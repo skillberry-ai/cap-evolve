@@ -1,0 +1,11 @@
+component: optimizer
+name: opencode
+summary: opencode headless (opencode run --dangerously-skip-permissions) as edit proposer.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

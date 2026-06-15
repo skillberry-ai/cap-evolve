@@ -1,0 +1,11 @@
+component: optimizer
+name: mock
+summary: Deterministic, zero-API edit proposer driven by a JSON edit script; for tests/CI.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

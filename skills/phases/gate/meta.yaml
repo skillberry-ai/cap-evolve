@@ -1,0 +1,12 @@
+component: phase
+name: gate
+summary: Apply the acceptance decision (always on val; significance by default).
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores]
+provides: [decision]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

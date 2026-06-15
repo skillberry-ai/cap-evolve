@@ -1,0 +1,37 @@
+% Sources grounding agent-capo's skill content. Skills cite these by key in their
+% SKILL.md `sources:` frontmatter. Expand as skills are authored.
+
+@misc{gepa,
+  title = {GEPA: Reflective Prompt Evolution with Genetic-Pareto search},
+  note  = {GEPAAdapter (evaluate + make_reflective_dataset); Actionable Side Information; system-aware merge.},
+}
+
+@misc{dspy,
+  title = {DSPy: Declarative Self-improving Python},
+  note  = {Teleprompters: MIPROv2, BootstrapFewShot, COPRO, GEPA.},
+}
+
+@misc{skillopt,
+  title = {SkillOpt: Executive Strategy for Self-Evolving Agent Skills},
+  note  = {Epochs/minibatch, textual learning-rate budget, strict held-out gate, rejected-edit buffer.},
+}
+
+@misc{skillgrad,
+  title = {SkillGrad: Optimizing agent skills like gradient descent},
+  note  = {executor -> diagnoser -> momentum -> patcher; faithful Agent Skills loader (progressive disclosure).},
+}
+
+@misc{trace2skill,
+  title = {Trace2Skill: Distill Trajectory-Local Lessons into Transferable Agent Skills},
+  note  = {Parallel trace analysis; hierarchical consolidation; validation gate.},
+}
+
+@misc{tau2bench,
+  title = {tau2-bench: tool-agent-user interaction benchmark},
+  note  = {Domain policy + tools + user simulator; pass^k; reward on correct mutating actions.},
+}
+
+@misc{evo,
+  title = {evo / evo-graph / governor: skill-structured agentic optimizers},
+  note  = {Tree search, failure clustering (issues graph), Rejected Memory Store, frontier strategies, worktree parallelism.},
+}

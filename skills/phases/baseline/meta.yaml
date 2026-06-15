@@ -1,0 +1,12 @@
+component: phase
+name: baseline
+summary: Create the run dir, freeze seeded splits, score the seed capability on val.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [project, tasks]
+provides: [splits, baseline, candidate]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

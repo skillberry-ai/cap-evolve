@@ -1,0 +1,11 @@
+component: capability
+name: mcp-tool
+summary: Optimize an MCP toolset where the server is external — only documentation (descriptions/params/examples) and adding/removing tools are permitted.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  optimizers: ["*"]
+  algorithms: ["*"]

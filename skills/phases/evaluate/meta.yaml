@@ -1,0 +1,12 @@
+component: phase
+name: evaluate
+summary: Score a candidate on a split with multi-trial honesty + pass^k.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [candidate]
+provides: [scores, traces]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

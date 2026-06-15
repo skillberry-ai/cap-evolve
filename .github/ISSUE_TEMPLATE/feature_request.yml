@@ -1,0 +1,14 @@
+name: Feature request
+description: Suggest a capability, algorithm, optimizer, or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+    validations: {required: true}
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: If it's a new skill, note which component (capability/algorithm/optimizer/phase).

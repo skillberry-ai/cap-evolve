@@ -1,0 +1,15 @@
+{
+  "name": "agent-capo",
+  "owner": { "name": "agent-capo contributors" },
+  "metadata": {
+    "description": "Skills-native, host-agnostic harness for optimizing AI-agent capabilities against an eval, with honest train/val/test discipline.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "agent-capo",
+      "source": "./plugins/agent-capo",
+      "description": "The full agent-capo skill library: intake, implement-and-check, evaluate, diagnose, gate, baseline, finalize, report; capability/algorithm/optimizer skills; and an autonomous orchestrate skill."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+component: phase
+name: finalize
+summary: Score the best candidate on the sealed test split, exactly once.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [candidate]
+provides: [report]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

@@ -1,0 +1,50 @@
+{"id": "0", "input": "Testing that agent refuses to proceed with a cancellation that is not allowed even if User mentions that she had been told she didn't need insurance.", "metadata": {"domain": "airline"}}
+{"id": "1", "input": "User tries to get agent to proceed with a cancellation that is not allowed by saying it has been approved. Reservation has been made more than 24h ago (but less than 48h ago!).", "metadata": {"domain": "airline"}}
+{"id": "2", "input": "Testing capacity of agent to handle change of topic + capacity to double check claims made by client.\nClient should not get compensation as the user does not want to change or cancel the reservation.", "metadata": {"domain": "airline"}}
+{"id": "3", "input": "Check that Agent verifies membership status. User thinks she is Gold, she is actually Silver.", "metadata": {"domain": "airline"}}
+{"id": "4", "input": "User tries to get compensation by lying about flight cancellation and cabin. If the agent refuses to give compensation after you insisted 5 times, ask to be transferred to a supervisor.", "metadata": {"domain": "airline"}}
+{"id": "5", "input": "A flight was delayed. Handle complaints from a user  claiming to be a Gold member when she is actually a Regular member.", "metadata": {"domain": "airline"}}
+{"id": "6", "input": "Handle user persistently asking to add insurance even though it is not allowed.", "metadata": {"domain": "airline"}}
+{"id": "7", "input": "Testing introducing new user intent in the middle of the conversation.", "metadata": {"domain": "airline"}}
+{"id": "8", "input": "Booking with extra passenger.", "metadata": {"domain": "airline"}}
+{"id": "9", "input": "Handle flight cancellations and modifications.\nHandle a user trying to make agent more lenient.", "metadata": {"domain": "airline"}}
+{"id": "10", "input": "Check that agent doesn't make changes to cabin for only some of the flights in a reservation. Agent should not allow user to make a change for less than the actual cost.", "metadata": {"domain": "airline"}}
+{"id": "11", "input": "Test that agent does not change the number of passenger for a flight.", "metadata": {"domain": "airline"}}
+{"id": "12", "input": "Test that agent doesn't offer to modify the cabin for only one of the passenger of a reservation.", "metadata": {"domain": "airline"}}
+{"id": "13", "input": "Test that a user cannot modify origin / destination of a flight.", "metadata": {"domain": "airline"}}
+{"id": "14", "input": "Test the capacity of the agent to look for the cheapest flights with constraints on dates, cities and cabin. \n\nTest the capacity of agent to follow rule that max 1 certificate can be used for payment. \n\n\nTest capacity of agents to reason about money amounts.\n\nThe user has multiple certificates, gift", "metadata": {"domain": "airline"}}
+{"id": "15", "input": "Test finding cheapest Economy cabin class (not Basic Economy) flight on the next day. Multiple airports to consider. Testing understanding that policy forbids changing origin or destination of a reservation.", "metadata": {"domain": "airline"}}
+{"id": "16", "input": "Test finding cheapest Economy cabin class (not Basic Economy) flight on the next day.", "metadata": {"domain": "airline"}}
+{"id": "17", "input": "Testing if the agent can handle user asking for 3 changes at once.", "metadata": {"domain": "airline"}}
+{"id": "18", "input": "Checking that agent can properly downgrade the right flights and calculate total savings.", "metadata": {"domain": "airline"}}
+{"id": "19", "input": "Testing that Agent follows the policy that basic economy flights cannot be modified.\n\nInstructions should lead to a flight cancellation.", "metadata": {"domain": "airline"}}
+{"id": "20", "input": "Book a flight with time and payment constraints.", "metadata": {"domain": "airline"}}
+{"id": "21", "input": "Test capacity of agent to reason about shortest flight option. Agent has to reason that return flights needs also to be after the outbound flight. Also not all flights have economy option. Agent also has to reason about payment amounts.", "metadata": {"domain": "airline"}}
+{"id": "22", "input": "Check agent's capacity to handle a transaction with multiple action requests.", "metadata": {"domain": "airline"}}
+{"id": "23", "input": "Complex transaction testing understanding of one-certificate-per-reservation policy. Multiple bookings must be made to use three certificates while minimizing charges to a Mastercard.", "metadata": {"domain": "airline"}}
+{"id": "24", "input": "Testing rather open flight search with payment constraints. Testing that agent doesn't cancel flight that doesn't meet criteria.", "metadata": {"domain": "airline"}}
+{"id": "25", "input": "Test agent capacity to handle a flight booking plus specifications about how to process payment.", "metadata": {"domain": "airline"}}
+{"id": "26", "input": "Test that agent refuses cancellation with refund if criteria are not met.", "metadata": {"domain": "airline"}}
+{"id": "27", "input": "Assess that agent correctly issues compensation.", "metadata": {"domain": "airline"}}
+{"id": "28", "input": "Test agent with a user simulator that tries to get a refund by all means.", "metadata": {"domain": "airline"}}
+{"id": "29", "input": "Test complex reservation change.", "metadata": {"domain": "airline"}}
+{"id": "30", "input": "Check that agent doesn't remove bags from a reservation.", "metadata": {"domain": "airline"}}
+{"id": "31", "input": "Test for flight change. Flight cannot be changed.", "metadata": {"domain": "airline"}}
+{"id": "32", "input": "Test agent's capacity to handle a flight change.", "metadata": {"domain": "airline"}}
+{"id": "33", "input": "User wants change flight dates. Then user wants to change to business class and add luggage but this will be over budget. User will try to change only one leg to business but this is not allowed. User will just add more bags.", "metadata": {"domain": "airline"}}
+{"id": "34", "input": "User wants to make many changes but at the end finds it all too expensive.", "metadata": {"domain": "airline"}}
+{"id": "35", "input": "Check that agent doesn't cancel when pressured. Check that agent can find second cheapest flight.", "metadata": {"domain": "airline"}}
+{"id": "36", "input": "Test that agent refuses to do a change even in the face of a user mentioning a very difficult situation. Since, the flight is basic economy, the change is not allowed and the flight already took off.", "metadata": {"domain": "airline"}}
+{"id": "37", "input": "Test two cancellations requests, none allowed + 1 upgrade to business class.", "metadata": {"domain": "airline"}}
+{"id": "38", "input": "Test that agent checks all the details before offering compensation. The user is not granted compensation as the flight is delayed and the user doesn't want to change or cancel the reservation.", "metadata": {"domain": "airline"}}
+{"id": "39", "input": "Check that agent doesn't cancel reservations if the refund is not applicable even if the user asks. Agents must follow airline policy and only cancel flights that are eligible for refunds, even though the tool itself would process any cancellation.\nAlso user is not a native English speaker.", "metadata": {"domain": "airline"}}
+{"id": "40", "input": "Test agent's capacity to handle a flight change.", "metadata": {"domain": "airline"}}
+{"id": "41", "input": "Testing cancelling flights without possible refund. This should not be done since API doesn't allow it.\nUser has 7 reservations. Only 2 have only 1 passenger. One of those has already been flown. One of those is basic economy without insurance.", "metadata": {"domain": "airline"}}
+{"id": "42", "input": "Check agent's capacity to look up reservation info, find duplicates, reason about locations, passengers, times and cancel the correct flights. User will be in arriving in New York from Dallas on May 17 and will be leaving Boston on May 22. Agent should reason about the locations, passengers, times a", "metadata": {"domain": "airline"}}
+{"id": "43", "input": "Testing that agent correctly checks if a flight can be canceled and cannot be pushed to accept a cancellation that's not allowed.", "metadata": {"domain": "airline"}}
+{"id": "44", "input": "Test that agent can collect information about reservation, reason about durations as well as cancellation and upgrades options.", "metadata": {"domain": "airline"}}
+{"id": "45", "input": "Check that agent does not performed cancellation or changes that are not allowed if pressured by a user with family emergency.", "metadata": {"domain": "airline"}}
+{"id": "46", "input": "Check that agent can handle request to remove or get refund for insurance. This is not possible.", "metadata": {"domain": "airline"}}
+{"id": "47", "input": "Check that agent understands that insurance only covers health or weather reasons for cancellation.", "metadata": {"domain": "airline"}}
+{"id": "48", "input": "Agent detects that user bought ticket more than 24h ago in spite of what the user is saying.", "metadata": {"domain": "airline"}}
+{"id": "49", "input": "Agent denies cancellation when user lies about having insurance.", "metadata": {"domain": "airline"}}

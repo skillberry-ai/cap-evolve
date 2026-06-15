@@ -1,0 +1,43 @@
+# agent-capo run spec. The intake skill fills this by interviewing you; the
+# orchestrate skill (or `acapo run --spec`) reads it to sequence the pipeline.
+# Values reference skills from the installed library (skills/_registry/manifest.json).
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt]            # list of capability skills to optimize jointly
+#   (e.g. [system-prompt, tools] to optimize a prompt AND tools together)
+capability_path: seed_capability         # the artifact dir (a copy is optimized)
+actions: [edit]                          # allowed edits (capability-specific)
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: mock                    # optimizers/<skill>
+optimizer_model: ""                      # backend-specific (e.g. a claude model id)
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: all-at-once             # algorithms/<skill>
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: tasks.jsonl              # file/dir, or "adapter" to use tasks()
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# Optional: pin the split explicitly instead of ratios. JSON file with
+# {"train":[ids], "val":[ids], "test":[ids]}. Use to lock a benchmark's official
+# split, or to fit on the whole set (train==val==test==all ids — no holdout).
+split_ids_file: ""
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: significant                   # significant | strict | threshold | simplicity_tiebreak
+gate_k_se: 1.0
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 10
+stall: 2
+
+# --- iteration store (how each iteration is versioned for an inspectable process)
+store: git                               # git (default) | copy | command
+# store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)

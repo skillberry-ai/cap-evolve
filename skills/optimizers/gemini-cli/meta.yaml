@@ -1,0 +1,11 @@
+component: optimizer
+name: gemini-cli
+summary: Google Gemini CLI headless (gemini -p --approval-mode=yolo) as edit proposer.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

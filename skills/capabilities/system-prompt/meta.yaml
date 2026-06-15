@@ -1,0 +1,11 @@
+component: capability
+name: system-prompt
+summary: Optimize an agent's system prompt / policy text (instructions, output contract, decision policy).
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  optimizers: ["*"]
+  algorithms: ["*"]

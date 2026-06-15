@@ -1,0 +1,12 @@
+c38aaa8 manual: TAKE cand_0007 (val 0.75) as best — highest score
+61a783e iter 8: reject candidate cand_0008 (val 0.735, Δ +0.020)
+0369dd6 iter 7: reject candidate cand_0007 (val 0.750, Δ +0.035)
+a9e7595 iter 6: reject candidate cand_0006 (val 0.685, Δ -0.030)
+74e7cf7 iter 5: reject candidate cand_0005 (val 0.720, Δ +0.005)
+63f19cf iter 4: reject candidate cand_0004 (val 0.710, Δ -0.005)
+8b65b59 seed: baseline candidate
+b5285b3 manual: TAKE cand_0003 (val 0.715) as best — user override of significance gate
+ee9339e iter 3: reject candidate cand_0003 (val 0.715, Δ +0.035)
+1bdb1df iter 2: reject candidate cand_0002 (val 0.590, Δ -0.090)
+cdba7f6 iter 1: ACCEPT candidate cand_0001 (val 0.680, Δ +0.220)
+958719e seed: baseline candidate

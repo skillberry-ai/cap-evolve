@@ -1,0 +1,11 @@
+component: algorithm
+name: hardest-first
+summary: Rank train tasks by baseline score ascending and attack the hardest first, then cycle.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores, traces, candidate]
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]

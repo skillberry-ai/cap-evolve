@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# agent-capo run state (per-run, not source)
+.agentcapo/
+
+# OS
+.DS_Store
+.demo/

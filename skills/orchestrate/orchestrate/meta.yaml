@@ -1,0 +1,12 @@
+component: orchestrate
+name: orchestrate
+summary: Autonomous end-to-end driver; sequences all phases with the acapo-check hard gate and stop rules.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [project]
+provides: [report]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

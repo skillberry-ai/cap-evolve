@@ -1,0 +1,11 @@
+component: optimizer
+name: generic
+summary: Drive any shell-invokable agent as the edit proposer via ACAPO_OPTIMIZER_CMD.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

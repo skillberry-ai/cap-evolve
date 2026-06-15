@@ -1,0 +1,13 @@
+component: phase
+name: intake
+summary: Phase-1 input collection: scaffold .agentcapo/project, gather inputs, ask user for missing NEEDED ones.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+inputs: inputs/INPUTS.md
+needs: []
+provides: [project, tasks]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

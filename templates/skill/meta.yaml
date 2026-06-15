@@ -1,0 +1,16 @@
+# Machine-readable registration record. build_manifest.py reads this to wire the
+# skill into the pipeline. Keep name/component in sync with SKILL.md frontmatter.
+component: phase                 # phase | capability | algorithm | optimizer | orchestrate
+name: <skill-name>
+summary: <one line, what it does>
+entry: scripts/run.py            # the pipeline/run script
+abstract: scripts/abstract.py    # abstract methods the optimizer agent implements
+check: scripts/check.py          # the per-skill gate
+prompt: prompt/PROMPT.md
+inputs: inputs/INPUTS.md
+needs: []                        # tokens consumed (must be produced by some skill)
+provides: []                     # tokens produced
+compatible_with:                 # glob lists; "*" = any. Used for any x any x any wiring.
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

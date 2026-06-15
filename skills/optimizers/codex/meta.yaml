@@ -1,0 +1,11 @@
+component: optimizer
+name: codex
+summary: OpenAI Codex CLI headless (codex exec --sandbox workspace-write) as edit proposer.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

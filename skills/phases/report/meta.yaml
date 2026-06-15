@@ -1,0 +1,12 @@
+component: phase
+name: report
+summary: Summarize baseline to best-val to sealed-test and name the winner.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [report]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

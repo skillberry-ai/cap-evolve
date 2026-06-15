@@ -1,0 +1,34 @@
+# agent-capo
+
+> A skills-native, host-agnostic harness for optimizing AI-agent capabilities
+> (skills, tools/MCP, prompts) against your own evaluation, with honest
+> train/val/test discipline enforced in code. The pipeline is a library of Agent
+> Skills; the only shipped code is a tiny stdlib substrate.
+
+If you are an agent driving agent-capo: follow `RUN.md`. Implement the 4-method
+adapter (`docs/ADAPTER_CONTRACT.md`), pass `acapo check`, then run the phases
+intake → implement-and-check → baseline → <algorithm> → finalize → report. Never
+score the test split except at finalize; gate acceptance on val.
+
+## Start here
+- [RUN.md](RUN.md): the top-level orchestration prompt (point any agent at this).
+- [README.md](README.md): what it is, quickstart, comparison, skill library.
+- [docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md): the 4 methods you implement.
+- [docs/HONEST_EVAL.md](docs/HONEST_EVAL.md): the non-negotiable eval guarantees.
+
+## Extend
+- [docs/EXTENDING.md](docs/EXTENDING.md): add a capability/algorithm/optimizer skill.
+- [CONTRIBUTING.md](CONTRIBUTING.md): dev setup and house rules.
+- [docs/ROADMAP.md](docs/ROADMAP.md): prioritized next work.
+
+## Skills (each is skills/<component>/<name>/SKILL.md)
+- phases: intake, implement-and-check, baseline, evaluate, diagnose, gate, finalize, report
+- capabilities: system-prompt, skill-package, tools, mcp-tool
+- algorithms: all-at-once, cyclic, hardest-first, gepa-reflective
+- optimizers: claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob, generic, mock
+- orchestrate: orchestrate
+
+## Examples
+- [examples/toy_calc](examples/toy_calc): zero-API deterministic proof.
+- [examples/json_extract](examples/json_extract): a from-scratch benchmark.
+- [examples/tau2_airline](examples/tau2_airline): real tau2-bench with gpt-oss-120b.
