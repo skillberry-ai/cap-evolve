@@ -18,8 +18,9 @@ class _Adapter:
         from cap_evolve import Task
         return [Task(id=t) for t in ("A", "B", "C")]
 
-    def run_target(self, task, candidate_dir, split):
+    def run_target(self, task, ctx, *, seed=0):
         from cap_evolve import Rollout
+        candidate_dir = ctx
         cfg = (Path(candidate_dir) / self.cfg).read_text() if (Path(candidate_dir) / self.cfg).exists() else ""
         return Rollout(task_id=task.id, output=("pass" if task.id in cfg else "fail"))
 

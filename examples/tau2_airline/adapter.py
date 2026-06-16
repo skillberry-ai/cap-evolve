@@ -50,27 +50,57 @@ class Adapter(CapabilityAdapter):
         return list(self._all)
 
     # ---- make candidate live (inject BOTH the policy and the tools) ----
+    # ``apply`` is the still-supported back-compat hook; the engine's default
+    # ``live()`` context manager calls it on enter, so injection still happens once
+    # per evaluation and ``run_batch`` receives ``ctx == candidate_dir``.
     def apply(self, candidate_dir: Path, edits: dict | None = None) -> None:
+        if edits:
+            self.materialize(Path(candidate_dir), edits)
         rt.inject(Path(candidate_dir))
 
     # ---- run (batch is the fast path the harness prefers) ----
-    def run_batch(self, tasks: list[Task], candidate_dir: Path, split: str) -> dict:
+    def run_batch(self, tasks: list[Task], ctx, *, seed: int = 42) -> dict:
+        # ``ctx`` is the candidate dir (default from live()). ``seed`` is threaded
+        # into tau2's run config so each trial is an independent draw (no more
+        # hardcoded seed=42 across trials).
+        candidate_dir = Path(ctx)
         ids = [t.id for t in tasks]
-        raw = rt.run_airline_batch(Path(candidate_dir), ids)
-        return {tid: Rollout(task_id=tid, output=r["output"], trace=r["trace"],
-                             cost_usd=float(r.get("cost", 0.0) or 0.0),
-                             tokens=int(r.get("tokens", 0) or 0),
-                             metadata={"reward": r["reward"], "reward_info": r["reward_info"],
-                                       "termination": r["termination"]})
-                for tid, r in raw.items()}
+        raw = rt.run_airline_batch(candidate_dir, ids, seed=seed)
+        out = {}
+        for tid, r in raw.items():
+            term = str(r.get("termination") or "")
+            # Structured infra signal: tau2 terminations marked INFRASTRUCTURE are
+            # uncontrollable run errors that survived the runtime's retries. Set
+            # ``Rollout.error`` (the engine's ONLY infra signal) instead of leaving
+            # the classification to feedback prose, and do NOT carry a reward for an
+            # infra-failed run (it would be a noise 0, not a capability signal).
+            is_infra = "INFRASTRUCTURE" in term.upper()
+            out[tid] = Rollout(
+                task_id=tid, output=r["output"], trace=r["trace"],
+                cost_usd=float(r.get("cost", 0.0) or 0.0),
+                tokens=int(r.get("tokens", 0) or 0),
+                error=(f"tau2 infrastructure termination: {term}" if is_infra else None),
+                metadata={"reward": (None if is_infra else r["reward"]),
+                          "reward_info": (None if is_infra else r["reward_info"]),
+                          "termination": term},
+            )
+        return out
 
-    def run_target(self, task: Task, candidate_dir: Path, split: str) -> Rollout:
-        rolls = self.run_batch([task], candidate_dir, split)
+    def run_target(self, task: Task, ctx, *, seed: int = 42) -> Rollout:
+        rolls = self.run_batch([task], ctx, seed=seed)
         return rolls.get(task.id) or Rollout(task_id=task.id, error="no rollout produced")
 
     # ---- score (tau2 reward + gold-aware feedback) ----
     def score(self, task: Task, rollout: Rollout) -> Score:
         meta = rollout.metadata or {}
+        # An infra-failed rollout (Rollout.error set, reward cleared to None) scores
+        # 0 with a feedback that names it as infra noise; the engine's focus builder
+        # will classify it as uncontrollable via Rollout.error (raw.errored), so the
+        # optimizer is told to ignore it rather than "fix" a flaky run.
+        if rollout.error is not None or meta.get("reward") is None:
+            return Score(task_id=task.id, reward=0.0,
+                         feedback=f"infrastructure error (uncontrollable): {rollout.error or meta.get('termination')}",
+                         trial_rewards=[0.0])
         reward = float(meta.get("reward", 0.0))
         ri = meta.get("reward_info")
         fb = f"reward={reward:.2f}; termination={meta.get('termination')}"

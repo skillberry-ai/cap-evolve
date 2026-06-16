@@ -41,7 +41,10 @@ class Adapter(CapabilityAdapter):
                 tasks.append(Task(id=d["id"], input=d["input"], target=d["target"]))
         return tasks  # split filtering is handled by the harness via frozen splits
 
-    def run_target(self, task: Task, candidate_dir: Path, split: str) -> Rollout:
+    def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
+        # Deterministic stand-in: ``ctx`` is the candidate dir (default from live()).
+        # ``seed`` is accepted per the contract but unused — this runner is exact.
+        candidate_dir = ctx
         prompt = (Path(candidate_dir) / "prompt.txt").read_text(encoding="utf-8")
         expr = str(task.input)
         if "[CALC]" in prompt:

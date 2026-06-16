@@ -13,6 +13,7 @@ builds one from a skill's ``run.py`` so external agents plug in the same way.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -24,7 +25,7 @@ from typing import Callable
 
 from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores, select_parent
-from .rundir import RunDir
+from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -68,6 +69,28 @@ def _tasks_for(adapter, run_dir: RunDir, split: str) -> list[Task]:
     return [t for t in adapter.tasks("all") if t.id in ids]
 
 
+@contextlib.contextmanager
+def _live(adapter, candidate_dir: Path):
+    """Enter the adapter's ``live()`` context, with a default for older adapters.
+
+    New adapters (subclassing ``CapabilityAdapter``) get ``live`` for free. An
+    adapter that predates the contract (a bare object defining only the abstract
+    methods + ``apply``) won't have ``live``; we synthesize the same default here —
+    call ``apply(candidate_dir)`` on enter, yield ``candidate_dir`` as ``ctx`` — so
+    such adapters keep working without change. If it has neither, we just yield the
+    dir (a pure-file adapter the runner reads directly).
+    """
+    live = getattr(adapter, "live", None)
+    if callable(live):
+        with live(candidate_dir) as ctx:
+            yield ctx
+        return
+    apply = getattr(adapter, "apply", None)
+    if callable(apply):
+        apply(candidate_dir)
+    yield candidate_dir
+
+
 # ---- evaluation -----------------------------------------------------------
 
 def evaluate_candidate(
@@ -79,17 +102,33 @@ def evaluate_candidate(
     n_trials: int = 1,
     ks=(1, 2),
     tag: str = "cand",
+    base_seed: int | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
 
     Writes per-rollout JSON under the run dir, returns the aggregate SplitResult.
-    Scoring the **test** split flips the seal (raising on a second attempt), so the
-    held-out set can only ever be scored once — that is ``finalize``'s job.
+
+    Per-trial seeds (W1): trial ``k`` is run with ``seed = base_seed + k`` so distinct
+    trials are independent draws (real variance ⇒ honest pass^k + significance gate).
+    ``base_seed`` defaults to the frozen splits seed; the runner is responsible for
+    forwarding ``seed`` to any stochastic component (see the adapter contract).
+
+    Seal-on-success (W1): scoring the **test** split *reserves* the seal up front
+    (raising on reuse) but only *commits* (burns) it once the test SplitResult has
+    been computed and written — a crash mid-scoring leaves the seal unused so a
+    retry can still score test exactly once. That is ``finalize``'s job.
     """
     if split == "test":
-        run_dir.consume_test()  # raises TestSealError on reuse
+        run_dir.reserve_test()  # raises TestSealError on reuse; does NOT burn the seal yet
 
-    adapter.apply(candidate_dir)  # make this candidate live
+    if base_seed is None:
+        # Default the per-trial base to the run's frozen splits seed so the whole
+        # run is reproducible from one number.
+        try:
+            base_seed = int(run_dir.read_splits().seed)
+        except Exception:  # noqa: BLE001
+            base_seed = 0
+
     tasks = _tasks_for(adapter, run_dir, split)
     out_dir = run_dir.rollouts / split
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -100,41 +139,55 @@ def evaluate_candidate(
     # collect per-task trial rewards (+ last rollout/score) across trials
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
     per_task_feedback: dict[str, str] = {t.id: "" for t in tasks}
+    per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     task_by_id = {t.id: t for t in tasks}
     run_cost, run_tokens = 0.0, 0           # RUNNER spend, summed over rollouts
     t0 = time.time()
 
-    for k in range(n_trials):
-        if has_batch:
-            rb = adapter.run_batch(tasks, candidate_dir, split)
-            # accept either {task_id: Rollout} or a list parallel to `tasks`
-            rollouts = rb if isinstance(rb, dict) else {t.id: r for t, r in zip(tasks, rb)}
-        else:
-            rollouts = {t.id: adapter.run_target(t, candidate_dir, split) for t in tasks}
-        for tid, task in task_by_id.items():
-            rollout = rollouts.get(tid)
-            if rollout is None:
-                # The batch omitted this task (an error/timeout inside the runner).
-                # Record it as a failed rollout (reward 0) — do NOT serially re-run
-                # it here, which would add a slow tail to every batch evaluation.
-                rollout = Rollout(task_id=tid, error="omitted from batch result")
-            run_cost += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
-            run_tokens += int(getattr(rollout, "tokens", 0) or 0)
-            sc = adapter.score(task, rollout)
-            per_task_trials[tid].append(sc.reward)
-            per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
-            (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
-                json.dumps({"input": task.input, "rollout": rollout.to_dict(),
-                            "score": sc.to_dict()}, default=str),
-                encoding="utf-8",
-            )
+    # ``live()`` makes the candidate the one the target uses for this evaluation and
+    # yields the ``ctx`` the runner consumes (default ctx == candidate_dir). Using a
+    # context manager (instead of a bare global ``apply``) means the live state is
+    # scoped + torn down per evaluation, which is what lets independent candidates be
+    # evaluated without clobbering a single shared global slot.
+    with _live(adapter, candidate_dir) as ctx:
+        for k in range(n_trials):
+            seed = base_seed + k
+            if has_batch:
+                rb = adapter.run_batch(tasks, ctx, seed=seed)
+                # accept either {task_id: Rollout} or a list parallel to `tasks`
+                rollouts = rb if isinstance(rb, dict) else {t.id: r for t, r in zip(tasks, rb)}
+            else:
+                rollouts = {t.id: adapter.run_target(t, ctx, seed=seed) for t in tasks}
+            for tid, task in task_by_id.items():
+                rollout = rollouts.get(tid)
+                if rollout is None:
+                    # The batch omitted this task (an error/timeout inside the runner).
+                    # Record it as a failed rollout (reward 0) — do NOT serially re-run
+                    # it here, which would add a slow tail to every batch evaluation.
+                    rollout = Rollout(task_id=tid, error="omitted from batch result")
+                if getattr(rollout, "error", None):
+                    per_task_errored[tid] = True
+                run_cost += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
+                run_tokens += int(getattr(rollout, "tokens", 0) or 0)
+                sc = adapter.score(task, rollout)
+                per_task_trials[tid].append(sc.reward)
+                per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+                (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
+                    json.dumps({"input": task.input, "rollout": rollout.to_dict(),
+                                "score": sc.to_dict()}, default=str),
+                    encoding="utf-8",
+                )
 
     scores: list[Score] = []
     for tid in task_by_id:
         tr = per_task_trials[tid]
+        # ``raw.errored`` carries the structured infra signal (rollout.error was set
+        # on some trial) into the per-task record, so the focus builder can classify
+        # uncontrollable failures without substring-matching feedback prose.
         scores.append(Score(
             task_id=tid, reward=mean(tr), feedback=per_task_feedback[tid],
             n=n_trials, stderr=stderr(tr), trial_rewards=tr,
+            raw={"errored": per_task_errored[tid]},
         ))
 
     elapsed = time.time() - t0
@@ -158,6 +211,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
     vdir = run_dir.rollouts / split
     by_task: dict[str, list[float]] = {}
     feedback: dict[str, str] = {}
+    raw: dict[str, dict] = {}
     if vdir.exists():
         for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
             rec = _json.loads(f.read_text(encoding="utf-8"))
@@ -165,8 +219,13 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
             tid = sc.get("task_id") or f.name.split("__")[0]
             by_task.setdefault(tid, []).append(float(sc.get("reward", 0.0)))
             feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
+            # carry the structured infra flag forward across resume (errored on any trial)
+            r0 = raw.setdefault(tid, {})
+            if (sc.get("raw") or {}).get("errored"):
+                r0["errored"] = True
     scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
-                    n=len(r), stderr=stderr(r), trial_rewards=r) for t, r in by_task.items()]
+                    n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}))
+              for t, r in by_task.items()]
     return aggregate_scores(split, scores, ks=ks)
 
 
@@ -209,6 +268,23 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
 
 
 # ---- one propose -> gate step ---------------------------------------------
+
+def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | None:
+    """Aligned per-task ``cand_reward[t] - curr_reward[t]`` over shared val tasks.
+
+    Returns ``None`` if either side lacks per-task data or they share no task ids
+    (so the caller falls back to the unpaired significance test). Tasks present in
+    only one side are dropped — a paired test needs both halves of the pair.
+    """
+    cur = {pt.get("task_id"): pt.get("reward", 0.0) for pt in (current_val.per_task or [])}
+    cand = {pt.get("task_id"): pt.get("reward", 0.0) for pt in (cand_val.per_task or [])}
+    shared = [t for t in cand if t in cur]
+    if not shared:
+        return None
+    return [float(cand[t]) - float(cur[t]) for t in sorted(shared)]
+
+
+
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
                           rejected, history) -> str:
@@ -288,9 +364,19 @@ def run_step(
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
+
+    # Paired gate is the default when per-task data is available: candidate and
+    # current were scored on the SAME val tasks, so the correct (and far more
+    # powerful) test is mean(per-task Δ) vs the SE of those paired deltas. Build the
+    # aligned delta vector here; fall back to the unpaired ``significant`` test when
+    # the caller has pinned a different mode or the per-task data isn't aligned.
+    paired_deltas = _paired_deltas(current_val, cand_val)
+    if "mode" not in gate_kwargs and paired_deltas is not None:
+        gate_kwargs["mode"] = "paired"
     decision = gate_mod.decide(
         current_val.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
+        paired_deltas=paired_deltas, run_dir=run_dir,
         **gate_kwargs,
     )
 
@@ -366,11 +452,16 @@ def _init_memory_store(run_dir: RunDir, store):
 
 # ---- shared hill-climb loop (parameterized by focus) ----------------------
 
-# Feedback signatures of UNCONTROLLABLE failures — environment/run errors that no
-# capability edit can fix (and which add pure noise to the score). The optimizer is
-# told to ignore these so it doesn't waste edits "fixing" a flaky run.
-_UNCONTROLLABLE = ("infrastructure", "infra error", "timed out", "timeout",
-                   "no rollout", "run error", "traceback", "exception", "rate limit")
+def _is_infra(pt) -> bool:
+    """Structured infra signal: did this task's rollout carry ``error``?
+
+    The harness records ``raw.errored = True`` when any trial's ``Rollout.error``
+    was set (a timeout, API/run error, omitted batch result). We classify
+    uncontrollable failures by that STRUCTURED field — not by substring-matching
+    feedback prose, which dropped real "error" bugs and misfired on capability
+    feedback that merely *mentions* an exception.
+    """
+    return bool((pt.get("raw") or {}).get("errored"))
 
 
 def _focus_instructions(current_val: SplitResult, focus_ids, label: str) -> str:
@@ -380,12 +471,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str) -> str:
     passed = [pt for pt in per if (pt.get("reward", 0) or 0) >= 1.0]
     failing = [pt for pt in per if (pt.get("reward", 0) or 0) < 1.0]
 
-    def _uncontrollable(pt) -> bool:
-        fb = str(pt.get("feedback", "")).lower()
-        return any(k in fb for k in _UNCONTROLLABLE)
-
-    actionable = [pt for pt in failing if not _uncontrollable(pt)]
-    errored = [pt for pt in failing if _uncontrollable(pt)]
+    actionable = [pt for pt in failing if not _is_infra(pt)]
+    errored = [pt for pt in failing if _is_infra(pt)]
 
     lines = [
         "# Optimize the capability",
@@ -567,10 +654,18 @@ def _reflective_instructions(parent_result: SplitResult) -> str:
 # ---- finalize -------------------------------------------------------------
 
 def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=(1, 2)) -> dict:
-    """Score the best candidate on the SEALED test split exactly once."""
+    """Score the best candidate on the SEALED test split exactly once.
+
+    Seal-on-success: ``evaluate_candidate`` *reserves* the seal (raises if already
+    burned) but does not flip it. We compute + persist the test result FIRST, and
+    only then ``commit_test`` to burn the seal. So a crash anywhere in scoring or
+    in writing ``final.json`` leaves the seal unused and a retry can still score
+    test once — a transient failure no longer permanently destroys the headline.
+    """
     result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
                                 n_trials=n_trials, ks=ks, tag="FINAL")
     payload = {"test": result.to_dict(), "best_id": run_dir.best_id}
-    (run_dir.root / "final.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _atomic_write(run_dir.root / "final.json", json.dumps(payload, indent=2))
+    run_dir.commit_test()  # burn the seal ONLY now that the result is computed + written
     run_dir.log_event("finalize", test_reward=result.reward, best_id=run_dir.best_id)
     return payload

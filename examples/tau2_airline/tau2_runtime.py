@@ -220,9 +220,15 @@ def transcript(sim, max_turns: int = 60, max_chars: int = 8000) -> str:
     return "\n".join(lines)[-max_chars:]
 
 
-def run_airline_batch(candidate_dir: Path, task_ids: list[str]) -> dict:
+def run_airline_batch(candidate_dir: Path, task_ids: list[str], *, seed: int = 42) -> dict:
     """Run the given airline task ids through tau2 with the candidate policy.
-    Returns {task_id: {reward, reward_info, trace, termination, output}}."""
+
+    ``seed`` (W1 per-trial seed): threaded into tau2's ``TextRunConfig.seed`` so
+    distinct trials (the harness calls this once per trial with ``base_seed + k``)
+    are genuinely independent draws. Previously this hardcoded ``seed=42`` for every
+    trial, which made multi-trial evaluation produce identical runs ⇒ stderr 0 ⇒ the
+    significance gate degenerated to "any Δ>0". Returns
+    {task_id: {reward, reward_info, trace, termination, output}}."""
     from tau2.data_model.simulation import TextRunConfig
     from tau2.runner import get_tasks, run_tasks
     import contextlib
@@ -241,7 +247,7 @@ def run_airline_batch(candidate_dir: Path, task_ids: list[str]) -> dict:
     config = TextRunConfig(
         domain="airline", agent="llm_agent", llm_agent=model, llm_args_agent=dict(llm_args),
         user="user_simulator", llm_user=model, llm_args_user=dict(llm_args),
-        num_trials=1, max_steps=100, max_errors=10, max_concurrency=MAX_CONCURRENCY, seed=42,
+        num_trials=1, max_steps=100, max_errors=10, max_concurrency=MAX_CONCURRENCY, seed=int(seed),
     )
     # Hard wall-clock watchdog: the per-call `timeout` does NOT catch a tau2
     # concurrent-runner stall (a wedged conversation can hang the batch forever).

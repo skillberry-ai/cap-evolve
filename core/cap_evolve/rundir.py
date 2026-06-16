@@ -16,13 +16,75 @@ accounting can't be bypassed by a skill. Pure stdlib.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .splits import Splits
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write ``text`` to ``path`` atomically (tmp file + ``os.replace``).
+
+    A non-atomic ``path.write_text`` can leave a half-written / truncated file if
+    the process dies mid-write — and state.json / splits.json carry the seal and
+    budget, so a torn write is a correctness hazard. ``os.replace`` is atomic on a
+    POSIX filesystem, so a reader sees either the old file or the new one, never a
+    partial one. ``fsync`` before the replace so the bytes are durable first.
+    """
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)  # atomic: readers see old or new, never partial
+    except BaseException:
+        # If anything fails before/at the replace, don't leave a dangling temp that
+        # could be mistaken for state. The real file is untouched (replace is atomic).
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
+
+
+@contextlib.contextmanager
+def _file_lock(lock_path: Path):
+    """Advisory cross-process lock around a read-modify-write of run state.
+
+    State mutations (``set_best``, ``update_spent``, the seal commit) are
+    read-modify-write; two concurrent writers could lose an update. We take a
+    best-effort advisory lock via ``O_CREAT|O_EXCL`` on a lock file with a short
+    spin. Stdlib only (``fcntl`` would be POSIX-only and does not guard the RMW
+    window across the read). The lock is advisory: it serializes *our* writers,
+    which is all the engine needs.
+    """
+    lock_path = Path(lock_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = None
+    deadline = time.time() + 10.0
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            if time.time() > deadline:
+                # Stale lock (a crashed holder): steal it rather than hang forever.
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(lock_path)
+                deadline = time.time() + 10.0
+            time.sleep(0.02)
+    try:
+        yield
+    finally:
+        if fd is not None:
+            os.close(fd)
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(lock_path)
 
 
 @dataclass
@@ -85,6 +147,7 @@ class RunDir:
         self.rejected_path = self.root / "rejected.jsonl"
         self.history_path = self.root / "history.jsonl"
         self.events_path = self.root / "events.jsonl"
+        self._state_lock = self.root / ".state.lock"
 
     # ---- creation / loading -------------------------------------------------
     @classmethod
@@ -123,7 +186,10 @@ class RunDir:
         return json.loads(self.state_path.read_text(encoding="utf-8"))
 
     def _write_state(self, state: dict) -> None:
-        self.state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        # Atomic: a torn state.json would corrupt the seal/budget. events.jsonl is
+        # the append-only source of truth; state.json is a derived cache we never
+        # leave half-written.
+        _atomic_write(self.state_path, json.dumps(state, indent=2))
 
     @property
     def budget(self) -> Budget:
@@ -138,27 +204,29 @@ class RunDir:
         return self._read_state().get("best_id")
 
     def set_best(self, candidate_id: str) -> None:
-        st = self._read_state()
-        st["best_id"] = candidate_id
-        self._write_state(st)
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            st["best_id"] = candidate_id
+            self._write_state(st)
 
     def update_spent(self, *, iterations=0, metric_calls=0, usd=0.0, runner_tokens=0,
                      runner_seconds=0.0, optimizer_seconds=0.0, accepted: bool | None = None) -> Spent:
-        st = self._read_state()
-        sp = Spent.from_dict(st.get("spent"))
-        sp.iterations += iterations
-        sp.metric_calls += metric_calls
-        sp.usd += usd
-        sp.runner_tokens += runner_tokens
-        sp.runner_seconds += runner_seconds
-        sp.optimizer_seconds += optimizer_seconds
-        if accepted is True:
-            sp.stall = 0
-        elif accepted is False:
-            sp.stall += 1
-        st["spent"] = sp.to_dict()
-        self._write_state(st)
-        return sp
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            sp = Spent.from_dict(st.get("spent"))
+            sp.iterations += iterations
+            sp.metric_calls += metric_calls
+            sp.usd += usd
+            sp.runner_tokens += runner_tokens
+            sp.runner_seconds += runner_seconds
+            sp.optimizer_seconds += optimizer_seconds
+            if accepted is True:
+                sp.stall = 0
+            elif accepted is False:
+                sp.stall += 1
+            st["spent"] = sp.to_dict()
+            self._write_state(st)
+            return sp
 
     def budget_exhausted(self) -> tuple[bool, str]:
         b, s = self.budget, self.spent
@@ -174,17 +242,39 @@ class RunDir:
 
     # ---- splits (with test seal) -------------------------------------------
     def write_splits(self, splits: Splits) -> None:
-        self.splits_path.write_text(json.dumps(splits.to_dict(), indent=2), encoding="utf-8")
+        _atomic_write(self.splits_path, json.dumps(splits.to_dict(), indent=2))
 
     def read_splits(self) -> Splits:
         return Splits.from_dict(json.loads(self.splits_path.read_text(encoding="utf-8")))
 
-    def consume_test(self) -> Splits:
-        """Return splits with the test seal flipped and persisted. Raises on reuse."""
+    def reserve_test(self) -> Splits:
+        """Check the seal is unused (raise if not) WITHOUT flipping it.
+
+        ``reserve_test`` + ``commit_test`` replace the old ``consume_test`` so the
+        seal is burned *on success only*: a finalize that crashes mid-scoring (an
+        adapter exception, a runner timeout) leaves the seal unused, and a retry
+        can still score test exactly once. Call this at the start of finalize, then
+        ``commit_test`` only after the test SplitResult has been computed + written.
+        """
         splits = self.read_splits()
-        splits.mark_test_used()  # raises TestSealError if already used
-        self.write_splits(splits)
+        splits.check_test_unused()  # raises TestSealError if already used
         return splits
+
+    def commit_test(self) -> Splits:
+        """Burn the seal (flip + persist). Call ONLY after test is scored+written."""
+        with _file_lock(self._state_lock):
+            splits = self.read_splits()
+            splits.mark_test_used()  # raises TestSealError if already used (double commit)
+            self.write_splits(splits)
+            return splits
+
+    # Back-compat shim: ``consume_test`` flipped+persisted the seal BEFORE scoring,
+    # which permanently burned the headline number on a transient finalize crash.
+    # Kept so existing callers/tests don't break, but it is now reserve→commit with
+    # nothing in between (i.e. it still seals immediately when used standalone).
+    def consume_test(self) -> Splits:
+        self.reserve_test()
+        return self.commit_test()
 
     # ---- candidates ---------------------------------------------------------
     def snapshot(self, candidate_id: str, src_dir: Path) -> Path:

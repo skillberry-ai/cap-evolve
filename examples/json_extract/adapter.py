@@ -39,7 +39,10 @@ class Adapter(CapabilityAdapter):
                                   target=d["target"]))
         return tasks
 
-    def run_target(self, task: Task, candidate_dir: Path, split: str) -> Rollout:
+    def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
+        # ``ctx`` is the candidate dir (default from live()); deterministic runner,
+        # so the per-trial ``seed`` is accepted-but-unused.
+        candidate_dir = ctx
         prompt = (Path(candidate_dir) / "prompt.txt").read_text(encoding="utf-8")
         rec, field = task.input["record"], task.input["field"]
         value = _extract(rec, field)

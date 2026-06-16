@@ -135,10 +135,13 @@ class Adapter(CapabilityAdapter):
         # one <skill-name>/SKILL.md). Nothing global to inject; run_target uses it.
         return None
 
-    def run_target(self, task: Task, candidate_dir: Path, split: str) -> Rollout:
+    def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         # `bench` runs with cwd=CAPEVOLVE_SKILLSBENCH_ROOT, so every path handed to it
         # must be absolute (candidate_dir arrives relative to the cap-evolve workdir).
-        candidate_dir = Path(candidate_dir).resolve()
+        # ``ctx`` is the candidate dir (default live() yields it). ``seed`` is accepted
+        # per the contract; benchflow's agent seeding is not exposed here, so it is
+        # currently unused (the runner's stochasticity is not seed-controllable).
+        candidate_dir = Path(ctx).resolve()
         task_dir = Path(task.target).resolve()
         # Per-candidate jobs dir, cleared each call: candidates share a parent, so a
         # shared/uncleared dir would let one candidate (or trial) read another's stale
