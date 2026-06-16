@@ -40,7 +40,7 @@ depends on its system prompt; full setup in [examples/toy_calc](examples/toy_cal
 git clone <repo> AgentCapTune && cd AgentCapTune
 pip install ./core                         # the honest-eval substrate (CLI: acapo)
 ./install.sh                               # place skills into your agent host
-python3 -m agent_capo.cli run --spec .agentcapo/project/acapo.yaml --project .agentcapo/project
+bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run
 ```
 ```jsonc
 {
