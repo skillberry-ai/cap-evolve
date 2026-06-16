@@ -1,7 +1,7 @@
 """Mock optimizer — a deterministic, zero-API edit proposer.
 
 It mutates files in ``--workdir`` in place (the same contract every optimizer
-follows), driven by a JSON edit script (``ACAPO_MOCK_SCRIPT`` env var, or
+follows), driven by a JSON edit script (``CAPEVOLVE_MOCK_SCRIPT`` env var, or
 ``mock_script.json`` near the workdir). This lets the full optimize loop be
 exercised in tests and CI with no model and a reproducible outcome. Real
 optimizer skills (claude-code, codex, ...) replace this with an actual agent that
@@ -25,7 +25,7 @@ import _bootstrap  # noqa: F401
 
 
 def _find_script(workdir: Path) -> Path | None:
-    env = os.environ.get("ACAPO_MOCK_SCRIPT")
+    env = os.environ.get("CAPEVOLVE_MOCK_SCRIPT")
     if env and Path(env).exists():
         return Path(env)
     for cand in (workdir / "mock_script.json", workdir.parent / "mock_script.json"):

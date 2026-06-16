@@ -1,6 +1,6 @@
 ---
 name: openclaw
-description: Use OpenClaw as the edit proposer. Use when your optimizer is OpenClaw. Because OpenClaw's headless edit invocation is not standardized, this skill is a configurable wrapper — set ACAPO_OPENCLAW_CMD to OpenClaw's non-interactive edit command (with {workdir}/{prompt}/{prompt_text} placeholders); it defaults to a best-guess `openclaw run` form you should verify against your installed version.
+description: Use OpenClaw as the edit proposer. Use when your optimizer is OpenClaw. Because OpenClaw's headless edit invocation is not standardized, this skill is a configurable wrapper — set CAPEVOLVE_OPENCLAW_CMD to OpenClaw's non-interactive edit command (with {workdir}/{prompt}/{prompt_text} placeholders); it defaults to a best-guess `openclaw run` form you should verify against your installed version.
 component: optimizer
 argument-hint: "--workdir DIR --prompt FILE"
 allowed-tools: Read, Write, Bash
@@ -27,7 +27,7 @@ openclaw --version
 
 ## Configure
 ```bash
-export ACAPO_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"'
+export CAPEVOLVE_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"'
 ```
 Placeholders substituted at run time:
 - `{workdir}` — the candidate working directory (also set as cwd).
@@ -54,13 +54,13 @@ reliable headless edit command, use the `generic` optimizer instead (same contra
 
 ## Availability
 `scripts/run.py` checks the resolved command's binary on PATH and errors clearly if it is
-absent (telling you to set `ACAPO_OPENCLAW_CMD` or fall back to `generic`).
+absent (telling you to set `CAPEVOLVE_OPENCLAW_CMD` or fall back to `generic`).
 `scripts/check.py` passes without the CLI so CI is not blocked.
 
 ## How to run
 ```bash
 python scripts/check.py
-ACAPO_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"' \
+CAPEVOLVE_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"' \
   python scripts/run.py --workdir <copy> --prompt <INSTRUCTIONS.md>
 ```
 

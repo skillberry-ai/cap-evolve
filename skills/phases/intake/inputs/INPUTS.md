@@ -1,4 +1,4 @@
-# Inputs for a agent-capo run (collected by `intake`)
+# Inputs for a cap-evolve run (collected by `intake`)
 
 For every **NEEDED** input that is missing, ASK THE USER — quote the expected
 path, how to obtain it, and the alternatives. Never invent a NEEDED input.
@@ -13,7 +13,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   - options: a `.jsonl` file | a directory of json | `"adapter"` (tasks() builds them)
 
 - **target agent (RUNNER)**: the agent under test + how to run it on a task.
-  - where: implemented in `.agentcapo/project/adapters/adapter.py::run_target`
+  - where: implemented in `.capevolve/project/adapters/adapter.py::run_target`
   - how to get it: wire your agent's entrypoint (CLI/SDK/HTTP) inside `run_target`;
     capture output + trace into a `Rollout`
   - options: in-process call | subprocess | a benchmark's own runner (`run_batch`)
@@ -27,7 +27,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   - where: a dir/file, e.g. `policy/policy.md`, `tools.json`, a skill package dir
   - capability skill: `system-prompt | tools | mcp-tool | skill-package | …`
 
-## RECOMMENDED  (defaults shown; override in acapo.yaml)
+## RECOMMENDED  (defaults shown; override in capevolve.yaml)
 
 - **splits** — `train` / `val` / `test`.
   - default: seeded ratio split `0.5 / 0.25 / 0.25` (`split_seed`, `split_train/val/test`)
@@ -53,6 +53,6 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   (the baseline phase produces them on the first val eval).
 
 ## Notes
-- The intake script scaffolds `.agentcapo/project/` from the template; fill the
-  adapter + `acapo.yaml`, then run `acapo check` (the hard gate).
+- The intake script scaffolds `.capevolve/project/` from the template; fill the
+  adapter + `capevolve.yaml`, then run `cap-evolve check` (the hard gate).
 - Paths are relative to the project working dir unless absolute.

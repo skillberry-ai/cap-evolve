@@ -14,16 +14,16 @@ succeeds when the system prompt contains the marker `[CALC]`, so the optimizatio
 ## Run it
 ```bash
 REPO=$PWD                       # cap-evolve repo root
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
-export ACAPO_TOY_DATA=$REPO/examples/toy_calc
-export ACAPO_MOCK_SCRIPT=$REPO/examples/toy_calc/mock_script.json
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
+export CAPEVOLVE_TOY_DATA=$REPO/examples/toy_calc
+export CAPEVOLVE_MOCK_SCRIPT=$REPO/examples/toy_calc/mock_script.json
 
-D=/tmp/toy; mkdir -p $D/.agentcapo/project/adapters
-cp $REPO/examples/toy_calc/adapter.py $D/.agentcapo/project/adapters/
+D=/tmp/toy; mkdir -p $D/.capevolve/project/adapters
+cp $REPO/examples/toy_calc/adapter.py $D/.capevolve/project/adapters/
 cp -R $REPO/examples/toy_calc/capability $D/seed_capability
-cp $REPO/templates/project/acapo.yaml $D/.agentcapo/project/acapo.yaml   # defaults: system-prompt / mock / all-at-once
+cp $REPO/templates/project/capevolve.yaml $D/.capevolve/project/capevolve.yaml   # defaults: system-prompt / mock / all-at-once
 
-python3 -m agent_capo.cli run --spec $D/.agentcapo/project/acapo.yaml --project $D/.agentcapo/project --run-ts demo
+python3 -m cap_evolve.cli run --spec $D/.capevolve/project/capevolve.yaml --project $D/.capevolve/project --run-ts demo
 # -> baseline_val 0.0  ->  test_reward 1.0   (gate-accepted, test sealed) + dashboard.html
 ```
 This is exactly what `core/tests/test_e2e_slice.py` asserts.

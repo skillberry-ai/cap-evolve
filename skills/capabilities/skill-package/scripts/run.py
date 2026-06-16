@@ -9,7 +9,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import Candidate
+from cap_evolve import Candidate
 
 import abstract
 

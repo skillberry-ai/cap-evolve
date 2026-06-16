@@ -2,7 +2,7 @@
 name: baseline
 description: Establish the starting point. Use after implement-and-check and before any algorithm. Creates the run directory, freezes the seeded train/val/test split (written once), scores the unmodified seed capability on val, and records it as the candidate every algorithm must beat. Confirms there is headroom to optimize.
 component: phase
-argument-hint: "--base .agentcapo --project DIR --capability DIR"
+argument-hint: "--base .capevolve --project DIR --capability DIR"
 allowed-tools: Read, Write, Bash
 provides: [splits, baseline, candidate]
 needs: [project, tasks]
@@ -46,7 +46,7 @@ wrong and nothing later can fix it.
 
 ## How to run
 ```
-python scripts/run.py --base .agentcapo --project .agentcapo/project \
+python scripts/run.py --base .capevolve --project .capevolve/project \
     --capability seed_capability --seed 0 --ratios 0.5,0.25,0.25 \
     --max-iterations 10 --stall 2
 ```

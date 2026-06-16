@@ -262,7 +262,7 @@
     "generic": {
       "component": "optimizer",
       "path": "optimizers/generic",
-      "summary": "Drive any shell-invokable agent as the edit proposer via ACAPO_OPTIMIZER_CMD.",
+      "summary": "Drive any shell-invokable agent as the edit proposer via CAPEVOLVE_OPTIMIZER_CMD.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
@@ -284,7 +284,7 @@
     "ibm-bob": {
       "component": "optimizer",
       "path": "optimizers/ibm-bob",
-      "summary": "IBM Bob as edit proposer via AGENTS.md (configurable via ACAPO_BOB_CMD; no standard headless CLI).",
+      "summary": "IBM Bob as edit proposer via AGENTS.md (configurable via CAPEVOLVE_BOB_CMD; no standard headless CLI).",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
@@ -328,7 +328,7 @@
     "openclaw": {
       "component": "optimizer",
       "path": "optimizers/openclaw",
-      "summary": "OpenClaw as edit proposer (configurable via ACAPO_OPENCLAW_CMD).",
+      "summary": "OpenClaw as edit proposer (configurable via CAPEVOLVE_OPENCLAW_CMD).",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
@@ -372,7 +372,7 @@
     "orchestrate": {
       "component": "orchestrate",
       "path": "orchestrate/orchestrate",
-      "summary": "Autonomous end-to-end driver; sequences all phases with the acapo-check hard gate and stop rules.",
+      "summary": "Autonomous end-to-end driver; sequences all phases with the cap-evolve-check hard gate and stop rules.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
@@ -539,7 +539,7 @@
     "implement-and-check": {
       "component": "phase",
       "path": "phases/implement-and-check",
-      "summary": "HARD GATE: run acapo check + each involved skill's check until green.",
+      "summary": "HARD GATE: run cap-evolve check + each involved skill's check until green.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
@@ -566,7 +566,7 @@
     "intake": {
       "component": "phase",
       "path": "phases/intake",
-      "summary": "Phase-1 input collection: scaffold .agentcapo/project, gather inputs, ask user for missing NEEDED ones.",
+      "summary": "Phase-1 input collection: scaffold .capevolve/project, gather inputs, ask user for missing NEEDED ones.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",

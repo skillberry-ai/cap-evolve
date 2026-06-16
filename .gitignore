@@ -10,7 +10,7 @@ dist/
 venv/
 
 # cap-evolve run state (per-run, not source)
-.agentcapo/
+.capevolve/
 
 # OS
 .DS_Store

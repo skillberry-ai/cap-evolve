@@ -1,6 +1,6 @@
 component: phase
 name: implement-and-check
-summary: HARD GATE: run acapo check + each involved skill's check until green.
+summary: HARD GATE: run cap-evolve check + each involved skill's check until green.
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

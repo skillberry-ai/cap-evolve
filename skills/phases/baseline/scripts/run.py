@@ -14,13 +14,13 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import Budget, RunDir, harness
-from agent_capo.check import load_adapter
+from cap_evolve import Budget, RunDir, harness
+from cap_evolve.check import load_adapter
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="baseline")
-    p.add_argument("--base", default=".agentcapo", help="dir under which run_* is created")
+    p.add_argument("--base", default=".capevolve", help="dir under which run_* is created")
     p.add_argument("--project", required=True, help="dir with adapters/adapter.py")
     p.add_argument("--capability", required=True, help="seed capability dir")
     p.add_argument("--seed", type=int, default=0)

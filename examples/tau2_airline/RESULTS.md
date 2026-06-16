@@ -12,7 +12,7 @@ measurable target.
 
 ## Pipeline runs (real tau2 rollouts)
 
-Driven by the cap-evolve skills end to end: `acapo check` → `baseline` →
+Driven by the cap-evolve skills end to end: `cap-evolve check` → `baseline` →
 `all-at-once` (optimizer edits the policy) → `finalize` (sealed test) → `report`.
 
 | Run | split | baseline val | optimized val | gate | test (sealed) |
@@ -55,9 +55,9 @@ defaults to **multi-trial, variance-aware** evaluation and a significance gate.
 ## Reproduce
 ```bash
 # from the repo root, with .env containing RITS_API_KEY/WATSONX_* :
-export AGENT_CAPO_CORE="$PWD/core"
-export PYTHONPATH="$AGENT_CAPO_CORE:$PWD/examples/tau2_airline"
-export ACAPO_TAU2_DATA="$PWD/examples/tau2_airline/data"
+export CAPEVOLVE_CORE="$PWD/core"
+export PYTHONPATH="$CAPEVOLVE_CORE:$PWD/examples/tau2_airline"
+export CAPEVOLVE_TAU2_DATA="$PWD/examples/tau2_airline/data"
 export TAU2_MAX_CONCURRENCY=20
 
 # head-to-head A/B (degraded vs restored policy):

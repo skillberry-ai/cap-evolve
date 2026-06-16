@@ -2,7 +2,7 @@
 
 cap-evolve's one differentiator is that its numbers mean something. Optimizing a
 prompt/skill/tool against a metric is trivially gameable — you can hill-climb on
-the same data you report. The substrate (`agent_capo`) makes that hard *by
+the same data you report. The substrate (`cap_evolve`) makes that hard *by
 construction*, and the rules below are enforced in code, not just documented.
 
 ## The four guarantees
@@ -31,7 +31,7 @@ prior agent-optimization work proved the design with a six-axis engine. cap-evol
 but moves the orchestration into skills, so the pipeline runs on any host with no
 framework lock-in. The discipline can't drift because the only place rewards are
 aggregated, splits are made, the gate is applied, and test is sealed is
-`agent_capo` — every algorithm skill calls it and physically cannot gate on
+`cap_evolve` — every algorithm skill calls it and physically cannot gate on
 train or re-score test.
 
 ## What this costs you

@@ -8,7 +8,7 @@ def main() -> int:
         import run
         if not hasattr(run, "main"):
             rep["problems"].append("run.py missing main()")
-        from agent_capo.specfile import read_yaml  # noqa: F401
+        from cap_evolve.specfile import read_yaml  # noqa: F401
         rep["notes"].append("orchestrate wiring ok")
     except Exception as e:  # noqa: BLE001
         rep["problems"].append(f"import failed: {e}")

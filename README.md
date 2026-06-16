@@ -46,7 +46,7 @@ edits the prompt, so no API is called):
 
 ```bash
 git clone <repo> cap-evolve && cd cap-evolve
-pip install ./core                         # the honest-eval substrate (CLI: acapo)
+pip install ./core                         # the honest-eval substrate (CLI: cap-evolve)
 ./install.sh                               # place skills into your agent host
 bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run end-to-end
 ```
@@ -55,7 +55,7 @@ bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run 
   "baseline_val": 0.0,        // seed prompt fails every task
   "test_reward": 1.0,         // optimized prompt, scored ONCE on the sealed test split
   "test_pass_k": {"1": 1.0},
-  "dashboard": ".agentcapo/run_*/dashboard.html"   // open in any browser
+  "dashboard": ".capevolve/run_*/dashboard.html"   // open in any browser
 }
 ```
 Open the printed `dashboard.html` to see the run. That confirms the install works.
@@ -80,7 +80,7 @@ You connect these once through a tiny **4-method adapter**
 ### Path A — let your coding agent build and run it (no Python from you)
 Open the coding agent you already use (**Claude Code**, Codex, Gemini CLI, opencode,
 …) at the repo root and tell it to follow `RUN.md`. It loads the `intake` skill, asks
-you for anything missing, **writes the adapter for you**, runs the `acapo check` gate,
+you for anything missing, **writes the adapter for you**, runs the `cap-evolve check` gate,
 then the full optimize → significance-gate → sealed-test → report loop, and prints the
 dashboard path. (This is exactly how [`examples/date_tool`](examples/date_tool) was
 built — the optimizer agent wrote the adapter from scratch and improved the tool
@@ -146,28 +146,28 @@ The exact, copy-pasteable commands for that run are in
 and the full Bob-optimizer walkthrough (phases, what Bob wrote, metrics) is in
 [`examples/tau2_airline/run_full/BOB_EXPERIMENT.md`](examples/tau2_airline/run_full/BOB_EXPERIMENT.md).
 
-### Path B — drive it yourself with the `acapo` CLI
+### Path B — drive it yourself with the `cap-evolve` CLI
 ```bash
-# 1. scaffold a project (adapter STUB + acapo.yaml + PROJECT.md)
-python3 skills/phases/intake/scripts/run.py --base .agentcapo
+# 1. scaffold a project (adapter STUB + capevolve.yaml + PROJECT.md)
+python3 skills/phases/intake/scripts/run.py --base .capevolve
 
-# 2. implement the 4 methods in .agentcapo/project/adapters/adapter.py:
+# 2. implement the 4 methods in .capevolve/project/adapters/adapter.py:
 #      tasks(split)               -> your benchmark's tasks  (id, input, target)
 #      run_target(task, cand_dir) -> run YOUR agent/skill/tool on the task w/ the candidate applied
 #      score(task, rollout)       -> reward in [0,1] + feedback
 #      apply(cand_dir, edits)     -> make the candidate "live" (often a no-op for a skill/tool dir)
 #    Fastest path: copy the closest example adapter below and edit it.
 
-# 3. fill .agentcapo/project/acapo.yaml  (capabilities / optimizer / algorithm / splits)
+# 3. fill .capevolve/project/capevolve.yaml  (capabilities / optimizer / algorithm / splits)
 
 # 4. hard gate, then run
-acapo check .agentcapo/project
-acapo run --spec .agentcapo/project/acapo.yaml --project .agentcapo/project
-open .agentcapo/run_*/dashboard.html
+cap-evolve check .capevolve/project
+cap-evolve run --spec .capevolve/project/capevolve.yaml --project .capevolve/project
+open .capevolve/run_*/dashboard.html
 ```
 
 **Start from the closest worked example** — copy its `adapter.py`, point it at your
-data, swap `capabilities` in `acapo.yaml`:
+data, swap `capabilities` in `capevolve.yaml`:
 
 | You want to optimize… | Copy this example | `capabilities:` |
 |---|---|---|
@@ -215,9 +215,9 @@ headless commands; details in `skills/optimizers/<name>/SKILL.md`.
 | OpenAI Codex CLI | `codex` | `codex exec --sandbox workspace-write …` | stable |
 | Gemini CLI | `gemini-cli` | `gemini -p … --approval-mode=yolo` | stable |
 | opencode | `opencode` | `opencode run --dangerously-skip-permissions …` | stable |
-| OpenClaw | `openclaw` | configurable (`ACAPO_OPENCLAW_CMD`) | beta |
+| OpenClaw | `openclaw` | configurable (`CAPEVOLVE_OPENCLAW_CMD`) | beta |
 | IBM Bob | `ibm-bob` | via `AGENTS.md` (configurable) | beta |
-| Any CLI agent | `generic` | `ACAPO_OPTIMIZER_CMD` template | stable |
+| Any CLI agent | `generic` | `CAPEVOLVE_OPTIMIZER_CMD` template | stable |
 | (tests / CI) | `mock` | deterministic, zero-API | stable |
 
 `install.sh` auto-detects each host's skill dir (Claude Code `.claude/skills`,
@@ -225,16 +225,16 @@ Codex `.agents/skills`, opencode native, Gemini extensions, …).
 
 ## Install
 ```bash
-pip install ./core            # package: cap-evolve-core, CLI: acapo
+pip install ./core            # package: cap-evolve-core, CLI: cap-evolve
 ./install.sh                  # copy skills into your host's skills dir (optionally --host <name>)
 ```
 
 ## Usage (swap one word)
 
-Pick the optimizer in `acapo.yaml`; the loop is identical — only the host changes:
+Pick the optimizer in `capevolve.yaml`; the loop is identical — only the host changes:
 
 ```yaml
-# .agentcapo/project/acapo.yaml
+# .capevolve/project/capevolve.yaml
 capabilities: [system-prompt, tools]   # list of capabilities to optimize jointly
                                        #   any of: system-prompt | tools | mcp-tool | skill-package
 optimizer_skill:  claude-code      # ← swap: codex | gemini-cli | opencode | generic | mock
@@ -243,19 +243,19 @@ num_trials: 4
 store: git                         # versions every iteration; or: copy | command (e.g. a skills store)
 ```
 ```bash
-python3 -m agent_capo.cli run --spec .agentcapo/project/acapo.yaml --project .agentcapo/project
+python3 -m cap_evolve.cli run --spec .capevolve/project/capevolve.yaml --project .capevolve/project
 ```
 
 ## How it works
-1. **Intake** — interview the user, scaffold `.agentcapo/project/`, gather inputs (ask if missing).
-2. **Implement & check** — fill the 4-method adapter (`tasks · run_target · score · apply`); `acapo check` is a hard gate.
+1. **Intake** — interview the user, scaffold `.capevolve/project/`, gather inputs (ask if missing).
+2. **Implement & check** — fill the 4-method adapter (`tasks · run_target · score · apply`); `cap-evolve check` is a hard gate.
 3. **Baseline** — freeze seeded train/val/test (test **sealed**), score the seed on val.
 4. **Optimize** — each iteration: diagnose failing traces → the optimizer edits a candidate → score on **val** → a **significance gate** (Δ > k·SE) accepts or rejects → commit to git, update memory.
 5. **Finalize** — score the best candidate on the **sealed test split, exactly once**.
 6. **Report** — `report.md` + a self-contained `dashboard.html`.
 
 Honesty is enforced in code, not docs: the only place rewards are aggregated,
-splits are made, the gate is applied, and test is sealed is `agent_capo` —
+splits are made, the gate is applied, and test is sealed is `cap_evolve` —
 see [docs/HONEST_EVAL.md](docs/HONEST_EVAL.md). You implement four adapter methods
 once; everything else is provided ([docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md)).
 

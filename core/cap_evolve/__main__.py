@@ -1,4 +1,4 @@
-"""``python -m agent_capo <command>`` — JSON-over-stdout entry for any host.
+"""``python -m cap_evolve <command>`` — JSON-over-stdout entry for any host.
 
 Skills that can't import the package call these subcommands and parse the JSON.
 Keep this surface small and stable; it is the host-agnostic contract.
@@ -22,7 +22,7 @@ def _cmd_version(argv: list[str]) -> int:
 def _cmd_splits(argv: list[str]) -> int:
     import argparse
 
-    p = argparse.ArgumentParser(prog="agent_capo splits")
+    p = argparse.ArgumentParser(prog="cap_evolve splits")
     p.add_argument("--ids", required=True, help="comma-separated task ids OR @path to a file of ids (one per line)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--ratios", default="0.5,0.25,0.25")
@@ -48,7 +48,7 @@ COMMANDS = {
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: python -m agent_capo {version|splits|check} [args]", file=sys.stderr)
+        print("usage: python -m cap_evolve {version|splits|check} [args]", file=sys.stderr)
         return 0 if argv else 2
     cmd, rest = argv[0], argv[1:]
     fn = COMMANDS.get(cmd)

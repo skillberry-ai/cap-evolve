@@ -15,16 +15,16 @@ Zero-API and deterministic; asserted by `core/tests/test_new_benchmark.py`.
 ## Run it
 ```bash
 REPO=$PWD
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
-export ACAPO_JSON_DATA=$REPO/examples/json_extract
-export ACAPO_MOCK_SCRIPT=$REPO/examples/json_extract/mock_script.json
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
+export CAPEVOLVE_JSON_DATA=$REPO/examples/json_extract
+export CAPEVOLVE_MOCK_SCRIPT=$REPO/examples/json_extract/mock_script.json
 
-D=/tmp/jx; mkdir -p $D/.agentcapo/project/adapters
-cp $REPO/examples/json_extract/adapter.py $D/.agentcapo/project/adapters/
+D=/tmp/jx; mkdir -p $D/.capevolve/project/adapters
+cp $REPO/examples/json_extract/adapter.py $D/.capevolve/project/adapters/
 cp -R $REPO/examples/json_extract/capability $D/seed_capability
-cp $REPO/templates/project/acapo.yaml $D/.agentcapo/project/acapo.yaml
+cp $REPO/templates/project/capevolve.yaml $D/.capevolve/project/capevolve.yaml
 
-python3 -m agent_capo.cli run --spec $D/.agentcapo/project/acapo.yaml --project $D/.agentcapo/project --run-ts demo
+python3 -m cap_evolve.cli run --spec $D/.capevolve/project/capevolve.yaml --project $D/.capevolve/project --run-ts demo
 # -> baseline_val 0.0  ->  test_reward 1.0  + dashboard.html
 ```
 

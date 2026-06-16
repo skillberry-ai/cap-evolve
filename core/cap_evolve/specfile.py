@@ -1,6 +1,6 @@
-"""Tiny tolerant YAML reader for the configs agent-capo authors itself.
+"""Tiny tolerant YAML reader for the configs cap-evolve authors itself.
 
-acapo.yaml and meta.yaml are small, controlled documents — we don't want a YAML
+capevolve.yaml and meta.yaml are small, controlled documents — we don't want a YAML
 dependency just to read them. Uses PyYAML if present, else a minimal reader that
 handles: ``key: scalar``, ``key: [a, b]``, one level of nesting under ``key:``,
 ``# comments``, and ``--- frontmatter ---`` blocks. Good enough for our schema;

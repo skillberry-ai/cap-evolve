@@ -2,12 +2,12 @@
 
 The loop calls this with ``--workdir`` (a copy of the candidate) and ``--prompt``
 (INSTRUCTIONS.md). This script in turn invokes whatever agent command you set in
-``ACAPO_OPTIMIZER_CMD`` (a template with ``{workdir}`` and ``{prompt}``), with cwd
+``CAPEVOLVE_OPTIMIZER_CMD`` (a template with ``{workdir}`` and ``{prompt}``), with cwd
 set to the workdir so the agent edits files in place. This is the escape hatch
 that makes "any optimizer" literally true — if your agent has a CLI, it plugs in.
 
 Example:
-    export ACAPO_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'
+    export CAPEVOLVE_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'
 """
 
 from __future__ import annotations
@@ -27,13 +27,13 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="generic optimizer")
     p.add_argument("--workdir", required=True)
     p.add_argument("--prompt", required=True)
-    p.add_argument("--cmd", default=None, help="override ACAPO_OPTIMIZER_CMD")
+    p.add_argument("--cmd", default=None, help="override CAPEVOLVE_OPTIMIZER_CMD")
     args = p.parse_args(argv)
 
-    template = args.cmd or os.environ.get("ACAPO_OPTIMIZER_CMD")
+    template = args.cmd or os.environ.get("CAPEVOLVE_OPTIMIZER_CMD")
     if not template:
         print(json.dumps({"optimizer": "generic", "error":
-              "set ACAPO_OPTIMIZER_CMD (or --cmd) to your agent's edit command "
+              "set CAPEVOLVE_OPTIMIZER_CMD (or --cmd) to your agent's edit command "
               "with {workdir} and {prompt} placeholders"}))
         return 2
     cmd = [c.replace("{workdir}", args.workdir).replace("{prompt}", args.prompt)

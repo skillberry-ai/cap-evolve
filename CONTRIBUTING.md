@@ -6,7 +6,7 @@ touching core — you add a self-contained skill.
 ## Dev setup
 ```bash
 git clone <repo> cap-evolve && cd cap-evolve
-pip install -e ./core        # or: export AGENT_CAPO_CORE=$PWD/core
+pip install -e ./core        # or: export CAPEVOLVE_CORE=$PWD/core
 python -m pytest core/tests -q          # 28 tests, zero API cost
 python skills/_registry/build_manifest.py skills   # rebuild the registry
 ```
@@ -25,7 +25,7 @@ python skills/_registry/build_manifest.py skills   # rebuild the registry
 See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
 
 ## House rules (don't regress)
-- **Honesty lives only in `core/agent_capo`** — never fork splits/gate/seal
+- **Honesty lives only in `core/cap_evolve`** — never fork splits/gate/seal
   into a skill. Gate on val, seal test, report variance.
 - **Skills stay host-agnostic.** `scripts/run.py` must print a single JSON object
   to stdout (the contract), and must not depend on a specific agent host.
@@ -39,5 +39,5 @@ See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
 - Ground claims in cited papers/repos/docs.
 
 ## Reporting bugs / ideas
-Open an issue with a minimal repro (a tiny adapter + `acapo check` output is ideal).
+Open an issue with a minimal repro (a tiny adapter + `cap-evolve check` output is ideal).
 The roadmap in [docs/ROADMAP.md](docs/ROADMAP.md) lists prioritized work.

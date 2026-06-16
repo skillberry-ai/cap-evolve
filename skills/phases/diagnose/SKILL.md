@@ -55,7 +55,7 @@ analysts; issue-clustering in evolutionary loops).
 
 ## How to run
 ```
-python scripts/run.py --run-dir .agentcapo/run_XXXX --tag seed
+python scripts/run.py --run-dir .capevolve/run_XXXX --tag seed
 ```
 Run it on the current best's val rollouts each round; feed `reflective_dataset` +
 `clusters` into the algorithm's proposal prompt, and hand `kept_good` to the gate.

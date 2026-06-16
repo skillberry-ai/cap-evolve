@@ -45,7 +45,7 @@ Key flags (verified against the current CLI reference):
   gates — only reach for it if a sandboxed edit also needs to run shell/network freely.)
 - `--model <id>` — pick the model. Accepts the latest-model aliases `opus`, `sonnet`,
   `haiku`, `fable`, or a full id like `claude-sonnet-4-6`. Also settable via
-  `ACAPO_OPTIMIZER_MODEL` (the skill maps it to `--model`) or the `ANTHROPIC_MODEL` env var.
+  `CAPEVOLVE_OPTIMIZER_MODEL` (the skill maps it to `--model`) or the `ANTHROPIC_MODEL` env var.
 - `--output-format json` (or `stream-json`) — structured result if you want to parse the
   run programmatically instead of reading prose stdout.
 - `--add-dir <path>` — grant read/edit access to extra directories (rarely needed since

@@ -1,6 +1,6 @@
 component: phase
 name: intake
-summary: Phase-1 input collection: scaffold .agentcapo/project, gather inputs, ask user for missing NEEDED ones.
+summary: Phase-1 input collection: scaffold .capevolve/project, gather inputs, ask user for missing NEEDED ones.
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

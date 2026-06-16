@@ -48,6 +48,6 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
     evolutionary content optimization.
 
 ## Design tenets (don't regress)
-- The honesty guarantees live only in `agent_capo` — never fork them.
+- The honesty guarantees live only in `cap_evolve` — never fork them.
 - Every user-facing capability is a drop-in skill; adding one never edits core.
 - Skills stay host-agnostic; the plugin is a convenience, not a requirement.

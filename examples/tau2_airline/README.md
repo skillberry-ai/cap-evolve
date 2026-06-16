@@ -22,31 +22,31 @@ See **[RESULTS.md](RESULTS.md)** for measured outcomes (A/B Δ = +0.40 reward).
 ## Prerequisites
 1. `.env` (repo root) with `RITS_API_KEY` (and `WATSONX_*`). The runtime loads it.
 2. tau2-bench importable (`pip install -e ../tau2-bench` or it's already on PYTHONPATH).
-3. `pip install ./core` (or `export AGENT_CAPO_CORE=$PWD/core`).
+3. `pip install ./core` (or `export CAPEVOLVE_CORE=$PWD/core`).
 
 ## Run the full skill pipeline
 ```bash
 REPO=$PWD
-export AGENT_CAPO_CORE="$REPO/core"
-export ACAPO_TAU2_DATA="$REPO/examples/tau2_airline/data"
-export ACAPO_TAU2_TASK_IDS="0,1,26,39,41,43,45,49"   # cancellation tasks
+export CAPEVOLVE_CORE="$REPO/core"
+export CAPEVOLVE_TAU2_DATA="$REPO/examples/tau2_airline/data"
+export CAPEVOLVE_TAU2_TASK_IDS="0,1,26,39,41,43,45,49"   # cancellation tasks
 export TAU2_MAX_CONCURRENCY=20
 
 # scaffold a project, wire the adapter:
-mkdir -p run/.agentcapo/project/adapters && cd run
-cp $REPO/examples/tau2_airline/adapter.py .agentcapo/project/adapters/
-cp $REPO/examples/tau2_airline/tau2_runtime.py .agentcapo/project/adapters/
+mkdir -p run/.capevolve/project/adapters && cd run
+cp $REPO/examples/tau2_airline/adapter.py .capevolve/project/adapters/
+cp $REPO/examples/tau2_airline/tau2_runtime.py .capevolve/project/adapters/
 cp -R $REPO/examples/tau2_airline/policy_degraded seed_policy
 cp $REPO/examples/tau2_airline/mock_script.json .
-export PYTHONPATH="$AGENT_CAPO_CORE:$PWD/.agentcapo/project/adapters"
-export ACAPO_MOCK_SCRIPT="$PWD/mock_script.json"
+export PYTHONPATH="$CAPEVOLVE_CORE:$PWD/.capevolve/project/adapters"
+export CAPEVOLVE_MOCK_SCRIPT="$PWD/mock_script.json"
 
-python3 -m agent_capo check .agentcapo/project                 # HARD GATE
-python3 $REPO/skills/phases/baseline/scripts/run.py   --base .agentcapo --project .agentcapo/project --capability seed_policy --n-trials 2 --max-iterations 1 --run-ts demo
+python3 -m cap_evolve check .capevolve/project                 # HARD GATE
+python3 $REPO/skills/phases/baseline/scripts/run.py   --base .capevolve --project .capevolve/project --capability seed_policy --n-trials 2 --max-iterations 1 --run-ts demo
 OPT="python3 $REPO/skills/optimizers/mock/scripts/run.py --workdir {workdir} --prompt {prompt}"
-python3 $REPO/skills/algorithms/all-at-once/scripts/run.py --run-dir .agentcapo/run_demo --project .agentcapo/project --optimizer "$OPT" --max-iterations 1 --n-trials 2
-python3 $REPO/skills/phases/finalize/scripts/run.py   --run-dir .agentcapo/run_demo --project .agentcapo/project --n-trials 2
-python3 $REPO/skills/phases/report/scripts/run.py     --run-dir .agentcapo/run_demo
+python3 $REPO/skills/algorithms/all-at-once/scripts/run.py --run-dir .capevolve/run_demo --project .capevolve/project --optimizer "$OPT" --max-iterations 1 --n-trials 2
+python3 $REPO/skills/phases/finalize/scripts/run.py   --run-dir .capevolve/run_demo --project .capevolve/project --n-trials 2
+python3 $REPO/skills/phases/report/scripts/run.py     --run-dir .capevolve/run_demo
 ```
 
 To use a **real optimizer** instead of the mock, swap the `--optimizer` command for

@@ -31,7 +31,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="opencode optimizer")
     p.add_argument("--workdir", required=True)
     p.add_argument("--prompt", required=True)
-    p.add_argument("--model", default=os.environ.get("ACAPO_OPTIMIZER_MODEL") or None)
+    p.add_argument("--model", default=os.environ.get("CAPEVOLVE_OPTIMIZER_MODEL") or None)
     args = p.parse_args(argv)
     if shutil.which("opencode") is None:
         print(json.dumps({"optimizer": "opencode", "error": "the `opencode` CLI is not on PATH"}))

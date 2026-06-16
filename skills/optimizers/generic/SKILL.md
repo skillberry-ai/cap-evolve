@@ -1,6 +1,6 @@
 ---
 name: generic
-description: Use ANY shell-invokable coding agent as the edit proposer. Use when your optimizer of choice has a CLI but no dedicated agent-capo optimizer skill yet — set ACAPO_OPTIMIZER_CMD to its edit command (with {workdir} and {prompt} placeholders) and it plugs into the loop. This is the escape hatch that makes "any optimizer" literally true.
+description: Use ANY shell-invokable coding agent as the edit proposer. Use when your optimizer of choice has a CLI but no dedicated cap-evolve optimizer skill yet — set CAPEVOLVE_OPTIMIZER_CMD to its edit command (with {workdir} and {prompt} placeholders) and it plugs into the loop. This is the escape hatch that makes "any optimizer" literally true.
 component: optimizer
 argument-hint: "--workdir DIR --prompt FILE [--cmd 'agent --dir {workdir} --inst {prompt}']"
 allowed-tools: Read, Write, Bash
@@ -17,7 +17,7 @@ so the agent edits files in place and exits.
 
 ## Configure
 ```bash
-export ACAPO_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'
+export CAPEVOLVE_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'
 # or pass it per-run with --cmd '...'
 ```
 Placeholders substituted at run time:
@@ -49,7 +49,7 @@ only when no dedicated skill exists for your agent.
 ## How to run
 ```bash
 python scripts/check.py
-ACAPO_OPTIMIZER_CMD='...' python scripts/run.py --workdir <copy> --prompt <INSTRUCTIONS.md>
+CAPEVOLVE_OPTIMIZER_CMD='...' python scripts/run.py --workdir <copy> --prompt <INSTRUCTIONS.md>
 ```
 
 ## References

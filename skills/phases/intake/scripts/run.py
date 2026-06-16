@@ -1,6 +1,6 @@
-"""intake — scaffold the per-run acapo project from the template.
+"""intake — scaffold the per-run cap-evolve project from the template.
 
-Creates ``.agentcapo/project/`` (adapters stub, inputs/, acapo.yaml, PROJECT.md) so
+Creates ``.capevolve/project/`` (adapters stub, inputs/, capevolve.yaml, PROJECT.md) so
 the agent can fill the 4-method adapter and run spec. This is the mechanical part
 of intake; the *interview* (deciding capability/optimizer/algorithm/inputs and
 asking the user for missing NEEDED inputs) is driven by SKILL.md + INPUTS.md.
@@ -26,7 +26,7 @@ def find_templates() -> Path:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="intake")
-    p.add_argument("--base", default=".agentcapo")
+    p.add_argument("--base", default=".capevolve")
     p.add_argument("--templates", default=None)
     p.add_argument("--force", action="store_true")
     args = p.parse_args(argv)
@@ -48,9 +48,9 @@ def main(argv=None) -> int:
         "created": created,
         "next": [
             "implement the 4 methods in adapters/adapter.py",
-            "fill acapo.yaml (capability / optimizer / algorithm / budget)",
+            "fill capevolve.yaml (capability / optimizer / algorithm / budget)",
             "resolve NEEDED inputs (ask the user for any that are missing)",
-            "run: acapo check " + str(project),
+            "run: cap-evolve check " + str(project),
         ],
     }, indent=2))
     return 0

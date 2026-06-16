@@ -1,8 +1,8 @@
 ---
 name: intake
-description: Phase 1 of the pipeline — collect inputs and scaffold the run. Use at the very start of any optimization. Interviews the user to decide what capability to optimize, which runner/optimizer/algorithm to use, and where the data is; scaffolds .agentcapo/project/ (adapter stub, acapo.yaml, PROJECT.md); and for every NEEDED input that is missing, asks the user (quoting path, how to retrieve it, alternatives) rather than fabricating it.
+description: Phase 1 of the pipeline — collect inputs and scaffold the run. Use at the very start of any optimization. Interviews the user to decide what capability to optimize, which runner/optimizer/algorithm to use, and where the data is; scaffolds .capevolve/project/ (adapter stub, capevolve.yaml, PROJECT.md); and for every NEEDED input that is missing, asks the user (quoting path, how to retrieve it, alternatives) rather than fabricating it.
 component: phase
-argument-hint: "--base .agentcapo"
+argument-hint: "--base .capevolve"
 allowed-tools: Read, Write, Edit, Bash
 provides: [project, tasks]
 needs: []
@@ -12,14 +12,14 @@ sources: []
 # intake — collect inputs, scaffold the project
 
 The first phase. Its job is to turn a vague wish ("make this agent better at X")
-into a concrete, runnable project: a filled `acapo.yaml`, an adapter ready to
+into a concrete, runnable project: a filled `capevolve.yaml`, an adapter ready to
 implement, and **every NEEDED input resolved before any budget is spent**. Intake
 is cheap; a botched intake is not — an unresolved input discovered three phases
 later means a wasted optimization run and a meaningless number.
 
 ## Inputs / outputs (manifest tokens)
 - **needs:** *(nothing)* — intake is the pipeline entry point.
-- **provides:** `project` (the scaffolded `.agentcapo/project/`) and `tasks` (the
+- **provides:** `project` (the scaffolded `.capevolve/project/`) and `tasks` (the
   evaluation dataset, resolved either to a path or to the adapter's `tasks()`).
 
 Downstream, `implement-and-check` consumes `project`; `baseline` consumes
@@ -30,8 +30,8 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
 1. **Interview** (driven by this SKILL.md): pick the capability skill (*what* is
    optimized), the optimizer (*which* coding agent proposes edits), the algorithm
    (*the search loop*), the dataset, the splits, and the budget.
-2. **Scaffold** `.agentcapo/project/` from the template (`scripts/run.py`):
-   adapter stub, `inputs/`, `acapo.yaml`, `PROJECT.md`.
+2. **Scaffold** `.capevolve/project/` from the template (`scripts/run.py`):
+   adapter stub, `inputs/`, `capevolve.yaml`, `PROJECT.md`.
 3. **Resolve inputs** per `inputs/INPUTS.md` — the contract below.
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
@@ -61,28 +61,28 @@ spec; this SKILL.md is just the procedure for honoring it.
 
 ## How to run
 ```
-python scripts/run.py --base .agentcapo        # scaffold .agentcapo/project
+python scripts/run.py --base .capevolve        # scaffold .capevolve/project
 ```
 The script is purely mechanical: it copies the template and prints the next
 steps. The *judgment* — interviewing, choosing components, and running the
 ask-if-missing loop — is yours, driven by this SKILL.md and `inputs/INPUTS.md`.
 
-Then implement `adapters/adapter.py`, fill `acapo.yaml`, and proceed to
+Then implement `adapters/adapter.py`, fill `capevolve.yaml`, and proceed to
 `implement-and-check`. Together, **intake → implement-and-check** is the *full
-integration*: scaffold → implement the 4 adapter methods → `acapo check` green,
+integration*: scaffold → implement the 4 adapter methods → `cap-evolve check` green,
 before any budget is spent. The using-agent (e.g. the chosen optimizer) can run
 this whole integration autonomously.
 
 > **Worked example (from scratch, integration by the optimizer agent):**
 > `examples/date_tool/` — the intake script scaffolds the project, **IBM Bob**
-> implements the adapter from the stub until `acapo check` passes, then optimizes
+> implements the adapter from the stub until `cap-evolve check` passes, then optimizes
 > the capability (a tool) 0.125 → 1.0. It documents exactly what a SCRIPT does vs
 > what Bob does vs what you do.
 
 ## What good vs bad intake looks like
 - **Good:** every NEEDED input resolved to a real path or `"adapter"`; splits and
   budget chosen deliberately; each defaulted RECOMMENDED input logged in
-  `PROJECT.md`; `acapo.yaml` fully filled; the user answered every blocking
+  `PROJECT.md`; `capevolve.yaml` fully filled; the user answered every blocking
   question before the scaffold was declared done.
 - **Bad:** a tasks file that "looked plausible" was synthesized; the scorer leaks
   the gold answer into feedback; test == train with no note; budget left at a

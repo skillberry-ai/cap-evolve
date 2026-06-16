@@ -40,7 +40,7 @@ Key flags (verified against the Gemini CLI reference):
   `yolo` (auto-approve everything), `plan`. Use **`yolo`** so Gemini can write files
   unattended; the workdir is a throwaway candidate copy, so this is safe. The old
   `--yolo` / `-y` is a **deprecated** alias — the docs say to use `--approval-mode=yolo`.
-- `-m` / `--model <id>` — choose the model (default `auto`); also via `ACAPO_OPTIMIZER_MODEL`.
+- `-m` / `--model <id>` — choose the model (default `auto`); also via `CAPEVOLVE_OPTIMIZER_MODEL`.
 - `--output-format` / `-o` — `text` (default), `json`, or `stream-json` for structured runs.
 - `--include-directories <a,b>` — add directories to the workspace (rarely needed since the
   candidate dir is the cwd).

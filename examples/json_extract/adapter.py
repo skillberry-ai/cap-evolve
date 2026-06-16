@@ -17,9 +17,9 @@ import os
 import re
 from pathlib import Path
 
-from agent_capo import CapabilityAdapter, Rollout, Score, Task
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
-_DATA = Path(os.environ.get("ACAPO_JSON_DATA", Path(__file__).resolve().parent))
+_DATA = Path(os.environ.get("CAPEVOLVE_JSON_DATA", Path(__file__).resolve().parent))
 
 
 def _extract(record: str, field: str) -> str:

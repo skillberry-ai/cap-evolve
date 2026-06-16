@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -34,7 +34,7 @@ OpenClaw stores skills under `~/.openclaw/workspace/skills/<skill>/SKILL.md` and
 the subcommand/flag surface varies by build and configuration. So this skill is a
 configurable wrapper, not a hard-coded invocation.
 
-- **Configure**: `export ACAPO_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"'`
+- **Configure**: `export CAPEVOLVE_OPENCLAW_CMD='openclaw run --workspace {workdir} "{prompt_text}"'`
   (default best-guess). Placeholders: `{workdir}`, `{prompt}` (path to INSTRUCTIONS.md),
   `{prompt_text}` (its contents).
 - **The command must**: run non-interactively (no TTY prompts), auto-approve its file writes
@@ -48,7 +48,7 @@ configurable wrapper, not a hard-coded invocation.
   exact command in your hands rather than hard-coding a guess that breaks across builds.
 
 ## Sources
-- agent-capo `generic` optimizer (the same configurable-template contract, recommended
+- cap-evolve `generic` optimizer (the same configurable-template contract, recommended
   fallback): `skills/optimizers/generic/SKILL.md`
 - For comparison, the CLIs that *do* publish stable headless commands:
   Claude Code https://code.claude.com/docs/en/cli-reference ·

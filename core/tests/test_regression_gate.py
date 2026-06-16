@@ -15,16 +15,16 @@ class _Adapter:
         self.cfg = cfg_name
 
     def tasks(self, split):
-        from agent_capo import Task
+        from cap_evolve import Task
         return [Task(id=t) for t in ("A", "B", "C")]
 
     def run_target(self, task, candidate_dir, split):
-        from agent_capo import Rollout
+        from cap_evolve import Rollout
         cfg = (Path(candidate_dir) / self.cfg).read_text() if (Path(candidate_dir) / self.cfg).exists() else ""
         return Rollout(task_id=task.id, output=("pass" if task.id in cfg else "fail"))
 
     def score(self, task, rollout):
-        from agent_capo import Score
+        from cap_evolve import Score
         ok = rollout.output == "pass"
         return Score(task_id=task.id, reward=1.0 if ok else 0.0, trial_rewards=[1.0 if ok else 0.0])
 
@@ -33,16 +33,16 @@ class _Adapter:
 
 
 def test_no_regression_gate_rejects_breaking_candidate(tmp_path):
-    from agent_capo import RunDir, harness
+    from cap_evolve import RunDir, harness
 
     adapter = _Adapter()
     seed = tmp_path / "seed"
     seed.mkdir()
     (seed / "cfg.txt").write_text("A")          # A passes, B & C fail -> baseline 1/3
 
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="rg")
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="rg")
     # all three tasks in val so the gate sees them
-    from agent_capo.splits import Splits
+    from cap_evolve.splits import Splits
     run_dir.write_splits(Splits(train=[], val=["A", "B", "C"], test=[], seed=0))
     run_dir.snapshot("seed", seed)
     run_dir.set_best("seed")

@@ -17,9 +17,9 @@ sys.path.insert(0, str(EXAMPLE))
 
 @pytest.fixture(autouse=True)
 def _env(monkeypatch):
-    monkeypatch.setenv("AGENT_CAPO_CORE", str(CORE))
-    monkeypatch.setenv("ACAPO_TOY_DATA", str(EXAMPLE))
-    monkeypatch.setenv("ACAPO_MOCK_SCRIPT", str(EXAMPLE / "mock_script.json"))
+    monkeypatch.setenv("CAPEVOLVE_CORE", str(CORE))
+    monkeypatch.setenv("CAPEVOLVE_TOY_DATA", str(EXAMPLE))
+    monkeypatch.setenv("CAPEVOLVE_MOCK_SCRIPT", str(EXAMPLE / "mock_script.json"))
 
 
 def _toy_adapter():
@@ -33,13 +33,13 @@ def _toy_adapter():
 def test_git_store_and_memory(tmp_path):
     if shutil.which("git") is None:
         pytest.skip("git not available")
-    from agent_capo import Budget, RunDir, harness
-    from agent_capo.store import VersionStore
+    from cap_evolve import Budget, RunDir, harness
+    from cap_evolve.store import VersionStore
 
     adapter = _toy_adapter()
     seed = tmp_path / "seed"
     shutil.copytree(EXAMPLE / "capability", seed)
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="gs", budget=Budget(max_iterations=3, stall=3))
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="gs", budget=Budget(max_iterations=3, stall=3))
     harness.ensure_splits(adapter, run_dir, seed=0)
     base = harness.baseline(adapter, seed, run_dir=run_dir)
 

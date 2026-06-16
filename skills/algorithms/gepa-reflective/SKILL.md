@@ -108,7 +108,7 @@ selection core. See `references/concepts.md`.)
 
 ```
 python scripts/check.py
-python scripts/run.py --run-dir .agentcapo/run_XXXX --project .agentcapo/project \
+python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project \
     --optimizer "python <skills>/optimizers/<opt>/scripts/run.py --workdir {workdir} --prompt {prompt}" \
     --max-iterations 12
 ```

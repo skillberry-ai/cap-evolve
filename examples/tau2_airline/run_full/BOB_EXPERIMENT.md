@@ -4,7 +4,7 @@ The headline experiment: optimize the airline agent's **policy (system prompt)**
 **tools** with **IBM Bob** as the optimizer, against tau2-bench airline where the agent
 *and* user simulator are both **gpt-oss-120b** (IBM RITS).
 
-## Exact configuration (`acapo.yaml`)
+## Exact configuration (`capevolve.yaml`)
 ```yaml
 capabilities: [system-prompt, tools]   # policy.md (system prompt) + tools.py
 capability_path: seed_caps             # seed_caps/{policy/policy.md, tools/tools.py}
@@ -34,21 +34,21 @@ store: git                             # one commit per iteration
 
 | step | done by | what |
 |------|---------|------|
-| scaffold project | **SCRIPT** `intake/scripts/run.py` | `.agentcapo/project/` |
+| scaffold project | **SCRIPT** `intake/scripts/run.py` | `.capevolve/project/` |
 | tau2 adapter + runtime | **YOU / repo** | `adapter.py` (4 methods + `run_batch`) and `tau2_runtime.py` (RITS routing, tau2 concurrent runner, empty-turn retry). tau2 is complex infrastructure provided by the repo — *not* written by Bob (contrast the `date_tool` example, where Bob writes the adapter). |
 | seed capabilities | **YOU / repo** | `seed_caps/policy/policy.md`, `seed_caps/tools/tools.py` |
-| `acapo check` (hard gate) | **SCRIPT** | imports the adapter, 1 task × 2 trials, asserts determinism |
+| `cap-evolve check` (hard gate) | **SCRIPT** | imports the adapter, 1 task × 2 trials, asserts determinism |
 | baseline eval (val, 50×5) | **SCRIPT** `baseline` phase | `baseline.json` |
 | **propose policy+tools edits** | **BOB** (optimizer) | edits `policy.md` + `tools.py` in each candidate dir, from val feedback (tau2 reward + missed required actions + transcript) |
 | re-eval, significance gate, accept/reject | **SCRIPT** `all-at-once` + core gate | `events.jsonl`, git commit/iteration |
 | sealed test + report + dashboard | **SCRIPT** `finalize` + `report` | `report.md`, `dashboard.html` |
 
-Honesty lives entirely in `core/agent_capo` (sealed test, val-only gate, pass^k,
+Honesty lives entirely in `core/cap_evolve` (sealed test, val-only gate, pass^k,
 bootstrap CI) — Bob never touches it.
 
-## Phases that run (the sequence `acapo run` drives)
+## Phases that run (the sequence `cap-evolve run` drives)
 ```
-intake (scaffold)  →  acapo check (gate)  →  baseline (val 50×5)
+intake (scaffold)  →  cap-evolve check (gate)  →  baseline (val 50×5)
    →  all-at-once × 20  [ Bob edits policy+tools → eval val 50×5 → gate ]
    →  finalize (test 50×5, scored once)  →  report (report.md + dashboard.html)
 ```
@@ -71,10 +71,10 @@ unlike a low-leverage skills-bench task, the optimizer has real signal to climb 
 ## How it was launched
 ```bash
 REPO=/path/to/cap-evolve
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core:$R/.agentcapo/project/adapters
-export ACAPO_SKILLS_DIR=$REPO/skills ACAPO_TAU2_DATA=$REPO/examples/tau2_airline/data
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core:$R/.capevolve/project/adapters
+export CAPEVOLVE_SKILLS_DIR=$REPO/skills CAPEVOLVE_TAU2_DATA=$REPO/examples/tau2_airline/data
 export TAU2_MAX_CONCURRENCY=7 RITS_API_KEY=... BOBSHELL_API_KEY=...
-python3 -m agent_capo.cli run --spec $P/acapo.yaml --project $P --run-ts bobexp
+python3 -m cap_evolve.cli run --spec $P/capevolve.yaml --project $P --run-ts bobexp
 ```
 Results (baseline → best val → sealed test, Bob's accepted edits, dashboard) are
 appended to this file as the run completes.

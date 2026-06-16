@@ -6,7 +6,7 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
-- Honest-eval core (`agent_capo`): seeded splits with a sealed test set,
+- Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
   significance gate, multi-trial variance, pass^k + pass@k, bootstrap CIs.
 - 26 Agent Skills: phases (intake, implement-and-check, baseline, evaluate,
   diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,

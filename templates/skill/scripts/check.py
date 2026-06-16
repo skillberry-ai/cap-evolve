@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import sys
 
-import _bootstrap  # noqa: F401  (locates agent_capo)
+import _bootstrap  # noqa: F401  (locates cap_evolve)
 
 import abstract
 

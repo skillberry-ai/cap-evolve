@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -31,7 +31,7 @@ serve as the optimizer.
 
 ### What a good `run.py` invocation guarantees
 - **Headless** (no REPL/TTY prompts), **write-enabled** (edits auto-approved on a disposable
-  workdir), **cwd = workdir**, **model selectable** (`--model` / `ACAPO_OPTIMIZER_MODEL`),
+  workdir), **cwd = workdir**, **model selectable** (`--model` / `CAPEVOLVE_OPTIMIZER_MODEL`),
   and **clear absence handling** (errors with guidance if the CLI is missing; `check.py`
   still passes).
 
@@ -43,13 +43,13 @@ serve as the optimizer.
   can write files unattended. Finer control: set `OPENCODE_PERMISSION` to an inlined JSON
   permissions config.
 - **Model**: `-m` / `--model <provider/model>` (e.g. `anthropic/claude-sonnet-4-6`); also
-  `ACAPO_OPTIMIZER_MODEL`.
+  `CAPEVOLVE_OPTIMIZER_MODEL`.
 - **Auth**: `opencode auth login` (pick provider, paste key), `opencode auth list`; or set the
   provider key in the env for unattended runs. Provider-agnostic via models.dev.
 - **Other flags**: `--agent <name>`, `--format json`, `--continue`/`-c`, `--session`/`-s`,
   `--attach <url>` (with `opencode serve` to avoid MCP cold-boot on repeated runs).
-- **agent-capo native**: opencode reads Anthropic-compatible `SKILL.md` and `.claude/skills/`
-  directly, so the agent-capo skill library installs with zero translation.
+- **cap-evolve native**: opencode reads Anthropic-compatible `SKILL.md` and `.claude/skills/`
+  directly, so the cap-evolve skill library installs with zero translation.
 - **Version note**: confirm model-id format and flags with `opencode run --help`.
 
 ## Sources

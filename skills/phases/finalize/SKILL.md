@@ -22,7 +22,7 @@ split exactly once and writes `final.json`. That single number is the result.
 - **provides:** `report` — `final.json` with the test reward, `stderr`, and pass^k.
 
 ## The seal (why "exactly once")
-`agent_capo` flips a `test_used` flag the first time test is scored; any second
+`cap_evolve` flips a `test_used` flag the first time test is scored; any second
 attempt raises `TestSealError`. This is non-negotiable. The instant test informs
 *any* choice — picking between two finalists, "double-checking" a low number,
 re-running with more trials until it looks better — it stops being held out. Each
@@ -39,7 +39,7 @@ finalists, compare them on val (or a fresh held-out slice) — never on test.
 
 ## How to run
 ```
-python scripts/run.py --run-dir .agentcapo/run_XXXX --project .agentcapo/project --n-trials 3
+python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project --n-trials 3
 ```
 Use multiple trials so the headline carries an honest `stderr` and a pass^k
 reliability figure, not a single noisy point. If the split was configured with no

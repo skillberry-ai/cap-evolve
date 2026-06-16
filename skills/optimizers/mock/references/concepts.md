@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -29,7 +29,7 @@ lets *any* headless coding CLI (or this deterministic stand-in) play the role.
 The mock optimizer **fulfils the contract without a model**, so the full loop (propose →
 evaluate → gate → finalize) can be exercised in tests and CI with a reproducible outcome.
 
-- **Driven by a JSON edit script**, not an LLM: `ACAPO_MOCK_SCRIPT` env var, or
+- **Driven by a JSON edit script**, not an LLM: `CAPEVOLVE_MOCK_SCRIPT` env var, or
   `mock_script.json` in the workdir (or its parent).
 - **Script shape**:
   ```json
@@ -47,7 +47,7 @@ evaluate → gate → finalize) can be exercised in tests and CI with a reproduc
   and edits the files.
 
 ## Sources
-- agent-capo optimizer wiring (the `OptimizerFn (workdir, instructions) -> None` model and
-  how `run.py` plugs in): `core/agent_capo/harness.py`
+- cap-evolve optimizer wiring (the `OptimizerFn (workdir, instructions) -> None` model and
+  how `run.py` plugs in): `core/cap_evolve/harness.py`
 - Real optimizer skills that implement the same contract with live agents:
   `skills/optimizers/{claude-code,codex,gemini-cli,opencode}/SKILL.md`

@@ -9,8 +9,8 @@
 #   ./install.sh --host claude    # pick a known host's conventional dir
 #   ./install.sh --link           # symlink instead of copy (dev mode)
 #
-# Detection precedence: $ACAPO_SKILLS_DIR > ./.claude/skills > ~/.claude/skills
-#                       > ~/.config/<host>/skills > ~/.agentcapo/skills
+# Detection precedence: $CAPEVOLVE_SKILLS_DIR > ./.claude/skills > ~/.claude/skills
+#                       > ~/.config/<host>/skills > ~/.capevolve/skills
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 detect_dest() {
-  if [[ -n "${ACAPO_SKILLS_DIR:-}" ]]; then echo "$ACAPO_SKILLS_DIR"; return; fi
+  if [[ -n "${CAPEVOLVE_SKILLS_DIR:-}" ]]; then echo "$CAPEVOLVE_SKILLS_DIR"; return; fi
   if [[ -n "$HOST" ]]; then
     # Per-host skill dirs verified against current docs (2026). Codex uses
     # .agents/skills (NOT ~/.codex); opencode reads .claude/skills natively;
@@ -48,7 +48,7 @@ detect_dest() {
   fi
   if [[ -d "./.claude/skills" ]]; then echo "./.claude/skills"; return; fi
   if [[ -d "$HOME/.claude/skills" ]]; then echo "$HOME/.claude/skills"; return; fi
-  echo "$HOME/.agentcapo/skills"
+  echo "$HOME/.capevolve/skills"
 }
 
 [[ -n "$DEST" ]] || DEST="$(detect_dest)"
@@ -75,7 +75,7 @@ for comp in orchestrate phases capabilities algorithms optimizers; do
 done
 
 # (Re)build the manifest for both the repo (component layout) and the installed
-# tree (flat layout). build_manifest handles either, so `acapo run` works whether
+# tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether
 # it points at the repo skills or the installed dir.
 python3 "$SRC/_registry/build_manifest.py" "$SRC" || true
 python3 "$SRC/_registry/build_manifest.py" "$DEST" || true
@@ -84,6 +84,6 @@ cat <<EOF
 
 Done. Skills installed to: $DEST
 Next:
-  1) pip install $REPO_DIR/core        # the honest-eval substrate (or set AGENT_CAPO_CORE=$REPO_DIR/core)
-  2) point your agent at $REPO_DIR/RUN.md   — or run: acapo run --spec .agentcapo/project/acapo.yaml
+  1) pip install $REPO_DIR/core        # the honest-eval substrate (or set CAPEVOLVE_CORE=$REPO_DIR/core)
+  2) point your agent at $REPO_DIR/RUN.md   — or run: cap-evolve run --spec .capevolve/project/capevolve.yaml
 EOF

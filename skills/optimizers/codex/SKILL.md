@@ -38,7 +38,7 @@ Key flags (verified against the Codex CLI reference):
   workspace, no network), or `danger-full-access`. Use **`workspace-write`** here; the
   workdir is a throwaway candidate copy, so writing into it is safe. `--full-auto` is a
   **deprecated** compatibility flag — prefer `--sandbox workspace-write`.
-- `-m` / `--model <id>` — choose the model; also via `ACAPO_OPTIMIZER_MODEL`.
+- `-m` / `--model <id>` — choose the model; also via `CAPEVOLVE_OPTIMIZER_MODEL`.
 - `--cd` / `-C <dir>` — set the workspace root (the skill instead sets cwd to `--workdir`,
   which is equivalent and what the loop expects).
 - `--json` — emit newline-delimited JSON events instead of prose; pair with

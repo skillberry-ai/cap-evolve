@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-capo-core"
+name = "cap-evolve-core"
 version = "0.1.0"
-description = "Tiny stdlib-only honest-evaluation substrate for the agent-capo skills library."
+description = "Tiny stdlib-only honest-evaluation substrate for the cap-evolve skills library."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -18,10 +18,10 @@ dashboard = []    # static-HTML / Flask dashboard extras
 dev = ["pytest>=7"]
 
 [project.scripts]
-acapo = "agent_capo.cli:main"
+cap-evolve = "cap_evolve.cli:main"
 
 [tool.setuptools]
-packages = ["agent_capo"]
+packages = ["cap_evolve"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

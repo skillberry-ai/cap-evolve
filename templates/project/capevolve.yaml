@@ -1,5 +1,5 @@
 # cap-evolve run spec. The intake skill fills this by interviewing you; the
-# orchestrate skill (or `acapo run --spec`) reads it to sequence the pipeline.
+# orchestrate skill (or `cap-evolve run --spec`) reads it to sequence the pipeline.
 # Values reference skills from the installed library (skills/_registry/manifest.json).
 # Kept flat (no inline maps) so the zero-dependency reader can parse it.
 

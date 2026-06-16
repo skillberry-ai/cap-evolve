@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -31,7 +31,7 @@ serve as the optimizer.
 
 ### What a good `run.py` invocation guarantees
 - **Headless** (no REPL/TTY prompts), **write-enabled** (edits auto-approved on a disposable
-  workdir), **cwd = workdir**, **model selectable** (`--model` / `ACAPO_OPTIMIZER_MODEL`),
+  workdir), **cwd = workdir**, **model selectable** (`--model` / `CAPEVOLVE_OPTIMIZER_MODEL`),
   and **clear absence handling** (errors with guidance if the CLI is missing; `check.py`
   still passes).
 
@@ -43,7 +43,7 @@ serve as the optimizer.
 - **`--approval-mode`**: `default` | `auto_edit` (auto-accept edits only) | `yolo`
   (auto-approve everything) | `plan`. Use `yolo` to write files unattended. **`--yolo` / `-y`
   is a deprecated alias** — the docs say to use `--approval-mode=yolo`.
-- **Model**: `-m` / `--model` (default `auto`); also `ACAPO_OPTIMIZER_MODEL`.
+- **Model**: `-m` / `--model` (default `auto`); also `CAPEVOLVE_OPTIMIZER_MODEL`.
 - **Auth**: `GEMINI_API_KEY` (headless/CI; key from aistudio.google.com/apikey), Google OAuth
   (`gemini` then sign in), or Vertex (`GOOGLE_API_KEY` + `GOOGLE_GENAI_USE_VERTEXAI=true`).
 - **Context file**: reads `GEMINI.md` from the workdir.

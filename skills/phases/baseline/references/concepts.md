@@ -7,7 +7,7 @@
 
 ## Train / validation / test — the contract baseline seals
 
-agent-capo follows the standard three-way protocol:
+cap-evolve follows the standard three-way protocol:
 
 - **train** — the data the optimizer edits *against* (proposes changes from).
 - **val** — the data acceptance is decided on (the gate reads it every iteration).

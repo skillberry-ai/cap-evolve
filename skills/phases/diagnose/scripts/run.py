@@ -17,7 +17,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import RunDir
+from cap_evolve import RunDir
 
 
 def _load_val_records(run_dir: RunDir, tag: str) -> list[dict]:

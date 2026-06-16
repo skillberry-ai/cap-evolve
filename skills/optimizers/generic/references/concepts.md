@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The `generic` skill is the canonical, minimal
 expression of it: a templated shell command. The optimize loop, not the agent, owns the
 orchestration:
@@ -18,7 +18,7 @@ orchestration:
      across accepted iterations.
 3. **The loop invokes `scripts/run.py`** as
    `run.py --workdir <copy> --prompt <copy>/INSTRUCTIONS.md`. `run.py` substitutes the
-   `{workdir}` / `{prompt}` placeholders in `ACAPO_OPTIMIZER_CMD` and runs the resulting
+   `{workdir}` / `{prompt}` placeholders in `CAPEVOLVE_OPTIMIZER_CMD` and runs the resulting
    command with **cwd = `<copy>`**.
 4. **The agent edits files in place and exits.** Exit code 0 = success; non-zero is a failed
    proposal — the loop tolerates it and keeps the parent for that iteration.
@@ -30,7 +30,7 @@ The agent only ever sees a directory of files, a task, and its memory — which 
 
 ## This skill: generic templated command
 
-- **Configure**: `export ACAPO_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'`
+- **Configure**: `export CAPEVOLVE_OPTIMIZER_CMD='my-agent edit --dir {workdir} --instructions {prompt}'`
   (or pass `--cmd` per run). Placeholders: `{workdir}` (also the cwd), `{prompt}` (path to
   `INSTRUCTIONS.md`).
 - **Requirements for the wrapped agent**:

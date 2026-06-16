@@ -1,0 +1,13 @@
+4d6ce32 iter 11: ACCEPT candidate cand_0011 (val 0.556, Δ +0.052)
+1bf4f19 iter 10: reject candidate cand_0010 (val 0.468, Δ -0.036)
+7b324f4 manual accept cand_0009 (val 0.504, user: take improvement + lower gate to k_se=0.5)
+77d2377 iter 9: reject candidate cand_0009 (val 0.504, Δ +0.060)
+82d7b53 iter 8: reject candidate cand_0008 (val 0.464, Δ +0.020)
+00b4c52 iter 7: reject candidate cand_0007 (val 0.452, Δ +0.008)
+0765d67 iter 6: reject candidate cand_0006 (val 0.480, Δ +0.036)
+a2d9577 iter 5: reject candidate cand_0005 (val 0.408, Δ -0.036)
+97912ee iter 4: reject candidate cand_0004 (val 0.472, Δ +0.028)
+7c1b570 iter 3: reject candidate cand_0003 (val 0.412, Δ -0.032)
+f4b3931 iter 2: reject candidate cand_0002 (val 0.496, Δ +0.052)
+700f7ce iter 1: reject candidate cand_0001 (val 0.452, Δ +0.008)
+b9f9d5e seed: baseline candidate

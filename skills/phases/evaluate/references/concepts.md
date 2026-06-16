@@ -3,7 +3,7 @@
 > A reward without its uncertainty is half a measurement. Agents are stochastic;
 > the same candidate scored twice gives two numbers. This note is the statistical
 > backbone of `evaluate` (and therefore of the gate, which consumes its `stderr`).
-> The implementation is `agent_capo/stats.py`.
+> The implementation is `cap_evolve/stats.py`.
 
 ## Two sources of variance, one standard error
 
@@ -24,7 +24,7 @@ Reporting only one understates uncertainty. The honest figure folds both into a
 SE_total = sqrt( between_task_var / n_tasks  +  mean(per_task_SE^2) / n_tasks )
 ```
 
-This is exactly `agent_capo.stats.combined_stderr`: the between-task term is the
+This is exactly `cap_evolve.stats.combined_stderr`: the between-task term is the
 SE of the task means; the within-task term averages each task's squared trial SE.
 The gate compares candidate-vs-current using this combined SE, so getting it
 right is what stops the optimizer from "accepting" noise.
@@ -50,7 +50,7 @@ Both summarize k i.i.d. trials on a task, but they measure different things:
   computing `1 − (1 − c/n)^k`.
 
 A candidate can have high pass@k (it *can* solve the task) yet low pass^k (it
-*won't reliably*). agent-capo optimizes capabilities meant to be used repeatedly,
+*won't reliably*). cap-evolve optimizes capabilities meant to be used repeatedly,
 so pass^k is the reliability signal to watch; a wide pass^1 → pass^k drop at
 report time means the gain is fragile.
 
@@ -59,7 +59,7 @@ report time means the gain is fragile.
 The combined SE assumes roughly normal task means. For small or skewed task sets,
 a **percentile bootstrap** (Koehn 2004) is more robust: resample the per-task
 rewards with replacement B times, recompute the mean each time, and take the
-2.5th/97.5th percentiles of those means as a 95% CI. `agent_capo.stats.bootstrap_ci`
+2.5th/97.5th percentiles of those means as a 95% CI. `cap_evolve.stats.bootstrap_ci`
 implements this deterministically (fixed seed → reproducible CI). Koehn's point —
 made for MT metrics but general — is that without resampling you cannot tell
 whether a score *difference* is real or an artifact of the particular test items.
@@ -80,5 +80,5 @@ the finalize and gate references.
 - Koehn, "Statistical Significance Tests for Machine Translation Evaluation"
   (EMNLP 2004) — bootstrap resampling for score differences:
   https://aclanthology.org/W04-3250/
-- `agent_capo/stats.py` — `combined_stderr`, `pass_k`, `pass_at_k`, `bootstrap_ci`
+- `cap_evolve/stats.py` — `combined_stderr`, `pass_k`, `pass_at_k`, `bootstrap_ci`
   (the single auditable place rewards are aggregated).

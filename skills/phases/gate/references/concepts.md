@@ -3,7 +3,7 @@
 > The gate is the single rule that decides whether a candidate edit replaces the
 > current best. Get it wrong and the optimizer "improves" on noise; the held-out
 > number then disappoints and you cannot say why. Implementation:
-> `agent_capo/gate.py` (`decide`).
+> `cap_evolve/gate.py` (`decide`).
 
 ## Why a gate at all: search amplifies noise
 
@@ -89,4 +89,4 @@ mean can quietly trade away reliability.
 - Hastie, Tibshirani, Friedman, *Elements of Statistical Learning* — why
   selection happens on validation and the test set stays sealed:
   https://hastie.su.domains/ElemStatLearn/
-- `agent_capo/gate.py` — `decide` and the `TrainGateError` guard.
+- `cap_evolve/gate.py` — `decide` and the `TrainGateError` guard.

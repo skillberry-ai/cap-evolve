@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -31,7 +31,7 @@ serve as the optimizer.
 
 ### What a good `run.py` invocation guarantees
 - **Headless** (no REPL/TTY prompts), **write-enabled** (edits auto-approved on a disposable
-  workdir), **cwd = workdir**, **model selectable** (`--model` / `ACAPO_OPTIMIZER_MODEL`),
+  workdir), **cwd = workdir**, **model selectable** (`--model` / `CAPEVOLVE_OPTIMIZER_MODEL`),
   and **clear absence handling** (errors with guidance if the CLI is missing; `check.py`
   still passes).
 
@@ -43,7 +43,7 @@ serve as the optimizer.
 - **`--sandbox` / `-s`**: `read-only` | `workspace-write` | `danger-full-access`. Use
   `workspace-write` (edit files, no network). **`--full-auto` is deprecated** in favor of
   `--sandbox workspace-write`.
-- **Model**: `-m` / `--model`; also `ACAPO_OPTIMIZER_MODEL`. Reasoning effort via
+- **Model**: `-m` / `--model`; also `CAPEVOLVE_OPTIMIZER_MODEL`. Reasoning effort via
   `-c model_reasoning_effort=high`.
 - **Auth**: `codex login` (ChatGPT OAuth, cached under `~/.codex/`) or
   `codex login --with-api-key` / `OPENAI_API_KEY` for headless/CI; `--device-auth` for

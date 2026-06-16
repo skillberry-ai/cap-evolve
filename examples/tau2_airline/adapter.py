@@ -6,7 +6,7 @@ concurrent runner. Scoring is tau2's own reward in [0,1] with rich, gold-aware
 feedback the optimizer turns into general corrective rules.
 
 Env:
-  ACAPO_TAU2_TASK_IDS   comma-separated airline task ids to use (default: a small set)
+  CAPEVOLVE_TAU2_TASK_IDS   comma-separated airline task ids to use (default: a small set)
   TAU2_MAX_CONCURRENCY  parallelism for the batch runner (default 20)
 """
 
@@ -16,13 +16,13 @@ import json
 import os
 from pathlib import Path
 
-from agent_capo import CapabilityAdapter, Rollout, Score, Task
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
 import tau2_runtime as rt
 
-_DATA = Path(os.environ.get("ACAPO_TAU2_DATA", Path(__file__).resolve().parent / "data"))
-# Default: ALL airline tasks. Set ACAPO_TAU2_TASK_IDS="0,2,6,..." to use a fast subset.
-_TASK_IDS_ENV = os.environ.get("ACAPO_TAU2_TASK_IDS", "").strip()
+_DATA = Path(os.environ.get("CAPEVOLVE_TAU2_DATA", Path(__file__).resolve().parent / "data"))
+# Default: ALL airline tasks. Set CAPEVOLVE_TAU2_TASK_IDS="0,2,6,..." to use a fast subset.
+_TASK_IDS_ENV = os.environ.get("CAPEVOLVE_TAU2_TASK_IDS", "").strip()
 
 
 def _fmt_action(action) -> str:

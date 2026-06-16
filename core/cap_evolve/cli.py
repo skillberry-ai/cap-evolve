@@ -1,15 +1,15 @@
-"""The ``acapo`` CLI — a thin sequencer over the skill ``run.py`` scripts.
+"""The ``cap-evolve`` CLI — a thin sequencer over the skill ``run.py`` scripts.
 
-``acapo`` does NOT contain pipeline logic; it locates skills (via the registry
-manifest) and runs their ``scripts/run.py`` in the order a ``acapo.yaml`` spec
+``cap-evolve`` does NOT contain pipeline logic; it locates skills (via the registry
+manifest) and runs their ``scripts/run.py`` in the order a ``capevolve.yaml`` spec
 declares, threading the run dir between them. The honesty guarantees live in
-``agent_capo`` (splits/gate/seal); ``acapo`` just orchestrates.
+``cap_evolve`` (splits/gate/seal); ``cap-evolve`` just orchestrates.
 
 Subcommands:
-    acapo version
-    acapo splits  --ids ... [--seed N] [--ratios a,b,c]
-    acapo check   [project_dir]
-    acapo run     --spec .agentcapo/project/acapo.yaml   (sequences phase skills)
+    cap-evolve version
+    cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
+    cap-evolve check   [project_dir]
+    cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -28,10 +28,10 @@ from .check import run_check
 
 def _find_skills_dir() -> Path | None:
     for cand in [
-        os.environ.get("ACAPO_SKILLS_DIR"),
+        os.environ.get("CAPEVOLVE_SKILLS_DIR"),
         "./.claude/skills",
         os.path.expanduser("~/.claude/skills"),
-        os.path.expanduser("~/.agentcapo/skills"),
+        os.path.expanduser("~/.capevolve/skills"),
     ]:
         if cand and Path(cand).is_dir():
             return Path(cand)
@@ -45,7 +45,7 @@ def _find_skills_dir() -> Path | None:
 
 
 def _cmd_version(argv):
-    print(json.dumps({"acapo": __version__}))
+    print(json.dumps({"cap-evolve": __version__}))
     return 0
 
 
@@ -55,7 +55,7 @@ def _cmd_splits(argv):
 
 
 def _cmd_check(argv):
-    project = Path(argv[0]) if argv else Path(".agentcapo/project")
+    project = Path(argv[0]) if argv else Path(".capevolve/project")
     rep = run_check(project)
     print(json.dumps(rep.to_dict(), indent=2))
     return 0 if rep.ok else 1
@@ -74,9 +74,9 @@ def _cmd_run(argv):
     import subprocess
     from .specfile import read_yaml
 
-    p = argparse.ArgumentParser(prog="acapo run")
-    p.add_argument("--spec", default=".agentcapo/project/acapo.yaml")
-    p.add_argument("--project", default=".agentcapo/project")
+    p = argparse.ArgumentParser(prog="cap-evolve run")
+    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml")
+    p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--skills-dir", default=None)
     p.add_argument("--plan-only", action="store_true", help="print the command plan, don't execute")
     p.add_argument("--run-ts", default=None)
@@ -84,7 +84,7 @@ def _cmd_run(argv):
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
     if not skills_dir:
-        print(json.dumps({"error": "skills dir not found; set ACAPO_SKILLS_DIR or --skills-dir"}))
+        print(json.dumps({"error": "skills dir not found; set CAPEVOLVE_SKILLS_DIR or --skills-dir"}))
         return 1
     skills = _resolve_skills(skills_dir)
     spec = read_yaml(Path(args.spec).read_text())
@@ -96,13 +96,13 @@ def _cmd_run(argv):
         return str(skills_dir / s["path"] / s["entry"])
 
     # All steps run in ONE consistent working directory: the dir that contains
-    # .agentcapo/ (i.e. project's grandparent). Paths are kept relative to it so the
-    # run_dir baseline prints ("..agentcapo/run_X") resolves identically in every
-    # subprocess regardless of where `acapo run` was invoked from.
+    # .capevolve/ (i.e. project's grandparent). Paths are kept relative to it so the
+    # run_dir baseline prints ("..capevolve/run_X") resolves identically in every
+    # subprocess regardless of where `cap-evolve run` was invoked from.
     proj_abs = Path(args.project).resolve()
     workdir = proj_abs.parent.parent
-    project = str(proj_abs.relative_to(workdir))      # ".agentcapo/project"
-    base = str(proj_abs.parent.relative_to(workdir))  # ".agentcapo"
+    project = str(proj_abs.relative_to(workdir))      # ".capevolve/project"
+    base = str(proj_abs.parent.relative_to(workdir))  # ".capevolve"
     cap_path = spec.get("capability_path", "seed_capability")
     ratios = f"{spec.get('split_train',0.5)},{spec.get('split_val',0.25)},{spec.get('split_test',0.25)}"
     opt_cmd = (f"{sys.executable} {skill_run(spec['optimizer_skill'])} "
@@ -178,7 +178,7 @@ COMMANDS = {
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: acapo {version|splits|check|run} [args]", file=sys.stderr)
+        print("usage: cap-evolve {version|splits|check|run} [args]", file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:

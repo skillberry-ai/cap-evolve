@@ -22,9 +22,9 @@ drives the loop.
    · `score` · `apply`. (See [`adapter.py`](adapter.py) and
    [docs/ADAPTER_CONTRACT.md](../../docs/ADAPTER_CONTRACT.md).)
 2. **Pick** the capability (`capabilities: [skill-package]`), optimizer (`ibm-bob`),
-   and algorithm (`all-at-once`) in `acapo.yaml`.
-3. `acapo check` — the hard gate (adapter implemented + deterministic scorer).
-4. `acapo run` — baseline → optimize → finalize (sealed test) → report + dashboard.
+   and algorithm (`all-at-once`) in `capevolve.yaml`.
+3. `cap-evolve check` — the hard gate (adapter implemented + deterministic scorer).
+4. `cap-evolve run` — baseline → optimize → finalize (sealed test) → report + dashboard.
 
 No cap-evolve core/skill changes are needed for a new benchmark.
 
@@ -33,7 +33,7 @@ No cap-evolve core/skill changes are needed for a new benchmark.
 ## Step 0 — prerequisites
 ```bash
 # cap-evolve
-pip install ./core            # or export AGENT_CAPO_CORE=$PWD/core
+pip install ./core            # or export CAPEVOLVE_CORE=$PWD/core
 
 # skills-bench (Docker required; provides the `bench` CLI)
 git clone https://github.com/benchflow-ai/skillsbench && cd skillsbench
@@ -78,7 +78,7 @@ model_list:
       api_base: https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/gpt-oss-120b/v1
       api_key: rits
       extra_headers: { RITS_API_KEY: <YOUR_RITS_API_KEY> }
-general_settings: { master_key: sk-bridge-acapo }
+general_settings: { master_key: sk-bridge-cap-evolve }
 litellm_settings: { drop_params: true }
 ```
 ```bash
@@ -86,7 +86,7 @@ litellm_settings: { drop_params: true }
 skillsbench/.venv/bin/litellm --config /tmp/rits_bridge.yaml --port 8123 --host 127.0.0.1 &
 # benchflow's `vllm` provider takes its upstream from BENCHFLOW_PROVIDER_BASE_URL:
 export BENCHFLOW_PROVIDER_BASE_URL=http://127.0.0.1:8123/v1
-export BENCHFLOW_PROVIDER_API_KEY=sk-bridge-acapo OPENAI_API_KEY=sk-bridge-acapo
+export BENCHFLOW_PROVIDER_API_KEY=sk-bridge-cap-evolve OPENAI_API_KEY=sk-bridge-cap-evolve
 ```
 
 A model already on **Bearer auth** (OpenAI / Anthropic / Gemini, or a vLLM server)
@@ -95,29 +95,29 @@ needs no bridge — set `BENCHFLOW_PROVIDER_BASE_URL`/`OPENAI_API_KEY` to it dir
 ## Step 4 — wire + check
 ```bash
 REPO=/path/to/cap-evolve
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
-export ACAPO_SKILLSBENCH_ROOT=/path/to/skillsbench
-export ACAPO_SKB_TASK_IDS="offer-letter-generator,powerlifting-coef-calc"
-export ACAPO_SKB_AGENT=pi-acp ACAPO_SKB_MODEL=vllm/gpt-oss-120b ACAPO_SKB_SANDBOX=docker
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
+export CAPEVOLVE_SKILLSBENCH_ROOT=/path/to/skillsbench
+export CAPEVOLVE_SKB_TASK_IDS="offer-letter-generator,powerlifting-coef-calc"
+export CAPEVOLVE_SKB_AGENT=pi-acp CAPEVOLVE_SKB_MODEL=vllm/gpt-oss-120b CAPEVOLVE_SKB_SANDBOX=docker
 
-R=/tmp/skb; rm -rf $R; mkdir -p $R/.agentcapo/project/adapters
-cp $REPO/examples/skills_bench/adapter.py   $R/.agentcapo/project/adapters/
+R=/tmp/skb; rm -rf $R; mkdir -p $R/.capevolve/project/adapters
+cp $REPO/examples/skills_bench/adapter.py   $R/.capevolve/project/adapters/
 cp -R $REPO/examples/skills_bench/seed_skill $R/seed_skill
-cp $REPO/examples/skills_bench/acapo.yaml    $R/.agentcapo/project/acapo.yaml
+cp $REPO/examples/skills_bench/capevolve.yaml    $R/.capevolve/project/capevolve.yaml
 
-python3 -m agent_capo.cli check $R/.agentcapo/project          # HARD GATE
+python3 -m cap_evolve.cli check $R/.capevolve/project          # HARD GATE
 ```
 
 ## Step 5 — run
 ```bash
 export BOBSHELL_API_KEY="$(grep ^BOBSHELL_API_KEY= .env | cut -d= -f2- | tr -d '\"'\'' ')"
-python3 -m agent_capo.cli run --project $R/.agentcapo/project
+python3 -m cap_evolve.cli run --project $R/.capevolve/project
 # baseline (gpt-oss-120b + seed skill on val) -> Bob edits SKILL.md -> re-score ->
 # significance gate -> sealed test -> report.md + dashboard.html
-git -C $R/.agentcapo/run_* log --oneline     # one commit per iteration
+git -C $R/.capevolve/run_* log --oneline     # one commit per iteration
 ```
 
-`acapo.yaml` here pins `split_seed: 0` so **val = offer-letter-generator** (the
+`capevolve.yaml` here pins `split_seed: 0` so **val = offer-letter-generator** (the
 skill-sensitive docx task — the thin seed skill omits nested-table / header /
 conditional handling, which is the optimization headroom) and **test =
 powerlifting-coef-calc** (held out, sealed).
@@ -126,7 +126,7 @@ powerlifting-coef-calc** (held out, sealed).
 
 `--agent oracle` runs each task's reference solution — no model, no bridge, fast.
 Use it to confirm a task is self-contained (oracle reward 1.0) before spending model
-budget. `ACAPO_SKB_AGENT=oracle acapo check`/`run` exercises the whole adapter
+budget. `CAPEVOLVE_SKB_AGENT=oracle cap-evolve check`/`run` exercises the whole adapter
 (tasks → run_target → score) deterministically. Note: oracle ignores the injected
 skill, so it shows **no** optimization signal — only the harness wiring.
 

@@ -1,7 +1,7 @@
 """openclaw optimizer — drive OpenClaw as the edit proposer (configurable).
 
 OpenClaw's headless CLI flags are less standardized than claude/codex/gemini, so
-this skill is a thin, documented wrapper: set ``ACAPO_OPENCLAW_CMD`` to OpenClaw's
+this skill is a thin, documented wrapper: set ``CAPEVOLVE_OPENCLAW_CMD`` to OpenClaw's
 non-interactive edit command (with ``{workdir}`` and ``{prompt}`` placeholders).
 Defaults to a best-guess ``openclaw run`` form that you should verify against your
 installed version.
@@ -29,13 +29,13 @@ def main(argv=None) -> int:
     p.add_argument("--prompt", required=True)
     args = p.parse_args(argv)
 
-    template = os.environ.get("ACAPO_OPENCLAW_CMD", DEFAULT_CMD)
+    template = os.environ.get("CAPEVOLVE_OPENCLAW_CMD", DEFAULT_CMD)
     instr = Path(args.prompt).read_text(encoding="utf-8")
     cmd = [c.replace("{workdir}", args.workdir).replace("{prompt}", args.prompt)
             .replace("{prompt_text}", instr) for c in shlex.split(template)]
     if shutil.which(cmd[0]) is None:
         print(json.dumps({"optimizer": "openclaw", "error":
-              f"`{cmd[0]}` not on PATH. Set ACAPO_OPENCLAW_CMD to your OpenClaw "
+              f"`{cmd[0]}` not on PATH. Set CAPEVOLVE_OPENCLAW_CMD to your OpenClaw "
               "non-interactive edit command, or use `generic`."}))
         return 2
     proc = subprocess.run(cmd, cwd=args.workdir, capture_output=True, text=True)

@@ -5,7 +5,7 @@ import _bootstrap  # noqa: F401
 def main() -> int:
     rep = {"ok": False, "problems": [], "notes": []}
     try:
-        from agent_capo import harness
+        from cap_evolve import harness
         if not hasattr(harness, "hill_climb_loop"):
             rep["problems"].append("core harness missing hill_climb_loop")
         import run

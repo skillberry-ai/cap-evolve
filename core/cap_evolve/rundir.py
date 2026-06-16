@@ -1,6 +1,6 @@
 """Run directory: the on-disk home of a single optimization run.
 
-Layout under ``.agentcapo/run_<ts>/``::
+Layout under ``.capevolve/run_<ts>/``::
 
     state.json          # best candidate id, budget, spent, test_used
     splits.json         # the frozen train/val/test partition (sealed test)

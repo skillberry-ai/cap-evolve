@@ -1,8 +1,8 @@
 """The adapter contract — the small set of methods the OPTIMIZER agent implements.
 
-This is agent-capo's generalization device (prior agent-optimization work had 3 adapters, SkillOpt had 5;
+This is cap-evolve's generalization device (prior agent-optimization work had 3 adapters, SkillOpt had 5;
 we use 4, cleaner). The using-agent implements these once in
-``.agentcapo/project/adapters/`` so that *any* target agent, *any* benchmark, and
+``.capevolve/project/adapters/`` so that *any* target agent, *any* benchmark, and
 *any* capability can be driven by the same pipeline:
 
     tasks(split)                        -> list[Task]   # where eval data comes from
@@ -30,7 +30,7 @@ IMPLEMENT_MARKER = "IMPLEMENT ME"
 
 
 class CapabilityAdapter(ABC):
-    """Implement this in ``.agentcapo/project/adapters/adapter.py``."""
+    """Implement this in ``.capevolve/project/adapters/adapter.py``."""
 
     @abstractmethod
     def tasks(self, split: str) -> list[Task]:

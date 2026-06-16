@@ -12,14 +12,14 @@ adapter shells out to `uv run bench eval create` and reads the per-rollout
 `result.json` it writes under `--jobs-dir`.
 
 Env knobs:
-  ACAPO_SKILLSBENCH_ROOT   path to the skillsbench checkout (required)
-  ACAPO_SKB_TASK_IDS       comma-separated task ids (default: all tasks under tasks/)
-  ACAPO_SKB_AGENT          benchflow agent: oracle | opencode | openclaw | codex |
+  CAPEVOLVE_SKILLSBENCH_ROOT   path to the skillsbench checkout (required)
+  CAPEVOLVE_SKB_TASK_IDS       comma-separated task ids (default: all tasks under tasks/)
+  CAPEVOLVE_SKB_AGENT          benchflow agent: oracle | opencode | openclaw | codex |
                            claude | gemini  (default: oracle — deterministic, no model)
-  ACAPO_SKB_MODEL          litellm model id for the agent (e.g. openai/gpt-oss-120b);
+  CAPEVOLVE_SKB_MODEL          litellm model id for the agent (e.g. openai/gpt-oss-120b);
                            ignored when agent is "oracle"
-  ACAPO_SKB_SANDBOX        docker | daytona | modal (default: docker)
-  ACAPO_SKB_TIMEOUT        per-task wall-clock budget in seconds (default: 1200)
+  CAPEVOLVE_SKB_SANDBOX        docker | daytona | modal (default: docker)
+  CAPEVOLVE_SKB_TIMEOUT        per-task wall-clock budget in seconds (default: 1200)
 
 Routing a model: with a non-"oracle" agent + a model, benchflow starts a host-side
 LiteLLM proxy and the sandboxed agent talks OpenAI to it. Point that proxy at your
@@ -39,14 +39,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from agent_capo import CapabilityAdapter, Rollout, Score, Task
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
-ROOT = Path(os.environ.get("ACAPO_SKILLSBENCH_ROOT", "")).expanduser()
-AGENT = os.environ.get("ACAPO_SKB_AGENT", "oracle")
-MODEL = os.environ.get("ACAPO_SKB_MODEL", "openai/gpt-oss-120b")
-SANDBOX = os.environ.get("ACAPO_SKB_SANDBOX", "docker")
-TIMEOUT = int(os.environ.get("ACAPO_SKB_TIMEOUT", "1200"))
-_TASK_IDS = os.environ.get("ACAPO_SKB_TASK_IDS", "").strip()
+ROOT = Path(os.environ.get("CAPEVOLVE_SKILLSBENCH_ROOT", "")).expanduser()
+AGENT = os.environ.get("CAPEVOLVE_SKB_AGENT", "oracle")
+MODEL = os.environ.get("CAPEVOLVE_SKB_MODEL", "openai/gpt-oss-120b")
+SANDBOX = os.environ.get("CAPEVOLVE_SKB_SANDBOX", "docker")
+TIMEOUT = int(os.environ.get("CAPEVOLVE_SKB_TIMEOUT", "1200"))
+_TASK_IDS = os.environ.get("CAPEVOLVE_SKB_TASK_IDS", "").strip()
 
 
 def _task_instruction(task_dir: Path) -> str:
@@ -136,8 +136,8 @@ class Adapter(CapabilityAdapter):
         return None
 
     def run_target(self, task: Task, candidate_dir: Path, split: str) -> Rollout:
-        # `bench` runs with cwd=ACAPO_SKILLSBENCH_ROOT, so every path handed to it
-        # must be absolute (candidate_dir arrives relative to the acapo workdir).
+        # `bench` runs with cwd=CAPEVOLVE_SKILLSBENCH_ROOT, so every path handed to it
+        # must be absolute (candidate_dir arrives relative to the cap-evolve workdir).
         candidate_dir = Path(candidate_dir).resolve()
         task_dir = Path(task.target).resolve()
         # Per-candidate jobs dir, cleared each call: candidates share a parent, so a

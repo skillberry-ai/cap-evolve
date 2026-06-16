@@ -21,7 +21,7 @@ It documents (1) the inputs the intake phase needs, (2) the answers the agent
   RITS_API_URL=…        WATSONX_PROJECT_ID=…
                         WATSONX_URL=…
   ```
-- `claude` CLI on PATH (the optimizer); `pip install ./core` (or `AGENT_CAPO_CORE`).
+- `claude` CLI on PATH (the optimizer); `pip install ./core` (or `CAPEVOLVE_CORE`).
 
 ## 2. The intake phase — questions and the answers given (by Claude Code)
 
@@ -42,7 +42,7 @@ run the answers were:
 | **Iteration store?** | `git` (default) — every iteration is committed so the whole process is browsable. |
 | **tau concurrency?** | `TAU2_MAX_CONCURRENCY=7`. |
 
-These answers are encoded in `examples/tau2_airline/run_full/acapo.composite.yaml`.
+These answers are encoded in `examples/tau2_airline/run_full/cap-evolve.composite.yaml`.
 
 ## 3. Input files (what the user/agent provides)
 
@@ -55,7 +55,7 @@ examples/tau2_airline/
 │   └── tools/tools.py         # the 14 airline tool docstrings as editable fns ← optimized
 ├── data/airline.jsonl         # the 50 tasks
 └── run_full/
-    ├── acapo.composite.yaml   # the run spec (answers above)
+    ├── cap-evolve.composite.yaml   # the run spec (answers above)
     ├── split_ids_all50.json   # train=val=test=all 50 ids
     └── reuse_baseline.sh      # the launcher (reuses the cached baseline)
 ```
@@ -65,17 +65,17 @@ examples/tau2_airline/
 ### 4a. Baseline (run once; reused afterwards)
 ```bash
 REPO=$PWD                       # cap-evolve repo root
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
-export ACAPO_TAU2_DATA=$REPO/examples/tau2_airline/data TAU2_MAX_CONCURRENCY=7
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
+export CAPEVOLVE_TAU2_DATA=$REPO/examples/tau2_airline/data TAU2_MAX_CONCURRENCY=7
 
-R=/tmp/tau2_full; mkdir -p $R/.agentcapo/project/adapters
-cp $REPO/examples/tau2_airline/{adapter.py,tau2_runtime.py} $R/.agentcapo/project/adapters/
+R=/tmp/tau2_full; mkdir -p $R/.capevolve/project/adapters
+cp $REPO/examples/tau2_airline/{adapter.py,tau2_runtime.py} $R/.capevolve/project/adapters/
 cp -R $REPO/examples/tau2_airline/seed_caps $R/seed_composite
 cp $REPO/examples/tau2_airline/run_full/split_ids_all50.json $R/split_ids.json
-cp $REPO/examples/tau2_airline/run_full/acapo.composite.yaml $R/.agentcapo/project/acapo.yaml
+cp $REPO/examples/tau2_airline/run_full/cap-evolve.composite.yaml $R/.capevolve/project/capevolve.yaml
 
-python3 -m agent_capo.cli run --spec $R/.agentcapo/project/acapo.yaml \
-    --project $R/.agentcapo/project --run-ts full
+python3 -m cap_evolve.cli run --spec $R/.capevolve/project/capevolve.yaml \
+    --project $R/.capevolve/project --run-ts full
 ```
 The baseline over all 50 tasks × 4 trials was **val = 0.46 ± 0.058** (gpt-oss-120b
 on the seed policy + default tool docs). It was cached to `/tmp/tau2_baseline_cache`.
@@ -93,7 +93,7 @@ all 50×4, gating on val, committing every iteration to git, and writing
 
 ### 4c. Inspect the process
 ```bash
-RD=/tmp/tau2_comp/.agentcapo/run_comp
+RD=/tmp/tau2_comp/.capevolve/run_comp
 git -C $RD log --oneline          # one commit per iteration (the whole process)
 cat $RD/report.md                 # baseline → best-val → test
 open $RD/dashboard.html           # KPIs, per-task heatmap, score-over-iterations, leaderboard

@@ -1,13 +1,13 @@
-"""agent_capo — the tiny, stdlib-only honest-evaluation substrate.
+"""cap_evolve — the tiny, stdlib-only honest-evaluation substrate.
 
-This is the *only* shipped code in agent-capo. Everything user-facing is an
+This is the *only* shipped code in cap-evolve. Everything user-facing is an
 Agent Skill; those skills' ``run.py`` scripts call into here for the things that
 must be consistent and honest across every run: task/score types, seeded splits
 with a sealed test set, variance-aware statistics, the acceptance gate,
 optimizer memory, the run directory, and the adapter contract.
 
 Import it directly when Python is available, or invoke ``python -m
-agent_capo <command>`` and parse the JSON it prints.
+cap_evolve <command>`` and parse the JSON it prints.
 """
 
 from __future__ import annotations

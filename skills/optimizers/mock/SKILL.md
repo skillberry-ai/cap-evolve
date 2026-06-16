@@ -17,12 +17,12 @@ edits to the files in place — exactly the contract a real optimizer follows �
 of the pipeline can be tested deterministically.
 
 ## When to use
-- Building/validating an adapter (`acapo check` is green; now prove the loop runs).
+- Building/validating an adapter (`cap-evolve check` is green; now prove the loop runs).
 - Developing a new algorithm or capability skill (no API spend per iteration).
 - CI: the end-to-end proof slice uses `mock` so it costs nothing and never flakes.
 
 ## How it works
-It reads an edit script — `ACAPO_MOCK_SCRIPT` env var, or `mock_script.json` in the workdir
+It reads an edit script — `CAPEVOLVE_MOCK_SCRIPT` env var, or `mock_script.json` in the workdir
 (or its parent) — of the form:
 ```json
 { "edits": [ { "file": "prompt.txt", "op": "ensure_contains", "text": "..." } ] }
@@ -41,7 +41,7 @@ makes no edits and exits 0 (candidate == parent for that iteration).
 ```bash
 python scripts/check.py                                   # smoke-test the edit engine
 python scripts/run.py --workdir <copy> --prompt <INSTRUCTIONS.md>
-ACAPO_MOCK_SCRIPT=/path/to/edits.json python scripts/run.py --workdir <copy> --prompt <f>
+CAPEVOLVE_MOCK_SCRIPT=/path/to/edits.json python scripts/run.py --workdir <copy> --prompt <f>
 ```
 
 ## References

@@ -1,6 +1,6 @@
 ---
 name: opencode
-description: Use opencode headless as the edit proposer. Use when you want opencode to propose capability edits. Runs `opencode run --dangerously-skip-permissions "<instructions>"` with cwd set to the candidate working directory so opencode edits files in place. opencode reads Anthropic-compatible SKILL.md and .claude/skills natively, making it a natural agent-capo host. Documents the verified install, auth, and useful flags.
+description: Use opencode headless as the edit proposer. Use when you want opencode to propose capability edits. Runs `opencode run --dangerously-skip-permissions "<instructions>"` with cwd set to the candidate working directory so opencode edits files in place. opencode reads Anthropic-compatible SKILL.md and .claude/skills natively, making it a natural cap-evolve host. Documents the verified install, auth, and useful flags.
 component: optimizer
 argument-hint: "--workdir DIR --prompt FILE [--model PROVIDER/ID]"
 allowed-tools: Read, Write, Bash
@@ -43,7 +43,7 @@ Key flags (verified against the opencode CLI reference):
   is safe. (Finer control: set `OPENCODE_PERMISSION` to an inlined JSON permissions config
   instead of blanket-approving.)
 - `-m` / `--model <provider/model>` — pin the model in `provider/model` form (e.g.
-  `anthropic/claude-sonnet-4-6`); also via `ACAPO_OPTIMIZER_MODEL`.
+  `anthropic/claude-sonnet-4-6`); also via `CAPEVOLVE_OPTIMIZER_MODEL`.
 - `--agent <name>` — select a configured agent persona.
 - `--format json` — raw JSON event stream instead of formatted text.
 - `--continue` / `-c`, `--session` / `-s` — continue a prior session (not used by the
@@ -54,9 +54,9 @@ Key flags (verified against the opencode CLI reference):
 opencode edits the candidate copy in place. The loop's `MEMORY.md` / `STATE.md` are in the
 same dir for it to read and update.
 
-## Why opencode is a first-class agent-capo host
+## Why opencode is a first-class cap-evolve host
 opencode reads Anthropic-compatible `SKILL.md` and even `.claude/skills/` natively, so the
-agent-capo skill library installs with zero translation — the same skills you ship for
+cap-evolve skill library installs with zero translation — the same skills you ship for
 Claude Code work here unchanged.
 
 ## Using it well

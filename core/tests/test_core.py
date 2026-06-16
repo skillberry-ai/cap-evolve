@@ -8,7 +8,7 @@ import math
 
 import pytest
 
-from agent_capo import (
+from cap_evolve import (
     RejectedMemory,
     RunDir,
     TestSealError,
@@ -17,8 +17,8 @@ from agent_capo import (
     make_splits,
     pass_k,
 )
-from agent_capo import stats
-from agent_capo.gate import decide as gate_decide
+from cap_evolve import stats
+from cap_evolve.gate import decide as gate_decide
 
 
 # ---- splits ---------------------------------------------------------------
@@ -104,7 +104,7 @@ def test_pass_k_k_gt_n_is_zero():
 
 
 def test_pass_at_k_capability_vs_reliability():
-    from agent_capo import pass_at_k
+    from cap_evolve import pass_at_k
     # 2 of 4 pass: reliability(pass^2)=1/6, capability(pass@2)=1 - C(2,2)/C(4,2)=5/6
     assert math.isclose(pass_at_k([1, 1, 0, 0], 2), 5 / 6, rel_tol=1e-9)
     assert pass_at_k([0, 0, 0], 2) == 0.0
@@ -112,7 +112,7 @@ def test_pass_at_k_capability_vs_reliability():
 
 
 def test_bootstrap_ci_is_deterministic_and_bracketed():
-    from agent_capo import bootstrap_ci
+    from cap_evolve import bootstrap_ci
     lo, hi = bootstrap_ci([1, 1, 1, 0, 0], seed=0)
     assert 0.0 <= lo <= hi <= 1.0
     assert bootstrap_ci([1, 1, 1, 0, 0], seed=0) == bootstrap_ci([1, 1, 1, 0, 0], seed=0)

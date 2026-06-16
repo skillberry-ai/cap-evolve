@@ -1,7 +1,7 @@
 """Pipeline/run script for <skill-name>.
 
 Assumes `check.py` is green. Wires the implemented abstract methods into
-`agent_capo`, performs this skill's step, and prints a single JSON object to
+`cap_evolve`, performs this skill's step, and prints a single JSON object to
 stdout (the contract surface consumed by downstream skills / non-Python hosts).
 """
 
@@ -18,7 +18,7 @@ import abstract  # noqa: F401  (the implemented methods)
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="<skill-name> run")
-    p.add_argument("--run-dir", default=None, help="path to the active .agentcapo/run_* dir")
+    p.add_argument("--run-dir", default=None, help="path to the active .capevolve/run_* dir")
     # add skill-specific args here
     args = p.parse_args(argv)
 

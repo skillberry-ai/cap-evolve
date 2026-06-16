@@ -1,6 +1,6 @@
 """implement-and-check — the HARD GATE before any optimization budget is spent.
 
-Runs ``acapo check`` on the project adapter and (optionally) each involved skill's
+Runs ``cap-evolve check`` on the project adapter and (optionally) each involved skill's
 own ``check.py``. Aggregates the results; exits non-zero if anything is unfilled
 or non-deterministic, listing exactly what to fix.
 """
@@ -15,12 +15,12 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo.check import run_check
+from cap_evolve.check import run_check
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="implement-and-check")
-    p.add_argument("--project", default=".agentcapo/project")
+    p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--skill-check", action="append", default=[],
                    help="path to a skill's scripts/check.py to also run (repeatable)")
     args = p.parse_args(argv)

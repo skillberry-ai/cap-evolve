@@ -30,7 +30,7 @@ The pipeline's honesty is the sum of per-phase invariants, applied in order:
 
 1. **ask-if-missing (intake)** — a missing NEEDED input is a question for the user,
    never a fabrication. Wrong here and everything downstream measures nothing.
-2. **hard gate (implement-and-check)** — `acapo check` must be green; the adapter
+2. **hard gate (implement-and-check)** — `cap-evolve check` must be green; the adapter
    must be implemented and the scorer deterministic before any budget is spent.
 3. **freeze-once split + headroom (baseline)** — the split is written once and
    seeded; if the seed already saturates val, stop.

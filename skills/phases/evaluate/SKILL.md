@@ -15,7 +15,7 @@ Turns a candidate into a score you can *trust*. A reward number is only as hones
 as the variance around it: agents are stochastic, so the same candidate run twice
 gives two scores. evaluate's job is to produce a point estimate **and** the
 uncertainty that lets the gate decide whether a difference is real. The honesty
-math lives in `agent_capo.stats`; this skill drives the adapter and aggregates.
+math lives in `cap_evolve.stats`; this skill drives the adapter and aggregates.
 
 ## Inputs / outputs (manifest tokens)
 - **needs:** `candidate` — a capability variant to score (an id in the run dir or
@@ -39,7 +39,7 @@ A `SplitResult` containing:
 
 ## How to run
 ```
-python scripts/run.py --run-dir .agentcapo/run_XXXX --project .agentcapo/project \
+python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project \
     --candidate seed --split val --n-trials 3
 ```
 `--split` accepts only `train` or `val` — **evaluate can never touch test.**

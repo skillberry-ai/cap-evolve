@@ -2,11 +2,11 @@
 
 > implement-and-check verifies the measurement apparatus before any measurement
 > is trusted. A green check is the only honest entry into the optimization loop.
-> Implementation: `agent_capo.check.run_check` + each skill's `scripts/check.py`.
+> Implementation: `cap_evolve.check.run_check` + each skill's `scripts/check.py`.
 
 ## The adapter is the contract
 
-agent-capo measures everything through four methods the user implements. The
+cap-evolve measures everything through four methods the user implements. The
 check verifies each is real:
 
 | method        | contract                                            | failure if stubbed                |
@@ -55,7 +55,7 @@ variance rather than smuggling it into a single score.
 Self-improving systems that skip a wiring check tend to "improve" against broken
 measurements and report gains that vanish on inspection. The fix, common to
 skill-/agent-optimization frameworks, is a non-negotiable validation gate: prove
-the contract holds, *then* spend. implement-and-check is that gate for agent-capo —
+the contract holds, *then* spend. implement-and-check is that gate for cap-evolve —
 the analog of running a test suite green before trusting a benchmark built on top
 of it. The no-gold-leak rule from intake also belongs here in spirit: a scorer can
 pass the determinism check and still corrupt the run if its feedback hands the

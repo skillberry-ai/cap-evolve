@@ -102,7 +102,7 @@ the right yardstick.
 
 ```
 python scripts/check.py
-python scripts/run.py --run-dir .agentcapo/run_XXXX --project .agentcapo/project \
+python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project \
     --optimizer "python <skills>/optimizers/<opt>/scripts/run.py --workdir {workdir} --prompt {prompt}" \
     --max-iterations 10 --n-trials 1 --gate-mode significant --k-se 1.0
 ```

@@ -1,8 +1,8 @@
 ---
 name: implement-and-check
-description: The HARD GATE that must pass before any optimization budget is spent. Use right after intake. Walks the agent through implementing the 4 adapter methods (and any selected skill's abstract methods), then runs `acapo check` on the project plus each involved skill's check.py, refusing to proceed until everything is implemented and deterministic — and listing exactly what is still stubbed.
+description: The HARD GATE that must pass before any optimization budget is spent. Use right after intake. Walks the agent through implementing the 4 adapter methods (and any selected skill's abstract methods), then runs `cap-evolve check` on the project plus each involved skill's check.py, refusing to proceed until everything is implemented and deterministic — and listing exactly what is still stubbed.
 component: phase
-argument-hint: "--project .agentcapo/project --skill-check PATH"
+argument-hint: "--project .capevolve/project --skill-check PATH"
 allowed-tools: Read, Write, Edit, Bash
 provides: [checked]
 needs: [project]
@@ -19,13 +19,13 @@ ensures the contract holds *before* a single unit of budget is spent. It is
 cheaper to fail here than after a full optimization run.
 
 ## Inputs / outputs (manifest tokens)
-- **needs:** `project` — the scaffolded `.agentcapo/project/` from intake.
+- **needs:** `project` — the scaffolded `.capevolve/project/` from intake.
 - **provides:** `checked` — the proof that the adapter (and any involved skill)
   is fully implemented and deterministic. `baseline` will not run without it.
 
 ## Steps
 1. **Implement the four adapter methods** in
-   `.agentcapo/project/adapters/adapter.py` (see `docs/ADAPTER_CONTRACT.md`):
+   `.capevolve/project/adapters/adapter.py` (see `docs/ADAPTER_CONTRACT.md`):
    - `tasks(split)` — yield the evaluation tasks (non-empty, stable across calls).
    - `run_target(task, capability)` — run the agent under test; capture output +
      trace into a `Rollout`.
@@ -36,10 +36,10 @@ cheaper to fail here than after a full optimization run.
    need nothing).
 3. **Run the gate:**
    ```
-   python scripts/run.py --project .agentcapo/project \
+   python scripts/run.py --project .capevolve/project \
        --skill-check <skills>/capabilities/<cap>/scripts/check.py
    ```
-   It runs `acapo check` (adapter: no stubs, `tasks` non-empty + stable, scorer
+   It runs `cap-evolve check` (adapter: no stubs, `tasks` non-empty + stable, scorer
    deterministic, `apply` callable) and each named skill's `check.py`. **Exit 0 =
    green; the JSON lists exactly what is still stubbed or non-deterministic.**
 

@@ -2,7 +2,7 @@
 
 Drives the real toy_calc adapter and the real `mock` optimizer skill script
 (via subprocess, exactly as a host would) through:
-    acapo check -> baseline -> all-at-once step -> finalize -> report-equivalent
+    cap-evolve check -> baseline -> all-at-once step -> finalize -> report-equivalent
 and asserts the honesty guarantees hold. This is the CI gate that proves the
 architecture works without any model.
 """
@@ -26,17 +26,17 @@ sys.path.insert(0, str(EXAMPLE))  # import the toy adapter
 @pytest.fixture(autouse=True)
 def _env():
     old = dict(os.environ)
-    os.environ["AGENT_CAPO_CORE"] = str(CORE)
-    os.environ["ACAPO_TOY_DATA"] = str(EXAMPLE)
-    os.environ["ACAPO_MOCK_SCRIPT"] = str(EXAMPLE / "mock_script.json")
+    os.environ["CAPEVOLVE_CORE"] = str(CORE)
+    os.environ["CAPEVOLVE_TOY_DATA"] = str(EXAMPLE)
+    os.environ["CAPEVOLVE_MOCK_SCRIPT"] = str(EXAMPLE / "mock_script.json")
     yield
     os.environ.clear()
     os.environ.update(old)
 
 
 def test_full_slice(tmp_path):
-    from agent_capo import Budget, RunDir, TestSealError, harness
-    from agent_capo.loop import SplitResult
+    from cap_evolve import Budget, RunDir, TestSealError, harness
+    from cap_evolve.loop import SplitResult
     import importlib.util
     spec = importlib.util.spec_from_file_location("toy_calc_adapter", EXAMPLE / "adapter.py")
     toy = importlib.util.module_from_spec(spec)
@@ -48,7 +48,7 @@ def test_full_slice(tmp_path):
     seed = tmp_path / "seed_capability"
     shutil.copytree(EXAMPLE / "capability", seed)
 
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="t", budget=Budget(max_iterations=5, stall=2))
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="t", budget=Budget(max_iterations=5, stall=2))
 
     # baseline: splits frozen, seed scored on val
     harness.ensure_splits(adapter, run_dir, seed=0)
@@ -82,7 +82,7 @@ def test_full_slice(tmp_path):
 
 def test_cyclic_variant_also_improves(tmp_path):
     """The shared hill-climb loop works for a focus variant (cyclic), end to end."""
-    from agent_capo import RunDir, harness
+    from cap_evolve import RunDir, harness
     import importlib.util
     spec = importlib.util.spec_from_file_location("toy_calc_adapter", EXAMPLE / "adapter.py")
     toy = importlib.util.module_from_spec(spec)
@@ -90,8 +90,8 @@ def test_cyclic_variant_also_improves(tmp_path):
     adapter = toy.Adapter()
     seed = tmp_path / "seed"
     shutil.copytree(EXAMPLE / "capability", seed)
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="cyc",
-                            budget=__import__("agent_capo").Budget(max_iterations=5, stall=2))
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="cyc",
+                            budget=__import__("cap_evolve").Budget(max_iterations=5, stall=2))
     harness.ensure_splits(adapter, run_dir, seed=0)
     base = harness.baseline(adapter, seed, run_dir=run_dir)
 
@@ -108,7 +108,7 @@ def test_cyclic_variant_also_improves(tmp_path):
 
 def test_baseline_better_than_nothing_is_gated(tmp_path):
     """A no-op edit (no change) must be rejected by the significance gate."""
-    from agent_capo import RunDir, harness
+    from cap_evolve import RunDir, harness
     import importlib.util
     spec = importlib.util.spec_from_file_location("toy_calc_adapter", EXAMPLE / "adapter.py")
     toy = importlib.util.module_from_spec(spec)
@@ -116,7 +116,7 @@ def test_baseline_better_than_nothing_is_gated(tmp_path):
     adapter = toy.Adapter()
     seed = tmp_path / "seed"
     shutil.copytree(EXAMPLE / "capability", seed)
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="t2")
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="t2")
     harness.ensure_splits(adapter, run_dir, seed=0)
     base = harness.baseline(adapter, seed, run_dir=run_dir)
 

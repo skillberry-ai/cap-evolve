@@ -20,14 +20,14 @@ COMPONENTS = ["orchestrate", "phases", "capabilities", "algorithms", "optimizers
 REQUIRED = ["component", "name", "entry", "check"]
 
 
-# Use the canonical YAML reader from agent_capo.specfile (no duplicate parser).
+# Use the canonical YAML reader from cap_evolve.specfile (no duplicate parser).
 _CORE = Path(__file__).resolve().parents[2] / "core"
 if str(_CORE) not in sys.path:
     sys.path.insert(0, str(_CORE))
 try:
-    from agent_capo.specfile import read_frontmatter, read_yaml
+    from cap_evolve.specfile import read_frontmatter, read_yaml
 except Exception as e:  # pragma: no cover
-    raise SystemExit(f"build_manifest needs agent_capo.specfile (expected at {_CORE}): {e}")
+    raise SystemExit(f"build_manifest needs cap_evolve.specfile (expected at {_CORE}): {e}")
 
 
 # ---- manifest build --------------------------------------------------------

@@ -15,10 +15,10 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import RunDir, harness
-from agent_capo.store import make_store
-from agent_capo.check import load_adapter
-from agent_capo.loop import SplitResult
+from cap_evolve import RunDir, harness
+from cap_evolve.store import make_store
+from cap_evolve.check import load_adapter
+from cap_evolve.loop import SplitResult
 
 FOCUS = "hardest-first"
 ALGO = "hardest-first"

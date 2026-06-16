@@ -22,7 +22,7 @@ Sleep 800ms
 Type "# (claude-opus-4-6 optimizer, gpt-oss-120b agent+user, git iteration store)"
 Enter
 Sleep 800ms
-Type "cat $RUN/.agentcapo/project/acapo.yaml"
+Type "cat $RUN/.capevolve/project/capevolve.yaml"
 Enter
 Sleep 3800ms
 Type "clear"
@@ -36,15 +36,15 @@ Sleep 2200ms
 Type "# every iteration is committed to git — the whole process is inspectable:"
 Enter
 Sleep 900ms
-Type "git -C $RUN/.agentcapo/$RID log --oneline"
+Type "git -C $RUN/.capevolve/$RID log --oneline"
 Enter
 Sleep 3000ms
 Type "# optimizer memory (rejected approaches it will not retry):"
 Enter
 Sleep 700ms
-Type "cat $RUN/.agentcapo/$RID/rejected.jsonl"
+Type "cat $RUN/.capevolve/$RID/rejected.jsonl"
 Enter
 Sleep 2500ms
-Type "cat $RUN/.agentcapo/$RID/report.md"
+Type "cat $RUN/.capevolve/$RID/report.md"
 Enter
 Sleep 3500ms

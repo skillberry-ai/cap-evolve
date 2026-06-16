@@ -13,7 +13,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import RunDir, harness
+from cap_evolve import RunDir, harness
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "dashboard_template.html"
 

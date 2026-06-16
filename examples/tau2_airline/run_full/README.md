@@ -6,29 +6,29 @@ agent *and* user simulator both **gpt-oss-120b** (watsonx/RITS), over **all 50**
 airline tasks in train/val/test (a deliberate no-holdout fit on the full
 benchmark), **10 iterations**, **num_trials 4**, tau **concurrency 7**.
 
-- `acapo.yaml` — the run spec (capability=system-prompt on the policy, optimizer=
+- `capevolve.yaml` — the run spec (capability=system-prompt on the policy, optimizer=
   claude-code @ claude-opus-4-6, algorithm=all-at-once, num_trials=4, 10 iters).
 - `split_ids_all50.json` — train=val=test=all 50 task ids.
 
 ## Run it
 ```bash
 REPO=/path/to/cap-evolve
-export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
-export ACAPO_TAU2_DATA=$REPO/examples/tau2_airline/data
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
+export CAPEVOLVE_TAU2_DATA=$REPO/examples/tau2_airline/data
 export TAU2_MAX_CONCURRENCY=7          # tau2 batch parallelism
 # .env (repo root) must hold RITS_API_KEY / WATSONX_* for gpt-oss-120b
 
 R=/tmp/tau2_full
-mkdir -p $R/.agentcapo/project/adapters
-cp $REPO/examples/tau2_airline/adapter.py        $R/.agentcapo/project/adapters/
-cp $REPO/examples/tau2_airline/tau2_runtime.py   $R/.agentcapo/project/adapters/
+mkdir -p $R/.capevolve/project/adapters
+cp $REPO/examples/tau2_airline/adapter.py        $R/.capevolve/project/adapters/
+cp $REPO/examples/tau2_airline/tau2_runtime.py   $R/.capevolve/project/adapters/
 cp -R $REPO/examples/tau2_airline/policy         $R/seed_policy
-cp $REPO/examples/tau2_airline/run_full/acapo.yaml          $R/.agentcapo/project/acapo.yaml
+cp $REPO/examples/tau2_airline/run_full/capevolve.yaml          $R/.capevolve/project/capevolve.yaml
 cp $REPO/examples/tau2_airline/run_full/split_ids_all50.json $R/split_ids.json
 
-python3 -m agent_capo.cli run --spec $R/.agentcapo/project/acapo.yaml \
-    --project $R/.agentcapo/project --run-ts full
-# -> writes $R/.agentcapo/run_full/{report.md, dashboard.html, final.json}
+python3 -m cap_evolve.cli run --spec $R/.capevolve/project/capevolve.yaml \
+    --project $R/.capevolve/project --run-ts full
+# -> writes $R/.capevolve/run_full/{report.md, dashboard.html, final.json}
 ```
 
 ## Cost / time

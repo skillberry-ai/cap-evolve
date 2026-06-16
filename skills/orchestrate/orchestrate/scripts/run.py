@@ -1,7 +1,7 @@
-"""orchestrate — resolve acapo.yaml + the manifest into an ordered run plan.
+"""orchestrate — resolve capevolve.yaml + the manifest into an ordered run plan.
 
 Prints the exact sequence of skill commands the pipeline will execute (or, with
-``--execute``, hands off to ``acapo run`` to run them). Wiring is validated by
+``--execute``, hands off to ``cap-evolve run`` to run them). Wiring is validated by
 matching each step's `needs` against upstream `provides` in the manifest.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo.specfile import read_yaml
+from cap_evolve.specfile import read_yaml
 
 
 def _skills_dir() -> Path | None:
@@ -30,9 +30,9 @@ def _skills_dir() -> Path | None:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="orchestrate")
-    p.add_argument("--spec", default=".agentcapo/project/acapo.yaml")
-    p.add_argument("--project", default=".agentcapo/project")
-    p.add_argument("--execute", action="store_true", help="run the plan via `acapo run`")
+    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml")
+    p.add_argument("--project", default=".capevolve/project")
+    p.add_argument("--execute", action="store_true", help="run the plan via `cap-evolve run`")
     args = p.parse_args(argv)
 
     spec = read_yaml(Path(args.spec).read_text()) if Path(args.spec).exists() else {}
@@ -45,11 +45,11 @@ def main(argv=None) -> int:
         "algorithm": spec.get("algorithm_skill"),
         "gate": spec.get("gate_mode"),
         "budget": {"max_iterations": spec.get("max_iterations"), "stall": spec.get("stall")},
-        "rule": "acapo check must be green before baseline; test scored once at finalize.",
+        "rule": "cap-evolve check must be green before baseline; test scored once at finalize.",
     }
 
     if args.execute:
-        from agent_capo.cli import main as cli_main
+        from cap_evolve.cli import main as cli_main
         return cli_main(["run", "--spec", args.spec, "--project", args.project])
 
     print(json.dumps(plan, indent=2))

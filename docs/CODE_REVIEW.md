@@ -8,7 +8,7 @@ honest assessment of how easy cap-evolve is to extend and integrate.
 | # | Severity | Issue | Fix |
 |---|----------|-------|-----|
 | 1 | high | test split could be scored without flipping the seal (`seal_test=False`) | `evaluate_candidate` seals on ANY `split=="test"` |
-| 2 | high | `acapo run` broke with an absolute `--project` (relative run_dir resolved against the wrong cwd) | all steps share one working dir; paths relative to it |
+| 2 | high | `cap-evolve run` broke with an absolute `--project` (relative run_dir resolved against the wrong cwd) | all steps share one working dir; paths relative to it |
 | 3 | high | `evaluate_candidate` assumed `run_batch` returns a dict | accepts dict **or** list parallel to tasks |
 | 4 | high | adapters with helper modules (tau2's `tau2_runtime`) failed under `load_adapter` | `load_adapter` adds the adapter dir to `sys.path` |
 | 5 | high | copy-install had no manifest and a flat layout `build_manifest` couldn't read | `build_manifest` handles flat + component layouts; `install.sh` builds into the install dir |
@@ -19,7 +19,7 @@ honest assessment of how easy cap-evolve is to extend and integrate.
 | 10 | low | configurable optimizers crashed on literal `{}` in a command template | brace-safe `.replace` substitution |
 | 11 | low | required-field check used truthiness; `--help` truncation | presence check; widened range |
 
-All 28 tests pass; flat-install and absolute-path `acapo run` verified.
+All 28 tests pass; flat-install and absolute-path `cap-evolve run` verified.
 
 ## Extensibility — how easy is it?
 
@@ -37,10 +37,10 @@ jsonl/dir or `tasks()` in the adapter; splits are seeded by core.
 
 **Integrate a new agent (optimizer).** Either add an optimizer skill (the 6 real
 ones are ~40 lines each: build the headless command, `shutil.which` guard) or use
-`generic` with `ACAPO_OPTIMIZER_CMD`. Any CLI that edits files in a dir works.
+`generic` with `CAPEVOLVE_OPTIMIZER_CMD`. Any CLI that edits files in a dir works.
 
 **Integrate a new benchmark/dataset.** Implement the 4-method `CapabilityAdapter`
-(`tasks/run_target/score/apply`) and pass `acapo check`. Proven end-to-end three
+(`tasks/run_target/score/apply`) and pass `cap-evolve check`. Proven end-to-end three
 times with *no framework changes*: `toy_calc` (deterministic), `json_extract`
 (JSON-aware scoring, added from scratch with only an adapter + data), and
 `tau2_airline` (real tau2-bench with gpt-oss-120b; helper module + batch runner).

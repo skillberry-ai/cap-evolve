@@ -41,7 +41,7 @@ Always report the **test stderr / CI**, not just the point: "0.71" and
 
 ## How to run
 ```
-python scripts/run.py --run-dir .agentcapo/run_XXXX
+python scripts/run.py --run-dir .capevolve/run_XXXX
 ```
 Writes `report.md` and a single-file **`dashboard.html`** next to the run state
 (open it by double-clicking — it inlines the run data and loads ECharts from a

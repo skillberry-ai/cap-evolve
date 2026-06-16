@@ -1,6 +1,6 @@
 component: optimizer
 name: ibm-bob
-summary: IBM Bob as edit proposer via AGENTS.md (configurable via ACAPO_BOB_CMD; no standard headless CLI).
+summary: IBM Bob as edit proposer via AGENTS.md (configurable via CAPEVOLVE_BOB_CMD; no standard headless CLI).
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

@@ -1,6 +1,6 @@
 component: optimizer
 name: openclaw
-summary: OpenClaw as edit proposer (configurable via ACAPO_OPENCLAW_CMD).
+summary: OpenClaw as edit proposer (configurable via CAPEVOLVE_OPENCLAW_CMD).
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

@@ -42,8 +42,8 @@ class VersionStore:
             r = self._git("init", "-q")
             if r.returncode != 0:
                 return False
-            self._git("config", "user.email", "agent-capo@local")
-            self._git("config", "user.name", "agent-capo")
+            self._git("config", "user.email", "cap-evolve@local")
+            self._git("config", "user.name", "cap-evolve")
             # don't track heavy/per-trial rollout files by default
             (self.root / ".gitignore").write_text("rollouts/\nwork/\n", encoding="utf-8")
         self._git_ready = True
@@ -90,7 +90,7 @@ class VersionStore:
 
 
 def make_store(spec: dict | None, run_root: Path) -> VersionStore:
-    """Build a store from a acapo.yaml-style spec (``store`` + ``store_commit_cmd``)."""
+    """Build a store from a capevolve.yaml-style spec (``store`` + ``store_commit_cmd``)."""
     spec = spec or {}
     kind = (spec.get("store") or "git").strip()
     return VersionStore(kind=kind, root=run_root, commit_cmd=spec.get("store_commit_cmd"))

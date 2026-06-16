@@ -35,7 +35,7 @@ bob --accept-license --yolo --chat-mode code "<instructions>"     # cwd = the ca
   files** (off by default). The workdir is a throwaway candidate copy, so this is safe.
 - `--accept-license` accepts the IBM license on the first run in a fresh env.
 - `--chat-mode code` selects the coding mode; `--hide-intermediary-output` keeps stdout clean.
-- `-m/--model` (or `ACAPO_OPTIMIZER_MODEL`) picks the model.
+- `-m/--model` (or `CAPEVOLVE_OPTIMIZER_MODEL`) picks the model.
 
 ## Using it well
 - The loop writes the reflection (diagnosis + rejected-memory + a pointer to the run

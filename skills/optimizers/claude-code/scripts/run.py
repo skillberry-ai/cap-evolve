@@ -33,7 +33,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="claude-code optimizer")
     p.add_argument("--workdir", required=True)
     p.add_argument("--prompt", required=True)
-    p.add_argument("--model", default=os.environ.get("ACAPO_OPTIMIZER_MODEL") or None)
+    p.add_argument("--model", default=os.environ.get("CAPEVOLVE_OPTIMIZER_MODEL") or None)
     args = p.parse_args(argv)
 
     if shutil.which("claude") is None:

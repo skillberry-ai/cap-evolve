@@ -6,7 +6,7 @@
 > Skills; the only shipped code is a tiny stdlib substrate.
 
 If you are an agent driving cap-evolve: follow `RUN.md`. Implement the 4-method
-adapter (`docs/ADAPTER_CONTRACT.md`), pass `acapo check`, then run the phases
+adapter (`docs/ADAPTER_CONTRACT.md`), pass `cap-evolve check`, then run the phases
 intake → implement-and-check → baseline → <algorithm> → finalize → report. Never
 score the test split except at finalize; gate acceptance on val.
 

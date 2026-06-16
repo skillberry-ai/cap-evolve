@@ -2,7 +2,7 @@
 
 cap-evolve works with *any* target agent, benchmark, and capability because the
 agent-specific glue is confined to four methods you implement once, in
-`.agentcapo/project/adapters/adapter.py`:
+`.capevolve/project/adapters/adapter.py`:
 
 ```python
 class Adapter(CapabilityAdapter):
@@ -35,7 +35,7 @@ the four orthogonal responsibilities: *get data, run, score, make-live*.
 
 ## The gate
 
-`acapo check .agentcapo/project` loads your adapter and refuses until all four
+`cap-evolve check .capevolve/project` loads your adapter and refuses until all four
 methods are implemented (no `IMPLEMENT ME` stubs), `tasks` is non-empty and
 stable, and `score` is deterministic. This is mandatory before any budget is
 spent — a half-wired adapter can only produce a dishonest number.
@@ -43,5 +43,5 @@ spent — a half-wired adapter can only produce a dishonest number.
 ## Everything else is provided
 
 Splits, trials, gating, pass^k, rejected-memory, run-dir state, parent selection,
-and the loop mechanics live in `agent_capo`. Do not reimplement them in the
+and the loop mechanics live in `cap_evolve`. Do not reimplement them in the
 adapter — calling them is what keeps results comparable and honest.

@@ -1,6 +1,6 @@
 component: orchestrate
 name: orchestrate
-summary: Autonomous end-to-end driver; sequences all phases with the acapo-check hard gate and stop rules.
+summary: Autonomous end-to-end driver; sequences all phases with the cap-evolve-check hard gate and stop rules.
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

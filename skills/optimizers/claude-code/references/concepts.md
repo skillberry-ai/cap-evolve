@@ -2,7 +2,7 @@
 
 ## The universal edit-proposer contract
 
-Every agent-capo optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
+Every cap-evolve optimizer — claude-code, codex, gemini-cli, opencode, openclaw, generic,
 mock — implements the **same** contract. The optimize loop, not the agent, owns the
 orchestration:
 
@@ -34,7 +34,7 @@ serve as the optimizer: the loop adapts to the contract, not the other way aroun
 - **Headless**: no REPL, no TTY prompts — runs to completion unattended.
 - **Write-enabled**: edits are auto-approved (the workdir is disposable).
 - **cwd = workdir**: so the agent's file edits land on the candidate copy.
-- **Model selectable**: via `--model` / `ACAPO_OPTIMIZER_MODEL`.
+- **Model selectable**: via `--model` / `CAPEVOLVE_OPTIMIZER_MODEL`.
 - **Clear absence handling**: if the CLI isn't on PATH, `run.py` errors with guidance
   (use `generic` or `mock`); `check.py` still passes so CI isn't blocked.
 

@@ -1,6 +1,6 @@
 """gate — apply the acceptance decision (always on val) and print it.
 
-A thin, inspectable front-end to ``agent_capo.gate.decide``. Algorithms call
+A thin, inspectable front-end to ``cap_evolve.gate.decide``. Algorithms call
 the gate internally via the harness; this skill exists so an agent or a human can
 reproduce/inspect a single accept/reject decision and understand the rule.
 """
@@ -13,7 +13,7 @@ import sys
 
 import _bootstrap  # noqa: F401
 
-from agent_capo.gate import decide
+from cap_evolve.gate import decide
 
 
 def main(argv=None) -> int:

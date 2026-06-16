@@ -7,8 +7,8 @@ the arithmetic correctly; otherwise it guesses and fails. So optimizing the prom
 (adding ``[CALC]``) is what raises the score — a clean, reproducible proof of the
 whole pipeline.
 
-Copy this to ``.agentcapo/project/adapters/adapter.py`` (the intake skill does this)
-and set ``ACAPO_TOY_DATA`` to this example dir.
+Copy this to ``.capevolve/project/adapters/adapter.py`` (the intake skill does this)
+and set ``CAPEVOLVE_TOY_DATA`` to this example dir.
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from agent_capo import CapabilityAdapter, Rollout, Score, Task
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
-_DATA = Path(os.environ.get("ACAPO_TOY_DATA", Path(__file__).resolve().parent))
+_DATA = Path(os.environ.get("CAPEVOLVE_TOY_DATA", Path(__file__).resolve().parent))
 
 
 def _safe_eval(expr: str) -> int:

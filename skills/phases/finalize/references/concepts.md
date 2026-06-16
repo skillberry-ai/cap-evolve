@@ -3,7 +3,7 @@
 > The whole pipeline exists to produce *one* number you can defend: how good is
 > the optimized capability on data nothing was tuned against. finalize produces
 > it, once, and the run dir enforces that "once". Implementation:
-> `harness.finalize` + the `test_used` seal in `agent_capo/rundir.py`.
+> `harness.finalize` + the `test_used` seal in `cap_evolve/rundir.py`.
 
 ## Why val is not the answer
 
@@ -30,7 +30,7 @@ applied to the one split that was supposed to be clean. The result is no longer
 an unbiased estimate; it has quietly become a fit metric, and nothing in the
 output says so.
 
-agent-capo refuses to let this happen by accident: `RunDir` flips `test_used` on
+cap-evolve refuses to let this happen by accident: `RunDir` flips `test_used` on
 the first test scoring, and any second attempt raises `TestSealError`. The
 honesty is enforced by the harness, not left to the operator's discipline.
 
@@ -69,4 +69,4 @@ optimization run.
 - Koehn, "Statistical Significance Tests for MT Evaluation" (EMNLP 2004) — why a
   reported difference needs uncertainty, not a bare point:
   https://aclanthology.org/W04-3250/
-- `agent_capo/rundir.py` — the `test_used` flag and `TestSealError`.
+- `cap_evolve/rundir.py` — the `test_used` flag and `TestSealError`.

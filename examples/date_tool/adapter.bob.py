@@ -1,10 +1,10 @@
-"""Project adapter — IMPLEMENT the 4 methods, then run `acapo check`.
+"""Project adapter — IMPLEMENT the 4 methods, then run `cap-evolve check`.
 
 This is the one place you wire cap-evolve to YOUR target agent, YOUR benchmark,
 and YOUR capability. Everything else (splits, trials, gating, pass^k, memory) is
-provided by agent_capo and must not be reimplemented here.
+provided by cap_evolve and must not be reimplemented here.
 
-`acapo check` refuses to proceed until all four are real and deterministic.
+`cap-evolve check` refuses to proceed until all four are real and deterministic.
 """
 
 from __future__ import annotations
@@ -15,19 +15,19 @@ import sys
 import importlib.util
 from pathlib import Path
 
-# `agent_capo` is importable once installed (`pip install ./core`) or via
+# `cap_evolve` is importable once installed (`pip install ./core`) or via
 # the FORGE skills bootstrap. The intake skill ensures this works.
-from agent_capo import CapabilityAdapter, Rollout, Score, Task
-from agent_capo.adapter import IMPLEMENT_MARKER
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
+from cap_evolve.adapter import IMPLEMENT_MARKER
 
 
 class Adapter(CapabilityAdapter):
 
     def tasks(self, split: str) -> list[Task]:
-        """Read tasks from JSONL file specified in ACAPO_DT_TASKS env var."""
-        tasks_path = os.environ.get("ACAPO_DT_TASKS")
+        """Read tasks from JSONL file specified in CAPEVOLVE_DT_TASKS env var."""
+        tasks_path = os.environ.get("CAPEVOLVE_DT_TASKS")
         if not tasks_path:
-            raise ValueError("ACAPO_DT_TASKS environment variable not set")
+            raise ValueError("CAPEVOLVE_DT_TASKS environment variable not set")
         
         tasks = []
         with open(tasks_path, "r") as f:

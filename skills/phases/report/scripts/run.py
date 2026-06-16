@@ -13,7 +13,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from agent_capo import RunDir
+from cap_evolve import RunDir
 
 
 def main(argv=None) -> int:
@@ -40,7 +40,7 @@ def main(argv=None) -> int:
     }
 
     md = [
-        f"# agent-capo run report — {run_dir.root.name}",
+        f"# cap-evolve run report — {run_dir.root.name}",
         "",
         f"- Best candidate: `{run_dir.best_id}`",
         f"- Baseline val: {base_val}",

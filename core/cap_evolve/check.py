@@ -1,6 +1,6 @@
-"""``acapo check`` — the HARD GATE before any optimization budget is spent.
+"""``cap-evolve check`` — the HARD GATE before any optimization budget is spent.
 
-Loads the project adapter from ``.agentcapo/project/adapters/adapter.py`` and proves
+Loads the project adapter from ``.capevolve/project/adapters/adapter.py`` and proves
 the contract holds:
 
   1. all four adapter methods are implemented (no IMPLEMENT-ME stubs);
@@ -122,8 +122,8 @@ def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
 def _main(argv: list[str]) -> int:
     import argparse
 
-    p = argparse.ArgumentParser(prog="agent_capo.check")
-    p.add_argument("project_dir", nargs="?", default=".agentcapo/project")
+    p = argparse.ArgumentParser(prog="cap_evolve.check")
+    p.add_argument("project_dir", nargs="?", default=".capevolve/project")
     args = p.parse_args(argv)
     rep = run_check(Path(args.project_dir))
     print(json.dumps(rep.to_dict(), indent=2))

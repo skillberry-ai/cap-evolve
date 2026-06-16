@@ -24,9 +24,9 @@ sys.path.insert(0, str(EXAMPLE))
 @pytest.fixture(autouse=True)
 def _env():
     old = dict(os.environ)
-    os.environ["AGENT_CAPO_CORE"] = str(CORE)
-    os.environ["ACAPO_JSON_DATA"] = str(EXAMPLE)
-    os.environ["ACAPO_MOCK_SCRIPT"] = str(EXAMPLE / "mock_script.json")
+    os.environ["CAPEVOLVE_CORE"] = str(CORE)
+    os.environ["CAPEVOLVE_JSON_DATA"] = str(EXAMPLE)
+    os.environ["CAPEVOLVE_MOCK_SCRIPT"] = str(EXAMPLE / "mock_script.json")
     yield
     os.environ.clear()
     os.environ.update(old)
@@ -41,12 +41,12 @@ def _load_adapter(py_file: Path, mod_name: str):
 
 
 def test_new_benchmark_from_scratch(tmp_path):
-    from agent_capo import Budget, RunDir, harness
+    from cap_evolve import Budget, RunDir, harness
     adapter = _load_adapter(EXAMPLE / "adapter.py", "json_extract_adapter")
 
     seed = tmp_path / "seed"
     shutil.copytree(EXAMPLE / "capability", seed)
-    run_dir = RunDir.create(tmp_path / ".agentcapo", ts="jx", budget=Budget(max_iterations=3, stall=2))
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="jx", budget=Budget(max_iterations=3, stall=2))
 
     harness.ensure_splits(adapter, run_dir, seed=0)
     base = harness.baseline(adapter, seed, run_dir=run_dir)

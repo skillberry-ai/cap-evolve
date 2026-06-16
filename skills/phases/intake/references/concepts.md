@@ -7,8 +7,8 @@
 
 ## The adapter is the whole interface
 
-Everything agent-capo measures flows through four methods the user implements in
-`.agentcapo/project/adapters/adapter.py`. intake's job is to make sure each one
+Everything cap-evolve measures flows through four methods the user implements in
+`.capevolve/project/adapters/adapter.py`. intake's job is to make sure each one
 *can* be implemented from real inputs:
 
 | method        | question it answers                              | NEEDED input behind it |
