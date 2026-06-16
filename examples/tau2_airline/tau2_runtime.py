@@ -1,4 +1,4 @@
-"""tau2 airline runtime helpers for the agent-capo example.
+"""tau2 airline runtime helpers for the AgentCapTune example.
 
 Routes both the agent and the user simulator to RITS ``openai/gpt-oss-120b``,
 injects the candidate policy into tau2's airline domain, and runs tasks through
@@ -229,8 +229,13 @@ def run_airline_batch(candidate_dir: Path, task_ids: list[str]) -> dict:
     inject_policy(candidate_dir)
     kw = rits_kwargs(AGENT_MODEL)
     model = kw["model"]
+    # `timeout`/`num_retries`: a stalled RITS request must abort (and let tau2's
+    # max_errors retry) rather than hang the whole batch forever — concurrency means
+    # one wedged call otherwise blocks the entire evaluation. Override via env.
     llm_args = {"max_tokens": 8000, "api_base": kw["api_base"], "api_key": kw["api_key"],
-                "extra_headers": kw["extra_headers"]}
+                "extra_headers": kw["extra_headers"],
+                "timeout": float(os.environ.get("TAU2_LLM_TIMEOUT", "300")),
+                "num_retries": int(os.environ.get("TAU2_LLM_RETRIES", "2"))}
     t2 = get_tasks("airline", task_ids=[str(t) for t in task_ids])
     config = TextRunConfig(
         domain="airline", agent="llm_agent", llm_agent=model, llm_args_agent=dict(llm_args),
@@ -246,11 +251,21 @@ def run_airline_batch(candidate_dir: Path, task_ids: list[str]) -> dict:
     for sim in results.simulations:
         tid = str(sim.task_id)
         ri = getattr(sim, "reward_info", None)
+        # token usage (summed over all agent+user messages) and cost, for the dashboard.
+        tokens = 0
+        for m in (getattr(sim, "messages", None) or []):
+            u = getattr(m, "usage", None)
+            if isinstance(u, dict):
+                tokens += int(u.get("total_tokens")
+                              or (u.get("prompt_tokens", 0) + u.get("completion_tokens", 0)) or 0)
+        cost = float((getattr(sim, "agent_cost", 0) or 0) + (getattr(sim, "user_cost", 0) or 0))
         out[tid] = {
             "reward": float(ri.reward) if ri else 0.0,
             "reward_info": ri,
             "trace": transcript(sim),
             "termination": str(getattr(sim, "termination_reason", None)),
+            "tokens": tokens,
+            "cost": cost,
             "output": str(getattr(sim, "messages", [])[-1].content
                           if getattr(sim, "messages", None) else ""),
         }

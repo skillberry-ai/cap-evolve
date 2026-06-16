@@ -12,7 +12,7 @@ measurable target.
 
 ## Pipeline runs (real tau2 rollouts)
 
-Driven by the agent-capo skills end to end: `acapo check` → `baseline` →
+Driven by the AgentCapTune skills end to end: `acapo check` → `baseline` →
 `all-at-once` (optimizer edits the policy) → `finalize` (sealed test) → `report`.
 
 | Run | split | baseline val | optimized val | gate | test (sealed) |
@@ -41,7 +41,7 @@ delta         = +0.40
 
 Restoring the cancellation-eligibility rules fixed tasks **26, 41, 43, 47, 48**
 (0 → 1). A few tasks stay hard (0, 45, 39 — adversarial pressure / other factors)
-and one flipped on single-trial noise (task 1) — which is exactly why agent-capo
+and one flipped on single-trial noise (task 1) — which is exactly why AgentCapTune
 defaults to **multi-trial, variance-aware** evaluation and a significance gate.
 
 ## Lessons this example encodes

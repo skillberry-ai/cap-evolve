@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to agent-capo are documented here. The format follows
+All notable changes to AgentCapTune are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 

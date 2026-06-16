@@ -1,6 +1,6 @@
-# Honest evaluation in agent-capo
+# Honest evaluation in AgentCapTune
 
-agent-capo's one differentiator is that its numbers mean something. Optimizing a
+AgentCapTune's one differentiator is that its numbers mean something. Optimizing a
 prompt/skill/tool against a metric is trivially gameable — you can hill-climb on
 the same data you report. The substrate (`agent_capo`) makes that hard *by
 construction*, and the rules below are enforced in code, not just documented.
@@ -27,7 +27,7 @@ construction*, and the rules below are enforced in code, not just documented.
 
 ## Why no central engine?
 
-prior agent-optimization work proved the design with a six-axis engine. agent-capo keeps the *discipline*
+prior agent-optimization work proved the design with a six-axis engine. AgentCapTune keeps the *discipline*
 but moves the orchestration into skills, so the pipeline runs on any host with no
 framework lock-in. The discipline can't drift because the only place rewards are
 aggregated, splits are made, the gate is applied, and test is sealed is

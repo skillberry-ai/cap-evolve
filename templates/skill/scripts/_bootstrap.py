@@ -1,7 +1,7 @@
 """Locate ``agent_capo`` whether the skill runs from source or installed.
 
 Skill scripts ``import _bootstrap`` first. Resolution order:
-  1. already importable (pip-installed `agent-capo-core`) — use it;
+  1. already importable (pip-installed `AgentCapTune-core`) — use it;
   2. ``$AGENT_CAPO_CORE`` env var pointing at the ``core/`` dir;
   3. walk up from this file looking for a sibling ``core/agent_capo``;
   4. walk up looking for any ``agent_capo`` package on disk.

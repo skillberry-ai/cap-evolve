@@ -1,6 +1,6 @@
 """json_extract adapter — a second, different-domain benchmark from scratch.
 
-Demonstrates agent-capo extensibility: a brand-new benchmark plugs in by writing
+Demonstrates AgentCapTune extensibility: a brand-new benchmark plugs in by writing
 ONLY this adapter + data + a seed prompt. No core or skill changes. The scoring
 is JSON-aware (parse the agent's output, check a field) — a different paradigm
 from toy_calc's exact-match — proving the adapter contract generalizes.

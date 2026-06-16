@@ -16,7 +16,7 @@ Type "export RUN=${RUN:-/tmp/tau2_comp_smoke} RID=${RID:-run_smoke}" Enter
 Type "clear" Enter
 Show
 
-Type "# agent-capo x tau2-airline: optimize the POLICY + TOOLS together"
+Type "# AgentCapTune x tau2-airline: optimize the POLICY + TOOLS together"
 Enter
 Sleep 800ms
 Type "# (claude-opus-4-6 optimizer, gpt-oss-120b agent+user, git iteration store)"

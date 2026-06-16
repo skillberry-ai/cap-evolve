@@ -68,7 +68,16 @@ steps. The *judgment* — interviewing, choosing components, and running the
 ask-if-missing loop — is yours, driven by this SKILL.md and `inputs/INPUTS.md`.
 
 Then implement `adapters/adapter.py`, fill `acapo.yaml`, and proceed to
-`implement-and-check`.
+`implement-and-check`. Together, **intake → implement-and-check** is the *full
+integration*: scaffold → implement the 4 adapter methods → `acapo check` green,
+before any budget is spent. The using-agent (e.g. the chosen optimizer) can run
+this whole integration autonomously.
+
+> **Worked example (from scratch, integration by the optimizer agent):**
+> `examples/date_tool/` — the intake script scaffolds the project, **IBM Bob**
+> implements the adapter from the stub until `acapo check` passes, then optimizes
+> the capability (a tool) 0.125 → 1.0. It documents exactly what a SCRIPT does vs
+> what Bob does vs what you do.
 
 ## What good vs bad intake looks like
 - **Good:** every NEEDED input resolved to a real path or `"adapter"`; splits and

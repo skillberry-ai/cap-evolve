@@ -1,4 +1,4 @@
-# VHS tape for the agent-capo demo GIF.  Render from the repo root:  vhs docs/demo.tape
+# VHS tape for the AgentCapTune demo GIF.  Render from the repo root:  vhs docs/demo.tape
 # Requires https://github.com/charmbracelet/vhs (+ ttyd + ffmpeg). Produces docs/demo.gif.
 
 Output docs/demo.gif
@@ -23,7 +23,7 @@ Type "clear" Enter
 Show
 
 # --- shown demo ---
-Type "# agent-capo - optimize a prompt, prove the gain (zero-API toy)"
+Type "# AgentCapTune - optimize a prompt, prove the gain (zero-API toy)"
 Enter
 Sleep 900ms
 Type "python3 -m agent_capo.cli check .agentcapo/project"

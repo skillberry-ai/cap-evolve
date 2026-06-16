@@ -1,12 +1,12 @@
 # Integrate a new benchmark, step by step — skills-bench + IBM Bob + gpt-oss-120b
 
-This is the worked example of agent-capo's core promise: **integrate any benchmark
+This is the worked example of AgentCapTune's core promise: **integrate any benchmark
 by writing one adapter.** Here the benchmark is
 [skills-bench](https://github.com/benchflow-ai/skillsbench) (evaluates how well an
 agent uses an Agent **Skill**), the optimizer is **IBM Bob**, and the agent under
 test (the RUNNER) is **`openai/gpt-oss-120b`** via IBM RITS.
 
-The capability being optimized is a **skill package** (`skill-package`): agent-capo
+The capability being optimized is a **skill package** (`skill-package`): AgentCapTune
 edits `SKILL.md`, the runner re-runs skills-bench tasks with the edited skill
 injected (`--skills-dir … --skill-mode with-skill`), and the task verifier's reward
 drives the loop.
@@ -26,13 +26,13 @@ drives the loop.
 3. `acapo check` — the hard gate (adapter implemented + deterministic scorer).
 4. `acapo run` — baseline → optimize → finalize (sealed test) → report + dashboard.
 
-No agent-capo core/skill changes are needed for a new benchmark.
+No AgentCapTune core/skill changes are needed for a new benchmark.
 
 ---
 
 ## Step 0 — prerequisites
 ```bash
-# agent-capo
+# AgentCapTune
 pip install ./core            # or export AGENT_CAPO_CORE=$PWD/core
 
 # skills-bench (Docker required; provides the `bench` CLI)
@@ -94,7 +94,7 @@ needs no bridge — set `BENCHFLOW_PROVIDER_BASE_URL`/`OPENAI_API_KEY` to it dir
 
 ## Step 4 — wire + check
 ```bash
-REPO=/path/to/agent-capo
+REPO=/path/to/AgentCapTune
 export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
 export ACAPO_SKILLSBENCH_ROOT=/path/to/skillsbench
 export ACAPO_SKB_TASK_IDS="offer-letter-generator,powerlifting-coef-calc"

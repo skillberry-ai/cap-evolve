@@ -1,11 +1,11 @@
-# Contributing to agent-capo
+# Contributing to AgentCapTune
 
-Thanks for helping! agent-capo is designed so that extending it almost never means
+Thanks for helping! AgentCapTune is designed so that extending it almost never means
 touching core — you add a self-contained skill.
 
 ## Dev setup
 ```bash
-git clone <repo> agent-capo && cd agent-capo
+git clone <repo> AgentCapTune && cd AgentCapTune
 pip install -e ./core        # or: export AGENT_CAPO_CORE=$PWD/core
 python -m pytest core/tests -q          # 28 tests, zero API cost
 python skills/_registry/build_manifest.py skills   # rebuild the registry

@@ -1,7 +1,7 @@
 """skills-bench adapter — optimize an Agent Skill against benchflow-ai/skillsbench.
 
 The capability under optimization is a **skill package** (a `skill-package`
-capability): a directory `<skill-name>/SKILL.md`. agent-capo edits the skill; the
+capability): a directory `<skill-name>/SKILL.md`. AgentCapTune edits the skill; the
 RUNNER is the skills-bench harness running a chosen agent+model on each task WITH
 the candidate skill injected (`--skills-dir <cand> --skill-mode with-skill`); the
 SCORE is the task verifier's reward in [0,1].
@@ -70,17 +70,39 @@ def _latest_result(jobs: Path) -> tuple[dict, Path] | None:
     return json.loads(results[-1].read_text(encoding="utf-8")), results[-1]
 
 
-def _failed_checks(result_path: Path, limit: int = 12) -> list[str]:
-    """The verifier's FAILED/ERROR assertion names — actionable optimizer feedback."""
+def _verifier_detail(result_path: Path, limit: int = 14) -> dict:
+    """Parse the task verifier's pytest output.
+
+    Returns ``{fraction, passed, total, failures}`` where ``fraction`` is the share
+    of assertions that passed (a DENSE optimization signal — far better than the
+    benchmark's all-or-nothing 0/1 reward, which gives the optimizer no gradient),
+    and ``failures`` is a list of ``"test_name: AssertionError msg"`` strings the
+    optimizer can act on. Empty dict if no verifier output.
+    """
     stdout = result_path.parent / "verifier" / "test-stdout.txt"
     if not stdout.exists():
-        return []
-    names = []
-    for m in re.finditer(r"^(?:FAILED|ERROR)\s+(\S+)", stdout.read_text(encoding="utf-8", errors="replace"), re.M):
-        name = m.group(1).lstrip(":")
-        if name not in names:
-            names.append(name)
-    return names[:limit]
+        return {}
+    txt = stdout.read_text(encoding="utf-8", errors="replace")
+    # Per-test outcome lines: "::test_name FAILED [ 5%]" / "PASSED" / "ERROR".
+    outcomes = re.findall(r"^::?\S*?(\S+?)\s+(PASSED|FAILED|ERROR)", txt, re.M)
+    passed = sum(1 for _, o in outcomes if o == "PASSED")
+    total = len(outcomes)
+    if total == 0:
+        # Fallback to the pytest summary line counts.
+        counts = {"passed": 0, "failed": 0, "error": 0}
+        for m in re.finditer(r"(\d+)\s+(passed|failed|error)", txt):
+            counts[m.group(2)] += int(m.group(1))
+        passed = counts["passed"]
+        total = counts["passed"] + counts["failed"] + counts["error"]
+    # Short failure reasons from the summary block: "FAILED ::test - AssertionError: ..."
+    failures = []
+    for m in re.finditer(r"^(?:FAILED|ERROR)\s+::?(\S+?)(?:\s+-\s+(.*))?$", txt, re.M):
+        name, msg = m.group(1).lstrip(":"), (m.group(2) or "").strip()
+        entry = f"{name}: {msg}" if msg else name
+        if entry not in failures:
+            failures.append(entry)
+    return {"fraction": (passed / total if total else None),
+            "passed": passed, "total": total, "failures": failures[:limit]}
 
 
 def _reward_of(result: dict) -> float | None:
@@ -162,36 +184,42 @@ class Adapter(CapabilityAdapter):
                            error=f"no result.json (rc={proc.returncode}): {proc.stderr[-400:]}")
         result, result_path = found
 
-        reward = _reward_of(result)
+        binary = _reward_of(result)
+        detail = _verifier_detail(result_path)
+        # Shaped reward: fraction of assertions passed (dense gradient). Fall back to
+        # the benchmark's binary reward only if the verifier output can't be parsed.
+        reward = detail.get("fraction")
+        if reward is None:
+            reward = binary if binary is not None else 0.0
         agent_res = result.get("agent_result") or {}
         metrics = result.get("final_metrics") or {}
         cost = metrics.get("total_cost_usd") or agent_res.get("cost_usd") or 0.0
         tokens = agent_res.get("total_tokens") or 0
-        failed = _failed_checks(result_path) if (reward is None or reward < 1.0) else []
         return Rollout(
             task_id=task.id,
             output=str(reward),
             trace=json.dumps(result.get("trajectory_summary") or {})[:2000],
             cost_usd=float(cost or 0.0),
             tokens=int(tokens or 0),
-            metadata={"reward": reward, "skill_invocations": result.get("n_skill_invocations"),
-                      "failed_checks": failed, "error": result.get("error")},
+            metadata={"reward": float(reward), "binary_pass": binary,
+                      "passed": detail.get("passed"), "total": detail.get("total"),
+                      "failures": detail.get("failures") or [],
+                      "skill_invocations": result.get("n_skill_invocations"),
+                      "error": result.get("error")},
         )
 
     def score(self, task: Task, rollout: Rollout) -> Score:
         meta = rollout.metadata or {}
-        reward = meta.get("reward")
-        if reward is None:
-            reward = 0.0
-        ok = reward >= 1.0
-        if ok:
-            fb = "passed all task assertions"
+        reward = float(meta.get("reward") or 0.0)
+        passed, total = meta.get("passed"), meta.get("total")
+        if reward >= 1.0:
+            fb = f"passed all {total or ''} task assertions"
         else:
-            fb = f"reward={reward}."
+            head = f"{passed}/{total} assertions passed" if total else f"reward={reward:.3f}"
+            fb = f"{head}. Keep the checks that already pass; fix the failing ones"
             if meta.get("error"):
-                fb += f" error={meta['error']}."
-            failed = meta.get("failed_checks") or []
-            if failed:
-                # Actionable signal for the optimizer: which verifier checks failed.
-                fb += " Failing checks the skill must address: " + ", ".join(failed) + "."
-        return Score(task_id=task.id, reward=float(reward), feedback=fb, trial_rewards=[float(reward)])
+                fb += f" (run error: {meta['error']})"
+            failures = meta.get("failures") or []
+            if failures:
+                fb += ":\n- " + "\n- ".join(failures)
+        return Score(task_id=task.id, reward=reward, feedback=fb, trial_rewards=[reward])

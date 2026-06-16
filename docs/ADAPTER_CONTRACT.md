@@ -1,6 +1,6 @@
 # The adapter contract
 
-agent-capo works with *any* target agent, benchmark, and capability because the
+AgentCapTune works with *any* target agent, benchmark, and capability because the
 agent-specific glue is confined to four methods you implement once, in
 `.agentcapo/project/adapters/adapter.py`:
 

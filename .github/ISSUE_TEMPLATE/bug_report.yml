@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in agent-capo
+description: Report a defect in AgentCapTune
 labels: [bug]
 body:
   - type: textarea
@@ -17,4 +17,4 @@ body:
   - type: input
     id: version
     attributes:
-      label: agent-capo commit / version
+      label: AgentCapTune commit / version

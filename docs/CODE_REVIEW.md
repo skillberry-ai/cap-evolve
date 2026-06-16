@@ -1,7 +1,7 @@
 # Code review & extensibility assessment
 
 A max-effort review (two independent finder passes + verification) plus an
-honest assessment of how easy agent-capo is to extend and integrate.
+honest assessment of how easy AgentCapTune is to extend and integrate.
 
 ## Findings fixed (this round)
 

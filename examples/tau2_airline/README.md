@@ -1,6 +1,6 @@
 # Example: tau2-bench airline (real, watsonx `gpt-oss-120b`)
 
-A real, end-to-end agent-capo example that optimizes the **airline policy** against
+A real, end-to-end AgentCapTune example that optimizes the **airline policy** against
 [tau2-bench](https://github.com/sierra-research/tau2-bench), with the agent and the
 user simulator both running `openai/gpt-oss-120b` via IBM RITS / watsonx.
 

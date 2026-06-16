@@ -58,6 +58,8 @@ class Adapter(CapabilityAdapter):
         ids = [t.id for t in tasks]
         raw = rt.run_airline_batch(Path(candidate_dir), ids)
         return {tid: Rollout(task_id=tid, output=r["output"], trace=r["trace"],
+                             cost_usd=float(r.get("cost", 0.0) or 0.0),
+                             tokens=int(r.get("tokens", 0) or 0),
                              metadata={"reward": r["reward"], "reward_info": r["reward_info"],
                                        "termination": r["termination"]})
                 for tid, r in raw.items()}

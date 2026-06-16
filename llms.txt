@@ -1,11 +1,11 @@
-# agent-capo
+# AgentCapTune
 
 > A skills-native, host-agnostic harness for optimizing AI-agent capabilities
 > (skills, tools/MCP, prompts) against your own evaluation, with honest
 > train/val/test discipline enforced in code. The pipeline is a library of Agent
 > Skills; the only shipped code is a tiny stdlib substrate.
 
-If you are an agent driving agent-capo: follow `RUN.md`. Implement the 4-method
+If you are an agent driving AgentCapTune: follow `RUN.md`. Implement the 4-method
 adapter (`docs/ADAPTER_CONTRACT.md`), pass `acapo check`, then run the phases
 intake → implement-and-check → baseline → <algorithm> → finalize → report. Never
 score the test split except at finalize; gate acceptance on val.

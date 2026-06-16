@@ -1,4 +1,4 @@
-# agent-capo run report — run_comp
+# AgentCapTune run report — run_comp
 
 - Best candidate: `cand_0007`
 - Baseline val: 0.46

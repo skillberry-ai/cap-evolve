@@ -7,17 +7,18 @@ optimizer_model: ""                # let Bob use its default model
 algorithm_skill: all-at-once
 dataset_source: adapter            # tasks() lists skills-bench tasks
 
-num_trials: 2                      # average the binary task reward over 2 rollouts
+num_trials: 4                      # average gpt-oss-120b's high variance over 4 rollouts
 gate_mode: significant
 gate_k_se: 1.0
 
-# 2 tasks: val = offer-letter-generator (the skill-sensitive task), test =
-# powerlifting-coef-calc (held out, sealed). split_seed=0 pins this placement.
+# 2 tasks: val = powerlifting-coef-calc (high-leverage: 9/11 baseline, 2 specific
+# fixable gaps — exact columns + Excel formula), test = offer-letter-generator
+# (held out, sealed). split_seed=1 pins this placement.
 split_train: 0.0
 split_val: 0.5
 split_test: 0.5
-split_seed: 0
+split_seed: 1
 
-max_iterations: 2
+max_iterations: 5
 stall: 0
 store: git

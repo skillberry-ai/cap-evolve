@@ -4,7 +4,7 @@
 # agent+user: gpt-oss-120b (watsonx/RITS); all 50 tasks in train/val/test;
 # 10 iterations; num_trials 4; tau concurrency 7; git iteration store.
 #
-# Usage:  REPO=/path/to/agent-capo BASELINE=/tmp/tau2_baseline_cache ./reuse_baseline.sh
+# Usage:  REPO=/path/to/AgentCapTune BASELINE=/tmp/tau2_baseline_cache ./reuse_baseline.sh
 set -euo pipefail
 REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 BASELINE="${BASELINE:-/tmp/tau2_baseline_cache}"     # dir with baseline.json + rollouts/ (val=0.46)

@@ -12,7 +12,7 @@ benchmark), **10 iterations**, **num_trials 4**, tau **concurrency 7**.
 
 ## Run it
 ```bash
-REPO=/path/to/agent-capo
+REPO=/path/to/AgentCapTune
 export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
 export ACAPO_TAU2_DATA=$REPO/examples/tau2_airline/data
 export TAU2_MAX_CONCURRENCY=7          # tau2 batch parallelism

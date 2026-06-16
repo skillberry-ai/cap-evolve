@@ -1,9 +1,9 @@
 cff-version: 1.2.0
-message: "If you use agent-capo, please cite it."
-title: "agent-capo: a skills-native, host-agnostic harness for honestly optimizing AI-agent capabilities"
+message: "If you use AgentCapTune, please cite it."
+title: "AgentCapTune: a skills-native, host-agnostic harness for honestly optimizing AI-agent capabilities"
 authors:
-  - name: "agent-capo contributors"
+  - name: "AgentCapTune contributors"
 version: 0.1.0
 license: MIT
 date-released: 2026-06-14
-repository-code: "https://github.com/OWNER/agent-capo"
+repository-code: "https://github.com/OWNER/AgentCapTune"

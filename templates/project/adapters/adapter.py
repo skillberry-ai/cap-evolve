@@ -1,6 +1,6 @@
 """Project adapter — IMPLEMENT the 4 methods, then run `acapo check`.
 
-This is the one place you wire agent-capo to YOUR target agent, YOUR benchmark,
+This is the one place you wire AgentCapTune to YOUR target agent, YOUR benchmark,
 and YOUR capability. Everything else (splits, trials, gating, pass^k, memory) is
 provided by agent_capo and must not be reimplemented here.
 

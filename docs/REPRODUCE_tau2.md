@@ -14,7 +14,7 @@ It documents (1) the inputs the intake phase needs, (2) the answers the agent
 ## 1. Prerequisites
 
 - `tau2-bench` importable (this workspace has it at `../tau2-bench`).
-- Repo `.env` (one level above `agent-capo/`) with the RITS/watsonx creds — read
+- Repo `.env` (one level above `AgentCapTune/`) with the RITS/watsonx creds — read
   automatically by `tau2_runtime.load_env()`:
   ```
   RITS_API_KEY=…        WATSONX_APIKEY=…
@@ -64,7 +64,7 @@ examples/tau2_airline/
 
 ### 4a. Baseline (run once; reused afterwards)
 ```bash
-REPO=$PWD                       # agent-capo repo root
+REPO=$PWD                       # AgentCapTune repo root
 export AGENT_CAPO_CORE=$REPO/core PYTHONPATH=$REPO/core ACAPO_SKILLS_DIR=$REPO/skills
 export ACAPO_TAU2_DATA=$REPO/examples/tau2_airline/data TAU2_MAX_CONCURRENCY=7
 
@@ -102,7 +102,7 @@ cat $RD/rejected.jsonl            # approaches the gate rejected (optimizer memo
 
 ## 5. What "all 50 tasks in train/val/test" means here
 The user asked to use all 50 tasks for train, val, AND test. That is a **no-holdout
-fit** on the full airline benchmark (train = val = test = the 50 tasks). agent-capo
+fit** on the full airline benchmark (train = val = test = the 50 tasks). AgentCapTune
 allows it but logs a `splits_warning` and the report flags the test number as a fit
 metric (not held-out). For a held-out result, set `split_ids_file: ""` and use the
 ratio split (`split_train/val/test`) instead.

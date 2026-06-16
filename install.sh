@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Universal installer: place the agent-capo skills into ANY host's skills dir and
+# Universal installer: place the AgentCapTune skills into ANY host's skills dir and
 # (re)build the registry manifest. Host-agnostic by design — Claude Code, Codex,
 # Gemini CLI, opencode, openclaw, IBM Bob, or a bare clone all work.
 #
@@ -38,7 +38,7 @@ detect_dest() {
     case "$HOST" in
       claude|claude-code) echo "$HOME/.claude/skills"; return;;
       codex)              echo "$HOME/.agents/skills"; return;;
-      gemini|gemini-cli)  echo "$HOME/.gemini/extensions/agent-capo/skills"; return;;
+      gemini|gemini-cli)  echo "$HOME/.gemini/extensions/AgentCapTune/skills"; return;;
       opencode)           echo "$HOME/.config/opencode/skills"; return;;
       openclaw)           echo "$HOME/.openclaw/workspace/skills"; return;;
       cursor)             echo "$PWD/.cursor/skills"; return;;
@@ -54,7 +54,7 @@ detect_dest() {
 [[ -n "$DEST" ]] || DEST="$(detect_dest)"
 mkdir -p "$DEST"
 
-echo "agent-capo: installing skills"
+echo "AgentCapTune: installing skills"
 echo "  from: $SRC"
 echo "  to:   $DEST"
 

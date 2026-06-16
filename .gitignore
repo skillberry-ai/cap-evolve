@@ -9,7 +9,7 @@ dist/
 .venv/
 venv/
 
-# agent-capo run state (per-run, not source)
+# AgentCapTune run state (per-run, not source)
 .agentcapo/
 
 # OS

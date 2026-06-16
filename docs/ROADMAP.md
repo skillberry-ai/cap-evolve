@@ -1,10 +1,10 @@
-# agent-capo roadmap
+# AgentCapTune roadmap
 
-agent-capo's differentiator is real whitespace: **skills-native + host-agnostic +
+AgentCapTune's differentiator is real whitespace: **skills-native + host-agnostic +
 honest train/val/test**, which no top optimization repo combines. This roadmap is
 derived from a survey of the best optimization/eval repos (DSPy, GEPA, OpenEvolve,
 Inspect, promptfoo, DeepEval, tau-bench, SWE-bench, the Agent Skills standard) and
-prioritizes what makes agent-capo best-in-class and widely adopted.
+prioritizes what makes AgentCapTune best-in-class and widely adopted.
 
 ## Done (v0.1)
 - Honest eval as a structural invariant: seeded splits, **sealed** test, val-only
@@ -38,7 +38,7 @@ prioritizes what makes agent-capo best-in-class and widely adopted.
 6. **More algorithms**: cluster_cyclic (issues-graph clustering), skillopt_epochs
    (epochs / textual-LR / rejected-edit buffer), dspy_instruction_search (MIPRO).
 7. **More capabilities**: skill-package (full SKILL.md dir), retrieval_config.
-8. **Distribution polish**: `pip install agent-capo`, `llms.txt`/`llms-full.txt`,
+8. **Distribution polish**: `pip install AgentCapTune`, `llms.txt`/`llms-full.txt`,
    an MCP server + CLI to query results, `skills-ref validate` against the
    agentskills.io spec, and a static-HTML dashboard.
 9. **Evals as a CI gate** (`assert_skill(candidate, suite)` pytest helper) and a

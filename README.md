@@ -1,4 +1,4 @@
-# agent-capo
+# AgentCapTune
 
 <!-- badges: replace OWNER/REPO once published -->
 ![status](https://img.shields.io/badge/status-beta%20(0.x)-orange)
@@ -12,7 +12,7 @@
 against your own eval. Host-agnostic. Honest train/val/test. Every iteration
 versioned in git.**
 
-agent-capo is a library of [Agent Skills](https://www.anthropic.com/news/skills)
+AgentCapTune is a library of [Agent Skills](https://www.anthropic.com/news/skills)
 (plus a tiny stdlib core) that turns "make this agent better at X" into a
 disciplined loop *any* coding agent can run: collect inputs → wire a 4-method
 adapter → evaluate → diagnose failures → propose edits → keep only what beats a
@@ -29,7 +29,7 @@ honest number you can trust.
 [Skill library](#skill-library) · [Examples](#examples) ·
 [Extending](#extending) · [Contributing](#contributing) · [Citation](#citation)
 
-![agent-capo demo](docs/demo.gif)
+![AgentCapTune demo](docs/demo.gif)
 
 ## Quickstart (60 seconds)
 
@@ -37,7 +37,7 @@ A real, zero-API run — the `toy_calc` example (a deterministic agent whose sco
 depends on its system prompt; full setup in [examples/toy_calc](examples/toy_calc)):
 
 ```bash
-git clone <repo> agent-capo && cd agent-capo
+git clone <repo> AgentCapTune && cd AgentCapTune
 pip install ./core                         # the honest-eval substrate (CLI: acapo)
 ./install.sh                               # place skills into your agent host
 python3 -m agent_capo.cli run --spec .agentcapo/project/acapo.yaml --project .agentcapo/project
@@ -89,7 +89,7 @@ Codex `.agents/skills`, opencode native, Gemini extensions, …).
 
 ## Install
 ```bash
-pip install ./core            # package: agent-capo-core, CLI: acapo
+pip install ./core            # package: AgentCapTune-core, CLI: acapo
 ./install.sh                  # copy skills into your host's skills dir (optionally --host <name>)
 ```
 
@@ -131,7 +131,7 @@ pass^k / pass@k.
 
 ## How it compares
 
-| | agent-capo | DSPy | GEPA | promptfoo |
+| | AgentCapTune | DSPy | GEPA | promptfoo |
 |---|:--:|:--:|:--:|:--:|
 | Optimizes prompts | ✅ | ✅ | ✅ | ❌ (eval only) |
 | Optimizes tools/MCP + skills | ✅ | ➖ | ➖ | ❌ |
@@ -170,11 +170,11 @@ Report security issues via [SECURITY.md](SECURITY.md). Changes: [CHANGELOG.md](C
 
 ## Citation
 ```bibtex
-@software{agent-capo,
-  title  = {agent-capo: a skills-native, host-agnostic harness for honestly
+@software{AgentCapTune,
+  title  = {AgentCapTune: a skills-native, host-agnostic harness for honestly
             optimizing AI-agent capabilities},
   year   = {2026},
-  note   = {https://github.com/OWNER/agent-capo}
+  note   = {https://github.com/OWNER/AgentCapTune}
 }
 ```
 Builds on GEPA, DSPy, SkillOpt, SkillGrad, Trace2Skill, evo/evo-graph/governor,

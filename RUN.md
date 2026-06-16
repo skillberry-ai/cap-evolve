@@ -1,6 +1,6 @@
-# RUN — drive the full agent-capo pipeline (point any agent here)
+# RUN — drive the full AgentCapTune pipeline (point any agent here)
 
-You are an AI agent asked to optimize an agent capability with **agent-capo**.
+You are an AI agent asked to optimize an agent capability with **AgentCapTune**.
 Follow these steps exactly. The skills you load do the real work; this file just
 sequences them and enforces the non-negotiable rules.
 
