@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "agent-capo-core"
 version = "0.1.0"
 description = "Tiny stdlib-only honest-evaluation substrate for the agent-capo skills library."
-readme = "../README.md"
+readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 # Zero hard runtime dependencies — pure stdlib by design.
