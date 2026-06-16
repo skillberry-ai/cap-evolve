@@ -22,7 +22,8 @@ honest number you can trust.
 > **Status:** beta (`0.x`) — APIs may change. Working end to end; proven on a real
 > benchmark (see [Results](#results)).
 
-**Contents:** [Quickstart](#quickstart-60-seconds) · [Results](#results) ·
+**Contents:** [Quickstart](#quickstart-60-seconds) ·
+[Optimize your own](#optimize-your-own-skill-tool-or-agent) · [Results](#results) ·
 [Supported agent hosts](#supported-agent-hosts) · [Install](#install) ·
 [Usage](#usage-swap-one-word) · [How it works](#how-it-works) ·
 [Dashboard](#dashboard) · [Comparison](#how-it-compares) ·
@@ -33,14 +34,21 @@ honest number you can trust.
 
 ## Quickstart (60 seconds)
 
-A real, zero-API run — the `toy_calc` example (a deterministic agent whose score
-depends on its system prompt; full setup in [examples/toy_calc](examples/toy_calc)):
+**Prerequisites:** Python 3.10+ and git — that's all for this example (it's
+**zero-API**, so no model key needed). A *real* optimization additionally needs a
+coding-agent CLI to act as the optimizer (e.g. `claude`, `codex`, `gemini`) plus
+its API key — see [Optimize your own](#optimize-your-own-skill-tool-or-agent). Some
+benchmarks (e.g. skills-bench) also need Docker.
+
+**Step 1 — verify the install with a real, zero-API run** (the `toy_calc` example:
+a deterministic agent whose score depends on its system prompt; the `mock` optimizer
+edits the prompt, so no API is called):
 
 ```bash
 git clone <repo> AgentCapTune && cd AgentCapTune
 pip install ./core                         # the honest-eval substrate (CLI: acapo)
 ./install.sh                               # place skills into your agent host
-bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run
+bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run end-to-end
 ```
 ```jsonc
 {
@@ -50,7 +58,79 @@ bash examples/toy_calc/run.sh              # scaffold a tmp project dir and run
   "dashboard": ".agentcapo/run_*/dashboard.html"   // open in any browser
 }
 ```
+Open the printed `dashboard.html` to see the run. That confirms the install works.
+
+**Step 2 — optimize your own skill / tool / agent:** see the next section.
 Or, host-agnostic: point any agent at [`RUN.md`](RUN.md) and say *"follow RUN.md."*
+
+## Optimize your own skill, tool, or agent
+
+The Quickstart runs a *bundled* example. To optimize **your** capability against
+**your** benchmark, you supply three things and AgentCapTune runs the loop:
+
+1. **The capability to optimize** — a skill (`SKILL.md` package), a tool's code, an
+   MCP tool definition, or a system prompt. A *copy* is edited each iteration; your
+   original is never touched.
+2. **Tasks** — your benchmark's eval cases (each with an id + a gold/criterion).
+3. **A scorer** — how one run becomes a reward in `[0,1]` (+ short feedback).
+
+You connect these once through a tiny **4-method adapter**
+(`tasks · run_target · score · apply`). There are two ways to get there — pick one:
+
+### Path A — let your coding agent build and run it (no Python from you)
+Open the coding agent you already use (**Claude Code**, Codex, Gemini CLI, opencode,
+…) at the repo root and tell it:
+
+> **"Follow `RUN.md` to optimize my skill at `<path/to/skill>` against the benchmark
+> at `<path/to/tasks>`. Score a task as `<your pass/fail rule>`."**
+
+It loads the `intake` skill, asks you for anything missing, **writes the adapter for
+you**, runs the `acapo check` gate, then the full optimize → significance-gate →
+sealed-test → report loop — and prints the dashboard path. This is exactly how
+[`examples/date_tool`](examples/date_tool) was built: the optimizer agent wrote the
+adapter from scratch and improved the tool **0.125 → 1.0**, with no human edits.
+
+### Path B — drive it yourself with the `acapo` CLI
+```bash
+# 1. scaffold a project (adapter STUB + acapo.yaml + PROJECT.md)
+python3 skills/phases/intake/scripts/run.py --base .agentcapo
+
+# 2. implement the 4 methods in .agentcapo/project/adapters/adapter.py:
+#      tasks(split)               -> your benchmark's tasks  (id, input, target)
+#      run_target(task, cand_dir) -> run YOUR agent/skill/tool on the task w/ the candidate applied
+#      score(task, rollout)       -> reward in [0,1] + feedback
+#      apply(cand_dir, edits)     -> make the candidate "live" (often a no-op for a skill/tool dir)
+#    Fastest path: copy the closest example adapter below and edit it.
+
+# 3. fill .agentcapo/project/acapo.yaml  (capabilities / optimizer / algorithm / splits)
+
+# 4. hard gate, then run
+acapo check .agentcapo/project
+acapo run --spec .agentcapo/project/acapo.yaml --project .agentcapo/project
+open .agentcapo/run_*/dashboard.html
+```
+
+**Start from the closest worked example** — copy its `adapter.py`, point it at your
+data, swap `capabilities` in `acapo.yaml`:
+
+| You want to optimize… | Copy this example | `capabilities:` |
+|---|---|---|
+| a **tool's code** | [`examples/date_tool`](examples/date_tool) | `[tools]` |
+| a **skill package** (`SKILL.md`) | [`examples/skills_bench`](examples/skills_bench) | `[skill-package]` |
+| a **system prompt + tools** (real agent) | [`examples/tau2_airline`](examples/tau2_airline) | `[system-prompt, tools]` |
+| a simple **prompt** / extractor | [`examples/toy_calc`](examples/toy_calc) · [`examples/json_extract`](examples/json_extract) | `[system-prompt]` |
+
+### Pointing it at your own benchmark
+Your benchmark plugs in **only** through the adapter — nothing else changes:
+- `tasks(split)` reads your benchmark's cases (its files, or an API call).
+- `run_target(task, candidate_dir, split)` runs your agent on one task **with the
+  candidate capability applied**, capturing output/trace into a `Rollout`.
+- `score(task, rollout)` turns that into a reward using your benchmark's metric.
+
+If your benchmark ships its **own batch runner**, implement `run_batch` instead of
+per-task `run_target` (see [`examples/tau2_airline/adapter.py`](examples/tau2_airline/adapter.py))
+so AgentCapTune drives the benchmark's runner directly. Splits, trials, the gate,
+pass^k, the sealed test, and the dashboard are all handled for you.
 
 ## Results
 
