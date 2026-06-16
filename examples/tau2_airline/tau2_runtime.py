@@ -244,9 +244,34 @@ def run_airline_batch(candidate_dir: Path, task_ids: list[str]) -> dict:
     )
     # tau2 prints progress to stdout; redirect to stderr so our JSON contract stays clean.
     import contextlib
+    import signal
     import sys as _sys
-    with contextlib.redirect_stdout(_sys.stderr):
-        results = run_tasks(config, t2, save_path=None, console_display=False)
+
+    # Hard wall-clock watchdog on the whole batch. The per-call `timeout` above does
+    # not catch a tau2 concurrent-runner stall (a wedged conversation can hang the
+    # batch indefinitely). SIGALRM fires in the main thread (the harness is
+    # synchronous), aborts run_tasks, and we return {} so those tasks score 0 for this
+    # trial — the loop keeps going instead of hanging forever. Override via env.
+    batch_timeout = int(os.environ.get("TAU2_BATCH_TIMEOUT", "1200"))
+
+    class _BatchTimeout(Exception):
+        pass
+
+    def _on_alarm(signum, frame):
+        raise _BatchTimeout()
+
+    old_handler = signal.signal(signal.SIGALRM, _on_alarm)
+    signal.alarm(batch_timeout)
+    try:
+        with contextlib.redirect_stdout(_sys.stderr):
+            results = run_tasks(config, t2, save_path=None, console_display=False)
+    except _BatchTimeout:
+        _sys.stderr.write(f"[tau2_runtime] batch timed out after {batch_timeout}s "
+                          f"({len(task_ids)} tasks) — scoring this trial's tasks as 0\n")
+        return {}
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
     out = {}
     for sim in results.simulations:
         tid = str(sim.task_id)
