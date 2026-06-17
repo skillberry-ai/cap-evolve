@@ -31,7 +31,9 @@ def load_env() -> None:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    os.environ.setdefault(k.strip(), v.strip())
+                    # strip surrounding quotes — a quoted value (KEY="abc") must not
+                    # send the quotes downstream (RITS rejects a quoted API key).
+                    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
             return
 
 
