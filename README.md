@@ -135,7 +135,8 @@ Follow RUN.md to run a cap-evolve optimization:
 # 1. CAPABILITY: [system-prompt, tools]  (optimize the airline policy AND the tool docstrings/code)
 #    local path: examples/tau2_airline/seed_caps   (policy/policy.md + tools/tools.py)
 # 2. BENCHMARK: tau2-bench airline; repo local at ../tau2-bench; tasks via "adapter" (50 airline tasks)
-#    splits: all 50 tasks in train/val/test (no holdout, fit metric) -> run_full/split_ids_all50.json
+#    splits: an honest holdout (e.g. 30/10/10) via a split_ids.json, or all 50 as
+#    train/val/test for a no-holdout fit metric (the engine logs a splits_warning)
 # 3. RUNNER: agent AND user simulator = watsonx/openai/gpt-oss-120b via IBM RITS;
 #    credential RITS_API_KEY in the repo-root .env; tau concurrency 7 (TAU2_MAX_CONCURRENCY=7)
 # 4. SCORER: tau2's own task reward in [0,1] (required actions performed + info communicated);
@@ -145,10 +146,9 @@ Follow RUN.md to run a cap-evolve optimization:
 #            (or algorithm gepa / skillopt for the sample-efficient flagships)
 ```
 
-The exact, copy-pasteable commands for that run are in
-[`examples/tau2_airline/run_full/README.md`](examples/tau2_airline/run_full/README.md),
-and the full Bob-optimizer walkthrough (phases, what Bob wrote, metrics) is in
-[`examples/tau2_airline/run_full/BOB_EXPERIMENT.md`](examples/tau2_airline/run_full/BOB_EXPERIMENT.md).
+The exact, copy-pasteable commands plus two real autonomous runs (hill-climb/ibm-bob
+and gepa/claude-code, with dashboards) are in
+[`examples/tau2_airline/run_full/README.md`](examples/tau2_airline/run_full/README.md).
 
 ### Path B — drive it yourself with the `cap-evolve` CLI
 ```bash

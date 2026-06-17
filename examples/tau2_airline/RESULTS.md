@@ -13,7 +13,7 @@ measurable target.
 ## Pipeline runs (real tau2 rollouts)
 
 Driven by the cap-evolve skills end to end: `cap-evolve check` → `baseline` →
-`all-at-once` (optimizer edits the policy) → `finalize` (sealed test) → `report`.
+`hill-climb --focus all` (optimizer edits the policy) → `finalize` (sealed test) → `report`.
 
 | Run | split | baseline val | optimized val | gate | test (sealed) |
 |-----|-------|--------------|---------------|------|----------------|
@@ -70,11 +70,12 @@ AB_TASK_IDS="0,1,26,39,41,43,45,47,48,49" python3 examples/tau2_airline/ab_compa
 
 ## Composite run (policy + tools, claude-opus-4-6) — full 50-task result
 
-The headline composite run: optimize the airline **policy + tools together** with
-`all-at-once`, the **claude-code optimizer @ claude-opus-4-6**, agent+user
-`gpt-oss-120b` (watsonx/RITS), **all 50 tasks** (no-holdout fit), **num_trials 4**,
-tau **concurrency 7**, **git** iteration store + optimizer memory. Reproduce:
-[run_full/](run_full/) and [../../docs/REPRODUCE_tau2.md](../../docs/REPRODUCE_tau2.md).
+A prior composite run (policy + tools together) with the **claude-code** optimizer,
+agent+user `gpt-oss-120b` (watsonx/RITS), **all 50 tasks** (no-holdout fit),
+**num_trials 4**, tau **concurrency 7**, git iteration store + optimizer memory.
+For the current, committed, reproducible v2 runs (with dashboards) see
+[run_full/](run_full/); the general recipe is in
+[../../docs/REPRODUCE_tau2.md](../../docs/REPRODUCE_tau2.md).
 
 | metric | value |
 |---|---|

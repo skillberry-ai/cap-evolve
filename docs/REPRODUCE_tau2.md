@@ -1,114 +1,69 @@
-# Reproducing the tau2-airline run (exact commands, inputs, and intake answers)
+# Reproducing a tau2-airline run (intake answers + exact commands)
 
-This is the full recipe for the headline run: optimize the airline **policy + tools
-together** (composite) with the **claude-code optimizer @ claude-opus-4-6**, the
-agent *and* user simulator both **gpt-oss-120b** (watsonx/RITS), over **all 50**
-airline tasks, **10 iterations**, **num_trials 4**, tau **concurrency 7**, with a
-**git** iteration store and optimizer **memory**.
-
-It documents (1) the inputs the intake phase needs, (2) the answers the agent
-(Claude Code, i.e. me) gave to the intake questions, and (3) the exact commands.
+A worked walkthrough of running the **v2 pipeline** on tau2-bench airline,
+fully autonomously: `cap-evolve check → baseline → <algorithm> → finalize →
+report → dashboard`, with the agent *and* user simulator both
+`watsonx/openai/gpt-oss-120b` via IBM RITS. Two real runs (configs + dashboards)
+live in [`../examples/tau2_airline/run_full/README.md`](../examples/tau2_airline/run_full/README.md);
+this doc shows the inputs the **intake** phase collects and the answers behind them.
 
 ---
 
 ## 1. Prerequisites
-
 - `tau2-bench` importable (this workspace has it at `../tau2-bench`).
-- Repo `.env` (one level above `cap-evolve/`) with the RITS/watsonx creds — read
-  automatically by `tau2_runtime.load_env()`:
-  ```
-  RITS_API_KEY=…        WATSONX_APIKEY=…
-  RITS_API_URL=…        WATSONX_PROJECT_ID=…
-                        WATSONX_URL=…
-  ```
-- `claude` CLI on PATH (the optimizer); `pip install ./core` (or `CAPEVOLVE_CORE`).
+- Repo-root `.env` (one level above `cap-evolve/`) with the RITS creds — read
+  automatically by `tau2_runtime.load_env()` (quoted values are fine):
+  `RITS_API_KEY`, `RITS_API_URL` (+ `WATSONX_*` if you route through watsonx;
+  `BOBSHELL_API_KEY` if the optimizer is `ibm-bob`).
+- `pip install ./core` (or set `CAPEVOLVE_CORE`); the optimizer CLI on PATH
+  (`claude` for `claude-code`, `bob` for `ibm-bob`; `mock` needs nothing).
 
-## 2. The intake phase — questions and the answers given (by Claude Code)
+## 2. The intake phase — questions and example answers
+`intake` collects the inputs in `skills/phases/intake/inputs/INPUTS.md`:
 
-`intake` collects the inputs in `skills/phases/intake/inputs/INPUTS.md`. For this
-run the answers were:
-
-| Intake question | Answer (this run) |
+| Intake question | Example answer |
 |---|---|
-| **What capability to optimize?** | `composite` — the airline **policy** (a `system-prompt` member) **and** the **tools** (`tools.py` docstrings + new composite tools). Artifact: `examples/tau2_airline/seed_caps/` (`policy/policy.md` + `tools/tools.py`). |
-| **Where is the target agent (RUNNER) + how to run it?** | tau2-bench airline; `adapter.run_batch` runs tasks through tau2's concurrent runner with agent+user = `openai/gpt-oss-120b` via RITS (`tau2_runtime.run_airline_batch`). |
-| **How to score?** | tau2's own reward ∈ [0,1] (`adapter.score`), with gold-aware feedback (expected actions/info missed) as the learning signal. |
-| **Dataset + splits?** | All 50 airline tasks. `split_ids_file: split_ids.json` with train = val = test = all 50 (a deliberate **no-holdout fit** on the full benchmark — the run logs a leakage warning and the test number is reported as a fit metric). |
-| **num_trials?** | 4 (gpt-oss is stochastic; 4 trials → mean + stderr + pass^k/pass@k). |
-| **Optimizer + model?** | `claude-code` @ `claude-opus-4-6` (substitute a current Claude Opus model id your `claude` CLI accepts). |
-| **Algorithm?** | `all-at-once` (propose against the whole train set each iteration). |
-| **Budget?** | `max_iterations: 10`, `stall: 0`. |
-| **Gate?** | `significant` (Δ > 1·SE on val). |
+| **What capability to optimize?** | `[system-prompt, tools]` — the airline **policy** (`policy/policy.md`) **and** the **tools** (`tools/tools.py` docstrings + new composite tools). Artifact: `examples/tau2_airline/seed_caps/`. |
+| **Target agent (RUNNER) + how to run it?** | tau2-bench airline; `adapter.run_batch` runs tasks through tau2's concurrent runner with agent+user = `openai/gpt-oss-120b` via RITS (`tau2_runtime`). |
+| **How to score?** | tau2's own reward ∈ [0,1] (`adapter.score`) with gold-aware feedback (expected actions/info missed) as the learning signal. |
+| **Dataset + splits?** | The 50 airline tasks. Prefer an **honest holdout** via `split_ids_file` (e.g. 30/10/10); or all 50 as train=val=test for a **no-holdout fit** (the engine logs a `splits_warning` and the report flags the test number as a fit metric). |
+| **num_trials?** | 2–5 (gpt-oss is stochastic; trials give mean + stderr + pass^k/pass@k). |
+| **Optimizer + model?** | Any name in `optimizers/registry.yaml` (`run-optimizer --list`): e.g. `claude-code` (a Claude model id) or `ibm-bob`. |
+| **Algorithm?** | `hill-climb` (baseline), `gepa` (sample-efficient flagship), or `skillopt`. |
+| **Budget?** | `max_iterations`, `stall`; for `gepa` also `--max-metric-calls` via `algorithm_args`. |
+| **Gate?** | omit `gate_mode` → the engine auto-selects the **paired** gate (candidate & current share val tasks); `gate_k_se` tunes strictness. |
 | **Iteration store?** | `git` (default) — every iteration is committed so the whole process is browsable. |
 | **tau concurrency?** | `TAU2_MAX_CONCURRENCY=7`. |
 
-These answers are encoded in `examples/tau2_airline/run_full/cap-evolve.composite.yaml`.
-
-## 3. Input files (what the user/agent provides)
-
-```
-examples/tau2_airline/
-├── adapter.py                 # the 4-method CapabilityAdapter (tasks/run_target/score/apply) + run_batch
-├── tau2_runtime.py            # RITS routing + inject(policy + tools) + gpt-oss empty-turn retry
-├── seed_caps/
-│   ├── policy/policy.md       # the airline policy  (system-prompt member)  ← optimized
-│   └── tools/tools.py         # the 14 airline tool docstrings as editable fns ← optimized
-├── data/airline.jsonl         # the 50 tasks
-└── run_full/
-    ├── cap-evolve.composite.yaml   # the run spec (answers above)
-    ├── split_ids_all50.json   # train=val=test=all 50 ids
-    └── reuse_baseline.sh      # the launcher (reuses the cached baseline)
-```
-
-## 4. Exact commands
-
-### 4a. Baseline (run once; reused afterwards)
+## 3. Exact commands
 ```bash
-REPO=$PWD                       # cap-evolve repo root
-export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
-export CAPEVOLVE_TAU2_DATA=$REPO/examples/tau2_airline/data TAU2_MAX_CONCURRENCY=7
+REPO=$PWD                                    # cap-evolve repo root
+R=/tmp/tau2_run; PROJECT=$R/.capevolve/project
+export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core:$PROJECT/adapters
+export CAPEVOLVE_SKILLS_DIR=$REPO/skills CAPEVOLVE_TAU2_DATA=$REPO/examples/tau2_airline/data
+export TAU2_MAX_CONCURRENCY=7 TAU2_LLM_TIMEOUT=240 TAU2_INFRA_RETRIES=2
 
-R=/tmp/tau2_full; mkdir -p $R/.capevolve/project/adapters
-cp $REPO/examples/tau2_airline/{adapter.py,tau2_runtime.py} $R/.capevolve/project/adapters/
-cp -R $REPO/examples/tau2_airline/seed_caps $R/seed_composite
-cp $REPO/examples/tau2_airline/run_full/split_ids_all50.json $R/split_ids.json
-cp $REPO/examples/tau2_airline/run_full/cap-evolve.composite.yaml $R/.capevolve/project/capevolve.yaml
+mkdir -p $PROJECT/adapters
+cp $REPO/examples/tau2_airline/{adapter.py,tau2_runtime.py} $PROJECT/adapters/
+cp -R $REPO/examples/tau2_airline/seed_caps $R/seed_caps
+# write $PROJECT/capevolve.yaml (capabilities/optimizer/algorithm/splits — see §2)
+# and, for a holdout, $R/split_ids.json referenced by split_ids_file
 
-python3 -m cap_evolve.cli run --spec $R/.capevolve/project/capevolve.yaml \
-    --project $R/.capevolve/project --run-ts full
+python3 -m cap_evolve.cli run --spec $PROJECT/capevolve.yaml --project $PROJECT --run-ts run
 ```
-The baseline over all 50 tasks × 4 trials was **val = 0.46 ± 0.058** (gpt-oss-120b
-on the seed policy + default tool docs). It was cached to `/tmp/tau2_baseline_cache`.
 
-### 4b. The optimization (reusing the baseline to save the ~40-min baseline pass)
+## 4. Inspect the process
 ```bash
-REPO=$PWD BASELINE=/tmp/tau2_baseline_cache R=/tmp/tau2_comp \
-    examples/tau2_airline/run_full/reuse_baseline.sh
-```
-This snapshots the composite seed, reuses the cached baseline (val 0.46), then runs
-`all-at-once` for 10 iterations (claude-opus-4-6 proposes coordinated edits to the
-policy + tool docstrings + may add composite tools), evaluating each candidate on
-all 50×4, gating on val, committing every iteration to git, and writing
-`report.md` + `dashboard.html` + the git history + `MEMORY.md`/`rejected.jsonl`.
-
-### 4c. Inspect the process
-```bash
-RD=/tmp/tau2_comp/.capevolve/run_comp
-git -C $RD log --oneline          # one commit per iteration (the whole process)
-cat $RD/report.md                 # baseline → best-val → test
-open $RD/dashboard.html           # KPIs, per-task heatmap, score-over-iterations, leaderboard
-cat $RD/rejected.jsonl            # approaches the gate rejected (optimizer memory)
+RD=$R/.capevolve/run_run
+git -C $RD log --oneline      # one commit per iteration (the whole process)
+cat $RD/report.md             # baseline → best-val → sealed test (scored once)
+open $RD/dashboard.html       # KPIs, cumulative-best stair, per-task heatmap, lineage, cost
+cat $RD/rejected.jsonl        # what the honest gate rejected (optimizer memory)
 ```
 
-## 5. What "all 50 tasks in train/val/test" means here
-The user asked to use all 50 tasks for train, val, AND test. That is a **no-holdout
-fit** on the full airline benchmark (train = val = test = the 50 tasks). cap-evolve
-allows it but logs a `splits_warning` and the report flags the test number as a fit
-metric (not held-out). For a held-out result, set `split_ids_file: ""` and use the
-ratio split (`split_train/val/test`) instead.
-
-## 6. Notes on cost
-all-at-once evaluates the val split (50 × 4 = 200 tau2 conversations) each
-iteration, so the run is ~200 (baseline) + 10×200 + 200 (test) ≈ 2,400 multi-turn
-conversations + 10 claude-opus-4-6 calls — several hours at concurrency 7. Reduce
-`max_iterations`/`num_trials`, or use a ratio split, for a faster pass.
+## 5. A note on honest results
+On a small held-out val, the **paired gate correctly refuses gains it can't
+distinguish from noise** — so a run may honestly finalize at the seed. That is the
+system working, not failing. To give a real gain the statistical power to clear the
+gate, use a larger val / more trials (or the no-holdout fit, labeled as such). See
+the two runs in `examples/tau2_airline/run_full/` for honest worked outcomes.
