@@ -42,8 +42,20 @@ def rits_kwargs(model_name: str = AGENT_MODEL) -> dict:
     key = os.environ.get("RITS_API_KEY")
     if not key:
         raise RuntimeError("RITS_API_KEY not set (add it to the repo .env)")
-    resp = requests.get(INFO_URL, headers={"RITS_API_KEY": key}, timeout=30)
-    resp.raise_for_status()
+    # The info endpoint can be briefly slow/flaky; a single timeout shouldn't abort
+    # the whole run. Retry the (idempotent) lookup a few times with backoff.
+    import time
+    last = None
+    for attempt in range(4):
+        try:
+            resp = requests.get(INFO_URL, headers={"RITS_API_KEY": key}, timeout=60)
+            resp.raise_for_status()
+            break
+        except Exception as e:  # noqa: BLE001
+            last = e
+            time.sleep(2 * (attempt + 1))
+    else:
+        raise RuntimeError(f"RITS info endpoint unreachable after retries: {last}")
     models = {m["model_name"]: m["endpoint"].split("/")[-1] for m in resp.json()}
     url = models.get(model_name)
     if not url:
@@ -203,8 +215,15 @@ def inject_tools(candidate_dir: Path) -> dict:
 
 
 def inject(candidate_dir: Path) -> dict:
-    """Inject BOTH the policy and the tools from a (composite) candidate dir."""
-    _patch_empty_turn_retry()
+    """Make a candidate live: inject its policy + tools into a pristine tau2.
+
+    By default tau2 runs UNPATCHED — the only thing we change is the candidate's
+    policy/tools (that is the capability under optimization). The optional
+    gpt-oss empty-turn retry is OFF unless ``TAU2_EMPTY_TURN_RETRY=1`` is set, so
+    the honest baseline reflects vanilla tau2 + the model as-is.
+    """
+    if os.environ.get("TAU2_EMPTY_TURN_RETRY") == "1":
+        _patch_empty_turn_retry()
     inject_policy(candidate_dir)
     return inject_tools(candidate_dir)
 

@@ -49,8 +49,9 @@ defaults to **multi-trial, variance-aware** evaluation and a significance gate.
   tasks; the significance gate will (correctly) refuse marginal, noisy gains.
 - The **sealed test set** prevents over-claiming — a val win is not a result until
   it survives held-out test.
-- gpt-oss reasoning models sometimes emit an empty turn; `tau2_runtime.py` re-requests
-  that single call (no fabricated content) so tau2 doesn't abort.
+- gpt-oss reasoning models sometimes emit an empty turn; current tau2 retries that
+  itself, so `tau2_runtime.py` runs **unpatched by default** (an optional fallback
+  re-request is available via `TAU2_EMPTY_TURN_RETRY=1`, off by default).
 
 ## Reproduce
 ```bash
