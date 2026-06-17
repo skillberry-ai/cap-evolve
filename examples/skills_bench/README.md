@@ -22,7 +22,7 @@ drives the loop.
    · `score` · `apply`. (See [`adapter.py`](adapter.py) and
    [docs/ADAPTER_CONTRACT.md](../../docs/ADAPTER_CONTRACT.md).)
 2. **Pick** the capability (`capabilities: [skill-package]`), optimizer (`ibm-bob`),
-   and algorithm (`all-at-once`) in `capevolve.yaml`.
+   and algorithm (`hill-climb`) in `capevolve.yaml`.
 3. `cap-evolve check` — the hard gate (adapter implemented + deterministic scorer).
 4. `cap-evolve run` — baseline → optimize → finalize (sealed test) → report + dashboard.
 
