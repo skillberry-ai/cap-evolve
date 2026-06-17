@@ -544,7 +544,7 @@ def gepa_loop(
         decision_dict, accepted, cand_val = _full_val_gate(
             adapter, run_dir=run_dir, workdir=workdir, parent_result=parent_result,
             cid=cid, n_trials=n_trials, gate_kwargs=gate_kwargs,
-            no_regression=no_regression,
+            no_regression=no_regression, parent_id=parent["id"],
         )
         step["decision"] = decision_dict
         step["candidate_val"] = cand_val.to_dict()
@@ -611,6 +611,7 @@ def _sample_minibatch(train_ids: list[str], size: int, rng: random.Random) -> li
 def _full_val_gate(
     adapter, *, run_dir: RunDir, workdir: Path, parent_result: SplitResult,
     cid: str, n_trials: int, gate_kwargs: dict, no_regression: bool,
+    parent_id: str | None = None,
 ) -> tuple[dict, bool, SplitResult]:
     """Full-val eval + the honest significance gate (the same path ``run_step``
     uses, replicated WITHOUT bypassing gate/seal).
@@ -642,7 +643,7 @@ def _full_val_gate(
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
     run_dir.log_event("gepa_val_gate", candidate=cid, accept=accepted,
                       reason=decision.reason, val=cand_val.reward,
-                      parent_val=parent_result.reward)
+                      parent=parent_id, parent_val=parent_result.reward)
     return decision.to_dict(), accepted, cand_val
 
 
@@ -701,6 +702,7 @@ def _try_merge(
     decision_dict, accepted, cand_val = _full_val_gate(
         adapter, run_dir=run_dir, workdir=workdir, parent_result=base_parent["result"],
         cid=mid, n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
+        parent_id=base_parent["id"],
     )
     step["decision"] = decision_dict
     step["candidate_val"] = cand_val.to_dict()

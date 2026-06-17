@@ -5,13 +5,33 @@ Follow these steps exactly. The skills you load do the real work; this file just
 sequences them and enforces the non-negotiable rules.
 
 ## 0. Install (once)
+
+**Claude Code (plugin — recommended):** load the bundled plugin so every phase /
+algorithm / optimizer skill becomes a `/cap-evolve:<skill>` command, the honesty
+hooks arm, and the `using-cap-evolve` router auto-triggers on "optimize X":
+```
+claude --plugin-dir ./plugins/cap-evolve        # dev: load the plugin in place
+pip install ./core                              # the honest-eval substrate (or export CAPEVOLVE_CORE)
+```
+The plugin's hooks (PreToolUse / Stop / SubagentStop / SessionStart) enforce the
+sealed-test and green-check rules automatically; they no-op outside a run dir.
+
+**Any host (host-agnostic — Codex / Gemini / opencode / openclaw / IBM Bob / bare):**
 ```
 ./install.sh                     # copy skills into this host's skills dir
 pip install ./core               # or: export CAPEVOLVE_CORE="$PWD/core"
 ```
+This path needs none of the Claude-only features. The optimizer step (`run-optimizer`)
+runs the chosen CLI prose-fed and sequential, so the full pipeline still completes;
+the offline `mock` optimizer keeps zero-API CI working.
+
+> Under the plugin, prefix the skill names below with `/cap-evolve:` (e.g.
+> `/cap-evolve:intake`); on a bare host, "load the **`intake`** skill" means open
+> its `SKILL.md`. Either way the steps and rules are identical.
 
 ## 1. Intake — collect inputs
-Load the **`intake`** skill. It interviews the user, scaffolds `.capevolve/project/`
+Load the **`intake`** skill (or start with **`using-cap-evolve`**, the router that
+sends "optimize X" here). It interviews the user, scaffolds `.capevolve/project/`
 (adapters + inputs + `capevolve.yaml` + `PROJECT.md`), and gathers inputs.
 > For every input the skill marks **NEEDED** that is missing, ASK THE USER —
 > quote the expected path, the command/options to obtain it, and alternatives.

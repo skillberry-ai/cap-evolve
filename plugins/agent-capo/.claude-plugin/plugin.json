@@ -1,6 +1,0 @@
-{
-  "name": "cap-evolve",
-  "description": "Optimize AI-agent capabilities (skills, tools/MCP, prompts) against your eval, honestly. Skills-native, host-agnostic.",
-  "version": "0.1.0",
-  "skills": "./skills"
-}

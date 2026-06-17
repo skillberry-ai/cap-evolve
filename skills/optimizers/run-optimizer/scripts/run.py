@@ -95,6 +95,84 @@ def _read_dotenv_key(names: tuple[str, ...]) -> str | None:
     return None
 
 
+def _coerce_float(x) -> float | None:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_cost(stdout: str) -> dict:
+    """Best-effort extraction of cost from a headless optimizer's JSON output.
+
+    Coding-agent CLIs emit structured results with slightly different shapes; we
+    look for the common keys without committing to one vendor:
+
+      * Claude Code (`--output-format json`): top-level ``total_cost_usd`` and
+        ``usage`` (input/output tokens); per-model cost under ``modelUsage``.
+      * Codex (`--json`): a stream of JSON lines; the final/`result`-like object
+        may carry ``total_cost_usd`` or ``usage``.
+      * Gemini (`--output-format json``): ``total_cost_usd`` / ``usage`` if present.
+
+    Returns ``{usd: float|None, tokens: int|None, raw: <parsed-or-None>}``. Never
+    raises: a CLI that printed prose (no JSON) yields ``{usd: None, ...}`` and the
+    caller falls back to the prose-fed path unchanged.
+    """
+    out = {"usd": None, "tokens": None, "raw": None}
+    if not stdout or not stdout.strip():
+        return out
+
+    # Try whole-string JSON first, then last-nonempty-line (JSONL streams like codex).
+    objs: list = []
+    text = stdout.strip()
+    try:
+        objs.append(json.loads(text))
+    except Exception:
+        for line in reversed(text.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                objs.append(json.loads(line))
+                break
+            except Exception:
+                continue
+    if not objs:
+        return out
+
+    def _scan(obj) -> None:
+        """Walk dicts/lists pulling the first cost/token signal we recognize."""
+        if isinstance(obj, dict):
+            for key in ("total_cost_usd", "cost_usd", "totalCostUsd"):
+                if out["usd"] is None and key in obj:
+                    out["usd"] = _coerce_float(obj[key])
+            usage = obj.get("usage") or obj.get("token_usage") or {}
+            if isinstance(usage, dict) and out["tokens"] is None:
+                tot = usage.get("total_tokens")
+                if tot is None:
+                    inp = usage.get("input_tokens") or usage.get("prompt_tokens")
+                    o = usage.get("output_tokens") or usage.get("completion_tokens")
+                    if inp is not None or o is not None:
+                        tot = (int(inp or 0) + int(o or 0))
+                if tot is not None:
+                    try:
+                        out["tokens"] = int(tot)
+                    except (TypeError, ValueError):
+                        pass
+            for v in obj.values():
+                if out["usd"] is None or out["tokens"] is None:
+                    _scan(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                if out["usd"] is None or out["tokens"] is None:
+                    _scan(v)
+
+    for o in objs:
+        _scan(o)
+        out["raw"] = o
+    return out
+
+
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
                   model: str | None, self_dir: str) -> list[str]:
     """Expand the template into argv.
@@ -130,6 +208,14 @@ def main(argv=None) -> int:
     p.add_argument("--workdir", help="candidate working copy to edit in place")
     p.add_argument("--prompt", help="path to INSTRUCTIONS.md")
     p.add_argument("--model", default=os.environ.get("CAPEVOLVE_OPTIMIZER_MODEL") or None)
+    p.add_argument("--json", action="store_true",
+                   default=os.environ.get("CAPEVOLVE_OPTIMIZER_JSON") == "1",
+                   help="append the registry row's json_flag and parse total_cost_usd "
+                        "from the CLI's structured output (best-effort; off by default)")
+    p.add_argument("--json-schema", default=os.environ.get("CAPEVOLVE_OPTIMIZER_JSON_SCHEMA"),
+                   help="for Claude Code: a JSON Schema string passed as --json-schema so "
+                        "the result carries .structured_output (only added when --json and "
+                        "the row's json_flag contains --output-format)")
     p.add_argument("--list", action="store_true", help="list known optimizers and exit")
     args = p.parse_args(argv)
 
@@ -158,6 +244,19 @@ def main(argv=None) -> int:
     cmd = build_command(str(row.get("command_template", "")), workdir=workdir,
                         prompt=str(prompt_path), prompt_text=prompt_text,
                         model=args.model, self_dir=_self_dir())
+
+    # Optional headless structured output: append the row's json_flag so the CLI
+    # emits machine-readable cost. Off by default — the prose-fed path is untouched,
+    # and a row with an empty json_flag (mock/generic/opencode/openclaw/ibm-bob)
+    # silently stays prose-fed even with --json.
+    want_json = bool(args.json)
+    json_flag = str(row.get("json_flag", "")).strip()
+    if want_json and json_flag and str(row.get("offline", "")).lower() != "true":
+        cmd += shlex.split(os.path.expandvars(json_flag))
+        # Claude Code: pair --output-format json with --json-schema for .structured_output.
+        if args.json_schema and "--output-format" in json_flag:
+            cmd += ["--json-schema", args.json_schema]
+
     if not cmd:
         print(json.dumps({"optimizer": name, "error":
               "empty command — for generic/openclaw set the *_CMD env var"}))
@@ -176,9 +275,20 @@ def main(argv=None) -> int:
     env.update(auth["env"])
 
     proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, env=env)
-    print(json.dumps({"optimizer": name, "cli_present": True, "returncode": proc.returncode,
-                      "auth_present": auth["present"],
-                      "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-500:]}))
+    result = {"optimizer": name, "cli_present": True, "returncode": proc.returncode,
+              "auth_present": auth["present"],
+              "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-500:]}
+    # Best-effort cost capture: only when --json requested AND the row had a json_flag.
+    # The prose-fed path (no --json, or empty json_flag) never reaches here, so the
+    # offline/mock and generic flows are unchanged.
+    if want_json and json_flag:
+        cost = parse_cost(proc.stdout)
+        result["cost"] = {"total_cost_usd": cost["usd"], "tokens": cost["tokens"]}
+        if cost["usd"] is None:
+            # Headless output wasn't parseable — say so; the loop falls back to no-cost.
+            result["cost"]["note"] = ("no total_cost_usd in optimizer output; "
+                                      "loop continues without a cost figure")
+    print(json.dumps(result))
     return proc.returncode
 
 

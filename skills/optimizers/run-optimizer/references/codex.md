@@ -10,4 +10,7 @@ deprecated in favor of it).
 
 - **Install:** https://developers.openai.com/codex
 - **Auth:** `codex login`, or `OPENAI_API_KEY`.
-- **JSON:** `--json`.
+- **JSON / cost:** `--json` emits a JSONL event stream; the runner parses the last
+  JSON line for `total_cost_usd` / `usage` when called with `--json`. Add
+  `--output-last-message <file>` to also capture the final assistant message on
+  disk (handy when you want the proposer's summary, not just the diff).

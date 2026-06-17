@@ -59,6 +59,39 @@ python scripts/run.py --name claude-code --workdir ./cand --prompt ./cand/INSTRU
 In a run, the orchestrator builds this command for you from the spec's
 `optimizer_skill` (the optimizer NAME) and `optimizer_model`.
 
+## Headless JSON cost capture (optional, best-effort)
+
+Coding-agent CLIs can emit a structured result that carries the exact spend.
+Pass `--json` (or set `CAPEVOLVE_OPTIMIZER_JSON=1`) and the runner appends the
+registry row's **`json_flag`** to the command, then parses `total_cost_usd`
+(and token usage) out of the output:
+
+```bash
+python scripts/run.py --name claude-code --json \
+  --workdir ./cand --prompt ./cand/INSTRUCTIONS.md --model claude-opus-4-6
+# -> {... "cost": {"total_cost_usd": 0.0123, "tokens": 4210}}
+```
+
+Per CLI (verify with `<cli> --help`):
+- **claude-code** — `json_flag: --output-format json`; the JSON result has
+  `total_cost_usd`, `usage`, and per-model cost under `modelUsage`. Add
+  `--json-schema '<JSONSchema>'` (via `--json-schema` here, or
+  `CAPEVOLVE_OPTIMIZER_JSON_SCHEMA`) to also get `.structured_output` for a
+  decision step. The runner only appends `--json-schema` when the row's json_flag
+  contains `--output-format`.
+- **codex** — `json_flag: --json` (a JSONL stream); pair with
+  `codex exec --json --output-last-message <file>` when you want the final message
+  on disk. The runner parses the last JSON line for cost/usage.
+- **gemini-cli** — `json_flag: --output-format json`; `total_cost_usd`/`usage` are
+  parsed when present.
+
+**This is strictly additive.** With no `--json`, or for a row whose `json_flag` is
+empty (`mock`, `generic`, `opencode`, `openclaw`, `ibm-bob`), nothing changes —
+the optimizer runs prose-fed exactly as before, and `mock` stays fully offline. If
+the output isn't parseable JSON, `cost.total_cost_usd` is `null` and the loop
+continues without a cost figure (never an error). See `core-wiring.md` below for
+threading that cost into the iteration store.
+
 ## Back-compat
 
 A spec that still names an old per-CLI optimizer skill (`claude-code`, `ibm-bob`,
@@ -67,3 +100,5 @@ without edits.
 
 ## References
 - `references/<name>.md` — install, auth, and flags for each CLI.
+- `references/core-wiring.md` — the (small) cli.py change needed to thread the
+  parsed `total_cost_usd` from the optimizer JSON into the iteration store.

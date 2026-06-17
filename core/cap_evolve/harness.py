@@ -327,6 +327,7 @@ def run_step(
     n_trials: int = 1,
     gate_kwargs: dict | None = None,
     candidate_id: str | None = None,
+    parent_id: str | None = None,
     no_regression: bool = False,
     rejected=None,
     history=None,
@@ -342,6 +343,10 @@ def run_step(
     """
     gate_kwargs = dict(gate_kwargs or {})
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
+    # Lineage edge for the dashboard/report: the parent is the candidate this step
+    # was forked from (the current best by default in a global hill-climb). Captured
+    # before any accept flips ``best_id`` so the edge points at the true parent.
+    parent_id = parent_id or run_dir.best_id
     workdir = run_dir.root / "work" / cid
     if workdir.exists():
         shutil.rmtree(workdir)
@@ -399,7 +404,7 @@ def run_step(
         run_dir.set_best(cid)
     run_dir.update_spent(iterations=1, accepted=accepted)
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=decision.reason,
-                      val=cand_val.reward, parent_val=current_val.reward,
+                      val=cand_val.reward, parent=parent_id, parent_val=current_val.reward,
                       optimizer_seconds=round(optimizer_seconds, 2),
                       runner_seconds=round(cand_val.seconds, 2),
                       cost_usd=cand_val.cost_usd, tokens=cand_val.tokens)

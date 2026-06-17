@@ -3,7 +3,8 @@
 > A report's job is not to make the run look good; it is to let a human decide
 > whether to ship. The honest reading is always test-vs-baseline, with the
 > val-test gap as the overfitting it is. Implementation: this skill's
-> `scripts/run.py` + `scripts/dashboard.py`.
+> `scripts/run.py` + the `cap_evolve.dashboard` builder (panels + schema documented
+> in `references/dashboard.md`).
 
 ## The three numbers, and what their relationships mean
 
