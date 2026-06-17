@@ -1,0 +1,11 @@
+{"t": 1781660775.6096158, "kind": "splits", "train": 12, "val": 6, "test": 6, "seed": 0}
+{"t": 1781661106.720907, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5833333333333334, "stderr": 0.2173067468400883, "cost_usd": 0.0, "tokens": 808255, "seconds": 331.11}
+{"t": 1781661106.72131, "kind": "baseline", "val": 0.5833333333333334, "stderr": 0.2173067468400883}
+{"t": 1781661466.02847, "kind": "evaluate", "split": "val", "tag": "cand_0001", "reward": 0.6666666666666666, "stderr": 0.2041241452319315, "cost_usd": 0.0, "tokens": 698106, "seconds": 272.62}
+{"t": 1781661466.029045, "kind": "step", "candidate": "cand_0001", "accept": false, "reason": "paired \u0394\u0304=+0.0833 <= 1.0\u00b7SE=0.0833 (SE=0.0833, n=6)", "val": 0.6666666666666666, "parent": "seed", "parent_val": 0.5833333333333334, "optimizer_seconds": 85.89, "runner_seconds": 272.62, "cost_usd": 0.0, "tokens": 698106}
+{"t": 1781661788.5581849, "kind": "evaluate", "split": "val", "tag": "cand_0002", "reward": 0.5, "stderr": 0.22360679774997896, "cost_usd": 0.0, "tokens": 631058, "seconds": 213.23}
+{"t": 1781661788.558804, "kind": "step", "candidate": "cand_0002", "accept": false, "reason": "paired \u0394\u0304=-0.0833 <= 1.0\u00b7SE=0.0833 (SE=0.0833, n=6)", "val": 0.5, "parent": "seed", "parent_val": 0.5833333333333334, "optimizer_seconds": 109.17, "runner_seconds": 213.23, "cost_usd": 0.0, "tokens": 631058}
+{"t": 1781662098.3925672, "kind": "evaluate", "split": "val", "tag": "cand_0003", "reward": 0.3333333333333333, "stderr": 0.2041241452319315, "cost_usd": 0.0, "tokens": 753848, "seconds": 193.76}
+{"t": 1781662098.393281, "kind": "step", "candidate": "cand_0003", "accept": false, "reason": "paired \u0394\u0304=-0.2500 <= 1.0\u00b7SE=0.1118 (SE=0.1118, n=6)", "val": 0.3333333333333333, "parent": "seed", "parent_val": 0.5833333333333334, "optimizer_seconds": 115.96, "runner_seconds": 193.76, "cost_usd": 0.0, "tokens": 753848}
+{"t": 1781662259.5205572, "kind": "evaluate", "split": "test", "tag": "FINAL", "reward": 0.4166666666666667, "stderr": 0.21081851067789195, "cost_usd": 0.0, "tokens": 819746, "seconds": 160.47}
+{"t": 1781662259.5223758, "kind": "finalize", "test_reward": 0.4166666666666667, "best_id": "seed"}
