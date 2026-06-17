@@ -115,3 +115,74 @@ def write_val_rollout(run_dir, task_id: str, *, tag: str = "seed", trial: int = 
     f = out_dir / f"{task_id}__{tag}__t{trial}.json"
     f.write_text(json.dumps(rec, default=str), encoding="utf-8")
     return f
+
+
+# ---- tiny synthetic adapter + mock optimizer (offline, zero-API) ----------
+#
+# Shared so an algorithm's behavioral ``check.py`` AND the pytest e2e drive the
+# SAME deterministic, model-free target. The "agent" reads ``level.txt`` from the
+# live candidate dir: the higher the level, the more tasks it solves. The mock
+# optimizer simply bumps that integer, so each accepted edit raises the score —
+# a clean, reproducible proof of an epoch/step loop without any model call.
+
+class SyntheticAdapter:
+    """A deterministic CapabilityAdapter parameterized by ``n`` tasks.
+
+    Task ``i`` is "solved" iff the candidate's integer level >= ``i+1``; a missing
+    ``level.txt`` is level 0 (nothing solved). Reward is binary 0/1, feedback
+    names the level needed (never leaks a gold answer for a real benchmark, but
+    here there is none to leak).
+    """
+
+    def __init__(self, n: int = 8):
+        self.n = n
+
+    def tasks(self, split: str):
+        from .types import Task
+        return [Task(id=f"t{i}", input=f"solve-{i}", target=str(i + 1)) for i in range(self.n)]
+
+    def run_target(self, task, ctx, *, seed: int = 0):
+        from .types import Rollout
+        lvl_file = Path(ctx) / "level.txt"
+        try:
+            level = int(lvl_file.read_text(encoding="utf-8").strip())
+        except Exception:  # noqa: BLE001
+            level = 0
+        need = int(task.target)
+        return Rollout(task_id=task.id, output=str(level), trace=f"level={level}")
+
+    def score(self, task, rollout):
+        from .types import Score
+        level = int(rollout.output or 0)
+        need = int(task.target)
+        ok = level >= need
+        fb = ("solved" if ok
+              else f"needs capability level {need}; current level only reaches {level} "
+                   f"— raise the skill level to cover this task")
+        return Score(task_id=task.id, reward=1.0 if ok else 0.0, feedback=fb,
+                     trial_rewards=[1.0 if ok else 0.0])
+
+
+def make_mock_optimizer(*, bump: int = 1):
+    """An in-process OptimizerFn that bumps ``level.txt`` by ``bump`` each call.
+
+    Models a real optimizer that makes a bounded edit; combined with
+    ``SyntheticAdapter`` it produces a monotonically-improving lineage so the
+    gate accepts, then plateaus once every task is solved (so later steps reject —
+    exercising the rejected-edit buffer too)."""
+    def _opt(workdir: Path, instructions: str) -> None:
+        f = Path(workdir) / "level.txt"
+        try:
+            cur = int(f.read_text(encoding="utf-8").strip())
+        except Exception:  # noqa: BLE001
+            cur = 0
+        f.write_text(str(cur + bump), encoding="utf-8")
+    return _opt
+
+
+def seed_capability_dir(tmp: Path, *, level: int = 0) -> Path:
+    """Create a seed capability dir with a ``level.txt`` for SyntheticAdapter."""
+    d = Path(tmp) / "seed_capability"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "level.txt").write_text(str(level), encoding="utf-8")
+    return d

@@ -24,7 +24,8 @@ from pathlib import Path
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache.
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md"}
+_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
+                 "REFLECTION.md"}
 _IGNORE_DIRS = {".git", "__pycache__"}
 
 

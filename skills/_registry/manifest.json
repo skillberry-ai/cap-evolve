@@ -1,5 +1,32 @@
 {
   "skills": {
+    "gepa": {
+      "component": "algorithm",
+      "path": "algorithms/gepa",
+      "summary": "Real GEPA \u2014 sample-efficient reflective Pareto optimization with a cheap minibatch local gate in front of the honest full-val gate, trace-based reflective dataset, per-instance frontier parent sampling, round-robin component focus, and system-aware merge.",
+      "entry": "scripts/run.py",
+      "abstract": "scripts/abstract.py",
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [
+        "scores",
+        "traces",
+        "reflective_dataset",
+        "candidate"
+      ],
+      "provides": [
+        "candidate"
+      ],
+      "compatible_with": {
+        "capabilities": [
+          "*"
+        ],
+        "optimizers": [
+          "*"
+        ]
+      }
+    },
     "gepa-reflective": {
       "component": "algorithm",
       "path": "algorithms/gepa-reflective",
@@ -31,6 +58,32 @@
       "component": "algorithm",
       "path": "algorithms/hill-climb",
       "summary": "Global hill-climb on the val gate with a selectable focus schedule (--focus all|cyclic|hardest-first); parent is always the current best.",
+      "entry": "scripts/run.py",
+      "abstract": "scripts/abstract.py",
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [
+        "scores",
+        "traces",
+        "candidate"
+      ],
+      "provides": [
+        "candidate"
+      ],
+      "compatible_with": {
+        "capabilities": [
+          "*"
+        ],
+        "optimizers": [
+          "*"
+        ]
+      }
+    },
+    "skillopt": {
+      "component": "algorithm",
+      "path": "algorithms/skillopt",
+      "summary": "SkillOpt single-lineage climb over epochs x mini-batches with a textual learning rate (integer edit budget on a constant|linear|cosine schedule), a within-epoch rejected-edit buffer, and a gated epoch-boundary slow/meta update.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",

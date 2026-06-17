@@ -44,7 +44,8 @@ def main(argv=None) -> int:
                    help="schedule: all | cyclic | hardest-first (old skill names accepted)")
     p.add_argument("--max-iterations", type=int, default=10)
     p.add_argument("--n-trials", type=int, default=1)
-    p.add_argument("--gate-mode", default="significant")
+    p.add_argument("--gate-mode", default="auto",
+                   help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--store", default="git", help="git|copy|command")
     p.add_argument("--store-commit-cmd", default=None)
@@ -73,7 +74,8 @@ def main(argv=None) -> int:
     result = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
         focus=focus, max_iterations=args.max_iterations, n_trials=args.n_trials,
-        gate_kwargs={"mode": args.gate_mode, "k_se": args.k_se},
+        gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
+                     else {"mode": args.gate_mode, "k_se": args.k_se}),
         algorithm=f"{ALGO}:{focus}", no_regression=args.no_regression, store=store,
     )
     print(json.dumps(result, indent=2))

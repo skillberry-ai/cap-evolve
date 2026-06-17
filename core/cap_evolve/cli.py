@@ -159,7 +159,7 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
-                          "gate_mode": spec.get("gate_mode", "significant"),
+                          "gate_mode": spec.get("gate_mode", "auto (paired)"),
                           "budget": {"max_iterations": spec.get("max_iterations", 10),
                                      "stall": spec.get("stall", 0)},
                           "sequence": sequence}, indent=2))
@@ -193,13 +193,20 @@ def _cmd_run(argv):
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
                "--optimizer", opt_cmd, "--max-iterations", str(spec.get("max_iterations", 10)),
                "--n-trials", str(spec.get("num_trials", 1)),
-               "--gate-mode", str(spec.get("gate_mode", "significant")),
+               "--gate-mode", str(spec.get("gate_mode", "auto")),
                "--k-se", str(spec.get("gate_k_se", 1.0)),
                "--store", str(spec.get("store", "git"))]
     if algorithm_focus is not None:
         alg_cmd += ["--focus", algorithm_focus]
     if spec.get("store_commit_cmd"):
         alg_cmd += ["--store-commit-cmd", str(spec["store_commit_cmd"])]
+    # Algorithm-specific knobs without hardcoding per-algorithm: a spec may set
+    # `algorithm_args` (string) to pass extra flags straight through to the
+    # algorithm run.py — e.g. "--epochs 6 --lr-schedule cosine" for skillopt,
+    # "--max-metric-calls 200 --minibatch-size 5" for gepa.
+    if spec.get("algorithm_args"):
+        import shlex as _shlex
+        alg_cmd += _shlex.split(str(spec["algorithm_args"]))
     proc = run(alg_cmd)
     if proc.returncode != 0:
         print(json.dumps({"step": "algorithm", "error": proc.stderr[-1500:]}))
