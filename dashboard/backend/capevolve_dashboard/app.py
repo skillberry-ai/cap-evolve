@@ -1,11 +1,14 @@
 """FastAPI app factory serving cap-evolve run data (read-only)."""
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from . import runs, trajectories
+from . import stream as _stream
 
 
 def create_app(base_dir: Path) -> FastAPI:
@@ -55,5 +58,35 @@ def create_app(base_dir: Path) -> FastAPI:
         from . import compare
         run_ids = [x for x in ids.split(",") if x]
         return compare.compare_runs(base, run_ids)
+
+    @app.get("/api/runs/{run_id}/stream")
+    async def run_stream(run_id: str):
+        path = base / run_id
+        events_path = path / "events.jsonl"
+        if not events_path.exists():
+            raise HTTPException(status_code=404, detail="run not found")
+
+        async def gen():
+            # Initial snapshot of the full reduced run.
+            try:
+                yield _stream.sse_format("snapshot", runs.load_run(base, run_id))
+            except runs.RunNotFound:
+                return
+            offset = events_path.stat().st_size
+            idle = 0
+            while True:
+                new, offset = _stream.read_new_events(events_path, offset)
+                for ev in new:
+                    yield _stream.sse_format("event", ev)
+                    if ev.get("kind") == "finalize":
+                        yield _stream.sse_format("done", {"run_id": run_id})
+                        return
+                idle = idle + 1 if not new else 0
+                if idle > 600:  # ~5 min of silence -> stop holding the connection
+                    yield _stream.sse_format("idle", {"run_id": run_id})
+                    return
+                await asyncio.sleep(0.5)
+
+        return StreamingResponse(gen(), media_type="text/event-stream")
 
     return app
