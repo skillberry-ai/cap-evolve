@@ -1,0 +1,47 @@
+# cap-evolve run spec. The intake skill fills this by interviewing you; the
+# orchestrate skill (or `cap-evolve run --spec`) reads it to sequence the pipeline.
+# Values reference skills from the installed library (skills/_registry/manifest.json).
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt, tools]     # optimize the airline POLICY and the TOOLS jointly
+capability_path: seed_capability         # the artifact dir (a copy is optimized)
+actions: [edit]                          # allowed edits (capability-specific)
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code             # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)
+optimizer_model: claude-opus-4-6         # the optimizer's Claude model id
+optimizer_max_turns: 400                 # generous per-iteration turn cap; the real ceiling is the $ cap below
+optimizer_usd_per_iter: 40.0             # per-iteration $ cap, enforced by claude (--max-budget-usd N)
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb              # algorithms/<skill>
+algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter                  # use the adapter's tasks()
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# Pin the split explicitly: no-holdout fit (train==val==test==all 50 ids).
+split_ids_file: split_ids.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 10              # gpt-oss is stochastic; 10 trials → mean+stderr + pass^k
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: significant                   # significant | strict | threshold | simplicity_tiebreak
+gate_k_se: 1.0
+
+# --- budget -----------------------------------------------------------------
+# Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a
+# $ range before spending. All caps below are hard stops; 0 = unlimited/off.
+max_iterations: 10          # optimizer iterations (dominant cost knob)
+stall: 2                    # stop after N consecutive rejects
+max_metric_calls: 0         # 0 = unlimited; else stop after N runner evals
+max_usd: 400.0              # total $ cap (runner + optimizer + intake)
+max_optimizer_usd: 400.0    # cumulative optimizer-only $ cap (per-iteration cap is optimizer_usd_per_iter=40)
+
+# --- iteration store (how each iteration is versioned for an inspectable process)
+store: git                               # git (default) | copy | command
