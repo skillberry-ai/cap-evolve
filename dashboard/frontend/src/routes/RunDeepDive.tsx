@@ -16,6 +16,7 @@ import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
 import { MemoryPanel } from '../components/MemoryPanel'
+import { Insights } from '../components/Insights'
 import type { RunStatus } from '../lib/types'
 
 const TABS: TabDef[] = [
@@ -25,7 +26,7 @@ const TABS: TabDef[] = [
   { id: 'trajectories', label: 'Trajectories' },
   { id: 'iterations', label: 'Iterations' },
   { id: 'memory', label: 'Memory' },
-  { id: 'insights', label: 'Insights', disabled: true },
+  { id: 'insights', label: 'Insights' },
 ]
 
 export function RunDeepDive() {
@@ -104,9 +105,11 @@ export function RunDeepDive() {
                   <IterationsDiff runId={id!} graph={data.graph} />
                 ) : active === 'memory' ? (
                   <MemoryPanel runId={id!} graph={data.graph} />
+                ) : active === 'insights' ? (
+                  <Insights runId={id!} detail={data} />
                 ) : (
                   <Card>
-                    <div className="p-8 text-center text-sm text-muted">This view lands in Plan 3.</div>
+                    <div className="p-8 text-center text-sm text-muted">Unknown view.</div>
                   </Card>
                 )
               }
