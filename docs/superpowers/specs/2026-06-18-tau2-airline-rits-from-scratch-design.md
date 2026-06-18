@@ -1,124 +1,122 @@
-# Design: tau2-bench airline + RITS, from scratch, production-ready & recorded
+# Design: tau2-bench airline + RITS — dogfood cap-evolve from scratch, harden it, record it
 
 **Date:** 2026-06-18
 **Author:** Osher Elhadad
-**Status:** Draft for review
+**Status:** Draft for review (v2 — reframed after user feedback)
+
+## What this actually is
+
+This is **not** "hand-write a bespoke tau2 example." It is a **dogfooding + hardening
+exercise**: I act **only as the user** of cap-evolve and drive its *own* documented
+flow (RUN.md → intake → implement-and-check → baseline → algorithm → finalize →
+report) to optimize tau2-bench airline via RITS. **Nothing is assumed or pre-built** —
+not the tau2 integration, not RITS support, not the adapter. Each of those must be
+*produced by the cap-evolve flow itself*.
+
+Wherever the flow cannot collect or build something a user would need — its
+**prompts, inputs, templates, skills, optimizer registry, or core** — that is a
+**framework gap**. I fix the gap in the framework and then **start over from a clean
+environment** (including `rm -rf .venv` and re-running setup), repeating until a user
+can run this example **end to end, autonomously, from just the prompt**.
+
+The deliverable is therefore a **hardened cap-evolve** (skills/templates/inputs/
+prompts/core good enough that this run "just works") + the new tau2_airline example
+that the flow produces + a recorded run + production docs.
 
 ## Goal
 
-Make cap-evolve's flagship example a **from-scratch, zero-assumption, recorded**
-optimization of **tau2-bench airline** using **IBM RITS** (`openai/gpt-oss-120b` as
-both agent and user simulator) and a **Claude Code (`claude-opus-4-6`) optimizer**.
-The whole thing must run **autonomously from one prompt**, be **easy to reproduce**,
-and produce artifacts for a **demo video**. Then refactor the repo's examples and
-docs to production quality.
-
-This replaces the existing bundled `examples/tau2_airline` (which relies on a
-runtime monkeypatch and a vendored task file) with a clean integration built
-against a freshly cloned upstream tau2-bench.
+A user opens their coding agent (Claude Code) at the repo, gives the tau2-airline+RITS
+prompt, and cap-evolve runs the whole optimization autonomously and honestly,
+producing a dashboard and an honest (fit-metric) number — with zero hand-holding and
+zero undocumented assumptions.
 
 ## Non-goals
+- Hand-authoring `rits.py` / `adapter.py` from a private design (the flow produces them).
+- Maintaining a tau2-bench fork.
+- Hitting a target score (the honest number is whatever the run yields; no-holdout ⇒ reported as a fit metric).
+- Changing cap-evolve's honesty machinery (splits/gate/seal) — used as-is.
 
-- Changing cap-evolve's core honesty machinery (splits/gate/seal). We use it as-is.
-- Maintaining a fork of tau2-bench.
-- Beating a specific score. The number is whatever the honest run produces; for a
-  no-holdout split it is reported as a **fit metric**, not a held-out result.
+## Dogfooding discipline (the rules I follow)
+1. **I am the user.** I provide inputs/answers a user would; I let intake/implement-and-check/orchestrate and the optimizer do the building. I don't shortcut by pre-writing integration code from my own design.
+2. **Nothing assumed.** RITS, tau2-from-upstream, per-iteration optimizer budget, `num_trials=10`, `TAU2_MAX_CONCURRENCY=100`, no-holdout — each must be either (a) already supported by the flow, or (b) added to the flow as a framework change.
+3. **Fix the framework, not the example.** When the flow is deficient, the change goes into `skills/`, `templates/`, intake `inputs/INPUTS.md`, `optimizers/registry.yaml`, `run-optimizer`, `RUN.md`, or `core/` — never a one-off hack buried in the example.
+4. **Clean-room restart.** After a framework change, blow away derived state (`rm -rf .venv`, regenerated project dirs, run dirs) and re-run from `setup` so we always validate the *true* from-nothing path. Repeat until clean.
+5. **General bugs → core.** Non-tau-specific bugs are fixed in `core/` (and noted in CHANGELOG), not patched around in the example.
 
-## The run, exactly
+## The run, exactly (the inputs I feed as the user)
 
 | Knob | Value |
 |---|---|
-| Benchmark | tau2-bench **airline**, cloned fresh from `github.com/sierra-research/tau2-bench` (**latest main**) into `../tau2-bench` |
+| Benchmark | tau2-bench **airline**, cloned fresh from `github.com/sierra-research/tau2-bench` (**latest main**; record resolved SHA) |
 | Tasks / splits | all **50** airline tasks as **train = val = test** (no-holdout fit metric; engine logs `splits_warning`) |
 | Runner (agent + user sim) | `openai/gpt-oss-120b` via **IBM RITS** |
-| RITS integration | **litellm config shim** (`rits.py`): resolve per-model RITS endpoint, set litellm globals + `RITS_API_KEY` header, use model string `hosted_vllm/openai/gpt-oss-120b` |
+| RITS integration | **litellm config shim (Approach A)** — produced via the flow; `RITS_API_KEY` from repo-root `.env` |
 | Concurrency | `TAU2_MAX_CONCURRENCY=100` |
-| num_trials | **10** (per-trial seed → real pass^k) |
+| num_trials | **10** |
 | Optimizer | **claude-code** @ **`claude-opus-4-6`** |
+| Per-iteration optimizer budget | ≈ **$40** — passed to the optimizer CLI at the intake/run-optimizer step, enforced by the optimizer's own mechanism where it exists (see below) |
+| Total budget | `max_usd: 400`, `max_optimizer_usd: 400` |
 | Algorithm | **hill-climb** `--focus all` |
-| Capabilities | `[system-prompt, tools]` (airline policy + tool docstrings/code) |
+| Capabilities | `[system-prompt, tools]` |
 | max_iterations | **10** |
-| Budget | `max_usd: 400`, `max_optimizer_usd: 400`; per-iteration ≈ $40 approximated via `optimizer_max_turns` (cap-evolve has **no** per-iteration $ cap — documented limitation) |
-| Gate | auto (paired significance), `gate_k_se` per tuning |
 
-**Cost/time reality (acknowledged):** val 50 × 10 trials × 10 iters ≈ 5,000 val
-rollouts + baseline (~500) + sealed test (~500) ≈ **~6,000 full airline
-conversations** through gpt-oss as both agent and user. Many hours of RITS load at
-concurrency 100. RITS runner cost is **not** dollar-tracked; the $400 budget governs
-the **optimizer (Claude)**.
+**Cost/time reality (acknowledged):** ~6,000 full airline conversations for the full
+run; many hours of RITS load at concurrency 100. RITS runner cost is not
+dollar-tracked; the $400 governs the Claude optimizer.
 
-## Architecture
+## Per-iteration optimizer budget (framework change, no assumptions)
 
-### Component 1 — `setup.sh` (from-scratch, reproducible)
-Single command. Responsibilities:
-1. Clone `sierra-research/tau2-bench` latest main into `../tau2-bench` (skip if present), `pip install -e ../tau2-bench`.
-2. `pip install ./core` (cap-evolve-core).
-3. **Record the resolved tau2-bench commit SHA** into `run_full/TAU2_COMMIT.txt` + echo it (so "latest main" is still reproducible after the fact).
-4. Verify: `python -c "import tau2"`, RITS reachable (`RITS_API_KEY` present + info endpoint 200), `claude --version`, `cap-evolve version`.
-5. Print a green "ready" line or a precise remediation message. No silent failure.
+Requirement: the per-iteration **optimizer-call** budget ($40) must be **passed to the
+optimizer CLI** at the step where intake/run-optimizer constructs the optimizer
+invocation, and enforced **by the optimizer itself where possible** (Claude Code), with
+graceful degradation where not (Bob: no such control).
 
-Pin the Python interpreter explicitly (the repo has both miniforge `cap-evolve` and a
-`.venv`); `setup.sh` resolves and prints the interpreter that has `cap_evolve` importable.
+Plan (research, don't assume, when I reach it):
+- Inspect each relevant optimizer CLI for a native per-run budget/cost/limit control (`claude --help`, etc.). **Record what actually exists** — do not invent flags.
+- Make per-iteration budget a first-class config field surfaced by **intake** and
+  threaded through **run-optimizer** into the registry row's budget mechanism
+  (today: `budget_flag`). Per-optimizer: map to the native control if present; else
+  fall back to the turn cap (`--max-turns`) and/or the cumulative `max_optimizer_usd`,
+  and **clearly document** that it's a proxy, not a hard per-iteration $ stop.
+- Update `intake/inputs/INPUTS.md`, `templates/project/capevolve.yaml`,
+  `optimizers/registry.yaml` + per-optimizer reference docs, and the `cli.py`/run-optimizer
+  plumbing as needed.
 
-### Component 2 — `rits.py` (RITS via litellm config shim — Approach A)
-- `load_env()`: parse repo-root `.env` (walk parents), `setdefault` so it never clobbers real env.
-- `resolve_endpoint(model_name)`: query RITS info endpoint (retry w/ backoff), map model → endpoint path, build `api_base = {API_URL}/{endpoint}/v1`.
-- `configure_litellm()`: set `litellm.api_base`/`HOSTED_VLLM_API_BASE`, `HOSTED_VLLM_API_KEY`, and `litellm.headers = {"RITS_API_KEY": key}` once at import. Model string handed to tau2 = `hosted_vllm/openai/gpt-oss-120b`.
-- Keep the proven robustness: gpt-oss empty-turn retry (env-gated), `TAU2_LLM_TIMEOUT`, `TAU2_LLM_RETRIES`, `TAU2_BATCH_TIMEOUT` watchdog, `TAU2_INFRA_RETRIES`.
-- **No monkeypatch of `litellm.acompletion`.** If tau2's runner ignores litellm globals for some call path, fall back is documented but Approach A is the target.
+## RITS integration (Approach A — produced via the flow)
+- A `rits.py`-style shim: resolve the per-model RITS endpoint (info API, retried), set litellm globals (`HOSTED_VLLM_API_BASE`, `HOSTED_VLLM_API_KEY`, `litellm.headers={"RITS_API_KEY": …}`), hand tau2 the model string `hosted_vllm/openai/gpt-oss-120b`. No monkeypatch of `litellm.acompletion`, no tau2 fork.
+- Robustness (gpt-oss empty-turn retry, timeouts, infra retries, batch watchdog) included.
+- If the intake/implement-and-check flow doesn't naturally lead a user to produce this, that's a **framework gap** (e.g., intake lacks a "runner via OpenAI-compatible/RITS endpoint" input, or the docs don't guide it) → fix the framework.
 
-### Component 3 — `adapter.py` (cap-evolve `CapabilityAdapter`)
-- `tasks("all")`: pull the **50 airline tasks directly from tau2-bench** (`tau2.runner.get_tasks` / domain task loader) — no duplicated `airline.jsonl`. Deterministic order. Honors `CAPEVOLVE_TAU2_TASK_IDS` subset for smoke tests.
-- `run_batch(tasks, ctx, *, seed)`: drive tau2's concurrent runner once per trial with `seed = base + k`; agent+user = RITS model; `num_trials=1` inside tau2 (harness owns trials). Wrap stdout→stderr to protect JSON. Mark `INFRASTRUCTURE`-terminated runs as `Rollout.error` (noise, not capability).
-- `run_target` delegates to `run_batch([task])`.
-- `score(task, rollout)`: tau2 reward ∈ [0,1] + gold-aware feedback (missed required actions / info). Deterministic.
-- `materialize(cand_dir, edits)`: pure write of policy/tools into cand_dir.
-- `live(cand_dir)`: context manager that injects the candidate policy + tools into tau2's airline domain for one eval (snapshot-restore pristine each time).
-- Must pass `cap-evolve check` (no stubs, stable tasks, deterministic scorer, pure materialize).
+## Setup / reproducibility
+- A `setup` path (script or documented steps the flow relies on) clones tau2-bench latest main into `../tau2-bench`, `pip install -e` it + `./core`, records the resolved tau2 SHA, and verifies imports / RITS reachability / `claude` / `cap-evolve`. Must fail loudly with precise remediation, never silently.
+- Interpreter is pinned/printed (repo has miniforge `cap-evolve` + a `.venv`).
 
-### Component 4 — seed capability
-`seed_caps/policy/policy.md` + `seed_caps/tools/tools.py`, seeded from tau2-bench's
-own airline domain (canonical, "from scratch"). Tool stubs whose docstrings are the
-live tool descriptions the agent reads.
+## Recording (asciinema + DEMO.md + dashboard)
+- `brew install asciinema agg`; record clean-env setup → smoke → full run launch → dashboard open into a `.cast`.
+- `DEMO.md`: storyboard + exact commands + `.cast`→GIF/MP4 render + narration + resolved tau2 SHA.
+- Ship `dashboard.html` + `report.md` + `events.jsonl` under `run_full/`.
 
-### Component 5 — run config + launcher
-- `capevolve.yaml` with the exact knobs in the table above.
-- `run.sh`: sets env (`TAU2_MAX_CONCURRENCY=100`, timeouts, infra retries, PYTHONPATH, CAPEVOLVE_*), then `cap-evolve run --spec ... --project ...`. One command.
-- `smoke.sh`: same but tiny (`CAPEVOLVE_TAU2_TASK_IDS` of 2 ids, `num_trials 1`, `max_iterations 1`, optimizer `mock` or 1-turn claude) to prove end-to-end before spending.
+## Process / sequencing
 
-### Component 6 — recording
-- `brew install asciinema agg` (in setup or DEMO.md).
-- Record `setup.sh` → `smoke.sh` → `run.sh` launch → `open dashboard.html` into a `.cast` under `run_full/`.
-- `DEMO.md`: storyboard + exact commands + how to render `.cast` → GIF/MP4 (`agg`) → narration beats. Includes the resolved tau2 SHA.
-- Ship the run's `dashboard.html` + `report.md` + `events.jsonl` under `run_full/`.
-
-### Component 7 — cleanup + docs to production
-- **Delete** `examples/date_tool`, `examples/json_extract`, `examples/skills_bench`, old `examples/tau2_airline`.
-- **Keep** `examples/toy_calc`; verify it still runs and matches the README quickstart (it's the zero-API CI gate).
-- Rewrite: README Quickstart + tau2 worked example + Results (re-measured), `docs/REPRODUCE_tau2.md`, examples table, skill/example counts, and **purge every reference** to the deleted examples across README/docs/CI.
-- Update CI if it referenced deleted examples (keep toy_calc as the gate).
-
-## Process / sequencing (the build plan)
-
-1. `setup.sh` + clone tau2-bench + verify imports/RITS/claude.
-2. `rits.py` + `adapter.py` + `seed_caps` + `capevolve.yaml`.
-3. `cap-evolve check` green (hard gate).
-4. `smoke.sh`: 2 tasks / 1 trial / 1 iter, prove the full pipeline runs autonomously end to end. Fix every bug. **General (non-tau-specific) bugs are fixed in `core/`, not patched around in the example**, and noted in the spec/changelog.
-5. Re-run smoke until clean.
-6. Launch full `run.sh` (background) and record. Monitor for terminal failure signatures.
-7. On completion: capture dashboard/report, re-measure Results.
-8. Cleanup examples + rewrite docs.
-9. Final `cap-evolve check` + toy_calc CI gate green; verify docs commands run verbatim.
+0. **Clean room.** From a fresh environment (remove `.venv` and any derived project/run dirs), install per the *documented* path only.
+1. **Drive intake as the user** with the inputs above; record every place the flow asks for something it shouldn't have to / fails to ask for something it needs → framework gap list.
+2. **implement-and-check**: let the flow build the adapter + RITS shim + seed caps; `cap-evolve check` must go green. Gaps → fix framework, then **clean-room restart** (incl. `rm -rf .venv`).
+3. **Per-iteration optimizer budget** framework change (above), wired through intake/run-optimizer.
+4. **smoke** (2 tasks / 1 trial / 1 iter, cheap optimizer): prove autonomous end-to-end. Fix all bugs (general → core). Clean-room restart until smoke is clean from nothing.
+5. **Full `cap-evolve run`** (10 iters, background) and record. Monitor terminal failure signatures (`Traceback|INFRASTRUCTURE|FAILED|Killed|max_usd`) + progress.
+6. **Re-measure Results** from the real run; capture dashboard/report/cast.
+7. **Cleanup + docs to production:** delete `date_tool`, `json_extract`, `skills_bench`, old `tau2_airline`; keep + verify `toy_calc` (CI zero-API gate, must match README). Rewrite README Quickstart + tau2 worked example + Results, `docs/REPRODUCE_tau2.md`, examples table, counts; purge all references to deleted examples; update CI.
+8. **Final clean-room validation:** from nothing, the documented commands run verbatim; `cap-evolve check` + toy_calc gate green.
 
 ## Risks & mitigations
-- **tau2 latest-main API drift** → adapter is defensive about tau2's import surface; record SHA; if a breaking change appears, fix in adapter and note it.
-- **litellm globals not honored by some tau2 call path** → Approach A first; if a path bypasses globals, document and add the narrowest possible hook (still not a fork).
-- **Long wall-clock / RITS load** → smoke first; full run in background with a Monitor watching for `Traceback|INFRASTRUCTURE|FAILED|Killed|max_usd` plus progress.
-- **$40/iter not hard-enforceable** → set total caps + `optimizer_max_turns`; document the limitation in README and DEMO.md. (Optional follow-up: add a per-iteration optimizer $ cap to core — out of scope unless desired.)
-- **Multiple debug runs consume RITS + minor optimizer $** → accepted per user.
+- **tau2 latest-main API drift** → record SHA; flow/adapter defensive about tau2 imports; fix + note on breakage.
+- **litellm globals not honored by a tau2 call path** → Approach A first; if a path bypasses globals, add the narrowest framework hook (still no fork).
+- **Long wall-clock / RITS load** → smoke first; full run in background with a Monitor.
+- **No native per-iteration $ cap in some optimizers** → research actual CLI capabilities; map to native control where present (Claude Code), else turn-cap/total-cap proxy, clearly documented.
+- **Repeated clean-room restarts cost time + some RITS/optimizer $** → accepted by user; smoke keeps it cheap before the full run.
 
 ## Deliverables
-`examples/tau2_airline/{setup.sh, rits.py, adapter.py, capevolve.yaml, run.sh, smoke.sh, seed_caps/, README.md, DEMO.md, run_full/{dashboard.html, report.md, events.jsonl, TAU2_COMMIT.txt, *.cast}}`; refactored top-level README + `docs/REPRODUCE_tau2.md`; deleted examples; verified toy_calc + CI.
+Hardened framework (`skills/`, `templates/`, intake `INPUTS.md`, `optimizers/registry.yaml` + refs, `run-optimizer`, `RUN.md`, `core/` as needed) such that the run is autonomous from the prompt; the flow-produced `examples/tau2_airline/` (setup + rits shim + adapter + seed_caps + capevolve.yaml + run/smoke + README + DEMO.md + run_full artifacts); refactored README + `docs/REPRODUCE_tau2.md`; deleted examples; verified toy_calc + CI; CHANGELOG entries for core/framework changes.
 
-## Open items confirmed with user
-RITS = litellm config shim (A). tau2 = latest main (+ record SHA). Optimizer = claude-opus-4-6 + turns cap. Recording = asciinema + DEMO.md + dashboard. Execution = smoke-then-full. Examples = remove all but keep/verify toy_calc.
+## Confirmed with user
+RITS = Approach A. tau2 = latest main (+ record SHA). Optimizer = claude-opus-4-6 with per-iteration budget passed to the optimizer CLI (native enforcement where possible, e.g. Claude Code; proxy + documented where not, e.g. Bob). Recording = asciinema + DEMO.md + dashboard. Execution = smoke→full. Examples = remove all but keep/verify toy_calc. **I play only the user; nothing assumed; framework gaps fixed in the framework with clean-room (`rm -rf .venv`) restarts.**
