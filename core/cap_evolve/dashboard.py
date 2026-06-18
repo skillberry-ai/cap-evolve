@@ -611,8 +611,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>cap-evolve · run dashboard</title>
 <style>
-:root{--bg:#0e1116;--card:#161b22;--card2:#1c232c;--line:#2b333d;--text:#e6edf3;
---muted:#8b949e;--accent:#4493f8;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--radius:12px}
+:root{--bg:#07090d;--card:#0d1117;--card2:#141b24;--line:#1e2733;--text:#e6edf3;
+--muted:#8b98a9;--accent:#3b82f6;--champion:#f59e0b;--ok:#22c55e;--bad:#ef4444;--warn:#d29922;--radius:12px}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 .num{font-variant-numeric:tabular-nums}
@@ -627,7 +627,18 @@ section h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:va
 .kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 .kpi .v{font-size:23px;font-weight:700;margin-top:4px}
-.kpi .v.ok{color:var(--ok)} .kpi .v.bad{color:var(--bad)} .kpi .v.acc{color:var(--accent)}
+.kpi .v.ok{color:var(--ok)} .kpi .v.bad{color:var(--bad)} .kpi .v.acc{color:var(--accent)} .kpi .v.champ{color:var(--champion)}
+header .logo{flex:none}
+header .tag{color:var(--muted);font-size:12px;margin-left:auto}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.phase{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.phase .nm{font-weight:600} .phase .st{font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.phase.done{border-color:#1f3a23} .phase.done .st{color:var(--ok)}
+.phase.active{border-color:var(--accent)} .phase.active .st{color:var(--accent)}
+.phase.pending .st{color:var(--muted)}
+.phase .d{color:var(--muted);font-size:11px;margin-top:4px}
+.dead{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:6px 12px;margin:6px 0}
+.dead .x{color:var(--bad);font-size:11px;float:right}
 .kpi .s{color:var(--muted);font-size:11px;margin-top:2px}
 svg{display:block;max-width:100%}
 .legend{color:var(--muted);font-size:12px;margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
@@ -657,7 +668,15 @@ border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
 .muted{color:var(--muted)}
 </style></head><body>
-<header><h1>cap-evolve</h1><span class="meta" id="hdr"></span></header>
+<header><svg class="logo" width="26" height="26" viewBox="0 0 48 48" aria-label="cap-evolve">
+<path d="M4 40 L16 34 L26 24 L36 14 L44 8" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="44" cy="8" r="2.6" fill="#f59e0b"/>
+<g fill="#e6edf3"><ellipse cx="22" cy="33" rx="13" ry="8.5"/><ellipse cx="34" cy="28" rx="7.5" ry="6.5"/>
+<ellipse cx="40.5" cy="29.5" rx="3.2" ry="2.6"/><circle cx="31" cy="22" r="1.8"/><circle cx="36" cy="22" r="1.8"/>
+<rect x="14" y="38" width="2.8" height="6" rx="1.4"/><rect x="26" y="38" width="2.8" height="6" rx="1.4"/></g>
+<circle cx="34" cy="26.5" r="1" fill="#07090d"/></svg>
+<h1>cap<span style="color:#f59e0b">·</span>evolve</h1><span class="meta" id="hdr"></span>
+<span class="tag">watch capability evolve</span></header>
 <main id="main"></main>
 <div class="tip" id="tip"></div>
 <script type="application/json" id="run-data">/*__RUN_DATA__*/null</script>
@@ -687,7 +706,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     $('div',{class:'v '+cls,text:v}));if(s2)k.append($('div',{class:'s',text:s2}));return k;};
   const c=S.counts, cost=S.cost;
   g.append(
-    kp('best val',fmt(S.best_val),'acc',S.best_id),
+    kp('best val',fmt(S.best_val),'champ',S.best_id),
     kp('baseline',fmt(S.baseline_val)),
     kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
     kp('held-out test',fmt(S.test_reward),'',S.test_sealed?'sealed once':'not finalized'),
@@ -698,6 +717,57 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     kp('tokens',S.tokens.toLocaleString())
   );
   s.append(g);
+})();
+
+/* ---------- 1b. Narrative summary ---------- */
+(function(){
+  const c=S.counts, parts=[];
+  if(S.baseline_val!=null&&S.best_val!=null){
+    const d=((S.best_val-S.baseline_val)*100).toFixed(1);
+    parts.push(`Starting from a ${(S.baseline_val*100).toFixed(1)}% baseline, the search reached `+
+      `${(S.best_val*100).toFixed(1)}% (+${d} points)`);
+  }
+  parts.push(`after ${c.accepted+c.rejected} iterations (${c.accepted} accepted, ${c.rejected} rejected)`);
+  if(S.test_reward!=null)parts.push(`The best candidate scored ${(S.test_reward*100).toFixed(1)}% on the sealed test set`);
+  if(!parts.length)return;
+  const s=sec('Narrative'); s.append($('p',{class:'muted',text:parts.join('. ')+'.'}));
+})();
+
+/* ---------- 1c. Phases timeline ---------- */
+(function(){
+  const c=S.counts, total=c.total, evaluated=c.accepted+c.rejected;
+  const hasBase=S.baseline_val!=null, finalized=(S.test_reward!=null)||S.test_sealed;
+  const D=b=>b?'done':'pending';
+  const phases=[
+    {nm:'Intake',st:D(total>0||hasBase),d:'Interview + scaffold project, adapter, seed.'},
+    {nm:'Implement & check',st:D(total>0||hasBase),d:'Hard gate before any budget is spent.'},
+    {nm:'Baseline',st:D(hasBase),d:`Freeze splits; seed val ${fmt(S.baseline_val)}.`},
+    {nm:'Optimize'+(S.algorithm?' · '+S.algorithm:''),st:finalized?'done':(hasBase?'active':'pending'),
+     d:`${evaluated} iters · ${c.accepted} accepted · best ${fmt(S.best_val)}.`},
+    {nm:'Finalize',st:D(finalized),d:`Sealed test ${fmt(S.test_reward)}.`},
+    {nm:'Report',st:D(finalized),d:'This dashboard.'},
+  ];
+  const s=sec('Pipeline phases'); const g=$('div',{class:'phases'});
+  for(const p of phases){const e=$('div',{class:'phase '+p.st});
+    e.append($('div',{class:'nm',text:p.nm}),$('div',{class:'st',text:p.st}),$('div',{class:'d',text:p.d}));
+    g.append(e);}
+  s.append(g);
+})();
+
+/* ---------- 1d. What not to try (deduped dead-ends) ---------- */
+(function(){
+  const norm=r=>(r||'rejected').replace(/-?\d+\.\d+/g,'N').replace(/-?\d+/g,'N').trim();
+  const map=new Map();
+  for(const n of G.nodes){ if(n.status!=='rejected')continue;
+    const k=norm(n.reason); const cur=map.get(k)||{reason:k,count:0,ex:[]};
+    cur.count++; if(cur.ex.length<3)cur.ex.push(n.id); map.set(k,cur);}
+  const ends=[...map.values()].sort((a,b)=>b.count-a.count);
+  if(!ends.length)return;
+  const s=sec('What not to try — dead ends');
+  for(const d of ends){const e=$('div',{class:'dead'});
+    if(d.count>1)e.append($('span',{class:'x',text:'×'+d.count}));
+    e.append($('div',{class:'muted',text:d.ex.join(', ')}),$('div',{text:d.reason}));
+    s.append(e);}
 })();
 
 /* ---------- 2. Cumulative-best stair over per-iteration scatter ---------- */
