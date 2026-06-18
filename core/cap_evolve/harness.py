@@ -264,8 +264,35 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         env = dict(os.environ)
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if proc.returncode != 0:
-            raise RuntimeError(f"optimizer failed ({proc.returncode}): {proc.stderr[:2000]}")
+            raise RuntimeError(
+                f"optimizer failed ({proc.returncode}): {_optimizer_failure_detail(proc)}")
     return _run
+
+
+def _optimizer_failure_detail(proc: "subprocess.CompletedProcess") -> str:
+    """Best-effort human-readable reason a failed optimizer subprocess gives.
+
+    The optimizer runner (``run-optimizer``) reports the underlying agent CLI's
+    real output as a JSON object on **stdout** (``stderr_tail``/``stdout_tail``),
+    while its own stderr is usually empty. Prefer that detail so the
+    ``optimizer_error`` event (and the dashboard) explains *why* it failed
+    instead of an empty ``failed (1):``.
+    """
+    detail = (proc.stderr or "").strip()
+    out = (proc.stdout or "").strip()
+    if out:
+        try:
+            import json as _json
+            info = _json.loads(out.splitlines()[-1])
+            tail = str(info.get("stderr_tail") or info.get("stdout_tail") or "").strip()
+            if tail:
+                detail = f"{detail} {tail}".strip() if detail else tail
+            elif not detail:
+                detail = out[-2000:]
+        except Exception:  # noqa: BLE001 — stdout wasn't the runner's JSON
+            if not detail:
+                detail = out[-2000:]
+    return (detail or "no output from optimizer")[:2000]
 
 
 # ---- one propose -> gate step ---------------------------------------------
