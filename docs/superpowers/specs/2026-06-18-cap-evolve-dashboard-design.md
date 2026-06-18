@@ -57,7 +57,7 @@ view of a capability-optimization run. It must:
 
 | Decision | Choice |
 |---|---|
-| Frontend | **New React app**: React + Vite + TypeScript + Tailwind + **shadcn/ui** (components via **21st.dev MCP**), charts via **Recharts** + a few hand-built SVG views |
+| Frontend | **New React app**: React + Vite + TypeScript + Tailwind + **shadcn/ui** (components via **21st.dev MCP**), charts via **Recharts** + a few hand-built SVG views, animation via **Framer Motion** (see §4a) |
 | Backend / data delivery | **Live server + real-time monitoring**: **FastAPI** serving run-dir data + **SSE** live updates (polling fallback) |
 | Run scope | **Hub** (list all runs) → **single-run deep-dive** → **cross-run compare** |
 | Live timing | **Auto-start at pipeline START by default** (watch the whole evolution); configurable; report phase guarantees creation/open. If user doesn't specify → UI on by default |
@@ -80,6 +80,54 @@ view of a capability-optimization run. It must:
   (never color-alone).
 - **Type:** **Fira Sans** (UI) + **Fira Code** (scores, diffs, tabular figures so numeric
   columns don't jitter).
+
+## 4a. Motion, Animation & Polish (the "amazing" bar)
+
+Motion is **meaningful, not decorative** — every animation expresses a cause→effect
+in the evolution process. Library: **Framer Motion** (`motion`) for React + CSS
+transitions; charts animate via Recharts' built-in animation. **Tokens are global**
+(one easing/duration scale, shared rhythm) so the whole app feels unified.
+
+**Motion tokens**
+- Durations: micro `120ms`, standard `200ms`, entrance `280ms`, complex ≤ `400ms`.
+  **Exits are ~65% of enter** (snappier dismissal).
+- Easing: **ease-out** entering, **ease-in** exiting; **spring** (`stiffness ~260,
+  damping ~24`) for elements that "grow" (lineage nodes, candidate dots, cards).
+- Animate **`transform`/`opacity` only** (GPU-friendly; never width/height/top/left).
+- **Stagger** list/grid/heatmap entrance by 30–50ms per item.
+
+**Signature, on-theme animations (the evolution story)**
+- **Cumulative-best curve draws in** on load via `stroke-dashoffset` (the fitness
+  line "grows"); the champion **★ twinkles** once when it becomes best.
+- **Live candidate arrival (SSE):** a new scatter dot **springs in** (scale 0.6→1)
+  and settles; **accepted** → green ripple pulse; **rejected** → quick dim/fade to muted.
+- **Lineage tree:** new nodes **grow from their parent** (origin-anchored spring) and
+  the **connector path draws** from parent to child; the **best-path spine glows amber**
+  with a slow, subtle pulse (the one allowed continuous animation — disabled on reduced-motion).
+- **KPI strip:** numbers **count-up** (tween) on change; the delta chip **flashes**
+  green/red then settles; the **live badge** has a soft pulsing dot.
+- **Phases timeline:** the active phase **shimmers**; completed phases fill with a
+  left-to-right wipe; a connecting progress line advances as the pipeline proceeds.
+- **Heatmap:** cells **stagger-reveal**; a cell flips pass↔fail with a crossfade.
+- **Capybara logo:** gentle idle "breathing"; switches to a **pulse** state while a run
+  is live; on the hero it subtly **climbs the fitness curve**.
+
+**Navigation & continuity**
+- Tab changes **crossfade + small directional slide** (forward = up/left, back =
+  down/right); **shared-element transition** from a Hub run-card into its deep-dive header.
+- Modals/sheets **scale+fade from their trigger**; backdrop scrim 40–60%.
+- Press feedback: subtle scale `0.97` on cards/buttons; hover transitions 150–300ms.
+
+**Discipline & accessibility (non-negotiable)**
+- **`prefers-reduced-motion`**: a global guard disables transforms/springs/continuous
+  pulses and the curve-draw, falling back to instant or simple opacity. Data is fully
+  readable with motion off.
+- **Max 1–2 hero animations per view** — no animate-everything; continuous motion is
+  reserved for the live-spine pulse and loading indicators only.
+- **Loading = skeleton shimmer** (not blocking spinners) for waits > 300ms; charts show
+  a shimmer placeholder, never an empty axis frame.
+- **Animations are interruptible** and never block input; chart entrance respects
+  reduced-motion and data renders immediately underneath.
 
 ## 5. Architecture
 
