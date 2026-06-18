@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GitCompareArrows, LayoutGrid } from 'lucide-react'
-import { Capybara } from './Capybara'
+import { BrandLogo } from './BrandLogo'
 import { cn } from '../lib/cn'
 
 const NAV = [
@@ -19,7 +19,7 @@ export function AppShell({ children, live = false }: { children: ReactNode; live
       {/* Sidebar (lg+) */}
       <aside className="hidden lg:flex flex-col gap-1 border-r border-border bg-surface px-3 py-4">
         <Link to="/" className="mb-4 flex items-center gap-2 px-2">
-          <Capybara size={30} state={live ? 'live' : 'idle'} />
+          <BrandLogo size={30} state={live ? 'live' : 'idle'} />
           <span className="text-lg font-semibold tracking-tight">
             cap<span className="text-accent">·</span>evolve
           </span>
@@ -45,7 +45,7 @@ export function AppShell({ children, live = false }: { children: ReactNode; live
 
       {/* Top bar (mobile) */}
       <header className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-surface/90 px-4 py-3 backdrop-blur">
-        <Capybara size={26} state={live ? 'live' : 'idle'} />
+        <BrandLogo size={26} state={live ? 'live' : 'idle'} />
         <span className="font-semibold tracking-tight">
           cap<span className="text-accent">·</span>evolve
         </span>
