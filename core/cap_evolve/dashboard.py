@@ -339,17 +339,36 @@ def reduce_run(run_dir) -> dict:
         counts[n["status"]] = counts.get(n["status"], 0) + 1
     counts["total"] = len(nodes)
 
-    # --- cost / time / tokens split (optimizer vs runner) ---------------
+    # --- cost / time / tokens split (intake vs optimizer vs runner) ------
+    # state.json's Spent is the authoritative, role-tagged accumulator (runner +
+    # optimizer + best-effort intake). Prefer it; fall back to event/node-derived
+    # sums for synthetic fixtures that log events but never wrote a Spent.
+    try:
+        sp = run_dir.spent
+    except Exception:  # noqa: BLE001
+        sp = None
     opt_secs = sum(n.get("optimizer_seconds") or 0.0 for n in nodes.values())
     run_secs = sum(n.get("runner_seconds") or 0.0 for n in nodes.values())
+    runner_usd = sum(float(n.get("cost_usd") or 0.0) for n in nodes.values())
     # cost_usd on a step is the RUNNER eval cost; optimizer cost is captured
     # separately by headless backends as opt_cost_usd when present.
-    runner_usd = sum(float(n.get("cost_usd") or 0.0) for n in nodes.values())
     opt_usd = 0.0
     for ev in events:
         if ev.get("kind") in ("step", "skillopt_step", "gepa_val_gate"):
             opt_usd += float(ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd") or 0.0)
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
+    intake_usd = intake_tokens = intake_secs = 0.0
+    opt_tokens = 0
+    if sp is not None and (sp.total_usd or sp.metric_calls or sp.optimizer_seconds):
+        runner_usd = sp.usd
+        opt_usd = sp.optimizer_usd
+        intake_usd = sp.intake_usd
+        opt_secs = sp.optimizer_seconds
+        run_secs = sp.runner_seconds
+        intake_secs = sp.intake_seconds
+        opt_tokens = sp.optimizer_tokens
+        intake_tokens = sp.intake_tokens
+        tokens = sp.runner_tokens + sp.optimizer_tokens + sp.intake_tokens
 
     test = final.get("test") or {}
     test_reward = test.get("reward")
@@ -379,12 +398,19 @@ def reduce_run(run_dir) -> dict:
         "counts": counts,
         "frontier": frontier,
         "tasks": tasks,
-        "wall_clock_seconds": round(opt_secs + run_secs, 1),
+        "wall_clock_seconds": round(opt_secs + run_secs + intake_secs, 1),
         "optimizer_seconds": round(opt_secs, 1),
         "runner_seconds": round(run_secs, 1),
+        "intake_seconds": round(intake_secs, 1),
         "cost": {"optimizer_usd": round(opt_usd, 4), "runner_usd": round(runner_usd, 4),
-                 "total_usd": round(opt_usd + runner_usd, 4)},
+                 "intake_usd": round(intake_usd, 4),
+                 "total_usd": round(opt_usd + runner_usd + intake_usd, 4)},
         "tokens": tokens,
+        "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
+                           "optimizer": opt_tokens, "intake": int(intake_tokens)},
+        "budget": (run_dir.budget.to_dict() if sp is not None else None),
+        "spent": (sp.to_dict() if sp is not None else None),
+        "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),

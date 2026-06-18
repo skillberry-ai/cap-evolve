@@ -29,7 +29,40 @@ from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
-OptimizerFn = Callable[[Path, str], None]
+# An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
+# cost, e.g. ``{"cost_usd": 0.42, "tokens": 1234}`` (or ``None`` when unknown) so the
+# loop can count optimizer spend against ``max_usd``. Older optimizers returning
+# ``None`` keep working — cost simply stays unmeasured for them.
+OptimizerFn = Callable[[Path, str], "dict | None"]
+
+
+def _parse_optimizer_cost(stdout: str) -> dict | None:
+    """Pull ``{"cost_usd","tokens"}`` from a ``run-optimizer`` stdout payload.
+
+    ``run-optimizer`` prints a single JSON object whose ``cost`` field is
+    ``{"total_cost_usd": <float|None>, "tokens": <int|None>}`` (only when invoked
+    with ``--json`` against a CLI that emits structured output). We read the last
+    JSON line that carries a ``cost`` block. Returns ``None`` when no cost is
+    present so callers can leave optimizer spend unmeasured.
+    """
+    if not stdout or not stdout.strip():
+        return None
+    for line in reversed(stdout.strip().splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:  # noqa: BLE001
+            continue
+        if isinstance(obj, dict) and isinstance(obj.get("cost"), dict):
+            c = obj["cost"]
+            usd = c.get("total_cost_usd")
+            tokens = c.get("tokens")
+            if usd is None and tokens is None:
+                return None
+            return {"cost_usd": float(usd or 0.0), "tokens": int(tokens or 0)}
+    return None
 
 
 # ---- splits ---------------------------------------------------------------
@@ -257,7 +290,7 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
     "mock", "--workdir", "{workdir}", "--prompt", "{prompt}"]``. The subprocess
     edits files in workdir.
     """
-    def _run(workdir: Path, instructions: str) -> None:
+    def _run(workdir: Path, instructions: str) -> dict | None:
         prompt_path = workdir / "INSTRUCTIONS.md"
         prompt_path.write_text(instructions, encoding="utf-8")
         cmd = [c.format(workdir=str(workdir), prompt=str(prompt_path)) for c in cmd_template]
@@ -265,6 +298,9 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if proc.returncode != 0:
             raise RuntimeError(f"optimizer failed ({proc.returncode}): {proc.stderr[:2000]}")
+        # Best-effort: if run-optimizer reported its cost (it does under --json), hand
+        # it back so the loop counts optimizer spend against the budget.
+        return _parse_optimizer_cost(proc.stdout)
     return _run
 
 
@@ -356,9 +392,13 @@ def run_step(
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
     optimizer_error = None
+    opt_cost_usd, opt_tokens = 0.0, 0
     _opt_t0 = time.time()
     try:
-        optimizer(workdir, instructions)  # mutates workdir in place
+        opt_report = optimizer(workdir, instructions)  # mutates workdir in place
+        if isinstance(opt_report, dict):
+            opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
+            opt_tokens = int(opt_report.get("tokens") or 0)
     except Exception as e:  # noqa: BLE001
         # A failed proposal (e.g. a transient optimizer/API error) must not abort a
         # long run — leave the workdir as the parent copy so the candidate == parent
@@ -366,7 +406,8 @@ def run_step(
         optimizer_error = str(e)
         run_dir.log_event("optimizer_error", candidate=cid, error=optimizer_error[:500])
     optimizer_seconds = time.time() - _opt_t0
-    run_dir.update_spent(optimizer_seconds=optimizer_seconds)
+    run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
+                         optimizer_tokens=opt_tokens)
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
@@ -407,7 +448,9 @@ def run_step(
                       val=cand_val.reward, parent=parent_id, parent_val=current_val.reward,
                       optimizer_seconds=round(optimizer_seconds, 2),
                       runner_seconds=round(cand_val.seconds, 2),
-                      cost_usd=cand_val.cost_usd, tokens=cand_val.tokens)
+                      cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
+                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    run_dir.record_spend_warnings()
 
     # update optimizer memory + commit the iteration to the version store so the
     # whole process stays inspectable (git log / MEMORY.md / REJECTED.md).
@@ -431,6 +474,8 @@ def run_step(
         "parent_val": current_val.to_dict(),
         "regressions": regressions,
         "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
         "optimizer_error": optimizer_error,
         "workdir": str(workdir),
     }

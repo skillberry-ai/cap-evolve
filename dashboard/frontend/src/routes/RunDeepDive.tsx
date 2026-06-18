@@ -17,15 +17,21 @@ import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
 import { MemoryPanel } from '../components/MemoryPanel'
 import { Insights } from '../components/Insights'
+import { CostPanel } from '../components/CostPanel'
+import { FileTree } from '../components/FileTree'
+import { GitDiff } from '../components/GitDiff'
 import type { RunStatus } from '../lib/types'
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'cost', label: 'Cost' },
   { id: 'phases', label: 'Phases' },
   { id: 'lineage', label: 'Lineage' },
   { id: 'trajectories', label: 'Trajectories' },
   { id: 'iterations', label: 'Iterations' },
+  { id: 'git', label: 'Git diffs' },
   { id: 'memory', label: 'Memory' },
+  { id: 'files', label: 'Files' },
   { id: 'insights', label: 'Insights' },
 ]
 
@@ -95,6 +101,8 @@ export function RunDeepDive() {
               {(active) =>
                 active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
+                ) : active === 'cost' ? (
+                  <CostPanel summary={data.summary} />
                 ) : active === 'phases' ? (
                   <PhasesTimeline detail={data} />
                 ) : active === 'lineage' ? (
@@ -103,8 +111,12 @@ export function RunDeepDive() {
                   <Trajectories runId={id!} />
                 ) : active === 'iterations' ? (
                   <IterationsDiff runId={id!} graph={data.graph} />
+                ) : active === 'git' ? (
+                  <GitDiff runId={id!} />
                 ) : active === 'memory' ? (
                   <MemoryPanel runId={id!} graph={data.graph} />
+                ) : active === 'files' ? (
+                  <FileTree runId={id!} />
                 ) : active === 'insights' ? (
                   <Insights runId={id!} detail={data} />
                 ) : (

@@ -41,7 +41,12 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   marginal gains. Enables pass^k / pass@k.
 
 - **budget**: `max_iterations` (default 10), `stall` (stop after N rejects),
-  `max_metric_calls`, `max_usd`.
+  `max_metric_calls` (0 = unlimited), `max_usd` (0 = unlimited; total cap over
+  runner + optimizer + intake), `max_optimizer_usd` (separate optimizer-only cap),
+  and `optimizer_max_turns` (per-iteration cap passed to the agent CLI, e.g.
+  claude-code `--max-turns`). Write all of these into `capevolve.yaml` — the template
+  has slots for each. Suggest the user run `cap-evolve estimate --spec capevolve.yaml`
+  to preview call counts and a $ range before the first run.
 
 - **optimizer + model**: `optimizer_skill` is the optimizer NAME, resolved by the
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`

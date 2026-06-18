@@ -15,6 +15,9 @@
 #   install_url      : where to get the CLI (printed when it is not on PATH).
 #   auth_notes       : one-line auth hint.
 #   json_flag        : extra flag(s) to request machine-readable output, or "".
+#   budget_flag      : flag(s) with a {budget} placeholder to cap one optimization
+#                      iteration's work (e.g. claude --max-turns N), or "" if the CLI
+#                      has no such knob. Appended only when run-optimizer gets --budget.
 #   offline          : "true" only for `mock` (never shells a network CLI).
 #
 # Per-CLI install/auth/flag prose lives in references/<name>.md.
@@ -25,6 +28,7 @@ mock:
   install_url: ""
   auth_notes: "No auth — deterministic, zero-API. Driven by mock_script.json."
   json_flag: ""
+  budget_flag: ""
   offline: "true"
 
 generic:
@@ -33,6 +37,7 @@ generic:
   install_url: ""
   auth_notes: "Whatever your agent CLI needs; this is the escape hatch."
   json_flag: ""
+  budget_flag: ""
   offline: "false"
 
 claude-code:
@@ -41,6 +46,7 @@ claude-code:
   install_url: "https://docs.claude.com/claude-code"
   auth_notes: "Logged-in Claude Code session or ANTHROPIC_API_KEY."
   json_flag: "--output-format json"
+  budget_flag: "--max-turns {budget}"
   offline: "false"
 
 codex:
@@ -49,6 +55,7 @@ codex:
   install_url: "https://developers.openai.com/codex"
   auth_notes: "codex login, or OPENAI_API_KEY."
   json_flag: "--json"
+  budget_flag: ""
   offline: "false"
 
 gemini-cli:
@@ -57,6 +64,7 @@ gemini-cli:
   install_url: "https://github.com/google-gemini/gemini-cli"
   auth_notes: "gemini auth, or GEMINI_API_KEY."
   json_flag: "--output-format json"
+  budget_flag: ""
   offline: "false"
 
 opencode:
@@ -65,6 +73,7 @@ opencode:
   install_url: "https://opencode.ai/docs/cli"
   auth_notes: "Per opencode's provider config."
   json_flag: ""
+  budget_flag: ""
   offline: "false"
 
 openclaw:
@@ -73,6 +82,7 @@ openclaw:
   install_url: ""
   auth_notes: "OpenClaw's headless flags are not standardized — set the command via env."
   json_flag: ""
+  budget_flag: ""
   offline: "false"
 
 ibm-bob:
@@ -81,4 +91,5 @@ ibm-bob:
   install_url: "https://bob.ibm.com/download/bobshell.sh"
   auth_notes: "Reads BOBSHELL_API_KEY (runner also maps BOB_API_KEY and the nearest .env)."
   json_flag: ""
+  budget_flag: ""
   offline: "false"

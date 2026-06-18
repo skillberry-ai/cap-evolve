@@ -12,4 +12,6 @@ split_test: 1.0
 num_trials: 1
 gate_mode: significant
 max_iterations: 5
+max_metric_calls: 0        # 0 = unlimited
+max_usd: 0.0               # 0 = unlimited; total $ cap (runner + optimizer + intake)
 store: git

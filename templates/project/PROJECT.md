@@ -23,7 +23,7 @@ Filled by the `intake` skill. Records the decisions behind this run so anyone
 ## Optimizer + algorithm
 - Optimizer (proposer): <claude-code | codex | gemini-cli | ... | mock>
 - Algorithm: <hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt>
-- Budget: <iterations / metric-calls / usd / stall>
+- Budget: <iterations / metric-calls / usd / optimizer-usd / stall / optimizer-max-turns>
 
 ## Inputs status
 - NEEDED inputs resolved: <list>

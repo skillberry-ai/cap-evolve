@@ -66,8 +66,11 @@ feedback general (what was wrong, what class of error), never the solution.
   overstates how dependable an agent is.
 
 - **budget** — `max_iterations`, `stall` (stop after N consecutive rejects),
-  `max_metric_calls`, `max_usd`. A budget too small to plausibly find a gain is
-  itself a misconfiguration worth flagging at intake.
+  `max_metric_calls`, `max_usd` (total cap: runner + optimizer + intake),
+  `max_optimizer_usd` (optimizer-only cap), `optimizer_max_turns` (per-iteration
+  agent-CLI cap). All are hard stops at 0=unlimited; `cap-evolve estimate` previews
+  the spend before a run. A budget too small to plausibly find a gain is itself a
+  misconfiguration worth flagging at intake.
 
 ## Sources
 - τ-bench (Yao, Shinn, Razavi, Narasimhan, 2024) — pass^k as a *reliability*

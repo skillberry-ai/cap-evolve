@@ -3,11 +3,15 @@ import type {
   CandidateDiff,
   CandidateFile,
   CompareResult,
+  FileResult,
+  GitCommit,
+  GitDiffResult,
   MemoryResult,
   RolloutDetail,
   RolloutRow,
   RunDetail,
   RunSummary,
+  TreeResult,
 } from './types'
 
 async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -52,6 +56,27 @@ export const api = {
 
   compare: (ids: string[], signal?: AbortSignal) =>
     getJSON<CompareResult>(`/api/compare?ids=${ids.map(encodeURIComponent).join(',')}`, signal),
+
+  tree: (id: string, path = '', signal?: AbortSignal) =>
+    getJSON<TreeResult>(
+      `/api/runs/${encodeURIComponent(id)}/tree?path=${encodeURIComponent(path)}`,
+      signal,
+    ),
+
+  file: (id: string, path: string, signal?: AbortSignal) =>
+    getJSON<FileResult>(
+      `/api/runs/${encodeURIComponent(id)}/file?path=${encodeURIComponent(path)}`,
+      signal,
+    ),
+
+  gitLog: (id: string, signal?: AbortSignal) =>
+    getJSON<GitCommit[]>(`/api/runs/${encodeURIComponent(id)}/git/log`, signal),
+
+  gitDiff: (id: string, from: string, to: string, signal?: AbortSignal) =>
+    getJSON<GitDiffResult>(
+      `/api/runs/${encodeURIComponent(id)}/git/diff?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      signal,
+    ),
 
   streamURL: (id: string) => `/api/runs/${encodeURIComponent(id)}/stream`,
 }

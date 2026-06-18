@@ -90,9 +90,10 @@ def _file_lock(lock_path: Path):
 @dataclass
 class Budget:
     max_iterations: int = 20
-    max_metric_calls: int = 0   # 0 = unlimited
-    max_usd: float = 0.0        # 0 = unlimited
-    stall: int = 0              # consecutive no-accepts before stop; 0 = off
+    max_metric_calls: int = 0     # 0 = unlimited
+    max_usd: float = 0.0          # 0 = unlimited (total: runner + optimizer + intake)
+    stall: int = 0                # consecutive no-accepts before stop; 0 = off
+    max_optimizer_usd: float = 0.0  # 0 = off; separate cap on optimizer spend alone
 
     def to_dict(self) -> dict:
         return {
@@ -100,6 +101,7 @@ class Budget:
             "max_metric_calls": self.max_metric_calls,
             "max_usd": self.max_usd,
             "stall": self.stall,
+            "max_optimizer_usd": self.max_optimizer_usd,
         }
 
     @classmethod
@@ -110,6 +112,7 @@ class Budget:
             max_metric_calls=int(d.get("max_metric_calls") or 0),
             max_usd=float(d.get("max_usd") or 0.0),
             stall=int(d.get("stall") or 0),
+            max_optimizer_usd=float(d.get("max_optimizer_usd") or 0.0),
         )
 
 
@@ -122,11 +125,24 @@ class Spent:
     runner_tokens: int = 0           # RUNNER tokens
     runner_seconds: float = 0.0      # RUNNER wall time (in evaluation)
     optimizer_seconds: float = 0.0   # OPTIMIZER wall time (proposing edits)
+    optimizer_usd: float = 0.0       # OPTIMIZER cost (reported by the agent CLI)
+    optimizer_tokens: int = 0        # OPTIMIZER tokens
+    intake_usd: float = 0.0          # INTAKE cost (best-effort; interview phase)
+    intake_tokens: int = 0           # INTAKE tokens (best-effort)
+    intake_seconds: float = 0.0      # INTAKE wall time (best-effort)
+
+    @property
+    def total_usd(self) -> float:
+        """All-role spend: what ``max_usd`` is checked against."""
+        return self.usd + self.optimizer_usd + self.intake_usd
 
     def to_dict(self) -> dict:
         return {"iterations": self.iterations, "metric_calls": self.metric_calls,
                 "usd": self.usd, "stall": self.stall, "runner_tokens": self.runner_tokens,
-                "runner_seconds": self.runner_seconds, "optimizer_seconds": self.optimizer_seconds}
+                "runner_seconds": self.runner_seconds, "optimizer_seconds": self.optimizer_seconds,
+                "optimizer_usd": self.optimizer_usd, "optimizer_tokens": self.optimizer_tokens,
+                "intake_usd": self.intake_usd, "intake_tokens": self.intake_tokens,
+                "intake_seconds": self.intake_seconds}
 
     @classmethod
     def from_dict(cls, d: dict) -> "Spent":
@@ -134,7 +150,10 @@ class Spent:
         return cls(int(d.get("iterations") or 0), int(d.get("metric_calls") or 0),
                    float(d.get("usd") or 0.0), int(d.get("stall") or 0),
                    int(d.get("runner_tokens") or 0), float(d.get("runner_seconds") or 0.0),
-                   float(d.get("optimizer_seconds") or 0.0))
+                   float(d.get("optimizer_seconds") or 0.0),
+                   float(d.get("optimizer_usd") or 0.0), int(d.get("optimizer_tokens") or 0),
+                   float(d.get("intake_usd") or 0.0), int(d.get("intake_tokens") or 0),
+                   float(d.get("intake_seconds") or 0.0))
 
 
 class RunDir:
@@ -210,7 +229,9 @@ class RunDir:
             self._write_state(st)
 
     def update_spent(self, *, iterations=0, metric_calls=0, usd=0.0, runner_tokens=0,
-                     runner_seconds=0.0, optimizer_seconds=0.0, accepted: bool | None = None) -> Spent:
+                     runner_seconds=0.0, optimizer_seconds=0.0, optimizer_usd=0.0,
+                     optimizer_tokens=0, intake_usd=0.0, intake_tokens=0, intake_seconds=0.0,
+                     accepted: bool | None = None) -> Spent:
         with _file_lock(self._state_lock):
             st = self._read_state()
             sp = Spent.from_dict(st.get("spent"))
@@ -220,6 +241,11 @@ class RunDir:
             sp.runner_tokens += runner_tokens
             sp.runner_seconds += runner_seconds
             sp.optimizer_seconds += optimizer_seconds
+            sp.optimizer_usd += optimizer_usd
+            sp.optimizer_tokens += optimizer_tokens
+            sp.intake_usd += intake_usd
+            sp.intake_tokens += intake_tokens
+            sp.intake_seconds += intake_seconds
             if accepted is True:
                 sp.stall = 0
             elif accepted is False:
@@ -234,11 +260,50 @@ class RunDir:
             return True, f"max_iterations reached ({s.iterations}/{b.max_iterations})"
         if b.max_metric_calls and s.metric_calls >= b.max_metric_calls:
             return True, f"max_metric_calls reached ({s.metric_calls}/{b.max_metric_calls})"
-        if b.max_usd and s.usd >= b.max_usd:
-            return True, f"max_usd reached (${s.usd:.2f}/${b.max_usd:.2f})"
+        if b.max_usd and s.total_usd >= b.max_usd:
+            return True, (f"max_usd reached (${s.total_usd:.2f}/${b.max_usd:.2f}; "
+                          f"run ${s.usd:.2f} + opt ${s.optimizer_usd:.2f} + intake ${s.intake_usd:.2f})")
+        if b.max_optimizer_usd and s.optimizer_usd >= b.max_optimizer_usd:
+            return True, f"max_optimizer_usd reached (${s.optimizer_usd:.2f}/${b.max_optimizer_usd:.2f})"
         if b.stall and s.stall >= b.stall:
             return True, f"stalled ({s.stall} rejects in a row >= {b.stall})"
         return False, ""
+
+    def record_spend_warnings(self) -> list[dict]:
+        """Emit a ``budget_warning`` event once per crossed soft threshold.
+
+        Fires at 50%/80% of ``max_usd`` (on total spend) and 80% of
+        ``max_metric_calls``. Crossings already announced are remembered in
+        ``state.json`` so each fires at most once. Returns the warnings emitted
+        this call (for callers/tests).
+        """
+        b, s = self.budget, self.spent
+        checks: list[tuple[str, float, float, float]] = []  # (metric, frac, spent, limit)
+        if b.max_usd:
+            frac = s.total_usd / b.max_usd if b.max_usd else 0.0
+            for thr in (0.5, 0.8):
+                if frac >= thr:
+                    checks.append(("max_usd", thr, s.total_usd, b.max_usd))
+        if b.max_metric_calls:
+            frac = s.metric_calls / b.max_metric_calls if b.max_metric_calls else 0.0
+            if frac >= 0.8:
+                checks.append(("max_metric_calls", 0.8, float(s.metric_calls), float(b.max_metric_calls)))
+        emitted: list[dict] = []
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            fired = set(st.get("warnings_fired") or [])
+            for metric, thr, spent_v, limit_v in checks:
+                key = f"{metric}@{int(thr * 100)}"
+                if key in fired:
+                    continue
+                fired.add(key)
+                rec = {"metric": metric, "pct": int(thr * 100), "spent": round(spent_v, 4), "limit": limit_v}
+                emitted.append(rec)
+            st["warnings_fired"] = sorted(fired)
+            self._write_state(st)
+        for rec in emitted:
+            self.log_event("budget_warning", **rec)
+        return emitted
 
     # ---- splits (with test seal) -------------------------------------------
     def write_splits(self, splits: Splits) -> None:

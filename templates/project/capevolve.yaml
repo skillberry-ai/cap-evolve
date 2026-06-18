@@ -12,6 +12,8 @@ actions: [edit]                          # allowed edits (capability-specific)
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: mock                    # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)
 optimizer_model: ""                      # backend-specific (e.g. a claude model id)
+optimizer_max_turns: 0                   # 0 = off; per-iteration cap passed to the agent CLI
+#   (claude-code → --max-turns N), bounding the cost/work of each optimization step
 
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb              # algorithms/<skill>
@@ -36,8 +38,13 @@ gate_mode: significant                   # significant | strict | threshold | si
 gate_k_se: 1.0
 
 # --- budget -----------------------------------------------------------------
-max_iterations: 10
-stall: 2
+# Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a
+# $ range before spending. All caps below are hard stops; 0 = unlimited/off.
+max_iterations: 10          # optimizer iterations (dominant cost knob)
+stall: 2                    # stop after N consecutive rejects
+max_metric_calls: 0         # 0 = unlimited; else stop after N runner evals
+max_usd: 0.0                # 0 = unlimited; total $ cap (runner + optimizer + intake)
+max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
 
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command

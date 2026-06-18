@@ -30,11 +30,18 @@ def main(argv=None) -> int:
     p.add_argument("--n-trials", type=int, default=1)
     p.add_argument("--max-iterations", type=int, default=10)
     p.add_argument("--stall", type=int, default=0)
+    p.add_argument("--max-metric-calls", type=int, default=0, help="0 = unlimited")
+    p.add_argument("--max-usd", type=float, default=0.0,
+                   help="0 = unlimited; total spend cap (runner + optimizer + intake)")
+    p.add_argument("--max-optimizer-usd", type=float, default=0.0,
+                   help="0 = off; separate cap on optimizer spend alone")
     p.add_argument("--run-ts", default=None, help="fixed timestamp for reproducible run dirs")
     args = p.parse_args(argv)
 
     Path(args.base).mkdir(parents=True, exist_ok=True)
-    budget = Budget(max_iterations=args.max_iterations, stall=args.stall)
+    budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
+                    max_metric_calls=args.max_metric_calls, max_usd=args.max_usd,
+                    max_optimizer_usd=args.max_optimizer_usd)
     run_dir = RunDir.create(Path(args.base), ts=args.run_ts, budget=budget)
 
     adapter = load_adapter(Path(args.project))

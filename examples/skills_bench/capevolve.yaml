@@ -22,4 +22,6 @@ split_seed: 1
 
 max_iterations: 5
 stall: 0
+max_metric_calls: 0        # 0 = unlimited; else stop after N runner evals
+max_usd: 0.0               # 0 = unlimited; total $ cap (runner + optimizer + intake)
 store: git

@@ -10,6 +10,8 @@ from fastapi.responses import StreamingResponse
 from . import compare, runs, trajectories
 from . import memory as _memory
 from . import stream as _stream
+from . import files as _files
+from . import gitlog as _gitlog
 
 
 def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
@@ -61,6 +63,30 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     @app.get("/api/runs/{run_id}/candidate/{candidate}/files")
     def get_candidate_files(run_id: str, candidate: str):
         return _memory.list_candidate_files(_resolve_or_404(run_id), candidate)
+
+    @app.get("/api/runs/{run_id}/tree")
+    def get_tree(run_id: str, path: str = Query(default="")):
+        try:
+            return _files.tree(_resolve_or_404(run_id), path)
+        except PermissionError:
+            raise HTTPException(status_code=400, detail="path escapes run dir")
+
+    @app.get("/api/runs/{run_id}/file")
+    def get_file(run_id: str, path: str = Query(...)):
+        try:
+            return _files.read_file(_resolve_or_404(run_id), path)
+        except PermissionError:
+            raise HTTPException(status_code=400, detail="path escapes run dir")
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="file not found")
+
+    @app.get("/api/runs/{run_id}/git/log")
+    def get_git_log(run_id: str):
+        return _gitlog.log(_resolve_or_404(run_id))
+
+    @app.get("/api/runs/{run_id}/git/diff")
+    def get_git_diff(run_id: str, frm: str = Query(..., alias="from"), to: str = Query(...)):
+        return _gitlog.diff(_resolve_or_404(run_id), frm, to)
 
     @app.get("/api/compare")
     def get_compare(ids: str = Query(...)):

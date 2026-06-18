@@ -505,13 +505,18 @@ def gepa_loop(
         instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
         opt_error = None
+        opt_cost_usd, opt_tokens = 0.0, 0
         _t0 = time.time()
         try:
-            optimizer(workdir, instructions)
+            opt_report = optimizer(workdir, instructions)
+            if isinstance(opt_report, dict):
+                opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
+                opt_tokens = int(opt_report.get("tokens") or 0)
         except Exception as e:  # noqa: BLE001
             opt_error = str(e)
             run_dir.log_event("optimizer_error", candidate=cid, error=opt_error[:500])
-        run_dir.update_spent(optimizer_seconds=time.time() - _t0)
+        run_dir.update_spent(optimizer_seconds=time.time() - _t0, optimizer_usd=opt_cost_usd,
+                             optimizer_tokens=opt_tokens)
 
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,
@@ -537,6 +542,7 @@ def gepa_loop(
             if store is not None:
                 store.commit(f"iter {len(steps)+1}: reject(local) {cid}", accepted=False)
             steps.append(step)
+            run_dir.record_spend_warnings()
             continue
 
         # 7. local gate PASSED → pay for full val + the honest significance gate.
@@ -567,6 +573,7 @@ def gepa_loop(
             if store is not None:
                 store.commit(f"iter {len(steps)+1}: reject(val) {summary}", accepted=False)
         steps.append(step)
+        run_dir.record_spend_warnings()
 
         # 10. system-aware merge (gated by cadence + budget).
         if (accepted and merges_done < max_merges and accepts % max(1, merge_cadence) == 0):

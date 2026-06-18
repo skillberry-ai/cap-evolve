@@ -61,11 +61,33 @@ export interface RunSummaryDetail {
   wall_clock_seconds?: number | null
   optimizer_seconds?: number | null
   runner_seconds?: number | null
-  cost?: { optimizer_usd: number | null; runner_usd: number | null; total_usd: number | null }
+  intake_seconds?: number | null
+  cost?: {
+    optimizer_usd: number | null
+    runner_usd: number | null
+    intake_usd?: number | null
+    total_usd: number | null
+  }
   tokens?: number | null
+  tokens_by_role?: { runner: number; optimizer: number; intake: number }
+  budget?: {
+    max_iterations?: number
+    max_metric_calls?: number
+    max_usd?: number
+    max_optimizer_usd?: number
+    stall?: number
+  } | null
+  spent?: {
+    iterations?: number
+    metric_calls?: number
+    usd?: number
+    optimizer_usd?: number
+    intake_usd?: number
+  } | null
+  budget_warnings?: { metric: string; pct: number; spent: number; limit: number }[]
   gate_warnings?: unknown[]
   diagnoses?: unknown[]
-  git_log?: unknown[]
+  git_log?: { hash: string; subject: string }[]
 }
 
 /** GET /api/runs/{id}. */
@@ -141,6 +163,43 @@ export interface MemoryResult {
 export interface CandidateFile {
   name: string
   text: string
+}
+
+/** GET /api/runs/{id}/tree — a generic, format-agnostic directory listing. */
+export interface TreeEntry {
+  name: string
+  path: string
+  type: 'dir' | 'file'
+  size?: number | null
+  children?: TreeEntry[]
+}
+export interface TreeResult {
+  path: string
+  entries: TreeEntry[]
+  truncated?: boolean
+}
+
+/** GET /api/runs/{id}/file — one text file (size-capped, binary-detected). */
+export interface FileResult {
+  path: string
+  binary: boolean
+  size: number
+  truncated?: boolean
+  text: string | null
+}
+
+/** GET /api/runs/{id}/git/log + /git/diff. */
+export interface GitCommit {
+  hash: string
+  subject: string
+  iter: number
+}
+export interface GitDiffResult {
+  from: string
+  to: string
+  available?: boolean
+  error?: string
+  files: DiffFile[]
 }
 
 /** GET /api/runs/{id}/rollout/{file}. */

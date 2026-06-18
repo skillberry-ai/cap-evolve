@@ -216,6 +216,9 @@ def main(argv=None) -> int:
                    help="for Claude Code: a JSON Schema string passed as --json-schema so "
                         "the result carries .structured_output (only added when --json and "
                         "the row's json_flag contains --output-format)")
+    p.add_argument("--budget", type=int, default=None,
+                   help="per-iteration cap rendered into the registry row's budget_flag "
+                        "(e.g. claude-code → --max-turns N); ignored if the row has none")
     p.add_argument("--list", action="store_true", help="list known optimizers and exit")
     args = p.parse_args(argv)
 
@@ -256,6 +259,13 @@ def main(argv=None) -> int:
         # Claude Code: pair --output-format json with --json-schema for .structured_output.
         if args.json_schema and "--output-format" in json_flag:
             cmd += ["--json-schema", args.json_schema]
+
+    # Per-iteration budget cap: render {budget} into the row's budget_flag (e.g.
+    # claude-code → "--max-turns N"). Skipped when --budget is unset, the row has no
+    # budget_flag, or the row is offline (mock).
+    budget_flag = str(row.get("budget_flag", "")).strip()
+    if args.budget is not None and budget_flag and str(row.get("offline", "")).lower() != "true":
+        cmd += shlex.split(budget_flag.replace("{budget}", str(int(args.budget))))
 
     if not cmd:
         print(json.dumps({"optimizer": name, "error":

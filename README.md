@@ -121,7 +121,23 @@ Follow RUN.md to run a cap-evolve optimization. Here is everything intake needs:
 - algorithm:       hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt
                    (gepa & skillopt are the sample-efficient flagships)
 - max_iterations:  <N>     num_trials: <K, use >=3 for a stochastic agent>
+- max_metric_calls:<N, 0=unlimited>   max_usd: <$, 0=unlimited; runner+optimizer+intake>
+- max_optimizer_usd:<$, 0=off>        optimizer_max_turns: <N, per-iteration agent-CLI cap>
 - gate:            significant (k_se, e.g. 1.0) | strict | threshold   (paired sig is the default)
+```
+
+**Preview the spend before you run.** `cap-evolve estimate --spec capevolve.yaml`
+prints the call counts (`val × trials × iterations` runner calls, `iterations`
+optimizer calls) and a $ range — calibrated from your prior runs' *actual* reported
+cost when available, else priced from a bundled table (or `--price-in/--price-out`).
+Every cap is a hard stop, and soft `budget_warning` events fire at 50%/80% of
+`max_usd`. Optimizer spend is tracked per role (intake / optimizer / runner) and
+counts toward `max_usd`. Any cap can also be overridden at the command line:
+
+```bash
+cap-evolve estimate --spec capevolve.yaml          # dry-run cost preview (spends nothing)
+cap-evolve run --spec capevolve.yaml --max-usd 10 --max-iterations 5 \
+               --optimizer-max-turns 30            # claude-code → --max-turns 30 per step
 ```
 
 **Worked example — tau2-bench airline, from scratch** (this is the bundled
@@ -141,6 +157,7 @@ Follow RUN.md to run a cap-evolve optimization:
 #    objective = maximize mean reward on val
 # 5. OPTIMIZER: ibm-bob  (or claude-code @ claude-opus-4-6); credential BOBSHELL_API_KEY (or ANTHROPIC_API_KEY)
 # 6. BUDGET: algorithm hill-climb (--focus all); max_iterations 20; num_trials 5; gate significant (k_se 0.5)
+#            max_usd 50 (total cap); optimizer_max_turns 40 (claude-code per-step cap); max_metric_calls 0
 #            (or algorithm gepa / skillopt for the sample-efficient flagships)
 ```
 
