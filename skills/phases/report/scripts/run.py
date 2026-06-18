@@ -27,6 +27,9 @@ def main(argv=None) -> int:
                         "chart + top-N table) instead of the JSON summary")
     p.add_argument("--no-color", action="store_true", help="disable ANSI colors in --terminal mode")
     p.add_argument("--top-n", type=int, default=8, help="rows in the --terminal candidate table")
+    p.add_argument("--dashboard-mode", choices=("auto", "report-only", "off"), default="off",
+                   help="ensure the live dashboard server is up (auto/report-only) at the final phase")
+    p.add_argument("--dashboard-port", type=int, default=7878)
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -73,6 +76,20 @@ def main(argv=None) -> int:
             summary["dashboard"] = str(dash)
         except Exception as e:  # noqa: BLE001 — never let the dashboard break the report
             summary["dashboard_error"] = str(e)
+
+    # Final phase: guarantee the live dashboard server is up (idempotent) and
+    # opened, so "the dashboard is created automatically in the last phase" holds
+    # even when early auto-start was disabled. Best-effort; never fails the report.
+    if args.dashboard_mode in ("auto", "report-only"):
+        try:
+            from cap_evolve import dashboard_launch
+            base = run_dir.root.resolve().parent  # absolute: subprocess cwd may differ
+            status = dashboard_launch.maybe_launch(
+                base, mode=args.dashboard_mode, port=args.dashboard_port, open_browser=True
+            )
+            summary["dashboard_server"] = status.get("dashboard")
+        except Exception as e:  # noqa: BLE001
+            summary["dashboard_server_error"] = str(e)
 
     print(json.dumps(summary, indent=2))
     return 0

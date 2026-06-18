@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark Mode (OLED) — the primary theme. Semantic tokens; never raw hex in components. */
+  --bg: #07090d;
+  --surface: #0d1117;
+  --surface-2: #141b24;
+  --border: #1e2733;
+  --fg: #e6edf3;
+  --muted: #8b98a9;
+  --primary: #3b82f6;
+  --primary-deep: #1e40af;
+  --accent: #f59e0b;        /* champion / best — amber */
+  --accent-strong: #d97706;
+  --accepted: #22c55e;      /* accepted / improved */
+  --rejected: #ef4444;      /* rejected / regressed */
+  --seed: #64748b;          /* seed / neutral */
+
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for all numeric/score displays so columns don't jitter. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Fira Code', ui-monospace, monospace;
+}
+
+/* Skeleton shimmer for loading states (>300ms waits). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* Global reduced-motion guard: kill transforms/animations/transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus rings for keyboard nav. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

@@ -104,6 +104,9 @@ def _cmd_run(argv):
     p.add_argument("--skills-dir", default=None)
     p.add_argument("--plan-only", action="store_true", help="print the command plan, don't execute")
     p.add_argument("--run-ts", default=None)
+    p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
+                   help="live dashboard: auto (default, launch at run start), report-only, or off")
+    p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
@@ -112,6 +115,10 @@ def _cmd_run(argv):
         return 1
     skills = _resolve_skills(skills_dir)
     spec = read_yaml(Path(args.spec).read_text())
+
+    from . import dashboard_launch
+    dash_mode = dashboard_launch.resolve_mode(args.dashboard, spec.get("dashboard"))
+    dash_port = args.dashboard_port or int(spec.get("dashboard_port") or dashboard_launch.DEFAULT_PORT)
 
     def skill_run(name: str) -> str:
         s = skills.get(name)
@@ -189,6 +196,16 @@ def _cmd_run(argv):
         return 1
     run_dir = json.loads(proc.stdout)["run_dir"]
 
+    # Auto-start the live dashboard now (the run dir exists) so the whole
+    # evolution is watchable. Best-effort: never blocks or fails the run.
+    if dash_mode == "auto":
+        # Absolute base: the dashboard subprocess inherits THIS process's cwd
+        # (not workdir), so a relative ".capevolve" would resolve wrongly when
+        # `cap-evolve run` is invoked from outside workdir.
+        status = dashboard_launch.maybe_launch(
+            proj_abs.parent, mode=dash_mode, port=dash_port, open_browser=True)
+        print(json.dumps(status))
+
     # 2) algorithm (hill-climb variants select their schedule via --focus)
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
                "--optimizer", opt_cmd, "--max-iterations", str(spec.get("max_iterations", 10)),
@@ -214,7 +231,9 @@ def _cmd_run(argv):
 
     # 3) finalize  4) report
     last = proc.stdout
-    for step, extra in (("finalize", ["--n-trials", str(spec.get("num_trials", 1))]), ("report", [])):
+    report_extra = ["--dashboard-mode", dash_mode, "--dashboard-port", str(dash_port)]
+    for step, extra in (("finalize", ["--n-trials", str(spec.get("num_trials", 1))]),
+                        ("report", report_extra)):
         cmd = [py, skill_run(step), "--run-dir", run_dir]
         if step == "finalize":
             cmd += ["--project", project]
@@ -229,18 +248,37 @@ def _cmd_run(argv):
     return 0
 
 
+def _cmd_dashboard(argv):
+    """Launch (or focus) the live dashboard server over a base dir of runs."""
+    import argparse
+    from . import dashboard_launch
+
+    p = argparse.ArgumentParser(prog="cap-evolve dashboard")
+    p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
+    p.add_argument("--port", type=int, default=dashboard_launch.DEFAULT_PORT)
+    p.add_argument("--no-open", action="store_true", help="don't open a browser")
+    args = p.parse_args(argv)
+
+    status = dashboard_launch.maybe_launch(
+        args.base, mode="auto", port=args.port, open_browser=not args.no_open
+    )
+    print(json.dumps(status))
+    return 0 if status.get("dashboard") not in (None, "error", "skipped") else 1
+
+
 COMMANDS = {
     "version": _cmd_version,
     "splits": _cmd_splits,
     "check": _cmd_check,
     "run": _cmd_run,
+    "dashboard": _cmd_dashboard,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run} [args]", file=sys.stderr)
+        print("usage: cap-evolve {version|splits|check|run|dashboard} [args]", file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:
