@@ -1,4 +1,10 @@
-# cap-evolve
+<p align="center">
+  <img src="docs/assets/cap-evolve-logo.png" alt="cap-evolve" width="200"/>
+</p>
+
+<h1 align="center">cap-evolve</h1>
+
+<p align="center"><em>watch capability evolve</em></p>
 
 <!-- badges: replace OWNER/REPO once published -->
 ![status](https://img.shields.io/badge/status-beta%20(0.x)-orange)
