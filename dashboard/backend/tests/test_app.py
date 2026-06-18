@@ -34,3 +34,18 @@ def test_get_run_endpoint(tmp_base, make_run):
 def test_get_missing_run_404(tmp_base):
     r = _client(tmp_base).get("/api/runs/run_nope")
     assert r.status_code == 404
+
+
+def test_serves_static_index(tmp_path):
+    from capevolve_dashboard.app import create_app
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text("<!doctype html><title>cap-evolve</title>", encoding="utf-8")
+    base = tmp_path / "runs"
+    base.mkdir()
+    c = TestClient(create_app(base, static_dir=static))
+    r = c.get("/")
+    assert r.status_code == 200
+    assert "cap-evolve" in r.text
+    # API still wins
+    assert c.get("/api/health").json()["ok"] is True

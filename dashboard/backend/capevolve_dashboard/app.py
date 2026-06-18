@@ -11,7 +11,7 @@ from . import runs, trajectories
 from . import stream as _stream
 
 
-def create_app(base_dir: Path) -> FastAPI:
+def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     base = Path(base_dir)
     app = FastAPI(title="cap-evolve dashboard", version="0.1.0")
     app.state.base_dir = base
@@ -88,5 +88,9 @@ def create_app(base_dir: Path) -> FastAPI:
                 await asyncio.sleep(0.5)
 
         return StreamingResponse(gen(), media_type="text/event-stream")
+
+    if static_dir is not None and Path(static_dir).is_dir():
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
     return app
