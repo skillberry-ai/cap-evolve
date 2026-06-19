@@ -68,23 +68,51 @@ mis-threaded.
 Why it works: N fragile turns become 1 deterministic call; the loop and the
 error handling live in code the model cannot get wrong.
 
-## 3c. Enforce an invariant the API does not — a rule-checking tool
+## 3c. Validation / rule-enforcement tool — wrap, then delegate (then remove the primitive)
 
 Trace symptom: a write that must be preceded by a read, or whose precondition the
 backend does not itself enforce, keeps producing wrong-state failures (the agent
-skips the check or mis-reads it).
+skips the check or mis-reads it). The rule is GENERAL (it always applies), so it
+belongs in code, not in a prompt sentence the model can forget.
+
+Emit two edits together: `compose` the safe wrapper, then `remove` the raw
+primitive so the only reachable path is the validated one.
+
+```json
+[
+  { "kind": "compose",
+    "value": {
+      "name": "cancel_record_safely",
+      "description": "Cancel a record after verifying it is cancellable. Reads the record first and REFUSES (returns an error) if the cancellation preconditions are not met — so you never need to read the record yourself before cancelling. Use this for every cancellation.",
+      "parameters": { "type": "object", "properties": { "record_id": { "type": "string" } }, "required": ["record_id"] },
+      "code": "def cancel_record_safely(record_id):\n    rec = get_record(record_id)\n    if not rec.get('cancellable'):\n        return {'error': 'not cancellable', 'record': rec}\n    return cancel_record(record_id)" } },
+  { "tool": "cancel_record", "kind": "remove" }
+]
+```
+
+Why it works: the read-before-write order and the precondition are guaranteed in
+code; a violation is a clean refusal, not a corrupted write. Removing the raw
+`cancel_record` keeps the surface lean and makes the unsafe path unreachable —
+the model cannot route around the check.
+
+## 3c-bis. Validate-and-normalize inputs before a primitive
+
+Trace symptom: the agent calls `charge_payment` with the amount in the wrong
+unit, or against a method that isn't on file, and the raw primitive happily
+errors mid-task. A wrapper normalizes the input, checks the precondition, then
+delegates.
 
 ```json
 { "kind": "compose",
   "value": {
-    "name": "cancel_record_checked",
-    "description": "Cancel a record after verifying it is cancellable. Reads the record first and REFUSES (returns an error) if the cancellation preconditions are not met — so you never need to read the record yourself before cancelling.",
-    "parameters": { "type": "object", "properties": { "record_id": { "type": "string" } }, "required": ["record_id"] },
-    "code": "def cancel_record_checked(record_id):\n    rec = get_record(record_id)\n    if not rec.get('cancellable'):\n        return {'error': 'not cancellable', 'record': rec}\n    return cancel_record(record_id)" } }
+    "name": "charge_payment_safely",
+    "description": "Charge `amount` (whole US cents) to `payment_id` after confirming the method is on the user's profile. Normalizes the amount and refuses (returns an error) if the method is not on file, so the charge never errors mid-task.",
+    "parameters": { "type": "object", "properties": { "payment_id": { "type": "string" }, "amount": { "type": "integer" } }, "required": ["payment_id", "amount"] },
+    "code": "def charge_payment_safely(payment_id, amount):\n    amount = int(round(amount))\n    methods = {m['id'] for m in get_user_details()['payment_methods']}\n    if payment_id not in methods:\n        return {'error': 'payment method not on file', 'available': sorted(methods)}\n    return charge_payment(payment_id=payment_id, amount=amount)" } }
 ```
 
-Why it works: the read-before-write order and the precondition are guaranteed in
-code; a violation is a clean refusal, not a corrupted write.
+Why it works: validate → normalize → enforce → delegate, all in code; the model
+hands over an id and an amount and cannot mis-route the call.
 
 ## 3d. Keep failure modes — improve, do not delete, `Raises:`
 

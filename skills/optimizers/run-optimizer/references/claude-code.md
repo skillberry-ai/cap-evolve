@@ -54,11 +54,17 @@ context. The optimizer can be told (in its INSTRUCTIONS prompt) to:
   model, so this is cheap. Phrase it as: *"Research the failures in clusters A,
   B, and C in parallel using separate subagents, then synthesize the root
   causes."*
-- **One subagent per edit hypothesis.** Generate several **candidate edits in
-  parallel** — one subagent drafts each hypothesis (different prompt wording,
-  tool-doc fix, restructure) — then the main agent compares the returned
-  diffs/rationales and writes only the most promising one. This turns "guess one
-  edit serially" into "explore N edits, keep the best".
+- **One subagent per edit hypothesis or candidate tool.** Generate several
+  **candidate edits in parallel** — one subagent drafts each hypothesis
+  (different prompt wording, tool-doc fix, restructure, or — for the `tools`
+  capability — a different **candidate code-bearing tool**: a validation/wrapper
+  tool that enforces a rule then delegates, or a loop tool that collapses N calls
+  into one, each with a real body). Then the main agent compares the returned
+  diffs/rationales and **synthesizes the single best edit**, writing only that
+  one. This turns "guess one edit serially" into "explore N edits, keep the best".
+  Concretely: spawn one subagent per trajectory-failure cluster AND/OR one per
+  candidate tool/edit hypothesis, explore in parallel, then synthesize and land
+  exactly one edit.
 - **Isolate high-volume work.** Delegate re-reading long rollouts or large logs
   to a subagent so only the relevant summary returns; keeps the main agent's
   budget focused on deciding and writing the edit.

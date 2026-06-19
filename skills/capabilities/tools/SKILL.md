@@ -22,6 +22,50 @@ when the tools come from an external Model Context Protocol server you can only
 re-describe, not re-implement. The two share the same `tools.json` artifact and
 handlers; the only difference is which edits the action policy permits.
 
+## The highest-leverage edit: write a NEW code-bearing tool
+
+**Start here. A deterministic tool beats a sentence in the prompt.** A docstring
+or system-prompt rule only makes the model *more likely* to comply — it can be
+forgotten, mis-read, or out-reasoned on the next task. A tool whose body is
+**real code** (loops, validation, calls to existing tools) makes the right
+behavior *the only thing that can happen* — it cannot be "forgotten." When the
+traces show a rule the agent keeps breaking or a multi-step sequence it keeps
+fumbling, **do not just reword a description — write a tool with a real body.**
+This is the first edit to reach for, not the last.
+
+Two patterns carry almost all the gain (worked bodies below and in
+[`references/examples.md`](references/examples.md)):
+
+1. **Validation / rule-enforcement tool (wrap, then delegate).** When a policy
+   or precondition that today lives only in the prompt is GENERAL — it always
+   applies, not just to one task — implement it as code in a NEW tool that:
+   validates / normalizes the inputs → enforces the rule → calls the existing
+   primitive → returns a clear result (or a clean refusal). Then **remove the raw
+   primitive from the exposed set** if the agent should only ever reach it
+   through the safe path. Example: `cancel_record_safely(record_id)` reads the
+   record, refuses unless it is cancellable, then calls the raw `cancel_record`.
+
+2. **Workflow / loop tool (collapse a recurring multi-step sequence).** When a
+   small multi-step workflow recurs, or the agent calls one primitive N times in
+   a row (and drops or mis-threads a result), implement it as ONE tool with real
+   loops/code that calls the existing tools internally and returns the finished
+   result. Example: a tool that loops over a list of ids calling `get_record`
+   once each and returns them aligned, instead of the agent issuing N calls.
+
+**Lean caveat — replace, don't accumulate.** Every exposed tool enters the
+agent's context, and too many tools degrade selection (see §3 of concepts.md).
+So PREFER consolidating over piling on: when you add a safer or looped tool,
+**`remove` the now-redundant primitive** so the net tool count stays small and
+sharp. Do not add many narrow tools. One sharp tool that subsumes a primitive
+beats two overlapping ones.
+
+**You must write the BODY.** A `compose`/`add`/`code` edit whose body is `...`,
+a bare `pass`, or docstring-only is NOT this edit — it does nothing. Emit a real
+implementation: the loop, the precondition check, the calls to the existing
+tools (`get_record(i)` — or `self.get_record(i)` if your adapter binds tools as
+methods). Worked examples with full bodies are below under
+[Add tools that call existing tools](#add-tools-that-call-existing-tools-the-highest-leverage-edit).
+
 ## When to use this
 
 Reach for `tools` when a trace shows one of these failure signatures:
@@ -62,8 +106,12 @@ optimize the [`system-prompt`](../system-prompt/SKILL.md) instead.
 | `examples` | example call strings | shows concrete well-formed calls |
 | `schema` | the full JSON Schema (types, `required`, `enum`) | constrains/guides the model's output |
 | `code` | the handler implementation | fix behavior, bugs, or return shape |
-| `compose` | **add a tool that calls existing tools** | collapse a fumbled multi-call chain |
-| `add` / `remove` | introduce / delete a tool | shape and shrink the toolset |
+| `compose` | **add a code-bearing tool that calls existing tools** | **highest leverage** — enforce a rule or collapse a multi-call chain in code |
+| `add` / `remove` | introduce / delete a tool | shape and shrink the toolset (replace primitives; keep it lean) |
+
+The `compose`/`code`/`add` rows are the **first edits to reach for** — a
+deterministic tool beats a sentence in a prompt (see below). Reword descriptions
+*after* you've asked "can this rule or recurring workflow be code instead?"
 
 Lock any of these off via `inputs/policy.json`. For example, in a frozen-API
 deployment you might allow only `["description", "params", "examples"]` so an
@@ -159,10 +207,11 @@ this capability: **fewer, sharper, non-overlapping tools beat many vague ones.**
 
 A docstring edit can only make the model *more likely* to do the right thing.
 A new tool whose body calls existing tools can make the right thing *the only
-thing the model can do*, and can turn many calls into one. Three patterns, all
-benchmark-agnostic:
+thing the model can do*, and can turn many calls into one. These are the two
+PRIMARY patterns (§"highest-leverage edit" above) plus the normalize variant —
+all benchmark-agnostic, and each shows a REAL body you are expected to write:
 
-1. **Collapse repeated primitive calls into one list call.** If the agent calls
+1. **Workflow / loop — collapse repeated primitive calls into one list call.** If the agent calls
    `get_record(id)` once per id, or `search(origin, dest, date)` once per
    route/date combination, add a tool that takes the **list** and loops inside a
    single call, returning all results together. The agent makes one call instead
@@ -175,26 +224,32 @@ benchmark-agnostic:
        "code": "def get_records(ids):\n    out = []\n    for i in ids:\n        try:\n            out.append(get_record(i))\n        except Exception as e:\n            out.append({'id': i, 'error': str(e)})\n    return out" }}
    ```
 
-2. **Enforce a rule / required order deterministically.** If a write must be
-   preceded by a read, or a precondition the API does not itself check must hold,
-   put the check in code so a violation returns a clear error instead of
-   corrupting state. The model literally cannot skip the step.
+2. **Validation / rule-enforcement — enforce a rule or required order
+   deterministically (wrap, then delegate).** If a write must be preceded by a
+   read, or a precondition the API does not itself check must hold, put the check
+   in code: validate/normalize the inputs, enforce the rule, then call the
+   existing primitive — so a violation returns a clear refusal instead of
+   corrupting state. The model literally cannot skip the step. Then **`remove`
+   the raw primitive** so the only path is the safe one.
    ```json
    { "kind": "compose", "value": {
-       "name": "cancel_record_checked",
-       "description": "Cancel a record after verifying it is cancellable. Reads the record first and refuses (returns an error) if the cancellation preconditions are not met, so you never need to call get_record yourself before cancelling.",
+       "name": "cancel_record_safely",
+       "description": "Cancel a record after verifying it is cancellable. Reads the record first and REFUSES (returns an error) if the cancellation preconditions are not met, so you never need to call get_record yourself before cancelling. Use this for every cancellation.",
        "parameters": {"type":"object","properties":{"record_id":{"type":"string"}},"required":["record_id"]},
-       "code": "def cancel_record_checked(record_id):\n    rec = get_record(record_id)\n    if not rec.get('cancellable'):\n        return {'error': 'not cancellable', 'record': rec}\n    return cancel_record(record_id)" }}
+       "code": "def cancel_record_safely(record_id):\n    rec = get_record(record_id)\n    if not rec.get('cancellable'):\n        return {'error': 'not cancellable', 'record': rec}\n    return cancel_record(record_id)" }}
    ```
+   ...paired with a `{ "tool": "cancel_record", "kind": "remove" }` so the unsafe
+   primitive leaves the choice set entirely.
 
 3. **Normalize / return richer, ready-to-use results.** Have the new tool do the
    glue the model otherwise improvises (resolve an id, attach the related record,
    coerce units), so the model gets a result it can act on directly.
 
-**Then remove the error-prone original** (or leave it) deliberately. To *replace*
-a confusing tool, `add`/`compose` the clearer one and `remove` the old name so it
-leaves the choice set — don't keep both, or selection gets harder (§3 of
-concepts.md).
+**Then remove the error-prone original** deliberately (the lean caveat). To
+*replace* a confusing or now-redundant tool, `add`/`compose` the clearer one and
+`remove` the old name so it leaves the choice set — don't keep both, or selection
+gets harder (§3 of concepts.md). Net tool count should stay small and sharp:
+prefer one tool that subsumes a primitive over two that overlap.
 
 ## What good vs bad tool edits look like
 

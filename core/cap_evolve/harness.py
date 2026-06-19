@@ -549,10 +549,18 @@ def _is_infra(pt) -> bool:
 # capability's meta.yaml at runtime so this never drifts from the skill.
 _CAP_EDIT_SPACE = {
     "tools": "Edit tool names/descriptions, per-parameter docs, in-description examples, "
-             "the JSON schema, and the handler code. You MAY ADD tools — including a "
-             "COMPOSITE tool that calls existing tools to collapse a fumbled multi-call "
-             "chain — and REMOVE redundant/overlapping ones. Selection is driven by the "
-             "name+description; argument-filling by the parameter schema/enums.",
+             "the JSON schema, and the handler code. HIGHEST-LEVERAGE EDIT: WRITE A NEW "
+             "CODE-BEARING TOOL (a real body — loops, validation, calls to existing tools), "
+             "because a deterministic tool can't be 'forgotten' the way a prompt rule can. "
+             "Two patterns to prefer: (1) a VALIDATION/RULE-ENFORCEMENT tool that wraps a "
+             "primitive — validate/normalize inputs, enforce a GENERAL rule, then delegate "
+             "to the primitive (e.g. cancel_record_safely(id) checks cancellable then calls "
+             "cancel_record), and REMOVE the raw primitive so the only path is the safe one; "
+             "(2) a WORKFLOW/LOOP tool that collapses a recurring multi-step sequence or N "
+             "repeated calls into ONE call with real loops (e.g. loop get_record over a list "
+             "of ids). Keep the toolset LEAN — REPLACE/consolidate, don't accumulate. The "
+             "body must be real code, never '...' or docstring-only. Selection is driven by "
+             "the name+description; argument-filling by the parameter schema/enums.",
     "system-prompt": "Edit the prompt/policy text: instructions, decision policy, and the "
                      "output contract. Prefer sharpening rules the traces show the agent "
                      "breaking; do not just append more preamble.",
@@ -657,21 +665,28 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "",
         "Work in three steps and STOP after step 3:",
         "",
-        "## Step 1 — Analyze (read the traces + the current capability)",
-        "Read the capability files in this working directory and the failing/flaky traces "
-        "below. Identify, with evidence:",
-        "  (a) the MAIN RECURRING problems that drive the metric down — cluster the failures "
-        "by shared root cause (same missing step, same mis-used tool, same misread field); "
-        "name the cluster and the tasks in it, biggest cluster first.",
+        "## Step 1 — Analyze the trajectories DEEPLY first (read traces + capability)",
+        "Read the capability files in this working directory AND read the failing/flaky "
+        "trajectories below closely — don't skim. Trace what the agent actually did "
+        "step-by-step. Identify, with evidence:",
+        "  (a) the MAIN RECURRING root-cause CLUSTERS that drive the metric down — group the "
+        "failures by shared cause (same missing step, same mis-used tool, same misread "
+        "field, the same RULE the agent botches, the same multi-step WORKFLOW it gets wrong "
+        "or repeats N times); name the cluster and the tasks in it, biggest cluster first.",
         "  (b) the GOOD behaviors that happen only SOMETIMES (the flaky tasks below pass on "
         "some trials and fail on others) — identify what the agent does on the good runs "
         "that we want to make CONSISTENT.",
+        "If your coding agent supports parallel sub-agents, fan them out here — one per "
+        "failure cluster or per candidate-edit hypothesis — to analyze concurrently, then "
+        "synthesize. It makes each (costly) iteration deeper and faster.",
         "",
-        "## Step 2 — Ideate",
-        "Propose the single best, targeted edit (or a tight set) that directly addresses the "
-        "biggest cluster from (a) and reinforces (b). It must be a CONCRETE edit to the "
-        "capability (specific file + change), not vague advice, and must generalize across "
-        "the class — not patch one task.",
+        "## Step 2 — Ideate (aim for a DRASTIC, generalizing improvement)",
+        "Each iteration is costly (optimize + full eval is long), so do NOT settle for a "
+        "tiny tweak — propose the single best edit (or a tight set) that could move the "
+        "metric a lot by fixing the biggest cluster from (a) at its ROOT and reinforcing "
+        "(b). It must be a CONCRETE edit to the capability (specific file + change), not "
+        "vague advice, and must generalize across the whole class — never a one-off patch "
+        "to a single task.",
         "",
         "## Step 3 — Edit and stop",
         "Apply the edit to the capability files here, then STOP. Do not re-run evaluation "
@@ -705,6 +720,21 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     cap = _capability_brief(capabilities)
     if cap:
         lines += [cap, ""]
+    if "tools" in set(capabilities or []):
+        lines += [
+            "## For the `tools` capability: prefer adding/replacing tools with CODE",
+            "A deterministic tool beats a sentence in the prompt — if a rule the agent keeps "
+            "breaking or a recurring workflow it fumbles can be done in code, MAKE IT A TOOL "
+            "with a real body (loops, validation, calls to existing tools), not a docstring "
+            "tweak. Two go-to patterns: (1) a VALIDATION tool that wraps a primitive "
+            "(validate/normalize inputs -> enforce the GENERAL rule -> call the primitive), "
+            "then REMOVE the raw primitive so only the safe path remains; (2) a WORKFLOW/LOOP "
+            "tool that collapses a recurring multi-step sequence or N repeated calls into ONE "
+            "call. Keep the toolset LEAN: replace/consolidate, don't accumulate. The body "
+            "must be real code, never '...' or docstring-only. Read the tools SKILL.md for "
+            "worked examples with full bodies.",
+            "",
+        ]
     lines += [_algorithm_brief(current_val, algorithm), ""]
     lines += [
         "## Be economical",

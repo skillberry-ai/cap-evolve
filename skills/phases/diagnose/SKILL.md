@@ -40,18 +40,28 @@ rollouts.
 The reflective dataset feeds a fixed three-step shape the algorithm encodes into
 the per-iteration optimizer INSTRUCTIONS — the optimizer must **analyze before it
 edits**, never patch blindly:
-1. **Analyze first.** From the traces + the current capability, name (a) the MAIN
-   RECURRING problems (the failure *clusters* above, biggest first, with evidence)
-   and (b) the GOOD behaviors that occur only *sometimes* — tasks whose mean reward
-   is between 0 and 1 pass on some trials and fail on others; identify what the
+1. **Analyze the trajectories DEEPLY first.** Read the traces closely (not a
+   skim) alongside the current capability, and name (a) the MAIN RECURRING root-cause
+   *clusters* (above, biggest first, with evidence) — the rules and workflows the
+   agent botches, the steps it skips, the tools it mis-uses or repeats N times —
+   and (b) the GOOD behaviors that occur only *sometimes* (tasks whose mean reward
+   is between 0 and 1 pass on some trials and fail on others); identify what the
    good runs do so it can be made CONSISTENT. (Always-failing tasks, mean ≈ 0, are
    a root-cause fix; flaky tasks are a consistency/reinforcement fix — a different
-   edit. Note the per-task `Feedback` line is from the *last* trial and can disagree
-   with a graded mean; the reward is the honest signal.)
-2. **Then ideate.** Propose the single best targeted edit (or tight set) that
-   directly addresses the biggest cluster from (a) and reinforces (b) — concrete
-   edits to the capability, generalizing across the class, not vague advice and not
-   a one-off patch to one task.
+   edit. The per-task `Feedback` line is from the *last* trial and can disagree
+   with a graded mean; the reward is the honest signal.) If your coding agent
+   supports parallel sub-agents, fan them out — one per failure cluster or per
+   candidate-edit hypothesis — to analyze concurrently, then synthesize; it makes
+   each costly iteration deeper and faster.
+2. **Then ideate a DRASTIC, generalizing edit.** Each iteration is costly
+   (optimize + full eval is long), so aim for a big root-cause improvement, not a
+   tiny tweak: propose the single best targeted edit (or tight set) that addresses
+   the biggest cluster from (a) and reinforces (b) — concrete, generalizing across
+   the class, never a one-off patch to one task. When the capability is the agent's
+   own tools, PREFER writing a new code-bearing tool over a docstring tweak — a
+   deterministic tool can't be forgotten the way a prompt rule can: wrap a primitive
+   to enforce a general rule (then remove the raw primitive), or collapse a recurring
+   multi-step workflow into one looped tool. Write a real body, not `...`.
 3. **Then edit and stop.** Apply it; the harness re-scores. Be economical — no
    narration, no exploring unrelated files, do exactly what's needed and finish.
 
