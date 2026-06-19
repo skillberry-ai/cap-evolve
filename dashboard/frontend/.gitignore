@@ -8,7 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist is intentionally COMMITTED: the backend serves this prebuilt SPA at runtime
+# so the live dashboard works with no node/build step (see dashboard_launch). Keep it tracked.
+# dist
 dist-ssr
 *.local
 
