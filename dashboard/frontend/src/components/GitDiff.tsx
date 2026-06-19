@@ -7,13 +7,7 @@ import { staggerContainer, fadeUpItem } from '../lib/motion'
 import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
 import { cn } from '../lib/cn'
-
-const ROW_CLASS = {
-  add: 'bg-accepted/10 text-accepted',
-  del: 'bg-rejected/10 text-rejected',
-  hunk: 'text-primary',
-  ctx: 'text-muted',
-} as const
+import { DiffFileView } from './DiffRows'
 
 /** Real git diffs between iteration commits from the run's git store. Pick a commit
  * to see what changed versus the previous one — the actual on-disk artifact history,
@@ -86,22 +80,7 @@ export function GitDiff({ runId }: { runId: string }) {
         ) : !diff || diff.files.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted">No file changes in this commit.</p>
         ) : (
-          diff.files.map((f) => (
-            <div key={f.path} className="mb-4">
-              <div className="flex items-center gap-2 border-b border-border pb-1">
-                <span className="truncate font-mono text-xs">{f.path}</span>
-                <span className="tnum ml-auto text-xs text-accepted">+{f.added}</span>
-                <span className="tnum text-xs text-rejected">−{f.removed}</span>
-              </div>
-              <pre className="overflow-x-auto rounded-b bg-background text-xs leading-relaxed">
-                {f.rows.map((r, i) => (
-                  <div key={i} className={cn('px-2', ROW_CLASS[r.t])}>
-                    {r.l || ' '}
-                  </div>
-                ))}
-              </pre>
-            </div>
-          ))
+          diff.files.map((f) => <DiffFileView key={f.path} file={f} />)
         )}
       </Card>
     </div>

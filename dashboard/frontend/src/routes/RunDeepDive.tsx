@@ -15,6 +15,7 @@ import { LineageTree } from '../components/LineageTree'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
+import { RadialTimeline } from '../components/RadialTimeline'
 import { MemoryPanel } from '../components/MemoryPanel'
 import { Insights } from '../components/Insights'
 import { CostPanel } from '../components/CostPanel'
@@ -23,6 +24,7 @@ import { GitDiff } from '../components/GitDiff'
 import type { RunStatus } from '../lib/types'
 
 const TABS: TabDef[] = [
+  { id: 'radial', label: 'Radial' },
   { id: 'overview', label: 'Overview' },
   { id: 'cost', label: 'Cost' },
   { id: 'phases', label: 'Phases' },
@@ -99,7 +101,9 @@ export function RunDeepDive() {
             <KpiStrip summary={data.summary} />
             <Tabs tabs={TABS}>
               {(active) =>
-                active === 'overview' ? (
+                active === 'radial' ? (
+                  <RadialTimeline graph={data.graph} summary={data.summary} runId={id!} />
+                ) : active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
                 ) : active === 'cost' ? (
                   <CostPanel summary={data.summary} />

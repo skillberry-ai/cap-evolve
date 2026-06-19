@@ -433,6 +433,55 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     )
 
 
+def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
+                              capabilities=None) -> None:
+    """Give the optimizer everything it needs to read, inside its own working dir.
+
+    Copies, VERBATIM and without parsing:
+      - the runner's native trajectories for the most recent ``split`` eval into
+        ``workdir/trajectories/`` (path from ``adapter.trajectories(split)``; falls
+        back to cap-evolve's own per-rollout JSON under ``rollouts/<split>/`` — which
+        already embeds each rollout's full trace — so there is always something);
+      - the selected capability skill(s) into ``workdir/guidance/<cap>/`` so the
+        optimizer can read the full edit-space guidance + examples without leaving
+        its dir.
+    No benchmark assumptions: the trajectory directory may be any structure / format.
+    """
+    # 1) trajectories (verbatim)
+    traj_src = None
+    try:
+        traj_src = adapter.trajectories(split)
+    except Exception:  # noqa: BLE001 — never let optional context break a step
+        traj_src = None
+    if not traj_src:
+        traj_src = run_dir.rollouts / split
+    try:
+        traj_src = Path(traj_src)
+        if traj_src.is_dir() and any(traj_src.iterdir()):
+            dst = workdir / "trajectories"
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(traj_src, dst)
+    except Exception as e:  # noqa: BLE001
+        run_dir.log_event("optimizer_context_warning", what="trajectories", error=str(e)[:300])
+
+    # 2) capability skills as local guidance
+    caps = [c for c in (capabilities or []) if c]
+    if caps:
+        skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+        for c in caps:
+            src = skills_root / c
+            if not src.is_dir():
+                continue
+            try:
+                shutil.copytree(
+                    src, workdir / "guidance" / c,
+                    ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
+                )
+            except Exception as e:  # noqa: BLE001
+                run_dir.log_event("optimizer_context_warning", what=f"guidance/{c}", error=str(e)[:300])
+
+
 def run_step(
     adapter,
     *,
@@ -449,6 +498,8 @@ def run_step(
     rejected=None,
     history=None,
     store=None,
+    capabilities=None,
+    eval_split: str = "val",
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
 
@@ -469,6 +520,10 @@ def run_step(
         shutil.rmtree(workdir)
     workdir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(parent_dir, workdir)
+
+    # Give the optimizer the full trajectories + capability guidance, in its own dir.
+    _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
+                              capabilities=capabilities)
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
@@ -521,8 +576,13 @@ def run_step(
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
+    # Snapshot EVERY candidate (accepted and rejected) so the dashboard can diff any
+    # iteration's output against its parent. Exclude the optimizer's injected scratch
+    # (trajectories/, guidance/, INSTRUCTIONS/MEMORY/STATE) so the stored candidate is
+    # capability-only and the diff shows just the real edit. Only an accepted candidate
+    # becomes the new best (parent for the next step).
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
     if accepted:
-        run_dir.snapshot(cid, workdir)
         run_dir.set_best(cid)
     run_dir.update_spent(iterations=1, accepted=accepted)
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=decision.reason,
@@ -656,7 +716,9 @@ def _capability_brief(capabilities) -> str:
         if edit:
             lines.append(f"  - Allowed edits: {edit}")
         if skill_md.exists():
-            lines.append(f"  - Full guidance (read if you need the boundaries): {skill_md}")
+            # The full skill is copied into the workdir at ./guidance/<c>/ (see
+            # run_step) so the optimizer can read it without leaving its dir.
+            lines.append(f"  - Full guidance (read it): ./guidance/{c}/SKILL.md")
     return "\n".join(lines)
 
 
@@ -695,64 +757,33 @@ def _fmt(pt) -> str:
            f"{str(pt.get('feedback', '')).strip()[:400]}"
 
 
-def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
-                        capabilities=None, algorithm: str = "hill-climb") -> str:
-    """Build one iteration's INSTRUCTIONS: analyze → ideate → edit, economically.
+# The optimizer-instructions template ships in the repo as a project default and is
+# what the intake phase copies + customizes per benchmark. The harness renders it by
+# substituting the per-iteration dynamic blocks below; nothing benchmark-specific lives
+# here. ``{{...}}`` placeholders: FOCUS_SUMMARY, FAILURES, CAP_BRIEF, ALGO_BRIEF, BENCH_REPO.
+_DEFAULT_INSTRUCTIONS_TEMPLATE = (
+    Path(__file__).resolve().parents[2] / "templates" / "project" / "optimizer" / "INSTRUCTIONS.md"
+)
+# Big read-context the harness injects into the workdir that must NOT be stored as part
+# of the candidate snapshot (it would bloat candidates/ and pollute diffs). NOTE we keep
+# INSTRUCTIONS.md / MEMORY.md / STATE.md in the snapshot — STATE.md is the optimizer's
+# scratchpad that must carry across accepted iterations (the next step copies the
+# snapshot as its parent). Those three are instead filtered out at DIFF time
+# (see dashboard._DIFF_SKIP) so iteration diffs show only real capability edits.
+_SNAPSHOT_IGNORE = ("trajectories", "guidance")
 
-    The optimizer is told (a) the recurring problems to fix and (b) the
-    sometimes-good behaviors to make consistent, what edit space it may use (the
-    selected capability skills), how acceptance works, and to be economical.
-    """
-    per = current_val.per_task
-    if focus_ids is not None:
-        per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
-    errored, always_fail, flaky, solid = _classify(per)
-    n = len(per)
 
-    lines = [
-        "# Optimize the capability — analyze first, then make ONE targeted edit",
-        "",
-        f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
-        f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
-        + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks.",
-        "",
-        "Work in three steps and STOP after step 3:",
-        "",
-        "## Step 1 — Analyze the trajectories DEEPLY first (read traces + capability)",
-        "Read the capability files in this working directory AND read the failing/flaky "
-        "trajectories below closely — don't skim. Trace what the agent actually did "
-        "step-by-step. Identify, with evidence:",
-        "  (a) the MAIN RECURRING root-cause CLUSTERS that drive the metric down — group the "
-        "failures by shared cause (same missing step, same mis-used tool, same misread "
-        "field, the same RULE the agent botches, the same multi-step WORKFLOW it gets wrong "
-        "or repeats N times); name the cluster and the tasks in it, biggest cluster first.",
-        "  (b) the GOOD behaviors that happen only SOMETIMES (the flaky tasks below pass on "
-        "some trials and fail on others) — identify what the agent does on the good runs "
-        "that we want to make CONSISTENT.",
-        "If your coding agent supports parallel sub-agents, fan them out here — one per "
-        "failure cluster or per candidate-edit hypothesis — to analyze concurrently, then "
-        "synthesize. It makes each (costly) iteration deeper and faster.",
-        "",
-        "## Step 2 — Ideate (aim for a DRASTIC, generalizing improvement)",
-        "Each iteration is costly (optimize + full eval is long), so do NOT settle for a "
-        "tiny tweak — propose the single best edit (or a tight set) that could move the "
-        "metric a lot by fixing the biggest cluster from (a) at its ROOT and reinforcing "
-        "(b). It must be a CONCRETE edit to the capability (specific file + change), not "
-        "vague advice, and must generalize across the whole class — never a one-off patch "
-        "to a single task.",
-        "",
-        "## Step 3 — Edit and stop",
-        "Apply the edit to the capability files here, then STOP. Do not re-run evaluation "
-        "yourself; the harness re-scores you.",
-        "",
-    ]
-
+def _failures_block(always_fail, flaky, errored) -> str:
+    """The per-iteration (a)/(b)/errored failure index for the prompt."""
+    lines: list[str] = []
     if always_fail:
-        lines.append(f"## (a) {len(always_fail)} ALWAYS-failing task(s) — fix the shared root cause:")
+        lines.append(f"## (a) {len(always_fail)} ALWAYS-failing task(s) — fix the shared "
+                     "root cause (full traces in ./trajectories/):")
         lines += [_fmt(pt) for pt in always_fail[:10]]
         lines.append("")
     if flaky:
-        lines.append(f"## (b) {len(flaky)} FLAKY task(s) — pass sometimes; make the good behavior consistent:")
+        lines.append(f"## (b) {len(flaky)} FLAKY task(s) — pass sometimes; make the good "
+                     "behavior consistent (full traces in ./trajectories/):")
         lines.append("(reward is the mean over trials — the honest signal; the feedback line is "
                      "from the LAST trial and may say 'passed' even when the mean is below 1.)")
         lines += [_fmt(pt) for pt in flaky[:8]]
@@ -769,33 +800,71 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
             "fix them, so do not change anything on their account: " + ids,
             "",
         ]
-
-    cap = _capability_brief(capabilities)
-    if cap:
-        lines += [cap, ""]
-    if "tools" in set(capabilities or []):
-        lines += [
-            "## For the `tools` capability: prefer adding/replacing tools with CODE",
-            "A deterministic tool beats a sentence in the prompt — if a rule the agent keeps "
-            "breaking or a recurring workflow it fumbles can be done in code, MAKE IT A TOOL "
-            "with a real body (loops, validation, calls to existing tools), not a docstring "
-            "tweak. Two go-to patterns: (1) a VALIDATION tool that wraps a primitive "
-            "(validate/normalize inputs -> enforce the GENERAL rule -> call the primitive), "
-            "then REMOVE the raw primitive so only the safe path remains; (2) a WORKFLOW/LOOP "
-            "tool that collapses a recurring multi-step sequence or N repeated calls into ONE "
-            "call. Keep the toolset LEAN: replace/consolidate, don't accumulate. The body "
-            "must be real code, never '...' or docstring-only. Read the tools SKILL.md for "
-            "worked examples with full bodies.",
-            "",
-        ]
-    lines += [_algorithm_brief(current_val, algorithm), ""]
-    lines += [
-        "## Be economical",
-        "Be analytical but to the point: minimal thinking out loud, no narration or "
-        "restating these instructions, no exploring unrelated files. Do exactly what is "
-        "needed for ONE good edit and finish. Do not loop or burn turns/tokens.",
-    ]
     return "\n".join(lines)
+
+
+def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
+                        capabilities=None, algorithm: str = "hill-climb",
+                        instructions_file=None, bench_repo: str | None = None) -> str:
+    """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
+    optimizer-instructions template.
+
+    The static framing (analyze → ideate → edit, the read-pointers, the code-bearing
+    tools guidance, the economy footer) lives in the template file — authored by the
+    intake phase per benchmark, with a generic default shipped in ``templates/``. Only
+    the per-iteration data (the focus summary, the failure index, the capability/algorithm
+    briefs, the benchmark-repo pointer) is computed here and substituted.
+    """
+    per = current_val.per_task
+    if focus_ids is not None:
+        per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+    errored, always_fail, flaky, solid = _classify(per)
+    n = len(per)
+
+    focus_summary = (
+        f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
+        f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
+        + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
+    )
+    failures = _failures_block(always_fail, flaky, errored)
+    cap = _capability_brief(capabilities)
+    algo = _algorithm_brief(current_val, algorithm)
+    bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "
+             "you may consult to understand tools, scoring, or task structure."
+             if bench_repo else "")
+
+    repl = {
+        "{{FOCUS_SUMMARY}}": focus_summary,
+        "{{FAILURES}}": failures,
+        "{{CAP_BRIEF}}": cap,
+        "{{ALGO_BRIEF}}": algo,
+        "{{BENCH_REPO}}": bench,
+    }
+
+    tmpl_path = Path(instructions_file) if instructions_file else _DEFAULT_INSTRUCTIONS_TEMPLATE
+    tmpl = None
+    try:
+        if tmpl_path.exists():
+            tmpl = tmpl_path.read_text(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        tmpl = None
+    if tmpl and "{{FOCUS_SUMMARY}}" in tmpl:
+        for k, v in repl.items():
+            tmpl = tmpl.replace(k, v)
+        return tmpl
+
+    # Fallback (template unreadable): assemble a minimal but complete prompt so a run
+    # never breaks just because the template file is missing.
+    parts = [
+        "# Optimize the capability — analyze the full trajectories in ./trajectories/, "
+        "then make ONE targeted, generalizing edit and STOP.",
+        focus_summary, "",
+        "Read ./trajectories/ (full traces), ./guidance/<cap>/SKILL.md, ./STATE.md, "
+        "./MEMORY.md. Prefer deterministic code-bearing tools over prompt text.",
+        bench, "", failures, cap, "", algo, "",
+        "Be economical: one good edit, minimal narration, then finish.",
+    ]
+    return "\n".join(p for p in parts if p is not None)
 
 
 def hill_climb_loop(
@@ -812,6 +881,8 @@ def hill_climb_loop(
     no_regression: bool = False,
     store=None,
     capabilities=None,
+    instructions_file=None,
+    bench_repo: str | None = None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -847,12 +918,14 @@ def hill_climb_loop(
         else:
             focus_ids, label = None, focus
         instructions = _focus_instructions(current_val, focus_ids, label,
-                                            capabilities=capabilities, algorithm=algorithm)
+                                            capabilities=capabilities, algorithm=algorithm,
+                                            instructions_file=instructions_file,
+                                            bench_repo=bench_repo)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-            rejected=rejected, history=history, store=store,
+            rejected=rejected, history=history, store=store, capabilities=capabilities,
         )
         steps.append(step)
         if step["accepted"]:

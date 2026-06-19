@@ -66,6 +66,17 @@ tools (`get_record(i)` — or `self.get_record(i)` if your adapter binds tools a
 methods). Worked examples with full bodies are below under
 [Add tools that call existing tools](#add-tools-that-call-existing-tools-the-highest-leverage-edit).
 
+**SECONDARY (last resort): passthrough / "think" / reasoning-only tools.** A tool
+whose body just returns (or echoes) its argument, with the actual rule living only
+in the *docstring* (e.g. a `think(thought)`/`check_policy(text)` tool that does no
+real work), is the WEAKEST form of this edit — it is prose wearing a tool's
+costume, and the model can ignore or mis-apply it exactly like any prompt sentence.
+**If a rule can be encoded as code, encode it as code** — validate, normalize, and
+enforce it in the body (patterns 1 and 2 above), don't leave it as docstring prose.
+Reach for a reasoning-only tool only when the behavior genuinely cannot be made
+deterministic (e.g. you want to *prompt* a planning step), never as a substitute
+for a check you could have written in a few lines of code.
+
 ## When to use this
 
 Reach for `tools` when a trace shows one of these failure signatures:

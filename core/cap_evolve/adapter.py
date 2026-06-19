@@ -138,6 +138,23 @@ class CapabilityAdapter(ABC):
         """
         self.materialize(candidate_dir, edits)
 
+    def trajectories(self, split: str, ctx=None):
+        """OPTIONAL: the directory of raw trajectories from the most recent eval.
+
+        Return a ``Path`` to a directory holding the runner's native trajectories
+        for the last evaluation of ``split`` — *any* structure, files in *any*
+        format. cap-evolve copies that directory **verbatim** into the optimizer's
+        working dir (as ``./trajectories/``) so the optimizer can read the full,
+        unmodified traces — not a lossy summary. The PATH comes from your inputs
+        (e.g. the directory your benchmark writes its run logs/results to); how the
+        objective metric is extracted from those traces lives in ``score()``.
+
+        Return ``None`` (the default) if you have no separate native trajectory
+        store — the harness then falls back to copying cap-evolve's own per-rollout
+        JSON (which already embeds each rollout's trace).
+        """
+        return None
+
 
 def stub_methods(adapter: object) -> list[str]:
     """Return the names of adapter methods that are still unimplemented.

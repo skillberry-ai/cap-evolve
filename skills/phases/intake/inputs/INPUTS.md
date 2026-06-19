@@ -32,6 +32,28 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   - how to get it: exact-match / state-check / rubric; feedback must be general
     (never leak the gold answer)
 
+- **metric extraction / scoring source**: WHERE the objective metric lives, so
+  `score()` can be implemented AND verified against the benchmark's own number.
+  - where: a reference to the benchmark's scoring implementation (file/function/CLI)
+    OR a precise description of how the metric is read out of one trajectory (which
+    field/file in a native trace holds pass/fail or the graded reward)
+  - how to get it: point at the runner's scorer (`<bench>/.../score.py`, a results
+    `metrics.json` key, a rubric spec) or describe the read path ("trajectory's
+    `reward` field", "the `outcome=="success"` line of the result json")
+  - why: without this the intake agent cannot write a faithful `score()` — a guessed
+    scorer produces a number that does not match the benchmark and the run is wasted
+
+- **trajectories path**: the DIRECTORY the runner writes its native traces/results
+  to for an eval (any structure, any format — JSON, logs, per-task subdirs).
+  - where: returned by the intake-authored `adapter.trajectories(split)`; the path
+    itself comes from your runner config (e.g. the runner's `--output-dir`/log dir)
+  - how to get it: run one eval and note where the runner dumps its traces; return
+    that `Path` from `trajectories(split)` (return `None` to fall back to cap-evolve's
+    own per-rollout JSON)
+  - why: cap-evolve copies this directory **verbatim** into the optimizer's working
+    dir as `./trajectories/`, so the optimizer reads the FULL, unmodified traces (not
+    a lossy summary) when proposing edits. This is the optimizer's ground truth.
+
 - **capability artifact**: the thing being optimized (a copy is edited).
   - where: a dir/file, e.g. `policy/policy.md`, `tools.json`, a skill package dir
   - capability skill: `system-prompt | tools | mcp-tool | skill-package | …`
@@ -64,6 +86,17 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
 - **optimizer + model**: `optimizer_skill` is the optimizer NAME, resolved by the
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`
   to see the available names); `optimizer_model` is the backend-specific model id.
+
+- **runner_repo_path** (default `""`): the benchmark/runner SOURCE (a local path or
+  checkout), surfaced to the optimizer as READ-ONLY context so it can consult the
+  runner's tools / scoring / task structure while proposing edits. Set it when the
+  runner is a benchmark repo; leave empty if there is no separate source to read.
+
+- **optimizer_instructions_file** (default `optimizer/INSTRUCTIONS.md`): the
+  per-iteration optimizer-prompt TEMPLATE. The scaffold already copies a generic
+  default to `project/optimizer/INSTRUCTIONS.md`; the agent CUSTOMIZES it for this
+  benchmark (keeping the `{{...}}` placeholders the harness fills) rather than
+  authoring one from scratch. Point this key at the customized file.
 
 - **gate**: `gate_mode` (significant|strict|threshold|simplicity_tiebreak),
   `gate_k_se` (default 1.0). Add `--no-regression` to forbid breaking passing tasks.

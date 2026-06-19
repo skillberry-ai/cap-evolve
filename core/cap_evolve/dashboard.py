@@ -169,6 +169,40 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     return per, fb
 
 
+def _trials_for(run_dir, tag: str, split: str) -> int:
+    """How many trials a ``tag`` was evaluated with, read from its rollout files.
+
+    Rollouts are persisted as ``{task_id}__{tag}__t{k}.json`` (see
+    ``harness.evaluate_candidate``); the trial count is ``max(k)+1`` over the files
+    of a single task. Returns 0 when no rollouts were persisted (synthetic logs).
+    """
+    vdir = Path(run_dir.rollouts) / split
+    if not vdir.exists():
+        return 0
+    best = 0
+    seen_task = None
+    for f in vdir.glob(f"*__{tag}__t*.json"):
+        name = f.name
+        # ``<tid>__<tag>__t<k>.json`` — k is the integer after the final "__t".
+        try:
+            k = int(name.rsplit("__t", 1)[1].split(".", 1)[0])
+        except (IndexError, ValueError):
+            continue
+        tid = name.split("__", 1)[0]
+        # Count trials within ONE task so distinct tasks don't inflate the number.
+        if seen_task is None:
+            seen_task = tid
+        if tid == seen_task:
+            best = max(best, k + 1)
+    return best
+
+
+def _trials_from_per_task(per_task: list) -> int:
+    """Trial count from a SplitResult's per-task ``n`` (the honest per-task trials)."""
+    ns = [int(pt.get("n") or 0) for pt in (per_task or []) if isinstance(pt, dict)]
+    return max(ns) if ns else 0
+
+
 def _git_log(root: Path) -> list[dict]:
     """One row per iteration commit from the run dir's git store (empty if none)."""
     if not (root / ".git").exists() or not shutil.which("git"):
@@ -406,6 +440,72 @@ def reduce_run(run_dir) -> dict:
         "tokens": int(intake_tokens),
     }
 
+    # --- first-class evaluations (split-oriented, distinct from per_iteration) ---
+    # An evaluation is one scoring of a candidate on one split: the seed baseline on
+    # val, every candidate that earned a full val score on val, and the sealed test
+    # eval on test. This is the eval-centric view (vs per_iteration's optimizer-step
+    # view): kind, candidate, split, reward±stderr, n_tasks × trials, runner spend.
+    evaluations: list[dict] = []
+
+    # baseline (seed on val)
+    base_trials = (_trials_from_per_task(base_val_obj.get("per_task", []))
+                   or _trials_for(run_dir, "seed", "val") or 1)
+    if baseline_val is not None or base_val_obj:
+        evaluations.append({
+            "id": "baseline",
+            "kind": "baseline",
+            "candidate": "seed",
+            "split": "val",
+            "reward": baseline_val,
+            "stderr": base_val_obj.get("stderr"),
+            "n_tasks": len(base_val_obj.get("per_task", [])) or len(tasks),
+            "trials": base_trials,
+            "cost_usd": (base_val_obj.get("cost_usd") or 0.0),
+            "seconds": (base_val_obj.get("seconds") or 0.0),
+            "tokens": int(base_val_obj.get("tokens") or 0),
+        })
+
+    # candidates (one per candidate node that earned a full val score)
+    for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
+                    key=lambda x: x.get("iteration") or 0):
+        if n.get("val") is None:
+            continue
+        cid = n["id"]
+        n_tasks = len(n.get("per_task") or {})
+        trials = _trials_for(run_dir, cid, "val") or 1
+        evaluations.append({
+            "id": cid,
+            "kind": "candidate",
+            "candidate": cid,
+            "split": "val",
+            "reward": n.get("val"),
+            "stderr": n.get("stderr"),
+            "n_tasks": n_tasks,
+            "trials": trials,
+            "cost_usd": float(n.get("cost_usd") or 0.0),
+            "seconds": float(n.get("runner_seconds") or 0.0),
+            "tokens": int(n.get("tokens") or 0),
+        })
+
+    # test (the sealed test eval, from final.json)
+    test_obj = final.get("test") or {}
+    if test_obj:
+        test_trials = (_trials_from_per_task(test_obj.get("per_task", []))
+                       or _trials_for(run_dir, "FINAL", "test") or 1)
+        evaluations.append({
+            "id": "test",
+            "kind": "test",
+            "candidate": final.get("best_id") or best_id,
+            "split": "test",
+            "reward": test_obj.get("reward"),
+            "stderr": test_obj.get("stderr"),
+            "n_tasks": len(test_obj.get("per_task", [])),
+            "trials": test_trials,
+            "cost_usd": float(test_obj.get("cost_usd") or 0.0),
+            "seconds": float(test_obj.get("seconds") or 0.0),
+            "tokens": int(test_obj.get("tokens") or 0),
+        })
+
     delta_pct = None
     if baseline_val not in (None, 0) and best_val is not None:
         delta_pct = round((best_val - baseline_val) / abs(baseline_val) * 100.0, 1)
@@ -438,6 +538,7 @@ def reduce_run(run_dir) -> dict:
         "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
                            "optimizer": opt_tokens, "intake": int(intake_tokens)},
         "per_iteration": per_iteration,
+        "evaluations": evaluations,
         "intake": intake,
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
@@ -455,14 +556,24 @@ def reduce_run(run_dir) -> dict:
 # Diff view (candidate vs parent) — computed from candidate dirs
 # ---------------------------------------------------------------------------
 
+# Optimizer prompt/memory files that live alongside the capability in a candidate
+# snapshot but are NOT capability edits — skipped when diffing iterations so the diff
+# shows only the real change. (The big read-context dirs trajectories/ and guidance/
+# are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
+_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md"}
+
+
 def _read_dir_files(d: Path) -> dict[str, str]:
     out = {}
     if not d.exists():
         return out
     for f in sorted(d.rglob("*")):
         if f.is_file():
+            rel = str(f.relative_to(d))
+            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance"):
+                continue
             try:
-                out[str(f.relative_to(d))] = f.read_text(encoding="utf-8")
+                out[rel] = f.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
     return out
@@ -1061,6 +1172,73 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   s.append($('div',{class:'legend',html:'<span><i style="background:#4493f8"></i>optimizer time</span>'+
     '<span><i style="background:#3fb950"></i>runner time</span>'+
     '<span class="muted">$ shown when available (runner cost is often $0/null) · time always</span>'}));
+})();
+
+/* ---------- 6d. Evaluations (split-oriented, distinct from per-iteration) ---------- */
+(function(){
+  const evals=S.evaluations||[];
+  if(!evals.length)return;
+  const s=sec('Evaluations');
+  s.append($('p',{class:'muted',text:'Each scoring of a candidate on a split — '+
+    'baseline (seed on val), every full val eval, and the sealed test eval. '+
+    'Distinct from the optimizer-step view above.'}));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'kind'}),$('th',{text:'candidate'}),$('th',{text:'split'}),
+    $('th',{class:'r',text:'reward ± stderr'}),$('th',{class:'r',text:'runner $'}),
+    $('th',{class:'r',text:'time'}),$('th',{class:'r',text:'tokens'}),$('th',{class:'r',text:'tasks × trials'})));
+  const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
+    const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
+  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed'};
+  evals.forEach(e=>{
+    const re=e.reward==null?'—':fmt(e.reward)+(e.stderr!=null?' ± '+(+e.stderr).toFixed(3):'');
+    t.append($('tr',{},
+      $('td',{},$('span',{class:'badge '+(kindBadge[e.kind]||'b-seed'),text:e.kind})),
+      $('td',{},$('code',{text:e.candidate})),
+      $('td',{class:'muted',text:e.split}),
+      $('td',{class:'r num',text:re}),
+      $('td',{class:'r num',text:e.cost_usd?'$'+(+e.cost_usd).toFixed(4):'—'}),
+      $('td',{class:'r num',text:dsec(e.seconds)}),
+      $('td',{class:'r num',text:(e.tokens||0).toLocaleString()}),
+      $('td',{class:'r num',text:(e.n_tasks||0)+' × '+(e.trials||1)})));
+  });
+  s.append(t);
+})();
+
+/* ---------- 6e. Radial iteration ring (vanilla SVG) ---------- */
+(function(){
+  const nodes=G.nodes;
+  if(nodes.length<2)return;
+  const s=sec('Radial iteration ring');
+  const cands=nodes.filter(n=>n.id!=='seed').sort((a,b)=>(a.iteration||0)-(b.iteration||0));
+  if(!cands.length)return;
+  const W=560,H=560,cx=W/2,cy=H/2,R=210,innerR=110;
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  const COL={accepted:'#22c55e',rejected:'#ef4444',failed:'#8b98a9',seed:'#64748b'};
+  // running-best champion drawn on an inner orbit; the rest on the outer ring.
+  let best=-1,champId=S.best_id;
+  const N=cands.length;
+  cands.forEach((n,i)=>{
+    const ang=(i/N)*2*Math.PI-Math.PI/2;
+    const onInner=(n.id===champId);
+    const r=onInner?innerR:R;
+    const x=cx+r*Math.cos(ang),y=cy+r*Math.sin(ang);
+    el.append(svg('line',{x1:cx,y1:cy,x2:x,y2:y,stroke:'#1e2733','stroke-width':1}));
+    const dot=svg('circle',{cx:x,cy:y,r:n.id===champId?9:6,fill:COL[n.status]||'#64748b',
+      stroke:'#07090d','stroke-width':1.5});
+    dot.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status} · val=${fmt(n.val)}\niter ${n.iteration||0}`));
+    dot.addEventListener('mouseleave',hideTip);
+    el.append(dot);
+  });
+  // seed at center
+  el.append(svg('circle',{cx,cy,r:11,fill:'#64748b',stroke:'#07090d','stroke-width':2}));
+  el.append(svg('text',{x:cx,y:cy+4,fill:'#07090d','font-size':9,'text-anchor':'middle','font-weight':700})).textContent='seed';
+  s.append(el);
+  s.append($('div',{class:'legend',html:
+    '<span><i style="background:#22c55e"></i>accepted</span>'+
+    '<span><i style="background:#ef4444"></i>rejected</span>'+
+    '<span><i style="background:#8b98a9"></i>failed</span>'+
+    '<span><i style="background:#64748b;border-radius:50%"></i>seed (center)</span>'+
+    '<span class="muted">champion pulled to inner orbit · hover a node</span>'}));
 })();
 
 /* ---------- 7. Annotations / diagnoses stream ---------- */

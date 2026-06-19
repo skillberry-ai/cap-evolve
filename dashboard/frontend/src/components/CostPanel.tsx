@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AlertTriangle } from 'lucide-react'
-import type { RunSummaryDetail } from '../lib/types'
-import { compactNum, duration, usd } from '../lib/format'
+import type { Evaluation, RunSummaryDetail } from '../lib/types'
+import { compactNum, duration, pct, usd } from '../lib/format'
 import { easeEnter, fadeUpItem, staggerContainer } from '../lib/motion'
 import { Card } from './ui/Card'
 import { cn } from '../lib/cn'
@@ -89,6 +89,10 @@ export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
       </motion.div>
 
       <motion.div variants={fadeUpItem}>
+        <EvaluationsTable summary={summary} />
+      </motion.div>
+
+      <motion.div variants={fadeUpItem}>
         <BudgetMeters summary={summary} />
       </motion.div>
     </motion.div>
@@ -107,7 +111,7 @@ function PerIterationCostTime({ summary }: { summary: RunSummaryDetail }) {
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Cost &amp; time per iteration</h3>
+        <h3 className="text-sm font-medium">Optimizer iterations</h3>
         <span className="text-[11px] text-muted">optimizer vs runner · $ when available · time always</span>
       </div>
 
@@ -187,6 +191,74 @@ function TimeBar({ seconds, max, color }: { seconds: number; max: number; color:
       </div>
       <span className="tnum text-muted">{duration(seconds)}</span>
     </div>
+  )
+}
+
+const EVAL_BADGE: Record<Evaluation['kind'], { label: string; color: string }> = {
+  baseline: { label: 'baseline', color: 'var(--seed)' },
+  candidate: { label: 'candidate', color: 'var(--accepted)' },
+  test: { label: 'test', color: 'var(--accent)' },
+}
+
+/** Eval-centric view (distinct from the optimizer-step table above): the seed
+ * baseline on val, every full val eval, and the sealed test eval. Shows reward±stderr,
+ * runner spend, and the tasks×trials that produced each number. */
+function EvaluationsTable({ summary }: { summary: RunSummaryDetail }) {
+  const evals = summary.evaluations ?? []
+  return (
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-medium">Evaluations</h3>
+        <span className="text-[11px] text-muted">each scoring of a candidate on a split</span>
+      </div>
+      {evals.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">No evaluations recorded yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted">
+                <th className="py-1.5 pr-2">kind</th>
+                <th className="py-1.5 pr-2">candidate</th>
+                <th className="py-1.5 pr-2">split</th>
+                <th className="py-1.5 pr-2 text-right">reward ± stderr</th>
+                <th className="py-1.5 pr-2 text-right">run $</th>
+                <th className="py-1.5 pr-2 text-right">time</th>
+                <th className="py-1.5 pr-2 text-right">tokens</th>
+                <th className="py-1.5 pr-2 text-right">tasks × trials</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evals.map((e) => {
+                const badge = EVAL_BADGE[e.kind] ?? EVAL_BADGE.candidate
+                return (
+                  <tr key={e.id} className="border-b border-border/50">
+                    <td className="py-1.5 pr-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ background: badge.color }} />
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-2 font-mono text-[11px]">{e.candidate}</td>
+                    <td className="py-1.5 pr-2 text-muted">{e.split}</td>
+                    <td className="tnum py-1.5 pr-2 text-right">
+                      {pct(e.reward)}
+                      {e.stderr != null && <span className="text-muted"> ± {(e.stderr * 100).toFixed(1)}%</span>}
+                    </td>
+                    <td className="tnum py-1.5 pr-2 text-right">{e.cost_usd ? usd(e.cost_usd) : '—'}</td>
+                    <td className="tnum py-1.5 pr-2 text-right">{duration(e.seconds)}</td>
+                    <td className="tnum py-1.5 pr-2 text-right">{compactNum(e.tokens || null)}</td>
+                    <td className="tnum py-1.5 pr-2 text-right">
+                      {e.n_tasks} × {e.trials}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   )
 }
 

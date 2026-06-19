@@ -275,6 +275,22 @@ def _cmd_run(argv):
         caps = [c.strip() for c in caps.split(",") if c.strip()]
     if caps and algorithm_name == "hill-climb":
         alg_cmd += ["--capabilities", ",".join(str(c) for c in caps)]
+    # Optimizer-instructions template (intake-authored, per benchmark) + benchmark repo
+    # as read-only optimizer context. Both are resolved project-relative if not absolute.
+    # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.
+    if algorithm_name == "hill-climb":
+        instr = spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md"
+        instr_p = Path(instr)
+        if not instr_p.is_absolute() and not instr_p.exists():
+            instr_p = Path(project) / instr
+        if instr_p.exists():
+            alg_cmd += ["--instructions-file", str(instr_p)]
+        repo = spec.get("runner_repo_path")
+        if repo:
+            repo_p = Path(str(repo))
+            if not repo_p.is_absolute() and not repo_p.exists():
+                repo_p = Path(project) / str(repo)
+            alg_cmd += ["--bench-repo", str(repo_p)]
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):

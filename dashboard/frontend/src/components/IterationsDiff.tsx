@@ -5,14 +5,7 @@ import type { RunGraph } from '../lib/types'
 import { pct } from '../lib/format'
 import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
-import { cn } from '../lib/cn'
-
-const ROW_CLASS = {
-  add: 'bg-accepted/10 text-accepted',
-  del: 'bg-rejected/10 text-rejected',
-  hunk: 'text-primary',
-  ctx: 'text-muted',
-} as const
+import { DiffFileView } from './DiffRows'
 
 /** Per-candidate diff vs parent — what changed each iteration, and did it help. */
 export function IterationsDiff({ runId, graph }: { runId: string; graph: RunGraph }) {
@@ -85,20 +78,7 @@ export function IterationsDiff({ runId, graph }: { runId: string; graph: RunGrap
       )}
 
       {data?.files.map((f) => (
-        <div key={f.path} className="mb-4">
-          <div className="flex items-center gap-2 border-b border-border pb-1">
-            <span className="font-mono text-xs">{f.path}</span>
-            <span className="tnum text-xs text-accepted">+{f.added}</span>
-            <span className="tnum text-xs text-rejected">−{f.removed}</span>
-          </div>
-          <pre className="overflow-x-auto rounded-b bg-background text-xs leading-relaxed">
-            {f.rows.map((r, i) => (
-              <div key={i} className={cn('px-2', ROW_CLASS[r.t])}>
-                {r.l || ' '}
-              </div>
-            ))}
-          </pre>
-        </div>
+        <DiffFileView key={f.path} file={f} />
       ))}
     </Card>
   )

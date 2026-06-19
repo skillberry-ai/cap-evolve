@@ -32,6 +32,24 @@ export interface PerIterationCost {
   runner_tokens: number
 }
 
+/** One row of reduced["summary"].evaluations — a single scoring of a candidate on a
+ * split. Distinct from PerIterationCost (which is optimizer-step oriented): this is
+ * the eval-centric view (baseline seed-on-val, every full val eval, the sealed test).
+ * cost_usd/tokens/seconds are the RUNNER spend that produced the eval. */
+export interface Evaluation {
+  id: string
+  kind: 'baseline' | 'candidate' | 'test'
+  candidate: string
+  split: string
+  reward: number | null
+  stderr: number | null
+  n_tasks: number
+  trials: number
+  cost_usd: number
+  seconds: number
+  tokens: number
+}
+
 /** A candidate in reduced["graph"].nodes. */
 export interface GraphNode {
   id: string
@@ -87,6 +105,7 @@ export interface RunSummaryDetail {
   tokens?: number | null
   tokens_by_role?: { runner: number; optimizer: number; intake: number }
   per_iteration?: PerIterationCost[]
+  evaluations?: Evaluation[]
   intake?: { usd: number; seconds: number; tokens: number }
   budget?: {
     max_iterations?: number

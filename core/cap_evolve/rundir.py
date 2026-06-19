@@ -342,11 +342,19 @@ class RunDir:
         return self.commit_test()
 
     # ---- candidates ---------------------------------------------------------
-    def snapshot(self, candidate_id: str, src_dir: Path) -> Path:
+    def snapshot(self, candidate_id: str, src_dir: Path, ignore=None) -> Path:
+        """Persist ``src_dir`` as candidate ``candidate_id``.
+
+        ``ignore`` is an optional iterable of top-level names to exclude (e.g. the
+        optimizer's injected scratch — ``trajectories/``, ``guidance/`` — and its
+        prompt/memory files) so the stored candidate stays capability-only and
+        diffs against the parent show only real edits.
+        """
         dst = self.candidates / candidate_id
         if dst.exists():
             shutil.rmtree(dst)
-        shutil.copytree(src_dir, dst)
+        ig = shutil.ignore_patterns(*ignore) if ignore else None
+        shutil.copytree(src_dir, dst, ignore=ig)
         return dst
 
     def candidate_dir(self, candidate_id: str) -> Path:

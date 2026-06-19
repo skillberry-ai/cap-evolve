@@ -22,6 +22,17 @@ optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap pas
 algorithm_skill: hill-climb              # algorithms/<skill>
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
 
+# --- what context the optimizer gets (hill-climb) ---------------------------
+# The per-iteration optimizer prompt is RENDERED from this template (intake authors it,
+# customized per benchmark). Defaults to the scaffolded optimizer/INSTRUCTIONS.md.
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md
+# Optional: path to the benchmark/runner source, surfaced to the optimizer as read-only
+# context (so it can consult tools/scoring/task structure). Resolved project-relative.
+runner_repo_path: ""
+# (The full trajectories of each eval are always copied verbatim into the optimizer's
+#  working dir as ./trajectories/ — via your adapter's trajectories(split) hook, else
+#  cap-evolve's own per-rollout JSON. No config needed.)
+
 # --- data + splits ----------------------------------------------------------
 dataset_source: tasks.jsonl              # file/dir, or "adapter" to use tasks()
 split_seed: 0

@@ -31,8 +31,30 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
    optimized), the optimizer (*which* coding agent proposes edits), the algorithm
    (*the search loop*), the dataset, the splits, and the budget.
 2. **Scaffold** `.capevolve/project/` from the template (`scripts/run.py`):
-   adapter stub, `inputs/`, `capevolve.yaml`, `PROJECT.md`.
+   adapter stub, `inputs/`, `capevolve.yaml`, `PROJECT.md`, and the optimizer-prompt
+   template `optimizer/INSTRUCTIONS.md` (the whole `templates/project/` tree is
+   copytree'd verbatim, so this file is already in place — confirm it exists).
 3. **Resolve inputs** per `inputs/INPUTS.md` — the contract below.
+4. **Wire trajectories + scoring into the adapter.** From the *trajectories path*
+   and *metric extraction / scoring source* inputs:
+   - implement `adapter.trajectories(split)` to RETURN the runner's native trajectory
+     directory for the last eval of `split` (any structure/format; it is copied
+     verbatim into the optimizer's `./trajectories/`). Return `None` only if there is
+     genuinely no separate native store (cap-evolve then falls back to its per-rollout
+     JSON) — note that choice in `PROJECT.md`.
+   - implement `score()` to extract the OBJECTIVE metric from a rollout, matching the
+     benchmark's own scoring source; verify it reproduces the benchmark's number.
+5. **Author the optimizer instructions for THIS benchmark.** Customize the scaffolded
+   `.capevolve/project/optimizer/INSTRUCTIONS.md`: KEEP the `{{...}}` placeholders
+   intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`, `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`,
+   `{{BENCH_REPO}}` — the harness fills these per iteration), but tailor the static
+   guidance and the "READ THESE" pointers (`./trajectories/`, `./guidance/<cap>/`,
+   `./STATE.md`, `./MEMORY.md`, and the benchmark repo) to this benchmark's traces,
+   tools, and conventions.
+6. **Set the new spec keys** in `capevolve.yaml`: `runner_repo_path` (the
+   benchmark/runner source, surfaced read-only to the optimizer) and
+   `optimizer_instructions_file` (point it at the customized template — default
+   `optimizer/INSTRUCTIONS.md`).
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
 Read `inputs/INPUTS.md`. It classifies every input as **NEEDED** or
@@ -50,6 +72,21 @@ you to paper over. This is the single most important behavior of this phase.
 in `PROJECT.md` (e.g. "num_trials defaulted to 1 — scores will be single-trial,
 so the significance gate will correctly reject marginal gains"), so the honesty
 cost of each default is visible at report time.
+
+### Block on a missing NEEDED input (never fabricate)
+The action when a NEEDED input is absent depends on the run mode:
+- **Interactive / chat mode** — ASK THE USER and wait: quote *what* is needed, *why*
+  it is needed (what breaks without it), and *how* to provide it (the exact path /
+  command / option / alternatives from `INPUTS.md`). Do not proceed past the missing
+  input.
+- **Non-interactive mode** (`cap-evolve run` / orchestrate, no human to ask) — do NOT
+  fabricate. WRITE a clearly delimited section into `PROJECT.md`:
+  `BLOCKED: <input> — why it is needed — how to provide it`, then STOP with a non-zero
+  exit. A blocked-but-honest stop is correct; a green run on a guessed input is not.
+
+This extends the ask-if-missing discipline above — it is the same rule, with an
+explicit non-interactive fallback so a headless run fails loud and recorded instead
+of silently inventing a dataset, scorer, trajectories path, or scoring source.
 
 ### Why a contract, not a guess
 The classic failure mode of "auto-optimize my agent" tooling is to start running

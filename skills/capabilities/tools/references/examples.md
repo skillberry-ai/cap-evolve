@@ -4,6 +4,12 @@ Each example is an edit you would emit to `apply()`. Edit shape:
 `{"tool": <name>, "kind": <action>, "value": <...>}`. For `add`/`compose` the
 value is a full tool def; for `remove` the value is ignored.
 
+**Ordered by leverage.** The PRIMARY edits are the code-bearing tools in §3b
+(workflow/loop) and §3c (validation/rule-enforcement) — a deterministic body beats
+a prompt sentence. Reach for the description/schema edits (§1, §2) *after* asking
+"can this rule or recurring workflow be code instead?" A passthrough / reasoning-only
+tool (§7) is the SECONDARY, last-resort form — prose in a tool's costume.
+
 ## 1. Selection fix — sharpen a vague description
 
 Trace symptom: agent calls a generic `query` tool for everything and fails on
@@ -171,3 +177,24 @@ schema edit in example 2 is refused:
 
 The fix is either to widen the policy deliberately or to express the change as an
 allowed edit (e.g. add the enum guidance via a `params` description instead).
+
+## 7. SECONDARY (last resort) — a passthrough / reasoning-only tool
+
+Trace symptom: the agent keeps skipping a rule. The WEAK fix is a tool whose body
+does no real work — it returns its argument and parks the rule in the docstring:
+
+```json
+{ "kind": "compose",
+  "value": {
+    "name": "check_cancellable",
+    "description": "Before cancelling, state here whether the record is cancellable and why.",
+    "parameters": { "type": "object", "properties": { "reasoning": { "type": "string" } }, "required": ["reasoning"] },
+    "code": "def check_cancellable(reasoning):\n    return {'noted': reasoning}" } }
+```
+
+Why it under-performs: the body enforces nothing — the model can write any
+`reasoning` and still proceed, exactly like ignoring a prompt sentence. **Prefer
+the §3c code-bearing wrapper** (`cancel_record_safely` reads the record and refuses
+in code, then `remove` the raw primitive) so the rule is guaranteed, not merely
+requested. Only keep a reasoning-only tool when the step genuinely cannot be made
+deterministic.

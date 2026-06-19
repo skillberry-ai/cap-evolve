@@ -58,6 +58,12 @@ def main(argv=None) -> int:
                    help="comma-separated capability skills under optimization (e.g. "
                         "'system-prompt,tools'); surfaced to the optimizer so it knows "
                         "the allowed edit space")
+    p.add_argument("--instructions-file", default=None,
+                   help="optimizer-instructions template (intake-authored) to render the "
+                        "per-iteration prompt from; defaults to the shipped template")
+    p.add_argument("--bench-repo", default=None,
+                   help="path to the benchmark/runner source, surfaced to the optimizer "
+                        "as read-only context")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -82,6 +88,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         algorithm=f"{ALGO}:{focus}", no_regression=args.no_regression, store=store,
         capabilities=[c.strip() for c in args.capabilities.split(",") if c.strip()],
+        instructions_file=args.instructions_file, bench_repo=args.bench_repo,
     )
     print(json.dumps(result, indent=2))
     return 0

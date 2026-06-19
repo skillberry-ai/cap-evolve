@@ -42,6 +42,28 @@ cheaper to fail here than after a full optimization run.
    It runs `cap-evolve check` (adapter: no stubs, `tasks` non-empty + stable, scorer
    deterministic, `apply` callable) and each named skill's `check.py`. **Exit 0 =
    green; the JSON lists exactly what is still stubbed or non-deterministic.**
+4. **Pipeline-wiring self-test (runs automatically once the check is green).** A
+   green adapter is necessary but not sufficient — the optimizer also needs its
+   *context* wired. After the check passes, `run.py` runs `pipeline_selftest.py`,
+   a cheap, benchmark-agnostic check (no API cost) that asserts the plumbing the
+   optimizer depends on:
+   - the optimizer-prompt template is scaffolded at `optimizer/INSTRUCTIONS.md`
+     and still carries its `{{...}}` placeholders (intake must not delete them);
+   - `capevolve.yaml::optimizer_instructions_file` points at a file that EXISTS;
+   - rendering that template through the REAL harness renderer leaves NO `{{`
+     placeholder behind (every dynamic block substitutes);
+   - the adapter either DEFINES `trajectories()` (native traj dir → copied verbatim
+     into the optimizer's `./trajectories/`) or intentionally inherits the base
+     default (cap-evolve falls back to its per-rollout JSON) — both valid, reported.
+
+   It reports the precise missing/broken artifact so you can iterate until green.
+   (Pass `--no-pipeline-selftest` to skip it; run it standalone with
+   `python scripts/pipeline_selftest.py --project .capevolve/project`.)
+
+   A full one-iteration mock run is intentionally NOT done here: it would need a
+   baseline + frozen split + run dir that do not exist yet at gate time, and those
+   are benchmark-specific. This self-test exercises the same workdir-building and
+   prompt-rendering code paths instead — the wiring an optimizer actually consumes.
 
 ## What the check actually verifies (and why)
 - **No stubs** — a `NotImplementedError`/`pass` body means the method silently
