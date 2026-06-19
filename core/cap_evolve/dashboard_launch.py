@@ -9,12 +9,31 @@ is a no-op with a friendly hint — the run is never affected.
 from __future__ import annotations
 
 import importlib.util
+import socket
 import subprocess
 import sys
 from pathlib import Path
 
 MODES = ("auto", "report-only", "off")
 DEFAULT_PORT = 7878
+
+
+def _free_port(start: int, tries: int = 25) -> int:
+    """First free TCP port at/above ``start`` so we never reuse a stale server.
+
+    The dashboard server binds a port and serves whatever ``--base`` it was given;
+    if another (possibly unrelated) server already holds ``start``, our spawn would
+    silently fail to bind and that stale server would keep serving the WRONG run.
+    Picking a free port guarantees this run gets its own dashboard on its own base.
+    """
+    for p in range(start, start + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", p))
+                return p
+            except OSError:
+                continue
+    return start
 
 
 def resolve_mode(cli_arg: str | None, spec_value: str | None, default: str = "auto") -> str:
@@ -56,6 +75,7 @@ def maybe_launch(base_dir, *, mode: str, port: int = DEFAULT_PORT,
         return {"dashboard": "skipped",
                 "reason": "capevolve-dashboard not installed "
                           "(pip install -e dashboard/backend)"}
+    port = _free_port(port)  # avoid reusing a stale server squatting the default port
     try:
         subprocess.Popen(
             launch_command(Path(base_dir), port=port, open_browser=open_browser),
