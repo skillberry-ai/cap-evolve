@@ -106,6 +106,9 @@ def _cmd_run(argv):
     p.add_argument("--dry-run", action="store_true",
                    help="print a pre-run cost estimate (call counts + $ range) and exit")
     p.add_argument("--run-ts", default=None)
+    p.add_argument("--reuse-baseline", default=None,
+                   help="prior run dir: reuse its baseline (split/baseline/seed/val-rollouts) "
+                        "and skip the baseline eval")
     # Budget overrides — when set, take precedence over the spec's values. Defaults
     # are None so "not passed" is distinguishable from an explicit 0 (= unlimited).
     p.add_argument("--max-iterations", type=int, default=None)
@@ -134,6 +137,8 @@ def _cmd_run(argv):
         v = getattr(args, flag)
         if v is not None:
             spec[key] = v
+    if args.reuse_baseline is not None:
+        spec["reuse_baseline"] = args.reuse_baseline
 
     if args.dry_run:
         print(json.dumps(_estimate_core(spec, Path(args.project)), indent=2))
@@ -240,6 +245,10 @@ def _cmd_run(argv):
                 "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0))]
     if spec.get("split_ids_file"):
         base_cmd += ["--split-ids", str(spec["split_ids_file"])]
+    # reuse_baseline: copy a prior run's split/baseline/seed/val-rollouts and skip the
+    # baseline eval (algorithm starts at iter 1 on the reused baseline).
+    if spec.get("reuse_baseline"):
+        base_cmd += ["--reuse-baseline", str(spec["reuse_baseline"])]
     if args.run_ts:
         base_cmd += ["--run-ts", args.run_ts]
     proc = run(base_cmd)

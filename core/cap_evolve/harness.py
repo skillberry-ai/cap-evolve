@@ -280,6 +280,59 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     return result
 
 
+def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
+    """Reuse a PRIOR run's baseline instead of recomputing it.
+
+    Copies the prior run's frozen ``splits.json``, ``baseline.json``, the seed
+    candidate snapshot (``candidates/seed``), and the seed's val rollouts
+    (``rollouts/val``) into this fresh run dir, registers ``seed`` as the best
+    candidate, and returns the prior baseline val SplitResult — SKIPPING the
+    (expensive) baseline eval. The test seal stays intact: only ``splits.json`` is
+    copied, and its ``test_used`` flag is forced unused so this run can still score
+    test exactly once at finalize.
+
+    Used by ``baseline``'s ``--reuse-baseline`` flag. Backward compatible: when not
+    invoked, baseline behaves exactly as before.
+    """
+    prior = Path(prior_run_dir)
+    prior_splits = prior / "splits.json"
+    prior_baseline = prior / "baseline.json"
+    if not prior_splits.exists():
+        raise FileNotFoundError(f"prior run has no splits.json: {prior_splits}")
+    if not prior_baseline.exists():
+        raise FileNotFoundError(f"prior run has no baseline.json: {prior_baseline}")
+
+    # Copy the frozen split, but reset the test seal so this run can finalize once.
+    prior_split_obj = Splits.from_dict(json.loads(prior_splits.read_text(encoding="utf-8")))
+    fresh_split = Splits(train=list(prior_split_obj.train), val=list(prior_split_obj.val),
+                         test=list(prior_split_obj.test), seed=prior_split_obj.seed)
+    run_dir.write_splits(fresh_split)
+
+    # Copy baseline.json verbatim (the recorded seed val score + best_id).
+    shutil.copyfile(prior_baseline, run_dir.root / "baseline.json")
+
+    # Copy the seed candidate snapshot so this run can read/serve it as best.
+    prior_seed = prior / "candidates" / "seed"
+    if prior_seed.is_dir():
+        run_dir.snapshot("seed", prior_seed)
+
+    # Copy the seed's val rollouts so diagnose/algorithm can read them without a re-run.
+    prior_val_rollouts = prior / "rollouts" / "val"
+    if prior_val_rollouts.is_dir():
+        dst = run_dir.rollouts / "val"
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(prior_val_rollouts, dst)
+
+    run_dir.set_best("seed")
+
+    baseline_data = json.loads(prior_baseline.read_text(encoding="utf-8"))
+    result = SplitResult.from_dict(baseline_data["val"])
+    run_dir.log_event("baseline_reused", prior_run_dir=str(prior),
+                      val=result.reward, stderr=result.stderr)
+    return result
+
+
 # ---- optimizer plumbing ---------------------------------------------------
 
 def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:

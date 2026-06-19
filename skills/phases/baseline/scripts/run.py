@@ -27,6 +27,9 @@ def main(argv=None) -> int:
     p.add_argument("--ratios", default="0.5,0.25,0.25")
     p.add_argument("--split-ids", default=None,
                    help="JSON file {train:[],val:[],test:[]} to pin the split explicitly")
+    p.add_argument("--reuse-baseline", default=None,
+                   help="prior run dir: reuse its splits/baseline/seed/val-rollouts and "
+                        "SKIP the baseline eval (algorithm starts at iter 1 on it)")
     p.add_argument("--n-trials", type=int, default=1)
     p.add_argument("--max-iterations", type=int, default=10)
     p.add_argument("--stall", type=int, default=0)
@@ -45,6 +48,20 @@ def main(argv=None) -> int:
     run_dir = RunDir.create(Path(args.base), ts=args.run_ts, budget=budget)
 
     adapter = load_adapter(Path(args.project))
+
+    # --reuse-baseline: copy a prior run's frozen split + baseline + seed snapshot +
+    # seed val rollouts into this fresh run dir and SKIP the (expensive) baseline eval.
+    if args.reuse_baseline:
+        result = harness.reuse_baseline(Path(args.reuse_baseline), run_dir=run_dir)
+        splits = run_dir.read_splits()
+        print(json.dumps({
+            "run_dir": str(run_dir.root),
+            "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},
+            "baseline_val": result.to_dict(),
+            "reused_baseline_from": str(args.reuse_baseline),
+        }, indent=2))
+        return 0
+
     ratios = tuple(float(x) for x in args.ratios.split(","))
     split_ids = None
     if args.split_ids:
