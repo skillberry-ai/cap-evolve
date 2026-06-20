@@ -92,19 +92,35 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   runner's tools / scoring / task structure while proposing edits. Set it when the
   runner is a benchmark repo; leave empty if there is no separate source to read.
 
+- **capability_sources** (default `[]`): extra source files — the benchmark's
+  data-model / types module(s) that a selected capability's code imports — copied
+  VERBATIM into the optimizer's `./guidance/sources/` so it can write correct code
+  against the real types. Resolved relative to the project dir (or capability dir).
+  - how to get it: look at what the seed capability's code imports (e.g. the tools
+    file's `from <bench>.data_model import ...`) and list those module paths.
+  - set it whenever a selected capability edits code against a shared types module;
+    leave `[]` when there is no such source.
+
 - **optimizer_instructions_file** (default `optimizer/INSTRUCTIONS.md`): the
   per-iteration optimizer-prompt TEMPLATE. The scaffold already copies a generic
   default to `project/optimizer/INSTRUCTIONS.md`; the agent CUSTOMIZES it for this
   benchmark (keeping the `{{...}}` placeholders the harness fills) rather than
-  authoring one from scratch. Point this key at the customized file. The authored
-  instructions must direct the optimizer to: READ and USE all chosen capability
-  skills (`./guidance/<cap>/`), the diagnose skill (`./guidance/diagnose/SKILL.md`),
-  and its own features reference (`./guidance/optimizer/<name>.md`); READ
-  `./MEMORY.md` FIRST and never re-propose a rejected approach; understand the
-  prior-iteration run-dir layout; write the rich `## Handover for next iteration`
-  STATE.md section; address ALL failure clusters each iteration (parallel subagents
-  → merge into one candidate where supported); and prefer code-bearing write/workflow
-  tools over prose for behavioral failures (see intake SKILL.md step 5).
+  authoring one from scratch. Point this key at the customized file. Keep the
+  authored guidance SHORT, with an explicit GOAL (maximize the eval score) and
+  EFFORT-ADAPTATION (scale to #trajectories + difficulty), and **scope it to the
+  SELECTED capabilities only** — include guidance / skill-references / editable
+  artifacts for just the caps in `capevolve.yaml: capabilities`. If only `tools` is
+  selected, do NOT include prompt-editing guidance, do NOT reference the
+  `system-prompt` skill, and do NOT present the prompt file as editable (and vice
+  versa). The authored instructions must also direct the optimizer to: READ and USE
+  the selected capability skills (`./guidance/<cap>/SKILL.md`), the diagnose skill
+  (`./guidance/diagnose/SKILL.md`), its own features reference
+  (`./guidance/optimizer/<name>.md`), and any `./guidance/sources/` files; READ
+  `./MEMORY.md` FIRST and never re-propose an approach recorded as
+  rejected-as-implemented (not a permanent ban); understand the prior-iteration
+  run-dir layout; write the rich `## Handover for next iteration` STATE.md section;
+  and address ALL failure clusters each iteration (parallel subagents → merge into
+  one candidate where supported). See intake SKILL.md step 5.
 
 - **gate**: `gate_mode` (significant|strict|threshold|simplicity_tiebreak),
   `gate_k_se` (default 1.0). Add `--no-regression` to forbid breaking passing tasks.

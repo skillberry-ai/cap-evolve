@@ -34,12 +34,22 @@ number. It optimizes what your agent *reads*, not its weights.
 - **Optimizes prompts, tools/MCP, *and* skill packages** — not just prompts.
   Pick one or several (`[system-prompt, tools, mcp-tool, skill-package]`) and
   optimize them jointly.
+- **Code-bearing optimization, not just reword.** For `tools`, the optimizer can
+  edit tool *code* — add validation/loop/composite tools that enforce a rule or
+  perform a stalled action in code (the fix for a behavioral failure prose can't
+  reach) — and safely swap, never bare-remove, a primitive.
 - **Onboard any benchmark/agent from a single prompt.** Paste one intake brief to
-  your coding agent; it installs the benchmark, wires a tiny adapter, and runs the
-  loop. No pre-integration.
+  your coding agent; **intake does the full integration** — installs the benchmark,
+  wires the adapter (incl. trajectories + a batched fast path), authors a
+  capability-scoped optimizer prompt, and passes the `cap-evolve check` gate —
+  before any budget is spent. No pre-integration.
+- **Per-task causal feedback.** Each iteration the optimizer sees which task ids a
+  prior edit BROKE and FIXED plus the currently-passing set to protect — so it
+  makes large, multi-cluster edits that don't regress the wins.
 - **Honesty enforced in code, not docs.** The sealed test split is scored exactly
-  once and a paired significance gate (Δ > k·SE) decides every acceptance — both
-  live in the `cap_evolve` core, the only place rewards are aggregated.
+  once and a paired, val-only significance gate (Δ > k·SE) decides every
+  acceptance — both live in the `cap_evolve` core, the only place rewards are
+  aggregated.
 - **Host- and agent-agnostic.** The optimizer is *any* coding-agent CLI
   (claude-code, codex, gemini, opencode, ibm-bob, …) resolved by one registry row.
   No framework lock-in.
@@ -113,15 +123,19 @@ bash examples/tau2_airline/run.sh     # cap-evolve run --dashboard auto: full lo
 This two-command path is simply the executable transcript of pasting
 [`PROMPT.md`](examples/tau2_airline/PROMPT.md) to your coding agent and saying
 *"follow [`RUN.md`](RUN.md)."* Intake onboards tau2-bench (recording the resolved
-commit), wires the adapter, passes `cap-evolve check`, then optimizes over all 50
-airline tasks (10 trials each) under a per-iteration `--max-budget-usd` cap, with a
-paired significance gate and a git commit per iteration. `--dashboard auto` serves
-the live capybara UI; the `setup.sh` flag `--dashboard` / `--no-dashboard` toggles
+commit), wires the adapter — including `run_batch` → tau2's runner, the batched
+`run_trials` fast path, `trajectories()` (native tau2 traces), and `score()`
+(reads `reward_info`) — and authors a capability-scoped optimizer prompt, then
+passes `cap-evolve check`. It optimizes the airline policy + tools over all 50
+tasks (10 trials each) under a per-iteration `--max-budget-usd` cap, with a paired
+significance gate and a git commit per iteration. `--dashboard auto` serves the
+live capybara UI; the `setup.sh` flag `--dashboard` / `--no-dashboard` toggles
 installing that server. Full walkthrough: [`DEMO.md`](examples/tau2_airline/DEMO.md);
 reproduce from zero: [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md).
 
-This is the exact prompt that produced this example — paste it to your coding agent
-and say *"follow RUN.md"*:
+This is the exact prompt that produced this example (the full text, verbatim from
+[`PROMPT.md`](examples/tau2_airline/PROMPT.md)) — paste it to your coding agent and
+say *"follow RUN.md"*:
 
 ```text
 Follow RUN.md to run a cap-evolve optimization. Onboard this as a brand-new
@@ -133,6 +147,15 @@ exists). Here is everything intake needs:
 - tools means:  edit tool docstrings/descriptions; edit tool behavior/code; and
                 ADD/REMOVE tools, including composite tools that call existing tools
 - seed:         tau2-bench's canonical airline policy + its airline tool set
+- seed tools:   the seed tools file must be CLEAN, runnable code as intake would
+                produce it — real tool bodies, no baked-in optimizer/editing
+                instructions in its docstrings (what the optimizer may change to the
+                tools lives in the tools capability SKILL.md, not in the seed file)
+- capability_sources:  set `capability_sources` to the benchmark's data-model/types
+                module(s) the tools import (here tau2's airline data_model — the source
+                of FlightDB, Reservation, Passenger, Payment, etc.). cap-evolve copies
+                these verbatim into the optimizer's workdir so it can write correct
+                new-tool code against the real types.
 
 # 2. BENCHMARK / DATASET  (the eval) — INSTALL IT DURING INTAKE
 - benchmark:    tau2-bench, airline domain
@@ -145,21 +168,63 @@ exists). Here is everything intake needs:
 
 # 3. RUNNER  (the agent under test) + MODELS + CREDENTIALS
 - how to run:   tau2's own batch runner (adapter.run_batch -> tau2.runner.run_tasks)
+- fast eval:    ALSO implement the optional adapter method
+                run_trials(tasks, ctx, *, n_trials, base_seed) -> {task_id: [Rollout, ...]}.
+                Run ALL num_trials in ONE tau2 run_tasks call with num_trials=N (grouped by
+                sim.trial) at TAU2_MAX_CONCURRENCY=125, and return {task_id: [trial0, trial1, ...]}
+                (len n_trials, trial-ordered). When present, cap-evolve calls it ONCE per candidate
+                instead of looping run_batch per trial; per-trial persistence
+                (rollouts/<split>/<task>__<tag>__t<k>.json) is UNCHANGED so pass^k / SE / resume
+                keep working. This collapses N sequential eval passes into one batched run.
 - agent AND user simulator:  openai/gpt-oss-120b  via IBM RITS
 - RITS wiring:  litellm model "hosted_vllm/openai/gpt-oss-120b" + per-call api_base +
                 extra_headers {"RITS_API_KEY": ...}  (NO litellm monkeypatch, NO tau2 fork)
 - credentials:  RITS_API_KEY (+ RITS_API_URL) in the repo-root .env
-- concurrency:  TAU2_MAX_CONCURRENCY=100
+- concurrency:  TAU2_MAX_CONCURRENCY=125
 
-# 4. SCORER  (what to optimize against)
+# 4. SCORER  (what to optimize against) — and WHERE the metric comes from
 - metric:       tau2's own task reward in [0,1] (required actions performed + info communicated)
-- feedback:     gold-AWARE but gold-SAFE — which required actions/info were missed (the learning signal)
+- metric source: tau2 computes it per simulation as `sim.reward_info.reward`; the per-check
+                breakdown is in `sim.reward_info` (db_check / action_checks / communicate_checks /
+                nl_assertions / env_assertions). Implement adapter.score() to read the reward +
+                reward_info that run_batch stashes from each simulation, and verify score() is
+                deterministic on a fixed rollout (the `cap-evolve check` gate enforces this).
+- feedback:     gold-AWARE but gold-SAFE — which required actions/info were missed (the learning
+                signal), derived from reward_info checks; never leak the gold answer.
 - objective:    maximize mean reward on the VAL split
 
-# 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
+# 4b. TRAJECTORIES  (the FULL traces the optimizer reads) — PATH IS AN INPUT
+- where:        tau2's batch runner can persist its native per-task simulation results
+                (full message transcript + reward_info) to a directory via run_tasks(save_path=...).
+                Point run_batch's save_path at a per-eval dir UNDER THE RUN, e.g.
+                <run_dir>/trajectories/val/  (any structure/format tau2 writes is fine).
+- expose:       implement adapter.trajectories(split) to return that directory. cap-evolve copies
+                it VERBATIM into the optimizer's working dir as ./trajectories/ each iteration, so
+                the optimizer reads the complete, unmodified traces (not a lossy summary).
+                (If you cannot persist native files, return None — cap-evolve falls back to copying
+                its own per-rollout JSON, which already embeds each rollout's full message trace.)
+
+# 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS + CONTEXT
 - optimizer:    claude-code
 - model:        claude-opus-4-6
 - credentials:  a logged-in Claude Code session (or ANTHROPIC_API_KEY)
+- runner_repo_path:  ../tau2-bench  (the cloned checkout — surfaced to the optimizer as
+                read-only context so it can consult tau2's tools/scoring/task structure)
+- optimizer instructions: author .capevolve/project/optimizer/INSTRUCTIONS.md from the scaffolded
+                template (keep its {{...}} placeholders intact — the harness fills them per
+                iteration), tailoring the guidance + the "READ THESE" pointers (./trajectories/,
+                ./guidance/<cap>/, ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md,
+                ./STATE.md, ./MEMORY.md, ../tau2-bench) to this benchmark. The authored INSTRUCTIONS
+                must follow the new flow: READ ./MEMORY.md FIRST and never re-propose a rejected
+                approach; address ALL failure clusters each iteration (fan out one subagent per
+                cluster, each in its own worktree, then merge all edits into ONE candidate); and end
+                STATE.md with the rich "## Handover for next iteration" section (approaches tried,
+                lessons, recommendation, what NOT to retry). For the tools capability, the primary
+                edit is CODE-BEARING tools — a validation tool that enforces a rule in code then
+                calls the existing tool and removes the raw one; a workflow tool that collapses a
+                recurring sequence; and a composite WRITE tool that performs a stalled multi-step
+                action in code (then removes the raw write primitives) so the agent cannot analyze,
+                confirm, and then fail to execute — not docstring prose.
 
 # 6. BUDGET / GATE
 - algorithm:        hill-climb  (--focus all)
@@ -170,6 +235,12 @@ exists). Here is everything intake needs:
 - gate:             significant (paired), k_se 0.2
 - store:            git          (every iteration committed for an inspectable process)
 ```
+
+The bundled `examples/tau2_airline/` is the **result** of running this prompt: the
+adapter (incl. `run_batch`/`run_trials`/`trajectories`/`score`), the RITS shim, the
+editable seed (`seed_capability/` = `policy/` + `tools/` + `reference/data_model.py`),
+and the capability-scoped `optimizer/INSTRUCTIONS.md` are exactly what the
+intake / implement-and-check flow produced.
 
 ## Optimize your own
 
@@ -188,6 +259,10 @@ materialize(cand_dir, edits)   -> None         # PURE write of edits into cand_d
 live(cand_dir)                 -> ctx (CM)      # make the candidate live for ONE eval
 run_batch(tasks, ctx, *, seed) -> ...           # implement INSTEAD of run_target to drive a
                                                #   benchmark's OWN batch runner (as tau2 does)
+run_trials(tasks, ctx, *, n_trials, base_seed) # batched fast path: ALL trials in ONE run
+  -> {task_id: [Rollout, ...]}                 #   (collapses N eval passes; pass^k/SE unchanged)
+trajectories(split)            -> Path|None    # the runner's NATIVE trace dir for the last eval;
+                                               #   copied verbatim to the optimizer's ./trajectories/
 ```
 
 Everything else — splits, trials, gating, pass^k, the sealed test, memory, and the
@@ -308,23 +383,95 @@ folder or one `optimizers/registry.yaml` row — see
 
 ## How it works
 
-**intake → implement-and-check → baseline → optimize → finalize → report.**
+**intake → implement-and-check → baseline → algorithm → finalize → report.**
 
-Intake collects inputs and scaffolds the project. Implement-and-check is a hard
-gate: `cap-evolve check` refuses to proceed until the adapter is real and
-deterministic. Baseline freezes a seeded train/val/test split (test **sealed**) and
-scores the seed on val. Each optimize iteration **diagnoses** failing val traces →
-the optimizer **proposes** one edit → the candidate is **evaluated** on val (each
-trial gets its own seed, so pass^k measures real variance) → a **paired
-significance gate** (Δ > k·SE) accepts or rejects → the iteration is committed and
-memory updated. Finalize scores the best candidate on the **sealed test split
-exactly once**; report writes `report.md` and a self-contained `dashboard.html`.
+**Intake does the whole benchmark integration — before any budget is spent.** It
+interviews you (or reads your brief), installs the benchmark, and wires the
+**adapter** (tasks / run_target-or-run_batch / score), the **trajectory** path
+(`adapter.trajectories(split)` → the runner's native traces), the optional batched
+**run_trials** fast path, and `capability_sources` (the data-model/types files the
+tools import). It then authors a **capability-scoped** optimizer prompt
+(`optimizer/INSTRUCTIONS.md`) — guidance and editable artifacts for *only* the
+selected capabilities. Missing NEEDED inputs are asked for, never fabricated.
+
+**implement-and-check is the HARD GATE.** `cap-evolve check` refuses to proceed
+until every adapter method (and any selected skill's abstract methods) is real and
+`score()` is deterministic — so no spend happens against a stub.
+
+**baseline** freezes the seeded train/val/test split (written once; test
+**sealed**) and scores the unmodified seed on val — the candidate every iteration
+must beat.
+
+**Each algorithm iteration** (`hill-climb` / `gepa` / `skillopt`): **diagnose**
+failing val traces into failure clusters → the **optimizer proposes** a large,
+multi-part edit → the candidate is **evaluated** on val (each of N trials gets its
+own seed, so pass^k measures real variance) → a **paired significance gate**
+(Δ > k·SE, val-only) accepts or rejects → the iteration is git-committed and memory
+updated.
+
+**finalize** scores the best candidate on the **sealed test split exactly once**
+(the run dir enforces the seal); **report** writes `report.md` and a self-contained
+`dashboard.html`.
+
+### What the optimizer receives each iteration (and why edits are large + non-regressing)
+
+The harness assembles a **capability-scoped** working dir per iteration, then runs
+your chosen coding-agent CLI in it:
+
+- **The selected capability skill(s)** — both as `./guidance/<cap>/` *and* placed
+  **natively** in the agent's own skills dir (e.g. `.claude/skills/`, `.codex/…`)
+  so a headless agent auto-loads them. Each carries a "What you can change here"
+  menu and edit boundaries.
+- **The diagnose method** (`./guidance/diagnose/`) — how to cluster failures into a
+  reflective dataset (per failing task: Inputs, Generated Outputs, Feedback).
+- **ONLY the current best step's full trajectories** (`./trajectories/`) — the
+  runner's verbatim traces of the candidate it builds on, never the seed + every
+  rejected attempt.
+- **Supporting sources / data model** (`./guidance/sources/`) — the
+  `capability_sources` files, copied verbatim so new tool code is written against
+  the real types.
+- **Per-task IMPACT of prior candidates** — which task ids each prior edit BROKE
+  (were passing) and FIXED, plus the **currently-passing set to protect** — causal
+  feedback so a known regression is never re-introduced.
+- **A cross-iteration handover** — `STATE.md` (scratchpad, carried across accepted
+  iterations) + `MEMORY.md` (accepted history + rejected-as-implemented approaches,
+  never to be re-proposed). The optimizer reads MEMORY first.
+
+Because it sees all failure clusters, the protect-set, and the prior causal impact
+at once, the optimizer produces **one bold, multi-part candidate per iteration that
+addresses every cluster without regressing the wins** — not a one-line tweak.
+
+### What the optimizer can change
+
+The **prompt** and the **tools** are equally fair game — pick whatever fixes the
+most clusters:
+
+- **Prompt** ([`system-prompt`](skills/capabilities/system-prompt/SKILL.md)):
+  rewrite/consolidate/add rules, add examples, tighten the output contract — but
+  **never drop a needed rule** (change / consolidate / add, don't delete).
+- **Tools** ([`tools`](skills/capabilities/tools/SKILL.md)): add/replace/wrap tools,
+  **edit tool CODE** for deterministic enforcement, improve docs **and RETURN
+  VALUES** (actionable errors) for recovery, add loop/workflow/composite tools, and
+  **swap via a safe wrapper — never bare-remove** a primitive. Code-bearing tool
+  edits are emphasized (a tool body the model cannot skip beats a sentence it can
+  forget — the fix for a *behavioral* failure the agent "knows" but doesn't do),
+  but a knowledge-gap failure still belongs in the prompt.
 
 > **Honesty is enforced in code, not docs.** Splitting, reward aggregation, the
-> gate, and sealing test all live in `cap_evolve`
-> ([`docs/HONEST_EVAL.md`](docs/HONEST_EVAL.md)). Infra-vs-capability failures are
-> distinguished by a structured `Rollout.error` signal, never by string-matching
-> feedback prose.
+> val-only significance gate (paired, `k_se` standard errors), and sealing test all
+> live in `cap_evolve` ([`docs/HONEST_EVAL.md`](docs/HONEST_EVAL.md)). Every
+> iteration is git-versioned. Infra-vs-capability failures are distinguished by a
+> structured `Rollout.error` signal, never by string-matching feedback prose.
+
+### Speed + observability
+
+All N trials of a candidate run in **one concurrent pass** when the adapter
+implements `run_trials(tasks, ctx, *, n_trials, base_seed)` (collapsing N
+sequential eval passes into one batched run; per-trial persistence and pass^k/SE
+are byte-for-byte unchanged). The **live dashboard** launches first and shows the
+intake cost/time/output, per-iteration optimizer & runner cost + time, the
+cumulative-best stair, a tasks × iterations pass/fail heatmap, the git diff per
+iteration, the lineage tree, and gate decisions.
 
 ## How it compares
 
@@ -369,15 +516,21 @@ markdown.
 
 ## Results
 
-<!-- RESULTS: filled from examples/tau2_airline/run_full -->
+<!-- RESULTS: baseline ~0.50 → best <pending>; filled from .capevolve/run_full/final.json (run in progress) -->
 
 > Real [tau2-bench](https://github.com/sierra-research/tau2-bench) airline run —
 > optimizing the airline policy + tools with a `claude-opus-4-6` optimizer and
-> `gpt-oss-120b` (agent + user simulator, via IBM RITS) over all 50 tasks. Numbers
-> come from the latest run in
+> `gpt-oss-120b` (agent + user simulator, via IBM RITS) over all 50 tasks.
+> **Metric:** mean tau2 task reward in `[0,1]` over the 50 tasks (10 trials each,
+> so the report also gives pass^k — the fraction of tasks solved on all k trials).
+> A run is currently in progress; final numbers are filled from the latest run in
 > [`examples/tau2_airline/run_full/`](examples/tau2_airline/run_full/) (`report.md` /
-> `dashboard.html`); every iteration is a git commit. Reproduce from zero:
-> [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md).
+> `dashboard.html`) once it completes. Every iteration is a git commit. Reproduce
+> from zero: [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md).
+>
+> Note: this example pins train = val = test = all 50 tasks (no-holdout), so the
+> headline test number is reported as a **fit metric** (the engine logs a
+> `splits_warning`); for a held-out result, pin a 30/10/10 split via `split_ids.json`.
 
 ## Contributing
 

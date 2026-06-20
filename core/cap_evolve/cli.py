@@ -316,6 +316,14 @@ def _cmd_run(argv):
             if not repo_p.is_absolute() and not repo_p.exists():
                 repo_p = Path(project) / str(repo)
             alg_cmd += ["--bench-repo", str(repo_p)]
+        # Supporting source files (data models / types the tools import) copied verbatim
+        # into the optimizer's ./guidance/sources/ so it can write correct code. Resolved
+        # project-relative by the harness; we pass them through as given.
+        csrc = spec.get("capability_sources") or []
+        if isinstance(csrc, str):
+            csrc = [c.strip() for c in csrc.split(",") if c.strip()]
+        if csrc:
+            alg_cmd += ["--capability-sources", ",".join(str(c) for c in csrc)]
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):

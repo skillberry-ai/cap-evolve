@@ -12,6 +12,8 @@
 - 4. Composite tools collapse fragile chains
 - 5. The action policy is the safety boundary
 - 6. Automatic optimization of tool text
+- 7. Output / response shaping
+- 8. The safe tool-replacement protocol
 - Sources
 
 ## 1. The model never sees your code — it sees the definitions
@@ -65,8 +67,18 @@ Selection accuracy degrades as the toolset grows and as tools overlap:
 Design implication: prefer **fewer, sharper, non-overlapping tools.** Anthropic's
 "Writing tools for agents" makes the same point — overlapping tools "distract
 agents," a single tool can "consolidate functionality… under the hood," and even
-small description refinements "yield dramatic improvements." Namespacing
-(`orders_search` vs `users_search`) reduces selection ambiguity.
+small description refinements "yield dramatic improvements." A concrete budget:
+OpenAI's function-calling guide recommends keeping the **active set under ~20
+tools** per turn. **Namespacing** by service/resource (`orders_search` vs
+`users_search`, `payments_charge` vs `payments_refund`) reduces selection ambiguity
+as the library grows, and `user_id` selects better than a bare `user`.
+
+Argument-filling reliability scales with how *closed* the schema is: use **`enum`**
+for every closed value set, the provider's **strict / schema-validated mode** where
+available (so output conforms rather than merely suggesting), per-parameter
+**units/format/default**, and **`input_examples`** for nested or format-sensitive
+params. Don't ask the model to fill an argument the code already knows — bind it in
+a wrapper.
 
 ## 4. Composite tools collapse fragile chains
 
@@ -96,6 +108,47 @@ over — "Tool Documentation Enables Zero-Shot Tool-Usage" (arXiv:2308.00675)
 finds documentation, not examples, is what carries usage. Deleting error
 conditions to shorten a description removes guidance and is a common
 *non-improving* edit.
+
+## 7. Output / response shaping
+
+Selection and filling decide the *call*; the **response** decides the next turn.
+Anthropic's "Writing tools for agents" treats response design as a first-class
+lever:
+
+- **Return high-signal fields, drop noise.** Internal uuids, mime types,
+  thumbnail urls, and audit columns inflate context and distract. Project to the
+  fields the agent acts on.
+- **Stable, human-readable ids over raw UUIDs.** Long opaque identifiers are
+  mis-copied and hallucinated; surface a readable handle (`order_id="A-1042"`) and
+  keep the UUID only if a later call truly needs it.
+- **Pagination / filtering / truncation with sane defaults**, plus a
+  **`verbosity` / `response_format`** control so the model can request `concise`
+  vs `full` rather than always paying for the largest payload.
+- **Errors are a steering surface.** An `isError` result with a specific,
+  example-bearing message ("amount must be whole cents; got 12.99 → pass 1299")
+  lets the model self-correct; an opaque traceback or code teaches it nothing and
+  it retries the same bad call. Treat the error string as instructions to the next
+  turn, not a log line. (Tool Documentation Enables Zero-Shot Tool-Usage,
+  arXiv:2308.00675, finds documented behavior — including failure modes — is what
+  carries usage.)
+
+## 8. The safe tool-replacement protocol
+
+Observed in real runs: optimizers add wrappers but never remove the primitives, so
+the unsafe path survives — or they bare-remove a tool and strand the tasks that
+needed it. Both are regressions. The safe sequence to replace/consolidate a tool:
+
+1. **ADD a wrapper** whose body *calls* the existing primitive after the extra
+   validation/normalization/steps you want guaranteed (it delegates, never
+   re-implements).
+2. **VERIFY** it (`validate`; confirm the body calls the primitive and returns a
+   sane result).
+3. **SWAP the registration** — `remove` the raw primitive from the exposed set and
+   expose the wrapper.
+
+Never bare-remove without a replacement that calls the original. Add-verify-swap
+makes the safe path the only path with no coverage gap (and keeps the count lean —
+one tool subsuming a primitive beats two overlapping ones).
 
 ## 5. The action policy is the safety boundary
 

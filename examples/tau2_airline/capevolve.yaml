@@ -7,6 +7,10 @@
 capabilities: [system-prompt, tools]     # optimize the airline POLICY and the TOOLS jointly
 capability_path: seed_capability         # the artifact dir (a copy is optimized)
 actions: [edit]                          # allowed edits (capability-specific)
+# Extra source files the tools import (tau2's airline data model / types), copied
+# verbatim into the optimizer workdir (guidance/sources/) so it can write correct
+# new-tool code against the real types. Resolved relative to this project dir.
+capability_sources: [seed_capability/reference/data_model.py]
 
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: claude-code             # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)

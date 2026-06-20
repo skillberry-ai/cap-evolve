@@ -67,6 +67,10 @@ def main(argv=None) -> int:
     p.add_argument("--optimizer-name", default=None,
                    help="resolved optimizer name (registry row); used to copy that "
                         "optimizer's features reference into the optimizer workdir")
+    p.add_argument("--capability-sources", default="",
+                   help="comma-separated supporting source files (data models / types "
+                        "the tools import) copied verbatim into the optimizer's "
+                        "./guidance/sources/; resolved relative to --project")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -93,6 +97,8 @@ def main(argv=None) -> int:
         capabilities=[c.strip() for c in args.capabilities.split(",") if c.strip()],
         instructions_file=args.instructions_file, bench_repo=args.bench_repo,
         optimizer_name=args.optimizer_name,
+        capability_sources=[s.strip() for s in args.capability_sources.split(",") if s.strip()],
+        project_dir=Path(args.project),
     )
     print(json.dumps(result, indent=2))
     return 0

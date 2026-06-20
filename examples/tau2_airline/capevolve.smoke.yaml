@@ -3,6 +3,7 @@
 capabilities: [system-prompt, tools]
 capability_path: seed_capability
 actions: [edit]
+capability_sources: [seed_capability/reference/data_model.py]
 
 optimizer_skill: claude-code
 optimizer_model: claude-opus-4-6

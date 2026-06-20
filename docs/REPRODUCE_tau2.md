@@ -60,12 +60,18 @@ bash examples/tau2_airline/run.sh      # full run + live capybara dashboard (see
 2. **Onboard the benchmark** — clone tau2-bench (latest `main`) as a sibling
    `../tau2-bench`, `pip install -e ../tau2-bench`, and **record the resolved commit** to
    `examples/tau2_airline/run_full/TAU2_COMMIT.txt`.
-3. **Scaffold + wire** — run the `intake` scaffold into `.capevolve/project`, then copy in
-   the authored integration: the adapter (`adapters/adapter.py`), the RITS shim
-   (`adapters/rits.py`), the seed capability (`seed_capability/` =
-   `policy/policy.md` + `tools/tools.py`), and the spec (`capevolve.yaml`).
+3. **Scaffold + wire (the full integration)** — run the `intake` scaffold into
+   `.capevolve/project`, then copy in the authored integration: the adapter
+   (`adapters/adapter.py` — `tasks` + `run_batch` → tau2's runner, the batched
+   `run_trials` fast path, `trajectories()` returning tau2's native trace dir, and
+   `score()` reading `reward_info`), the RITS shim (`adapters/rits.py`), the editable
+   seed capability (`seed_capability/` = `policy/` + `tools/` +
+   `reference/data_model.py`), the capability-scoped `optimizer/INSTRUCTIONS.md`, and
+   the spec (`capevolve.yaml`, which sets `capability_sources` to the data model so it
+   is copied verbatim into the optimizer's workdir).
 4. **Hard gate** — `cap-evolve check .capevolve/project` (verifies credentials + the
-   adapter contract). The run refuses to proceed until this is green.
+   adapter contract, incl. that `score()` is deterministic). The run refuses to
+   proceed until this is green.
 
 > **tau2-bench commit (this reproduction):** `5ebebbe827b455b3ed04fcb9294235c6ef4e5fd6`
 > (recorded automatically in `run_full/TAU2_COMMIT.txt`; your clone of latest `main` may
@@ -81,10 +87,15 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
 - **Cost preview** — `cap-evolve estimate` prints the call counts (`val × trials ×
   iterations` runner calls, `iterations` optimizer calls) and a calibrated `$` range.
 - **Baseline** — score the seed policy + tools on val.
-- **Each iteration** — diagnose val traces → the `claude-opus-4-6` optimizer edits the
-  policy + tools under the per-iteration `--max-budget-usd 40` cap → re-evaluate on val
-  (each of 10 trials gets its own seed → real pass^k) → the **paired significance gate**
-  (`gate_k_se 0.2`) accepts or rejects → **commit to git**.
+- **Each iteration** — diagnose val traces into failure clusters → the
+  `claude-opus-4-6` optimizer (given the current best step's full `./trajectories/`,
+  the selected capability skills both as `./guidance/<cap>/` and natively in
+  `.claude/skills/`, the data model in `./guidance/sources/`, the per-task impact of
+  prior edits + the passing set to protect, and the STATE/MEMORY handover) edits the
+  **policy AND tools** — including code-bearing tools — under the per-iteration
+  `--max-budget-usd 40` cap → re-evaluate ALL 10 trials in one batched `run_trials`
+  pass on val (each trial its own seed → real pass^k) → the **paired significance
+  gate** (`gate_k_se 0.2`, val-only) accepts or rejects → **commit to git**.
 - **Finalize** — score the best candidate once on the sealed test split (seal-on-success).
 - **Report** — `report.md` + a self-contained `dashboard.html`. The **live dashboard**
   shows per-iteration optimizer + runner **cost & time**, the one-time **intake cost**,
@@ -94,7 +105,7 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
 Run config (from `examples/tau2_airline/capevolve.yaml`): `hill-climb --focus all`,
 `max_iterations 10`, `num_trials 10`, `split_ids_file split_ids.json` (no-holdout fit),
 `gate_mode significant` `gate_k_se 0.2`, `store git`, `max_usd 400`,
-`optimizer_usd_per_iter 40`, `TAU2_MAX_CONCURRENCY 100`.
+`optimizer_usd_per_iter 40`, `TAU2_MAX_CONCURRENCY 125`.
 
 ## 6. Inspect the process
 

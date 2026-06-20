@@ -5,12 +5,20 @@
 > train/val/test discipline enforced in code. The pipeline is a library of Agent
 > Skills; the only shipped code is a tiny stdlib substrate.
 
-If you are an agent driving cap-evolve: follow `RUN.md`. Implement the adapter —
-`tasks · run_target(task, ctx, *, seed) · score` plus a pure `materialize` and a
-`live` context manager (`apply` is a back-compat hook); see
-`docs/ADAPTER_CONTRACT.md`. Pass `cap-evolve check`, then run the phases
-intake → implement-and-check → baseline → <algorithm> → finalize → report. Never
-score the test split except at finalize; gate acceptance on val.
+If you are an agent driving cap-evolve: follow `RUN.md`. **Intake does the full
+benchmark integration** — install the benchmark, implement the adapter
+(`tasks · run_target` *or* a benchmark's own `run_batch` · `score`, plus optional
+`trajectories(split)` returning the runner's native trace dir and a batched
+`run_trials(tasks, ctx, *, n_trials, base_seed)` fast path; `materialize` is a pure
+write and `live` a context manager, `apply` a back-compat hook), wire
+`capability_sources` (data-model files the tools import), and author a
+capability-scoped `optimizer/INSTRUCTIONS.md`; see `docs/ADAPTER_CONTRACT.md`. Pass
+`cap-evolve check` (the hard gate), then run the phases intake → implement-and-check
+→ baseline → <algorithm> → finalize → report. Each iteration the optimizer gets the
+current best step's full trajectories, the selected capability skills, the per-task
+impact of prior edits + the passing set to protect, and a STATE/MEMORY handover; it
+may edit BOTH the prompt and the tools (incl. tool code). Never score the test split
+except at finalize; gate acceptance on val with a paired significance gate.
 
 ## Start here
 - [RUN.md](RUN.md): the top-level orchestration prompt (point any agent at this).

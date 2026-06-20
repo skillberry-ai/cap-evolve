@@ -102,6 +102,17 @@ reasoning-tuned models and crowd the context.
 - **Fix:** encode the constraint in the *schema* (types, `enum`, formats) and keep
   one or two examples, not ten.
 
+## Opaque errors and UUID-heavy / bloated responses
+A handler that raises a raw traceback (or returns a low-signal blob full of uuids,
+mime types, and audit columns) leaves the model blind: it hallucinates ids,
+re-fetches, and retries the same invalid call because the error told it nothing.
+- **Detect:** failing tasks where the trace shows the model copying a wrong id, or
+  re-issuing the identical bad call after an error with an opaque message.
+- **Fix:** project to high-signal fields, surface a stable human-readable id (not
+  the raw UUID), and return an **actionable** error that names the correct format
+  or the recovery tool ("payment method not on file; available: [...]"). Errors are
+  a steering surface (examples §3f).
+
 ## Vague names defeat good descriptions
 `lookup`, `query`, `do_it` select poorly no matter how good the description is —
 the name is read first and weighs heavily.

@@ -1,38 +1,18 @@
-"""Candidate airline TOOLS — the optimizer edits THIS FILE'S REAL CODE directly.
+"""Airline tool set for the tau2-bench airline domain.
 
-This is the COMPLETE, self-contained airline tools implementation the agent uses.
-Every ``@is_tool`` method below carries the REAL tau2 body (copied verbatim from
-``tau2.domains.airline.tools.AirlineTools``), so the optimizer can read and edit
-actual tool logic, not stubs. The class subclasses tau2's ``AirlineTools`` only to
-inherit the private helpers (``_get_user``, ``_get_reservation``,
-``_search_direct_flight``, ...) and the ``ToolKitBase`` machinery; every
-agent-callable tool is re-declared here with its full body so editing it changes
-behavior.
+The ``AirlineTools`` class subclasses tau2's ``AirlineTools`` (to inherit the
+private helpers — ``_get_user``, ``_get_reservation``, ``_search_direct_flight``,
+... — and the ``ToolKitBase`` machinery) and re-declares every agent-callable tool
+with its real tau2 body (copied verbatim from ``tau2.domains.airline.tools``).
 
-The optimizer is ALLOWED to, on this file:
-  * EDIT A TOOL'S CODE — change the body of any ``@is_tool`` method below to fix
-    behavior. The signature must stay compatible with tau2 (it replays tool calls
-    by name + arguments).
-  * IMPROVE A TOOL'S DOCSTRING — the docstring is the live tool description the
-    agent sees; rewrite it so the agent picks the tool and fills args correctly.
-  * ADD A NEW (COMPOSITE) TOOL — define a new method, decorate it with
-    ``@is_tool(ToolType.READ|WRITE|GENERIC|THINK)``, give it a docstring, and call
-    existing tools/helpers through ``self`` (e.g. ``self.get_reservation_details(...)``,
-    ``self._get_user(...)``) to compose a higher-level action.
-  * REMOVE A TOOL — either delete its method here (it then falls back to tau2's
-    inherited implementation, so this only changes the body, not the toolset) OR
-    list its name in the module-level ``REMOVE_TOOLS`` set to drop it from the
-    exposed agent toolset entirely.
+The module-level ``REMOVE_TOOLS`` set names any tools to drop from the exposed
+agent toolset (empty by default; the seed exposes tau2's default airline tools).
 
-Do NOT change a tool's name or its parameter names/types unless you keep it
-consistent — tau2 evaluation replays tool calls by name and arguments.
-
-IMPORTANT (schema validity): this file deliberately does NOT use
-``from __future__ import annotations``. Type annotations in tool signatures must
-be REAL, importable objects (not strings), because tau2 builds each tool's
-parameter JSON-schema via ``create_model("parameters", ...)`` from the live
-signature and then calls ``model_json_schema()`` — stringified forward refs would
-fail to resolve. Every type used in a signature below is imported here.
+Note: this file does NOT use ``from __future__ import annotations``. Tool
+signature annotations must be real, importable objects (not strings), because
+tau2 builds each tool's parameter JSON-schema from the live signature via
+``create_model(...).model_json_schema()`` and stringified forward refs would not
+resolve. Every type used in a signature below is imported here.
 """
 
 from copy import deepcopy

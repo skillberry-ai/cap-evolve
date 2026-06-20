@@ -16,6 +16,15 @@ exists). Here is everything intake needs:
 - tools means:  edit tool docstrings/descriptions; edit tool behavior/code; and
                 ADD/REMOVE tools, including composite tools that call existing tools
 - seed:         tau2-bench's canonical airline policy + its airline tool set
+- seed tools:   the seed tools file must be CLEAN, runnable code as intake would
+                produce it — real tool bodies, no baked-in optimizer/editing
+                instructions in its docstrings (what the optimizer may change to the
+                tools lives in the tools capability SKILL.md, not in the seed file)
+- capability_sources:  set `capability_sources` to the benchmark's data-model/types
+                module(s) the tools import (here tau2's airline data_model — the source
+                of FlightDB, Reservation, Passenger, Payment, etc.). cap-evolve copies
+                these verbatim into the optimizer's workdir so it can write correct
+                new-tool code against the real types.
 
 # 2. BENCHMARK / DATASET  (the eval) — INSTALL IT DURING INTAKE
 - benchmark:    tau2-bench, airline domain
@@ -72,19 +81,38 @@ exists). Here is everything intake needs:
                 read-only context so it can consult tau2's tools/scoring/task structure)
 - optimizer instructions: author .capevolve/project/optimizer/INSTRUCTIONS.md from the scaffolded
                 template (keep its {{...}} placeholders intact — the harness fills them per
-                iteration), tailoring the guidance + the "READ THESE" pointers (./trajectories/,
-                ./guidance/<cap>/, ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md,
-                ./STATE.md, ./MEMORY.md, ../tau2-bench) to this benchmark. The authored INSTRUCTIONS
-                must follow the new flow: READ ./MEMORY.md FIRST and never re-propose a rejected
-                approach; address ALL failure clusters each iteration (fan out one subagent per
-                cluster, each in its own worktree, then merge all edits into ONE candidate); and end
-                STATE.md with the rich "## Handover for next iteration" section (approaches tried,
-                lessons, recommendation, what NOT to retry). For the tools capability, the primary
-                edit is CODE-BEARING tools — a validation tool that enforces a rule in code then
-                calls the existing tool and removes the raw one; a workflow tool that collapses a
-                recurring sequence; and a composite WRITE tool that performs a stalled multi-step
-                action in code (then removes the raw write primitives) so the agent cannot analyze,
-                confirm, and then fail to execute — not docstring prose.
+                iteration). Keep it SHORT and give the optimizer FREEDOM: state the GOAL (maximize the
+                eval score — make the biggest improvement you can this iteration) and tell it to ADAPT
+                effort to the number + difficulty of failing trajectories (few → move fast; many/hard
+                → go deeper, fanning out one subagent per failure cluster, each in its own worktree,
+                then merging all edits into ONE candidate). Tailor only the "READ THESE" pointers
+                (./trajectories/, ./guidance/<cap>/SKILL.md for EACH selected capability,
+                ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md, ./guidance/sources/
+                [the data model], ./STATE.md, ./MEMORY.md, ../tau2-bench).
+- scope to the SELECTED capabilities: BOTH system-prompt and tools are selected here, so the
+                instructions reference BOTH skills and the optimizer may edit EITHER. (Generic rule: if
+                only ONE capability were selected, the instructions, the guidance, and the editable
+                files must cover ONLY that one — e.g. tools-only ⇒ no prompt-editing guidance, no
+                system-prompt skill, the prompt is not presented as editable.)
+- EDIT BOTH the prompt AND the tools — they are EQUALLY fair game; pick whatever fixes the clusters:
+    * PROMPT (system-prompt), per ./guidance/system-prompt/SKILL.md: rewrite/clarify a rule, add the
+      WHY, consolidate redundant rules, add a missing rule grounded in the trajectories, add an
+      example, tighten the output contract. NEVER drop a needed rule (change/consolidate/add, don't
+      delete). The prompt is HIGH-VALUE — not a last resort.
+    * TOOLS, per ./guidance/tools/SKILL.md: prefer CODE-BEARING changes — a validation tool that
+      enforces a rule in code then calls the existing tool and removes the raw one; a workflow/loop
+      tool that collapses a recurring sequence; a composite WRITE tool that performs a stalled
+      multi-step action in code (then removes the raw write primitives) so the agent can't analyze,
+      confirm, then fail to execute. Improve tool docs AND RETURN VALUES (actionable errors + next
+      steps) — the docstring and return are what the agent sees. Never bare-remove a tool — add a
+      replacement that calls it, verify, then swap registration.
+- process flow: READ ./MEMORY.md + ./STATE.md FIRST (don't re-submit a rejected edit verbatim — a
+                redesigned version may still work; don't abandon a high-value cluster); analyze the
+                current best step's ./trajectories/; use the per-task IMPACT of prior candidates + the
+                currently-passing tasks the harness lists to steer AWAY from regressions (don't
+                re-introduce a change that broke a task) WITHOUT freezing; make a bold, multi-part edit
+                across the selected capabilities; end STATE.md with the rich "## Handover for next
+                iteration" section (approaches tried, lessons, recommendation, what regressed as-tried).
 
 # 6. BUDGET / GATE
 - algorithm:        hill-climb  (--focus all)

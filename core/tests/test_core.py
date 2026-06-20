@@ -131,4 +131,7 @@ def test_rejected_memory_roundtrip_and_render(tmp_path):
     assert len(rm.entries()) == 2
     rendered = rm.render()
     assert "added verbose preamble" in rendered
-    assert "do NOT re-propose" in rendered.lower() or "do not" in rendered.lower()
+    # The block is reframed as STEERING (regressed-as-implemented), not a hard ban:
+    # it must still steer the optimizer away from re-submitting the rejected edit.
+    low = rendered.lower()
+    assert "regressed" in low and "re-submit" in low

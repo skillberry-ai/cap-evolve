@@ -22,6 +22,51 @@ when the tools come from an external Model Context Protocol server you can only
 re-describe, not re-implement. The two share the same `tools.json` artifact and
 handlers; the only difference is which edits the action policy permits.
 
+## What you can change here
+
+**The tool's docstring AND its return value are what the agent SEES — make both
+clear and recovery-oriented.** The doc surface (description, important-notes,
+per-param, `Raises:`, examples) drives *which* tool the model calls and *how* it
+fills the arguments; the return value (and especially the error text) steers the
+*next* turn. Each lever below is an edit class; pick the one that fixes the biggest
+failure cluster. (1-line generic examples; worked bodies in
+[`references/examples.md`](references/examples.md), depth below and in
+[`references/concepts.md`](references/concepts.md).)
+
+1. **Add a new tool** — give the agent a capability it lacks, built as a thoughtful
+   workflow tool, not a thin wrapper around one endpoint. *Ex:* add `search_logs`
+   that returns only the relevant lines instead of a raw dump.
+2. **Replace / wrap a tool** — superset an existing tool and route the old behavior
+   through it. *Ex:* wrap `find_record`+`charge_payment` behind one
+   `charge_record(record_id)` that resolves then charges.
+3. **Edit a tool's code / logic** — bake validation/enforcement into the body so
+   correctness doesn't depend on the LLM. *Ex:* reject a past date inside the tool
+   rather than hoping the prompt prevents it.
+4. **Improve a tool's documentation** — sharpen description / important-notes /
+   `Raises:` / per-param docs / examples; rename for least surprise. *Ex:*
+   `lookup(record)` → `get_record(record_id: str)` with "returns an error object if
+   not found."
+5. **Improve RETURN VALUES for recoverability** — high-signal fields, stable
+   human-readable ids, and **actionable error text with a next-step hint and what
+   NOT to do**. *Ex:* error returns "payment method not on file; available:
+   ['card_1'] — pass one of these" instead of a raw traceback.
+6. **Add a loop tool** — replace N repeated single-item calls with one list call.
+   *Ex:* `get_records(ids: [...])` replaces N× `get_record(id)`.
+7. **Add a workflow tool** — for a *recurring*, failure-prone multi-step sequence,
+   a deterministic tool that calls several tools in order. *Ex:*
+   `apply_change_plan(record_id, steps)` runs validate → apply-each → return final
+   state as one reliable step.
+8. **Remove-with-replacement** — remove a redundant/overlapping tool *only* after a
+   replacement preserving its capability exists. *Ex:* drop `query` once
+   `get_record` + `search_records` cover it.
+
+**Guardrails (depth below):** encode deterministic logic in code, not prose (a
+tool body the model cannot skip beats a sentence it can forget); keep the toolset
+small and namespaced (aim **< ~20** active tools); ship correct, bug-free code
+(every code edit needs validation + a `validate` run); and **never remove a tool
+without a capability-preserving replacement** (add → verify → swap, see the SAFE
+TOOL-REPLACEMENT PROTOCOL).
+
 ## The highest-leverage edit: write a NEW code-bearing tool
 
 **Start here. A deterministic tool beats a sentence in the prompt.** A docstring
@@ -89,6 +134,23 @@ So PREFER consolidating over piling on: when you add a safer or looped tool,
 **`remove` the now-redundant primitive** so the net tool count stays small and
 sharp. Do not add many narrow tools. One sharp tool that subsumes a primitive
 beats two overlapping ones.
+
+**SAFE TOOL-REPLACEMENT PROTOCOL (never bare-remove a tool).** To replace or
+consolidate a tool, follow these steps in order — never delete a tool without a
+replacement that subsumes it:
+
+1. **ADD a wrapper tool whose body CALLS the existing tool** — after validation,
+   normalization, or the extra steps you want guaranteed. The wrapper delegates to
+   the primitive; it does not re-implement it.
+2. **VERIFY** the wrapper (run `validate`; confirm the body actually calls the
+   primitive and returns a sane result).
+3. **Only then SWAP the registration**: `remove` the raw primitive from the active
+   / exposed set and register the wrapper as the path the agent uses.
+
+Bare-removing a primitive with no replacement strands every task that needed it
+("no applicable tool"); adding a wrapper but leaving the primitive exposed lets the
+model route around the guard and reproduce the original failure. The add-verify-swap
+order is what makes the safe path the *only* path without a coverage gap.
 
 **You must write the BODY.** A `compose`/`add`/`code` edit whose body is `...`,
 a bare `pass`, or docstring-only is NOT this edit — it does nothing. Emit a real
@@ -200,8 +262,58 @@ follow, and each is driven by a different part of that block:
 2. **Argument-filling** — *how* to populate the call. Decided from the
    **parameter schema** (types, `required`, `enum`, descriptions) plus any
    **examples**. An `enum` turns "guess a status string" into "pick from this
-   closed set." A per-field description ("ISO-8601 date, e.g. 2025-06-14") turns
-   a malformed argument into a correct one.
+   closed set"; prefer it for every closed value set, and use the provider's
+   **strict / schema-validated mode** where available so the model adheres to the
+   schema instead of guessing. A per-field description ("ISO-8601 date, e.g.
+   2025-06-14"; "amount in whole US cents") turns a malformed argument into a
+   correct one — always pin **units, format, and default** per parameter. Add
+   schema-validated **`input_examples`** for complex / nested / format-sensitive
+   params (a few help; long dumps hurt reasoning models). And **don't make the
+   model fill arguments you already know** — pass them in code (a wrapper) instead
+   of asking for them.
+
+**Namespace by service/resource** so selection stays unambiguous as the set grows
+(`github_list_prs`, `payments_charge`), and keep the **active toolset small** — aim
+for **fewer than ~20 tools per turn** (OpenAI's heuristic); selection degrades
+sharply past that. This is the number behind the lean caveat above.
+
+## Shape the RESULT, not just the call (output/response design)
+
+What a tool *returns* steers the next turn as much as its description steers
+selection. A bloated or opaque result causes hallucinated ids, wasted context, and
+redundant calls. Design the response:
+
+- **Return high-signal fields only.** Strip low-value noise (internal uuids, mime
+  types, 256-px thumbnail urls, audit columns). Return the semantic fields the
+  agent will actually act on.
+- **Use stable, human-readable identifiers, not raw UUIDs.** Models hallucinate and
+  mis-copy long opaque ids; a `get_order(order_id)` projection should surface
+  `order_id="A-1042"` over `4f3c…-uuid`. If the backend only has a UUID, attach a
+  readable handle alongside it.
+- **Paginate / filter / truncate with sane defaults**, and offer a
+  **`verbosity`/`response_format`** control (e.g. `"concise"` vs `"full"`) so the
+  agent asks for detail only when needed instead of drowning in it.
+- **Make error messages ACTIONABLE — they are a steering surface, not just a
+  failure.** A raw traceback or opaque code teaches the model nothing. Return a
+  specific, example-bearing message that tells the agent how to recover:
+  `"payment method not on file; available: ['card_1','gift_4'] — pass one of these"`
+  or `"date must be ISO-8601 YYYY-MM-DD, got '6/14/25'"`. The model reads the error
+  and self-corrects on the next call instead of retrying the same bad one. Wrappers
+  (patterns 1–3) are the natural place to produce these.
+
+## Document every tool comprehensively
+
+A tool's documentation is its contract. Every tool — primitive or wrapper — needs
+**all** of these, or the model is left guessing:
+
+- a **crisp description**: what it does, when to use it, and when NOT to (the
+  boundary against the nearest sibling tool);
+- an **"important points"** note for any non-obvious behavior or precondition;
+- a **Raises / errors** section listing the failure conditions (keep these — see
+  below; they are a guard rail, not clutter);
+- a **per-parameter description** with units / format / allowed values / default;
+- one **generic, always-valid usage example** (the shape of a call, never one
+  task's literal id/date/city).
 
 **The description is the model's contract, not flavor text.** It is the *only*
 information the model has about *which* tool to call and *what argument values
@@ -334,8 +446,8 @@ Drawn from real runs where the optimizer left most of the gain on the table.
   and left the model blind to why calls fail. Error conditions are guidance, not
   clutter — keep them.
 - **Cosmetic description rewording** — reflowing sentences, adding commas,
-  restating the obvious ("Cancel the reservation" → "Cancel an entire
-  reservation"). No new always-true information, so no behavior change.
+  restating the obvious ("Cancel the record" → "Cancel an entire record"). No new
+  always-true information, so no behavior change.
 - **Baking one task's specifics into a description** — naming a particular id,
   date, or city. It overfits and can mislead on the next task.
 - **Adding tools that duplicate ones the agent already uses fine** — enlarges the

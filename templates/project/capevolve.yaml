@@ -29,6 +29,10 @@ optimizer_instructions_file: optimizer/INSTRUCTIONS.md
 # Optional: path to the benchmark/runner source, surfaced to the optimizer as read-only
 # context (so it can consult tools/scoring/task structure). Resolved project-relative.
 runner_repo_path: ""
+# Optional: supporting source files (e.g. the data model / types module the tools
+# import) copied VERBATIM into the optimizer's ./guidance/sources/ so it can write
+# correct tool code. List of paths, resolved project-relative; missing files tolerated.
+capability_sources: []
 # (The full trajectories of each eval are always copied verbatim into the optimizer's
 #  working dir as ./trajectories/ — via your adapter's trajectories(split) hook, else
 #  cap-evolve's own per-rollout JSON. No config needed.)

@@ -85,6 +85,35 @@ untrusted unless they come from a trusted server. Operational implication for th
 capability: **review every description you expose**, prefer well-known/trusted
 servers, and remove tools whose metadata you can't vouch for.
 
+### Tool annotations (the four behavior hints)
+A tool's optional `annotations` are server-supplied **behavior hints** for UX and
+gating, each with a default:
+
+- `readOnlyHint` (default `false`) — the tool does not modify its environment.
+- `destructiveHint` (default `true`) — may perform destructive updates; only
+  meaningful when not read-only.
+- `idempotentHint` (default `false`) — repeated identical calls add no further
+  effect.
+- `openWorldHint` (default `true`) — interacts with an external/open world (web).
+
+They drive gating (confirm destructive ops, allow idempotent retries) but are
+**hints, untrusted unless the server is trusted** — never a safety guarantee.
+
+### Human-in-the-loop and self-correcting errors
+The spec says clients SHOULD **show tool inputs before calling** and **confirm
+sensitive/destructive operations** — a defense against tool-poisoning and
+`list_changed` injection. And it distinguishes **execution errors** (`isError:true`
+with an actionable message, surfaced to the model so it retries with fixed args)
+from **protocol errors** (JSON-RPC failures the model can't act on). Encourage the
+former: when you can only re-describe, document the failure mode so the model
+self-corrects.
+
+### What of §3-style output shaping is client-safe here
+Documenting result fields, caps, and formats in the *description* is allowed (it's
+client-side presentation). Changing the wire `inputSchema`/`outputSchema` is NOT —
+that's a server change. Keep the boundary sharp: re-describe and curate, never
+re-contract.
+
 ## 5. Practical optimization playbook
 
 1. **Re-describe terse server tools** on the client side — state what/when/when-not

@@ -44,43 +44,47 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
      JSON) — note that choice in `PROJECT.md`.
    - implement `score()` to extract the OBJECTIVE metric from a rollout, matching the
      benchmark's own scoring source; verify it reproduces the benchmark's number.
-5. **Author the optimizer instructions for THIS benchmark.** Customize the scaffolded
-   `.capevolve/project/optimizer/INSTRUCTIONS.md`: KEEP the `{{...}}` placeholders
-   intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`, `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`,
-   `{{BENCH_REPO}}` — the harness fills these per iteration), but tailor the static
-   guidance and the "READ THESE" pointers to this benchmark's traces, tools, and
-   conventions. The authored instructions MUST tell the optimizer to:
-   - **READ and USE** every chosen capability skill at `./guidance/<cap>/`, the
-     diagnose phase skill at `./guidance/diagnose/SKILL.md`, and its own
-     optimizer-agent features reference at `./guidance/optimizer/<name>.md` —
-     not just `./trajectories/`, `./STATE.md`, `./MEMORY.md`, and the benchmark repo.
-   - **READ `./MEMORY.md` FIRST**, before analyzing, and **never re-propose an
-     approach** listed there as already tried/rejected (the harness also injects
-     recent rejected diffs to block duplicates).
-   - **Explain the prior-iteration run-dir structure** so the optimizer can inspect
-     earlier work: `<run_root>/candidates/<id>/` (capability snapshots),
-     `/work/<id>/` (scratch + STATE), `/rollouts/<split>/<task>__<cand>__t<k>.json`
-     (per-trial traces), `/events.jsonl`, `/rejected.jsonl`, and the per-iteration
-     git diffs.
-   - **Write the rich STATE.md handover** required by the shared contract: end
-     STATE.md with a section headed `## Handover for next iteration` containing
-     Approaches tried this iteration (1 line each, concrete), Lessons learned
-     (general), Recommendation / what to focus on next, and What NOT to retry — the
-     harness parses this into the next iteration's MEMORY note.
-   - **Address ALL failure clusters per iteration**, not one tiny single-theme
-     edit: if the optimizer agent supports parallel subagents (see its
-     `./guidance/optimizer/<name>.md`), fan out one per cluster, analyze
-     concurrently, then merge all the edits into ONE candidate; otherwise handle
-     the clusters in sequence within the iteration.
-   - **Prefer code-bearing tools for behavioral failures** — when the capability is
-     the agent's own tools and a cluster is a BEHAVIORAL/execution failure (e.g. the
-     agent stalls before a write and never issues it), write a composite WRITE /
-     workflow tool that performs the whole action in code and `remove` the raw
-     primitives, rather than rewording prose the model can keep skipping.
-6. **Set the new spec keys** in `capevolve.yaml`: `runner_repo_path` (the
-   benchmark/runner source, surfaced read-only to the optimizer) and
-   `optimizer_instructions_file` (point it at the customized template — default
-   `optimizer/INSTRUCTIONS.md`).
+5. **Author the optimizer instructions for THIS benchmark — SCOPED TO THE SELECTED
+   CAPABILITIES.** Customize the scaffolded `.capevolve/project/optimizer/INSTRUCTIONS.md`.
+   Keep the `{{...}}` placeholders intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`,
+   `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`, `{{BENCH_REPO}}` — the harness fills them per
+   iteration). Keep the authored static guidance **SHORT**, and make it
+   **capability-scoped**: include guidance, skill references, and edit-space ONLY for
+   the capabilities actually listed in `capevolve.yaml: capabilities`.
+   - **State the GOAL up front:** maximize the eval score — make the largest
+     improvement you can this iteration, grounded in the trajectories.
+   - **EFFORT-ADAPTATION:** scale analysis depth and effort to the number of failing
+     trajectories and their difficulty — few → move fast; many/hard → go deeper
+     (parallel subagents per cluster, then merge into ONE candidate).
+   - **Capability-scoping (the key rule):** reference `./guidance/<cap>/SKILL.md`
+     and present the editable artifacts **for the selected caps only**. If only
+     `tools` is selected, do NOT include any prompt-editing guidance, do NOT
+     reference the `system-prompt` skill, and do NOT present the prompt/policy file
+     as editable. If only `system-prompt` is selected, do not surface the tools file
+     as editable. Each capability's "What you can change here" lives in its
+     `./guidance/<cap>/SKILL.md` — point the optimizer there rather than restating it.
+   - **Always include (capability-agnostic):** READ `./MEMORY.md` FIRST and never
+     re-propose an approach recorded as rejected *as implemented* (a better-designed
+     version may still work — it is not a permanent ban); READ and USE the diagnose
+     skill `./guidance/diagnose/SKILL.md`, the optimizer features reference
+     `./guidance/optimizer/<name>.md`, this step's `./trajectories/`, `./STATE.md`,
+     and any `./guidance/sources/` data-model files; understand the prior run-dir
+     layout (`<run_root>/candidates/<id>/`, `/work/<id>/`,
+     `/rollouts/<split>/<task>__<cand>__t<k>.json`, `/events.jsonl`,
+     `/rejected.jsonl`, per-iteration git diffs); write the rich
+     `## Handover for next iteration` STATE.md section (Approaches tried — 1 line
+     each, Lessons learned, Recommendation, and What-regressed-as-implemented — NOT
+     a permanent ban-list); and address ALL failure clusters each iteration.
+6. **Set the spec keys** in `capevolve.yaml`:
+   - `runner_repo_path` — the benchmark/runner source, surfaced read-only to the
+     optimizer.
+   - `optimizer_instructions_file` — point at the customized template (default
+     `optimizer/INSTRUCTIONS.md`).
+   - `capability_sources` — the benchmark's data-model / types source files that the
+     tools import (resolved relative to the project dir; copied verbatim into the
+     optimizer's `./guidance/sources/`), so the optimizer can write correct code
+     against the real types. Set this whenever a selected capability's code imports a
+     shared types/data-model module; leave the default `[]` when there is none.
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
 Read `inputs/INPUTS.md`. It classifies every input as **NEEDED** or

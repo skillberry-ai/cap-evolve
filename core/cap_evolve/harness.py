@@ -174,6 +174,7 @@ def evaluate_candidate(
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
     per_task_feedback: dict[str, str] = {t.id: "" for t in tasks}
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
+    per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
     task_by_id = {t.id: t for t in tasks}
     run_acc = {"cost": 0.0, "tokens": 0}    # RUNNER spend, summed over rollouts (mutable for closure)
     t0 = time.time()
@@ -192,6 +193,7 @@ def evaluate_candidate(
                 rollout = Rollout(task_id=tid, error="omitted from batch result")
             if getattr(rollout, "error", None):
                 per_task_errored[tid] = True
+                per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
             sc = adapter.score(task, rollout)
@@ -245,7 +247,9 @@ def evaluate_candidate(
         scores.append(Score(
             task_id=tid, reward=mean(tr), feedback=per_task_feedback[tid],
             n=n_trials, stderr=stderr(tr), trial_rewards=tr,
-            raw={"errored": per_task_errored[tid]},
+            raw={"errored": per_task_errored[tid],
+                 "errored_trials": per_task_errored_trials[tid],
+                 "n_trials": n_trials},
         ))
 
     elapsed = time.time() - t0
@@ -277,10 +281,15 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
             tid = sc.get("task_id") or f.name.split("__")[0]
             by_task.setdefault(tid, []).append(float(sc.get("reward", 0.0)))
             feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
-            # carry the structured infra flag forward across resume (errored on any trial)
+            # carry the structured infra flag + trial counts forward across resume.
+            # Each rollout file is one trial, so count an errored trial here and tally
+            # the total trials seen — letting _is_infra_ignore reconstruct the
+            # majority-errored condition from disk.
             r0 = raw.setdefault(tid, {})
+            r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
             if (sc.get("raw") or {}).get("errored"):
                 r0["errored"] = True
+                r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
     scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
                     n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}))
               for t, r in by_task.items()]
@@ -448,7 +457,8 @@ _STATE_SEED = (
     "- Approaches tried this iteration (1 concrete line each):\n"
     "- Lessons learned (general):\n"
     "- Recommendation / what to focus on next:\n"
-    "- What NOT to retry:\n"
+    "- Approaches that regressed AS IMPLEMENTED (a better-designed version may still "
+    "work — don't permanently abandon a high-value cluster):\n"
 )
 
 
@@ -472,18 +482,7 @@ def _recent_rejected_diffs(run_dir: RunDir, rejected, *, max_cands: int = 3,
         return ""
     # Map each candidate id to the parent it was forked from (the best at the time),
     # read from the step events. Fall back to "seed" when unknown.
-    parent_of: dict[str, str] = {}
-    try:
-        for line in (run_dir.events_path.read_text(encoding="utf-8").splitlines()
-                     if run_dir.events_path.exists() else []):
-            line = line.strip()
-            if not line:
-                continue
-            rec = json.loads(line)
-            if rec.get("kind") == "step" and rec.get("candidate"):
-                parent_of[str(rec["candidate"])] = str(rec.get("parent") or "seed")
-    except Exception:  # noqa: BLE001
-        parent_of = {}
+    parent_of = _parent_map(run_dir)
 
     _skip = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md"}
 
@@ -539,6 +538,131 @@ def _recent_rejected_diffs(run_dir: RunDir, rejected, *, max_cands: int = 3,
     return text
 
 
+def _parent_map(run_dir: RunDir) -> dict[str, str]:
+    """Map each candidate id -> the parent id it was forked from, from ``step`` events.
+
+    Falls back to "seed" for any candidate whose parent is unknown. Best-effort: an
+    unreadable/absent events log yields an empty map."""
+    parent_of: dict[str, str] = {}
+    try:
+        if not run_dir.events_path.exists():
+            return {}
+        for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            rec = json.loads(line)
+            if rec.get("kind") == "step" and rec.get("candidate"):
+                parent_of[str(rec["candidate"])] = str(rec.get("parent") or "seed")
+    except Exception:  # noqa: BLE001
+        return parent_of
+    return parent_of
+
+
+def _per_task_rewards(run_dir: RunDir, tag: str, split: str = "val") -> dict[str, float]:
+    """Per-task mean reward for ``tag``, rebuilt from persisted rollouts.
+
+    Reuses the canonical ``split_result_from_rollouts`` so scores match the loop
+    exactly (the same read the dashboard's ``_per_task_from_rollouts`` uses).
+    Returns {} when no rollouts were persisted for this tag."""
+    try:
+        sr = split_result_from_rollouts(run_dir, tag, split)
+    except Exception:  # noqa: BLE001
+        return {}
+    return {pt["task_id"]: float(pt.get("reward", 0.0)) for pt in (sr.per_task or [])}
+
+
+def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
+                           parent_of: dict | None = None) -> dict | None:
+    """Per-task reward Δ of candidate ``cid`` vs its PARENT, from rollouts.
+
+    Returns ``{"broke": [...], "fixed": [...], "delta": float}`` where ``broke`` are
+    tasks that were PASSING (reward ≈ 1) under the parent and DROPPED under the
+    candidate, and ``fixed`` are tasks that were failing under the parent and now
+    PASS. ``delta`` is the mean per-task reward change over shared tasks. Returns
+    ``None`` when either side has no rollouts on disk (nothing to compare)."""
+    parent_of = parent_of if parent_of is not None else _parent_map(run_dir)
+    parent_id = parent_of.get(cid, "seed")
+    cand = _per_task_rewards(run_dir, cid, split)
+    par = _per_task_rewards(run_dir, parent_id, split)
+    if not cand or not par:
+        return None
+    shared = [t for t in cand if t in par]
+    if not shared:
+        return None
+    eps = 1e-9
+    broke = sorted(t for t in shared
+                   if par[t] >= 1.0 - eps and cand[t] < par[t] - eps)
+    fixed = sorted(t for t in shared
+                   if par[t] < 1.0 - eps and cand[t] >= 1.0 - eps)
+    delta = sum(cand[t] - par[t] for t in shared) / len(shared)
+    return {"broke": broke, "fixed": fixed, "delta": delta, "parent": parent_id}
+
+
+def _per_task_impact_block(run_dir: RunDir, rejected, history, *,
+                           max_cands: int = 5, max_chars: int = 4000,
+                           split: str = "val") -> str:
+    """Causal block: per prior candidate, the tasks it BROKE and FIXED vs its parent.
+
+    The optimizer otherwise sees only diffs + an aggregate Δ/SE, so it cannot learn
+    that a previous edit fixed a few tasks while breaking many passing ones — and
+    repeats the regression. This block lists, for the most informative recent
+    candidates (rejected + accepted), the concrete broken/fixed task ids so the
+    optimizer can avoid re-introducing a known regression. Caps to ``max_cands`` /
+    ``max_chars``. Returns "" when no candidate has comparable rollouts yet."""
+    parent_of = _parent_map(run_dir)
+    # Most-recent-first union of rejected + accepted candidate ids.
+    ids: list[tuple[str, str]] = []  # (cid, status)
+    try:
+        for e in reversed((rejected.entries() if rejected is not None else [])):
+            cid = str(e.get("candidate_id") or "")
+            if cid:
+                ids.append((cid, "rejected"))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        for e in reversed((history.entries() if history is not None else [])):
+            cid = str(e.get("candidate_id") or "")
+            if cid:
+                ids.append((cid, "accepted"))
+    except Exception:  # noqa: BLE001
+        pass
+
+    lines: list[str] = []
+    seen: set[str] = set()
+    for cid, status in ids:
+        if len(lines) >= max_cands:
+            break
+        if cid in seen:
+            continue
+        seen.add(cid)
+        impact = _candidate_task_impact(run_dir, cid, split, parent_of=parent_of)
+        if impact is None:
+            continue
+        broke, fixed = impact["broke"], impact["fixed"]
+        if not broke and not fixed:
+            continue  # no net per-task movement worth reporting
+        broke_s = "{" + ", ".join(broke[:20]) + "}" if broke else "{}"
+        fixed_s = "{" + ", ".join(fixed[:20]) + "}" if fixed else "{}"
+        lines.append(
+            f"- {cid} ({status}, Δ{impact['delta']:+.3f} vs {impact['parent']}): "
+            f"BROKE {broke_s} (were passing) | FIXED {fixed_s}"
+        )
+    if not lines:
+        return ""
+    header = (
+        "## Per-task impact of prior candidates (learn from this — do NOT repeat a "
+        "change that broke a task)\n"
+        "Each prior candidate's effect vs its parent, by task id. A task in BROKE was "
+        "passing before that candidate and dropped — never re-introduce the change that "
+        "broke it.\n"
+    )
+    text = header + "\n".join(lines) + "\n"
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip() + "\n... (truncated)\n"
+    return text
+
+
 def _extract_handover(state_path: Path, *, max_chars: int = 800) -> str | None:
     """Pull the text under ``## Handover for next iteration`` from a candidate STATE.md.
 
@@ -577,7 +701,8 @@ def _extract_handover(state_path: Path, *, max_chars: int = 800) -> str | None:
     seed_labels = ("approaches tried this iteration (1 concrete line each):",
                    "lessons learned (general):",
                    "recommendation / what to focus on next:",
-                   "what not to retry:")
+                   "approaches that regressed as implemented (a better-designed version may still "
+                   "work — don't permanently abandon a high-value cluster):")
     residual = section.lower()
     for lbl in seed_labels:
         residual = residual.replace(lbl, "")
@@ -623,13 +748,17 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
         f"proposing, so you build on what worked and never re-propose a rejected edit."
     )
 
+    impact = _per_task_impact_block(run_dir, rejected, history)
+    impact_block = ("\n\n" + impact) if impact else ""
+
     rej_diffs = _recent_rejected_diffs(run_dir, rejected)
     rej_block = ""
     if rej_diffs:
         rej_block = (
-            "\n\n## Recently rejected edits — do NOT re-propose these\n"
-            "These exact edits were already tried and rejected by the gate. Propose "
-            "something materially different.\n\n" + rej_diffs
+            "\n\n## Recently rejected edits — don't re-submit these verbatim\n"
+            "These exact diffs were already tried and rejected by the gate. Don't "
+            "re-submit them as-is; a better-designed version of the same idea may still "
+            "work, so redesign rather than abandon a high-value cluster.\n\n" + rej_diffs
         )
 
     return (
@@ -638,30 +767,62 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
         f"## Your scratchpad\nUpdate `STATE.md` in this dir with your diagnosis and plan; "
         f"it persists across accepted iterations. It MUST end with a "
         f"`## Handover for next iteration` section (the harness stores it in MEMORY).\n\n"
-        f"{layout}{rej_block}\n"
+        f"{layout}{impact_block}{rej_block}\n"
     )
 
 
-def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
-                              capabilities=None, optimizer_name: str | None = None) -> None:
-    """Give the optimizer everything it needs to read, inside its own working dir.
+def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
+    """Copy ONLY the current best/parent candidate's per-tag rollouts for ``split``
+    into ``workdir/trajectories/`` — the single step the optimizer builds on.
 
-    Copies, VERBATIM and without parsing:
-      - the runner's native trajectories for the most recent ``split`` eval into
-        ``workdir/trajectories/`` (path from ``adapter.trajectories(split)``; falls
-        back to cap-evolve's own per-rollout JSON under ``rollouts/<split>/`` — which
-        already embeds each rollout's full trace — so there is always something);
-      - the selected capability skill(s) into ``workdir/guidance/<cap>/`` so the
-        optimizer can read the full edit-space guidance + examples without leaving
-        its dir;
-      - the diagnose phase skill into ``workdir/guidance/diagnose/`` (the
-        failure-clustering method);
-      - the resolved optimizer's features reference into
-        ``workdir/guidance/optimizer/<optimizer_name>.md`` (parallel-subagent
-        capabilities etc.), when ``optimizer_name`` is known and the file exists.
-    No benchmark assumptions: the trajectory directory may be any structure / format.
+    The run dir's ``rollouts/<split>/`` mixes the seed plus every accepted AND
+    rejected candidate's trials, so copying it wholesale would make the optimizer
+    analyze stale, irrelevant trajectories. We scope to the BEST candidate's tag
+    (``rollouts/<split>/*__<best_id>__t*.json``) — the parent this iteration forks
+    from. Fallbacks preserve the existing "always something to read" guarantee:
+      1. per-tag rollout copy for the resolved best tag (preferred — scoped);
+      2. if no best tag has rollouts yet, the ``seed`` tag;
+      3. if neither exists on disk, the adapter's native trajectories dir (if any);
+      4. as a last resort, the whole ``rollouts/<split>/`` dir.
+    The per-tag copy is preferred even when the adapter returns a native dir, because
+    the native dir generally cannot be scoped to one candidate.
     """
-    # 1) trajectories (verbatim)
+    dst = workdir / "trajectories"
+
+    def _copy_tag(tag: str) -> bool:
+        vdir = run_dir.rollouts / split
+        if not vdir.is_dir():
+            return False
+        files = sorted(vdir.glob(f"*__{tag}__t*.json"))
+        if not files:
+            return False
+        try:
+            if dst.exists():
+                shutil.rmtree(dst)
+            dst.mkdir(parents=True, exist_ok=True)
+            for f in files:
+                shutil.copyfile(f, dst / f.name)
+            return True
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning",
+                              what=f"trajectories/{tag}", error=str(e)[:300])
+            return False
+
+    # Resolve the best/parent candidate id from run state (the parent this step forks
+    # from), falling back to the seed tag when no candidate has been accepted yet.
+    best_id = None
+    try:
+        best_id = run_dir.best_id
+    except Exception:  # noqa: BLE001
+        best_id = None
+
+    if best_id and _copy_tag(str(best_id)):
+        return
+    if _copy_tag("seed"):
+        return
+
+    # Fallbacks: adapter native dir, then the whole rollouts/<split>/ — so there is
+    # ALWAYS something for the optimizer to read.
     traj_src = None
     try:
         traj_src = adapter.trajectories(split)
@@ -672,12 +833,39 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     try:
         traj_src = Path(traj_src)
         if traj_src.is_dir() and any(traj_src.iterdir()):
-            dst = workdir / "trajectories"
             if dst.exists():
                 shutil.rmtree(dst)
             shutil.copytree(traj_src, dst)
     except Exception as e:  # noqa: BLE001
         run_dir.log_event("optimizer_context_warning", what="trajectories", error=str(e)[:300])
+
+
+def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
+                              capabilities=None, optimizer_name: str | None = None,
+                              capability_sources=None, project_dir: Path | None = None) -> None:
+    """Give the optimizer everything it needs to read, inside its own working dir.
+
+    Copies, VERBATIM and without parsing:
+      - the CURRENT BEST/PARENT candidate's per-tag trajectories for the most recent
+        ``split`` eval into ``workdir/trajectories/`` — ONLY the step the optimizer
+        builds on, not the seed + every rejected candidate (see ``_copy_step_trajectories``);
+      - the selected capability skill(s) into ``workdir/guidance/<cap>/`` so the
+        optimizer can read the full edit-space guidance + examples without leaving
+        its dir;
+      - any ``capability_sources`` files (data models / types the tools import) into
+        ``workdir/guidance/sources/<basename>`` so the optimizer can write correct code;
+      - the diagnose phase skill into ``workdir/guidance/diagnose/`` (the
+        failure-clustering method);
+      - the resolved optimizer's features reference into
+        ``workdir/guidance/optimizer/<optimizer_name>.md`` (parallel-subagent
+        capabilities etc.), when ``optimizer_name`` is known and the file exists.
+    No benchmark assumptions: the trajectory directory may be any structure / format.
+    """
+    # 1) trajectories (verbatim) — ONLY the current best/parent candidate's tag for
+    # this split, so the optimizer analyzes the step it builds on (not seed + every
+    # rejected candidate mixed together). Always preserves the "something to read"
+    # guarantee via per-tag fallback then the native dir.
+    _copy_step_trajectories(adapter, run_dir, workdir, split)
 
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
@@ -694,6 +882,26 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
                 )
             except Exception as e:  # noqa: BLE001
                 run_dir.log_event("optimizer_context_warning", what=f"guidance/{c}", error=str(e)[:300])
+
+    # 2b) capability_sources — supporting source files (data models / types the tools
+    # import) copied VERBATIM into ./guidance/sources/<basename> so the optimizer can
+    # write correct code against them. Paths resolve relative to the project dir;
+    # missing files are tolerated.
+    sources = [s for s in (capability_sources or []) if s]
+    if sources:
+        sdst = workdir / "guidance" / "sources"
+        for s in sources:
+            try:
+                sp = Path(s)
+                if not sp.is_absolute() and project_dir is not None:
+                    sp = Path(project_dir) / s
+                if not sp.is_file():
+                    continue
+                sdst.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(sp, sdst / sp.name)
+            except Exception as e:  # noqa: BLE001
+                run_dir.log_event("optimizer_context_warning",
+                                  what=f"guidance/sources/{s}", error=str(e)[:300])
 
     repo_root = Path(__file__).resolve().parents[2]
 
@@ -852,6 +1060,8 @@ def run_step(
     capabilities=None,
     eval_split: str = "val",
     optimizer_name: str | None = None,
+    capability_sources=None,
+    project_dir: Path | None = None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
 
@@ -875,7 +1085,8 @@ def run_step(
 
     # Give the optimizer the full trajectories + capability guidance, in its own dir.
     _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
-                              capabilities=capabilities, optimizer_name=optimizer_name)
+                              capabilities=capabilities, optimizer_name=optimizer_name,
+                              capability_sources=capability_sources, project_dir=project_dir)
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
@@ -951,12 +1162,18 @@ def run_step(
     # candidate's STATE.md so the NEXT iteration sees what was tried, not just Δ/SE.
     summary = f"candidate {cid} (val {cand_val.reward:.3f}, Δ {cand_val.reward - current_val.reward:+.3f})"
     note = _extract_handover(workdir / "STATE.md")
+    # Per-task broke/fixed lists vs the parent (from the rollouts just persisted), so
+    # MEMORY records the SPECIFIC tasks a candidate broke — not just a category — and
+    # the next iteration won't retry the regression. Best-effort; None when not
+    # comparable (e.g. parent rollouts absent).
+    impact = _candidate_task_impact(run_dir, cid, "val",
+                                    parent_of={cid: parent_id})
     if accepted:
         if history is not None:
-            history.add(cid, summary, cand_val.reward, note=note)
+            history.add(cid, summary, cand_val.reward, note=note, impact=impact)
     else:
         if rejected is not None:
-            rejected.add(cid, summary, decision.reason, cand_val.reward, note=note)
+            rejected.add(cid, summary, decision.reason, cand_val.reward, note=note, impact=impact)
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",
@@ -1000,15 +1217,48 @@ def _init_memory_store(run_dir: RunDir, store):
 # ---- shared hill-climb loop (parameterized by focus) ----------------------
 
 def _is_infra(pt) -> bool:
-    """Structured infra signal: did this task's rollout carry ``error``?
+    """Structured infra signal: did ANY of this task's trials carry ``error``?
 
     The harness records ``raw.errored = True`` when any trial's ``Rollout.error``
-    was set (a timeout, API/run error, omitted batch result). We classify
-    uncontrollable failures by that STRUCTURED field — not by substring-matching
-    feedback prose, which dropped real "error" bugs and misfired on capability
-    feedback that merely *mentions* an exception.
+    was set (a timeout, API/run error, omitted batch result). This is the raw
+    *signal* — true the moment a single trial errored. It does NOT by itself mean
+    the task is uncontrollable; ``_is_infra_ignore`` adds the majority-errored +
+    low-mean condition that justifies telling the optimizer to ignore the task.
+    We use the STRUCTURED field — not substring-matching feedback prose, which
+    dropped real "error" bugs and misfired on feedback that merely *mentions* an
+    exception.
     """
     return bool((pt.get("raw") or {}).get("errored"))
+
+
+def _is_infra_ignore(pt) -> bool:
+    """Is this task TRULY uncontrollable (safe to tell the optimizer to ignore)?
+
+    A task belongs in the ignore/infra bucket ONLY when MOST of its trials errored
+    AND its mean reward is ≈ 0 — i.e. the failure is dominated by infrastructure
+    noise, not by capability. A mostly-passing task that merely had ONE errored
+    trial is solid/flaky and must be PROTECTED, never called "noise / no edit can
+    fix it" — that misclassification is what let prior regressions hide.
+
+    Trial-level data: ``raw.errored_trials`` / ``raw.n_trials`` give the exact
+    counts when present. We fall back to the boolean ``raw.errored`` (any-trial
+    errored) combined with the aggregate reward when the per-trial counts are not
+    recorded (older rollouts), still requiring mean ≈ 0 so a passing task is never
+    bucketed as ignore.
+    """
+    raw = pt.get("raw") or {}
+    if not raw.get("errored"):
+        return False
+    eps = 1e-9
+    mean_reward = float(pt.get("reward", 0) or 0)
+    if mean_reward > eps:
+        return False  # it passes (at least partially) — controllable, protect it
+    errored_trials = raw.get("errored_trials")
+    n_trials = raw.get("n_trials") or pt.get("n")
+    if errored_trials is not None and n_trials:
+        return int(errored_trials) * 2 > int(n_trials)  # strict majority errored
+    # No per-trial counts: any-trial-errored + mean≈0 is the best we can do.
+    return True
 
 
 # Per-capability edit-space brief surfaced to the optimizer. Kept short and
@@ -1091,15 +1341,21 @@ def _algorithm_brief(current_val: SplitResult, algorithm: str) -> str:
 
 
 def _classify(per):
-    """Split focus tasks into infra-errored / always-failing / flaky / solid.
+    """Split focus tasks into infra-ignore / always-failing / flaky / solid.
 
     Uses the AGGREGATE reward (mean over trials), so a task that passes only some
     of the time is 'flaky' (0 < reward < 1) — a sometimes-good behavior to make
     CONSISTENT — distinct from an always-failing task (reward ~ 0) whose root cause
     must be fixed. (Per-task feedback is from the last trial and can disagree with a
-    graded mean; the reward is the honest signal, so we classify by it.)"""
-    errored = [pt for pt in per if _is_infra(pt)]
-    rest = [pt for pt in per if not _is_infra(pt)]
+    graded mean; the reward is the honest signal, so we classify by it.)
+
+    The infra-IGNORE bucket is reserved for TRULY uncontrollable tasks
+    (``_is_infra_ignore``: most trials errored AND mean ≈ 0). A task that merely had
+    an errored trial but still mostly passes is NOT ignored — it falls through to
+    solid/flaky and is therefore PROTECTED. Returns the four buckets; ``solid`` is
+    the protected set callers must not regress."""
+    errored = [pt for pt in per if _is_infra_ignore(pt)]
+    rest = [pt for pt in per if not _is_infra_ignore(pt)]
     eps = 1e-9
     always_fail = [pt for pt in rest if (pt.get("reward", 0) or 0) <= eps]
     flaky = [pt for pt in rest if eps < (pt.get("reward", 0) or 0) < 1.0 - eps]
@@ -1112,10 +1368,29 @@ def _fmt(pt) -> str:
            f"{str(pt.get('feedback', '')).strip()[:400]}"
 
 
+def _passing_block(solid, *, max_ids: int = 60) -> str:
+    """A block listing currently-PASSING (solid, reward≈1) task ids to PROTECT.
+
+    The optimizer is only ever shown failures; without the wins it cannot tell
+    which behaviors its edit must preserve, and prior candidates fixed a few tasks
+    while silently breaking many passing ones (net ≈ 0). Surfacing the passing ids
+    makes non-regression a checkable, explicit constraint."""
+    if not solid:
+        return ""
+    ids = [str(pt.get("task_id")) for pt in solid]
+    shown = ", ".join(ids[:max_ids])
+    more = f" … (+{len(ids) - max_ids} more)" if len(ids) > max_ids else ""
+    return (
+        f"## Currently PASSING ({len(solid)} task(s)) — your edit MUST NOT regress these\n"
+        f"These tasks already score ~1.0. Preserve their behavior: any edit that changes "
+        f"their trajectory is a regression and will be rejected. Protect: {shown}{more}\n"
+    )
+
+
 # The optimizer-instructions template ships in the repo as a project default and is
 # what the intake phase copies + customizes per benchmark. The harness renders it by
 # substituting the per-iteration dynamic blocks below; nothing benchmark-specific lives
-# here. ``{{...}}`` placeholders: FOCUS_SUMMARY, FAILURES, CAP_BRIEF, ALGO_BRIEF, BENCH_REPO.
+# here. ``{{...}}`` placeholders: FOCUS_SUMMARY, FAILURES, PASSING, CAP_BRIEF, ALGO_BRIEF, BENCH_REPO.
 _DEFAULT_INSTRUCTIONS_TEMPLATE = (
     Path(__file__).resolve().parents[2] / "templates" / "project" / "optimizer" / "INSTRUCTIONS.md"
 )
@@ -1155,9 +1430,13 @@ def _failures_block(always_fail, flaky, errored) -> str:
     if errored:
         ids = ", ".join(str(pt.get("task_id")) for pt in errored[:25])
         lines += [
-            f"## Ignore — {len(errored)} task(s) failed with run/infrastructure errors",
-            "Environment noise (a flaky/aborted run), NOT a capability problem; no edit can "
-            "fix them, so do not change anything on their account: " + ids,
+            f"## Ignore — {len(errored)} task(s) are uncontrollable infrastructure errors",
+            "These tasks had MOST of their trials abort with a run/infrastructure error "
+            "AND a mean reward of ~0 — truly environment noise (timeouts/aborted runs), NOT "
+            "a capability problem; no edit can fix them, so do not change anything on their "
+            "account: " + ids,
+            "(A task that merely had one errored trial but still mostly PASSES is NOT listed "
+            "here — it is solid/flaky and must be protected, not ignored.)",
             "",
         ]
     return "\n".join(lines)
@@ -1187,6 +1466,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
     )
     failures = _failures_block(always_fail, flaky, errored)
+    passing = _passing_block(solid)
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
     bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "
@@ -1196,6 +1476,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     repl = {
         "{{FOCUS_SUMMARY}}": focus_summary,
         "{{FAILURES}}": failures,
+        "{{PASSING}}": passing,
         "{{CAP_BRIEF}}": cap,
         "{{ALGO_BRIEF}}": algo,
         "{{BENCH_REPO}}": bench,
@@ -1216,13 +1497,16 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     # Fallback (template unreadable): assemble a minimal but complete prompt so a run
     # never breaks just because the template file is missing.
     parts = [
-        "# Optimize the capability — analyze the full trajectories in ./trajectories/, "
-        "then make ONE targeted, generalizing edit and STOP.",
+        "# Optimize the capability — analyze this step's trajectories in ./trajectories/, "
+        "then make ONE bold, multi-part, generalizing edit and STOP.",
         focus_summary, "",
-        "Read ./trajectories/ (full traces), ./guidance/<cap>/SKILL.md, ./STATE.md, "
-        "./MEMORY.md. Prefer deterministic code-bearing tools over prompt text.",
-        bench, "", failures, cap, "", algo, "",
-        "Be economical: one good edit, minimal narration, then finish.",
+        "Read ./trajectories/ (full traces), ./guidance/<cap>/SKILL.md (what you can "
+        "change), ./guidance/sources/ (data models/types — read before writing tool "
+        "code), ./STATE.md, ./MEMORY.md. The prompt and the tools are equally fair game; "
+        "ground every change in the trajectories; enforcing a deterministic rule in tool "
+        "code is stronger than prose — do both where useful.",
+        bench, "", failures, passing, cap, "", algo, "",
+        "Be economical: one strong multi-part edit, minimal narration, then finish.",
     ]
     return "\n".join(p for p in parts if p is not None)
 
@@ -1244,6 +1528,8 @@ def hill_climb_loop(
     instructions_file=None,
     bench_repo: str | None = None,
     optimizer_name: str | None = None,
+    capability_sources=None,
+    project_dir: Path | None = None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1287,7 +1573,8 @@ def hill_climb_loop(
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
             rejected=rejected, history=history, store=store, capabilities=capabilities,
-            optimizer_name=optimizer_name,
+            optimizer_name=optimizer_name, capability_sources=capability_sources,
+            project_dir=project_dir,
         )
         steps.append(step)
         if step["accepted"]:

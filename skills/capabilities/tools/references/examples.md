@@ -170,6 +170,36 @@ Why it works: the model now knows the units (cents), the precondition (method on
 file), and exactly what to do on each failure — instead of retrying the same bad
 call.
 
+## 3f. Shape the result — high-signal fields, readable ids, actionable errors
+
+Trace symptom: a tool returns the raw row (uuids, mime, audit columns); the model
+hallucinates ids and the response floods context. And when a call is invalid, the
+handler raises an opaque traceback the model can't recover from.
+
+```json
+{ "tool": "get_order", "kind": "code",
+  "value": "def get_order(order_id):\n    row = db.orders.find(order_id)\n    if row is None:\n        return {'error': f\"no order {order_id!r}; search with search_orders(query=...) to find the id\"}\n    return {\n        'order_id': row['public_ref'],   # stable, human-readable, not the uuid\n        'status': row['status'],\n        'items': [{'sku': i['sku'], 'qty': i['qty']} for i in row['items']],\n        'total_cents': row['total_cents'],\n    }" }
+```
+
+Why it works: the projection drops noise, returns a readable `order_id`, and the
+not-found path is an **actionable** message that names the recovery tool — the
+model self-corrects instead of retrying the same bad call. Add a
+`verbosity`/`response_format` param when callers sometimes need the full row.
+
+## 3g. A comprehensively documented tool (the doc contract)
+
+Every tool — primitive or wrapper — should carry: a crisp what/when/when-not, an
+"important points" note, a Raises/errors section, per-parameter docs with
+units/format/default, and one generic example.
+
+```json
+{ "tool": "charge_payment", "kind": "description",
+  "value": "Charge `amount` to a payment method on the user's profile and return the receipt.\nUse after the user confirms the total; do NOT use to quote a price (use get_quote).\nImportant: amounts are in WHOLE US CENTS (1299 = $12.99); the method must already be on file.\nRaises: 'method not on file' — pick another id from get_user_details; 'gift-card balance below amount' — split across methods or choose a card.\nExample: charge_payment(payment_id='card_1', amount=1299)" }
+```
+
+Pair it with a schema whose `amount` param description says "Whole US cents
+(integer), e.g. 1299 for $12.99" and a `payment_id` with an `input_examples` entry.
+
 ## 4. Shrink an overlapping toolset — remove + consolidate
 
 Trace symptom: `create_pr`, `review_pr`, `merge_pr` all present; agent keeps
