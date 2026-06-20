@@ -36,19 +36,32 @@ the same candidate. (1-line generic examples; worked bodies in
 [`references/concepts.md`](references/concepts.md).)
 
 **Comprehensive multi-fix pass.** Diagnose ALL clusters, map each to its edit
-class, and apply them together. Optimizers that ship one wrapper and stop leave
-most of the gain on the table — a strong iteration touches several tools' code +
-docs + returns AND the prompt at once.
+class, and apply them together. The DEFAULT edit is **editing the BODIES of
+EXISTING tools** — most violated rules govern a tool that already exists, and the
+fix is an in-body guard there, so expect to touch SEVERAL existing tool bodies per
+iteration (one per violated rule). Adding a brand-new tool is the exception, not
+the reflex — reach for it only when no existing tool owns the rule. Optimizers that
+ship one wrapper and stop, or that reflexively add one new tool and reword
+docstrings while leaving the rules as prose, leave most of the gain on the table —
+a strong iteration converts MANY violated textual rules into in-body checks across
+existing tools, plus docs + returns AND the prompt at once.
 
-1. **Add a new tool** — give the agent a capability it lacks, built as a thoughtful
-   workflow tool, not a thin wrapper around one endpoint. *Ex:* add `search_logs`
-   that returns only the relevant lines instead of a raw dump.
-2. **Replace / wrap a tool** — superset an existing tool and route the old behavior
+1. **Edit the CODE of EXISTING tools to enforce rules deterministically (the most
+   common high-leverage edit)** — most violated textual rules govern a tool that
+   ALREADY exists, and the fix is an in-body guard *there*, not a new tool. Bake the
+   precondition / normalization / actionable refusal into the body so correctness
+   doesn't depend on the LLM. *Ex:* add `if not rec["cancellable"]: raise
+   ValueError("not cancellable; reason=...; do X instead")` to the existing
+   `cancel_record` body. Expect to touch the BODIES of SEVERAL existing tools per
+   iteration — one per violated rule.
+2. **Add a new tool** — give the agent a capability it genuinely LACKS (no existing
+   tool covers it), built as a thoughtful workflow tool, not a thin wrapper around
+   one endpoint. *Ex:* add `search_logs` that returns only the relevant lines
+   instead of a raw dump. (Reach for this only after asking "does an existing tool's
+   body already own this rule?" — usually yes, and item 1 is the fix.)
+3. **Replace / wrap a tool** — superset an existing tool and route the old behavior
    through it. *Ex:* wrap `find_record`+`charge_payment` behind one
    `charge_record(record_id)` that resolves then charges.
-3. **Edit a tool's code / logic** — bake validation/enforcement into the body so
-   correctness doesn't depend on the LLM. *Ex:* reject a past date inside the tool
-   rather than hoping the prompt prevents it.
 4. **Improve a tool's documentation** — sharpen description / important-notes /
    `Raises:` / per-param docs / examples; rename for least surprise. *Ex:*
    `lookup(record)` → `get_record(record_id: str)` with "returns an error object if
@@ -67,6 +80,39 @@ docs + returns AND the prompt at once.
    replacement preserving its capability exists. *Ex:* drop `query` once
    `get_record` + `search_records` cover it.
 
+**Before/after — convert a violated prose rule into an in-body guard (the default
+edit).** The rule "a record can only be cancelled when it is cancellable" lives as
+prose in the prompt and the agent keeps breaking it. Don't add a tool — edit the
+EXISTING `cancel_record` body:
+
+```diff
+  def cancel_record(record_id):
++     rec = get_record(record_id)
++     if not rec["cancellable"]:
++         raise ValueError(
++             "not cancellable; reason=" + rec.get("status", "unknown")
++             + "; do X instead (e.g. offer a change_record)")
+      return _backend.cancel(record_id)
+```
+
+And the rule "amounts are in whole cents and the method must be on file" — edit the
+EXISTING `book` (or `charge`) body to normalize the field then raise an actionable
+error:
+
+```diff
+  def book(record_id, amount, payment_id):
++     amount = int(round(amount))            # normalize: callers pass dollars
++     methods = {m["id"] for m in get_record(record_id)["payment_methods"]}
++     if payment_id not in methods:
++         raise ValueError(
++             f"payment method {payment_id!r} not on file; "
++             f"available={sorted(methods)} — pass one of these")
+      return _backend.book(record_id, amount, payment_id)
+```
+
+Both fixes touch a tool that ALREADY exists; no new tool is needed. A docstring-only
+or new-tool-only iteration that leaves these rules as prose is under-used.
+
 **Guardrails (depth below):** encode deterministic logic in code, not prose (a
 tool body the model cannot skip beats a sentence it can forget); keep the toolset
 small and namespaced (aim **< ~20** active tools); ship correct, bug-free code
@@ -74,17 +120,28 @@ small and namespaced (aim **< ~20** active tools); ship correct, bug-free code
 without a capability-preserving replacement** (add → verify → swap, see the SAFE
 TOOL-REPLACEMENT PROTOCOL).
 
-## The highest-leverage edit: write a NEW code-bearing tool
+## The highest-leverage edit: deterministic CODE (usually in an EXISTING tool body)
 
-**Start here. A deterministic tool beats a sentence in the prompt.** A docstring
-or system-prompt rule only makes the model *more likely* to comply — it can be
-forgotten, mis-read, or out-reasoned on the next task. A tool whose body is
-**real code** (loops, validation, calls to existing tools) makes the right
-behavior *the only thing that can happen* — it cannot be "forgotten." When the
-traces show a rule the agent keeps breaking, a multi-step action it keeps
-fumbling, or — most importantly — an action it *stalls on and never executes*,
-**do not just reword a description — write a tool with a real body.** This is the
-first edit to reach for, not the last.
+**Start here. A deterministic guard in code beats a sentence in the prompt.** A
+docstring or system-prompt rule only makes the model *more likely* to comply — it
+can be forgotten, mis-read, or out-reasoned on the next task. Code (a precondition
+check, a normalization, a loop) makes the right behavior *the only thing that can
+happen* — it cannot be "forgotten." When the traces show a rule the agent keeps
+breaking, a multi-step action it keeps fumbling, or — most importantly — an action
+it *stalls on and never executes*, **do not just reword a description — put the
+behavior in code.**
+
+**The most common high-leverage edit: enforce the rule in the body of an EXISTING
+tool.** Most violated textual rules govern a tool that already exists — e.g. "only
+cancel a cancellable record" governs the existing `cancel_record`, "amounts in
+whole cents" governs the existing `book`/`charge`. The fix is an in-body guard in
+that tool, and you usually do **NOT** need a new tool. Expect to touch the BODIES
+of SEVERAL existing tools per iteration — one per violated rule. (See the
+before/after diffs above and the "Turning N prose rules into N in-body checks"
+section in [`references/examples.md`](references/examples.md).) Write a NEW
+code-bearing tool only when no existing tool owns the rule, or when you need to
+collapse a multi-call chain / encapsulate a stalled multi-step WRITE (the three
+patterns below). Either way, this is the first edit to reach for, not the last.
 
 **Prose cannot fix a BEHAVIORAL failure.** There is a sharp distinction the
 optimizer must make. If the agent *does not know* something (a format, a rule, a
@@ -238,16 +295,20 @@ optimize the [`system-prompt`](../system-prompt/SKILL.md) instead.
 | `params` | per-parameter descriptions / defaults | drives correct *argument-filling* |
 | `examples` | example call strings | shows concrete well-formed calls |
 | `schema` | the full JSON Schema (types, `required`, `enum`) | constrains/guides the model's output |
-| `code` | the handler implementation | fix behavior, bugs, or return shape |
-| `compose` | **add a code-bearing tool that calls existing tools** | **highest leverage** — enforce a rule, collapse a multi-call chain, or perform a whole stalled WRITE action in code |
+| `code` | **the handler body of an EXISTING tool** | **the default high-leverage edit** — convert a violated prose rule into an in-body guard (precondition, normalization, actionable refusal); expect to edit SEVERAL existing bodies per iteration |
+| `compose` | add a code-bearing tool that calls existing tools | enforce a rule, collapse a multi-call chain, or perform a whole stalled WRITE action in code — use when no existing tool owns the rule |
 | `add` / `remove` | introduce / delete a tool | shape and shrink the toolset (replace primitives; keep it lean) |
 
-The `compose`/`code`/`add` rows are the **first edits to reach for** — a
-deterministic tool beats a sentence in a prompt (see below). Reword descriptions
-*after* you've asked "can this rule or recurring workflow be code instead?" In ONE
-pass, apply EVERY edit class the traces call for — a validation wrapper AND a loop
-tool AND enriched returns/errors AND doc fixes across all implicated tools can and
-should all ship in the same candidate; do not stop after a single edit.
+The `code` row (editing an EXISTING tool's body) is the **first edit to reach
+for**, with `compose`/`add` close behind — a deterministic guard beats a sentence
+in a prompt (see below). For each violated rule, first ask "which EXISTING tool
+governs this, and what in-body check enforces it?" — usually the answer is editing
+that tool's body, not adding a new one. Reword descriptions *after* you've asked
+"can this rule be code in the existing body instead?" In ONE pass, apply EVERY edit
+class the traces call for — in-body guards across SEVERAL existing tools AND a loop
+tool where needed AND enriched returns/errors AND doc fixes across all implicated
+tools can and should all ship in the same candidate; do not stop after a single
+edit.
 
 Lock any of these off via `inputs/policy.json`. For example, in a frozen-API
 deployment you might allow only `["description", "params", "examples"]` so an

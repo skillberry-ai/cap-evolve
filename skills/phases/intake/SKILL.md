@@ -62,6 +62,24 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
      > trade breadth for caution. A single small edit is an under-used iteration."
    - **State the GOAL up front:** maximize the eval score — make the largest
      improvement you can this iteration, grounded in the trajectories.
+   - **The authored INSTRUCTIONS MUST encode all three of these (generic, capability-scoped):**
+     1. **STEP-0 reading mandate.** Before diagnosing, the optimizer must READ
+        `./guidance/<cap>/SKILL.md` (for EACH selected capability) and the optimizer
+        features reference under `./guidance/optimizer/`. State this as an explicit
+        first step.
+     2. **The EXISTING-tool-code mandate** (when `tools` is selected). Demand: convert
+        violated textual rules into in-code checks across MANY EXISTING tool bodies —
+        most violated rules govern a tool that already exists, so the fix is an in-body
+        guard there, not a new tool. State plainly: *a docstring-only iteration (or one
+        that only adds a single new tool + rewords docstrings, leaving rules as prose)
+        is under-used.*
+     3. **The explicit TWO-PHASE subagent pattern.** Require: Phase 1 — diagnose
+        fan-out (one read-only subagent per trajectory-group → tight issue list; main
+        dedups into clusters); Phase 2 — implement fan-out (one edit-subagent per
+        ISSUE, each in its own worktree, each PREFERRING to edit the EXISTING tool's
+        code body to enforce its rule); then the main agent MERGES all edits into ONE
+        candidate. Point at `./guidance/optimizer/<name>.md` for the agent's concrete
+        trigger phrasing.
    - **Capability-scoping (the key rule):** reference `./guidance/<cap>/SKILL.md`
      and present the editable artifacts **for the selected caps only**. If only
      `tools` is selected, do NOT include any prompt-editing guidance, do NOT
@@ -165,6 +183,10 @@ this whole integration autonomously.
   the gold answer into feedback; test == train with no note; budget left at a
   default that cannot possibly find a gain; the run proceeded past a missing
   NEEDED input "to keep moving".
+- **Bad:** authored INSTRUCTIONS that let an iteration pass by adding one tool +
+  rewording docstrings (leaving violated rules as prose) — or that omit the STEP-0
+  reading mandate, the existing-tool-code mandate, or the explicit two-phase
+  (diagnose fan-out → implement fan-out → merge) subagent pattern.
 
 ## References
 - `references/concepts.md` — the inputs contract, NEEDED vs RECOMMENDED

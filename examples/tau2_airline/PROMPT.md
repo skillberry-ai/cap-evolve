@@ -88,8 +88,17 @@ exists). Here is everything intake needs:
                 many tool docs, AND fix the prompt, together in ONE candidate, with each fix scoped to
                 protect passing tasks (non-regression). "Freedom" does NOT mean do little — a single
                 small edit is an under-used iteration; diagnose ALL clusters and fix as many as
-                possible, fanning out one subagent per failure cluster, each in its own worktree, then
-                merging all edits into ONE candidate. Tailor only the "READ THESE" pointers
+                possible. The authored INSTRUCTIONS MUST encode all three: (i) a STEP-0 reading
+                mandate — "read ./guidance/<cap>/SKILL.md (for EACH selected cap) + ./guidance/optimizer/
+                before diagnosing"; (ii) the EXISTING-tool-code mandate — "convert violated rules into
+                in-code checks across MANY EXISTING tool bodies; most violated rules govern a tool that
+                already exists, so the fix is an in-body guard there, not a new tool — a docstring-only
+                iteration (or one that only adds a single new tool + rewords docstrings, leaving rules as
+                prose) is under-used"; (iii) the explicit TWO-PHASE subagent pattern — Phase 1 diagnose
+                fan-out (one read-only subagent per trajectory-group → tight issue list; main dedups into
+                clusters), Phase 2 implement fan-out (one edit-subagent per ISSUE, each in its own
+                worktree, each PREFERRING to edit the EXISTING tool's code body to enforce its rule), then
+                merge all edits into ONE candidate. Tailor only the "READ THESE" pointers
                 (./trajectories/, ./guidance/<cap>/SKILL.md for EACH selected capability,
                 ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md, ./guidance/sources/
                 [the data model], ./STATE.md, ./MEMORY.md, ../tau2-bench).

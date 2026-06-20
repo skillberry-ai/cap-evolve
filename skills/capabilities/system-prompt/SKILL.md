@@ -111,6 +111,20 @@ and declined; that class of failure belongs in the agent's tools/code (see the
 skipped). Diagnose every cluster as KNOWLEDGE (fix here) vs BEHAVIORAL (fix in
 code) before reaching for a prompt edit.
 
+**If a rule is a VIOLATION the agent commits despite knowing it (not a knowledge
+gap), do NOT add prose — flag it for an in-code check in the tool body** (the
+[`tools`](../tools/SKILL.md) capability: convert the violated rule into an in-body
+guard on the EXISTING tool that owns it). Adding another sentence to a rule the
+agent already read and broke just grows the prompt without changing behavior.
+
+**Each prompt iteration should also CONSOLIDATE.** When a rule now lives in tool
+code (an in-body guard enforces it deterministically), REMOVE its now-redundant
+prose so the prompt stays sharp — the deterministic check is authoritative and the
+duplicate sentence only dilutes attention. This prevents prose pile-up: as
+behavioral rules migrate into code, the prompt should get shorter, not longer.
+(This is consolidation under the never-drop rule — the constraint still lives,
+now in code, so removing its prose drops no rule.)
+
 ## How agents use it
 The prompt is prepended to context every turn. Agents read it literally and are
 sensitive to ordering, contradictions, and verbosity. Long preambles dilute

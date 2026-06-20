@@ -451,14 +451,16 @@ _STATE_SEED = (
     "partial-credit failures, AND communication/omission failures — each named, with "
     "its task ids and shared root cause. Biggest first.)\n\n"
     "## Edits made this iteration (one row per cluster fixed)\n"
-    "| cluster | edit class (tool-code / validation / enriched-return / new-tool / "
-    "docs / prompt) | tool or prompt touched | why it generalizes | how it protects "
-    "passing tasks |\n"
-    "| --- | --- | --- | --- | --- |\n\n"
+    "**Rule-violations found: N. Converted to in-code checks: M.** (M should ≈ N; list "
+    "any left as prose and why.)\n"
+    "| cluster | rule-violation? (Y/N) | edit class | EXISTING tool body edited (name) "
+    "| new tool added (name) | prompt edited? | why it generalizes | protects passing |\n"
+    "| --- | --- | --- | --- | --- | --- | --- | --- |\n\n"
     "## Handover for next iteration\n"
     "- Approaches tried this iteration (1 concrete line each):\n"
     "- Lessons learned (general):\n"
     "- Recommendation / what to focus on next:\n"
+    "- Rules still living as prose that SHOULD become in-code checks next iteration:\n"
     "- Approaches that regressed AS IMPLEMENTED (a better-designed version may still "
     "work — don't permanently abandon a high-value cluster):\n"
 )
@@ -703,6 +705,7 @@ def _extract_handover(state_path: Path, *, max_chars: int = 800) -> str | None:
     seed_labels = ("approaches tried this iteration (1 concrete line each):",
                    "lessons learned (general):",
                    "recommendation / what to focus on next:",
+                   "rules still living as prose that should become in-code checks next iteration:",
                    "approaches that regressed as implemented (a better-designed version may still "
                    "work — don't permanently abandon a high-value cluster):")
     residual = section.lower()
@@ -1502,22 +1505,28 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "# Optimize the capability — analyze this step's trajectories in ./trajectories/, "
         "then fix MANY root causes in this ONE candidate and STOP.",
         focus_summary, "",
-        "Read ./trajectories/ (full traces), ./guidance/<cap>/SKILL.md (what you can "
-        "change), ./guidance/sources/ (data models/types — read before writing tool "
-        "code), ./STATE.md, ./MEMORY.md. The prompt and the tools are equally fair game; "
-        "ground every change in the trajectories; enforcing a deterministic rule in tool "
-        "code is stronger than prose — do both where useful.",
+        "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
+        "./guidance/optimizer/<name>.md (your subagent/parallelism features) IN FULL "
+        "before diagnosing. Then read ./trajectories/ (full traces), ./guidance/sources/ "
+        "(data models/types — read before writing tool code), ./STATE.md, ./MEMORY.md. "
+        "The prompt and the tools are equally fair game.",
         bench, "", failures, passing, cap, "", algo, "",
-        "Address EVERY failure cluster you found, not just the biggest. A strong "
-        "iteration ships, together: tool CODE (corrected/added handlers), "
-        "validation/workflow/composite tools for behavioral clusters, enriched tool "
-        "returns + actionable error messages so the agent can recover, new tools, "
-        "sharpened docs across EVERY implicated tool, and prompt rules for genuine "
-        "knowledge gaps. Non-regression is a design constraint on each INDIVIDUAL fix "
-        "(scope each edit so it doesn't alter a passing task's code path), NOT a reason "
-        "to make fewer fixes. A single small prose patch under-uses the iteration; the "
-        "measure is how MANY real issues you fix, not how much you spend — be "
-        "cost-efficient AND thorough.",
+        "Address EVERY failure cluster you found, not just the biggest. The DEFAULT fix "
+        "for a violated rule/precondition/formula is to move it INTO THE CODE BODY of the "
+        "EXISTING tool it governs — an in-body validation/normalization that raises an "
+        "ACTIONABLE error — NOT a docstring or prompt restatement. Editing the CODE of "
+        "MANY existing tools is the expected shape of a strong iteration; adding one new "
+        "tool while leaving rules as prose is the failure mode to avoid. Prose/docstring "
+        "edits are reserved for genuine KNOWLEDGE gaps (a format/criterion the agent "
+        "cannot derive); rule VIOLATIONS go in code. A strong iteration also ships, where "
+        "useful: validation/workflow/composite tools for behavioral clusters, enriched "
+        "tool returns + actionable error messages, corrected handlers, and new tools. "
+        "Non-regression is a design constraint on each INDIVIDUAL fix (scope each guard "
+        "so it doesn't alter a passing task's code path), NOT a reason to make fewer "
+        "fixes. If you edited the BODY of fewer than ~3 EXISTING tools or converted fewer "
+        "than half the rule-violations you found into in-code checks, you under-used the "
+        "iteration — new tools and docstring edits do NOT count toward that bar. The "
+        "measure is how MANY real clusters you fix in-code, not how much you spend.",
     ]
     return "\n".join(p for p in parts if p is not None)
 

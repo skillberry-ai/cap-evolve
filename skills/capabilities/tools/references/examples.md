@@ -4,11 +4,63 @@ Each example is an edit you would emit to `apply()`. Edit shape:
 `{"tool": <name>, "kind": <action>, "value": <...>}`. For `add`/`compose` the
 value is a full tool def; for `remove` the value is ignored.
 
-**Ordered by leverage.** The PRIMARY edits are the code-bearing tools in §3b
-(workflow/loop) and §3c (validation/rule-enforcement) — a deterministic body beats
-a prompt sentence. Reach for the description/schema edits (§1, §2) *after* asking
-"can this rule or recurring workflow be code instead?" A passthrough / reasoning-only
-tool (§7) is the SECONDARY, last-resort form — prose in a tool's costume.
+**Ordered by leverage.** The DEFAULT, most common edit is §0 — editing the BODY of
+an EXISTING tool to convert a violated prose rule into an in-body check. The other
+PRIMARY edits are the code-bearing tools in §3b (workflow/loop) and §3c
+(validation/rule-enforcement) — a deterministic body beats a prompt sentence. Reach
+for the description/schema edits (§1, §2) *after* asking "can this rule be code in
+the existing body instead?" A passthrough / reasoning-only tool (§7) is the
+SECONDARY, last-resort form — prose in a tool's costume.
+
+## 0. Turning N prose rules into N in-body checks (the DEFAULT edit)
+
+The most common high-leverage edit is NOT adding a tool — it is editing the BODIES
+of EXISTING tools so a rule the agent keeps violating becomes code it cannot skip.
+Most violated textual rules govern a tool that already exists, so expect to emit
+SEVERAL `code` edits per iteration, one per violated rule. Each example below
+edits an existing handler in place (no new tool, no `remove`).
+
+**0a. Precondition guard — refuse when the rule is not met.** Prose rule: "only
+cancel a record that is still cancellable." Edit the existing `cancel_record` body
+to enforce it:
+
+```json
+{ "tool": "cancel_record", "kind": "code",
+  "value": "def cancel_record(record_id):\n    rec = get_record(record_id)\n    if not rec.get('cancellable'):\n        raise ValueError(\"not cancellable; reason=\" + rec.get('status','unknown') + \"; offer a change_record instead\")\n    return _backend.cancel(record_id)" }
+```
+
+**0b. Unit / format normalization — coerce the field, then validate.** Prose rule:
+"amounts are in whole US cents." Edit the existing `charge` body to normalize the
+field so a dollars-vs-cents mistake can't corrupt the write:
+
+```json
+{ "tool": "charge", "kind": "code",
+  "value": "def charge(record_id, amount):\n    amount = int(round(amount))\n    if amount <= 0:\n        raise ValueError(f\"amount must be a positive integer in whole US cents, got {amount!r}\")\n    return _backend.charge(record_id, amount)" }
+```
+
+**0c. Actionable error — name the valid options on refusal.** Prose rule: "the
+payment method must already be on the record." Edit the existing `book` body to
+check it and raise an error the model can recover from on the next turn:
+
+```json
+{ "tool": "book", "kind": "code",
+  "value": "def book(record_id, payment_id):\n    methods = {m['id'] for m in get_record(record_id)['payment_methods']}\n    if payment_id not in methods:\n        raise ValueError(f\"payment method {payment_id!r} not on file; available={sorted(methods)} — pass one of these\")\n    return _backend.book(record_id, payment_id)" }
+```
+
+**0d. Required-order guard — enforce read-before-write in the body.** Prose rule:
+"never update a record you have not fetched this turn." Edit the existing
+`update_record` body so the read is part of the write and the staleness check is
+guaranteed:
+
+```json
+{ "tool": "update_record", "kind": "code",
+  "value": "def update_record(record_id, field, value):\n    rec = get_record(record_id)\n    if rec.get('locked'):\n        raise ValueError(f\"record {record_id} is locked (status={rec.get('status')}); unlock or escalate before updating\")\n    return _backend.update(record_id, field, value)" }
+```
+
+These four counterbalance the new-tool-heavy examples below: each takes ONE prose
+rule and lands it as an in-body check on the tool that already owns it. A
+docstring-only or new-tool-only iteration that leaves these rules as prose is
+under-used.
 
 ## 1. Selection fix — sharpen a vague description
 

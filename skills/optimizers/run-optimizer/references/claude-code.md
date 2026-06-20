@@ -48,29 +48,40 @@ window** with its own tool set and returns only a summary to the main agent —
 so verbose trajectory text and dead-end exploration never bloat the main
 context. The optimizer can be told (in its INSTRUCTIONS prompt) to:
 
-- **Fan out exploration of trajectories + capability.** Spawn several read-only
-  **Explore** subagents in parallel — e.g. one per failure-cluster or per
-  capability file — to find recurring problems faster than one serial pass.
-  Explore is the built-in read-only agent (Write/Edit denied) and runs on a fast
-  model, so this is cheap. Phrase it as: *"Research the failures in clusters A,
-  B, and C in parallel using separate subagents, then synthesize the root
-  causes."*
-- **One subagent per FAILURE CLUSTER → propose → merge into ONE candidate (the
-  primary parallel pattern).** This is the strong default for an iteration that
-  must address ALL recurring clusters at once. Spawn **one subagent per failure
-  cluster** (from diagnose), each working concurrently in its **own context
-  window** — and, when competing edits touch the same files, each in its **own
-  git worktree** (`isolation: "worktree"`, below) so their changes don't collide
-  while drafting. Each subagent analyzes its cluster and proposes a **general,
-  non-overfitting** edit for that cluster — for the `tools` capability, prefer a
-  code-bearing tool (a validation/wrapper tool that enforces a rule then delegates
-  and removes the raw primitive, a loop tool that collapses N calls into one, or a
-  composite WRITE tool that performs a stalled action in code — each with a real
-  body), never a one-task patch. The **main agent then MERGES all of the
-  per-cluster edits into ONE coherent candidate**, resolving any overlap so the
-  combined diff applies cleanly with **no conflicts**, and writes that single
-  merged candidate. One iteration thus fixes every cluster, not just the biggest —
-  while each edit stays general because it was reasoned about in isolation.
+Run the iteration as **TWO explicit fan-out phases** — diagnose in parallel, then
+implement in parallel — with a dedup/merge step on the main agent between and after.
+This is the primary parallel pattern and the strong default for an iteration that
+must address ALL recurring clusters at once.
+
+**Phase 1 — DIAGNOSE in parallel (read-only).** Spawn one read-only **Explore**
+subagent per trajectory-group (e.g. one per failure cluster, per trajectory
+directory, or per capability file). Each returns a **tight issue list** — the
+specific rules violated and which EXISTING tool/prompt-rule owns each — not raw
+trajectory dumps. Explore is the built-in read-only agent (Write/Edit denied) on a
+fast model, so this is cheap. The **main agent then DEDUPS the returned issues into
+clusters** (collapsing the same root cause seen across groups) so Phase 2 gets one
+issue per distinct fix. Trigger phrasing: *"Diagnose the failures in trajectory
+groups A, B, and C in parallel using separate read-only Explore subagents; each
+returns a tight list of violated rules and the existing tool or prompt rule that
+owns each. Then dedup all issues into clusters."*
+
+**Phase 2 — IMPLEMENT in parallel (one edit-subagent per ISSUE).** Spawn one
+edit-subagent per deduped ISSUE, **each in its own git worktree**
+(`isolation: "worktree"`, below) so competing edits don't collide while drafting.
+Tell each subagent to PREFER **editing the EXISTING tool's code body** to enforce
+the rule deterministically (an in-body precondition / normalization / actionable
+refusal on the tool that already owns the rule) — **not** merely adding a new tool
+or rewording docstrings, and never a one-task patch. (Adding a new tool, a loop
+tool that collapses N calls into one, or a composite WRITE tool — each with a real
+body — is for the cases where no existing tool owns the rule.) The **main agent
+then MERGES all per-issue edits into ONE coherent candidate**, resolving overlap so
+the combined diff applies cleanly with **no conflicts**, and writes that single
+merged candidate. One iteration thus fixes every cluster, not just the biggest —
+while each edit stays general because it was reasoned about in isolation. Trigger
+phrasing: *"Spawn one edit-subagent per issue cluster, each in its own worktree;
+each PREFERS editing the existing tool's code body to enforce its rule in code (not
+just adding a tool or rewording docs) and returns a general edit; then merge all
+edits into a single candidate with no conflicts."*
 - **One subagent per edit hypothesis or candidate tool (explore-then-pick).** When
   a *single* cluster has several plausible fixes, generate the **candidate edits
   in parallel** — one subagent drafts each hypothesis (different prompt wording,
@@ -88,18 +99,20 @@ context. The optimizer can be told (in its INSTRUCTIONS prompt) to:
 
 How to trigger it from the prompt: Claude auto-delegates based on task phrasing.
 Explicit, parallel phrasing ("in parallel using separate subagents") is what
-actually fans out. Independent investigations parallelize well; dependent ones
-should be chained, not fanned out. To fan out per cluster with isolation, phrase
-it as: *"spawn one subagent per failure cluster, each in its own worktree,
-proposing one general edit; then merge all edits into a single candidate with no
-conflicts."*
+actually fans out. The two phases are sequenced (Phase 2 depends on Phase 1's
+deduped clusters), but each phase fans out internally; use the per-phase trigger
+phrasings above. Independent investigations within a phase parallelize well;
+dependent steps across phases should be chained, not fanned out together.
 
 > Generic note: this is Claude Code's realization of the cap-evolve flow where one
-> iteration addresses ALL failure clusters at once (parallel analysis → merge into
-> one candidate). Every other optimizer's reference file
-> (`./guidance/optimizer/<name>.md`) should document its OWN equivalent
-> parallelism / isolation / merge features (or note their absence), so the authored
-> INSTRUCTIONS can lean on whatever that agent actually supports.
+> iteration addresses ALL failure clusters at once via TWO fan-out phases (Phase 1
+> diagnose in parallel → dedup into clusters; Phase 2 implement in parallel, one
+> edit-subagent per issue → merge into one candidate). Every other optimizer's
+> reference file (`./guidance/optimizer/<name>.md`) should document its OWN
+> equivalent two-phase parallelism / isolation / merge features (or note their
+> absence) — including whatever it supports for a read-only diagnose fan-out and an
+> isolated implement fan-out — so the authored INSTRUCTIONS can lean on what that
+> agent actually supports.
 
 ### Defining custom agent types headlessly
 
