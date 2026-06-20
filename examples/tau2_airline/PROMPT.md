@@ -81,11 +81,15 @@ exists). Here is everything intake needs:
                 read-only context so it can consult tau2's tools/scoring/task structure)
 - optimizer instructions: author .capevolve/project/optimizer/INSTRUCTIONS.md from the scaffolded
                 template (keep its {{...}} placeholders intact — the harness fills them per
-                iteration). Keep it SHORT and give the optimizer FREEDOM: state the GOAL (maximize the
-                eval score — make the biggest improvement you can this iteration) and tell it to ADAPT
-                effort to the number + difficulty of failing trajectories (few → move fast; many/hard
-                → go deeper, fanning out one subagent per failure cluster, each in its own worktree,
-                then merging all edits into ONE candidate). Tailor only the "READ THESE" pointers
+                iteration). Keep it short on meta-narration but explicit and DEMANDING on iteration
+                depth, and impose a DEPTH MANDATE: state the GOAL (maximize the eval score) and require
+                each iteration to be a substantial multi-cluster, multi-edit-class sweep — improve
+                multiple tools' code + validation + enriched returns/errors, add new tools, sharpen
+                many tool docs, AND fix the prompt, together in ONE candidate, with each fix scoped to
+                protect passing tasks (non-regression). "Freedom" does NOT mean do little — a single
+                small edit is an under-used iteration; diagnose ALL clusters and fix as many as
+                possible, fanning out one subagent per failure cluster, each in its own worktree, then
+                merging all edits into ONE candidate. Tailor only the "READ THESE" pointers
                 (./trajectories/, ./guidance/<cap>/SKILL.md for EACH selected capability,
                 ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md, ./guidance/sources/
                 [the data model], ./STATE.md, ./MEMORY.md, ../tau2-bench).

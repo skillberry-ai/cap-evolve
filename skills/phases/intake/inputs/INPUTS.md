@@ -106,8 +106,17 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   default to `project/optimizer/INSTRUCTIONS.md`; the agent CUSTOMIZES it for this
   benchmark (keeping the `{{...}}` placeholders the harness fills) rather than
   authoring one from scratch. Point this key at the customized file. Keep the
-  authored guidance SHORT, with an explicit GOAL (maximize the eval score) and
-  EFFORT-ADAPTATION (scale to #trajectories + difficulty), and **scope it to the
+  authored guidance short on meta-narration but explicit and DEMANDING on iteration
+  depth, with an explicit GOAL (maximize the eval score). The authored instructions
+  must impose a DEPTH MANDATE — each iteration is a substantial multi-cluster,
+  multi-edit-class sweep (tool code + validation + enriched returns + new tools +
+  many docs + prompt), non-regression scoped per fix; a single small edit is an
+  under-used iteration. Produce this target snippet: "Each iteration is a
+  substantial, multi-root-cause pass. Diagnose ALL clusters and fix as many as
+  possible in ONE candidate — improve multiple tools' code, validation, and return
+  values/errors; add new tools; sharpen many tool docs; and fix the prompt —
+  together. Scope each fix to protect passing tasks; do NOT trade breadth for
+  caution. A single small edit is an under-used iteration." And **scope it to the
   SELECTED capabilities only** — include guidance / skill-references / editable
   artifacts for just the caps in `capevolve.yaml: capabilities`. If only `tools` is
   selected, do NOT include prompt-editing guidance, do NOT reference the

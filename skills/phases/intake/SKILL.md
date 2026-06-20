@@ -48,14 +48,20 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
    CAPABILITIES.** Customize the scaffolded `.capevolve/project/optimizer/INSTRUCTIONS.md`.
    Keep the `{{...}}` placeholders intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`,
    `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`, `{{BENCH_REPO}}` — the harness fills them per
-   iteration). Keep the authored static guidance **SHORT**, and make it
-   **capability-scoped**: include guidance, skill references, and edit-space ONLY for
-   the capabilities actually listed in `capevolve.yaml: capabilities`.
+   iteration). Keep the authored static guidance **short on meta-narration, explicit
+   and DEMANDING on iteration depth**, and make it **capability-scoped**: include
+   guidance, skill references, and edit-space ONLY for the capabilities actually
+   listed in `capevolve.yaml: capabilities`.
+   - **DEPTH MANDATE — address ALL failure clusters each iteration.** The authored
+     instructions must demand a substantial multi-root-cause pass. Produce this
+     target snippet:
+     > "Each iteration is a substantial, multi-root-cause pass. Diagnose ALL clusters
+     > and fix as many as possible in ONE candidate — improve multiple tools' code,
+     > validation, and return values/errors; add new tools; sharpen many tool docs;
+     > and fix the prompt — together. Scope each fix to protect passing tasks; do NOT
+     > trade breadth for caution. A single small edit is an under-used iteration."
    - **State the GOAL up front:** maximize the eval score — make the largest
      improvement you can this iteration, grounded in the trajectories.
-   - **EFFORT-ADAPTATION:** scale analysis depth and effort to the number of failing
-     trajectories and their difficulty — few → move fast; many/hard → go deeper
-     (parallel subagents per cluster, then merge into ONE candidate).
    - **Capability-scoping (the key rule):** reference `./guidance/<cap>/SKILL.md`
      and present the editable artifacts **for the selected caps only**. If only
      `tools` is selected, do NOT include any prompt-editing guidance, do NOT
@@ -74,7 +80,7 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
      `/rejected.jsonl`, per-iteration git diffs); write the rich
      `## Handover for next iteration` STATE.md section (Approaches tried — 1 line
      each, Lessons learned, Recommendation, and What-regressed-as-implemented — NOT
-     a permanent ban-list); and address ALL failure clusters each iteration.
+     a permanent ban-list).
 6. **Set the spec keys** in `capevolve.yaml`:
    - `runner_repo_path` — the benchmark/runner source, surfaced read-only to the
      optimizer.
