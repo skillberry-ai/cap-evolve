@@ -28,10 +28,17 @@ handlers; the only difference is which edits the action policy permits.
 clear and recovery-oriented.** The doc surface (description, important-notes,
 per-param, `Raises:`, examples) drives *which* tool the model calls and *how* it
 fills the arguments; the return value (and especially the error text) steers the
-*next* turn. Each lever below is an edit class; pick the one that fixes the biggest
-failure cluster. (1-line generic examples; worked bodies in
+*next* turn. Each lever below is an edit class; in ONE pass, apply EVERY edit class
+the traces call for — a validation wrapper AND a loop tool AND enriched
+returns/errors AND doc fixes across all implicated tools can and should all ship in
+the same candidate. (1-line generic examples; worked bodies in
 [`references/examples.md`](references/examples.md), depth below and in
 [`references/concepts.md`](references/concepts.md).)
+
+**Comprehensive multi-fix pass.** Diagnose ALL clusters, map each to its edit
+class, and apply them together. Optimizers that ship one wrapper and stop leave
+most of the gain on the table — a strong iteration touches several tools' code +
+docs + returns AND the prompt at once.
 
 1. **Add a new tool** — give the agent a capability it lacks, built as a thoughtful
    workflow tool, not a thin wrapper around one endpoint. *Ex:* add `search_logs`
@@ -237,7 +244,10 @@ optimize the [`system-prompt`](../system-prompt/SKILL.md) instead.
 
 The `compose`/`code`/`add` rows are the **first edits to reach for** — a
 deterministic tool beats a sentence in a prompt (see below). Reword descriptions
-*after* you've asked "can this rule or recurring workflow be code instead?"
+*after* you've asked "can this rule or recurring workflow be code instead?" In ONE
+pass, apply EVERY edit class the traces call for — a validation wrapper AND a loop
+tool AND enriched returns/errors AND doc fixes across all implicated tools can and
+should all ship in the same candidate; do not stop after a single edit.
 
 Lock any of these off via `inputs/policy.json`. For example, in a frozen-API
 deployment you might allow only `["description", "params", "examples"]` so an

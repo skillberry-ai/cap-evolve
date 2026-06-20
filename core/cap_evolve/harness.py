@@ -450,9 +450,11 @@ _STATE_SEED = (
     "(Every recurring cluster you found in ./trajectories/ — total failures, "
     "partial-credit failures, AND communication/omission failures — each named, with "
     "its task ids and shared root cause. Biggest first.)\n\n"
-    "## Edit made and why it generalizes\n"
-    "(The concrete edit(s) you applied this iteration and the CLASS of failures each "
-    "addresses — not a one-off patch.)\n\n"
+    "## Edits made this iteration (one row per cluster fixed)\n"
+    "| cluster | edit class (tool-code / validation / enriched-return / new-tool / "
+    "docs / prompt) | tool or prompt touched | why it generalizes | how it protects "
+    "passing tasks |\n"
+    "| --- | --- | --- | --- | --- |\n\n"
     "## Handover for next iteration\n"
     "- Approaches tried this iteration (1 concrete line each):\n"
     "- Lessons learned (general):\n"
@@ -1498,7 +1500,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     # never breaks just because the template file is missing.
     parts = [
         "# Optimize the capability — analyze this step's trajectories in ./trajectories/, "
-        "then make ONE bold, multi-part, generalizing edit and STOP.",
+        "then fix MANY root causes in this ONE candidate and STOP.",
         focus_summary, "",
         "Read ./trajectories/ (full traces), ./guidance/<cap>/SKILL.md (what you can "
         "change), ./guidance/sources/ (data models/types — read before writing tool "
@@ -1506,7 +1508,16 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "ground every change in the trajectories; enforcing a deterministic rule in tool "
         "code is stronger than prose — do both where useful.",
         bench, "", failures, passing, cap, "", algo, "",
-        "Be economical: one strong multi-part edit, minimal narration, then finish.",
+        "Address EVERY failure cluster you found, not just the biggest. A strong "
+        "iteration ships, together: tool CODE (corrected/added handlers), "
+        "validation/workflow/composite tools for behavioral clusters, enriched tool "
+        "returns + actionable error messages so the agent can recover, new tools, "
+        "sharpened docs across EVERY implicated tool, and prompt rules for genuine "
+        "knowledge gaps. Non-regression is a design constraint on each INDIVIDUAL fix "
+        "(scope each edit so it doesn't alter a passing task's code path), NOT a reason "
+        "to make fewer fixes. A single small prose patch under-uses the iteration; the "
+        "measure is how MANY real issues you fix, not how much you spend — be "
+        "cost-efficient AND thorough.",
     ]
     return "\n".join(p for p in parts if p is not None)
 

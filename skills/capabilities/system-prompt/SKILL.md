@@ -130,9 +130,10 @@ attention; conflicting instructions resolve unpredictably.
 The optimizer should **analyze before editing**: from the traces + the current
 prompt, identify (a) the recurring failures clustered by root cause (the rule the
 agent keeps breaking) and (b) the good behavior seen only on some trials that
-should be made consistent; then make ONE targeted prompt edit that fixes the
-biggest cluster and reinforces (b) — sharpen or correct the offending rule rather
-than appending more preamble. Be economical: one good edit, then stop.
+should be made consistent; then make prompt edits for EVERY knowledge-gap cluster,
+paired with the tool-code fixes for the behavioral clusters in the SAME candidate,
+and reinforce (b) — sharpen or correct the offending rules rather than appending
+more preamble.
 
 ## How to run
 ```

@@ -8,7 +8,7 @@ fixes the most failure clusters. Then STOP (the harness re-scores you; don't re-
 evaluation yourself).
 
 EFFORT: scale your analysis depth and effort to the number and difficulty of the
-failing trajectories. Few, easy failures → move fast with one focused edit. Many or
+failing trajectories. Few, easy failures → still address each one. Many or
 hard failures → go deeper; if your agent supports parallel sub-agents / worktrees
 (see `./guidance/optimizer/<name>.md`), spawn one per cluster to analyze concurrently,
 then synthesize.
@@ -36,13 +36,18 @@ then synthesize.
    work but failed to report or confirm it). Also note GOOD-but-INCONSISTENT behaviors
    (pass on some trials, fail on others) to make consistent. Name each cluster, its
    tasks, and its shared cause; biggest first.
-3. Make ONE bold, multi-part edit across the SELECTED capabilities that addresses as
-   many clusters as you can at their root. You may rewrite, consolidate, or add prompt
-   rules AND add, replace, or edit tools. Ground every change in the trajectories;
-   never drop a needed rule (change/consolidate/add — don't delete). Enforcing a rule
-   in tool code is stronger than prose when the rule is deterministic — so do both
-   where useful. Build on the current best (keep its wins).
-4. Write a short handover in `STATE.md` (sections below), apply the edit, and STOP.
+3. Fix MANY root causes in this ONE candidate. Address EVERY failure cluster you
+   found, not just the biggest. A strong iteration ships, together: (a)
+   validation/workflow/composite tools with REAL code for behavioral clusters (then
+   REMOVE_TOOLS the raw primitive via the safe wrapper-swap); (b) enriched tool RETURN
+   values + actionable error messages so the agent can recover; (c) corrected/added
+   tool code where a handler is wrong; (d) sharpened docs across EVERY tool the traces
+   implicate; (e) prompt rules for genuine knowledge gaps. A single small prose patch
+   is an UNDER-PERFORMING iteration. The measure of a strong iteration is how MANY
+   real issues you fix — not how much you spend; be cost-efficient AND thorough.
+   Ground every change in the trajectories; never drop a needed rule
+   (change/consolidate/add — don't delete). Build on the current best (keep its wins).
+4. Write a short handover in `STATE.md` (sections below), apply the edits, and STOP.
 
 ## Steering — protect the wins, don't freeze
 Use the "Currently PASSING" block and the "Per-task impact of prior candidates" block
@@ -52,6 +57,10 @@ Use the "Currently PASSING" block and the "Per-task impact of prior candidates" 
     change the code path / rule / tool it exercises.
   - A net gain that breaks as many tasks as it fixes is rejected — protect the passing
     set, but keep editing boldly everywhere else.
+  - Non-regression is a design constraint on each INDIVIDUAL fix (scope each edit so it
+    doesn't alter a passing task's code path) — NOT a reason to make fewer fixes. Many
+    well-scoped fixes that each protect the passing set is the target; one timid fix is
+    a failure.
 
 ## Handover
 Your `STATE.md` MUST end with:
@@ -68,6 +77,8 @@ Your `STATE.md` MUST end with:
 {{CAP_BRIEF}}
 {{ALGO_BRIEF}}
 
-## Be economical
-Minimal narration; don't restate these instructions or explore unrelated files. Make
-one strong, multi-part candidate, write the handover, and finish.
+## Self-check before STOP
+Before finishing, count your changes. If you touched fewer than ~3 tools/clusters or
+wrote NO new/edited tool CODE, you have under-used the iteration — go back and address
+the remaining clusters from your STATE.md list. Keep narration minimal; don't restate
+these instructions or explore unrelated files.
