@@ -110,7 +110,10 @@ This is exactly what `core/tests/test_e2e_slice.py` asserts. Open the printed
 The bundled [`examples/tau2_airline`](examples/tau2_airline) takes a **brand-new
 benchmark** from one prompt to an honest, optimized result. It optimizes the
 airline **policy + tools together** with a `claude-opus-4-6` optimizer, using
-`gpt-oss-120b` over IBM RITS as **both** the agent and the user simulator.
+`gpt-oss-120b` over IBM RITS as **both** the agent and the user simulator. The
+committed run lifted val reward **0.496 → 0.702 (+0.206, ≈ +41% relative)**; see
+the headline numbers and walkthrough below, or just open the committed
+[`run_full/dashboard.html`](examples/tau2_airline/run_full/dashboard.html) offline.
 
 ```bash
 # RITS creds in repo-root .env (RITS_API_KEY, RITS_API_URL); be logged into Claude Code.
@@ -516,21 +519,45 @@ markdown.
 
 ## Results
 
-<!-- RESULTS: baseline ~0.50 → best <pending>; filled from .capevolve/run_full/final.json (run in progress) -->
+Real [tau2-bench](https://github.com/sierra-research/tau2-bench) airline run —
+optimizing the airline **policy + tools together** with a `claude-opus-4-6`
+optimizer and `gpt-oss-120b` (agent **and** user simulator, via IBM RITS) over
+all 50 airline tasks (10 trials each). **Metric:** mean tau2 task reward in
+`[0,1]`.
 
-> Real [tau2-bench](https://github.com/sierra-research/tau2-bench) airline run —
-> optimizing the airline policy + tools with a `claude-opus-4-6` optimizer and
-> `gpt-oss-120b` (agent + user simulator, via IBM RITS) over all 50 tasks.
-> **Metric:** mean tau2 task reward in `[0,1]` over the 50 tasks (10 trials each,
-> so the report also gives pass^k — the fraction of tasks solved on all k trials).
-> A run is currently in progress; final numbers are filled from the latest run in
-> [`examples/tau2_airline/run_full/`](examples/tau2_airline/run_full/) (`report.md` /
-> `dashboard.html`) once it completes. Every iteration is a git commit. Reproduce
-> from zero: [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md).
->
-> Note: this example pins train = val = test = all 50 tasks (no-holdout), so the
-> headline test number is reported as a **fit metric** (the engine logs a
-> `splits_warning`); for a held-out result, pin a 30/10/10 split via `split_ids.json`.
+| | val reward (50 tasks · 10 trials) | Δ vs baseline |
+|---|---|---|
+| **Baseline** (seed policy + tools) | **0.496** | — |
+| **Best candidate** (`cand_0013`) | **0.702** | **+0.206 (≈ +41% relative)** |
+
+The gain accretes across iterations behind the paired significance gate — gains
+small enough to be noise are rejected. Acceptances: iter 1 `+0.110`
+(0.496→0.606), iter 2 `+0.054` (→0.660), iter 9 `+0.020` (→0.680), iter 13
+`+0.022` (→0.702); the other 11 iterations were rejected by the gate. A 10-iteration
+finalize scored its best candidate (`cand_0009`) **once** on the sealed split at
+**0.676 pass@1** (pass^2 0.556).
+
+**What actually changed.** Every accepted iteration makes deep, in-code edits to
+the tools — not just prompt tweaks. Driven by argument-level feedback from the
+failing rollouts, the optimizer turns prose policy rules into executable guards
+inside the existing tool bodies: e.g. iter 1 alone converted 5 of 6 rule
+violations into in-code guards (cancel/update/baggage eligibility checks) plus a
+`get_all_reservation_details` loop tool; `tools.py` grows 593 → 982 lines and the
+policy grows 166 → 212 lines across the run. See the curated story in
+[`examples/tau2_airline/DEMO.md`](examples/tau2_airline/DEMO.md).
+
+**See it before you run it.** Open the committed self-contained dashboard —
+[`examples/tau2_airline/run_full/dashboard.html`](examples/tau2_airline/run_full/dashboard.html) —
+in any browser (offline; KPIs, evaluations, per-iteration git diffs, cost/intake
+panel, lineage, memory). Raw numbers:
+[`run_full/final.json`](examples/tau2_airline/run_full/final.json). Reproduce from
+zero: [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md). Every iteration is a git
+commit.
+
+> Note: this example pins train = val = test = all 50 tasks (no-holdout), so val
+> **is** the fit metric and the sealed-test number is reported as a **fit metric**
+> (the engine logs a `splits_warning`); for a held-out result, pin a 30/10/10
+> split via `split_ids.json`.
 
 ## Contributing
 
