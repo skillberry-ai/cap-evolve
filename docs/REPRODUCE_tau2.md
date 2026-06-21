@@ -10,6 +10,27 @@ The capability under optimization is the airline **policy + tools, jointly**; th
 is `openai/gpt-oss-120b` via IBM RITS as **both agent and user simulator**; the optimizer
 is `claude-code @ claude-opus-4-6`.
 
+## Result of the committed run
+
+| | val reward (50 tasks · 10 trials) | Δ vs baseline |
+|---|---|---|
+| **Baseline** (seed policy + tools) | **0.496** | — |
+| **Best candidate** (`cand_0013`) | **0.702** | **+0.206 (≈ +41% relative)** |
+
+Metric = mean tau2 task reward in `[0,1]`. The gain accretes per iteration behind the
+paired significance gate; acceptances at iters 1 (`+0.110`), 2 (`+0.054`), 9 (`+0.020`),
+13 (`+0.022`), the other 11 rejected as noise. A 10-iteration finalize scored its best
+candidate (`cand_0009`) **once** on the sealed split at **0.676 pass@1** (pass^2 0.556).
+This example is no-holdout (train = val = test = all 50), so **val IS the fit metric**.
+
+Every accepted iteration makes deep **in-code** tool edits (prose rules → executable
+guards), not just prompt tweaks — `tools.py` grows 593 → 982 lines over the run. You can
+**see the result before reproducing**: open the committed, self-contained
+[`examples/tau2_airline/run_full/dashboard.html`](../examples/tau2_airline/run_full/dashboard.html)
+in any browser (offline), read the curated story in
+[`examples/tau2_airline/DEMO.md`](../examples/tau2_airline/DEMO.md), or the raw numbers in
+[`run_full/final.json`](../examples/tau2_airline/run_full/final.json).
+
 ---
 
 ## 1. Prerequisites (the only things you provide)
@@ -92,10 +113,14 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
   the selected capability skills both as `./guidance/<cap>/` and natively in
   `.claude/skills/`, the data model in `./guidance/sources/`, the per-task impact of
   prior edits + the passing set to protect, and the STATE/MEMORY handover) edits the
-  **policy AND tools** — including code-bearing tools — under the per-iteration
-  `--max-budget-usd 40` cap → re-evaluate ALL 10 trials in one batched `run_trials`
-  pass on val (each trial its own seed → real pass^k) → the **paired significance
-  gate** (`gate_k_se 0.2`, val-only) accepts or rejects → **commit to git**.
+  **policy AND tools** — driven by **argument-level feedback** from the failing
+  rollouts, it turns prose policy rules into **executable in-code guards inside the
+  existing tool bodies** (eligibility checks, idempotency / no-op guards, route
+  validation) and adds composite tools (e.g. a `get_all_reservation_details` loop) —
+  under the per-iteration `--max-budget-usd 40` cap → re-evaluate ALL 10 trials in one
+  batched `run_trials` pass on val (each trial its own seed → real pass^k) → the
+  **paired significance gate** (`gate_k_se 0.2`, val-only) accepts or rejects →
+  **commit to git**. Across the committed run `tools.py` grows 593 → 982 lines.
 - **Finalize** — score the best candidate once on the sealed test split (seal-on-success).
 - **Report** — `report.md` + a self-contained `dashboard.html`. The **live dashboard**
   shows per-iteration optimizer + runner **cost & time**, the one-time **intake cost**,
