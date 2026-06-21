@@ -59,6 +59,9 @@ tests **and** not break the existing ones — FAIL_TO_PASS *and* PASS_TO_PASS).
 `diagnose` provides `kept_good` (the currently-passing tasks) precisely so this
 check has something to protect.
 
+## Dual-mode
+This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:gate` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+
 ## How to run
 ```
 python scripts/run.py --current 0.50 --candidate 0.62 \

@@ -11,7 +11,7 @@ class _Adapter:
     def tasks(self, split):
         from cap_evolve import Task
         return [Task(id=str(i)) for i in range(6)]
-    def run_target(self, t, d, s):
+    def run_target(self, t, ctx, *, seed=0):
         from cap_evolve import Rollout
         return Rollout(task_id=t.id)
     def score(self, t, r):

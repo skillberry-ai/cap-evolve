@@ -13,9 +13,12 @@ cap_evolve <command>`` and parse the JSON it prints.
 from __future__ import annotations
 
 from .adapter import CapabilityAdapter, stub_methods
+from .cache import EvalCache, hash_candidate_dir
 from .gate import GateDecision, TrainGateError, decide
+from .lr_schedule import build_schedule
 from .memory import History, RejectedMemory
 from .rundir import Budget, RunDir, Spent
+from .selection import PICKERS, STRATEGIES, pick, validate_strategy
 from .splits import Splits, TestSealError, make_splits
 from .stats import aggregate, bootstrap_ci, combined_stderr, mean, pass_at_k, pass_k, stderr
 from .types import Candidate, Rollout, Score, Task
@@ -25,6 +28,13 @@ __version__ = "0.1.0"
 __all__ = [
     "CapabilityAdapter",
     "stub_methods",
+    "EvalCache",
+    "hash_candidate_dir",
+    "build_schedule",
+    "PICKERS",
+    "STRATEGIES",
+    "pick",
+    "validate_strategy",
     "GateDecision",
     "TrainGateError",
     "decide",

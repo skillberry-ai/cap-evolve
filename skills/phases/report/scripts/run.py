@@ -1,7 +1,9 @@
 """report — summarize a run: baseline → best val → sealed test, and the winner.
 
 Reads the run dir's baseline.json / final.json / events and prints a human and
-machine readable summary. Writes report.md next to them.
+machine readable summary. Writes report.md next to them, plus (by default) a
+self-contained dashboard.html. ``--terminal`` / ``--ansi`` prints a colored
+in-terminal report instead (CLAUDECODE-margin-aware) for in-chat progress.
 """
 
 from __future__ import annotations
@@ -20,9 +22,25 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="report")
     p.add_argument("--run-dir", required=True)
     p.add_argument("--no-dashboard", action="store_true", help="skip generating dashboard.html")
+    p.add_argument("--terminal", "--ansi", dest="terminal", action="store_true",
+                   help="print a colored ANSI terminal report (KPI strip + cumulative-best "
+                        "chart + top-N table) instead of the JSON summary")
+    p.add_argument("--no-color", action="store_true", help="disable ANSI colors in --terminal mode")
+    p.add_argument("--top-n", type=int, default=8, help="rows in the --terminal candidate table")
+    p.add_argument("--dashboard-mode", choices=("auto", "report-only", "off"), default="off",
+                   help="ensure the live dashboard server is up (auto/report-only) at the final phase")
+    p.add_argument("--dashboard-port", type=int, default=7878)
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+
+    # --- ANSI terminal mode: reduce → render_ansi → stdout, then return ---
+    if args.terminal:
+        import dashboard
+        reduced = dashboard.reduce_run(run_dir)
+        print(dashboard.render_ansi(reduced, color=not args.no_color, top_n=args.top_n))
+        return 0
+
     baseline = json.loads((run_dir.root / "baseline.json").read_text()) if (run_dir.root / "baseline.json").exists() else {}
     final = json.loads((run_dir.root / "final.json").read_text()) if (run_dir.root / "final.json").exists() else {}
 
@@ -58,6 +76,20 @@ def main(argv=None) -> int:
             summary["dashboard"] = str(dash)
         except Exception as e:  # noqa: BLE001 — never let the dashboard break the report
             summary["dashboard_error"] = str(e)
+
+    # Final phase: guarantee the live dashboard server is up (idempotent) and
+    # opened, so "the dashboard is created automatically in the last phase" holds
+    # even when early auto-start was disabled. Best-effort; never fails the report.
+    if args.dashboard_mode in ("auto", "report-only"):
+        try:
+            from cap_evolve import dashboard_launch
+            base = run_dir.root.resolve().parent  # absolute: subprocess cwd may differ
+            status = dashboard_launch.maybe_launch(
+                base, mode=args.dashboard_mode, port=args.dashboard_port, open_browser=True
+            )
+            summary["dashboard_server"] = status.get("dashboard")
+        except Exception as e:  # noqa: BLE001
+            summary["dashboard_server_error"] = str(e)
 
     print(json.dumps(summary, indent=2))
     return 0

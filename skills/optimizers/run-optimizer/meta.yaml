@@ -1,0 +1,11 @@
+component: optimizer
+name: run-optimizer
+summary: One runner for every shell-invokable edit proposer; resolves a named optimizer from optimizers/registry.yaml and shells it in the candidate workdir.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  algorithms: ["*"]

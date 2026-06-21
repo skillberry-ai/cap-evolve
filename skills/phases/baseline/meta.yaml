@@ -5,7 +5,7 @@ entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py
 needs: [project, tasks]
-provides: [splits, baseline, candidate]
+provides: [splits, baseline, candidate, scores, traces]
 compatible_with:
   capabilities: ["*"]
   optimizers: ["*"]

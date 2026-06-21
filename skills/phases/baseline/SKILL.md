@@ -44,6 +44,19 @@ wrong and nothing later can fix it.
 - Tasks must be plentiful enough to split three ways and still leave val/test big
   enough that their standard errors are not dominated by sample size.
 
+## Reusing a prior baseline (`--reuse-baseline PRIOR_RUN_DIR`)
+Re-scoring the seed on val every run is wasteful when the split + seed are
+unchanged. Pass `--reuse-baseline <prior run_* dir>` (spec key `reuse_baseline`,
+or `cap-evolve run --reuse-baseline ...`) and baseline copies the prior run's
+`splits.json`, `baseline.json`, the seed candidate snapshot, and the seed val
+rollouts into the fresh run dir, then **skips** the baseline eval — the algorithm
+starts at iteration 1 on the reused baseline. The **test seal stays intact**: the
+copied split's `test_used` flag is reset so this run can still finalize on test
+exactly once. Backward compatible — absent, baseline behaves exactly as before.
+
+## Dual-mode
+This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:baseline` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+
 ## How to run
 ```
 python scripts/run.py --base .capevolve --project .capevolve/project \

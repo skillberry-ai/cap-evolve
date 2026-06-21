@@ -20,8 +20,8 @@ def test_build_manifest_clean(tmp_path):
     names = set(manifest["skills"])
     # the proof-slice skills must all be present
     for required in ["intake", "implement-and-check", "baseline", "evaluate", "diagnose",
-                     "gate", "finalize", "report", "all-at-once", "system-prompt",
-                     "mock", "orchestrate"]:
+                     "gate", "finalize", "report", "hill-climb", "system-prompt",
+                     "run-optimizer", "orchestrate"]:
         assert required in names, f"missing skill: {required}"
 
 

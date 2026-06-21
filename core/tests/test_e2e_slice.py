@@ -17,7 +17,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 EXAMPLE = REPO / "examples" / "toy_calc"
-MOCK_RUN = REPO / "skills" / "optimizers" / "mock" / "scripts" / "run.py"
+MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
 
 sys.path.insert(0, str(CORE))
 sys.path.insert(0, str(EXAMPLE))  # import the toy adapter
@@ -57,7 +57,7 @@ def test_full_slice(tmp_path):
 
     # one optimize step using the REAL mock optimizer skill (subprocess)
     optimizer = harness.optimizer_from_command(
-        ["python3", str(MOCK_RUN), "--workdir", "{workdir}", "--prompt", "{prompt}"]
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}", "--prompt", "{prompt}"]
     )
     step = harness.run_step(
         adapter, run_dir=run_dir,
@@ -96,7 +96,7 @@ def test_cyclic_variant_also_improves(tmp_path):
     base = harness.baseline(adapter, seed, run_dir=run_dir)
 
     optimizer = harness.optimizer_from_command(
-        ["python3", str(MOCK_RUN), "--workdir", "{workdir}", "--prompt", "{prompt}"])
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}", "--prompt", "{prompt}"])
     summary = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=base,
         focus="cyclic", max_iterations=5, gate_kwargs={"mode": "significant", "k_se": 1.0},

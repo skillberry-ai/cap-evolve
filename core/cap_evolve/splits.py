@@ -49,6 +49,21 @@ class Splits:
             )
         self.test_used = True
 
+    def check_test_unused(self) -> None:
+        """Raise if the seal is already burned, WITHOUT flipping it.
+
+        Used by ``reserve_test()`` to fail fast at the *start* of finalize, so a
+        second finalize is refused — but the seal is only actually flipped by
+        ``mark_test_used`` once the test score has been computed and written
+        (seal-on-success). A crash between reserve and commit must NOT burn it.
+        """
+        if self.test_used:
+            raise TestSealError(
+                "TEST split already scored once this run. The held-out test set "
+                "is sealed — re-scoring it would invalidate the headline number. "
+                "Score val during optimization; test is for finalize() only."
+            )
+
     def to_dict(self) -> dict:
         return {
             "train": list(self.train),

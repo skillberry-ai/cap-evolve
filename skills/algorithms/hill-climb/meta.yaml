@@ -1,0 +1,11 @@
+component: algorithm
+name: hill-climb
+summary: Global hill-climb on the val gate with a selectable focus schedule (--focus all|cyclic|hardest-first); parent is always the current best.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores, traces, candidate]
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]

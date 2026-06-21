@@ -1,8 +1,0 @@
-{"id": "j1", "input": "Name: Alice; Age: 30; City: Paris", "field": "Name", "target": "Alice"}
-{"id": "j2", "input": "Name: Bob; Age: 25; City: Rome", "field": "City", "target": "Rome"}
-{"id": "j3", "input": "Name: Carol; Age: 41; City: Oslo", "field": "Age", "target": "41"}
-{"id": "j4", "input": "Name: Dan; Age: 19; City: Lima", "field": "Name", "target": "Dan"}
-{"id": "j5", "input": "Name: Eve; Age: 52; City: Cairo", "field": "City", "target": "Cairo"}
-{"id": "j6", "input": "Name: Finn; Age: 8; City: Tokyo", "field": "Age", "target": "8"}
-{"id": "j7", "input": "Name: Gina; Age: 33; City: Berlin", "field": "Name", "target": "Gina"}
-{"id": "j8", "input": "Name: Hugo; Age: 60; City: Madrid", "field": "City", "target": "Madrid"}

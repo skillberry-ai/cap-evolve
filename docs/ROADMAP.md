@@ -11,19 +11,29 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
   significance gate, multi-trial variance, **pass^k (reliability) + pass@k
   (capability)** + bootstrap CIs.
 - Skills-native pipeline (intake → implement-and-check → baseline → algorithm →
-  diagnose → gate → finalize → report) + auto `orchestrate`.
-- Algorithms: all-at-once, cyclic, hardest-first, **gepa-reflective** (flagship:
-  reflective Pareto evolution).
+  diagnose → gate → finalize → report) + auto `orchestrate` + a `using-cap-evolve`
+  session-start router.
+- Algorithms: **`gepa`** (flagship — real GEPA: two-stage minibatch-then-full-val
+  economy, per-instance Pareto frontier, reflective dataset, system-aware merge;
+  arXiv:2507.19457), **`skillopt`** (flagship — epochs × mini-batches, decaying
+  textual-LR edit budget, rejected-edit buffer, gated slow update; arXiv:2605.23904),
+  **`hill-climb`** (one skill, `--focus all|cyclic|hardest-first`)
+  (a thin precursor).
 - Capabilities: system-prompt, skill-package, tools, mcp-tool (action-policy / mutation-lock); capabilities chosen as a LIST.
-- Optimizers: claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob,
-  generic, mock — verified headless commands.
-- Host-agnostic installer + Claude Code plugin/marketplace.
-- Real proof: tau2-bench airline (gpt-oss-120b) A/B 0.20→0.60 reward; a second
-  from-scratch benchmark (json_extract) green in CI.
+- Optimizers: one **`run-optimizer`** skill + `optimizers/registry.yaml`
+  (claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob, generic, mock) —
+  verified headless commands; adding one is a single YAML row.
+- Honest-eval upgrades: paired significance gate (default), seal-on-success test,
+  structured `Rollout.error` infra signal, per-trial seed for real pass^k variance.
+- Rich **self-contained** `dashboard.html` + `cap-evolve report --terminal` ANSI report.
+- Host-agnostic installer + Claude Code plugin (honesty hooks in core-owned scripts,
+  diagnoser/proposer subagents, router) — `claude --plugin-dir ./plugins/cap-evolve`.
+- Real proof: tau2-bench airline (gpt-oss-120b agent + user simulator) optimized
+  policy + tools jointly with a claude-opus optimizer; toy_calc zero-API gate green in CI.
 
 ## Next (prioritized from the research)
 1. **Optimizer strategy registry + one `optimize(seed, train, val)` API** (DSPy
-   ergonomics) so algorithms swap in one line; gepa-reflective as the default.
+   ergonomics) so algorithms swap in one line; `gepa` as the default flagship.
 2. **Scorer library** (batteries-included): `match`, `regex`, `contains`,
    `numeric`, `json`, `f1`, `choice` (shuffled-MCQ-safe), `llm_judge` (NL criteria
    → 0–1, DeepEval GEval style), and **first-class `cost`/`latency` scorers** —
@@ -35,12 +45,14 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
    sealed Verified tier for the headline; a cheap filter before the expensive eval.
 5. **Artifacts side-channel** (OpenEvolve): pipe failing stderr/trace text directly
    into the next proposal prompt (richer than the current reflection).
-6. **More algorithms**: cluster_cyclic (issues-graph clustering), skillopt_epochs
-   (epochs / textual-LR / rejected-edit buffer), dspy_instruction_search (MIPRO).
+6. **More algorithms**: cluster_cyclic (issues-graph clustering),
+   dspy_instruction_search (MIPRO). *(GEPA and SkillOpt — `gepa`, `skillopt` — are
+   now **DONE**; see "Done".)*
 7. **More capabilities**: skill-package (full SKILL.md dir), retrieval_config.
-8. **Distribution polish**: `pip install cap-evolve`, `llms.txt`/`llms-full.txt`,
-   an MCP server + CLI to query results, `skills-ref validate` against the
-   agentskills.io spec, and a static-HTML dashboard.
+8. **Distribution polish**: `pip install cap-evolve`, an `llms-full.txt`, an MCP
+   server + CLI to query results, and `skills-ref validate` against the
+   agentskills.io spec. *(`llms.txt` and the self-contained static-HTML dashboard
+   now ship — see "Done".)*
 9. **Evals as a CI gate** (`assert_skill(candidate, suite)` pytest helper) and a
    **trace → dataset → experiment** loop turning real runs into held-out sets.
 10. **Numeric meta-knob tuning** (temperature, population size, retrieval-k) via

@@ -1,1 +1,0 @@
-{"edits": [{"file": "prompt.txt", "op": "ensure_contains", "text": "\n[STRICT_JSON] Output ONLY a JSON object of the form {\"answer\": <value>} with the requested field's value as a string. No prose."}]}

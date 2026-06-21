@@ -1,0 +1,12 @@
+component: orchestrate
+name: using-cap-evolve
+summary: Session-start router — turns "optimize <X>" into the cap-evolve pipeline; routes to intake and documents the standalone phase chain and the automatic `cap-evolve run` path.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [project]
+provides: [report]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

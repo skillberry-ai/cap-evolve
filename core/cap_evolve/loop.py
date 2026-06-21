@@ -96,63 +96,37 @@ def select_parent(
     rng=None,
     epsilon: float = 0.2,
     k: int = 3,
+    seed: int = 0,
 ) -> dict:
     """Pick a parent candidate to extend.
 
-    ``candidates`` is a list of dicts each with at least ``id`` and ``val``
-    (and optionally ``per_task`` for pareto). Strategies mirror evo/gepa:
-    ``best`` | ``top_k`` | ``epsilon_greedy`` | ``pareto``.
+    ``candidates`` is a list of dicts each with at least ``id`` and ``val`` (and
+    optionally ``per_task`` for the Pareto strategies). This now DELEGATES to
+    ``selection.pick`` so there is exactly one implementation of each strategy
+    (``best`` | ``top_k`` | ``epsilon_greedy`` | ``softmax`` | ``pareto`` |
+    ``pareto_per_instance``). Returns the single chosen parent (``ranked[0]``).
+
+    Back-compat: the legacy ``epsilon``/``k`` keyword args are folded into the
+    strategy params. A passed ``rng`` is used to derive the selection ``seed`` (so
+    existing callers that injected an RNG still get varied draws); otherwise
+    ``seed`` is used directly.
     """
-    if not candidates:
-        raise ValueError("no candidates to select from")
-    if strategy == "best":
-        return max(candidates, key=lambda c: c.get("val", 0.0))
+    from . import selection
+
+    spec: dict = {"kind": strategy}
     if strategy == "top_k":
-        ranked = sorted(candidates, key=lambda c: c.get("val", 0.0), reverse=True)[:k]
-        return (rng or _default_rng()).choice(ranked)
-    if strategy == "epsilon_greedy":
-        r = (rng or _default_rng())
-        if r.random() < epsilon:
-            return r.choice(candidates)
-        return max(candidates, key=lambda c: c.get("val", 0.0))
-    if strategy == "pareto":
-        front = pareto_frontier(candidates)
-        return (rng or _default_rng()).choice(front)
-    raise ValueError(f"unknown selection strategy: {strategy!r}")
+        spec["k"] = k
+    elif strategy == "epsilon_greedy":
+        spec["epsilon"] = epsilon
+    if rng is not None:
+        # Derive a per-call seed from the injected RNG so repeated calls vary.
+        seed = rng.randrange(2 ** 31)
+    ranked, _ = selection.pick(candidates, spec, seed=seed)
+    return ranked[0]
 
 
+# Kept as a public alias so any external importer of ``loop.pareto_frontier`` still
+# works; the implementation lives in ``selection`` (single source of truth).
 def pareto_frontier(candidates: list[dict]) -> list[dict]:
-    """Per-task Pareto frontier (gepa): keep candidates not dominated on all tasks.
-
-    Each candidate needs ``per_task`` = list of {task_id, reward}. A candidate A
-    dominates B if A >= B on every task and > on at least one. Candidates without
-    per_task fall back to the global best.
-    """
-    usable = [c for c in candidates if c.get("per_task")]
-    if not usable:
-        return [max(candidates, key=lambda c: c.get("val", 0.0))]
-
-    def vec(c):
-        return {pt["task_id"]: pt["reward"] for pt in c["per_task"]}
-
-    vecs = [(c, vec(c)) for c in usable]
-    front = []
-    for c, cv in vecs:
-        dominated = False
-        for other, ov in vecs:
-            if other is c:
-                continue
-            keys = set(cv) | set(ov)
-            ge_all = all(ov.get(k, 0.0) >= cv.get(k, 0.0) for k in keys)
-            gt_any = any(ov.get(k, 0.0) > cv.get(k, 0.0) for k in keys)
-            if ge_all and gt_any:
-                dominated = True
-                break
-        if not dominated:
-            front.append(c)
-    return front or [max(candidates, key=lambda c: c.get("val", 0.0))]
-
-
-def _default_rng():
-    import random
-    return random.Random(0)
+    from . import selection
+    return selection.pareto_frontier(candidates)

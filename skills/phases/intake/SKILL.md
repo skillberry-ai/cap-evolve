@@ -31,8 +31,112 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
    optimized), the optimizer (*which* coding agent proposes edits), the algorithm
    (*the search loop*), the dataset, the splits, and the budget.
 2. **Scaffold** `.capevolve/project/` from the template (`scripts/run.py`):
-   adapter stub, `inputs/`, `capevolve.yaml`, `PROJECT.md`.
+   adapter stub, `inputs/`, `capevolve.yaml`, `PROJECT.md`, and the optimizer-prompt
+   template `optimizer/INSTRUCTIONS.md` (the whole `templates/project/` tree is
+   copytree'd verbatim, so this file is already in place — confirm it exists).
 3. **Resolve inputs** per `inputs/INPUTS.md` — the contract below.
+4. **Wire trajectories + scoring into the adapter.** From the *trajectories path*
+   and *metric extraction / scoring source* inputs:
+   - implement `adapter.trajectories(split)` to RETURN the runner's native trajectory
+     directory for the last eval of `split` (any structure/format; it is copied
+     verbatim into the optimizer's `./trajectories/`). Return `None` only if there is
+     genuinely no separate native store (cap-evolve then falls back to its per-rollout
+     JSON) — note that choice in `PROJECT.md`.
+   - implement `score()` to extract the OBJECTIVE metric from a rollout, matching the
+     benchmark's own scoring source; verify it reproduces the benchmark's number.
+   - **Make `score()`'s feedback ARGUMENT-LEVEL — it IS the learning signal.** A
+     tool-name-only signal ("action X was wrong") is too coarse for the optimizer to
+     localize a fix; it pattern-matches to prose rules and the run plateaus. For EACH
+     failing check, the feedback must point at the specific argument/value/step that
+     was wrong: name the wrong ARGUMENT key and the **agent's OWN wrong value** (not
+     the gold value), name the wrong target id, and for communication/omission misses
+     name the value or field the agent failed to state **when it is derivable from the
+     agent's own state** (e.g. an un-stated computed total). This is **gold-SAFE**:
+     derive everything from the agent's own messages/tool-calls/observed state (and the
+     user's own profile/db state the agent saw) — use the gold record ONLY to learn
+     WHICH check/argument failed (key names are safe; gold VALUES must never be read or
+     printed). When a piece is not safely derivable, fall back to the coarser
+     tool-name message. Keep `score()` deterministic (the check gate requires it).
+5. **Author the optimizer instructions for THIS benchmark — SCOPED TO THE SELECTED
+   CAPABILITIES.** Customize the scaffolded `.capevolve/project/optimizer/INSTRUCTIONS.md`.
+   Keep the `{{...}}` placeholders intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`,
+   `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`, `{{BENCH_REPO}}` — the harness fills them per
+   iteration). Keep the authored static guidance **short on meta-narration, explicit
+   and DEMANDING on iteration depth**, and make it **capability-scoped**: include
+   guidance, skill references, and edit-space ONLY for the capabilities actually
+   listed in `capevolve.yaml: capabilities`.
+   - **DEPTH MANDATE — address ALL failure clusters each iteration.** The authored
+     instructions must demand a substantial multi-root-cause pass. Produce this
+     target snippet:
+     > "Each iteration is a substantial, multi-root-cause pass. Diagnose ALL clusters
+     > and fix as many as possible in ONE candidate — improve multiple tools' code,
+     > validation, and return values/errors; add new tools; sharpen many tool docs;
+     > and fix the prompt — together. Scope each fix to protect passing tasks; do NOT
+     > trade breadth for caution. A single small edit is an under-used iteration."
+   - **State the GOAL up front:** maximize the eval score — make the largest
+     improvement you can this iteration, grounded in the trajectories.
+   - **The authored INSTRUCTIONS MUST encode all three of these (generic, capability-scoped):**
+     1. **STEP-0 reading mandate.** Before diagnosing, the optimizer must READ
+        `./guidance/<cap>/SKILL.md` (for EACH selected capability) and the optimizer
+        features reference under `./guidance/optimizer/`. State this as an explicit
+        first step.
+     2. **The EXISTING-tool-code mandate** (when `tools` is selected). Demand: convert
+        violated textual rules into in-code checks across MANY EXISTING tool bodies —
+        most violated rules govern a tool that already exists, so the fix is an in-body
+        guard there, not a new tool. State plainly: *a docstring-only iteration (or one
+        that only adds a single new tool + rewords docstrings, leaving rules as prose)
+        is under-used.*
+     3. **The explicit TWO-PHASE subagent pattern.** Require: Phase 1 — diagnose
+        fan-out (one read-only subagent per trajectory-group → tight issue list; main
+        dedups into clusters); Phase 2 — implement fan-out (one edit-subagent per
+        ISSUE, each in its own worktree, each PREFERRING to edit the EXISTING tool's
+        code body to enforce its rule); then the main agent MERGES all edits into ONE
+        candidate. Point at `./guidance/optimizer/<name>.md` for the agent's concrete
+        trigger phrasing.
+     4. **The NON-OVERFITTING guardrail.** Demand that every prompt/tool edit encode
+        a GENERAL rule/policy/validation that generalizes across the whole class of
+        inputs — NEVER hardcode a specific task's id/value/date/name/answer. A guard
+        must fire on the general condition (e.g. "id not in the user's profile"), not
+        match a literal value (NOT `if id == "ABC123"`). A literal special-case that
+        only helps one task is forbidden — it overfits, fails the held-out gate, and
+        hurts other tasks. Per-task specifics are for understanding the failure CLASS
+        only; the fix must be general.
+     5. **EXPLOIT ground-truth/eval present in the trajectories (diagnosis only).**
+        Tell the optimizer that when `./trajectories/` include ground-truth /
+        expected actions / a reward breakdown, it should USE them during diagnosis to
+        localize the exact defect (expected vs actual action/argument/value) — and if
+        not present, infer from the traces + feedback. State plainly that ground truth
+        informs the failure class only; the resulting edit must still be GENERAL
+        (guardrail 4) and never copy a gold value.
+   - **Capability-scoping (the key rule):** reference `./guidance/<cap>/SKILL.md`
+     and present the editable artifacts **for the selected caps only**. If only
+     `tools` is selected, do NOT include any prompt-editing guidance, do NOT
+     reference the `system-prompt` skill, and do NOT present the prompt/policy file
+     as editable. If only `system-prompt` is selected, do not surface the tools file
+     as editable. Each capability's "What you can change here" lives in its
+     `./guidance/<cap>/SKILL.md` — point the optimizer there rather than restating it.
+   - **Always include (capability-agnostic):** READ `./MEMORY.md` FIRST and never
+     re-propose an approach recorded as rejected *as implemented* (a better-designed
+     version may still work — it is not a permanent ban); READ and USE the diagnose
+     skill `./guidance/diagnose/SKILL.md`, the optimizer features reference
+     `./guidance/optimizer/<name>.md`, this step's `./trajectories/`, `./STATE.md`,
+     and any `./guidance/sources/` data-model files; understand the prior run-dir
+     layout (`<run_root>/candidates/<id>/`, `/work/<id>/`,
+     `/rollouts/<split>/<task>__<cand>__t<k>.json`, `/events.jsonl`,
+     `/rejected.jsonl`, per-iteration git diffs); write the rich
+     `## Handover for next iteration` STATE.md section (Approaches tried — 1 line
+     each, Lessons learned, Recommendation, and What-regressed-as-implemented — NOT
+     a permanent ban-list).
+6. **Set the spec keys** in `capevolve.yaml`:
+   - `runner_repo_path` — the benchmark/runner source, surfaced read-only to the
+     optimizer.
+   - `optimizer_instructions_file` — point at the customized template (default
+     `optimizer/INSTRUCTIONS.md`).
+   - `capability_sources` — the benchmark's data-model / types source files that the
+     tools import (resolved relative to the project dir; copied verbatim into the
+     optimizer's `./guidance/sources/`), so the optimizer can write correct code
+     against the real types. Set this whenever a selected capability's code imports a
+     shared types/data-model module; leave the default `[]` when there is none.
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
 Read `inputs/INPUTS.md`. It classifies every input as **NEEDED** or
@@ -51,6 +155,21 @@ in `PROJECT.md` (e.g. "num_trials defaulted to 1 — scores will be single-trial
 so the significance gate will correctly reject marginal gains"), so the honesty
 cost of each default is visible at report time.
 
+### Block on a missing NEEDED input (never fabricate)
+The action when a NEEDED input is absent depends on the run mode:
+- **Interactive / chat mode** — ASK THE USER and wait: quote *what* is needed, *why*
+  it is needed (what breaks without it), and *how* to provide it (the exact path /
+  command / option / alternatives from `INPUTS.md`). Do not proceed past the missing
+  input.
+- **Non-interactive mode** (`cap-evolve run` / orchestrate, no human to ask) — do NOT
+  fabricate. WRITE a clearly delimited section into `PROJECT.md`:
+  `BLOCKED: <input> — why it is needed — how to provide it`, then STOP with a non-zero
+  exit. A blocked-but-honest stop is correct; a green run on a guessed input is not.
+
+This extends the ask-if-missing discipline above — it is the same rule, with an
+explicit non-interactive fallback so a headless run fails loud and recorded instead
+of silently inventing a dataset, scorer, trajectories path, or scoring source.
+
 ### Why a contract, not a guess
 The classic failure mode of "auto-optimize my agent" tooling is to start running
 with whatever it can find and backfill assumptions. That yields a green run and a
@@ -58,6 +177,9 @@ worthless result. Splitting inputs into NEEDED (blocking → ask) vs RECOMMENDED
 (default → log) makes the *only* legitimate way to proceed-without-an-input an
 explicit, recorded default — never a silent fabrication. Treat `INPUTS.md` as the
 spec; this SKILL.md is just the procedure for honoring it.
+
+## Dual-mode
+This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:intake` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
 
 ## How to run
 ```
@@ -73,11 +195,12 @@ integration*: scaffold → implement the 4 adapter methods → `cap-evolve check
 before any budget is spent. The using-agent (e.g. the chosen optimizer) can run
 this whole integration autonomously.
 
-> **Worked example (from scratch, integration by the optimizer agent):**
-> `examples/date_tool/` — the intake script scaffolds the project, **IBM Bob**
-> implements the adapter from the stub until `cap-evolve check` passes, then optimizes
-> the capability (a tool) 0.125 → 1.0. It documents exactly what a SCRIPT does vs
-> what Bob does vs what you do.
+> **Worked example (onboard a new benchmark from a prompt):** see `examples/` for
+> an end-to-end onboarding. The intake/onboarding step **installs the benchmark**
+> (clones + installs it) and the **optimizer agent** wires the adapter from the
+> stub until `cap-evolve check` passes, then optimizes the selected capability. The
+> example's `setup.sh` is the executable transcript of that onboarding; `run.sh`
+> runs the full optimization with the live dashboard.
 
 ## What good vs bad intake looks like
 - **Good:** every NEEDED input resolved to a real path or `"adapter"`; splits and
@@ -88,6 +211,10 @@ this whole integration autonomously.
   the gold answer into feedback; test == train with no note; budget left at a
   default that cannot possibly find a gain; the run proceeded past a missing
   NEEDED input "to keep moving".
+- **Bad:** authored INSTRUCTIONS that let an iteration pass by adding one tool +
+  rewording docstrings (leaving violated rules as prose) — or that omit the STEP-0
+  reading mandate, the existing-tool-code mandate, or the explicit two-phase
+  (diagnose fan-out → implement fan-out → merge) subagent pattern.
 
 ## References
 - `references/concepts.md` — the inputs contract, NEEDED vs RECOMMENDED

@@ -1,0 +1,11 @@
+component: algorithm
+name: skillopt
+summary: SkillOpt single-lineage climb over epochs x mini-batches with a textual learning rate (integer edit budget on a constant|linear|cosine schedule), a within-epoch rejected-edit buffer, and a gated epoch-boundary slow/meta update.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores, traces, candidate]
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]

@@ -1,0 +1,9 @@
+{
+  "name": "cap-evolve",
+  "description": "Optimize AI-agent capabilities (skills, tools/MCP, prompts, system prompts) against your eval, honestly. Skills-native and host-agnostic, with honest train/val/test discipline (sealed test, val-only gate) enforced by core-owned hooks. Exposes every phase/algorithm/capability/optimizer/orchestrate skill as a /cap-evolve:<skill> command, ships read-only diagnoser + writing proposer subagents, and a session-start router (using-cap-evolve) that auto-triggers the pipeline.",
+  "version": "0.1.0",
+  "author": { "name": "cap-evolve contributors" },
+  "homepage": "https://github.com/cap-evolve/cap-evolve",
+  "keywords": ["agent", "optimization", "skills", "eval", "gepa", "prompt-optimization"],
+  "skills": "./skills"
+}

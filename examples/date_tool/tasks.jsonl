@@ -1,8 +1,0 @@
-{"id": "iso", "input": "2026-06-16", "target": "2026-06-16"}
-{"id": "us_slash", "input": "06/16/2026", "target": "2026-06-16"}
-{"id": "dmy_dash", "input": "16-06-2026", "target": "2026-06-16"}
-{"id": "long_dmy", "input": "16 June 2026", "target": "2026-06-16"}
-{"id": "long_mdy", "input": "June 16, 2026", "target": "2026-06-16"}
-{"id": "slash_iso", "input": "2026/06/16", "target": "2026-06-16"}
-{"id": "abbr_mdy", "input": "Jun 16 2026", "target": "2026-06-16"}
-{"id": "dotted", "input": "2026.06.16", "target": "2026-06-16"}

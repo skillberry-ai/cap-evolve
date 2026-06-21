@@ -10,7 +10,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 EXAMPLE = REPO / "examples" / "toy_calc"
-MOCK_RUN = REPO / "skills" / "optimizers" / "mock" / "scripts" / "run.py"
+MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
 sys.path.insert(0, str(CORE))
 sys.path.insert(0, str(EXAMPLE))
 
@@ -44,7 +44,7 @@ def test_git_store_and_memory(tmp_path):
     base = harness.baseline(adapter, seed, run_dir=run_dir)
 
     optimizer = harness.optimizer_from_command(
-        ["python3", str(MOCK_RUN), "--workdir", "{workdir}", "--prompt", "{prompt}"])
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}", "--prompt", "{prompt}"])
     store = VersionStore(kind="git", root=run_dir.root)
     summary = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=base,

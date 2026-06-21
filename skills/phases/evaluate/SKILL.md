@@ -37,6 +37,9 @@ A `SplitResult` containing:
   questions; see `references/concepts.md`.
 - **per-task scores + feedback** — the learning signal `diagnose` reads.
 
+## Dual-mode
+This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:evaluate` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+
 ## How to run
 ```
 python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project \

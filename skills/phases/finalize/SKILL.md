@@ -37,6 +37,9 @@ Corollary: **all selection happens before finalize.** Choose the single best
 candidate on val, *then* finalize it. If you genuinely need to compare two
 finalists, compare them on val (or a fresh held-out slice) — never on test.
 
+## Dual-mode
+This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:finalize` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+
 ## How to run
 ```
 python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project --n-trials 3

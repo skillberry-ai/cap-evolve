@@ -12,6 +12,15 @@ venv/
 # cap-evolve run state (per-run, not source)
 .capevolve/
 
+# secrets — never commit credentials (RITS_API_KEY, WATSONX_*, ANTHROPIC_API_KEY, …)
+.env
+.env.*
+!.env.example
+
 # OS
 .DS_Store
 .demo/
+
+# keep the prebuilt dashboard frontend (served at runtime; no node needed)
+!dashboard/frontend/dist/
+!dashboard/frontend/dist/**
