@@ -28,7 +28,8 @@ honest number you can trust.
 [Usage](#usage-swap-one-word) · [How it works](#how-it-works) ·
 [Dashboard](#dashboard) · [Comparison](#how-it-compares) ·
 [Skill library](#skill-library) · [Examples](#examples) ·
-[Extending](#extending) · [Contributing](#contributing) · [Citation](#citation)
+[How-to guides](#how-to-guides) · [Extending](#extending) ·
+[Contributing](#contributing) · [Citation](#citation)
 
 ![cap-evolve demo](docs/demo.gif)
 
@@ -294,6 +295,16 @@ Whitespace: **skills-native + host-agnostic + honesty enforced in code.** Roadma
 - [`examples/toy_calc`](examples/toy_calc) — zero-API deterministic proof (the CI gate).
 - [`examples/json_extract`](examples/json_extract) — a new benchmark from scratch (adapter + data only).
 - [`examples/tau2_airline`](examples/tau2_airline) — the real tau2-bench run above.
+
+## How-to guides
+
+Step-by-step recipes for specific harness + benchmark combinations:
+
+| Guide | What it covers |
+|---|---|
+| [cap-evolve with Exgentic / tau2-bench](docs/how-to/cap-evolve-with-exgentic-tau2.md) | Optimize airline `policy.md` + `tools.py` via the exgentic harness and a LiteLLM proxy |
+
+More guides will be added here over time.
 
 ## Extending
 A new capability / algorithm / optimizer is **one folder** — clone `templates/skill`,
