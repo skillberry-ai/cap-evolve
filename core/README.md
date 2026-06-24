@@ -1,7 +1,7 @@
 # cap-evolve-core
 
 [![python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/cap-evolve-core/)
-[![license](https://img.shields.io/badge/license-MIT-informational)](../LICENSE)
+[![license](https://img.shields.io/badge/license-Apache--2.0-informational)](../LICENSE)
 [![deps](https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success)](#)
 
 Tiny stdlib-only honest-evaluation substrate for the
@@ -32,4 +32,4 @@ documentation, examples, and the skills library.
 
 ## License
 
-MIT.
+Apache-2.0.

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/status-beta%20(0.x)-orange" alt="status">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success" alt="deps">
-  <img src="https://img.shields.io/badge/license-MIT-informational" alt="license">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-informational" alt="license">
   <img src="https://img.shields.io/badge/agent%20skills-18-7c5cff" alt="skills">
 </p>
 
@@ -604,4 +604,4 @@ standard. Full citations: [docs/sources.bib](docs/sources.bib).
 
 ## License
 
-MIT.
+Apache-2.0.
