@@ -124,3 +124,62 @@ ibm-bob:
   offline: "false"
   skills_dir: ".bob/skills"
   instructions_file: "AGENTS.md"
+
+cursor:
+  command_template: "cursor-agent -p {prompt_text} --force --model {model}"
+  env_keys: "CURSOR_API_KEY"
+  install_url: "https://cursor.com/docs/cli"
+  auth_notes: "cursor-agent login, or CURSOR_API_KEY."
+  json_flag: "--output-format json"
+  budget_flag: ""
+  offline: "false"
+  skills_dir: ".cursor/skills"
+  instructions_file: "AGENTS.md"
+
+droid:
+  command_template: "droid exec --auto low -m {model} {prompt_text}"
+  env_keys: "FACTORY_API_KEY"
+  install_url: "https://docs.factory.ai/cli"
+  auth_notes: "droid login, or FACTORY_API_KEY."
+  json_flag: "--output-format json"
+  budget_flag: ""
+  offline: "false"
+  instructions_file: "AGENTS.md"
+
+copilot:
+  command_template: "copilot -p {prompt_text} --allow-all-tools --model {model}"
+  env_keys: "COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+  install_url: "https://github.com/github/copilot-cli  (npm i -g @github/copilot)"
+  auth_notes: "copilot /login, or COPILOT_GITHUB_TOKEN / GH_TOKEN."
+  json_flag: ""
+  budget_flag: ""
+  offline: "false"
+  instructions_file: "AGENTS.md"
+
+kimi:
+  command_template: "kimi -p {prompt_text} -m {model}"
+  env_keys: "MOONSHOT_API_KEY,KIMI_API_KEY"
+  install_url: "https://github.com/MoonshotAI/kimi-code"
+  auth_notes: "kimi login (Kimi OAuth / Moonshot key). API-key env var unverified — login is the safe path."
+  json_flag: ""
+  budget_flag: ""
+  offline: "false"
+  instructions_file: "AGENTS.md"
+
+pi:
+  command_template: "pi -p {prompt_text} --model {model}"
+  env_keys: "ANTHROPIC_API_KEY,OPENAI_API_KEY"
+  install_url: "https://github.com/earendil-works/pi"
+  auth_notes: "Provider-native keys (ANTHROPIC_API_KEY / OPENAI_API_KEY) or pi /login. No edit prompts by design."
+  json_flag: ""
+  budget_flag: ""
+  offline: "false"
+
+antigravity:
+  command_template: "${CAPEVOLVE_ANTIGRAVITY_CMD}"
+  env_keys: "CAPEVOLVE_ANTIGRAVITY_CMD"
+  install_url: "https://antigravity.google/docs/cli-overview"
+  auth_notes: "Google Sign-In (OAuth/keyring); no documented CI API-key. Headless `agy -p` exists — set the full command via CAPEVOLVE_ANTIGRAVITY_CMD."
+  json_flag: ""
+  budget_flag: ""
+  offline: "false"

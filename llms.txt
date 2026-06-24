@@ -37,7 +37,8 @@ except at finalize; gate acceptance on val with a paired significance gate.
 - algorithms: hill-climb (--focus all|cyclic|hardest-first), gepa, skillopt
   (gepa & skillopt are the sample-efficient flagships)
 - optimizers: run-optimizer + optimizers/registry.yaml (claude-code, codex, gemini-cli,
-  opencode, openclaw, ibm-bob, generic, mock — one runner resolves the name)
+  opencode, cursor, droid, copilot, kimi, pi, antigravity, openclaw, ibm-bob, generic,
+  mock — one runner resolves the name; the agent set matches obra/superpowers)
 - orchestrate: orchestrate, using-cap-evolve (session-start router)
 
 ## Examples

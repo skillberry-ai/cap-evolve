@@ -6,6 +6,16 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **Six more coding agents as optimizers** — `cursor` (Cursor `cursor-agent`),
+  `droid` (Factory Droid), `copilot` (GitHub Copilot CLI), `kimi` (Moonshot Kimi),
+  `pi` (earendil-works Pi), and `antigravity` (Google `agy`, a configurable wrapper).
+  This brings cap-evolve's supported coding-agent set to parity with
+  [obra/superpowers](https://github.com/obra/superpowers). Each is **one row** in
+  `skills/optimizers/registry.yaml` (verified headless command, except `antigravity`
+  which reads `CAPEVOLVE_ANTIGRAVITY_CMD` because its auth is Google-Sign-In-only and
+  its non-interactive approve flag is unconfirmed) plus a per-CLI
+  `run-optimizer/references/<name>.md`. `install.sh --host` learns each one's skills
+  dir. No core/runner changes — the registry-driven `run-optimizer` already generalizes.
 - **Per-iteration optimizer dollar cap** (`optimizer_usd_per_iter` in `capevolve.yaml`):
   threaded through `run-optimizer --usd-budget` into a new registry `usd_budget_flag`,
   enforced natively by the optimizer CLI where supported (claude-code →

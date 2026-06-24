@@ -16,7 +16,7 @@ pip install ./core                              # the honest-eval substrate (or 
 The plugin's hooks (PreToolUse / Stop / SubagentStop / SessionStart) enforce the
 sealed-test and green-check rules automatically; they no-op outside a run dir.
 
-**Any host (host-agnostic — Codex / Gemini / opencode / openclaw / IBM Bob / bare):**
+**Any host (host-agnostic — Codex / Gemini / opencode / Cursor / Factory Droid / Copilot CLI / Kimi / Pi / Antigravity / openclaw / IBM Bob / bare):**
 ```
 ./install.sh                     # copy skills into this host's skills dir
 pip install ./core               # or: export CAPEVOLVE_CORE="$PWD/core"

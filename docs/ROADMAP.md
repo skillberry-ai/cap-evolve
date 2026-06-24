@@ -21,8 +21,9 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
   (a thin precursor).
 - Capabilities: system-prompt, skill-package, tools, mcp-tool (action-policy / mutation-lock); capabilities chosen as a LIST.
 - Optimizers: one **`run-optimizer`** skill + `optimizers/registry.yaml`
-  (claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob, generic, mock) —
-  verified headless commands; adding one is a single YAML row.
+  (claude-code, codex, gemini-cli, opencode, cursor, droid, copilot, kimi, pi,
+  antigravity, openclaw, ibm-bob, generic, mock — the agent set matches
+  obra/superpowers) — verified headless commands; adding one is a single YAML row.
 - Honest-eval upgrades: paired significance gate (default), seal-on-success test,
   structured `Rollout.error` infra signal, per-trial seed for real pass^k variance.
 - Rich **self-contained** `dashboard.html` + `cap-evolve report --terminal` ANSI report.

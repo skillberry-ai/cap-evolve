@@ -326,7 +326,7 @@ you want intake to ask):
 - objective:  maximize mean reward on the VAL split
 
 # 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
-- optimizer:   <claude-code | codex | gemini-cli | opencode | openclaw | ibm-bob | generic | mock>
+- optimizer:   <claude-code | codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock>
 - model:       <backend-specific model id>
 - credentials: <e.g. ANTHROPIC_API_KEY or a logged-in Claude Code session; BOBSHELL_API_KEY for ibm-bob>
 
@@ -371,7 +371,7 @@ Start from the closest example and edit its `adapter.py`:
 
 ```yaml
 capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
-optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | openclaw | ibm-bob | generic | mock
+optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
 algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt
 num_trials: 4
 store: git                                # versions every iteration
@@ -501,7 +501,7 @@ variants collapsed into one `hill-climb` skill with `--focus`.
 | phases       | `intake` · `implement-and-check` · `baseline` · `evaluate` · `diagnose` · `gate` · `finalize` · `report` |
 | capabilities | `system-prompt` · `skill-package` · `tools` · `mcp-tool` |
 | algorithms   | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` |
-| optimizers   | `run-optimizer` + `optimizers/registry.yaml` (`claude-code`, `codex`, `gemini-cli`, `opencode`, `openclaw`, `ibm-bob`, `generic`, `mock`) |
+| optimizers   | `run-optimizer` + `optimizers/registry.yaml` (`claude-code`, `codex`, `gemini-cli`, `opencode`, `cursor`, `droid`, `copilot`, `kimi`, `pi`, `antigravity`, `openclaw`, `ibm-bob`, `generic`, `mock`) |
 
 `gepa` (real GEPA — reflective Pareto search, two-stage minibatch-then-full-val
 economy; arXiv:2507.19457) and `skillopt` (epochs × mini-batches with a decaying

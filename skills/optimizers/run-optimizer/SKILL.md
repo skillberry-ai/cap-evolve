@@ -1,6 +1,6 @@
 ---
 name: run-optimizer
-description: Drives any shell-invokable coding agent (Claude Code, Codex, Gemini CLI, opencode, OpenClaw, IBM Bob, or a fully custom command) as the edit proposer in a cap-evolve run, resolving the named optimizer from optimizers/registry.yaml. Use this as the optimizer for every run; pick the concrete agent with --name (or optimizer_skill in the spec). Use --name mock for a deterministic, zero-API proposer in tests and CI.
+description: Drives any shell-invokable coding agent (Claude Code, Codex, Gemini CLI, opencode, Cursor, Factory Droid, GitHub Copilot CLI, Kimi, Pi, Antigravity, OpenClaw, IBM Bob, or a fully custom command) as the edit proposer in a cap-evolve run, resolving the named optimizer from optimizers/registry.yaml. Use this as the optimizer for every run; pick the concrete agent with --name (or optimizer_skill in the spec). Use --name mock for a deterministic, zero-API proposer in tests and CI.
 component: optimizer
 argument-hint: "--name NAME --workdir DIR --prompt FILE [--model ID]"
 allowed-tools: Read, Write, Bash
@@ -35,17 +35,23 @@ new skill directory.
 | `{prompt_text}` | the *contents* of `INSTRUCTIONS.md` (for CLIs that take the prompt inline) |
 | `{model}` | the resolved model id; an empty `{model}` drops itself and a preceding `-m`/`--model` |
 | `{self_dir}` | the runner's own scripts dir (used by the `mock` row) |
-| `${VAR}` | environment expansion (the `generic`/`openclaw` escape hatches read their command from env) |
+| `${VAR}` | environment expansion (the `generic`/`openclaw`/`antigravity` escape hatches read their command from env) |
 
 ## Choosing an optimizer (`--name` / `optimizer_skill`)
 
-`mock`, `generic`, `claude-code`, `codex`, `gemini-cli`, `opencode`, `openclaw`,
-`ibm-bob`. Per-CLI install / auth / flag details are in `references/<name>.md`.
+`mock`, `generic`, `claude-code`, `codex`, `gemini-cli`, `opencode`, `cursor`,
+`droid` (Factory Droid), `copilot` (GitHub Copilot CLI), `kimi`, `pi`,
+`antigravity`, `openclaw`, `ibm-bob`. Per-CLI install / auth / flag details are in
+`references/<name>.md`.
 
 - **`mock`** is fully offline (runs a shipped JSON-driven editor, never a network
   CLI), so the end-to-end proof slice costs nothing and never flakes.
-- **`generic`** / **`openclaw`** read their command from `CAPEVOLVE_OPTIMIZER_CMD`
-  / `CAPEVOLVE_OPENCLAW_CMD` — the escape hatch that makes "any optimizer" literal.
+- **`generic`** / **`openclaw`** / **`antigravity`** read their command from
+  `CAPEVOLVE_OPTIMIZER_CMD` / `CAPEVOLVE_OPENCLAW_CMD` / `CAPEVOLVE_ANTIGRAVITY_CMD`
+  — the escape hatch that makes "any optimizer" literal. (`antigravity` is a wrapper
+  because its auth is Google-Sign-In-only and its headless approve flag is unconfirmed.)
+- **`cursor`**, **`droid`**, **`copilot`**, **`kimi`**, **`pi`** are verified
+  headless commands; matches the agent set supported by obra/superpowers.
 
 ## Standalone use
 

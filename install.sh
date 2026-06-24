@@ -35,15 +35,23 @@ detect_dest() {
     # Per-host skill dirs verified against current docs (2026). Codex uses
     # .agents/skills (NOT ~/.codex); opencode reads .claude/skills natively;
     # Gemini bundles skills inside extensions; IBM Bob has no SKILL.md concept.
+    # cursor/droid/copilot/kimi/pi/antigravity dirs follow each tool's dotdir
+    # convention (best-guess) — override with --dest or $CAPEVOLVE_SKILLS_DIR if
+    # your build differs. See skills/optimizers/run-optimizer/references/<host>.md.
     case "$HOST" in
-      claude|claude-code) echo "$HOME/.claude/skills"; return;;
-      codex)              echo "$HOME/.agents/skills"; return;;
-      gemini|gemini-cli)  echo "$HOME/.gemini/extensions/cap-evolve/skills"; return;;
-      opencode)           echo "$HOME/.config/opencode/skills"; return;;
-      openclaw)           echo "$HOME/.openclaw/workspace/skills"; return;;
-      cursor)             echo "$PWD/.cursor/skills"; return;;
-      bob|ibm-bob)        echo "$HOME/.bob/skills"; return;;
-      *)                  echo "$HOME/.config/$HOST/skills"; return;;
+      claude|claude-code)          echo "$HOME/.claude/skills"; return;;
+      codex)                       echo "$HOME/.agents/skills"; return;;
+      gemini|gemini-cli)           echo "$HOME/.gemini/extensions/cap-evolve/skills"; return;;
+      opencode)                    echo "$HOME/.config/opencode/skills"; return;;
+      openclaw)                    echo "$HOME/.openclaw/workspace/skills"; return;;
+      cursor)                      echo "$PWD/.cursor/skills"; return;;
+      droid|factory|factory-droid) echo "$HOME/.factory/skills"; return;;
+      copilot|github-copilot)      echo "$HOME/.copilot/skills"; return;;
+      kimi|kimi-code)              echo "$HOME/.kimi/skills"; return;;
+      pi)                          echo "$HOME/.pi/skills"; return;;
+      antigravity|agy)             echo "$HOME/.antigravity/skills"; return;;
+      bob|ibm-bob)                 echo "$HOME/.bob/skills"; return;;
+      *)                           echo "$HOME/.config/$HOST/skills"; return;;
     esac
   fi
   if [[ -d "./.claude/skills" ]]; then echo "./.claude/skills"; return; fi
