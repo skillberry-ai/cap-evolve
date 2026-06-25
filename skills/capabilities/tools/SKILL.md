@@ -63,8 +63,23 @@ many changes without net-zero churn.
   helper tools that a guard or a prompt line would subsume, and never add a tool just to
   "ship a new tool" — that is churn the gate punishes.
 
+- **DECISION / PERMISSION cluster → a discriminating-predicate guard (the BOUNDED-blast-
+  radius alternative to a prompt change).** When a cluster is about ACT-vs-REFUSE (the
+  agent acted where it should have refused/escalated, or vice versa), the WRONG fix is
+  loosening a global decision rule in the prompt — that has UNBOUNDED blast radius and
+  regresses every task where the original behavior was gold. The RIGHT fix lives here:
+  an in-body guard on the tool that owns the action, expressing the EXACT policy
+  predicate, that refuses/raises ONLY when the qualifying condition is/isn't met. It
+  fires only on the narrow violating condition, so its blast radius is bounded to the
+  failing inputs — the SAFEST edit, preferred over any prompt/permission change.
+- **HARD-ZERO / capability-gap cluster → a REAL targeted tool, never prose.** A task
+  scoring 0.00 that needs a compute / composite / discriminating-predicate tool stays
+  0.00 after any docstring or prompt reword. Ship a tool the agent will CALL that
+  changes the graded state.
+
 The two failure modes to avoid: (1) leaving a rule the agent keeps breaking as loose
-prose instead of a guard; (2) padding the candidate with low-value helper tools or
+prose instead of a guard, or loosening a global permission rule (unbounded regression)
+instead of a scoped guard; (2) padding the candidate with low-value helper tools or
 cosmetic rewrites that move no graded task.
 
 1. **Edit the CODE of EXISTING tools to enforce rules deterministically (the most
@@ -153,6 +168,13 @@ condition that defines the failure class, never on a literal value from one task
 `if reservation_id == "ABC123": raise ...` — that overfits to one task, gets
 rejected by the held-out gate, and helps nothing else. Use a failing task's
 specifics only to identify the class, then write the general check.
+
+A discriminating-predicate guard for a decision/permission cluster must encode the
+GENERAL policy condition that separates the qualifying cases from the rest (e.g.
+`if cabin == "basic_economy" and action == "change_flight": raise ...`), NOT a global
+behavior flip and NOT a task literal. The guard NARROWS — it fires only on the cases
+the policy actually governs — so passing tasks outside that condition keep their
+behavior unchanged.
 
 ## The highest-leverage edit: deterministic CODE (usually in an EXISTING tool body)
 
@@ -321,6 +343,14 @@ Reach for `tools` when a trace shows one of these failure signatures:
   normalization the model forgets. A tool that **enforces the rule in code**
   (validates, normalizes, or performs the steps in the right order) makes the
   mistake impossible rather than merely discouraged.
+- **A DECISION / PERMISSION the model gets wrong (ACT vs REFUSE)** — the agent acts
+  where the policy says refuse/escalate (or refuses where it should act). Do NOT fix
+  this by loosening the global rule in the prompt — that changes behavior for the whole
+  class and regresses every task where the original behavior was correct (unbounded
+  blast radius). Encode the EXACT discriminating policy predicate as an in-body guard on
+  the tool that owns the action: it refuses/raises ONLY on the qualifying condition, so
+  its blast radius is bounded to the violating cases. This is the SAFE, preferred
+  alternative to a permission-rule prompt edit.
 - **A bloated or overlapping toolset** — too many tools, or several that do
   nearly the same thing, distracting the agent. Remove or consolidate.
 - **A real behavioral bug in a handler** — the tool returns the wrong thing.

@@ -33,9 +33,13 @@ that fixes the biggest failure cluster. (1-line generic examples; depth in
    distinct constraint. *Ex:* three "confirm before deleting" lines → one "Confirm
    before any destructive action (delete, overwrite, send)."
 4. **Add a missing rule grounded in the source/policy** — add a rule the source
-   requires but the prompt omits (must trace to a real source, never invented).
+   requires but the prompt omits (must trace to a real source, never invented). The
+   added rule must be ADDITIVE (a constraint/predicate the prompt lacked) or NARROWING
+   (a stricter condition) — NEVER one that LOOSENS or broadens an existing
+   permission/decision, which regresses the whole class.
    *Ex:* source says refunds need a manager code → "Require a manager code before
-   any refund."
+   any refund." (A *narrowing* add. Adding "anyone may refund without a code" would be
+   a loosening — forbidden.)
 5. **Add an example** — 1, up to 3–5, `<example>`-tagged exemplars to pin format.
    *Ex:* add one `<example>` showing the exact JSON envelope expected.
 6. **Reorder** — long context/data to the top, query + instructions last; group
@@ -76,6 +80,17 @@ The good practices, failure modes, and the full never-drop rule are in
   the cheapest class to fix.
 - **Decision rules** — when to call which tool, when to ask vs. act, refusal
   rules (many agents are scored on adherence to such decision rules).
+  **DANGER — a global decision/permission/refusal rule has UNBOUNDED blast radius.**
+  Loosening or broadening one to fix a failing cluster (e.g. "basic economy CAN change
+  flights", "any agent may issue the refund") flips behavior for the WHOLE class and
+  regresses every currently-passing task where the original, stricter behavior was the
+  gold answer. NEVER loosen a global decision rule to fix a cluster. If a cluster needs
+  different behavior, state the EXACT discriminating CONDITION that narrows the rule to
+  the qualifying cases — and prefer encoding that predicate as an in-body guard in the
+  [`tools`](../tools/SKILL.md) capability (it fires only on the qualifying cases). A
+  prompt edit to a decision rule is safe ONLY when it ADDS a predicate the agent lacked
+  or NARROWS the rule — never when it broadens a permission or flips a decision the
+  agent currently gets right.
 - **Few-shot exemplars / reasoning scaffolds** — 3–5 diverse, relevant examples
   wrapped in `<example>` tags steer format (caveat: long example dumps can hurt
   reasoning models — keep it to a handful).
@@ -130,6 +145,17 @@ gap), do NOT add prose — flag it for an in-code check in the tool body** (the
 [`tools`](../tools/SKILL.md) capability: convert the violated rule into an in-body
 guard on the EXISTING tool that owns it). Adding another sentence to a rule the
 agent already read and broke just grows the prompt without changing behavior.
+
+**A DECISION / PERMISSION cluster is NOT a knowledge gap — never loosen a global rule
+to fix it.** When a cluster shows the agent making the wrong ACT-vs-REFUSE call, the
+agent usually already "knows" the rule; the real condition is just more specific than
+the prose. Relaxing the global rule makes the agent act on the WHOLE class and regresses
+every task where refusing/escalating was the gold answer (unbounded blast radius — this
+exact mistake sank a prior run). The right fix is the precise discriminating CONDITION —
+ideally a coded guard in the [`tools`](../tools/SKILL.md) capability that refuses/raises
+only on the qualifying cases — or, if it must be prose, a NARROWING rule stating the
+exact predicate. A prompt edit may only ADD knowledge or NARROW; never broaden a
+permission or flip a decision the agent currently gets right.
 
 **Each prompt iteration should also CONSOLIDATE.** When a rule now lives in tool
 code (an in-body guard enforces it deterministically), REMOVE its now-redundant

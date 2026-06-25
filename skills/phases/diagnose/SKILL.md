@@ -47,6 +47,16 @@ rollouts.
   - **KNOWLEDGE** — the agent doesn't know a format/rule/criterion → fix in the prompt.
   - **BEHAVIORAL** — the agent KNOWS the rule but violates it on a tool that exists
     → fix in that EXISTING tool's body (an in-code guard).
+  - **DECISION / PERMISSION (ACT vs REFUSE)** — a cluster about *whether the agent should
+    ACT or REFUSE/escalate* on a policy-governed class (it acted where it should have
+    refused, or refused where it should have acted). Tag it SEPARATELY so it is NOT
+    "fixed" by loosening a global decision/permission/refusal rule in the prompt — a
+    global change flips behavior for the ENTIRE class and regresses every
+    currently-passing task where the original behavior was gold (UNBOUNDED blast radius;
+    this exact mistake sank a prior run). Fix = the EXACT discriminating CONDITION:
+    ideally an in-body guard (tools) that refuses/raises only on the qualifying
+    predicate; or prose-only, a NARROWING rule. Its blast radius is EVERY passing task in
+    the decision class — name them and confirm the fix won't flip their action.
   - **CAPABILITY-GAP** — the agent has NO reliable way to do the thing, or it
     narrates/confirms a multi-step action then STALLS and never executes it → fix with
     the strongest STRUCTURAL lever the SELECTED capability offers (per its
@@ -73,7 +83,11 @@ edits**, never patch blindly:
    overlook. **Rank the clusters by how much they cost** (tasks affected ×
    score lost), biggest first, with evidence. For each cluster, tag it **KNOWLEDGE**
    (lacks a format/rule/criterion → prompt), **BEHAVIORAL** (knows the rule but
-   violates it on an existing tool → in-code guard in that tool's body), or
+   violates it on an existing tool → in-code guard in that tool's body),
+   **DECISION / PERMISSION** (wrong ACT-vs-REFUSE call on a policy-governed class →
+   discriminating-condition guard, NEVER a global prompt rule change: a global change
+   regresses the whole class; the blast radius is EVERY passing task in that decision
+   class, so name them and confirm the fix doesn't flip their action), or
    **CAPABILITY-GAP** (no reliable way to do it, or stalls at the action boundary
    and never executes → the strongest STRUCTURAL lever the SELECTED capability offers
    per its guidance: a NEW composite/loop/validation tool for a tools capability, or an
@@ -85,10 +99,13 @@ edits**, never patch blindly:
    marginal gain per edit and are easy to miss when you focus on zero-score tasks.
    For a multi-cause task, note its **secondary** cause too (a residual second-pass),
    so one candidate can fix both the primary and the residual cause in the same edit.
-   For EACH cluster, also note its **blast radius** — the currently-PASSING tasks that
-   exercise the same tool/rule/path — so the fix can be scoped to fire only on the
-   failing condition and not regress them; and cross-check the run history (LEDGER /
-   prior iterations) to SKIP any cluster whose fix was already tried and rejected (don't
+   For EACH cluster, also note its **blast radius** — the currently-PASSING tasks whose
+   behavior the fix would change. For a tool-body guard that is the tasks exercising the
+   same tool/rule/path; for a DECISION / PERMISSION cluster it is EVERY passing task in
+   the same decision class (a global rule change would flip all of them). Scope the fix
+   to fire only on the failing condition and confirm it does not change the action on any
+   passing task in that radius; and cross-check the run history (LEDGER / prior
+   iterations) to SKIP any cluster whose fix was already tried and rejected (don't
    re-diagnose a refuted approach). A cluster's value is the score it can recover MINUS
    the regression risk to its blast radius.
    Then name (b) the GOOD behaviors that occur only *sometimes* (tasks whose mean
