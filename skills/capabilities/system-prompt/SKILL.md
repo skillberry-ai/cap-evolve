@@ -117,7 +117,7 @@ These are *how* to phrase a prompt edit so it actually changes behavior:
 - **Generalize, never hardcode.** A prompt rule must state the GENERAL policy that
   holds across the whole class of inputs, never a specific task's case or answer.
   *Good:* "Reverse the charge to the original payment method on file." *Bad:* "If the
-  record id is <TASK_SPECIFIC_ID>, apply the exact amount that one task expects."
+  record id is `<TASK_SPECIFIC_ID>`, apply the exact amount that one task expects."
   Baking one task's id/value/date/answer into
   the prompt overfits, fails the held-out gate, and can mislead other tasks. Use a
   failing task's specifics only to understand the class, then write the general rule.
