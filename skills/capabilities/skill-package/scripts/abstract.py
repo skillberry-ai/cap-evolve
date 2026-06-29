@@ -6,12 +6,20 @@ loaded on demand), ``scripts/`` (executables), and ``assets/``. Optimizing a ski
 means editing that text to improve how a downstream agent uses it.
 
 ``validate`` here encodes the skill-creator / Agent-Skills authoring rules so the
-optimizer can't drift into an invalid package:
-  - frontmatter has ``name`` (<=64 chars, [a-z0-9-], no "anthropic"/"claude") and
-    a non-empty ``description`` (<=1024 chars) that says WHAT + WHEN ("use when").
-  - SKILL.md body stays under ~500 lines (progressive disclosure budget).
+optimizer can't drift into an invalid package (all rules sourced to first-party
+Anthropic docs — see references/concepts.md):
+  - frontmatter has ``name`` (<=64 chars, [a-z0-9-], no "anthropic"/"claude",
+    no XML tags) and a non-empty ``description`` (<=1024 chars, no XML tags) that
+    says WHAT + WHEN ("use when").
+  - SKILL.md body stays under ~500 lines AND ~5k tokens (progressive disclosure
+    budget; the body is a recurring per-session token cost).
   - references are one level deep and any long reference (>300 lines) has a TOC.
   - referenced files that the body points at actually exist.
+
+Soft authoring lints (warnings, not failures): a first-person description
+(point-of-view drift hurts discovery), all-caps CRITICAL/ALWAYS/MUST/NEVER in the
+description (over-triggers current models), and a long description that risks the
+1,536-char listing truncation (description + when_to_use) — front-load the use case.
 
 Edit ops (mirrored by the mock optimizer): {"file","op":"set|append|ensure_contains","text"}.
 """
@@ -23,8 +31,13 @@ from pathlib import Path
 
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.S)
+XML_TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")  # an actual tag, not a stray "<"
 MAX_BODY_LINES = 500
+MAX_BODY_TOKENS = 5000            # ~chars/4; Level-2 body budget
+CHARS_PER_TOKEN = 4
 LONG_REF_LINES = 300
+LISTING_CAP_CHARS = 1536          # description + when_to_use truncation in the listing
+LONG_DESC_CHARS = 1024            # hard cap; also the front-load advisory threshold
 
 
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -97,21 +110,42 @@ def validate(capability_dir: Path) -> dict:
         problems.append(f"name {name!r} must be <=64 chars, lowercase [a-z0-9-]")
     if "anthropic" in name.lower() or "claude" in name.lower():
         problems.append("name must not contain 'anthropic' or 'claude'")
+    if XML_TAG_RE.search(name):
+        problems.append("name must not contain XML tags")
 
     desc = fm.get("description", "")
     if not desc.strip():
         problems.append("frontmatter missing a non-empty 'description'")
     else:
-        if len(desc) > 1024:
-            problems.append(f"description is {len(desc)} chars (>1024)")
+        if len(desc) > LONG_DESC_CHARS:
+            problems.append(f"description is {len(desc)} chars (>{LONG_DESC_CHARS})")
+        if XML_TAG_RE.search(desc):
+            problems.append("description must not contain XML tags")
         if not re.search(r"\b(use when|when )\b", desc, re.I):
             warnings.append("description should say WHEN to use the skill "
                             "('Use when …') — it is the primary triggering signal")
+        # point-of-view drift: descriptions must be third person.
+        if re.search(r"(?<![A-Za-z])I(?![A-Za-z])|I'?m\b|I can\b|you can help", desc):
+            warnings.append("description should be third person (e.g. 'Processes X "
+                            "…'), not first person ('I can …') — POV drift hurts discovery")
+        # all-caps imperatives over-trigger current models.
+        if re.search(r"\b(CRITICAL|ALWAYS|MUST|NEVER)\b", desc):
+            warnings.append("avoid all-caps CRITICAL/ALWAYS/MUST/NEVER in the "
+                            "description — it over-triggers; say plainly 'Use when …'")
+        # the listing shows description + when_to_use truncated at 1,536 chars.
+        if len(desc) > LISTING_CAP_CHARS - 256:
+            warnings.append(f"description is {len(desc)} chars; the listing truncates "
+                            f"description + when_to_use at {LISTING_CAP_CHARS} — "
+                            "front-load the key use case so it survives truncation")
 
     n_body = body.count("\n") + 1
     if n_body > MAX_BODY_LINES:
         warnings.append(f"SKILL.md body is {n_body} lines (>{MAX_BODY_LINES}); "
                         "split detail into references/ (progressive disclosure)")
+    body_tokens = len(body) // CHARS_PER_TOKEN
+    if body_tokens > MAX_BODY_TOKENS:
+        warnings.append(f"SKILL.md body is ~{body_tokens} tokens (>{MAX_BODY_TOKENS}); "
+                        "it is a recurring per-session cost — move detail into references/")
 
     refs = capability_dir / "references"
     if refs.is_dir():
