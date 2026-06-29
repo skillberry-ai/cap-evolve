@@ -215,9 +215,16 @@ exists). Here is everything intake needs:
       a task-specific filename/value/answer into a skill. Skills are used many times; fiddly
       task-specific rules hurt the held-out gate.
     * CROSS-ITERATION files: read ./LEDGER.md + the whole ./JOURNAL.md + ./RUNMAP.md +
-      ./prior_iterations/ FIRST (don't re-submit a rejected edit verbatim); each iteration fill
-      ./PROCESS.md (ranked clusters with KNOWLEDGE/BEHAVIORAL/CAPABILITY-GAP tags, every edit +
-      class, verify-the-fix, what to preserve, what was skipped) and APPEND to ./JOURNAL.md.
+      ./prior_iterations/ FIRST. NOTE the JOURNAL model (framework-owned): each optimizer entry
+      is INTENT only, and the framework stamps a RESULT line below it (ACCEPTED/REJECTED · Δ ·
+      exact tasks fixed/broke) — the RESULT lines are the truth of what worked; if the latest
+      RESULT is REJECTED its batch was reverted, so keep the edits NOT in its broke={…} and
+      drop/redesign those that were (don't resubmit, don't abandon the cluster). Each iteration
+      fill ./PROCESS.md (ranked clusters with KNOWLEDGE/BEHAVIORAL/CAPABILITY-GAP tags, every
+      edit + class, verify-the-fix, what to preserve, what was skipped) and APPEND your INTENT
+      entry to ./JOURNAL.md. PREFER CODE: a BEHAVIORAL miss (agent knows the step but skips it)
+      is fixed by a script the agent RUNS, not another prose rule it will skip; build the
+      script THIS iteration, don't defer it.
     * use the two-phase subagent pattern where helpful (Phase 1: one read-only diagnose subagent
       per failing task → tight issue list; Phase 2: one edit-subagent per skill in its own
       worktree → merge into ONE candidate).

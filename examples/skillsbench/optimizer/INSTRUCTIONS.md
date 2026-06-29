@@ -65,7 +65,13 @@ STEP 0 (reading mandate — do this BEFORE any edit, EVERY iteration):
 - The FOUR skills in your candidate dir (`docx/`, `pptx/`, `xlsx/`, `pdf/`) — read the
   SKILL.md + references + scripts of any skill you intend to edit.
 - `./LEDGER.md` (FACTS, read-only) — every prior iteration's outcome + tasks it broke/fixed.
-- `./JOURNAL.md` — the append-only handover; skim for refuted ideas, APPEND your entry.
+- `./JOURNAL.md` — the accumulating handover. Each entry is the optimizer's INTENT; the
+  framework stamps a **RESULT** line right below it (objective: ACCEPTED/REJECTED · Δ · the
+  EXACT tasks fixed/broke). The RESULT lines — not the intent — are the truth of what worked:
+  read them ALL before proposing. If the most recent RESULT is REJECTED, its whole batch was
+  reverted — read that entry's `./prior_iterations/<id>/diff.patch`, keep the edits NOT in its
+  `broke={…}`, and DROP or REDESIGN the ones that were (don't resubmit the batch, don't
+  abandon the cluster). APPEND your new entry (INTENT only) below the marker.
 - `./RUNMAP.md` + `./prior_iterations/<id>/` — prior PROCESS.md + diffs for clusters you touch.
 - `./PROCESS.md` — your REQUIRED explainability file for THIS iteration (template inside).
 {{BENCH_REPO}}
@@ -103,8 +109,14 @@ edits into ONE candidate.
    execute-vs-read intent in the body ("run `scripts/<x>.py`, do not reimplement"). Add a
    script ONLY when the agent will actually call it and it changes the produced file.
 
-For a hard-ZERO task, prose alone rarely helps: give the agent an unmissable PROCEDURE or a
-SCRIPT it will run that changes the graded output file — not a reworded paragraph.
+PREFER CODE (a script) over prose for a BEHAVIORAL miss (this is where iterations fall short).
+If the trace shows the agent already "knows" what to do but skips or botches a deterministic
+step (mishandles docx split-runs, forgets to recalc xlsx formulas, mangles a pdf transform),
+adding ANOTHER prose rule it will skip the same way does little — ship a `<skill>/scripts/`
+helper the agent RUNS that performs the step correctly, and point the body at it with execute
+intent. Reserve prose for genuine KNOWLEDGE gaps (a fact/format/criterion the agent cannot
+derive). For a hard-ZERO cluster a script is usually the only thing that moves it. Do NOT
+defer a needed script to "next iteration" — build it now; it is the highest-leverage edit.
 
 ## VERIFY-THE-FIX (do this for EACH kept edit — satisfies VERIFIED + SAFE)
 - **Body / procedure edit:** tie it to the exact failed verifier test in the trace (e.g.
@@ -133,10 +145,13 @@ general fix. A fiddly task-specific rule hurts the held-out tasks.
   KNOWLEDGE / BEHAVIORAL / CAPABILITY-GAP tag per cluster), every kept edit + its edit
   CLASS, the VERIFY-THE-FIX + blast-radius line per edit, what you deliberately skipped and
   why, and (if you used subagents) that you did.
-- **JOURNAL.md** (append one entry below the marker; never edit earlier entries): what I
-  tried (1 line/change) · what WORKED (only on a real gated gain; cite task ids/Δ) · what
-  REGRESSED and the verdict · refuted hypotheses (never re-test) · high-value clusters not
-  yet cracked + designs already tried · focus next iteration.
+- **JOURNAL.md** (append ONE entry below the marker; never edit earlier entries). Write
+  INTENT only — you cannot know your own gate result; the framework stamps the RESULT line
+  below your entry. Include: the changes I made (1 line/edit, naming the skill + file +
+  cluster) · the EXPECTED effect + why each is safe (which failing task it should fix; why
+  no passing task regresses) · which prior RESULTS I built on and which regressing edits I
+  did NOT re-try (cite ids) · refuted hypotheses (a prior RESULT disproved — never re-test) ·
+  high-value clusters not yet cracked · focus next iteration.
 
 {{FAILURES}}
 {{PASSING}}
