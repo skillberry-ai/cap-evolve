@@ -557,9 +557,8 @@ policy grows 166 → 212 lines across the run. See the curated story in
 
 **See it before you run it.** Open the committed full interactive dashboard (all 15
 iterations, no backend needed) — the static UI export at
-[`examples/tau2_airline/run_full/ui/`](examples/tau2_airline/run_full/ui/) — by running
-`cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000` (then visit
-http://localhost:8000), or host it on GitHub Pages / any static host (KPIs, evaluations,
+[`examples/tau2_airline/run_full/ui/`](examples/tau2_airline/run_full/ui/), served as
+shown in the [tau2-bench example](#tau2-bench-example-real) above (KPIs, evaluations,
 per-iteration git diffs, cost/intake panel, lineage, memory). Raw numbers:
 [`run_full/final.json`](examples/tau2_airline/run_full/final.json). Reproduce from
 zero: [`docs/REPRODUCE_tau2.md`](docs/REPRODUCE_tau2.md). Every iteration is a git
@@ -586,11 +585,12 @@ Report security issues via [SECURITY.md](SECURITY.md). Changes: [CHANGELOG.md](C
 }
 ```
 
-**Acknowledgements.** The `gepa` and `skillopt` skills are independent
-implementations of the GEPA (arXiv:2507.19457) and SkillOpt (arXiv:2605.23904)
-papers — no third-party code is included; both reference projects are MIT-licensed.
-cap-evolve also draws on ideas from DSPy, tau-bench/tau2-bench, and the Agent Skills
-standard. Full citations: [docs/sources.bib](docs/sources.bib).
+**Acknowledgements.** cap-evolve includes **no third-party code** — the `gepa` and
+`skillopt` skills are independent implementations of the GEPA (arXiv:2507.19457) and
+SkillOpt (arXiv:2605.23904) papers, and it draws on ideas from DSPy and Anthropic's
+[Agent Skills](https://www.anthropic.com/news/skills) standard. The bundled example
+uses [tau2-bench](https://github.com/sierra-research/tau2-bench) (MIT). Full
+citations: [docs/sources.bib](docs/sources.bib).
 
 ## License
 

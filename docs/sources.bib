@@ -2,8 +2,9 @@
 % SKILL.md `sources:` frontmatter. Expand as skills are authored.
 
 @misc{gepa,
-  title = {GEPA: Reflective Prompt Evolution with Genetic-Pareto search},
-  note  = {GEPAAdapter (evaluate + make_reflective_dataset); Actionable Side Information; system-aware merge.},
+  title        = {GEPA: Reflective Prompt Evolution Can Outperform Reinforcement Learning},
+  howpublished = {arXiv:2507.19457},
+  note         = {Genetic-Pareto reflective search; evaluate + make_reflective_dataset; system-aware merge. Independently re-implemented; no upstream code vendored.},
 }
 
 @misc{dspy,
@@ -12,8 +13,9 @@
 }
 
 @misc{skillopt,
-  title = {SkillOpt: Executive Strategy for Self-Evolving Agent Skills},
-  note  = {Epochs/minibatch, textual learning-rate budget, strict held-out gate, rejected-edit buffer.},
+  title        = {SkillOpt: Executive Strategy for Self-Evolving Agent Skills},
+  howpublished = {arXiv:2605.23904},
+  note         = {Epochs/minibatch, textual learning-rate budget, strict held-out gate, rejected-edit buffer. Independently re-implemented; no upstream code vendored.},
 }
 
 @misc{skillgrad,
@@ -28,12 +30,18 @@
 
 @misc{tau2bench,
   title = {tau2-bench: tool-agent-user interaction benchmark},
-  note  = {Domain policy + tools + user simulator; pass^k; reward on correct mutating actions.},
+  url   = {https://github.com/sierra-research/tau2-bench},
+  note  = {MIT-licensed. Domain policy + tools + user simulator; pass^k; reward on correct mutating actions. Used (installed) as the worked example; not vendored.},
 }
 
 @misc{evo,
   title = {evo / evo-graph / governor: skill-structured agentic optimizers},
   note  = {Tree search, failure clustering (issues graph), Rejected Memory Store, frontier strategies, worktree parallelism.},
+}
+
+@misc{superpowers,
+  title = {Superpowers — skills-based agentic development workflow},
+  note  = {In-repo design methodology; plans/specs under docs/superpowers/. Process, not vendored code.},
 }
 
 @misc{agentskills,
