@@ -16,7 +16,7 @@ export SKILLSBENCH_TASK_TIMEOUT="${SKILLSBENCH_TASK_TIMEOUT:-2400}"
 
 echo "skillsbench commit: $(git -C "$REPO/vendor/skillsbench" rev-parse HEAD 2>/dev/null || echo '?')"
 echo "agent under test: claude (Claude Code via ACP) @ claude-sonnet-4-6 | sandbox docker"
-echo "optimizer: claude-code @ claude-opus-4-8 | 10 iters · 7 val tasks · 1 trial"
+echo "optimizer: claude-code @ claude-opus-4-8 | 7 iters · 7 val tasks · 3 trials"
 echo "------ pre-run cost preview (spends nothing) ------"
 "$REPO/.venv/bin/cap-evolve" estimate --spec "$PROJECT/capevolve.yaml" --project "$PROJECT"
 echo "------ cap-evolve run (live dashboard) ------"

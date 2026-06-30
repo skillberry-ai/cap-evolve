@@ -25,6 +25,7 @@ number. It optimizes what your agent *reads*, not its weights.
 
 **Contents:** [Why](#why-cap-evolve) · [Install](#install) ·
 [Toy example](#toy-example-zero-api) · [tau2-bench example](#tau2-bench-example-real) ·
+[SkillsBench example](#skillsbench-example-skill-package) ·
 [Optimize your own](#optimize-your-own) · [How it works](#how-it-works) ·
 [Comparison](#how-it-compares) · [Skill library](#skill-library) ·
 [Results](#results) · [How-to guides](#how-to-guides) · [License](#license)
@@ -250,6 +251,44 @@ adapter (incl. `run_batch`/`run_trials`/`trajectories`/`score`), the RITS shim, 
 editable seed (`seed_capability/` = `policy/` + `tools/` + `reference/data_model.py`),
 and the capability-scoped `optimizer/INSTRUCTIONS.md` are exactly what the
 intake / implement-and-check flow produced.
+
+## SkillsBench example (skill-package)
+
+The bundled [`examples/skillsbench`](examples/skillsbench) shows cap-evolve optimizing a
+different capability — an **Agent Skill package** — on a different kind of benchmark:
+[**SkillsBench**](https://github.com/benchflow-ai/skillsbench), where a `claude-sonnet-4-6`
+agent runs each task in a **Docker** sandbox. The capability is the four **shared
+office-document skills** (`docx`/`pptx`/`xlsx`/`pdf`) the benchmark hands its agent; a
+`claude-opus-4-8` optimizer edits those skills — bodies, references, **and executable
+scripts** — and one optimized set is deployed to every task (BenchFlow's
+`--skill-mode with-skill --skills-dir`).
+
+The run lifted **val 0.333 → 0.714** (7 train==val tasks · 3 trials) and, on the **sealed
+held-out test** (scored once on **both** baseline and optimized skills), **0.556 → 0.667
+(+0.111)**. Across four accepted iterations the optimizer edited all four `SKILL.md` bodies
+and added scripts (`pptx/scripts/recalc.py`, `xlsx/scripts/`); it then stopped on a real
+ceiling — diagnosing the two unsolved tasks as broken/hardcoded oracles rather than
+overfitting them. Headline numbers + per-iteration story:
+[`run_full/`](examples/skillsbench/run_full/) · [`DEMO.md`](examples/skillsbench/DEMO.md).
+
+```bash
+# Docker running; `uv`; logged into Claude Code; gateway creds in repo-root .env
+# (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN).
+bash examples/skillsbench/setup.sh   # intake: uv tool install benchflow, clone SkillsBench,
+                                     # scaffold + wire the adapter, then cap-evolve check
+bash examples/skillsbench/smoke.sh   # 1 val task in Docker → a real verifier reward
+bash examples/skillsbench/run.sh     # full run (7 iters · 3 trials) + dashboard on :7878
+```
+
+This is the executable transcript of pasting
+[`PROMPT.md`](examples/skillsbench/PROMPT.md) to your coding agent and saying *"follow
+[`RUN.md`](RUN.md)."* Three benchmark-agnostic improvements drove the result and apply to
+any run: the `claude-code` optimizer can **run code to verify its edits**
+(`--allowedTools Bash`), so it ships verified scripts rather than prose-only edits; the
+adapter evaluates a split's tasks in **one parallel `bench` call**; and `finalize` scores
+**both baseline and optimized on the sealed test split**, so every run reports the honest
+held-out improvement. Reproduce from zero:
+[`docs/REPRODUCE_skillsbench.md`](docs/REPRODUCE_skillsbench.md).
 
 ## Optimize your own
 

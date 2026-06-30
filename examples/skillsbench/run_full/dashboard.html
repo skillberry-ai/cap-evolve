@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>cap-evolve · run dashboard</title>
+<style>
+:root{--bg:#07090d;--card:#0d1117;--card2:#141b24;--line:#1e2733;--text:#e6edf3;
+--muted:#8b98a9;--accent:#3b82f6;--champion:#f59e0b;--ok:#22c55e;--bad:#ef4444;--warn:#d29922;--radius:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.num{font-variant-numeric:tabular-nums}
+header{position:sticky;top:0;z-index:5;background:rgba(14,17,22,.88);backdrop-filter:blur(8px);
+border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:baseline;gap:16px}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.02em}
+header .meta{color:var(--muted);font-size:12px}
+main{max-width:1180px;margin:0 auto;padding:26px;display:flex;flex-direction:column;gap:26px}
+section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+section h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px}
+.kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.kpi .v{font-size:23px;font-weight:700;margin-top:4px}
+.kpi .v.ok{color:var(--ok)} .kpi .v.bad{color:var(--bad)} .kpi .v.acc{color:var(--accent)} .kpi .v.champ{color:var(--champion)}
+header .logo{flex:none}
+header .tag{color:var(--muted);font-size:12px;margin-left:auto}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.phase{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.phase .nm{font-weight:600} .phase .st{font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.phase.done{border-color:#1f3a23} .phase.done .st{color:var(--ok)}
+.phase.active{border-color:var(--accent)} .phase.active .st{color:var(--accent)}
+.phase.pending .st{color:var(--muted)}
+.phase .d{color:var(--muted);font-size:11px;margin-top:4px}
+.dead{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:6px 12px;margin:6px 0}
+.dead .x{color:var(--bad);font-size:11px;float:right}
+.kpi .s{color:var(--muted);font-size:11px;margin-top:2px}
+svg{display:block;max-width:100%}
+.legend{color:var(--muted);font-size:12px;margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tip{position:fixed;pointer-events:none;background:#000d;border:1px solid var(--line);
+border-radius:8px;padding:7px 10px;font-size:12px;z-index:50;display:none;max-width:320px;white-space:pre-line}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+td.r,th.r{text-align:right}
+.badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.b-accepted{background:#1f3a23;color:var(--ok)} .b-rejected{background:#3a2f12;color:var(--warn)}
+.b-failed{background:#3a1c1c;color:var(--bad)} .b-seed{background:#22303a;color:var(--accent)}
+.hide{display:none!important}
+.row{display:flex;gap:18px;flex-wrap:wrap}
+.col{flex:1;min-width:280px}
+select,button{background:var(--card2);color:var(--text);border:1px solid var(--line);
+border-radius:8px;padding:5px 9px;font:inherit;cursor:pointer}
+.diff{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#0b0e13;border:1px solid var(--line);
+border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
+.diff .add{color:var(--ok)} .diff .del{color:var(--bad)} .diff .hunk{color:var(--accent)} .diff .ctx{color:var(--muted)}
+.diff .file{color:var(--text);font-weight:700;margin:8px 0 2px}
+.ann{border-left:3px solid var(--warn);padding:6px 12px;margin:8px 0;background:var(--card2);border-radius:0 8px 8px 0}
+.ann.diag{border-left-color:var(--accent)}
+.ann .who{color:var(--muted);font-size:11px}
+.heat rect{cursor:pointer} .heat text{fill:var(--muted);font-size:10px}
+code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
+.muted{color:var(--muted)}
+</style></head><body>
+<header><svg class="logo" width="26" height="26" viewBox="0 0 48 48" aria-label="cap-evolve">
+<path d="M4 40 L16 34 L26 24 L36 14 L44 8" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="44" cy="8" r="2.6" fill="#f59e0b"/>
+<g fill="#e6edf3"><ellipse cx="22" cy="33" rx="13" ry="8.5"/><ellipse cx="34" cy="28" rx="7.5" ry="6.5"/>
+<ellipse cx="40.5" cy="29.5" rx="3.2" ry="2.6"/><circle cx="31" cy="22" r="1.8"/><circle cx="36" cy="22" r="1.8"/>
+<rect x="14" y="38" width="2.8" height="6" rx="1.4"/><rect x="26" y="38" width="2.8" height="6" rx="1.4"/></g>
+<circle cx="34" cy="26.5" r="1" fill="#07090d"/></svg>
+<h1>cap<span style="color:#f59e0b">·</span>evolve</h1><span class="meta" id="hdr"></span>
+<span class="tag">watch capability evolve</span></header>
+<main id="main"></main>
+<div class="tip" id="tip"></div>
+<script type="application/json" id="run-data">{"graph": {"nodes": [{"id": "seed", "parent": null, "children": ["cand_0001"], "status": "seed", "val": 0.33333333333333337, "stderr": 0.18442777839082938, "per_task": {"exceltable-in-ppt": 0.3333333333333333, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.0, "offer-letter-generator": 1.0, "sales-pivot-analysis": 0.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_content: The test failed in the call phase due to an assertion error", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task reward: 0.000. 3 verifier test(s) failed:\n  - ::TestPivotTableConfiguration::test_pivot_row_is_state: The test failed in the call phase\n  - ::TestPivotTableConfiguration::test_pivot_uses_correct_aggregation: The test failed in the call phase\n  - ::TestDataTransformationCorrectness::test_pivot_cache_has_fields: The test failed in the call phase", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "seconds": 2309.740989923477, "optimizer_seconds": 0.0, "runner_seconds": 2309.740989923477, "iteration": 0, "reason": "baseline (seed)", "best_so_far": 0.33333333333333337}, {"id": "cand_0001", "parent": "seed", "children": ["cand_0002"], "status": "accepted", "val": 0.38095238095238093, "stderr": null, "per_task": {"exceltable-in-ppt": 0.3333333333333333, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.3333333333333333, "offer-letter-generator": 0.6666666666666666, "sales-pivot-analysis": 0.6666666666666666, "weighted-gdp-calc": 0.6666666666666666, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestSourceDataContent::test_state_values_are_valid: The test failed in the call phase due to an assertion error", "weighted-gdp-calc": "Task reward: 0.000. 7 verifier test(s) failed:\n  - ::TestStep2NetExportsCalculation::test_net_exports_pct_values: The test failed in the call phase due to an assertion error\n  - ::TestStep2Statistics::test_min_values: The test failed in the call phase due to an assertion error\n  - ::TestStep2Statistics::test_max_values: The test failed in the call phase due to an assertion error\n  - ::TestStep2Statistics::test_median_values: The test failed in the call phase due to an assertion error\n  - ::TestStep2Statistics::test_mean_values: The test failed in the call phase due to an assertion error\n  - ::TestStep2Statistics::test_percentile_values: The test failed in the call phase due to an assertion error\n  - ::TestStep3WeightedMean::test_weighted_mean_values: The test failed in the call phase due to an assertion error", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_file_exists: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 8.159774, "opt_tokens": 46481, "seconds": 3134.23, "optimizer_seconds": 967.42, "runner_seconds": 2166.81, "iteration": 1, "reason": "paired \u0394\u0304=+0.0476 > 0.2\u00b7SE=0.0269 (SE=0.1347, n=7)", "parent_val": 0.33333333333333337, "best_so_far": 0.38095238095238093}, {"id": "cand_0002", "parent": "cand_0001", "children": ["cand_0003"], "status": "accepted", "val": 0.5714285714285714, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.0, "offer-letter-generator": 1.0, "sales-pivot-analysis": 1.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_content: The test failed in the call phase due to an assertion error", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 7.937032, "opt_tokens": 44157, "seconds": 2812.08, "optimizer_seconds": 1103.6, "runner_seconds": 1708.48, "iteration": 2, "reason": "paired \u0394\u0304=+0.1905 > 0.2\u00b7SE=0.0246 (SE=0.1230, n=7)", "parent_val": 0.38095238095238093, "best_so_far": 0.5714285714285714}, {"id": "cand_0003", "parent": "cand_0002", "children": ["cand_0004"], "status": "accepted", "val": 0.619047619047619, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.6666666666666666, "offer-letter-generator": 1.0, "sales-pivot-analysis": 0.6666666666666666, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 2.424093, "opt_tokens": 18304, "seconds": 2162.84, "optimizer_seconds": 349.77, "runner_seconds": 1813.07, "iteration": 3, "reason": "paired \u0394\u0304=+0.0476 > 0.2\u00b7SE=0.0227 (SE=0.1134, n=7)", "parent_val": 0.5714285714285714, "best_so_far": 0.619047619047619}, {"id": "cand_0004", "parent": "cand_0003", "children": ["cand_0005", "cand_0006", "cand_0007"], "status": "accepted", "val": 0.7142857142857143, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 1.0, "offer-letter-generator": 1.0, "sales-pivot-analysis": 1.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 3.646896, "opt_tokens": 49971, "seconds": 2667.86, "optimizer_seconds": 988.61, "runner_seconds": 1679.25, "iteration": 4, "reason": "paired \u0394\u0304=+0.0952 > 0.2\u00b7SE=0.0123 (SE=0.0615, n=7)", "parent_val": 0.619047619047619, "best_so_far": 0.7142857142857143}, {"id": "cand_0005", "parent": "cand_0004", "children": [], "status": "rejected", "val": 0.619047619047619, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.3333333333333333, "offer-letter-generator": 1.0, "sales-pivot-analysis": 1.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 1.989783, "opt_tokens": 35672, "seconds": 3855.37, "optimizer_seconds": 509.01, "runner_seconds": 3346.36, "iteration": 5, "reason": "paired \u0394\u0304=-0.0952 <= 0.2\u00b7SE=0.0190 (SE=0.0952, n=7)", "parent_val": 0.7142857142857143, "best_so_far": 0.7142857142857143}, {"id": "cand_0006", "parent": "cand_0004", "children": [], "status": "rejected", "val": 0.6666666666666667, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 0.6666666666666666, "offer-letter-generator": 1.0, "sales-pivot-analysis": 1.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 2.504018, "opt_tokens": 35869, "seconds": 2196.74, "optimizer_seconds": 555.31, "runner_seconds": 1641.43, "iteration": 6, "reason": "paired \u0394\u0304=-0.0476 <= 0.2\u00b7SE=0.0095 (SE=0.0476, n=7)", "parent_val": 0.7142857142857143, "best_so_far": 0.7142857142857143}, {"id": "cand_0007", "parent": "cand_0004", "children": [], "status": "rejected", "val": 0.7142857142857143, "stderr": null, "per_task": {"exceltable-in-ppt": 1.0, "financial-modeling-qa": 0.0, "invoice-fraud-detection": 1.0, "offer-letter-generator": 1.0, "sales-pivot-analysis": 1.0, "weighted-gdp-calc": 1.0, "xlsx-recover-data": 0.0}, "feedback": {"exceltable-in-ppt": "Task fully solved (all verifier tests passed; reward 1.0).", "financial-modeling-qa": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error", "invoice-fraud-detection": "Task fully solved (all verifier tests passed; reward 1.0).", "offer-letter-generator": "Task fully solved (all verifier tests passed; reward 1.0).", "sales-pivot-analysis": "Task fully solved (all verifier tests passed; reward 1.0).", "weighted-gdp-calc": "Task fully solved (all verifier tests passed; reward 1.0).", "xlsx-recover-data": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error"}, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 5.713039, "opt_tokens": 51311, "seconds": 2458.9700000000003, "optimizer_seconds": 930.29, "runner_seconds": 1528.68, "iteration": 7, "reason": "paired \u0394\u0304=+0.0000 <= 0 (SE=0 \u2192 STRICT fallback, warned; n=7)", "parent_val": 0.7142857142857143, "best_so_far": 0.7142857142857143}], "root": "seed", "best_id": "cand_0004"}, "summary": {"run_id": "run_full", "baseline_val": 0.33333333333333337, "best_val": 0.7142857142857143, "best_id": "cand_0004", "delta_abs": 0.381, "delta_pct": 114.3, "test_reward": 0.6666666666666666, "test_stderr": 0.33333333333333337, "test_pass_k": {"1": 0.6666666666666666, "2": 0.6666666666666666}, "test_sealed": true, "counts": {"accepted": 4, "rejected": 3, "failed": 0, "seed": 1, "total": 8}, "frontier": 1, "tasks": ["offer-letter-generator", "exceltable-in-ppt", "xlsx-recover-data", "sales-pivot-analysis", "invoice-fraud-detection", "weighted-gdp-calc", "financial-modeling-qa"], "wall_clock_seconds": 26087.4, "optimizer_seconds": 5404.0, "runner_seconds": 20683.3, "intake_seconds": 0.0, "cost": {"optimizer_usd": 32.3746, "runner_usd": 0.0, "intake_usd": 0.0, "total_usd": 32.3746}, "tokens": 281765, "tokens_by_role": {"runner": 0, "optimizer": 281765, "intake": 0}, "per_iteration": [{"iteration": 1, "candidate": "cand_0001", "status": "accepted", "optimizer_usd": 8.159774, "optimizer_seconds": 967.42, "optimizer_tokens": 46481, "runner_usd": null, "runner_seconds": 2166.81, "runner_tokens": 0}, {"iteration": 2, "candidate": "cand_0002", "status": "accepted", "optimizer_usd": 7.937032, "optimizer_seconds": 1103.6, "optimizer_tokens": 44157, "runner_usd": null, "runner_seconds": 1708.48, "runner_tokens": 0}, {"iteration": 3, "candidate": "cand_0003", "status": "accepted", "optimizer_usd": 2.424093, "optimizer_seconds": 349.77, "optimizer_tokens": 18304, "runner_usd": null, "runner_seconds": 1813.07, "runner_tokens": 0}, {"iteration": 4, "candidate": "cand_0004", "status": "accepted", "optimizer_usd": 3.646896, "optimizer_seconds": 988.61, "optimizer_tokens": 49971, "runner_usd": null, "runner_seconds": 1679.25, "runner_tokens": 0}, {"iteration": 5, "candidate": "cand_0005", "status": "rejected", "optimizer_usd": 1.989783, "optimizer_seconds": 509.01, "optimizer_tokens": 35672, "runner_usd": null, "runner_seconds": 3346.36, "runner_tokens": 0}, {"iteration": 6, "candidate": "cand_0006", "status": "rejected", "optimizer_usd": 2.504018, "optimizer_seconds": 555.31, "optimizer_tokens": 35869, "runner_usd": null, "runner_seconds": 1641.43, "runner_tokens": 0}, {"iteration": 7, "candidate": "cand_0007", "status": "rejected", "optimizer_usd": 5.713039, "optimizer_seconds": 930.29, "optimizer_tokens": 51311, "runner_usd": null, "runner_seconds": 1528.68, "runner_tokens": 0}], "evaluations": [{"id": "baseline", "kind": "baseline", "candidate": "seed", "split": "val", "reward": 0.33333333333333337, "stderr": 0.18442777839082938, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 2309.740989923477, "tokens": 0}, {"id": "cand_0001", "kind": "candidate", "candidate": "cand_0001", "split": "val", "reward": 0.38095238095238093, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 2166.81, "tokens": 0}, {"id": "cand_0002", "kind": "candidate", "candidate": "cand_0002", "split": "val", "reward": 0.5714285714285714, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 1708.48, "tokens": 0}, {"id": "cand_0003", "kind": "candidate", "candidate": "cand_0003", "split": "val", "reward": 0.619047619047619, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 1813.07, "tokens": 0}, {"id": "cand_0004", "kind": "candidate", "candidate": "cand_0004", "split": "val", "reward": 0.7142857142857143, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 1679.25, "tokens": 0}, {"id": "cand_0005", "kind": "candidate", "candidate": "cand_0005", "split": "val", "reward": 0.619047619047619, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 3346.36, "tokens": 0}, {"id": "cand_0006", "kind": "candidate", "candidate": "cand_0006", "split": "val", "reward": 0.6666666666666667, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 1641.43, "tokens": 0}, {"id": "cand_0007", "kind": "candidate", "candidate": "cand_0007", "split": "val", "reward": 0.7142857142857143, "stderr": null, "n_tasks": 7, "trials": 3, "cost_usd": 0.0, "seconds": 1528.68, "tokens": 0}, {"id": "test", "kind": "test", "candidate": "cand_0004", "split": "test", "reward": 0.6666666666666666, "stderr": 0.33333333333333337, "n_tasks": 3, "trials": 3, "cost_usd": 0.0, "seconds": 2384.8835899829865, "tokens": 0}], "intake": {"usd": 0.0, "seconds": 0.0, "tokens": 0, "output_summary": "", "implemented": []}, "budget": {"max_iterations": 7, "max_metric_calls": 0, "max_usd": 600.0, "stall": 0, "max_optimizer_usd": 400.0}, "spent": {"iterations": 7, "metric_calls": 186, "usd": 0.0, "stall": 3, "runner_tokens": 0, "runner_seconds": 20683.3216278553, "optimizer_seconds": 5404.0336837768555, "optimizer_usd": 32.37463425000001, "optimizer_tokens": 281765, "intake_usd": 0.0, "intake_tokens": 0, "intake_seconds": 0.0}, "budget_warnings": [], "gate_warnings": [{"reason": "combined/paired SE is 0 (likely n_trials=1 or identical trials) \u2014 the significance gate cannot distinguish noise from signal and is falling back to STRICT (accept any \u0394>0). Increase n_trials and ensure the runner forwards the per-trial seed to get real variance.", "context": "n=7", "mode": "paired"}], "diagnoses": [], "git_log": [{"hash": "8b2df05", "subject": "seed: baseline candidate"}, {"hash": "c8698a9", "subject": "iter 1: ACCEPT candidate cand_0001 (val 0.381, \u0394 +0.048)"}, {"hash": "4a58c5b", "subject": "iter 2: ACCEPT candidate cand_0002 (val 0.571, \u0394 +0.190)"}, {"hash": "b77200e", "subject": "iter 3: ACCEPT candidate cand_0003 (val 0.619, \u0394 +0.048)"}, {"hash": "e687563", "subject": "iter 4: ACCEPT candidate cand_0004 (val 0.714, \u0394 +0.095)"}, {"hash": "e9f6998", "subject": "iter 5: reject candidate cand_0005 (val 0.619, \u0394 -0.095)"}, {"hash": "00d5eaa", "subject": "iter 6: reject candidate cand_0006 (val 0.667, \u0394 -0.048)"}, {"hash": "1e302ea", "subject": "iter 7: reject candidate cand_0007 (val 0.714, \u0394 +0.000)"}]}, "diffs": {"cand_0001": [{"file": "pdf/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -273,4 +273,15 @@"}, {"t": "ctx", "l": "     writer.write(output)"}, {"t": "ctx", "l": " ```"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+### Reconciling extracted data against reference tables"}, {"t": "add", "l": "+When you extract a field from a document to look it up in reference data (vendors,"}, {"t": "add", "l": "+purchase orders, accounts, customers) and build a report, distinguish the **raw"}, {"t": "add", "l": "+extracted value** from the **resolved value**. If a key read from the document"}, {"t": "add", "l": "+(a PO/order/reference/account number) is not found in the reference data, record the"}, {"t": "add", "l": "+result the output contract specifies for \"not found\" \u2014 commonly `null`/`None` \u2014 rather"}, {"t": "add", "l": "+than echoing the unmatched raw string from the document. Re-read the task's stated"}, {"t": "add", "l": "+rule for each field's missing/invalid case before writing the report, and apply it"}, {"t": "add", "l": "+to every record (a value that fails its lookup is \"missing\", even if the document"}, {"t": "add", "l": "+printed something for it)."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Quick Reference"}]}, {"file": "xlsx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -126,4 +126,29 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " This applies to ALL calculations - totals, percentages, ratios, differences, etc. The spreadsheet should be able to recalculate when source data changes."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+## Creating real Excel PivotTables"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+When a task asks for an actual Excel **PivotTable** (not just a summary), you must"}, {"t": "add", "l": "+write a genuine OOXML PivotTable object (pivotCache + pivotTableDefinition). A"}, {"t": "add", "l": "+pandas `groupby` written as styled cells is NOT a pivot table \u2014 Excel and verifiers"}, {"t": "add", "l": "+inspect `workbook[sheet]._pivots[0]` (its `rowFields`, `dataFields[0].subtotal`,"}, {"t": "add", "l": "+`cache.cacheFields`), which a summary table does not create."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+openpyxl has no high-level \"create pivot\" helper, but the low-level `openpyxl.pivot`"}, {"t": "add", "l": "+API does support building one. **Do not skip the real pivot and substitute a summary"}, {"t": "add", "l": "+table.** Instead, first write the source data to a sheet, then run the bundled helper"}, {"t": "add", "l": "+once per pivot (do not reimplement it):"}, {"t": "add", "l": "+```bash"}, {"t": "add", "l": "+# fields are resolved by HEADER NAME from the source range's header row"}, {"t": "add", "l": "+python scripts/add_pivot_table.py demographic_analysis.xlsx \\"}, {"t": "add", "l": "+    --source SourceData --range auto \\"}, {"t": "add", "l": "+    --target \"Population by State\" --name \"Total Population\" \\"}, {"t": "add", "l": "+    --row STATE --value POPULATION_2023 --agg sum"}, {"t": "add", "l": "+# matrix pivot (row + column field): add --col Quarter"}, {"t": "add", "l": "+```"}, {"t": "add", "l": "+`--agg` accepts Excel subtotal names: `sum|count|countNums|average|min|max|product`."}, {"t": "add", "l": "+The script builds the pivotCache (one cacheField per source header), sets the row"}, {"t": "add", "l": "+(and optional column) axis field, and the data field's aggregation. Run it for each"}, {"t": "add", "l": "+required pivot sheet."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Common Workflow"}, {"t": "hunk", "l": "@@ -202,4 +227,23 @@"}, {"t": "ctx", "l": " ```"}, {"t": "ctx", "l": " "}, {"t": "add", "l": "+#### CRITICAL: Recalculate after editing any cell that a formula depends on"}, {"t": "add", "l": "+When you change the value of a cell that other formulas reference, the **cached"}, {"t": "add", "l": "+results** of those formulas become stale. openpyxl does NOT recompute them \u2014 on"}, {"t": "add", "l": "+save it writes each formula cell with its old (or blank) cached value, while the"}, {"t": "add", "l": "+formula string is preserved. Tools that read the file afterwards \u2014 `pandas.read_excel`,"}, {"t": "add", "l": "+`load_workbook(data_only=True)`, or a program consuming an embedded workbook \u2014"}, {"t": "add", "l": "+read the **cached value, not the formula**, so they see stale numbers or `None`/NaN."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Therefore: **after editing the value of any cell in a workbook that contains"}, {"t": "add", "l": "+formulas, you MUST run `recalc.py` on the file before delivering or repacking it.**"}, {"t": "add", "l": "+This applies even when you only changed a single input cell and added no new"}, {"t": "add", "l": "+formulas. Do NOT hardcode the recomputed numbers into the formula cells \u2014 let"}, {"t": "add", "l": "+`recalc.py` refill them:"}, {"t": "add", "l": "+```bash"}, {"t": "add", "l": "+python recalc.py modified.xlsx"}, {"t": "add", "l": "+```"}, {"t": "add", "l": "+Verify by re-reading with `data_only=True` and confirming the dependent cells now"}, {"t": "add", "l": "+hold the expected recomputed values."}, {"t": "add", "l": "+"}, {"t": "ctx", "l": " ## Recalculating formulas"}, {"t": "ctx", "l": " "}]}, {"file": "xlsx/scripts/add_pivot_table.py", "rows": [{"t": "hunk", "l": "@@ -0,0 +1,139 @@"}, {"t": "add", "l": "+#!/usr/bin/env python3"}, {"t": "add", "l": "+\"\"\""}, {"t": "add", "l": "+Add a REAL Excel PivotTable (OOXML pivotCache + pivotTableDefinition) to a workbook."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+openpyxl has no high-level \"create pivot\" helper, so agents often fall back to a"}, {"t": "add", "l": "+pandas groupby summary table. That is WRONG when a verifier or Excel expects an"}, {"t": "add", "l": "+actual PivotTable object: it inspects `workbook[sheet]._pivots[0]` (rowFields,"}, {"t": "add", "l": "+dataFields[0].subtotal, cache.cacheFields). This helper builds the genuine pivot"}, {"t": "add", "l": "+object via the low-level `openpyxl.pivot` API and appends it to the target sheet."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Fields are resolved BY HEADER NAME (read from row 1 of the source range), so the"}, {"t": "add", "l": "+same call works for any dataset \u2014 no hardcoded column positions."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Usage (CLI), one pivot per invocation:"}, {"t": "add", "l": "+    python add_pivot_table.py FILE.xlsx \\"}, {"t": "add", "l": "+        --source SourceData --range auto \\"}, {"t": "add", "l": "+        --target \"Population by State\" --name \"Total Population\" \\"}, {"t": "add", "l": "+        --row STATE --value POPULATION_2023 --agg sum [--col Quarter]"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+--range auto uses the source sheet's used dimensions (A1:..). --agg is one of"}, {"t": "add", "l": "+sum|count|countNums|average|min|max|product|stdDev|var (Excel subtotal names)."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Or import: add_pivot_table(wb, \"SourceData\", \"A1:I400\", \"Population by State\","}, {"t": "add", "l": "+\"Total Population\", \"STATE\", \"POPULATION_2023\", \"sum\", col_field=\"Quarter\")."}, {"t": "add", "l": "+\"\"\""}, {"t": "add", "l": "+import argparse"}, {"t": "add", "l": "+import sys"}, {"t": "add", "l": "+from openpyxl import load_workbook, Workbook"}, {"t": "add", "l": "+from openpyxl.pivot.table import TableDefinition, Location, PivotField, DataField, RowColField"}, {"t": "add", "l": "+from openpyxl.pivot.cache import ("}, {"t": "add", "l": "+    CacheDefinition, CacheField, CacheSource, WorksheetSource, SharedItems,"}, {"t": "add", "l": "+)"}, {"t": "add", "l": "+from openpyxl.utils import range_boundaries, get_column_letter"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def _headers(ws, ref):"}, {"t": "add", "l": "+    \"\"\"Return header names from the first (header) row of ref (e.g. 'A1:I400').\"\"\""}, {"t": "add", "l": "+    min_col, min_row, max_col, _ = range_boundaries(ref)"}, {"t": "add", "l": "+    return [ws.cell(row=min_row, column=c).value for c in range(min_col, max_col + 1)]"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def _auto_ref(ws):"}, {"t": "add", "l": "+    return f\"A1:{get_column_letter(ws.max_column)}{ws.max_row}\""}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def add_pivot_table(wb, source_sheet, source_ref, target_sheet, name,"}, {"t": "add", "l": "+                    row_field, value_field, agg=\"sum\", col_field=None):"}, {"t": "add", "l": "+    \"\"\"Build a real PivotTable on a new sheet and register it on the workbook."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    Field args are HEADER NAMES (case-insensitive); indices are resolved from the"}, {"t": "add", "l": "+    source range's header row. Returns the created TableDefinition."}, {"t": "add", "l": "+    \"\"\""}, {"t": "add", "l": "+    src = wb[source_sheet]"}, {"t": "add", "l": "+    if source_ref in (None, \"auto\"):"}, {"t": "add", "l": "+        source_ref = _auto_ref(src)"}, {"t": "add", "l": "+    headers = _headers(src, source_ref)"}, {"t": "add", "l": "+    lower = [str(h).lower() if h is not None else \"\" for h in headers]"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    def idx(field):"}, {"t": "add", "l": "+        f = str(field).lower()"}, {"t": "add", "l": "+        for i, h in enumerate(lower):"}, {"t": "add", "l": "+            if h == f:"}, {"t": "add", "l": "+                return i"}, {"t": "add", "l": "+        raise ValueError(f\"field {field!r} not found in headers {headers}\")"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    row_idx = idx(row_field)"}, {"t": "add", "l": "+    data_idx = idx(value_field)"}, {"t": "add", "l": "+    col_idx = idx(col_field) if col_field else None"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    pivot_ws = wb.create_sheet(target_sheet)"}, {"t": "add", "l": "+    loc_ref = \"A3:F30\" if col_idx is not None else \"A3:B60\""}, {"t": "add", "l": "+    pivot = TableDefinition("}, {"t": "add", "l": "+        name=name, cacheId=0, dataCaption=str(agg).title(),"}, {"t": "add", "l": "+        location=Location(ref=loc_ref, firstHeaderRow=1,"}, {"t": "add", "l": "+                          firstDataRow=2 if col_idx is not None else 1, firstDataCol=1),"}, {"t": "add", "l": "+    )"}, {"t": "add", "l": "+    for i in range(len(headers)):"}, {"t": "add", "l": "+        axis = \"axisRow\" if i == row_idx else (\"axisCol\" if i == col_idx else None)"}, {"t": "add", "l": "+        pivot.pivotFields.append(PivotField(axis=axis, dataField=(i == data_idx), showAll=False))"}, {"t": "add", "l": "+    pivot.rowFields.append(RowColField(x=row_idx))"}, {"t": "add", "l": "+    if col_idx is not None:"}, {"t": "add", "l": "+        pivot.colFields.append(RowColField(x=col_idx))"}, {"t": "add", "l": "+    pivot.dataFields.append(DataField(name=name, fld=data_idx, subtotal=agg))"}, {"t": "add", "l": "+    pivot.cache = CacheDefinition("}, {"t": "add", "l": "+        cacheSource=CacheSource(type=\"worksheet\","}, {"t": "add", "l": "+                                worksheetSource=WorksheetSource(ref=source_ref, sheet=source_sheet)),"}, {"t": "add", "l": "+        cacheFields=[CacheField(name=h, sharedItems=SharedItems()) for h in headers],"}, {"t": "add", "l": "+    )"}, {"t": "add", "l": "+    pivot_ws._pivots.append(pivot)"}, {"t": "add", "l": "+    return pivot"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def _cli(argv):"}, {"t": "add", "l": "+    p = argparse.ArgumentParser(description=\"Add a real Excel PivotTable to a workbook.\")"}, {"t": "add", "l": "+    p.add_argument(\"file\")"}, {"t": "add", "l": "+    p.add_argument(\"--source\", required=True)"}, {"t": "add", "l": "+    p.add_argument(\"--range\", default=\"auto\")"}, {"t": "add", "l": "+    p.add_argument(\"--target\", required=True)"}, {"t": "add", "l": "+    p.add_argument(\"--name\", required=True)"}, {"t": "add", "l": "+    p.add_argument(\"--row\", required=True)"}, {"t": "add", "l": "+    p.add_argument(\"--value\", required=True)"}, {"t": "add", "l": "+    p.add_argument(\"--agg\", default=\"sum\")"}, {"t": "add", "l": "+    p.add_argument(\"--col\", default=None)"}, {"t": "add", "l": "+    a = p.parse_args(argv)"}, {"t": "add", "l": "+    wb = load_workbook(a.file)"}, {"t": "add", "l": "+    add_pivot_table(wb, a.source, a.range, a.target, a.name, a.row, a.value, a.agg, a.col)"}, {"t": "add", "l": "+    wb.save(a.file)"}, {"t": "add", "l": "+    print(f\"Added pivot '{a.name}' on sheet '{a.target}' (row={a.row}, value={a.value}, agg={a.agg}\""}, {"t": "add", "l": "+          + (f\", col={a.col}\" if a.col else \"\") + \")\")"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def _selfcheck():"}, {"t": "add", "l": "+    \"\"\"Build a toy sheet, add one sum pivot, reload, assert the verifier predicates.\"\"\""}, {"t": "add", "l": "+    import io"}, {"t": "add", "l": "+    wb = Workbook()"}, {"t": "add", "l": "+    ws = wb.active"}, {"t": "add", "l": "+    ws.title = \"SourceData\""}, {"t": "add", "l": "+    ws.append([\"STATE\", \"POP\", \"Quarter\"])"}, {"t": "add", "l": "+    for r in [[\"NSW\", 10, \"Q1\"], [\"VIC\", 20, \"Q2\"], [\"NSW\", 5, \"Q3\"]]:"}, {"t": "add", "l": "+        ws.append(r)"}, {"t": "add", "l": "+    add_pivot_table(wb, \"SourceData\", \"auto\", \"Pop by State\", \"Total Pop\","}, {"t": "add", "l": "+                    \"STATE\", \"POP\", \"sum\")"}, {"t": "add", "l": "+    buf = io.BytesIO()"}, {"t": "add", "l": "+    wb.save(buf)"}, {"t": "add", "l": "+    buf.seek(0)"}, {"t": "add", "l": "+    wb2 = load_workbook(buf)"}, {"t": "add", "l": "+    piv = wb2[\"Pop by State\"]._pivots[0]"}, {"t": "add", "l": "+    names = [f.name for f in piv.cache.cacheFields]"}, {"t": "add", "l": "+    assert len(names) > 0, \"cache has no fields\""}, {"t": "add", "l": "+    assert names[piv.rowFields[0].x].lower() == \"state\", names"}, {"t": "add", "l": "+    assert piv.dataFields[0].subtotal == \"sum\", piv.dataFields[0].subtotal"}, {"t": "add", "l": "+    print(\"selfcheck OK:\", names)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+if __name__ == \"__main__\":"}, {"t": "add", "l": "+    if len(sys.argv) == 1:"}, {"t": "add", "l": "+        _selfcheck()"}, {"t": "add", "l": "+    else:"}, {"t": "add", "l": "+        _cli(sys.argv[1:])"}]}], "cand_0002": [{"file": "pptx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -179,4 +179,33 @@"}, {"t": "ctx", "l": " 4. **CRITICAL**: Validate immediately after each edit and fix any validation errors before proceeding: `python ooxml/scripts/validate.py <dir> --original <file>`"}, {"t": "ctx", "l": " 5. Pack the final presentation: `python ooxml/scripts/pack.py <input_directory> <office_file>`"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+## Editing an embedded Excel workbook inside a presentation"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+A slide may contain an **embedded Excel object** (a spreadsheet/table pasted into the"}, {"t": "add", "l": "+deck). Its workbook lives inside the .pptx ZIP at `ppt/embeddings/*.xlsx`. To change a"}, {"t": "add", "l": "+value in it: read the .pptx as a ZIP, extract that embedded `.xlsx` to a temp file, edit"}, {"t": "add", "l": "+it, then write the modified `.xlsx` back into the same ZIP entry and save the .pptx."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+### CRITICAL: refresh cached formula results after editing the embedded workbook"}, {"t": "add", "l": "+When the embedded workbook has **formula cells**, editing it with openpyxl and re-saving"}, {"t": "add", "l": "+DESTROYS the cached results of every formula cell \u2014 openpyxl writes the formula string"}, {"t": "add", "l": "+but drops its stored `<v>` value. Anything that reads the embedded workbook afterwards"}, {"t": "add", "l": "+(`pandas.read_excel`, `load_workbook(data_only=True)`, PowerPoint, a verifier) reads the"}, {"t": "add", "l": "+**cached value, not the formula**, so those cells come back as stale numbers or"}, {"t": "add", "l": "+blank/`NaN`, and formulas that depend on the cell you changed still show the OLD result."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Therefore, after editing the embedded `.xlsx` with openpyxl and BEFORE re-zipping it into"}, {"t": "add", "l": "+the .pptx, you MUST recalculate it so every formula cell's cached value is refreshed"}, {"t": "add", "l": "+(LibreOffice `calculateAll` + store). Run the bundled helper (do not reimplement it, do"}, {"t": "add", "l": "+not hand-edit `<v>` values):"}, {"t": "add", "l": "+```bash"}, {"t": "add", "l": "+python scripts/recalc.py path/to/extracted_embedded.xlsx"}, {"t": "add", "l": "+```"}, {"t": "add", "l": "+Keep formula cells as formulas \u2014 only set the input cell(s) you were asked to change;"}, {"t": "add", "l": "+`recalc.py` recomputes the dependent formulas' cached values for you. Then re-embed the"}, {"t": "add", "l": "+recalculated workbook into the .pptx. Verify by reading the embedded workbook back with"}, {"t": "add", "l": "+`pandas.read_excel` (or `data_only=True`) and confirming the changed cell AND its"}, {"t": "add", "l": "+dependent formula cells now hold the expected recomputed numbers and the other formula"}, {"t": "add", "l": "+cells' values are unchanged."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Creating a new PowerPoint presentation **using a template**"}]}, {"file": "pptx/scripts/recalc.py", "rows": [{"t": "hunk", "l": "@@ -0,0 +1,178 @@"}, {"t": "add", "l": "+#!/usr/bin/env python3"}, {"t": "add", "l": "+\"\"\""}, {"t": "add", "l": "+Excel Formula Recalculation Script"}, {"t": "add", "l": "+Recalculates all formulas in an Excel file using LibreOffice"}, {"t": "add", "l": "+\"\"\""}, {"t": "add", "l": "+"}, {"t": "add", "l": "+import json"}, {"t": "add", "l": "+import sys"}, {"t": "add", "l": "+import subprocess"}, {"t": "add", "l": "+import os"}, {"t": "add", "l": "+import platform"}, {"t": "add", "l": "+from pathlib import Path"}, {"t": "add", "l": "+from openpyxl import load_workbook"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def setup_libreoffice_macro():"}, {"t": "add", "l": "+    \"\"\"Setup LibreOffice macro for recalculation if not already configured\"\"\""}, {"t": "add", "l": "+    if platform.system() == 'Darwin':"}, {"t": "add", "l": "+        macro_dir = os.path.expanduser('~/Library/Application \u00abredacted\u00bb')"}, {"t": "add", "l": "+    else:"}, {"t": "add", "l": "+        macro_dir = os.path.expanduser('~/.\u00abredacted\u00bb')"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    macro_file = os.path.join(macro_dir, 'Module1.xba')"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if os.path.exists(macro_file):"}, {"t": "add", "l": "+        with open(macro_file, 'r') as f:"}, {"t": "add", "l": "+            if 'RecalculateAndSave' in f.read():"}, {"t": "add", "l": "+                return True"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if not os.path.exists(macro_dir):"}, {"t": "add", "l": "+        subprocess.run(['soffice', '--headless', '--terminate_after_init'],"}, {"t": "add", "l": "+                      capture_output=True, timeout=10)"}, {"t": "add", "l": "+        os.makedirs(macro_dir, exist_ok=True)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    macro_content = '''<?xml version=\"1.0\" encoding=\"UTF-8\"?>"}, {"t": "add", "l": "+<!DOCTYPE script:module PUBLIC \"-//OpenOffice.org//DTD OfficeDocument 1.0//EN\" \"module.dtd\">"}, {"t": "add", "l": "+<script:module xmlns:script=\"http://openoffice.org/2000/script\" script:name=\"Module1\" script:language=\"StarBasic\">"}, {"t": "add", "l": "+    Sub RecalculateAndSave()"}, {"t": "add", "l": "+      ThisComponent.calculateAll()"}, {"t": "add", "l": "+      ThisComponent.store()"}, {"t": "add", "l": "+      ThisComponent.close(True)"}, {"t": "add", "l": "+    End Sub"}, {"t": "add", "l": "+<\/script:module>'''"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    try:"}, {"t": "add", "l": "+        with open(macro_file, 'w') as f:"}, {"t": "add", "l": "+            f.write(macro_content)"}, {"t": "add", "l": "+        return True"}, {"t": "add", "l": "+    except Exception:"}, {"t": "add", "l": "+        return False"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def recalc(filename, timeout=30):"}, {"t": "add", "l": "+    \"\"\""}, {"t": "add", "l": "+    Recalculate formulas in Excel file and report any errors"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    Args:"}, {"t": "add", "l": "+        filename: Path to Excel file"}, {"t": "add", "l": "+        timeout: Maximum time to wait for recalculation (seconds)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    Returns:"}, {"t": "add", "l": "+        dict with error locations and counts"}, {"t": "add", "l": "+    \"\"\""}, {"t": "add", "l": "+    if not Path(filename).exists():"}, {"t": "add", "l": "+        return {'error': f'File {filename} does not exist'}"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    abs_path = str(Path(filename).absolute())"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if not setup_libreoffice_macro():"}, {"t": "add", "l": "+        return {'error': 'Failed to setup LibreOffice macro'}"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    cmd = ["}, {"t": "add", "l": "+        'soffice', '--headless', '--norestore',"}, {"t": "add", "l": "+        'vnd.sun.star.script:Standard.Module1.RecalculateAndSave?language=Basic&location=application',"}, {"t": "add", "l": "+        abs_path"}, {"t": "add", "l": "+    ]"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    # Handle timeout command differences between Linux and macOS"}, {"t": "add", "l": "+    if platform.system() != 'Windows':"}, {"t": "add", "l": "+        timeout_cmd = 'timeout' if platform.system() == 'Linux' else None"}, {"t": "add", "l": "+        if platform.system() == 'Darwin':"}, {"t": "add", "l": "+            # Check if gtimeout is available on macOS"}, {"t": "add", "l": "+            try:"}, {"t": "add", "l": "+                subprocess.run(['gtimeout', '--version'], capture_output=True, timeout=1, check=False)"}, {"t": "add", "l": "+                timeout_cmd = 'gtimeout'"}, {"t": "add", "l": "+            except (FileNotFoundError, subprocess.TimeoutExpired):"}, {"t": "add", "l": "+                pass"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        if timeout_cmd:"}, {"t": "add", "l": "+            cmd = [timeout_cmd, str(timeout)] + cmd"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    result = subprocess.run(cmd, capture_output=True, text=True)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if result.returncode != 0 and result.returncode != 124:  # 124 is timeout exit code"}, {"t": "add", "l": "+        error_msg = result.stderr or 'Unknown error during recalculation'"}, {"t": "add", "l": "+        if 'Module1' in error_msg or 'RecalculateAndSave' not in error_msg:"}, {"t": "add", "l": "+            return {'error': 'LibreOffice macro not configured properly'}"}, {"t": "add", "l": "+        else:"}, {"t": "add", "l": "+            return {'error': error_msg}"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    # Check for Excel errors in the recalculated file - scan ALL cells"}, {"t": "add", "l": "+    try:"}, {"t": "add", "l": "+        wb = load_workbook(filename, data_only=True)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        excel_errors = ['#VALUE!', '#DIV/0!', '#REF!', '#NAME?', '#NULL!', '#NUM!', '#N/A']"}, {"t": "add", "l": "+        error_details = {err: [] for err in excel_errors}"}, {"t": "add", "l": "+        total_errors = 0"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        for sheet_name in wb.sheetnames:"}, {"t": "add", "l": "+            ws = wb[sheet_name]"}, {"t": "add", "l": "+            # Check ALL rows and columns - no limits"}, {"t": "add", "l": "+            for row in ws.iter_rows():"}, {"t": "add", "l": "+                for cell in row:"}, {"t": "add", "l": "+                    if cell.value is not None and isinstance(cell.value, str):"}, {"t": "add", "l": "+                        for err in excel_errors:"}, {"t": "add", "l": "+                            if err in cell.value:"}, {"t": "add", "l": "+                                location = f\"{sheet_name}!{cell.coordinate}\""}, {"t": "add", "l": "+                                error_details[err].append(location)"}, {"t": "add", "l": "+                                total_errors += 1"}, {"t": "add", "l": "+                                break"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        wb.close()"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        # Build result summary"}, {"t": "add", "l": "+        result = {"}, {"t": "add", "l": "+            'status': 'success' if total_errors == 0 else 'errors_found',"}, {"t": "add", "l": "+            'total_errors': total_errors,"}, {"t": "add", "l": "+            'error_summary': {}"}, {"t": "add", "l": "+        }"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        # Add non-empty error categories"}, {"t": "add", "l": "+        for err_type, locations in error_details.items():"}, {"t": "add", "l": "+            if locations:"}, {"t": "add", "l": "+                result['error_summary'][err_type] = {"}, {"t": "add", "l": "+                    'count': len(locations),"}, {"t": "add", "l": "+                    'locations': locations[:20]  # Show up to 20 locations"}, {"t": "add", "l": "+                }"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        # Add formula count for context - also check ALL cells"}, {"t": "add", "l": "+        wb_formulas = load_workbook(filename, data_only=False)"}, {"t": "add", "l": "+        formula_count = 0"}, {"t": "add", "l": "+        for sheet_name in wb_formulas.sheetnames:"}, {"t": "add", "l": "+            ws = wb_formulas[sheet_name]"}, {"t": "add", "l": "+            for row in ws.iter_rows():"}, {"t": "add", "l": "+                for cell in row:"}, {"t": "add", "l": "+                    if cell.value and isinstance(cell.value, str) and cell.value.startswith('='):"}, {"t": "add", "l": "+                        formula_count += 1"}, {"t": "add", "l": "+        wb_formulas.close()"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        result['total_formulas'] = formula_count"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+        return result"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    except Exception as e:"}, {"t": "add", "l": "+        return {'error': str(e)}"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def main():"}, {"t": "add", "l": "+    if len(sys.argv) < 2:"}, {"t": "add", "l": "+        print(\"Usage: python recalc.py <excel_file> [timeout_seconds]\")"}, {"t": "add", "l": "+        print(\"\\nRecalculates all formulas in an Excel file using LibreOffice\")"}, {"t": "add", "l": "+        print(\"\\nReturns JSON with error details:\")"}, {"t": "add", "l": "+        print(\"  - status: 'success' or 'errors_found'\")"}, {"t": "add", "l": "+        print(\"  - total_errors: Total number of Excel errors found\")"}, {"t": "add", "l": "+        print(\"  - total_formulas: Number of formulas in the file\")"}, {"t": "add", "l": "+        print(\"  - error_summary: Breakdown by error type with locations\")"}, {"t": "add", "l": "+        print(\"    - #VALUE!, #DIV/0!, #REF!, #NAME?, #NULL!, #NUM!, #N/A\")"}, {"t": "add", "l": "+        sys.exit(1)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    filename = sys.argv[1]"}, {"t": "add", "l": "+    timeout = int(sys.argv[2]) if len(sys.argv) > 2 else 30"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    result = recalc(filename, timeout)"}, {"t": "add", "l": "+    print(json.dumps(result, indent=2))"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+if __name__ == '__main__':"}, {"t": "add", "l": "+    main()"}]}, {"file": "xlsx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -126,4 +126,29 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " This applies to ALL calculations - totals, percentages, ratios, differences, etc. The spreadsheet should be able to recalculate when source data changes."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+### Percentages: scale the stored value to match the cell's number format"}, {"t": "add", "l": "+A percentage can be stored two different ways, and the cell's **number format** decides"}, {"t": "add", "l": "+which one is correct. Mismatching them makes the cell read 100\u00d7 too small or too large."}, {"t": "add", "l": "+- If the cell's number format includes `%` (e.g. `0.0%`), store the raw **ratio**"}, {"t": "add", "l": "+  (`=a/b`); Excel multiplies by 100 only for display."}, {"t": "add", "l": "+- If the cell's number format is a plain number (e.g. `0.0`, `General`, no `%`), the"}, {"t": "add", "l": "+  stored value IS the displayed value, so a \"percent of\" result must be the ratio"}, {"t": "add", "l": "+  **times 100** (`=a/b*100`). A bare `=a/b` would store `0.197` where the task expects"}, {"t": "add", "l": "+  `19.7`."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+When the task asks for something \"as a percent of\" / \"percentage of\" X, check the target"}, {"t": "add", "l": "+cell's existing `number_format` first and write the formula to match it. Do not assume a"}, {"t": "add", "l": "+bare ratio is a percentage. (Reading: a cell formatted `0.0` that should show ~20% must"}, {"t": "add", "l": "+contain `~20`, not `~0.2`.)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+### Joining two data sources: drop rows that fail the join"}, {"t": "add", "l": "+When you build output by merging two datasets on a key (e.g. a population table joined to"}, {"t": "add", "l": "+an income table on a region code) and a **required output column depends on a value from"}, {"t": "add", "l": "+the second source**, rows present in one source but missing in the other cannot have that"}, {"t": "add", "l": "+column computed. Carrying them through (e.g. a pandas left/outer join) leaves invalid"}, {"t": "add", "l": "+records \u2014 blank/`NaN` totals, or category values the spec does not allow \u2014 which a"}, {"t": "add", "l": "+verifier rejects. Use an **inner join** (or explicitly drop the unmatched rows) so every"}, {"t": "add", "l": "+row in the output has all its required fields. Only keep unmatched rows when the task"}, {"t": "add", "l": "+explicitly asks you to recover/impute the missing values."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Creating real Excel PivotTables"}]}], "cand_0003": [{"file": "pdf/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -277,11 +277,26 @@"}, {"t": "ctx", "l": " When you extract a field from a document to look it up in reference data (vendors,"}, {"t": "ctx", "l": " purchase orders, accounts, customers) and build a report, distinguish the **raw"}, {"t": "del", "l": "-extracted value** from the **resolved value**. If a key read from the document"}, {"t": "del", "l": "-(a PO/order/reference/account number) is not found in the reference data, record the"}, {"t": "del", "l": "-result the output contract specifies for \"not found\" \u2014 commonly `null`/`None` \u2014 rather"}, {"t": "del", "l": "-than echoing the unmatched raw string from the document. Re-read the task's stated"}, {"t": "del", "l": "-rule for each field's missing/invalid case before writing the report, and apply it"}, {"t": "del", "l": "-to every record (a value that fails its lookup is \"missing\", even if the document"}, {"t": "del", "l": "-printed something for it)."}, {"t": "add", "l": "+extracted value** from the **resolved value**. A key read from the document is only"}, {"t": "add", "l": "+valid if it is found in the reference data. If it is NOT found, the field is"}, {"t": "add", "l": "+\"missing/invalid\" and you record the contract's not-found sentinel (commonly"}, {"t": "add", "l": "+`null`/`None`) \u2014 you do NOT echo the raw string the document printed for it."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+\"Missing\" means *fails its lookup*, regardless of what the document shows. A"}, {"t": "add", "l": "+non-empty placeholder on the page (e.g. `PO-INVALID`, `N/A`, `UNKNOWN`, a typo'd or"}, {"t": "add", "l": "+out-of-range id) that is absent from the reference table is still \"missing\": write"}, {"t": "add", "l": "+`null`, not the placeholder. This is true even when your own classification reason"}, {"t": "add", "l": "+names that field's failure (\"Invalid PO\" / \"Unknown account\") \u2014 the reason explains"}, {"t": "add", "l": "+WHY it is null; it does not license echoing the bad value."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+```python"}, {"t": "add", "l": "+# Reconcile each extracted key against the reference set, then build the record."}, {"t": "add", "l": "+po_raw = extract_po(page)                 # e.g. \"PO-INVALID\" or \"PO-10293\""}, {"t": "add", "l": "+po = po_raw if po_raw in known_po_numbers else None   # unmatched -> null sentinel"}, {"t": "add", "l": "+record = {\"page\": n, \"po_number\": po, \"reason\": reason}"}, {"t": "add", "l": "+# WRONG: record[\"po_number\"] = po_raw  # echoes an unmatched placeholder"}, {"t": "add", "l": "+```"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Apply the same matched-or-null rule to every looked-up field (vendor, account,"}, {"t": "add", "l": "+order, customer) in every record before writing the report."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Quick Reference"}]}], "cand_0004": [{"file": "docx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -5,4 +5,6 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " # Word Document Manipulation with python-docx"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+> **You are now running with this skill loaded.** This is reference guidance injected into your context \u2014 it does not execute on its own, run in the background, or return results for you to wait on. Do the task yourself, starting now: read the input file(s) and run your own Python/bash to produce the output. Never pause \"waiting for the skill to finish or return\" \u2014 there is nothing to wait for; you are the one doing the work."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Critical: Split Placeholder Problem"}]}, {"file": "pdf/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -6,4 +6,6 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " # PDF Processing Guide"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+> **You are now running with this skill loaded.** This is reference guidance injected into your context \u2014 it does not execute on its own, run in the background, or return results for you to wait on. Do the task yourself, starting now: read the input file(s) and run your own Python/bash to produce the output. Never pause \"waiting for the skill to finish or return\" \u2014 there is nothing to wait for; you are the one doing the work."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Overview"}]}, {"file": "pptx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -6,4 +6,6 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " # PPTX creation, editing, and analysis"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+> **You are now running with this skill loaded.** This is reference guidance injected into your context \u2014 it does not execute on its own, run in the background, or return results for you to wait on. Do the task yourself, starting now: read the input file(s) and run your own Python/bash to produce the output. Never pause \"waiting for the skill to finish or return\" \u2014 there is nothing to wait for; you are the one doing the work."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## Overview"}]}, {"file": "xlsx/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -6,4 +6,6 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " # Requirements for Outputs"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+> **You are now running with this skill loaded.** This is reference guidance injected into your context \u2014 it does not execute on its own, run in the background, or return results for you to wait on. Do the task yourself, starting now: read the input file(s) and run your own Python/bash to produce the output. Never pause \"waiting for the skill to finish or return\" \u2014 there is nothing to wait for; you are the one doing the work."}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ## All Excel files"}]}], "cand_0007": [{"file": "pdf/SKILL.md", "rows": [{"t": "hunk", "l": "@@ -277,4 +277,27 @@"}, {"t": "ctx", "l": " "}, {"t": "ctx", "l": " ### Reconciling extracted data against reference tables"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+**Invoice-fraud detection (one invoice per PDF page, reconciled against a vendor table"}, {"t": "add", "l": "+and a purchase-order table): RUN the bundled helper instead of hand-rolling the"}, {"t": "add", "l": "+extract\u2192reconcile\u2192classify loop.** Re-deriving the fuzzy threshold, the criterion"}, {"t": "add", "l": "+priority order, and the raw-vs-null PO rule by hand varies run-to-run and slips on edge"}, {"t": "add", "l": "+cases (a flagged invoice whose PO is still valid; a placeholder PO that must become"}, {"t": "add", "l": "+`null`). The script does it deterministically and writes the report directly:"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+```bash"}, {"t": "add", "l": "+python scripts/detect_invoice_fraud.py \\"}, {"t": "add", "l": "+    --invoices /root/invoices.pdf --vendors /root/vendors.xlsx \\"}, {"t": "add", "l": "+    --pos /root/purchase_orders.csv --out /root/fraud_report.json"}, {"t": "add", "l": "+```"}, {"t": "add", "l": "+(Run from the `pdf` skill dir; if the script isn't at that path, locate it with"}, {"t": "add", "l": "+`find . -name detect_invoice_fraud.py`.)"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+It parses each page (vendor, total, IBAN, PO), fuzzy-matches the vendor, and applies the"}, {"t": "add", "l": "+criteria in priority order (Unknown Vendor \u2192 IBAN Mismatch \u2192 Invalid PO \u2192 Amount Mismatch"}, {"t": "add", "l": "+\u2192 Vendor Mismatch), emitting only flagged invoices with `po_number` set to `null` when the"}, {"t": "add", "l": "+printed PO is not a valid reference. Field labels / column names are overridable via flags"}, {"t": "add", "l": "+if a task's layout differs. Do NOT reimplement this loop; run the script and verify its"}, {"t": "add", "l": "+output. The general principle behind it:"}, {"t": "add", "l": "+"}, {"t": "ctx", "l": " When you extract a field from a document to look it up in reference data (vendors,"}, {"t": "ctx", "l": " purchase orders, accounts, customers) and build a report, distinguish the **raw"}]}, {"file": "pdf/scripts/detect_invoice_fraud.py", "rows": [{"t": "hunk", "l": "@@ -0,0 +1,111 @@"}, {"t": "add", "l": "+#!/usr/bin/env python3"}, {"t": "add", "l": "+\"\"\"Detect invoice fraud by reconciling extracted invoices against reference tables."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+General pattern: each PDF page is one invoice carrying a vendor name, total amount,"}, {"t": "add", "l": "+payment IBAN and PO number. Each invoice is reconciled against an approved-vendor"}, {"t": "add", "l": "+table (id, name, iban) and a purchase-order table (po_number, vendor_id, amount)."}, {"t": "add", "l": "+An invoice is flagged if it meets ANY criterion, and the FIRST matching criterion"}, {"t": "add", "l": "+in this priority order wins:"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+  1. Unknown Vendor  - vendor name not found (fuzzy) in the vendor table"}, {"t": "add", "l": "+  2. IBAN Mismatch   - vendor found, but invoice IBAN != vendor's authorized IBAN"}, {"t": "add", "l": "+  3. Invalid PO      - PO number not found in the PO table"}, {"t": "add", "l": "+  4. Amount Mismatch - PO found, but invoice amount differs from PO amount (>0.01)"}, {"t": "add", "l": "+  5. Vendor Mismatch - PO valid, but linked to a different vendor than the invoice"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+This deterministic procedure removes per-run variance (fuzzy threshold, priority"}, {"t": "add", "l": "+order, raw-vs-null PO, float compare). RUN THIS instead of hand-rolling the loop;"}, {"t": "add", "l": "+it computes everything from the inputs and hardcodes no answers. The field labels"}, {"t": "add", "l": "+and reference column names below match the common layout but are overridable via"}, {"t": "add", "l": "+the CLI flags if a task uses different wording."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+Usage:"}, {"t": "add", "l": "+  python detect_invoice_fraud.py \\"}, {"t": "add", "l": "+      --invoices invoices.pdf --vendors vendors.xlsx \\"}, {"t": "add", "l": "+      --pos purchase_orders.csv --out fraud_report.json"}, {"t": "add", "l": "+\"\"\""}, {"t": "add", "l": "+import argparse"}, {"t": "add", "l": "+import json"}, {"t": "add", "l": "+import re"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+import pandas as pd"}, {"t": "add", "l": "+import pdfplumber"}, {"t": "add", "l": "+from rapidfuzz import fuzz, process"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def parse_invoices(pdf_path, vendor_re, amount_re, po_re, iban_re):"}, {"t": "add", "l": "+    \"\"\"Return one dict per page: {page, vendor_name, amount, iban, po_number}."}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    po_number is None when the printed value does not match the PO pattern (e.g. a"}, {"t": "add", "l": "+    placeholder like 'PO-INVALID'); that is treated as missing, per the contract."}, {"t": "add", "l": "+    \"\"\""}, {"t": "add", "l": "+    invoices = []"}, {"t": "add", "l": "+    with pdfplumber.open(pdf_path) as pdf:"}, {"t": "add", "l": "+        for i, page in enumerate(pdf.pages):"}, {"t": "add", "l": "+            text = page.extract_text() or \"\""}, {"t": "add", "l": "+            vm = re.search(vendor_re, text)"}, {"t": "add", "l": "+            am = re.search(amount_re, text)"}, {"t": "add", "l": "+            pm = re.search(po_re, text)"}, {"t": "add", "l": "+            im = re.search(iban_re, text)"}, {"t": "add", "l": "+            invoices.append({"}, {"t": "add", "l": "+                \"invoice_page_number\": i + 1,"}, {"t": "add", "l": "+                \"vendor_name\": vm.group(1).strip() if vm else None,"}, {"t": "add", "l": "+                \"invoice_amount\": float(am.group(1)) if am else 0.0,"}, {"t": "add", "l": "+                \"iban\": im.group(1) if im else None,"}, {"t": "add", "l": "+                \"po_number\": pm.group(1) if pm else None,"}, {"t": "add", "l": "+            })"}, {"t": "add", "l": "+    return invoices"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def classify(inv, vendor_list, vendor_db, po_db, threshold):"}, {"t": "add", "l": "+    \"\"\"Return the first-matching fraud reason for one invoice, or None if clean.\"\"\""}, {"t": "add", "l": "+    best = process.extractOne(inv[\"vendor_name\"], vendor_list, scorer=fuzz.ratio)"}, {"t": "add", "l": "+    if not best or best[1] <= threshold:"}, {"t": "add", "l": "+        return \"Unknown Vendor\", None"}, {"t": "add", "l": "+    vendor = vendor_db[best[0]]"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if inv[\"iban\"] != vendor[\"iban\"]:"}, {"t": "add", "l": "+        return \"IBAN Mismatch\", vendor"}, {"t": "add", "l": "+    if inv[\"po_number\"] not in po_db:"}, {"t": "add", "l": "+        return \"Invalid PO\", vendor"}, {"t": "add", "l": "+    po = po_db[inv[\"po_number\"]]"}, {"t": "add", "l": "+    if abs(inv[\"invoice_amount\"] - po[\"amount\"]) > 0.01:"}, {"t": "add", "l": "+        return \"Amount Mismatch\", vendor"}, {"t": "add", "l": "+    if po[\"vendor_id\"] != vendor[\"id\"]:"}, {"t": "add", "l": "+        return \"Vendor Mismatch\", vendor"}, {"t": "add", "l": "+    return None, vendor"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+def detect(invoices_pdf, vendors_xlsx, pos_csv, out_path, threshold=80,"}, {"t": "add", "l": "+           vendor_re=r\"From: (.*)\", amount_re=r\"Total \\$(\\d+\\.\\d{2})\","}, {"t": "add", "l": "+           po_re=r\"PO Number: (PO-\\d+)\", iban_re=r\"Payment IBAN: ([A-Z0-9_-]+)\"):"}, {"t": "add", "l": "+    vendors = pd.read_excel(vendors_xlsx)"}, {"t": "add", "l": "+    pos = pd.read_csv(pos_csv)"}, {"t": "add", "l": "+    vendor_list = vendors[\"name\"].tolist()"}, {"t": "add", "l": "+    vendor_db = vendors.set_index(\"name\").to_dict(orient=\"index\")"}, {"t": "add", "l": "+    po_db = pos.set_index(\"po_number\").to_dict(orient=\"index\")"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    invoices = parse_invoices(invoices_pdf, vendor_re, amount_re, po_re, iban_re)"}, {"t": "add", "l": "+    report = []"}, {"t": "add", "l": "+    for inv in invoices:"}, {"t": "add", "l": "+        reason, _ = classify(inv, vendor_list, vendor_db, po_db, threshold)"}, {"t": "add", "l": "+        if reason is not None:"}, {"t": "add", "l": "+            report.append({**inv, \"reason\": reason})"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+    if out_path:"}, {"t": "add", "l": "+        with open(out_path, \"w\") as f:"}, {"t": "add", "l": "+            json.dump(report, f, indent=2)"}, {"t": "add", "l": "+    return report"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+"}, {"t": "add", "l": "+if __name__ == \"__main__\":"}, {"t": "add", "l": "+    ap = argparse.ArgumentParser(description=\"Detect invoice fraud via reconciliation.\")"}, {"t": "add", "l": "+    ap.add_argument(\"--invoices\", default=\"/root/invoices.pdf\")"}, {"t": "add", "l": "+    ap.add_argument(\"--vendors\", default=\"/root/vendors.xlsx\")"}, {"t": "add", "l": "+    ap.add_argument(\"--pos\", default=\"/root/purchase_orders.csv\")"}, {"t": "add", "l": "+    ap.add_argument(\"--out\", default=\"/root/fraud_report.json\")"}, {"t": "add", "l": "+    ap.add_argument(\"--threshold\", type=float, default=80,"}, {"t": "add", "l": "+                    help=\"fuzzy vendor-match cutoff (matched if score > threshold)\")"}, {"t": "add", "l": "+    a = ap.parse_args()"}, {"t": "add", "l": "+    rep = detect(a.invoices, a.vendors, a.pos, a.out, a.threshold)"}, {"t": "add", "l": "+    print(f\"Wrote {len(rep)} flagged invoices to {a.out}\")"}]}]}}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('run-data').textContent);
+const G = DATA.graph, S = DATA.summary, DIFFS = DATA.diffs||{};
+const $ = (t,a={},...k)=>{const e=document.createElement(t);for(const[p,v]of Object.entries(a)){
+  if(p==='html')e.innerHTML=v;else if(p==='text')e.textContent=v;else e.setAttribute(p,v);}
+  for(const c of k)if(c!=null)e.append(c);return e;};
+const NS='http://www.w3.org/2000/svg';
+const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Object.entries(a))e.setAttribute(p,v);return e;};
+const fmt=v=>v==null?'—':(+v).toFixed(3);
+const main=document.getElementById('main'), tip=document.getElementById('tip');
+document.getElementById('hdr').textContent =
+  `${S.run_id} · ${S.counts.total} candidates · ${S.test_sealed?'test sealed':'no holdout yet'}`;
+function showTip(e,txt){tip.textContent=txt;tip.style.display='block';
+  tip.style.left=Math.min(e.clientX+14,innerWidth-330)+'px';tip.style.top=(e.clientY+14)+'px';}
+function hideTip(){tip.style.display='none';}
+function sec(title){const s=$('section');s.append($('h2',{text:title}));main.append(s);return s;}
+
+/* ---------- 1. KPI strip ---------- */
+(function(){
+  const s=sec('Summary'); const g=$('div',{class:'kpis'});
+  const dpct=S.delta_pct!=null?`${S.delta_pct>0?'+':''}${S.delta_pct}%`:
+            (S.delta_abs!=null?`${S.delta_abs>0?'+':''}${S.delta_abs.toFixed(3)}`:'—');
+  const kp=(l,v,cls='',s2='')=>{const k=$('div',{class:'kpi'});k.append($('div',{class:'l',text:l}),
+    $('div',{class:'v '+cls,text:v}));if(s2)k.append($('div',{class:'s',text:s2}));return k;};
+  const c=S.counts, cost=S.cost;
+  g.append(
+    kp('best val',fmt(S.best_val),'champ',S.best_id),
+    kp('baseline',fmt(S.baseline_val)),
+    kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
+    kp('held-out test',fmt(S.test_reward),'',S.test_sealed?'sealed once':'not finalized'),
+    kp('candidates',c.total,'',`${c.accepted}✓ ${c.rejected}✗ ${c.failed}⚠`),
+    kp('frontier',S.frontier),
+    kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
+    kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
+    kp('tokens',S.tokens.toLocaleString())
+  );
+  s.append(g);
+})();
+
+/* ---------- 1b. Narrative summary ---------- */
+(function(){
+  const c=S.counts, parts=[];
+  if(S.baseline_val!=null&&S.best_val!=null){
+    const d=((S.best_val-S.baseline_val)*100).toFixed(1);
+    parts.push(`Starting from a ${(S.baseline_val*100).toFixed(1)}% baseline, the search reached `+
+      `${(S.best_val*100).toFixed(1)}% (+${d} points)`);
+  }
+  parts.push(`after ${c.accepted+c.rejected} iterations (${c.accepted} accepted, ${c.rejected} rejected)`);
+  if(S.test_reward!=null)parts.push(`The best candidate scored ${(S.test_reward*100).toFixed(1)}% on the sealed test set`);
+  if(!parts.length)return;
+  const s=sec('Narrative'); s.append($('p',{class:'muted',text:parts.join('. ')+'.'}));
+})();
+
+/* ---------- 1c. Phases timeline ---------- */
+(function(){
+  const c=S.counts, total=c.total, evaluated=c.accepted+c.rejected;
+  const hasBase=S.baseline_val!=null, finalized=(S.test_reward!=null)||S.test_sealed;
+  const D=b=>b?'done':'pending';
+  const phases=[
+    {nm:'Intake',st:D(total>0||hasBase),d:'Interview + scaffold project, adapter, seed.'},
+    {nm:'Implement & check',st:D(total>0||hasBase),d:'Hard gate before any budget is spent.'},
+    {nm:'Baseline',st:D(hasBase),d:`Freeze splits; seed val ${fmt(S.baseline_val)}.`},
+    {nm:'Optimize'+(S.algorithm?' · '+S.algorithm:''),st:finalized?'done':(hasBase?'active':'pending'),
+     d:`${evaluated} iters · ${c.accepted} accepted · best ${fmt(S.best_val)}.`},
+    {nm:'Finalize',st:D(finalized),d:`Sealed test ${fmt(S.test_reward)}.`},
+    {nm:'Report',st:D(finalized),d:'This dashboard.'},
+  ];
+  const s=sec('Pipeline phases'); const g=$('div',{class:'phases'});
+  for(const p of phases){const e=$('div',{class:'phase '+p.st});
+    e.append($('div',{class:'nm',text:p.nm}),$('div',{class:'st',text:p.st}),$('div',{class:'d',text:p.d}));
+    g.append(e);}
+  s.append(g);
+})();
+
+/* ---------- 1d. What not to try (deduped dead-ends) ---------- */
+(function(){
+  const norm=r=>(r||'rejected').replace(/-?\d+\.\d+/g,'N').replace(/-?\d+/g,'N').trim();
+  const map=new Map();
+  for(const n of G.nodes){ if(n.status!=='rejected')continue;
+    const k=norm(n.reason); const cur=map.get(k)||{reason:k,count:0,ex:[]};
+    cur.count++; if(cur.ex.length<3)cur.ex.push(n.id); map.set(k,cur);}
+  const ends=[...map.values()].sort((a,b)=>b.count-a.count);
+  if(!ends.length)return;
+  const s=sec('What not to try — dead ends');
+  for(const d of ends){const e=$('div',{class:'dead'});
+    if(d.count>1)e.append($('span',{class:'x',text:'×'+d.count}));
+    e.append($('div',{class:'muted',text:d.ex.join(', ')}),$('div',{text:d.reason}));
+    s.append(e);}
+})();
+
+/* ---------- 2. Cumulative-best stair over per-iteration scatter ---------- */
+(function(){
+  const pts=G.nodes.filter(n=>n.iteration!=null&&n.best_so_far!=null)
+    .sort((a,b)=>a.iteration-b.iteration);
+  if(pts.length<2)return;
+  const s=sec('Score over iterations — cumulative best');
+  const W=1080,H=300,m={l:46,r:16,t:16,b:30};
+  const xs=pts.map(p=>p.iteration), allv=pts.flatMap(p=>[p.best_so_far,p.val].filter(v=>v!=null));
+  const xmin=Math.min(...xs),xmax=Math.max(...xs)||1,vmin=Math.min(...allv,0),vmax=Math.max(...allv,1);
+  const X=i=>m.l+(i-xmin)/((xmax-xmin)||1)*(W-m.l-m.r);
+  const Y=v=>H-m.b-(v-vmin)/((vmax-vmin)||1)*(H-m.t-m.b);
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  for(let g2=0;g2<=4;g2++){const v=vmin+(vmax-vmin)*g2/4;
+    el.append(svg('line',{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:'#2b333d','stroke-width':1}));
+    el.append(svg('text',{x:6,y:Y(v)+4,fill:'#8b949e','font-size':10,'text-content':''})).textContent=v.toFixed(2);}
+  // stair polyline of running best
+  let d='';let prevY=null;
+  pts.forEach((p,i)=>{const x=X(p.iteration),y=Y(p.best_so_far);
+    if(i===0)d=`M${x},${y}`;else d+=` L${x},${prevY} L${x},${y}`;prevY=y;});
+  el.append(svg('path',{d,fill:'none',stroke:'#3fb950','stroke-width':2}));
+  // record-holder rings + per-iter scatter
+  let rec=-1;
+  pts.forEach(p=>{
+    if(p.val!=null){const col=p.status==='accepted'?'#3fb950':p.status==='failed'?'#f85149':'#d29922';
+      const c=svg('circle',{cx:X(p.iteration),cy:Y(p.val),r:4,fill:col,'fill-opacity':.85,stroke:'#0e1116'});
+      const dpar=p.parent_val!=null?(p.val-p.parent_val).toFixed(3):'—';
+      c.addEventListener('mousemove',e=>showTip(e,`${p.id}\n${p.status}  val=${fmt(p.val)}\nΔ parent=${dpar}\niter ${p.iteration}`));
+      c.addEventListener('mouseleave',hideTip);el.append(c);}
+    if(p.best_so_far>rec){rec=p.best_so_far;
+      el.append(svg('circle',{cx:X(p.iteration),cy:Y(p.best_so_far),r:7,fill:'none',stroke:'#4493f8','stroke-width':1.5}));}
+  });
+  // champion star + label
+  const champ=pts.reduce((a,b)=>(b.best_so_far>=a.best_so_far?b:a),pts[0]);
+  const cx=X(champ.iteration),cy=Y(champ.best_so_far);
+  el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'#f0d040',stroke:'#0e1116'}));
+  el.append(svg('text',{x:cx+10,y:cy-8,fill:'#e6edf3','font-size':12})).textContent=fmt(champ.best_so_far);
+  s.append(el);
+  s.append($('div',{class:'legend',html:
+    '<span><i style="background:#3fb950"></i>running best / accept</span>'+
+    '<span><i style="background:#d29922"></i>rejected</span>'+
+    '<span><i style="background:#f85149"></i>failed</span>'+
+    '<span><i style="background:#4493f8;border-radius:50%"></i>record-holder ring</span>'}));
+  function starPath(cx,cy,R,r){let p='';for(let i=0;i<10;i++){const ang=Math.PI/5*i-Math.PI/2;
+    const rad=i%2?r:R;p+=(i?'L':'M')+(cx+rad*Math.cos(ang))+','+(cy+rad*Math.sin(ang));}return p+'Z';}
+})();
+
+/* ---------- 3. tasks × iterations pass/fail heatmap ---------- */
+(function(){
+  const tasks=S.tasks||[];
+  const iters=G.nodes.filter(n=>Object.keys(n.per_task||{}).length).sort((a,b)=>a.iteration-b.iteration);
+  if(!tasks.length||iters.length<1)return;
+  const s=sec('Per-task pass/fail across iterations');
+  // sort rows worst-first by mean reward
+  const meanFor=t=>{let sum=0,n=0;iters.forEach(it=>{if(it.per_task[t]!=null){sum+=it.per_task[t];n++;}});return n?sum/n:0;};
+  const rows=[...tasks].sort((a,b)=>meanFor(a)-meanFor(b));
+  const cw=Math.max(10,Math.min(26,Math.floor(1000/iters.length))),ch=16,labW=120;
+  const W=labW+iters.length*cw+10,H=rows.length*ch+24;
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,class:'heat'});
+  iters.forEach((it,j)=>{el.append(svg('text',{x:labW+j*cw+cw/2,y:12,'text-anchor':'middle'})).textContent=it.iteration;});
+  rows.forEach((t,i)=>{
+    el.append(svg('text',{x:labW-6,y:24+i*ch+11,'text-anchor':'end'})).textContent=t.length>16?t.slice(0,15)+'…':t;
+    iters.forEach((it,j)=>{
+      const v=it.per_task[t];
+      const col=v==null?'#21262d':v>=0.999?'#2ea043':v<=0.001?'#7d2622':'#9e6a1a';
+      const rect=svg('rect',{x:labW+j*cw,y:24+i*ch,width:cw-1.5,height:ch-1.5,rx:2,fill:col});
+      const fb=(it.feedback&&it.feedback[t])||'';
+      rect.addEventListener('mousemove',e=>showTip(e,`${t} @ iter ${it.iteration} (${it.id})\nreward=${v==null?'—':v.toFixed(3)}\n${fb.slice(0,180)}`));
+      rect.addEventListener('mouseleave',hideTip);
+      el.append(rect);
+    });
+  });
+  s.append(el);
+  s.append($('div',{class:'legend',html:
+    '<span><i style="background:#2ea043"></i>pass</span><span><i style="background:#7d2622"></i>fail</span>'+
+    '<span><i style="background:#9e6a1a"></i>partial</span><span><i style="background:#21262d"></i>not run</span>'+
+    '<span class="muted">rows sorted worst-first · hover a cell for feedback</span>'}));
+})();
+
+/* ---------- 4. Per-iteration diff view ---------- */
+(function(){
+  const ids=Object.keys(DIFFS); if(!ids.length)return;
+  const s=sec('Diff vs parent');
+  const bar=$('div',{class:'row'});
+  const sel=$('select'); ids.forEach(id=>sel.append($('option',{value:id,text:id})));
+  const mode=$('select'); mode.append($('option',{value:'unified',text:'unified'}),$('option',{value:'split',text:'split'}));
+  bar.append($('span',{class:'muted',text:'candidate '}),sel,$('span',{class:'muted',text:' view '}),mode);
+  s.append(bar);
+  const out=$('div',{class:'diff'}); s.append(out);
+  function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function render(){
+    const id=sel.value, files=DIFFS[id]||[], split=mode.value==='split';
+    out.innerHTML='';
+    files.forEach(f=>{
+      out.append($('div',{class:'file',text:'━ '+f.file}));
+      if(!split){
+        f.rows.forEach(r=>out.append($('div',{class:r.t,text:r.l})));
+      }else{
+        const tbl=$('div'); f.rows.forEach(r=>{
+          if(r.t==='hunk'){tbl.append($('div',{class:'hunk',text:r.l}));return;}
+          const cls=r.t; const line=$('div',{class:cls});
+          line.textContent=(r.t==='del'?'◀ ':r.t==='add'?'▶ ':'  ')+r.l.slice(1);
+          tbl.append(line);
+        }); out.append(tbl);
+      }
+    });
+  }
+  sel.addEventListener('change',render); mode.addEventListener('change',render); render();
+})();
+
+/* ---------- 5. Lineage tree (DAG, best-spine highlighted) ---------- */
+(function(){
+  const nodes=G.nodes, byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
+  if(nodes.length<2)return;
+  const s=sec('Lineage');
+  // depth = distance from root; assign columns by BFS order within depth
+  const depth={}; const order=[];
+  (function walk(id,d){const n=byId[id];if(!n||depth[id]!=null)return;depth[id]=d;order.push(id);
+    (n.children||[]).forEach(c=>walk(c,d+1));})('seed',0);
+  nodes.forEach(n=>{if(depth[n.id]==null){depth[n.id]=0;order.push(n.id);}});
+  const cols={}; const maxd=Math.max(...Object.values(depth));
+  const byDepth={}; order.forEach(id=>{const d=depth[id];(byDepth[d]=byDepth[d]||[]).push(id);});
+  const pos={};
+  for(let d=0;d<=maxd;d++){(byDepth[d]||[]).forEach((id,i)=>pos[id]={x:60+d*150,y:40+i*46});}
+  // best-lineage spine
+  const spine=new Set(); let cur=S.best_id;
+  while(cur){spine.add(cur);cur=byId[cur]?byId[cur].parent:null;}
+  const W=80+( maxd+1)*150, H=40+Math.max(...Object.values(byDepth).map(a=>a.length))*46+20;
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  nodes.forEach(n=>{const p=pos[n.id];if(!p)return;
+    const parents=[n.parent,...(n.merge_of||[])].filter(x=>x&&pos[x]);
+    parents.forEach(pp=>{const a=pos[pp];const onSpine=spine.has(n.id)&&spine.has(pp);
+      el.append(svg('path',{d:`M${a.x+14},${a.y} C${(a.x+p.x)/2},${a.y} ${(a.x+p.x)/2},${p.y} ${p.x-14},${p.y}`,
+        fill:'none',stroke:onSpine?'#f0d040':'#3a434d','stroke-width':onSpine?2.5:1.2}));});
+  });
+  nodes.forEach(n=>{const p=pos[n.id];if(!p)return;
+    const col=n.status==='accepted'?'#3fb950':n.status==='rejected'?'#d29922':n.status==='failed'?'#f85149':'#4493f8';
+    const c=svg('circle',{cx:p.x,cy:p.y,r:n.id===S.best_id?9:6,fill:col,
+      stroke:spine.has(n.id)?'#f0d040':'#0e1116','stroke-width':spine.has(n.id)?2:1});
+    c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
+    c.addEventListener('mouseleave',hideTip); el.append(c);
+    el.append(svg('text',{x:p.x+12,y:p.y+4,fill:'#8b949e','font-size':10})).textContent=n.id;
+  });
+  s.append(el);
+  s.append($('div',{class:'legend',html:'<span><i style="background:#f0d040"></i>best lineage spine</span>'+
+    '<span class="muted">merges shown as multi-parent edges</span>'}));
+})();
+
+/* ---------- 6. Cost / tokens / latency ---------- */
+(function(){
+  const pts=G.nodes.filter(n=>n.iteration).sort((a,b)=>a.iteration-b.iteration);
+  if(!pts.length)return;
+  const s=sec('Cost · tokens · latency (optimizer vs runner)');
+  const W=1080,H=240,m={l:46,r:16,t:14,b:28},n=pts.length;
+  const bw=Math.max(6,Math.min(40,(W-m.l-m.r)/n-6));
+  const maxSec=Math.max(...pts.map(p=>(p.optimizer_seconds||0)+(p.runner_seconds||0)),0.001);
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  // stacked bars: optimizer (blue) + runner (green) seconds; cumulative cost line
+  let cum=0; const costMax=Math.max(S.cost.total_usd,0.0001);
+  pts.forEach((p,i)=>{const x=m.l+i*((W-m.l-m.r)/n)+3;
+    const os=(p.optimizer_seconds||0)/maxSec*(H-m.t-m.b);
+    const rs=(p.runner_seconds||0)/maxSec*(H-m.t-m.b);
+    el.append(svg('rect',{x,y:H-m.b-rs,width:bw,height:rs,fill:'#3fb950'})).addEventListener('mousemove',()=>{});
+    el.append(svg('rect',{x,y:H-m.b-rs-os,width:bw,height:os,fill:'#4493f8'}));
+    const bar=svg('rect',{x,y:m.t,width:bw,height:H-m.t-m.b,fill:'transparent'});
+    bar.addEventListener('mousemove',e=>showTip(e,`${p.id} · iter ${p.iteration}\nopt ${(p.optimizer_seconds||0).toFixed(2)}s · run ${(p.runner_seconds||0).toFixed(2)}s\n$${(p.cost_usd||0).toFixed(4)} · ${p.tokens||0} tok`));
+    bar.addEventListener('mouseleave',hideTip); el.append(bar);
+  });
+  // cumulative cost line (right axis, normalized)
+  let d='';pts.forEach((p,i)=>{cum+=(p.cost_usd||0);const x=m.l+i*((W-m.l-m.r)/n)+3+bw/2;
+    const y=H-m.b-(cum/costMax)*(H-m.t-m.b);d+=(i?' L':'M')+x+','+y;});
+  if(S.cost.total_usd>0)el.append(svg('path',{d,fill:'none',stroke:'#f0d040','stroke-width':1.8,'stroke-dasharray':'4 3'}));
+  s.append(el);
+  s.append($('div',{class:'legend',html:'<span><i style="background:#4493f8"></i>optimizer s</span>'+
+    '<span><i style="background:#3fb950"></i>runner s</span>'+
+    (S.cost.total_usd>0?'<span><i style="background:#f0d040"></i>cumulative $</span>':'')}));
+})();
+
+/* ---------- 6b. cumulative cost vs best score ---------- */
+(function(){
+  if(S.cost.total_usd<=0)return;
+  const pts=G.nodes.filter(n=>n.iteration&&n.best_so_far!=null).sort((a,b)=>a.iteration-b.iteration);
+  if(pts.length<2)return;
+  const s=sec('Cost vs best score'); const W=1080,H=220,m={l:46,r:16,t:14,b:28};
+  let cum=0;const xy=pts.map(p=>{cum+=(p.cost_usd||0);return [cum,p.best_so_far];});
+  const xmax=Math.max(...xy.map(p=>p[0]))||1,ymin=Math.min(...xy.map(p=>p[1]),0),ymax=Math.max(...xy.map(p=>p[1]),1);
+  const X=v=>m.l+v/xmax*(W-m.l-m.r),Y=v=>H-m.b-(v-ymin)/((ymax-ymin)||1)*(H-m.t-m.b);
+  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
+  let d='';xy.forEach((p,i)=>d+=(i?' L':'M')+X(p[0])+','+Y(p[1]));
+  el.append(svg('path',{d,fill:'none',stroke:'#4493f8','stroke-width':2}));
+  el.append(svg('text',{x:W-m.r,y:H-8,fill:'#8b949e','font-size':10,'text-anchor':'end'})).textContent=`$${xmax.toFixed(4)} total`;
+  s.append(el);
+})();
+
+/* ---------- 6c. Cost & time per iteration (optimizer vs runner) + intake ---------- */
+(function(){
+  const rows=S.per_iteration||[];
+  const intake=S.intake||{usd:0,seconds:0,tokens:0};
+  const s=sec('Cost & time per iteration');
+  // intake row — always shown, even at $0, so it's clear intake spent nothing.
+  const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
+    const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
+  const intakeRow=$('div',{class:'phase',style:'margin-bottom:12px'});
+  const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let intakeHtml='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;'+
+    'background:var(--accent);margin-right:6px;vertical-align:-1px"></span>'+
+    '<b>Intake</b> &nbsp; cost <b>$'+(intake.usd||0).toFixed(4)+'</b>'+
+    (intake.usd===0?' <span class="muted">(spent $0)</span>':'')+
+    ' &nbsp; time <b>'+dsec(intake.seconds)+'</b> &nbsp; <span class="muted">'+
+    (intake.tokens||0).toLocaleString()+' tok</span>';
+  if(intake.output_summary)intakeHtml+='<div class="muted" style="margin-top:6px">'+esc(intake.output_summary)+'</div>';
+  if((intake.implemented||[]).length)intakeHtml+='<div style="margin-top:6px"><span class="muted">implemented:</span> '+
+    intake.implemented.map(x=>'<code>'+esc(x)+'</code>').join(' ')+'</div>';
+  intakeRow.innerHTML=intakeHtml;
+  s.append(intakeRow);
+  if(!rows.length){s.append($('p',{class:'muted',text:'No iterations recorded yet.'}));return;}
+  const optMax=Math.max(1e-6,...rows.map(r=>r.optimizer_seconds||0));
+  const runMax=Math.max(1e-6,...rows.map(r=>r.runner_seconds||0));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),
+    $('th',{class:'r',text:'opt $'}),$('th',{html:'<span style="color:var(--accent)">opt time</span>'}),
+    $('th',{class:'r',text:'run $'}),$('th',{html:'<span style="color:var(--ok)">run time</span>'})));
+  const bar=(secv,max,col)=>{const frac=max>0?Math.min(1,secv/max):0;
+    const wrap=$('div',{style:'display:flex;align-items:center;gap:8px'});
+    const track=$('div',{style:'height:6px;width:64px;border-radius:6px;overflow:hidden;background:var(--card2)'});
+    track.append($('div',{style:`height:100%;border-radius:6px;width:${frac*100}%;background:${col}`}));
+    wrap.append(track,$('span',{class:'muted num',text:dsec(secv)}));return wrap;};
+  rows.forEach(r=>{
+    t.append($('tr',{},
+      $('td',{class:'num muted',text:r.iteration}),
+      $('td',{},$('code',{text:r.candidate})),
+      $('td',{class:'r num',text:r.optimizer_usd!=null?'$'+(+r.optimizer_usd).toFixed(4):'—'}),
+      $('td',{},bar(r.optimizer_seconds||0,optMax,'#4493f8')),
+      $('td',{class:'r num',text:r.runner_usd!=null?'$'+(+r.runner_usd).toFixed(4):'—'}),
+      $('td',{},bar(r.runner_seconds||0,runMax,'#3fb950'))));
+  });
+  s.append(t);
+  s.append($('div',{class:'legend',html:'<span><i style="background:#4493f8"></i>optimizer time</span>'+
+    '<span><i style="background:#3fb950"></i>runner time</span>'+
+    '<span class="muted">$ shown when available (runner cost is often $0/null) · time always</span>'}));
+})();
+
+/* ---------- 6d. Evaluations (split-oriented, distinct from per-iteration) ---------- */
+(function(){
+  const evals=S.evaluations||[];
+  if(!evals.length)return;
+  const s=sec('Evaluations');
+  s.append($('p',{class:'muted',text:'Each scoring of a candidate on a split — '+
+    'baseline (seed on val), every full val eval, and the sealed test eval. '+
+    'Distinct from the optimizer-step view above.'}));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'kind'}),$('th',{text:'candidate'}),$('th',{text:'split'}),
+    $('th',{class:'r',text:'reward ± stderr'}),$('th',{class:'r',text:'runner $'}),
+    $('th',{class:'r',text:'time'}),$('th',{class:'r',text:'tokens'}),$('th',{class:'r',text:'tasks × trials'})));
+  const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
+    const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
+  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed'};
+  evals.forEach(e=>{
+    const re=e.reward==null?'—':fmt(e.reward)+(e.stderr!=null?' ± '+(+e.stderr).toFixed(3):'');
+    t.append($('tr',{},
+      $('td',{},$('span',{class:'badge '+(kindBadge[e.kind]||'b-seed'),text:e.kind})),
+      $('td',{},$('code',{text:e.candidate})),
+      $('td',{class:'muted',text:e.split}),
+      $('td',{class:'r num',text:re}),
+      $('td',{class:'r num',text:e.cost_usd?'$'+(+e.cost_usd).toFixed(4):'—'}),
+      $('td',{class:'r num',text:dsec(e.seconds)}),
+      $('td',{class:'r num',text:(e.tokens||0).toLocaleString()}),
+      $('td',{class:'r num',text:(e.n_tasks||0)+' × '+(e.trials||1)})));
+  });
+  s.append(t);
+})();
+
+/* ---------- 7. Annotations / diagnoses stream ---------- */
+(function(){
+  const W=S.gate_warnings||[], D=S.diagnoses||[];
+  if(!W.length&&!D.length)return;
+  const s=sec('Annotations & diagnoses');
+  W.forEach(w=>{const a=$('div',{class:'ann'});a.append($('div',{class:'who',text:'gate · '+(w.mode||'')}),
+    $('div',{text:w.reason||''}));s.append(a);});
+  D.forEach(d=>{const a=$('div',{class:'ann diag'});a.append($('div',{class:'who',text:(d.kind||'diagnose')+(d.candidate?' · '+d.candidate:'')}),
+    $('div',{text:(d.text||'').slice(0,400)}));s.append(a);});
+})();
+
+/* ---------- 8. Candidate leaderboard + git log ---------- */
+(function(){
+  const s=sec('Candidates'); const t=$('table');
+  t.append($('tr',{},$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
+    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'}),$('th',{text:'reason'})));
+  G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
+    const dlt=n.parent_val!=null&&n.val!=null?(n.val-n.parent_val):null;
+    t.append($('tr',{},
+      $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
+      $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
+      $('td',{class:'r num',text:fmt(n.val)}),
+      $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
+      $('td',{class:'r num',text:n.iteration}),
+      $('td',{class:'muted',text:(n.reason||'').slice(0,80)})));
+  });
+  s.append(t);
+  if(S.git_log&&S.git_log.length){
+    s.append($('h2',{text:'Iteration store (git)',style:'margin-top:18px'}));
+    const g=$('div',{class:'diff'});
+    S.git_log.forEach(r=>g.append($('div',{class:'ctx',text:r.hash+'  '+r.subject})));
+    s.append(g);
+  }
+})();
+</script></body></html>

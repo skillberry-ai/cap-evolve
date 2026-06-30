@@ -1,0 +1,143 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.6666666666666666,
+    "stderr": 0.33333333333333337,
+    "pass_k": {
+      "1": 0.6666666666666666,
+      "2": 0.6666666666666666
+    },
+    "pass_at_k": {
+      "1": 0.6666666666666666,
+      "2": 0.6666666666666666
+    },
+    "per_task": [
+      {
+        "task_id": "pdf-excel-diff",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "pptx-reference-formatting",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "reserves-at-risk-calc",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 5 verifier test(s) failed:\n  - ::test_step1_volatility_calculations: The test failed in the call phase due to an assertion error\n  - ::test_step2_gold_reserves_and_risk: The test failed in the call phase\n  - ::test_step3_rar_percentage: The test failed in the call phase\n  - ::test_formulas_present: The test failed in the call phase due to an assertion error\n  - ::test_no_errors_or_macros: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2384.8835899829865
+  },
+  "best_id": "cand_0004",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.5555555555555555,
+    "stderr": 0.31426968052735443,
+    "pass_k": {
+      "1": 0.5555555555555555,
+      "2": 0.4444444444444444
+    },
+    "pass_at_k": {
+      "1": 0.5555555555555556,
+      "2": 0.6666666666666666
+    },
+    "per_task": [
+      {
+        "task_id": "pdf-excel-diff",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "pptx-reference-formatting",
+        "reward": 0.6666666666666666,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_titles_center_aligned: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "reserves-at-risk-calc",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 5 verifier test(s) failed:\n  - ::test_step1_volatility_calculations: The test failed in the call phase due to an assertion error\n  - ::test_step2_gold_reserves_and_risk: The test failed in the call phase\n  - ::test_step3_rar_percentage: The test failed in the call phase\n  - ::test_formulas_present: The test failed in the call phase due to an assertion error\n  - ::test_no_errors_or_macros: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2104.626617908478
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.111111
+}

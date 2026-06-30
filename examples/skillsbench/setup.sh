@@ -7,7 +7,7 @@
 #
 #   bash examples/skillsbench/setup.sh   # install cap-evolve + onboard SkillsBench + check
 #   bash examples/skillsbench/smoke.sh   # 1-task autonomy smoke (cheap, Docker)
-#   bash examples/skillsbench/run.sh     # full run (10 iters) + live dashboard
+#   bash examples/skillsbench/run.sh     # full run (7 iters) + live dashboard
 set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -73,4 +73,4 @@ PYTHONPATH="$PROJECT/adapters" "$VENV/bin/cap-evolve" check "$PROJECT" || die "c
 CAPEVOLVE_CORE="$REPO/core" "$PY" "$REPO/skills/capabilities/skill-package/scripts/check.py" >/dev/null \
   || die "skill-package check.py did not pass"
 
-printf '\n\033[1;32mREADY.\033[0m  Next:\n  bash %s/smoke.sh   # 1-task autonomy smoke (cheap, Docker)\n  bash %s/run.sh     # full run (10 iters · 7 val tasks · 1 trial) + live dashboard\n' "$EX_DIR" "$EX_DIR"
+printf '\n\033[1;32mREADY.\033[0m  Next:\n  bash %s/smoke.sh   # 1-task autonomy smoke (cheap, Docker)\n  bash %s/run.sh     # full run (7 iters · 7 val tasks · 3 trials) + live dashboard\n' "$EX_DIR" "$EX_DIR"
