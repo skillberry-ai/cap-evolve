@@ -1,34 +1,34 @@
 {
   "test": {
     "split": "test",
-    "reward": 0.6759999999999999,
-    "stderr": 0.05005792562988749,
+    "reward": 0.6940000000000001,
+    "stderr": 0.050406600726744084,
     "pass_k": {
-      "1": 0.6759999999999999,
-      "2": 0.556
+      "1": 0.6940000000000001,
+      "2": 0.5844444444444444
     },
     "pass_at_k": {
-      "1": 0.6759999999999999,
-      "2": 0.7959999999999999
+      "1": 0.6940000000000001,
+      "2": 0.8035555555555556
     },
     "per_task": [
       {
         "task_id": "0",
-        "reward": 0.9,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
+        "reward": 0.8,
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.1,
+        "stderr": 0.13333333333333333,
         "trial_rewards": [
           1.0,
           1.0,
           1.0,
           1.0,
           1.0,
+          0.0,
+          0.0,
           1.0,
           1.0,
-          1.0,
-          1.0,
-          0.0
+          1.0
         ],
         "raw": {
           "errored": false,
@@ -38,32 +38,8 @@
       },
       {
         "task_id": "1",
-        "reward": 0.2,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
-        "n": 10,
-        "stderr": 0.13333333333333336,
-        "trial_rewards": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0
-        ],
-        "raw": {
-          "errored": false,
-          "errored_trials": 0,
-          "n_trials": 10
-        }
-      },
-      {
-        "task_id": "2",
         "reward": 1.0,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly).",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -74,6 +50,30 @@
           1.0,
           1.0,
           1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 10
+        }
+      },
+      {
+        "task_id": "2",
+        "reward": 0.7,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
+        "n": 10,
+        "stderr": 0.15275252316519466,
+        "trial_rewards": [
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
           1.0,
           1.0,
           1.0
@@ -110,14 +110,14 @@
       },
       {
         "task_id": "4",
-        "reward": 1.0,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='AB742-20240412-SC-001' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='AB742-20240412-SC-001' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='AB742-20240412-SC-001' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='AB742-20240412-SC-001' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='AB742-20240412-SC-001' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']).",
+        "reward": 0.9,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='BC9X2Z' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='BC9X2Z' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='BC9X2Z' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='BC9X2Z' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']); get_reservation_details: agent used reservation_id='BC9X2Z' (not among the user's reservations; held=['NM1VX1', 'KC18K6', 'S61CZX', 'H8Q05L', 'WUNA5K']).",
         "n": 10,
-        "stderr": 0.0,
+        "stderr": 0.1,
         "trial_rewards": [
           1.0,
           1.0,
-          1.0,
+          0.0,
           1.0,
           1.0,
           1.0,
@@ -135,13 +135,13 @@
       {
         "task_id": "5",
         "reward": 0.8,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly).",
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
         "stderr": 0.13333333333333333,
         "trial_rewards": [
           1.0,
-          1.0,
           0.0,
+          1.0,
           0.0,
           1.0,
           1.0,
@@ -158,18 +158,18 @@
       },
       {
         "task_id": "6",
-        "reward": 0.6,
+        "reward": 0.8,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.13333333333333333,
         "trial_rewards": [
           1.0,
           0.0,
           1.0,
           1.0,
-          0.0,
           1.0,
-          0.0,
+          1.0,
+          1.0,
           0.0,
           1.0,
           1.0
@@ -183,7 +183,7 @@
       {
         "task_id": "7",
         "reward": 0.0,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: was never called (or not called correctly); cancel_reservation: was never called (or not called correctly); cancel_reservation: was never called (or not called correctly). 1 required piece(s) of information were not clearly communicated to the user. State the confirmations/details (e.g. the computed total, the new flight times) the policy requires you to convey.",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: was never called (or not called correctly); cancel_reservation: agent used reservation_id='59XX6W'. 1 required piece(s) of information were not clearly communicated to the user. State the confirmations/details (e.g. the computed total, the new flight times) the policy requires you to convey.",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -206,16 +206,16 @@
       },
       {
         "task_id": "8",
-        "reward": 1.0,
+        "reward": 0.9,
         "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly).",
         "n": 10,
-        "stderr": 0.0,
+        "stderr": 0.1,
         "trial_rewards": [
           1.0,
           1.0,
           1.0,
           1.0,
-          1.0,
+          0.0,
           1.0,
           1.0,
           1.0,
@@ -230,6 +230,54 @@
       },
       {
         "task_id": "9",
+        "reward": 0.7,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 10,
+        "stderr": 0.15275252316519466,
+        "trial_rewards": [
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 10
+        }
+      },
+      {
+        "task_id": "10",
+        "reward": 0.4,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 10,
+        "stderr": 0.16329931618554522,
+        "trial_rewards": [
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 10
+        }
+      },
+      {
+        "task_id": "11",
         "reward": 1.0,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
@@ -253,65 +301,17 @@
         }
       },
       {
-        "task_id": "10",
-        "reward": 0.2,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
-        "n": 10,
-        "stderr": 0.13333333333333336,
-        "trial_rewards": [
-          0.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "raw": {
-          "errored": false,
-          "errored_trials": 0,
-          "n_trials": 10
-        }
-      },
-      {
-        "task_id": "11",
-        "reward": 0.4,
-        "feedback": "Task reward: 1.000. All checks passed.",
-        "n": 10,
-        "stderr": 0.16329931618554522,
-        "trial_rewards": [
-          0.0,
-          1.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          1.0
-        ],
-        "raw": {
-          "errored": false,
-          "errored_trials": 0,
-          "n_trials": 10
-        }
-      },
-      {
         "task_id": "12",
-        "reward": 0.8,
+        "reward": 0.7,
         "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): calculate: was never called (or not called correctly).",
         "n": 10,
-        "stderr": 0.13333333333333333,
+        "stderr": 0.15275252316519466,
         "trial_rewards": [
-          1.0,
-          1.0,
+          0.0,
+          0.0,
           0.0,
           1.0,
-          0.0,
+          1.0,
           1.0,
           1.0,
           1.0,
@@ -350,19 +350,19 @@
       },
       {
         "task_id": "14",
-        "reward": 0.3,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: agent used reservation_id='HATHAT'.",
+        "reward": 0.5,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='business', destination='SFO', flight_type='round_trip', flights=[{'flight_number': 'HAT023', 'date': '2024-05-26'}, {'flight_number': 'HAT204', 'date': '2024-05-27'}, {'flight_number': 'HAT021', 'date': '2024-05-27'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Mohamed', 'last_name': 'Silva', 'dob': '1960-11-26'}, {'first_name': 'Raj', 'last_name': 'Sanchez', 'dob': '1986-09-12'}, {'first_name': 'Liam', 'last_name': 'Wilson', 'dob': '1980-03-27'}], payment_methods=[{'payment_id': 'certificate_3765853', 'amount': 500}, {'payment_id': 'gift_card_8020792', 'amount': 198}, {'payment_id': 'gift_card_6136092', 'amount': 129}, {'payment_id': 'credit_card_2198526', 'amount': 1915}] (not on the user's profile; available=['credit_card_5843230', 'gift_card_8020792', 'certificate_3765853', 'gift_card_6136092', 'certificate_9984806', 'credit_card_2198526', 'certificate_2765295']), total_baggages=0, user_id='mohamed_silva_9265'. 1 required piece(s) of information were not clearly communicated to the user. State the confirmations/details (e.g. the computed total, the new flight times) the policy requires you to convey.",
         "n": 10,
-        "stderr": 0.15275252316519464,
+        "stderr": 0.16666666666666669,
         "trial_rewards": [
           1.0,
           1.0,
+          0.0,
+          0.0,
+          1.0,
           1.0,
           0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          1.0,
           0.0,
           0.0
         ],
@@ -374,20 +374,20 @@
       },
       {
         "task_id": "15",
-        "reward": 0.9,
+        "reward": 0.6,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.1,
+        "stderr": 0.16329931618554522,
         "trial_rewards": [
+          0.0,
+          1.0,
           0.0,
           1.0,
           1.0,
           1.0,
           1.0,
-          1.0,
-          1.0,
-          1.0,
-          1.0,
+          0.0,
+          0.0,
           1.0
         ],
         "raw": {
@@ -398,20 +398,20 @@
       },
       {
         "task_id": "16",
-        "reward": 1.0,
+        "reward": 0.7,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.0,
+        "stderr": 0.15275252316519466,
         "trial_rewards": [
           1.0,
           1.0,
           1.0,
+          0.0,
           1.0,
           1.0,
+          0.0,
           1.0,
-          1.0,
-          1.0,
-          1.0,
+          0.0,
           1.0
         ],
         "raw": {
@@ -422,10 +422,10 @@
       },
       {
         "task_id": "17",
-        "reward": 0.8,
+        "reward": 0.9,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.13333333333333333,
+        "stderr": 0.1,
         "trial_rewards": [
           1.0,
           1.0,
@@ -434,7 +434,7 @@
           1.0,
           1.0,
           1.0,
-          0.0,
+          1.0,
           1.0,
           1.0
         ],
@@ -446,21 +446,21 @@
       },
       {
         "task_id": "18",
-        "reward": 0.1,
-        "feedback": "Task reward: 0.000. 1 required piece(s) of information were not clearly communicated to the user. State the confirmations/details (e.g. the computed total, the new flight times) the policy requires you to convey.",
+        "reward": 0.2,
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.1,
+        "stderr": 0.13333333333333336,
         "trial_rewards": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
           1.0,
           0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
+          1.0
         ],
         "raw": {
           "errored": false,
@@ -470,21 +470,21 @@
       },
       {
         "task_id": "19",
-        "reward": 0.5,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: was never called (or not called correctly).",
+        "reward": 0.7,
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.16666666666666669,
+        "stderr": 0.15275252316519466,
         "trial_rewards": [
           0.0,
+          1.0,
+          0.0,
+          1.0,
           0.0,
           1.0,
           1.0,
           1.0,
-          0.0,
           1.0,
-          1.0,
-          0.0,
-          0.0
+          1.0
         ],
         "raw": {
           "errored": false,
@@ -495,20 +495,20 @@
       {
         "task_id": "20",
         "reward": 0.8,
-        "feedback": "Task reward: 1.000. All checks passed.",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SEA', flight_type='one_way', flights=[{'flight_number': 'HAT136', 'date': '2024-05-20'}, {'flight_number': 'HAT039', 'date': '2024-05-20'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Amelia', 'last_name': 'Ahmed', 'dob': '1957-03-21'}], payment_methods=[{'payment_id': 'certificate_7504069', 'amount': 250}, {'payment_id': 'certificate_4856383', 'amount': 100}] (not on the user's profile; available=['credit_card_4421486', 'certificate_4856383', 'certificate_7504069', 'credit_card_1955700']), total_baggages=3, user_id='mia_li_3668'.",
         "n": 10,
         "stderr": 0.13333333333333333,
         "trial_rewards": [
-          0.0,
-          1.0,
-          1.0,
-          1.0,
-          1.0,
-          1.0,
           1.0,
           1.0,
           0.0,
-          1.0
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
         ],
         "raw": {
           "errored": false,
@@ -519,11 +519,10 @@
       {
         "task_id": "21",
         "reward": 0.2,
-        "feedback": "Task reward: 1.000. All checks passed.",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: was never called (or not called correctly); update_reservation_baggages: was never called (or not called correctly).",
         "n": 10,
         "stderr": 0.13333333333333336,
         "trial_rewards": [
-          0.0,
           0.0,
           1.0,
           0.0,
@@ -531,8 +530,9 @@
           0.0,
           0.0,
           0.0,
+          1.0,
           0.0,
-          1.0
+          0.0
         ],
         "raw": {
           "errored": false,
@@ -547,14 +547,14 @@
         "n": 10,
         "stderr": 0.16329931618554522,
         "trial_rewards": [
+          0.0,
+          0.0,
           1.0,
           0.0,
           1.0,
           1.0,
-          0.0,
           1.0,
           1.0,
-          0.0,
           0.0,
           1.0
         ],
@@ -566,21 +566,21 @@
       },
       {
         "task_id": "23",
-        "reward": 0.6,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: agent used reservation_id='K1NW8N'; book_reservation: agent used cabin='business', destination='SFO', flight_type='round_trip', flights=[{'flight_number': 'HAT023', 'date': '2024-05-26'}, {'flight_number': 'HAT204', 'date': '2024-05-28'}, {'flight_number': 'HAT100', 'date': '2024-05-28'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Mohamed', 'last_name': 'Silva', 'dob': '1960-11-26'}, {'first_name': 'Raj', 'last_name': 'Sanchez', 'dob': '1986-09-12'}, {'first_name': 'Liam', 'last_name': 'Wilson', 'dob': '1980-03-27'}], payment_methods=[{'payment_id': 'certificate_3765853', 'amount': 500}, {'payment_id': 'gift_card_8020792', 'amount': 198}, {'payment_id': 'gift_card_6136092', 'amount': 129}, {'payment_id': 'credit_card_2198526', 'amount': 1786}] (not on the user's profile; available=['credit_card_5843230', 'gift_card_8020792', 'certificate_3765853', 'gift_card_6136092', 'certificate_9984806', 'credit_card_2198526', 'certificate_2765295']), total_baggages=0, user_id='mohamed_silva_9265'; book_reservation: agent used cabin='business', destination='SFO', flight_type='round_trip', flights=[{'flight_number': 'HAT023', 'date': '2024-05-26'}, {'flight_number': 'HAT204', 'date': '2024-05-28'}, {'flight_number': 'HAT100', 'date': '2024-05-28'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Mohamed', 'last_name': 'Silva', 'dob': '1960-11-26'}, {'first_name': 'Raj', 'last_name': 'Sanchez', 'dob': '1986-09-12'}, {'first_name': 'Liam', 'last_name': 'Wilson', 'dob': '1980-03-27'}], payment_methods=[{'payment_id': 'certificate_3765853', 'amount': 500}, {'payment_id': 'gift_card_8020792', 'amount': 198}, {'payment_id': 'gift_card_6136092', 'amount': 129}, {'payment_id': 'credit_card_2198526', 'amount': 1786}] (not on the user's profile; available=['credit_card_5843230', 'gift_card_8020792', 'certificate_3765853', 'gift_card_6136092', 'certificate_9984806', 'credit_card_2198526', 'certificate_2765295']), total_baggages=0, user_id='mohamed_silva_9265'; book_reservation: agent used cabin='business', destination='SFO', flight_type='round_trip', flights=[{'flight_number': 'HAT023', 'date': '2024-05-26'}, {'flight_number': 'HAT204', 'date': '2024-05-28'}, {'flight_number': 'HAT100', 'date': '2024-05-28'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Mohamed', 'last_name': 'Silva', 'dob': '1960-11-26'}, {'first_name': 'Raj', 'last_name': 'Sanchez', 'dob': '1986-09-12'}, {'first_name': 'Liam', 'last_name': 'Wilson', 'dob': '1980-03-27'}], payment_methods=[{'payment_id': 'certificate_3765853', 'amount': 500}, {'payment_id': 'gift_card_8020792', 'amount': 198}, {'payment_id': 'gift_card_6136092', 'amount': 129}, {'payment_id': 'credit_card_2198526', 'amount': 1786}] (not on the user's profile; available=['credit_card_5843230', 'gift_card_8020792', 'certificate_3765853', 'gift_card_6136092', 'certificate_9984806', 'credit_card_2198526', 'certificate_2765295']), total_baggages=0, user_id='mohamed_silva_9265'. 1 required piece(s) of information were not clearly communicated to the user. State the confirmations/details (e.g. the computed total, the new flight times) the policy requires you to convey.",
+        "reward": 0.5,
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.16666666666666669,
         "trial_rewards": [
           1.0,
           0.0,
+          0.0,
           1.0,
-          1.0,
-          1.0,
-          1.0,
+          0.0,
           1.0,
           0.0,
           0.0,
-          0.0
+          1.0,
+          1.0
         ],
         "raw": {
           "errored": false,
@@ -590,13 +590,13 @@
       },
       {
         "task_id": "24",
-        "reward": 0.1,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='basic_economy', destination='LAX', flight_type='round_trip', flights=[{'flight_number': 'HAT041', 'date': '2024-05-20'}, {'flight_number': 'HAT012', 'date': '2024-05-25'}], insurance='no', nonfree_baggages=0, origin='EWR', passengers=[{'first_name': 'Mia', 'last_name': 'Kim', 'dob': '1965-06-09'}], payment_methods=[{'payment_id': 'gift_card_7359776', 'amount': 39}, {'payment_id': 'gift_card_7773485', 'amount': 124}] (not on the user's profile; available=['gift_card_7359776', 'gift_card_7773485']), total_baggages=1, user_id='mia_kim_4397'.",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='basic_economy', destination='LAX', flight_type='round_trip', flights=[{'flight_number': 'HAT041', 'date': '2024-05-20'}, {'flight_number': 'HAT012', 'date': '2024-05-25'}], insurance='no', nonfree_baggages=0, origin='EWR', passengers=[{'first_name': 'Mia', 'last_name': 'Kim', 'dob': '1965-06-09'}], payment_methods=[{'payment_id': 'gift_card_7359776', 'amount': 39.0}, {'payment_id': 'gift_card_7773485', 'amount': 124.0}] (not on the user's profile; available=['gift_card_7359776', 'gift_card_7773485']), total_baggages=1, user_id='mia_kim_4397'.",
         "n": 10,
-        "stderr": 0.1,
+        "stderr": 0.0,
         "trial_rewards": [
           0.0,
-          1.0,
+          0.0,
           0.0,
           0.0,
           0.0,
@@ -614,18 +614,18 @@
       },
       {
         "task_id": "25",
-        "reward": 0.8,
+        "reward": 0.9,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.13333333333333333,
+        "stderr": 0.1,
         "trial_rewards": [
-          1.0,
-          1.0,
-          1.0,
-          1.0,
           0.0,
           1.0,
-          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
           1.0,
           1.0,
           1.0
@@ -663,7 +663,7 @@
       {
         "task_id": "27",
         "reward": 1.0,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly).",
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -710,21 +710,21 @@
       },
       {
         "task_id": "29",
-        "reward": 0.6,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): cancel_reservation: agent used reservation_id='VA5SGQ'.",
+        "reward": 0.1,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: was never called (or not called correctly); book_reservation: was never called (or not called correctly).",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.1,
         "trial_rewards": [
           0.0,
-          1.0,
-          1.0,
-          1.0,
           0.0,
           0.0,
           0.0,
           1.0,
-          1.0,
-          1.0
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
         ],
         "raw": {
           "errored": false,
@@ -734,10 +734,10 @@
       },
       {
         "task_id": "30",
-        "reward": 0.9,
+        "reward": 1.0,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.1,
+        "stderr": 0.0,
         "trial_rewards": [
           1.0,
           1.0,
@@ -745,7 +745,7 @@
           1.0,
           1.0,
           1.0,
-          0.0,
+          1.0,
           1.0,
           1.0,
           1.0
@@ -758,19 +758,19 @@
       },
       {
         "task_id": "31",
-        "reward": 0.6,
+        "reward": 0.7,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.15275252316519466,
         "trial_rewards": [
           1.0,
           0.0,
+          0.0,
           1.0,
           1.0,
           0.0,
           1.0,
-          0.0,
-          0.0,
+          1.0,
           1.0,
           1.0
         ],
@@ -782,18 +782,18 @@
       },
       {
         "task_id": "32",
-        "reward": 0.3,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly).",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly).",
         "n": 10,
-        "stderr": 0.15275252316519464,
+        "stderr": 0.0,
         "trial_rewards": [
           0.0,
-          1.0,
-          0.0,
-          1.0,
           0.0,
           0.0,
-          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
           0.0,
           0.0,
           0.0
@@ -806,21 +806,21 @@
       },
       {
         "task_id": "33",
-        "reward": 0.8,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): search_direct_flight: agent used date='2024-05-23', destination='IAH', origin='SFO'.",
+        "reward": 0.4,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT072', 'date': '2024-05-19'}, {'flight_number': 'HAT278', 'date': '2024-05-21'}], payment_id='gift_card_6941833', reservation_id='HXDUBJ'.",
         "n": 10,
-        "stderr": 0.13333333333333333,
+        "stderr": 0.16329931618554522,
         "trial_rewards": [
           1.0,
-          1.0,
+          0.0,
           1.0,
           1.0,
           1.0,
           0.0,
-          1.0,
-          1.0,
           0.0,
-          1.0
+          0.0,
+          0.0,
+          0.0
         ],
         "raw": {
           "errored": false,
@@ -855,19 +855,19 @@
       {
         "task_id": "35",
         "reward": 0.5,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SFO', flight_type='one_way', flights=[{'flight_number': 'HAT023', 'date': '2024-05-24'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Aarav', 'last_name': 'Ahmed', 'dob': '1981-05-26'}], payment_methods=[{'payment_id': 'credit_card_9074831', 'amount': 163}] (not on the user's profile; available=['credit_card_4959530', 'credit_card_9074831', 'certificate_9645872']), total_baggages=0, user_id='aarav_ahmed_6699'.",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SFO', flight_type='one_way', flights=[{'flight_number': 'HAT069', 'date': '2024-05-24'}, {'flight_number': 'HAT258', 'date': '2024-05-24'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Aarav', 'last_name': 'Ahmed', 'dob': '1981-05-26'}, {'first_name': 'Daiki', 'last_name': 'Li', 'dob': '1980-12-24'}], payment_methods=[{'payment_id': 'credit_card_9074831', 'amount': 580}] (not on the user's profile; available=['credit_card_9074831', 'certificate_9645872', 'credit_card_4959530']), total_baggages=0, user_id='aarav_ahmed_6699'.",
         "n": 10,
         "stderr": 0.16666666666666669,
         "trial_rewards": [
-          1.0,
-          1.0,
+          0.0,
           1.0,
           1.0,
           0.0,
-          0.0,
+          1.0,
           0.0,
           1.0,
           0.0,
+          1.0,
           0.0
         ],
         "raw": {
@@ -902,56 +902,8 @@
       },
       {
         "task_id": "37",
-        "reward": 0.7,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly).",
-        "n": 10,
-        "stderr": 0.15275252316519466,
-        "trial_rewards": [
-          1.0,
-          1.0,
-          0.0,
-          1.0,
-          0.0,
-          1.0,
-          1.0,
-          0.0,
-          1.0,
-          1.0
-        ],
-        "raw": {
-          "errored": false,
-          "errored_trials": 0,
-          "n_trials": 10
-        }
-      },
-      {
-        "task_id": "38",
-        "reward": 0.8,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
-        "n": 10,
-        "stderr": 0.13333333333333333,
-        "trial_rewards": [
-          1.0,
-          1.0,
-          1.0,
-          0.0,
-          1.0,
-          0.0,
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "raw": {
-          "errored": false,
-          "errored_trials": 0,
-          "n_trials": 10
-        }
-      },
-      {
-        "task_id": "39",
         "reward": 1.0,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); cancel_reservation: agent used reservation_id='MSJ4OA'; cancel_reservation: agent used reservation_id='MSJ4OA'; cancel_reservation: agent used reservation_id='MSJ4OA'.",
+        "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -973,20 +925,44 @@
         }
       },
       {
-        "task_id": "40",
-        "reward": 0.3,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_passengers: was never called (or not called correctly).",
+        "task_id": "38",
+        "reward": 0.7,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='SDZQKO'.",
         "n": 10,
-        "stderr": 0.15275252316519464,
+        "stderr": 0.15275252316519466,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 10
+        }
+      },
+      {
+        "task_id": "39",
+        "reward": 0.2,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='LU15PA'; get_reservation_details: agent used reservation_id='LU15PA'; get_reservation_details: agent used reservation_id='LU15PA'; get_reservation_details: agent used reservation_id='LU15PA'; get_reservation_details: agent used reservation_id='LU15PA'; cancel_reservation: agent used reservation_id='LU15PA'.",
+        "n": 10,
+        "stderr": 0.13333333333333336,
         "trial_rewards": [
           1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
           1.0,
-          0.0,
-          0.0,
-          1.0,
-          0.0,
-          0.0,
-          0.0,
           0.0,
           0.0
         ],
@@ -997,9 +973,33 @@
         }
       },
       {
+        "task_id": "40",
+        "reward": 0.9,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 10,
+        "stderr": 0.1,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 10
+        }
+      },
+      {
         "task_id": "41",
         "reward": 1.0,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -1023,7 +1023,7 @@
       {
         "task_id": "42",
         "reward": 0.0,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); cancel_reservation: was never called (or not called correctly); cancel_reservation: was never called (or not called correctly).",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='HSR97W'; get_reservation_details: agent used reservation_id='HSR97W'; get_reservation_details: agent used reservation_id='HSR97W'.",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -1046,20 +1046,20 @@
       },
       {
         "task_id": "43",
-        "reward": 0.4,
-        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_user_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly).",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='9HBUV8'; get_reservation_details: agent used reservation_id='9HBUV8'; get_reservation_details: agent used reservation_id='9HBUV8'; get_reservation_details: agent used reservation_id='9HBUV8'.",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.0,
         "trial_rewards": [
-          0.0,
-          0.0,
-          0.0,
           1.0,
           1.0,
-          0.0,
-          0.0,
           1.0,
-          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
         "raw": {
@@ -1071,7 +1071,7 @@
       {
         "task_id": "44",
         "reward": 0.0,
-        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); get_reservation_details: was never called (or not called correctly); search_direct_flight: agent used date='2024-05-25', destination='LAX', origin='EWR'; search_direct_flight: agent used date='2024-05-25', destination='LAX', origin='EWR'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'date': '2024-05-24'}], payment_id='credit_card_4196779', reservation_id='H8Q05L'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'date': '2024-05-24'}], payment_id='credit_card_4196779', reservation_id='H8Q05L'.",
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='H8Q05L'; get_reservation_details: agent used reservation_id='H8Q05L'; get_reservation_details: agent used reservation_id='H8Q05L'; get_reservation_details: agent used reservation_id='H8Q05L'; search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'date': '2024-05-24'}], payment_id='credit_card_4196779', reservation_id='H8Q05L'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'date': '2024-05-24'}], payment_id='credit_card_4196779', reservation_id='H8Q05L'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'date': '2024-05-24'}], payment_id='credit_card_4196779', reservation_id='H8Q05L'.",
         "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
@@ -1102,9 +1102,9 @@
           1.0,
           1.0,
           1.0,
-          1.0,
-          1.0,
           0.0,
+          1.0,
+          1.0,
           1.0,
           1.0,
           1.0,
@@ -1142,20 +1142,20 @@
       },
       {
         "task_id": "47",
-        "reward": 0.4,
+        "reward": 1.0,
         "feedback": "Task reward: 1.000. All checks passed.",
         "n": 10,
-        "stderr": 0.16329931618554522,
+        "stderr": 0.0,
         "trial_rewards": [
-          0.0,
-          0.0,
           1.0,
           1.0,
-          0.0,
           1.0,
-          0.0,
-          0.0,
-          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
         "raw": {
@@ -1215,7 +1215,7 @@
     ],
     "cost_usd": 0.0,
     "tokens": 0,
-    "seconds": 1276.6784899234772
+    "seconds": 1413.1968097686768
   },
-  "best_id": "cand_0009"
+  "best_id": "cand_0007"
 }

@@ -14,19 +14,21 @@ is `claude-code @ claude-opus-4-6`.
 
 | | val reward (50 tasks · 10 trials) | Δ vs baseline |
 |---|---|---|
-| **Baseline** (seed policy + tools) | **0.496** | — |
-| **Best candidate** (`cand_0013`) | **0.702** | **+0.206 (≈ +41% relative)** |
+| **Baseline** (seed policy + tools) | **0.536** | — |
+| **Best candidate** (`cand_0007`) | **0.712** | **+0.176 (≈ +33% relative)** |
 
 Metric = mean tau2 task reward in `[0,1]`. The gain accretes per iteration behind the
-paired significance gate; acceptances at iters 1 (`+0.110`), 2 (`+0.054`), 9 (`+0.020`),
-13 (`+0.022`), the other 11 rejected as noise. A 10-iteration finalize scored its best
-candidate (`cand_0009`) **once** on the sealed split at **0.676 pass@1** (pass^2 0.556).
+paired significance gate; acceptances at iters 1 (`+0.046`), 3 (`+0.052`), 5 (`+0.036`),
+6 (`+0.014`), 7 (`+0.028`), the other 5 rejected as noise. The `finalize` step scored its
+best candidate (`cand_0007`) **once** on the sealed split at **0.694 pass@1** (pass^2 0.584).
 This example is no-holdout (train = val = test = all 50), so **val IS the fit metric**.
 
 Every accepted iteration makes deep **in-code** tool edits (prose rules → executable
-guards), not just prompt tweaks — `tools.py` grows 593 → 982 lines over the run. You can
+guards), not just prompt tweaks — `tools.py` grows 593 → 832 lines over the run (see five
+trajectory-verified before→after examples in
+[`docs/OPTIMIZATION_EXAMPLES.md`](OPTIMIZATION_EXAMPLES.md)). You can
 **see the result before reproducing**: open the committed full interactive dashboard
-(all 15 iterations, no backend needed) — the static UI export at
+(all 10 iterations, no backend needed) — the static UI export at
 [`examples/tau2_airline/run_full/ui/`](../examples/tau2_airline/run_full/ui/) — by running
 `cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000` (then
 http://localhost:8000), or host it on GitHub Pages / any static host; read the curated story in
@@ -96,7 +98,7 @@ bash examples/tau2_airline/run.sh      # full run + live capybara dashboard (see
    adapter contract, incl. that `score()` is deterministic). The run refuses to
    proceed until this is green.
 
-> **tau2-bench commit (this reproduction):** `5ebebbe827b455b3ed04fcb9294235c6ef4e5fd6`
+> **tau2-bench commit (this reproduction):** `8ebb7499622fc2be9b9d510d6f7a7653461f4f29`
 > (recorded automatically in `run_full/TAU2_COMMIT.txt`; your clone of latest `main` may
 > resolve to a newer commit — the recorded value is the source of truth for the run).
 
@@ -122,7 +124,7 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
   under the per-iteration `--max-budget-usd 40` cap → re-evaluate ALL 10 trials in one
   batched `run_trials` pass on val (each trial its own seed → real pass^k) → the
   **paired significance gate** (`gate_k_se 0.2`, val-only) accepts or rejects →
-  **commit to git**. Across the committed run `tools.py` grows 593 → 982 lines.
+  **commit to git**. Across the committed run `tools.py` grows 593 → 832 lines.
 - **Finalize** — score the best candidate once on the sealed test split (seal-on-success).
 - **Report** — `report.md` + a self-contained `dashboard.html`. The **live dashboard**
   shows per-iteration optimizer + runner **cost & time**, the one-time **intake cost**,
@@ -145,7 +147,7 @@ cat "$RD/rejected.jsonl"        # what the honest gate rejected (optimizer memor
 ```
 
 Saved artifacts also land in [`../examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)
-(`demo.cast`, the full interactive dashboard under `ui/` — all 15 iterations, no backend
+(`demo.cast`, the full interactive dashboard under `ui/` — all 10 iterations, no backend
 needed; serve with `python3 -m http.server 8000` in that dir or host on GitHub Pages /
 any static host — `report.md`, `events.jsonl`, `TAU2_COMMIT.txt`). See
 [`examples/tau2_airline/DEMO.md`](../examples/tau2_airline/DEMO.md) for the narrated walkthrough.

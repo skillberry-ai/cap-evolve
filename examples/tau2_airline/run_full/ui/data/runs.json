@@ -1,1 +1,1 @@
-[{"run_id":"run_full","path":"/tmp/nm_capevolve/cap-evolve/.capevolve/run_full","algorithm":null,"status":"done","best_val":0.7020000000000001,"baseline_val":0.496,"delta_pct":41.5,"iterations":15,"total_usd":185.618,"mtime":1782062725.3402236}]
+[{"run_id":"run_full","path":"/tmp/nm_capevolve/cap-evolve/.capevolve/run_full","algorithm":null,"status":"done","best_val":0.7120000000000001,"baseline_val":0.536,"delta_pct":32.8,"iterations":10,"total_usd":148.4339,"mtime":1782783564.280974}]

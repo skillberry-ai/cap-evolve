@@ -1,7 +1,7 @@
 # cap-evolve dashboard — static export (tau2-airline `run_full`)
 
 A **fully self-contained, static** snapshot of the cap-evolve React dashboard,
-populated with the completed **15-iteration tau2-airline** run (`run_full`). It
+populated with the completed **10-iteration tau2-airline** run (`run_full`). It
 runs on **any computer with no backend and no Python** — just a static file
 server. This is the real SPA (every page/tab: Overview/KPIs, Cost, Phases,
 Lineage, Iterations + git diffs, Memory, Files, Insights), reading pre-generated
@@ -38,8 +38,8 @@ ui/
 ```
 
 `data/` filenames are a deterministic slug of each `/api/*` path+query (matching
-the frontend's `staticSlug()`), e.g. `runs_run_full.json` (run detail with all 15
-iterations), `runs_run_full_git_log.json`, `runs_run_full_diff_cand_0013.json`,
+the frontend's `staticSlug()`), e.g. `runs_run_full.json` (run detail with all 10
+iterations), `runs_run_full_git_log.json`, `runs_run_full_diff_cand_0007.json`,
 `runs_run_full_memory.json`, `runs_run_full_git_diff_from_<sha>_1_to_<sha>.json`.
 
 ## How it was generated
