@@ -262,6 +262,9 @@ class Adapter(CapabilityAdapter):
             if skills_dir.parent.name == "candidates":
                 return skills_dir.parent.parent / "bench_jobs"
         except Exception:
+            # Deliberate best-effort fallback: a nonstandard/temporary candidate path
+            # (e.g. `cap-evolve check`'s temp copy) has no recognizable run root, so we
+            # use the local scratch dir below rather than failing the eval.
             pass
         return Path(__file__).resolve().parents[2] / ".bench_runs" / "default"
 

@@ -59,7 +59,10 @@ def _subpackages(capability_dir: Path) -> list[Path]:
     A capability_path may hold ONE skill (SKILL.md at the top) or SEVERAL shared
     skills as immediate sub-packages (e.g. seed_capability/{docx,pptx,xlsx,pdf}/).
     Returns the sub-package dirs (sorted) when this is a MULTI-skill root, else []."""
-    if (capability_dir / "SKILL.md").exists():
+    # A missing/typoed/non-dir path is NOT a multi-skill root — return [] so the caller
+    # falls through to the single-skill path and reports a clean validation error
+    # ("no SKILL.md") instead of raising FileNotFoundError on iterdir().
+    if not capability_dir.is_dir() or (capability_dir / "SKILL.md").exists():
         return []
     return sorted(
         sub for sub in capability_dir.iterdir()

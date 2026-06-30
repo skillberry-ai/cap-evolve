@@ -39,6 +39,9 @@ def _load_env() -> None:
                     if key:
                         os.environ.setdefault(key, val)
             except Exception:
+                # Best-effort .env load: a malformed/unreadable .env is intentionally
+                # non-fatal here so import never fails on the filesystem. A genuinely
+                # missing credential is reported later, by gateway_env() at call time.
                 pass
             break
 

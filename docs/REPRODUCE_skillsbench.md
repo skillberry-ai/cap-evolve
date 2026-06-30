@@ -79,9 +79,10 @@ bash examples/skillsbench/run.sh      # full run (7 iters · 3 trials) + dashboa
    then the authored integration: the adapter (`adapters/adapter.py` — `tasks`, `run_batch`
    issuing ONE `bench eval run --concurrency` over all the split's tasks with the candidate
    skills injected at `/skills`, gold-safe CTRF `score()`, multi-skill `materialize`), the
-   gateway env shim (`adapters/anthropic_env.py`), the editable seed (`seed_capability/` =
-   `docx/`+`pptx/`+`xlsx/`+`pdf/`), the skill-package-scoped `optimizer/INSTRUCTIONS.md`, and
-   the spec (`capevolve.yaml`).
+   gateway env shim (`adapters/anthropic_env.py`), the editable seed — the four shared skills
+   (`docx`/`pptx`/`xlsx`/`pdf`) **extracted from the SkillsBench clone** (Anthropic-licensed,
+   not vendored here; see `examples/skillsbench/seed_capability/README.md`), the
+   skill-package-scoped `optimizer/INSTRUCTIONS.md`, and the spec (`capevolve.yaml`).
 4. **Hard gate** — `cap-evolve check .capevolve/project` (adapter contract + deterministic
    `score()`). The run refuses to proceed until this is `{"ok": true}`.
 

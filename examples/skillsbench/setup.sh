@@ -62,7 +62,15 @@ say "4/4  Wire the project + hard gate (cap-evolve check)"
 PROJECT="$REPO/.capevolve/project"
 mkdir -p "$PROJECT/adapters" "$PROJECT/optimizer"
 cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/anthropic_env.py" "$PROJECT/adapters/"
-rm -rf "$PROJECT/seed_capability"; cp -R "$EX_DIR/seed_capability" "$PROJECT/seed_capability"
+# Seed capability = the four shared office skills, EXTRACTED from the cloned SkillsBench
+# tasks (NOT committed to this repo — they are Anthropic-licensed; see seed_capability/README.md).
+# Pull the most complete variant of each, exactly as the prompt specifies.
+SEED="$PROJECT/seed_capability"; rm -rf "$SEED"; mkdir -p "$SEED"
+cp -R "$SB_DIR/tasks/offer-letter-generator/environment/skills/docx" "$SEED/docx" || die "extract docx skill failed"
+cp -R "$SB_DIR/tasks/exceltable-in-ppt/environment/skills/pptx"      "$SEED/pptx" || die "extract pptx skill failed"
+cp -R "$SB_DIR/tasks/exceltable-in-ppt/environment/skills/xlsx"      "$SEED/xlsx" || die "extract xlsx skill failed"
+cp -R "$SB_DIR/tasks/pdf-excel-diff/environment/skills/pdf"          "$SEED/pdf"  || die "extract pdf skill failed"
+echo "  seed skills extracted from the clone (docx/pptx/xlsx/pdf) — not vendored in this repo"
 cp "$EX_DIR/optimizer/INSTRUCTIONS.md" "$PROJECT/optimizer/"
 cp "$EX_DIR/capevolve.yaml" "$EX_DIR/capevolve.smoke.yaml" \
    "$EX_DIR/split_ids.json" "$EX_DIR/smoke_split.json" "$PROJECT/"
