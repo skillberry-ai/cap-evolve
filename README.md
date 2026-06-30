@@ -112,9 +112,9 @@ The bundled [`examples/tau2_airline`](examples/tau2_airline) takes a **brand-new
 benchmark** from one prompt to an honest, optimized result. It optimizes the
 airline **policy + tools together** with a `claude-opus-4-6` optimizer, using
 `gpt-oss-120b` over IBM RITS as **both** the agent and the user simulator. The
-committed run lifted val reward **0.496 → 0.702 (+0.206, ≈ +41% relative)**; see
+committed run lifted val reward **0.536 → 0.712 (+0.176, ≈ +33% relative)**; see
 the headline numbers and walkthrough below, or just open the full interactive
-dashboard (all 15 iterations, no backend needed) committed under
+dashboard (all 10 iterations, no backend needed) committed under
 [`run_full/ui/`](examples/tau2_airline/run_full/ui/) — serve it with
 `cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000` (then
 http://localhost:8000), or host it on GitHub Pages / any static host.
@@ -575,24 +575,43 @@ all 50 airline tasks (10 trials each). **Metric:** mean tau2 task reward in
 
 | | val reward (50 tasks · 10 trials) | Δ vs baseline |
 |---|---|---|
-| **Baseline** (seed policy + tools) | **0.496** | — |
-| **Best candidate** (`cand_0013`) | **0.702** | **+0.206 (≈ +41% relative)** |
+| **Baseline** (seed policy + tools) | **0.536** | — |
+| **Best candidate** (`cand_0007`) | **0.712** | **+0.176 (≈ +33% relative)** |
 
 The gain accretes across iterations behind the paired significance gate — gains
-small enough to be noise are rejected. Acceptances: iter 1 `+0.110`
-(0.496→0.606), iter 2 `+0.054` (→0.660), iter 9 `+0.020` (→0.680), iter 13
-`+0.022` (→0.702); the other 11 iterations were rejected by the gate. A 10-iteration
-finalize scored its best candidate (`cand_0009`) **once** on the sealed split at
-**0.676 pass@1** (pass^2 0.556).
+small enough to be noise are rejected. Acceptances: iter 1 `+0.046` (0.536→0.582),
+iter 3 `+0.052` (→0.634), iter 5 `+0.036` (→0.670), iter 6 `+0.014` (→0.684),
+iter 7 `+0.028` (→0.712); the other 5 iterations were rejected by the gate. The
+`finalize` step scored the best candidate (`cand_0007`) **once** on the sealed split
+at **0.694 pass@1** (pass^2 0.584).
 
 **What actually changed.** Every accepted iteration makes deep, in-code edits to
 the tools — not just prompt tweaks. Driven by argument-level feedback from the
 failing rollouts, the optimizer turns prose policy rules into executable guards
-inside the existing tool bodies: e.g. iter 1 alone converted 5 of 6 rule
-violations into in-code guards (cancel/update/baggage eligibility checks) plus a
-`get_all_reservation_details` loop tool; `tools.py` grows 593 → 982 lines and the
-policy grows 166 → 212 lines across the run. See the curated story in
-[`examples/tau2_airline/DEMO.md`](examples/tau2_airline/DEMO.md).
+inside the existing tool bodies, across `tools.py` (593 → 832 lines) and the policy
+(166 → 233 lines). One concrete, trajectory-verified example — the policy caps a
+booking at **one travel certificate**, but the seed tool accepted any number
+silently, so `cand_0006` added an in-body guard to `book_reservation`:
+
+```python
+cert_count = sum(1 for pm in payment_methods
+    if user.payment_methods.get(pm.payment_id)
+    and user.payment_methods[pm.payment_id].source == "certificate")
+if cert_count > 1:
+    raise ValueError(
+        f"At most 1 travel certificate allowed per reservation, but {cert_count} "
+        f"were provided: {cert_ids}. Pick the single best certificate and use "
+        f"credit card or gift card for the remainder.")
+```
+
+In the trajectories, task 14 went from the agent booking with **three** certificates
+(wrong DB state, reward 0) to the guard rejecting the call, the agent reading the
+actionable error, and rebooking with one certificate + a card (reward 1). Four more
+verified before→after edits — a budget-cap validation, an enumeration loop tool, a
+"don't ask for data you can look up" knowledge rule, and an exact-figure output
+contract — are in
+[`docs/OPTIMIZATION_EXAMPLES.md`](docs/OPTIMIZATION_EXAMPLES.md); the curated
+walkthrough is in [`examples/tau2_airline/DEMO.md`](examples/tau2_airline/DEMO.md).
 
 **See it before you run it.** Open the committed full interactive dashboard (all 15
 iterations, no backend needed) — the static UI export at
