@@ -24,3 +24,15 @@ venv/
 # keep the prebuilt dashboard frontend (served at runtime; no node needed)
 !dashboard/frontend/dist/
 !dashboard/frontend/dist/**
+
+# skillsbench example: local clone + bench cache + run scratch (not committed)
+vendor/
+.bench_cwd/
+.bench_runs/
+examples/skillsbench/run/
+.cache/
+
+# skillsbench seed skills are Anthropic-licensed — extracted from the SkillsBench clone
+# by setup.sh at onboarding time, NOT vendored here (only the README is tracked).
+examples/skillsbench/seed_capability/*
+!examples/skillsbench/seed_capability/README.md

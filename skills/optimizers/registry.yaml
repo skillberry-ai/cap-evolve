@@ -70,7 +70,12 @@ generic:
   offline: "false"
 
 claude-code:
-  command_template: "claude -p {prompt_text} --permission-mode acceptEdits --model {model}"
+  # --allowedTools Bash lets the optimizer RUN code (python/pytest/soffice/scripts) to VERIFY
+  # an edit it makes — without it (acceptEdits alone blocks shell), the optimizer can only edit
+  # text it can't test, so it conservatively avoids shipping scripts/tool code. Verifying edits
+  # is core to optimizing skills/tools, so this is on by default. Edits stay auto-approved
+  # (acceptEdits); the optimizer runs in an isolated candidate-copy workdir.
+  command_template: "claude -p {prompt_text} --permission-mode acceptEdits --allowedTools Bash --model {model}"
   env_keys: "ANTHROPIC_API_KEY"
   install_url: "https://docs.claude.com/claude-code"
   auth_notes: "Logged-in Claude Code session or ANTHROPIC_API_KEY."

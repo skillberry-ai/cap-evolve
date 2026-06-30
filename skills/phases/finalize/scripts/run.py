@@ -23,7 +23,19 @@ def main(argv=None) -> int:
     run_dir = RunDir.open(Path(args.run_dir))
     adapter = load_adapter(Path(args.project))
     best_dir = run_dir.candidate_dir(run_dir.best_id)
-    payload = harness.finalize(adapter, run_dir=run_dir, best_dir=best_dir, n_trials=args.n_trials)
+    # Also score the unmodified seed (baseline) on the sealed test split, so the headline
+    # is the honest optimized-vs-baseline improvement on held-out tasks. `baseline()` always
+    # snapshots the seed, so a missing `candidates/seed` means a corrupted run dir — fail
+    # fast rather than silently producing a misleading baseline==optimized comparison.
+    seed_dir = run_dir.candidate_dir("seed")
+    if not seed_dir.exists():
+        raise FileNotFoundError(
+            f"baseline 'seed' candidate not found at {seed_dir} — the run dir looks "
+            "corrupted (baseline() should have snapshotted it). Refusing to finalize "
+            "without a baseline to compare on the sealed test split."
+        )
+    payload = harness.finalize(adapter, run_dir=run_dir, best_dir=best_dir,
+                               n_trials=args.n_trials, baseline_dir=seed_dir)
     print(json.dumps(payload, indent=2))
     return 0
 

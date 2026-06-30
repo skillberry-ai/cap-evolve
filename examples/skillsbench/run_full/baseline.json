@@ -1,0 +1,140 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.33333333333333337,
+    "stderr": 0.18442777839082938,
+    "pass_k": {
+      "1": 0.33333333333333337,
+      "2": 0.2857142857142857
+    },
+    "pass_at_k": {
+      "1": 0.33333333333333337,
+      "2": 0.380952380952381
+    },
+    "per_task": [
+      {
+        "task_id": "offer-letter-generator",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "exceltable-in-ppt",
+        "reward": 0.3333333333333333,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "xlsx-recover-data",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_growth_values: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "sales-pivot-analysis",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 3 verifier test(s) failed:\n  - ::TestPivotTableConfiguration::test_pivot_row_is_state: The test failed in the call phase\n  - ::TestPivotTableConfiguration::test_pivot_uses_correct_aggregation: The test failed in the call phase\n  - ::TestDataTransformationCorrectness::test_pivot_cache_has_fields: The test failed in the call phase",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "invoice-fraud-detection",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_content: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "weighted-gdp-calc",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      },
+      {
+        "task_id": "financial-modeling-qa",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_answer_value_correct: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2309.740989923477
+  },
+  "best_id": "seed"
+}

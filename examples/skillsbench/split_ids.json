@@ -1,0 +1,25 @@
+{
+  "train": [
+    "offer-letter-generator",
+    "exceltable-in-ppt",
+    "xlsx-recover-data",
+    "sales-pivot-analysis",
+    "invoice-fraud-detection",
+    "weighted-gdp-calc",
+    "financial-modeling-qa"
+  ],
+  "val": [
+    "offer-letter-generator",
+    "exceltable-in-ppt",
+    "xlsx-recover-data",
+    "sales-pivot-analysis",
+    "invoice-fraud-detection",
+    "weighted-gdp-calc",
+    "financial-modeling-qa"
+  ],
+  "test": [
+    "pdf-excel-diff",
+    "pptx-reference-formatting",
+    "reserves-at-risk-calc"
+  ]
+}

@@ -1754,19 +1754,43 @@ def hill_climb_loop(
 
 # ---- finalize -------------------------------------------------------------
 
-def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=(1, 2)) -> dict:
+def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=(1, 2),
+             baseline_dir: Path | None = None) -> dict:
     """Score the best candidate on the SEALED test split exactly once.
 
-    Seal-on-success: ``evaluate_candidate`` *reserves* the seal (raises if already
-    burned) but does not flip it. We compute + persist the test result FIRST, and
-    only then ``commit_test`` to burn the seal. So a crash anywhere in scoring or
-    in writing ``final.json`` leaves the seal unused and a retry can still score
-    test once — a transient failure no longer permanently destroys the headline.
+    Also scores the BASELINE (seed) capability on the SAME sealed test split, so the
+    headline is the honest *improvement* on held-out data — optimized vs. baseline —
+    not just an absolute number that might equal the baseline. Both are scored inside
+    this single sealed finalize: ``evaluate_candidate`` only *reserves* (checks) the
+    seal, so scoring two candidates here is fine; the seal is *committed* once at the
+    end. Pass ``baseline_dir`` (the ``seed`` candidate dir) to enable the comparison;
+    if the best candidate IS the seed (no accepted gain), the two are equal by
+    construction and the second eval is skipped.
+
+    Seal-on-success: we compute + persist the test result(s) FIRST and only then
+    ``commit_test`` to burn the seal, so a crash mid-scoring leaves the seal unused
+    and a retry can still score test once.
     """
     result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
                                 n_trials=n_trials, ks=ks, tag="FINAL")
     payload = {"test": result.to_dict(), "best_id": run_dir.best_id}
+
+    # Baseline-on-test: the honest held-out comparison (optimized skills vs seed skills).
+    if baseline_dir is not None and Path(baseline_dir).resolve() != Path(best_dir).resolve():
+        base = evaluate_candidate(adapter, baseline_dir, run_dir=run_dir, split="test",
+                                  n_trials=n_trials, ks=ks, tag="FINAL_seed")
+        payload["test_baseline"] = base.to_dict()
+        payload["baseline_id"] = "seed"
+        payload["test_delta"] = round(result.reward - base.reward, 6)
+    else:
+        # Best IS the seed (no accepted improvement) → baseline == optimized on test.
+        payload["test_baseline"] = result.to_dict()
+        payload["baseline_id"] = run_dir.best_id
+        payload["test_delta"] = 0.0
+
     _atomic_write(run_dir.root / "final.json", json.dumps(payload, indent=2))
-    run_dir.commit_test()  # burn the seal ONLY now that the result is computed + written
-    run_dir.log_event("finalize", test_reward=result.reward, best_id=run_dir.best_id)
+    run_dir.commit_test()  # burn the seal ONLY now that the result(s) are computed + written
+    run_dir.log_event("finalize", test_reward=result.reward,
+                      test_baseline_reward=payload["test_baseline"]["reward"],
+                      test_delta=payload["test_delta"], best_id=run_dir.best_id)
     return payload

@@ -1,0 +1,52 @@
+# cap-evolve run spec — optimize SkillsBench's SHARED office-document skills.
+# The intake skill fills this; orchestrate / `cap-evolve run --spec` reads it.
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]            # the four shared Agent Skills (docx/pptx/xlsx/pdf)
+capability_path: seed_capability         # a dir holding the FOUR skill sub-packages (a copy is optimized)
+actions: [edit]                          # edit SKILL.md + references/*.md + scripts/
+# The skills are self-contained (no shared types module the scripts import).
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code             # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)
+optimizer_model: claude-opus-4-8         # the optimizer's Claude model id
+optimizer_max_turns: 200                 # generous turn cap; the real ceiling is the $ cap below
+optimizer_usd_per_iter: 40.0             # per-iteration $ cap, enforced by claude (--max-budget-usd N)
+# The cloned SkillsBench checkout, surfaced READ-ONLY to the optimizer (task.md
+# instructions + verifier tests + the skills it edits) as ./bench_repo/.
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb              # algorithms/<skill>
+algorithm_focus: all                     # whole-trainset reflection each iteration
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter                  # use the adapter's tasks()
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# Pin the official split: train==val (7 shared-skill tasks; engine logs a
+# splits_warning), test = 3 held-out tasks (SEALED, scored once by finalize).
+split_ids_file: split_ids.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 3                            # the sonnet agent is STOCHASTIC: single-trial scoring made the
+#   gate reject real gains as noise (2 tasks flipped randomly run-to-run). 3 trials/task → a meaningful
+#   per-task mean + SE (and pass^k), so the paired gate distinguishes signal from noise.
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired                        # per-task paired SE — banks real 1-task gains on train==val
+gate_k_se: 0.2                           # accept gains clearing a 0.2·SE bar
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 7
+stall: 0                                 # run all 7 iterations (no early stop)
+max_metric_calls: 0                      # 0 = unlimited
+max_usd: 600.0                           # total $ cap (sonnet docker rollouts + optimizer)
+max_optimizer_usd: 400.0                 # cumulative optimizer-only $ cap
+
+# --- iteration store --------------------------------------------------------
+store: git                               # every iteration committed for an inspectable process

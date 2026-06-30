@@ -1,0 +1,5 @@
+{
+  "train": ["offer-letter-generator"],
+  "val": ["offer-letter-generator"],
+  "test": ["pdf-excel-diff"]
+}

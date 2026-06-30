@@ -47,25 +47,58 @@ def main(argv=None) -> int:
     base_val = (baseline.get("val") or {}).get("reward")
     test = final.get("test") or {}
     test_reward = test.get("reward")
+    # Baseline scored on the SAME sealed test split — the honest held-out improvement.
+    test_baseline = final.get("test_baseline") or {}
+    test_baseline_reward = test_baseline.get("reward")
+    test_delta = final.get("test_delta")
+    baseline_id = final.get("baseline_id")  # "seed" normally; == best_id if best IS the seed
 
     summary = {
         "run_dir": str(run_dir.root),
         "best_id": run_dir.best_id,
         "baseline_val": base_val,
         "test_reward": test_reward,
+        "test_baseline_reward": test_baseline_reward,
+        "test_delta": test_delta,
         "test_pass_k": test.get("pass_k"),
         "iterations": run_dir.spent.iterations,
     }
 
+    test_line = f"- **Held-out test (optimized skills): {test_reward}**" + (
+        f"  (pass^k={test.get('pass_k')})" if test.get("pass_k") else "")
     md = [
         f"# cap-evolve run report — {run_dir.root.name}",
         "",
         f"- Best candidate: `{run_dir.best_id}`",
         f"- Baseline val: {base_val}",
-        f"- **Held-out test: {test_reward}**" + (f"  (pass^k={test.get('pass_k')})" if test.get("pass_k") else ""),
+        test_line,
+    ]
+    # When the best candidate IS the seed (no accepted gain), baseline_id == best_id and
+    # baseline == optimized — label accordingly rather than implying a separate comparison.
+    best_is_seed = baseline_id is not None and baseline_id == run_dir.best_id
+    if test_baseline_reward is not None and not best_is_seed:
+        baseline_label = f"baseline `{baseline_id}` skills" if baseline_id else "baseline skills"
+        md.append(f"- Held-out test ({baseline_label}): {test_baseline_reward}")
+        md.append(
+            f"- **Test improvement (optimized − baseline): {test_delta:+}**"
+            if isinstance(test_delta, (int, float)) else f"- Test improvement: {test_delta}"
+        )
+        sealed_note = (
+            "Test was scored exactly once on the sealed split, for BOTH the baseline "
+            f"(`{baseline_id}`) and the optimized skills — the improvement above is on "
+            "held-out tasks the optimizer never saw."
+        )
+    else:
+        sealed_note = (
+            "Test was scored exactly once on the sealed split. The best candidate is the "
+            "seed (no accepted improvement), so baseline and optimized are identical here."
+            if best_is_seed else
+            "Test was scored exactly once on the sealed split."
+        )
+    md += [
         f"- Iterations: {run_dir.spent.iterations}",
         "",
-        "Test was scored exactly once on the sealed split.",
+        sealed_note,
     ]
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 

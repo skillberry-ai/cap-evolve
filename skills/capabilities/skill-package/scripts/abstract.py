@@ -53,18 +53,51 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     return fm, body
 
 
-def materialize(capability_dir: Path) -> dict:
-    """Flatten SKILL.md + references into named text components."""
-    capability_dir = Path(capability_dir)
+def _subpackages(capability_dir: Path) -> list[Path]:
+    """Immediate sub-directories that are themselves skill packages (contain SKILL.md).
+
+    A capability_path may hold ONE skill (SKILL.md at the top) or SEVERAL shared
+    skills as immediate sub-packages (e.g. seed_capability/{docx,pptx,xlsx,pdf}/).
+    Returns the sub-package dirs (sorted) when this is a MULTI-skill root, else []."""
+    # A missing/typoed/non-dir path is NOT a multi-skill root — return [] so the caller
+    # falls through to the single-skill path and reports a clean validation error
+    # ("no SKILL.md") instead of raising FileNotFoundError on iterdir().
+    if not capability_dir.is_dir() or (capability_dir / "SKILL.md").exists():
+        return []
+    return sorted(
+        sub for sub in capability_dir.iterdir()
+        if sub.is_dir() and (sub / "SKILL.md").exists()
+    )
+
+
+def _materialize_one(skill_dir: Path, prefix: str = "") -> dict:
+    """Flatten ONE skill package's SKILL.md + references into named components."""
     parts = {}
-    skill_md = capability_dir / "SKILL.md"
+    skill_md = skill_dir / "SKILL.md"
     if skill_md.exists():
-        parts["SKILL.md"] = skill_md.read_text(encoding="utf-8")
-    refs = capability_dir / "references"
+        parts[f"{prefix}SKILL.md"] = skill_md.read_text(encoding="utf-8")
+    refs = skill_dir / "references"
     if refs.is_dir():
         for f in sorted(refs.glob("*.md")):
-            parts[f"references/{f.name}"] = f.read_text(encoding="utf-8")
+            parts[f"{prefix}references/{f.name}"] = f.read_text(encoding="utf-8")
     return parts
+
+
+def materialize(capability_dir: Path) -> dict:
+    """Flatten SKILL.md + references into named text components.
+
+    Supports BOTH a single-skill capability_path (SKILL.md at the top) and a
+    MULTI-skill root holding several immediate sub-packages: components from each
+    sub-package are namespaced by ``<skill>/`` (e.g. ``docx/SKILL.md``,
+    ``pdf/references/forms.md``)."""
+    capability_dir = Path(capability_dir)
+    subs = _subpackages(capability_dir)
+    if subs:
+        parts: dict = {}
+        for sub in subs:
+            parts.update(_materialize_one(sub, prefix=f"{sub.name}/"))
+        return parts
+    return _materialize_one(capability_dir)
 
 
 def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
@@ -91,7 +124,29 @@ def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
 
 
 def validate(capability_dir: Path) -> dict:
-    """Enforce the Agent-Skills authoring rules. Returns {ok, problems, warnings}."""
+    """Enforce the Agent-Skills authoring rules. Returns {ok, problems, warnings}.
+
+    For a MULTI-skill root (several immediate sub-packages), validate EACH
+    sub-package and aggregate: problems/warnings are namespaced by ``<skill>:`` and
+    ``ok`` is True only if every sub-package is valid."""
+    capability_dir = Path(capability_dir)
+    subs = _subpackages(capability_dir)
+    if subs:
+        problems: list[str] = []
+        warnings: list[str] = []
+        names: list[str] = []
+        for sub in subs:
+            v = _validate_one(sub)
+            names.append(v.get("name", sub.name))
+            problems += [f"{sub.name}: {p}" for p in v["problems"]]
+            warnings += [f"{sub.name}: {w}" for w in v["warnings"]]
+        return {"ok": not problems, "name": ",".join(names),
+                "problems": problems, "warnings": warnings}
+    return _validate_one(capability_dir)
+
+
+def _validate_one(capability_dir: Path) -> dict:
+    """Enforce the Agent-Skills authoring rules on ONE skill package."""
     capability_dir = Path(capability_dir)
     problems: list[str] = []
     warnings: list[str] = []
