@@ -1,0 +1,70 @@
+# ============================================================================
+# Test PR with Bob - Trigger
+# Copy of trigger-templates/test-pr-with-bob-trigger.yml from skillberry-ai/.github
+# This file must live in the repo itself (fires pull_request_target events locally).
+#
+# SECURITY NOTE:
+# pull_request_target is used to handle PRs from forks or bot-created branches.
+# This workflow is safe because it only uploads PR metadata and does not execute
+# PR code. The companion workflow has a trusted-owner guard before running code.
+# ============================================================================
+
+name: Test PR with Bob - Trigger
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: test-pr-with-bob-trigger-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  collect-pr-context:
+    if: >-
+      !github.event.pull_request.draft &&
+      (contains(github.event.pull_request.labels.*.name, 'test-with-bob') ||
+       contains(github.event.pull_request.labels.*.name, 'fix-with-bob'))
+    runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Write PR context artifact
+        run: |
+          set -euo pipefail
+          mkdir -p pr-test-context
+          cat > pr-test-context/context.json <<'JSON'
+          {
+            "pr_number": ${{ github.event.pull_request.number }},
+            "pr_title": ${{ toJson(github.event.pull_request.title) }},
+            "pr_body": ${{ toJson(github.event.pull_request.body) }},
+            "pr_url": ${{ toJson(github.event.pull_request.html_url) }},
+            "base_ref": ${{ toJson(github.event.pull_request.base.ref) }},
+            "base_sha": ${{ toJson(github.event.pull_request.base.sha) }},
+            "head_ref": ${{ toJson(github.event.pull_request.head.ref) }},
+            "head_sha": ${{ toJson(github.event.pull_request.head.sha) }},
+            "head_repo": ${{ toJson(github.event.pull_request.head.repo.full_name) }},
+            "head_owner": ${{ toJson(github.event.pull_request.head.repo.owner.login) }},
+            "repository": ${{ toJson(github.repository) }},
+            "actor": ${{ toJson(github.actor) }},
+            "labels": ${{ toJson(github.event.pull_request.labels.*.name) }}
+          }
+          JSON
+          cat pr-test-context/context.json
+
+      - name: Upload PR context
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-test-context
+          path: pr-test-context/context.json
+          retention-days: 7
+          if-no-files-found: error
+
+# Made with Bob

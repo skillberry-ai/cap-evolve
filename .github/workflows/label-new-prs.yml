@@ -1,0 +1,25 @@
+# ============================================================================
+# Label New PRs — delegates to shared reusable workflow
+# Triggered by label-new-prs-trigger.yml via workflow_run.
+# Shared source: skillberry-ai/.github/.github/workflows/label-new-prs.yml
+# ============================================================================
+
+name: Label New PRs
+
+on:
+  workflow_run:
+    workflows: ["Label New PRs - Trigger"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number to label'
+        required: true
+        type: number
+
+jobs:
+  call-label-prs:
+    uses: skillberry-ai/.github/.github/workflows/label-new-prs.yml@main
+    secrets: inherit
+
+# Made with Bob

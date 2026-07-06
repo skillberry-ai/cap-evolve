@@ -1,0 +1,17 @@
+# ============================================================================
+# Fix Issues with Bob — delegates to shared reusable workflow
+# Shared source: skillberry-ai/.github/.github/workflows/fix-issues-with-bob.yml
+# ============================================================================
+
+name: Fix Issues with Bob
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  call-fix-issues:
+    uses: skillberry-ai/.github/.github/workflows/fix-issues-with-bob.yml@main
+    secrets: inherit
+
+# Made with Bob

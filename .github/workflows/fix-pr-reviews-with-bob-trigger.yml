@@ -1,0 +1,90 @@
+# ============================================================================
+# Fix PR Reviews with Bob - Trigger
+# Copy of trigger-templates/fix-pr-reviews-with-bob-trigger.yml from skillberry-ai/.github
+# This file must live in the repo itself (fires pull_request_review events locally).
+# ============================================================================
+
+name: Fix PR Reviews with Bob - Trigger
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  trigger-bob-workflow:
+    # Only run for reviews with comments that mention @skillberry-bot on PRs labeled with 'fix-with-bob'
+    if: |
+      (github.event.review.state == 'commented' || github.event.review.state == 'changes_requested') &&
+      contains(github.event.pull_request.labels.*.name, 'fix-with-bob') &&
+      contains(github.event.review.body, '@skillberry-bot')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Save PR and Review Information
+        id: save_info
+        run: |
+          echo "This is a dummy workflow that triggers the actual fix-pr-reviews-with-bob workflow."
+          echo "It's necessary because pull_request_review events from forked repositories"
+          echo "don't have access to repository secrets."
+          echo ""
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Review ID: ${{ github.event.review.id }}"
+          echo "Reviewer: ${{ github.event.review.user.login }}"
+
+          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "review_id=${{ github.event.review.id }}" >> $GITHUB_OUTPUT
+          echo "reviewer=${{ github.event.review.user.login }}" >> $GITHUB_OUTPUT
+
+          PR_TITLE=$(cat <<'TITLE_EOF'
+          ${{ github.event.pull_request.title }}
+          TITLE_EOF
+          )
+          echo "pr_title<<TITLE_EOF" >> $GITHUB_OUTPUT
+          echo "$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "TITLE_EOF" >> $GITHUB_OUTPUT
+
+          echo "head_ref=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+          echo "head_repo=${{ github.event.pull_request.head.repo.full_name }}" >> $GITHUB_OUTPUT
+          echo "review_state=${{ github.event.review.state }}" >> $GITHUB_OUTPUT
+
+          jq -n \
+            --arg pr_number "${{ github.event.pull_request.number }}" \
+            --arg review_id "${{ github.event.review.id }}" \
+            --arg reviewer "${{ github.event.review.user.login }}" \
+            --arg pr_title "${{ github.event.pull_request.title }}" \
+            --arg head_ref "${{ github.event.pull_request.head.ref }}" \
+            --arg head_repo "${{ github.event.pull_request.head.repo.full_name }}" \
+            --arg review_state "${{ github.event.review.state }}" \
+            '{
+              pr_number: ($pr_number | tonumber),
+              review_id: ($review_id | tonumber),
+              reviewer: $reviewer,
+              pr_title: $pr_title,
+              head_ref: $head_ref,
+              head_repo: $head_repo,
+              review_state: $review_state
+            }' > pr-review-context.json
+
+          cat pr-review-context.json
+
+      - name: Upload PR review context
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-review-context
+          path: pr-review-context.json
+          retention-days: 1
+
+      - name: Create Summary
+        run: |
+          echo "### PR Review Trigger Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR**: #${{ steps.save_info.outputs.pr_number }} - ${{ steps.save_info.outputs.pr_title }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Review ID**: ${{ steps.save_info.outputs.review_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reviewer**: @${{ steps.save_info.outputs.reviewer }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Review State**: ${{ steps.save_info.outputs.review_state }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head Ref**: ${{ steps.save_info.outputs.head_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head Repo**: ${{ steps.save_info.outputs.head_repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This will trigger the main workflow with access to secrets." >> $GITHUB_STEP_SUMMARY
+
+# Made with Bob

@@ -1,0 +1,62 @@
+# ============================================================================
+# CI — cap-evolve specific continuous integration
+# ============================================================================
+#
+# PURPOSE:
+# Runs two parallel jobs on every push to main and every pull request:
+#   1. test-python  — installs cap-evolve-core[dev] and runs pytest on core/tests/
+#   2. build-dashboard — installs dashboard/frontend dependencies and runs npm build
+#
+# No shared-workflow delegation needed: this is repo-specific CI.
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-python:
+    name: Test Python (core)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install cap-evolve-core with dev extras
+        run: pip install -e "./core[dev]"
+
+      - name: Run pytest
+        run: python -m pytest core/tests -q
+
+  build-dashboard:
+    name: Build Dashboard (frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: dashboard/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: dashboard/frontend
+        run: npm run build
+
+# Made with Bob

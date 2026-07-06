@@ -1,0 +1,20 @@
+# ============================================================================
+# Fix PR Reviews with Bob — delegates to shared reusable workflow
+# Triggered by fix-pr-reviews-with-bob-trigger.yml via workflow_run.
+# Shared source: skillberry-ai/.github/.github/workflows/fix-pr-reviews-with-bob.yml
+# ============================================================================
+
+name: Fix PR Reviews with Bob
+
+on:
+  workflow_run:
+    workflows: ["Fix PR Reviews with Bob - Trigger"]
+    types: [completed]
+
+jobs:
+  call-fix-pr-reviews:
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: skillberry-ai/.github/.github/workflows/fix-pr-reviews-with-bob.yml@main
+    secrets: inherit
+
+# Made with Bob

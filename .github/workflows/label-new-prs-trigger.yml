@@ -1,0 +1,88 @@
+# ============================================================================
+# Label New PRs - Trigger
+# Copy of trigger-templates/label-new-prs-trigger.yml from skillberry-ai/.github
+# This file must live in the repo itself (fires pull_request events locally).
+# ============================================================================
+
+name: Label New PRs - Trigger
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  trigger-labeling-workflow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Save PR Information
+        id: save_info
+        run: |
+          echo "This is a trigger workflow that activates the main labeling workflow."
+          echo "It's necessary because pull_request events from forked repositories"
+          echo "don't have access to repository secrets."
+          echo ""
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "PR Title: ${{ github.event.pull_request.title }}"
+          echo "PR Author: ${{ github.event.pull_request.user.login }}"
+
+          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+          PR_TITLE=$(cat <<'TITLE_EOF'
+          ${{ github.event.pull_request.title }}
+          TITLE_EOF
+          )
+          echo "pr_title<<TITLE_EOF" >> $GITHUB_OUTPUT
+          echo "$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "TITLE_EOF" >> $GITHUB_OUTPUT
+
+          echo "pr_author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
+          echo "head_ref=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+          echo "head_repo=${{ github.event.pull_request.head.repo.full_name }}" >> $GITHUB_OUTPUT
+          echo "base_ref=${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
+
+          PR_BODY_ESCAPED=$(cat <<'BODY_EOF'
+          ${{ github.event.pull_request.body }}
+          BODY_EOF
+          )
+
+          jq -n \
+            --arg pr_number "${{ github.event.pull_request.number }}" \
+            --arg pr_title "${PR_TITLE}" \
+            --arg pr_author "${{ github.event.pull_request.user.login }}" \
+            --arg pr_body "${PR_BODY_ESCAPED}" \
+            --arg head_ref "${{ github.event.pull_request.head.ref }}" \
+            --arg head_repo "${{ github.event.pull_request.head.repo.full_name }}" \
+            --arg base_ref "${{ github.event.pull_request.base.ref }}" \
+            '{
+              pr_number: ($pr_number | tonumber),
+              pr_title: $pr_title,
+              pr_author: $pr_author,
+              pr_body: $pr_body,
+              head_ref: $head_ref,
+              head_repo: $head_repo,
+              base_ref: $base_ref
+            }' > pr-context.json
+
+          cat pr-context.json
+
+      - name: Upload PR context
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-context
+          path: pr-context.json
+          retention-days: 1
+
+      - name: Create Summary
+        run: |
+          echo "### PR Labeling Trigger Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR**: #${{ steps.save_info.outputs.pr_number }} - ${{ steps.save_info.outputs.pr_title }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Author**: @${{ steps.save_info.outputs.pr_author }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head Ref**: ${{ steps.save_info.outputs.head_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head Repo**: ${{ steps.save_info.outputs.head_repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Ref**: ${{ steps.save_info.outputs.base_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This will trigger the main labeling workflow with access to secrets." >> $GITHUB_STEP_SUMMARY
+
+# Made with Bob

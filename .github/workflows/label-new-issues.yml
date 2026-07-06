@@ -1,0 +1,23 @@
+# ============================================================================
+# Label New Issues — delegates to shared reusable workflow
+# Shared source: skillberry-ai/.github/.github/workflows/label-new-issues.yml
+# ============================================================================
+
+name: Label New Issues
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to label'
+        required: true
+        type: number
+
+jobs:
+  call-label-issues:
+    uses: skillberry-ai/.github/.github/workflows/label-new-issues.yml@main
+    secrets: inherit
+
+# Made with Bob
