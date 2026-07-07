@@ -18,6 +18,6 @@ jobs:
     uses: skillberry-ai/skillberry-common/.github/workflows/codeql.yml@main
     secrets: inherit
     with:
-      languages: python,javascript
+      languages: '["python","javascript"]'
 
 # Made with Bob
