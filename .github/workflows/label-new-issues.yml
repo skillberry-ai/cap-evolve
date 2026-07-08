@@ -19,5 +19,8 @@ jobs:
   call-label-issues:
     uses: skillberry-ai/skillberry-common/.github/workflows/label-new-issues.yml@main
     secrets: inherit
+    permissions:
+      issues: write
+      contents: read
 
 # Made with Bob

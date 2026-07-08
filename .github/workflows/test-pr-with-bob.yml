@@ -11,13 +11,6 @@ on:
     workflows: ["Test PR with Bob - Trigger"]
     types: [completed]
 
-permissions:
-  actions: read
-  checks: read
-  contents: read
-  issues: write
-  pull-requests: write
-
 concurrency:
   group: test-pr-with-bob-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
@@ -26,5 +19,11 @@ jobs:
   call-test-pr:
     uses: skillberry-ai/skillberry-common/.github/workflows/test-pr-with-bob.yml@main
     secrets: inherit
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      issues: write
+      pull-requests: write
 
 # Made with Bob

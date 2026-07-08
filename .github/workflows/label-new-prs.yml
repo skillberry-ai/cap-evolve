@@ -21,5 +21,9 @@ jobs:
   call-label-prs:
     uses: skillberry-ai/skillberry-common/.github/workflows/label-new-prs.yml@main
     secrets: inherit
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
 
 # Made with Bob

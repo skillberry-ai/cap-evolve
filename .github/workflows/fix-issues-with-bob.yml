@@ -13,5 +13,13 @@ jobs:
   call-fix-issues:
     uses: skillberry-ai/skillberry-common/.github/workflows/fix-issues-with-bob.yml@main
     secrets: inherit
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+      deployments: write
+      statuses: write
+      actions: write
+      checks: read
 
 # Made with Bob
