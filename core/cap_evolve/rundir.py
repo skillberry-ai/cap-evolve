@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 import shutil
 import time
@@ -25,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .splits import Splits
+
+_log = logging.getLogger(__name__)
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -385,7 +388,7 @@ class RunDir:
             try:
                 obs.on_run_start(run_id, metadata or {})
             except Exception:
-                pass  # observers must not crash the run
+                _log.warning("observer %s.on_run_start failed", type(obs).__name__, exc_info=True)
 
     def notify_run_end(self, summary: dict | None = None) -> None:
         """Signal observers that the run has finished, then flush + close."""
@@ -393,7 +396,7 @@ class RunDir:
             try:
                 obs.on_run_end(summary or {})
             except Exception:
-                pass
+                _log.warning("observer %s.on_run_end failed", type(obs).__name__, exc_info=True)
         self.flush_observers()
 
     def flush_observers(self) -> None:
@@ -402,7 +405,7 @@ class RunDir:
             try:
                 obs.flush()
             except Exception:
-                pass
+                _log.warning("observer %s.flush failed", type(obs).__name__, exc_info=True)
 
     def close_observers(self) -> None:
         """Close all attached observers and release their resources."""
@@ -410,7 +413,7 @@ class RunDir:
             try:
                 obs.close()
             except Exception:
-                pass
+                _log.warning("observer %s.close failed", type(obs).__name__, exc_info=True)
 
     def _notify_observers(self, event: dict) -> None:
         """Forward an event dict to every attached observer (fire-and-forget)."""
@@ -418,4 +421,4 @@ class RunDir:
             try:
                 obs.on_event(event)
             except Exception:
-                pass  # observers must not crash the run
+                _log.warning("observer %s.on_event failed", type(obs).__name__, exc_info=True)
