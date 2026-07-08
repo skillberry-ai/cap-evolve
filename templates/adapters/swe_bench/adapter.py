@@ -170,9 +170,7 @@ Do not include any explanation before or after the patch.
 
             cost = float(getattr(response, "_hidden_params", {}).get("response_cost", 0) or 0)
             usage = getattr(response, "usage", None)
-            tokens = (
-                (usage.total_tokens if usage else 0) if usage else 0
-            )
+            tokens = usage.total_tokens if usage else 0
 
             return Rollout(
                 task_id=task.id,
