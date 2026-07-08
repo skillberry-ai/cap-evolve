@@ -1,3 +1,8 @@
+# ============================================================================
+# Fix Issues with Bob — delegates to shared reusable workflow
+# Shared source: skillberry-ai/skillberry-common/.github/workflows/fix-issues-with-bob.yml
+# ============================================================================
+
 name: Fix Issues with Bob
 
 on:
@@ -5,11 +10,9 @@ on:
     types: [labeled]
 
 jobs:
-  fix-issues-with-bob:
-    # Only run when the 'fix-with-bob' label is added
-    if: github.event.label.name == 'fix-with-bob'
-    runs-on: ubuntu-latest
-
+  call-fix-issues:
+    uses: skillberry-ai/skillberry-common/.github/workflows/fix-issues-with-bob.yml@main
+    secrets: inherit
     permissions:
       issues: write
       pull-requests: write
@@ -18,197 +21,5 @@ jobs:
       statuses: write
       actions: write
       checks: read
-
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install Bob Shell
-        run: |
-          echo "Installing Bob Shell..."
-          curl -fsSL https://bob.ibm.com/download/bobshell.sh | bash -s -- --package-manager npm
-
-          if command -v bob &> /dev/null; then
-            echo "Bob Shell installed successfully"
-            bob --version
-          else
-            echo "Bob Shell installation failed"
-            exit 1
-          fi
-
-      - name: Authenticate Bob Shell
-        env:
-          BOBSHELL_API_KEY: ${{ secrets.BOBSHELL_API_KEY }}
-        run: |
-          echo "Configuring Bob Shell authentication..."
-          if [ -z "$BOBSHELL_API_KEY" ]; then
-            echo "Error: BOBSHELL_API_KEY secret is not set"
-            exit 1
-          fi
-          echo "Bob Shell authentication configured successfully"
-
-      - name: Get Issue Details
-        id: issue
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE_NUMBER="${{ github.event.issue.number }}"
-          echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
-
-          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${ISSUE_NUMBER})
-
-          ISSUE_TITLE=$(echo "${ISSUE_DATA}" | jq -r '.title')
-          ISSUE_BODY=$(echo "${ISSUE_DATA}" | jq -r '.body // ""')
-
-          {
-            echo "issue_title<<TITLE_EOF"
-            echo "${ISSUE_TITLE}"
-            echo "TITLE_EOF"
-            echo "issue_body<<BODY_EOF"
-            echo "${ISSUE_BODY}"
-            echo "BODY_EOF"
-          } >> $GITHUB_OUTPUT
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create Branch for Fix
-        run: |
-          BRANCH_NAME="fix-issue-${{ steps.issue.outputs.issue_number }}"
-          git checkout -b "${BRANCH_NAME}"
-          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-
-      - name: Execute Bob to Fix Issue
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          retry_wait_seconds: 10
-          command: |
-            PROMPT=$(cat <<'EOF'
-            Fix GitHub issue #${{ steps.issue.outputs.issue_number }}: ${{ steps.issue.outputs.issue_title }}
-
-            Repository: ${{ github.repository }}
-            Issue URL: ${{ github.event.issue.html_url }}
-
-            Issue Description:
-            ${{ steps.issue.outputs.issue_body }}
-
-            Please analyze this issue and make all necessary code changes to fix it.
-            Ensure the changes are complete, follow best practices, and resolve the issue.
-            EOF
-            )
-
-            bob --accept-license --yolo -p "${PROMPT}"
-        env:
-          BOBSHELL_API_KEY: ${{ secrets.BOBSHELL_API_KEY }}
-          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check for Changes
-        id: changes
-        run: |
-          if [[ -n $(git status --porcelain) ]]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected:"
-            git status --short
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          fi
-
-      - name: Commit and Push Changes
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-        run: |
-          git add -A
-          # Exclude Bob Shell local notes/metadata from commits.
-          git reset .bob/ || true
-          git commit -m "Fix issue #${{ steps.issue.outputs.issue_number }}: ${{ steps.issue.outputs.issue_title }}"
-
-          echo "Pushing to origin..."
-          if git push -u origin "${BRANCH_NAME}"; then
-            echo "✓ Branch ${BRANCH_NAME} pushed successfully to origin"
-          else
-            echo "✗ Failed to push to origin"
-            exit 1
-          fi
-
-      - name: Create Pull Request
-        id: create_pr
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-        run: |
-          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
-          git fetch --no-tags origin "${DEFAULT_BRANCH}"
-          DIFF_STATS=$(git diff "origin/${DEFAULT_BRANCH}"..HEAD --stat || echo "Unable to generate diff stats")
-
-          PR_BODY=$(cat <<EOF
-          This PR was automatically generated by Bob Shell to fix issue #${{ steps.issue.outputs.issue_number }}.
-
-          ## Issue Details
-          ${{ steps.issue.outputs.issue_body }}
-
-          ## Changes
-          Bob Shell analyzed the issue and applied the following fixes:
-          ${DIFF_STATS}
-
-          Closes #${{ steps.issue.outputs.issue_number }}
-          EOF
-          )
-
-          PR_URL=$(gh pr create \
-            --repo ${{ github.repository }} \
-            --title "Fix: Issue #${{ steps.issue.outputs.issue_number }} - ${{ steps.issue.outputs.issue_title }}" \
-            --body "${PR_BODY}" \
-            --base "${DEFAULT_BRANCH}" \
-            --head "${BRANCH_NAME}")
-
-          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
-
-          PR_NUMBER="${PR_URL##*/}"
-          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
-
-          gh pr edit "${PR_NUMBER}" --repo ${{ github.repository }} --add-label "fix-with-bob"
-          echo "✓ Added 'fix-with-bob' label to PR #${PR_NUMBER}"
-
-      - name: Comment on Issue
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-        run: |
-          gh issue comment ${{ steps.issue.outputs.issue_number }} \
-            --body "🤖 Bob Shell has analyzed this issue and created a pull request with a proposed fix: ${{ steps.create_pr.outputs.pr_url }}. Please review the changes."
-
-      - name: Comment on Issue - No Changes
-        if: steps.changes.outputs.has_changes == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-        run: |
-          gh issue comment ${{ steps.issue.outputs.issue_number }} \
-            --body "🤖 Bob Shell analyzed this issue but did not generate any code changes. Manual intervention may be required."
-
-      - name: Handle Errors
-        if: failure()
-        env:
-          GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
-        run: |
-          gh issue comment ${{ steps.issue.outputs.issue_number }} \
-            --body "❌ Bob Shell encountered an error while trying to fix this issue. Please check the workflow logs for details."
 
 # Made with Bob
