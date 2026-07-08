@@ -27,6 +27,7 @@ from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
+from .telemetry import Telemetry
 from .types import Rollout, Score, Task
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -1165,6 +1166,7 @@ def run_step(
     reject the candidate if it breaks any val task the parent already passed.
     """
     gate_kwargs = dict(gate_kwargs or {})
+    telemetry = Telemetry.open(run_dir.root)
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
     # Lineage edge for the dashboard/report: the parent is the candidate this step
     # was forked from (the current best by default in a global hill-climb). Captured
@@ -1186,17 +1188,21 @@ def run_step(
     optimizer_error = None
     opt_cost_usd, opt_tokens = 0.0, 0
     _opt_t0 = time.time()
-    try:
-        opt_report = optimizer(workdir, instructions)  # mutates workdir in place
-        if isinstance(opt_report, dict):
-            opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
-            opt_tokens = int(opt_report.get("tokens") or 0)
-    except Exception as e:  # noqa: BLE001
-        # A failed proposal (e.g. a transient optimizer/API error) must not abort a
-        # long run — leave the workdir as the parent copy so the candidate == parent
-        # and the gate simply rejects it (a wasted iteration, not a crash).
-        optimizer_error = str(e)
-        run_dir.log_event("optimizer_error", candidate=cid, error=optimizer_error[:500])
+    with telemetry.span("optimize", attributes={
+        "cap_evolve.candidate_id": cid,
+        "cap_evolve.parent_id": parent_id or "",
+    }):
+        try:
+            opt_report = optimizer(workdir, instructions)  # mutates workdir in place
+            if isinstance(opt_report, dict):
+                opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
+                opt_tokens = int(opt_report.get("tokens") or 0)
+        except Exception as e:  # noqa: BLE001
+            # A failed proposal (e.g. a transient optimizer/API error) must not abort a
+            # long run — leave the workdir as the parent copy so the candidate == parent
+            # and the gate simply rejects it (a wasted iteration, not a crash).
+            optimizer_error = str(e)
+            run_dir.log_event("optimizer_error", candidate=cid, error=optimizer_error[:500])
     optimizer_seconds = time.time() - _opt_t0
     run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
                          optimizer_tokens=opt_tokens)
@@ -1277,6 +1283,14 @@ def run_step(
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",
                      tag=("best" if accepted else None), accepted=accepted)
+
+    telemetry.log_iteration(
+        candidate_id=cid, accepted=accepted, parent_id=parent_id,
+        current_val=current_val.reward, candidate_val=cand_val.to_dict(),
+        decision=decision.to_dict(), optimizer_seconds=optimizer_seconds,
+        optimizer_usd=opt_cost_usd, optimizer_tokens=opt_tokens,
+        optimizer_error=optimizer_error,
+    )
 
     return {
         "candidate_id": cid,
@@ -1771,8 +1785,10 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
     ``commit_test`` to burn the seal, so a crash mid-scoring leaves the seal unused
     and a retry can still score test once.
     """
-    result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
-                                n_trials=n_trials, ks=ks, tag="FINAL")
+    telemetry = Telemetry.open(run_dir.root)
+    with telemetry.span("finalize", attributes={"cap_evolve.best_id": run_dir.best_id or ""}):
+        result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
+                                    n_trials=n_trials, ks=ks, tag="FINAL")
     payload = {"test": result.to_dict(), "best_id": run_dir.best_id}
 
     # Baseline-on-test: the honest held-out comparison (optimized skills vs seed skills).
@@ -1793,4 +1809,5 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
     run_dir.log_event("finalize", test_reward=result.reward,
                       test_baseline_reward=payload["test_baseline"]["reward"],
                       test_delta=payload["test_delta"], best_id=run_dir.best_id)
+    telemetry.log_finalize(payload)
     return payload

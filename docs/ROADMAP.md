@@ -27,6 +27,7 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
 - Honest-eval upgrades: paired significance gate (default), seal-on-success test,
   structured `Rollout.error` infra signal, per-trial seed for real pass^k variance.
 - Rich **self-contained** `dashboard.html` + `cap-evolve report --terminal` ANSI report.
+- Optional observability integrations: `telemetry: [mlflow, otel]` (or `cap-evolve run --telemetry mlflow,otel`) logs run/iteration/finalize metrics, artifacts, and span-shaped phase traces without changing the core pipeline's local artifacts.
 - Host-agnostic installer + Claude Code plugin (honesty hooks in core-owned scripts,
   diagnoser/proposer subagents, router) — `claude --plugin-dir ./plugins/cap-evolve`.
 - Real proof: tau2-bench airline (gpt-oss-120b agent + user simulator) optimized

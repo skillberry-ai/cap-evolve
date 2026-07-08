@@ -16,6 +16,7 @@ from pathlib import Path
 import _bootstrap  # noqa: F401
 
 from cap_evolve import RunDir
+from cap_evolve.telemetry import Telemetry
 
 
 def main(argv=None) -> int:
@@ -33,6 +34,7 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+    telemetry = Telemetry.open(run_dir.root)
 
     # --- ANSI terminal mode: reduce → render_ansi → stdout, then return ---
     if args.terminal:
@@ -123,6 +125,13 @@ def main(argv=None) -> int:
             summary["dashboard_server"] = status.get("dashboard")
         except Exception as e:  # noqa: BLE001
             summary["dashboard_server_error"] = str(e)
+
+    try:
+        telemetry.log_finalize({"best_id": run_dir.best_id, "test": final.get("test") or {},
+                                "test_baseline": final.get("test_baseline") or {},
+                                "test_delta": final.get("test_delta")})
+    except Exception:  # noqa: BLE001
+        pass
 
     print(json.dumps(summary, indent=2))
     return 0

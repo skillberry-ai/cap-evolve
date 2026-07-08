@@ -121,6 +121,8 @@ def _cmd_run(argv):
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
+    p.add_argument("--telemetry", default=None,
+                   help="comma-separated telemetry exporters to enable: mlflow,otel")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
@@ -145,6 +147,7 @@ def _cmd_run(argv):
         return 0
 
     from . import dashboard_launch
+    from .telemetry import resolve_telemetry_config
     dash_mode = dashboard_launch.resolve_mode(args.dashboard, spec.get("dashboard"))
     dash_port = args.dashboard_port or int(spec.get("dashboard_port") or dashboard_launch.DEFAULT_PORT)
 
@@ -218,6 +221,9 @@ def _cmd_run(argv):
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
+                          "telemetry": resolve_telemetry_config(
+                              spec, cli_telemetry=args.telemetry, project_dir=proj_abs, run_ts=args.run_ts
+                          ),
                           "budget": {"max_iterations": spec.get("max_iterations", 10),
                                      "stall": spec.get("stall", 0),
                                      "max_metric_calls": spec.get("max_metric_calls", 0),
@@ -257,6 +263,18 @@ def _cmd_run(argv):
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return 1
     run_dir = json.loads(proc.stdout)["run_dir"]
+
+    telemetry_cfg = resolve_telemetry_config(
+        spec, cli_telemetry=args.telemetry, project_dir=proj_abs, run_ts=args.run_ts or Path(run_dir).name
+    )
+    if telemetry_cfg.get("enabled"):
+        try:
+            from .telemetry import Telemetry
+            tel = Telemetry(workdir / run_dir, telemetry_cfg)
+            tel.save()
+            tel.log_run_start(run_dir=workdir / run_dir, spec=spec)
+        except Exception:  # noqa: BLE001
+            pass
 
     # Record the intake phase's spend + summary into the run, if the intake phase
     # wrote <project>/intake.json. Best-effort: a missing/malformed file is ignored so
