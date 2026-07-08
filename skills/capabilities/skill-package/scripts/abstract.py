@@ -123,13 +123,31 @@ def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
     return report
 
 
+def is_empty(capability_dir: Path) -> bool:
+    """Return True when the capability directory has no meaningful skill content yet.
+
+    An empty directory (no SKILL.md, no sub-packages) is an accepted starting state
+    so the optimizer can create the initial skill from failing trajectories."""
+    capability_dir = Path(capability_dir)
+    subs = _subpackages(capability_dir)
+    if subs:
+        return False
+    return not (capability_dir / "SKILL.md").exists()
+
+
 def validate(capability_dir: Path) -> dict:
     """Enforce the Agent-Skills authoring rules. Returns {ok, problems, warnings}.
+
+    An empty capability (no SKILL.md, no sub-packages) is accepted as a valid
+    starting state so the optimizer can create the initial skill from failing
+    trajectories.
 
     For a MULTI-skill root (several immediate sub-packages), validate EACH
     sub-package and aggregate: problems/warnings are namespaced by ``<skill>:`` and
     ``ok`` is True only if every sub-package is valid."""
     capability_dir = Path(capability_dir)
+    if is_empty(capability_dir):
+        return {"ok": True, "empty": True, "name": "", "problems": [], "warnings": []}
     subs = _subpackages(capability_dir)
     if subs:
         problems: list[str] = []

@@ -34,5 +34,9 @@ def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
     return tool_surface.apply(capability_dir, DEFAULT_POLICY, edits)
 
 
+def is_empty(capability_dir: Path) -> bool:
+    return tool_surface.is_empty(capability_dir)
+
+
 def validate(capability_dir: Path) -> dict:
     return tool_surface.validate(capability_dir)

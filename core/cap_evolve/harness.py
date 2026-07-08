@@ -303,8 +303,14 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
 
     Establishes the starting point every algorithm compares against. Assumes
     ``ensure_splits`` has been called.
+
+    An empty ``seed_dir`` (no files) is accepted — the directory is created if
+    needed and snapshotted as an empty candidate. The optimizer will create the
+    initial capability content from the failing trajectories.
     """
-    run_dir.snapshot("seed", Path(seed_dir))
+    seed_dir = Path(seed_dir)
+    seed_dir.mkdir(parents=True, exist_ok=True)
+    run_dir.snapshot("seed", seed_dir)
     run_dir.set_best("seed")
     result = evaluate_candidate(adapter, run_dir.candidate_dir("seed"), run_dir=run_dir,
                                split="val", n_trials=n_trials, ks=ks, tag="seed")
@@ -1582,6 +1588,35 @@ def _parallel_note(parallel: bool, optimizer_name: str | None) -> str:
             "real, safe fix, not just the biggest one.")
 
 
+def _empty_seed_note(current_val: SplitResult) -> str:
+    """Return a guidance block when the capability started from an empty seed.
+
+    Detected when the current best has reward ≈ 0 and every task is failing —
+    the hallmark of an empty seed (no capability content yet). The block tells the
+    optimizer to CREATE the initial capability content from the failing trajectories
+    rather than merely editing existing text.
+    """
+    if current_val.reward > 1e-9:
+        return ""
+    per = current_val.per_task
+    if not per:
+        return ""
+    eps = 1e-9
+    if any((pt.get("reward", 0) or 0) > eps for pt in per):
+        return ""
+    return (
+        "## EMPTY SEED — create the capability from scratch\n"
+        "The capability directory is EMPTY (no pre-existing content). This is the first "
+        "iteration starting from a blank slate. Your job is to CREATE the initial capability "
+        "content — not edit existing files (there are none). Analyze the failing trajectories "
+        "in `./trajectories/` to understand what the agent needs, then create the capability "
+        "files from scratch (e.g. SKILL.md, prompt.txt, tools.json, policy.md — whatever the "
+        "capability type requires). Read `./guidance/<cap>/SKILL.md` for the expected file "
+        "format and structure. A good initial capability addresses the most common failure "
+        "patterns visible in the trajectories.\n"
+    )
+
+
 def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         capabilities=None, algorithm: str = "hill-climb",
                         instructions_file=None, bench_repo: str | None = None,
@@ -1615,6 +1650,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
              if bench_repo else "")
 
     parallel_note = _parallel_note(_optimizer_parallel(optimizer_name), optimizer_name)
+    empty_note = _empty_seed_note(current_val)
     repl = {
         "{{FOCUS_SUMMARY}}": focus_summary,
         "{{FAILURES}}": failures,
@@ -1623,6 +1659,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "{{ALGO_BRIEF}}": algo,
         "{{BENCH_REPO}}": bench,
         "{{PARALLEL_NOTE}}": parallel_note,
+        "{{EMPTY_SEED}}": empty_note,
     }
 
     tmpl_path = Path(instructions_file) if instructions_file else _DEFAULT_INSTRUCTIONS_TEMPLATE
@@ -1643,6 +1680,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "# Optimize the capability — analyze this step's trajectories in ./trajectories/, "
         "then fix MANY root causes in this ONE candidate and STOP.",
         focus_summary, "",
+        empty_note,
         "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
         "./guidance/optimizer/<name>.md (your subagent/parallelism features) IN FULL "
         "before diagnosing. Then read ./trajectories/ (full traces), ./guidance/sources/ "

@@ -2,6 +2,8 @@
 
 {{FOCUS_SUMMARY}}
 
+{{EMPTY_SEED}}
+
 GOAL: raise the eval score as much as you can THIS iteration, then STOP (the harness
 re-scores you — don't run evaluation yourself). The prompt AND the tools are equally
 fair game.

@@ -54,9 +54,20 @@ def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
     return report
 
 
+def is_empty(capability_dir: Path) -> bool:
+    """Return True when the capability directory has no meaningful content yet."""
+    return not any(materialize(Path(capability_dir)).values())
+
+
 def validate(capability_dir: Path) -> dict:
-    """A prompt artifact is valid if it has at least one non-empty text file."""
-    parts = materialize(Path(capability_dir))
+    """A prompt artifact is valid if it has at least one non-empty text file.
+
+    An empty capability (no files at all) is accepted as a valid starting state
+    so the optimizer can create the initial content from failing trajectories."""
+    capability_dir = Path(capability_dir)
+    if is_empty(capability_dir):
+        return {"ok": True, "empty": True, "files": [], "problems": [], "warnings": []}
+    parts = materialize(capability_dir)
     nonempty = {k: v for k, v in parts.items() if v.strip()}
     return {"ok": bool(nonempty), "files": list(nonempty),
             "problems": [] if nonempty else ["no non-empty prompt file found"]}
