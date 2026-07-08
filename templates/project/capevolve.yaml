@@ -67,3 +67,14 @@ max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command
 # store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)
+
+# --- observability (optional; push events to external platforms) ---------------
+# Each entry needs at minimum a "backend" key.  Extra keys are forwarded as
+# kwargs to the observer class.  Built-in backends: null, mlflow, otel.
+# Install extras:  pip install cap-evolve-core[mlflow]  or  [otel]  or  [observability]
+# observers:
+#   - backend: mlflow
+#     experiment_name: cap-evolve/my-project
+#     tracking_uri: http://localhost:5000
+#   - backend: otel
+#     service_name: cap-evolve
