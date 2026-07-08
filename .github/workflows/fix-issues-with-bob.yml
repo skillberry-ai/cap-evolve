@@ -149,11 +149,13 @@ jobs:
           fi
 
       - name: Create Pull Request
+        id: create_pr
         if: steps.changes.outputs.has_changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
         run: |
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          git fetch --no-tags origin "${DEFAULT_BRANCH}"
           DIFF_STATS=$(git diff "origin/${DEFAULT_BRANCH}"..HEAD --stat || echo "Unable to generate diff stats")
 
           PR_BODY=$(cat <<EOF
@@ -177,10 +179,10 @@ jobs:
             --base "${DEFAULT_BRANCH}" \
             --head "${BRANCH_NAME}")
 
-          echo "PR_URL=${PR_URL}" >> $GITHUB_ENV
+          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
 
           PR_NUMBER="${PR_URL##*/}"
-          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
 
           gh pr edit "${PR_NUMBER}" --repo ${{ github.repository }} --add-label "fix-with-bob"
           echo "✓ Added 'fix-with-bob' label to PR #${PR_NUMBER}"
@@ -191,7 +193,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
         run: |
           gh issue comment ${{ steps.issue.outputs.issue_number }} \
-            --body "🤖 Bob Shell has analyzed this issue and created a pull request with a proposed fix: ${PR_URL}. Please review the changes."
+            --body "🤖 Bob Shell has analyzed this issue and created a pull request with a proposed fix: ${{ steps.create_pr.outputs.pr_url }}. Please review the changes."
 
       - name: Comment on Issue - No Changes
         if: steps.changes.outputs.has_changes == 'false'
