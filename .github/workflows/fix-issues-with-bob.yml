@@ -136,11 +136,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
         run: |
           git add -A
+          # Exclude Bob Shell local notes/metadata from commits.
           git reset .bob/ || true
           git commit -m "Fix issue #${{ steps.issue.outputs.issue_number }}: ${{ steps.issue.outputs.issue_title }}"
 
           echo "Pushing to origin..."
-          if git push -f -u origin "${BRANCH_NAME}"; then
+          if git push -u origin "${BRANCH_NAME}"; then
             echo "✓ Branch ${BRANCH_NAME} pushed successfully to origin"
           else
             echo "✗ Failed to push to origin"
