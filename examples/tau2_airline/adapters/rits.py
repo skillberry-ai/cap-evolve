@@ -135,3 +135,58 @@ def llm_args() -> dict:
         "extra_headers": {"RITS_API_KEY": key},
         "temperature": 0.0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Provider-aware model selection (default = RITS gpt-oss; override for claude).
+# ---------------------------------------------------------------------------
+# The agent and user-simulator models are env-overridable so the same adapter can
+# run on RITS gpt-oss (default) OR on a claude model via the IBM Anthropic-compatible
+# gateway (e.g. the on-demand integration test: TAU2_AGENT_MODEL=anthropic/claude-haiku-4-5).
+
+
+def _is_anthropic(model: str) -> bool:
+    m = (model or "").lower()
+    return m.startswith("anthropic/") or "claude" in m
+
+
+def agent_model() -> str:
+    """litellm model string for the agent under test (default: RITS gpt-oss)."""
+    return os.environ.get("TAU2_AGENT_MODEL") or LITELLM_MODEL
+
+
+def user_model() -> str:
+    """litellm model string for the user simulator (default: RITS gpt-oss)."""
+    return os.environ.get("TAU2_USER_MODEL") or LITELLM_MODEL
+
+
+def _gateway_args() -> dict:
+    """litellm args for a claude model on the IBM Anthropic-compatible gateway.
+
+    Reads ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN from the repo-root .env (or env).
+    The gateway authenticates via a bearer token (Claude-Code convention); we pass it
+    both as litellm's ``api_key`` (litellm's anthropic provider requires one) and as an
+    ``Authorization: Bearer`` header so the gateway accepts it. LAZY: never at import.
+    """
+    _load_env()
+    base = os.environ.get("ANTHROPIC_BASE_URL")
+    token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    missing = [n for n, v in (("ANTHROPIC_BASE_URL", base), ("ANTHROPIC_AUTH_TOKEN", token)) if not v]
+    if missing:
+        raise RuntimeError(
+            f"{' and '.join(missing)} not set. Put them in the repo-root .env to run the "
+            "agent/user on a claude model via the Anthropic-compatible gateway."
+        )
+    return {
+        "api_base": base,
+        "api_key": token,
+        "extra_headers": {"Authorization": f"Bearer {token}"},
+        "temperature": 0.0,
+    }
+
+
+def llm_args_for(model: str) -> dict:
+    """Per-model litellm args: claude models -> IBM gateway; anything else -> RITS."""
+    if _is_anthropic(model):
+        return _gateway_args()
+    return llm_args()

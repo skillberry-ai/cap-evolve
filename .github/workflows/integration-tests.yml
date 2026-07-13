@@ -1,0 +1,63 @@
+# ============================================================================
+# Integration tests — REAL, on-demand end-to-end optimization regression check.
+# ============================================================================
+#
+# Runs a real cap-evolve optimization (real models, real benchmark, real $), so it
+# is NOT part of the always-on CI. It runs ONLY when requested:
+#   * manually  — Actions -> "Integration tests" -> Run workflow, or
+#   * on a PR   — add the `integration-test` label to the pull request.
+#
+# Suite: taubench (tau2 airline) task 9 — general optimization-pipeline regression
+# on the real benchmark. Agent + user simulator claude-haiku-4-5 via the IBM
+# Anthropic-compatible gateway; optimizer claude-code @ claude-sonnet-4-6;
+# 1 task / 1 trial / 1 iteration. assert_itest.py gates on completion + non-regression.
+#
+# REQUIREMENTS (see examples/tau2_airline/itest.sh):
+#   * a SELF-HOSTED runner registered to this repo/org with network reachability to
+#     the IBM Anthropic-compatible gateway (GitHub-hosted runners cannot reach it);
+#   * repo secrets ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN (serve the agent, the
+#     user simulator, AND the claude-code optimizer).
+# ============================================================================
+
+name: Integration tests
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    types: [labeled]
+
+jobs:
+  tau2:
+    name: tau2 (task 9)
+    # Runs on ANY self-hosted runner registered to this repo/org. To pin a specific
+    # runner, add its label(s): e.g. runs-on: [self-hosted, my-ibm-runner].
+    runs-on: self-hosted
+    # Fork guard: never run PR code from a fork on a self-hosted runner, even if a
+    # maintainer applies the label. Only in-repo PRs (or manual dispatch) may run.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(github.event.pull_request.labels.*.name, 'integration-test'))
+    concurrency:
+      group: itest-tau2-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      TAU2_AGENT_MODEL: anthropic/claude-haiku-4-5
+      TAU2_USER_MODEL: anthropic/claude-haiku-4-5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tau2 task-9 integration test
+        run: bash examples/tau2_airline/itest.sh
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tau2-itest-run
+          path: |
+            .capevolve/run_itest/report.md
+            .capevolve/run_itest/final.json
+            .capevolve/run_itest/baseline.json
+          if-no-files-found: ignore

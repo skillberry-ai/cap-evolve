@@ -177,17 +177,18 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks:
             return results
 
-        llm_args = rits.llm_args()
+        agent_m = rits.agent_model()
+        user_m = rits.user_model()
         max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
-            llm_agent=rits.LITELLM_MODEL,
-            llm_args_agent=dict(llm_args),
+            llm_agent=agent_m,
+            llm_args_agent=rits.llm_args_for(agent_m),
             user="user_simulator",
-            llm_user=rits.LITELLM_MODEL,
-            llm_args_user=dict(llm_args),
+            llm_user=user_m,
+            llm_args_user=rits.llm_args_for(user_m),
             num_trials=1,
             max_steps=100,
             max_errors=10,
@@ -312,17 +313,18 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks or n_trials <= 0:
             return results
 
-        llm_args = rits.llm_args()
+        agent_m = rits.agent_model()
+        user_m = rits.user_model()
         max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "125"))
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
-            llm_agent=rits.LITELLM_MODEL,
-            llm_args_agent=dict(llm_args),
+            llm_agent=agent_m,
+            llm_args_agent=rits.llm_args_for(agent_m),
             user="user_simulator",
-            llm_user=rits.LITELLM_MODEL,
-            llm_args_user=dict(llm_args),
+            llm_user=user_m,
+            llm_args_user=rits.llm_args_for(user_m),
             num_trials=n_trials,
             max_steps=100,
             max_errors=10,

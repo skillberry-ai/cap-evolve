@@ -93,8 +93,19 @@ def apply(capability_dir: Path, default_policy: dict, edits: list[dict] | None =
     return report
 
 
-def validate(capability_dir: Path) -> dict:
+def is_empty(capability_dir: Path) -> bool:
+    """Return True when the capability directory has no tool definitions yet."""
     data = _load(capability_dir)
+    return not data.get("tools")
+
+
+def validate(capability_dir: Path) -> dict:
+    """Validate the tool surface. An empty capability (no tools.json or empty tools
+    list) is accepted as a valid starting state so the optimizer can create initial
+    tools from failing trajectories."""
+    data = _load(capability_dir)
+    if not data.get("tools"):
+        return {"ok": True, "empty": True, "tools": [], "problems": []}
     problems = []
     names = set()
     for t in data.get("tools", []):

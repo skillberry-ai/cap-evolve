@@ -54,9 +54,25 @@ def apply(capability_dir: Path, edits: list[dict] | None = None) -> dict:
     return report
 
 
+def is_empty(capability_dir: Path) -> bool:
+    """Return True when the capability directory has no meaningful content yet.
+
+    "Meaningful" is judged after ``strip()`` — the same notion of non-empty that
+    ``validate()`` uses — so a missing prompt file and an empty/whitespace-only one
+    are both treated as an empty seed (nothing for the optimizer to build on yet)."""
+    return not any(v.strip() for v in materialize(Path(capability_dir)).values())
+
+
 def validate(capability_dir: Path) -> dict:
-    """A prompt artifact is valid if it has at least one non-empty text file."""
-    parts = materialize(Path(capability_dir))
+    """A prompt artifact is valid if it has at least one non-empty text file.
+
+    A capability with no non-empty (non-whitespace) prompt content is accepted as a
+    valid empty-seed starting state so the optimizer can create the initial content
+    from failing trajectories."""
+    capability_dir = Path(capability_dir)
+    if is_empty(capability_dir):
+        return {"ok": True, "empty": True, "files": [], "problems": [], "warnings": []}
+    parts = materialize(capability_dir)
     nonempty = {k: v for k, v in parts.items() if v.strip()}
     return {"ok": bool(nonempty), "files": list(nonempty),
             "problems": [] if nonempty else ["no non-empty prompt file found"]}
