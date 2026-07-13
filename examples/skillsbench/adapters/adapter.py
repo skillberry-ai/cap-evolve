@@ -50,7 +50,9 @@ SOURCE_REPO = "benchflow-ai/skillsbench"
 SOURCE_PATH = "tasks"
 SOURCE_REF = "main"
 AGENT = "claude"
-MODEL = "claude-sonnet-4-6"
+# Agent-under-test model. Override with SKILLSBENCH_AGENT_MODEL (e.g. a cheaper
+# claude-haiku-4-5 for the on-demand integration test); defaults to sonnet.
+MODEL = os.environ.get("SKILLSBENCH_AGENT_MODEL") or "claude-sonnet-4-6"
 SANDBOX = "docker"
 BENCH_BIN = os.environ.get("SKILLSBENCH_BENCH_BIN") or str(Path.home() / ".local" / "bin" / "bench")
 

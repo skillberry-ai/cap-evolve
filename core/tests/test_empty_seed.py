@@ -7,7 +7,6 @@ harness baseline/optimizer-instructions flow handles the empty seed correctly.
 
 import json
 import shutil
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -198,6 +197,37 @@ def test_empty_seed_note_not_shown_when_passing():
                               seconds=0.0, cost_usd=0.0, tokens=0)
     note = harness._empty_seed_note(current_val)
     assert note == ""
+
+
+def test_empty_seed_note_not_shown_when_seed_nonempty_but_all_failing():
+    """The false-positive guard: a genuinely hard, NON-empty seed that scores 0 on
+    every task must NOT be told the directory is empty. The explicit seed_empty=False
+    signal overrides the reward heuristic (which alone would wrongly fire here)."""
+    per_task = [
+        {"task_id": "t0", "reward": 0.0, "feedback": "fail"},
+        {"task_id": "t1", "reward": 0.0, "feedback": "fail"},
+    ]
+    current_val = SplitResult(split="val", reward=0.0, stderr=0.0, per_task=per_task,
+                              seconds=0.0, cost_usd=0.0, tokens=0)
+    # Reward heuristic alone (seed_empty=None) would fire...
+    assert "EMPTY SEED" in harness._empty_seed_note(current_val)
+    # ...but the authoritative signal that the seed is NON-empty suppresses it.
+    assert harness._empty_seed_note(current_val, seed_empty=False) == ""
+    # ...and an authoritatively-empty seed still fires it.
+    assert "EMPTY SEED" in harness._empty_seed_note(current_val, seed_empty=True)
+
+
+def test_capability_is_empty_signal(tmp_path):
+    """_capability_is_empty reflects the capability's own is_empty() on the dir."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert harness._capability_is_empty(["skill-package"], empty) is True
+    (empty / "SKILL.md").write_text(
+        "---\nname: x\ndescription: Do a thing. Use when needed.\n---\n# x\n",
+        encoding="utf-8")
+    assert harness._capability_is_empty(["skill-package"], empty) is False
+    # No capabilities -> no signal (None => reward-heuristic fallback).
+    assert harness._capability_is_empty([], empty) is None
 
 
 # ---- end-to-end: empty seed through hill-climb loop ----------------------

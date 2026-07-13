@@ -1,0 +1,102 @@
+# ============================================================================
+# Integration tests — REAL, on-demand end-to-end optimization regression checks.
+# ============================================================================
+#
+# These run a real cap-evolve optimization (real models, real benchmark, real $) so
+# they are NOT part of the always-on CI. They run ONLY when requested:
+#   * manually  — Actions -> "Integration tests" -> Run workflow (pick a suite), or
+#   * on a PR   — add the `integration-test` label to the pull request.
+#
+# Two suites:
+#   skillsbench — EMPTY-SEED regression (optimizer authors a skill from scratch),
+#                 1 task (offer-letter-generator), agent claude-haiku-4-5 in Docker.
+#   tau2        — taubench airline task 9, agent+user-sim claude-haiku-4-5.
+# Both use optimizer claude-code @ claude-sonnet-4-6, 1 trial, 1 iteration.
+#
+# REQUIREMENTS (see examples/*/itest.sh):
+#   * a SELF-HOSTED runner with Docker and network reachability to the IBM
+#     Anthropic-compatible gateway (GitHub-hosted runners cannot reach it);
+#   * repo secrets ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN (serve the agent,
+#     the user simulator, AND the claude-code optimizer).
+#
+# TODO(maintainer): replace `REPLACE_ME` below with your self-hosted runner label(s).
+# ============================================================================
+
+name: Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Which suite to run"
+        type: choice
+        default: both
+        options: [both, skillsbench, tau2]
+  pull_request:
+    types: [labeled]
+
+env:
+  ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+  ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+
+jobs:
+  skillsbench:
+    name: skillsbench (empty-seed)
+    # TODO(maintainer): set your self-hosted runner label(s).
+    runs-on: [self-hosted, REPLACE_ME]
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.suite == 'both' || github.event.inputs.suite == 'skillsbench')) ||
+      (github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'integration-test'))
+    concurrency:
+      group: itest-skillsbench-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      SKILLSBENCH_AGENT_MODEL: claude-haiku-4-5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure uv on PATH (for the benchflow CLI)
+        run: command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Run skillsbench empty-seed integration test
+        run: bash examples/skillsbench/itest.sh
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillsbench-itest-run
+          path: |
+            .capevolve/run_itest/report.md
+            .capevolve/run_itest/final.json
+            .capevolve/run_itest/baseline.json
+          if-no-files-found: ignore
+
+  tau2:
+    name: tau2 (task 9)
+    # TODO(maintainer): set your self-hosted runner label(s).
+    runs-on: [self-hosted, REPLACE_ME]
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.suite == 'both' || github.event.inputs.suite == 'tau2')) ||
+      (github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'integration-test'))
+    concurrency:
+      group: itest-tau2-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      TAU2_AGENT_MODEL: anthropic/claude-haiku-4-5
+      TAU2_USER_MODEL: anthropic/claude-haiku-4-5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tau2 task-9 integration test
+        run: bash examples/tau2_airline/itest.sh
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tau2-itest-run
+          path: |
+            .capevolve/run_itest/report.md
+            .capevolve/run_itest/final.json
+            .capevolve/run_itest/baseline.json
+          if-no-files-found: ignore

@@ -1588,22 +1588,66 @@ def _parallel_note(parallel: bool, optimizer_name: str | None) -> str:
             "real, safe fix, not just the biggest one.")
 
 
-def _empty_seed_note(current_val: SplitResult) -> str:
+def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
+    """Whether the candidate is an EMPTY seed, from the capabilities' own ``is_empty()``.
+
+    Imports each ``skills/capabilities/<name>/scripts/abstract.py`` (same loader pattern
+    as ``check.py``) and calls ``is_empty(cand_dir)``. Returns True only if EVERY
+    capability reports empty, False if ANY reports non-empty, and None when the signal
+    can't be obtained (no capabilities, missing abstract, or no ``is_empty`` — older
+    capabilities) so callers fall back to the reward heuristic.
+    """
+    caps = [c for c in (capabilities or []) if c]
+    if not caps:
+        return None
+    import importlib.util
+
+    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    saw_signal = False
+    for name in caps:
+        abstract_path = skills_root / name / "scripts" / "abstract.py"
+        if not abstract_path.exists():
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location(
+                f"capevolve_cap_{name}_isempty", abstract_path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            is_empty = getattr(mod, "is_empty", None)
+            if is_empty is None:
+                continue
+            saw_signal = True
+            if not is_empty(cand_dir):
+                return False  # any non-empty capability => not an empty seed
+        except Exception:  # noqa: BLE001 — never break the loop over instructions rendering
+            continue
+    return True if saw_signal else None
+
+
+def _empty_seed_note(current_val: SplitResult, seed_empty: bool | None = None) -> str:
     """Return a guidance block when the capability started from an empty seed.
 
-    Detected when the current best has reward ≈ 0 and every task is failing —
-    the hallmark of an empty seed (no capability content yet). The block tells the
-    optimizer to CREATE the initial capability content from the failing trajectories
-    rather than merely editing existing text.
+    ``seed_empty`` is the authoritative signal — computed from the capability's own
+    ``is_empty()`` on the current best candidate (see ``_capability_is_empty``). When it
+    is provided we trust it directly. Only when it is ``None`` (the abstract has no
+    ``is_empty``, or the caller could not compute it) do we fall back to the reward
+    heuristic: reward ≈ 0 with every task failing. That fallback is deliberately NOT
+    used when we have the real signal, because a genuinely hard benchmark whose real
+    (non-empty) seed scores 0 at baseline would otherwise be wrongly told the directory
+    is empty and to "create from scratch".
     """
-    if current_val.reward > 1e-9:
+    if seed_empty is False:
         return ""
-    per = current_val.per_task
-    if not per:
-        return ""
-    eps = 1e-9
-    if any((pt.get("reward", 0) or 0) > eps for pt in per):
-        return ""
+    if seed_empty is None:
+        # No authoritative signal — fall back to the reward heuristic.
+        if current_val.reward > 1e-9:
+            return ""
+        per = current_val.per_task
+        if not per:
+            return ""
+        eps = 1e-9
+        if any((pt.get("reward", 0) or 0) > eps for pt in per):
+            return ""
     return (
         "## EMPTY SEED — create the capability from scratch\n"
         "The capability directory is EMPTY (no pre-existing content). This is the first "
@@ -1620,7 +1664,8 @@ def _empty_seed_note(current_val: SplitResult) -> str:
 def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         capabilities=None, algorithm: str = "hill-climb",
                         instructions_file=None, bench_repo: str | None = None,
-                        optimizer_name: str | None = None) -> str:
+                        optimizer_name: str | None = None,
+                        seed_empty: bool | None = None) -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
     optimizer-instructions template.
 
@@ -1650,7 +1695,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
              if bench_repo else "")
 
     parallel_note = _parallel_note(_optimizer_parallel(optimizer_name), optimizer_name)
-    empty_note = _empty_seed_note(current_val)
+    empty_note = _empty_seed_note(current_val, seed_empty=seed_empty)
     repl = {
         "{{FOCUS_SUMMARY}}": focus_summary,
         "{{FAILURES}}": failures,
@@ -1762,10 +1807,12 @@ def hill_climb_loop(
             label = f"task {focus_ids[0]}" if focus_ids else "train"
         else:
             focus_ids, label = None, focus
+        seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
         instructions = _focus_instructions(current_val, focus_ids, label,
                                             capabilities=capabilities, algorithm=algorithm,
                                             instructions_file=instructions_file,
-                                            bench_repo=bench_repo, optimizer_name=optimizer_name)
+                                            bench_repo=bench_repo, optimizer_name=optimizer_name,
+                                            seed_empty=seed_empty)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
