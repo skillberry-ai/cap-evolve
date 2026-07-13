@@ -59,7 +59,7 @@ metric_primary: ""           # which name gates accept/reject (defaults to the r
 metric_directions: []        # parallel to metrics_display: higher | lower for each
 
 # --- integrations / stop ----------------------------------------------------
-github_integration: false    # mirror-only: mirror weaknesses as issues + ship winner as PR (Closes #n)
+github_integration: false    # mirror-only: mirror the algorithm's work items as issues + ship winner as PR (Closes #n); WHAT is mirrored is algorithm-specific (evo-graph=weaknesses)
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
