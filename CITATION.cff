@@ -4,6 +4,6 @@ title: "cap-evolve: a skills-native, host-agnostic harness for honestly optimizi
 authors:
   - name: "cap-evolve contributors"
 version: 0.1.0
-license: MIT
+license: Apache-2.0
 date-released: 2026-06-14
 repository-code: "https://github.com/skillberry-ai/cap-evolve"

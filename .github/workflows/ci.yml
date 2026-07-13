@@ -3,9 +3,12 @@
 # ============================================================================
 #
 # PURPOSE:
-# Runs two parallel jobs on every push to main and every pull request:
-#   1. test-python  — installs cap-evolve-core[dev] and runs pytest on core/tests/
+# Runs parallel jobs on every push to main and every pull request:
+#   1. test-python     — installs cap-evolve-core[dev] and runs pytest on core/tests/
 #   2. build-dashboard — installs dashboard/frontend dependencies and runs npm build
+#   3. toy-example     — runs the zero-API toy_calc example and asserts test_reward 1.0
+#   4. docs-links      — checks relative links/images in Markdown resolve (offline)
+#   5. spellcheck      — codespell over README + docs
 #
 # No shared-workflow delegation needed: this is repo-specific CI.
 # ============================================================================
@@ -58,5 +61,63 @@ jobs:
       - name: Build
         working-directory: dashboard/frontend
         run: npm run build
+
+  toy-example:
+    name: Toy example (zero-API)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install cap-evolve-core
+        run: pip install ./core
+
+      - name: Run toy_calc and assert honest improvement
+        run: |
+          set -euo pipefail
+          out="$(bash examples/toy_calc/run.sh)"
+          echo "$out"
+          echo "$out" | grep -q '"baseline_val": 0.0' \
+            && echo "$out" | grep -q '"test_reward": 1.0' \
+            || { echo "::error::toy_calc did not reach baseline_val 0.0 -> test_reward 1.0"; exit 1; }
+
+  docs-links:
+    name: Docs link check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check relative Markdown links and images (offline)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --offline --no-progress --include-fragments
+            --exclude-path examples/tau2_airline/run_full
+            --exclude-path examples/skillsbench/run_full
+            "README.md" "docs/**/*.md" "examples/**/*.md" "*.md"
+          fail: true
+
+  spellcheck:
+    name: Spellcheck (docs)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: codespell
+        uses: codespell-project/actions-codespell@v2
+        with:
+          path: README.md docs
+          skip: docs/sources.bib,docs/assets,docs/superpowers
+          ignore_words_list: nd,te,ba,alls,ist,fo,ans,crate,ede,hel,optimizer,capevolve,noteb,fpr
 
 # Made with Bob

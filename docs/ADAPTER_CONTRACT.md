@@ -1,47 +1,79 @@
 # The adapter contract
 
 cap-evolve works with *any* target agent, benchmark, and capability because the
-agent-specific glue is confined to four methods you implement once, in
-`.capevolve/project/adapters/adapter.py`:
+agent-specific glue is confined to a small adapter you implement once, in
+`.capevolve/project/adapters/adapter.py`. It subclasses `CapabilityAdapter`
+(`core/cap_evolve/adapter.py`).
+
+## The three required methods
+
+These three are `@abstractmethod` — `cap-evolve check` refuses to run until all
+three are real (no `IMPLEMENT ME` stub):
 
 ```python
 class Adapter(CapabilityAdapter):
-    def tasks(self, split) -> list[Task]: ...
-    def run_target(self, task, candidate_dir, split) -> Rollout: ...
-    def score(self, task, rollout) -> Score: ...
-    def apply(self, candidate_dir, edits=None) -> None: ...
+    def tasks(self, split: str) -> list[Task]: ...
+    def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout: ...
+    def score(self, task: Task, rollout: Rollout) -> Score: ...
 ```
 
-## What each method owns
-
-- **`tasks(split)`** — where evaluation data comes from. Return the same tasks
-  for a given split every call (determinism is checked).
-- **`run_target(task, candidate_dir, split)`** — run the agent *under test* with
-  the candidate capability live, and capture a `Rollout` (output, trace, tool
-  calls, cost). No scoring here.
+- **`tasks(split)`** — where evaluation data comes from, for `split` in
+  `'train' | 'val' | 'test' | 'all'`. Return the same tasks for a given split every
+  call (determinism is checked).
+- **`run_target(task, ctx, *, seed=0)`** — run the agent *under test* with the
+  candidate capability **live as `ctx`**, and capture a `Rollout` (output, trace, tool
+  calls, cost). `ctx` is whatever `live()` yields (by default the candidate dir).
+  Forward `seed` if the agent is stochastic; set `Rollout.error` on an infra failure
+  (never score-penalize infra failures). No scoring here.
 - **`score(task, rollout)`** — return a reward in `[0, 1]` plus natural-language
   `feedback`. The feedback is the learning signal (gepa's "Actionable Side
-  Information"); describe *why* generally, never leak the gold answer.
-- **`apply(candidate_dir, edits=None)`** — make the capability in `candidate_dir`
-  the one the target actually uses (env var, config patch, copy into a skills
-  dir). With `edits`, write them first, then make live.
+  Information"); describe *why* generally, and **never leak the gold answer**. Must be
+  deterministic on a fixed rollout (enforced by the gate).
 
-## Why four (and not prior agent-optimization work's three or SkillOpt's five)
+## Optional hooks (working defaults provided)
 
-prior agent-optimization work split injection across `runner_adapter` + `inject`; SkillOpt split the env
-into build/eval/rollout/reflect/get_task_types. We fold injection into
-`apply(edits=None)` and keep reflection in the diagnosis skill, leaving exactly
-the four orthogonal responsibilities: *get data, run, score, make-live*.
+You only override these when the default behavior doesn't fit:
+
+```python
+def materialize(self, candidate_dir, edits=None) -> None   # PURE write of {component: text} edits into candidate_dir
+def live(self, candidate_dir)                              # @contextmanager: make the candidate live for ONE eval, yield ctx
+def apply(self, candidate_dir, edits=None) -> None         # back-compat inject hook (env var / config patch / copy)
+def trajectories(self, split, ctx=None) -> Path | None     # the runner's NATIVE trace dir for the last eval (default: None)
+```
+
+Two more optional methods are **not** on the base class — the harness probes for them
+with `hasattr` (`core/cap_evolve/harness.py`) and uses them when present:
+
+```python
+def run_batch(self, tasks, ctx, *, seed=0) -> ...                                  # drive a benchmark's OWN batch runner INSTEAD of run_target (as tau2 does)
+def run_trials(self, tasks, ctx, *, n_trials, base_seed) -> {id: [Rollout, ...]}   # batched fast path: ALL trials in ONE run
+```
+
+`run_trials` collapses N sequential eval passes into one concurrent run; per-trial
+persistence and pass^k / SE are byte-for-byte unchanged, so resume keeps working.
+
+## Why this shape (three abstract, not prior work's three or SkillOpt's five)
+
+Prior agent-optimization work split injection across `runner_adapter` + `inject`;
+SkillOpt split the env into build/eval/rollout/reflect/get_task_types. cap-evolve folds
+injection into `materialize` + `live`/`apply`, keeps reflection in the `diagnose` skill,
+and leaves exactly the orthogonal responsibilities: *get data, run, score* (required),
+plus *make-live* and *native traces* (defaulted).
 
 ## The gate
 
-`cap-evolve check .capevolve/project` loads your adapter and refuses until all four
-methods are implemented (no `IMPLEMENT ME` stubs), `tasks` is non-empty and
-stable, and `score` is deterministic. This is mandatory before any budget is
-spent — a half-wired adapter can only produce a dishonest number.
+```bash
+cap-evolve check .capevolve/project   # must print {"ok": true}
+```
+
+`cap-evolve check` loads your adapter and refuses until the three abstract methods are
+implemented, `tasks` is non-empty and stable, and `score` is deterministic. This is
+mandatory before any budget is spent — a half-wired adapter can only produce a
+dishonest number.
 
 ## Everything else is provided
 
-Splits, trials, gating, pass^k, rejected-memory, run-dir state, parent selection,
-and the loop mechanics live in `cap_evolve`. Do not reimplement them in the
-adapter — calling them is what keeps results comparable and honest.
+Splits, trials, gating, pass^k, rejected-memory, run-dir state, parent selection, the
+sealed test, and the loop mechanics live in `cap_evolve`. Do not reimplement them in the
+adapter — calling them is what keeps results comparable and honest. See
+[`HONEST_EVAL.md`](HONEST_EVAL.md).
