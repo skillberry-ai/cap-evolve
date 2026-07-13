@@ -42,7 +42,7 @@ upstream `provides` in the manifest, so a misordered or incompatible pipeline is
 caught before it runs.
 
 ## Agent-mode loop (`orchestration_mode: agent`)
-When the spec sets `orchestration_mode: agent`, cap-evolve does intake → check → baseline, then hands YOU the loop (it prints a handoff with the `run_dir`). You drive the optimization by following the selected algorithm's **"Agent-mode loop"** section (`skills/algorithms/<algorithm_skill>/SKILL.md`). Rules:
+When the spec sets `orchestration_mode: agent`, cap-evolve does intake → check → baseline, then hands YOU the loop (it prints a handoff with the `run_dir`). **YOU — the coding agent in this conversation — run the optimization yourself:** read the selected algorithm's **"Agent-mode loop"** section (`skills/algorithms/<algorithm_skill>/SKILL.md`), make the capability edits, and run the evaluations directly. You do **not** delegate the search to a separate optimizer agent — that per-iteration "optimizer" edit-proposer is a *deterministic-mode* concept; in agent mode you are the optimizer. (You may still spawn helper subagents for parallel sub-tasks if an algorithm's loop calls for it, but the driver is you.) Rules:
 
 1. **Drive through cap-evolve primitives, never around them.** Every evaluation goes through cap-evolve's eval (so per-rollout JSON + results land in the run dir); every accept/reject goes through the gate on **val** (Δ > k·SE); every accepted candidate is snapshotted via the store; log round boundaries with the run dir's event log. This is what keeps `events.jsonl`/rollouts/results/snapshots populated so the **dashboard renders with no changes**.
 2. **Honesty is self-policed:** never touch the sealed test split until the end; revert on regression; acceptance is val-only.
