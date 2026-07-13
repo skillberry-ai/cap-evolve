@@ -50,6 +50,49 @@ def _gate_regression_pending(run_dir: Path) -> str | None:
     return None
 
 
+def _agent_mode(run_dir: Path) -> bool:
+    """True iff the run's project spec declares ``orchestration_mode: agent``.
+
+    Tolerant read of ``capevolve.yaml``: prefer the core reader when importable,
+    else a simple line scan. Defaults to "deterministic" on any ambiguity so the
+    hook only nudges when agent mode is unambiguously configured.
+    """
+    proj = H.project_dir_for(run_dir)
+    if proj is None:
+        return False
+    spec = proj / "capevolve.yaml"
+    if not spec.exists():
+        return False
+    try:
+        text = spec.read_text(encoding="utf-8")
+    except Exception:
+        return False
+
+    mode = "deterministic"
+    if H.core_importable():
+        try:
+            from cap_evolve.specfile import read_yaml
+            data = read_yaml(text) or {}
+            mode = str(data.get("orchestration_mode") or "deterministic")
+        except Exception:
+            mode = _scan_orchestration_mode(text)
+    else:
+        mode = _scan_orchestration_mode(text)
+    return mode.strip() == "agent"
+
+
+def _scan_orchestration_mode(text: str) -> str:
+    """Line-scan fallback: the value of a top-level ``orchestration_mode:`` key."""
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].rstrip()
+        if not line or line[:1].isspace():
+            continue  # only top-level (unindented) keys
+        key, sep, val = line.partition(":")
+        if sep and key.strip() == "orchestration_mode":
+            return val.strip().strip("'\"") or "deterministic"
+    return "deterministic"
+
+
 def _check_failed_reason(run_dir: Path) -> str | None:
     """Run ``cap-evolve check`` on the run's project; return a reason if not green."""
     proj = H.project_dir_for(run_dir)
@@ -115,6 +158,16 @@ def decide(payload: dict) -> int:
             "next score stays honest. Fix the adapter/contract, then stop."
         )
 
+    # Agent mode: nudge the driver to keep going until the loop's stop_condition is
+    # met and the run is sealed. Fires once per Stop chain (stop_hook_active relents).
+    if not payload.get("stop_hook_active") and _agent_mode(run_dir):
+        # not finalized (checked above: test_used would have returned 0 already)
+        return H.emit_block(
+            "cap-evolve (agent mode): the run is not finalized. Re-read your "
+            "stop_condition — if it isn't met and budget remains, keep driving the "
+            "algorithm's Agent-mode loop (evaluate->gate->accept/revert), verifying each "
+            "round wrote its run-dir artifacts. When done, seal with `cap-evolve finalize`."
+        )
     return 0
 
 
