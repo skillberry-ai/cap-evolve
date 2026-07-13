@@ -7,7 +7,7 @@ from .app import create_app
 _base = Path(os.environ.get("CAPEVOLVE_BASE_DIR", ".capevolve"))
 _static = os.environ.get("CAPEVOLVE_STATIC_DIR")
 if _static is None:
-    # asgi.py(file) -> capevolve_dashboard[0] -> backend[1] -> dashboard[2].
+    # parents[0]=capevolve_dashboard, parents[1]=backend, parents[2]=dashboard.
     _auto = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if _auto.is_dir():
         _static = str(_auto)
