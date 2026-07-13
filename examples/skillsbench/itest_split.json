@@ -1,1 +1,1 @@
-{"train": ["offer-letter-generator"], "val": ["offer-letter-generator"], "test": ["offer-letter-generator"]}
+{"train": ["court-form-filling"], "val": ["court-form-filling"], "test": ["court-form-filling"]}

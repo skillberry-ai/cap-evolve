@@ -9,7 +9,7 @@
 #
 # Two suites:
 #   skillsbench — EMPTY-SEED regression (optimizer authors a skill from scratch),
-#                 1 task (offer-letter-generator), agent claude-haiku-4-5 in Docker.
+#                 1 task (court-form-filling, difficulty:easy pdf), agent claude-haiku-4-5 in Docker.
 #   tau2        — taubench airline task 9, agent+user-sim claude-haiku-4-5.
 # Both use optimizer claude-code @ claude-sonnet-4-6, 1 trial, 1 iteration.
 #
