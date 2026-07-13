@@ -126,6 +126,37 @@ def _live(adapter, candidate_dir: Path):
 
 # ---- evaluation -----------------------------------------------------------
 
+def _aggregate_metrics(per_trial_metrics: list, reduced_reward: float) -> list:
+    """Reduce per-trial metric catalogs into one display catalog for the reduced Score.
+
+    Secondary metrics are averaged across the trials that report them; the primary
+    metric's value is pinned to ``reduced_reward`` so it stays consistent with the
+    gate scalar (and satisfies Score's primary-value==reward invariant). Metric
+    identity is by ``name``; ``primary``/``direction`` come from the first trial that
+    names the metric. Returns [] when no trial reported any metric.
+    """
+    from .stats import mean as _mean
+    order: list[str] = []
+    vals: dict[str, list[float]] = {}
+    meta: dict[str, dict] = {}
+    for cat in per_trial_metrics or []:
+        for m in cat or []:
+            name = m.get("name")
+            if name is None:
+                continue
+            if name not in vals:
+                order.append(name)
+                vals[name] = []
+                meta[name] = {"primary": bool(m.get("primary")), "direction": m.get("direction")}
+            vals[name].append(float(m.get("value", 0.0)))
+    out = []
+    for name in order:
+        value = reduced_reward if meta[name]["primary"] else _mean(vals[name])
+        out.append({"name": name, "value": value,
+                    "primary": meta[name]["primary"], "direction": meta[name]["direction"]})
+    return out
+
+
 def evaluate_candidate(
     adapter,
     candidate_dir: Path,
@@ -173,6 +204,7 @@ def evaluate_candidate(
     # collect per-task trial rewards (+ last rollout/score) across trials
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
     per_task_feedback: dict[str, str] = {t.id: "" for t in tasks}
+    per_task_metrics: dict[str, list] = {t.id: [] for t in tasks}  # per-trial metric catalogs
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
     task_by_id = {t.id: t for t in tasks}
@@ -199,6 +231,7 @@ def evaluate_candidate(
             sc = adapter.score(task, rollout)
             per_task_trials[tid].append(sc.reward)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+            per_task_metrics[tid].append(sc.metrics)
             (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
@@ -250,6 +283,7 @@ def evaluate_candidate(
             raw={"errored": per_task_errored[tid],
                  "errored_trials": per_task_errored_trials[tid],
                  "n_trials": n_trials},
+            metrics=_aggregate_metrics(per_task_metrics[tid], mean(tr)),
         ))
 
     elapsed = time.time() - t0
@@ -274,6 +308,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
     by_task: dict[str, list[float]] = {}
     feedback: dict[str, str] = {}
     raw: dict[str, dict] = {}
+    metrics_by_task: dict[str, list] = {}
     if vdir.exists():
         for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
             rec = _json.loads(f.read_text(encoding="utf-8"))
@@ -281,6 +316,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
             tid = sc.get("task_id") or f.name.split("__")[0]
             by_task.setdefault(tid, []).append(float(sc.get("reward", 0.0)))
             feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
+            metrics_by_task.setdefault(tid, []).append(sc.get("metrics") or [])
             # carry the structured infra flag + trial counts forward across resume.
             # Each rollout file is one trial, so count an errored trial here and tally
             # the total trials seen — letting _is_infra_ignore reconstruct the
@@ -291,7 +327,8 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
                 r0["errored"] = True
                 r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
     scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
-                    n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}))
+                    n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}),
+                    metrics=_aggregate_metrics(metrics_by_task.get(t, []), mean(r)))
               for t, r in by_task.items()]
     return aggregate_scores(split, scores, ks=ks)
 
