@@ -11,7 +11,7 @@ def _reload_asgi_with_static_dir(monkeypatch, *, static_dir):
     return importlib.reload(module)
 
 
-def _static_route(app):
+def _find_static_route(app):
     return next((route for route in app.routes if getattr(route, "name", None) == "static"), None)
 
 
@@ -40,7 +40,7 @@ def test_url_for():
 
 def test_asgi_auto_detects_static_dir_when_env_unset(monkeypatch):
     module = _reload_asgi_with_static_dir(monkeypatch, static_dir=None)
-    route = _static_route(module.app)
+    route = _find_static_route(module.app)
     expected = Path(module.__file__).resolve().parents[2] / "frontend" / "dist"
     assert route is not None
     assert Path(route.app.directory) == expected
@@ -48,4 +48,4 @@ def test_asgi_auto_detects_static_dir_when_env_unset(monkeypatch):
 
 def test_asgi_empty_static_dir_disables_static_mount(monkeypatch):
     module = _reload_asgi_with_static_dir(monkeypatch, static_dir="")
-    assert _static_route(module.app) is None
+    assert _find_static_route(module.app) is None
