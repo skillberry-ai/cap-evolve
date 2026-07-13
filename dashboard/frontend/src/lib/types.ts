@@ -196,6 +196,13 @@ export interface MemoryResult {
   rejected: RejectedEntry[]
 }
 
+/** GET /api/runs/{id}/custom-view — an optional algorithm-shipped view to embed.
+ *  `{}` (no url) means the run ships no custom view. */
+export interface CustomView {
+  title?: string
+  url?: string
+}
+
 /** GET /api/runs/{id}/candidate/{cid}/files. */
 export interface CandidateFile {
   name: string

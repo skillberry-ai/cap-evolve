@@ -11,6 +11,7 @@ import type {
   CandidateDiff,
   CandidateFile,
   CompareResult,
+  CustomView,
   FileResult,
   GitCommit,
   GitDiffResult,
@@ -81,6 +82,9 @@ export const api = {
 
   memory: (id: string, signal?: AbortSignal) =>
     getJSON<MemoryResult>(`/api/runs/${encodeURIComponent(id)}/memory`, signal),
+
+  customView: (id: string, signal?: AbortSignal) =>
+    getJSON<CustomView>(`/api/runs/${encodeURIComponent(id)}/custom-view`, signal),
 
   candidateFiles: (id: string, cid: string, signal?: AbortSignal) =>
     getJSON<CandidateFile[]>(

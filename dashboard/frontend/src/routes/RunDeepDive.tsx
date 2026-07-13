@@ -45,6 +45,19 @@ export function RunDeepDive() {
     enabled: !!id,
   })
 
+  // Optional algorithm-shipped custom view (e.g. evo-graph's weakness graph),
+  // mounted as an extra iframe tab when the run declares one. Absent -> no tab.
+  const { data: customView } = useQuery({
+    queryKey: ['custom-view', id],
+    queryFn: ({ signal }) => api.customView(id!, signal),
+    enabled: !!id,
+    retry: false,
+  })
+  const customUrl = customView?.url
+  const tabs: TabDef[] = customUrl
+    ? [...TABS, { id: 'custom', label: customView?.title || 'Custom view' }]
+    : TABS
+
   // SSE: on each live event, debounce-refetch the authoritative reduced run.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onActivity = useCallback(() => {
@@ -97,7 +110,7 @@ export function RunDeepDive() {
         {data && (
           <div className="space-y-5">
             <KpiStrip summary={data.summary} />
-            <Tabs tabs={TABS}>
+            <Tabs tabs={tabs}>
               {(active) =>
                 active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
@@ -119,6 +132,12 @@ export function RunDeepDive() {
                   <FileTree runId={id!} />
                 ) : active === 'insights' ? (
                   <Insights runId={id!} detail={data} />
+                ) : active === 'custom' && customUrl ? (
+                  <iframe
+                    src={customUrl}
+                    title={customView?.title || 'Custom view'}
+                    className="h-[75vh] w-full rounded-lg border border-border bg-surface"
+                  />
                 ) : (
                   <Card>
                     <div className="p-8 text-center text-sm text-muted">Unknown view.</div>
