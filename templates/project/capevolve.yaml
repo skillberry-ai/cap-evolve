@@ -51,6 +51,17 @@ split_ids_file: ""
 # --- scoring ----------------------------------------------------------------
 num_trials: 1
 
+# --- metrics (display) ------------------------------------------------------
+# The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
+# are shown in the dashboard/results but never affect accept/reject.
+metrics_display: []          # names to show, e.g. [accuracy, latency_ms]; empty = just the primary reward
+metric_primary: ""           # which name gates accept/reject (defaults to the reward if blank)
+metric_directions: []        # parallel to metrics_display: higher | lower for each
+
+# --- integrations / stop ----------------------------------------------------
+github_integration: false    # mirror-only: mirror weaknesses as issues + ship winner as PR (Closes #n)
+stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
+
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant | strict | threshold | simplicity_tiebreak
 gate_k_se: 1.0

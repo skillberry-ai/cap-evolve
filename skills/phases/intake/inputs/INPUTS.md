@@ -157,6 +157,12 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   also: significant|strict|threshold|simplicity_tiebreak), `gate_k_se` (default 1.0; the
   examples use 0.2). Add `--no-regression` to forbid breaking passing tasks.
 
+- **metrics (display)**: which numbers to surface and which one GATES.
+  - `metric_primary`: the single metric that decides accept/reject (= the scalar reward). Blank = use the reward directly.
+  - `metrics_display` + `metric_directions`: extra SHOWN-ONLY metrics and each one's direction (`higher`|`lower`). These never affect the gate — display only.
+- **github_integration** (default `false`): if `true`, intake runs `gh auth status`; when authed, cap-evolve may mirror weaknesses as issues and ship the winner as a PR (`Closes #n`). GitHub is NEVER the source of truth — the run dir is. If unauthed, intake offers `gh auth login` or skip.
+- **stop_condition** (default empty): agent-mode free-text halt rule, re-read each round. Deterministic mode ignores it and uses the budget knobs.
+
 - **baseline traces** (optional): prior rollouts to seed diagnosis. Default: none
   (the baseline phase produces them on the first val eval).
 
