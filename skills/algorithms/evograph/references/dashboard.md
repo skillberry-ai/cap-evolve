@@ -44,8 +44,8 @@ is rendered in its **own Final-test panel**, not plotted on the rounds line — 
   `python scripts/now.py`. `completed_at` is absent while the round is still running
   (the UI shows it as "running"). (`timestamp` is still accepted as a legacy alias for `started_at`.)
 - **`cost_usd`** (optional) — **one** number for the whole optimization (the agents' conversation
-  cost, not the benchmark eval spend), recorded on **`final-test.json`** at the very end — never
-  per-round. The UI shows it next to the total time. See [cost.md](cost.md).
+  cost, not the benchmark eval spend), recorded on **`final-test.json`** at the end, READ FROM cap-evolve's run-dir spend (never
+  per-round, and never hand-totalled). The UI shows it next to the total time; the source of truth is cap-evolve's cost accounting (the Cost tab / `RunDir` spend).
 - **`extra`** (optional, free-form) — a catch-all object for anything you want recorded but that the
   UI doesn't render: the run-params actually used (trials-per-task, concurrency), seeds, notes,
   links, whatever. **The dashboard ignores fields it doesn't know**, so adding your own keys here (or
