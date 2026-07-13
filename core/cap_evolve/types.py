@@ -93,10 +93,31 @@ class Score:
     stderr: float = 0.0
     trial_rewards: list = field(default_factory=list)
     raw: dict = field(default_factory=dict)
+    metrics: list = field(default_factory=list)  # shown-only catalog; see _validate_metrics
 
     def __post_init__(self) -> None:
         self.reward = _clamp01(self.reward)
         self.trial_rewards = [_clamp01(r) for r in self.trial_rewards]
+        self._validate_metrics()
+
+    def _validate_metrics(self) -> None:
+        if not self.metrics:
+            return
+        primaries = [m for m in self.metrics if m.get("primary") is True]
+        if len(primaries) != 1:
+            raise ValueError(f"exactly one metric must be primary, got {len(primaries)}")
+        for m in self.metrics:
+            if m.get("direction") not in ("higher", "lower"):
+                raise ValueError(f"metric {m.get('name')!r} needs direction higher|lower")
+        pv = float(primaries[0]["value"])
+        if abs(pv - self.reward) > 1e-9:
+            raise ValueError(f"primary metric value {pv} must equal reward {self.reward}")
+
+    def primary_metric(self):
+        for m in self.metrics:
+            if m.get("primary") is True:
+                return m
+        return None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -111,6 +132,7 @@ class Score:
             stderr=float(d.get("stderr") or 0.0),
             trial_rewards=list(d.get("trial_rewards") or []),
             raw=dict(d.get("raw") or {}),
+            metrics=list(d.get("metrics") or []),
         )
 
 
