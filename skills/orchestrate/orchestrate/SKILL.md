@@ -41,6 +41,15 @@ The wiring is validated structurally: each step's `needs` must be satisfied by a
 upstream `provides` in the manifest, so a misordered or incompatible pipeline is
 caught before it runs.
 
+## Agent-mode loop (`orchestration_mode: agent`)
+When the spec sets `orchestration_mode: agent`, cap-evolve does intake → check → baseline, then hands YOU the loop (it prints a handoff with the `run_dir`). You drive the optimization by following the selected algorithm's **"Agent-mode loop"** section (`skills/algorithms/<algorithm_skill>/SKILL.md`). Rules:
+
+1. **Drive through cap-evolve primitives, never around them.** Every evaluation goes through cap-evolve's eval (so per-rollout JSON + results land in the run dir); every accept/reject goes through the gate on **val** (Δ > k·SE); every accepted candidate is snapshotted via the store; log round boundaries with the run dir's event log. This is what keeps `events.jsonl`/rollouts/results/snapshots populated so the **dashboard renders with no changes**.
+2. **Honesty is self-policed:** never touch the sealed test split until the end; revert on regression; acceptance is val-only.
+3. **Between rounds, verify the run dir has what the dashboard needs** before continuing: the round's events are logged, results/rollouts are written, and each accepted candidate is snapshotted. If a round produced no run-dir artifacts, the dashboard will be blank — fix that before proceeding.
+4. **Re-read `stop_condition` each round.** Stop when it is met, or budget/stall hits.
+5. **Seal once, at the end:** call `cap-evolve finalize` (scores the best candidate on the sealed test split exactly once) then `cap-evolve report`. A run with no finalize has no result.
+
 ## How to run
 ```
 python scripts/run.py --spec .capevolve/project/capevolve.yaml            # print the plan
