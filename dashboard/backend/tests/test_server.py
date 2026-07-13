@@ -12,7 +12,8 @@ def _reload_asgi_with_static_dir(monkeypatch, *, static_dir):
 
 
 def _find_static_route(app):
-    return next((route for route in app.routes if getattr(route, "name", None) == "static"), None)
+    routes = getattr(app, "routes", ())
+    return next((route for route in routes if getattr(route, "name", None) == "static"), None)
 
 
 def test_is_up_false_when_nothing_listening():
@@ -39,9 +40,12 @@ def test_url_for():
 
 
 def test_asgi_auto_detects_static_dir_when_env_unset(monkeypatch):
+    from capevolve_dashboard import server
+
     module = _reload_asgi_with_static_dir(monkeypatch, static_dir=None)
     route = _find_static_route(module.app)
-    expected = Path(module.__file__).resolve().parents[2] / "frontend" / "dist"
+    expected = server.resolve_static_dir()
+    assert expected is not None
     assert route is not None
     assert Path(route.app.directory) == expected
 
