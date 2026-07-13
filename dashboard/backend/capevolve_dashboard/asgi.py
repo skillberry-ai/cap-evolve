@@ -6,8 +6,8 @@ from .app import create_app
 
 _base = Path(os.environ.get("CAPEVOLVE_BASE_DIR", ".capevolve"))
 _static = os.environ.get("CAPEVOLVE_STATIC_DIR")
-if not _static:
-    _auto = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if _static is None:
+    _auto = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if _auto.is_dir():
         _static = str(_auto)
 app = create_app(_base, static_dir=Path(_static) if _static else None)
