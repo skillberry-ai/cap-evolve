@@ -1,5 +1,31 @@
 {
   "skills": {
+    "evograph": {
+      "component": "algorithm",
+      "path": "algorithms/evograph",
+      "summary": "evo-graph as a cap-evolve algorithm (AGENT MODE ONLY) \u2014 a collaborative weakness-graph optimizer that clusters train failures into a shared markdown wiki, dispatches one solver per weakness in its own worktree scoped to that weakness's frozen affected_tasks, merges verified improvements, reverts a whole round on regression, and seals the test once via finalize. Writes a run-dir wiki + custom_view.json so its weakness-graph dashboard tab renders.",
+      "entry": "scripts/run.py",
+      "abstract": "scripts/abstract.py",
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [
+        "scores",
+        "traces",
+        "candidate"
+      ],
+      "provides": [
+        "candidate"
+      ],
+      "compatible_with": {
+        "capabilities": [
+          "*"
+        ],
+        "optimizers": [
+          "*"
+        ]
+      }
+    },
     "gepa": {
       "component": "algorithm",
       "path": "algorithms/gepa",
