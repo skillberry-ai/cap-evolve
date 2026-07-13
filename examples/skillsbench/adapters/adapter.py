@@ -50,16 +50,12 @@ SOURCE_REPO = "benchflow-ai/skillsbench"
 SOURCE_PATH = "tasks"
 SOURCE_REF = "main"
 AGENT = "claude"
-# Agent-under-test model. Override with SKILLSBENCH_AGENT_MODEL (e.g. a cheaper
-# claude-haiku-4-5 for the on-demand integration test); defaults to sonnet.
-MODEL = os.environ.get("SKILLSBENCH_AGENT_MODEL") or "claude-sonnet-4-6"
+MODEL = "claude-sonnet-4-6"
 SANDBOX = "docker"
 BENCH_BIN = os.environ.get("SKILLSBENCH_BENCH_BIN") or str(Path.home() / ".local" / "bin" / "bench")
 
-# SkillsBench task ids. tasks() is split-agnostic and network-free; the harness
-# filters by the frozen split_ids.json. The first 10 are the shared-office-skill
-# tasks; `court-form-filling` (a single-skill `pdf`, difficulty:easy task) is used
-# by the empty-seed integration test.
+# The 10 tasks (ids = SkillsBench task names). tasks() is split-agnostic and
+# network-free; the harness filters by the frozen split_ids.json.
 TASK_IDS = [
     "offer-letter-generator",
     "exceltable-in-ppt",
@@ -71,7 +67,6 @@ TASK_IDS = [
     "pdf-excel-diff",
     "pptx-reference-formatting",
     "reserves-at-risk-calc",
-    "court-form-filling",
 ]
 
 # Where bench caches its dataset clone. We always invoke bench from this stable
