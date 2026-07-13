@@ -49,5 +49,8 @@ mean improves.
 
 Back-compat: `--focus all-at-once` is accepted and treated as `all`.
 
+## Agent-mode loop
+When `orchestration_mode: agent`, drive hill-climb yourself: from the baseline best, each iteration — propose ONE edit to the capability (per `--focus`: all / cyclic / hardest-first), evaluate the candidate on **val** via cap-evolve (writes rollouts+results), gate Δ>k·SE, accept→snapshot via the store / reject→revert. Log each iteration to the run dir's event log. Re-read `stop_condition`; stop on it or on stall/budget. Between iterations, confirm the run dir got this iteration's rollouts + event so the dashboard stays current. Seal once with `cap-evolve finalize`, then `report`.
+
 ## References
 - `references/focus-schedules.md` — how each schedule builds its focus set.
