@@ -204,6 +204,10 @@ def _cmd_run(argv):
     algorithm_name, algorithm_focus = _resolve_algorithm(spec["algorithm_skill"])
     if spec.get("algorithm_focus") and algorithm_name == "hill-climb":
         algorithm_focus = str(spec["algorithm_focus"])
+    # orchestration_mode: "deterministic" (cap-evolve sequences the loop, below) vs
+    # "agent" (the coding agent drives the loop; cap-evolve run only does setup+baseline
+    # then hands off — see the short-circuit after baseline).
+    orchestration_mode = str(spec.get("orchestration_mode", "deterministic")).strip() or "deterministic"
     py = sys.executable
 
     def run(cmd):
@@ -217,6 +221,7 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          "orchestration_mode": orchestration_mode,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
                           "budget": {"max_iterations": spec.get("max_iterations", 10),
                                      "stall": spec.get("stall", 0),
@@ -276,6 +281,17 @@ def _cmd_run(argv):
                          implemented=list(data.get("implemented") or []))
     except Exception:  # noqa: BLE001 — intake tracking is best-effort
         pass
+
+    # Agent mode: the coding agent drives the optimization loop itself (reading the
+    # algorithm's "Agent-mode loop"), writing run-dir artifacts via cap-evolve
+    # primitives, and sealing with `cap-evolve finalize`. cap-evolve run does
+    # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
+    if orchestration_mode == "agent":
+        print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
+                          "stop_condition": str(spec.get("stop_condition", "")),
+                          "next": "drive via the orchestrate Agent-mode loop; "
+                                  "seal with `cap-evolve finalize`"}))
+        return 0
 
     # 2) algorithm (hill-climb variants select their schedule via --focus)
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
