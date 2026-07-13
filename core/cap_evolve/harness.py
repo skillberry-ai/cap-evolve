@@ -309,7 +309,12 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     initial capability content from the failing trajectories.
     """
     seed_dir = Path(seed_dir)
-    seed_dir.mkdir(parents=True, exist_ok=True)
+    if not seed_dir.exists():
+        # Accept an empty seed, but make it auditable: a typo'd capability_path would
+        # otherwise silently become a brand-new empty dir and look like an empty seed.
+        run_dir.log_event("seed_dir_created", path=str(seed_dir),
+                          msg="seed capability dir did not exist — created empty (empty-seed start)")
+        seed_dir.mkdir(parents=True, exist_ok=True)
     run_dir.snapshot("seed", seed_dir)
     run_dir.set_best("seed")
     result = evaluate_candidate(adapter, run_dir.candidate_dir("seed"), run_dir=run_dir,
@@ -1603,10 +1608,11 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
     import importlib.util
 
     skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
-    saw_signal = False
+    complete = True  # did we get a usable is_empty() from EVERY requested capability?
     for name in caps:
         abstract_path = skills_root / name / "scripts" / "abstract.py"
         if not abstract_path.exists():
+            complete = False
             continue
         try:
             spec = importlib.util.spec_from_file_location(
@@ -1615,13 +1621,17 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
             spec.loader.exec_module(mod)  # type: ignore[union-attr]
             is_empty = getattr(mod, "is_empty", None)
             if is_empty is None:
+                complete = False
                 continue
-            saw_signal = True
             if not is_empty(cand_dir):
-                return False  # any non-empty capability => not an empty seed
+                return False  # any non-empty capability => definitely not an empty seed
         except Exception:  # noqa: BLE001 — never break the loop over instructions rendering
+            complete = False
             continue
-    return True if saw_signal else None
+    # No capability reported non-empty. Only claim "empty" if we heard a reliable
+    # signal from EVERY capability; otherwise return None so the caller falls back
+    # to the reward heuristic rather than over-claiming emptiness.
+    return True if complete else None
 
 
 def _empty_seed_note(current_val: SplitResult, seed_empty: bool | None = None) -> str:

@@ -9,7 +9,7 @@
 #   - credentials            : ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN
 #
 # Exit code is the test result (0 = pass) — the asserter gates it.
-set -uo pipefail
+set -euo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../.." && pwd)"
@@ -26,7 +26,7 @@ export TAU2_USER_MODEL="${TAU2_USER_MODEL:-anthropic/claude-haiku-4-5}"
 
 say "1/4  Install cap-evolve core + tau2-bench"
 [ -x "$PY" ] || python3 -m venv "$VENV" || die "could not create venv (need python3.10+)"
-"$PY" -m pip install -q --upgrade pip
+"$PY" -m pip install -q --upgrade pip || true   # best-effort; a mirror 401 must not abort
 "$PY" -m pip install -q -e "$REPO/core" || die "pip install ./core failed"
 "$VENV/bin/cap-evolve" version || die "cap-evolve CLI not available"
 if [ ! -d "$TAU2_DIR/.git" ]; then
@@ -36,12 +36,11 @@ fi
 "$PY" -c "import tau2" >/dev/null 2>&1 || die "tau2 import failed after install"
 
 say "2/4  Credentials (IBM Anthropic-compatible gateway)"
-if [ ! -f "$REPO/.env" ]; then
-  if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-    printf 'ANTHROPIC_BASE_URL=%s\nANTHROPIC_AUTH_TOKEN=%s\n' "$ANTHROPIC_BASE_URL" "$ANTHROPIC_AUTH_TOKEN" > "$REPO/.env"
-  else
-    die "ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN not set and no $REPO/.env — the claude agent/user/optimizer need them."
-  fi
+# The adapter (rits.py) and the claude-code optimizer read these from the environment;
+# we deliberately do NOT write them to a .env file (a self-hosted runner's workspace
+# may persist, so this test never leaves the token on disk). An existing .env is honored.
+if { [ -z "${ANTHROPIC_BASE_URL:-}" ] || [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; } && [ ! -f "$REPO/.env" ]; then
+  die "Set ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN in the environment (or provide $REPO/.env)."
 fi
 
 say "3/4  Wire the project (adapter + seed + spec) + hard gate"
