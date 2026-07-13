@@ -15,7 +15,7 @@ cd cap-evolve
 ## 2. Create a clean environment and install the core
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3.11 -m venv .venv && source .venv/bin/activate   # pin a specific 3.10+ interpreter
 pip install ./core          # package: cap-evolve-core, CLI: cap-evolve (zero runtime deps)
 cap-evolve version          # verify
 ```

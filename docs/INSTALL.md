@@ -6,7 +6,7 @@ add-ons depending on how you want to drive it. Requires **Python 3.10+** and **g
 ```bash
 git clone https://github.com/skillberry-ai/cap-evolve.git
 cd cap-evolve
-python3 -m venv .venv && source .venv/bin/activate   # recommended: isolated env
+python3.11 -m venv .venv && source .venv/bin/activate   # recommended: isolated env (pin a specific 3.10+ interpreter)
 ```
 
 ## Required — the core (honest-eval substrate + CLI)

@@ -58,7 +58,7 @@ rises — **no model is called**.
 git clone https://github.com/skillberry-ai/cap-evolve.git
 cd cap-evolve
 
-python3 -m venv .venv && source .venv/bin/activate
+python3.11 -m venv .venv && source .venv/bin/activate   # pin a specific 3.10+ interpreter
 pip install ./core                 # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
 
 bash examples/toy_calc/run.sh
