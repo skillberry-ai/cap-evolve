@@ -56,7 +56,7 @@ def main() -> int:
         c.check(needle in skill, f"SKILL.md missing: {label!r} ({needle!r})", note=f"SKILL.md declares {label}")
 
     # 3: the referenced wiki-format docs exist.
-    for ref in ("clustering.md", "graph.md", "dashboard.md", "cost.md"):
+    for ref in ("clustering.md", "graph.md", "dashboard.md"):
         c.check((SKILL_DIR / "references" / ref).exists(),
                 f"missing reference: references/{ref}", note=f"references/{ref} present")
 

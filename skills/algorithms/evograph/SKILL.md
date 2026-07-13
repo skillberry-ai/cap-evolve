@@ -131,10 +131,17 @@ solution cards + logs present, standard events/rollouts emitted). Re-read `stop_
 Call `cap-evolve finalize` — it scores the best candidate on the sealed test split exactly once and
 burns the seal (unfakeable headline number). Mirror that number into `<run_dir>/wiki/results/final-test.json`
 (`"split":"test"`, `"round":"final"`) so evograph's tab shows it in its Final-test panel. Then
-`cap-evolve report`. Optionally record run cost per [references/cost.md](references/cost.md).
+`cap-evolve report`.
+
+## Cost — use cap-evolve's cost system (not a separate one)
+Do **not** run a bespoke end-of-run cost prompt. Cost is cap-evolve's job: every eval you drive
+through cap-evolve records spend in the run dir (`RunDir.update_spent`), the default dashboard **Cost**
+tab renders it, and the spec's `max_usd` / `max_optimizer_usd` caps bound it (preview with
+`cap-evolve estimate`). If you want the evograph tab's Final-test panel to show a cost number, read it
+from cap-evolve's recorded run-dir spend and mirror it into `final-test.json` as `cost_usd` — never ask
+the user to hand-total it.
 
 ## References
 - [references/clustering.md](references/clustering.md) — weakness schema, direct-write build, freeze rule.
 - [references/graph.md](references/graph.md) — branch/PR model, solution layout, `related` edges.
 - [references/dashboard.md](references/dashboard.md) — the wiki file formats the tab reads (the contract).
-- [references/cost.md](references/cost.md) — optional end-of-run cost report.
