@@ -2,7 +2,7 @@ import importlib
 from pathlib import Path
 
 
-def _reload_asgi(monkeypatch, *, static_dir):
+def _reload_asgi_with_static_dir(monkeypatch, *, static_dir):
     if static_dir is None:
         monkeypatch.delenv("CAPEVOLVE_STATIC_DIR", raising=False)
     else:
@@ -39,7 +39,7 @@ def test_url_for():
 
 
 def test_asgi_auto_detects_static_dir_when_env_unset(monkeypatch):
-    module = _reload_asgi(monkeypatch, static_dir=None)
+    module = _reload_asgi_with_static_dir(monkeypatch, static_dir=None)
     route = _static_route(module.app)
     expected = Path(module.__file__).resolve().parents[2] / "frontend" / "dist"
     assert route is not None
@@ -47,5 +47,5 @@ def test_asgi_auto_detects_static_dir_when_env_unset(monkeypatch):
 
 
 def test_asgi_empty_static_dir_disables_static_mount(monkeypatch):
-    module = _reload_asgi(monkeypatch, static_dir="")
+    module = _reload_asgi_with_static_dir(monkeypatch, static_dir="")
     assert _static_route(module.app) is None
