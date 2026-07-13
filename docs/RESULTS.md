@@ -11,8 +11,8 @@ Each result is labeled by **split discipline**:
   generalization claim.
 - **held-out** — test ids the optimizer never saw, scored exactly once at `finalize`.
 
-Reward is mean task reward in `[0, 1]` (shown on a 0–100 scale where the source run
-reports percentages). Gains are given as **absolute** and **relative %**.
+Reward is mean task reward in `[0, 1]`. Where we quote externally reported results that use 0–100% units, we label them explicitly as percentages.
+Gains are given as **absolute** and **relative %**.
 
 ---
 
