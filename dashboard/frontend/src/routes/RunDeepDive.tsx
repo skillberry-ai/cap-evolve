@@ -133,11 +133,25 @@ export function RunDeepDive() {
                 ) : active === 'insights' ? (
                   <Insights runId={id!} detail={data} />
                 ) : active === 'custom' && customUrl ? (
-                  <iframe
-                    src={customUrl}
-                    title={customView?.title || 'Custom view'}
-                    className="h-[75vh] w-full rounded-lg border border-border bg-surface"
-                  />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-end">
+                      <a
+                        href={customUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-bg hover:text-fg"
+                        title={`Open ${customView?.title || 'this view'} full-screen in a new tab`}
+                      >
+                        Open full view in new window
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    </div>
+                    <iframe
+                      src={customUrl}
+                      title={customView?.title || 'Custom view'}
+                      className="h-[80vh] w-full rounded-lg border border-border bg-surface"
+                    />
+                  </div>
                 ) : (
                   <Card>
                     <div className="p-8 text-center text-sm text-muted">Unknown view.</div>
