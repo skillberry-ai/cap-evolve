@@ -185,7 +185,7 @@ tone, reason-in-one-clause):
 These are organization moves; they never loosen a decision/permission rule (unbounded
 blast radius) — keep the narrowing-only discipline from `references/concepts.md`.
 
-## Common problems (see references/pitfalls.md)
+## Common problems (see references/concepts.md — Pitfalls / failure modes)
 - Over-long, redundant instructions → worse, not better.
 - Missing/loose output contract → correct content, wrong shape, zero reward.
 - Instructions that fight the model's defaults → inconsistent behavior.
