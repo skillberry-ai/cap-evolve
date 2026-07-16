@@ -663,6 +663,10 @@ python scripts/run.py --path <capability_dir>     # candidate + policy + validit
 
 ## References
 
+- [`references/authoring-and-validation.md`](references/authoring-and-validation.md) —
+  how to BUILD/specify a tool or bundled script the agent can find, fill, and run
+  (spec fields, docstring rules, the validate pipeline, script interface). Load when
+  creating a new tool/compose/script, not when only rewording one.
 - [`references/concepts.md`](references/concepts.md) — the mental model (select vs.
   fill, toolset design, the policy) with cited sources.
 - [`references/examples.md`](references/examples.md) — worked before/after edits.
