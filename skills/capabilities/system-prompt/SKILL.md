@@ -169,6 +169,22 @@ The prompt is prepended to context every turn. Agents read it literally and are
 sensitive to ordering, contradictions, and verbosity. Long preambles dilute
 attention; conflicting instructions resolve unpredictably.
 
+## Organize the prompt for the agent reader (snippet patterns)
+The prompt is a *snippet* the agent re-reads every turn — organize it the way an agent
+parses fastest, and write it for that reader (third person, imperative, no marketing
+tone, reason-in-one-clause):
+- **Decompose instructions into concrete, ordered steps** rather than one dense
+  paragraph; number them when order matters.
+- **Decision trees for when-to-do-what.** A compact branch (`If X → do A; if Y → do B`)
+  steers the act/refuse and tool-choice decisions better than prose.
+- **Failure-handling / recovery lines** — state the recovery path, not only the happy
+  path (e.g. "If the lookup returns empty, ask for the id instead of guessing.").
+- **Redundancy removal** — repeated guidance dilutes attention and costs tokens every
+  turn; consolidate duplicates into one rule (never dropping a distinct constraint —
+  see the never-drop rule below).
+These are organization moves; they never loosen a decision/permission rule (unbounded
+blast radius) — keep the narrowing-only discipline from `references/concepts.md`.
+
 ## Common problems (see references/pitfalls.md)
 - Over-long, redundant instructions → worse, not better.
 - Missing/loose output contract → correct content, wrong shape, zero reward.
