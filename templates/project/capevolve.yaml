@@ -18,6 +18,19 @@ optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap pas
 #   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
 #   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
 
+# --- consuming (runtime) LLM the capabilities are optimized FOR --------------
+# The model the AGENT UNDER TEST reads these capabilities with at runtime — DISTINCT
+# from optimizer_model (which PROPOSES edits). May be a concrete model id (resolved to a
+# capability tier via the built-in profile registry) OR a tier keyword directly:
+# frontier | strong | mid | weak. Empty = profile-agnostic (today's behavior). When set,
+# the optimizer prompt + capability guidance adapt edits to that reader (a weaker reader
+# gets more explicit rules, worked examples, and code enforcement; a frontier reader gets
+# leaner prose).
+target_model: ""
+# Optional project-local brief (raw text/markdown) that OVERRIDES the resolved tier's
+# built-in brief. Resolved project-relative. Leave empty to use the built-in brief.
+target_profile_file: ""
+
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb              # algorithms/<skill>
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first

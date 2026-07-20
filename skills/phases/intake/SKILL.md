@@ -141,6 +141,11 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
      optimizer's `./guidance/sources/`), so the optimizer can write correct code
      against the real types. Set this whenever a selected capability's code imports a
      shared types/data-model module; leave the default `[]` when there is none.
+   - `target_model` (+ optional `target_profile_file`) — the runtime/CONSUMING LLM the
+     agent reads the capabilities with, DISTINCT from `optimizer_model`. A model id or a
+     tier (`frontier|strong|mid|weak`); steers the optimizer prompt + capability guidance
+     to optimize FOR that reader. Ask which model the agent runs at runtime; leave blank
+     (profile-agnostic) if unknown. See `inputs/INPUTS.md` → `target_model`.
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
 Read `inputs/INPUTS.md`. It classifies every input as **NEEDED** or
