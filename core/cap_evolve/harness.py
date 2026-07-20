@@ -1786,6 +1786,8 @@ def hill_climb_loop(
     optimizer_name: str | None = None,
     capability_sources=None,
     project_dir: Path | None = None,
+    target_model: str = "",
+    target_profile_file: str | None = None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1797,6 +1799,11 @@ def hill_climb_loop(
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
+
+    # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
+    from . import target_profile as _tp
+    _profile = _tp.resolve(target_model, target_profile_file, project_dir=project_dir)
+    _target_reader = _tp.reader_block(_profile)
 
     # establish a focus order over the train tasks when needed
     train_ids = run_dir.read_splits().train
@@ -1825,7 +1832,7 @@ def hill_climb_loop(
                                             capabilities=capabilities, algorithm=algorithm,
                                             instructions_file=instructions_file,
                                             bench_repo=bench_repo, optimizer_name=optimizer_name,
-                                            seed_empty=seed_empty)
+                                            seed_empty=seed_empty, target_reader=_target_reader)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
