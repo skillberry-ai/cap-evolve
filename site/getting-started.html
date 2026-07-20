@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting started — cap-evolve</title>
+  <meta name="description" content="Your first successful cap-evolve run, in two minutes, with no API key. Clone, install the core, run the toy_calc example, open the dashboard.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html" class="active">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Getting started</h1>
+  <p class="lead">
+    Your first successful cap-evolve run, in two minutes, with <strong>no API key</strong>.
+  </p>
+
+  <div class="callout callout-accent">
+    <div class="callout-title">Prerequisites</div>
+    Python <strong>3.10+</strong> and <strong>git</strong>. That's it.
+  </div>
+
+  <h2>1. Clone and enter</h2>
+<pre><code>git clone https://github.com/skillberry-ai/cap-evolve.git
+cd cap-evolve</code></pre>
+
+  <h2>2. Create a clean environment and install the core</h2>
+<pre><code>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install ./core          # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
+cap-evolve version          # verify</code></pre>
+
+  <blockquote>
+    <p>If your default pip index requires auth, append <code>--index-url https://pypi.org/simple</code>.</p>
+  </blockquote>
+
+  <h2>3. Run the zero-API toy example</h2>
+
+  <p>
+    <code>toy_calc</code> is a deterministic stand-in agent that only answers correctly when its
+    system prompt contains a <code>[CALC]</code> marker. The <code>mock</code> optimizer adds the
+    marker, so the score provably rises — <strong>no model is called</strong>.
+  </p>
+
+<pre><code>bash examples/toy_calc/run.sh</code></pre>
+
+  <p>
+    Expected output — the seed prompt scores <code>0.0</code> on val; the optimized prompt is
+    gate-accepted and scores <code>1.0</code> on the sealed test split:
+  </p>
+
+<pre><code>baseline_val 0.0  ->  test_reward 1.0   (gate-accepted, test sealed) + dashboard.html</code></pre>
+
+  <p>
+    This is exactly what <code>core/tests/test_e2e_slice.py</code> asserts. The script prints
+    a working directory; open the <code>dashboard.html</code> it writes in any browser to see
+    the run (KPIs, per-iteration diffs, the tasks × iterations heatmap).
+  </p>
+
+  <h2>4. Where to next</h2>
+  <table>
+    <thead>
+      <tr><th>You want to…</th><th>Go to</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Understand what cap-evolve optimizes and how</td>
+        <td><a href="architecture.html">Architecture</a></td>
+      </tr>
+      <tr>
+        <td>Set up a real optimizer/runner (credentials, dashboard)</td>
+        <td><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/INSTALL.md">INSTALL.md</a></td>
+      </tr>
+      <tr>
+        <td>Optimize your own agent + benchmark</td>
+        <td><a href="optimize-your-own.html">Optimize your own agent</a></td>
+      </tr>
+      <tr>
+        <td>See real benchmark results</td>
+        <td><a href="results.html">Results</a></td>
+      </tr>
+      <tr>
+        <td>Something failed</td>
+        <td><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>Apache-2.0 · beta (0.x) · <em>watch capability evolve</em></div>
+    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

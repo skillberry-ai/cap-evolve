@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — cap-evolve</title>
+  <meta name="description" content="The cap-evolve pipeline (intake → check → baseline → algorithm → finalize → report), the optimizer context assembled each iteration, and the skill library.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Architecture</h1>
+  <p class="lead">
+    cap-evolve is a library of Agent Skills over a tiny pure-stdlib core
+    (<code>core/cap_evolve</code>). The pipeline is:
+  </p>
+
+<pre><code>intake → implement-and-check → baseline → algorithm → finalize → report</code></pre>
+
+  <h2>The phases</h2>
+
+  <ul>
+    <li><strong>intake</strong> — does the whole benchmark integration <em>before any budget is spent</em>. It interviews you (or reads your brief), installs the benchmark, and wires the <strong>adapter</strong> (<code>tasks</code> / <code>run_target</code>-or-<code>run_batch</code> / <code>score</code>), the <strong>trajectory</strong> path (<code>adapter.trajectories(split)</code> → the runner's native traces), the optional batched <code>run_trials</code> fast path, and <code>capability_sources</code> (the data-model/types files the tools import). It then authors a <strong>capability-scoped</strong> optimizer prompt (<code>optimizer/INSTRUCTIONS.md</code>). Missing NEEDED inputs are asked for, never fabricated.</li>
+    <li><strong>implement-and-check — the HARD GATE.</strong> <code>cap-evolve check</code> refuses to proceed until every required adapter method is real and <code>score()</code> is deterministic, so no spend happens against a stub.</li>
+    <li><strong>baseline</strong> — freezes the seeded train/val/test split (written once; <strong>test sealed</strong>) and scores the unmodified seed on val: the candidate every iteration must beat.</li>
+    <li><strong>algorithm</strong> (<code>hill-climb</code> / <code>gepa</code> / <code>skillopt</code>) — each iteration: <strong>diagnose</strong> failing val traces into failure clusters → the <strong>optimizer proposes</strong> a large, multi-part edit → the candidate is <strong>evaluated</strong> on val (each of N trials gets its own seed, so pass^k measures real variance) → a <strong>paired significance gate</strong> (Δ &gt; k·SE, val-only) accepts or rejects → the iteration is git-committed and memory updated.</li>
+    <li><strong>finalize</strong> — scores the best candidate on the <strong>sealed test split exactly once</strong> (the run dir enforces the seal).</li>
+    <li><strong>report</strong> — writes <code>report.md</code> and a self-contained <code>dashboard.html</code>.</li>
+  </ul>
+
+  <p>
+    See <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">HONEST_EVAL.md</a>
+    for the splitting / gating / sealing guarantees and
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md">ADAPTER_CONTRACT.md</a>
+    for the adapter.
+  </p>
+
+  <h2>What the optimizer receives each iteration</h2>
+
+  <p>
+    The harness assembles a <strong>capability-scoped</strong> working dir per iteration, then
+    runs your chosen coding-agent CLI in it:
+  </p>
+
+  <ul>
+    <li><strong>The selected capability skill(s)</strong> — both as <code>./guidance/&lt;cap&gt;/</code> <em>and</em> placed natively in the agent's own skills dir (e.g. <code>.claude/skills/</code>) so a headless agent auto-loads them. Each carries a "What you can change here" menu and edit boundaries.</li>
+    <li><strong>The diagnose method</strong> (<code>./guidance/diagnose/</code>) — how to cluster failures into a reflective dataset (per failing task: Inputs, Generated Outputs, Feedback).</li>
+    <li><strong>Only the current best step's full trajectories</strong> (<code>./trajectories/</code>) — the runner's verbatim traces of the candidate it builds on, never the seed + every rejected attempt.</li>
+    <li><strong>Supporting sources / data model</strong> (<code>./guidance/sources/</code>) — the <code>capability_sources</code> files, copied verbatim so new tool code is written against the real types.</li>
+    <li><strong>Per-task IMPACT of prior candidates</strong> — which task ids each prior edit BROKE (were passing) and FIXED, plus the <strong>currently-passing set to protect</strong> — causal feedback so a known regression is never re-introduced.</li>
+  </ul>
+
+  <h2>Cross-iteration files (clean ownership)</h2>
+
+  <table>
+    <thead>
+      <tr><th>File</th><th>Owner</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>LEDGER.md</code></td><td>framework</td><td>FACTS: every iteration's outcome + the exact tasks it broke/fixed</td></tr>
+      <tr><td><code>JOURNAL.md</code></td><td>optimizer</td><td>append-only HANDOVER across the run (tried / worked / regressed / refuted / focus-next)</td></tr>
+      <tr><td><code>PROCESS.md</code></td><td>optimizer</td><td>EXPLAINABILITY, snapshotted per candidate</td></tr>
+      <tr><td><code>RUNMAP.md</code> + <code>prior_iterations/</code></td><td>framework</td><td>a manifest plus every prior iteration's PROCESS.md and capability diff, for real prior-work access</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Because it sees all failure clusters, the protect-set, and the prior causal impact at once,
+    the optimizer produces <strong>one bold, multi-part candidate per iteration that addresses
+    every cluster without regressing the wins</strong> — not a one-line tweak.
+  </p>
+
+  <h2>What the optimizer can change</h2>
+
+  <p>The <strong>prompt</strong> and the <strong>tools</strong> are equally fair game:</p>
+
+  <ul>
+    <li><strong>Prompt</strong> (<a href="https://github.com/skillberry-ai/cap-evolve/blob/main/skills/capabilities/system-prompt/SKILL.md"><code>system-prompt</code></a>) — rewrite/consolidate/add rules, add examples, tighten the output contract, but <strong>never drop a needed rule</strong> (change / consolidate / add, don't delete).</li>
+    <li><strong>Tools</strong> (<a href="https://github.com/skillberry-ai/cap-evolve/blob/main/skills/capabilities/tools/SKILL.md"><code>tools</code></a>) — add/replace/wrap tools, <strong>edit tool CODE</strong> for deterministic enforcement, improve docs <strong>and return values</strong> (actionable errors), add loop/workflow/composite tools, and <strong>swap via a safe wrapper — never bare-remove</strong> a primitive. A tool body the model cannot skip beats a sentence it can forget; a knowledge-gap failure still belongs in the prompt.</li>
+  </ul>
+
+  <h2>Speed + observability</h2>
+
+  <p>
+    All N trials of a candidate run in <strong>one concurrent pass</strong> when the adapter
+    implements <code>run_trials(tasks, ctx, *, n_trials, base_seed)</code> (per-trial
+    persistence and pass^k/SE are byte-for-byte unchanged). The <strong>live dashboard</strong>
+    shows intake cost/time, per-iteration optimizer &amp; runner cost + time, the
+    cumulative-best stair, a tasks × iterations pass/fail heatmap, per-iteration git diffs,
+    the lineage tree, and gate decisions.
+  </p>
+
+  <h2>Skill library</h2>
+
+  <p>
+    18 skills over the core. Extending is one folder or one registry row — see
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/EXTENDING.md">EXTENDING.md</a>.
+  </p>
+
+  <table>
+    <thead><tr><th>Component</th><th>Skills</th></tr></thead>
+    <tbody>
+      <tr><td>orchestrate</td><td><code>orchestrate</code> · <code>using-cap-evolve</code></td></tr>
+      <tr><td>phases</td><td><code>intake</code> · <code>implement-and-check</code> · <code>baseline</code> · <code>evaluate</code> · <code>diagnose</code> · <code>gate</code> · <code>finalize</code> · <code>report</code></td></tr>
+      <tr><td>capabilities</td><td><code>system-prompt</code> · <code>skill-package</code> · <code>tools</code> · <code>mcp-tool</code></td></tr>
+      <tr><td>algorithms</td><td><code>hill-climb</code> (<code>--focus all|cyclic|hardest-first</code>) · <code>gepa</code> · <code>skillopt</code></td></tr>
+      <tr><td>optimizers</td><td><code>run-optimizer</code> + <code>optimizers/registry.yaml</code> (14 backends incl. <code>mock</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-accent">
+    <div class="callout-title">Claude Code plugin</div>
+    <code>claude --plugin-dir ./plugins/cap-evolve</code> exposes every skill as
+    <code>/cap-evolve:&lt;skill&gt;</code> and arms honesty <strong>hooks</strong>
+    (PreToolUse denies edits to the sealed test/gold; Stop/SubagentStop block finishing until
+    <code>cap-evolve check</code> and the gate are green) — all in core-owned scripts,
+    never in editable skill markdown.
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>Apache-2.0 · beta (0.x) · <em>watch capability evolve</em></div>
+    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

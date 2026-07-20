@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results — cap-evolve</title>
+  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html" class="active">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Results</h1>
+  <p class="lead">
+    The canonical results for cap-evolve. Every number here is derived from a committed run
+    artifact (<code>examples/*/run_full/*.json</code>) or, where noted, from a held-out run whose
+    artifact is committed separately. The <a href="./">home page</a>'s results section is a short
+    snapshot of this page.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">Split discipline — how to read every table below</div>
+    <ul>
+      <li><strong>fit metric</strong> — <code>train == val == test</code> (no holdout); the test number is <em>not</em> held out and the engine logs a <code>splits_warning</code>. Useful to show the loop works; not a generalization claim.</li>
+      <li><strong>held-out</strong> — test ids the optimizer never saw, scored exactly once at <code>finalize</code>.</li>
+    </ul>
+    Reward is mean task reward in <code>[0, 1]</code>. Where we quote externally reported results that use 0–100% units, we label them explicitly as percentages. Gains are given as <strong>absolute</strong> and <strong>relative %</strong>.
+  </div>
+
+  <h2>toy_calc — deterministic, zero-API</h2>
+
+  <table>
+    <thead><tr><th></th><th>val</th><th>test</th><th>notes</th></tr></thead>
+    <tbody>
+      <tr><td>Seed prompt</td><td><strong>0.0</strong></td><td>—</td><td>no <code>[CALC]</code> marker</td></tr>
+      <tr><td>Optimized (<code>mock</code> adds <code>[CALC]</code>)</td><td>—</td><td><strong>1.0</strong></td><td>gate-accepted, test sealed</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Deterministic, no model call. Asserted by <code>core/tests/test_e2e_slice.py</code> and
+    reproduced by <code>bash examples/toy_calc/run.sh</code>.
+  </p>
+
+  <h2>τ²-bench airline — no-holdout fit-metric run (reproducible, committed)</h2>
+
+  <p>
+    Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_airline/run_full"><code>examples/tau2_airline/run_full/</code></a>
+    (<code>final.json</code>, static dashboard under <code>ui/</code>).
+    Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2.md">REPRODUCE_tau2.md</a>.
+  </p>
+
+  <ul>
+    <li><strong>Capability:</strong> airline <strong>policy + tools</strong> optimized jointly (<code>[system-prompt, tools]</code>).</li>
+    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-6</code>.</li>
+    <li><strong>Runner + user simulator:</strong> <code>openai/gpt-oss-120b</code> via IBM RITS.</li>
+    <li><strong>Tasks / trials:</strong> all <strong>50</strong> airline tasks · <strong>10</strong> trials each.</li>
+    <li><strong>Split:</strong> <code>train == val == test == 50</code> — <strong>fit metric</strong> (no holdout).</li>
+    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.2</code>.</li>
+    <li><strong>tau2-bench commit:</strong> <code>8ebb7499622fc2be9b9d510d6f7a7653461f4f29</code>.</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th></th><th>reward (50 tasks · 10 trials)</th><th>Δ vs baseline</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Baseline</strong> (seed policy + tools)</td><td><strong>0.536</strong></td><td>—</td></tr>
+      <tr><td><strong>Best candidate</strong> (<code>cand_0007</code>) — val</td><td><strong>0.712</strong></td><td class="gain">+0.176 / +32.8% relative</td></tr>
+      <tr><td><code>cand_0007</code> — sealed test (fit metric)</td><td><strong>0.694</strong> pass@1 (pass² 0.584)</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Accepted iterations (the rest were rejected by the gate as within-noise):
+    iter 1 <code>+0.046</code> (0.536→0.582), iter 3 <code>+0.052</code> (→0.634),
+    iter 5 <code>+0.036</code> (→0.670), iter 6 <code>+0.014</code> (→0.684),
+    iter 7 <code>+0.028</code> (→0.712). <strong>5 of 10</strong> iterations accepted.
+  </p>
+
+  <p>
+    What changed: deep in-code tool edits (<code>tools.py</code> 593 → 832 lines;
+    policy 166 → 233 lines), not just prompt tweaks — five trajectory-verified
+    before→after edits in
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/OPTIMIZATION_EXAMPLES.md">OPTIMIZATION_EXAMPLES.md</a>;
+    curated walkthrough in
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_airline/DEMO.md">examples/tau2_airline/DEMO.md</a>.
+  </p>
+
+  <h2>τ²-bench airline — held-out 30/10/10 run</h2>
+
+  <p>
+    Same benchmark and capability, run with a real holdout split
+    (<code>split_ids.json</code>, 30 train / 10 val / 10 test) so the test number is a genuine
+    generalization result.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>56.7</strong></td><td><strong>70.0</strong></td><td class="gain">+13.3 pp / +23.5% relative</td></tr>
+      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>30.0</strong></td><td><strong>47.5</strong></td><td class="gain">+17.5 pp / +58.3% relative</td></tr>
+    </tbody>
+  </table>
+
+  <blockquote>
+    <p>
+      The held-out <code>run_full</code> artifact for this run is committed separately.
+      Until it lands, treat these figures as the reported held-out result; the reproducible
+      artifact-backed run above is the no-holdout fit metric.
+    </p>
+  </blockquote>
+
+  <p>
+    See <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md">COMPARISON.md</a>
+    for how this <strong>+58.3% within-run relative</strong> held-out gain sits next to external
+    tool-optimization work (EvoTool, Evolutionary Context Search) — with the important caveat
+    that those use different benchmark versions, models, splits, and budgets and are
+    <strong>not</strong> an apples-to-apples comparison.
+  </p>
+
+  <h2>SkillsBench — skill-package optimization (held-out, committed)</h2>
+
+  <p>
+    Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/skillsbench/run_full"><code>examples/skillsbench/run_full/</code></a>
+    (<code>report.md</code>, <code>final.json</code>).
+    Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_skillsbench.md">REPRODUCE_skillsbench.md</a>.
+  </p>
+
+  <ul>
+    <li><strong>Capability:</strong> the four shared office-document <strong>skill packages</strong> (<code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>).</li>
+    <li><strong>Agent under test:</strong> <code>claude-sonnet-4-6</code> in a Docker sandbox.</li>
+    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-8</code>.</li>
+    <li><strong>Tasks / trials:</strong> <strong>7</strong> val tasks (<code>train == val</code>) · <strong>3</strong> trials; <strong>3</strong> sealed test tasks.</li>
+    <li><strong>Iterations:</strong> 7 (best <code>cand_0004</code>, 4 accepted).</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th></th><th>reward</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Baseline — val</td><td><strong>0.333</strong></td><td>—</td></tr>
+      <tr><td>Optimized (<code>cand_0004</code>) — val</td><td><strong>0.714</strong></td><td class="gain">+0.381 / +114% relative</td></tr>
+      <tr><td>Baseline seed skills — sealed test</td><td><strong>0.556</strong></td><td>—</td></tr>
+      <tr><td>Optimized skills — sealed test (held-out)</td><td><strong>0.667</strong></td><td class="gain">+0.111 / +20.0% relative</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Test was scored once on the sealed split for <strong>both</strong> baseline and optimized
+    skills, so the improvement is on tasks the optimizer never saw. The optimizer edited all
+    four <code>SKILL.md</code> bodies and added executable scripts, then stopped on a real
+    ceiling (diagnosing two unsolved tasks as broken oracles rather than overfitting them).
+  </p>
+
+  <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
+    <em>Last reviewed: 2026-07-13.</em>
+  </p>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>Apache-2.0 · beta (0.x) · <em>watch capability evolve</em></div>
+    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

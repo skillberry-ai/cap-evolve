@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cap-evolve — watch capability evolve</title>
+  <meta name="description" content="cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces. Bring your agent and eval; cap-evolve runs the loop and reports one honest number.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- ─────────────────────────── hero ─────────────────────────── -->
+  <section class="hero">
+    <img src="assets/logo.png" alt="cap-evolve" class="hero-logo">
+    <h1>cap-evolve</h1>
+    <p class="tagline">watch capability evolve</p>
+    <p class="description">
+      <strong>cap-evolve improves an AI agent's prompts, tools, and skills by learning from
+      failed evaluation traces.</strong> You bring the agent and the eval you already have.
+      cap-evolve runs the loop — evaluate → diagnose → propose an edit → keep it only if it
+      beats a held-out split by a significant margin → commit — and reports one honest number.
+      It optimizes what your agent <em>reads</em>, not its weights.
+    </p>
+    <div class="badges">
+      <span class="badge">beta (0.x)</span>
+      <span class="badge">python 3.10+</span>
+      <span class="badge badge-success">0 runtime deps</span>
+      <span class="badge">Apache-2.0</span>
+      <span class="badge badge-accent">18 agent skills</span>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── quickstart ─────────────────────────── -->
+  <div class="cta">
+    <h3>Try it in two minutes — no API key required</h3>
+<pre><code>git clone https://github.com/skillberry-ai/cap-evolve.git
+cd cap-evolve
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install ./core
+bash examples/toy_calc/run.sh</code></pre>
+    <p class="cta-note">
+      <code>toy_calc</code> is a deterministic zero-API stand-in: the seed prompt scores
+      <code>0.0</code>; the optimized prompt is gate-accepted and scores <code>1.0</code> on
+      the sealed test split — <strong>no model is called</strong>. Full walkthrough:
+      <a href="getting-started.html">Getting started</a>.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────── hero screenshot ─────────────────────────── -->
+  <div class="hero-screenshot">
+    <img src="assets/dashboard.png" alt="cap-evolve dashboard — a real τ²-bench airline run">
+    <div class="caption">
+      A real τ²-bench airline run in the live dashboard — baseline → best,
+      accepted vs rejected candidates, cost, and the fitness stair.
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── results ─────────────────────────── -->
+  <section class="section">
+    <h2>Results</h2>
+    <p class="section-intro">
+      Numbers are cross-checked against committed run artifacts. Each is labeled
+      <strong>fit metric</strong> (no holdout) or <strong>held-out</strong> (test
+      scored once on ids the optimizer never saw). Full detail, models, task/trial
+      counts, commits, and costs: <a href="results.html">Results</a>.
+    </p>
+    <table class="table-hero">
+      <thead>
+        <tr>
+          <th>Benchmark</th>
+          <th>Split</th>
+          <th>Baseline → Optimized</th>
+          <th>Gain</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>toy_calc</strong> <span style="color:var(--muted);">(zero-API)</span></td>
+          <td>sealed test</td>
+          <td><code>0.0 → 1.0</code></td>
+          <td class="gain">deterministic proof</td>
+        </tr>
+        <tr>
+          <td><strong>τ²-bench airline</strong> <span style="color:var(--muted);">(policy + tools)</span></td>
+          <td>val — <em>fit metric</em></td>
+          <td><code>0.536 → 0.712</code></td>
+          <td class="gain">+0.176 / +32.8%</td>
+        </tr>
+        <tr>
+          <td><strong>τ²-bench airline</strong> <span style="color:var(--muted);">(held-out 30/10/10)</span></td>
+          <td>sealed <strong>test</strong></td>
+          <td><code>30.0 → 47.5</code></td>
+          <td class="gain">+17.5 pp / +58.3%</td>
+        </tr>
+        <tr>
+          <td><strong>SkillsBench</strong> <span style="color:var(--muted);">(skill package)</span></td>
+          <td>sealed <strong>test</strong> (held-out)</td>
+          <td><code>0.556 → 0.667</code></td>
+          <td class="gain">+0.111 / +20.0%</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─────────────────────────── what it optimizes ─────────────────────────── -->
+  <section class="section">
+    <h2>What cap-evolve optimizes</h2>
+    <p class="section-intro">Pick one — or combine them, e.g. <code>[system-prompt, tools]</code>.</p>
+    <table>
+      <thead>
+        <tr><th>Capability</th><th>What the optimizer may change</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>System prompts</strong></td>
+          <td>Rewrite / consolidate / add rules, examples, output contracts — never drop a needed rule</td>
+        </tr>
+        <tr>
+          <td><strong>Tool implementations</strong></td>
+          <td>Edit tool <strong>code</strong> for deterministic enforcement; add/wrap/swap tools (never bare-remove)</td>
+        </tr>
+        <tr>
+          <td><strong>MCP tool surfaces</strong></td>
+          <td>Safe edits only — tool docs, in-description examples, and which tools are exposed</td>
+        </tr>
+        <tr>
+          <td><strong>Skill packages</strong></td>
+          <td>An Agent Skill dir — <code>SKILL.md</code> bodies, references, and executable scripts</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─────────────────────────── choose your path ─────────────────────────── -->
+  <section class="section">
+    <h2>Choose your path</h2>
+    <p class="section-intro">Every path shares the same core install and the same honesty guarantees.</p>
+    <table>
+      <thead>
+        <tr><th>Path</th><th>Use it when</th><th>Start</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Claude Code plugin</strong></td>
+          <td>You use Claude Code and want slash commands + honesty hooks</td>
+          <td><code>claude --plugin-dir ./plugins/cap-evolve</code></td>
+        </tr>
+        <tr>
+          <td><strong>Another coding-agent host</strong></td>
+          <td>Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, or bare</td>
+          <td><code>./install.sh --host &lt;name&gt;</code></td>
+        </tr>
+        <tr>
+          <td><strong>Manual adapter + CLI</strong></td>
+          <td>You want to wire the adapter yourself and drive <code>cap-evolve</code> directly</td>
+          <td><a href="optimize-your-own.html">Optimize your own agent</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─────────────────────────── documentation tiles ─────────────────────────── -->
+  <section class="section">
+    <h2>Documentation</h2>
+    <p class="section-intro">
+      Hand-crafted pages for the four hero topics below; the rest are on GitHub,
+      alongside the code they describe.
+    </p>
+    <div class="tiles">
+      <a class="tile" href="getting-started.html">
+        <div class="tile-title">Getting started <span class="tile-badge on-site">on this site</span></div>
+        <p class="tile-desc">Your first successful run, in two minutes, with no API key. The <code>toy_calc</code> loop end-to-end.</p>
+      </a>
+      <a class="tile" href="results.html">
+        <div class="tile-title">Results <span class="tile-badge on-site">on this site</span></div>
+        <p class="tile-desc">Full benchmark detail: toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Reproducibility and artifacts.</p>
+      </a>
+      <a class="tile" href="architecture.html">
+        <div class="tile-title">Architecture <span class="tile-badge on-site">on this site</span></div>
+        <p class="tile-desc">The pipeline (intake → check → baseline → algorithm → finalize → report), the optimizer context, and the skill library.</p>
+      </a>
+      <a class="tile" href="optimize-your-own.html">
+        <div class="tile-title">Optimize your own agent <span class="tile-badge on-site">on this site</span></div>
+        <p class="tile-desc">Wire one small adapter — three methods. Two ways: let your coding agent do it, or drive the CLI yourself.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/INSTALL.md">
+        <div class="tile-title">Installation <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Host-specific setup, credentials, and the dashboard.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md">
+        <div class="tile-title">Adapter contract <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">The full method signatures and semantics if you're implementing an adapter.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">
+        <div class="tile-title">Honest evaluation <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Splits, gates, sealing — the discipline that keeps the numbers meaningful.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md">
+        <div class="tile-title">Comparison <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Positioning vs other tool-optimization work (EvoTool, Evolutionary Context Search) — with the caveats.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/EXTENDING.md">
+        <div class="tile-title">Extending <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Adding a capability, an algorithm, or a new optimizer backend.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/TROUBLESHOOTING.md">
+        <div class="tile-title">Troubleshooting <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Installation or a run failed — start here.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ROADMAP.md">
+        <div class="tile-title">Roadmap <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc">Planned work — what's coming next.</p>
+      </a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples">
+        <div class="tile-title">Examples <span class="tile-badge on-github">on GitHub</span></div>
+        <p class="tile-desc"><code>toy_calc</code> (deterministic), <code>tau2_airline</code> (policy + tool code), <code>skillsbench</code> (skill package).</p>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      Apache-2.0 · beta (0.x) · <em>watch capability evolve</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

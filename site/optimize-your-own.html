@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Optimize your own agent — cap-evolve</title>
+  <meta name="description" content="Wire one small adapter — three methods — to optimize your own capability against your benchmark. Two ways: let your coding agent build it, or drive the cap-evolve CLI yourself.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="optimize-your-own.html" class="active">Optimize your own</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Optimize your own agent</h1>
+  <p class="lead">
+    To optimize <strong>your</strong> capability against <strong>your</strong> benchmark you
+    wire one small <strong>adapter</strong> — three required methods plus optional hooks
+    (<a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md">ADAPTER_CONTRACT.md</a>):
+  </p>
+
+<pre><code>tasks(split)                   -&gt; list[Task]   # your eval cases for 'train'|'val'|'test'|'all'
+run_target(task, ctx, *, seed) -&gt; Rollout      # run your agent with the candidate LIVE as ctx;
+                                               #   forward `seed` if stochastic; set Rollout.error on infra failure
+score(task, rollout)           -&gt; Score        # reward in [0,1] + feedback (never leak the gold)
+
+# optional (working defaults provided):
+materialize(cand_dir, edits)   -&gt; None         # PURE write of edits into cand_dir
+live(cand_dir)                 -&gt; ctx (CM)     # make the candidate live for ONE eval
+run_batch(tasks, ctx, *, seed) -&gt; ...          # implement INSTEAD of run_target to drive a benchmark's OWN batch runner
+run_trials(tasks, ctx, *, n_trials, base_seed) # batched fast path: ALL trials in ONE run
+  -&gt; {task_id: [Rollout, ...]}                 #   (collapses N eval passes; pass^k/SE unchanged)
+trajectories(split)            -&gt; Path|None    # the runner's NATIVE trace dir; copied verbatim to ./trajectories/</code></pre>
+
+  <p>
+    Everything else — splits, trials, gating, pass^k, the sealed test, memory, and the
+    dashboard — is provided by the core and must <strong>not</strong> be reimplemented
+    (that is what keeps eval honest).
+  </p>
+
+  <p>There are two ways to get there.</p>
+
+  <h2>A — let your coding agent build it (no Python from you)</h2>
+
+  <p>
+    Open the coding agent you already use at the repo root and tell it to follow
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/RUN.md">RUN.md</a>. It loads
+    the <code>intake</code> skill, asks for anything missing (never fabricating a NEEDED input),
+    writes the adapter, runs <code>cap-evolve check</code>, then the full loop. A complete
+    worked brief is
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_airline/PROMPT.md">examples/tau2_airline/PROMPT.md</a>.
+  </p>
+
+  <p>
+    Fill this in and paste it to your coding agent with <em>"follow RUN.md"</em> — intake asks
+    for anything you omit and never fabricates a needed input:
+  </p>
+
+<pre><code>Follow RUN.md to run a cap-evolve optimization on MY benchmark/agent. If the
+benchmark is not installed yet, the intake/integration step should CLONE + INSTALL
+it. Here is everything intake needs (fill each field; leave a field blank only if
+you want intake to ask):
+
+# 1. CAPABILITY  (what gets optimized — a COPY is edited each iteration; the original is never touched)
+- type:    &lt;one or a list of: system-prompt | tools | mcp-tool | skill-package&gt;
+           # system-prompt = a prompt/policy text file; tools = the agent's OWN tools;
+           # mcp-tool = tools served by an EXTERNAL MCP server (only docs/exposed-set edits);
+           # skill-package = an Agent Skill dir (SKILL.md + refs + scripts). Combine, e.g. [system-prompt, tools].
+- seed:    &lt;path to the seed artifact to optimize, e.g. policy/policy.md | tools.json | skills/&lt;name&gt;/&gt;
+- NOTE for `tools`: the optimizer may edit tool docstrings/descriptions AND tool
+           behavior/code, AND add/remove COMPOSITE tools that call existing tools
+           (wrapping rules, loops, argument normalization) — not just reword docs.
+
+# 2. BENCHMARK / DATASET  (the eval)
+- benchmark:  &lt;name, e.g. my-bench / SWE-bench-lite / a homegrown suite&gt;
+- repo:       &lt;local path OR git URL&gt;            # where the benchmark code/data lives
+- install:    &lt;how to install it, e.g. `pip install -e ../&lt;bench&gt;`; RECORD the resolved commit for reproducibility&gt;
+- tasks:      &lt;path to tasks.jsonl  OR  "adapter"&gt;   # "adapter" = adapter.tasks(split) builds them in-code
+- task format: each task = id + input + gold/criterion
+              # one JSON object per line: {"id": ..., "input": ..., "target"/"criterion": ...}
+- splits:     &lt;one of:&gt;
+              #  seeded ratio   -&gt; split_seed + split_train/val/test (default 0.5/0.25/0.25)
+              #  explicit       -&gt; split_ids.json  {"train":[...],"val":[...],"test":[...]} (e.g. an official split)
+              #  no-holdout fit -&gt; train == val == test == all ids (report FLAGS the test number as a fit metric)
+
+# 3. RUNNER  (the agent under test) + MODELS + CREDENTIALS
+- how to run one task:  &lt;in-process call | subprocess | HTTP endpoint
+                         | the benchmark's OWN batch runner -&gt; implement adapter.run_batch instead of run_target&gt;
+- runner model(s):      &lt;model id(s) the agent under test uses&gt;
+- credentials:          &lt;env vars / repo-root .env keys, e.g. OPENAI_API_KEY, WATSONX_*, RITS_API_KEY — never hardcode a secret&gt;
+- custom/OpenAI-compatible endpoint (vLLM, IBM RITS, a gateway):
+                        &lt;api_base + any custom auth header&gt;
+                        # pass via the runner's LLM config (most benchmarks forward extra kwargs to litellm);
+                        # prefer PER-CALL config — no monkeypatch, no benchmark fork
+- concurrency knob:     &lt;e.g. an env var / max-concurrency setting the runner honors&gt;
+
+# 4. SCORER  (what to optimize against)
+- metric:     &lt;exact-match | reward in [0,1] | rubric | pass/fail rule&gt;
+- source:     &lt;the benchmark's own verifier  OR  your score() function in adapter.py&gt;
+- feedback:   must be GENERAL and gold-SAFE — it is the learning signal; never leak the gold answer
+- objective:  maximize mean reward on the VAL split
+
+# 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
+- optimizer:   &lt;claude-code | codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock&gt;
+- model:       &lt;backend-specific model id&gt;
+- credentials: &lt;e.g. ANTHROPIC_API_KEY or a logged-in Claude Code session; BOBSHELL_API_KEY for ibm-bob&gt;
+
+# 6. BUDGET / GATE
+- algorithm:            &lt;hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt&gt;
+- max_iterations:       &lt;N — dominant cost knob&gt;
+- num_trials:           &lt;&gt;=3 for a stochastic agent; 1 only for a deterministic one&gt;   # enables pass^k
+- max_metric_calls:     &lt;0 = unlimited; else stop after N runner evals&gt;
+- max_usd:              &lt;total $ cap over runner + optimizer + intake; 0 = unlimited&gt;
+- max_optimizer_usd:    &lt;cumulative optimizer-only $ cap; 0 = unlimited&gt;
+- optimizer_usd_per_iter: &lt;PER-ITERATION $ cap enforced by the optimizer CLI itself, e.g. claude `--max-budget-usd N`&gt;
+- optimizer_max_turns:  &lt;per-iteration WORK cap passed to the agent CLI, e.g. claude `--max-turns N`&gt;
+- gate:                 &lt;significant (k_se) | strict | threshold&gt;
+                        # significant: accept only if Δ &gt; k_se · SE — k_se is how many standard errors
+                        # the val gain must clear (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress
+- stall:                &lt;stop after N consecutive rejects; 0 = run all max_iterations&gt;
+- store:                git          # versions every iteration as a commit for an inspectable process
+</code></pre>
+
+  <h2>B — drive the <code>cap-evolve</code> CLI yourself</h2>
+
+<pre><code>python3 skills/phases/intake/scripts/run.py --base .capevolve   # scaffold adapter STUB + capevolve.yaml
+# 1. implement tasks / run_target (or run_batch) / score in
+#    .capevolve/project/adapters/adapter.py  (copy the closest example below)
+# 2. set capabilities / optimizer / algorithm / splits in capevolve.yaml
+cap-evolve check .capevolve/project                              # hard gate — must print {"ok": true}
+cap-evolve estimate --spec .capevolve/project/capevolve.yaml     # dry-run cost preview (spends nothing)
+cap-evolve run   --spec .capevolve/project/capevolve.yaml --project .capevolve/project
+open .capevolve/run_*/dashboard.html</code></pre>
+
+  <p>Start from the closest example and edit its <code>adapter.py</code>:</p>
+
+  <table>
+    <thead>
+      <tr><th>You want to optimize…</th><th>Copy</th><th><code>capabilities:</code></th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>a <strong>prompt</strong> (zero-API proof)</td>
+        <td><a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/toy_calc">examples/toy_calc</a></td>
+        <td><code>[system-prompt]</code></td>
+      </tr>
+      <tr>
+        <td>a <strong>system prompt + tools</strong> (real agent)</td>
+        <td><a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_airline">examples/tau2_airline</a></td>
+        <td><code>[system-prompt, tools]</code></td>
+      </tr>
+      <tr>
+        <td>a <strong>skill package</strong></td>
+        <td><a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/skillsbench">examples/skillsbench</a></td>
+        <td><code>[skill-package]</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Swapping the optimizer is one word</strong> in <code>capevolve.yaml</code> — one
+    runner (<code>run-optimizer</code>) resolves the name via
+    <code>skills/optimizers/registry.yaml</code>:
+  </p>
+
+<pre><code>capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
+optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
+algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt
+num_trials: 4
+store: git                                # versions every iteration</code></pre>
+
+  <p>
+    Extending is just as small — a new capability, algorithm, or optimizer is one folder or
+    one <code>optimizers/registry.yaml</code> row. See
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/EXTENDING.md">EXTENDING.md</a>.
+  </p>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>Apache-2.0 · beta (0.x) · <em>watch capability evolve</em></div>
+    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
