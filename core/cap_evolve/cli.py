@@ -217,6 +217,7 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          "target_model": spec.get("target_model", ""),
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
                           "budget": {"max_iterations": spec.get("max_iterations", 10),
                                      "stall": spec.get("stall", 0),
