@@ -1675,7 +1675,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         capabilities=None, algorithm: str = "hill-climb",
                         instructions_file=None, bench_repo: str | None = None,
                         optimizer_name: str | None = None,
-                        seed_empty: bool | None = None) -> str:
+                        seed_empty: bool | None = None,
+                        target_reader: str = "") -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
     optimizer-instructions template.
 
@@ -1715,6 +1716,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "{{BENCH_REPO}}": bench,
         "{{PARALLEL_NOTE}}": parallel_note,
         "{{EMPTY_SEED}}": empty_note,
+        "{{TARGET_READER}}": target_reader,
     }
 
     tmpl_path = Path(instructions_file) if instructions_file else _DEFAULT_INSTRUCTIONS_TEMPLATE
@@ -1734,6 +1736,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     parts = [
         "# Optimize the capability — analyze this step's trajectories in ./trajectories/, "
         "then fix MANY root causes in this ONE candidate and STOP.",
+        target_reader,
         focus_summary, "",
         empty_note,
         "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
