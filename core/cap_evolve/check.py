@@ -60,6 +60,35 @@ def load_adapter(project_dir: Path) -> CapabilityAdapter:
     return mod.Adapter()
 
 
+def _check_consuming_model(rep: "CheckReport", adapter, project_dir: Path) -> None:
+    """Best-effort, non-blocking: warn if the declared consuming model resolves to a
+    different capability tier than the runner actually drives. Trusts the declaration
+    when either side is absent. Never raises and never affects ``rep.ok``.
+    """
+    try:
+        from . import target_profile as _tp
+        from .specfile import read_yaml as _read_yaml
+        cfg_path = project_dir / "capevolve.yaml"
+        declared = ""
+        if cfg_path.exists():
+            declared = str((_read_yaml(cfg_path.read_text(encoding="utf-8")) or {}).get("target_model", "") or "")
+        try:
+            actual = adapter.runner_model()
+        except Exception:  # noqa: BLE001 — optional hook
+            actual = None
+        if declared and actual:
+            dt = _tp.resolve(declared).tier
+            at = _tp.resolve(str(actual)).tier
+            if dt != at:
+                rep.notes.append(
+                    f"consuming-model mismatch: optimizing FOR '{declared}' (tier {dt}) "
+                    f"but the runner drives '{actual}' (tier {at}) — edits are tuned for a "
+                    "different reader than eval measures. Set target_model to the runner's "
+                    "model, or confirm this is intended.")
+    except Exception:  # noqa: BLE001 — mismatch check is best-effort, never blocks
+        pass
+
+
 def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
     rep = CheckReport()
     try:
@@ -76,6 +105,10 @@ def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
             + " — implement them in adapters/adapter.py"
         )
         return rep  # can't probe further safely
+
+    # Consuming-model tier mismatch (non-blocking). Runs before the task/scoring probes
+    # so it is emitted even when those early-return, and never affects rep.ok.
+    _check_consuming_model(rep, adapter, Path(project_dir))
 
     # 2. tasks present + stable
     try:
