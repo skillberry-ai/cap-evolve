@@ -7,6 +7,7 @@
 <p align="center"><em>watch capability evolve</em></p>
 
 <p align="center">
+  <a href="https://skillberry-ai.github.io/cap-evolve/"><img src="https://img.shields.io/badge/site-live-7c5cff" alt="site"></a>
   <img src="https://img.shields.io/badge/status-beta%20(0.x)-orange" alt="status">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success" alt="deps">
@@ -173,6 +174,7 @@ from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skills
 
 | Document | Use it when |
 |---|---|
+| [Site (home)](https://skillberry-ai.github.io/cap-evolve/) | You want the interactive site — hero, results, and doc navigation in one place |
 | [Getting started](docs/GETTING_STARTED.md) | You want your first successful run |
 | [Installation](docs/INSTALL.md) | You need host-specific setup, credentials, or the dashboard |
 | [Optimize your own agent](docs/OPTIMIZE_YOUR_OWN.md) | You want to integrate your agent or benchmark |
