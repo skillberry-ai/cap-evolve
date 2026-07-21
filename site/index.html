@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://rsms.me/">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
-  <link rel="stylesheet" href="style.css?v=20260721-1">
+  <link rel="stylesheet" href="style.css?v=20260721-2">
 </head>
 <body>
 
@@ -92,6 +92,65 @@ bash examples/toy_calc/run.sh</code></pre>
     </div>
   </div>
 
+  <!-- ─────────────────────────── why cap-evolve (differentiators) ─────────────────────────── -->
+  <section class="section">
+    <h2>Why cap-evolve</h2>
+    <p class="section-intro">
+      Five things that shape how cap-evolve works — and how it differs from what came before.
+    </p>
+    <div class="diff-tiles">
+      <a class="diff-tile" href="architecture.html#what-the-optimizer-receives">
+        <span class="diff-tile-num">01</span>
+        <div class="diff-tile-title">Agents optimize agents</div>
+        <p class="diff-tile-desc">
+          The optimizer is itself a coding-agent CLI (Claude Code, Codex, and 12 more): it
+          reads failing traces and proposes bold multi-part edits — no gradient descent,
+          no heuristic search.
+        </p>
+        <span class="diff-tile-link">How the optimizer runs →</span>
+      </a>
+      <a class="diff-tile" href="#what-cap-evolve-optimizes">
+        <span class="diff-tile-num">02</span>
+        <div class="diff-tile-title">Optimize any agentic capability</div>
+        <p class="diff-tile-desc">
+          System prompts, tool code, MCP surfaces, skill packages — one at a time or
+          combined. What your agent <em>reads</em>, not its weights.
+        </p>
+        <span class="diff-tile-link">What it optimizes →</span>
+      </a>
+      <a class="diff-tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">
+        <span class="diff-tile-num">03</span>
+        <div class="diff-tile-title">Optimization under constraints</div>
+        <p class="diff-tile-desc">
+          Every candidate must beat a paired-significance gate, keep the currently-passing
+          protect-set green, and stay inside your budget. Constraints aren't optional —
+          they're the loop.
+        </p>
+        <span class="diff-tile-link">Gates &amp; protect-set →</span>
+      </a>
+      <a class="diff-tile" href="architecture.html#cross-iteration-files">
+        <span class="diff-tile-num">04</span>
+        <div class="diff-tile-title">Flexible state management</div>
+        <p class="diff-tile-desc">
+          Iteration state lives in git-committed markdown — <code>LEDGER</code>,
+          <code>JOURNAL</code>, <code>PROCESS</code>. Every run is a browseable history you
+          can inspect, edit, or resume.
+        </p>
+        <span class="diff-tile-link">Cross-iteration files →</span>
+      </a>
+      <a class="diff-tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">
+        <span class="diff-tile-num">05</span>
+        <div class="diff-tile-title">Honest evaluation</div>
+        <p class="diff-tile-desc">
+          Test split sealed until finalize, scored exactly once; every accepted iteration
+          passes a paired-significance gate on val; every published number ships with its
+          run artifact.
+        </p>
+        <span class="diff-tile-link">Splits, gates, sealing →</span>
+      </a>
+    </div>
+  </section>
+
   <!-- ─────────────────────────── results ─────────────────────────── -->
   <section class="section">
     <h2>Results</h2>
@@ -140,7 +199,7 @@ bash examples/toy_calc/run.sh</code></pre>
   </section>
 
   <!-- ─────────────────────────── what it optimizes ─────────────────────────── -->
-  <section class="section">
+  <section class="section" id="what-cap-evolve-optimizes">
     <h2>What cap-evolve optimizes</h2>
     <p class="section-intro">Pick one — or combine them, e.g. <code>[system-prompt, tools]</code>.</p>
     <table>

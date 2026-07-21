@@ -18,7 +18,7 @@
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
   <link rel="preconnect" href="https://rsms.me/">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="style.css?v=20260721-1">
+  <link rel="stylesheet" href="style.css?v=20260721-2">
 </head>
 <body>
 
@@ -173,7 +173,7 @@
     for the adapter.
   </p>
 
-  <h2>What the optimizer receives each iteration</h2>
+  <h2 id="what-the-optimizer-receives">What the optimizer receives each iteration</h2>
 
   <p>
     The harness assembles a <strong>capability-scoped</strong> working dir per iteration, then
@@ -188,7 +188,7 @@
     <li><strong>Per-task IMPACT of prior candidates</strong> — which task ids each prior edit BROKE (were passing) and FIXED, plus the <strong>currently-passing set to protect</strong> — causal feedback so a known regression is never re-introduced.</li>
   </ul>
 
-  <h2>Cross-iteration files (clean ownership)</h2>
+  <h2 id="cross-iteration-files">Cross-iteration files (clean ownership)</h2>
 
   <table>
     <thead>
