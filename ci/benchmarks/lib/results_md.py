@@ -35,11 +35,13 @@ def main(argv):
     lines = [
         "# Benchmark suite — baseline metrics (2× measurement)",
         "",
-        "Agent `aws/gpt-oss-120b` · optimizer Claude Code `claude-opus-4-8` · 1 iteration · "
-        "baselines frozen & reused (baseline agent never re-run in CI). Measured twice on "
-        "skillberry-1 (self-hosted, IBM VPC). All tasks are **hard** (baseline reward 0; no "
-        "natural 0→1 flip exists at this budget — see README). Latency is wall-time and "
-        "host-dependent; cost/tokens are host-independent (tau2/skillsbench runners report 0).",
+        (
+            "Agent `aws/gpt-oss-120b` · optimizer Claude Code `claude-opus-4-8` · 1 iteration · "
+            "baselines frozen & reused (baseline agent never re-run in CI). Measured twice on "
+            "skillberry-1 (self-hosted, IBM VPC). All tasks are **hard** (baseline reward 0; no "
+            "natural 0→1 flip exists at this budget — see README). Latency is wall-time and "
+            "host-dependent; cost/tokens are host-independent (tau2/skillsbench runners report 0)."
+        ),
         "",
         "| bench | task | reward base→opt | latency base (s) | latency opt r1/r2 (s) | runner cost base→opt | optimizer $ r1/r2 |",
         "|---|---|:--:|---|---|---|---|",
@@ -61,6 +63,7 @@ def main(argv):
                  "A stable `0→0/0` is the expected hard-task signal; the CI gates on non-regression.")
     out.write_text("\n".join(lines) + "\n")
     print(out.read_text())
+    return 0
 
 
 if __name__ == "__main__":

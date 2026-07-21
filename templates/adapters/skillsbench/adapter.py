@@ -317,7 +317,7 @@ class Adapter(CapabilityAdapter):
             if skills_dir.parent.name == "candidates":
                 return skills_dir.parent.parent / "bench_jobs"
         except (AttributeError, IndexError, TypeError):
-            pass
+            pass  # odd path shape → fall through to the default jobs root below
         return Path(__file__).resolve().parents[2] / ".bench_runs" / "default"
 
     @classmethod
