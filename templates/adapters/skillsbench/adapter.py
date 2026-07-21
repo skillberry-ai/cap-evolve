@@ -56,6 +56,10 @@ from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 SOURCE_REPO = "benchflow-ai/skillsbench"
 SOURCE_PATH = "tasks"
 SOURCE_REF = "main"
+# Optional LOCAL tasks dir (a checkout of skillsbench). When set, bench reads tasks
+# from here (--tasks-dir) instead of resolving/cloning the remote repo — this avoids
+# bench's remote source-SHA resolution (which can fail on newer git) and works offline.
+TASKS_DIR = os.environ.get("SKILLSBENCH_TASKS_DIR", "")
 AGENT = os.environ.get("SKILLSBENCH_AGENT", "claude")
 MODEL = os.environ.get("SKILLSBENCH_MODEL", "claude-sonnet-4-6")
 SANDBOX = os.environ.get("SKILLSBENCH_SANDBOX", "docker")
@@ -107,7 +111,12 @@ def _load_env() -> None:
 
 
 def _gateway_env() -> dict[str, str]:
-    """Return {ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN} for the sandboxed agent."""
+    """Return the gateway env for the sandboxed agent.
+
+    Always includes the Anthropic-compatible vars (Claude models). Also mirrors them
+    onto OpenAI-compatible vars so an OpenAI-family model (e.g. aws/gpt-oss-120b)
+    served by the same gateway can run — bench routes such models via OPENAI_API_KEY.
+    """
     _load_env()
     base = os.environ.get("ANTHROPIC_BASE_URL")
     token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
@@ -120,7 +129,11 @@ def _gateway_env() -> dict[str, str]:
         raise RuntimeError(
             f"{' and '.join(missing)} not set. Put them in the repo-root .env."
         )
-    return {"ANTHROPIC_BASE_URL": base, "ANTHROPIC_AUTH_TOKEN": token}
+    env = {"ANTHROPIC_BASE_URL": base, "ANTHROPIC_AUTH_TOKEN": token}
+    # OpenAI-compatible mirror (same gateway) for OpenAI-family agent models.
+    env["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY", token)
+    env["OPENAI_BASE_URL"] = os.environ.get("OPENAI_BASE_URL", base.rstrip("/") + "/v1")
+    return env
 
 
 class Adapter(CapabilityAdapter):
@@ -186,35 +199,26 @@ class Adapter(CapabilityAdapter):
         concurrency = min(
             len(tasks), int(os.environ.get("SKILLSBENCH_CONCURRENCY", "7"))
         )
-        cmd = [
-            BENCH_BIN,
-            "eval",
-            "run",
-            "--source-repo",
-            SOURCE_REPO,
-            "--source-path",
-            SOURCE_PATH,
-            "--source-ref",
-            SOURCE_REF,
-            "--agent",
-            AGENT,
-            "--model",
-            MODEL,
-            "--sandbox",
-            SANDBOX,
-            "--concurrency",
-            str(concurrency),
-            "--skill-mode",
-            "with-skill",
-            "--skills-dir",
-            str(skills_root),
-            "--jobs-dir",
-            str(jobs_dir),
-            "--agent-env",
-            f"ANTHROPIC_BASE_URL={env['ANTHROPIC_BASE_URL']}",
-            "--agent-env",
-            f"ANTHROPIC_AUTH_TOKEN={env['ANTHROPIC_AUTH_TOKEN']}",
+        cmd = [BENCH_BIN, "eval", "run"]
+        # Source: a local tasks dir (robust/offline) if provided, else the remote repo.
+        if TASKS_DIR and Path(TASKS_DIR).is_dir():
+            cmd += ["--tasks-dir", str(Path(TASKS_DIR).resolve())]
+        else:
+            cmd += ["--source-repo", SOURCE_REPO, "--source-path", SOURCE_PATH,
+                    "--source-ref", SOURCE_REF]
+        cmd += [
+            "--agent", AGENT,
+            "--model", MODEL,
+            "--sandbox", SANDBOX,
+            "--concurrency", str(concurrency),
+            "--skill-mode", "with-skill",
+            "--skills-dir", str(skills_root),
+            "--jobs-dir", str(jobs_dir),
         ]
+        # Pass every gateway var (Anthropic + OpenAI mirror) so both Claude and
+        # OpenAI-family agent models resolve against the same gateway.
+        for k, v in env.items():
+            cmd += ["--agent-env", f"{k}={v}"]
         for t in tasks:
             cmd += ["--include", t.id]
 
@@ -313,7 +317,7 @@ class Adapter(CapabilityAdapter):
             if skills_dir.parent.name == "candidates":
                 return skills_dir.parent.parent / "bench_jobs"
         except (AttributeError, IndexError, TypeError):
-            pass
+            pass  # odd path shape → fall through to the default jobs root below
         return Path(__file__).resolve().parents[2] / ".bench_runs" / "default"
 
     @classmethod

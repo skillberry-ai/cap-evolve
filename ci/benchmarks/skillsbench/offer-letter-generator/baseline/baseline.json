@@ -1,0 +1,36 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "offer-letter-generator",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 3 verifier test(s) failed:\n  - ::test_no_remaining_placeholders: The test failed in the call phase due to an assertion error\n  - ::test_split_placeholder_replaced: The test failed in the call phase due to an assertion error\n  - ::test_nested_table_value: The test failed in the call phase due to an assertion error",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 157.97205662727356
+  },
+  "best_id": "seed"
+}
