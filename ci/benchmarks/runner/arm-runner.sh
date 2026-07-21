@@ -48,10 +48,12 @@ if [ ! -x ./run.sh ]; then
   tar xzf "$PKG"
 fi
 
-# (re)configure as ephemeral — one job, then the registration is consumed
+# (re)configure. Ephemeral by default (one job, then deregister); set RUNNER_EPHEMERAL=0
+# for a persistent runner (e.g. to clear a multi-job matrix in one arming).
+EPH="--ephemeral"; [ "${RUNNER_EPHEMERAL:-1}" = "0" ] && EPH=""
 ./config.sh remove --token "$TOKEN" >/dev/null 2>&1 || true
 ./config.sh --url "https://github.com/$REPO_SLUG" --token "$TOKEN" \
-  --labels "$LABELS" --name "$(hostname -s)-capevolve" --ephemeral --unattended --replace
+  --labels "$LABELS" --name "$(hostname -s)-capevolve" $EPH --unattended --replace
 
-echo "Runner armed (labels: $LABELS) — waiting for ONE benchmark job, then it exits."
+echo "Runner armed (labels: $LABELS${EPH:+, ephemeral}) — waiting for job(s)."
 exec ./run.sh
