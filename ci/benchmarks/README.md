@@ -75,6 +75,13 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
 Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
 
+> **Note:** GitHub only exposes `workflow_dispatch` (and evaluates `pull_request`
+> workflows) from the **default branch**, so `benchmarks.yml` becomes triggerable
+> once it lands on `main`. Until then, run the suite directly on the runner host with
+> `ci/benchmarks/lib/run_suite.sh <bench>` (what the workflow calls). Validated on
+> skillberry-1: the `ibm-vpc` runner registers/listens and `run_suite` completes
+> end-to-end against the VPC gateway.
+
 ## Metrics
 
 Per task: `reward (base→opt)`, `flip`, `latency base→opt (s)`, `runner cost base→opt`,
