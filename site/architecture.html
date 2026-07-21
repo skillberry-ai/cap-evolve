@@ -7,13 +7,13 @@
   <meta name="description" content="The cap-evolve pipeline (intake → check → baseline → algorithm → finalize → report), the optimizer context assembled each iteration, and the skill library.">
   <link rel="preconnect" href="https://rsms.me/">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="style.css?v=20260720-1">
+  <link rel="stylesheet" href="style.css?v=20260721-1">
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-brand" href="./">cap-evolve</a>
+    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
     <div class="nav-links">
       <a href="getting-started.html">Getting started</a>
       <a href="results.html">Results</a>
@@ -36,6 +36,115 @@
 <pre><code>intake → implement-and-check → baseline → algorithm → finalize → report</code></pre>
 
   <h2>The phases</h2>
+
+  <figure class="arch-diagram">
+    <svg viewBox="0 0 720 340" role="img"
+         aria-labelledby="arch-title arch-desc"
+         xmlns="http://www.w3.org/2000/svg">
+      <title id="arch-title">The cap-evolve pipeline</title>
+      <desc id="arch-desc">
+        Six sequential phases — intake, check, baseline, algorithm, finalize, report — with
+        the algorithm phase expanded to show its per-iteration inner loop: diagnose, propose,
+        evaluate, gate. On rejection, control returns to diagnose. On acceptance, the
+        iteration is committed and the loop advances.
+      </desc>
+
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#666a72"/>
+        </marker>
+        <marker id="arrowhead-accent" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#4b34c9"/>
+        </marker>
+      </defs>
+
+      <!-- top row: 6 phase pills -->
+      <!-- widths: 96 each, gaps 12; total 6*96 + 5*12 = 636, centered starts at x=42 -->
+      <g>
+        <rect class="phase-box" x="42"  y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="90" y="52">intake</text>
+
+        <rect class="phase-box" x="150" y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="198" y="46">check</text>
+        <text class="phase-sub"   x="198" y="60">(hard gate)</text>
+
+        <rect class="phase-box" x="258" y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="306" y="52">baseline</text>
+
+        <rect class="phase-box-accent" x="366" y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="414" y="46">algorithm</text>
+        <text class="phase-sub"   x="414" y="60">iterate ×N</text>
+
+        <rect class="phase-box" x="474" y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="522" y="46">finalize</text>
+        <text class="phase-sub"   x="522" y="60">seal test</text>
+
+        <rect class="phase-box" x="582" y="24" width="96" height="44" rx="8" ry="8"/>
+        <text class="phase-label" x="630" y="52">report</text>
+      </g>
+
+      <!-- horizontal arrows between top-row pills -->
+      <line class="arrow" x1="138" y1="46" x2="149" y2="46" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="246" y1="46" x2="257" y2="46" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="354" y1="46" x2="365" y2="46" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="462" y1="46" x2="473" y2="46" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="570" y1="46" x2="581" y2="46" marker-end="url(#arrowhead)"/>
+
+      <!-- vertical accent line from algorithm pill down to callout -->
+      <line class="arrow-accent" x1="414" y1="68" x2="414" y2="112" marker-end="url(#arrowhead-accent)"/>
+
+      <!-- callout box: the iteration loop -->
+      <rect class="loop-box" x="46" y="118" width="628" height="184" rx="10" ry="10"/>
+      <text class="loop-label" x="66" y="141">algorithm — each iteration</text>
+
+      <!-- 4 inner steps: diagnose → propose → evaluate → gate -->
+      <g>
+        <rect class="phase-box" x="114" y="185" width="108" height="42" rx="8" ry="8"/>
+        <text class="phase-label" x="168" y="205">diagnose</text>
+        <text class="phase-sub"   x="168" y="218">cluster failures</text>
+
+        <rect class="phase-box" x="242" y="185" width="108" height="42" rx="8" ry="8"/>
+        <text class="phase-label" x="296" y="205">propose</text>
+        <text class="phase-sub"   x="296" y="218">optimizer edit</text>
+
+        <rect class="phase-box" x="370" y="185" width="108" height="42" rx="8" ry="8"/>
+        <text class="phase-label" x="424" y="205">evaluate</text>
+        <text class="phase-sub"   x="424" y="218">N trials on val</text>
+
+        <rect class="phase-box" x="498" y="185" width="108" height="42" rx="8" ry="8"/>
+        <text class="phase-label" x="552" y="205">gate</text>
+        <text class="phase-sub"   x="552" y="218">Δ &gt; k·SE</text>
+      </g>
+
+      <!-- forward arrows between inner steps -->
+      <line class="arrow" x1="222" y1="206" x2="241" y2="206" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="350" y1="206" x2="369" y2="206" marker-end="url(#arrowhead)"/>
+      <line class="arrow" x1="478" y1="206" x2="497" y2="206" marker-end="url(#arrowhead)"/>
+
+      <!-- loop-back arrow: from top of gate box up and around to top of diagnose box -->
+      <path class="arrow-accent"
+            d="M 552 185 L 552 162 L 168 162 L 168 184"
+            marker-end="url(#arrowhead-accent)"/>
+      <text class="loop-step" x="360" y="156" text-anchor="middle" fill="#4b34c9">
+        rejected — try again (protect-set + IMPACT + JOURNAL)
+      </text>
+
+      <!-- accepted output below the boxes -->
+      <text class="loop-step" x="360" y="253" text-anchor="middle">
+        accepted → git-commit iteration → memory updated → next iter or exit
+      </text>
+
+      <text class="caption" x="360" y="286">
+        Repeats until iteration budget is exhausted; best candidate advances to finalize.
+      </text>
+    </svg>
+    <figcaption class="chart-caption">
+      The pipeline runs left-to-right; the <em>algorithm</em> phase is the only one that
+      loops, and the <em>gate</em> is what makes each accepted iteration a real improvement.
+    </figcaption>
+  </figure>
 
   <ul>
     <li><strong>intake</strong> — does the whole benchmark integration <em>before any budget is spent</em>. It interviews you (or reads your brief), installs the benchmark, and wires the <strong>adapter</strong> (<code>tasks</code> / <code>run_target</code>-or-<code>run_batch</code> / <code>score</code>), the <strong>trajectory</strong> path (<code>adapter.trajectories(split)</code> → the runner's native traces), the optional batched <code>run_trials</code> fast path, and <code>capability_sources</code> (the data-model/types files the tools import). It then authors a <strong>capability-scoped</strong> optimizer prompt (<code>optimizer/INSTRUCTIONS.md</code>). Missing NEEDED inputs are asked for, never fabricated.</li>
@@ -139,8 +248,19 @@
 
 <footer class="footer">
   <div class="footer-inner">
-    <div>Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em></div>
-    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+    <div>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
   </div>
 </footer>
 

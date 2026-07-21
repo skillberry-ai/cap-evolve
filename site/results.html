@@ -7,13 +7,13 @@
   <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
   <link rel="preconnect" href="https://rsms.me/">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="style.css?v=20260720-1">
+  <link rel="stylesheet" href="style.css?v=20260721-1">
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-brand" href="./">cap-evolve</a>
+    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
     <div class="nav-links">
       <a href="getting-started.html">Getting started</a>
       <a href="results.html" class="active">Results</a>
@@ -173,6 +173,80 @@
     ceiling (diagnosing two unsolved tasks as broken oracles rather than overfitting them).
   </p>
 
+  <h2>At a glance — baseline → optimized</h2>
+
+  <figure class="chart-figure">
+    <svg viewBox="0 0 720 320" role="img"
+         aria-labelledby="chart-title chart-desc"
+         xmlns="http://www.w3.org/2000/svg">
+      <title id="chart-title">Baseline vs optimized reward across benchmarks</title>
+      <desc id="chart-desc">
+        Three benchmarks, each showing the seed baseline (open circle) and the optimized
+        candidate (filled green circle) on a 0–100 scale.
+        τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
+        τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
+        SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
+      </desc>
+
+      <!-- gridlines at 0/25/50/75/100 (plot: x=180..620) -->
+      <line class="grid-line" x1="180" y1="60" x2="180" y2="230"/>
+      <line class="grid-line" x1="290" y1="60" x2="290" y2="230"/>
+      <line class="grid-line" x1="400" y1="60" x2="400" y2="230"/>
+      <line class="grid-line" x1="510" y1="60" x2="510" y2="230"/>
+      <line class="grid-line" x1="620" y1="60" x2="620" y2="230"/>
+
+      <!-- axis tick labels -->
+      <text class="axis-label" x="180" y="252" text-anchor="middle">0</text>
+      <text class="axis-label" x="290" y="252" text-anchor="middle">25</text>
+      <text class="axis-label" x="400" y="252" text-anchor="middle">50</text>
+      <text class="axis-label" x="510" y="252" text-anchor="middle">75</text>
+      <text class="axis-label" x="620" y="252" text-anchor="middle">100</text>
+      <text class="axis-label" x="400" y="272" text-anchor="middle">reward × 100</text>
+
+      <!-- Row 1: τ²-bench airline fit metric — 53.6 → 71.2 -->
+      <text class="row-label" x="170" y="86" text-anchor="end">τ²-bench airline</text>
+      <text class="row-sub"   x="170" y="99" text-anchor="end">fit metric (50 tasks)</text>
+      <line class="connector" x1="422" y1="92" x2="487" y2="92"/>
+      <circle class="dot-base" cx="416" cy="92" r="6"/>
+      <circle class="dot-opt"  cx="493" cy="92" r="6"/>
+      <text class="val-label"     x="416" y="79" text-anchor="middle">53.6</text>
+      <text class="val-label-opt" x="493" y="79" text-anchor="middle">71.2</text>
+      <text class="gain-label" x="510" y="96">+17.6 pp · +32.8%</text>
+
+      <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
+      <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
+      <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (10 tasks)</text>
+      <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
+      <circle class="dot-base" cx="312" cy="142" r="6"/>
+      <circle class="dot-opt"  cx="389" cy="142" r="6"/>
+      <text class="val-label"     x="312" y="129" text-anchor="middle">30.0</text>
+      <text class="val-label-opt" x="389" y="129" text-anchor="middle">47.5</text>
+      <text class="gain-label" x="406" y="146">+17.5 pp · +58.3%</text>
+
+      <!-- Row 3: SkillsBench held-out — 55.6 → 66.7 -->
+      <text class="row-label" x="170" y="186" text-anchor="end">SkillsBench</text>
+      <text class="row-sub"   x="170" y="199" text-anchor="end">held-out test (3 tasks)</text>
+      <line class="connector" x1="431" y1="192" x2="468" y2="192"/>
+      <circle class="dot-base" cx="425" cy="192" r="6"/>
+      <circle class="dot-opt"  cx="473" cy="192" r="6"/>
+      <text class="val-label"     x="425" y="179" text-anchor="middle">55.6</text>
+      <text class="val-label-opt" x="473" y="179" text-anchor="middle">66.7</text>
+      <text class="gain-label" x="490" y="196">+11.1 pp · +20.0%</text>
+
+      <!-- Legend -->
+      <g transform="translate(230,296)">
+        <circle class="dot-base" cx="6" cy="0" r="6"/>
+        <text class="legend-text" x="20" y="4">baseline (seed)</text>
+        <circle class="dot-opt" cx="180" cy="0" r="6"/>
+        <text class="legend-text" x="194" y="4">optimized (best candidate)</text>
+      </g>
+    </svg>
+    <figcaption class="chart-caption">
+      Rewards normalized to 0–100 for a shared axis. <code>toy_calc</code> is omitted — it's a
+      deterministic loop check (0 → 100 by construction), not a comparative benchmark.
+    </figcaption>
+  </figure>
+
   <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
     <em>Last reviewed: 2026-07-13.</em>
   </p>
@@ -181,8 +255,19 @@
 
 <footer class="footer">
   <div class="footer-inner">
-    <div>Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em></div>
-    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+    <div>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
   </div>
 </footer>
 

@@ -64,9 +64,19 @@ body {
   color: var(--ink);
   text-decoration: none;
   letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .nav-brand:hover { color: var(--accent-ink); }
+
+.nav-brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: block;
+}
 
 .nav-links {
   display: flex;
@@ -117,9 +127,9 @@ body {
 }
 
 .hero-logo {
-  width: 96px;
+  width: 148px;
   height: auto;
-  margin: 0 auto 1.2rem;
+  margin: 0 auto 1.4rem;
   display: block;
 }
 
@@ -467,6 +477,121 @@ table code {
   border-color: var(--accent-soft);
 }
 
+/* ─────────────────────── affiliation strips ─────────────────────── */
+
+/* Hero variant — home page, below the badges */
+.hero-affil {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 2.5rem;
+  color: var(--sub);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-affil-label { color: var(--sub); font-weight: 500; }
+
+.hero-affil-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.hero-affil-logos img { display: block; }
+.hero-affil-logos .logo-ibm { height: 26px; width: auto; }
+.hero-affil-logos .logo-redhat { height: 26px; width: auto; }
+
+/* Footer variant — smaller, subdued, on every page */
+.footer-affil {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--sub);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.footer-affil-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.footer-affil-logos img { display: block; }
+.footer-affil-logos .logo-ibm { height: 16px; width: auto; }
+.footer-affil-logos .logo-redhat { height: 16px; width: auto; }
+
+/* ─────────────────────── dumbbell chart (results page) ─────────────────────── */
+
+.chart-figure {
+  margin: 2rem 0 1rem;
+  padding: 0;
+}
+
+.chart-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.chart-caption {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 0.6rem auto 0;
+  max-width: 620px;
+  line-height: 1.5;
+}
+
+/* SVG chart colors — reuse for maintenance */
+.chart-figure .grid-line { stroke: var(--border-soft); stroke-width: 1; }
+.chart-figure .axis-tick { stroke: var(--border); stroke-width: 1; }
+.chart-figure .axis-label { fill: var(--sub); font-size: 11px; font-family: inherit; }
+.chart-figure .row-label { fill: var(--ink); font-size: 12px; font-family: inherit; font-weight: 500; }
+.chart-figure .row-sub { fill: var(--sub); font-size: 10px; font-family: inherit; }
+.chart-figure .connector { stroke: #c5c8cf; stroke-width: 2; }
+.chart-figure .dot-base { fill: #ffffff; stroke: var(--muted); stroke-width: 2; }
+.chart-figure .dot-opt { fill: var(--success); stroke: var(--success); stroke-width: 2; }
+.chart-figure .val-label { fill: var(--body); font-size: 11px; font-family: inherit; font-variant-numeric: tabular-nums; }
+.chart-figure .val-label-opt { fill: var(--success); font-size: 11px; font-family: inherit; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-figure .gain-label { fill: var(--success); font-size: 11px; font-family: inherit; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-figure .legend-text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+
+/* ─────────────────────── architecture diagram ─────────────────────── */
+
+.arch-diagram {
+  margin: 1rem 0 2rem;
+  padding: 1.2rem 0.5rem 0.5rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.arch-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.arch-diagram .phase-box { fill: #ffffff; stroke: var(--border); stroke-width: 1; }
+.arch-diagram .phase-box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.arch-diagram .phase-label { fill: var(--ink); font-size: 12px; font-family: inherit; font-weight: 600; text-anchor: middle; }
+.arch-diagram .phase-sub { fill: var(--muted); font-size: 10px; font-family: inherit; text-anchor: middle; }
+.arch-diagram .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.arch-diagram .arrow-accent { stroke: var(--accent-ink); stroke-width: 1.5; fill: none; }
+.arch-diagram .loop-box { fill: #ffffff; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; }
+.arch-diagram .loop-label { fill: var(--accent-ink); font-size: 11px; font-family: inherit; font-weight: 600; }
+.arch-diagram .loop-step { fill: var(--ink); font-size: 11px; font-family: inherit; }
+.arch-diagram .caption { fill: var(--muted); font-size: 10px; font-family: inherit; text-anchor: middle; }
+
 /* ─────────────────────── footer ─────────────────────── */
 
 .footer {
@@ -495,10 +620,15 @@ table code {
 @media (max-width: 640px) {
   .nav-inner { padding: 0.7rem 1rem; gap: 1rem; }
   .nav-links { gap: 0.9rem; font-size: 0.85rem; }
+  .nav-brand-logo { width: 24px; height: 24px; }
   .page, .page-narrow { padding: 2rem 1rem 3rem; }
+  .hero-logo { width: 112px; }
   .hero h1 { font-size: 2.2rem; }
   .hero .tagline { font-size: 1.05rem; }
   .hero .description { font-size: 1rem; }
+  .hero-affil { flex-direction: column; gap: 0.5rem; }
+  .hero-affil-logos .logo-ibm,
+  .hero-affil-logos .logo-redhat { height: 22px; }
   .doc h1 { font-size: 1.8rem; }
   .doc h2 { font-size: 1.3rem; }
   table { font-size: 0.85rem; }
