@@ -33,6 +33,23 @@ from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 DOMAIN = "airline"
 
 
+def _shown_metrics(reward: float, reward_info: dict, rollout) -> list:
+    """Shown-only secondary metrics for display; the GATE still uses reward (primary).
+
+    Always emits the primary ``reward`` (== Score.reward) plus at least one shown-only
+    secondary (``cost_usd``), and ``db_match`` when tau2 reports the DB check. These ride
+    through the results JSON for the dashboard and never affect accept/reject.
+    """
+    metrics = [{"name": "reward", "value": float(reward), "primary": True, "direction": "higher"}]
+    db_check = (reward_info or {}).get("db_check") or {}
+    if "db_match" in db_check:
+        metrics.append({"name": "db_match", "value": 1.0 if db_check.get("db_match") else 0.0,
+                        "primary": False, "direction": "higher"})
+    metrics.append({"name": "cost_usd", "value": float(getattr(rollout, "cost_usd", 0.0) or 0.0),
+                    "primary": False, "direction": "lower"})
+    return metrics
+
+
 # ---------------------------------------------------------------------------
 # Candidate building helpers (pure; no network)
 # ---------------------------------------------------------------------------
@@ -379,6 +396,7 @@ class Adapter(CapabilityAdapter):
                     f"({rollout.error}). This is uncontrollable noise, not an agent "
                     "policy/tool failure; do not optimize against it."
                 ),
+                metrics=_shown_metrics(0.0, {}, rollout),
             )
 
         reward = float(meta.get("tau2_reward", 0.0) or 0.0)
@@ -391,7 +409,10 @@ class Adapter(CapabilityAdapter):
         ctx["trace"] = rollout.trace or rollout.output or meta.get("trace") or []
 
         feedback = self._build_feedback(reward, reward_info, ctx)
-        return Score(task_id=task.id, reward=reward, feedback=feedback)
+        return Score(
+            task_id=task.id, reward=reward, feedback=feedback,
+            metrics=_shown_metrics(reward, reward_info, rollout),
+        )
 
     # ---- gold-safe rollout introspection (for argument-level feedback) ----
     #
