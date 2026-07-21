@@ -101,15 +101,33 @@ class Score:
         self._validate_metrics()
 
     def _validate_metrics(self) -> None:
+        # Fully validate every entry: a malformed catalog that slips through here
+        # crashes later in harness._aggregate_metrics (float(value), name as dict key).
         if not self.metrics:
             return
-        primaries = [m for m in self.metrics if m.get("primary") is True]
-        if len(primaries) != 1:
-            raise ValueError(f"exactly one metric must be primary, got {len(primaries)}")
+        seen: set = set()
+        n_primary = 0
         for m in self.metrics:
+            if not isinstance(m, dict):
+                raise ValueError(f"metric entry must be a dict, got {type(m).__name__}")
+            name = m.get("name")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(f"metric name must be a non-empty string, got {name!r}")
+            if name in seen:
+                raise ValueError(f"duplicate metric name {name!r}")
+            seen.add(name)
+            primary = m.get("primary")
+            if not isinstance(primary, bool):
+                raise ValueError(f"metric {name!r} 'primary' must be a bool, got {primary!r}")
+            n_primary += primary
             if m.get("direction") not in ("higher", "lower"):
-                raise ValueError(f"metric {m.get('name')!r} needs direction higher|lower")
-        pv = float(primaries[0]["value"])
+                raise ValueError(f"metric {name!r} needs direction higher|lower")
+            value = m.get("value")
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"metric {name!r} value must be numeric, got {value!r}")
+        if n_primary != 1:
+            raise ValueError(f"exactly one metric must be primary, got {n_primary}")
+        pv = float(next(m["value"] for m in self.metrics if m["primary"]))
         if abs(pv - self.reward) > 1e-9:
             raise ValueError(f"primary metric value {pv} must equal reward {self.reward}")
 

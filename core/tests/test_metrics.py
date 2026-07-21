@@ -46,3 +46,47 @@ def test_direction_must_be_higher_or_lower():
 def test_primary_value_must_match_reward():
     with pytest.raises(ValueError):
         _score(metrics=[{"name": "a", "value": 0.5, "primary": True, "direction": "higher"}])
+
+
+def _ok_primary():
+    return {"name": "acc", "value": 0.8, "primary": True, "direction": "higher"}
+
+
+def test_secondary_value_must_be_numeric():
+    # non-numeric value would crash later in _aggregate_metrics (float(m["value"]))
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(),
+                        {"name": "note", "value": "fast", "primary": False, "direction": "lower"}])
+
+
+def test_bool_value_rejected():
+    # bool is a subclass of int but is not a metric value
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(),
+                        {"name": "ok", "value": True, "primary": False, "direction": "higher"}])
+
+
+def test_name_must_be_nonempty_string():
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(),
+                        {"name": "", "value": 1.0, "primary": False, "direction": "lower"}])
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(),
+                        {"name": None, "value": 1.0, "primary": False, "direction": "lower"}])
+
+
+def test_duplicate_names_rejected():
+    # names are used as dict keys during aggregation; duplicates silently collide
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(),
+                        {"name": "acc", "value": 1.0, "primary": False, "direction": "higher"}])
+
+
+def test_primary_must_be_bool():
+    with pytest.raises(ValueError):
+        _score(metrics=[{"name": "a", "value": 0.8, "primary": 1, "direction": "higher"}])
+
+
+def test_non_dict_entry_rejected():
+    with pytest.raises(ValueError):
+        _score(metrics=[_ok_primary(), ["not", "a", "dict"]])
