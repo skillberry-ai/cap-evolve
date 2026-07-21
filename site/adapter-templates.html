@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adapter templates — cap-evolve</title>
+  <meta name="description" content="Copy-and-run cap-evolve adapter templates — JSONL, HuggingFace, tau2-bench, SWE-bench, SkillsBench — that work with any litellm provider. Onboarding a benchmark is config, not code.">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260720-1">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a href="adapter-templates.html" class="active">Adapter templates</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Adapter templates</h1>
+  <p class="lead">
+    Onboarding a benchmark should be <strong>config, not code</strong>. Instead of writing an
+    adapter from scratch, copy a ready-made template, drop in the shared
+    <code>model_config.py</code>, set credentials in a <code>.env</code>, and run. You only
+    write code when task loading or scoring is genuinely custom.
+  </p>
+
+<pre><code>cp -r templates/adapters/&lt;template&gt;/*  .capevolve/project/adapters/
+cp    templates/adapters/model_config.py  .capevolve/project/adapters/
+mv    .capevolve/project/adapters/seed_capability  .capevolve/project/seed_capability
+# set MODEL + credentials in a repo-root .env, then:
+cap-evolve check &amp;&amp; cap-evolve run</code></pre>
+
+  <h2>Which template?</h2>
+  <table>
+    <thead>
+      <tr><th>Template</th><th>Best for</th><th>Optimizes</th><th>Task source</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>jsonl_litellm/</code></td><td><strong>The common case</strong> — start here</td><td>a system prompt</td><td>a local <code>tasks.jsonl</code></td></tr>
+      <tr><td><code>huggingface_litellm/</code></td><td>any HuggingFace eval dataset</td><td>a system prompt</td><td><code>datasets.load_dataset(...)</code></td></tr>
+      <tr><td><code>tau2_bench/</code></td><td>tau2-bench airline</td><td>system-prompt policy + tool code</td><td>tau2's runner</td></tr>
+      <tr><td><code>skillsbench/</code></td><td>SkillsBench</td><td>shared Agent Skills</td><td>BenchFlow <code>bench eval run</code></td></tr>
+      <tr><td><code>swe_bench/</code></td><td>SWE-bench / Lite</td><td>coding-agent prompt</td><td>HuggingFace + Docker harness</td></tr>
+    </tbody>
+  </table>
+  <p>
+    The first two are <strong>generic</strong> — point them at your data with env vars, no
+    code edits. The last three are <strong>worked benchmark adapters</strong> you copy and run.
+  </p>
+
+  <h2>One line to switch provider</h2>
+  <p>
+    All templates wire the model through <code>model_config.py</code>, which resolves
+    credentials from env vars by the <code>MODEL</code> prefix (the same routing litellm does).
+    It is <strong>lazy</strong> — no network at import — so <code>cap-evolve check</code> stays
+    offline. Switching providers is a one-line <code>MODEL=</code> change, no adapter edits:
+  </p>
+
+<pre><code>MODEL=gpt-4.1-mini                         OPENAI_API_KEY=sk-…            # OpenAI
+MODEL=anthropic/claude-sonnet-4-6          ANTHROPIC_API_KEY=sk-ant-…     # Anthropic
+MODEL=vertex_ai/claude-sonnet-4-6                                         # Vertex AI (ADC — no key)
+MODEL=azure/gpt-4o   AZURE_API_KEY=…       AZURE_API_BASE=https://….openai.azure.com   # Azure
+MODEL=ollama/qwen2.5:7b-instruct           API_BASE=http://localhost:11434  # Ollama (local)
+MODEL=litellm_proxy/my-model  LITELLM_PROXY_API_BASE=http://proxy:4000  LITELLM_PROXY_API_KEY=sk-…  # any proxy
+MODEL=openai/my-model  OPENAI_API_KEY=…    OPENAI_API_BASE=http://my-endpoint/v1        # any OpenAI-compatible</code></pre>
+
+  <h2>The common case — <code>jsonl_litellm</code></h2>
+  <p>
+    Tasks are one JSON object per line — <code>{"id", "input", "target"}</code>. Point the
+    adapter at your file, pick a scoring mode, set a model; the optimizer edits the system
+    prompt in <code>seed_capability/prompt.txt</code>.
+  </p>
+
+<pre><code>TASKS_FILE=/path/to/tasks.jsonl     # {"id","input","target"} per line
+SCORING=exact                       # exact | contains | regex
+MODEL=gpt-4.1-mini
+OPENAI_API_KEY=sk-…</code></pre>
+
+  <p>
+    Full per-template env-var tables, prerequisites, the provider matrix, and the
+    “write your own” guide are in
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_TEMPLATES.md">docs/ADAPTER_TEMPLATES.md</a>;
+    the templates themselves are in
+    <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/templates/adapters">templates/adapters/</a>.
+  </p>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em></div>
+    <div><a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

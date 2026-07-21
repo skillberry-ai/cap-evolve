@@ -1,24 +1,33 @@
 # SWE-bench adapter template — cap-evolve configuration
 #
-# Copy capevolve.yaml + adapter.py + model_config.py to .capevolve/project/
-# and adjust the env vars in your .env file (see adapter.py header).
+# Copy adapter.py + model_config.py into .capevolve/project/adapters/ and
+# seed_capability/ into .capevolve/project/seed_capability/, then set env vars in
+# a repo-root .env (see adapter.py header). Switching providers is a one-line
+# MODEL= change — see model_config.py.
+#
+# Keep the run cheap: SWE-bench evaluation is a Docker build per instance. Pin a
+# small subset with SWEBENCH_INSTANCE_IDS (comma-separated) in your .env, e.g.
+#   SWEBENCH_INSTANCE_IDS=psf__requests-2317,psf__requests-863
+# then the split ratios below partition just that subset.
 #
 # Minimal .env example (OpenAI):
 #   MODEL=gpt-4.1-mini
 #   OPENAI_API_KEY=sk-…
-#
-# See model_config.py for all supported providers.
+#   SWEBENCH_INSTANCE_IDS=psf__requests-2317
 
 capabilities:       [system-prompt]
 capability_path:    seed_capability
-optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode
-optimizer_model:    claude-opus-4-6
-algorithm_skill:    all-at-once
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""                    # e.g. a claude model id for claude-code
+algorithm_skill:    hill-climb
+algorithm_focus:    all
 dataset_source:     adapter
-split_ids_file:     "inputs/split_ids.json"
-num_trials:         1                     # SWE-bench is mostly deterministic at temp=0
-gate_mode:          significant
-gate_k_se:          0.5
+split_train:        0.34
+split_val:          0.33
+split_test:         0.33
+num_trials:         1                     # SWE-bench is ~deterministic at temp=0
+gate_mode:          paired
+gate_k_se:          1.0
 max_iterations:     20
 stall:              5
 store:              git

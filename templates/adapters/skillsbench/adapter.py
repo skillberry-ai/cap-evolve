@@ -18,9 +18,12 @@ SETUP:
        ANTHROPIC_AUTH_TOKEN=sk-ant-…
 
   4. Optional env vars:
-       SKILLSBENCH_BENCH_BIN=/path/to/bench      # default: ~/.local/bin/bench
-       SKILLSBENCH_CONCURRENCY=7                  # parallel tasks (default: 7)
-       SKILLSBENCH_TASK_TIMEOUT=1800              # per-task timeout in seconds
+       SKILLSBENCH_MODEL=claude-sonnet-4-6        # the in-sandbox agent model (as your gateway names it)
+       SKILLSBENCH_AGENT=claude                   # agent kind bench runs
+       SKILLSBENCH_SANDBOX=docker                 # docker | modal
+       SKILLSBENCH_BENCH_BIN=/path/to/bench       # default: ~/.local/bin/bench
+       SKILLSBENCH_CONCURRENCY=7                   # parallel tasks (default: 7)
+       SKILLSBENCH_TASK_TIMEOUT=1800               # per-task timeout in seconds
 
   5. Run: cap-evolve check && cap-evolve run
 
@@ -53,9 +56,9 @@ from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 SOURCE_REPO = "benchflow-ai/skillsbench"
 SOURCE_PATH = "tasks"
 SOURCE_REF = "main"
-AGENT = "claude"
-MODEL = "claude-sonnet-4-6"
-SANDBOX = "docker"
+AGENT = os.environ.get("SKILLSBENCH_AGENT", "claude")
+MODEL = os.environ.get("SKILLSBENCH_MODEL", "claude-sonnet-4-6")
+SANDBOX = os.environ.get("SKILLSBENCH_SANDBOX", "docker")
 BENCH_BIN = os.environ.get("SKILLSBENCH_BENCH_BIN") or str(
     Path.home() / ".local" / "bin" / "bench"
 )
@@ -98,8 +101,8 @@ def _load_env() -> None:
                     val = val.strip().strip('"').strip("'")
                     if key:
                         os.environ.setdefault(key, val)
-            except Exception:
-                pass
+            except Exception as exc:  # non-fatal: env vars may already be set
+                print(f"skillsbench: could not read {env}: {exc}", file=sys.stderr)
             break
 
 
@@ -143,6 +146,18 @@ class Adapter(CapabilityAdapter):
         """Run ALL tasks in ONE bench eval run call, in parallel."""
         if not tasks:
             return {}
+
+        # Short-circuit unknown task ids WITHOUT launching bench — this keeps the
+        # `cap-evolve check` stub-probe (a synthetic "__probe__" task) cheap and
+        # offline, and rejects any id that is not a real SkillsBench task.
+        known = set(TASK_IDS)
+        results: dict[str, Rollout] = {
+            t.id: Rollout(task_id=t.id, error=f"unknown SkillsBench task id: {t.id!r}")
+            for t in tasks if t.id not in known
+        }
+        tasks = [t for t in tasks if t.id in known]
+        if not tasks:
+            return results
 
         candidate_dir = Path(ctx).resolve()
         jobs_dir = self._jobs_dir(candidate_dir, seed)
@@ -226,7 +241,7 @@ class Adapter(CapabilityAdapter):
         finally:
             shutil.rmtree(skills_root, ignore_errors=True)
 
-        results: dict[str, Rollout] = {}
+        # (results already holds any unknown-task-id errors from the guard above)
         for t in tasks:
             if launch_err is not None:
                 results[t.id] = Rollout(
@@ -293,10 +308,11 @@ class Adapter(CapabilityAdapter):
 
     @staticmethod
     def _jobs_root(skills_dir: Path) -> Path:
+        # Non-fatal path-shape probe; any odd layout falls back to the default root.
         try:
             if skills_dir.parent.name == "candidates":
                 return skills_dir.parent.parent / "bench_jobs"
-        except Exception:
+        except (AttributeError, IndexError, TypeError):
             pass
         return Path(__file__).resolve().parents[2] / ".bench_runs" / "default"
 

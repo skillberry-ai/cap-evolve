@@ -11,14 +11,14 @@
 
 capabilities:       [system-prompt, tools]
 capability_path:    seed_capability
-optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode
-optimizer_model:    claude-opus-4-6
-algorithm_skill:    all-at-once
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""                    # e.g. a claude model id for claude-code
+algorithm_skill:    hill-climb
+algorithm_focus:    all
 dataset_source:     adapter
-split_ids_file:     "inputs/split_ids.json"
 num_trials:         5                     # tau2 is stochastic — more trials = lower noise
-gate_mode:          significant
-gate_k_se:          0.5
+gate_mode:          paired
+gate_k_se:          1.0
 max_iterations:     20
 stall:              5
 store:              git

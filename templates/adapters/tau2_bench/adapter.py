@@ -13,8 +13,8 @@ SETUP:
   3. Set env vars (in .env or shell):
        MODEL=gpt-4.1-mini  OPENAI_API_KEY=sk-…       # OpenAI
        MODEL=anthropic/claude-sonnet-4-6  ANTHROPIC_API_KEY=…  # Anthropic
+       MODEL=vertex_ai/claude-sonnet-4-6              # Vertex AI (ADC, no key)
        MODEL=ollama/qwen2.5:7b-instruct  API_BASE=http://localhost:11434  # local
-       MODEL=hosted_vllm/openai/gpt-oss-120b  RITS_API_KEY=…  # IBM RITS
        MODEL=litellm_proxy/my-model  LITELLM_PROXY_API_BASE=http://proxy:4000  LITELLM_PROXY_API_KEY=…
 
   4. Run: cap-evolve check && cap-evolve run

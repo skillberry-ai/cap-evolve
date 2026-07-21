@@ -14,18 +14,20 @@ SETUP:
 
   4. Copy model_config.py to .capevolve/project/adapters/
 
-  5. Set env vars (in .env or shell):
+  5. Set env vars (in .env or shell) — any litellm provider, see model_config.py:
        MODEL=gpt-4.1-mini  OPENAI_API_KEY=sk-…       # OpenAI
        MODEL=anthropic/claude-sonnet-4-6  ANTHROPIC_API_KEY=…  # Anthropic
+       MODEL=vertex_ai/claude-sonnet-4-6              # Vertex AI (ADC, no key)
        MODEL=ollama/qwen2.5:7b-instruct  API_BASE=http://localhost:11434  # local
-       MODEL=hosted_vllm/openai/gpt-oss-120b  RITS_API_KEY=…  # IBM RITS
        MODEL=litellm_proxy/my-model  LITELLM_PROXY_API_BASE=http://proxy:4000  LITELLM_PROXY_API_KEY=…
 
   6. Optional env vars:
        SWEBENCH_DATASET=princeton-nlp/SWE-bench_Lite  # default dataset
        SWEBENCH_SPLIT=test                             # dataset split
        SWEBENCH_MAX_WORKERS=4                          # parallel evaluations
-       SWEBENCH_TIMEOUT=300                            # per-instance timeout (s)
+       SWEBENCH_TIMEOUT=1800                           # per-instance timeout (s)
+       SWEBENCH_NAMESPACE=none                         # "none" builds images locally (arm64/Mac);
+                                                       #   set "swebench" to pull prebuilt x86 images
 
   7. Run: cap-evolve check && cap-evolve run
 
@@ -66,14 +68,19 @@ import model_config
 DATASET = os.environ.get("SWEBENCH_DATASET", "princeton-nlp/SWE-bench_Lite")
 SPLIT = os.environ.get("SWEBENCH_SPLIT", "test")
 MAX_WORKERS = int(os.environ.get("SWEBENCH_MAX_WORKERS", "4"))
-TIMEOUT = int(os.environ.get("SWEBENCH_TIMEOUT", "300"))
+TIMEOUT = int(os.environ.get("SWEBENCH_TIMEOUT", "1800"))
+# "none" → build images locally (correct on arm64/Mac); "swebench" → pull prebuilt x86.
+NAMESPACE = os.environ.get("SWEBENCH_NAMESPACE", "none")
+# Optional comma-separated subset — the "config, not code" knob for a small/cheap
+# run (each instance is a Docker build). Empty → use the whole split.
+INSTANCE_IDS = [s.strip() for s in os.environ.get("SWEBENCH_INSTANCE_IDS", "").split(",") if s.strip()]
 
 # Cache loaded instances so tasks() is stable across calls.
 _instances_cache: list[dict] | None = None
 
 
 def _load_instances() -> list[dict]:
-    """Load SWE-bench instances from HuggingFace datasets (cached)."""
+    """Load SWE-bench instances from HuggingFace datasets (cached, optional subset)."""
     global _instances_cache
     if _instances_cache is not None:
         return _instances_cache
@@ -82,12 +89,21 @@ def _load_instances() -> list[dict]:
         from datasets import load_dataset
 
         ds = load_dataset(DATASET, split=SPLIT)
-        _instances_cache = [dict(row) for row in ds]
+        rows = [dict(row) for row in ds]
     except Exception as e:
         raise RuntimeError(
             f"Failed to load SWE-bench dataset {DATASET}/{SPLIT}: {e}. "
             "Install: pip install datasets"
         ) from e
+
+    if INSTANCE_IDS:
+        want = set(INSTANCE_IDS)
+        rows = [r for r in rows if r["instance_id"] in want]
+        if not rows:
+            raise RuntimeError(
+                f"None of SWEBENCH_INSTANCE_IDS={INSTANCE_IDS} are in {DATASET}/{SPLIT}."
+            )
+    _instances_cache = rows
     return _instances_cache
 
 
@@ -161,6 +177,7 @@ Do not include any explanation before or after the patch.
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
+                seed=seed,  # forwarded per the stochastic-runner contract
                 **model_config.llm_kwargs(),
             )
             output = response.choices[0].message.content or ""
@@ -219,6 +236,17 @@ Do not include any explanation before or after the patch.
                 "to output a valid unified diff.",
             )
 
+        # A non-diff can never resolve an instance — reject cheaply without paying
+        # for a Docker build. This also keeps `cap-evolve check`'s scorer probe
+        # (a synthetic non-diff rollout) offline and fast.
+        if not _looks_like_diff(patch):
+            return Score(
+                task_id=task.id,
+                reward=0.0,
+                feedback="Output is not a valid unified diff (no diff/---/@@ markers). "
+                "The prompt must instruct the model to output ONLY a unified diff.",
+            )
+
         instance_id = task.id
 
         try:
@@ -233,97 +261,87 @@ Do not include any explanation before or after the patch.
         return Score(task_id=task.id, reward=reward, feedback=feedback)
 
     def _evaluate_patch(self, instance_id: str, patch: str) -> tuple[float, str]:
-        """Run swebench evaluation for a single instance + patch.
+        """Run the swebench Docker harness for one instance + patch.
 
-        Uses the swebench harness CLI which runs in Docker. Returns (reward, feedback).
+        Uses the current ``swebench.harness.run_evaluation`` CLI
+        (``--dataset_name/--predictions_path/--max_workers/--run_id``) and reads
+        the ``<model>.<run_id>.json`` report it writes (``resolved_ids``).
+        Returns ``(reward, feedback)``.
         """
+        run_id = f"capevolve_{instance_id}"
         with tempfile.TemporaryDirectory(prefix="swebench_eval_") as tmpdir:
-            predictions_path = Path(tmpdir) / "predictions.jsonl"
-            results_path = Path(tmpdir) / "results"
-            results_path.mkdir()
-
-            prediction = {
-                "instance_id": instance_id,
-                "model_patch": patch,
-                "model_name_or_path": model_config.MODEL,
-            }
+            tmp = Path(tmpdir)
+            predictions_path = tmp / "predictions.jsonl"
             predictions_path.write_text(
-                json.dumps(prediction) + "\n", encoding="utf-8"
+                json.dumps(
+                    {
+                        "instance_id": instance_id,
+                        "model_patch": patch,
+                        "model_name_or_path": model_config.MODEL,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
             )
 
             cmd = [
                 sys.executable,
                 "-m",
                 "swebench.harness.run_evaluation",
-                "--predictions_path",
-                str(predictions_path),
-                "--swe_bench_tasks",
-                DATASET,
-                "--log_dir",
-                str(results_path),
-                "--testbed",
-                str(Path(tmpdir) / "testbed"),
-                "--timeout",
-                str(TIMEOUT),
-                "--verbose",
+                "--dataset_name", DATASET,
+                "--split", SPLIT,
+                "--instance_ids", instance_id,
+                "--predictions_path", str(predictions_path),
+                "--max_workers", str(MAX_WORKERS),
+                "--timeout", str(TIMEOUT),
+                "--namespace", NAMESPACE,   # "none" → build locally (arm64-safe)
+                "--run_id", run_id,
             ]
 
             try:
+                # Run inside tmpdir so the report JSON + ./logs land there.
                 proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=TIMEOUT + 120,
+                    cmd, capture_output=True, text=True,
+                    timeout=TIMEOUT + 600, cwd=tmpdir,
                 )
             except subprocess.TimeoutExpired:
                 return 0.0, (
-                    f"Evaluation timed out after {TIMEOUT + 120}s. "
-                    "Consider increasing SWEBENCH_TIMEOUT."
+                    f"Evaluation timed out. Docker image builds can be slow on the "
+                    f"first run; raise SWEBENCH_TIMEOUT (currently {TIMEOUT}s)."
                 )
 
-            # Parse evaluation results.
-            report_files = list(results_path.rglob("*.json"))
-            resolved = False
-            test_output = ""
-
-            for rf in report_files:
+            # The harness writes <model_name_or_path sanitized>.<run_id>.json to cwd.
+            reports = list(tmp.glob(f"*{run_id}.json")) + list(tmp.glob("*.json"))
+            for rf in reports:
                 try:
                     report = json.loads(rf.read_text(encoding="utf-8"))
-                    if isinstance(report, dict):
-                        # Check for resolved status.
-                        inst_report = report.get(instance_id, report)
-                        if isinstance(inst_report, dict):
-                            if inst_report.get("resolved", False):
-                                resolved = True
-                            test_output = str(
-                                inst_report.get("test_output", "")
-                            )[:1500]
-                except Exception:
+                except Exception:  # not the report file — skip
                     continue
+                resolved_ids = report.get("resolved_ids", [])
+                if instance_id in resolved_ids:
+                    return 1.0, "Instance resolved — the patch makes the tests pass."
+                if report.get("completed_ids") or report.get("submitted_instances"):
+                    return 0.0, (
+                        "Instance NOT resolved: the patch applied/ran but did not make "
+                        "the failing tests pass. Guide the model toward a correct, "
+                        "minimal fix for the described issue."
+                    )
 
-            if not report_files:
-                stderr_tail = (proc.stderr or "")[-1000:]
-                return 0.0, (
-                    f"No evaluation results found. "
-                    f"Harness exit code: {proc.returncode}. "
-                    f"stderr: {stderr_tail}"
-                )
-
-            if resolved:
-                return 1.0, "Instance resolved — all tests pass with the generated patch."
-
-            feedback_parts = [
-                f"Instance NOT resolved (reward 0.0). "
-                f"The patch did not make all tests pass."
-            ]
-            if test_output:
-                feedback_parts.append(f"Test output (truncated): {test_output}")
-            return 0.0, " ".join(feedback_parts)
+            stderr_tail = (proc.stderr or "")[-800:]
+            return 0.0, (
+                f"No evaluation report produced (harness exit {proc.returncode}). "
+                f"Check Docker is running and the image built. stderr: {stderr_tail}"
+            )
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _looks_like_diff(text: str) -> bool:
+    """True if ``text`` contains unified-diff markers (cheap, no Docker)."""
+    return any(m in text for m in ("diff --git", "\n--- ", "--- ", "@@ ")) or text.startswith("--- ")
 
 
 def _extract_patch(text: str) -> str:
@@ -369,3 +387,13 @@ Guidelines:
 - Ensure your patch applies cleanly to the repository.
 - Output ONLY the unified diff patch — no explanations, no markdown.
 """
+
+
+if __name__ == "__main__":
+    # ponytail self-check: patch extraction + diff detection (no Docker / model).
+    md = "Here is the fix:\n```diff\n--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@\n-a\n+b\n```\ndone"
+    assert _extract_patch(md).startswith("--- a/f.py"), _extract_patch(md)
+    assert _looks_like_diff("--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@")
+    assert not _looks_like_diff("__probe_output__")  # check probe stays offline
+    assert not _looks_like_diff("I could not find the bug.")
+    print("swe_bench extract/diff self-check: OK")

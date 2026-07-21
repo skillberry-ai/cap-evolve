@@ -1,0 +1,25 @@
+# jsonl_litellm adapter template — cap-evolve configuration
+#
+# Copy this dir's contents + model_config.py into .capevolve/project/adapters/
+# (the seed_capability/ dir goes to .capevolve/project/seed_capability/), then set
+# your model + credentials in a repo-root .env. Switching providers is a one-line
+# MODEL= change — see model_config.py.
+#
+# Minimal .env (OpenAI):
+#   MODEL=gpt-4.1-mini
+#   OPENAI_API_KEY=sk-…
+#   SCORING=exact            # exact | contains | regex
+
+capabilities:       [system-prompt]
+capability_path:    seed_capability
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""                    # e.g. a claude model id for claude-code
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter               # tasks() reads TASKS_FILE (default tasks.jsonl)
+num_trials:         1                     # raise to 3–5 if the model is stochastic
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     10
+stall:              2
+store:              git

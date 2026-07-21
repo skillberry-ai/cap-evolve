@@ -7,7 +7,11 @@ build/
 dist/
 .pytest_cache/
 .venv/
+.venv-*/
 venv/
+
+# local E2E scratch (venvs, benchmark clones, run artifacts, .env credentials)
+e2e/
 
 # cap-evolve run state (per-run, not source)
 .capevolve/
