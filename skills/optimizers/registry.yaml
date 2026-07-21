@@ -52,7 +52,7 @@
 # Per-CLI install/auth/flag prose lives in references/<name>.md.
 
 mock:
-  command_template: "python {self_dir}/_mock_apply.py --workdir {workdir} --prompt {prompt}"
+  command_template: "python3 {self_dir}/_mock_apply.py --workdir {workdir} --prompt {prompt}"
   env_keys: ""
   install_url: ""
   auth_notes: "No auth — deterministic, zero-API. Driven by mock_script.json."
