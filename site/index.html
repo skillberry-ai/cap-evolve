@@ -142,8 +142,9 @@ bash examples/toy_calc/run.sh</code></pre>
         <div class="diff-tile-title">Honest evaluation</div>
         <p class="diff-tile-desc">
           Test split sealed until finalize, scored exactly once; every accepted iteration
-          passes a paired-significance gate on val; every published number ships with its
-          run artifact.
+          passes a paired-significance gate on val — on the primary metric only, with any
+          shown-only secondaries (cost, latency, sub-checks) displayed but never gating;
+          every published number ships with its run artifact.
         </p>
         <span class="diff-tile-link">Splits, gates, sealing →</span>
       </a>
