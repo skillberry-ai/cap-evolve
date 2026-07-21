@@ -1,0 +1,4 @@
+[
+  {"id": "scikit-learn__scikit-learn-10297", "tag": "hard", "agent": "aws/gpt-oss-120b"},
+  {"id": "pallets__flask-4992", "tag": "hard", "agent": "aws/gpt-oss-120b"}
+]

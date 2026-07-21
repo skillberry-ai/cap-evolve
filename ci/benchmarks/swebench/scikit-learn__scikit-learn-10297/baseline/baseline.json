@@ -1,0 +1,36 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "scikit-learn__scikit-learn-10297",
+        "reward": 0.0,
+        "feedback": "Instance NOT resolved: the patch applied/ran but did not make the failing tests pass. Guide the model toward a correct, minimal fix for the described issue.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        }
+      }
+    ],
+    "cost_usd": 0.0005371499999999999,
+    "tokens": 1469,
+    "seconds": 157.55742764472961
+  },
+  "best_id": "seed"
+}

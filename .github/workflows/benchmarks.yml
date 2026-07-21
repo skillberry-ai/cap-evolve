@@ -1,0 +1,106 @@
+# ============================================================================
+# Benchmarks — real optimization regression suite (reward / latency / cost).
+# ============================================================================
+#
+# Runs, per benchmark, a curated set of tasks through cap-evolve using the ADAPTER
+# TEMPLATES: agent aws/gpt-oss-120b, optimizer Claude Code @ claude-opus-4-8, 3 iterations.
+# Baselines are FROZEN (committed under ci/benchmarks/<bench>/<task>/baseline) and reused
+# via `cap-evolve run --reuse-baseline` — the baseline agent is never re-run; CI only
+# optimizes + evaluates, then reports reward/latency/cost vs the frozen baseline and
+# publishes the optimized capabilities for review.
+#
+# REAL models, real $ → NOT part of always-on CI. Runs ONLY when requested:
+#   * manually  — Actions → "Benchmarks" → Run workflow (pick a benchmark), or
+#   * on a PR   — add the `benchmark-test` label.
+#
+# REQUIRES a SELF-HOSTED runner on the IBM network (the gateway is VPC-internal;
+# GitHub-hosted runners cannot reach it). See ci/benchmarks/README.md +
+# ci/benchmarks/runner/arm-runner.sh. Repo secrets: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN.
+# ============================================================================
+
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Which benchmark to run"
+        type: choice
+        default: all
+        options: [all, tau2, swebench, skillsbench]
+      iterations:
+        description: "Optimizer iterations per task (default 1; raise to give the optimizer more budget)"
+        type: string
+        default: "1"
+  pull_request:
+    types: [labeled]
+
+jobs:
+  bench:
+    name: ${{ matrix.bench }}
+    runs-on: [self-hosted, ibm-vpc]
+    # Fork guard: never run PR code from a fork on the self-hosted runner.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(github.event.pull_request.labels.*.name, 'benchmark-test'))
+    strategy:
+      fail-fast: false
+      matrix:
+        bench: [tau2, swebench, skillsbench]
+    concurrency:
+      group: benchmarks-${{ matrix.bench }}-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      ITERATIONS: ${{ github.event.inputs.iterations || '1' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate (skip unselected benchmark on manual dispatch)
+        id: gate
+        run: |
+          sel="${{ github.event.inputs.benchmark || 'all' }}"
+          if [ "$sel" != "all" ] && [ "$sel" != "${{ matrix.bench }}" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup runner env
+        if: steps.gate.outputs.run == 'true'
+        run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
+
+      - name: Run suite
+        if: steps.gate.outputs.run == 'true'
+        run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.bench }}"
+
+      - name: Upload artifacts (metrics + optimized capabilities)
+        if: steps.gate.outputs.run == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ matrix.bench }}
+          path: ci/benchmarks/.work/suite_${{ matrix.bench }}/**
+          if-no-files-found: warn
+
+      - name: Comment results on the PR
+        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = `ci/benchmarks/.work/suite_${{ matrix.bench }}/report.md`;
+            if (!fs.existsSync(path)) return;
+            const body = `<!-- benchmarks:${{ matrix.bench }} -->\n` + fs.readFileSync(path, 'utf8');
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const marker = `<!-- benchmarks:${{ matrix.bench }} -->`;
+            const {data: comments} = await github.rest.issues.listComments({owner, repo, issue_number});
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({owner, repo, comment_id: existing.id, body});
+            } else {
+              await github.rest.issues.createComment({owner, repo, issue_number, body});
+            }

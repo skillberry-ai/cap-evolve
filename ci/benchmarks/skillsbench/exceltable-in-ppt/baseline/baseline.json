@@ -1,0 +1,36 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "exceltable-in-ppt",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 8 verifier test(s) failed:\n  - ::test_output_file_exists: The test failed in the call phase due to an assertion error\n  - ::test_output_is_valid_pptx: The test failed in the call phase due to an assertion error\n  - ::test_embedded_excel_preserved: The test failed in the call phase\n  - ::test_exchange_rate_updated: The test failed in the call phase\n  - ::test_inverse_rate_updated: The test failed in the call phase\n  - ::test_other_cells_unchanged: The test failed in the call phase\n  - ::test_formulas_preserved: The test failed in the call phase\n  - ::test_slide_structure_preserved: The test failed in the call phase",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 433.4782702922821
+  },
+  "best_id": "seed"
+}

@@ -40,3 +40,6 @@ examples/skillsbench/run/
 # by setup.sh at onboarding time, NOT vendored here (only the README is tracked).
 examples/skillsbench/seed_capability/*
 !examples/skillsbench/seed_capability/README.md
+
+# CI benchmark scratch (per-task work dirs)
+ci/benchmarks/.work/
