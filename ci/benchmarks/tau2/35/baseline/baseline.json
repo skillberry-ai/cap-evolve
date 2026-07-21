@@ -1,0 +1,36 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "35",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. Failed action(s): book_reservation.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        }
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 110.98309803009033
+  },
+  "best_id": "seed"
+}
