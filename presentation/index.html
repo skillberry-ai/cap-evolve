@@ -114,6 +114,38 @@
     .reveal .phase-pill .name { font-size: 0.65em; font-weight: 700; color: var(--ink); }
     .reveal .phase-pill .desc { font-size: 0.48em; color: var(--sub); font-style: italic; margin-top: 0.1em; }
 
+    /* SVG loop diagram (slide 2) */
+    .reveal .loop-diagram {
+      display: block; margin: 0.7em auto 0.2em; width: 100%; max-width: 96%; height: auto;
+    }
+    .reveal .loop-diagram .lp-box     { fill: var(--card-bg); stroke: var(--card-border); stroke-width: 1.5; }
+    .reveal .loop-diagram .lp-accent  { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+    .reveal .loop-diagram .lp-name    { fill: var(--ink); font-family: Inter, sans-serif; font-size: 22px; font-weight: 700; text-anchor: middle; }
+    .reveal .loop-diagram .lp-name-accent { fill: var(--accent); }
+    .reveal .loop-diagram .lp-desc    { fill: var(--sub); font-family: Inter, sans-serif; font-size: 14px; font-style: italic; text-anchor: middle; }
+    .reveal .loop-diagram .lp-arrow   { stroke: var(--sub); stroke-width: 2.5; fill: none; }
+    .reveal .loop-diagram .lp-return  { stroke: var(--accent); stroke-width: 2.5; fill: none; }
+    .reveal .loop-diagram .lp-label   { fill: var(--accent); font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; text-anchor: middle; letter-spacing: 0.05em; }
+
+    /* Compact "capabilities" strip (slide 2) */
+    .reveal .surface-strip {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5em; margin: 0.5em auto 0; max-width: 96%; flex-wrap: wrap;
+    }
+    .reveal .surface-title {
+      font-size: 0.5em; color: var(--sub); font-style: italic; letter-spacing: 0.03em;
+      margin-right: 0.15em; text-transform: uppercase;
+    }
+    .reveal .surface-chip {
+      display: inline-block; padding: 0.35em 0.9em; border-radius: 999px;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      color: var(--ink); font-size: 0.5em; font-weight: 600; letter-spacing: 0.02em;
+    }
+    .reveal .surface-note {
+      font-size: 0.45em; color: var(--sub); font-style: italic;
+      text-align: center; margin: 0.3em auto 0;
+    }
+
     /* Roadmap overview tiles (6-item grid) */
     .reveal .roadmap-tile {
       background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
@@ -200,10 +232,9 @@
       <h1 style="letter-spacing:-0.03em;">cap-evolve</h1>
       <div class="subtitle" style="font-size:1.1em;">Optimize agentic capabilities — with agents</div>
       <p style="margin-top:1.4em; font-size:0.65em; color:var(--sub); line-height:1.7;">
-        <strong style="color:var(--ink);">Management review</strong> · first draft<br>
-        Made at IBM · Red Hat        //        v0.x beta        //        github.com/skillberry-ai/cap-evolve
+        Made at IBM · Red Hat        //        v0.1        //        github.com/skillberry-ai/cap-evolve
       </p>
-      <div class="team">⚠ presenter(s) &amp; date — TO CONFIRM</div>
+      <div class="team">Last updated: 2026-07-22</div>
       <aside class="notes">
         Cover. Set the frame: cap-evolve is our optimizer for agentic capabilities. Three parts:
         (1) what it is, (2) where we stand on experiments and results, (3) where we go from here —
@@ -215,38 +246,77 @@
     <!-- Slide 2 — What cap-evolve is (dense: pitch + loop + surfaces) -->
     <section>
       <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
-      <h2>The loop that improves what your agent reads.</h2>
-      <p style="font-size:0.62em; margin-top:0.2em; color:var(--sub); max-width:92%;">
-        <strong style="color:var(--ink);">cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces.</strong>
-        You bring the agent and the eval you already have; cap-evolve runs the loop and reports
-        <strong style="color:var(--ink);">one honest number</strong>. It optimizes what your agent <em>reads</em> — not its weights.
+      <h2>Improve agentic capabilities iteratively — with agents</h2>
+      <p style="font-size:0.62em; margin-top:0.2em; color:var(--sub); max-width:94%;">
+        Agents drive both the <strong style="color:var(--ink);">outer search loop</strong> and the
+        <strong style="color:var(--ink);">inner optimization step</strong>. Bring the agent and the eval
+        you already have; cap-evolve reports <strong style="color:var(--ink);">one honest number</strong>.
+        What your agent <em>reads</em>, not its weights.
       </p>
 
-      <div class="grid-5" style="margin:1em auto 0.4em; max-width:92%; font-size:0.6em;">
-        <div class="phase-pill"><div class="name">evaluate</div><div class="desc">on val split</div></div>
-        <div class="phase-pill"><div class="name">diagnose</div><div class="desc">cluster failures</div></div>
-        <div class="phase-pill accent"><div class="name">propose</div><div class="desc">optimizer-agent edits</div></div>
-        <div class="phase-pill"><div class="name">gate</div><div class="desc">Δ &gt; k·SE</div></div>
-        <div class="phase-pill"><div class="name">commit</div><div class="desc">git + memory</div></div>
-      </div>
-      <p style="font-size:0.5em; color:var(--sub); font-style:italic; text-align:center;">
-        Every iteration is a git commit. Rejected candidates never re-proposed.
-      </p>
+      <svg class="loop-diagram" viewBox="0 0 1200 240"
+           xmlns="http://www.w3.org/2000/svg" role="img"
+           aria-label="cap-evolve iteration loop: evaluate, diagnose, propose, gate, commit, then back to evaluate">
+        <defs>
+          <marker id="arr-fwd" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#b8b8b8"/>
+          </marker>
+          <marker id="arr-ret" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#a48bff"/>
+          </marker>
+        </defs>
 
-      <div class="grid-4" style="max-width:96%; margin:0.6em auto 0;">
-        <div class="card"><div class="who">System prompts</div><div class="role">Rewrite / consolidate / add rules — never drop a needed one.</div></div>
-        <div class="card"><div class="who">Tool code</div><div class="role">Edit implementations for deterministic enforcement; add / wrap / swap.</div></div>
-        <div class="card"><div class="who">Skill packages</div><div class="role">SKILL.md bodies, references, executable scripts.</div></div>
-        <div class="card"><div class="who">MCP surfaces</div><div class="role">Safe edits — docs, examples, which tools are exposed.</div></div>
+        <!-- 5 boxes in a row -->
+        <g>
+          <rect class="lp-box" x="60"  y="30" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="150" y="65">evaluate</text>
+          <text class="lp-desc" x="150" y="90">on val split</text>
+
+          <rect class="lp-box" x="270" y="30" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="360" y="65">diagnose</text>
+          <text class="lp-desc" x="360" y="90">cluster failures</text>
+
+          <rect class="lp-accent" x="480" y="30" width="180" height="80" rx="10"/>
+          <text class="lp-name lp-name-accent" x="570" y="65">propose</text>
+          <text class="lp-desc" x="570" y="90">optimizer-agent edits</text>
+
+          <rect class="lp-box" x="690" y="30" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="780" y="65">gate</text>
+          <text class="lp-desc" x="780" y="90">Δ &gt; k·SE</text>
+
+          <rect class="lp-box" x="900" y="30" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="990" y="65">commit</text>
+          <text class="lp-desc" x="990" y="90">git + memory</text>
+        </g>
+
+        <!-- forward arrows between adjacent boxes -->
+        <line class="lp-arrow" x1="242" y1="70" x2="268" y2="70" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="452" y1="70" x2="478" y2="70" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="662" y1="70" x2="688" y2="70" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="872" y1="70" x2="898" y2="70" marker-end="url(#arr-fwd)"/>
+
+        <!-- return arc: commit-bottom → evaluate-bottom -->
+        <path class="lp-return" d="M 990 112 C 990 200, 150 200, 150 118"
+              marker-end="url(#arr-ret)"/>
+        <text class="lp-label" x="570" y="192">each iteration</text>
+      </svg>
+
+      <div class="surface-strip">
+        <span class="surface-title">Capabilities we optimize:</span>
+        <span class="surface-chip">System prompts</span>
+        <span class="surface-chip">Tool code</span>
+        <span class="surface-chip">Skill packages</span>
+        <span class="surface-chip">MCP surfaces</span>
       </div>
-      <p style="font-size:0.5em; color:var(--sub); font-style:italic; margin-top:0.5em;">
-        Pick one — or combine them, e.g. <span class="kbd">[system-prompt, tools]</span>.
-      </p>
+      <p class="surface-note">Pick one — or combine, e.g. <span class="kbd">[system-prompt, tools]</span>.</p>
 
       <aside class="notes">
-        Frame cap-evolve as a loop that emits one honest number from an eval the audience
-        already has. "Reads, not weights" — no training compute, no model risk.
-        The 4 surfaces slide is meant to open the door for cross-team applicability.
+        Frame cap-evolve as an iterative loop where agents drive both the outer search
+        (which capability to change next) and the inner optimization (what edit to propose).
+        "Reads, not weights" — no training compute, no model risk. The 4 surfaces chips
+        open the door for cross-team applicability.
       </aside>
     </section>
 
@@ -258,7 +328,7 @@
 
       <div class="grid-4" style="max-width:92%; margin:0.8em auto;">
         <div class="num-card">
-          <div class="n">v0.x</div><div class="l">beta</div>
+          <div class="n">v0.1</div><div class="l">beta</div>
           <div class="s">public repo, live docs site</div>
         </div>
         <div class="num-card">
