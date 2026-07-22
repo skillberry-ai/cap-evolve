@@ -49,6 +49,22 @@ def test_custom_view_invalid_ignored(tmp_base, make_run):
     assert _client(tmp_base).get("/api/runs/run_a/custom-view").json() == {}
 
 
+def test_custom_view_rejects_dangerous_schemes(tmp_base, make_run):
+    rd = make_run("run_a", events=BASE_EVENTS)
+    # javascript:/data:/scheme-relative/relative URLs are never used as an iframe src.
+    for bad in (
+        "javascript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "//evil.example.com/",
+        "/relative/path",
+        "ftp://host/file",
+    ):
+        (rd.root / "custom_view.json").write_text(
+            json.dumps({"url": bad}), encoding="utf-8"
+        )
+        assert _client(tmp_base).get("/api/runs/run_a/custom-view").json() == {}
+
+
 def test_custom_view_missing_run_404(tmp_base):
     r = _client(tmp_base).get("/api/runs/run_nope/custom-view")
     assert r.status_code == 404

@@ -65,6 +65,9 @@ export function RunDeepDive() {
     timer.current = setTimeout(() => {
       queryClient.invalidateQueries({ queryKey: ['run', id] })
       queryClient.invalidateQueries({ queryKey: ['runs'] })
+      // A run can declare (or update) its custom view mid-flight — refetch so the
+      // extra tab appears/updates live rather than only after a full reload.
+      queryClient.invalidateQueries({ queryKey: ['custom-view', id] })
     }, 400)
   }, [id, queryClient])
 
@@ -149,6 +152,12 @@ export function RunDeepDive() {
                     <iframe
                       src={customUrl}
                       title={customView?.title || 'Custom view'}
+                      // The embedded page is data-driven (declared by the run dir), so
+                      // sandbox it: allow it to run scripts and talk to its own origin,
+                      // but deny top-level navigation, popups, and same-origin trust.
+                      sandbox="allow-scripts allow-same-origin allow-forms"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
                       className="h-[80vh] w-full rounded-lg border border-border bg-surface"
                     />
                   </div>

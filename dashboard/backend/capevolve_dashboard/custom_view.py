@@ -12,6 +12,7 @@ runs that ship no view are unaffected.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -33,6 +34,12 @@ def read_custom_view(run_dir: Path) -> dict:
     url = data.get("url")
     if not isinstance(url, str) or not url.strip():
         return {}
+    url = url.strip()
+    # Defensive: this value is used directly as an iframe ``src`` by the frontend,
+    # so only allow absolute http(s) URLs. Reject dangerous schemes
+    # (``javascript:``, ``data:``, …) and scheme-relative URLs (``//host``).
+    if url.startswith("//") or not re.match(r"(?i)^https?://", url):
+        return {}
     title = data.get("title")
     title = title.strip() if isinstance(title, str) and title.strip() else "Custom view"
-    return {"title": title, "url": url.strip()}
+    return {"title": title, "url": url}
