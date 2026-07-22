@@ -77,6 +77,15 @@ def test_deterministic_mode_green_allows_stop(tmp_path):
     assert rgc.decide(payload) == 0
 
 
+def test_agent_mode_sealed_without_state_json_allows_stop(tmp_path):
+    # A sealed run (splits.json test_used=true) whose state.json is missing/corrupt
+    # must still be recognized as finalized — the seal is authoritative, not state.json.
+    run_dir = _build_run(tmp_path, "agent", finalized=True)
+    (run_dir / "state.json").unlink()  # simulate missing/corrupt state
+    payload = {"cwd": str(run_dir), "hook_event_name": "Stop", "stop_hook_active": False}
+    assert rgc.decide(payload) == 0
+
+
 def test_agent_mode_relents_when_stop_hook_active(tmp_path):
     run_dir = _build_run(tmp_path, "agent", finalized=False)
     payload = {"cwd": str(run_dir), "hook_event_name": "Stop", "stop_hook_active": True}

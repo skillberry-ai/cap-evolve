@@ -79,6 +79,11 @@ def test_plan_only_surfaces_mode(tmp_path, capsys):
     assert rc == 0
     plan = json.loads(capsys.readouterr().out)
     assert plan["orchestration_mode"] == "agent"
+    # Agent-mode plan stops after baseline (the agent drives the rest) — it must not
+    # list the algorithm/finalize/report steps that this process won't run.
+    assert "baseline" in plan["sequence"]
+    assert "hill-climb" not in plan["sequence"]
+    assert "finalize" not in plan["sequence"]
 
 
 def test_agent_mode_stops_after_baseline_with_handoff(tmp_path, capsys):

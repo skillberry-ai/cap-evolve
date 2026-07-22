@@ -215,7 +215,13 @@ def _cmd_run(argv):
 
     # The run sequence is built from the manifest + spec (orchestrate validates the
     # needs/provides DAG); it now includes intake + the check gate before baseline.
-    sequence = ["intake", "implement-and-check", "baseline", algorithm_name, "finalize", "report"]
+    # In agent mode `cap-evolve run` stops after baseline and hands the loop to the
+    # coding agent, so the plan reflects only what this process actually runs.
+    if orchestration_mode == "agent":
+        sequence = ["intake", "implement-and-check", "baseline",
+                    "<handoff: agent drives the loop, then `cap-evolve finalize`>"]
+    else:
+        sequence = ["intake", "implement-and-check", "baseline", algorithm_name, "finalize", "report"]
 
     if args.plan_only:
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,

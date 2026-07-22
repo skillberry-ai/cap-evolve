@@ -128,17 +128,14 @@ def decide(payload: dict) -> int:
         return 0
     run_dir = run_dir.resolve()
 
-    # Already finalized? The seal is burned; the gate has done its job.
-    state = run_dir / "state.json"
-    if state.exists():
+    # Already finalized? The seal is burned; the gate has done its job. This is keyed
+    # on splits.json:test_used alone — the authoritative seal — independent of
+    # state.json, which may be missing/corrupt even for a sealed run (agent mode).
+    sp = run_dir / "splits.json"
+    if sp.exists():
         try:
-            st = json.loads(state.read_text(encoding="utf-8"))
-            sp = run_dir / "splits.json"
-            if sp.exists():
-                spd = json.loads(sp.read_text(encoding="utf-8"))
-                if spd.get("test_used"):
-                    return 0
-            _ = st  # state available for future budget-aware rules
+            if json.loads(sp.read_text(encoding="utf-8")).get("test_used"):
+                return 0
         except Exception:
             pass
 
