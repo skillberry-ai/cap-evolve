@@ -174,15 +174,15 @@
     /* Roadmap overview tiles (6-item grid) */
     .reveal .roadmap-tile {
       background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
-      padding: 0.75em 0.8em; text-align: left; height: 100%;
+      padding: 0.95em 1em; text-align: left; height: 100%;
     }
     .reveal .roadmap-tile .n {
-      display: inline-block; padding: 0.08em 0.4em; border-radius: 3px;
+      display: inline-block; padding: 0.1em 0.5em; border-radius: 4px;
       background: var(--accent-soft); color: var(--accent);
-      font-size: 0.5em; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.3em;
+      font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.35em;
     }
-    .reveal .roadmap-tile .title { font-size: 0.7em; font-weight: 700; color: var(--ink); margin-bottom: 0.15em; }
-    .reveal .roadmap-tile .desc  { font-size: 0.5em; color: var(--sub); line-height: 1.4; }
+    .reveal .roadmap-tile .title { font-size: 0.9em; font-weight: 700; color: var(--ink); margin-bottom: 0.25em; }
+    .reveal .roadmap-tile .desc  { font-size: 0.62em; color: var(--sub); line-height: 1.45; }
 
     /* Table for external comparison */
     .reveal .cmp {
@@ -364,13 +364,13 @@
         </div>
         <div class="diff-tile">
           <span class="badge">03</span>
-          <div class="diff-title">Flexible intake</div>
-          <div class="diff-desc">One-prompt benchmark onboarding. Agent-driven adapter wiring, dynamic per-capability config.</div>
+          <div class="diff-title">Optimization under constraints</div>
+          <div class="diff-desc">Cost-capped iterations. Wall-clock next.</div>
         </div>
         <div class="diff-tile">
           <span class="badge">04</span>
-          <div class="diff-title">Under constraints</div>
-          <div class="diff-desc">Cost-capped iterations. Wall-clock next.</div>
+          <div class="diff-title">Flexible intake</div>
+          <div class="diff-desc">One-prompt onboarding. Agent-driven wiring, dynamic config.</div>
         </div>
         <div class="diff-tile">
           <span class="badge">05</span>
@@ -450,43 +450,47 @@
       <p class="subtitle" style="font-size:0.65em;">Every number is derived from a committed run artifact.</p>
 
       <div class="grid-3" style="max-width:96%; margin:0.7em auto;">
+        <!-- τ²-bench airline — val (fit metric) — LEFT -->
+        <div class="stat-card">
+          <div class="gain-strip"><span>GAIN</span><span>+32.8%</span></div>
+          <div class="big">+17.6</div>
+          <div class="unit">pp</div>
+          <div class="title">τ²-bench airline</div>
+          <div class="sub-title">val — fit metric (50 tasks · 10 trials)</div>
+          <div class="ba">53.6 → <span class="after">71.2</span></div>
+        </div>
+        <!-- τ²-bench airline — test set — MIDDLE -->
         <div class="stat-card">
           <div class="gain-strip"><span>GAIN</span><span>+58.3%</span></div>
           <div class="big">+17.5</div>
           <div class="unit">pp</div>
           <div class="title">τ²-bench airline</div>
-          <div class="sub-title">sealed HELD-OUT test (10 tasks, scored once)</div>
+          <div class="sub-title">test set (20 tasks)</div>
           <div class="ba">30.0 → <span class="after">47.5</span></div>
         </div>
-        <div class="stat-card">
-          <div class="gain-strip"><span>GAIN</span><span>+32.8%</span></div>
-          <div class="big">+0.176</div>
-          <div class="unit">reward</div>
-          <div class="title">τ²-bench airline</div>
-          <div class="sub-title">val — fit metric (50 tasks · 10 trials)</div>
-          <div class="ba">0.536 → <span class="after">0.712</span></div>
-        </div>
+        <!-- SkillsBench — test set — RIGHT -->
         <div class="stat-card">
           <div class="gain-strip"><span>GAIN</span><span>+20.0%</span></div>
-          <div class="big">+0.111</div>
-          <div class="unit">reward</div>
+          <div class="big">+11.1</div>
+          <div class="unit">pp</div>
           <div class="title">SkillsBench</div>
-          <div class="sub-title">sealed HELD-OUT test (3 tasks) · 4 skill packages</div>
-          <div class="ba">0.556 → <span class="after">0.667</span></div>
+          <div class="sub-title">test set (3 tasks) · 4 skill packages</div>
+          <div class="ba">55.6 → <span class="after">66.7</span></div>
         </div>
       </div>
 
       <div class="banner banner-accent">
-        <span style="color:var(--accent); font-weight:700;">Plus:</span>
+        <span style="color:var(--accent); font-weight:700;">Ongoing:</span>
         <span style="color:var(--sub);">
-          <span class="kbd">toy_calc</span> — deterministic zero-API proof-of-loop (0.0 → 1.0, gate-accepted, test sealed). No model called; runs in CI.
+          Experiments on additional benchmarks (SWE-bench, more τ² domains) and other optimization algorithms are in progress.
         </span>
       </div>
 
       <aside class="notes">
-        Headline: +58.3% held-out. Fit-metric +32.8% is the reproducible artifact-backed run.
-        SkillsBench +20% held-out edited all 4 skill packages and stopped on a real ceiling.
-        Every result is committed in examples/*/run_full/.
+        All three numbers now shown in percentage-point units for a fair side-by-side.
+        Headline: +58.3% relative gain on the τ² test set (20 tasks). Fit-metric on the left is the
+        reproducible artifact-backed run. SkillsBench on the right edited all 4 skill packages
+        and stopped on a real ceiling. Every result is committed in examples/*/run_full/.
       </aside>
     </section>
 
@@ -580,13 +584,13 @@
       <div class="grid-3" style="max-width:96%; margin:0.7em auto 0; font-size:0.6em;">
         <div class="roadmap-tile">
           <span class="n">3.1</span>
-          <div class="title">Publication</div>
-          <div class="desc">Benchmarks: Tau2 · SWE-bench · SkillBench. Compare vs. Arbor + EvoSkill (and possibly GEPA / SkillOps).</div>
+          <div class="title">Working with Red Hat</div>
+          <div class="desc">Parsec PoC: optimize <span class="kbd">babylon</span> skill + tools; joint tool-API ergonomics win.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.2</span>
-          <div class="title">Working with Red Hat</div>
-          <div class="desc">Parsec PoC: optimize <span class="kbd">babylon</span> skill + tools; joint tool-API ergonomics win.</div>
+          <div class="title">Publication</div>
+          <div class="desc">Benchmarks: Tau2 · SWE-bench · SkillBench. Compare vs. Arbor + EvoSkill (and possibly GEPA / SkillOps).</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.3</span>
@@ -617,53 +621,10 @@
       </aside>
     </section>
 
-    <!-- Slide 9 — 3.1 Publication -->
+    <!-- Slide 9 — 3.1 Working with Red Hat (moved before Publication) -->
     <section>
       <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
-      <h2><span class="thread-pill">3.1</span>Publication</h2>
-      <p class="subtitle" style="font-size:0.65em;">Three benchmarks × two-to-four baselines · gates &amp; splits enforced in-code.</p>
-
-      <div class="split">
-        <div class="col">
-          <h4>Benchmarks (planned)</h4>
-          <ul style="margin:0; padding-left:1.1em;">
-            <li><strong>Tau2</strong> — extend beyond current τ²-airline: policy + tool code, held-out</li>
-            <li><strong>SWE-bench</strong> — verified subset; capability = repo-scoped agent</li>
-            <li><strong>SkillBench</strong> — 4 office-doc packages; broaden task set</li>
-          </ul>
-          <h4 style="margin-top:0.7em;">Baselines to compare against</h4>
-          <ul style="margin:0; padding-left:1.1em;">
-            <li><strong>Arbor</strong> — direct tool-optimization competitor</li>
-            <li><strong>EvoSkill</strong> — arXiv:2604.01687v1</li>
-            <li><strong>GEPA / SkillOps</strong> — prompt-only optimizers (context, not head-to-head — cap-evolve's differentiator is <em>tool code</em>)</li>
-          </ul>
-        </div>
-        <div class="col">
-          <h4>Technical prerequisites</h4>
-          <ul style="margin:0; padding-left:1.1em;">
-            <li>Land the held-out τ²-bench artifact (<span class="kbd">run_full/</span>)</li>
-            <li>At least one apples-to-apples comparison per benchmark</li>
-            <li>Ablations: gate off, protect-set off, single-focus vs cyclic</li>
-            <li>Cost / iteration numbers reported alongside gains</li>
-          </ul>
-          <div class="placeholder" style="margin-top:0.6em;">
-            <div class="head">Decisions we need from management</div>
-            Target venue (workshop / conference / arXiv-first?) · Submission date · Author list &amp; order · Compute budget (RITS quota + external API) · Legal / IP review.
-          </div>
-        </div>
-      </div>
-
-      <aside class="notes">
-        Frame publication as three benchmarks × baseline set. The tool-code differentiator is
-        the reason we can head-to-head against Arbor / EvoSkill directly; GEPA and SkillOps
-        stay as prompt-only context. Management decisions are the blockers, not the numbers.
-      </aside>
-    </section>
-
-    <!-- Slide 10 — 3.2 Working with Red Hat (Parsec) -->
-    <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
-      <h2><span class="thread-pill">3.2</span>Working with Red Hat (Parsec)</h2>
+      <h2><span class="thread-pill">3.1</span>Working with Red Hat (Parsec)</h2>
       <p class="subtitle" style="font-size:0.65em;">Real internal LLM-agentic troubleshooting tool. Six sub-agents, ~21 tools, 130 real traces already in hand.</p>
 
       <div class="split">
@@ -702,6 +663,49 @@
         This is not hypothetical: 130 traces already delivered on 2026-07-13, phase-1 scope drafted
         (see rhdp-parsec/docs/rh_collaboration_proposal.md). Emphasize the API-ergonomics win as
         an early joint deliverable — it's a mutual value story management will appreciate.
+      </aside>
+    </section>
+
+    <!-- Slide 10 — 3.2 Publication (moved after Red Hat) -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.2</span>Publication</h2>
+      <p class="subtitle" style="font-size:0.65em;">Three benchmarks × two-to-four baselines · gates &amp; splits enforced in-code.</p>
+
+      <div class="split">
+        <div class="col">
+          <h4>Benchmarks (planned)</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Tau2</strong> — extend beyond current τ²-airline: policy + tool code, held-out</li>
+            <li><strong>SWE-bench</strong> — verified subset; capability = repo-scoped agent</li>
+            <li><strong>SkillBench</strong> — 4 office-doc packages; broaden task set</li>
+          </ul>
+          <h4 style="margin-top:0.7em;">Baselines to compare against</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Arbor</strong> — direct tool-optimization competitor</li>
+            <li><strong>EvoSkill</strong> — arXiv:2604.01687v1</li>
+            <li><strong>GEPA / SkillOps</strong> — prompt-only optimizers (context, not head-to-head — cap-evolve's differentiator is <em>tool code</em>)</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Technical prerequisites</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Land the held-out τ²-bench artifact (<span class="kbd">run_full/</span>)</li>
+            <li>At least one apples-to-apples comparison per benchmark</li>
+            <li>Ablations: gate off, protect-set off, single-focus vs cyclic</li>
+            <li>Cost / iteration numbers reported alongside gains</li>
+          </ul>
+          <div class="placeholder" style="margin-top:0.6em;">
+            <div class="head">Decisions we need from management</div>
+            Target venue (workshop / conference / arXiv-first?) · Submission date · Author list &amp; order · Compute budget (RITS quota + external API) · Legal / IP review.
+          </div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Frame publication as three benchmarks × baseline set. The tool-code differentiator is
+        the reason we can head-to-head against Arbor / EvoSkill directly; GEPA and SkillOps
+        stay as prompt-only context. Management decisions are the blockers, not the numbers.
       </aside>
     </section>
 
