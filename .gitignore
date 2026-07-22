@@ -29,6 +29,10 @@ e2e/
 !dashboard/frontend/dist/
 !dashboard/frontend/dist/**
 
+# keep the prebuilt evograph weakness-graph view (served by scripts/view.py at runtime)
+!skills/algorithms/evograph/dashboard/frontend/dist/
+!skills/algorithms/evograph/dashboard/frontend/dist/**
+
 # skillsbench example: local clone + bench cache + run scratch (not committed)
 vendor/
 .bench_cwd/

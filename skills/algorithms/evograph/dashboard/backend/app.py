@@ -1,9 +1,9 @@
-"""EvoGraph dashboard backend — a read-only view over a .evograph/ workdir.
+"""EvoGraph dashboard backend — a read-only view over a cap-evolve run dir.
 
-Agents never call this. It only reads the files under EVOGRAPH_BASE (the .evograph dir) and serves
-them as JSON + SSE, plus the prebuilt React app at "/".
+Agents never call this. It only reads the files under EVOGRAPH_BASE (the cap-evolve run dir the
+evograph skill writes its wiki into) and serves them as JSON + SSE, plus the prebuilt React app at "/".
 
-File layout it reads (see skills/evo-graph/references/dashboard.md):
+File layout it reads (see skills/algorithms/evograph/references/dashboard.md):
   wiki/weaknesses/<slug>.md
   wiki/solutions/<weakness-slug>/<sol-id>/{solution.md,changes.diff}
   wiki/results/round-<N>.json | final-test.json
@@ -39,6 +39,29 @@ RSM_HEADING = re.compile(r"^#{2,4}\s+(.*)$")
 ROUND_IN_TEXT = re.compile(r"round\s*(\d+)", re.IGNORECASE)
 
 app = FastAPI(title="EvoGraph dashboard", docs_url=None, redoc_url=None)
+
+
+# --------------------------------------------------------------------------- path safety
+# Route params (slug / weakness / sol_id) name a single file or directory under the
+# run dir. They are user-controlled, so validate them as plain path segments and
+# confirm the resolved path stays inside its base — never let one escape via
+# "..", "/", or an absolute path (defends against path traversal).
+_SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def safe_segment(seg: str) -> str:
+    if seg in (".", "..") or not _SAFE_SEGMENT.match(seg):
+        raise HTTPException(404, "not found")
+    return seg
+
+
+def within(base: Path, candidate: Path) -> bool:
+    """True iff ``candidate`` resolves to a path inside ``base`` (both resolved)."""
+    try:
+        candidate.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 # --------------------------------------------------------------------------- helpers
@@ -124,9 +147,15 @@ def parse_rejected(body: str) -> list[dict[str, Any]]:
         if m and "rejected store memory" not in m.group(1).lower():
             heading = m.group(1).strip()
             rnd = ROUND_IN_TEXT.search(heading)
+            # Only real attempts are entries — they carry a round number (e.g.
+            # "Round 2 · raise-temperature"). Skip section/format headings like
+            # "RSM entry format" that would otherwise become bogus rejected attempts.
+            if not rnd:
+                current = None
+                continue
             current = {
                 "label": heading.replace("`", "").replace("·", "-").strip(),
-                "round": int(rnd.group(1)) if rnd else None,
+                "round": int(rnd.group(1)),
                 "value": None,
             }
             out.append(current)
@@ -225,8 +254,9 @@ def graph() -> dict[str, Any]:
 
 @app.get("/api/weakness/{slug}")
 def weakness(slug: str) -> dict[str, Any]:
+    slug = safe_segment(slug)
     p = WEAK / f"{slug}.md"
-    if not p.exists():
+    if not within(WEAK, p) or not p.exists():
         raise HTTPException(404, f"weakness '{slug}' not found")
     fm, body = read_md(p)
     affected = set(fm.get("affected_tasks", []) or [])
@@ -243,8 +273,10 @@ def weakness(slug: str) -> dict[str, Any]:
 
 @app.get("/api/solution/{weakness}/{sol_id}")
 def solution(weakness: str, sol_id: str) -> dict[str, Any]:
+    weakness = safe_segment(weakness)
+    sol_id = safe_segment(sol_id)
     sol_dir = SOLS / weakness / sol_id
-    if not (sol_dir / "solution.md").exists():
+    if not within(SOLS, sol_dir) or not (sol_dir / "solution.md").exists():
         raise HTTPException(404, f"solution '{weakness}/{sol_id}' not found")
     data = load_solution(weakness, sol_dir)
     diff_path = sol_dir / "changes.diff"
@@ -267,13 +299,16 @@ def run_config() -> dict[str, Any]:
         return {"exists": False, "config": None, "path": rel}
     try:
         cfg = json.loads(p.read_text(encoding="utf-8-sig"))
-    except (json.JSONDecodeError, OSError) as e:
-        return {"exists": True, "config": None, "path": rel, "error": str(e)}
+    except (json.JSONDecodeError, OSError):
+        # Don't leak filesystem paths / stack detail to the client; the message is fixed.
+        return {"exists": True, "config": None, "path": rel,
+                "error": "run-config.json could not be read or parsed"}
     return {"exists": True, "config": cfg, "path": rel}
 
 
 @app.get("/api/progress/{slug}/stream")
 async def progress_stream(slug: str) -> StreamingResponse:
+    slug = safe_segment(slug)
     log = latest_log_for(slug)
 
     async def gen():
@@ -313,7 +348,9 @@ if DIST and DIST.exists():
 
     @app.get("/{full_path:path}")
     def spa_fallback(full_path: str) -> FileResponse:
+        # Only ever serve a real file that resolves inside the dist dir; anything
+        # else (incl. traversal like "../secret") falls back to the SPA entrypoint.
         candidate = _dist / full_path
-        if candidate.is_file():
+        if candidate.is_file() and within(_dist, candidate):
             return FileResponse(str(candidate))
         return FileResponse(str(_dist / "index.html"))

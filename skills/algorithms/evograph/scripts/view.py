@@ -53,6 +53,18 @@ def main(argv=None) -> int:
         return 1
 
     url = f"http://{args.host}:{args.port}/"
+
+    # The served SPA must exist before we register a tab pointing at this server —
+    # otherwise the dashboard mounts a "Weakness graph" tab backed by nothing.
+    # --register-only intentionally skips the server (and so skips this check).
+    if not args.register_only and not (DIST / "index.html").is_file():
+        sys.stderr.write(
+            f"evograph view: prebuilt UI not found at {DIST}. Build it "
+            "(dashboard/frontend: `npm ci && npm run build`) or pass --register-only "
+            "to write custom_view.json without serving.\n"
+        )
+        return 1
+
     write_custom_view(run_dir, url)
     print(json.dumps({"custom_view": str(run_dir / "custom_view.json"), "url": url}))
     if args.register_only:
