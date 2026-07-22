@@ -107,8 +107,8 @@ solution body. The **round-start eval** is the backstop for a real regression.
   re-evaluated the fix on its **own weakness's tasks** during research — so it does *not* re-run the
   eval per fix; it merges into `evograph` one weakness at a time and resolves conflicts. The
   whole-train **round-start eval** (see below) is the objective backstop that catches anything wrong.
-- The route is set by the **`github_integration`** choice captured at setup
-  ([questions.md](questions.md)):
+- The route is set by the **`github_integration`** choice captured at setup by cap-evolve
+  `intake` and recorded in the project spec (`capevolve.yaml`):
 - **`github_integration: true`** (GitHub CLI authenticated and the user opted in) → GitHub **mirrors**
   the wiki, which stays the source of truth (it's what the UI reads). At PR time the solver **syncs
   the weakness's GitHub issue to match its weakness md**, then opens a **PR** explaining the

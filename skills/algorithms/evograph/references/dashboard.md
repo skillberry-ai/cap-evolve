@@ -1,8 +1,12 @@
 # Dashboard — the agent ↔ UI contract
 
-The dashboard is a **read-only** viewer. A small FastAPI backend (launched by `bootstrap.py`,
-`cwd = <run_dir>/`) reads the files below and serves a prebuilt React app at `/`. **Agents never call
-the backend** — they only write these files, and the UI reflects them within a couple of seconds.
+This is a **file-format contract**: agents only ever *write* the files described below into
+the run dir, in the formats given. **Agents never call any backend** — they write these files
+and the viewer reflects them within a couple of seconds.
+
+The read-only viewer that renders these files (a small FastAPI backend serving a prebuilt React
+app, pointed at the run dir) ships separately with the weakness-graph view. This skill on its own
+just produces the files; the view is optional and mounted via cap-evolve's custom-view tab.
 
 So: *anything you want the user to see, write into one of these files in this format.*
 
@@ -89,4 +93,4 @@ same clock as `scripts/now.py`.
 
 No registration, no build step, no API client. Write a markdown file or append a log line and the
 user sees it. The wiki stays the single source of truth (see
-[the SKILL.md honesty rules](the SKILL.md honesty rules)).
+[the SKILL.md honesty rules](../SKILL.md)).
