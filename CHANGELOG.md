@@ -6,6 +6,18 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **Consuming-LLM profiles.** Declare the runtime/consuming model via `target_model`
+  (a concrete model id or a capability tier: `frontier|strong|mid|weak`) in
+  `capevolve.yaml`. The optimizer prompt (new `{{TARGET_READER}}` block) and the
+  capability guidance now adapt their proposed edits to that reader — a weaker reader
+  gets more explicit rules, worked examples, literal slot-filling docs, and code
+  enforcement; a frontier reader gets leaner prose that explains the *why*. This is
+  DISTINCT from `optimizer_model` (which proposes the edits). `cap-evolve check` warns
+  (non-blocking) when the declared consuming model's tier differs from the runner's
+  actual model (via an optional `adapter.runner_model()` hook). Report + dashboard
+  surface the consuming model alongside the optimizer model. Blank `target_model`
+  preserves prior behavior exactly; optional `target_profile_file` overrides a tier's
+  built-in brief. The tau2-airline example opts in (`gpt-oss-120b`, tier `mid`).
 - **Six more coding agents as optimizers** — `cursor` (Cursor `cursor-agent`),
   `droid` (Factory Droid), `copilot` (GitHub Copilot CLI), `kimi` (Moonshot Kimi),
   `pi` (earendil-works Pi), and `antigravity` (Google `agy`, a configurable wrapper).

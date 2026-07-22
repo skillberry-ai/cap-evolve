@@ -101,6 +101,15 @@ MCP also lets a server change its tool list at runtime and notify clients via
 `notifications/tools/list_changed`. Treat `add`/`remove` here as *your* curation
 of which of the available tools the model sees, not as a change to the server.
 
+### Adapting to the reader's capability tier
+Scale the client-side edits to WHO selects and fills these tools at runtime (see the
+`THE READER` block in your instructions, if present). A **mid/weak** reader needs more
+literal, example-bearing parameter descriptions and a **tighter exposed set** — hide more
+confusable/rarely-correct tools so the few it needs stand out, since selection and
+argument-filling degrade fastest for weaker readers. A **frontier** reader tolerates a
+larger set and terser descriptions. Re-description is the main lever either way; scale its
+explicitness (and how aggressively you trim the set) to the reader.
+
 ## Concrete before/after
 
 **Re-describe a terse server tool (client side).** The server ships

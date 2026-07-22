@@ -71,6 +71,10 @@ def main(argv=None) -> int:
                    help="comma-separated supporting source files (data models / types "
                         "the tools import) copied verbatim into the optimizer's "
                         "./guidance/sources/; resolved relative to --project")
+    p.add_argument("--target-model", default="",
+                   help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
+    p.add_argument("--target-profile-file", default=None,
+                   help="optional project-local brief overriding the tier's built-in brief")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -79,6 +83,13 @@ def main(argv=None) -> int:
         return 2
 
     run_dir = RunDir.open(Path(args.run_dir))
+    # Record the resolved consuming-LLM profile so report + dashboard can surface it.
+    from cap_evolve import target_profile as _tp
+    _prof = _tp.resolve(args.target_model, args.target_profile_file, project_dir=args.project)
+    if not _prof.is_agnostic:
+        run_dir.log_event("target_profile", model=_prof.model, tier=_prof.tier,
+                          suggested_num_trials=_prof.suggested_num_trials,
+                          resolution_note=_prof.resolution_note)
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -99,6 +110,8 @@ def main(argv=None) -> int:
         optimizer_name=args.optimizer_name,
         capability_sources=[s.strip() for s in args.capability_sources.split(",") if s.strip()],
         project_dir=Path(args.project),
+        target_model=args.target_model,
+        target_profile_file=args.target_profile_file,
     )
     print(json.dumps(result, indent=2))
     return 0

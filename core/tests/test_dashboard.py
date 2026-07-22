@@ -220,3 +220,26 @@ def test_render_ansi_claudecode_margin(monkeypatch):
         assert 40 <= w <= 200
         out = dashboard.render_ansi(r, color=False)
         assert out  # non-empty
+
+
+def test_target_profile_event_surfaces_in_summary_and_ansi():
+    from cap_evolve import dashboard
+    events = _BASE_EVENTS + [
+        {"kind": "target_profile", "model": "gpt-oss-120b", "tier": "mid",
+         "suggested_num_trials": 5, "resolution_note": ""}]
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=events, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        assert r["summary"]["target_profile"] == {
+            "model": "gpt-oss-120b", "tier": "mid", "resolution_note": ""}
+        plain = dashboard.render_ansi(r, color=False)
+        assert "consuming model gpt-oss-120b (tier mid)" in plain
+
+
+def test_no_target_profile_event_leaves_summary_none():
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        assert r["summary"]["target_profile"] is None
+        assert "consuming model" not in dashboard.render_ansi(r, color=False)

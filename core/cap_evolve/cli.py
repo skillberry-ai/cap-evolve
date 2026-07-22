@@ -217,6 +217,7 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          "target_model": spec.get("target_model", ""),
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
                           "budget": {"max_iterations": spec.get("max_iterations", 10),
                                      "stall": spec.get("stall", 0),
@@ -324,6 +325,16 @@ def _cmd_run(argv):
             csrc = [c.strip() for c in csrc.split(",") if c.strip()]
         if csrc:
             alg_cmd += ["--capability-sources", ",".join(str(c) for c in csrc)]
+        # Consuming/runtime LLM the capabilities are optimized FOR (distinct from the
+        # optimizer model). A model id or a tier keyword; steers the optimizer prompt.
+        if spec.get("target_model"):
+            alg_cmd += ["--target-model", str(spec["target_model"])]
+        tpf = spec.get("target_profile_file")
+        if tpf:
+            tpf_p = Path(str(tpf))
+            if not tpf_p.is_absolute() and not tpf_p.exists():
+                tpf_p = Path(project) / str(tpf)
+            alg_cmd += ["--target-profile-file", str(tpf_p)]
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):
