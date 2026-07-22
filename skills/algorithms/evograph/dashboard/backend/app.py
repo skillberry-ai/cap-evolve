@@ -43,25 +43,20 @@ app = FastAPI(title="EvoGraph dashboard", docs_url=None, redoc_url=None)
 
 # --------------------------------------------------------------------------- path safety
 # Route params (slug / weakness / sol_id) name a single file or directory under the
-# run dir. They are user-controlled, so validate them as plain path segments and
-# confirm the resolved path stays inside its base — never let one escape via
-# "..", "/", or an absolute path (defends against path traversal).
-_SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-
-
-def safe_segment(seg: str) -> str:
-    if seg in (".", "..") or not _SAFE_SEGMENT.match(seg):
-        raise HTTPException(404, "not found")
-    return seg
-
-
-def within(base: Path, candidate: Path) -> bool:
-    """True iff ``candidate`` resolves to a path inside ``base`` (both resolved)."""
-    try:
-        candidate.resolve().relative_to(base.resolve())
-        return True
-    except ValueError:
-        return False
+# run dir, and they are user-controlled. We never join them onto a path: instead we
+# enumerate the fixed parent directory and return the child whose *name* equals the
+# requested segment. The served path therefore always originates from a filesystem
+# listing, so traversal payloads ("..", "/etc/passwd", absolute paths) simply never
+# match anything and can never widen what the server reads.
+def child_named(base: Path, name: str) -> Path | None:
+    """Return the direct child of ``base`` whose name is exactly ``name`` (by listing
+    ``base``, not by path-joining untrusted input), or None if there is no such child."""
+    if not base.is_dir():
+        return None
+    for child in base.iterdir():
+        if child.name == name:
+            return child
+    return None
 
 
 # --------------------------------------------------------------------------- helpers
@@ -183,11 +178,16 @@ def stamp_line(line: str) -> str:
 
 
 def latest_log_for(slug: str) -> Path | None:
-    """Most recent runs/round-*/agents/<slug>.log."""
+    """Most recent runs/round-*/agents/<slug>.log.
+
+    Enumerate every agent log (fixed glob, no user input in the pattern) and keep the
+    ones whose filename matches ``<slug>.log`` — so the path we tail always comes from
+    the directory listing, never from concatenating the user-supplied slug."""
     if not RUNS.is_dir():
         return None
+    target = f"{slug}.log"
     candidates = sorted(
-        RUNS.glob(f"round-*/agents/{slug}.log"),
+        (p for p in RUNS.glob("round-*/agents/*.log") if p.name == target),
         key=lambda p: round_key(p.parent.parent),
     )
     return candidates[-1] if candidates else None
@@ -254,9 +254,8 @@ def graph() -> dict[str, Any]:
 
 @app.get("/api/weakness/{slug}")
 def weakness(slug: str) -> dict[str, Any]:
-    slug = safe_segment(slug)
-    p = WEAK / f"{slug}.md"
-    if not within(WEAK, p) or not p.exists():
+    p = child_named(WEAK, f"{slug}.md")
+    if p is None or not p.is_file():
         raise HTTPException(404, f"weakness '{slug}' not found")
     fm, body = read_md(p)
     affected = set(fm.get("affected_tasks", []) or [])
@@ -273,14 +272,13 @@ def weakness(slug: str) -> dict[str, Any]:
 
 @app.get("/api/solution/{weakness}/{sol_id}")
 def solution(weakness: str, sol_id: str) -> dict[str, Any]:
-    weakness = safe_segment(weakness)
-    sol_id = safe_segment(sol_id)
-    sol_dir = SOLS / weakness / sol_id
-    if not within(SOLS, sol_dir) or not (sol_dir / "solution.md").exists():
+    weak_dir = child_named(SOLS, weakness)
+    sol_dir = child_named(weak_dir, sol_id) if weak_dir is not None else None
+    if sol_dir is None or not (sol_dir / "solution.md").is_file():
         raise HTTPException(404, f"solution '{weakness}/{sol_id}' not found")
     data = load_solution(weakness, sol_dir)
-    diff_path = sol_dir / "changes.diff"
-    data["diff"] = diff_path.read_text(encoding="utf-8-sig") if diff_path.exists() else ""
+    diff_path = child_named(sol_dir, "changes.diff")
+    data["diff"] = diff_path.read_text(encoding="utf-8-sig") if diff_path is not None else ""
     return data
 
 
@@ -308,7 +306,6 @@ def run_config() -> dict[str, Any]:
 
 @app.get("/api/progress/{slug}/stream")
 async def progress_stream(slug: str) -> StreamingResponse:
-    slug = safe_segment(slug)
     log = latest_log_for(slug)
 
     async def gen():
@@ -348,9 +345,7 @@ if DIST and DIST.exists():
 
     @app.get("/{full_path:path}")
     def spa_fallback(full_path: str) -> FileResponse:
-        # Only ever serve a real file that resolves inside the dist dir; anything
-        # else (incl. traversal like "../secret") falls back to the SPA entrypoint.
-        candidate = _dist / full_path
-        if candidate.is_file() and within(_dist, candidate):
-            return FileResponse(str(candidate))
+        # Client-side routes all resolve to the SPA entrypoint. Real static files are
+        # served by the /assets mount above; this handler never reads a user-named
+        # path, so there is no traversal surface here.
         return FileResponse(str(_dist / "index.html"))
