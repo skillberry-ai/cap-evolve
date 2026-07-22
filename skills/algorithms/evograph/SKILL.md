@@ -77,10 +77,12 @@ Unchanged from evo-graph — the dashboard tab depends on these exact terms/form
 - Scaffold the wiki under the run dir and start evograph's dashboard, then declare it to the
   cap-evolve dashboard so its tab appears (the #39 custom-view contract):
   - create `<run_dir>/wiki/{weaknesses,solutions,results}` and `<run_dir>/runs/`.
-  - launch the bundled evograph dashboard server (see this skill's `dashboard/`, added by the UI
-    integration) pointed at `<run_dir>`; then write `<run_dir>/custom_view.json`:
+  - **if** this skill ships a `dashboard/` bundle (it lands with the weakness-graph view
+    integration — skip this bullet if the directory is absent): launch that dashboard server
+    pointed at `<run_dir>`, then write `<run_dir>/custom_view.json`:
     `{"title": "Weakness graph", "url": "http://127.0.0.1:<port>/"}`. The cap-evolve dashboard then
-    shows a **Weakness graph** tab embedding it. Give the user both links.
+    shows a **Weakness graph** tab embedding it. Give the user both links. Without the bundle the
+    wiki files above are still written and everything else in the loop works unchanged.
 
 ## Step 2 — Round loop (you drive it, uninterrupted to stop_condition)
 
