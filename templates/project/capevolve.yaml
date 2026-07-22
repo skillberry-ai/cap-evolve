@@ -21,6 +21,7 @@ optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap pas
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb              # algorithms/<skill>
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
+orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with `cap-evolve finalize`)
 
 # --- what context the optimizer gets (hill-climb) ---------------------------
 # The per-iteration optimizer prompt is RENDERED from this template (intake authors it,
