@@ -87,8 +87,10 @@ def round_key(p: Path) -> tuple[int, int]:
 
 
 def list_solution_dirs(weakness_slug: str) -> list[Path]:
-    d = SOLS / weakness_slug
-    if not d.is_dir():
+    # Locate the weakness's solutions dir by listing SOLS (not by joining the slug),
+    # so the dirs we go on to read are rooted in a filesystem listing, not user input.
+    d = child_named(SOLS, weakness_slug)
+    if d is None or not d.is_dir():
         return []
     return sorted([p for p in d.iterdir() if p.is_dir() and (p / "solution.md").exists()])
 
