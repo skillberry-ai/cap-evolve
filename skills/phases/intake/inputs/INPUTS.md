@@ -161,6 +161,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   - `metric_primary`: the single metric that decides accept/reject (= the scalar reward). Blank = use the reward directly.
   - `metrics_display` + `metric_directions`: extra SHOWN-ONLY metrics and each one's direction (`higher`|`lower`). These never affect the gate — display only.
 - **github_integration** (default `false`): if `true`, intake runs `gh auth status`; when authed, cap-evolve may mirror the algorithm's work items as issues and ship the winner as a PR (`Closes #n`). WHAT gets mirrored is algorithm-specific — the chosen `algorithm_skill` defines it (e.g. evo-graph mirrors *weaknesses*; a candidate-based algorithm might mirror candidates/iterations). GitHub is NEVER the source of truth — the run dir is. If unauthed, intake offers `gh auth login` or skip.
+- **orchestration_mode** (default `deterministic`): `deterministic` = cap-evolve sequences the loop (code-enforced honesty). `agent` = the coding agent drives the loop via cap-evolve primitives and seals with `cap-evolve finalize`. Agent mode also uses `stop_condition`.
 - **stop_condition** (default empty): agent-mode free-text halt rule, re-read each round. Deterministic mode ignores it and uses the budget knobs.
 
 - **baseline traces** (optional): prior rollouts to seed diagnosis. Default: none

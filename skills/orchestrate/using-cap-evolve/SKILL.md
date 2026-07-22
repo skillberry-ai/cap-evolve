@@ -36,7 +36,7 @@ It prints `{state, next, sequence, ...}`:
 1. **Standalone phase chain** — drive it turn by turn, inspecting each step:
    `/cap-evolve:intake` → `/cap-evolve:implement-and-check` →
    `/cap-evolve:baseline` → `/cap-evolve:<algorithm>` (e.g. `hill-climb`, `gepa`,
-   `skillopt`) → `/cap-evolve:finalize` → `/cap-evolve:report`.
+   `skillopt`, or `agent-optimize` in agent mode) → `/cap-evolve:finalize` → `/cap-evolve:report`.
    Use when you want to review each phase, or to run just one phase.
 2. **Fully automatic** — `/cap-evolve:orchestrate --execute`, or directly:
    ```bash

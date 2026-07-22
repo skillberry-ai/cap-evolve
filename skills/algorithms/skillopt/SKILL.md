@@ -79,6 +79,9 @@ significance test has signal. Only the slow update is a "meta" step — it is st
 **gated on val**, never force-accepted, and its train sample is small + counted in
 budget (toggle with `--no-slow-update`).
 
+## Agent-mode loop
+When `orchestration_mode: agent`, drive skillopt yourself: single-lineage climb with a textual learning rate over epochs/minibatches — each step propose an edit sized to the current LR, evaluate on **val** (minibatch then full as skillopt prescribes) via cap-evolve, gate Δ>k·SE, accept→snapshot / reject→revert & decay. Log steps to the run dir; between steps verify rollouts+results landed for the dashboard. Re-read `stop_condition`; stop on it/stall/budget. Seal once with `cap-evolve finalize`, then `report`.
+
 ## References
 - `references/concepts.md` — the SkillOpt loop in detail, the textual-LR schedule,
   the buffer/slow-update mechanics, and citations (arXiv:2605.23904).

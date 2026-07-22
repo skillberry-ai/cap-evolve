@@ -29,6 +29,7 @@
       <a href="getting-started.html">Getting started</a>
       <a href="results.html" class="active">Results</a>
       <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
       <a href="optimize-your-own.html">Optimize your own</a>
       <a href="adapter-templates.html">Adapter templates</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
@@ -148,6 +149,38 @@
     that those use different benchmark versions, models, splits, and budgets and are
     <strong>not</strong> an apples-to-apples comparison.
   </p>
+
+  <h2>τ²-bench airline — agent orchestration mode (held-out 30 (=val) / 20)</h2>
+
+  <p>
+    The first run driven entirely in <a href="agent-orchestration.html">agent mode</a> with the
+    <code>agent-optimize</code> algorithm: the conversational agent understood the benchmark, ran the
+    baseline, then proposed the airline-policy edits itself, gated every candidate on the full val
+    split, and sealed the test once. Runner + user simulator: <code>gpt-oss-120b</code> via a litellm
+    proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>split (single-trial)</th><th>baseline</th><th>best</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>val</strong> (30, fit)</td><td><strong>0.500</strong></td><td><strong>0.633</strong></td><td class="gain">+26.7% relative — gate-significant</td></tr>
+      <tr><td><strong>sealed test</strong> (20, held-out)</td><td><strong>0.400</strong></td><td><strong>0.550</strong></td><td class="gain">+37.5% relative</td></tr>
+    </tbody>
+  </table>
+
+  <blockquote>
+    <p>
+      Honest reading: τ²-bench airline is high-variance at a single trial. On a stable 3-trial
+      re-evaluation the val fit gain is <strong>+18%</strong> (paired-significant) while the held-out
+      test is flat within noise — and because <code>train == val</code>, the val figure is a
+      <em>fit</em>, not generalization. Agent mode produced the only gate-accepted improvement in a
+      head-to-head against a bounded deterministic run, but <code>gpt-oss-120b</code>'s stable val
+      ceiling here (~0.64) is below 0.78; a genuine held-out gain needs a stronger runner model or
+      tool-level edits. Details: <a href="agent-orchestration.html">Agent mode</a>.
+    </p>
+  </blockquote>
 
   <h2>τ²-bench airline — Qwen 2.5 14B</h2>
 

@@ -26,6 +26,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/agent-orchestration.html</loc>
+    <lastmod>2026-07-22</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://skillberry-ai.github.io/cap-evolve/adapter-templates.html</loc>
     <lastmod>2026-07-21</lastmod>
     <priority>0.7</priority>

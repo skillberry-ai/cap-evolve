@@ -45,6 +45,11 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
 ### GitHub integration
 - `gh auth status` = authed? Offer: mirror the algorithm's work items as issues + ship winner as PR (`Closes #n`) → `github_integration: true`; else offer `gh auth login` or skip → `false`. WHAT gets mirrored is algorithm-specific (the `algorithm_skill` defines it — e.g. evo-graph → weaknesses). GitHub is mirror-only; the run dir stays authoritative.
 
+### Orchestration mode
+- Ask: deterministic or agent? → `orchestration_mode` (default `deterministic`).
+  - `deterministic` — cap-evolve sequences intake→…→algorithm→finalize; honesty is code-enforced. Best when a deterministic engine exists for the algorithm.
+  - `agent` — the coding agent drives the loop itself (reads the algorithm's "Agent-mode loop"), self-policing honesty, and seals via the finalize phase. Required for agent-only algorithms. The purpose-built fully-agentic algorithm is `algorithm_skill: agent-optimize` (free-form loop; it also does a Phase-0 understand-the-benchmark step). In agent mode also collect `stop_condition`.
+
 ### Stop condition (agent mode)
 - Free-text halt rule re-read each round → `stop_condition`. Deterministic mode leaves it blank and uses budget knobs.
 
