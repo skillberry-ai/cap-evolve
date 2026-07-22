@@ -50,6 +50,16 @@ knob (`TAU2_MAX_CONCURRENCY`).
 **`TestSealError` / "test already scored"** — the sealed test split is scored exactly once
 per run, by design. Start a fresh run dir to finalize again. See [`HONEST_EVAL.md`](HONEST_EVAL.md).
 
+**Run interrupted (crash, timeout, pod eviction) — how do I continue it?** Re-run the same
+`cap-evolve run` command with `--resume` (and `--run-ts <ts>` to name the run; without it the
+latest run under the base is reused). It reopens the run dir instead of failing with
+`FileExistsError`, skips the baseline if it already ran, and picks the loop up at iteration
+N+1 from the current best — completed rollouts, accepted candidates, optimizer spend, and the
+git history are all preserved. If the interrupted run had already finalized (test seal burned),
+resume skips finalize and just regenerates the report, so the held-out number is never scored
+twice. To keep climbing past the original budget, pass a larger `--max-iterations` (or other
+budget flag) alongside `--resume` — explicit budget flags extend the resumed run.
+
 **A gain was rejected by the gate** — expected when the val improvement is within noise
 (Δ ≤ k·SE). Lower `k_se`, add trials (`num_trials`) to shrink SE, or accept that the edit
 didn't beat baseline significantly. On a small held-out val the gate will correctly refuse

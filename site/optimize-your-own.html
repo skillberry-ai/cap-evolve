@@ -157,6 +157,7 @@ you want intake to ask):
 cap-evolve check .capevolve/project                              # hard gate — must print {"ok": true}
 cap-evolve estimate --spec .capevolve/project/capevolve.yaml     # dry-run cost preview (spends nothing)
 cap-evolve run   --spec .capevolve/project/capevolve.yaml --project .capevolve/project
+cap-evolve run   --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts full --resume  # continue an interrupted run
 open .capevolve/run_*/dashboard.html</code></pre>
 
   <p>Start from the closest example and edit its <code>adapter.py</code>:</p>

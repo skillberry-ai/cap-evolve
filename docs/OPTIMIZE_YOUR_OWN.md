@@ -120,6 +120,14 @@ cap-evolve run   --spec .capevolve/project/capevolve.yaml --project .capevolve/p
 open .capevolve/run_*/dashboard.html
 ```
 
+Interrupted (crash, timeout, pod eviction)? Re-run the same command with `--resume`
+(and `--run-ts <ts>` to name the run, else the latest is reused) to continue from the
+last completed state — baseline and every accepted iteration are reused, not recomputed:
+
+```bash
+cap-evolve run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts full --resume
+```
+
 Start from the closest example and edit its `adapter.py`:
 
 | You want to optimize… | Copy | `capabilities:` |
