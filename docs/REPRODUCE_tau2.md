@@ -163,3 +163,64 @@ any static host — `report.md`, `events.jsonl`, `TAU2_COMMIT.txt`). See
 - On a small held-out val the paired gate will correctly refuse gains it cannot
   distinguish from noise — that is the system working, not failing. More trials or a
   larger val give a real gain the statistical power to clear the gate.
+
+## 8. Agent-mode reproduction (held-out 30/20, litellm proxy)
+
+The same benchmark, run in **agent orchestration mode** with the `agent-optimize` algorithm —
+the conversational agent drives the loop itself (see [`AGENT_ORCHESTRATION.md`](AGENT_ORCHESTRATION.md)).
+This uses the generic litellm-proxy model wiring (`adapters/model_config.py`), not RITS, so it
+works with any `aws/gpt-oss-120b`-behind-a-proxy endpoint.
+
+Project: a litellm-proxy-wired tau2 project (the local `e2e/tau2/.capevolve/project` harness — the
+same adapter as `examples/tau2_airline` but importing `model_config.py` instead of `rits.py`; set it
+up once alongside your proxy creds). Split: `inputs/split_ids.json` pins **30 train == 30 val**
+and a disjoint **20 test** (held out). Model: `aws/gpt-oss-120b` (agent + user simulator) via the
+proxy; the optimizer is the conversational agent itself (`optimizer_skill: mock`, never invoked).
+
+```bash
+# 1) credentials for the litellm-proxy path (repo-root or e2e/tau2/.env)
+cat > e2e/tau2/.env <<'ENV'
+MODEL=litellm_proxy/aws/gpt-oss-120b
+LITELLM_PROXY_API_BASE=https://<your-litellm-proxy-host>
+LITELLM_PROXY_API_KEY=<your-proxy-key>
+TEMPERATURE=0.0
+ENV
+
+export CAPEVOLVE_SKILLS_DIR="$PWD/skills"
+export PYTHONPATH="$PWD/e2e/tau2/.capevolve/project/adapters"
+export TAU2_MAX_CONCURRENCY=15 TAU2_LLM_TIMEOUT=240 TAU2_LLM_RETRIES=2
+
+# 2) hard gate + agent-mode check+baseline (prints the handoff, scores val baseline)
+cap-evolve check e2e/tau2/.capevolve/project
+cap-evolve run --spec e2e/tau2/.capevolve/project/capevolve.yaml \
+               --project e2e/tau2/.capevolve/project --run-ts e2e --dashboard off
+# -> {"mode":"agent","run_dir":".capevolve/run_e2e","algorithm":"agent-optimize", ...}
+```
+
+From the handoff, the agent drives the `agent-optimize` loop against `run_e2e`: it reads the
+failing-task feedback, proposes a general edit to `policy.md` / `tools.py` in a candidate copy,
+evaluates on **full val**, and accepts only through the paired gate — using the phase scripts:
+
+```bash
+S="$CAPEVOLVE_SKILLS_DIR"; R=e2e/tau2/.capevolve/run_e2e; P=e2e/tau2/.capevolve/project
+python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" --candidate "$R/work/cand_1" --split val --n-trials 1
+python "$S/phases/gate/scripts/run.py"     --mode significant --k-se 1.0 --current <best_mean> --candidate <cand_mean> --candidate-stderr <se> --current-stderr <se>
+# on accept: RunDir.snapshot + set_best + log_event (see AGENT_ORCHESTRATION.md)
+python -c "from cap_evolve import RunDir; import json; print(json.dumps(RunDir.open('$R').spent.to_dict(), indent=2))"  # constraint re-read
+
+# stop when the full-val mean clears the stop_condition, then seal test ONCE + report:
+python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P" --n-trials 1
+python "$S/phases/report/scripts/run.py"   --run-dir "$R"
+```
+
+Deterministic comparison on the identical split (`capevolve.det.yaml`, `hill-climb`, Claude Code
+optimizer via the same proxy):
+
+```bash
+cap-evolve run --spec e2e/tau2/.capevolve/project/capevolve.det.yaml \
+               --project e2e/tau2/.capevolve/project --run-ts det --dashboard off
+```
+
+This produced (single-trial) val **0.50 → 0.633** (+26.7%, gate-significant) and a sealed held-out
+test **0.40 → 0.55** (+37.5%), beating the deterministic run head-to-head. See [`RESULTS.md`](RESULTS.md)
+for the full table incl. the stable n=3 re-evaluation and the honest caveats.

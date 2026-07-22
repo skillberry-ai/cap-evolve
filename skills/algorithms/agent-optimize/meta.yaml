@@ -1,0 +1,11 @@
+component: algorithm
+name: agent-optimize
+summary: "Fully-agentic, free-form optimization loop the conversational agent owns end to end — it understands the benchmark/inputs first, proposes capability edits itself, evaluates task subsets for cheap triage, and accepts only on a full-val significance gate, all bounded by a free-text stop_condition it re-reads with the run-dir spend. Agent-mode only (orchestration_mode agent)."
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores, traces, candidate]
+provides: [candidate]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
