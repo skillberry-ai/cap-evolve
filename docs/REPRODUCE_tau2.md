@@ -109,6 +109,11 @@ cap-evolve estimate --spec .../capevolve.yaml   # pre-run cost preview (spends n
 cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard auto
 ```
 
+> **Long run interrupted?** This run takes hours and interruptions (pod eviction, disk
+> pressure, credential expiry) happen. Re-run the exact command with `--resume` appended —
+> it reopens `run_full`, skips the already-scored baseline, and continues from the last
+> accepted iteration, so you don't repay the baseline eval or the accepted-iteration cost.
+
 - **Cost preview** — `cap-evolve estimate` prints the call counts (`val × trials ×
   iterations` runner calls, `iterations` optimizer calls) and a calibrated `$` range.
 - **Baseline** — score the seed policy + tools on val.

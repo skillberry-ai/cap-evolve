@@ -60,6 +60,10 @@ snapshot or record-as-rejected → repeat until budget is spent. Diagnosis of
 traces is provided by the **`diagnose`** skill, which the algorithm calls to turn
 failures into an actionable learning signal.
 
+> **Interrupted?** Pass `--resume` (below) to continue from the last completed
+> state — the run dir is a durable checkpoint, so baseline and every accepted
+> iteration are reused instead of recomputed.
+
 ## 5. Finalize & report
 Load **`finalize`**: score the best candidate on TEST **exactly once** (the run
 dir seals it), then **`report`** for a human-readable summary and the best

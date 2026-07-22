@@ -170,11 +170,23 @@ class RunDir:
 
     # ---- creation / loading -------------------------------------------------
     @classmethod
-    def create(cls, base: Path, *, ts: str | None = None, budget: Budget | None = None) -> "RunDir":
+    def create(cls, base: Path, *, ts: str | None = None, budget: Budget | None = None,
+               exist_ok: bool = False) -> "RunDir":
+        """Create (or, with ``exist_ok``, resume) the run dir under ``base``.
+
+        ``exist_ok=True`` is the ``--resume`` path: if ``run_<ts>`` already has a
+        ``state.json``, reopen it UNCHANGED — preserving ``best_id``/``budget``/``spent``
+        so the loop keeps counting from prior progress instead of resetting. If the dir
+        exists but has no ``state.json`` (a torn/partial create), initialize a fresh
+        state into it. ``exist_ok=False`` (default) keeps the old strict behavior: a
+        colliding ``run_<ts>`` raises ``FileExistsError``.
+        """
         base = Path(base)
         ts = ts or time.strftime("%Y%m%d_%H%M%S")
         root = base / f"run_{ts}"
-        root.mkdir(parents=True, exist_ok=False)
+        if exist_ok and (root / "state.json").exists():
+            return cls.open(root)  # resume: preserve existing state, never reset
+        root.mkdir(parents=True, exist_ok=exist_ok)
         rd = cls(root)
         rd.candidates.mkdir(parents=True, exist_ok=True)
         rd.rollouts.mkdir(parents=True, exist_ok=True)
@@ -253,6 +265,24 @@ class RunDir:
             st["spent"] = sp.to_dict()
             self._write_state(st)
             return sp
+
+    def update_budget(self, **overrides) -> Budget:
+        """Overwrite selected budget fields (locked RMW). Used to EXTEND a resumed run.
+
+        Only keys explicitly passed are changed (e.g. ``max_iterations=30`` to keep
+        climbing past the original cap); everything else — and all ``spent`` — is
+        preserved. Unknown keys are ignored so a stray CLI flag can't corrupt state.
+        """
+        allowed = {"max_iterations", "max_metric_calls", "max_usd", "stall", "max_optimizer_usd"}
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            b = Budget.from_dict(st.get("budget")).to_dict()
+            for k, v in overrides.items():
+                if k in allowed and v is not None:
+                    b[k] = v
+            st["budget"] = b
+            self._write_state(st)
+            return Budget.from_dict(b)
 
     def budget_exhausted(self) -> tuple[bool, str]:
         b, s = self.budget, self.spent

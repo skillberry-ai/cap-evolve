@@ -2,7 +2,7 @@
 name: gepa
 description: Runs the real GEPA optimization loop (arXiv:2507.19457) — sample-efficient reflective Pareto search. Use when rollouts are expensive and the scorer gives informative per-task feedback, and you want the most quality per evaluation. Each iteration samples a parent from a per-instance Pareto frontier, evaluates it on a cheap minibatch of train tasks with full traces, builds a reflective dataset over the failures, asks the optimizer for one targeted component edit, re-checks the child on the same minibatch (a cheap local gate), and only on pass pays for a full-val eval behind the honest significance gate. Adds round-robin component focus and a system-aware merge across complementary lineages. Prefer over hill-climb when feedback is rich and budget is tight; use hill-climb for the first baseline run or feedback-poor binary tasks.
 component: algorithm
-argument-hint: "--run-dir DIR --project DIR --optimizer 'CMD {workdir} {prompt}' [--max-metric-calls N --minibatch-size 4 --component-selector round_robin|all --max-merges 2]"
+argument-hint: "--run-dir DIR --project DIR --optimizer 'CMD {workdir} {prompt}' [--max-metric-calls N --minibatch-size 4 --component-selector round_robin|all --max-merges 2 --resume]"
 allowed-tools: Read, Write, Bash
 provides: [candidate]
 needs: [scores, traces, reflective_dataset, candidate]
@@ -83,6 +83,11 @@ to recombine) rather than producing a degenerate child.
 - `--gate-mode` / `--k-se`: the val acceptance bar (paired significance by default).
 - `--no-regression`: reject a child that breaks any previously-passing val task.
 - `--seed`: seeds the parent-sampling + minibatch RNG (logged for reproducibility).
+- `--resume`: reconstruct the pool/lineage/frontier from the run dir (a
+  `gepa_state.json` checkpoint + each accepted candidate's rollouts) and continue the
+  Pareto search where it stopped, instead of restarting from the seed. Preserved spend
+  keeps the budget honest; the parent-sampling RNG stream restarts (selection is
+  stochastic by design, so the resumed run is not byte-identical).
 
 ## How to run
 

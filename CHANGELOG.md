@@ -6,6 +6,16 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
+  timeout) from its last completed state instead of starting over. Reopens the run dir
+  (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it
+  no longer fails with `FileExistsError`; skips the baseline when it already ran; picks
+  the loop up at iteration N+1 from the current best (spend, journal, git history, and
+  the test seal are all preserved); and skips a re-finalize when the test seal is already
+  burned. Explicit budget flags (`--max-iterations`, …) **extend** a resumed run. Works
+  across every algorithm — `hill-climb`/`skillopt` already resumed from rollouts, and
+  **`gepa` now reconstructs its full pool/lineage/frontier** from the run dir (a tiny
+  `gepa_state.json` checkpoint + rollouts) so its Pareto search continues where it stopped.
 - **Six more coding agents as optimizers** — `cursor` (Cursor `cursor-agent`),
   `droid` (Factory Droid), `copilot` (GitHub Copilot CLI), `kimi` (Moonshot Kimi),
   `pi` (earendil-works Pi), and `antigravity` (Google `agy`, a configurable wrapper).

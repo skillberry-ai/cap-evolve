@@ -10,6 +10,7 @@ Subcommands:
     cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
     cap-evolve check   [project_dir]
     cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
+                       [--resume [--run-ts TS]]  resume an interrupted run in place
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -106,6 +107,11 @@ def _cmd_run(argv):
     p.add_argument("--dry-run", action="store_true",
                    help="print a pre-run cost estimate (call counts + $ range) and exit")
     p.add_argument("--run-ts", default=None)
+    p.add_argument("--resume", action="store_true",
+                   help="continue an interrupted run from its last completed state instead "
+                        "of starting fresh: reopens the run dir (--run-ts, else the latest "
+                        "under the base), skips the baseline if done, and picks the loop up "
+                        "at iteration N+1 from the current best. Explicit budget flags extend it.")
     p.add_argument("--reuse-baseline", default=None,
                    help="prior run dir: reuse its baseline (split/baseline/seed/val-rollouts) "
                         "and skip the baseline eval")
@@ -247,6 +253,20 @@ def _cmd_run(argv):
                           "report": chk.to_dict()}))
         return 1
 
+    # Resume: reopen an existing run instead of creating a fresh one. Resolve which run
+    # to reopen — the explicit --run-ts, else the latest run_* under the base — and feed
+    # its ts to baseline so RunDir.create(exist_ok=True) reopens it in place.
+    from .rundir import RunDir as _RunDir
+    resume_ts = args.run_ts
+    if args.resume and not resume_ts:
+        try:
+            latest = _RunDir.latest(proj_abs.parent)
+            resume_ts = latest.root.name[len("run_"):]
+        except FileNotFoundError:
+            print(json.dumps({"step": "resume", "error": (
+                f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
+            return 1
+
     # 1) baseline (creates the run dir; capture its relative path)
     base_cmd = [py, skill_run("baseline"), "--base", base, "--project", project,
                 "--capability", cap_path, "--seed", str(spec.get("split_seed", 0)),
@@ -261,13 +281,24 @@ def _cmd_run(argv):
     # baseline eval (algorithm starts at iter 1 on the reused baseline).
     if spec.get("reuse_baseline"):
         base_cmd += ["--reuse-baseline", str(spec["reuse_baseline"])]
-    if args.run_ts:
-        base_cmd += ["--run-ts", args.run_ts]
+    if resume_ts:
+        base_cmd += ["--run-ts", resume_ts]
+    if args.resume:
+        base_cmd += ["--resume"]
     proc = run(base_cmd)
     if proc.returncode != 0:
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return 1
     run_dir = json.loads(proc.stdout)["run_dir"]
+
+    # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
+    # keep climbing past the original cap). Without an override the frozen budget stands.
+    if args.resume:
+        overrides = {k: getattr(args, k) for k in
+                     ("max_iterations", "max_metric_calls", "max_usd", "max_optimizer_usd", "stall")
+                     if getattr(args, k) is not None}
+        if overrides:
+            _RunDir.open(workdir / run_dir).update_budget(**overrides)
 
     # Record the intake phase's spend + summary into the run, if the intake phase
     # wrote <project>/intake.json. Best-effort: a missing/malformed file is ignored so
@@ -306,6 +337,11 @@ def _cmd_run(argv):
                "--gate-mode", str(spec.get("gate_mode", "auto")),
                "--k-se", str(spec.get("gate_k_se", 1.0)),
                "--store", str(spec.get("store", "git"))]
+    # Resume: every deterministic algorithm accepts --resume (continue from the current
+    # best in the run dir instead of re-reading baseline.json). agent mode already
+    # short-circuited above, so we never reach here for it.
+    if args.resume:
+        alg_cmd += ["--resume"]
     if algorithm_focus is not None:
         alg_cmd += ["--focus", algorithm_focus]
     # Surface the selected capability skills to the optimizer prompt so it knows the
@@ -367,8 +403,17 @@ def _cmd_run(argv):
     # 3) finalize  4) report
     last = proc.stdout
     report_extra = ["--dashboard-mode", dash_mode, "--dashboard-port", str(dash_port)]
-    for step, extra in (("finalize", ["--n-trials", str(spec.get("num_trials", 1))]),
-                        ("report", report_extra)):
+    # Resume seal guard: if a prior finalize already burned the test seal, re-running
+    # finalize would raise TestSealError. Skip it and just regenerate the report so the
+    # honest test number stays scored exactly once.
+    steps = [("finalize", ["--n-trials", str(spec.get("num_trials", 1))]), ("report", report_extra)]
+    if args.resume:
+        try:
+            if _RunDir.open(workdir / run_dir).read_splits().test_used:
+                steps = [("report", report_extra)]
+        except (FileNotFoundError, KeyError):
+            pass
+    for step, extra in steps:
         cmd = [py, skill_run(step), "--run-dir", run_dir]
         if step == "finalize":
             cmd += ["--project", project]

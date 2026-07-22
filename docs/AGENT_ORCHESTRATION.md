@@ -72,6 +72,14 @@ cap-evolve run --spec .capevolve/project/capevolve.yaml --project .capevolve/pro
 # -> prints {"mode":"agent","run_dir":".capevolve/run_myrun","algorithm":"agent-optimize", ...}
 ```
 
+If a run is interrupted, add `--resume` (with the same `--run-ts`) to reopen the run dir
+and hand the agent back the existing `run_dir` + current best instead of re-running the
+baseline:
+
+```bash
+cap-evolve run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts myrun --resume
+```
+
 The agent then drives the loop against `run_dir`, using the phase scripts directly:
 
 ```bash

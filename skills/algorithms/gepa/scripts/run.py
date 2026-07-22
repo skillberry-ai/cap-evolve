@@ -51,6 +51,9 @@ def main(argv=None) -> int:
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--no-regression", action="store_true",
                    help="reject candidates that break a previously-passing val task")
+    p.add_argument("--resume", action="store_true",
+                   help="reconstruct the pool/frontier from the run dir and continue the "
+                        "search instead of restarting from the seed")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -70,6 +73,7 @@ def main(argv=None) -> int:
         gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, seed=args.seed, store=store,
+        resume=args.resume,
     )
     print(json.dumps(result, indent=2))
     return 0
