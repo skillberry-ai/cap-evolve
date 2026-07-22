@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>cap-evolve — Management review</title>
+
+  <link rel="stylesheet" href="reveal/dist/reset.css">
+  <link rel="stylesheet" href="reveal/dist/reveal.css">
+  <link rel="stylesheet" href="reveal/dist/theme/black.css" id="theme">
+  <link rel="stylesheet" href="reveal/plugin/highlight/monokai.css">
+
+  <style>
+    :root {
+      --accent:      #a48bff;   /* cap-evolve purple, brightened for dark bg */
+      --accent-deep: #7c5cff;
+      --accent-soft: #241d47;
+      --ice:         #cadcfc;
+      --green:       #4bd657;
+      --green-deep:  #1a8f4c;
+      --amber:       #f5c518;
+      --amber-soft:  #332e12;
+      --red:         #e05555;
+      --ink:         #f2f2f2;
+      --sub:         #b8b8b8;
+      --muted:       #8a8f98;
+      --card-bg:     #1a1a1a;
+      --card-border: #2d2d2d;
+    }
+    .reveal { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; letter-spacing: -0.01em; }
+    .reveal h1 { font-size: 2.2em; }
+    .reveal h2 { font-size: 1.3em; line-height: 1.15; }
+    .reveal h3 { font-size: 1.15em; color: var(--ice); }
+    .reveal .part-pill + h2 { margin-top: 0.15em; margin-bottom: 0.15em; }
+    .reveal h2 .thread-pill { vertical-align: 0.15em; }
+
+    /* Slack at the bottom of every slide — keeps content off the very edge
+       and above Reveal's progress bar / slide counter. */
+    .reveal .slides > section { padding-bottom: 60px; box-sizing: border-box; }
+
+    /* Reusable typography helpers */
+    .reveal .subtitle { color: var(--sub); font-size: 0.7em; margin-top: 0.2em; line-height: 1.35; }
+    .reveal .team { color: var(--sub); font-size: 0.55em; margin-top: 1.6em; letter-spacing: 0.04em; }
+    .reveal .stat { color: var(--accent); font-size: 0.75em; margin-top: 0.6em; font-style: italic; }
+    .reveal .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
+    .reveal .quote { font-style: italic; color: var(--sub); }
+    .reveal ul, .reveal ol { display: inline-block; text-align: left; }
+    .reveal li { margin: 0.25em 0; }
+
+    /* Part / section pill */
+    .reveal .part-pill {
+      display: inline-block; padding: 0.2em 0.7em; border-radius: 999px;
+      font-size: 0.5em; margin-bottom: 0.8em; letter-spacing: 0.12em;
+      background: var(--accent-soft); color: var(--accent); font-weight: 600;
+    }
+    /* Sub-thread pill (03.x) */
+    .reveal .thread-pill {
+      display: inline-block; padding: 0.15em 0.55em; border-radius: 4px;
+      font-size: 0.45em; margin-right: 0.5em; letter-spacing: 0.05em;
+      background: #2a2a2a; color: var(--accent); font-weight: 600;
+    }
+
+    /* Cards & grids */
+    .reveal .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; margin-top: 0.8em; }
+    .reveal .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 0.8em; }
+    .reveal .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9em; margin-top: 0.8em; }
+    .reveal .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.7em; margin-top: 0.8em; }
+
+    .reveal .card {
+      background: var(--card-bg); border-radius: 12px; padding: 0.9em 0.9em;
+      border: 2px solid var(--card-border); text-align: left;
+    }
+    .reveal .card .who   { font-weight: 700; letter-spacing: 0.02em; margin-bottom: 0.15em; font-size: 0.75em; }
+    .reveal .card .role  { color: var(--sub); font-size: 0.6em; line-height: 1.45; }
+    .reveal .card .badge {
+      display: inline-block; font-size: 0.55em; padding: 0.1em 0.45em;
+      border-radius: 3px; background: #2a2a2a; color: var(--accent); margin-right: 0.4em;
+    }
+
+    /* Big-number stat callouts (results slide) */
+    .reveal .stat-card {
+      background: var(--card-bg); border: 2px solid var(--card-border);
+      border-radius: 12px; padding: 1em; text-align: center;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .reveal .stat-card .gain-strip {
+      background: #123319; color: var(--green); font-size: 0.5em;
+      font-weight: 700; padding: 0.2em 0.6em; letter-spacing: 0.15em;
+      border-radius: 4px; margin-bottom: 0.6em; display: flex; justify-content: space-between;
+    }
+    .reveal .stat-card .big { font-size: 2.4em; font-weight: 800; color: var(--accent); letter-spacing: -0.03em; }
+    .reveal .stat-card .unit { color: var(--sub); font-size: 0.55em; font-style: italic; margin-top: -0.1em; }
+    .reveal .stat-card .title { font-size: 0.68em; font-weight: 700; color: var(--ink); margin-top: 0.5em; }
+    .reveal .stat-card .sub-title { font-size: 0.5em; color: var(--sub); font-style: italic; margin-top: 0.1em; }
+    .reveal .stat-card .ba { font-size: 0.65em; color: var(--sub); margin-top: 0.6em; }
+    .reveal .stat-card .ba .after { color: var(--green); font-weight: 700; }
+
+    /* Small stat callouts (status slide) */
+    .reveal .num-card {
+      background: var(--accent-soft); border-radius: 12px; padding: 0.7em;
+      text-align: center;
+    }
+    .reveal .num-card .n { font-size: 1.7em; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
+    .reveal .num-card .l { font-size: 0.6em; font-weight: 700; color: var(--ink); }
+    .reveal .num-card .s { font-size: 0.48em; color: var(--sub); font-style: italic; margin-top: 0.15em; }
+
+    /* Pipeline pills (architecture slide) */
+    .reveal .phase-pill {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 8px; padding: 0.35em 0.4em; text-align: center;
+    }
+    .reveal .phase-pill.accent { background: var(--accent-soft); border-color: var(--accent); }
+    .reveal .phase-pill .name { font-size: 0.65em; font-weight: 700; color: var(--ink); }
+    .reveal .phase-pill .desc { font-size: 0.48em; color: var(--sub); font-style: italic; margin-top: 0.1em; }
+
+    /* Roadmap overview tiles (6-item grid) */
+    .reveal .roadmap-tile {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 0.75em 0.8em; text-align: left; height: 100%;
+    }
+    .reveal .roadmap-tile .n {
+      display: inline-block; padding: 0.08em 0.4em; border-radius: 3px;
+      background: var(--accent-soft); color: var(--accent);
+      font-size: 0.5em; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.3em;
+    }
+    .reveal .roadmap-tile .title { font-size: 0.7em; font-weight: 700; color: var(--ink); margin-bottom: 0.15em; }
+    .reveal .roadmap-tile .desc  { font-size: 0.5em; color: var(--sub); line-height: 1.4; }
+
+    /* Table for external comparison */
+    .reveal .cmp {
+      width: 100%; border-collapse: collapse; font-size: 0.6em;
+      margin: 0.4em auto; max-width: 92%;
+    }
+    .reveal .cmp th {
+      background: var(--accent-soft); color: var(--accent);
+      padding: 0.5em 0.7em; text-align: left; font-weight: 700;
+      letter-spacing: 0.05em; font-size: 0.85em;
+    }
+    .reveal .cmp td {
+      padding: 0.45em 0.7em; border-top: 1px solid var(--card-border);
+      color: var(--sub);
+    }
+    .reveal .cmp tr.us td { background: #0f1f14; color: var(--ink); font-weight: 600; }
+    .reveal .cmp tr.us td.rel { color: var(--green); }
+
+    /* Banners */
+    .reveal .banner {
+      border-radius: 10px; padding: 0.8em 1em; margin: 0.5em auto;
+      text-align: left; max-width: 92%; font-size: 0.6em;
+    }
+    .banner-accent { background: var(--accent-soft); border-left: 6px solid var(--accent); }
+    .banner-amber  { background: var(--amber-soft); border-left: 6px solid var(--amber); }
+    .banner-green  { background: #123319; border-left: 6px solid var(--green); }
+    .banner-red    { background: #331515; border-left: 6px solid var(--red); }
+    .banner .title { font-weight: 700; letter-spacing: 0.02em; margin-bottom: 0.3em; }
+    .banner ul { margin: 0.1em 0; padding-left: 1.1em; }
+    .banner li { margin: 0.15em 0; }
+
+    /* Placeholder overlay — visible flag on any slide needing content */
+    .reveal .placeholder {
+      border: 2px dashed var(--amber); background: var(--amber-soft);
+      border-radius: 10px; padding: 0.7em 1em; margin: 0.5em auto;
+      max-width: 92%; text-align: left; font-size: 0.55em; color: var(--amber);
+    }
+    .reveal .placeholder .head { font-weight: 700; letter-spacing: 0.03em; margin-bottom: 0.3em; }
+    .reveal .placeholder .head::before { content: "⚠ "; }
+
+    /* Two-column with left "what ships today", right "what's next" */
+    .reveal .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; text-align: left; font-size: 0.52em; margin-top: 0.3em; }
+    .reveal .split .col h4 { color: var(--accent); font-size: 0.95em; margin: 0 0 0.25em; letter-spacing: 0.03em; }
+    .reveal .split .col ul { margin: 0 0 0.4em; padding-left: 1.1em; }
+    .reveal .split .col li { margin: 0.15em 0; line-height: 1.35; }
+
+    /* Foot / back-to-site link */
+    .reveal .foot {
+      position: absolute; bottom: 0.5em; right: 1em; font-size: 0.5em; color: #555;
+    }
+    .back-to-site {
+      position: fixed; top: 0.9rem; left: 0.9rem; z-index: 100;
+      font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.85rem; color: #9a9a9a;
+      background: rgba(20,20,20,0.55); border: 1px solid #3a3a3a;
+      border-radius: 6px; padding: 0.3rem 0.6rem; text-decoration: none;
+      opacity: 0.75; transition: opacity 0.15s ease, color 0.15s ease;
+    }
+    .back-to-site:hover { opacity: 1; color: #e8e8e8; border-color: #6a6a6a; }
+    @media print { .back-to-site { display: none; } }
+
+    /* Notes panel styling stays default */
+  </style>
+</head>
+<body>
+<a class="back-to-site" href="https://skillberry-ai.github.io/cap-evolve/" title="cap-evolve site">← cap-evolve site</a>
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ─────────────────────────── COVER ─────────────────────────── -->
+    <section>
+      <h1 style="letter-spacing:-0.03em;">cap-evolve</h1>
+      <div class="subtitle" style="font-size:1.1em;">Optimize agentic capabilities — with agents</div>
+      <p style="margin-top:1.4em; font-size:0.65em; color:var(--sub); line-height:1.7;">
+        <strong style="color:var(--ink);">Management review</strong> · first draft<br>
+        Made at IBM · Red Hat        //        v0.x beta        //        github.com/skillberry-ai/cap-evolve
+      </p>
+      <div class="team">⚠ presenter(s) &amp; date — TO CONFIRM</div>
+      <aside class="notes">
+        Cover. Set the frame: cap-evolve is our optimizer for agentic capabilities. Three parts:
+        (1) what it is, (2) where we stand on experiments and results, (3) where we go from here —
+        six threads spanning publication, Red Hat collaboration, product extensions, memory, simulator, and public research.
+      </aside>
+    </section>
+
+    <!-- ═══════════════════════════ PART 1 ═══════════════════════════ -->
+    <!-- Slide 2 — What cap-evolve is (dense: pitch + loop + surfaces) -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>The loop that improves what your agent reads.</h2>
+      <p style="font-size:0.62em; margin-top:0.2em; color:var(--sub); max-width:92%;">
+        <strong style="color:var(--ink);">cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces.</strong>
+        You bring the agent and the eval you already have; cap-evolve runs the loop and reports
+        <strong style="color:var(--ink);">one honest number</strong>. It optimizes what your agent <em>reads</em> — not its weights.
+      </p>
+
+      <div class="grid-5" style="margin:1em auto 0.4em; max-width:92%; font-size:0.6em;">
+        <div class="phase-pill"><div class="name">evaluate</div><div class="desc">on val split</div></div>
+        <div class="phase-pill"><div class="name">diagnose</div><div class="desc">cluster failures</div></div>
+        <div class="phase-pill accent"><div class="name">propose</div><div class="desc">optimizer-agent edits</div></div>
+        <div class="phase-pill"><div class="name">gate</div><div class="desc">Δ &gt; k·SE</div></div>
+        <div class="phase-pill"><div class="name">commit</div><div class="desc">git + memory</div></div>
+      </div>
+      <p style="font-size:0.5em; color:var(--sub); font-style:italic; text-align:center;">
+        Every iteration is a git commit. Rejected candidates never re-proposed.
+      </p>
+
+      <div class="grid-4" style="max-width:96%; margin:0.6em auto 0;">
+        <div class="card"><div class="who">System prompts</div><div class="role">Rewrite / consolidate / add rules — never drop a needed one.</div></div>
+        <div class="card"><div class="who">Tool code</div><div class="role">Edit implementations for deterministic enforcement; add / wrap / swap.</div></div>
+        <div class="card"><div class="who">Skill packages</div><div class="role">SKILL.md bodies, references, executable scripts.</div></div>
+        <div class="card"><div class="who">MCP surfaces</div><div class="role">Safe edits — docs, examples, which tools are exposed.</div></div>
+      </div>
+      <p style="font-size:0.5em; color:var(--sub); font-style:italic; margin-top:0.5em;">
+        Pick one — or combine them, e.g. <span class="kbd">[system-prompt, tools]</span>.
+      </p>
+
+      <aside class="notes">
+        Frame cap-evolve as a loop that emits one honest number from an eval the audience
+        already has. "Reads, not weights" — no training compute, no model risk.
+        The 4 surfaces slide is meant to open the door for cross-team applicability.
+      </aside>
+    </section>
+
+    <!-- Slide 3 — Where cap-evolve stands today -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>Where cap-evolve stands today</h2>
+      <p class="subtitle" style="font-size:0.65em;">Beta, public, running on real benchmarks.</p>
+
+      <div class="grid-4" style="max-width:92%; margin:0.8em auto;">
+        <div class="num-card">
+          <div class="n">v0.x</div><div class="l">beta</div>
+          <div class="s">public repo, live docs site</div>
+        </div>
+        <div class="num-card">
+          <div class="n">18</div><div class="l">agent skills</div>
+          <div class="s">orchestrate / algorithms / capabilities / optimizers</div>
+        </div>
+        <div class="num-card">
+          <div class="n">14</div><div class="l">optimizer hosts</div>
+          <div class="s">Claude Code, Codex, Gemini, opencode, IBM Bob…</div>
+        </div>
+        <div class="num-card">
+          <div class="n">0</div><div class="l">runtime deps</div>
+          <div class="s">pure Python stdlib in the core</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="max-width:92%; margin:0.6em auto 0; font-size:0.6em;">
+        <div class="card">
+          <div class="who" style="color:var(--accent);">Recently shipped</div>
+          <ul style="font-size:0.85em; margin:0.4em 0 0 0.7em; padding:0;">
+            <li>Public GitHub Pages site — home + 5 hero pages</li>
+            <li>Held-out τ²-bench airline run — sealed test, artifact committed</li>
+            <li>SkillsBench held-out result — 4 skill packages edited</li>
+            <li>"Why cap-evolve" differentiators section on the site (PR #67)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="who" style="color:var(--accent);">Made at IBM · Red Hat</div>
+          <div class="role" style="font-size:0.85em;">
+            Open source (Apache-2.0) with an internal roadmap. First-class integration with IBM RITS models used in the τ²-bench airline runs.
+          </div>
+          <div style="margin-top:0.55em; color:var(--amber); font-size:0.9em; font-style:italic;">⚠ Team &amp; attribution list — TO FILL</div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Not a lab prototype — public repo, live docs, 14 host integrations. Highlight the IBM+RH
+        co-authored posture. Missing: exact author roster, confirm before we ship.
+      </aside>
+    </section>
+
+    <!-- Slide 4 — Why cap-evolve is different (5 tiles) -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>Why cap-evolve is different</h2>
+      <p class="subtitle" style="font-size:0.65em;">Five design choices that separate it from prior tool-optimization work.</p>
+
+      <div class="grid-5" style="max-width:96%; margin:0.7em auto 0; font-size:0.55em;">
+        <div class="card">
+          <span class="badge">01</span>
+          <div class="who" style="margin-top:0.3em;">Agents optimize agents</div>
+          <div class="role">Optimizer is itself a coding-agent CLI (Claude Code, Codex, +12 more). No gradients, no heuristic search.</div>
+        </div>
+        <div class="card">
+          <span class="badge">02</span>
+          <div class="who" style="margin-top:0.3em;">Any agentic capability</div>
+          <div class="role">System prompts, tool code, MCP surfaces, skill packages — one or combined.</div>
+        </div>
+        <div class="card">
+          <span class="badge">03</span>
+          <div class="who" style="margin-top:0.3em;">Under constraints</div>
+          <div class="role">Cap the cost per iteration — the optimizer stops at your budget. Wall-clock next.</div>
+        </div>
+        <div class="card">
+          <span class="badge">04</span>
+          <div class="who" style="margin-top:0.3em;">Flexible state</div>
+          <div class="role">Iteration state = git-committed markdown (LEDGER, JOURNAL, PROCESS). Browseable, editable, resumable.</div>
+        </div>
+        <div class="card">
+          <span class="badge">05</span>
+          <div class="who" style="margin-top:0.3em;">Honest evaluation</div>
+          <div class="role">Test sealed until finalize, scored once. Paired-significance gate on val. Every number ships with its artifact.</div>
+        </div>
+      </div>
+      <p style="font-size:0.5em; color:var(--sub); font-style:italic; margin-top:0.8em;">
+        Full detail at <span class="kbd">skillberry-ai.github.io/cap-evolve</span> · Why cap-evolve section.
+      </p>
+
+      <aside class="notes">
+        Same five differentiators on the public site (PR #67). #3 budget and #4 resumable state
+        are still firming up — deck flags where each will need more evidence.
+      </aside>
+    </section>
+
+    <!-- ═══════════════════════════ PART 2 ═══════════════════════════ -->
+    <!-- Slide 5 — Results at a glance -->
+    <section>
+      <div class="part-pill">02 · WHERE WE STAND</div>
+      <h2>Results at a glance</h2>
+      <p class="subtitle" style="font-size:0.65em;">Every number is derived from a committed run artifact.</p>
+
+      <div class="grid-3" style="max-width:96%; margin:0.7em auto;">
+        <div class="stat-card">
+          <div class="gain-strip"><span>GAIN</span><span>+58.3%</span></div>
+          <div class="big">+17.5</div>
+          <div class="unit">pp</div>
+          <div class="title">τ²-bench airline</div>
+          <div class="sub-title">sealed HELD-OUT test (10 tasks, scored once)</div>
+          <div class="ba">30.0 → <span class="after">47.5</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="gain-strip"><span>GAIN</span><span>+32.8%</span></div>
+          <div class="big">+0.176</div>
+          <div class="unit">reward</div>
+          <div class="title">τ²-bench airline</div>
+          <div class="sub-title">val — fit metric (50 tasks · 10 trials)</div>
+          <div class="ba">0.536 → <span class="after">0.712</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="gain-strip"><span>GAIN</span><span>+20.0%</span></div>
+          <div class="big">+0.111</div>
+          <div class="unit">reward</div>
+          <div class="title">SkillsBench</div>
+          <div class="sub-title">sealed HELD-OUT test (3 tasks) · 4 skill packages</div>
+          <div class="ba">0.556 → <span class="after">0.667</span></div>
+        </div>
+      </div>
+
+      <div class="banner banner-accent">
+        <span style="color:var(--accent); font-weight:700;">Plus:</span>
+        <span style="color:var(--sub);">
+          <span class="kbd">toy_calc</span> — deterministic zero-API proof-of-loop (0.0 → 1.0, gate-accepted, test sealed). No model called; runs in CI.
+        </span>
+      </div>
+
+      <aside class="notes">
+        Headline: +58.3% held-out. Fit-metric +32.8% is the reproducible artifact-backed run.
+        SkillsBench +20% held-out edited all 4 skill packages and stopped on a real ceiling.
+        Every result is committed in examples/*/run_full/.
+      </aside>
+    </section>
+
+    <!-- Slide 6 — What actually changed -->
+    <section>
+      <div class="part-pill">02 · WHERE WE STAND</div>
+      <h2>What actually changed</h2>
+      <p class="subtitle" style="font-size:0.65em;">Not prompt tweaks — real code and real skill packages.</p>
+
+      <div class="grid-2" style="max-width:94%; margin:0.7em auto; font-size:0.62em;">
+        <div class="card">
+          <div class="who" style="color:var(--accent);">τ²-bench airline (policy + tools)</div>
+          <ul style="margin:0.35em 0 0 0.7em; padding:0; font-size:0.9em;">
+            <li><strong>Deep in-code tool edits</strong></li>
+            <li style="list-style:none;"><span class="kbd" style="color:var(--ink);">&nbsp;&nbsp;tools.py: 593 → 832 lines</span></li>
+            <li style="list-style:none;"><span class="kbd" style="color:var(--ink);">&nbsp;&nbsp;policy.md: 166 → 233 lines</span></li>
+            <li>5 trajectory-verified before→after edits</li>
+            <li>5 of 10 iterations accepted by the gate</li>
+            <li style="color:var(--muted); font-style:italic;">Optimizer: <span class="kbd">claude-code @ claude-opus-4-6</span></li>
+            <li style="color:var(--muted); font-style:italic;">Runner + user sim: <span class="kbd">gpt-oss-120b</span> via IBM RITS</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="who" style="color:var(--accent);">SkillsBench (skill packages)</div>
+          <ul style="margin:0.35em 0 0 0.7em; padding:0; font-size:0.9em;">
+            <li><strong>All 4 SKILL.md packages edited</strong></li>
+            <li style="list-style:none;"><span class="kbd" style="color:var(--ink);">&nbsp;&nbsp;docx / pptx / xlsx / pdf</span></li>
+            <li>Executable scripts added</li>
+            <li>4 of 7 iterations accepted; stopped on a real ceiling</li>
+            <li>Diagnosed 2 unsolved tasks as broken oracles — did <strong>not</strong> overfit them</li>
+            <li style="color:var(--muted); font-style:italic;">Agent under test: <span class="kbd">claude-sonnet-4-6</span> (Docker sandbox)</li>
+            <li style="color:var(--muted); font-style:italic;">Optimizer: <span class="kbd">claude-code @ claude-opus-4-8</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Point: optimizer touches real code and real markdown, not just prose. Diagnosing broken
+        oracles instead of overfitting them is a real honesty signal to underline.
+      </aside>
+    </section>
+
+    <!-- Slide 7 — External context -->
+    <section>
+      <div class="part-pill">02 · WHERE WE STAND</div>
+      <h2>External context</h2>
+      <p class="subtitle" style="font-size:0.65em;">Positioning next to adjacent tool-optimization work — <strong style="color:var(--amber);">NOT apples-to-apples</strong>.</p>
+
+      <table class="cmp">
+        <thead>
+          <tr><th>Work</th><th>Benchmark</th><th>Split</th><th>Baseline → Optimized</th><th>Relative</th></tr>
+        </thead>
+        <tbody>
+          <tr class="us">
+            <td>cap-evolve</td><td>τ²-Bench airline</td><td>held-out</td><td>30.0 → 47.5</td><td class="rel">+58.3%</td>
+          </tr>
+          <tr>
+            <td>Evolutionary Context Search</td><td>τ²-Bench</td><td>reported</td><td>—</td><td>+23.3%</td>
+          </tr>
+          <tr>
+            <td>EvoTool (GPT-4.1)</td><td>τ-Bench airline</td><td>reported</td><td>35.9 → 39.1</td><td>+8.9%</td>
+          </tr>
+          <tr>
+            <td>EvoTool (Qwen3-8B)</td><td>τ-Bench airline</td><td>reported</td><td>14.4 → 15.7</td><td>+9.0%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="banner banner-amber">
+        <div class="title">Honesty caveats — read before quoting</div>
+        <ul>
+          <li>τ-Bench (EvoTool) and τ²-Bench are different benchmarks; τ² is harder.</li>
+          <li>Different models, splits, simulators, trial counts, budgets — the rows are context, not a controlled comparison.</li>
+          <li>Evolutionary Context Search +23.3% source citation still being confirmed (issue #46).</li>
+        </ul>
+      </div>
+
+      <aside class="notes">
+        The point of this slide is that we're NOT claiming state-of-the-art. We're placing our
+        +58.3% next to adjacent work and being explicit about caveats. Publication requires at
+        least one apples-to-apples comparison — flagged in Part 3.
+      </aside>
+    </section>
+
+    <!-- ═══════════════════════════ PART 3 — ROADMAP OVERVIEW ═══════ -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2>Six threads, one direction</h2>
+      <p class="subtitle" style="font-size:0.65em;">Publication, Red Hat, product extensions, memory, simulator, and public research.</p>
+
+      <div class="grid-3" style="max-width:96%; margin:0.7em auto 0; font-size:0.6em;">
+        <div class="roadmap-tile">
+          <span class="n">3.1</span>
+          <div class="title">Publication</div>
+          <div class="desc">Benchmarks: Tau2 · SWE-bench · SkillBench. Compare vs. Arbor + EvoSkill (and possibly GEPA / SkillOps).</div>
+        </div>
+        <div class="roadmap-tile">
+          <span class="n">3.2</span>
+          <div class="title">Working with Red Hat</div>
+          <div class="desc">Parsec PoC: optimize <span class="kbd">babylon</span> skill + tools; joint tool-API ergonomics win.</div>
+        </div>
+        <div class="roadmap-tile">
+          <span class="n">3.3</span>
+          <div class="title">Skillberry Proxy &amp; Store</div>
+          <div class="desc">Connect cap-evolve to the Proxy + Store surface — closed feedback loop from real usage.</div>
+        </div>
+        <div class="roadmap-tile">
+          <span class="n">3.4</span>
+          <div class="title">Memory / KB / LLM-wiki</div>
+          <div class="desc">Cross-run memory that IS the org's how-agents-learn wiki. Beyond per-run LEDGER/JOURNAL.</div>
+        </div>
+        <div class="roadmap-tile">
+          <span class="n">3.5</span>
+          <div class="title">Simulator from traces</div>
+          <div class="desc">Reconstruct tool environments from recorded I/O — closed-loop rollouts, no live systems needed.</div>
+        </div>
+        <div class="roadmap-tile">
+          <span class="n">3.6</span>
+          <div class="title">Public research adoption</div>
+          <div class="desc">Adopt what's proven from Arbor, EvoSkill, GEPA, SkillOps; stay ahead on the tool-code axis.</div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Preview the six threads at a glance so management can see the map before we dive in.
+        Each has its own slide. Order is roughly by external commitment level:
+        publication and Red Hat are near-term; simulator and public-research are ongoing.
+      </aside>
+    </section>
+
+    <!-- Slide 9 — 3.1 Publication -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.1</span>Publication</h2>
+      <p class="subtitle" style="font-size:0.65em;">Three benchmarks × two-to-four baselines · gates &amp; splits enforced in-code.</p>
+
+      <div class="split">
+        <div class="col">
+          <h4>Benchmarks (planned)</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Tau2</strong> — extend beyond current τ²-airline: policy + tool code, held-out</li>
+            <li><strong>SWE-bench</strong> — verified subset; capability = repo-scoped agent</li>
+            <li><strong>SkillBench</strong> — 4 office-doc packages; broaden task set</li>
+          </ul>
+          <h4 style="margin-top:0.7em;">Baselines to compare against</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Arbor</strong> — direct tool-optimization competitor</li>
+            <li><strong>EvoSkill</strong> — arXiv:2604.01687v1</li>
+            <li><strong>GEPA / SkillOps</strong> — prompt-only optimizers (context, not head-to-head — cap-evolve's differentiator is <em>tool code</em>)</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Technical prerequisites</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Land the held-out τ²-bench artifact (<span class="kbd">run_full/</span>)</li>
+            <li>At least one apples-to-apples comparison per benchmark</li>
+            <li>Ablations: gate off, protect-set off, single-focus vs cyclic</li>
+            <li>Cost / iteration numbers reported alongside gains</li>
+          </ul>
+          <div class="placeholder" style="margin-top:0.6em;">
+            <div class="head">Decisions we need from management</div>
+            Target venue (workshop / conference / arXiv-first?) · Submission date · Author list &amp; order · Compute budget (RITS quota + external API) · Legal / IP review.
+          </div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Frame publication as three benchmarks × baseline set. The tool-code differentiator is
+        the reason we can head-to-head against Arbor / EvoSkill directly; GEPA and SkillOps
+        stay as prompt-only context. Management decisions are the blockers, not the numbers.
+      </aside>
+    </section>
+
+    <!-- Slide 10 — 3.2 Working with Red Hat (Parsec) -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.2</span>Working with Red Hat (Parsec)</h2>
+      <p class="subtitle" style="font-size:0.65em;">Real internal LLM-agentic troubleshooting tool. Six sub-agents, ~21 tools, 130 real traces already in hand.</p>
+
+      <div class="split">
+        <div class="col">
+          <h4>Two ongoing threads</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Head-to-head:</strong> compare cap-evolve to <strong>SkillOps</strong> and <strong>GEPA</strong> on a shared set of tools + skills.</li>
+            <li><strong>Improve Parsec:</strong> optimize one sub-agent's skill + tool surface; propose composite "macro" tools.</li>
+          </ul>
+          <h4 style="margin-top:0.7em;">Phase 1 (4–6 weeks, proposed)</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>IBM: trajectory extractor, macro miner, LLM-as-judge, question clustering</li>
+            <li>Pilot sub-agent: <span class="kbd">babylon</span> (most signal, clearest wins)</li>
+            <li>RH: share skill files, tool schemas, allowlists</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Immediate mutual-interest win</h4>
+          <div class="banner banner-green" style="max-width:100%; margin:0.2em 0;">
+            <span style="color:var(--green); font-weight:700;">Tool-API ergonomics:</span>
+            <span style="color:var(--ink);">
+              <span class="kbd">query_babylon_catalog</span> errors on <strong>43.2%</strong> of calls;
+              <span class="kbd">query_aap2</span> errors on <strong>17.2%</strong>.
+              Fixing upstream compresses traces before any skill change.
+            </span>
+          </div>
+          <h4 style="margin-top:0.6em;">The prize</h4>
+          <div style="font-size:0.95em;">
+            Parsec = a real customer-facing agentic system that isn't a benchmark.
+            A win here is <strong>production evidence</strong>, not academic evidence.
+          </div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        This is not hypothetical: 130 traces already delivered on 2026-07-13, phase-1 scope drafted
+        (see rhdp-parsec/docs/rh_collaboration_proposal.md). Emphasize the API-ergonomics win as
+        an early joint deliverable — it's a mutual value story management will appreciate.
+      </aside>
+    </section>
+
+    <!-- Slide 11 — 3.3 Skillberry Proxy & Store [PLACEHOLDER] -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.3</span>Cap-evolve × Skillberry Proxy &amp; Store</h2>
+      <p class="subtitle" style="font-size:0.65em;">Connect the optimizer to the surface where skills are actually served and used.</p>
+
+      <div class="placeholder">
+        <div class="head">Content needed — please fill in</div>
+        This slide needs your input. Suggested subsections:
+        <ul style="margin:0.3em 0 0 1.1em;">
+          <li>What is the Skillberry Proxy? What does it currently do?</li>
+          <li>What is the Skillberry Store? What does it currently do?</li>
+          <li>What's the specific integration point with cap-evolve?
+            (e.g., proxy captures usage traces → cap-evolve consumes them; optimized skills → store)</li>
+          <li>Timeline / owners / dependencies</li>
+        </ul>
+      </div>
+
+      <!-- Draft structure I can fill in once we have the content -->
+      <div class="split" style="margin-top:0.4em;">
+        <div class="col">
+          <h4>Skillberry Proxy — role</h4>
+          <ul style="margin:0; padding-left:1.1em; color:var(--muted); font-style:italic;">
+            <li>What it intercepts / mediates</li>
+            <li>What signals it emits</li>
+            <li>What cap-evolve consumes from it</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Skillberry Store — role</h4>
+          <ul style="margin:0; padding-left:1.1em; color:var(--muted); font-style:italic;">
+            <li>What ships to the store</li>
+            <li>How cap-evolve promotes an optimized skill</li>
+            <li>Versioning &amp; roll-back story</li>
+          </ul>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Placeholder slide. Need concrete text on: what Proxy and Store are, the integration point,
+        and what "closed feedback loop" looks like in practice. Ask user to send docs / diagrams.
+      </aside>
+    </section>
+
+    <!-- Slide 12 — 3.4 Memory / KB / LLM-wiki (NEW) -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.4</span>Memory · KB · LLM-wiki</h2>
+      <p class="subtitle" style="font-size:0.6em;">State / memory / knowledge base / LLM-wiki — one cross-run substrate that IS the org's living record of how agents get better.</p>
+
+      <div class="split">
+        <div class="col">
+          <h4>What ships today</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Per-run markdown state — <span class="kbd">LEDGER · JOURNAL · PROCESS · RUNMAP</span></li>
+            <li>Every iteration is a git commit</li>
+            <li>Optimizer receives per-task IMPACT + protect-set each iteration</li>
+            <li>Rejected candidates never re-proposed <em>within a run</em></li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>The stretch — a durable KB</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Cross-run learnings</strong> — what worked / regressed across many runs</li>
+            <li><strong>LLM-queryable substrate</strong> — an MCP / wiki agents can read at plan time</li>
+            <li><strong>First-class rationale</strong> — decisions and their why, not just diffs</li>
+            <li><strong>Portable</strong> — export between org units and benchmarks</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="banner banner-accent" style="margin-top:0.6em;">
+        <div class="title" style="color:var(--accent);">Why it's strategic</div>
+        <span style="color:var(--sub);">
+          Today, cap-evolve's "memory" is a run artifact. Tomorrow, it's an evolving org-wide
+          substrate — every run adds to a shared KB that every future agent reads. A real moat.
+        </span>
+      </div>
+      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
+        ⚠ Sharpen with your framing: KB shape (RAG vs graph vs plain markdown), owners, first customer.
+      </p>
+
+      <aside class="notes">
+        Draft: today's LEDGER/JOURNAL/PROCESS is per-run; the stretch is a persistent, cross-run
+        substrate — durable memory that every future agent can query. Position this as the
+        long-term moat argument.
+      </aside>
+    </section>
+
+    <!-- Slide 13 — 3.5 Simulator from traces -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.5</span>Simulator from traces</h2>
+      <p class="subtitle" style="font-size:0.65em;">Reconstruct enough of the tool environment from recorded I/O to re-execute agents — closed-loop, no live systems.</p>
+
+      <div class="split">
+        <div class="col">
+          <h4>The mechanism</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Every tool call in a trace has captured <strong>inputs + outputs</strong></li>
+            <li>Read-only tools (<span class="kbd">query_*</span>, <span class="kbd">fetch_*</span>) simulate cheaply</li>
+            <li>Reconstruct a frozen replica; agent re-executes against it</li>
+          </ul>
+          <h4 style="margin-top:0.6em;">Why it matters for cap-evolve</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Score <strong>candidate skills live</strong> — not just recorded trajectories</li>
+            <li>No risk to live customer systems (Parsec fit)</li>
+            <li>Cheaper eval loop → more iterations per dollar</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Status</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Separate IBM team already building trace-based simulators</li>
+            <li>Natural collaboration with cap-evolve — clean integration point</li>
+            <li>Scoped as <strong>Parsec phase-2 extension</strong>, not a prerequisite</li>
+          </ul>
+          <h4 style="margin-top:0.6em;">Reference</h4>
+          <div style="font-size:0.9em; color:var(--sub);">
+            <span class="kbd" style="color:var(--ink);">rhdp-parsec/docs/rh_collaboration_proposal.md</span>
+            § 7 — Optional collaboration extension: simulator from traces
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
+        ⚠ Confirm: named contact + team on the IBM simulator side, and their capacity this quarter.
+      </p>
+
+      <aside class="notes">
+        The simulator makes live rollouts feasible. Two immediate consumers: publication
+        experiments (repeatable) and Red Hat Parsec (no live-system risk). Confirm which
+        IBM team is building this and their capacity for a shared integration.
+      </aside>
+    </section>
+
+    <!-- Slide 14 — 3.6 Improvements from public knowledge -->
+    <section>
+      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.6</span>Improvements from public knowledge</h2>
+      <p class="subtitle" style="font-size:0.65em;">Adopt what's proven from adjacent work; keep the tool-code axis as the differentiator.</p>
+
+      <div class="grid-4" style="max-width:96%; margin:0.6em auto; font-size:0.55em;">
+        <div class="card">
+          <div class="who" style="color:var(--accent);">Arbor</div>
+          <div class="role">
+            Direct tool-optimization competitor.<br>
+            <strong>What to compare:</strong> apples-to-apples on Tau2, SWE-bench, SkillBench.<br>
+            <strong>What to adopt:</strong> TBD after read-through.
+          </div>
+        </div>
+        <div class="card">
+          <div class="who" style="color:var(--accent);">EvoSkill</div>
+          <div class="role">
+            arXiv:2604.01687v1.<br>
+            <strong>What to compare:</strong> head-to-head where benchmarks overlap.<br>
+            <strong>What to adopt:</strong> mining / evolution techniques applicable to tool code.
+          </div>
+        </div>
+        <div class="card">
+          <div class="who" style="color:var(--accent);">GEPA</div>
+          <div class="role">
+            arXiv:2507.19457 — flagship prompt optimizer.<br>
+            <strong>Position:</strong> context, not direct competitor (prompt-only).<br>
+            <strong>Adopt:</strong> per-instance Pareto frontier, reflective dataset.
+          </div>
+        </div>
+        <div class="card">
+          <div class="who" style="color:var(--accent);">SkillOps</div>
+          <div class="role">
+            arXiv:2605.23904 — prompt-only skill evolution.<br>
+            <strong>Position:</strong> context, not direct competitor.<br>
+            <strong>Adopt:</strong> textual-LR budget, rejected-edit buffer.
+          </div>
+        </div>
+      </div>
+
+      <div class="banner banner-accent" style="margin-top:0.4em;">
+        <div class="title" style="color:var(--accent);">The differentiator to defend</div>
+        <span style="color:var(--sub);">
+          Arbor and EvoSkill are the head-to-head fights we can win on <strong>tool code</strong>.
+          GEPA and SkillOps are prompt-only; we cite them as context and adopt what generalizes.
+        </span>
+      </div>
+
+      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
+        ⚠ "What to adopt" bullets firm up after a careful read-through of Arbor and EvoSkill.
+      </p>
+
+      <aside class="notes">
+        Position: Arbor + EvoSkill are the direct fights on tool code; GEPA + SkillOps are
+        prompt-only and stay as context. Adopting-from-them bullets are placeholders — need
+        a careful read-through before publication.
+      </aside>
+    </section>
+
+    <!-- Slide 15 — Closing / three concrete asks -->
+    <section>
+      <h1 style="font-size:1.9em;">Where we go — this quarter</h1>
+      <p class="subtitle" style="font-size:0.75em; margin-top:0.3em;">Three concrete next steps.</p>
+
+      <div class="grid-3" style="max-width:92%; margin:1em auto 0; font-size:0.6em;">
+        <div class="card" style="border-color:#5c5c7c; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em;">01</div>
+          <div class="who" style="margin-top:0.4em; font-size:1.15em;">Ship the held-out artifact</div>
+          <div class="role" style="margin-top:0.4em;">
+            Land the τ²-bench airline held-out <span class="kbd">run_full/</span> so the +58.3%
+            number is self-contained and reproducible.
+          </div>
+        </div>
+        <div class="card" style="border-color:#5c8f6b; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em;">02</div>
+          <div class="who" style="margin-top:0.4em; font-size:1.15em;">One apples-to-apples comparison</div>
+          <div class="role" style="margin-top:0.4em;">
+            cap-evolve on a shared benchmark + model + split against a published baseline
+            (Arbor or EvoSkill first).
+          </div>
+        </div>
+        <div class="card" style="border-color:#a5895c; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em;">03</div>
+          <div class="who" style="margin-top:0.4em; font-size:1.15em;">Publication go-decision</div>
+          <div class="role" style="margin-top:0.4em;">
+            Confirm venue, timeline, authors, and compute budget (see slide 9).
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:1.4em; font-size:0.95em; color:var(--ink); font-weight:700;">Thank you · Questions?</p>
+
+      <aside class="notes">
+        Close with the three concrete asks so management leaves with a clear picture of what
+        we need this quarter. Q&A slide.
+      </aside>
+    </section>
+
+  </div>
+</div>
+
+<script src="reveal/dist/reveal.js"></script>
+<script src="reveal/plugin/notes/notes.js"></script>
+<script src="reveal/plugin/highlight/highlight.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: true,
+    center: true,
+    transition: 'fade',
+    // Larger internal canvas (default 960×700) — 16:9 with room for content-dense slides
+    // and the 60px bottom slack we set in CSS. Reveal scales this to the viewport.
+    width: 1280,
+    height: 800,
+    plugins: [ RevealNotes, RevealHighlight ]
+  });
+</script>
+</body>
+</html>
