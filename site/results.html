@@ -149,6 +149,80 @@
     <strong>not</strong> an apples-to-apples comparison.
   </p>
 
+  <h2>τ²-bench airline — Qwen 2.5 14B</h2>
+
+  <p>
+    Same benchmark, capability, split, and algorithm as the held-out run above, with a
+    self-hosted open model (<strong>Qwen 2.5 14B-Instruct</strong> via vLLM on OpenShift)
+    replacing the Claude runner.
+  </p>
+
+  <ul>
+    <li><strong>Capability:</strong> airline <strong>policy + tools</strong> (<code>[system-prompt, tools]</code>).</li>
+    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
+    <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
+    <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
+    <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>0.200</strong></td><td><strong>0.387</strong></td><td class="gain">+0.187 / +93.5% relative</td></tr>
+      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>0.170</strong></td><td><strong>0.240</strong></td><td class="gain">+0.070 / +41.2% relative</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    3 of 10 iterations accepted. The optimizer added code-level enforcement of cancellation
+    rules, input validation guards, and pre-flight status checks — hardening tool
+    implementations rather than rewriting policy prose.
+  </p>
+
+  <h2>τ²-bench airline — Qwen 2.5 14B, all capabilities</h2>
+
+  <p>
+    Same model and split as above, with all three capability types optimized jointly.
+  </p>
+
+  <ul>
+    <li><strong>Capability:</strong> <code>[skill-package, system-prompt, tools]</code>.</li>
+    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
+    <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
+    <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
+    <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>0.273</strong></td><td><strong>0.520</strong></td><td class="gain">+0.247 / +90.5% relative</td></tr>
+      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>0.120</strong></td><td><strong>0.270</strong></td><td class="gain">+0.150 / +125.0% relative</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    3 of 10 iterations accepted, 7 rejected. The optimizer edited tool code, policy rules,
+    and skill prose jointly — combining code-level guards with policy clarifications and
+    structured methodology in SKILL.md.
+    <strong>Best held-out test gain across all Qwen 14B runs (+125%).</strong>
+  </p>
+
+  <blockquote>
+    <p>
+      <strong>Key takeaway — Qwen 14B runs:</strong> On a self-hosted 14B model,
+      <code>[skill-package, system-prompt, tools]</code> with <code>hill-climb</code> produced
+      the best held-out result (+125% on test). Joint optimization of all three capabilities
+      outperformed the tools-only run (+41.2%) when paired with hill-climb's conservative gating.
+    </p>
+  </blockquote>
+
   <h2>SkillsBench — skill-package optimization (held-out, committed)</h2>
 
   <p>
@@ -259,7 +333,7 @@
   </figure>
 
   <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
-    <em>Last reviewed: 2026-07-13.</em>
+    <em>Last reviewed: 2026-07-21.</em>
   </p>
 
 </main>
