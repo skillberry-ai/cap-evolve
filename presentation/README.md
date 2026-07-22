@@ -38,9 +38,9 @@ open "http://localhost:8000/?print-pdf"
 | # | Slide | Part / Thread |
 |---|---|---|
 | 1  | Cover | — |
-| 2  | What cap-evolve is (pitch + loop + 4 surfaces) | 1 |
-| 3  | Where cap-evolve stands today (status stats + recent shipping) | 1 |
-| 4  | Why cap-evolve is different (5 differentiator tiles) | 1 |
+| 2  | What cap-evolve is (pitch + loop diagram + capability chips) | 1 |
+| 3  | Why cap-evolve is different (6 differentiator tiles, 3×2) | 1 |
+| 4  | Where cap-evolve stands today (status stats + recent shipping) | 1 |
 | 5  | Results at a glance (three big numbers) | 2 |
 | 6  | What actually changed (real edits) | 2 |
 | 7  | External context (comparison + honesty caveats) | 2 |

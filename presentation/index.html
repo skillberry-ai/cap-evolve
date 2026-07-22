@@ -128,13 +128,14 @@
     .reveal .loop-diagram .lp-label   { fill: var(--accent); font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; text-anchor: middle; letter-spacing: 0.05em; }
 
     /* Compact "capabilities" strip (slide 2) */
+    .reveal .surface-label {
+      text-align: center; font-size: 0.48em; color: var(--sub);
+      font-style: italic; letter-spacing: 0.06em; text-transform: uppercase;
+      margin: 0.55em auto 0.35em;
+    }
     .reveal .surface-strip {
       display: flex; align-items: center; justify-content: center;
-      gap: 0.5em; margin: 0.5em auto 0; max-width: 96%; flex-wrap: wrap;
-    }
-    .reveal .surface-title {
-      font-size: 0.5em; color: var(--sub); font-style: italic; letter-spacing: 0.03em;
-      margin-right: 0.15em; text-transform: uppercase;
+      gap: 0.55em; margin: 0 auto; max-width: 96%; flex-wrap: wrap;
     }
     .reveal .surface-chip {
       display: inline-block; padding: 0.35em 0.9em; border-radius: 999px;
@@ -144,6 +145,30 @@
     .reveal .surface-note {
       font-size: 0.45em; color: var(--sub); font-style: italic;
       text-align: center; margin: 0.3em auto 0;
+    }
+
+    /* Differentiator tiles — 3 × 2 grid, bigger fonts (slide 3, was slide 4) */
+    .reveal .diff-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.9em; margin: 0.8em auto 0.3em; max-width: 96%;
+    }
+    .reveal .diff-tile {
+      background: var(--card-bg); border: 2px solid var(--card-border);
+      border-radius: 12px; padding: 0.9em 1em; text-align: left;
+      display: flex; flex-direction: column;
+    }
+    .reveal .diff-tile .badge {
+      display: inline-block; font-size: 0.5em; padding: 0.12em 0.55em;
+      border-radius: 4px; background: var(--accent-soft); color: var(--accent);
+      font-weight: 700; letter-spacing: 0.06em;
+      align-self: flex-start; margin-bottom: 0.55em;
+    }
+    .reveal .diff-tile .diff-title {
+      font-size: 0.75em; font-weight: 700; color: var(--ink);
+      margin: 0 0 0.35em; letter-spacing: -0.005em; line-height: 1.2;
+    }
+    .reveal .diff-tile .diff-desc {
+      font-size: 0.55em; color: var(--sub); line-height: 1.45;
     }
 
     /* Roadmap overview tiles (6-item grid) */
@@ -250,8 +275,8 @@
       <p style="font-size:0.62em; margin-top:0.2em; color:var(--sub); max-width:94%;">
         Agents drive both the <strong style="color:var(--ink);">outer search loop</strong> and the
         <strong style="color:var(--ink);">inner optimization step</strong>. Bring the agent and the eval
-        you already have; cap-evolve reports <strong style="color:var(--ink);">one honest number</strong>.
-        What your agent <em>reads</em>, not its weights.
+        you already have; cap-evolve returns <strong style="color:var(--ink);">gate-verified improvements</strong>
+        measured on held-out splits.
       </p>
 
       <svg class="loop-diagram" viewBox="0 0 1200 240"
@@ -303,8 +328,8 @@
         <text class="lp-label" x="570" y="192">each iteration</text>
       </svg>
 
+      <p class="surface-label">Capabilities we optimize</p>
       <div class="surface-strip">
-        <span class="surface-title">Capabilities we optimize:</span>
         <span class="surface-chip">System prompts</span>
         <span class="surface-chip">Tool code</span>
         <span class="surface-chip">Skill packages</span>
@@ -315,12 +340,59 @@
       <aside class="notes">
         Frame cap-evolve as an iterative loop where agents drive both the outer search
         (which capability to change next) and the inner optimization (what edit to propose).
-        "Reads, not weights" — no training compute, no model risk. The 4 surfaces chips
-        open the door for cross-team applicability.
+        No training compute, no model risk. The 4 surfaces chips open the door for
+        cross-team applicability.
       </aside>
     </section>
 
-    <!-- Slide 3 — Where cap-evolve stands today -->
+    <!-- Slide 3 — Why cap-evolve is different (6 tiles in 3×2, was slide 4) -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>Why cap-evolve is different</h2>
+      <p class="subtitle" style="font-size:0.65em;">Six design choices that separate it from prior tool-optimization work.</p>
+
+      <div class="diff-grid">
+        <div class="diff-tile">
+          <span class="badge">01</span>
+          <div class="diff-title">Agents optimize agents</div>
+          <div class="diff-desc">The optimizer is a coding-agent CLI. No gradients, no heuristic search.</div>
+        </div>
+        <div class="diff-tile">
+          <span class="badge">02</span>
+          <div class="diff-title">Any agentic capability</div>
+          <div class="diff-desc">Prompts, tool code, MCP surfaces, skill packages — one or combined.</div>
+        </div>
+        <div class="diff-tile">
+          <span class="badge">03</span>
+          <div class="diff-title">Flexible intake</div>
+          <div class="diff-desc">One-prompt benchmark onboarding. Agent-driven adapter wiring, dynamic per-capability config.</div>
+        </div>
+        <div class="diff-tile">
+          <span class="badge">04</span>
+          <div class="diff-title">Under constraints</div>
+          <div class="diff-desc">Cost-capped iterations. Wall-clock next.</div>
+        </div>
+        <div class="diff-tile">
+          <span class="badge">05</span>
+          <div class="diff-title">Flexible state</div>
+          <div class="diff-desc">Git-committed markdown. Browseable, editable, resumable.</div>
+        </div>
+        <div class="diff-tile">
+          <span class="badge">06</span>
+          <div class="diff-title">Rigorous evaluation</div>
+          <div class="diff-desc">Sealed test, gate-verified acceptance, artifacts committed with every result.</div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Six differentiators. #3 Flexible intake is new here (added to the site tile set too):
+        one-prompt onboarding — cap-evolve interviews you, installs the benchmark, wires the
+        adapter, configures per capability. #4 budget-caps and #5 resumable state are still
+        firming up.
+      </aside>
+    </section>
+
+    <!-- Slide 4 — Where cap-evolve stands today (moved from slide 3) -->
     <section>
       <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
       <h2>Where cap-evolve stands today</h2>
@@ -367,49 +439,6 @@
       <aside class="notes">
         Not a lab prototype — public repo, live docs, 14 host integrations. Highlight the IBM+RH
         co-authored posture. Missing: exact author roster, confirm before we ship.
-      </aside>
-    </section>
-
-    <!-- Slide 4 — Why cap-evolve is different (5 tiles) -->
-    <section>
-      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
-      <h2>Why cap-evolve is different</h2>
-      <p class="subtitle" style="font-size:0.65em;">Five design choices that separate it from prior tool-optimization work.</p>
-
-      <div class="grid-5" style="max-width:96%; margin:0.7em auto 0; font-size:0.55em;">
-        <div class="card">
-          <span class="badge">01</span>
-          <div class="who" style="margin-top:0.3em;">Agents optimize agents</div>
-          <div class="role">Optimizer is itself a coding-agent CLI (Claude Code, Codex, +12 more). No gradients, no heuristic search.</div>
-        </div>
-        <div class="card">
-          <span class="badge">02</span>
-          <div class="who" style="margin-top:0.3em;">Any agentic capability</div>
-          <div class="role">System prompts, tool code, MCP surfaces, skill packages — one or combined.</div>
-        </div>
-        <div class="card">
-          <span class="badge">03</span>
-          <div class="who" style="margin-top:0.3em;">Under constraints</div>
-          <div class="role">Cap the cost per iteration — the optimizer stops at your budget. Wall-clock next.</div>
-        </div>
-        <div class="card">
-          <span class="badge">04</span>
-          <div class="who" style="margin-top:0.3em;">Flexible state</div>
-          <div class="role">Iteration state = git-committed markdown (LEDGER, JOURNAL, PROCESS). Browseable, editable, resumable.</div>
-        </div>
-        <div class="card">
-          <span class="badge">05</span>
-          <div class="who" style="margin-top:0.3em;">Honest evaluation</div>
-          <div class="role">Test sealed until finalize, scored once. Paired-significance gate on val. Every number ships with its artifact.</div>
-        </div>
-      </div>
-      <p style="font-size:0.5em; color:var(--sub); font-style:italic; margin-top:0.8em;">
-        Full detail at <span class="kbd">skillberry-ai.github.io/cap-evolve</span> · Why cap-evolve section.
-      </p>
-
-      <aside class="notes">
-        Same five differentiators on the public site (PR #67). #3 budget and #4 resumable state
-        are still firming up — deck flags where each will need more evidence.
       </aside>
     </section>
 
