@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent orchestration — cap-evolve</title>
+  <meta name="description" content="Two orchestration modes (deterministic vs agent) and the agent-optimize algorithm: the conversational agent drives the whole optimization loop itself, honestly, sealing the test once.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/agent-orchestration.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="Agent orchestration — cap-evolve">
+  <meta property="og:description" content="Two orchestration modes (deterministic vs agent) and the agent-optimize algorithm: the conversational agent drives the whole optimization loop itself, honestly, sealing the test once.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/agent-orchestration.html">
+  <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Agent orchestration — cap-evolve">
+  <meta name="twitter:description" content="Two orchestration modes (deterministic vs agent) and the agent-optimize algorithm.">
+  <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260721-2">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html" class="active">Agent mode</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a href="adapter-templates.html">Adapter templates</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Agent orchestration</h1>
+  <p class="lead">
+    cap-evolve runs in one of two <strong>orchestration modes</strong>, chosen by a single key in
+    <code>capevolve.yaml</code>. Both share the same honesty guarantees, because those live in the
+    core (seeded split, val-only significance gate, once-only sealed test) and cannot be bypassed by
+    any skill, prompt, or flag in either mode.
+  </p>
+
+<pre><code>orchestration_mode: deterministic   # default — cap-evolve sequences the loop in core
+orchestration_mode: agent           # the conversational agent drives the loop itself</code></pre>
+
+  <h2>Deterministic mode (default)</h2>
+  <p>
+    <code>cap-evolve run</code> sequences the phases itself
+    (<code>intake → implement-and-check → baseline → algorithm → finalize → report</code>). A
+    per-iteration <strong>optimizer</strong> subprocess (e.g. <code>claude-code</code>,
+    <code>codex</code>, or <code>mock</code>) proposes each edit; the engine evaluates on val, applies
+    the gate, and accepts or rejects. This is the right choice when the schedule is known and you want
+    a hands-off, reproducible run. Algorithms: <code>hill-climb</code>, <code>gepa</code>,
+    <code>skillopt</code>.
+  </p>
+
+  <h2>Agent mode</h2>
+  <p>
+    <code>cap-evolve run</code> does <code>check → baseline</code>, prints a handoff
+    (<code>run_dir</code>, <code>algorithm</code>, <code>stop_condition</code>) and <strong>returns</strong>
+    — no algorithm subprocess, no auto-finalize. From there the <strong>same conversational agent that
+    ran intake drives the optimization itself</strong>, following the selected algorithm's
+    <em>Agent-mode loop</em>. It is not a new spawned agent and it does not delegate edits to an
+    optimizer subprocess — in agent mode the agent <em>is</em> the optimizer, and you stay in the loop
+    to steer or halt at any round. A Stop hook re-nudges the agent so it keeps driving across turns
+    until the run is finalized.
+  </p>
+
+  <h2>The <code>agent-optimize</code> algorithm — free-form, fully agentic</h2>
+  <p>
+    <code>agent-optimize</code> is purpose-built for agent mode: no fixed schedule, no delegated
+    optimizer. The agent owns the whole search, bounded only by the honesty invariants (code-enforced)
+    and the free-text <code>stop_condition</code> it re-reads with the run-dir spend.
+  </p>
+  <ul>
+    <li><strong>Phase 0 — understand first.</strong> Read the project, adapter, seed capability, and
+      <code>score()</code>/feedback; note val/test sizes; restate the <code>stop_condition</code> as
+      concrete checks. Ask the user any blocking questions here so the loop then runs unattended.</li>
+    <li><strong>Free loop.</strong> Read the failing-task feedback (free signal); propose one coherent,
+      general edit itself; optionally triage on a cheap task subset; then evaluate on <strong>full
+      val</strong> and accept only on the paired significance gate (Δ &gt; k·SE) with no regression;
+      snapshot + set-best + log the round.</li>
+    <li><strong>See constraints every few rounds.</strong> Re-read <code>stop_condition</code> and the
+      run-dir spend — score goal, eval cost, optimization cost, and time all fit in one line.</li>
+    <li><strong>Stop &amp; seal once.</strong> When the stop condition is met, seal the held-out test
+      split exactly once and write the report.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="callout-title">Honesty invariants (both modes, code-enforced)</div>
+    Acceptance and the score-goal check are always on <strong>full val</strong> through the gate; cheap
+    subset triage never gates. The <strong>test split is sealed</strong> until a single finalize — the
+    evaluate phase physically restricts <code>--split</code> to <code>train|val</code>; a second
+    finalize raises <code>TestSealError</code>. Every accept is snapshotted; every run ends with
+    finalize + report.
+  </div>
+
+  <h2>How to select it</h2>
+<pre><code>orchestration_mode: agent
+algorithm_skill:    agent-optimize
+stop_condition:     "stop when the FULL val mean reward &gt;= 0.78; keep eval + optimization cost modest; you decide which tasks to evaluate and when; no fixed round count"</code></pre>
+
+  <h2>τ²-bench airline — agent-mode run (held-out 30 (=val) / 20)</h2>
+  <p>
+    The first run driven entirely in agent mode with <code>agent-optimize</code>: the agent understood
+    the benchmark, ran the baseline, then proposed the airline-policy edits itself (payment-construction
+    discipline via the <code>calculate</code> tool was the load-bearing change), gated every candidate on
+    the full val split, and sealed the test once. Runner + user simulator: <code>gpt-oss-120b</code> via
+    a litellm proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
+  </p>
+  <table>
+    <thead>
+      <tr><th>split (single-trial)</th><th>baseline</th><th>best</th><th>Δ</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>val</strong> (30, fit)</td><td>0.500</td><td><strong>0.633</strong></td><td class="gain">+26.7% relative — gate-significant</td></tr>
+      <tr><td><strong>sealed test</strong> (20, held-out)</td><td>0.400</td><td><strong>0.550</strong></td><td class="gain">+37.5% relative</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <div class="callout-title">Honest reading</div>
+    τ²-bench airline is high-variance at a single trial. On a stable 3-trial re-evaluation the val fit
+    gain is +18% (paired-significant) while the held-out test is flat within noise — and because
+    <code>train == val</code>, the val figure is a <em>fit</em>, not generalization. Agent mode did
+    produce the only gate-accepted improvement in a head-to-head against a bounded deterministic run,
+    but <code>gpt-oss-120b</code>'s stable val ceiling here (~0.64) is below the 0.78 target; a genuine
+    held-out gain needs a stronger runner model or tool-level edits. Full detail and caveats:
+    <a href="results.html">Results</a>.
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
