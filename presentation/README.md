@@ -1,6 +1,6 @@
 # cap-evolve — Management review presentation
 
-15-slide HTML deck for the cap-evolve management review.
+17-slide HTML deck for the cap-evolve management review.
 Framework: [Reveal.js 5.1](https://revealjs.com) (vendored, offline-safe).
 
 ## Run it
@@ -31,27 +31,29 @@ open "http://localhost:8000/?print-pdf"
 
 ## Storyboard
 
-**Part 1 · What cap-evolve is** — slides 1–4
-**Part 2 · Where we stand (experiments &amp; results)** — slides 5–7
-**Part 3 · Where we go from here** — slide 8 overview, slides 9–14 for the six sub-threads, slide 15 close.
+**Part 1 · What cap-evolve is** — slides 1–5
+**Part 2 · Where we stand (experiments &amp; results)** — slides 6–9
+**Part 3 · Where we go from here** — slide 10 overview, slides 11–16 for the six sub-threads, slide 17 close.
 
 | # | Slide | Part / Thread |
 |---|---|---|
 | 1  | Cover | — |
 | 2  | What cap-evolve is (pitch + loop diagram + capability chips) | 1 |
 | 3  | Why cap-evolve is different (6 differentiator tiles, 3×2) | 1 |
-| 4  | Where cap-evolve stands today (status stats + recent shipping) | 1 |
-| 5  | Results at a glance (three big numbers) | 2 |
-| 6  | What actually changed (real edits) | 2 |
-| 7  | External context (comparison + honesty caveats) | 2 |
-| 8  | Six threads, one direction (roadmap overview) | 3 |
-| 9  | Publication — benchmarks, baselines, prereqs, decisions | **3.1** |
-| 10 | Working with Red Hat (Parsec PoC + head-to-head) | **3.2** |
-| 11 | Skillberry Proxy &amp; Store *(placeholder — needs content)* | **3.3** |
-| 12 | Memory / KB / LLM-wiki | **3.4** |
-| 13 | Simulator from traces | **3.5** |
-| 14 | Public research adoption (Arbor / EvoSkill / GEPA / SkillOps) | **3.6** |
-| 15 | Three next steps + Q&amp;A | — |
+| 4  | The live dashboard (screenshot + feature highlights) | 1 |
+| 5  | Where cap-evolve stands today (status stats + recent shipping) | 1 |
+| 6  | Results at a glance (three big numbers) | 2 |
+| 7  | What actually changed (real edits) | 2 |
+| 8  | External context (comparison + honesty caveats) | 2 |
+| 9  | Ongoing experiment plan (12-row sweep table) | 2 |
+| 10 | Six threads, one direction (roadmap overview) | 3 |
+| 11 | Working with Red Hat (Parsec PoC + head-to-head) | **3.1** |
+| 12 | Publication — benchmarks, baselines, prereqs, decisions | **3.2** |
+| 13 | Skillberry Proxy &amp; Store *(placeholder — needs content)* | **3.3** |
+| 14 | Memory / KB / LLM-wiki | **3.4** |
+| 15 | Simulator from traces | **3.5** |
+| 16 | Public research adoption (Arbor / EvoSkill / GEPA / SkillOps) | **3.6** |
+| 17 | Three next steps + Q&amp;A | — |
 
 ## Placeholders — content the deck still needs
 

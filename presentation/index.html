@@ -174,15 +174,84 @@
     /* Roadmap overview tiles (6-item grid) */
     .reveal .roadmap-tile {
       background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
-      padding: 0.95em 1em; text-align: left; height: 100%;
+      padding: 1em 1.05em; text-align: left; height: 100%;
     }
     .reveal .roadmap-tile .n {
       display: inline-block; padding: 0.1em 0.5em; border-radius: 4px;
       background: var(--accent-soft); color: var(--accent);
-      font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.35em;
+      font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.4em;
     }
-    .reveal .roadmap-tile .title { font-size: 0.9em; font-weight: 700; color: var(--ink); margin-bottom: 0.25em; }
-    .reveal .roadmap-tile .desc  { font-size: 0.62em; color: var(--sub); line-height: 1.45; }
+    .reveal .roadmap-tile .title { font-size: 0.9em; font-weight: 700; color: var(--ink); margin-bottom: 0.3em; }
+    .reveal .roadmap-tile .desc  { font-size: 0.78em; color: var(--sub); line-height: 1.4; }
+
+    /* Experiment plan table */
+    .reveal .exp-wrap { max-width: 100%; margin: 0.45em auto 0; }
+    .reveal .exp-table {
+      margin: 0 auto; max-width: 100%;
+      border-collapse: collapse;
+      font-size: 0.33em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .reveal .exp-table th {
+      background: var(--accent-soft); color: var(--accent);
+      padding: 0.45em 0.42em; text-align: left; font-weight: 700;
+      letter-spacing: 0.03em; font-size: 0.85em;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .reveal .exp-table th.num, .reveal .exp-table td.num {
+      text-align: right; font-variant-numeric: tabular-nums;
+    }
+    .reveal .exp-table td {
+      padding: 0.36em 0.42em; border-bottom: 1px solid var(--card-border);
+      color: var(--sub); vertical-align: middle; white-space: nowrap;
+    }
+    .reveal .exp-table .status  { font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; font-size: 0.85em; }
+    .reveal .exp-table .st-done    { color: var(--green); }
+    .reveal .exp-table .st-planned { color: var(--amber); }
+    .reveal .exp-table .st-future  { color: var(--muted); font-style: italic; }
+    .reveal .exp-table tr.done-row    td { background: rgba( 75, 214,  87, 0.05); color: var(--ink); }
+    .reveal .exp-table tr.planned-row td { background: transparent; }
+    .reveal .exp-table tr.future-row  td { background: rgba(138, 143, 152, 0.06); color: var(--muted); }
+    .reveal .exp-table .delta-pos  { color: var(--green); font-weight: 700; }
+    .reveal .exp-table .delta-flat { color: var(--muted); }
+    .reveal .exp-legend {
+      font-size: 0.5em; color: var(--sub);
+      display: flex; justify-content: center; gap: 1.4em; margin-top: 0.5em;
+      font-style: italic;
+    }
+    .reveal .exp-legend .swatch {
+      display: inline-block; width: 0.9em; height: 0.9em;
+      border-radius: 3px; margin-right: 0.35em; vertical-align: -0.05em;
+    }
+    .reveal .exp-legend .sw-done    { background: rgba( 75, 214,  87, 0.35); }
+    .reveal .exp-legend .sw-planned { background: rgba(245, 197,  24, 0.35); }
+    .reveal .exp-legend .sw-future  { background: rgba(138, 143, 152, 0.35); }
+
+    /* Dashboard screenshot slide */
+    .reveal .dashboard-shot {
+      display: block; margin: 0.5em auto 0.25em;
+      max-width: 88%; max-height: 380px; width: auto; height: auto;
+      border: 1px solid #2d2d2d; border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .reveal .dashboard-caption {
+      text-align: center; color: var(--sub); font-size: 0.5em;
+      font-style: italic; margin: 0.4em auto 0.3em; max-width: 88%;
+    }
+    .reveal .dashboard-features {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.7em; margin: 0.4em auto 0; max-width: 92%;
+      font-size: 0.5em;
+    }
+    .reveal .dashboard-features .feat {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 8px; padding: 0.55em 0.75em; text-align: left;
+    }
+    .reveal .dashboard-features .feat .k {
+      color: var(--accent); font-weight: 700; letter-spacing: 0.02em;
+      font-size: 0.95em; margin-bottom: 0.15em;
+    }
+    .reveal .dashboard-features .feat .v { color: var(--sub); line-height: 1.4; }
 
     /* Table for external comparison */
     .reveal .cmp {
@@ -392,7 +461,47 @@
       </aside>
     </section>
 
-    <!-- Slide 4 — Where cap-evolve stands today (moved from slide 3) -->
+    <!-- Slide 4 — The live dashboard (NEW; sits between differentiators and status) -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>The live dashboard</h2>
+      <p class="subtitle" style="font-size:0.65em;">
+        Every run publishes a self-contained <span class="kbd">dashboard.html</span> — status, cost, iterations, diffs, and memory in one place.
+      </p>
+
+      <img src="assets/dashboard.png"
+           alt="cap-evolve dashboard — a real τ²-bench airline run"
+           class="dashboard-shot">
+
+      <p class="dashboard-caption">
+        A real τ²-bench airline run — baseline → best, accepted vs rejected candidates, cost, and the fitness stair over iterations.
+      </p>
+
+      <div class="dashboard-features">
+        <div class="feat">
+          <div class="k">Headline metrics</div>
+          <div class="v">BEST · BASELINE · Δ · SEALED TEST · COST · TOKENS · WALL-CLOCK · $ / +1%.</div>
+        </div>
+        <div class="feat">
+          <div class="k">Iteration lineage</div>
+          <div class="v">Accepted (green) vs rejected (red) candidates with the fitness stair — no cherry-picking.</div>
+        </div>
+        <div class="feat">
+          <div class="k">Deep views</div>
+          <div class="v">Cost, phases, lineage, trajectories, iterations, git diffs, memory, files, insights.</div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Visual proof that cap-evolve is a real tool, not a script. Every run produces this —
+        no external service required, just a static HTML file committed alongside the run
+        artifact. Numbers in the shot are from the reproducible τ²-airline fit-metric run
+        (matches slide 6): baseline 53.6 → best 71.2, cost $148 / 10h wall-clock, 5 accepted
+        and 5 rejected iterations.
+      </aside>
+    </section>
+
+    <!-- Slide 5 — Where cap-evolve stands today (moved from slide 3) -->
     <section>
       <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
       <h2>Where cap-evolve stands today</h2>
@@ -572,6 +681,217 @@
         The point of this slide is that we're NOT claiming state-of-the-art. We're placing our
         +58.3% next to adjacent work and being explicit about caveats. Publication requires at
         least one apples-to-apples comparison — flagged in Part 3.
+      </aside>
+    </section>
+
+    <!-- Slide 9 — Ongoing experiment plan (last slide of Part 2) -->
+    <section>
+      <div class="part-pill">02 · WHERE WE STAND</div>
+      <h2>Ongoing experiment plan</h2>
+      <p class="subtitle" style="font-size:0.65em;">
+        Head-to-head sweep across τ²-bench + SWE-bench Lite (+ RH Internal Bench) — cap-evolve
+        <span class="kbd">hill-climb</span> vs <span class="kbd">gepa</span> / <span class="kbd">skillopt</span> / <span class="kbd">local-gepa</span>.
+      </p>
+
+      <div class="exp-wrap">
+        <table class="exp-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Status</th>
+              <th>Benchmark</th>
+              <th>Agent Model</th>
+              <th>Optimizer Model</th>
+              <th>Capability</th>
+              <th>Algo</th>
+              <th>Tasks</th>
+              <th class="num">Trials</th>
+              <th class="num">Iters</th>
+              <th class="num">Baseline</th>
+              <th class="num">Optimized</th>
+              <th class="num">Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="done-row">
+              <td class="num">1</td>
+              <td><span class="status st-done">Done</span></td>
+              <td>tau2-bench</td>
+              <td>claude-sonnet-4-6</td>
+              <td>claude-code</td>
+              <td>[system-prompt, tools]</td>
+              <td>hill-climb</td>
+              <td>5 hard</td>
+              <td class="num">3</td>
+              <td class="num">2</td>
+              <td class="num">0.600</td>
+              <td class="num">0.800</td>
+              <td class="num delta-pos">+33%</td>
+            </tr>
+            <tr class="done-row">
+              <td class="num">2</td>
+              <td><span class="status st-done">Done</span></td>
+              <td>tau2-bench</td>
+              <td>claude-sonnet-4-6</td>
+              <td>claude-code</td>
+              <td>[skill-package]</td>
+              <td>hill-climb</td>
+              <td>5 hard</td>
+              <td class="num">3</td>
+              <td class="num">2</td>
+              <td class="num">0.533</td>
+              <td class="num">0.933</td>
+              <td class="num delta-pos">+75%</td>
+            </tr>
+            <tr class="done-row">
+              <td class="num">3</td>
+              <td><span class="status st-done">Done</span></td>
+              <td>SWE-bench Lite</td>
+              <td>claude-sonnet-4-6</td>
+              <td>claude-code</td>
+              <td>[skill-package]</td>
+              <td>hill-climb</td>
+              <td>5</td>
+              <td class="num">1</td>
+              <td class="num">2</td>
+              <td class="num">0.830</td>
+              <td class="num">0.900</td>
+              <td class="num delta-pos">+12%</td>
+            </tr>
+            <tr class="done-row">
+              <td class="num">4</td>
+              <td><span class="status st-done">Done</span></td>
+              <td>tau2-bench</td>
+              <td>claude-sonnet-4-6</td>
+              <td>claude-code</td>
+              <td>[system-prompt, tools]</td>
+              <td>hill-climb</td>
+              <td>5 easy</td>
+              <td class="num">3</td>
+              <td class="num">2</td>
+              <td class="num">1.000</td>
+              <td class="num">1.000</td>
+              <td class="num delta-flat">0%</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">5</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>SWE-bench Lite</td>
+              <td>qwen2.5:35b</td>
+              <td>qwen2.5:35b</td>
+              <td>[skill-package]</td>
+              <td>hill-climb</td>
+              <td>5</td>
+              <td class="num">1</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">6</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>SWE-bench Lite</td>
+              <td>qwen2.5:35b</td>
+              <td>qwen2.5:35b</td>
+              <td>[skill-package]</td>
+              <td>gepa</td>
+              <td>5</td>
+              <td class="num">1</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">7</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>SWE-bench Lite</td>
+              <td>qwen2.5:35b</td>
+              <td>qwen2.5:35b</td>
+              <td>[skill-package]</td>
+              <td>skillopt</td>
+              <td>5</td>
+              <td class="num">1</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">8</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>SWE-bench Lite</td>
+              <td>qwen2.5:35b</td>
+              <td>GEPA (local)</td>
+              <td>[skill-package]</td>
+              <td>local-gepa</td>
+              <td>5</td>
+              <td class="num">1</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">9</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>tau2-bench</td>
+              <td>qwen2.5:35b</td>
+              <td>qwen2.5:35b</td>
+              <td>[skill-package]</td>
+              <td>hill-climb</td>
+              <td>5 hard</td>
+              <td class="num">3</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">10</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>tau2-bench</td>
+              <td>claude-sonnet-4-6</td>
+              <td>claude-code</td>
+              <td>[skill-package]</td>
+              <td>gepa</td>
+              <td>5 hard</td>
+              <td class="num">3</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="planned-row">
+              <td class="num">11</td>
+              <td><span class="status st-planned">Planned</span></td>
+              <td>tau2-bench</td>
+              <td>claude-sonnet-4-6</td>
+              <td>GEPA (local)</td>
+              <td>[skill-package]</td>
+              <td>local-gepa</td>
+              <td>5 hard</td>
+              <td class="num">3</td>
+              <td class="num">3</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+            <tr class="future-row">
+              <td class="num">12</td>
+              <td><span class="status st-future">Future</span></td>
+              <td>RH Internal Bench</td>
+              <td>TBD</td>
+              <td>TBD</td>
+              <td>TBD</td>
+              <td>TBD</td>
+              <td>TBD</td>
+              <td class="num">TBD</td>
+              <td class="num">TBD</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="exp-legend">
+          <span><span class="swatch sw-done"></span>Done (4)</span>
+          <span><span class="swatch sw-planned"></span>Planned (7)</span>
+          <span><span class="swatch sw-future"></span>Future (1)</span>
+        </div>
+      </div>
+
+      <aside class="notes">
+        Twelve experiments in the sweep: 4 done, 7 planned, 1 future (RH internal). Done rows
+        are the τ²-bench + SWE-bench Lite results already committed. Planned rows are the
+        apples-to-apples publication comparisons — same benchmark + agent (ollama/qwen2.5:35b
+        for the local runs) across cap-evolve's hill-climb, GEPA, SkillOps, and standalone
+        local-GEPA. Future row is the Parsec-adjacent RH internal benchmark once available.
       </aside>
     </section>
 
