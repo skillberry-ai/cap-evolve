@@ -26,6 +26,14 @@
       --muted:       #8a8f98;
       --card-bg:     #1a1a1a;
       --card-border: #2d2d2d;
+
+      /* Section accent colors — one per part of the deck */
+      --sec1:        #a48bff;   /* Part 1 (WHAT)         — purple (matches --accent) */
+      --sec1-soft:   #241d47;
+      --sec2:        #5ec6d8;   /* Part 2 (WHERE WE STAND) — teal / cyan */
+      --sec2-soft:   #0f2e33;
+      --sec3:        #ff9d76;   /* Part 3 (WHAT'S NEXT)   — coral */
+      --sec3-soft:   #3d1f13;
     }
     .reveal { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
     .reveal h1, .reveal h2, .reveal h3 { text-transform: none; letter-spacing: -0.01em; }
@@ -37,7 +45,7 @@
 
     /* Slack at the bottom of every slide — keeps content off the very edge
        and above Reveal's progress bar / slide counter. */
-    .reveal .slides > section { padding-bottom: 60px; box-sizing: border-box; }
+    .reveal .slides > section { padding-bottom: 90px; box-sizing: border-box; }
 
     /* Reusable typography helpers */
     .reveal .subtitle { color: var(--sub); font-size: 0.7em; margin-top: 0.2em; line-height: 1.35; }
@@ -48,17 +56,20 @@
     .reveal ul, .reveal ol { display: inline-block; text-align: left; }
     .reveal li { margin: 0.25em 0; }
 
-    /* Part / section pill */
+    /* Part / section pill — three flavors, one per part of the deck */
     .reveal .part-pill {
       display: inline-block; padding: 0.2em 0.7em; border-radius: 999px;
       font-size: 0.5em; margin-bottom: 0.8em; letter-spacing: 0.12em;
-      background: var(--accent-soft); color: var(--accent); font-weight: 600;
+      background: var(--sec1-soft); color: var(--sec1); font-weight: 600;
     }
-    /* Sub-thread pill (03.x) */
+    .reveal .part-pill.sec-02 { background: var(--sec2-soft); color: var(--sec2); }
+    .reveal .part-pill.sec-03 { background: var(--sec3-soft); color: var(--sec3); }
+
+    /* Sub-thread pill (3.x) — always Part-3, so uses sec-03 color */
     .reveal .thread-pill {
       display: inline-block; padding: 0.15em 0.55em; border-radius: 4px;
       font-size: 0.45em; margin-right: 0.5em; letter-spacing: 0.05em;
-      background: #2a2a2a; color: var(--accent); font-weight: 600;
+      background: var(--sec3-soft); color: var(--sec3); font-weight: 600;
     }
 
     /* Cards & grids */
@@ -171,18 +182,26 @@
       font-size: 0.55em; color: var(--sub); line-height: 1.45;
     }
 
-    /* Roadmap overview tiles (6-item grid) */
+    /* Roadmap overview tiles — same visual footprint as .diff-tile so the
+       two "6 tiles in 3×2" slides (slide 3 and slide 10) match exactly. */
     .reveal .roadmap-tile {
-      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
-      padding: 1em 1.05em; text-align: left; height: 100%;
+      background: var(--card-bg); border: 2px solid var(--card-border);
+      border-radius: 12px; padding: 0.9em 1em;
+      text-align: left; display: flex; flex-direction: column; height: 100%;
     }
     .reveal .roadmap-tile .n {
-      display: inline-block; padding: 0.1em 0.5em; border-radius: 4px;
-      background: var(--accent-soft); color: var(--accent);
-      font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.4em;
+      display: inline-block; padding: 0.12em 0.55em; border-radius: 4px;
+      background: var(--sec3-soft); color: var(--sec3);
+      font-size: 0.5em; font-weight: 700; letter-spacing: 0.06em;
+      align-self: flex-start; margin-bottom: 0.55em;
     }
-    .reveal .roadmap-tile .title { font-size: 0.9em; font-weight: 700; color: var(--ink); margin-bottom: 0.3em; }
-    .reveal .roadmap-tile .desc  { font-size: 0.78em; color: var(--sub); line-height: 1.4; }
+    .reveal .roadmap-tile .title {
+      font-size: 0.75em; font-weight: 700; color: var(--ink);
+      margin: 0 0 0.35em; letter-spacing: -0.005em; line-height: 1.2;
+    }
+    .reveal .roadmap-tile .desc {
+      font-size: 0.55em; color: var(--sub); line-height: 1.45;
+    }
 
     /* Experiment plan table */
     .reveal .exp-wrap { max-width: 100%; margin: 0.45em auto 0; }
@@ -537,24 +556,27 @@
           </ul>
         </div>
         <div class="card">
-          <div class="who" style="color:var(--accent);">Made at IBM · Red Hat</div>
-          <div class="role" style="font-size:0.85em;">
-            Open source (Apache-2.0) with an internal roadmap. First-class integration with IBM RITS models used in the τ²-bench airline runs.
-          </div>
-          <div style="margin-top:0.55em; color:var(--amber); font-size:0.9em; font-style:italic;">⚠ Team &amp; attribution list — TO FILL</div>
+          <div class="who" style="color:var(--accent);">IBM · Red Hat collaboration</div>
+          <ul style="font-size:0.85em; margin:0.4em 0 0 0.7em; padding:0;">
+            <li>Open source (Apache-2.0); first-class integration with IBM RITS</li>
+            <li>Use-cases &amp; requirements shaped by Red Hat's production experience</li>
+            <li>cap-evolve and competing techniques applied and assessed by both teams</li>
+            <li>Functionality iterates on Red Hat feedback and requirements</li>
+          </ul>
         </div>
       </div>
 
       <aside class="notes">
-        Not a lab prototype — public repo, live docs, 14 host integrations. Highlight the IBM+RH
-        co-authored posture. Missing: exact author roster, confirm before we ship.
+        Not a lab prototype — public repo, live docs, 14 host integrations. The collaboration
+        panel names the four ways IBM and Red Hat work together: shared license, shared
+        use-case framing, joint application/assessment, and RH-driven feature iteration.
       </aside>
     </section>
 
     <!-- ═══════════════════════════ PART 2 ═══════════════════════════ -->
     <!-- Slide 5 — Results at a glance -->
     <section>
-      <div class="part-pill">02 · WHERE WE STAND</div>
+      <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>Results at a glance</h2>
       <p class="subtitle" style="font-size:0.65em;">Every number is derived from a committed run artifact.</p>
 
@@ -605,7 +627,7 @@
 
     <!-- Slide 6 — What actually changed -->
     <section>
-      <div class="part-pill">02 · WHERE WE STAND</div>
+      <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>What actually changed</h2>
       <p class="subtitle" style="font-size:0.65em;">Not prompt tweaks — real code and real skill packages.</p>
 
@@ -644,7 +666,7 @@
 
     <!-- Slide 7 — External context -->
     <section>
-      <div class="part-pill">02 · WHERE WE STAND</div>
+      <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>External context</h2>
       <p class="subtitle" style="font-size:0.65em;">Positioning next to adjacent tool-optimization work — <strong style="color:var(--amber);">NOT apples-to-apples</strong>.</p>
 
@@ -686,7 +708,7 @@
 
     <!-- Slide 9 — Ongoing experiment plan (last slide of Part 2) -->
     <section>
-      <div class="part-pill">02 · WHERE WE STAND</div>
+      <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>Ongoing experiment plan</h2>
       <p class="subtitle" style="font-size:0.65em;">
         Head-to-head sweep across τ²-bench + SWE-bench Lite (+ RH Internal Bench) — cap-evolve
@@ -897,40 +919,40 @@
 
     <!-- ═══════════════════════════ PART 3 — ROADMAP OVERVIEW ═══════ -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2>Six threads, one direction</h2>
       <p class="subtitle" style="font-size:0.65em;">Publication, Red Hat, product extensions, memory, simulator, and public research.</p>
 
-      <div class="grid-3" style="max-width:96%; margin:0.7em auto 0; font-size:0.6em;">
+      <div class="grid-3" style="max-width:96%; margin:0.7em auto 0;">
         <div class="roadmap-tile">
           <span class="n">3.1</span>
           <div class="title">Working with Red Hat</div>
-          <div class="desc">Parsec PoC: optimize <span class="kbd">babylon</span> skill + tools; joint tool-API ergonomics win.</div>
+          <div class="desc">Parsec PoC: optimize <span class="kbd">babylon</span> skill + tools. Joint API ergonomics win.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.2</span>
           <div class="title">Publication</div>
-          <div class="desc">Benchmarks: Tau2 · SWE-bench · SkillBench. Compare vs. Arbor + EvoSkill (and possibly GEPA / SkillOps).</div>
+          <div class="desc">Three benchmarks × Arbor + EvoSkill baselines. GEPA / SkillOps as context.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.3</span>
           <div class="title">Skillberry Proxy &amp; Store</div>
-          <div class="desc">Connect cap-evolve to the Proxy + Store surface — closed feedback loop from real usage.</div>
+          <div class="desc">Closed feedback loop from the Proxy + Store surface.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.4</span>
           <div class="title">Memory / KB / LLM-wiki</div>
-          <div class="desc">Cross-run memory that IS the org's how-agents-learn wiki. Beyond per-run LEDGER/JOURNAL.</div>
+          <div class="desc">Cross-run memory as org-wide agent wiki. Beyond per-run LEDGER.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.5</span>
           <div class="title">Simulator from traces</div>
-          <div class="desc">Reconstruct tool environments from recorded I/O — closed-loop rollouts, no live systems needed.</div>
+          <div class="desc">Reconstruct tool environments from traces. Closed-loop rollouts.</div>
         </div>
         <div class="roadmap-tile">
           <span class="n">3.6</span>
           <div class="title">Public research adoption</div>
-          <div class="desc">Adopt what's proven from Arbor, EvoSkill, GEPA, SkillOps; stay ahead on the tool-code axis.</div>
+          <div class="desc">Adopt what's proven from adjacent work. Defend the tool-code axis.</div>
         </div>
       </div>
 
@@ -943,7 +965,7 @@
 
     <!-- Slide 9 — 3.1 Working with Red Hat (moved before Publication) -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.1</span>Working with Red Hat (Parsec)</h2>
       <p class="subtitle" style="font-size:0.65em;">Real internal LLM-agentic troubleshooting tool. Six sub-agents, ~21 tools, 130 real traces already in hand.</p>
 
@@ -988,7 +1010,7 @@
 
     <!-- Slide 10 — 3.2 Publication (moved after Red Hat) -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.2</span>Publication</h2>
       <p class="subtitle" style="font-size:0.65em;">Three benchmarks × two-to-four baselines · gates &amp; splits enforced in-code.</p>
 
@@ -1031,7 +1053,7 @@
 
     <!-- Slide 11 — 3.3 Skillberry Proxy & Store [PLACEHOLDER] -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.3</span>Cap-evolve × Skillberry Proxy &amp; Store</h2>
       <p class="subtitle" style="font-size:0.65em;">Connect the optimizer to the surface where skills are actually served and used.</p>
 
@@ -1075,7 +1097,7 @@
 
     <!-- Slide 12 — 3.4 Memory / KB / LLM-wiki (NEW) -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.4</span>Memory · KB · LLM-wiki</h2>
       <p class="subtitle" style="font-size:0.6em;">State / memory / knowledge base / LLM-wiki — one cross-run substrate that IS the org's living record of how agents get better.</p>
 
@@ -1120,7 +1142,7 @@
 
     <!-- Slide 13 — 3.5 Simulator from traces -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.5</span>Simulator from traces</h2>
       <p class="subtitle" style="font-size:0.65em;">Reconstruct enough of the tool environment from recorded I/O to re-execute agents — closed-loop, no live systems.</p>
 
@@ -1167,7 +1189,7 @@
 
     <!-- Slide 14 — 3.6 Improvements from public knowledge -->
     <section>
-      <div class="part-pill">03 · WHERE WE GO FROM HERE</div>
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.6</span>Improvements from public knowledge</h2>
       <p class="subtitle" style="font-size:0.65em;">Adopt what's proven from adjacent work; keep the tool-code axis as the differentiator.</p>
 
@@ -1278,10 +1300,10 @@
     progress: true,
     center: true,
     transition: 'fade',
-    // Larger internal canvas (default 960×700) — 16:9 with room for content-dense slides
-    // and the 60px bottom slack we set in CSS. Reveal scales this to the viewport.
+    // Larger internal canvas (default 960×700) — extra height so content-dense
+    // slides fit with the 80px bottom slack we set in CSS.
     width: 1280,
-    height: 800,
+    height: 880,
     plugins: [ RevealNotes, RevealHighlight ]
   });
 </script>
