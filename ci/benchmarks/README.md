@@ -101,3 +101,20 @@ bash ci/benchmarks/lib/select_tasks.sh <bench> full <zero-baseline ids...>
 bash ci/benchmarks/lib/freeze_baseline.sh <bench> <task_id>
 # 3. update <bench>/tasks.json and re-measure (RESULTS.md)
 ```
+
+## Benchmark history page
+
+Every run appends a per-`(run×bench)` record to the **`benchmark-history`** orphan branch
+(`records/<run_id>__<bench>.json`) and regenerates `benchmarks.json` + `meta.json` there
+(single-writer `aggregate` job → no races). The Pages page `site/benchmarks.html` fetches
+`benchmarks.json` at load and renders a sortable/filterable table (rollup rows expand to
+per-task detail). Bootstrap the branch once:
+
+```bash
+git switch --orphan benchmark-history
+mkdir -p records && : > records/.gitkeep
+echo '[]' > benchmarks.json
+echo '{"count":0,"runs":0,"updated":null}' > meta.json
+git add records/.gitkeep benchmarks.json meta.json
+git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
+```

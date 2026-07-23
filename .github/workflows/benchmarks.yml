@@ -77,6 +77,35 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.bench }}"
 
+      - name: Write run metadata
+        if: steps.gate.outputs.run == 'true' && always()
+        run: |
+          out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.bench }}"
+          mkdir -p "$out"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            source="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
+          else
+            source="manual (${{ github.ref_name }})"; pr="null"
+          fi
+          cat > "$out/runmeta.json" <<JSON
+          {
+            "run_id": ${{ github.run_id }},
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "bench": "${{ matrix.bench }}",
+            "event": "${{ github.event_name }}",
+            "source": "$source",
+            "pr": $pr,
+            "branch": "${{ github.head_ref || github.ref_name }}",
+            "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "iterations": ${ITERATIONS:-1},
+            "agent_model": "aws/gpt-oss-120b",
+            "optimizer_model": "claude-opus-4-8",
+            "conclusion": "${{ job.status }}"
+          }
+          JSON
+          cat "$out/runmeta.json"
+
       - name: Upload artifacts (metrics + optimized capabilities)
         if: steps.gate.outputs.run == 'true' && always()
         uses: actions/upload-artifact@v4
@@ -104,3 +133,60 @@ jobs:
             } else {
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
+
+  # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
+  # writer → no push races) and regenerate benchmarks.json for the Pages history page.
+  # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).
+  aggregate:
+    name: aggregate history
+    needs: [bench]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4              # for ci/benchmarks/lib/record.py
+
+      - name: Download all benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+          pattern: benchmarks-*
+
+      - name: Build records
+        run: |
+          mkdir -p _new_records
+          for d in _artifacts/benchmarks-*; do
+            [ -d "$d" ] || continue
+            bench="$(basename "$d" | sed 's/^benchmarks-//')"
+            suite="$d/suite_$bench"
+            rm="$suite/runmeta.json"; metrics="$suite/metrics.jsonl"
+            [ -f "$rm" ] || { echo "no runmeta for $bench, skipping"; continue; }
+            rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
+            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" \
+              > "_new_records/${rid}__${bench}.json"
+            echo "built _new_records/${rid}__${bench}.json"
+          done
+          ls -la _new_records || true
+
+      - name: Push to benchmark-history (single writer, with rebase-retry)
+        run: |
+          [ -n "$(ls -A _new_records 2>/dev/null)" ] || { echo "no records to push"; exit 0; }
+          git config --global user.name "skillberry-bot"
+          git config --global user.email "actions@github.com"
+          for attempt in 1 2 3 4 5; do
+            rm -rf _hist
+            git clone --depth 1 --branch benchmark-history \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _hist || {
+                echo "branch missing — bootstrap it per ci/benchmarks/README.md"; exit 1; }
+            mkdir -p _hist/records
+            cp _new_records/*.json _hist/records/
+            python3 ci/benchmarks/lib/record.py aggregate _hist/records \
+              --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out _hist
+            cd _hist
+            git add records benchmarks.json meta.json
+            git commit -m "bench: record run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
+            if git push origin benchmark-history; then echo "pushed"; exit 0; fi
+            echo "push race, retrying ($attempt)"; cd ..; sleep 3
+          done
+          echo "failed to push after retries"; exit 1
