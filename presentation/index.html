@@ -426,9 +426,9 @@
         measured on held-out splits.
       </p>
 
-      <svg class="loop-diagram" viewBox="0 0 1200 240"
+      <svg class="loop-diagram" viewBox="0 0 1200 300"
            xmlns="http://www.w3.org/2000/svg" role="img"
-           aria-label="cap-evolve iteration loop: evaluate, diagnose, propose, gate, commit, then back to evaluate">
+           aria-label="cap-evolve hill-climb loop: evaluate produces a candidate, gate compares candidate vs previous best and picks the winner, commit fires only if the new candidate wins, diagnose cluster failures, propose an optimizer edit, new candidate loops back to evaluate">
         <defs>
           <marker id="arr-fwd" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
@@ -438,41 +438,73 @@
                   markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#a48bff"/>
           </marker>
+          <marker id="arr-mut" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8a8f98"/>
+          </marker>
         </defs>
 
-        <!-- 5 boxes in a row -->
+        <!-- HILL-CLIMB tag, top-center -->
+        <rect x="515" y="8" width="170" height="28" rx="14"
+              fill="#241d47" stroke="#a48bff" stroke-width="1"/>
+        <text x="600" y="27" fill="#a48bff" font-family="Inter, sans-serif"
+              font-size="14" font-weight="700" letter-spacing="0.14em"
+              text-anchor="middle">HILL-CLIMB</text>
+
+        <!-- Long return arc: propose-top → evaluate-top, labelled "new candidate" -->
+        <path class="lp-return" d="M 1000 90 C 1000 45, 200 45, 200 88"
+              marker-end="url(#arr-ret)"/>
+        <text class="lp-label" x="600" y="75">new candidate</text>
+
+        <!-- 5 boxes in a row (y=90..170); GATE is the accent-highlighted anchor -->
         <g>
-          <rect class="lp-box" x="60"  y="30" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="150" y="65">evaluate</text>
-          <text class="lp-desc" x="150" y="90">on val split</text>
+          <rect class="lp-box" x="110" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="200" y="125">evaluate</text>
+          <text class="lp-desc" x="200" y="150">val + trajectories</text>
 
-          <rect class="lp-box" x="270" y="30" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="360" y="65">diagnose</text>
-          <text class="lp-desc" x="360" y="90">cluster failures</text>
+          <rect class="lp-accent" x="310" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name lp-name-accent" x="400" y="125">gate</text>
+          <text class="lp-desc" x="400" y="150">Δ &gt; k·SE ?</text>
 
-          <rect class="lp-accent" x="480" y="30" width="180" height="80" rx="10"/>
-          <text class="lp-name lp-name-accent" x="570" y="65">propose</text>
-          <text class="lp-desc" x="570" y="90">optimizer-agent edits</text>
+          <rect class="lp-box" x="510" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="600" y="125">commit</text>
+          <text class="lp-desc" x="600" y="150">only if new wins</text>
 
-          <rect class="lp-box" x="690" y="30" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="780" y="65">gate</text>
-          <text class="lp-desc" x="780" y="90">Δ &gt; k·SE</text>
+          <rect class="lp-box" x="710" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="800" y="125">diagnose</text>
+          <text class="lp-desc" x="800" y="150">cluster failures</text>
 
-          <rect class="lp-box" x="900" y="30" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="990" y="65">commit</text>
-          <text class="lp-desc" x="990" y="90">git + memory</text>
+          <rect class="lp-box" x="910" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="1000" y="125">propose</text>
+          <text class="lp-desc" x="1000" y="150">optimizer edit</text>
         </g>
 
         <!-- forward arrows between adjacent boxes -->
-        <line class="lp-arrow" x1="242" y1="70" x2="268" y2="70" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="452" y1="70" x2="478" y2="70" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="662" y1="70" x2="688" y2="70" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="872" y1="70" x2="898" y2="70" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="292" y1="130" x2="308" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="492" y1="130" x2="508" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="692" y1="130" x2="708" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="892" y1="130" x2="908" y2="130" marker-end="url(#arr-fwd)"/>
 
-        <!-- return arc: commit-bottom → evaluate-bottom -->
-        <path class="lp-return" d="M 990 112 C 990 200, 150 200, 150 118"
-              marker-end="url(#arr-ret)"/>
-        <text class="lp-label" x="570" y="222">each iteration</text>
+        <!-- Arrow captions (below boxes at y=192) -->
+        <text x="300" y="192" fill="#8a8f98" font-family="Inter, sans-serif"
+              font-size="13" text-anchor="middle">candidate</text>
+        <text x="500" y="192" fill="#8a8f98" font-family="Inter, sans-serif"
+              font-size="13" text-anchor="middle">winner</text>
+        <text x="700" y="192" fill="#a48bff" font-family="Inter, sans-serif"
+              font-size="13" font-style="italic" text-anchor="middle">pick capability + trajectories</text>
+
+        <!-- Previous-best side-input pill feeding into GATE from below -->
+        <rect x="310" y="220" width="180" height="46" rx="10"
+              fill="#141414" stroke="#666a72" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="400" y="242" fill="#f2f2f2" font-family="Inter, sans-serif"
+              font-size="18" font-weight="700" text-anchor="middle">previous best</text>
+        <text x="400" y="258" fill="#8a8f98" font-family="Inter, sans-serif"
+              font-size="12" font-style="italic" text-anchor="middle">last committed candidate</text>
+
+        <!-- vertical arrow from previous-best pill up into GATE bottom -->
+        <line x1="400" y1="218" x2="400" y2="172"
+              stroke="#8a8f98" stroke-width="2" stroke-dasharray="5 3" fill="none"
+              marker-end="url(#arr-mut)"/>
       </svg>
 
       <p class="surface-label">Capabilities we optimize</p>
@@ -485,10 +517,20 @@
       <p class="surface-note">Pick one — or combine, e.g. <span class="kbd">[system-prompt, tools]</span>.</p>
 
       <aside class="notes">
-        Frame cap-evolve as an iterative loop where agents drive both the outer search
-        (which capability to change next) and the inner optimization (what edit to propose).
-        No training compute, no model risk. The 4 surfaces chips open the door for
-        cross-team applicability.
+        The diagram shows hill-climb specifically (labelled at the top). The key
+        beat: GATE takes TWO inputs — the freshly-evaluated candidate AND the
+        previous best (last committed) — and picks the winner via paired
+        significance (Δ > k·SE). Rollback isn't a separate branch; it's
+        the trivial outcome "GATE picked previous". COMMIT is a no-op when
+        the previous best wins — the parent snapshot is already committed.
+        The winner's trajectories feed DIAGNOSE (cluster failures) then
+        PROPOSE (optimizer-agent edit); the new candidate loops back to
+        EVALUATE.
+
+        Frame cap-evolve as an iterative loop where agents drive both the
+        outer search (which capability to change next) and the inner
+        optimization (what edit to propose). No training compute, no model
+        risk. The 4 surfaces chips open the door for cross-team applicability.
       </aside>
     </section>
 
