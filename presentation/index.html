@@ -119,17 +119,19 @@
     .reveal .stat-card .unit { color: var(--sub); font-size: 0.55em; font-style: italic; margin-top: -0.1em; }
     .reveal .stat-card .title { font-size: 0.68em; font-weight: 700; color: var(--ink); margin-top: 0.5em; }
     .reveal .stat-card .sub-title { font-size: 0.5em; color: var(--sub); font-style: italic; margin-top: 0.1em; }
-    .reveal .stat-card .ba { font-size: 0.65em; color: var(--sub); margin-top: 0.6em; }
+    /* Push the before→after row to the card's bottom so it aligns across all
+       three cards even when sub-titles wrap to a different number of lines. */
+    .reveal .stat-card .ba { font-size: 0.65em; color: var(--sub); margin-top: auto; padding-top: 0.6em; }
     .reveal .stat-card .ba .after { color: var(--green); font-weight: 700; }
 
     /* Small stat callouts (status slide) */
     .reveal .num-card {
-      background: var(--accent-soft); border-radius: 12px; padding: 0.7em;
+      background: var(--accent-soft); border-radius: 12px; padding: 0.45em 0.55em;
       text-align: center;
     }
-    .reveal .num-card .n { font-size: 1.7em; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
-    .reveal .num-card .l { font-size: 0.6em; font-weight: 700; color: var(--ink); }
-    .reveal .num-card .s { font-size: 0.48em; color: var(--sub); font-style: italic; margin-top: 0.15em; }
+    .reveal .num-card .n { font-size: 1.35em; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
+    .reveal .num-card .l { font-size: 0.55em; font-weight: 700; color: var(--ink); }
+    .reveal .num-card .s { font-size: 0.42em; color: var(--sub); font-style: italic; margin-top: 0.15em; }
 
     /* Pipeline pills (architecture slide) */
     .reveal .phase-pill {
@@ -146,12 +148,12 @@
     }
     .reveal .loop-diagram .lp-box     { fill: var(--card-bg); stroke: var(--card-border); stroke-width: 1.5; }
     .reveal .loop-diagram .lp-accent  { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
-    .reveal .loop-diagram .lp-name    { fill: var(--ink); font-family: Inter, sans-serif; font-size: 22px; font-weight: 700; text-anchor: middle; }
+    .reveal .loop-diagram .lp-name    { fill: var(--ink); font-family: Inter, sans-serif; font-size: 26px; font-weight: 700; text-anchor: middle; }
     .reveal .loop-diagram .lp-name-accent { fill: var(--accent); }
-    .reveal .loop-diagram .lp-desc    { fill: var(--sub); font-family: Inter, sans-serif; font-size: 14px; font-style: italic; text-anchor: middle; }
+    .reveal .loop-diagram .lp-desc    { fill: var(--sub); font-family: Inter, sans-serif; font-size: 17px; font-style: italic; text-anchor: middle; }
     .reveal .loop-diagram .lp-arrow   { stroke: var(--sub); stroke-width: 2.5; fill: none; }
     .reveal .loop-diagram .lp-return  { stroke: var(--accent); stroke-width: 2.5; fill: none; }
-    .reveal .loop-diagram .lp-label   { fill: var(--accent); font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; text-anchor: middle; letter-spacing: 0.05em; }
+    .reveal .loop-diagram .lp-label   { fill: var(--accent); font-family: Inter, sans-serif; font-size: 20px; font-weight: 700; text-anchor: middle; letter-spacing: 0.05em; }
 
     /* Compact "capabilities" strip (slide 2) */
     .reveal .surface-label {
@@ -173,50 +175,92 @@
       text-align: center; margin: 0.3em auto 0;
     }
 
-    /* Differentiator tiles — 3 × 2 grid, bigger fonts (slide 3, was slide 4) */
+    /* Differentiator tiles — 3 × 2 grid (slide 3 and slide 10 share this). */
     .reveal .diff-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 0.9em; margin: 0.8em auto 0.3em; max-width: 96%;
+      gap: 0.75em; margin: 0.7em auto 0.3em; max-width: 96%;
     }
     .reveal .diff-tile {
       background: var(--card-bg); border: 2px solid var(--card-border);
-      border-radius: 12px; padding: 0.9em 1em; text-align: left;
+      border-radius: 12px; padding: 0.65em 0.85em; text-align: left;
       display: flex; flex-direction: column;
     }
     .reveal .diff-tile .badge {
-      display: inline-block; font-size: 0.5em; padding: 0.12em 0.55em;
+      display: inline-block; font-size: 0.45em; padding: 0.1em 0.5em;
       border-radius: 4px; background: var(--accent-soft); color: var(--accent);
       font-weight: 700; letter-spacing: 0.06em;
-      align-self: flex-start; margin-bottom: 0.55em;
+      align-self: flex-start; margin-bottom: 0.4em;
     }
     .reveal .diff-tile .diff-title {
-      font-size: 0.75em; font-weight: 700; color: var(--ink);
-      margin: 0 0 0.35em; letter-spacing: -0.005em; line-height: 1.2;
+      font-size: 0.7em; font-weight: 700; color: var(--ink);
+      margin: 0 0 0.3em; letter-spacing: -0.005em; line-height: 1.2;
     }
     .reveal .diff-tile .diff-desc {
-      font-size: 0.55em; color: var(--sub); line-height: 1.45;
+      font-size: 0.5em; color: var(--sub); line-height: 1.4;
     }
 
-    /* Roadmap overview tiles — same visual footprint as .diff-tile so the
-       two "6 tiles in 3×2" slides (slide 3 and slide 10) match exactly. */
+    /* Roadmap tiles — mirror .diff-tile exactly (only the .n badge color
+       changes, via section theming). Height is content-driven so the
+       whole grid doesn't stretch when one tile has a longer description. */
     .reveal .roadmap-tile {
       background: var(--card-bg); border: 2px solid var(--card-border);
-      border-radius: 12px; padding: 0.9em 1em;
-      text-align: left; display: flex; flex-direction: column; height: 100%;
+      border-radius: 12px; padding: 0.65em 0.85em;
+      text-align: left; display: flex; flex-direction: column;
     }
+    .reveal .diff-grid { align-items: start; }
     .reveal .roadmap-tile .n {
-      display: inline-block; padding: 0.12em 0.55em; border-radius: 4px;
+      display: inline-block; padding: 0.1em 0.5em; border-radius: 4px;
       background: var(--sec3-soft); color: var(--sec3);
-      font-size: 0.5em; font-weight: 700; letter-spacing: 0.06em;
-      align-self: flex-start; margin-bottom: 0.55em;
+      font-size: 0.45em; font-weight: 700; letter-spacing: 0.06em;
+      align-self: flex-start; margin-bottom: 0.4em;
     }
     .reveal .roadmap-tile .title {
-      font-size: 0.75em; font-weight: 700; color: var(--ink);
-      margin: 0 0 0.35em; letter-spacing: -0.005em; line-height: 1.2;
+      font-size: 0.7em; font-weight: 700; color: var(--ink);
+      margin: 0 0 0.3em; letter-spacing: -0.005em; line-height: 1.2;
     }
     .reveal .roadmap-tile .desc {
-      font-size: 0.55em; color: var(--sub); line-height: 1.45;
+      font-size: 0.5em; color: var(--sub); line-height: 1.4;
     }
+
+    /* Concrete-edits (sdiff) slide */
+    .reveal .sdiff-wrap { max-width: 97%; margin: 0.25em auto 0; }
+    .reveal .sdiff {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 0.4em 0.55em; margin: 0.25em 0;
+    }
+    .reveal .sdiff-title {
+      color: var(--accent); font-size: 0.42em; font-weight: 700;
+      letter-spacing: 0.03em; margin-bottom: 0.3em;
+    }
+    .reveal .sdiff-title .badge {
+      display: inline-block; background: var(--accent-soft); color: var(--accent);
+      padding: 0.08em 0.5em; border-radius: 4px; margin-right: 0.4em;
+      letter-spacing: 0.05em;
+    }
+    .reveal .sdiff-body {
+      display: grid; grid-template-columns: 1fr 1.25fr; gap: 0.4em;
+    }
+    .reveal .sdiff-body pre {
+      margin: 0; padding: 0.4em 0.55em; border-radius: 8px;
+      background: #0f0f0f; color: var(--sub);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.28em; line-height: 1.35;
+      white-space: pre; overflow: hidden;
+      border: 1px solid #232323;
+    }
+    .reveal .sdiff-body pre.opt {
+      background: #0d1c15; border-color: #1f4230; color: var(--ink);
+    }
+    .reveal .sdiff-body pre .lbl {
+      display: block; margin-bottom: 0.4em;
+      color: var(--muted); font-size: 1.1em; font-weight: 600;
+      font-family: Inter, sans-serif; letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .reveal .sdiff-body pre.opt .lbl { color: var(--green); }
+    .reveal .sdiff-body pre .add { color: var(--green); }
+    .reveal .sdiff-body pre .rm  { color: #d97070; text-decoration: line-through; }
+    .reveal .sdiff-body pre .mut { color: #5d5d5d; }
 
     /* Experiment plan table */
     .reveal .exp-wrap { max-width: 100%; margin: 0.45em auto 0; }
@@ -382,7 +426,7 @@
         measured on held-out splits.
       </p>
 
-      <svg class="loop-diagram" viewBox="0 0 1200 270"
+      <svg class="loop-diagram" viewBox="0 0 1200 240"
            xmlns="http://www.w3.org/2000/svg" role="img"
            aria-label="cap-evolve iteration loop: evaluate, diagnose, propose, gate, commit, then back to evaluate">
         <defs>
@@ -428,7 +472,7 @@
         <!-- return arc: commit-bottom → evaluate-bottom -->
         <path class="lp-return" d="M 990 112 C 990 200, 150 200, 150 118"
               marker-end="url(#arr-ret)"/>
-        <text class="lp-label" x="570" y="235">each iteration</text>
+        <text class="lp-label" x="570" y="222">each iteration</text>
       </svg>
 
       <p class="surface-label">Capabilities we optimize</p>
@@ -560,19 +604,19 @@
         </div>
       </div>
 
-      <div class="grid-2" style="max-width:92%; margin:0.6em auto 0; font-size:0.6em;">
+      <div class="grid-2" style="max-width:94%; margin:0.5em auto 0; font-size:0.7em;">
         <div class="card">
-          <div class="who" style="color:var(--accent);">Recently shipped</div>
-          <ul style="font-size:0.85em; margin:0.4em 0 0 0.7em; padding:0;">
-            <li>Public GitHub Pages site — home + 5 hero pages</li>
-            <li>Held-out τ²-bench airline run — sealed test, artifact committed</li>
-            <li>SkillsBench held-out result — 4 skill packages edited</li>
-            <li>"Why cap-evolve" differentiators section on the site (PR #67)</li>
+          <div class="who" style="color:var(--accent); font-size:0.95em;">Recently shipped</div>
+          <ul style="font-size:0.85em; margin:0.4em 0 0 0.9em; padding:0;">
+            <li><strong>Adapter templates</strong> — τ²-bench, SkillsBench, SWE-bench: onboarding is config, not code</li>
+            <li><strong>Empty-seed intake</strong> — bootstrap optimization without a starting capability</li>
+            <li><strong>Held-out runs committed</strong> — τ²-airline + SkillsBench artifacts</li>
+            <li><strong>Public docs site</strong> + "Why cap-evolve" section</li>
           </ul>
         </div>
         <div class="card">
-          <div class="who" style="color:var(--accent);">IBM · Red Hat collaboration</div>
-          <ul style="font-size:0.85em; margin:0.4em 0 0 0.7em; padding:0;">
+          <div class="who" style="color:var(--accent); font-size:0.95em;">IBM · Red Hat collaboration</div>
+          <ul style="font-size:0.85em; margin:0.4em 0 0 0.9em; padding:0;">
             <li>Open source (Apache-2.0); first-class integration with IBM RITS</li>
             <li>Use-cases &amp; requirements shaped by Red Hat's production experience</li>
             <li>cap-evolve and competing techniques applied and assessed by both teams</li>
@@ -628,7 +672,7 @@
       <div class="banner banner-accent">
         <span style="color:var(--accent); font-weight:700;">Ongoing:</span>
         <span style="color:var(--sub);">
-          Experiments on additional benchmarks (SWE-bench, more τ² domains) and other optimization algorithms are in progress.
+          Head-to-head sweep in progress — τ²-bench airline, SWE-bench Lite, and SkillsBench vs. <strong>Arbor</strong> and <strong>EvoSkill</strong> baselines.
         </span>
       </div>
 
@@ -679,45 +723,96 @@
       </aside>
     </section>
 
-    <!-- Slide 7 — External context -->
+    <!-- Slide 8 — Concrete optimizer edits (sdiff-style; replaces the ext-ctx slide) -->
     <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
-      <h2>External context</h2>
-      <p class="subtitle" style="font-size:0.65em;">Positioning next to adjacent tool-optimization work — <strong style="color:var(--amber);">NOT apples-to-apples</strong>.</p>
+      <h2>Concrete optimizer edits</h2>
+      <p class="subtitle" style="font-size:0.6em;">
+        Two real edits from a τ²-bench airline run — enforcement moved from prose into deterministic tool code.
+      </p>
 
-      <table class="cmp">
-        <thead>
-          <tr><th>Work</th><th>Benchmark</th><th>Split</th><th>Baseline → Optimized</th><th>Relative</th></tr>
-        </thead>
-        <tbody>
-          <tr class="us">
-            <td>cap-evolve</td><td>τ²-Bench airline</td><td>held-out</td><td>30.0 → 47.5</td><td class="rel">+58.3%</td>
-          </tr>
-          <tr>
-            <td>Evolutionary Context Search</td><td>τ²-Bench</td><td>reported</td><td>—</td><td>+23.3%</td>
-          </tr>
-          <tr>
-            <td>EvoTool (GPT-4.1)</td><td>τ-Bench airline</td><td>reported</td><td>35.9 → 39.1</td><td>+8.9%</td>
-          </tr>
-          <tr>
-            <td>EvoTool (Qwen3-8B)</td><td>τ-Bench airline</td><td>reported</td><td>14.4 → 15.7</td><td>+9.0%</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="sdiff-wrap">
+        <!-- Example 1 — basic-economy flight-swap guard -->
+        <div class="sdiff">
+          <div class="sdiff-title"><span class="badge">Example 1</span>Basic economy · flight segments cannot change</div>
+          <div class="sdiff-body">
+<pre><span class="lbl">Seed  policy.md</span><span class="mut"># tau2 airline policy — modifications section</span>
 
-      <div class="banner banner-amber">
-        <div class="title">Honesty caveats — read before quoting</div>
-        <ul>
-          <li>τ-Bench (EvoTool) and τ²-Bench are different benchmarks; τ² is harder.</li>
-          <li>Different models, splits, simulators, trial counts, budgets — the rows are context, not a controlled comparison.</li>
-          <li>Evolutionary Context Search +23.3% source citation still being confirmed (issue #46).</li>
-        </ul>
+- Basic economy flights cannot be modified.
+- Other reservations can be modified without
+  changing the origin, destination, and trip type.
+
+<span class="mut"># tools.py — update_reservation_flights</span>
+def update_reservation_flights(reservation_id, cabin, flights):
+    reservation = self._get_reservation(reservation_id)
+    user = self._get_user(reservation.user_id)
+
+    # update flights and calculate price
+    ...</pre>
+<pre class="opt"><span class="lbl">Optimized  policy.md + tools.py</span><span class="add">- Basic economy **flight segments** cannot be changed to different flights.
+  However, basic economy reservations CAN still change cabin class, passengers,
+  and checked bags — only the segments themselves are locked.</span>
+
+<span class="mut"># tools.py — update_reservation_flights</span>
+def update_reservation_flights(reservation_id, cabin, flights):
+    reservation = self._get_reservation(reservation_id)
+    user = self._get_user(reservation.user_id)
+
+<span class="add">    # Guard: basic economy cannot change flight segments
+    if reservation.cabin == "basic_economy":
+        existing = {(f.flight_number, f.date) for f in reservation.flights}
+        new_seg  = {(f.flight_number, f.date) for f in flights}
+        if existing != new_seg:
+            raise ValueError(
+                f"Basic economy reservation {reservation_id} "
+                f"cannot change flight segments."
+            )</span>
+    # update flights and calculate price ...</pre>
+          </div>
+        </div>
+
+        <!-- Example 2 — baggage allowance guard -->
+        <div class="sdiff">
+          <div class="sdiff-title"><span class="badge">Example 2</span>Baggage allowance · per-membership × cabin</div>
+          <div class="sdiff-body">
+<pre><span class="lbl">Seed  tools.py — reserve()</span><span class="mut"># tools.py — reserve()</span>
+def reserve(cabin, passengers, nonfree_baggages, ...):
+    ...
+    reservation.nonfree_baggages = nonfree_baggages
+    reservation.total_baggages   = total_baggages
+    ...
+
+<span class="mut"># Policy relies on the LLM to compute:</span>
+<span class="mut">#   free_bags = membership × cabin (from prose)</span>
+<span class="mut">#   nonfree   = max(0, total − free_per_pax × N_pax)</span></pre>
+<pre class="opt"><span class="lbl">Optimized  tools.py — reserve()</span><span class="mut"># tools.py — reserve()</span>
+def reserve(cabin, passengers, nonfree_baggages, ...):
+    ...
+<span class="add">    # Guard: nonfree_baggages must match membership + cabin allowance
+    FREE_BAGS = {
+        "regular": {"basic_economy": 0, "economy": 1, "business": 2},
+        "silver":  {"basic_economy": 1, "economy": 2, "business": 3},
+        "gold":    {"basic_economy": 2, "economy": 3, "business": 4},
+    }
+    free_per_pax = FREE_BAGS[user.membership][cabin]
+    expected     = max(0, total_baggages - free_per_pax * len(passengers))
+    if nonfree_baggages != expected:
+        raise ValueError(
+            f"Incorrect nonfree_baggages={nonfree_baggages}. "
+            f"Expected {expected}. Each extra bag $50."
+        )</span>
+    reservation.nonfree_baggages = nonfree_baggages ...</pre>
+          </div>
+        </div>
       </div>
 
       <aside class="notes">
-        The point of this slide is that we're NOT claiming state-of-the-art. We're placing our
-        +58.3% next to adjacent work and being explicit about caveats. Publication requires at
-        least one apples-to-apples comparison — flagged in Part 3.
+        Two concrete examples from cap-evolve's τ²-bench airline run
+        (candidates/cand_0003). Both edits move enforcement from prose the LLM
+        must remember into deterministic tool code that raises a hard error.
+        Example 1 also updates the policy wording so the rule matches its
+        actual scope (segments, not cabin). Example 2 encodes the membership
+        × cabin baggage allowance the LLM used to have to compute by hand.
       </aside>
     </section>
 
@@ -938,7 +1033,7 @@
       <h2>Six threads, one direction</h2>
       <p class="subtitle" style="font-size:0.65em;">Publication, Red Hat, product extensions, memory, simulator, and public research.</p>
 
-      <div class="grid-3" style="max-width:96%; margin:0.7em auto 0;">
+      <div class="grid-3" style="max-width:96%; margin:0.7em auto 0; align-items:start;">
         <div class="roadmap-tile">
           <span class="n">3.1</span>
           <div class="title">Working with Red Hat</div>
@@ -1262,33 +1357,37 @@
       </aside>
     </section>
 
-    <!-- Slide 15 — Closing / three concrete asks -->
+    <!-- Slide 17 — Closing / three next-step tracks -->
     <section>
       <h1 style="font-size:1.9em;">Where we go — this quarter</h1>
-      <p class="subtitle" style="font-size:0.75em; margin-top:0.3em;">Three concrete next steps.</p>
+      <p class="subtitle" style="font-size:0.75em; margin-top:0.3em;">Three tracks, one direction.</p>
 
-      <div class="grid-3" style="max-width:92%; margin:1em auto 0; font-size:0.6em;">
-        <div class="card" style="border-color:#5c5c7c; padding:1em 0.9em;">
-          <div class="badge" style="font-size:0.9em;">01</div>
-          <div class="who" style="margin-top:0.4em; font-size:1.15em;">Ship the held-out artifact</div>
-          <div class="role" style="margin-top:0.4em;">
-            Land the τ²-bench airline held-out <span class="kbd">run_full/</span> so the +58.3%
-            number is self-contained and reproducible.
+      <div class="grid-3" style="max-width:96%; margin:1em auto 0; font-size:0.7em;">
+        <!-- 01 — Product extensions (roadmap threads 3.3–3.6, condensed) -->
+        <div class="card" style="border-color:#7ba5d8; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em; background:#7ba5d8; color:#0a1a2a;">01</div>
+          <div class="who" style="margin-top:0.5em; font-size:1.2em; color:#7ba5d8;">Product extensions</div>
+          <div class="role" style="margin-top:0.5em; font-size:0.95em; line-height:1.5;">
+            Skillberry Proxy &amp; Store integration, cross-run memory / KB substrate,
+            simulator from traces, and public-research adoption (Arbor, EvoSkill, GEPA, SkillOps).
           </div>
         </div>
-        <div class="card" style="border-color:#5c8f6b; padding:1em 0.9em;">
-          <div class="badge" style="font-size:0.9em;">02</div>
-          <div class="who" style="margin-top:0.4em; font-size:1.15em;">One apples-to-apples comparison</div>
-          <div class="role" style="margin-top:0.4em;">
-            cap-evolve on a shared benchmark + model + split against a published baseline
-            (Arbor or EvoSkill first).
+        <!-- 02 — Red Hat collaboration -->
+        <div class="card" style="border-color:#8fd0a4; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em; background:#8fd0a4; color:#08210f;">02</div>
+          <div class="who" style="margin-top:0.5em; font-size:1.2em; color:#8fd0a4;">Red Hat collaboration</div>
+          <div class="role" style="margin-top:0.5em; font-size:0.95em; line-height:1.5;">
+            Parsec sub-agent pilot (<span class="kbd">babylon</span> skill + tools + macro proposals);
+            trace-based simulator as a phase-2 extension.
           </div>
         </div>
-        <div class="card" style="border-color:#a5895c; padding:1em 0.9em;">
-          <div class="badge" style="font-size:0.9em;">03</div>
-          <div class="who" style="margin-top:0.4em; font-size:1.15em;">Publication go-decision</div>
-          <div class="role" style="margin-top:0.4em;">
-            Confirm venue, timeline, authors, and compute budget (see slide 9).
+        <!-- 03 — Publication -->
+        <div class="card" style="border-color:#e0c37f; padding:1em 0.9em;">
+          <div class="badge" style="font-size:0.9em; background:#e0c37f; color:#2a1e08;">03</div>
+          <div class="who" style="margin-top:0.5em; font-size:1.2em; color:#e0c37f;">Publication</div>
+          <div class="role" style="margin-top:0.5em; font-size:0.95em; line-height:1.5;">
+            Three benchmarks (τ² · SWE-bench Lite · SkillsBench) × Arbor + EvoSkill baselines.
+            Compute budget + venue + timeline still to decide.
           </div>
         </div>
       </div>
@@ -1296,8 +1395,10 @@
       <p style="margin-top:1.4em; font-size:0.95em; color:var(--ink); font-weight:700;">Thank you · Questions?</p>
 
       <aside class="notes">
-        Close with the three concrete asks so management leaves with a clear picture of what
-        we need this quarter. Q&A slide.
+        Close with three tracks that pull the work forward: product extensions bundle the
+        four longer-horizon roadmap threads; Red Hat is the concrete customer collaboration;
+        publication is the external validation. Number badges pick up each card's border
+        color for a clearer visual grouping.
       </aside>
     </section>
 
