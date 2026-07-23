@@ -426,9 +426,9 @@
         measured on held-out splits.
       </p>
 
-      <svg class="loop-diagram" viewBox="-210 0 1410 300"
+      <svg class="loop-diagram" viewBox="0 -20 1200 370"
            xmlns="http://www.w3.org/2000/svg" role="img"
-           aria-label="cap-evolve hill-climb loop: START from a base capability, evaluate, gate compares candidate vs previous best, ask whether the winner is improved — if yes commit new best — diagnose, propose, new candidate loops back to evaluate">
+           aria-label="cap-evolve hill-climb loop: base capability starts the flow into evaluate, then gate compares candidate vs previous best, then the loop asks whether the winner is improved — if yes commit new best — then diagnose, propose, and the new candidate loops back into evaluate">
         <defs>
           <marker id="arr-fwd" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
@@ -444,56 +444,52 @@
           </marker>
         </defs>
 
-        <!-- HILL-CLIMB tag, top-center -->
-        <rect x="515" y="8" width="170" height="28" rx="14"
-              fill="#241d47" stroke="#a48bff" stroke-width="1"/>
-        <text x="600" y="27" fill="#a48bff" font-family="Inter, sans-serif"
-              font-size="14" font-weight="700" letter-spacing="0.14em"
-              text-anchor="middle">HILL-CLIMB</text>
-
-        <!-- Long return arc: propose-top → evaluate-top, labelled "new candidate" -->
-        <path class="lp-return" d="M 1000 90 C 1000 45, 200 45, 200 88"
+        <!-- 3-segment U-shape return path: propose-top → up → left across → down into evaluate-top.
+             Horizontal segment sits at y=65 (below the base capability pill at y=5..51). -->
+        <path d="M 980 90 L 980 65 L 275 65 L 275 88"
+              stroke="#a48bff" stroke-width="2.5" fill="none"
               marker-end="url(#arr-ret)"/>
-        <text class="lp-label" x="600" y="75">new candidate</text>
+        <text class="lp-label" x="627" y="58">new candidate</text>
 
-        <!-- Row 0 · Base capability pill (top-left; starts the flow) -->
-        <rect x="-195" y="15" width="180" height="46" rx="10"
+        <!-- Row 0 · Base capability pill (directly above EVALUATE, extra vertical breathing room) -->
+        <rect x="140" y="-15" width="160" height="46" rx="10"
               fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
-        <text x="-105" y="45" fill="#f2f2f2" font-family="Inter, sans-serif"
-              font-size="18" font-weight="700" text-anchor="middle">base capability</text>
-        <!-- START arrow: base capability (row 0) down-then-right into EVALUATE (row 1) -->
-        <path d="M -105 63 L -105 130 L 108 130"
-              stroke="#b8b8b8" stroke-width="2.5" fill="none"
-              marker-end="url(#arr-fwd)"/>
-        <text x="0" y="120" fill="#b8b8b8" font-family="Inter, sans-serif"
+        <text x="220" y="15" fill="#f2f2f2" font-family="Inter, sans-serif"
+              font-size="20" font-weight="700" text-anchor="middle">base capability</text>
+        <!-- START arrow: straight down from base capability into EVALUATE (purple / accent) -->
+        <line x1="220" y1="33" x2="220" y2="88"
+              stroke="#a48bff" stroke-width="2.5" fill="none"
+              marker-end="url(#arr-ret)"/>
+        <text x="185" y="63" fill="#a48bff" font-family="Inter, sans-serif"
               font-size="16" font-weight="700" letter-spacing="0.08em"
-              text-anchor="middle">START</text>
+              text-anchor="end">START</text>
 
-        <!-- Row 1 · 5 elements: EVAL → GATE → improved? → DIAGNOSE → PROPOSE (all uniform) -->
+        <!-- Row 1 · 5 elements: EVAL → GATE → improved? → DIAGNOSE → PROPOSE.
+             Boxes narrower (160 wide) so the connecting arrows are visible, not just heads. -->
         <g>
-          <rect class="lp-box" x="110" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="200" y="138">evaluate</text>
+          <rect class="lp-box" x="140" y="90" width="160" height="80" rx="10"/>
+          <text class="lp-name" x="220" y="138">evaluate</text>
 
-          <rect class="lp-box" x="310" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="400" y="138">gate</text>
+          <rect class="lp-box" x="330" y="90" width="160" height="80" rx="10"/>
+          <text class="lp-name" x="410" y="138">gate</text>
 
-          <!-- improved? decision diamond (replaces the old COMMIT box) -->
-          <polygon points="600,90 690,130 600,170 510,130"
+          <!-- improved? decision diamond -->
+          <polygon points="600,90 680,130 600,170 520,130"
                    fill="#141414" stroke="#a48bff" stroke-width="2"/>
           <text class="lp-name" x="600" y="138">improved?</text>
 
-          <rect class="lp-box" x="710" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="800" y="138">diagnose</text>
+          <rect class="lp-box" x="710" y="90" width="160" height="80" rx="10"/>
+          <text class="lp-name" x="790" y="138">diagnose</text>
 
-          <rect class="lp-box" x="910" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="1000" y="138">propose</text>
+          <rect class="lp-box" x="900" y="90" width="160" height="80" rx="10"/>
+          <text class="lp-name" x="980" y="138">propose</text>
         </g>
 
-        <!-- forward arrows between adjacent boxes -->
-        <line class="lp-arrow" x1="292" y1="130" x2="308" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="492" y1="130" x2="508" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="692" y1="130" x2="708" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="892" y1="130" x2="908" y2="130" marker-end="url(#arr-fwd)"/>
+        <!-- forward arrows between adjacent elements (now 30px each — shafts visible) -->
+        <line class="lp-arrow" x1="302" y1="130" x2="328" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="492" y1="130" x2="518" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="682" y1="130" x2="708" y2="130" marker-end="url(#arr-fwd)"/>
+        <line class="lp-arrow" x1="872" y1="130" x2="898" y2="130" marker-end="url(#arr-fwd)"/>
 
         <!-- Down arrow from improved? diamond → commit-new-best pill in row 2 -->
         <line x1="600" y1="172" x2="600" y2="218"
@@ -501,51 +497,70 @@
               marker-end="url(#arr-ret)"/>
 
         <!-- Row 2 · previous-best side-input pill feeding into GATE from below -->
-        <rect x="310" y="220" width="180" height="46" rx="10"
+        <rect x="330" y="220" width="160" height="46" rx="10"
               fill="#141414" stroke="#666a72" stroke-width="1.5" stroke-dasharray="5 3"/>
-        <text x="400" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
-              font-size="18" font-weight="700" text-anchor="middle">previous best</text>
+        <text x="410" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
+              font-size="20" font-weight="700" text-anchor="middle">previous best</text>
         <!-- Previous-best arrow up into GATE bottom -->
-        <line x1="400" y1="218" x2="400" y2="172"
+        <line x1="410" y1="218" x2="410" y2="172"
               stroke="#8a8f98" stroke-width="2" stroke-dasharray="5 3" fill="none"
               marker-end="url(#arr-mut)"/>
 
         <!-- Row 2 · commit-new-best pill (below improved? diamond, solid border) -->
-        <rect x="510" y="220" width="180" height="46" rx="10"
+        <rect x="520" y="220" width="160" height="46" rx="10"
               fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
         <text x="600" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
-              font-size="18" font-weight="700" text-anchor="middle">commit new best</text>
+              font-size="20" font-weight="700" text-anchor="middle">commit new best</text>
+
+        <!-- HILL-CLIMB tag at the bottom -->
+        <rect x="515" y="310" width="170" height="30" rx="15"
+              fill="#241d47" stroke="#a48bff" stroke-width="1"/>
+        <text x="600" y="330" fill="#a48bff" font-family="Inter, sans-serif"
+              font-size="16" font-weight="700" letter-spacing="0.14em"
+              text-anchor="middle">HILL-CLIMB</text>
       </svg>
 
-      <p class="surface-label">Capabilities we optimize</p>
-      <div class="surface-strip">
-        <span class="surface-chip">System prompts</span>
-        <span class="surface-chip">Tool code</span>
-        <span class="surface-chip">Skill packages</span>
-        <span class="surface-chip">MCP surfaces</span>
+      <aside class="notes">
+        The diagram shows hill-climb specifically (label at the bottom).
+        Three rows: base capability at the top starts the flow (down arrow
+        into EVALUATE); the middle row is the loop itself (evaluate → gate
+        → improved? → diagnose → propose, with a 3-segment "new candidate"
+        return path over the top); and the bottom row holds the two side
+        states the loop reads/writes — previous best (dashed side-input
+        into GATE) and commit new best (target of the yes-branch out of
+        the improved? diamond).
+
+        GATE compares candidate vs previous best via paired Δ > k·SE.
+        Rollback is the trivial case "GATE picked previous" — COMMIT is
+        a no-op when the previous best wins (parent snapshot unchanged).
+      </aside>
+    </section>
+
+    <!-- Slide 3 — Capabilities we optimize (extracted from slide 2 for breathing room) -->
+    <section>
+      <div class="part-pill">01 · WHAT CAP-EVOLVE IS</div>
+      <h2>Capabilities we optimize</h2>
+      <p class="subtitle" style="font-size:0.65em;">
+        What your agent <em>reads</em> — pick one, or combine several.
+      </p>
+
+      <div class="surface-strip" style="margin-top:1.5em; gap:0.8em;">
+        <span class="surface-chip" style="font-size:0.8em; padding:0.5em 1.2em;">System prompts</span>
+        <span class="surface-chip" style="font-size:0.8em; padding:0.5em 1.2em;">Tool code</span>
+        <span class="surface-chip" style="font-size:0.8em; padding:0.5em 1.2em;">Skill packages</span>
+        <span class="surface-chip" style="font-size:0.8em; padding:0.5em 1.2em;">MCP surfaces</span>
       </div>
-      <p class="surface-note">Pick one — or combine, e.g. <span class="kbd">[system-prompt, tools]</span>.</p>
+
+      <p class="surface-note" style="font-size:0.6em; margin-top:1.2em;">
+        Combine as, e.g. <span class="kbd">[system-prompt, tools]</span>.
+      </p>
 
       <aside class="notes">
-        The diagram shows hill-climb specifically (labelled at the top).
-        Row 1 is the loop: EVALUATE → GATE → the "improved?" decision → DIAGNOSE
-        → PROPOSE → new candidate back to EVALUATE. Row 2 holds the three
-        capability states the loop reads from and writes to:
-
-        1. base capability (seed / baseline) — feeds into EVALUATE at the
-           very start via the "START" arrow.
-        2. previous best (last committed candidate) — feeds into GATE from
-           below every iteration; GATE compares candidate vs previous best
-           via paired Δ > k·SE.
-        3. commit new best — the "yes" branch out of "improved?". A no-op
-           when the previous best wins (nothing new to commit) — which is
-           how rollback stays a trivial case rather than a separate branch.
-
-        The winner's trajectories then feed DIAGNOSE (cluster failures) and
-        PROPOSE (optimizer-agent edit), and the new candidate loops back to
-        EVALUATE. Frame cap-evolve as an iterative loop where agents drive
-        both the outer search (which capability to change next) and the
-        inner optimization (what edit to propose).
+        Four surfaces the optimizer can edit — one at a time or jointly.
+        Prompts and skill packages are prose the LLM reads; tool code is
+        executable enforcement; MCP surfaces expose new tools. Cross-team
+        applicability: any team that has an eval and a capability can slot in.
+        Extracted from slide 2 so the hill-climb diagram has room to breathe.
       </aside>
     </section>
 
