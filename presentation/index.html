@@ -32,8 +32,21 @@
       --sec1-soft:   #241d47;
       --sec2:        #5ec6d8;   /* Part 2 (WHERE WE STAND) — teal / cyan */
       --sec2-soft:   #0f2e33;
-      --sec3:        #ff9d76;   /* Part 3 (WHAT'S NEXT)   — coral */
-      --sec3-soft:   #3d1f13;
+      --sec3:        #6ea8ff;   /* Part 3 (WHAT'S NEXT)   — sky blue */
+      --sec3-soft:   #152040;
+    }
+
+    /* When a slide belongs to Part 2 or Part 3, retheme --accent so every
+       inner element that uses it (banners, table headers, panel labels,
+       big-number stat colors) picks up the section color without needing
+       per-element overrides. Part 1 keeps the default (--accent = purple). */
+    .reveal .slides > section.sec-02 {
+      --accent:      var(--sec2);
+      --accent-soft: var(--sec2-soft);
+    }
+    .reveal .slides > section.sec-03 {
+      --accent:      var(--sec3);
+      --accent-soft: var(--sec3-soft);
     }
     .reveal { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
     .reveal h1, .reveal h2, .reveal h3 { text-transform: none; letter-spacing: -0.01em; }
@@ -89,11 +102,13 @@
       border-radius: 3px; background: #2a2a2a; color: var(--accent); margin-right: 0.4em;
     }
 
-    /* Big-number stat callouts (results slide) */
+    /* Big-number stat callouts (results slide).
+       justify-content: flex-start so the GAIN strip aligns across all three
+       cards regardless of how many lines the sub-title wraps to. */
     .reveal .stat-card {
       background: var(--card-bg); border: 2px solid var(--card-border);
       border-radius: 12px; padding: 1em; text-align: center;
-      display: flex; flex-direction: column; justify-content: center;
+      display: flex; flex-direction: column; justify-content: flex-start;
     }
     .reveal .stat-card .gain-strip {
       background: #123319; color: var(--green); font-size: 0.5em;
@@ -367,7 +382,7 @@
         measured on held-out splits.
       </p>
 
-      <svg class="loop-diagram" viewBox="0 0 1200 240"
+      <svg class="loop-diagram" viewBox="0 0 1200 270"
            xmlns="http://www.w3.org/2000/svg" role="img"
            aria-label="cap-evolve iteration loop: evaluate, diagnose, propose, gate, commit, then back to evaluate">
         <defs>
@@ -413,7 +428,7 @@
         <!-- return arc: commit-bottom → evaluate-bottom -->
         <path class="lp-return" d="M 990 112 C 990 200, 150 200, 150 118"
               marker-end="url(#arr-ret)"/>
-        <text class="lp-label" x="570" y="192">each iteration</text>
+        <text class="lp-label" x="570" y="235">each iteration</text>
       </svg>
 
       <p class="surface-label">Capabilities we optimize</p>
@@ -575,7 +590,7 @@
 
     <!-- ═══════════════════════════ PART 2 ═══════════════════════════ -->
     <!-- Slide 5 — Results at a glance -->
-    <section>
+    <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>Results at a glance</h2>
       <p class="subtitle" style="font-size:0.65em;">Every number is derived from a committed run artifact.</p>
@@ -626,7 +641,7 @@
     </section>
 
     <!-- Slide 6 — What actually changed -->
-    <section>
+    <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>What actually changed</h2>
       <p class="subtitle" style="font-size:0.65em;">Not prompt tweaks — real code and real skill packages.</p>
@@ -665,7 +680,7 @@
     </section>
 
     <!-- Slide 7 — External context -->
-    <section>
+    <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>External context</h2>
       <p class="subtitle" style="font-size:0.65em;">Positioning next to adjacent tool-optimization work — <strong style="color:var(--amber);">NOT apples-to-apples</strong>.</p>
@@ -707,7 +722,7 @@
     </section>
 
     <!-- Slide 9 — Ongoing experiment plan (last slide of Part 2) -->
-    <section>
+    <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>Ongoing experiment plan</h2>
       <p class="subtitle" style="font-size:0.65em;">
@@ -918,7 +933,7 @@
     </section>
 
     <!-- ═══════════════════════════ PART 3 — ROADMAP OVERVIEW ═══════ -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2>Six threads, one direction</h2>
       <p class="subtitle" style="font-size:0.65em;">Publication, Red Hat, product extensions, memory, simulator, and public research.</p>
@@ -964,7 +979,7 @@
     </section>
 
     <!-- Slide 9 — 3.1 Working with Red Hat (moved before Publication) -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.1</span>Working with Red Hat (Parsec)</h2>
       <p class="subtitle" style="font-size:0.65em;">Real internal LLM-agentic troubleshooting tool. Six sub-agents, ~21 tools, 130 real traces already in hand.</p>
@@ -1009,7 +1024,7 @@
     </section>
 
     <!-- Slide 10 — 3.2 Publication (moved after Red Hat) -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.2</span>Publication</h2>
       <p class="subtitle" style="font-size:0.65em;">Three benchmarks × two-to-four baselines · gates &amp; splits enforced in-code.</p>
@@ -1052,7 +1067,7 @@
     </section>
 
     <!-- Slide 11 — 3.3 Skillberry Proxy & Store [PLACEHOLDER] -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.3</span>Cap-evolve × Skillberry Proxy &amp; Store</h2>
       <p class="subtitle" style="font-size:0.65em;">Connect the optimizer to the surface where skills are actually served and used.</p>
@@ -1096,7 +1111,7 @@
     </section>
 
     <!-- Slide 12 — 3.4 Memory / KB / LLM-wiki (NEW) -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.4</span>Memory · KB · LLM-wiki</h2>
       <p class="subtitle" style="font-size:0.6em;">State / memory / knowledge base / LLM-wiki — one cross-run substrate that IS the org's living record of how agents get better.</p>
@@ -1141,7 +1156,7 @@
     </section>
 
     <!-- Slide 13 — 3.5 Simulator from traces -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.5</span>Simulator from traces</h2>
       <p class="subtitle" style="font-size:0.65em;">Reconstruct enough of the tool environment from recorded I/O to re-execute agents — closed-loop, no live systems.</p>
@@ -1188,7 +1203,7 @@
     </section>
 
     <!-- Slide 14 — 3.6 Improvements from public knowledge -->
-    <section>
+    <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
       <h2><span class="thread-pill">3.6</span>Improvements from public knowledge</h2>
       <p class="subtitle" style="font-size:0.65em;">Adopt what's proven from adjacent work; keep the tool-code axis as the differentiator.</p>
