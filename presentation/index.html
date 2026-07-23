@@ -426,9 +426,9 @@
         measured on held-out splits.
       </p>
 
-      <svg class="loop-diagram" viewBox="0 0 1200 300"
+      <svg class="loop-diagram" viewBox="-210 0 1410 300"
            xmlns="http://www.w3.org/2000/svg" role="img"
-           aria-label="cap-evolve hill-climb loop: evaluate produces a candidate, gate compares candidate vs previous best and picks the winner, commit fires only if the new candidate wins, diagnose cluster failures, propose an optimizer edit, new candidate loops back to evaluate">
+           aria-label="cap-evolve hill-climb loop: START from a base capability, evaluate, gate compares candidate vs previous best, ask whether the winner is improved — if yes commit new best — diagnose, propose, new candidate loops back to evaluate">
         <defs>
           <marker id="arr-fwd" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
@@ -456,27 +456,37 @@
               marker-end="url(#arr-ret)"/>
         <text class="lp-label" x="600" y="75">new candidate</text>
 
-        <!-- 5 boxes in a row (y=90..170); GATE is the accent-highlighted anchor -->
+        <!-- Row 0 · Base capability pill (top-left; starts the flow) -->
+        <rect x="-195" y="15" width="180" height="46" rx="10"
+              fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
+        <text x="-105" y="45" fill="#f2f2f2" font-family="Inter, sans-serif"
+              font-size="18" font-weight="700" text-anchor="middle">base capability</text>
+        <!-- START arrow: base capability (row 0) down-then-right into EVALUATE (row 1) -->
+        <path d="M -105 63 L -105 130 L 108 130"
+              stroke="#b8b8b8" stroke-width="2.5" fill="none"
+              marker-end="url(#arr-fwd)"/>
+        <text x="0" y="120" fill="#b8b8b8" font-family="Inter, sans-serif"
+              font-size="16" font-weight="700" letter-spacing="0.08em"
+              text-anchor="middle">START</text>
+
+        <!-- Row 1 · 5 elements: EVAL → GATE → improved? → DIAGNOSE → PROPOSE (all uniform) -->
         <g>
           <rect class="lp-box" x="110" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="200" y="125">evaluate</text>
-          <text class="lp-desc" x="200" y="150">val + trajectories</text>
+          <text class="lp-name" x="200" y="138">evaluate</text>
 
-          <rect class="lp-accent" x="310" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name lp-name-accent" x="400" y="125">gate</text>
-          <text class="lp-desc" x="400" y="150">Δ &gt; k·SE ?</text>
+          <rect class="lp-box" x="310" y="90" width="180" height="80" rx="10"/>
+          <text class="lp-name" x="400" y="138">gate</text>
 
-          <rect class="lp-box" x="510" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="600" y="125">commit</text>
-          <text class="lp-desc" x="600" y="150">only if new wins</text>
+          <!-- improved? decision diamond (replaces the old COMMIT box) -->
+          <polygon points="600,90 690,130 600,170 510,130"
+                   fill="#141414" stroke="#a48bff" stroke-width="2"/>
+          <text class="lp-name" x="600" y="138">improved?</text>
 
           <rect class="lp-box" x="710" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="800" y="125">diagnose</text>
-          <text class="lp-desc" x="800" y="150">cluster failures</text>
+          <text class="lp-name" x="800" y="138">diagnose</text>
 
           <rect class="lp-box" x="910" y="90" width="180" height="80" rx="10"/>
-          <text class="lp-name" x="1000" y="125">propose</text>
-          <text class="lp-desc" x="1000" y="150">optimizer edit</text>
+          <text class="lp-name" x="1000" y="138">propose</text>
         </g>
 
         <!-- forward arrows between adjacent boxes -->
@@ -485,26 +495,26 @@
         <line class="lp-arrow" x1="692" y1="130" x2="708" y2="130" marker-end="url(#arr-fwd)"/>
         <line class="lp-arrow" x1="892" y1="130" x2="908" y2="130" marker-end="url(#arr-fwd)"/>
 
-        <!-- Arrow captions (below boxes at y=192) -->
-        <text x="300" y="192" fill="#8a8f98" font-family="Inter, sans-serif"
-              font-size="13" text-anchor="middle">candidate</text>
-        <text x="500" y="192" fill="#8a8f98" font-family="Inter, sans-serif"
-              font-size="13" text-anchor="middle">winner</text>
-        <text x="700" y="192" fill="#a48bff" font-family="Inter, sans-serif"
-              font-size="13" font-style="italic" text-anchor="middle">pick capability + trajectories</text>
+        <!-- Down arrow from improved? diamond → commit-new-best pill in row 2 -->
+        <line x1="600" y1="172" x2="600" y2="218"
+              stroke="#a48bff" stroke-width="2.5" fill="none"
+              marker-end="url(#arr-ret)"/>
 
-        <!-- Previous-best side-input pill feeding into GATE from below -->
+        <!-- Row 2 · previous-best side-input pill feeding into GATE from below -->
         <rect x="310" y="220" width="180" height="46" rx="10"
               fill="#141414" stroke="#666a72" stroke-width="1.5" stroke-dasharray="5 3"/>
-        <text x="400" y="242" fill="#f2f2f2" font-family="Inter, sans-serif"
+        <text x="400" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
               font-size="18" font-weight="700" text-anchor="middle">previous best</text>
-        <text x="400" y="258" fill="#8a8f98" font-family="Inter, sans-serif"
-              font-size="12" font-style="italic" text-anchor="middle">last committed candidate</text>
-
-        <!-- vertical arrow from previous-best pill up into GATE bottom -->
+        <!-- Previous-best arrow up into GATE bottom -->
         <line x1="400" y1="218" x2="400" y2="172"
               stroke="#8a8f98" stroke-width="2" stroke-dasharray="5 3" fill="none"
               marker-end="url(#arr-mut)"/>
+
+        <!-- Row 2 · commit-new-best pill (below improved? diamond, solid border) -->
+        <rect x="510" y="220" width="180" height="46" rx="10"
+              fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
+        <text x="600" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
+              font-size="18" font-weight="700" text-anchor="middle">commit new best</text>
       </svg>
 
       <p class="surface-label">Capabilities we optimize</p>
@@ -517,20 +527,25 @@
       <p class="surface-note">Pick one — or combine, e.g. <span class="kbd">[system-prompt, tools]</span>.</p>
 
       <aside class="notes">
-        The diagram shows hill-climb specifically (labelled at the top). The key
-        beat: GATE takes TWO inputs — the freshly-evaluated candidate AND the
-        previous best (last committed) — and picks the winner via paired
-        significance (Δ > k·SE). Rollback isn't a separate branch; it's
-        the trivial outcome "GATE picked previous". COMMIT is a no-op when
-        the previous best wins — the parent snapshot is already committed.
-        The winner's trajectories feed DIAGNOSE (cluster failures) then
-        PROPOSE (optimizer-agent edit); the new candidate loops back to
-        EVALUATE.
+        The diagram shows hill-climb specifically (labelled at the top).
+        Row 1 is the loop: EVALUATE → GATE → the "improved?" decision → DIAGNOSE
+        → PROPOSE → new candidate back to EVALUATE. Row 2 holds the three
+        capability states the loop reads from and writes to:
 
-        Frame cap-evolve as an iterative loop where agents drive both the
-        outer search (which capability to change next) and the inner
-        optimization (what edit to propose). No training compute, no model
-        risk. The 4 surfaces chips open the door for cross-team applicability.
+        1. base capability (seed / baseline) — feeds into EVALUATE at the
+           very start via the "START" arrow.
+        2. previous best (last committed candidate) — feeds into GATE from
+           below every iteration; GATE compares candidate vs previous best
+           via paired Δ > k·SE.
+        3. commit new best — the "yes" branch out of "improved?". A no-op
+           when the previous best wins (nothing new to commit) — which is
+           how rollback stays a trivial case rather than a separate branch.
+
+        The winner's trajectories then feed DIAGNOSE (cluster failures) and
+        PROPOSE (optimizer-agent edit), and the new candidate loops back to
+        EVALUATE. Frame cap-evolve as an iterative loop where agents drive
+        both the outer search (which capability to change next) and the
+        inner optimization (what edit to propose).
       </aside>
     </section>
 
