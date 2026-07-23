@@ -15,6 +15,9 @@ dependencies = []
 [project.optional-dependencies]
 judge = []        # llm-judge evaluator extras (filled when that evaluator lands)
 dashboard = []    # static-HTML / Flask dashboard extras
+mlflow = ["mlflow>=2.0"]
+otel = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
+observability = ["mlflow>=2.0", "opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
 dev = ["pytest>=7"]
 
 [project.scripts]
@@ -28,6 +31,10 @@ Issues        = "https://github.com/skillberry-ai/cap-evolve/issues"
 
 [tool.setuptools]
 packages = ["cap_evolve"]
+
+[project.entry-points."capevolve.observers"]
+mlflow = "cap_evolve.observers_mlflow:MLflowObserver"
+otel = "cap_evolve.observers_otel:OTelObserver"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
