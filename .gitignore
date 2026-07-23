@@ -29,6 +29,10 @@ e2e/
 !dashboard/frontend/dist/
 !dashboard/frontend/dist/**
 
+# keep the vendored Reveal.js used by the management-review deck
+!presentation/reveal/dist/
+!presentation/reveal/dist/**
+
 # skillsbench example: local clone + bench cache + run scratch (not committed)
 vendor/
 .bench_cwd/
