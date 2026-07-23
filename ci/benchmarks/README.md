@@ -16,7 +16,7 @@ regression, not a leaderboard.
 > budget to explore. The `flip`/`hard` tagging + agent-per-task are kept in the harness for
 > future use with a different model or a non-binary scorer.
 
-- **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **1 iteration** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
+- **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
 - **Baselines are frozen** (committed under `<bench>/<task>/baseline/`) and reused via
   `cap-evolve run --reuse-baseline` — the baseline agent is **never re-run**; CI only
   optimizes + evaluates.
@@ -100,4 +100,21 @@ bash ci/benchmarks/lib/select_tasks.sh <bench> full <zero-baseline ids...>
 # 2. freeze the chosen tasks' baselines
 bash ci/benchmarks/lib/freeze_baseline.sh <bench> <task_id>
 # 3. update <bench>/tasks.json and re-measure (RESULTS.md)
+```
+
+## Benchmark history page
+
+Every run appends a per-`(run×bench)` record to the **`benchmark-history`** orphan branch
+(`records/<run_id>__<bench>.json`) and regenerates `benchmarks.json` + `meta.json` there
+(single-writer `aggregate` job → no races). The Pages page `site/benchmarks.html` fetches
+`benchmarks.json` at load and renders a sortable/filterable table (rollup rows expand to
+per-task detail). Bootstrap the branch once:
+
+```bash
+git switch --orphan benchmark-history
+mkdir -p records && : > records/.gitkeep
+echo '[]' > benchmarks.json
+echo '{"count":0,"runs":0,"updated":null}' > meta.json
+git add records/.gitkeep benchmarks.json meta.json
+git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
 ```

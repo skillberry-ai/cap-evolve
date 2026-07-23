@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benchmark runs — cap-evolve</title>
+  <meta name="description" content="Every ci/benchmarks execution (tau2 · swebench · skillsbench), on PRs and manual runs — a sortable, filterable log of reward, flips, latency and cost vs the frozen baseline.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/benchmarks.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="Benchmark runs — cap-evolve">
+  <meta property="og:description" content="A sortable, filterable log of every ci/benchmarks execution (PR + manual runs), with per-task detail.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/benchmarks.html">
+  <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Benchmark runs — cap-evolve">
+  <meta name="twitter:description" content="A sortable, filterable log of every ci/benchmarks execution (PR + manual runs), with per-task detail.">
+  <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="style.css?v=20260721-2">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
+    <div class="nav-links">
+      <a href="getting-started.html">Getting started</a>
+      <a href="results.html">Results</a>
+      <a href="benchmarks.html" class="active">Benchmark runs</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
+      <a href="optimize-your-own.html">Optimize your own</a>
+      <a href="adapter-templates.html">Adapter templates</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page doc">
+
+  <h1>Benchmark runs</h1>
+  <p class="lead">
+    Every <code>ci/benchmarks</code> execution (tau2 · swebench · skillsbench), on PRs and manual
+    runs. Each row is one benchmark in one run vs the frozen baseline; click to expand its
+    per-task detail. <span id="updated" class="muted"></span>
+  </p>
+  <p>
+    See the hand-verified canonical numbers on the <a href="results.html">Results</a> page; this
+    is the raw CI log. Failed/cancelled runs are shown too, so infra breakage is visible.
+  </p>
+
+  <div class="filters">
+    <label>Benchmark
+      <select id="f-bench"><option value="">all</option><option>tau2</option><option>swebench</option><option>skillsbench</option></select>
+    </label>
+    <label>Source
+      <select id="f-source"><option value="">all</option><option value="pr">PR</option><option value="manual">manual</option></select>
+    </label>
+    <label>Result
+      <select id="f-conc"><option value="">all</option><option>success</option><option>failure</option><option>cancelled</option></select>
+    </label>
+    <label>Search
+      <input id="f-q" type="search" placeholder="branch or task…">
+    </label>
+  </div>
+
+  <table id="runs">
+    <thead><tr>
+      <th data-k="date">Date</th>
+      <th data-k="source">Source</th>
+      <th data-k="bench">Bench</th>
+      <th data-k="iterations">Iters</th>
+      <th data-k="reward">Reward base→opt</th>
+      <th data-k="flips">Flips</th>
+      <th data-k="optimizer_usd">Optimizer $</th>
+      <th data-k="conclusion">Result</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p id="empty" class="muted" hidden>No runs recorded yet — trigger the suite (add the
+    <code>benchmark-test</code> label to a PR, or Actions → Benchmarks).</p>
+  <p id="error" class="muted" hidden>Couldn't load benchmark history.</p>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="benchmarks.js"></script>
+</body>
+</html>
