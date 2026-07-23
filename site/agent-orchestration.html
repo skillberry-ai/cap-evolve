@@ -16,24 +16,33 @@
   <meta name="twitter:title" content="Agent orchestration — cap-evolve">
   <meta name="twitter:description" content="Two orchestration modes (deterministic vs agent) and the agent-optimize algorithm.">
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
-  <link rel="preconnect" href="https://rsms.me/">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="style.css?v=20260721-2">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
+  <link rel="stylesheet" href="style.css?v=20260724">
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
     <div class="nav-links">
-      <a href="getting-started.html">Getting started</a>
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
       <a href="results.html">Results</a>
-      <a href="benchmarks.html">Benchmark runs</a>
+      <a href="benchmarks.html">Benchmarks</a>
       <a href="architecture.html">Architecture</a>
       <a href="agent-orchestration.html" class="active">Agent mode</a>
-      <a href="optimize-your-own.html">Optimize your own</a>
-      <a href="adapter-templates.html">Adapter templates</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
     </div>
   </div>
 </nav>
@@ -51,96 +60,116 @@
 <pre><code>orchestration_mode: deterministic   # default — cap-evolve sequences the loop in core
 orchestration_mode: agent           # the conversational agent drives the loop itself</code></pre>
 
-  <h2>Deterministic mode (default)</h2>
-  <p>
-    <code>cap-evolve run</code> sequences the phases itself
-    (<code>intake → implement-and-check → baseline → algorithm → finalize → report</code>). A
-    per-iteration <strong>optimizer</strong> subprocess (e.g. <code>claude-code</code>,
-    <code>codex</code>, or <code>mock</code>) proposes each edit; the engine evaluates on val, applies
-    the gate, and accepts or rejects. This is the right choice when the schedule is known and you want
-    a hands-off, reproducible run. Algorithms: <code>hill-climb</code>, <code>gepa</code>,
-    <code>skillopt</code>.
-  </p>
+  <section class="reveal">
+    <h2>Two modes, same guarantees</h2>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Deterministic (default)</div>
+        <p class="card-desc">
+          <code>cap-evolve run</code> sequences the phases itself
+          (<code>intake → implement-and-check → baseline → algorithm → finalize → report</code>). A
+          per-iteration <strong>optimizer</strong> subprocess (e.g. <code>claude-code</code>,
+          <code>codex</code>, or <code>mock</code>) proposes each edit; the engine evaluates on val,
+          applies the gate, and accepts or rejects. Right when the schedule is known and you want a
+          hands-off, reproducible run. Algorithms: <code>hill-climb</code>, <code>gepa</code>,
+          <code>skillopt</code>.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Agent</div>
+        <p class="card-desc">
+          <code>cap-evolve run</code> does <code>check → baseline</code>, prints a handoff
+          (<code>run_dir</code>, <code>algorithm</code>, <code>stop_condition</code>) and
+          <strong>returns</strong> — no algorithm subprocess, no auto-finalize. The
+          <strong>same conversational agent that ran intake drives the optimization itself</strong>,
+          following the algorithm's <em>Agent-mode loop</em>. It is not a new spawned agent and does
+          not delegate edits — the agent <em>is</em> the optimizer, and you stay in the loop to steer
+          or halt at any round. A Stop hook re-nudges it across turns until the run is finalized.
+        </p>
+      </div>
+    </div>
+  </section>
 
-  <h2>Agent mode</h2>
-  <p>
-    <code>cap-evolve run</code> does <code>check → baseline</code>, prints a handoff
-    (<code>run_dir</code>, <code>algorithm</code>, <code>stop_condition</code>) and <strong>returns</strong>
-    — no algorithm subprocess, no auto-finalize. From there the <strong>same conversational agent that
-    ran intake drives the optimization itself</strong>, following the selected algorithm's
-    <em>Agent-mode loop</em>. It is not a new spawned agent and it does not delegate edits to an
-    optimizer subprocess — in agent mode the agent <em>is</em> the optimizer, and you stay in the loop
-    to steer or halt at any round. A Stop hook re-nudges the agent so it keeps driving across turns
-    until the run is finalized.
-  </p>
+  <section class="reveal">
+    <h2>The <code>agent-optimize</code> algorithm — free-form, fully agentic</h2>
+    <p>
+      Every algorithm has an Agent-mode loop, so <code>hill-climb</code> / <code>gepa</code> /
+      <code>skillopt</code> can all be agent-driven. The one purpose-built for agent mode is
+      <code>agent-optimize</code>: no fixed schedule, no delegated optimizer. The agent owns the
+      whole search, bounded only by the honesty invariants (code-enforced) and the free-text
+      <code>stop_condition</code> it re-reads with the run-dir spend.
+    </p>
+    <ul>
+      <li><strong>Phase 0 — understand first.</strong> Read the project, adapter, seed capability, and
+        <code>score()</code>/feedback; note val/test sizes; restate the <code>stop_condition</code> as
+        concrete checks. Ask the user any blocking questions here so the loop then runs unattended.</li>
+      <li><strong>Free loop.</strong> Read the failing-task feedback (free signal); propose one coherent,
+        general edit itself; optionally triage on a cheap task subset; then evaluate on <strong>full
+        val</strong> and accept only on the paired significance gate (Δ &gt; k·SE) with no regression;
+        snapshot + set-best + log the round.</li>
+      <li><strong>See constraints every few rounds.</strong> Re-read <code>stop_condition</code> and the
+        run-dir spend — score goal, eval cost, optimization cost, and time all fit in one line.</li>
+      <li><strong>Stop &amp; seal once.</strong> When the stop condition is met, seal the held-out test
+        split exactly once and write the report.</li>
+    </ul>
+    <p>
+      <strong>When to choose it:</strong> when the best next move is judgment — which failure cluster is
+      worth a targeted edit, when a subset eval is enough to kill a bad idea, when the score goal is
+      already met — rather than a fixed round schedule. Prefer a deterministic algorithm when rollouts
+      are cheap and you want a fully hands-off, reproducible run.
+    </p>
+  </section>
 
-  <h2>The <code>agent-optimize</code> algorithm — free-form, fully agentic</h2>
-  <p>
-    <code>agent-optimize</code> is purpose-built for agent mode: no fixed schedule, no delegated
-    optimizer. The agent owns the whole search, bounded only by the honesty invariants (code-enforced)
-    and the free-text <code>stop_condition</code> it re-reads with the run-dir spend.
-  </p>
-  <ul>
-    <li><strong>Phase 0 — understand first.</strong> Read the project, adapter, seed capability, and
-      <code>score()</code>/feedback; note val/test sizes; restate the <code>stop_condition</code> as
-      concrete checks. Ask the user any blocking questions here so the loop then runs unattended.</li>
-    <li><strong>Free loop.</strong> Read the failing-task feedback (free signal); propose one coherent,
-      general edit itself; optionally triage on a cheap task subset; then evaluate on <strong>full
-      val</strong> and accept only on the paired significance gate (Δ &gt; k·SE) with no regression;
-      snapshot + set-best + log the round.</li>
-    <li><strong>See constraints every few rounds.</strong> Re-read <code>stop_condition</code> and the
-      run-dir spend — score goal, eval cost, optimization cost, and time all fit in one line.</li>
-    <li><strong>Stop &amp; seal once.</strong> When the stop condition is met, seal the held-out test
-      split exactly once and write the report.</li>
-  </ul>
+  <section class="reveal">
+    <div class="callout callout-accent">
+      <div class="callout-title">Honesty invariants (both modes, code-enforced)</div>
+      <p>
+        Acceptance and the score-goal check are always on <strong>full val</strong> through the gate;
+        cheap subset triage never gates. The <strong>test split is sealed</strong> until a single
+        finalize — the evaluate phase physically restricts <code>--split</code> to
+        <code>train|val</code>; a second finalize raises <code>TestSealError</code>. Every edit encodes
+        a general rule, never a task-specific answer. Every accept is snapshotted via
+        <code>set_best</code> + <code>log_event</code>; every run ends with finalize + report.
+      </p>
+    </div>
+  </section>
 
-  <div class="callout">
-    <div class="callout-title">Honesty invariants (both modes, code-enforced)</div>
-    Acceptance and the score-goal check are always on <strong>full val</strong> through the gate; cheap
-    subset triage never gates. The <strong>test split is sealed</strong> until a single finalize — the
-    evaluate phase physically restricts <code>--split</code> to <code>train|val</code>; a second
-    finalize raises <code>TestSealError</code>. Every accept is snapshotted; every run ends with
-    finalize + report.
-  </div>
-
-  <h2>How to select it</h2>
+  <section class="reveal">
+    <h2>How to select it</h2>
 <pre><code>orchestration_mode: agent
 algorithm_skill:    agent-optimize
 stop_condition:     "stop when the FULL val mean reward &gt;= 0.78; keep eval + optimization cost modest; you decide which tasks to evaluate and when; no fixed round count"</code></pre>
+  </section>
 
-  <h2>τ²-bench airline — agent-mode run (held-out 30 (=val) / 20)</h2>
-  <p>
-    The first run driven entirely in agent mode with <code>agent-optimize</code>: the agent understood
-    the benchmark, ran the baseline, then proposed the airline-policy edits itself (payment-construction
-    discipline via the <code>calculate</code> tool was the load-bearing change), gated every candidate on
-    the full val split, and sealed the test once. Runner + user simulator: <code>gpt-oss-120b</code> via
-    a litellm proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
-  </p>
-  <table>
-    <thead>
-      <tr><th>split (single-trial)</th><th>baseline</th><th>best</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>val</strong> (30, fit)</td><td>0.500</td><td><strong>0.633</strong></td><td class="gain">+26.7% relative — gate-significant</td></tr>
-      <tr><td><strong>sealed test</strong> (20, held-out)</td><td>0.400</td><td><strong>0.550</strong></td><td class="gain">+37.5% relative</td></tr>
-    </tbody>
-  </table>
-  <div class="callout">
-    <div class="callout-title">Honest reading</div>
-    τ²-bench airline is high-variance at a single trial. On a stable 3-trial re-evaluation the val fit
-    gain is +18% (paired-significant) while the held-out test is flat within noise — and because
-    <code>train == val</code>, the val figure is a <em>fit</em>, not generalization. Agent mode did
-    produce the only gate-accepted improvement in a head-to-head against a bounded deterministic run,
-    but <code>gpt-oss-120b</code>'s stable val ceiling here (~0.64) is below the 0.78 target; a genuine
-    held-out gain needs a stronger runner model or tool-level edits. Full detail and caveats:
-    <a href="results.html">Results</a>.
-  </div>
+  <section class="reveal">
+    <h2>τ²-bench airline — agent-mode run</h2>
+    <p>
+      The first run driven entirely in agent mode with <code>agent-optimize</code>: the agent
+      understood the benchmark, ran the baseline, then proposed the airline-policy edits itself
+      (payment-construction discipline via the <code>calculate</code> tool was the load-bearing change),
+      gated every candidate on the full val split, and sealed the test once. Runner + user simulator:
+      <code>gpt-oss-120b</code> via a litellm proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
+    </p>
+    <div class="callout callout-warn">
+      <div class="callout-title">Honest reading — read the caveat, not the headline</div>
+      <p>
+        Single-trial: val <span class="num">0.500 → 0.633</span> (gate-significant), sealed test
+        <span class="num">0.400 → 0.550</span>. <strong>But</strong> τ²-bench airline is high-variance:
+        at <code>num_trials=3</code> the val gain <span class="num">0.544 → 0.644</span> is
+        paired-significant while the held-out test <span class="num">0.467 → 0.400</span> is
+        <strong>not</strong> significant, and the 0.78 val target was <strong>not</strong> reached.
+        Because <code>train == val</code>, the val figure is a <em>fit</em>, not generalization. Full
+        table and caveats: <a href="results.html">Results</a>.
+      </p>
+    </div>
+  </section>
 
 </main>
 
 <footer class="footer">
   <div class="footer-inner">
     <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
       Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
     </div>
     <div class="footer-affil">
@@ -156,5 +185,6 @@ stop_condition:     "stop when the FULL val mean reward &gt;= 0.78; keep eval + 
   </div>
 </footer>
 
+<script src="js/site.js?v=20260724" defer></script>
 </body>
 </html>

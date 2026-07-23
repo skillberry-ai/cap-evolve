@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Run end-to-end — cap-evolve</title>
+  <meta name="description" content="Take a real benchmark (τ²-bench airline) from a single prompt to an honest, sealed result — baseline 0.536 → 0.712 — with every claim backed by a committed artifact you can open offline.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/run-end-to-end.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="Run end-to-end — cap-evolve">
+  <meta property="og:description" content="Take a real benchmark (τ²-bench airline) from a single prompt to an honest, sealed result — baseline 0.536 → 0.712 — with every claim backed by a committed artifact you can open offline.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/run-end-to-end.html">
+  <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Run end-to-end — cap-evolve">
+  <meta name="twitter:description" content="Take a real benchmark (τ²-bench airline) from a single prompt to an honest, sealed result — baseline 0.536 → 0.712 — with every claim backed by a committed artifact you can open offline.">
+  <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
+  <link rel="stylesheet" href="style.css?v=20260724">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <div class="nav-links">
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html" class="active">Run end-to-end</a>
+      <a href="results.html">Results</a>
+      <a href="benchmarks.html">Benchmarks</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page doc">
+  <h1>Run it end-to-end</h1>
+  <p class="lead">
+    Take a real benchmark from a single prompt to an honest, sealed result — every
+    claim backed by a committed artifact you can open offline. The worked example is
+    <strong>τ²-bench airline</strong>: onboarded as a brand-new benchmark, wired to IBM
+    RITS, passed through the hard gate, then optimized behind a paired significance gate
+    with a live dashboard.
+  </p>
+
+  <div class="with-toc">
+    <div class="doc-main">
+
+      <!-- ─────────────────────────── headline ─────────────────────────── -->
+      <section class="reveal">
+        <h2 id="headline">The headline</h2>
+        <p>
+          Optimizing the airline <strong>policy and tools jointly</strong> over 10 hill-climb
+          iterations moved the mean τ² task reward from the seed capability to the best
+          candidate (<code>cand_0007</code>) on all 50 tasks × 10 trials:
+        </p>
+
+        <div class="beforeafter">
+          <div><div class="ba-num base">0.536</div><div class="ba-label">Baseline val</div></div>
+          <div class="ba-arrow">→</div>
+          <div><div class="ba-num best">0.712</div><div class="ba-label">Best val · cand_0007</div></div>
+        </div>
+
+        <div class="stat-strip">
+          <div class="stat"><div class="stat-num success">+32.8%</div><div class="stat-label">relative gain on val</div></div>
+          <div class="stat"><div class="stat-num">0.694</div><div class="stat-label">sealed test pass@1 (pass² 0.584)</div></div>
+          <div class="stat"><div class="stat-num amber">5 / 10</div><div class="stat-label">iterations accepted by the gate</div></div>
+          <div class="stat"><div class="stat-num">593→832</div><div class="stat-label">tool.py lines the optimizer wrote</div></div>
+        </div>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">This is a fit metric, not a held-out result</div>
+          <p>
+            This committed run is <strong>no-holdout</strong> (train = val = test = all 50
+            tasks), pinned via <code>split_ids.json</code>, so <strong>val <em>is</em> the fit
+            metric</strong> and the sealed-test number is reported as a fit metric — the engine
+            logs a <code>splits_warning</code> and the report flags it. For a held-out result,
+            pin a 30/10/10 split. The gain still accretes only behind the paired significance
+            gate, one git commit at a time.
+          </p>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────── prerequisites ─────────────────────────── -->
+      <section class="reveal">
+        <h2 id="prerequisites">Prerequisites</h2>
+        <div class="callout callout-accent">
+          <div class="callout-title">The only things you provide</div>
+          <ul>
+            <li><strong>Python 3.10+</strong> and <strong>git</strong>.</li>
+            <li>
+              <strong>RITS credentials</strong> in a repo-root <code>.env</code> —
+              <code>RITS_API_KEY</code> and <code>RITS_API_URL</code>. RITS is the runner and
+              user simulator (<code>openai/gpt-oss-120b</code>); it is internal/free, so the
+              runner cost is honestly <code>$0</code>.
+            </li>
+            <li>
+              <strong>An optimizer</strong>: a logged-in Claude Code session (or
+              <code>ANTHROPIC_API_KEY</code>) for <code>claude-code @ claude-opus-4-6</code>.
+            </li>
+          </ul>
+        </div>
+        <p>
+          Everything else — cap-evolve, tau2-bench, the dashboard server — is installed for you
+          by <code>setup.sh</code>. Nothing is expected to pre-exist except those credentials.
+        </p>
+      </section>
+
+      <!-- ─────────────────────────── the run ─────────────────────────── -->
+      <section class="reveal">
+        <h2 id="the-run">The run, step by step</h2>
+        <p>
+          Two commands do the whole thing. They are the executable transcript of pasting the
+          intake prompt to a coding agent and saying <em>&ldquo;follow RUN.md.&rdquo;</em>
+        </p>
+
+        <div class="steps">
+          <div class="step">
+            <h3>Setup — onboard the benchmark and pass the hard gate</h3>
+<pre><code>bash examples/tau2_airline/setup.sh</code></pre>
+            <p>The intake / implement-and-check transcript. In order it:</p>
+            <ul>
+              <li>creates <code>.venv</code> and <code>pip install -e ./core</code> (the <code>cap-evolve</code> CLI), plus the optional dashboard server;</li>
+              <li>clones tau2-bench from <code>github.com/sierra-research/tau2-bench</code>, <code>pip install -e</code>s it, and <strong>records the resolved SHA</strong> to <code>run_full/TAU2_COMMIT.txt</code>;</li>
+              <li>scaffolds <code>.capevolve/project</code>, then wires the authored integration — the adapter, the RITS shim, the editable seed capability (<code>policy/</code> + <code>tools/</code>), and <code>capevolve.yaml</code>;</li>
+              <li>runs the <strong>HARD GATE</strong> <code>cap-evolve check .capevolve/project</code>, which verifies the credentials and adapter contract (including that <code>score()</code> is deterministic).</li>
+            </ul>
+            <div class="callout callout-amber">
+              <div class="callout-title">No budget is spent until this is green</div>
+              <p><code>cap-evolve check</code> must print <code>{"ok": true}</code>. The run refuses to proceed otherwise.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <h3>Estimate — preview the cost (spends nothing)</h3>
+<pre><code>cap-evolve estimate --spec .capevolve/project/capevolve.yaml --project .capevolve/project</code></pre>
+            <p>
+              Prints the call counts (<code>val × trials × iterations</code> runner calls,
+              <code>iterations</code> optimizer calls) and a calibrated <code>$</code> range —
+              a preview that spends nothing before you commit to the full run.
+            </p>
+          </div>
+
+          <div class="step">
+            <h3>Run — optimize → gate → seal → report</h3>
+<pre><code>bash examples/tau2_airline/run.sh</code></pre>
+            <p>Which runs, with the live dashboard:</p>
+<pre><code>cap-evolve run --spec .capevolve/project/capevolve.yaml \
+  --project .capevolve/project --run-ts full --dashboard auto</code></pre>
+            <p>
+              The config (from <code>capevolve.yaml</code>): capabilities
+              <code>[system-prompt, tools]</code>, algorithm <strong>hill-climb</strong>
+              (<code>--focus all</code>), <strong>10 iterations · 50 tasks · 10 trials</strong>,
+              and the <strong>paired significance gate</strong> (<code>gate_k_se 0.2</code>,
+              val-only). Each iteration diagnoses val traces into failure clusters, the optimizer
+              edits policy <em>and</em> tools under a <code>--max-budget-usd 40</code> per-iteration
+              cap, all 10 trials are re-evaluated in one batched pass, the gate accepts or rejects,
+              and the step is committed to git.
+            </p>
+            <div class="callout">
+              <div class="callout-title">Interrupted? Just resume</div>
+              <p>
+                This run takes hours. Re-run the exact command with <code>--resume</code> appended —
+                it reopens <code>run_full</code>, skips the already-scored baseline, and continues
+                from the last accepted iteration, so you don't repay for work already done.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <h3>Inspect — the process, not just the number</h3>
+            <p>Every iteration is a git commit. Open the whole story offline:</p>
+<pre><code>RD=.capevolve/run_full
+git -C "$RD" log --oneline      # one commit per iteration (the whole optimization)
+cat "$RD/report.md"             # baseline val → best val → sealed test (+ pass^k)
+open "$RD/dashboard.html"       # KPIs, cumulative-best stair, heatmap, lineage, cost
+cat "$RD/rejected.jsonl"        # what the honest gate rejected = optimizer memory</code></pre>
+            <p>
+              <code>rejected.jsonl</code> is not noise — the gate's rejections become the
+              optimizer's memory: each rejected iteration's <code>RESULT</code> line names the
+              exact tasks it broke, and the next iteration drops just those edits.
+            </p>
+          </div>
+
+          <div class="step">
+            <h3>Open the committed dashboard with no backend</h3>
+            <p>
+              The full interactive dashboard — all 10 iterations — is checked in as a static
+              export. No Node, no backend, no re-run needed to see the result:
+            </p>
+<pre><code>cd examples/tau2_airline/run_full/ui &amp;&amp; python3 -m http.server 8000
+# then open http://localhost:8000</code></pre>
+            <p>Serve it locally like this, or host it on GitHub Pages / any static host.</p>
+          </div>
+        </div>
+
+        <figure class="shot">
+          <img src="assets/dash-overview.png" alt="Dashboard overview — KPIs and the fitness-over-iterations stair from baseline 0.536 to best 0.712">
+          <figcaption class="shot-cap">
+            After the run: the fitness stair only steps <em>up</em> — baseline
+            <span class="num">0.536</span> → best <span class="num">0.712</span>. The paired
+            significance gate refused every change it couldn't distinguish from noise.
+          </figcaption>
+        </figure>
+
+        <div class="shot-grid">
+          <figure class="shot">
+            <img src="assets/dash-lineage.png" alt="Lineage tree — seed to accepted candidates to champion, with rejected branches and the paired-gate math">
+            <figcaption class="shot-cap">
+              Lineage: seed → accepted (green) → champion (amber), rejected (red) branches, and
+              the paired-gate math (Δ &gt; k·SE) behind each accept/reject.
+            </figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="assets/dash-gitdiffs.png" alt="Per-iteration git diffs — the optimizer writing executable tool code and the JOURNAL.md memory entry">
+            <figcaption class="shot-cap">
+              The money shot: the optimizer writing <strong>code into the tool bodies</strong>,
+              plus the append-only <code>JOURNAL.md</code> where each iteration's intent meets the
+              framework's objective <code>RESULT</code> line.
+            </figcaption>
+          </figure>
+        </div>
+
+        <figure class="shot">
+          <img src="assets/dash-cost.png" alt="Cost panel — per-candidate evaluations table including the sealed test row, per-role and per-iteration cost, and budget usage">
+          <figcaption class="shot-cap">
+            Honest accounting: the per-candidate <strong>Evaluations</strong> table (including the
+            sealed <em>test</em> row scored once), cost by role and per iteration, and budget usage.
+            RITS runner cost is <code>$0</code>; the ~<span class="num">$148</span> spend is the
+            Claude optimizer, capped at <code>$40</code>/iteration.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- ─────────────────────────── what changed ─────────────────────────── -->
+      <section class="reveal">
+        <h2 id="what-changed">What actually changed</h2>
+        <p>
+          Five of the ten iterations cleared the gate. The throughline: <strong>argument-level
+          feedback</strong> from failing rollouts becomes <strong>executable in-code guards</strong>
+          inside the existing tool bodies — prose reserved for genuine knowledge gaps. That is why
+          <code>tools.py</code> grew 593 → 832 lines (and the policy 166 → 233); most of the lift is
+          real code, not prompt wording.
+        </p>
+
+        <table class="table-hero">
+          <thead>
+            <tr><th>Iter</th><th>Δ val</th><th>What the optimizer shipped</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td class="gain">+0.046</td><td>In-body tool guards: already-cancelled / already-flown on <code>cancel_reservation</code>, basic-economy + origin-preservation on <code>update_reservation_flights</code>, no-reduction on baggages, enriched <code>get_user_details</code>.</td></tr>
+            <tr><td>3</td><td class="gain">+0.052</td><td>Added the <code>get_all_reservation_details</code> <strong>enumeration loop tool</strong> that fixed the &ldquo;incomplete enumeration&rdquo; cluster; re-applied only the safe edits from the rejected iteration 2.</td></tr>
+            <tr><td>5</td><td class="gain">+0.036</td><td>Eligibility / state guards that broke nothing (fixed tasks 0, 13, 41, 49).</td></tr>
+            <tr><td>6</td><td class="gain">+0.014</td><td>The <strong>≤1 travel-certificate</strong> count guard in <code>book_reservation</code> and related payment validation.</td></tr>
+            <tr><td>7</td><td class="gain">+0.028</td><td>The best step: a <code>max_charge</code> budget guard on <code>update_reservation_flights</code>, plus the output contract to <strong>state the exact figure</strong> from <code>payment_history</code> instead of hand-computing it.</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          Five concrete before→after edits — each verified in the trajectories (what the agent did
+          on a failing rollout vs the passing one) — are written up in
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/OPTIMIZATION_EXAMPLES.md">docs/OPTIMIZATION_EXAMPLES.md</a>:
+          the certificate guard, the budget-cap validation, the enumeration loop tool, the
+          &ldquo;don't ask for data you can look up&rdquo; knowledge rule, and the exact-figure
+          output contract.
+        </p>
+      </section>
+
+      <!-- ─────────────────────────── next ─────────────────────────── -->
+      <section class="reveal">
+        <h2 id="next">Where to go next</h2>
+        <div class="card-grid">
+          <a class="card" href="results.html">
+            <div class="card-title">Results</div>
+            <div class="card-desc">The full results table — τ² airline, agent-mode held-out, and SkillsBench — with fit-metric vs held-out labels.</div>
+          </a>
+          <a class="card" href="architecture.html">
+            <div class="card-title">Architecture</div>
+            <div class="card-desc">How the pipeline is built: adapter contract, the honest evaluation loop, the paired gate, and the sealed test.</div>
+          </a>
+          <a class="card" href="optimize-your-own.html">
+            <div class="card-title">Optimize your own</div>
+            <div class="card-desc">Point cap-evolve at your agent and eval. Intake, the adapter you write, and the same honest loop.</div>
+          </a>
+        </div>
+      </section>
+
+    </div>
+
+    <nav class="toc" aria-label="On this page">
+      <div class="toc-title">On this page</div>
+      <a href="#headline">The headline</a>
+      <a href="#prerequisites">Prerequisites</a>
+      <a href="#the-run">The run, step by step</a>
+      <a href="#what-changed">What actually changed</a>
+      <a href="#next">Where to go next</a>
+    </nav>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js?v=20260724" defer></script>
+</body>
+</html>

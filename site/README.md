@@ -3,21 +3,37 @@
 The public-facing site at
 [skillberry-ai.github.io/cap-evolve/](https://skillberry-ai.github.io/cap-evolve/).
 
-Plain HTML + CSS. No framework, no build step, no JS.
+Hand-written HTML + CSS with a tiny sprinkle of vanilla JS (theme toggle,
+scroll-reveal, TOC scrollspy, code copy buttons). **No framework, no build step** —
+the `site/` directory is shipped verbatim. Dark-first, with a light-mode toggle.
 
 ## Structure
 
-- `index.html` — home. Hero + quickstart + dashboard screenshot + results
-  table + choose-your-path + doc tiles.
-- `getting-started.html` — first-run walkthrough (adapted from
-  `docs/GETTING_STARTED.md`).
-- `results.html` — full benchmark detail (adapted from `docs/RESULTS.md`).
-- `architecture.html` — pipeline + optimizer context (adapted from
-  `docs/ARCHITECTURE.md`).
-- `optimize-your-own.html` — adapter contract + two adoption paths (adapted
-  from `docs/OPTIMIZE_YOUR_OWN.md`).
-- `style.css` — one stylesheet for the whole site.
-- `assets/` — images (logo thumbnail, dashboard screenshot).
+- `index.html` — home. Hero + quickstart + how-it-works + before→after + real
+  dashboard screenshots + why + results + doc tiles.
+- `getting-started.html` — first-run walkthrough, zero-API `toy_calc` (from `docs/GETTING_STARTED.md`).
+- `run-end-to-end.html` — step-by-step run on a real benchmark, τ²-bench airline
+  (from `docs/REPRODUCE_tau2.md` + `examples/tau2_airline/DEMO.md`).
+- `results.html` — full benchmark detail (from `docs/RESULTS.md`); includes an inline SVG dumbbell chart.
+- `benchmarks.html` — live CI benchmark-run history; rendered by `benchmarks.js` from a JSON feed.
+- `architecture.html` — pipeline + optimizer context (from `docs/ARCHITECTURE.md`); includes an inline SVG pipeline diagram.
+- `optimize-your-own.html` — adapter contract + two adoption paths (from `docs/OPTIMIZE_YOUR_OWN.md`).
+- `agent-orchestration.html` — deterministic vs agent mode (from `docs/AGENT_ORCHESTRATION.md`).
+- `adapter-templates.html` — config-only adapter templates (from `docs/ADAPTER_TEMPLATES.md`).
+- `style.css` — one stylesheet (design tokens for dark + light, all components).
+- `js/site.js` — theme toggle, scroll-reveal (IntersectionObserver), TOC scrollspy, copy buttons. Progressive enhancement; content is fully readable without it.
+- `benchmarks.js` — fetches + renders the benchmark-run history table.
+- `assets/` — logo/mascot, favicon, and real dashboard screenshots (`dash-*.png`).
+
+## Design system (quick reference)
+
+- **Theme:** dark by default; an inline `<head>` script applies `data-theme` pre-paint
+  (no FOUC) and reads an explicit choice from `localStorage`. The nav `.theme-toggle`
+  flips and persists it. Tokens + light overrides live at the top of `style.css`.
+- **Fonts:** Fira Sans (UI) + Fira Code (mono/numbers), from Google Fonts — matches the dashboard.
+- **Palette:** blue `#3b82f6` primary, amber `#f59e0b` "champion" accent, green/red for accept/reject — matches the dashboard.
+- **Motion:** add class `reveal` to a block to fade-up on scroll. All motion is disabled under `prefers-reduced-motion`.
+- **Components:** `.btn`/`.btn-primary`/`.btn-ghost`, `.eyebrow`, `.pill`/`.badge`, `.card`/`.card-grid`, `.diff-tile(s)`, `.stat(-strip)`, `.beforeafter`, `.steps`/`.step`, `.shot`/`.shot-grid`, `.callout`(+`-accent`/`-warn`), `.table`/`.table-hero`, `.with-toc`+`.toc`. See `index.html` and `run-end-to-end.html` for usage.
 
 ## Preview locally
 
@@ -40,25 +56,23 @@ First-time setup (once per repo, done in GitHub Settings):
 
 ## Editing conventions
 
-- **Shared chrome (nav + footer) is duplicated across HTML files.** When you
-  change the nav or footer, update every `*.html` in this directory. Five
-  files today; grep for `class="nav"` and `class="footer"` to find them all.
-  Consider a small build script if it grows past ~10 pages.
-- **CSS cache-buster.** Every `<link rel="stylesheet" href="style.css?v=...">`
-  in the HTML files carries a `?v=YYYYMMDD-N` query string. **Bump it when
-  `style.css` changes** so returning visitors don't cache the old CSS.
+- **Shared chrome (nav + footer + the `<head>` theme/font block) is duplicated
+  across HTML files.** When you change any of it, update every `*.html` here.
+  Grep for `class="nav"` and `class="footer"` to find them all.
+- **CSS/JS cache-buster.** Every `style.css?v=...` and `js/site.js?v=...` link
+  carries a `?v=YYYYMMDD` query. **Bump it when the file changes** so returning
+  visitors don't cache the old asset.
 - **Sub-pages summarize the source markdown docs, they do not replace them.**
-  If you find yourself adding new content to a site page, consider whether it
-  belongs in `docs/*.md` first (the site page then absorbs the change).
-- **External links go to `github.com/skillberry-ai/cap-evolve/blob/main/...`**
-  so they always resolve against the current default branch.
+- **Honest numbers.** This project's premise is honest evaluation. Label every
+  figure `fit metric` (no holdout) or `held-out`; never present a reported-but-
+  not-yet-committed number as artifact-backed. Cross-check against `docs/RESULTS.md`
+  and the committed run artifacts before editing a results figure.
+- **External links go to `github.com/skillberry-ai/cap-evolve/blob/main/...`.**
 
 ## Adding a new sub-page
 
-1. Copy an existing sub-page (e.g. `getting-started.html`) as your template.
-2. Update `<title>`, meta description, `<h1>`, and the `.active` marker in the
-   nav.
-3. Write the content inside `<main class="page-narrow doc">`.
-4. Add a nav link in every HTML file (including `index.html`) so it's reachable.
-5. Bump the CSS cache-buster in the new file's `<link>` if you also changed
-   `style.css`.
+1. Copy `getting-started.html` as your template (it carries the canonical chrome).
+2. Update `<title>`, meta description, canonical/OG, `<h1>`, and the `.active` marker in the nav.
+3. Write the content inside `<main class="page-narrow doc">` (or `page doc` + `.with-toc` for long pages).
+4. Add a nav/footer link where appropriate, and a `sitemap.xml` entry.
+5. Bump the cache-buster if you also changed `style.css`/`site.js`.
