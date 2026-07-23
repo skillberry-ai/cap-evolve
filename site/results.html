@@ -16,29 +16,38 @@
   <meta name="twitter:title" content="Results — cap-evolve">
   <meta name="twitter:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
-  <link rel="preconnect" href="https://rsms.me/">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="style.css?v=20260721-2">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
+  <link rel="stylesheet" href="style.css?v=20260724">
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
     <div class="nav-links">
-      <a href="getting-started.html">Getting started</a>
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
       <a href="results.html" class="active">Results</a>
-      <a href="benchmarks.html">Benchmark runs</a>
+      <a href="benchmarks.html">Benchmarks</a>
       <a href="architecture.html">Architecture</a>
       <a href="agent-orchestration.html">Agent mode</a>
-      <a href="optimize-your-own.html">Optimize your own</a>
-      <a href="adapter-templates.html">Adapter templates</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
     </div>
   </div>
 </nav>
 
-<main class="page-narrow doc">
+<main class="page doc">
 
   <h1>Results</h1>
   <p class="lead">
@@ -48,333 +57,402 @@
     snapshot of this page.
   </p>
 
-  <div class="callout">
+  <div class="callout callout-accent">
     <div class="callout-title">Split discipline — how to read every table below</div>
     <ul>
       <li><strong>fit metric</strong> — <code>train == val == test</code> (no holdout); the test number is <em>not</em> held out and the engine logs a <code>splits_warning</code>. Useful to show the loop works; not a generalization claim.</li>
       <li><strong>held-out</strong> — test ids the optimizer never saw, scored exactly once at <code>finalize</code>.</li>
     </ul>
-    Reward is mean task reward in <code>[0, 1]</code>. Where we quote externally reported results that use 0–100% units, we label them explicitly as percentages. Gains are given as <strong>absolute</strong> and <strong>relative %</strong>.
+    <p>
+      Reward is mean task reward in <code>[0, 1]</code>; where a figure is also useful as a percentage we
+      show both (e.g. <span class="num">0.536</span> (53.6%)). Gains are given as <strong>absolute</strong>
+      and <strong>relative %</strong>.
+    </p>
   </div>
 
-  <h2>toy_calc — deterministic, zero-API</h2>
+  <div class="with-toc">
+    <div class="doc-main">
 
-  <table>
-    <thead><tr><th></th><th>val</th><th>test</th><th>notes</th></tr></thead>
-    <tbody>
-      <tr><td>Seed prompt</td><td><strong>0.0</strong></td><td>—</td><td>no <code>[CALC]</code> marker</td></tr>
-      <tr><td>Optimized (<code>mock</code> adds <code>[CALC]</code>)</td><td>—</td><td><strong>1.0</strong></td><td>gate-accepted, test sealed</td></tr>
-    </tbody>
-  </table>
+      <section class="reveal">
+        <h2 id="toy-calc">toy_calc — deterministic, zero-API</h2>
 
-  <p>
-    Deterministic, no model call. Asserted by <code>core/tests/test_e2e_slice.py</code> and
-    reproduced by <code>bash examples/toy_calc/run.sh</code>.
-  </p>
+        <table>
+          <thead><tr><th></th><th>val</th><th>test</th><th>notes</th></tr></thead>
+          <tbody>
+            <tr><td>Seed prompt</td><td class="num"><strong>0.0</strong></td><td class="num">—</td><td>no <code>[CALC]</code> marker</td></tr>
+            <tr><td>Optimized (<code>mock</code> adds <code>[CALC]</code>)</td><td class="num">—</td><td class="num"><strong>1.0</strong></td><td>gate-accepted, test sealed</td></tr>
+          </tbody>
+        </table>
 
-  <h2>τ²-bench airline — no-holdout fit-metric run (reproducible, committed)</h2>
+        <p>
+          Deterministic, no model call. Asserted by <code>core/tests/test_e2e_slice.py</code> and
+          reproduced by <code>bash examples/toy_calc/run.sh</code>.
+        </p>
 
-  <p>
-    Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_airline/run_full"><code>examples/tau2_airline/run_full/</code></a>
-    (<code>final.json</code>, static dashboard under <code>ui/</code>).
-    Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2.md">REPRODUCE_tau2.md</a>.
-  </p>
+        <blockquote>
+          <p>
+            Honest reading: this is a loop self-check (<span class="num">0.0</span> → <span class="num">1.0</span>
+            by construction), not a comparative benchmark. It proves the accept/gate/seal machinery works
+            end-to-end — nothing more.
+          </p>
+        </blockquote>
+      </section>
 
-  <ul>
-    <li><strong>Capability:</strong> airline <strong>policy + tools</strong> optimized jointly (<code>[system-prompt, tools]</code>).</li>
-    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-6</code>.</li>
-    <li><strong>Runner + user simulator:</strong> <code>openai/gpt-oss-120b</code> via IBM RITS.</li>
-    <li><strong>Tasks / trials:</strong> all <strong>50</strong> airline tasks · <strong>10</strong> trials each.</li>
-    <li><strong>Split:</strong> <code>train == val == test == 50</code> — <strong>fit metric</strong> (no holdout).</li>
-    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.2</code>.</li>
-    <li><strong>tau2-bench commit:</strong> <code>8ebb7499622fc2be9b9d510d6f7a7653461f4f29</code>.</li>
-  </ul>
+      <section class="reveal">
+        <h2 id="tau2-fit">τ²-bench airline — no-holdout fit-metric run (reproducible, committed)</h2>
 
-  <table>
-    <thead>
-      <tr><th></th><th>reward (50 tasks · 10 trials)</th><th>Δ vs baseline</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>Baseline</strong> (seed policy + tools)</td><td><strong>0.536</strong></td><td>—</td></tr>
-      <tr><td><strong>Best candidate</strong> (<code>cand_0007</code>) — val</td><td><strong>0.712</strong></td><td class="gain">+0.176 / +32.8% relative</td></tr>
-      <tr><td><code>cand_0007</code> — sealed test (fit metric)</td><td><strong>0.694</strong> pass@1 (pass² 0.584)</td><td>—</td></tr>
-    </tbody>
-  </table>
+        <p>
+          Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_airline/run_full"><code>examples/tau2_airline/run_full/</code></a>
+          (<code>final.json</code>, static dashboard under <code>ui/</code>).
+          Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2.md">REPRODUCE_tau2.md</a>.
+        </p>
 
-  <p>
-    Accepted iterations (the rest were rejected by the gate as within-noise):
-    iter 1 <code>+0.046</code> (0.536→0.582), iter 3 <code>+0.052</code> (→0.634),
-    iter 5 <code>+0.036</code> (→0.670), iter 6 <code>+0.014</code> (→0.684),
-    iter 7 <code>+0.028</code> (→0.712). <strong>5 of 10</strong> iterations accepted.
-  </p>
+        <ul>
+          <li><strong>Capability:</strong> airline <strong>policy + tools</strong> optimized jointly (<code>[system-prompt, tools]</code>).</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-6</code>.</li>
+          <li><strong>Runner + user simulator:</strong> <code>openai/gpt-oss-120b</code> via IBM RITS.</li>
+          <li><strong>Tasks / trials:</strong> all <strong>50</strong> airline tasks · <strong>10</strong> trials each.</li>
+          <li><strong>Split:</strong> <code>train == val == test == 50</code> — <strong>fit metric</strong> (no holdout).</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.2</code>.</li>
+          <li><strong>tau2-bench commit:</strong> <code>8ebb7499622fc2be9b9d510d6f7a7653461f4f29</code>.</li>
+        </ul>
 
-  <p>
-    What changed: deep in-code tool edits (<code>tools.py</code> 593 → 832 lines;
-    policy 166 → 233 lines), not just prompt tweaks — five trajectory-verified
-    before→after edits in
-    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/OPTIMIZATION_EXAMPLES.md">OPTIMIZATION_EXAMPLES.md</a>;
-    curated walkthrough in
-    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_airline/DEMO.md">examples/tau2_airline/DEMO.md</a>.
-  </p>
+        <table>
+          <thead>
+            <tr><th></th><th>reward (50 tasks · 10 trials)</th><th>Δ vs baseline</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Baseline</strong> (seed policy + tools)</td><td class="num"><strong>0.536</strong> (53.6%)</td><td class="num">—</td></tr>
+            <tr><td><strong>Best candidate</strong> (<code>cand_0007</code>) — val</td><td class="num"><strong>0.712</strong> (71.2%)</td><td class="gain">+0.176 / +32.8% relative</td></tr>
+            <tr><td><code>cand_0007</code> — sealed test (fit metric)</td><td class="num"><strong>0.694</strong> (69.4%) pass@1 · pass² 0.584 (58.4%)</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
 
-  <h2>τ²-bench airline — held-out 30/10/10 run</h2>
+        <p>
+          Accepted iterations (the rest were rejected by the gate as within-noise):
+          iter 1 <code>+0.046</code> (0.536→0.582), iter 3 <code>+0.052</code> (→0.634),
+          iter 5 <code>+0.036</code> (→0.670), iter 6 <code>+0.014</code> (→0.684),
+          iter 7 <code>+0.028</code> (→0.712). <strong>5 of 10</strong> iterations accepted.
+        </p>
 
-  <p>
-    Same benchmark and capability, run with a real holdout split
-    (<code>split_ids.json</code>, 30 train / 10 val / 10 test) so the test number is a genuine
-    generalization result.
-  </p>
+        <p>
+          What changed: deep in-code tool edits (<code>tools.py</code> 593 → 832 lines;
+          policy 166 → 233 lines), not just prompt tweaks — five trajectory-verified
+          before→after edits in
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/OPTIMIZATION_EXAMPLES.md">OPTIMIZATION_EXAMPLES.md</a>;
+          curated walkthrough in
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_airline/DEMO.md">examples/tau2_airline/DEMO.md</a>.
+        </p>
 
-  <table>
-    <thead>
-      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>56.7</strong></td><td><strong>70.0</strong></td><td class="gain">+13.3 pp / +23.5% relative</td></tr>
-      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>30.0</strong></td><td><strong>47.5</strong></td><td class="gain">+17.5 pp / +58.3% relative</td></tr>
-    </tbody>
-  </table>
+        <blockquote>
+          <p>
+            Honest reading: because <code>train == val == test</code>, the sealed-test number is a
+            <em>fit</em>, not a generalization claim — the engine logs a <code>splits_warning</code>.
+            This run's value is that it is fully committed and reproducible, and that the lift came
+            from real in-code tool edits.
+          </p>
+        </blockquote>
+      </section>
 
-  <blockquote>
-    <p>
-      The held-out <code>run_full</code> artifact for this run is committed separately.
-      Until it lands, treat these figures as the reported held-out result; the reproducible
-      artifact-backed run above is the no-holdout fit metric.
-    </p>
-  </blockquote>
+      <section class="reveal">
+        <h2 id="tau2-heldout">τ²-bench airline — held-out 30/10/10 run</h2>
 
-  <p>
-    See <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md">COMPARISON.md</a>
-    for how this <strong>+58.3% within-run relative</strong> held-out gain sits next to external
-    tool-optimization work (EvoTool, Evolutionary Context Search) — with the important caveat
-    that those use different benchmark versions, models, splits, and budgets and are
-    <strong>not</strong> an apples-to-apples comparison.
-  </p>
+        <p>
+          Same benchmark and capability, run with a real holdout split
+          (<code>split_ids.json</code>, 30 train / 10 val / 10 test) so the test number is a genuine
+          generalization result.
+        </p>
 
-  <h2>τ²-bench airline — agent orchestration mode (held-out 30 (=val) / 20)</h2>
+        <table>
+          <thead>
+            <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.567</strong> (56.7%)</td><td class="num"><strong>0.700</strong> (70.0%)</td><td class="gain">+13.3 pp / +23.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.300</strong> (30.0%)</td><td class="num"><strong>0.475</strong> (47.5%)</td><td class="gain">+17.5 pp / +58.3% relative</td></tr>
+          </tbody>
+        </table>
 
-  <p>
-    The first run driven entirely in <a href="agent-orchestration.html">agent mode</a> with the
-    <code>agent-optimize</code> algorithm: the conversational agent understood the benchmark, ran the
-    baseline, then proposed the airline-policy edits itself, gated every candidate on the full val
-    split, and sealed the test once. Runner + user simulator: <code>gpt-oss-120b</code> via a litellm
-    proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
-  </p>
+        <div class="callout callout-warn">
+          <div class="callout-title">Reported — artifact pending (not yet committed)</div>
+          <p>
+            These held-out figures are <strong>reported</strong>: the <code>run_full</code> artifact for
+            this run is <strong>not yet committed</strong>. Until it lands, treat the numbers above as the
+            reported held-out result — <strong>not</strong> artifact-backed. The reproducible,
+            artifact-backed run is the <a href="#tau2-fit">no-holdout fit metric</a> above.
+          </p>
+        </div>
 
-  <table>
-    <thead>
-      <tr><th>split (single-trial)</th><th>baseline</th><th>best</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>val</strong> (30, fit)</td><td><strong>0.500</strong></td><td><strong>0.633</strong></td><td class="gain">+26.7% relative — gate-significant</td></tr>
-      <tr><td><strong>sealed test</strong> (20, held-out)</td><td><strong>0.400</strong></td><td><strong>0.550</strong></td><td class="gain">+37.5% relative</td></tr>
-    </tbody>
-  </table>
+        <p>
+          See <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md">COMPARISON.md</a>
+          for how this <strong>+58.3% within-run relative</strong> held-out gain sits next to external
+          tool-optimization work (EvoTool, Evolutionary Context Search) — with the important caveat
+          that those use different benchmark versions, models, splits, and budgets and are
+          <strong>not</strong> an apples-to-apples comparison.
+        </p>
+      </section>
 
-  <blockquote>
-    <p>
-      Honest reading: τ²-bench airline is high-variance at a single trial. On a stable 3-trial
-      re-evaluation the val fit gain is <strong>+18%</strong> (paired-significant) while the held-out
-      test is flat within noise — and because <code>train == val</code>, the val figure is a
-      <em>fit</em>, not generalization. Agent mode produced the only gate-accepted improvement in a
-      head-to-head against a bounded deterministic run, but <code>gpt-oss-120b</code>'s stable val
-      ceiling here (~0.64) is below 0.78; a genuine held-out gain needs a stronger runner model or
-      tool-level edits. Details: <a href="agent-orchestration.html">Agent mode</a>.
-    </p>
-  </blockquote>
+      <section class="reveal">
+        <h2 id="tau2-agent">τ²-bench airline — agent orchestration mode (held-out 30 (=val) / 20)</h2>
 
-  <h2>τ²-bench airline — Qwen 2.5 14B</h2>
+        <p>
+          The first run driven entirely in <a href="agent-orchestration.html">agent mode</a> with the
+          <code>agent-optimize</code> algorithm: the conversational agent understood the benchmark, ran the
+          baseline, then proposed the airline-policy edits itself, gated every candidate on the full val
+          split, and sealed the test once. Runner + user simulator: <code>aws/gpt-oss-120b</code> via the
+          IBM ete litellm proxy. Split: 30 train == 30 val (fit) · 20 held-out test.
+        </p>
 
-  <p>
-    Same benchmark, capability, split, and algorithm as the held-out run above, with a
-    self-hosted open model (<strong>Qwen 2.5 14B-Instruct</strong> via vLLM on OpenShift)
-    replacing the Claude runner.
-  </p>
+        <table>
+          <thead>
+            <tr><th>split (single-trial)</th><th>baseline</th><th>best (<code>cand_5</code>)</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>val</strong> (30, fit)</td><td class="num"><strong>0.500</strong> (50.0%)</td><td class="num"><strong>0.633</strong> (63.3%)</td><td class="gain">+0.133 / +26.7% relative — gate-significant</td></tr>
+            <tr><td><strong>sealed test</strong> (20, held-out)</td><td class="num"><strong>0.400</strong> (40.0%)</td><td class="num"><strong>0.550</strong> (55.0%)</td><td class="gain">+0.150 / +37.5% relative</td></tr>
+          </tbody>
+        </table>
 
-  <ul>
-    <li><strong>Capability:</strong> airline <strong>policy + tools</strong> (<code>[system-prompt, tools]</code>).</li>
-    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
-    <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
-    <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
-    <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
-    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
-  </ul>
+        <blockquote>
+          <p>
+            Honest reading: τ²-bench airline is high-variance at a single trial. On a stable 3-trial
+            re-evaluation the val fit gain is <strong>+18.4%</strong> (paired-significant, Δ/SE = 1.80)
+            while the held-out test is flat within noise (−0.067, SE 0.105) — and because
+            <code>train == val</code>, the val figure is a <em>fit</em>, not generalization. Agent mode
+            produced the only gate-accepted improvement in a head-to-head against a bounded deterministic
+            run (whose best stayed the seed at sealed test <span class="num">0.35</span>), but
+            <code>gpt-oss-120b</code>'s stable val ceiling here (~<span class="num">0.64</span>) is below
+            the requested 0.78 target; a genuine held-out gain needs a stronger runner model or tool-level
+            edits. Details: <a href="agent-orchestration.html">Agent mode</a>.
+          </p>
+        </blockquote>
+      </section>
 
-  <table>
-    <thead>
-      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>0.200</strong></td><td><strong>0.387</strong></td><td class="gain">+0.187 / +93.5% relative</td></tr>
-      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>0.170</strong></td><td><strong>0.240</strong></td><td class="gain">+0.070 / +41.2% relative</td></tr>
-    </tbody>
-  </table>
+      <section class="reveal">
+        <h2 id="qwen-tools">τ²-bench airline — Qwen 2.5 14B</h2>
 
-  <p>
-    3 of 10 iterations accepted. The optimizer added code-level enforcement of cancellation
-    rules, input validation guards, and pre-flight status checks — hardening tool
-    implementations rather than rewriting policy prose.
-  </p>
+        <p>
+          Same benchmark, capability, split, and algorithm as the held-out run above, with a
+          self-hosted open model (<strong>Qwen 2.5 14B-Instruct</strong> via vLLM on OpenShift)
+          replacing the Claude runner.
+        </p>
 
-  <h2>τ²-bench airline — Qwen 2.5 14B, all capabilities</h2>
+        <ul>
+          <li><strong>Capability:</strong> airline <strong>policy + tools</strong> (<code>[system-prompt, tools]</code>).</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
+          <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
+          <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
+          <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
+        </ul>
 
-  <p>
-    Same model and split as above, with all three capability types optimized jointly.
-  </p>
+        <table>
+          <thead>
+            <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.200</strong> (20.0%)</td><td class="num"><strong>0.387</strong> (38.7%)</td><td class="gain">+0.187 / +93.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.170</strong> (17.0%)</td><td class="num"><strong>0.240</strong> (24.0%)</td><td class="gain">+0.070 / +41.2% relative</td></tr>
+          </tbody>
+        </table>
 
-  <ul>
-    <li><strong>Capability:</strong> <code>[skill-package, system-prompt, tools]</code>.</li>
-    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
-    <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
-    <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
-    <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
-    <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
-  </ul>
+        <p>
+          3 of 10 iterations accepted. The optimizer added code-level enforcement of cancellation
+          rules, input validation guards, and pre-flight status checks — hardening tool
+          implementations rather than rewriting policy prose.
+        </p>
+      </section>
 
-  <table>
-    <thead>
-      <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>val</strong> (10 tasks)</td><td><strong>0.273</strong></td><td><strong>0.520</strong></td><td class="gain">+0.247 / +90.5% relative</td></tr>
-      <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td><strong>0.120</strong></td><td><strong>0.270</strong></td><td class="gain">+0.150 / +125.0% relative</td></tr>
-    </tbody>
-  </table>
+      <section class="reveal">
+        <h2 id="qwen-all">τ²-bench airline — Qwen 2.5 14B, all capabilities</h2>
 
-  <p>
-    3 of 10 iterations accepted, 7 rejected. The optimizer edited tool code, policy rules,
-    and skill prose jointly — combining code-level guards with policy clarifications and
-    structured methodology in SKILL.md.
-    <strong>Best held-out test gain across all Qwen 14B runs (+125%).</strong>
-  </p>
+        <p>
+          Same model and split as above, with all three capability types optimized jointly.
+        </p>
 
-  <blockquote>
-    <p>
-      <strong>Key takeaway — Qwen 14B runs:</strong> On a self-hosted 14B model,
-      <code>[skill-package, system-prompt, tools]</code> with <code>hill-climb</code> produced
-      the best held-out result (+125% on test). Joint optimization of all three capabilities
-      outperformed the tools-only run (+41.2%) when paired with hill-climb's conservative gating.
-    </p>
-  </blockquote>
+        <ul>
+          <li><strong>Capability:</strong> <code>[skill-package, system-prompt, tools]</code>.</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
+          <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
+          <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
+          <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
+        </ul>
 
-  <h2>SkillsBench — skill-package optimization (held-out, committed)</h2>
+        <table>
+          <thead>
+            <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.273</strong> (27.3%)</td><td class="num"><strong>0.520</strong> (52.0%)</td><td class="gain">+0.247 / +90.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.120</strong> (12.0%)</td><td class="num"><strong>0.270</strong> (27.0%)</td><td class="gain">+0.150 / +125.0% relative</td></tr>
+          </tbody>
+        </table>
 
-  <p>
-    Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/skillsbench/run_full"><code>examples/skillsbench/run_full/</code></a>
-    (<code>report.md</code>, <code>final.json</code>).
-    Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_skillsbench.md">REPRODUCE_skillsbench.md</a>.
-  </p>
+        <p>
+          3 of 10 iterations accepted, 7 rejected. The optimizer edited tool code, policy rules,
+          and skill prose jointly — combining code-level guards with policy clarifications and
+          structured methodology in SKILL.md.
+          <strong>Best held-out test gain across all Qwen 14B runs (+125%).</strong>
+        </p>
 
-  <ul>
-    <li><strong>Capability:</strong> the four shared office-document <strong>skill packages</strong> (<code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>).</li>
-    <li><strong>Agent under test:</strong> <code>claude-sonnet-4-6</code> in a Docker sandbox.</li>
-    <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-8</code>.</li>
-    <li><strong>Tasks / trials:</strong> <strong>7</strong> val tasks (<code>train == val</code>) · <strong>3</strong> trials; <strong>3</strong> sealed test tasks.</li>
-    <li><strong>Iterations:</strong> 7 (best <code>cand_0004</code>, 4 accepted).</li>
-  </ul>
+        <blockquote>
+          <p>
+            <strong>Key takeaway — Qwen 14B runs:</strong> On a self-hosted 14B model,
+            <code>[skill-package, system-prompt, tools]</code> with <code>hill-climb</code> produced
+            the best held-out result (+125% on test). Joint optimization of all three capabilities
+            outperformed the tools-only run (+41.2%) when paired with hill-climb's conservative gating.
+          </p>
+        </blockquote>
+      </section>
 
-  <table>
-    <thead>
-      <tr><th></th><th>reward</th><th>Δ</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Baseline — val</td><td><strong>0.333</strong></td><td>—</td></tr>
-      <tr><td>Optimized (<code>cand_0004</code>) — val</td><td><strong>0.714</strong></td><td class="gain">+0.381 / +114% relative</td></tr>
-      <tr><td>Baseline seed skills — sealed test</td><td><strong>0.556</strong></td><td>—</td></tr>
-      <tr><td>Optimized skills — sealed test (held-out)</td><td><strong>0.667</strong></td><td class="gain">+0.111 / +20.0% relative</td></tr>
-    </tbody>
-  </table>
+      <section class="reveal">
+        <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
 
-  <p>
-    Test was scored once on the sealed split for <strong>both</strong> baseline and optimized
-    skills, so the improvement is on tasks the optimizer never saw. The optimizer edited all
-    four <code>SKILL.md</code> bodies and added executable scripts, then stopped on a real
-    ceiling (diagnosing two unsolved tasks as broken oracles rather than overfitting them).
-  </p>
+        <p>
+          Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/skillsbench/run_full"><code>examples/skillsbench/run_full/</code></a>
+          (<code>report.md</code>, <code>final.json</code>).
+          Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_skillsbench.md">REPRODUCE_skillsbench.md</a>.
+        </p>
 
-  <h2>At a glance — baseline → optimized</h2>
+        <ul>
+          <li><strong>Capability:</strong> the four shared office-document <strong>skill packages</strong> (<code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>).</li>
+          <li><strong>Agent under test:</strong> <code>claude-sonnet-4-6</code> in a Docker sandbox.</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-8</code>.</li>
+          <li><strong>Tasks / trials:</strong> <strong>7</strong> val tasks (<code>train == val</code>) · <strong>3</strong> trials; <strong>3</strong> sealed test tasks.</li>
+          <li><strong>Iterations:</strong> 7 (best <code>cand_0004</code>, 4 accepted).</li>
+        </ul>
 
-  <figure class="chart-figure">
-    <svg viewBox="0 0 720 320" role="img"
-         aria-labelledby="chart-title chart-desc"
-         xmlns="http://www.w3.org/2000/svg">
-      <title id="chart-title">Baseline vs optimized reward across benchmarks</title>
-      <desc id="chart-desc">
-        Three benchmarks, each showing the seed baseline (open circle) and the optimized
-        candidate (filled green circle) on a 0–100 scale.
-        τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
-        τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
-        SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
-      </desc>
+        <table>
+          <thead>
+            <tr><th></th><th>reward</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline — val</td><td class="num"><strong>0.333</strong> (33.3%)</td><td class="num">—</td></tr>
+            <tr><td>Optimized (<code>cand_0004</code>) — val</td><td class="num"><strong>0.714</strong> (71.4%)</td><td class="gain">+0.381 / +114% relative</td></tr>
+            <tr><td>Baseline seed skills — sealed test</td><td class="num"><strong>0.556</strong> (55.6%)</td><td class="num">—</td></tr>
+            <tr><td>Optimized skills — sealed test (held-out)</td><td class="num"><strong>0.667</strong> (66.7%)</td><td class="gain">+0.111 / +20.0% relative</td></tr>
+          </tbody>
+        </table>
 
-      <!-- gridlines at 0/25/50/75/100 (plot: x=180..620) -->
-      <line class="grid-line" x1="180" y1="60" x2="180" y2="230"/>
-      <line class="grid-line" x1="290" y1="60" x2="290" y2="230"/>
-      <line class="grid-line" x1="400" y1="60" x2="400" y2="230"/>
-      <line class="grid-line" x1="510" y1="60" x2="510" y2="230"/>
-      <line class="grid-line" x1="620" y1="60" x2="620" y2="230"/>
+        <p>
+          Test was scored once on the sealed split for <strong>both</strong> baseline and optimized
+          skills, so the improvement is on tasks the optimizer never saw. The optimizer edited all
+          four <code>SKILL.md</code> bodies and added executable scripts, then stopped on a real
+          ceiling (diagnosing two unsolved tasks as broken oracles rather than overfitting them).
+        </p>
 
-      <!-- axis tick labels -->
-      <text class="axis-label" x="180" y="252" text-anchor="middle">0</text>
-      <text class="axis-label" x="290" y="252" text-anchor="middle">25</text>
-      <text class="axis-label" x="400" y="252" text-anchor="middle">50</text>
-      <text class="axis-label" x="510" y="252" text-anchor="middle">75</text>
-      <text class="axis-label" x="620" y="252" text-anchor="middle">100</text>
-      <text class="axis-label" x="400" y="272" text-anchor="middle">reward × 100</text>
+        <blockquote>
+          <p>
+            Honest reading: this is a committed, held-out result — the test split was scored once for
+            both baseline and optimized skills. The val jump (+114%) is large but on 7 fit tasks; the
+            sealed-test gain (+20.0%) is the honest generalization number.
+          </p>
+        </blockquote>
+      </section>
 
-      <!-- Row 1: τ²-bench airline fit metric — 53.6 → 71.2 -->
-      <text class="row-label" x="170" y="86" text-anchor="end">τ²-bench airline</text>
-      <text class="row-sub"   x="170" y="99" text-anchor="end">fit metric (50 tasks)</text>
-      <line class="connector" x1="422" y1="92" x2="487" y2="92"/>
-      <circle class="dot-base" cx="416" cy="92" r="6"/>
-      <circle class="dot-opt"  cx="493" cy="92" r="6"/>
-      <text class="val-label"     x="416" y="79" text-anchor="middle">53.6</text>
-      <text class="val-label-opt" x="493" y="79" text-anchor="middle">71.2</text>
-      <text class="gain-label" x="510" y="96">+17.6 pp · +32.8%</text>
+      <section class="reveal">
+        <h2 id="at-a-glance">At a glance — baseline → optimized</h2>
 
-      <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
-      <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
-      <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (10 tasks)</text>
-      <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
-      <circle class="dot-base" cx="312" cy="142" r="6"/>
-      <circle class="dot-opt"  cx="389" cy="142" r="6"/>
-      <text class="val-label"     x="312" y="129" text-anchor="middle">30.0</text>
-      <text class="val-label-opt" x="389" y="129" text-anchor="middle">47.5</text>
-      <text class="gain-label" x="406" y="146">+17.5 pp · +58.3%</text>
+        <figure class="chart-figure">
+          <svg viewBox="0 0 720 320" role="img"
+               aria-labelledby="chart-title chart-desc"
+               xmlns="http://www.w3.org/2000/svg">
+            <title id="chart-title">Baseline vs optimized reward across benchmarks</title>
+            <desc id="chart-desc">
+              Three benchmarks, each showing the seed baseline (open circle) and the optimized
+              candidate (filled green circle) on a 0–100 scale.
+              τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
+              τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
+              SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
+            </desc>
 
-      <!-- Row 3: SkillsBench held-out — 55.6 → 66.7 -->
-      <text class="row-label" x="170" y="186" text-anchor="end">SkillsBench</text>
-      <text class="row-sub"   x="170" y="199" text-anchor="end">held-out test (3 tasks)</text>
-      <line class="connector" x1="431" y1="192" x2="468" y2="192"/>
-      <circle class="dot-base" cx="425" cy="192" r="6"/>
-      <circle class="dot-opt"  cx="473" cy="192" r="6"/>
-      <text class="val-label"     x="425" y="179" text-anchor="middle">55.6</text>
-      <text class="val-label-opt" x="473" y="179" text-anchor="middle">66.7</text>
-      <text class="gain-label" x="490" y="196">+11.1 pp · +20.0%</text>
+            <!-- gridlines at 0/25/50/75/100 (plot: x=180..620) -->
+            <line class="grid-line" x1="180" y1="60" x2="180" y2="230"/>
+            <line class="grid-line" x1="290" y1="60" x2="290" y2="230"/>
+            <line class="grid-line" x1="400" y1="60" x2="400" y2="230"/>
+            <line class="grid-line" x1="510" y1="60" x2="510" y2="230"/>
+            <line class="grid-line" x1="620" y1="60" x2="620" y2="230"/>
 
-      <!-- Legend -->
-      <g transform="translate(230,296)">
-        <circle class="dot-base" cx="6" cy="0" r="6"/>
-        <text class="legend-text" x="20" y="4">baseline (seed)</text>
-        <circle class="dot-opt" cx="180" cy="0" r="6"/>
-        <text class="legend-text" x="194" y="4">optimized (best candidate)</text>
-      </g>
-    </svg>
-    <figcaption class="chart-caption">
-      Rewards normalized to 0–100 for a shared axis. <code>toy_calc</code> is omitted — it's a
-      deterministic loop check (0 → 100 by construction), not a comparative benchmark.
-    </figcaption>
-  </figure>
+            <!-- axis tick labels -->
+            <text class="axis-label" x="180" y="252" text-anchor="middle">0</text>
+            <text class="axis-label" x="290" y="252" text-anchor="middle">25</text>
+            <text class="axis-label" x="400" y="252" text-anchor="middle">50</text>
+            <text class="axis-label" x="510" y="252" text-anchor="middle">75</text>
+            <text class="axis-label" x="620" y="252" text-anchor="middle">100</text>
+            <text class="axis-label" x="400" y="272" text-anchor="middle">reward × 100</text>
 
-  <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
-    <em>Last reviewed: 2026-07-21.</em>
-  </p>
+            <!-- Row 1: τ²-bench airline fit metric — 53.6 → 71.2 -->
+            <text class="row-label" x="170" y="86" text-anchor="end">τ²-bench airline</text>
+            <text class="row-sub"   x="170" y="99" text-anchor="end">fit metric (50 tasks)</text>
+            <line class="connector" x1="422" y1="92" x2="487" y2="92"/>
+            <circle class="dot-base" cx="416" cy="92" r="6"/>
+            <circle class="dot-opt"  cx="493" cy="92" r="6"/>
+            <text class="val-label"     x="416" y="79" text-anchor="middle">53.6</text>
+            <text class="val-label-opt" x="493" y="79" text-anchor="middle">71.2</text>
+            <text class="gain-label" x="510" y="96">+17.6 pp · +32.8%</text>
+
+            <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
+            <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
+            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (10 tasks)</text>
+            <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
+            <circle class="dot-base" cx="312" cy="142" r="6"/>
+            <circle class="dot-opt"  cx="389" cy="142" r="6"/>
+            <text class="val-label"     x="312" y="129" text-anchor="middle">30.0</text>
+            <text class="val-label-opt" x="389" y="129" text-anchor="middle">47.5</text>
+            <text class="gain-label" x="406" y="146">+17.5 pp · +58.3%</text>
+
+            <!-- Row 3: SkillsBench held-out — 55.6 → 66.7 -->
+            <text class="row-label" x="170" y="186" text-anchor="end">SkillsBench</text>
+            <text class="row-sub"   x="170" y="199" text-anchor="end">held-out test (3 tasks)</text>
+            <line class="connector" x1="431" y1="192" x2="468" y2="192"/>
+            <circle class="dot-base" cx="425" cy="192" r="6"/>
+            <circle class="dot-opt"  cx="473" cy="192" r="6"/>
+            <text class="val-label"     x="425" y="179" text-anchor="middle">55.6</text>
+            <text class="val-label-opt" x="473" y="179" text-anchor="middle">66.7</text>
+            <text class="gain-label" x="490" y="196">+11.1 pp · +20.0%</text>
+
+            <!-- Legend -->
+            <g transform="translate(230,296)">
+              <circle class="dot-base" cx="6" cy="0" r="6"/>
+              <text class="legend-text" x="20" y="4">baseline (seed)</text>
+              <circle class="dot-opt" cx="180" cy="0" r="6"/>
+              <text class="legend-text" x="194" y="4">optimized (best candidate)</text>
+            </g>
+          </svg>
+          <figcaption class="chart-caption">
+            Rewards normalized to 0–100 for a shared axis. <code>toy_calc</code> is omitted — it's a
+            deterministic loop check (0 → 100 by construction), not a comparative benchmark. The held-out
+            τ² row is the <a href="#tau2-heldout">reported (artifact-pending)</a> result.
+          </figcaption>
+        </figure>
+
+        <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
+          <em>Last reviewed: 2026-07-24.</em>
+        </p>
+      </section>
+
+    </div>
+
+    <nav class="toc" aria-label="On this page">
+      <div class="toc-title">On this page</div>
+      <a href="#toy-calc">toy_calc</a>
+      <a href="#tau2-fit">τ²-bench — fit metric</a>
+      <a href="#tau2-heldout">τ²-bench — held-out 30/10/10</a>
+      <a href="#tau2-agent">τ²-bench — agent mode</a>
+      <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
+      <a href="#qwen-all">Qwen 14B — all capabilities</a>
+      <a href="#skillsbench">SkillsBench</a>
+      <a href="#at-a-glance">At a glance</a>
+    </nav>
+  </div>
 
 </main>
 
 <footer class="footer">
   <div class="footer-inner">
     <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
       Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
     </div>
     <div class="footer-affil">
@@ -390,5 +468,6 @@
   </div>
 </footer>
 
+<script src="js/site.js?v=20260724" defer></script>
 </body>
 </html>

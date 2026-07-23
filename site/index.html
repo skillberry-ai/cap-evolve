@@ -3,38 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>cap-evolve — Optimize agentic capabilities — with agents</title>
+  <title>cap-evolve — Optimize agentic capabilities, with agents</title>
   <meta name="description" content="cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces. Bring your agent and eval; cap-evolve runs the loop and reports one honest number.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="cap-evolve">
-  <meta property="og:title" content="cap-evolve — Optimize agentic capabilities — with agents">
+  <meta property="og:title" content="cap-evolve — Optimize agentic capabilities, with agents">
   <meta property="og:description" content="cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces. Bring your agent and eval; cap-evolve runs the loop and reports one honest number.">
   <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/">
   <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="cap-evolve — Optimize agentic capabilities — with agents">
+  <meta name="twitter:title" content="cap-evolve — Optimize agentic capabilities, with agents">
   <meta name="twitter:description" content="cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed evaluation traces. Bring your agent and eval; cap-evolve runs the loop and reports one honest number.">
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
-  <link rel="preconnect" href="https://rsms.me/">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
   <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
-  <link rel="stylesheet" href="style.css?v=20260721-2">
+  <link rel="stylesheet" href="style.css?v=20260724">
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-brand" href="./"><img src="assets/logo.png" alt="" class="nav-brand-logo" aria-hidden="true">cap-evolve</a>
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
     <div class="nav-links">
-      <a href="getting-started.html">Getting started</a>
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
       <a href="results.html">Results</a>
-      <a href="benchmarks.html">Benchmark runs</a>
+      <a href="benchmarks.html">Benchmarks</a>
       <a href="architecture.html">Architecture</a>
       <a href="agent-orchestration.html">Agent mode</a>
-      <a href="optimize-your-own.html">Optimize your own</a>
-      <a href="adapter-templates.html">Adapter templates</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
     </div>
   </div>
 </nav>
@@ -43,22 +51,38 @@
 
   <!-- ─────────────────────────── hero ─────────────────────────── -->
   <section class="hero">
-    <img src="assets/logo.png" alt="cap-evolve" class="hero-logo">
-    <h1>cap-evolve</h1>
-    <p class="tagline">Optimize agentic capabilities — with agents</p>
+    <img src="assets/logo-300.png" alt="cap-evolve" class="hero-logo">
+    <span class="eyebrow"><span class="eyebrow-dot"></span>Reflective optimization for agents</span>
+    <h1>Make your agent <span class="grad">measurably better</span></h1>
+    <p class="tagline">Optimize agentic capabilities — with agents.</p>
     <p class="description">
-      <strong>cap-evolve improves an AI agent's prompts, tools, and skills by learning from
-      failed evaluation traces.</strong> You bring the agent and the eval you already have.
-      cap-evolve runs the loop — evaluate → diagnose → propose an edit → keep it only if it
-      beats a held-out split by a significant margin → commit — and reports one honest number.
-      It optimizes what your agent <em>reads</em>, not its weights.
+      <strong>cap-evolve improves an AI agent's prompts, tools, and skills by learning
+      from its failed evaluation traces.</strong> Bring the agent and the eval you
+      already have. cap-evolve runs the loop — evaluate → diagnose → propose an edit →
+      keep it only if it beats a held-out split by a significant margin → commit — and
+      reports one honest number. It optimizes what your agent <em>reads</em>, not its weights.
     </p>
-    <div class="badges">
+    <div class="btn-row">
+      <a class="btn btn-primary" href="getting-started.html">
+        Get started
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/skillberry-ai/cap-evolve">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.9 18 5.2 18 5.2c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg>
+        Star on GitHub
+      </a>
+    </div>
+    <div class="pill-row">
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Test sealed, scored once</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Every number ships its artifact</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>0 runtime dependencies</span>
+    </div>
+    <div class="badges pill-row">
       <span class="badge">beta (0.x)</span>
       <span class="badge">python 3.10+</span>
-      <span class="badge badge-success">0 runtime deps</span>
       <span class="badge">Apache-2.0</span>
-      <span class="badge badge-accent">18 agent skills</span>
+      <span class="badge badge-accent">18 skills · 4 algorithms</span>
+      <span class="badge badge-amber">14 optimizer backends</span>
     </div>
     <div class="hero-affil">
       <span class="hero-affil-label">Made at</span>
@@ -70,8 +94,8 @@
   </section>
 
   <!-- ─────────────────────────── quickstart ─────────────────────────── -->
-  <div class="cta">
-    <h3>Try it in two minutes — no API key required</h3>
+  <div class="cta reveal">
+    <h3>Try it in two minutes<span class="badge badge-success">no API key</span></h3>
 <pre><code>git clone https://github.com/skillberry-ai/cap-evolve.git
 cd cap-evolve
 python3 -m venv .venv &amp;&amp; source .venv/bin/activate
@@ -79,119 +103,164 @@ pip install ./core
 bash examples/toy_calc/run.sh</code></pre>
     <p class="cta-note">
       <code>toy_calc</code> is a deterministic zero-API stand-in: the seed prompt scores
-      <code>0.0</code>; the optimized prompt is gate-accepted and scores <code>1.0</code> on
-      the sealed test split — <strong>no model is called</strong>. Full walkthrough:
-      <a href="getting-started.html">Getting started</a>.
+      <code>0.0</code>; the optimized prompt is gate-accepted and scores <code>1.0</code>
+      on the sealed test split — <strong>no model is called</strong>. Full walkthrough:
+      <a href="getting-started.html">Getting started</a> · then
+      <a href="run-end-to-end.html">run it on a real benchmark</a>.
     </p>
   </div>
 
   <!-- ─────────────────────────── hero screenshot ─────────────────────────── -->
-  <div class="hero-screenshot">
-    <img src="assets/dashboard.png" alt="cap-evolve dashboard — a real τ²-bench airline run">
+  <div class="hero-screenshot reveal">
+    <img src="assets/dash-overview.png" alt="cap-evolve dashboard — a real τ²-bench airline run: KPIs and the fitness stair from baseline 53.6% to best 71.2%">
     <div class="caption">
-      A real τ²-bench airline run in the live dashboard — baseline → best,
-      accepted vs rejected candidates, cost, and the fitness stair.
+      A real τ²-bench airline run in the live dashboard — baseline <span class="num">53.6%</span> →
+      best <span class="num">71.2%</span>. The curve only steps <em>up</em>: the paired
+      significance gate refused every change it couldn't tell from noise.
     </div>
   </div>
 
-  <!-- ─────────────────────────── why cap-evolve (differentiators) ─────────────────────────── -->
-  <section class="section">
-    <h2>Why cap-evolve</h2>
+  <!-- ─────────────────────────── how it works ─────────────────────────── -->
+  <section class="section reveal" id="how-it-works">
+    <h2>How the loop works</h2>
     <p class="section-intro">
-      Five things that shape how cap-evolve works — and how it differs from what came before.
+      One iteration. A coding agent reads the failing traces and proposes a bold,
+      multi-part edit; the framework keeps it only if it clears a held-out significance gate.
     </p>
+    <div class="flow">
+      <div class="flow-step"><span class="fs-k">1 · evaluate</span><h4>Score on val</h4><p>Run the candidate on the validation split — every trial its own seed for honest variance.</p></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-k">2 · diagnose</span><h4>Read the failures</h4><p>Cluster failing rollouts into a reflective dataset: inputs, outputs, and gold-safe feedback.</p></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-k">3 · propose</span><h4>Edit the capability</h4><p>The optimizer agent writes one bold, multi-part change to the prompt, tools, or skill.</p></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step is-gate"><span class="fs-k">4 · gate</span><h4>Keep only if it wins</h4><p>Accept only when Δ &gt; k·SE on val. Noise-level gains are rejected and remembered.</p></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-k">5 · commit</span><h4>Git-commit + learn</h4><p>Every iteration is a commit; a journal records what worked so the next one builds on it.</p></div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── before → after ─────────────────────────── -->
+  <section class="section reveal" id="proof">
+    <h2>What that produces</h2>
+    <p class="section-intro">
+      τ²-bench airline, policy + tool code jointly optimized over 50 tasks × 10 trials
+      (fit metric — no holdout on this committed run).
+    </p>
+    <div class="beforeafter">
+      <div>
+        <div class="ba-num base">0.536</div>
+        <div class="ba-label">Baseline (seed)</div>
+      </div>
+      <div class="ba-arrow">→</div>
+      <div>
+        <div class="ba-num best">0.712</div>
+        <div class="ba-label">Best candidate</div>
+      </div>
+    </div>
+    <div class="stat-strip">
+      <div class="stat"><div class="stat-num success">+32.8%</div><div class="stat-label">relative gain on val</div></div>
+      <div class="stat"><div class="stat-num amber">0.694</div><div class="stat-label">sealed test (pass@1)</div></div>
+      <div class="stat"><div class="stat-num">5 / 10</div><div class="stat-label">iterations gate-accepted</div></div>
+      <div class="stat"><div class="stat-num">593 → 832</div><div class="stat-label">lines of tool code written</div></div>
+    </div>
+    <p class="section-intro" style="margin-top:1.2rem;">
+      Most of the lift is <strong>real code</strong> the optimizer wrote into the tool
+      bodies — deterministic guards, not just prose. See every accepted edit on
+      <a href="results.html">Results</a>, or <a href="run-end-to-end.html">reproduce it step by step</a>.
+    </p>
+  </section>
+
+  <!-- ─────────────────────────── screenshot gallery ─────────────────────────── -->
+  <section class="section reveal" id="see-it">
+    <h2>See the whole run — offline</h2>
+    <p class="section-intro">
+      Every run ships a self-contained dashboard export. No backend, no live model —
+      open it and inspect exactly what happened, honestly.
+    </p>
+    <div class="shot-grid">
+      <figure class="shot">
+        <img src="assets/dash-lineage.png" alt="Lineage tree: seed candidate, five accepted candidates on the best path, and the rejected branches, with the paired-gate math for the champion.">
+        <figcaption class="shot-cap">Lineage — accepted (green) vs rejected (red), and the paired-gate math behind the champion.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="assets/dash-gitdiffs.png" alt="Git diffs view: one commit per iteration and the actual JOURNAL.md diff the optimizer wrote.">
+        <figcaption class="shot-cap">Git diffs — one commit per iteration; the optimizer's real edits and its institutional memory.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── why cap-evolve ─────────────────────────── -->
+  <section class="section reveal" id="why">
+    <h2>Why cap-evolve</h2>
+    <p class="section-intro">Five things that shape how it works — and how it differs from what came before.</p>
     <div class="diff-tiles">
       <a class="diff-tile" href="architecture.html#what-the-optimizer-receives">
         <span class="diff-tile-num">01</span>
         <div class="diff-tile-title">Agents optimize agents</div>
-        <p class="diff-tile-desc">
-          The optimizer is itself a coding-agent CLI (Claude Code, Codex, and 12 more): it
-          reads failing traces and proposes bold multi-part edits — no gradient descent,
-          no heuristic search.
-        </p>
+        <p class="diff-tile-desc">The optimizer is a coding-agent CLI (Claude Code, Codex, and 12 more): it reads failing traces and proposes bold multi-part edits — no gradient descent, no heuristic search.</p>
         <span class="diff-tile-link">How the optimizer runs →</span>
       </a>
       <a class="diff-tile" href="#what-cap-evolve-optimizes">
         <span class="diff-tile-num">02</span>
-        <div class="diff-tile-title">Optimize any agentic capability</div>
-        <p class="diff-tile-desc">
-          System prompts, tool code, MCP surfaces, skill packages — one at a time or
-          combined. What your agent <em>reads</em>, not its weights.
-        </p>
+        <div class="diff-tile-title">Optimize any capability</div>
+        <p class="diff-tile-desc">System prompts, tool code, MCP surfaces, skill packages — one at a time or combined. What your agent <em>reads</em>, not its weights.</p>
         <span class="diff-tile-link">What it optimizes →</span>
       </a>
       <a class="diff-tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ROADMAP.md">
         <span class="diff-tile-num">03</span>
         <div class="diff-tile-title">Optimization under constraints</div>
-        <p class="diff-tile-desc">
-          Cap the cost of each iteration — the optimizer stops at the budget you set,
-          not at the point of diminishing returns. Wall-clock time next.
-        </p>
+        <p class="diff-tile-desc">Cap the cost of each iteration — the optimizer stops at the budget you set, not at the point of diminishing returns. Wall-clock next.</p>
         <span class="diff-tile-link">On the roadmap →</span>
       </a>
       <a class="diff-tile" href="architecture.html#cross-iteration-files">
         <span class="diff-tile-num">04</span>
-        <div class="diff-tile-title">Flexible state management</div>
-        <p class="diff-tile-desc">
-          Iteration state lives in git-committed markdown — <code>LEDGER</code>,
-          <code>JOURNAL</code>, <code>PROCESS</code>. Every run is a browseable history you
-          can inspect, edit, or resume.
-        </p>
+        <div class="diff-tile-title">Inspectable state</div>
+        <p class="diff-tile-desc">Iteration state lives in git-committed markdown — <code>LEDGER</code>, <code>JOURNAL</code>, <code>PROCESS</code>. Every run is a browseable history you can inspect, edit, or resume.</p>
         <span class="diff-tile-link">Cross-iteration files →</span>
       </a>
       <a class="diff-tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">
         <span class="diff-tile-num">05</span>
         <div class="diff-tile-title">Honest evaluation</div>
-        <p class="diff-tile-desc">
-          Test split sealed until finalize, scored exactly once; every accepted iteration
-          passes a paired-significance gate on val — on the primary metric only, with any
-          shown-only secondaries (cost, latency, sub-checks) displayed but never gating;
-          every published number ships with its run artifact.
-        </p>
+        <p class="diff-tile-desc">Test split sealed until finalize, scored exactly once; every accepted iteration clears a paired-significance gate on val — on the primary metric only. Every published number ships its run artifact.</p>
         <span class="diff-tile-link">Splits, gates, sealing →</span>
       </a>
     </div>
   </section>
 
   <!-- ─────────────────────────── results ─────────────────────────── -->
-  <section class="section">
+  <section class="section reveal" id="results">
     <h2>Results</h2>
     <p class="section-intro">
-      Numbers are cross-checked against committed run artifacts. Each is labeled
-      <strong>fit metric</strong> (no holdout) or <strong>held-out</strong> (test
-      scored once on ids the optimizer never saw). Full detail, models, task/trial
-      counts, commits, and costs: <a href="results.html">Results</a>.
+      Cross-checked against committed run artifacts. Each is labeled <strong>fit metric</strong>
+      (no holdout) or <strong>held-out</strong> (test scored once on ids the optimizer never saw).
+      Full detail, models, task/trial counts, and costs: <a href="results.html">Results</a>.
     </p>
     <table class="table-hero">
       <thead>
-        <tr>
-          <th>Benchmark</th>
-          <th>Split</th>
-          <th>Baseline → Optimized</th>
-          <th>Gain</th>
-        </tr>
+        <tr><th>Benchmark</th><th>Split</th><th>Baseline → Optimized</th><th>Gain</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>toy_calc</strong> <span style="color:var(--muted);">(zero-API)</span></td>
+          <td><strong>toy_calc</strong> <span class="muted">(zero-API)</span></td>
           <td>sealed test</td>
           <td><code>0.0 → 1.0</code></td>
           <td class="gain">deterministic proof</td>
         </tr>
         <tr>
-          <td><strong>τ²-bench airline</strong> <span style="color:var(--muted);">(policy + tools)</span></td>
+          <td><strong>τ²-bench airline</strong> <span class="muted">(policy + tools)</span></td>
           <td>val — <em>fit metric</em></td>
           <td><code>0.536 → 0.712</code></td>
           <td class="gain">+0.176 / +32.8%</td>
         </tr>
         <tr>
-          <td><strong>τ²-bench airline</strong> <span style="color:var(--muted);">(held-out 30/10/10)</span></td>
+          <td><strong>τ²-bench airline</strong> <span class="muted">(held-out 30/10/10)</span></td>
           <td>sealed <strong>test</strong></td>
           <td><code>30.0 → 47.5</code></td>
-          <td class="gain">+17.5 pp / +58.3%</td>
+          <td class="gain">+58.3% <span class="muted">· reported</span></td>
         </tr>
         <tr>
-          <td><strong>SkillsBench</strong> <span style="color:var(--muted);">(skill package)</span></td>
+          <td><strong>SkillsBench</strong> <span class="muted">(skill package)</span></td>
           <td>sealed <strong>test</strong> (held-out)</td>
           <td><code>0.556 → 0.667</code></td>
           <td class="gain">+0.111 / +20.0%</td>
@@ -201,126 +270,51 @@ bash examples/toy_calc/run.sh</code></pre>
   </section>
 
   <!-- ─────────────────────────── what it optimizes ─────────────────────────── -->
-  <section class="section" id="what-cap-evolve-optimizes">
+  <section class="section reveal" id="what-cap-evolve-optimizes">
     <h2>What cap-evolve optimizes</h2>
     <p class="section-intro">Pick one — or combine them, e.g. <code>[system-prompt, tools]</code>.</p>
     <table>
-      <thead>
-        <tr><th>Capability</th><th>What the optimizer may change</th></tr>
-      </thead>
+      <thead><tr><th>Capability</th><th>What the optimizer may change</th></tr></thead>
       <tbody>
-        <tr>
-          <td><strong>System prompts</strong></td>
-          <td>Rewrite / consolidate / add rules, examples, output contracts — never drop a needed rule</td>
-        </tr>
-        <tr>
-          <td><strong>Tool implementations</strong></td>
-          <td>Edit tool <strong>code</strong> for deterministic enforcement; add/wrap/swap tools (never bare-remove)</td>
-        </tr>
-        <tr>
-          <td><strong>MCP tool surfaces</strong></td>
-          <td>Safe edits only — tool docs, in-description examples, and which tools are exposed</td>
-        </tr>
-        <tr>
-          <td><strong>Skill packages</strong></td>
-          <td>An Agent Skill dir — <code>SKILL.md</code> bodies, references, and executable scripts</td>
-        </tr>
+        <tr><td><strong>System prompts</strong></td><td>Rewrite / consolidate / add rules, examples, output contracts — never drop a needed rule</td></tr>
+        <tr><td><strong>Tool implementations</strong></td><td>Edit tool <strong>code</strong> for deterministic enforcement; add/wrap/swap tools (never bare-remove)</td></tr>
+        <tr><td><strong>MCP tool surfaces</strong></td><td>Safe edits only — tool docs, in-description examples, and which tools are exposed</td></tr>
+        <tr><td><strong>Skill packages</strong></td><td>An Agent Skill dir — <code>SKILL.md</code> bodies, references, and executable scripts</td></tr>
       </tbody>
     </table>
   </section>
 
   <!-- ─────────────────────────── choose your path ─────────────────────────── -->
-  <section class="section">
+  <section class="section reveal" id="choose-path">
     <h2>Choose your path</h2>
     <p class="section-intro">Every path shares the same core install and the same honesty guarantees.</p>
     <table>
-      <thead>
-        <tr><th>Path</th><th>Use it when</th><th>Start</th></tr>
-      </thead>
+      <thead><tr><th>Path</th><th>Use it when</th><th>Start</th></tr></thead>
       <tbody>
-        <tr>
-          <td><strong>Claude Code plugin</strong></td>
-          <td>You use Claude Code and want slash commands + honesty hooks</td>
-          <td><code>claude --plugin-dir ./plugins/cap-evolve</code></td>
-        </tr>
-        <tr>
-          <td><strong>Another coding-agent host</strong></td>
-          <td>Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, or bare</td>
-          <td><code>./install.sh --host &lt;name&gt;</code></td>
-        </tr>
-        <tr>
-          <td><strong>Manual adapter + CLI</strong></td>
-          <td>You want to wire the adapter yourself and drive <code>cap-evolve</code> directly</td>
-          <td><a href="optimize-your-own.html">Optimize your own agent</a></td>
-        </tr>
+        <tr><td><strong>Claude Code plugin</strong></td><td>You use Claude Code and want slash commands + honesty hooks</td><td><code>claude --plugin-dir ./plugins/cap-evolve</code></td></tr>
+        <tr><td><strong>Another coding-agent host</strong></td><td>Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, or bare</td><td><code>./install.sh --host &lt;name&gt;</code></td></tr>
+        <tr><td><strong>Manual adapter + CLI</strong></td><td>You want to wire the adapter yourself and drive <code>cap-evolve</code> directly</td><td><a href="optimize-your-own.html">Optimize your own agent</a></td></tr>
       </tbody>
     </table>
   </section>
 
   <!-- ─────────────────────────── documentation tiles ─────────────────────────── -->
-  <section class="section">
+  <section class="section reveal" id="docs">
     <h2>Documentation</h2>
-    <p class="section-intro">
-      Hand-crafted pages for the four hero topics below; the rest are on GitHub,
-      alongside the code they describe.
-    </p>
+    <p class="section-intro">Hand-crafted pages for the hero topics; the rest are on GitHub, alongside the code they describe.</p>
     <div class="tiles">
-      <a class="tile" href="getting-started.html">
-        <div class="tile-title">Getting started <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">Your first successful run, in two minutes, with no API key. The <code>toy_calc</code> loop end-to-end.</p>
-      </a>
-      <a class="tile" href="results.html">
-        <div class="tile-title">Results <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">Full benchmark detail: toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Reproducibility and artifacts.</p>
-      </a>
-      <a class="tile" href="architecture.html">
-        <div class="tile-title">Architecture <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">The pipeline (intake → check → baseline → algorithm → finalize → report), the optimizer context, and the skill library.</p>
-      </a>
-      <a class="tile" href="agent-orchestration.html">
-        <div class="tile-title">Agent mode <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">Deterministic vs agent orchestration, and the <code>agent-optimize</code> algorithm — the conversational agent drives the whole loop itself, honestly, sealing the test once.</p>
-      </a>
-      <a class="tile" href="optimize-your-own.html">
-        <div class="tile-title">Optimize your own agent <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">Wire one small adapter — three methods. Two ways: let your coding agent do it, or drive the CLI yourself.</p>
-      </a>
-      <a class="tile" href="adapter-templates.html">
-        <div class="tile-title">Adapter templates <span class="tile-badge on-site">on this site</span></div>
-        <p class="tile-desc">Copy-and-run adapters — JSONL, HuggingFace, tau2, SWE-bench, SkillsBench — for any litellm provider. Config, not code.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/INSTALL.md">
-        <div class="tile-title">Installation <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Host-specific setup, credentials, and the dashboard.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md">
-        <div class="tile-title">Adapter contract <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">The full method signatures and semantics if you're implementing an adapter.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md">
-        <div class="tile-title">Honest evaluation <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Splits, gates, sealing — the discipline that keeps the numbers meaningful.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md">
-        <div class="tile-title">Comparison <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Positioning vs other tool-optimization work (EvoTool, Evolutionary Context Search) — with the caveats.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/EXTENDING.md">
-        <div class="tile-title">Extending <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Adding a capability, an algorithm, or a new optimizer backend.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/TROUBLESHOOTING.md">
-        <div class="tile-title">Troubleshooting <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Installation or a run failed — start here.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ROADMAP.md">
-        <div class="tile-title">Roadmap <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc">Planned work — what's coming next.</p>
-      </a>
-      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples">
-        <div class="tile-title">Examples <span class="tile-badge on-github">on GitHub</span></div>
-        <p class="tile-desc"><code>toy_calc</code> (deterministic), <code>tau2_airline</code> (policy + tool code), <code>skillsbench</code> (skill package).</p>
-      </a>
+      <a class="tile" href="getting-started.html"><div class="tile-title">Getting started <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">Your first successful run in two minutes, no API key. The <code>toy_calc</code> loop end-to-end.</p></a>
+      <a class="tile" href="run-end-to-end.html"><div class="tile-title">Run end-to-end <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">A real benchmark, start to finish: τ²-bench airline from setup to sealed result, step by step.</p></a>
+      <a class="tile" href="results.html"><div class="tile-title">Results <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">Full benchmark detail: toy_calc, τ²-bench airline (fit + held-out), SkillsBench. Reproducibility and artifacts.</p></a>
+      <a class="tile" href="benchmarks.html"><div class="tile-title">Benchmark runs <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">The raw CI log: every <code>ci/benchmarks</code> execution on PRs and manual runs, sortable and filterable.</p></a>
+      <a class="tile" href="architecture.html"><div class="tile-title">Architecture <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">The pipeline (intake → check → baseline → algorithm → finalize → report), the optimizer context, and the skill library.</p></a>
+      <a class="tile" href="agent-orchestration.html"><div class="tile-title">Agent mode <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">Deterministic vs agent orchestration, and the <code>agent-optimize</code> algorithm — the conversational agent drives the loop itself.</p></a>
+      <a class="tile" href="optimize-your-own.html"><div class="tile-title">Optimize your own agent <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">Wire one small adapter — three methods. Two ways: let your coding agent do it, or drive the CLI yourself.</p></a>
+      <a class="tile" href="adapter-templates.html"><div class="tile-title">Adapter templates <span class="tile-badge on-site">on this site</span></div><p class="tile-desc">Copy-and-run adapters — JSONL, HuggingFace, tau2, SWE-bench, SkillsBench — for any litellm provider. Config, not code.</p></a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HONEST_EVAL.md"><div class="tile-title">Honest evaluation <span class="tile-badge on-github">on GitHub</span></div><p class="tile-desc">Splits, gates, sealing — the discipline that keeps the numbers meaningful.</p></a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md"><div class="tile-title">Adapter contract <span class="tile-badge on-github">on GitHub</span></div><p class="tile-desc">The full method signatures and semantics if you're implementing an adapter.</p></a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/COMPARISON.md"><div class="tile-title">Comparison <span class="tile-badge on-github">on GitHub</span></div><p class="tile-desc">Positioning vs other tool-optimization work (EvoTool, Evolutionary Context Search) — with the caveats.</p></a>
+      <a class="tile" href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/TROUBLESHOOTING.md"><div class="tile-title">Troubleshooting <span class="tile-badge on-github">on GitHub</span></div><p class="tile-desc">Installation or a run failed — start here.</p></a>
     </div>
   </section>
 
@@ -329,6 +323,7 @@ bash examples/toy_calc/run.sh</code></pre>
 <footer class="footer">
   <div class="footer-inner">
     <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
       Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
     </div>
     <div class="footer-affil">
@@ -344,5 +339,6 @@ bash examples/toy_calc/run.sh</code></pre>
   </div>
 </footer>
 
+<script src="js/site.js?v=20260724" defer></script>
 </body>
 </html>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="cap-evolve">
+  <rect width="64" height="64" rx="14" fill="#0d1117"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#1e2733" stroke-width="2"/>
+  <!-- fitness stair: capability rising, gated step by step -->
+  <path d="M12 46 H22 V38 H32 V30 H42 V20 H52"
+        fill="none" stroke="#3b82f6" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- champion endpoint -->
+  <circle cx="52" cy="20" r="6" fill="#f59e0b"/>
+  <circle cx="12" cy="46" r="4" fill="#64748b"/>
+</svg>
