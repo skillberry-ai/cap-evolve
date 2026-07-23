@@ -1084,18 +1084,20 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
           <h4>Two ongoing threads</h4>
           <ul style="margin:0; padding-left:1.1em;">
             <li><strong>Head-to-head:</strong> compare cap-evolve to <strong>SkillOps</strong> and <strong>GEPA</strong> on a shared set of tools + skills.</li>
-            <li><strong>Improve Parsec:</strong> optimize one sub-agent's skill + tool surface; propose composite "macro" tools.</li>
+            <li><strong>Improve Parsec:</strong> optimize one sub-agent's skill + tool surface; propose composite "macro" tools;
+              <em>optional</em> — demonstrate a trace-based simulator over Parsec so candidates roll out safely against a frozen replica.</li>
           </ul>
           <h4 style="margin-top:0.7em;">Phase 1 (4–6 weeks, proposed)</h4>
           <ul style="margin:0; padding-left:1.1em;">
             <li>IBM: trajectory extractor, macro miner, LLM-as-judge, question clustering</li>
             <li>Pilot sub-agent: <span class="kbd">babylon</span> (most signal, clearest wins)</li>
             <li>RH: share skill files, tool schemas, allowlists</li>
+            <li><em>Optional stretch:</em> stand up a Parsec simulator on the read-only tools (<span class="kbd">query_*</span>, <span class="kbd">fetch_*</span>) — enables live rollouts of candidate skills without touching production</li>
           </ul>
         </div>
         <div class="col">
           <h4>Immediate mutual-interest win</h4>
-          <div class="banner banner-green" style="max-width:100%; margin:0.2em 0;">
+          <div class="banner banner-green" style="max-width:100%; margin:0.2em 0; font-size:0.72em;">
             <span style="color:var(--green); font-weight:700;">Tool-API ergonomics:</span>
             <span style="color:var(--ink);">
               <span class="kbd">query_babylon_catalog</span> errors on <strong>43.2%</strong> of calls;
@@ -1147,10 +1149,6 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
             <li>Ablations: gate off, protect-set off, single-focus vs cyclic</li>
             <li>Cost / iteration numbers reported alongside gains</li>
           </ul>
-          <div class="placeholder" style="margin-top:0.6em;">
-            <div class="head">Decisions we need from management</div>
-            Target venue (workshop / conference / arXiv-first?) · Submission date · Author list &amp; order · Compute budget (RITS quota + external API) · Legal / IP review.
-          </div>
         </div>
       </div>
 
@@ -1161,108 +1159,115 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
       </aside>
     </section>
 
-    <!-- Slide 11 — 3.3 Skillberry Proxy & Store [PLACEHOLDER] -->
+    <!-- Slide 13 — 3.3 Skillberry Proxy & Store (filled from repos) -->
     <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
-      <h2><span class="thread-pill">3.3</span>Cap-evolve × Skillberry Proxy &amp; Store</h2>
-      <p class="subtitle" style="font-size:0.65em;">Connect the optimizer to the surface where skills are actually served and used.</p>
-
-      <div class="placeholder">
-        <div class="head">Content needed — please fill in</div>
-        This slide needs your input. Suggested subsections:
-        <ul style="margin:0.3em 0 0 1.1em;">
-          <li>What is the Skillberry Proxy? What does it currently do?</li>
-          <li>What is the Skillberry Store? What does it currently do?</li>
-          <li>What's the specific integration point with cap-evolve?
-            (e.g., proxy captures usage traces → cap-evolve consumes them; optimized skills → store)</li>
-          <li>Timeline / owners / dependencies</li>
-        </ul>
-      </div>
-
-      <!-- Draft structure I can fill in once we have the content -->
-      <div class="split" style="margin-top:0.4em;">
-        <div class="col">
-          <h4>Skillberry Proxy — role</h4>
-          <ul style="margin:0; padding-left:1.1em; color:var(--muted); font-style:italic;">
-            <li>What it intercepts / mediates</li>
-            <li>What signals it emits</li>
-            <li>What cap-evolve consumes from it</li>
-          </ul>
-        </div>
-        <div class="col">
-          <h4>Skillberry Store — role</h4>
-          <ul style="margin:0; padding-left:1.1em; color:var(--muted); font-style:italic;">
-            <li>What ships to the store</li>
-            <li>How cap-evolve promotes an optimized skill</li>
-            <li>Versioning &amp; roll-back story</li>
-          </ul>
-        </div>
-      </div>
-
-      <aside class="notes">
-        Placeholder slide. Need concrete text on: what Proxy and Store are, the integration point,
-        and what "closed feedback loop" looks like in practice. Ask user to send docs / diagrams.
-      </aside>
-    </section>
-
-    <!-- Slide 12 — 3.4 Memory / KB / LLM-wiki (NEW) -->
-    <section class="sec-03">
-      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
-      <h2><span class="thread-pill">3.4</span>Memory · KB · LLM-wiki</h2>
-      <p class="subtitle" style="font-size:0.6em;">State / memory / knowledge base / LLM-wiki — one cross-run substrate that IS the org's living record of how agents get better.</p>
-
-      <div class="split">
-        <div class="col">
-          <h4>What ships today</h4>
-          <ul style="margin:0; padding-left:1.1em;">
-            <li>Per-run markdown state — <span class="kbd">LEDGER · JOURNAL · PROCESS · RUNMAP</span></li>
-            <li>Every iteration is a git commit</li>
-            <li>Optimizer receives per-task IMPACT + protect-set each iteration</li>
-            <li>Rejected candidates never re-proposed <em>within a run</em></li>
-          </ul>
-        </div>
-        <div class="col">
-          <h4>The stretch — a durable KB</h4>
-          <ul style="margin:0; padding-left:1.1em;">
-            <li><strong>Cross-run learnings</strong> — what worked / regressed across many runs</li>
-            <li><strong>LLM-queryable substrate</strong> — an MCP / wiki agents can read at plan time</li>
-            <li><strong>First-class rationale</strong> — decisions and their why, not just diffs</li>
-            <li><strong>Portable</strong> — export between org units and benchmarks</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="banner banner-accent" style="margin-top:0.6em;">
-        <div class="title" style="color:var(--accent);">Why it's strategic</div>
-        <span style="color:var(--sub);">
-          Today, cap-evolve's "memory" is a run artifact. Tomorrow, it's an evolving org-wide
-          substrate — every run adds to a shared KB that every future agent reads. A real moat.
-        </span>
-      </div>
-      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
-        ⚠ Sharpen with your framing: KB shape (RAG vs graph vs plain markdown), owners, first customer.
+      <h2><span class="thread-pill">3.3</span>Skillberry Proxy &amp; Store</h2>
+      <p class="subtitle" style="font-size:0.62em;">
+        Two Skillberry components that close the loop with cap-evolve — a runtime interception layer and a smart skill repository.
       </p>
 
+      <div class="split" style="margin-top:0.4em;">
+        <div class="col">
+          <h4>Skillberry Proxy (skillberry-agent)</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Intervenes between the agent and the LLM</strong> — every prompt, tool call, and response passes through it</li>
+            <li>Captures real usage traces (with metadata) and can rewrite tool surfaces on the fly</li>
+            <li>Feeds cap-evolve <strong>production-signal traces</strong> to diagnose from — no synthetic eval loop needed</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Skillberry Store (skillberry-store)</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>Smart skills repository</strong> — persist, execute, semantic-search, and version tools / skills / snippets</li>
+            <li>MCP + REST + CLI + WebDAV frontends; sandboxed execution; namespaces &amp; lifecycle states</li>
+            <li>Where cap-evolve <strong>publishes optimized skills</strong>; agents pull the latest version at runtime</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="banner banner-accent" style="margin-top:0.7em; font-size:0.72em;">
+        <div class="title" style="color:var(--accent);">The closed loop</div>
+        <span style="color:var(--sub);">
+          Agents run → <strong style="color:var(--ink);">Proxy</strong> logs traces →
+          <strong style="color:var(--ink);">cap-evolve</strong> diagnoses + optimizes →
+          <strong style="color:var(--ink);">Store</strong> publishes the improved skill →
+          agents pull it — production evidence, not synthetic eval.
+        </span>
+      </div>
+
       <aside class="notes">
-        Draft: today's LEDGER/JOURNAL/PROCESS is per-run; the stretch is a persistent, cross-run
-        substrate — durable memory that every future agent can query. Position this as the
-        long-term moat argument.
+        Skillberry-agent (the Proxy) intercepts every agent-LLM call at runtime and captures
+        usage traces; skillberry-store is the smart repository where optimized skills land
+        and where agents pull them from. Together they form the runtime half of the
+        cap-evolve loop: real usage → real diagnosis → real deployment.
+        Repos: github.com/skillberry-ai/skillberry-agent, github.com/skillberry-ai/skillberry-store.
       </aside>
     </section>
 
-    <!-- Slide 13 — 3.5 Simulator from traces -->
+    <!-- Slide 14 — 3.4 State Management -->
     <section class="sec-03">
       <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
-      <h2><span class="thread-pill">3.5</span>Simulator from traces</h2>
-      <p class="subtitle" style="font-size:0.65em;">Reconstruct enough of the tool environment from recorded I/O to re-execute agents — closed-loop, no live systems.</p>
+      <h2><span class="thread-pill">3.4</span>State Management</h2>
+      <p class="subtitle" style="font-size:0.6em;">
+        The substrate the optimizer <em>reads from</em> and <em>writes to</em> between iterations.
+        Better state → better optimization. Core research challenge: <strong style="color:var(--ink);">representation schema + accurate search/retrieve</strong>.
+      </p>
+
+      <div class="split" style="font-size:0.55em;">
+        <div class="col">
+          <h4>Landscape — how each project holds state</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li><strong>cap-evolve</strong> — single-best chain + optimizer memory (LEDGER · JOURNAL · PROCESS)</li>
+            <li><strong>EvoGraph</strong> — shared <strong>weakness graph</strong>, Obsidian-style linked wiki; every fix links back to the failure it addresses</li>
+            <li><strong>Arbor</strong> — persistent <strong>hypothesis tree</strong> with distilled insights back-propagated up; cross-run reuse via <span class="kbd">EXPERIENCE.md</span></li>
+            <li><strong>GEPA</strong> — Pareto frontier over task subsets</li>
+            <li><strong>SkillOpt</strong> — rejected-edit buffer + "meta skill" for long-horizon lessons</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Where we want to go</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>A shared, cross-run, LLM-queryable substrate — not a per-run artifact</li>
+            <li>First-class rationale (decisions + <em>why</em>) alongside diffs</li>
+            <li><strong>Open research question:</strong> representation schema (graph? tree? RAG index? plain markdown?) + how to search / retrieve fast &amp; accurately</li>
+            <li>Ongoing work under Skillberry (cap-evolve, EvoGraph) and adjacent Context-Engineering projects in the group</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="banner banner-accent" style="margin-top:0.5em; font-size:0.72em;">
+        <div class="title" style="color:var(--accent);">Why it's strategic</div>
+        <span style="color:var(--sub);">
+          The state substrate is <strong style="color:var(--ink);">the lever</strong> — it decides what the optimizer sees, remembers, and reuses.
+          Cross-project research; whichever schema wins ends up in every optimizer.
+        </span>
+      </div>
+
+      <aside class="notes">
+        Landscape drawn from the skill-optimizer 2.0 landscape doc (2026-07-08).
+        cap-evolve's single-best chain is the simplest of these; EvoGraph and Arbor
+        preserve information the chain discards. Rephrase: this is a shared research
+        thread across Skillberry (cap-evolve + EvoGraph) and adjacent group projects
+        (context engineering).
+      </aside>
+    </section>
+
+    <!-- Slide 15 — 3.5 Simulator -->
+    <section class="sec-03">
+      <div class="part-pill sec-03">03 · WHERE WE GO FROM HERE</div>
+      <h2><span class="thread-pill">3.5</span>Simulator</h2>
+      <p class="subtitle" style="font-size:0.62em;">
+        <strong style="color:var(--ink);">Use an agent to simulate tools</strong> (and other environment components) so cap-evolve can optimize against the simulated environment — no live systems required.
+      </p>
 
       <div class="split">
         <div class="col">
           <h4>The mechanism</h4>
           <ul style="margin:0; padding-left:1.1em;">
-            <li>Every tool call in a trace has captured <strong>inputs + outputs</strong></li>
-            <li>Read-only tools (<span class="kbd">query_*</span>, <span class="kbd">fetch_*</span>) simulate cheaply</li>
-            <li>Reconstruct a frozen replica; agent re-executes against it</li>
+            <li>An agent stands in for tools (and other env components), producing plausible outputs given inputs</li>
+            <li>Trace-seeded: recorded I/O anchors the simulator to real behavior</li>
+            <li>Read-only tools (<span class="kbd">query_*</span>, <span class="kbd">fetch_*</span>) simulate cheaply; stateful tools need care</li>
           </ul>
           <h4 style="margin-top:0.6em;">Why it matters for cap-evolve</h4>
           <ul style="margin:0; padding-left:1.1em;">
@@ -1272,28 +1277,25 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
           </ul>
         </div>
         <div class="col">
-          <h4>Status</h4>
+          <h4>Stretch goal — benchmark over simulated env</h4>
           <ul style="margin:0; padding-left:1.1em;">
-            <li>Separate IBM team already building trace-based simulators</li>
-            <li>Natural collaboration with cap-evolve — clean integration point</li>
-            <li>Scoped as <strong>Parsec phase-2 extension</strong>, not a prerequisite</li>
+            <li>Build a synthetic <strong>benchmark on top of the simulator</strong> — tasks + oracle scoring driven by the same agent</li>
+            <li>Optimize entirely inside the simulated environment: no working env from the client, no direct interaction with production</li>
+            <li>Unlocks cap-evolve for customers who <em>cannot</em> or <em>will not</em> expose a live eval loop</li>
           </ul>
-          <h4 style="margin-top:0.6em;">Reference</h4>
-          <div style="font-size:0.9em; color:var(--sub);">
-            <span class="kbd" style="color:var(--ink);">rhdp-parsec/docs/rh_collaboration_proposal.md</span>
-            § 7 — Optional collaboration extension: simulator from traces
-          </div>
+          <h4 style="margin-top:0.6em;">Status</h4>
+          <ul style="margin:0; padding-left:1.1em;">
+            <li>Separate IBM team already building trace-based simulators — natural integration</li>
+            <li>Scoped as a <strong>Parsec phase-2 extension</strong> + publication multiplier</li>
+          </ul>
         </div>
       </div>
 
-      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
-        ⚠ Confirm: named contact + team on the IBM simulator side, and their capacity this quarter.
-      </p>
-
       <aside class="notes">
-        The simulator makes live rollouts feasible. Two immediate consumers: publication
-        experiments (repeatable) and Red Hat Parsec (no live-system risk). Confirm which
-        IBM team is building this and their capacity for a shared integration.
+        Reframe: the simulator isn't just "replay recorded I/O" — it's an agent that
+        simulates the environment. Stretch goal: build a benchmark over that simulated
+        env so optimization runs without ever touching the customer's real system.
+        Ref: rhdp-parsec/docs/rh_collaboration_proposal.md § 7.
       </aside>
     </section>
 
@@ -1303,34 +1305,34 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
       <h2><span class="thread-pill">3.6</span>Improvements from public knowledge</h2>
       <p class="subtitle" style="font-size:0.65em;">Adopt what's proven from adjacent work; keep the tool-code axis as the differentiator.</p>
 
-      <div class="grid-4" style="max-width:96%; margin:0.6em auto; font-size:0.55em;">
+      <div class="grid-4" style="max-width:96%; margin:0.6em auto; font-size:0.68em;">
         <div class="card">
-          <div class="who" style="color:var(--accent);">Arbor</div>
-          <div class="role">
+          <div class="who" style="color:var(--accent); font-size:0.95em;">Arbor</div>
+          <div class="role" style="font-size:0.75em;">
             Direct tool-optimization competitor.<br>
-            <strong>What to compare:</strong> apples-to-apples on Tau2, SWE-bench, SkillBench.<br>
-            <strong>What to adopt:</strong> TBD after read-through.
+            <strong>Compare:</strong> apples-to-apples on Tau2, SWE-bench, SkillBench.<br>
+            <strong>Adopt:</strong> hypothesis-tree with insight-backprop.
           </div>
         </div>
         <div class="card">
-          <div class="who" style="color:var(--accent);">EvoSkill</div>
-          <div class="role">
+          <div class="who" style="color:var(--accent); font-size:0.95em;">EvoSkill</div>
+          <div class="role" style="font-size:0.75em;">
             arXiv:2604.01687v1.<br>
-            <strong>What to compare:</strong> head-to-head where benchmarks overlap.<br>
-            <strong>What to adopt:</strong> mining / evolution techniques applicable to tool code.
+            <strong>Compare:</strong> head-to-head where benchmarks overlap.<br>
+            <strong>Adopt:</strong> mining / evolution techniques for tool code.
           </div>
         </div>
         <div class="card">
-          <div class="who" style="color:var(--accent);">GEPA</div>
-          <div class="role">
+          <div class="who" style="color:var(--accent); font-size:0.95em;">GEPA</div>
+          <div class="role" style="font-size:0.75em;">
             arXiv:2507.19457 — flagship prompt optimizer.<br>
             <strong>Position:</strong> context, not direct competitor (prompt-only).<br>
             <strong>Adopt:</strong> per-instance Pareto frontier, reflective dataset.
           </div>
         </div>
         <div class="card">
-          <div class="who" style="color:var(--accent);">SkillOps</div>
-          <div class="role">
+          <div class="who" style="color:var(--accent); font-size:0.95em;">SkillOps</div>
+          <div class="role" style="font-size:0.75em;">
             arXiv:2605.23904 — prompt-only skill evolution.<br>
             <strong>Position:</strong> context, not direct competitor.<br>
             <strong>Adopt:</strong> textual-LR budget, rejected-edit buffer.
@@ -1338,17 +1340,13 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
         </div>
       </div>
 
-      <div class="banner banner-accent" style="margin-top:0.4em;">
+      <div class="banner banner-accent" style="margin-top:0.5em; font-size:0.72em;">
         <div class="title" style="color:var(--accent);">The differentiator to defend</div>
         <span style="color:var(--sub);">
           Arbor and EvoSkill are the head-to-head fights we can win on <strong>tool code</strong>.
           GEPA and SkillOps are prompt-only; we cite them as context and adopt what generalizes.
         </span>
       </div>
-
-      <p style="font-size:0.48em; color:var(--amber); font-style:italic; margin-top:0.4em;">
-        ⚠ "What to adopt" bullets firm up after a careful read-through of Arbor and EvoSkill.
-      </p>
 
       <aside class="notes">
         Position: Arbor + EvoSkill are the direct fights on tool code; GEPA + SkillOps are
