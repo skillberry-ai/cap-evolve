@@ -16,7 +16,7 @@ regression, not a leaderboard.
 > budget to explore. The `flip`/`hard` tagging + agent-per-task are kept in the harness for
 > future use with a different model or a non-binary scorer.
 
-- **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **1 iteration** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
+- **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
 - **Baselines are frozen** (committed under `<bench>/<task>/baseline/`) and reused via
   `cap-evolve run --reuse-baseline` — the baseline agent is **never re-run**; CI only
   optimizes + evaluates.

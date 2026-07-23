@@ -29,9 +29,9 @@ on:
         default: all
         options: [all, tau2, swebench, skillsbench]
       iterations:
-        description: "Optimizer iterations per task (default 1; raise to give the optimizer more budget)"
+        description: "Optimizer iterations per task (default 3; raise to give the optimizer more budget)"
         type: string
-        default: "1"
+        default: "3"
   pull_request:
     types: [labeled]
 
@@ -60,7 +60,7 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-      ITERATIONS: ${{ github.event.inputs.iterations || '1' }}
+      ITERATIONS: ${{ github.event.inputs.iterations || '3' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,7 +103,7 @@ jobs:
             "branch": "${{ github.head_ref || github.ref_name }}",
             "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "iterations": ${ITERATIONS:-1},
+            "iterations": ${ITERATIONS:-3},
             "agent_model": "aws/gpt-oss-120b",
             "optimizer_model": "claude-opus-4-8",
             "conclusion": "${{ job.status }}"

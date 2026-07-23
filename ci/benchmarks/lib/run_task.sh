@@ -24,7 +24,7 @@ FROZEN="${4:-}"
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-ITER="${ITERATIONS:-1}"                                   # optimizer iterations (CI-configurable; default 1)
+ITER="${ITERATIONS:-3}"                                   # optimizer iterations (CI-configurable; default 3)
 AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"            # bare gateway model for the AGENT under test
 #   hard tasks use aws/gpt-oss-120b; flip tasks may use a stronger model (e.g. aws/claude-sonnet-5)
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"          # venv with core+litellm(+swebench/datasets)

@@ -62,7 +62,7 @@ done <<< "$ids_tags"
 {
   echo "## Benchmark suite — $BENCH"
   echo
-  echo "Agent \`aws/gpt-oss-120b\` · optimizer Claude Code \`claude-opus-4-8\` · ${ITERATIONS:-1} iteration(s) · baselines frozen (reused)."
+  echo "Agent \`aws/gpt-oss-120b\` · optimizer Claude Code \`claude-opus-4-8\` · ${ITERATIONS:-3} iteration(s) · baselines frozen (reused)."
   echo
   "$PY" "$LIB_DIR/metrics.py" table "$OUT/metrics.jsonl"
 } > "$OUT/report.md"
