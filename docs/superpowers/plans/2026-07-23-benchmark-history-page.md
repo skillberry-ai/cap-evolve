@@ -277,8 +277,7 @@ Append to `.github/workflows/benchmarks.yml` under `jobs:` (sibling of `bench`):
           for d in _artifacts/benchmarks-*; do
             [ -d "$d" ] || continue
             bench="$(basename "$d" | sed 's/^benchmarks-//')"
-            suite="$d/suite_$bench"
-            rm="$suite/runmeta.json"; metrics="$suite/metrics.jsonl"
+            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"   # artifacts are flat at root
             [ -f "$rm" ] || { echo "no runmeta for $bench, skipping"; continue; }
             rid="$(python3 -c "import json,sys;print(json.load(open('$rm'))['run_id'])")"
             python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" \
