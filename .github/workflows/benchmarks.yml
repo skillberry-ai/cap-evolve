@@ -39,6 +39,11 @@ jobs:
   bench:
     name: ${{ matrix.bench }}
     runs-on: [self-hosted, ibm-vpc]
+    # Repo default token is read-only; the "Comment results on the PR" step needs write.
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     # Fork guard: never run PR code from a fork on the self-hosted runner.
     if: >-
       github.event_name == 'workflow_dispatch' ||
