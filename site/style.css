@@ -707,13 +707,13 @@ table code {
 
 /* Benchmark runs history page */
 .filters { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
-.filters label { display: flex; flex-direction: column; font-size: .8rem; color: #555; gap: .25rem; }
+.filters label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: .25rem; }
 .run-row { cursor: pointer; }
-.run-row:hover { background: #f6f8fa; }
-.detail-row > td { background: #fafbfc; padding: .5rem 1rem; }
+.run-row:hover { background: var(--bg-soft); }
+.detail-row > td { background: var(--bg-soft); padding: .5rem 1rem; }
 table.detail { width: 100%; font-size: .85rem; }
 .badge { padding: .1rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
-.badge.success { background: #d5f5e3; color: #1e7a46; }
+.badge.success { background: var(--success-soft); color: var(--success); }
 .badge.failure { background: #fbdcdc; color: #a12; }
-.badge.cancelled { background: #eee; color: #666; }
-.muted { color: #777; font-weight: 400; }
+.badge.cancelled { background: var(--bg-code); color: var(--muted); }
+.muted { color: var(--muted); font-weight: 400; }

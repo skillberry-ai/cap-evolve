@@ -239,7 +239,7 @@ In `.github/workflows/benchmarks.yml`, inside the `bench` job, **after** the "Ru
             "branch": "${{ github.head_ref || github.ref_name }}",
             "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "iterations": ${ITERATIONS:-1},
+            "iterations": ${ITERATIONS:-3},
             "agent_model": "aws/gpt-oss-120b",
             "optimizer_model": "claude-opus-4-8",
             "conclusion": "${{ job.status }}"

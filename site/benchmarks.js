@@ -3,6 +3,8 @@ let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
 const fmt = (v, d = 3) => (typeof v === "number" ? v.toFixed(d) : "—");
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 async function load() {
   try {
@@ -56,12 +58,12 @@ function render() {
     const flips = r.suite ? `${r.suite.flips}/${r.suite.n}` : "—";
     const usd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const src = r.pr
-      ? `<a href="https://github.com/skillberry-ai/cap-evolve/pull/${r.pr}">${r.source}</a>`
-      : (r.source || "—");
-    const badge = `<span class="badge ${r.conclusion}">${r.conclusion}</span>`;
-    const date = (r.date || "").replace("T", " ").replace("Z", "");
-    tr.innerHTML = `<td><a href="${r.run_url}">${date}</a></td>
-      <td>${src}</td><td>${r.bench}</td><td>${r.iterations ?? "—"}</td>
+      ? `<a href="https://github.com/skillberry-ai/cap-evolve/pull/${encodeURIComponent(r.pr)}">${esc(r.source)}</a>`
+      : esc(r.source || "—");
+    const badge = `<span class="badge ${esc(r.conclusion)}">${esc(r.conclusion)}</span>`;
+    const date = esc((r.date || "").replace("T", " ").replace("Z", ""));
+    tr.innerHTML = `<td><a href="${esc(r.run_url)}">${date}</a></td>
+      <td>${src}</td><td>${esc(r.bench)}</td><td>${r.iterations ?? "—"}</td>
       <td>${reward}</td><td>${flips}</td><td>${usd}</td><td>${badge}</td>`;
     tb.appendChild(tr);
 
@@ -81,7 +83,7 @@ function taskTable(tasks) {
   if (!tasks.length) return `<em class="muted">no per-task metrics</em>`;
   const head = `<tr><th>task</th><th>reward base→opt</th><th>flip</th><th>latency (s)</th>` +
     `<th>runner $</th><th>opt $</th><th>iters</th></tr>`;
-  const body = tasks.map((t) => `<tr><td><code>${t.task}</code></td>
+  const body = tasks.map((t) => `<tr><td><code>${esc(t.task)}</code></td>
     <td>${fmt(t.reward_baseline)} → ${fmt(t.reward_opt)}</td>
     <td>${t.flipped ? "✅" : "—"}</td>
     <td>${fmt(t.latency_baseline_s, 1)} → ${fmt(t.latency_opt_s, 1)}</td>
