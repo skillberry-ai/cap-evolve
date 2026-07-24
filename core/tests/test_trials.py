@@ -1,4 +1,7 @@
 """Tests for the concurrent multi-trial helper (cap_evolve.run_trials_pool)."""
+import contextlib
+import io
+
 from cap_evolve import run_trials_pool
 from cap_evolve.types import Rollout, Task
 
@@ -42,3 +45,18 @@ def test_zero_trials_is_empty_lists():
     out = run_trials_pool(lambda t, s: Rollout(task_id=t.id), _tasks(["a", "b"]),
                           n_trials=0, base_seed=0, max_workers=4)
     assert out == {"a": [], "b": []}
+
+
+def test_caller_stdout_protected_from_concurrent_rollout_output():
+    # Adapters' runners (e.g. tau2) print progress to stdout; run in parallel that would
+    # race the per-call redirect_stdout and leak into the pure-JSON stdout contract. The
+    # pool must keep the caller's stdout clean regardless.
+    def noisy(task, seed):
+        print("RUNNER PROGRESS must not leak to stdout")
+        return Rollout(task_id=task.id, output="ok")
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        out = run_trials_pool(noisy, _tasks(["a", "b"]), n_trials=3, base_seed=0, max_workers=4)
+    assert buf.getvalue() == ""  # nothing leaked to the caller's stdout
+    assert all(r.output == "ok" for r in out["a"] + out["b"])

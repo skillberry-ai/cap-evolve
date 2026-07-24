@@ -14,6 +14,8 @@ rollout *generation*.
 """
 from __future__ import annotations
 
+import contextlib
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
@@ -50,12 +52,20 @@ def run_trials_pool(
 
     if not jobs:
         return results
-    if max_workers == 1:
-        for job in jobs:
-            tid, k, rollout = _one(job)
-            results[tid][k] = rollout
-    else:
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            for tid, k, rollout in ex.map(_one, jobs):
+    # Adapters keep the stdout JSON-contract clean by redirecting their runner's stdout to
+    # stderr (e.g. tau2's run_batch). contextlib.redirect_stdout swaps the PROCESS-GLOBAL
+    # sys.stdout and is NOT thread-safe: with concurrent per-call redirects, one thread's
+    # exit can restore real stdout while another is still printing, leaking runner output
+    # into the pure-JSON stdout. Wrap the whole pool once so real stdout is never the
+    # "current" target during the threads — inner per-call redirects then only ever
+    # save/restore sys.stderr, so nothing can leak.
+    with contextlib.redirect_stdout(sys.stderr):
+        if max_workers == 1:
+            for job in jobs:
+                tid, k, rollout = _one(job)
                 results[tid][k] = rollout
+        else:
+            with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                for tid, k, rollout in ex.map(_one, jobs):
+                    results[tid][k] = rollout
     return results
