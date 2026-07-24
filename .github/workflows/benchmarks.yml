@@ -161,18 +161,27 @@ jobs:
       - name: Build records
         run: |
           mkdir -p _new_records
+          # upload-artifact stores files flat at the artifact root (the least-common-ancestor
+          # of ci/benchmarks/.work/suite_<bench>/** is that dir), so runmeta.json/metrics.jsonl
+          # live directly under _artifacts/benchmarks-<bench>/ — NOT a suite_<bench>/ subdir.
+          have=0; built=0
           for d in _artifacts/benchmarks-*; do
             [ -d "$d" ] || continue
             bench="$(basename "$d" | sed 's/^benchmarks-//')"
-            suite="$d/suite_$bench"
-            rm="$suite/runmeta.json"; metrics="$suite/metrics.jsonl"
-            [ -f "$rm" ] || { echo "no runmeta for $bench, skipping"; continue; }
+            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"
+            [ -f "$rm" ] || { echo "::warning::no runmeta for $bench, skipping"; continue; }
+            have=$((have+1))
             rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
             python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" \
-              > "_new_records/${rid}__${bench}.json"
+              > "_new_records/${rid}__${bench}.json" && built=$((built+1))
             echo "built _new_records/${rid}__${bench}.json"
           done
           ls -la _new_records || true
+          # Guard: if artifacts with runmeta exist but produced no records, fail loudly
+          # instead of silently exiting 0 (which previously masked a path bug).
+          if [ "$have" -gt 0 ] && [ "$built" -lt "$have" ]; then
+            echo "::error::found $have runmeta artifact(s) but built only $built record(s)"; exit 1
+          fi
 
       - name: Push to benchmark-history (single writer, with rebase-retry)
         run: |
