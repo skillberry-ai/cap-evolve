@@ -19,6 +19,508 @@
         "cost_usd": 0.0,
         "tokens": 0
       }
+    },
+    "full": {
+      "0": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "0",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 17.891420602798462,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "1": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "1",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 38.489951372146606,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "2": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "2",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 78.12290596961975,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "3": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "3",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 19.08966064453125,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "4": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "4",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 35.33852434158325,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "5": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "5",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 68.03229331970215,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "6": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "6",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 75.76188397407532,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "7": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "7",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 53.03666949272156,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "8": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "8",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 58.54883146286011,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "9": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "9",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 60.22515296936035,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "10": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "10",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 84.58023071289062,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "11": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "11",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 39.50560259819031,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "12": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "12",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 53.1360502243042,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "13": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "13",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 7.082188606262207,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "14": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "14",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 62.0079562664032,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "15": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "15",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 33.6515793800354,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "16": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "16",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 35.458338260650635,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "17": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "17",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 36.11767816543579,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "18": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "18",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 88.01885676383972,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "19": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "19",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 34.16231942176819,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "20": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "20",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 50.60759472846985,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "21": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "21",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 44.178335189819336,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "22": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "22",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 30.361441135406494,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "23": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "23",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 96.19957780838013,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "24": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "24",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 65.69299578666687,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "25": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "25",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 89.60473227500916,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "26": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "26",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 12.640986204147339,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "27": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "27",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 35.036633253097534,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "28": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "28",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 27.892482042312622,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "29": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "29",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 11.90407419204712,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "30": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "30",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 36.26051330566406,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "31": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "31",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 36.23640060424805,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "32": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "32",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 11.509979486465454,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "33": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "33",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 72.58719444274902,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "34": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "34",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 25.9608895778656,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "35": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "35",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 61.52584505081177,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "36": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "36",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 12.601608037948608,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "37": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "37",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 100.14145731925964,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "38": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "38",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 83.06434798240662,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "39": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "39",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 45.624611377716064,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "40": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "40",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 37.706626892089844,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "41": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "41",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 33.709412813186646,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "42": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "42",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 67.7481837272644,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "43": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "43",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 42.055105686187744,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "44": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "44",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 51.81168603897095,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "45": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "45",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 117.65095043182373,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "46": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "46",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 24.083495378494263,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "47": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "47",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 33.2413911819458,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "48": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "48",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 1.0,
+        "latency_s": 12.184430360794067,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "49": {
+        "bench": "tau2",
+        "tier": "full",
+        "task": "49",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 17.947223663330078,
+        "cost_usd": 0.0,
+        "tokens": 0
+      }
     }
   },
   "swebench": {
