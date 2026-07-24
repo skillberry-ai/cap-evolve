@@ -22,10 +22,26 @@ async function load() {
   }
 }
 
+// current time window (ms epoch), recomputed each render() from the Time filter.
+let WIN = { start: null, end: null };
+
+function timeWindow() {
+  const v = $("#f-time").value;
+  if (v === "all") return { start: null, end: null };
+  if (v === "custom") {
+    const f = $("#f-from").value, t = $("#f-to").value;
+    return { start: f ? new Date(f).getTime() : null, end: t ? new Date(t).getTime() : null };
+  }
+  return { start: Date.now() - Number(v) * 1000, end: null }; // last N seconds
+}
+
 function passes(r) {
   const b = $("#f-bench").value, s = $("#f-source").value, c = $("#f-conc").value;
   const t = $("#f-tier").value;
   const q = $("#f-q").value.toLowerCase();
+  const ts = Date.parse(r.date);
+  if (WIN.start != null && !(ts >= WIN.start)) return false;
+  if (WIN.end != null && !(ts <= WIN.end)) return false;
   if (b && r.bench !== b) return false;
   if (t && (r.tier || "smoke") !== t) return false;
   if (s === "pr" && r.event !== "pull_request") return false;
@@ -47,13 +63,22 @@ function sortVal(r, k) {
 }
 
 function render() {
+  WIN = timeWindow();
   const rows = RECORDS.filter(passes).sort((a, b) => {
     const x = sortVal(a, sortKey), y = sortVal(b, sortKey);
     return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
   });
   const tb = $("#rows");
   tb.innerHTML = "";
-  $("#empty").hidden = rows.length > 0;
+  const empty = $("#empty");
+  if (rows.length === 0) {
+    empty.hidden = false;
+    empty.innerHTML = RECORDS.length
+      ? "No runs match the current filters — try widening the time range."
+      : "No runs recorded yet — trigger the suite (add a <code>benchmark-smoke</code> label to a PR, or Actions → Benchmarks).";
+  } else {
+    empty.hidden = true;
+  }
   for (const r of rows) {
     const tr = document.createElement("tr");
     tr.className = "run-row";
@@ -105,7 +130,13 @@ document.querySelectorAll("#runs thead th").forEach((th) =>
     render();
   })
 );
-["f-bench", "f-tier", "f-source", "f-conc", "f-q"].forEach((id) =>
+["f-time", "f-from", "f-to", "f-bench", "f-tier", "f-source", "f-conc", "f-q"].forEach((id) =>
   $("#" + id).addEventListener("input", render)
 );
+// reveal the custom datetime inputs only when Time = "Custom…"
+$("#f-time").addEventListener("change", () => {
+  const custom = $("#f-time").value === "custom";
+  $("#f-from-wrap").hidden = !custom;
+  $("#f-to-wrap").hidden = !custom;
+});
 load();
