@@ -7,7 +7,11 @@ build/
 dist/
 .pytest_cache/
 .venv/
+.venv-*/
 venv/
+
+# local E2E scratch (venvs, benchmark clones, run artifacts, .env credentials)
+e2e/
 
 # cap-evolve run state (per-run, not source)
 .capevolve/
@@ -36,3 +40,6 @@ examples/skillsbench/run/
 # by setup.sh at onboarding time, NOT vendored here (only the README is tracked).
 examples/skillsbench/seed_capability/*
 !examples/skillsbench/seed_capability/README.md
+
+# CI benchmark scratch (per-task work dirs)
+ci/benchmarks/.work/

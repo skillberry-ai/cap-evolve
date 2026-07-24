@@ -1,0 +1,13 @@
+{
+  "train": [
+    "3"
+  ],
+  "val": [
+    "3"
+  ],
+  "test": [
+    "3"
+  ],
+  "seed": 0,
+  "test_used": true
+}

@@ -1,0 +1,165 @@
+# =============================================================================
+# vLLM Model Serving on OpenShift — Optimizer Model (Qwen 2.5 14B)
+#
+# The "optimizer" model reads agent trajectories, analyzes failures, and
+# proposes improved skills/capabilities. It should be more capable than the
+# agent model to provide meaningful optimization guidance.
+#
+# Served on 2 GPUs with tensor parallelism. Requires nodes with >=2 GPUs.
+# =============================================================================
+
+# --- PVC: cache for downloaded model weights ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-optimizer-cache
+  namespace: cap-evolve
+  labels:
+    app.kubernetes.io/part-of: cap-evolve
+    component: vllm
+    role: optimizer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+# --- Deployment: vLLM inference server (optimizer) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-optimizer
+  namespace: cap-evolve
+  labels:
+    app: vllm-optimizer
+    component: vllm
+    role: optimizer
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-optimizer
+      component: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm-optimizer
+        component: vllm
+        role: optimizer
+    spec:
+      serviceAccountName: cap-evolve-runner
+      # Match this to your cluster's GPU node label (oc get nodes --show-labels | grep gpu)
+      nodeSelector:
+        gpu-pool-size: xlarge
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.21.0
+          env:
+            - name: HOME
+              value: /tmp
+            # HOME=/tmp would send the HF cache to /tmp (ephemeral); pin it to
+            # the mounted PVC so 14B weights persist across restarts.
+            - name: HF_HOME
+              value: /.cache/huggingface
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: HF_TOKEN
+                  optional: true
+          args:
+            - --model
+            - Qwen/Qwen2.5-14B-Instruct
+            - --tensor-parallel-size
+            - "2"
+            - --max-model-len
+            - "32768"
+            - --gpu-memory-utilization
+            - "0.9"
+            - --enable-chunked-prefill
+            - --enable-prefix-caching
+            - --enable-auto-tool-choice
+            - --tool-call-parser
+            - hermes
+            - --served-model-name
+            - qwen2.5-14b-instruct
+            - --port
+            - "8000"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "4"
+              memory: 32Gi
+              nvidia.com/gpu: "2"
+            limits:
+              cpu: "8"
+              memory: 64Gi
+              nvidia.com/gpu: "2"
+          volumeMounts:
+            - name: cache
+              mountPath: /.cache
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vllm-optimizer-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+---
+# --- Service: cluster-internal endpoint for the optimizer model ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-optimizer
+  namespace: cap-evolve
+  labels:
+    app: vllm-optimizer
+    component: vllm
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  selector:
+    app: vllm-optimizer
+    component: vllm
+---
+# --- Route: external HTTPS access (optional, for testing) ---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: vllm-optimizer
+  namespace: cap-evolve
+  labels:
+    app: vllm-optimizer
+    component: vllm
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+  to:
+    kind: Service
+    name: vllm-optimizer
+    weight: 100

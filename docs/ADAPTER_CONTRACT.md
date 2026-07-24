@@ -29,6 +29,14 @@ class Adapter(CapabilityAdapter):
   `feedback`. The feedback is the learning signal (gepa's "Actionable Side
   Information"); describe *why* generally, and **never leak the gold answer**. Must be
   deterministic on a fixed rollout (enforced by the gate).
+  You may also return a `metrics` catalog of shown-only secondaries alongside the
+  reward — each entry is `{name, value, primary, direction}` with `direction` in
+  `higher | lower`. Exactly one entry has `primary: true` and its `value` must equal
+  `reward` (the scalar the gate uses); every other entry is display-only and **never
+  affects accept/reject**. Secondaries flow through the rollout/results JSON for the
+  dashboard. Example (tau2 airline): primary `reward` plus shown-only `db_match`
+  (higher) and `cost_usd` (lower). See `examples/tau2_airline/adapters/adapter.py`
+  `_shown_metrics()`. Leave `metrics` empty to keep the plain scalar-reward behavior.
 
 ## Optional hooks (working defaults provided)
 
@@ -70,6 +78,10 @@ cap-evolve check .capevolve/project   # must print {"ok": true}
 implemented, `tasks` is non-empty and stable, and `score` is deterministic. This is
 mandatory before any budget is spent — a half-wired adapter can only produce a
 dishonest number.
+
+The gate reads only the **primary** metric (the scalar `reward`). Any shown-only
+secondaries a `score()` returns are carried through for display but can never move an
+accept/reject decision or the sealed number.
 
 ## Everything else is provided
 

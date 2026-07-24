@@ -39,13 +39,30 @@ def main(argv=None) -> int:
     p.add_argument("--max-optimizer-usd", type=float, default=0.0,
                    help="0 = off; separate cap on optimizer spend alone")
     p.add_argument("--run-ts", default=None, help="fixed timestamp for reproducible run dirs")
+    p.add_argument("--resume", action="store_true",
+                   help="reopen an existing run dir instead of failing; skip the baseline "
+                        "eval when it already ran (baseline.json present)")
     args = p.parse_args(argv)
 
     Path(args.base).mkdir(parents=True, exist_ok=True)
     budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
                     max_metric_calls=args.max_metric_calls, max_usd=args.max_usd,
                     max_optimizer_usd=args.max_optimizer_usd)
-    run_dir = RunDir.create(Path(args.base), ts=args.run_ts, budget=budget)
+    run_dir = RunDir.create(Path(args.base), ts=args.run_ts, budget=budget, exist_ok=args.resume)
+
+    # Resume fast-path: baseline already ran → the split is frozen, the seed is scored,
+    # best_id is set. Re-print the recorded baseline and skip the (expensive) eval so the
+    # algorithm resumes straight from the current best. state.json is left untouched.
+    if args.resume and (run_dir.root / "baseline.json").exists():
+        splits = run_dir.read_splits()
+        recorded = json.loads((run_dir.root / "baseline.json").read_text(encoding="utf-8"))
+        print(json.dumps({
+            "run_dir": str(run_dir.root),
+            "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},
+            "baseline_val": recorded.get("val", {}),
+            "resumed": True,
+        }, indent=2))
+        return 0
 
     adapter = load_adapter(Path(args.project))
 

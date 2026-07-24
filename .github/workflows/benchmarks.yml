@@ -1,0 +1,233 @@
+# ============================================================================
+# Benchmarks — real optimization regression suite (reward / latency / cost).
+# ============================================================================
+#
+# Runs, per benchmark, a curated set of tasks through cap-evolve using the ADAPTER
+# TEMPLATES: agent aws/gpt-oss-120b, optimizer Claude Code @ claude-opus-4-8, 3 iterations.
+# Baselines are FROZEN (committed under ci/benchmarks/<bench>/<task>/baseline) and reused
+# via `cap-evolve run --reuse-baseline` — the baseline agent is never re-run; CI only
+# optimizes + evaluates, then reports reward/latency/cost vs the frozen baseline and
+# publishes the optimized capabilities for review.
+#
+# REAL models, real $ → NOT part of always-on CI. Runs ONLY when requested:
+#   * manually  — Actions → "Benchmarks" → Run workflow (pick a benchmark), or
+#   * on a PR   — add the `benchmark-test` label.
+#
+# REQUIRES a SELF-HOSTED runner on the IBM network (the gateway is VPC-internal;
+# GitHub-hosted runners cannot reach it). See ci/benchmarks/README.md +
+# ci/benchmarks/runner/arm-runner.sh. Repo secrets: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN.
+# ============================================================================
+
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Which benchmark to run"
+        type: choice
+        default: all
+        options: [all, tau2, swebench, skillsbench]
+      tier:
+        description: "Which tier (default smoke; full is the whole/representative benchmark and is expensive)"
+        type: choice
+        default: smoke
+        options: [all, smoke, full]
+      iterations:
+        description: "Optimizer iterations per task (default 3; raise to give the optimizer more budget)"
+        type: string
+        default: "3"
+  pull_request:
+    types: [labeled]
+
+jobs:
+  bench:
+    name: ${{ matrix.tier }} / ${{ matrix.bench }}
+    runs-on: [self-hosted, ibm-vpc]
+    # Repo default token is read-only; the "Comment results on the PR" step needs write.
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    # Fork guard: never run PR code from a fork on the self-hosted runner.
+    # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
+    # (an all-label or a per-bench one). The per-matrix gate decides the exact tier×bench.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
+         contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
+    strategy:
+      fail-fast: false
+      matrix:
+        # tier is a first-class dimension. full runs the whole/representative benchmark
+        # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
+        tier: [smoke, full]
+        bench: [tau2, swebench, skillsbench]
+    concurrency:
+      group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      ITERATIONS: ${{ github.event.inputs.iterations || '3' }}
+      TIER: ${{ matrix.tier }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate (decide whether this tier/bench runs)
+        id: gate
+        env:
+          # tier-agnostic exact-match label checks (evaluated by Actions, not the shell):
+          #   benchmark-<tier>  = all benches of this tier;  benchmark-<tier>-<bench> = this one
+          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}', matrix.tier)) }}
+          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}-{1}', matrix.tier, matrix.bench)) }}
+          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
+          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+        run: |
+          run=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tier_ok=false; bench_ok=false
+            { [ "$TIER_SEL" = "all" ] || [ "$TIER_SEL" = "${{ matrix.tier }}" ]; } && tier_ok=true
+            { [ "$BENCH_SEL" = "all" ] || [ "$BENCH_SEL" = "${{ matrix.bench }}" ]; } && bench_ok=true
+            if [ "$tier_ok" = true ] && [ "$bench_ok" = true ]; then run=true; fi
+          else
+            # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
+            if [ "$HAS_ALL" = "true" ] || [ "$HAS_THIS" = "true" ]; then run=true; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Setup runner env
+        if: steps.gate.outputs.run == 'true'
+        run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
+
+      - name: Run suite
+        if: steps.gate.outputs.run == 'true'
+        run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+
+      - name: Write run metadata
+        if: steps.gate.outputs.run == 'true' && always()
+        run: |
+          out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+          mkdir -p "$out"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            source="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
+          else
+            source="manual (${{ github.ref_name }})"; pr="null"
+          fi
+          cat > "$out/runmeta.json" <<JSON
+          {
+            "run_id": ${{ github.run_id }},
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "bench": "${{ matrix.bench }}",
+            "tier": "${{ matrix.tier }}",
+            "event": "${{ github.event_name }}",
+            "source": "$source",
+            "pr": $pr,
+            "branch": "${{ github.head_ref || github.ref_name }}",
+            "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "iterations": ${ITERATIONS:-3},
+            "agent_model": "aws/gpt-oss-120b",
+            "optimizer_model": "claude-opus-4-8",
+            "conclusion": "${{ job.status }}"
+          }
+          JSON
+          cat "$out/runmeta.json"
+
+      - name: Upload artifacts (metrics + optimized capabilities)
+        if: steps.gate.outputs.run == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
+          path: ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}/**
+          if-no-files-found: warn
+
+      - name: Comment results on the PR
+        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = `ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}/report.md`;
+            if (!fs.existsSync(path)) return;
+            const body = `<!-- benchmarks:${{ matrix.tier }}-${{ matrix.bench }} -->\n` + fs.readFileSync(path, 'utf8');
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const marker = `<!-- benchmarks:${{ matrix.tier }}-${{ matrix.bench }} -->`;
+            const {data: comments} = await github.rest.issues.listComments({owner, repo, issue_number});
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({owner, repo, comment_id: existing.id, body});
+            } else {
+              await github.rest.issues.createComment({owner, repo, issue_number, body});
+            }
+
+  # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
+  # writer → no push races) and regenerate benchmarks.json for the Pages history page.
+  # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).
+  aggregate:
+    name: aggregate history
+    needs: [bench]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4              # for ci/benchmarks/lib/record.py
+
+      - name: Download all benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+          pattern: benchmarks-*
+
+      - name: Build records
+        run: |
+          mkdir -p _new_records
+          # upload-artifact stores files flat at the artifact root (the least-common-ancestor
+          # of ci/benchmarks/.work/suite_<tier>_<bench>/** is that dir), so runmeta.json/
+          # metrics.jsonl live directly under _artifacts/benchmarks-<tier>-<bench>/. The dir
+          # suffix is the <tier>-<bench> slug — use it verbatim to keep record files unique
+          # per (run, tier, bench) so smoke and full of the same bench never collide.
+          have=0; built=0
+          for d in _artifacts/benchmarks-*; do
+            [ -d "$d" ] || continue
+            slug="$(basename "$d" | sed 's/^benchmarks-//')"   # e.g. smoke-tau2 / full-tau2
+            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"
+            [ -f "$rm" ] || { echo "::warning::no runmeta for $slug, skipping"; continue; }
+            have=$((have+1))
+            rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
+            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" \
+              > "_new_records/${rid}__${slug}.json" && built=$((built+1))
+            echo "built _new_records/${rid}__${slug}.json"
+          done
+          ls -la _new_records || true
+          # Guard: if artifacts with runmeta exist but produced no records, fail loudly
+          # instead of silently exiting 0 (which previously masked a path bug).
+          if [ "$have" -gt 0 ] && [ "$built" -lt "$have" ]; then
+            echo "::error::found $have runmeta artifact(s) but built only $built record(s)"; exit 1
+          fi
+
+      - name: Push to benchmark-history (single writer, with rebase-retry)
+        run: |
+          [ -n "$(ls -A _new_records 2>/dev/null)" ] || { echo "no records to push"; exit 0; }
+          git config --global user.name "skillberry-bot"
+          git config --global user.email "actions@github.com"
+          for attempt in 1 2 3 4 5; do
+            rm -rf _hist
+            git clone --depth 1 --branch benchmark-history \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _hist || {
+                echo "branch missing — bootstrap it per ci/benchmarks/README.md"; exit 1; }
+            mkdir -p _hist/records
+            cp _new_records/*.json _hist/records/
+            python3 ci/benchmarks/lib/record.py aggregate _hist/records \
+              --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out _hist
+            cd _hist
+            git add records benchmarks.json meta.json
+            git commit -m "bench: record run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
+            if git push origin benchmark-history; then echo "pushed"; exit 0; fi
+            echo "push race, retrying ($attempt)"; cd ..; sleep 3
+          done
+          echo "failed to push after retries"; exit 1

@@ -80,6 +80,11 @@ you want intake to ask):
 - source:     <the benchmark's own verifier  OR  your score() function in adapter.py>
 - feedback:   must be GENERAL and gold-SAFE — it is the learning signal; never leak the gold answer
 - objective:  maximize mean reward on the VAL split
+- metrics_display:   <optional names to also SHOW, e.g. [accuracy, latency_ms]; empty = just the primary reward>
+- metric_primary:    <which name GATES accept/reject; blank = the reward scalar itself>
+- metric_directions: <parallel to metrics_display: higher | lower per metric>
+                      # secondaries are display-only (dashboard/results JSON); ONLY the primary (= reward) gates.
+                      # your score() returns them via Score.metrics — see docs/ADAPTER_CONTRACT.md
 
 # 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
 - optimizer:   <claude-code | codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock>
@@ -113,6 +118,14 @@ cap-evolve check .capevolve/project                              # hard gate —
 cap-evolve estimate --spec .capevolve/project/capevolve.yaml     # dry-run cost preview (spends nothing)
 cap-evolve run   --spec .capevolve/project/capevolve.yaml --project .capevolve/project
 open .capevolve/run_*/dashboard.html
+```
+
+Interrupted (crash, timeout, pod eviction)? Re-run the same command with `--resume`
+(and `--run-ts <ts>` to name the run, else the latest is reused) to continue from the
+last completed state — baseline and every accepted iteration are reused, not recomputed:
+
+```bash
+cap-evolve run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts full --resume
 ```
 
 Start from the closest example and edit its `adapter.py`:

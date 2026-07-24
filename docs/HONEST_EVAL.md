@@ -19,7 +19,10 @@ construction*, and the rules below are enforced in code, not just documented.
    any split but `val` (`TrainGateError`) and, by default, accepts a candidate
    only when the improvement exceeds `k · SE` — so noise is not mistaken for
    progress (`mode="significant"`). Other modes (`strict`, `threshold`,
-   `simplicity_tiebreak`) exist but never relax the val-only rule.
+   `simplicity_tiebreak`) exist but never relax the val-only rule. The gate reads
+   only the **primary** metric (the scalar `reward`); any shown-only secondary
+   metrics a scorer emits (`Score.metrics`) are for display and cannot move the
+   decision.
 
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;

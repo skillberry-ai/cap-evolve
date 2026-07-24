@@ -26,6 +26,33 @@ Downstream, `implement-and-check` consumes `project`; `baseline` consumes
 `project` + `tasks`. If intake under-delivers either token, the hard gate in
 `implement-and-check` fails loudly rather than silently optimizing against a stub.
 
+## Step 0 — Inspect before asking
+Before any question, inspect the target so you can PROPOSE defaults instead of asking blind:
+1. Look at the repo/benchmark/agent: entrypoint, how one eval runs, where traces/scores live.
+2. Detect candidate metrics (what the scorer emits), a natural train/val/test split, and cost caps.
+3. Run `gh auth status` to know whether GitHub is available.
+
+Then ask the FEWEST questions — present detected metrics/splits/caps as multiple-choice
+defaults with a free-text escape, keeping the ask-user-if-missing discipline for NEEDED
+inputs. The metric / GitHub / stop-condition questions below feed directly into the
+`capevolve.yaml` spec keys, so ask them here (after inspecting, before scaffolding).
+
+### Metrics
+- Which metrics should the dashboard show? (detected: `<list>`) — multiple choice + free text → `metrics_display`.
+- Which ONE gates accept/reject? — single choice → `metric_primary`. (This is the only metric the gate uses.)
+- For each shown metric, is higher or lower better? → `metric_directions` (parallel to `metrics_display`).
+
+### GitHub integration
+- `gh auth status` = authed? Offer: mirror the algorithm's work items as issues + ship winner as PR (`Closes #n`) → `github_integration: true`; else offer `gh auth login` or skip → `false`. WHAT gets mirrored is algorithm-specific (the `algorithm_skill` defines it — e.g. evo-graph → weaknesses). GitHub is mirror-only; the run dir stays authoritative.
+
+### Orchestration mode
+- Ask: deterministic or agent? → `orchestration_mode` (default `deterministic`).
+  - `deterministic` — cap-evolve sequences intake→…→algorithm→finalize; honesty is code-enforced. Best when a deterministic engine exists for the algorithm.
+  - `agent` — the coding agent drives the loop itself (reads the algorithm's "Agent-mode loop"), self-policing honesty, and seals via the finalize phase. Required for agent-only algorithms. The purpose-built fully-agentic algorithm is `algorithm_skill: agent-optimize` (free-form loop; it also does a Phase-0 understand-the-benchmark step). In agent mode also collect `stop_condition`.
+
+### Stop condition (agent mode)
+- Free-text halt rule re-read each round → `stop_condition`. Deterministic mode leaves it blank and uses budget knobs.
+
 ## What it does
 1. **Interview** (driven by this SKILL.md): pick the capability skill (*what* is
    optimized), the optimizer (*which* coding agent proposes edits), the algorithm

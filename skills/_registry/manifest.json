@@ -1,5 +1,31 @@
 {
   "skills": {
+    "agent-optimize": {
+      "component": "algorithm",
+      "path": "algorithms/agent-optimize",
+      "summary": "Fully-agentic, free-form optimization loop the conversational agent owns end to end \u2014 it understands the benchmark/inputs first, proposes capability edits itself, evaluates task subsets for cheap triage, and accepts only on a full-val significance gate, all bounded by a free-text stop_condition it re-reads with the run-dir spend. Agent-mode only (orchestration_mode agent).",
+      "entry": "scripts/run.py",
+      "abstract": "scripts/abstract.py",
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [
+        "scores",
+        "traces",
+        "candidate"
+      ],
+      "provides": [
+        "candidate"
+      ],
+      "compatible_with": {
+        "capabilities": [
+          "*"
+        ],
+        "optimizers": [
+          "*"
+        ]
+      }
+    },
     "gepa": {
       "component": "algorithm",
       "path": "algorithms/gepa",

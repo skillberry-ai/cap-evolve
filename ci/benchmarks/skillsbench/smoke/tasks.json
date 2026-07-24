@@ -1,0 +1,4 @@
+[
+  {"id": "offer-letter-generator", "tag": "hard", "agent": "aws/gpt-oss-120b"},
+  {"id": "exceltable-in-ppt", "tag": "hard", "agent": "aws/gpt-oss-120b"}
+]

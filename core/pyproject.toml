@@ -20,6 +20,12 @@ dev = ["pytest>=7"]
 [project.scripts]
 cap-evolve = "cap_evolve.cli:main"
 
+[project.urls]
+Homepage      = "https://skillberry-ai.github.io/cap-evolve/"
+Documentation = "https://skillberry-ai.github.io/cap-evolve/"
+Repository    = "https://github.com/skillberry-ai/cap-evolve"
+Issues        = "https://github.com/skillberry-ai/cap-evolve/issues"
+
 [tool.setuptools]
 packages = ["cap_evolve"]
 

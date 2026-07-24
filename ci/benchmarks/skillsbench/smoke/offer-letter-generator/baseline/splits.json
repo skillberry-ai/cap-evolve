@@ -1,0 +1,13 @@
+{
+  "train": [
+    "offer-letter-generator"
+  ],
+  "val": [
+    "offer-letter-generator"
+  ],
+  "test": [
+    "offer-letter-generator"
+  ],
+  "seed": 0,
+  "test_used": true
+}

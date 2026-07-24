@@ -1,0 +1,15 @@
+# Workspace PVC — shared by the runner Job and Deployment.
+# Run artifacts persist here across pod restarts and Job completions.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cap-evolve-workspace
+  namespace: cap-evolve
+  labels:
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

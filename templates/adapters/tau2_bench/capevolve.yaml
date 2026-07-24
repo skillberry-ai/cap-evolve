@@ -1,0 +1,24 @@
+# tau2-bench adapter template — cap-evolve configuration
+#
+# Copy capevolve.yaml + adapter.py + model_config.py to .capevolve/project/
+# and adjust the env vars in your .env file (see adapter.py header).
+#
+# Minimal .env example (OpenAI):
+#   MODEL=gpt-4.1-mini
+#   OPENAI_API_KEY=sk-…
+#
+# See model_config.py for all supported providers.
+
+capabilities:       [system-prompt, tools]
+capability_path:    seed_capability
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""                    # e.g. a claude model id for claude-code
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter
+num_trials:         5                     # tau2 is stochastic — more trials = lower noise
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     20
+stall:              5
+store:              git
