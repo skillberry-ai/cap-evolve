@@ -7,6 +7,7 @@
 <p align="center"><em>watch capability evolve</em></p>
 
 <p align="center">
+  <a href="https://skillberry-ai.github.io/cap-evolve/"><img src="https://img.shields.io/badge/site-live-7c5cff" alt="site"></a>
   <img src="https://img.shields.io/badge/status-beta%20(0.x)-orange" alt="status">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success" alt="deps">
@@ -154,7 +155,11 @@ dashboard — is provided by the core. Two ways to get there:
 - **Do it yourself** — implement the adapter and drive the CLI.
 
 Both are walked through in **[docs/OPTIMIZE_YOUR_OWN.md](docs/OPTIMIZE_YOUR_OWN.md)**;
-the contract is in [docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md).
+the contract is in [docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md). For common
+cases, **don't write an adapter from scratch** — copy a ready-made
+[adapter template](templates/adapters/) (JSONL, HuggingFace, tau2-bench, SWE-bench,
+SkillsBench) and switch providers with a one-line env change:
+[docs/ADAPTER_TEMPLATES.md](docs/ADAPTER_TEMPLATES.md).
 
 ## Examples
 
@@ -173,11 +178,14 @@ from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skills
 
 | Document | Use it when |
 |---|---|
+| [Site (home)](https://skillberry-ai.github.io/cap-evolve/) | You want the interactive site — hero, results, and doc navigation in one place |
 | [Getting started](docs/GETTING_STARTED.md) | You want your first successful run |
 | [Installation](docs/INSTALL.md) | You need host-specific setup, credentials, or the dashboard |
 | [Optimize your own agent](docs/OPTIMIZE_YOUR_OWN.md) | You want to integrate your agent or benchmark |
+| [Adapter templates](docs/ADAPTER_TEMPLATES.md) | You want a copy-and-run adapter (JSONL, HuggingFace, tau2, SWE-bench, SkillsBench) |
 | [Adapter contract](docs/ADAPTER_CONTRACT.md) | You are implementing an adapter |
 | [Architecture](docs/ARCHITECTURE.md) | You want to understand the pipeline and optimizer context |
+| [Agent orchestration](docs/AGENT_ORCHESTRATION.md) | You want the agent to drive the loop itself (`orchestration_mode: agent`, `agent-optimize`) |
 | [Honest evaluation](docs/HONEST_EVAL.md) | You need details on splits, gates, and sealing |
 | [Results](docs/RESULTS.md) | You want the full experiments and artifacts |
 | [Comparison](docs/COMPARISON.md) | You want positioning vs other tools and external results |

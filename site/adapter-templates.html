@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adapter templates — cap-evolve</title>
+  <meta name="description" content="Copy-and-run cap-evolve adapter templates — JSONL, HuggingFace, tau2-bench, SWE-bench, SkillsBench — that work with any litellm provider. Onboarding a benchmark is config, not code.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/adapter-templates.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="Adapter templates — cap-evolve">
+  <meta property="og:description" content="Copy-and-run cap-evolve adapter templates — JSONL, HuggingFace, tau2-bench, SWE-bench, SkillsBench — that work with any litellm provider. Onboarding a benchmark is config, not code.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/adapter-templates.html">
+  <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Adapter templates — cap-evolve">
+  <meta name="twitter:description" content="Copy-and-run cap-evolve adapter templates — JSONL, HuggingFace, tau2-bench, SWE-bench, SkillsBench — that work with any litellm provider. Onboarding a benchmark is config, not code.">
+  <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
+  <link rel="stylesheet" href="style.css?v=20260724b">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <div class="nav-links">
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
+      <a href="results.html">Results</a>
+      <a href="benchmarks.html">Benchmarks</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Adapter templates</h1>
+  <p class="lead">
+    Onboarding a benchmark should be <strong>config, not code</strong>. Instead of writing an
+    adapter from scratch, copy a ready-made template, drop in the shared
+    <code>model_config.py</code>, set credentials in a <code>.env</code>, and run. You only
+    write code when task loading or scoring is genuinely custom.
+  </p>
+
+  <section class="reveal">
+<pre><code>cp -r templates/adapters/&lt;template&gt;/*  .capevolve/project/adapters/
+cp    templates/adapters/model_config.py  .capevolve/project/adapters/
+mv    .capevolve/project/adapters/seed_capability  .capevolve/project/seed_capability
+# set MODEL + credentials in a repo-root .env, then:
+cap-evolve check &amp;&amp; cap-evolve run</code></pre>
+  </section>
+
+  <section class="reveal">
+  <h2>Which template?</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><code>jsonl_litellm/</code></div>
+      <div class="card-desc"><span class="badge badge-accent">start here</span> The common case — optimize a system prompt against a local <code>tasks.jsonl</code>.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><code>huggingface_litellm/</code></div>
+      <div class="card-desc">Any HuggingFace eval dataset — optimize a system prompt over <code>load_dataset(...)</code>.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><code>tau2_bench/</code></div>
+      <div class="card-desc">tau2-bench airline — optimize the system-prompt policy <em>and</em> tool code.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><code>skillsbench/</code></div>
+      <div class="card-desc">SkillsBench — optimize the shared Agent Skills via BenchFlow <code>bench eval run</code>.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><code>swe_bench/</code></div>
+      <div class="card-desc">SWE-bench / Lite — optimize a coding-agent prompt against the Docker harness.</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Template</th><th>Best for</th><th>Optimizes</th><th>Task source</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>jsonl_litellm/</code></td><td><strong>The common case</strong> — start here</td><td>a system prompt</td><td>a local <code>tasks.jsonl</code></td></tr>
+      <tr><td><code>huggingface_litellm/</code></td><td>any HuggingFace eval dataset</td><td>a system prompt</td><td><code>datasets.load_dataset(...)</code></td></tr>
+      <tr><td><code>tau2_bench/</code></td><td>tau2-bench airline</td><td>system-prompt policy + tool code</td><td>tau2's runner</td></tr>
+      <tr><td><code>skillsbench/</code></td><td>SkillsBench</td><td>shared Agent Skills</td><td>BenchFlow <code>bench eval run</code></td></tr>
+      <tr><td><code>swe_bench/</code></td><td>SWE-bench / Lite</td><td>coding-agent prompt</td><td>HuggingFace + Docker harness</td></tr>
+    </tbody>
+  </table>
+  <p>
+    The first two are <strong>generic</strong> — point them at your data with env vars, no
+    code edits. The last three are <strong>worked benchmark adapters</strong> you copy and run.
+  </p>
+  </section>
+
+  <section class="reveal">
+  <h2>One line to switch provider</h2>
+  <p>
+    All templates wire the model through <code>model_config.py</code>, which resolves
+    credentials from env vars by the <code>MODEL</code> prefix (the same routing litellm does).
+    It is <strong>lazy</strong> — no network at import — so <code>cap-evolve check</code> stays
+    offline. Switching providers is a one-line <code>MODEL=</code> change, no adapter edits:
+  </p>
+
+<pre><code>MODEL=gpt-4.1-mini                         OPENAI_API_KEY=sk-…            # OpenAI
+MODEL=anthropic/claude-sonnet-4-6          ANTHROPIC_API_KEY=sk-ant-…     # Anthropic
+MODEL=vertex_ai/claude-sonnet-4-6                                         # Vertex AI (ADC — no key)
+MODEL=azure/gpt-4o   AZURE_API_KEY=…       AZURE_API_BASE=https://….openai.azure.com   # Azure
+MODEL=ollama/qwen2.5:7b-instruct           API_BASE=http://localhost:11434  # Ollama (local)
+MODEL=litellm_proxy/my-model  LITELLM_PROXY_API_BASE=http://proxy:4000  LITELLM_PROXY_API_KEY=sk-…  # any proxy
+MODEL=openai/my-model  OPENAI_API_KEY=…    OPENAI_API_BASE=http://my-endpoint/v1        # any OpenAI-compatible</code></pre>
+  </section>
+
+  <section class="reveal">
+  <h2>The common case — <code>jsonl_litellm</code></h2>
+  <p>
+    Tasks are one JSON object per line — <code>{"id", "input", "target"}</code>. Point the
+    adapter at your file, pick a scoring mode, set a model; the optimizer edits the system
+    prompt in <code>seed_capability/prompt.txt</code>.
+  </p>
+
+<pre><code>TASKS_FILE=/path/to/tasks.jsonl     # {"id","input","target"} per line
+SCORING=exact                       # exact | contains | regex
+MODEL=gpt-4.1-mini
+OPENAI_API_KEY=sk-…</code></pre>
+
+  <p>
+    Full per-template env-var tables, prerequisites, the provider matrix, and the
+    “write your own” guide are in
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_TEMPLATES.md">docs/ADAPTER_TEMPLATES.md</a>;
+    the templates themselves are in
+    <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/templates/adapters">templates/adapters/</a>.
+    Next: <a href="optimize-your-own.html">optimize your own capability</a> or see a
+    <a href="run-end-to-end.html">full run end-to-end</a>.
+  </p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js?v=20260724" defer></script>
+</body>
+</html>

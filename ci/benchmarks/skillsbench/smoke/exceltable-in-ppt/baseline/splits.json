@@ -1,0 +1,13 @@
+{
+  "train": [
+    "exceltable-in-ppt"
+  ],
+  "val": [
+    "exceltable-in-ppt"
+  ],
+  "test": [
+    "exceltable-in-ppt"
+  ],
+  "seed": 0,
+  "test_used": true
+}

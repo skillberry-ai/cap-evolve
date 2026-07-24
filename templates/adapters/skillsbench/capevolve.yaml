@@ -1,0 +1,18 @@
+# SkillsBench adapter template — cap-evolve configuration
+#
+# Copy capevolve.yaml + adapter.py to .capevolve/project/
+# and set ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN in your .env file.
+
+capabilities:       [skill-package]
+capability_path:    seed_capability
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""                    # e.g. a claude model id for claude-code
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter
+num_trials:         1                     # SkillsBench is mostly deterministic
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     20
+stall:              5
+store:              git

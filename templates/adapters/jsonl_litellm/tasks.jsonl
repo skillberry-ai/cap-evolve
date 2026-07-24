@@ -1,0 +1,8 @@
+{"id": "cap-fr", "input": "What is the capital of France? Answer with the city name only.", "target": "Paris"}
+{"id": "cap-jp", "input": "What is the capital of Japan? Answer with the city name only.", "target": "Tokyo"}
+{"id": "cap-au", "input": "What is the capital of Australia? Answer with the city name only.", "target": "Canberra"}
+{"id": "cap-ca", "input": "What is the capital of Canada? Answer with the city name only.", "target": "Ottawa"}
+{"id": "cap-eg", "input": "What is the capital of Egypt? Answer with the city name only.", "target": "Cairo"}
+{"id": "cap-br", "input": "What is the capital of Brazil? Answer with the city name only.", "target": "Brasilia"}
+{"id": "cap-no", "input": "What is the capital of Norway? Answer with the city name only.", "target": "Oslo"}
+{"id": "cap-ke", "input": "What is the capital of Kenya? Answer with the city name only.", "target": "Nairobi"}

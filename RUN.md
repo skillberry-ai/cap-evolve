@@ -60,6 +60,10 @@ snapshot or record-as-rejected → repeat until budget is spent. Diagnosis of
 traces is provided by the **`diagnose`** skill, which the algorithm calls to turn
 failures into an actionable learning signal.
 
+> **Interrupted?** Pass `--resume` (below) to continue from the last completed
+> state — the run dir is a durable checkpoint, so baseline and every accepted
+> iteration are reused instead of recomputed.
+
 ## 5. Finalize & report
 Load **`finalize`**: score the best candidate on TEST **exactly once** (the run
 dir seals it), then **`report`** for a human-readable summary and the best
@@ -68,6 +72,7 @@ artifact.
 ## The rules (enforced by cap_evolve, restated here for bare hosts)
 - Train/val/test are split once with a seed; **test is scored only at finalize**.
 - Acceptance is gated on **val**, never on the data the optimizer edited against.
+- Only the **primary** metric (the scalar reward) gates; shown-only secondaries (e.g. `cost_usd`, `db_match`) are displayed but never affect accept/reject.
 - Multi-trial scoring reports mean + stderr; pass^k is reported when trials > 1.
 - Rejected approaches are remembered and never re-proposed.
 

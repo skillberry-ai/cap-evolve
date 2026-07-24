@@ -23,6 +23,8 @@ pip install ./core
 ```bash
 cap-evolve run   --spec .capevolve/project/capevolve.yaml \
             --project .capevolve/project
+cap-evolve run   --spec .capevolve/project/capevolve.yaml \
+            --project .capevolve/project --run-ts full --resume  # continue an interrupted run
 cap-evolve check --spec .capevolve/project/capevolve.yaml   # validate adapter
 cap-evolve report                                        # regenerate dashboard
 ```

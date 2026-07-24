@@ -59,6 +59,7 @@ from .harness import (
     _live,
     _paired_deltas,
     evaluate_candidate,
+    split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir
@@ -393,6 +394,51 @@ def _build_merge(ancestor_dir: Path, a_dir: Path, b_dir: Path, dst: Path) -> dic
                           and any(v == "a" for v in origin.values())}
 
 
+# ---- resume: persist + reconstruct the search state -----------------------
+
+def _persist_gepa_state(run_dir: RunDir, *, lineage: dict, accepts: int,
+                        merges_done: int, comp_cursor: int, n_steps: int) -> None:
+    """Checkpoint the reconstructable search state after each step.
+
+    Only the lineage + counters are stored — each accepted candidate's val is
+    re-read for free from its persisted rollouts on resume, so the file stays tiny.
+    Atomic write (a torn checkpoint would mislead resume).
+    """
+    from .rundir import _atomic_write
+    _atomic_write(run_dir.root / "gepa_state.json", json.dumps({
+        "lineage": lineage, "accepts": accepts, "merges_done": merges_done,
+        "comp_cursor": comp_cursor, "steps": n_steps}, indent=2))
+
+
+def _reconstruct_gepa(run_dir: RunDir, seed_val: SplitResult):
+    """Rebuild (pool, lineage, accepts, merges_done, comp_cursor, step_offset).
+
+    Seeds the pool from ``seed`` and re-adds every accepted candidate recorded in
+    ``gepa_state.json``, reconstructing each one's val ``SplitResult`` from its
+    persisted rollouts (no re-eval). A candidate whose snapshot is missing (a torn
+    accept) is skipped so the frontier stays consistent. No ``gepa_state.json`` (an
+    older run, or a crash before the first checkpoint) → seed-only pool, i.e. exactly
+    today's fresh behavior.
+    """
+    seed_dir = run_dir.candidate_dir("seed")
+    pool: list[dict] = [_entry("seed", seed_dir, seed_val, parent=None)]
+    lineage: dict[str, str | None] = {"seed": None}
+    state_path = run_dir.root / "gepa_state.json"
+    if not state_path.exists():
+        return pool, lineage, 0, 0, 0, 0
+    st = json.loads(state_path.read_text(encoding="utf-8"))
+    for cid, parent in (st.get("lineage") or {}).items():
+        if cid == "seed":
+            continue
+        cdir = run_dir.candidate_dir(cid)
+        if not cdir.exists():
+            continue
+        pool.append(_entry(cid, cdir, split_result_from_rollouts(run_dir, cid, "val"), parent=parent))
+        lineage[cid] = parent
+    return (pool, lineage, int(st.get("accepts") or 0), int(st.get("merges_done") or 0),
+            int(st.get("comp_cursor") or 0), int(st.get("steps") or 0))
+
+
 # ---- the GEPA loop ---------------------------------------------------------
 
 def gepa_loop(
@@ -413,6 +459,7 @@ def gepa_loop(
     no_regression: bool = False,
     seed: int = 0,
     store=None,
+    resume: bool = False,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -443,15 +490,21 @@ def gepa_loop(
                       component_selector=component_selector,
                       selection_strategy=selection_strategy)
 
-    seed_dir = run_dir.candidate_dir("seed")
-    pool: list[dict] = [_entry("seed", seed_dir, seed_val, parent=None)]
-    lineage: dict[str, str | None] = {"seed": None}
+    # Fresh vs resume: on resume rebuild the pool/lineage/counters from the run dir so
+    # the Pareto search continues where it stopped; otherwise seed-only (a fresh run).
+    if resume:
+        pool, lineage, accepts, merges_done, comp_cursor, step_offset = _reconstruct_gepa(
+            run_dir, seed_val)
+        run_dir.log_event("gepa_resume", pool=len(pool), accepts=accepts,
+                          merges_done=merges_done, step_offset=step_offset)
+    else:
+        seed_dir = run_dir.candidate_dir("seed")
+        pool = [_entry("seed", seed_dir, seed_val, parent=None)]
+        lineage = {"seed": None}
+        accepts = merges_done = comp_cursor = step_offset = 0
     train_ids = list(run_dir.read_splits().train) or list(run_dir.read_splits().val)
 
     steps: list[dict] = []
-    accepts = 0
-    merges_done = 0
-    comp_cursor = 0  # round-robin pointer over the parent's components
 
     def _budget_left() -> tuple[bool, str]:
         exhausted, why = run_dir.budget_exhausted()
@@ -459,14 +512,23 @@ def gepa_loop(
             return False, why
         if max_metric_calls and run_dir.spent.metric_calls >= max_metric_calls:
             return False, f"max_metric_calls reached ({run_dir.spent.metric_calls}/{max_metric_calls})"
-        if max_iterations and len(steps) >= max_iterations:
-            return False, f"max_iterations reached ({len(steps)}/{max_iterations})"
+        if max_iterations and step_offset + len(steps) >= max_iterations:
+            return False, f"max_iterations reached ({step_offset + len(steps)}/{max_iterations})"
         return True, ""
+
+    def _save() -> None:
+        _persist_gepa_state(run_dir, lineage=lineage, accepts=accepts,
+                            merges_done=merges_done, comp_cursor=comp_cursor,
+                            n_steps=step_offset + len(steps))
 
     while True:
         ok, why = _budget_left()
         if not ok:
             break
+
+        # Global step index across resumes: names candidates/tags/commits so a resumed
+        # run never collides with the ids already on disk (step_offset = prior steps).
+        n = step_offset + len(steps)
 
         # 2. select a parent from the per-instance frontier (frequency-weighted).
         sel_seed = rng.randrange(2 ** 31)
@@ -485,10 +547,10 @@ def gepa_loop(
 
         # 4. eval parent on the minibatch (cheap, cached, traced).
         parent_mb = _eval_minibatch(adapter, parent_dir, mb, run_dir=run_dir,
-                                    cache=cache, tag=f"mb_p_{len(steps):04d}", seed=seed)
+                                    cache=cache, tag=f"mb_p_{n:04d}", seed=seed)
 
         # 5. build the reflective dataset + component focus, then optimize a child.
-        cid = f"gepa_{len(steps) + 1:04d}"
+        cid = f"gepa_{n + 1:04d}"
         workdir = run_dir.root / "work" / cid
         if workdir.exists():
             shutil.rmtree(workdir)
@@ -522,7 +584,7 @@ def gepa_loop(
 
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,
-                                   cache=cache, tag=f"mb_c_{len(steps):04d}", seed=seed)
+                                   cache=cache, tag=f"mb_c_{n:04d}", seed=seed)
         local_pass = _sum_reward(child_mb) > _sum_reward(parent_mb)
         run_dir.log_event("gepa_local_gate", candidate=cid, parent=parent["id"],
                           child_sum=_sum_reward(child_mb), parent_sum=_sum_reward(parent_mb),
@@ -542,9 +604,10 @@ def gepa_loop(
                               f"{parent_mb.reward:.3f})",
                          "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward)
             if store is not None:
-                store.commit(f"iter {len(steps)+1}: reject(local) {cid}", accepted=False)
+                store.commit(f"iter {n+1}: reject(local) {cid}", accepted=False)
             steps.append(step)
             run_dir.record_spend_warnings()
+            _save()
             continue
 
         # 7. local gate PASSED → pay for full val + the honest significance gate.
@@ -569,11 +632,11 @@ def gepa_loop(
             history.add(cid, summary, cand_val.reward)
             accepts += 1
             if store is not None:
-                store.commit(f"iter {len(steps)+1}: ACCEPT {summary}", tag="best", accepted=True)
+                store.commit(f"iter {n+1}: ACCEPT {summary}", tag="best", accepted=True)
         else:
             rejected.add(cid, summary, decision_dict.get("reason", "val gate"), cand_val.reward)
             if store is not None:
-                store.commit(f"iter {len(steps)+1}: reject(val) {summary}", accepted=False)
+                store.commit(f"iter {n+1}: reject(val) {summary}", accepted=False)
         steps.append(step)
         run_dir.record_spend_warnings()
 
@@ -584,14 +647,16 @@ def gepa_loop(
                 mb_size=minibatch_size, rng=rng, n_trials=n_trials,
                 gate_kwargs=gate_kwargs, no_regression=no_regression,
                 store=store, history=history, rejected=rejected, train_ids=train_ids,
-                idx=len(steps), seed=seed,
+                idx=step_offset + len(steps), seed=seed,
             )
             if merge_step is not None:
                 steps.append(merge_step)
                 merges_done += 1
                 if merge_step.get("accepted"):
                     accepts += 1
+        _save()
 
+    _save()
     best = max(pool, key=lambda c: c["val"])
     run_dir.set_best(best["id"])
     _, why2 = run_dir.budget_exhausted()
@@ -601,7 +666,7 @@ def gepa_loop(
         "best_val": best["val"],
         "frontier_size": len(selection.pareto_frontier(pool)),
         "pool_size": len(pool),
-        "iterations": len(steps),
+        "iterations": step_offset + len(steps),
         "accepts": accepts,
         "merges": merges_done,
         "metric_calls": run_dir.spent.metric_calls,

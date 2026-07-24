@@ -1,0 +1,60 @@
+name: Deploy GitHub Pages
+
+# Publish the cap-evolve site from site/ to GitHub Pages.
+#
+# Triggers:
+#   - push to main that touches site/ or this workflow → auto-deploy
+#   - manual dispatch → deploy on demand
+#
+# What it does: uploads site/ verbatim as the Pages artifact and hands it to
+# the official Pages deploy action. No build step (static HTML/CSS/PNG only).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; cancel any in-progress deploy when a
+# newer commit lands.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify site/ exists
+        run: |
+          test -d site || { echo "no site/ directory"; exit 1; }
+          test -f site/index.html || { echo "no site/index.html"; exit 1; }
+          ls -la site/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

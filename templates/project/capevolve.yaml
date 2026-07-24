@@ -32,8 +32,9 @@ target_model: ""
 target_profile_file: ""
 
 # --- how to iterate ---------------------------------------------------------
-algorithm_skill: hill-climb              # algorithms/<skill>
+algorithm_skill: hill-climb              # algorithms/<skill>: hill-climb | gepa | skillopt | agent-optimize (agent-optimize REQUIRES orchestration_mode: agent)
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
+orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with `cap-evolve finalize`)
 
 # --- what context the optimizer gets (hill-climb) ---------------------------
 # The per-iteration optimizer prompt is RENDERED from this template (intake authors it,
@@ -63,6 +64,17 @@ split_ids_file: ""
 
 # --- scoring ----------------------------------------------------------------
 num_trials: 1
+
+# --- metrics (display) ------------------------------------------------------
+# The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
+# are shown in the dashboard/results but never affect accept/reject.
+metrics_display: []          # names to show, e.g. [accuracy, latency_ms]; empty = just the primary reward
+metric_primary: ""           # which name gates accept/reject (defaults to the reward if blank)
+metric_directions: []        # parallel to metrics_display: higher | lower for each
+
+# --- integrations / stop ----------------------------------------------------
+github_integration: false    # mirror-only: mirror the algorithm's work items as issues + ship winner as PR (Closes #n); WHAT is mirrored is algorithm-specific (evo-graph=weaknesses)
+stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant | strict | threshold | simplicity_tiebreak

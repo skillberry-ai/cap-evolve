@@ -1,0 +1,158 @@
+# =============================================================================
+# vLLM Model Serving on OpenShift — Agent Model (Qwen 2.5 7B)
+#
+# The "agent" model executes benchmark tasks during evaluation.
+# It is the model whose skill/capability is being optimized.
+#
+# Served on 1 GPU. For the optimizer model (14B), see vllm-optimizer.yaml.
+# =============================================================================
+
+# --- PVC: cache for downloaded model weights ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-agent-cache
+  namespace: cap-evolve
+  labels:
+    app.kubernetes.io/part-of: cap-evolve
+    component: vllm
+    role: agent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+# --- Deployment: vLLM inference server (agent) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-agent
+  namespace: cap-evolve
+  labels:
+    app: vllm-agent
+    component: vllm
+    role: agent
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-agent
+      component: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm-agent
+        component: vllm
+        role: agent
+    spec:
+      serviceAccountName: cap-evolve-runner
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.21.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              vllm serve Qwen/Qwen2.5-7B-Instruct \
+                --max-model-len 32768 \
+                --enable-chunked-prefill \
+                --enable-prefix-caching \
+                --enable-auto-tool-choice \
+                --tool-call-parser hermes \
+                --served-model-name qwen2.5-7b-instruct
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: HF_TOKEN
+                  optional: true
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 300
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 300
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4"
+              memory: 16Gi
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: cache
+              mountPath: /.cache
+            - name: config
+              mountPath: /.config
+            - name: local
+              mountPath: /.local
+            - name: triton
+              mountPath: /.triton
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vllm-agent-cache
+        - name: config
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+        - name: local
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+        - name: triton
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+---
+# --- Service: cluster-internal endpoint for the agent model ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-agent
+  namespace: cap-evolve
+  labels:
+    app: vllm-agent
+    component: vllm
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    app: vllm-agent
+    component: vllm
+---
+# --- Route: external HTTPS access (optional, for testing) ---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: vllm-agent
+  namespace: cap-evolve
+  labels:
+    app: vllm-agent
+    component: vllm
+    app.kubernetes.io/part-of: cap-evolve
+spec:
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+  to:
+    kind: Service
+    name: vllm-agent
+    weight: 100

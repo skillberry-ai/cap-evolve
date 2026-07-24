@@ -1,22 +1,17 @@
 # ============================================================================
-# Integration tests — REAL, on-demand end-to-end optimization regression check.
+# Integration test — tau2 (airline task 9) end-to-end optimization regression.
 # ============================================================================
 #
-# Runs a real cap-evolve optimization (real models, real benchmark, real $), so it
-# is NOT part of the always-on CI. It runs ONLY when requested:
-#   * manually  — Actions -> "Integration tests" -> Run workflow, or
-#   * on a PR   — add the `integration-test` label to the pull request.
+# The general pipeline regression on a real benchmark: agent aws/gpt-oss-120b,
+# optimizer Claude Code @ claude-opus-4-8, 3 iterations, via the adapter template.
+# Passes when the run COMPLETES and the sealed test does not regress vs baseline
+# (with 1 task the gate usually rejects — a legitimate PASS proving the pipeline runs).
 #
-# Suite: taubench (tau2 airline) task 9 — general optimization-pipeline regression
-# on the real benchmark. Agent + user simulator claude-haiku-4-5 via the IBM
-# Anthropic-compatible gateway; optimizer claude-code @ claude-sonnet-4-6;
-# 1 task / 1 trial / 1 iteration. assert_itest.py gates on completion + non-regression.
+# For the full reward/latency/cost suite over many curated tasks, see benchmarks.yml.
 #
-# REQUIREMENTS (see examples/tau2_airline/itest.sh):
-#   * a SELF-HOSTED runner registered to this repo/org with network reachability to
-#     the IBM Anthropic-compatible gateway (GitHub-hosted runners cannot reach it);
-#   * repo secrets ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN (serve the agent, the
-#     user simulator, AND the claude-code optimizer).
+# REAL models / real $ → on-demand only: manual dispatch, or the `integration-test`
+# PR label. Needs a SELF-HOSTED runner on the IBM network (VPC gateway) + repo secrets
+# ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN. See ci/benchmarks/README.md.
 # ============================================================================
 
 name: Integration tests
@@ -29,11 +24,7 @@ on:
 jobs:
   tau2:
     name: tau2 (task 9)
-    # Runs on ANY self-hosted runner registered to this repo/org. To pin a specific
-    # runner, add its label(s): e.g. runs-on: [self-hosted, my-ibm-runner].
-    runs-on: self-hosted
-    # Fork guard: never run PR code from a fork on a self-hosted runner, even if a
-    # maintainer applies the label. Only in-repo PRs (or manual dispatch) may run.
+    runs-on: [self-hosted, ibm-vpc]
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
@@ -45,19 +36,21 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-      TAU2_AGENT_MODEL: anthropic/claude-haiku-4-5
-      TAU2_USER_MODEL: anthropic/claude-haiku-4-5
     steps:
       - uses: actions/checkout@v4
-      - name: Run tau2 task-9 integration test
-        run: bash examples/tau2_airline/itest.sh
+      - name: Setup runner env (tau2)
+        run: bash ci/benchmarks/lib/ci_setup.sh tau2
+      - name: Run tau2 task-9 end-to-end (agent gpt-oss-120b, optimizer claude-opus-4-8)
+        run: |
+          set -euo pipefail
+          out="$(bash ci/benchmarks/lib/run_task.sh tau2 9 full)"
+          echo "$out"
+          run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
+          "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" --min-iterations 1
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tau2-itest-run
-          path: |
-            .capevolve/run_itest/report.md
-            .capevolve/run_itest/final.json
-            .capevolve/run_itest/baseline.json
+          path: ci/benchmarks/.work/tau2/9/.capevolve/run_full/**
           if-no-files-found: ignore

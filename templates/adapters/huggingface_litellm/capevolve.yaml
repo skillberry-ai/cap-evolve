@@ -1,0 +1,29 @@
+# huggingface_litellm adapter template — cap-evolve configuration
+#
+# Copy this dir's contents + model_config.py into .capevolve/project/adapters/
+# (seed_capability/ goes to .capevolve/project/seed_capability/), then set your
+# dataset, column mapping, model + credentials in a repo-root .env.
+#
+# Minimal .env (GSM8K via OpenAI):
+#   HF_DATASET=openai/gsm8k
+#   HF_CONFIG=main
+#   HF_SPLIT=test
+#   INPUT_FIELD=question
+#   TARGET_FIELD=answer
+#   SCORING=contains
+#   MODEL=gpt-4.1-mini
+#   OPENAI_API_KEY=sk-…
+
+capabilities:       [system-prompt]
+capability_path:    seed_capability
+optimizer_skill:    claude-code           # or: codex | gemini-cli | opencode | mock
+optimizer_model:    ""
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter               # tasks() reads the HuggingFace dataset
+num_trials:         1                     # raise to 3–5 if the model is stochastic
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     10
+stall:              2
+store:              git

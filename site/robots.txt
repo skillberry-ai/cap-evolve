@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://skillberry-ai.github.io/cap-evolve/sitemap.xml
