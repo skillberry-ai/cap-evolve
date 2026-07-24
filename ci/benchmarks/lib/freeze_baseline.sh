@@ -12,6 +12,7 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 BENCH="${1:?bench}"; TASK="${2:?task}"; shift 2
+TIER="${TIER:-smoke}"                          # smoke (default) | full — set TIER=full to freeze full-tier baselines
 NO_ROLLOUTS=0; RUN_DIR=""
 for a in "$@"; do case "$a" in --no-rollouts) NO_ROLLOUTS=1;; *) RUN_DIR="$a";; esac; done
 
@@ -20,7 +21,7 @@ WORK="$REPO/ci/benchmarks/.work/$BENCH/$SAFE/.capevolve"
 [ -n "$RUN_DIR" ] || { for ts in run_full run_baseline; do [ -d "$WORK/$ts" ] && RUN_DIR="$WORK/$ts" && break; done; }
 [ -d "$RUN_DIR" ] || { echo "no run dir for $BENCH/$TASK (looked under $WORK)"; exit 1; }
 
-DST="$REPO/ci/benchmarks/$BENCH/$SAFE/baseline"
+DST="$REPO/ci/benchmarks/$BENCH/$TIER/$SAFE/baseline"
 rm -rf "$DST"; mkdir -p "$DST"
 cp "$RUN_DIR/splits.json" "$RUN_DIR/baseline.json" "$DST/"
 if [ "$NO_ROLLOUTS" = 0 ] && [ -d "$RUN_DIR/rollouts/val" ]; then
@@ -30,17 +31,17 @@ if [ "$NO_ROLLOUTS" = 0 ] && [ -d "$RUN_DIR/rollouts/val" ]; then
 fi
 
 # append the recorded baseline metrics to baselines.json
-"$PY" - "$BENCH" "$TASK" "$RUN_DIR" "$REPO/ci/benchmarks/baselines.json" <<'PY'
+"$PY" - "$BENCH" "$TIER" "$TASK" "$RUN_DIR" "$REPO/ci/benchmarks/baselines.json" <<'PY'
 import json,sys,pathlib
-bench,task,run_dir,store=sys.argv[1:5]
+bench,tier,task,run_dir,store=sys.argv[1:6]
 import os
 b=json.loads((pathlib.Path(run_dir)/"baseline.json").read_text())["val"]
-rec={"bench":bench,"task":task,"agent":os.environ.get("AGENT_MODEL","aws/gpt-oss-120b"),
+rec={"bench":bench,"tier":tier,"task":task,"agent":os.environ.get("AGENT_MODEL","aws/gpt-oss-120b"),
      "reward":b.get("reward"),
      "latency_s":b.get("seconds"),"cost_usd":b.get("cost_usd"),"tokens":b.get("tokens")}
 p=pathlib.Path(store); data=json.loads(p.read_text()) if p.exists() else {}
-data.setdefault(bench,{})[task]=rec
+data.setdefault(bench,{}).setdefault(tier,{})[task]=rec
 p.write_text(json.dumps(data,indent=2))
-print("froze",bench,task,"->",rec)
+print("froze",bench,tier,task,"->",rec)
 PY
 echo "frozen baseline at $DST"

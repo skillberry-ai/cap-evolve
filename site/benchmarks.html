@@ -64,6 +64,22 @@
   </div>
 
   <div class="filters">
+    <label>Time
+      <select id="f-time">
+        <option value="3600">Last 1 hour</option>
+        <option value="21600">Last 6 hours</option>
+        <option value="86400" selected>Last 24 hours</option>
+        <option value="604800">Last week</option>
+        <option value="all">All</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </label>
+    <label id="f-from-wrap" hidden>From
+      <input id="f-from" type="datetime-local">
+    </label>
+    <label id="f-to-wrap" hidden>To
+      <input id="f-to" type="datetime-local">
+    </label>
     <label>Benchmark
       <select id="f-bench"><option value="">all</option><option>tau2</option><option>swebench</option><option>skillsbench</option></select>
     </label>
