@@ -58,3 +58,14 @@ def test_aggregate_sorts_and_counts(tmp_path):
     recs, meta = record.aggregate(d, now="2026-07-23T09:00:00Z")
     assert [r["run_id"] for r in recs] == [2, 1]  # newest first
     assert meta == {"count": 2, "runs": 2, "updated": "2026-07-23T09:00:00Z"}
+
+
+def test_build_preserves_tier(tmp_path):
+    m = tmp_path / "metrics.jsonl"; _write_jsonl(m, [TASK_OK])
+    rec = record.build_record(m, {"run_id": 9, "bench": "tau2", "tier": "smoke",
+                                   "conclusion": "success", "date": "d"})
+    assert rec["tier"] == "smoke"
+    # tier absent -> not fabricated (the page defaults missing tier to "smoke" at render)
+    rec2 = record.build_record(m, {"run_id": 9, "bench": "tau2",
+                                    "conclusion": "success", "date": "d"})
+    assert "tier" not in rec2

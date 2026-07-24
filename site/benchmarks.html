@@ -53,7 +53,8 @@
     <h1>Benchmark runs</h1>
     <p class="lead">
       Every <code>ci/benchmarks</code> execution (tau2 · swebench · skillsbench), on PRs and manual
-      runs. Each row is one benchmark in one run vs the frozen baseline; click to expand its
+      runs. Each row is one benchmark in one run vs the frozen baseline; the <strong>Type</strong>
+      column marks the tier (<code>smoke</code> or <code>full</code>). Click a row to expand its
       per-task detail. <span id="updated" class="muted"></span>
     </p>
     <p>
@@ -65,6 +66,9 @@
   <div class="filters">
     <label>Benchmark
       <select id="f-bench"><option value="">all</option><option>tau2</option><option>swebench</option><option>skillsbench</option></select>
+    </label>
+    <label>Type
+      <select id="f-tier"><option value="">all</option><option>smoke</option><option>full</option></select>
     </label>
     <label>Source
       <select id="f-source"><option value="">all</option><option value="pr">PR</option><option value="manual">manual</option></select>
@@ -82,6 +86,7 @@
       <th data-k="date">Date</th>
       <th data-k="source">Source</th>
       <th data-k="bench">Bench</th>
+      <th data-k="tier">Type</th>
       <th data-k="iterations">Iters</th>
       <th data-k="reward">Reward base→opt</th>
       <th data-k="flips">Flips</th>
@@ -90,8 +95,8 @@
     </tr></thead>
     <tbody id="rows"></tbody>
   </table>
-  <p id="empty" class="muted" hidden>No runs recorded yet — trigger the suite (add the
-    <code>benchmark-test</code> label to a PR, or Actions → Benchmarks).</p>
+  <p id="empty" class="muted" hidden>No runs recorded yet — trigger the suite (add a
+    <code>benchmark-smoke</code> label to a PR, or Actions → Benchmarks).</p>
   <p id="error" class="muted" hidden>Couldn't load benchmark history.</p>
 
 </main>

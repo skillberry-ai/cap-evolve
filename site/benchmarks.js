@@ -24,8 +24,10 @@ async function load() {
 
 function passes(r) {
   const b = $("#f-bench").value, s = $("#f-source").value, c = $("#f-conc").value;
+  const t = $("#f-tier").value;
   const q = $("#f-q").value.toLowerCase();
   if (b && r.bench !== b) return false;
+  if (t && (r.tier || "smoke") !== t) return false;
   if (s === "pr" && r.event !== "pull_request") return false;
   if (s === "manual" && r.event === "pull_request") return false;
   if (c && r.conclusion !== c) return false;
@@ -40,6 +42,7 @@ function sortVal(r, k) {
   if (k === "reward") return r.suite ? r.suite.reward_opt : -1;
   if (k === "flips") return r.suite ? r.suite.flips : -1;
   if (k === "optimizer_usd") return r.suite ? r.suite.optimizer_usd : -1;
+  if (k === "tier") return r.tier || "smoke";
   return r[k] ?? "";
 }
 
@@ -62,15 +65,16 @@ function render() {
       : esc(r.source || "—");
     const badge = `<span class="badge ${esc(r.conclusion)}">${esc(r.conclusion)}</span>`;
     const date = esc((r.date || "").replace("T", " ").replace("Z", ""));
+    const tier = esc(r.tier || "smoke");
     tr.innerHTML = `<td><a href="${esc(r.run_url)}">${date}</a></td>
-      <td>${src}</td><td>${esc(r.bench)}</td><td>${r.iterations ?? "—"}</td>
+      <td>${src}</td><td>${esc(r.bench)}</td><td>${tier}</td><td>${r.iterations ?? "—"}</td>
       <td>${reward}</td><td>${flips}</td><td>${usd}</td><td>${badge}</td>`;
     tb.appendChild(tr);
 
     const detail = document.createElement("tr");
     detail.className = "detail-row";
     detail.hidden = true;
-    detail.innerHTML = `<td colspan="8">${taskTable(r.tasks || [])}</td>`;
+    detail.innerHTML = `<td colspan="9">${taskTable(r.tasks || [])}</td>`;
     tb.appendChild(detail);
 
     tr.addEventListener("click", (e) => {
@@ -101,7 +105,7 @@ document.querySelectorAll("#runs thead th").forEach((th) =>
     render();
   })
 );
-["f-bench", "f-source", "f-conc", "f-q"].forEach((id) =>
+["f-bench", "f-tier", "f-source", "f-conc", "f-q"].forEach((id) =>
   $("#" + id).addEventListener("input", render)
 );
 load();

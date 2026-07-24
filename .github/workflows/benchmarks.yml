@@ -37,7 +37,7 @@ on:
 
 jobs:
   bench:
-    name: ${{ matrix.bench }}
+    name: ${{ matrix.tier }} / ${{ matrix.bench }}
     runs-on: [self-hosted, ibm-vpc]
     # Repo default token is read-only; the "Comment results on the PR" step needs write.
     permissions:
@@ -45,34 +45,45 @@ jobs:
       pull-requests: write
       issues: write
     # Fork guard: never run PR code from a fork on the self-hosted runner.
+    # PR trigger: any label containing 'benchmark-smoke' (the all-label or a per-bench one).
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
-        contains(github.event.pull_request.labels.*.name, 'benchmark-test'))
+        contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke'))
     strategy:
       fail-fast: false
       matrix:
+        # tier is a first-class dimension: smoke now, full later (same workflow + page).
+        tier: [smoke]
         bench: [tau2, swebench, skillsbench]
     concurrency:
-      group: benchmarks-${{ matrix.bench }}-${{ github.ref }}
+      group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
       cancel-in-progress: true
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
       ITERATIONS: ${{ github.event.inputs.iterations || '3' }}
+      TIER: ${{ matrix.tier }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Gate (skip unselected benchmark on manual dispatch)
+      - name: Gate (decide whether this tier/bench runs)
         id: gate
+        env:
+          # exact-match label checks (evaluated by Actions, not the shell)
+          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, 'benchmark-smoke') }}
+          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-smoke-{0}', matrix.bench)) }}
         run: |
-          sel="${{ github.event.inputs.benchmark || 'all' }}"
-          if [ "$sel" != "all" ] && [ "$sel" != "${{ matrix.bench }}" ]; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
+          run=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            sel="${{ github.event.inputs.benchmark || 'all' }}"
+            if [ "$sel" = "all" ] || [ "$sel" = "${{ matrix.bench }}" ]; then run=true; fi
           else
-            echo "run=true" >> "$GITHUB_OUTPUT"
+            # pull_request: benchmark-smoke (all) OR benchmark-smoke-<bench>
+            if [ "$HAS_ALL" = "true" ] || [ "$HAS_THIS" = "true" ]; then run=true; fi
           fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
 
       - name: Setup runner env
         if: steps.gate.outputs.run == 'true'
@@ -97,6 +108,7 @@ jobs:
             "run_id": ${{ github.run_id }},
             "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "bench": "${{ matrix.bench }}",
+            "tier": "${{ matrix.tier }}",
             "event": "${{ github.event_name }}",
             "source": "$source",
             "pr": $pr,

@@ -1,15 +1,20 @@
 [
   {"schema":1,"run_id":123,"run_url":"https://github.com/skillberry-ai/cap-evolve/actions/runs/123",
-   "bench":"tau2","event":"pull_request","source":"PR #55","pr":55,
-   "branch":"feature/skill-tool-optimization-knowledge","sha":"abc1234","date":"2026-07-23T13:50:51Z",
-   "iterations":1,"agent_model":"aws/gpt-oss-120b","optimizer_model":"claude-opus-4-8","conclusion":"success",
+   "bench":"tau2","tier":"smoke","event":"pull_request","source":"PR #55","pr":55,
+   "branch":"feature/x","sha":"abc1234","date":"2026-07-24T13:50:51Z","iterations":3,
+   "agent_model":"aws/gpt-oss-120b","optimizer_model":"claude-opus-4-8","conclusion":"success",
    "suite":{"reward_base":0.0,"reward_opt":0.5,"flips":1,"n":2,"optimizer_usd":0.12},
    "tasks":[
-     {"task":"35","reward_baseline":0.0,"reward_opt":1.0,"flipped":true,"latency_baseline_s":10.0,"latency_opt_s":11.0,"cost_opt_runner_usd":0.0,"optimizer_usd":0.06,"iterations":1},
-     {"task":"37","reward_baseline":0.0,"reward_opt":0.0,"flipped":false,"latency_baseline_s":9.0,"latency_opt_s":9.5,"cost_opt_runner_usd":0.0,"optimizer_usd":0.06,"iterations":1}]},
+     {"task":"35","reward_baseline":0.0,"reward_opt":1.0,"flipped":true,"latency_baseline_s":10.0,"latency_opt_s":11.0,"cost_opt_runner_usd":0.0,"optimizer_usd":0.06,"iterations":3},
+     {"task":"37","reward_baseline":0.0,"reward_opt":0.0,"flipped":false,"latency_baseline_s":9.0,"latency_opt_s":9.5,"cost_opt_runner_usd":0.0,"optimizer_usd":0.06,"iterations":3}]},
   {"schema":1,"run_id":124,"run_url":"https://github.com/skillberry-ai/cap-evolve/actions/runs/124",
-   "bench":"swebench","event":"workflow_dispatch","source":"manual (main)","pr":null,
-   "branch":"main","sha":"def5678","date":"2026-07-22T09:00:00Z",
-   "iterations":1,"agent_model":"aws/gpt-oss-120b","optimizer_model":"claude-opus-4-8","conclusion":"failure",
+   "bench":"swebench","tier":"full","event":"workflow_dispatch","source":"manual (main)","pr":null,
+   "branch":"main","sha":"def5678","date":"2026-07-23T09:00:00Z","iterations":5,
+   "agent_model":"aws/gpt-oss-120b","optimizer_model":"claude-opus-4-8","conclusion":"success",
+   "suite":{"reward_base":0.2,"reward_opt":0.4,"flips":0,"n":10,"optimizer_usd":1.10},"tasks":[]},
+  {"schema":1,"run_id":100,"run_url":"https://github.com/skillberry-ai/cap-evolve/actions/runs/100",
+   "bench":"skillsbench","event":"workflow_dispatch","source":"manual (main)","pr":null,
+   "branch":"main","sha":"0000000","date":"2026-07-20T00:00:00Z","iterations":3,
+   "agent_model":"aws/gpt-oss-120b","optimizer_model":"claude-opus-4-8","conclusion":"failure",
    "suite":null,"tasks":[]}
 ]
