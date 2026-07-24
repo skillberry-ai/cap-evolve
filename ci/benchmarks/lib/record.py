@@ -23,7 +23,7 @@ def _num(x) -> bool:
 
 
 def rollup(tasks: list[dict]) -> dict | None:
-    """Suite rollup matching metrics.py table(): mean rewards, flip count, n, optimizer $."""
+    """Suite rollup: mean rewards, n, total eval (runner) $, total optimizer $."""
     rb = [t["reward_baseline"] for t in tasks if _num(t.get("reward_baseline"))]
     ro = [t["reward_opt"] for t in tasks if _num(t.get("reward_opt"))]
     if not (rb and ro):
@@ -31,8 +31,10 @@ def rollup(tasks: list[dict]) -> dict | None:
     return {
         "reward_base": round(sum(rb) / len(rb), 6),
         "reward_opt": round(sum(ro) / len(ro), 6),
-        "flips": sum(1 for t in tasks if t.get("flipped")),
         "n": len(tasks),
+        # total runner/evaluation cost of running the benchmark (sum over tasks; each
+        # task's eval_usd is that run's spent.usd — 0 when the gateway hides usage)
+        "eval_usd": round(sum(t.get("eval_usd") or 0 for t in tasks), 6),
         "optimizer_usd": round(sum(t.get("optimizer_usd") or 0 for t in tasks), 6),
     }
 

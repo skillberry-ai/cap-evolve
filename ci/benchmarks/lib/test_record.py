@@ -8,10 +8,11 @@ TASK_OK = {
     "reward_baseline": 0.0, "reward_opt": 1.0, "reward_delta": 1.0, "flipped": True,
     "latency_baseline_s": 10.0, "latency_opt_s": 11.0,
     "cost_baseline_usd": 0.0, "cost_opt_runner_usd": 0.0,
+    "eval_usd": 0.10, "eval_tokens": 1000,
     "optimizer_usd": 0.05, "optimizer_tokens": 0, "optimizer_seconds": 0, "iterations": 1,
 }
 TASK2 = {**TASK_OK, "task": "37", "reward_baseline": 0.0, "reward_opt": 0.0,
-         "flipped": False, "optimizer_usd": 0.03}
+         "flipped": False, "eval_usd": 0.05, "optimizer_usd": 0.03}
 
 
 def _write_jsonl(p: Path, rows):
@@ -20,7 +21,8 @@ def _write_jsonl(p: Path, rows):
 
 def test_rollup_math():
     r = record.rollup([TASK_OK, TASK2])
-    assert r == {"reward_base": 0.0, "reward_opt": 0.5, "flips": 1, "n": 2, "optimizer_usd": 0.08}
+    assert r == {"reward_base": 0.0, "reward_opt": 0.5, "n": 2,
+                 "eval_usd": 0.15, "optimizer_usd": 0.08}
 
 
 def test_rollup_empty_is_none():
@@ -34,7 +36,8 @@ def test_build_success(tmp_path):
     assert rec["schema"] == 1
     assert rec["run_id"] == 1 and rec["bench"] == "tau2"
     assert len(rec["tasks"]) == 2
-    assert rec["suite"]["flips"] == 1 and rec["suite"]["n"] == 2
+    assert rec["suite"]["n"] == 2 and rec["suite"]["eval_usd"] == 0.15
+    assert "flips" not in rec["suite"]
 
 
 def test_build_failed_run_has_null_suite(tmp_path):

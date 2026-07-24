@@ -56,7 +56,7 @@ function passes(r) {
 
 function sortVal(r, k) {
   if (k === "reward") return r.suite ? r.suite.reward_opt : -1;
-  if (k === "flips") return r.suite ? r.suite.flips : -1;
+  if (k === "eval_usd") return r.suite ? (r.suite.eval_usd ?? -1) : -1;
   if (k === "optimizer_usd") return r.suite ? r.suite.optimizer_usd : -1;
   if (k === "tier") return r.tier || "smoke";
   return r[k] ?? "";
@@ -83,8 +83,8 @@ function render() {
     const tr = document.createElement("tr");
     tr.className = "run-row";
     const reward = r.suite ? `${fmt(r.suite.reward_base)} → ${fmt(r.suite.reward_opt)}` : "—";
-    const flips = r.suite ? `${r.suite.flips}/${r.suite.n}` : "—";
-    const usd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
+    const evalUsd = r.suite && r.suite.eval_usd != null ? `$${fmt(r.suite.eval_usd, 4)}` : "—";
+    const optUsd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const src = r.pr
       ? `<a href="https://github.com/skillberry-ai/cap-evolve/pull/${encodeURIComponent(r.pr)}">${esc(r.source)}</a>`
       : esc(r.source || "—");
@@ -93,13 +93,15 @@ function render() {
     const tier = esc(r.tier || "smoke");
     tr.innerHTML = `<td><a href="${esc(r.run_url)}">${date}</a></td>
       <td>${src}</td><td>${esc(r.bench)}</td><td>${tier}</td><td>${r.iterations ?? "—"}</td>
-      <td>${reward}</td><td>${flips}</td><td>${usd}</td><td>${badge}</td>`;
+      <td>${reward}</td><td>${evalUsd}</td><td>${optUsd}</td>
+      <td><code>${esc(r.agent_model || "—")}</code></td><td><code>${esc(r.optimizer_model || "—")}</code></td>
+      <td>${badge}</td>`;
     tb.appendChild(tr);
 
     const detail = document.createElement("tr");
     detail.className = "detail-row";
     detail.hidden = true;
-    detail.innerHTML = `<td colspan="9">${taskTable(r.tasks || [])}</td>`;
+    detail.innerHTML = `<td colspan="11">${taskTable(r.tasks || [])}</td>`;
     tb.appendChild(detail);
 
     tr.addEventListener("click", (e) => {
@@ -110,11 +112,10 @@ function render() {
 
 function taskTable(tasks) {
   if (!tasks.length) return `<em class="muted">no per-task metrics</em>`;
-  const head = `<tr><th>task</th><th>reward base→opt</th><th>flip</th><th>latency (s)</th>` +
+  const head = `<tr><th>task</th><th>reward base→opt</th><th>latency (s)</th>` +
     `<th>runner $</th><th>opt $</th><th>iters</th></tr>`;
   const body = tasks.map((t) => `<tr><td><code>${esc(t.task)}</code></td>
     <td>${fmt(t.reward_baseline)} → ${fmt(t.reward_opt)}</td>
-    <td>${t.flipped ? "✅" : "—"}</td>
     <td>${fmt(t.latency_baseline_s, 1)} → ${fmt(t.latency_opt_s, 1)}</td>
     <td>$${fmt(t.cost_opt_runner_usd, 4)}</td><td>$${fmt(t.optimizer_usd, 4)}</td>
     <td>${t.iterations ?? "—"}</td></tr>`).join("");

@@ -59,6 +59,12 @@ def extract(run_dir: str, bench: str = "", task: str = "") -> dict:
         "latency_opt_s": latency_opt_s,
         "cost_baseline_usd": cost_baseline_usd,
         "cost_opt_runner_usd": cost_opt_runner_usd,
+        # total RUNNER (evaluation) spend across ALL rollouts (baseline + every
+        # optimize iteration + finalize) — the cost of running the benchmark itself,
+        # distinct from the optimizer's own spend. 0 when the runner/gateway does not
+        # surface usage (tau2/skillsbench via the gateway); non-zero for swebench (litellm).
+        "eval_usd": spent.get("usd"),
+        "eval_tokens": spent.get("runner_tokens"),
         "optimizer_usd": spent.get("optimizer_usd"),
         "optimizer_tokens": spent.get("optimizer_tokens"),
         "optimizer_seconds": spent.get("optimizer_seconds"),
