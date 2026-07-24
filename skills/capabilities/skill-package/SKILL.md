@@ -105,6 +105,9 @@ python scripts/token_report.py --path <skill_dir>        # progressive-disclosur
 ```
 
 ## References
+- [`references/writing-for-agents.md`](references/writing-for-agents.md) — the
+  write-for-the-agent-reader principle + checklist. Load before editing any
+  user-facing text (description, body, references).
 - [`references/concepts.md`](references/concepts.md) — the authoring model and the
   validity rules, with first-party sources. Load for grounding.
 - [`references/description-optimization.md`](references/description-optimization.md)

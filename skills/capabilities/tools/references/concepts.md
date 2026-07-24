@@ -194,3 +194,25 @@ them as named components an optimizer can rewrite.
 - Tool Documentation Enables Zero-Shot Tool-Usage (arXiv:2308.00675): https://arxiv.org/abs/2308.00675
 - GEPA: Reflective Prompt Evolution (arXiv:2507.19457): https://arxiv.org/abs/2507.19457
 - DSPy — optimizers tune instructions/demos against a metric: https://dspy.ai/
+
+## The four optimization layers (this capability owns Tools + Implementation)
+A skill decomposes into four independently optimizable layers. This capability edits
+the tool surface and the handler code:
+
+| Layer | What | Optimize for | Owner |
+|---|---|---|---|
+| 1. Description | when to select the tool | selection accuracy | this capability (`description`) |
+| 2. Snippets | agent instructions/policy | reasoning | the `skill-package` / `system-prompt` capability |
+| 3. Tools | the exposed tool surface | invocation accuracy, latency, composability | this capability |
+| 4. Tool implementation | the handler code (invisible to the LLM) | reliability, runtime, memory | this capability (`code`) |
+
+Route the failure to the layer that owns it: mis-selection → Description (name +
+description); bad arguments → the parameter schema / docs (Filling); missing or
+hard-to-call capability → the Tool surface; slow/flaky execution → the Implementation.
+Building a *new* tool well is its own discipline — see
+[`authoring-and-validation.md`](authoring-and-validation.md).
+
+## Metrics (Layers 3 + 4)
+Tools (Layer 3): invocation accuracy, success/failure rate, average latency, retry
+count. Implementation (Layer 4): runtime, CPU, memory, error rate. As always, a change
+counts only if it moves the objective on the held-out val split.
