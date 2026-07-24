@@ -149,6 +149,20 @@ class Adapter(CapabilityAdapter):
 
     # ---- running ---------------------------------------------------------
 
+    def run_trials(self, tasks: list[Task], ctx, *, n_trials: int, base_seed: int) -> dict:
+        """Run the whole task×trial grid concurrently (bounded by SKILLSBENCH_CONCURRENCY).
+
+        Each trial runs through run_target with a distinct seed = base_seed + k; the
+        per-seed jobs dir + a unique temp skills dir keep concurrent bench runs isolated.
+        """
+        from cap_evolve import run_trials_pool
+
+        max_workers = int(os.environ.get("SKILLSBENCH_CONCURRENCY", "7"))
+        return run_trials_pool(
+            lambda task, seed: self.run_target(task, ctx, seed=seed),
+            tasks, n_trials=n_trials, base_seed=base_seed, max_workers=max_workers,
+        )
+
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         """Run ONE SkillsBench task — a thin wrapper over run_batch."""
         return self.run_batch([task], ctx, seed=seed).get(
