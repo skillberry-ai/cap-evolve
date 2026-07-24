@@ -15,7 +15,9 @@ REPO="$(cd "$LIB_DIR/../../.." && pwd)"
 BENCH="${1:?bench}"; OUT="${2:-$REPO/ci/benchmarks/.work/suite_$BENCH}"
 mkdir -p "$OUT/optimized"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
-BASE="$REPO/ci/benchmarks/$BENCH"
+TIER="${TIER:-smoke}"                          # smoke (default) | full
+BASE="$REPO/ci/benchmarks/$BENCH/$TIER"
+[ -f "$BASE/tasks.json" ] || { echo "::warning::no tasks.json for $BENCH/$TIER — nothing to run"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks defined for this tier)" >> "$OUT/report.md"; exit 0; }
 : > "$OUT/metrics.jsonl"
 
 ids_tags="$("$PY" - "$BASE/tasks.json" <<'PY'
@@ -28,6 +30,9 @@ PY
 while IFS=$'\t' read -r id tag agent; do
   [ -n "$id" ] || continue
   frozen="$BASE/$(echo "$id" | tr '/ ' '__')/baseline"
+  # A tier may be partially populated (e.g. full mid-freeze): run only tasks whose frozen
+  # baseline exists; skip the rest with a warning instead of failing the whole suite.
+  [ -f "$frozen/baseline.json" ] || { echo "::warning::no frozen baseline for $BENCH/$TIER $id — skipping"; continue; }
   echo "::group::$BENCH $id ($tag, agent=$agent)"
   out="$(AGENT_MODEL="$agent" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" optimize "$frozen" 2>&1)" || true
   echo "$out"

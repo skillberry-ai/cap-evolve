@@ -17,7 +17,7 @@ regression, not a leaderboard.
 > future use with a different model or a non-binary scorer.
 
 - **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
-- **Baselines are frozen** (committed under `<bench>/<task>/baseline/`) and reused via
+- **Baselines are frozen** (committed under `<bench>/<tier>/<task>/baseline/`) and reused via
   `cap-evolve run --reuse-baseline` — the baseline agent is **never re-run**; CI only
   optimizes + evaluates.
 - Results are uploaded as an artifact and posted as a sticky PR comment (metrics table +
@@ -35,9 +35,9 @@ ci/benchmarks/
     assert_run.py     # completion + non-regression (+ optional flip) gate
     ci_setup.sh       # idempotent runner venv + deps/clones (cached outside the checkout)
   runner/arm-runner.sh  # register THIS host as an ephemeral self-hosted runner (label ibm-vpc)
-  <bench>/tasks.json    # the curated task ids (id + tag: flip|hard)
-  <bench>/<task>/baseline/  # frozen splits.json + baseline.json + rollouts/val (NO seed capability)
-  baselines.json        # recorded baseline reward/latency/cost per task
+  <bench>/<tier>/tasks.json         # curated task ids per tier (smoke|full); id + tag: flip|hard
+  <bench>/<tier>/<task>/baseline/   # frozen splits.json + baseline.json + rollouts/val (NO seed capability)
+  baselines.json        # recorded baseline metrics, nested bench → tier → task
   RESULTS.md            # the 2x local measurement of the finalized suite
 ```
 
@@ -69,18 +69,37 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
 ## Trigger the suite
 
-The suite runs a **smoke** tier today (2 hard tasks per benchmark). `tier` is a first-class
-dimension in the workflow (`smoke` now; `full` can be added later to the same workflow and the
-same history page). Runs surface the tier everywhere: the PR checks read **`smoke / <bench>`**,
-the report header reads **`## Smoke suite — <bench>`**, and the history page has a **Type** column.
+Runs come in two **tiers** (a first-class dimension in the workflow, same workflow + history page):
+- **`smoke`** — a few hard tasks per benchmark (fast regression; the default).
+- **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks +
+  frozen baselines live under `ci/benchmarks/<bench>/full/` and must be **populated on the runner**
+  (see below); until then `full` jobs simply run zero tasks.
 
-- **Manually:** Actions → **Benchmarks** → Run workflow → pick `all` or one benchmark.
+The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
+`full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
+has a **Type** column + filter.
+
+- **Manually:** Actions → **Benchmarks** → Run workflow → pick the **benchmark** (`all` / one) and
+  **tier** (`smoke` default / `full` / `all`).
 - **On a PR — labels:**
-  - **`benchmark-smoke`** → run all three smoke benchmarks.
-  - **`benchmark-smoke-tau2`** / **`benchmark-smoke-swebench`** / **`benchmark-smoke-skillsbench`** →
-    run just that one (combine labels to run a subset).
+  - **`benchmark-smoke`** / **`benchmark-full`** → run all three benchmarks of that tier.
+  - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` · `skillsbench`)
+    → run just that one (combine labels to run a subset).
 
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests** workflow.)
+
+### Populate the `full` tier (on the runner)
+
+`full/tasks.json` ships empty. On skillberry-1, select tasks and freeze their baselines with
+`TIER=full` (mirrors the smoke refresh flow below):
+
+```bash
+source ci/benchmarks/.creds
+# 1. pick full task ids and record them in ci/benchmarks/<bench>/full/tasks.json
+TIER=full bash ci/benchmarks/lib/select_tasks.sh <bench> full <ids...>
+# 2. freeze each chosen task's baseline into <bench>/full/<task>/baseline/
+TIER=full bash ci/benchmarks/lib/freeze_baseline.sh <bench> <task_id>
+```
 
 Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
 
@@ -101,14 +120,19 @@ swebench (litellm) does.
 
 ## Refresh the frozen baselines (when the model/config changes)
 
+`TIER` (default `smoke`) selects which tier's tasks/baselines you refresh — set `TIER=full`
+for the full tier. It controls where `freeze_baseline.sh` writes (`<bench>/<tier>/<task>/baseline/`)
+and the `baselines.json` nesting.
+
 ```bash
 source ci/benchmarks/.creds   # ANTHROPIC_* + CAPEVOLVE_PY + SKILLSBENCH_SRC (local, gitignored)
+export TIER=smoke             # or: export TIER=full
 # 1. sweep candidates and pick tasks (baseline==0; classify flip/hard)
 bash ci/benchmarks/lib/select_tasks.sh <bench> baseline <ids...>
 bash ci/benchmarks/lib/select_tasks.sh <bench> full <zero-baseline ids...>
-# 2. freeze the chosen tasks' baselines
+# 2. freeze the chosen tasks' baselines (writes to <bench>/$TIER/<task>/baseline/)
 bash ci/benchmarks/lib/freeze_baseline.sh <bench> <task_id>
-# 3. update <bench>/tasks.json and re-measure (RESULTS.md)
+# 3. update <bench>/$TIER/tasks.json and re-measure (RESULTS.md)
 ```
 
 ## Benchmark history page

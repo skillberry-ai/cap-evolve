@@ -28,6 +28,11 @@ on:
         type: choice
         default: all
         options: [all, tau2, swebench, skillsbench]
+      tier:
+        description: "Which tier (default smoke; full is the whole/representative benchmark and is expensive)"
+        type: choice
+        default: smoke
+        options: [all, smoke, full]
       iterations:
         description: "Optimizer iterations per task (default 3; raise to give the optimizer more budget)"
         type: string
@@ -45,17 +50,20 @@ jobs:
       pull-requests: write
       issues: write
     # Fork guard: never run PR code from a fork on the self-hosted runner.
-    # PR trigger: any label containing 'benchmark-smoke' (the all-label or a per-bench one).
+    # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
+    # (an all-label or a per-bench one). The per-matrix gate decides the exact tier×bench.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
-        contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke'))
+        (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
+         contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
     strategy:
       fail-fast: false
       matrix:
-        # tier is a first-class dimension: smoke now, full later (same workflow + page).
-        tier: [smoke]
+        # tier is a first-class dimension. full runs the whole/representative benchmark
+        # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
+        tier: [smoke, full]
         bench: [tau2, swebench, skillsbench]
     concurrency:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
@@ -71,16 +79,21 @@ jobs:
       - name: Gate (decide whether this tier/bench runs)
         id: gate
         env:
-          # exact-match label checks (evaluated by Actions, not the shell)
-          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, 'benchmark-smoke') }}
-          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-smoke-{0}', matrix.bench)) }}
+          # tier-agnostic exact-match label checks (evaluated by Actions, not the shell):
+          #   benchmark-<tier>  = all benches of this tier;  benchmark-<tier>-<bench> = this one
+          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}', matrix.tier)) }}
+          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}-{1}', matrix.tier, matrix.bench)) }}
+          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
+          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
         run: |
           run=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            sel="${{ github.event.inputs.benchmark || 'all' }}"
-            if [ "$sel" = "all" ] || [ "$sel" = "${{ matrix.bench }}" ]; then run=true; fi
+            tier_ok=false; bench_ok=false
+            { [ "$TIER_SEL" = "all" ] || [ "$TIER_SEL" = "${{ matrix.tier }}" ]; } && tier_ok=true
+            { [ "$BENCH_SEL" = "all" ] || [ "$BENCH_SEL" = "${{ matrix.bench }}" ]; } && bench_ok=true
+            if [ "$tier_ok" = true ] && [ "$bench_ok" = true ]; then run=true; fi
           else
-            # pull_request: benchmark-smoke (all) OR benchmark-smoke-<bench>
+            # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
             if [ "$HAS_ALL" = "true" ] || [ "$HAS_THIS" = "true" ]; then run=true; fi
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"

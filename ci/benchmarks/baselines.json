@@ -1,62 +1,68 @@
 {
   "tau2": {
-    "35": {
-      "bench": "tau2",
-      "task": "35",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 110.98309803009033,
-      "cost_usd": 0.0,
-      "tokens": 0
-    },
-    "37": {
-      "bench": "tau2",
-      "task": "37",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 34.649407148361206,
-      "cost_usd": 0.0,
-      "tokens": 0
+    "smoke": {
+      "35": {
+        "bench": "tau2",
+        "task": "35",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 110.98309803009033,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "37": {
+        "bench": "tau2",
+        "task": "37",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 34.649407148361206,
+        "cost_usd": 0.0,
+        "tokens": 0
+      }
     }
   },
   "swebench": {
-    "scikit-learn__scikit-learn-10297": {
-      "bench": "swebench",
-      "task": "scikit-learn__scikit-learn-10297",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 157.55742764472961,
-      "cost_usd": 0.0005371499999999999,
-      "tokens": 1469
-    },
-    "pallets__flask-4992": {
-      "bench": "swebench",
-      "task": "pallets__flask-4992",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 138.175274848938,
-      "cost_usd": 0.00044925000000000005,
-      "tokens": 1315
+    "smoke": {
+      "scikit-learn__scikit-learn-10297": {
+        "bench": "swebench",
+        "task": "scikit-learn__scikit-learn-10297",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 157.55742764472961,
+        "cost_usd": 0.0005371499999999999,
+        "tokens": 1469
+      },
+      "pallets__flask-4992": {
+        "bench": "swebench",
+        "task": "pallets__flask-4992",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 138.175274848938,
+        "cost_usd": 0.00044925000000000005,
+        "tokens": 1315
+      }
     }
   },
   "skillsbench": {
-    "offer-letter-generator": {
-      "bench": "skillsbench",
-      "task": "offer-letter-generator",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 157.97205662727356,
-      "cost_usd": 0.0,
-      "tokens": 0
-    },
-    "exceltable-in-ppt": {
-      "bench": "skillsbench",
-      "task": "exceltable-in-ppt",
-      "agent": "aws/gpt-oss-120b",
-      "reward": 0.0,
-      "latency_s": 433.4782702922821,
-      "cost_usd": 0.0,
-      "tokens": 0
+    "smoke": {
+      "offer-letter-generator": {
+        "bench": "skillsbench",
+        "task": "offer-letter-generator",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 157.97205662727356,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "exceltable-in-ppt": {
+        "bench": "skillsbench",
+        "task": "exceltable-in-ppt",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 433.4782702922821,
+        "cost_usd": 0.0,
+        "tokens": 0
+      }
     }
   }
 }
