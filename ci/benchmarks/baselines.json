@@ -3,19 +3,21 @@
     "smoke": {
       "35": {
         "bench": "tau2",
+        "tier": "smoke",
         "task": "35",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 110.98309803009033,
+        "latency_s": 89.30942487716675,
         "cost_usd": 0.0,
         "tokens": 0
       },
       "37": {
         "bench": "tau2",
+        "tier": "smoke",
         "task": "37",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 34.649407148361206,
+        "latency_s": 444.3881878852844,
         "cost_usd": 0.0,
         "tokens": 0
       }
@@ -527,21 +529,23 @@
     "smoke": {
       "scikit-learn__scikit-learn-10297": {
         "bench": "swebench",
+        "tier": "smoke",
         "task": "scikit-learn__scikit-learn-10297",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 157.55742764472961,
-        "cost_usd": 0.0005371499999999999,
-        "tokens": 1469
+        "latency_s": 280.24367475509644,
+        "cost_usd": 0.006528299999999999,
+        "tokens": 16618
       },
       "pallets__flask-4992": {
         "bench": "swebench",
+        "tier": "smoke",
         "task": "pallets__flask-4992",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 138.175274848938,
-        "cost_usd": 0.00044925000000000005,
-        "tokens": 1315
+        "latency_s": 134.3405840396881,
+        "cost_usd": 0.007724699999999999,
+        "tokens": 18537
       }
     }
   },
@@ -549,19 +553,21 @@
     "smoke": {
       "offer-letter-generator": {
         "bench": "skillsbench",
+        "tier": "smoke",
         "task": "offer-letter-generator",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 157.97205662727356,
+        "latency_s": 12.855244159698486,
         "cost_usd": 0.0,
         "tokens": 0
       },
       "exceltable-in-ppt": {
         "bench": "skillsbench",
+        "tier": "smoke",
         "task": "exceltable-in-ppt",
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
-        "latency_s": 433.4782702922821,
+        "latency_s": 13.484678745269775,
         "cost_usd": 0.0,
         "tokens": 0
       }

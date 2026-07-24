@@ -16,21 +16,31 @@
         "task_id": "pallets__flask-4992",
         "reward": 0.0,
         "feedback": "Instance NOT resolved: the patch applied/ran but did not make the failing tests pass. Guide the model toward a correct, minimal fix for the described issue.",
-        "n": 1,
+        "n": 10,
         "stderr": 0.0,
         "trial_rewards": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
           0.0
         ],
         "raw": {
           "errored": false,
           "errored_trials": 0,
-          "n_trials": 1
-        }
+          "n_trials": 10
+        },
+        "metrics": []
       }
     ],
-    "cost_usd": 0.00044925000000000005,
-    "tokens": 1315,
-    "seconds": 138.175274848938
+    "cost_usd": 0.007724699999999999,
+    "tokens": 18537,
+    "seconds": 134.3405840396881
   },
   "best_id": "seed"
 }
