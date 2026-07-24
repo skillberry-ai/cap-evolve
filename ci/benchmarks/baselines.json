@@ -1,16 +1,6 @@
 {
   "tau2": {
     "smoke": {
-      "35": {
-        "bench": "tau2",
-        "tier": "smoke",
-        "task": "35",
-        "agent": "aws/gpt-oss-120b",
-        "reward": 0.0,
-        "latency_s": 89.30942487716675,
-        "cost_usd": 0.0,
-        "tokens": 0
-      },
       "37": {
         "bench": "tau2",
         "tier": "smoke",
@@ -18,6 +8,96 @@
         "agent": "aws/gpt-oss-120b",
         "reward": 0.0,
         "latency_s": 444.3881878852844,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "17": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "17",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.2,
+        "latency_s": 78.58920788764954,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "40": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "40",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.0,
+        "latency_s": 33.96536588668823,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "12": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "12",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.3,
+        "latency_s": 130.27423691749573,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "8": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "8",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.5,
+        "latency_s": 100.86445951461792,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "23": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "23",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.5,
+        "latency_s": 149.48332238197327,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "25": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "25",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.1,
+        "latency_s": 237.27844738960266,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "22": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "22",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.1,
+        "latency_s": 50.51602578163147,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "19": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "19",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.5,
+        "latency_s": 36.40117383003235,
+        "cost_usd": 0.0,
+        "tokens": 0
+      },
+      "11": {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "11",
+        "agent": "aws/gpt-oss-120b",
+        "reward": 0.4,
+        "latency_s": 73.18826079368591,
         "cost_usd": 0.0,
         "tokens": 0
       }
