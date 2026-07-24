@@ -59,8 +59,9 @@ PY
 done <<< "$ids_tags"
 
 # render the report
+KIND="${TIER:-smoke}"
 {
-  echo "## Benchmark suite — $BENCH"
+  echo "## ${KIND^} suite — $BENCH"
   echo
   echo "Agent \`aws/gpt-oss-120b\` · optimizer Claude Code \`claude-opus-4-8\` · ${ITERATIONS:-3} iteration(s) · baselines frozen (reused)."
   echo

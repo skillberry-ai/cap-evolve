@@ -69,9 +69,18 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
 ## Trigger the suite
 
+The suite runs a **smoke** tier today (2 hard tasks per benchmark). `tier` is a first-class
+dimension in the workflow (`smoke` now; `full` can be added later to the same workflow and the
+same history page). Runs surface the tier everywhere: the PR checks read **`smoke / <bench>`**,
+the report header reads **`## Smoke suite — <bench>`**, and the history page has a **Type** column.
+
 - **Manually:** Actions → **Benchmarks** → Run workflow → pick `all` or one benchmark.
-- **On a PR:** add the **`benchmark-test`** label (the tau2 pipeline regression is the
-  **`integration-test`** label / **Integration tests** workflow).
+- **On a PR — labels:**
+  - **`benchmark-smoke`** → run all three smoke benchmarks.
+  - **`benchmark-smoke-tau2`** / **`benchmark-smoke-swebench`** / **`benchmark-smoke-skillsbench`** →
+    run just that one (combine labels to run a subset).
+
+  (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests** workflow.)
 
 Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
 
