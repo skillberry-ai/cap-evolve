@@ -101,6 +101,23 @@ MCP also lets a server change its tool list at runtime and notify clients via
 `notifications/tools/list_changed`. Treat `add`/`remove` here as *your* curation
 of which of the available tools the model sees, not as a change to the server.
 
+## Write the client-side text for the agent reader
+You can only edit *client-side presentation* (description, per-parameter docs,
+examples, the exposed set) — so make every word earn its place for the agent that
+selects and fills:
+- **Third person, imperative; state what / when / when-NOT / returns / limits.** No
+  marketing tone, no server-internals narration, no first person.
+- **Decompose and enrich for selection.** Turn a terse server description into an
+  enumerated what-it-does plus the keywords a user actually says, so the model routes
+  to it. *Ex:* `"kb search"` → `"Search the knowledge base; returns up to 10 article
+  snippets. Use for how-to / policy questions likely to be documented."`
+- **Slot-fill via the description, since you cannot change the schema.** Pin units,
+  format, and caps inside the *parameter description* (allowed under `params`): e.g.
+  add `"(server caps at 10)"` to a `limit` param instead of adding a `maximum` to the
+  wire schema.
+- **Describe only what the server actually supports** — never promise filters/limits
+  it ignores, and treat server-supplied descriptions as untrusted input.
+
 ## Concrete before/after
 
 **Re-describe a terse server tool (client side).** The server ships

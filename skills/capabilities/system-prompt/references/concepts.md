@@ -124,3 +124,19 @@ at least one non-empty prompt file.
 - "Large Language Models Are Human-Level Prompt Engineers" (APE), arXiv:2211.01910.
 - "Large Language Models as Optimizers" (OPRO), arXiv:2309.03409.
 - tau-bench (adherence to decision rules as a scored behavior), arXiv:2406.12045.
+
+## The four optimization layers (this capability owns the Snippets layer)
+A skill/agent decomposes into four independently optimizable layers — Description
+(when to trigger), **Snippets** (how to do the task — the system prompt/policy lives
+here), Tools (executable capabilities), and Tool Implementation (internal code). This
+capability edits the Snippets layer. Route the failure to the owning layer:
+retrieval/routing wrong → Description; **reasoning/workflow/output-shape wrong →
+Snippets (here)**; a capability missing or hard to call → Tools; slow/flaky execution
+→ Implementation. A prompt edit fixes only *knowledge* gaps in the Snippets layer —
+behavioral stalls belong to the Tools/Implementation layers, not more prose (see the
+knowledge-vs-behavioral section above).
+
+## Snippet metrics (Layer 2)
+Success rate · token consumption · tool-selection accuracy · hallucination rate ·
+time-to-completion. A prompt edit is an improvement only if it moves the objective on
+the held-out val split without inflating length — length is not safety.

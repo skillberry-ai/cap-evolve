@@ -90,3 +90,45 @@ cap-evolve discipline: propose → `evaluate` on val → `gate` on significance 
 - Claude Code skills docs: https://code.claude.com/docs/en/skills
 - Engineering blog, "Equipping agents for the real world with Agent Skills":
   https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills
+
+## The four optimization layers (this capability owns Description + Snippets)
+A skill decomposes into four independently optimizable layers. This capability edits
+the first two; the others live in sibling capabilities:
+
+| Layer | What | Optimize for | Owner capability |
+|---|---|---|---|
+| 1. Description | when to trigger | discoverability, precision/recall | this capability (`description`) |
+| 2. Snippets | how to do the task (body + references) | reasoning, token cost, fewer hallucinations | this capability (body/refs) |
+| 3. Tools | executable capabilities | invocation accuracy, latency | the `tools` / `mcp-tool` capability |
+| 4. Tool implementation | internal code | reliability, runtime | the `tools` capability (`code`) |
+
+Routing a failure to the right layer is the core move: **retrieval/routing wrong →
+fix the Description; reasoning/workflow wrong → fix the Snippets; capability missing
+or hard to call → fix the Tools; slow/unreliable execution → fix the Implementation.**
+This mirrors cap-evolve's own loop: identify the target layer → make one targeted
+edit → `evaluate` on val → `gate` → keep or roll back.
+
+## Snippet-organization patterns (Layer 2)
+The body and references are *instructional snippets* — they teach the agent how to
+work. High-leverage patterns:
+- **Split one giant document into focused snippets.** Instead of one long README,
+  organize into named sections/references the agent loads only when relevant
+  (Overview · Reading content · <the hard workflow> · Troubleshooting · Limitations ·
+  Examples). Lower context, faster reasoning, cheaper inference.
+- **Decision trees** — teach *when* to use each workflow with a compact branch:
+  `Need only text? → convert to Markdown.  Need comments? → read the XML.  Need
+  animations? → use the XML workflow.` A branch table steers selection better than a
+  paragraph.
+- **Failure-handling / recovery blocks** — state the recovery, not just the happy
+  path: `If unpack.py is unavailable: 1) search for unpack.py  2) validate the ZIP
+  3) retry extraction.`
+- **Example quality** — examples should resemble *real* user requests, not toy
+  fragments. `Extract XML.` is weak; `If the user asks to modify speaker notes, first
+  unpack the presentation and edit ppt/notesSlides XML.` teaches the actual mapping.
+- **Redundancy removal** — repeated instructions cost tokens every trigger;
+  consolidate duplicate guidance into one place.
+
+## Metrics for snippets (Layer 2)
+Success rate · token consumption · tool-selection accuracy · hallucination rate ·
+time-to-completion. A snippet edit is an improvement only if it moves the objective
+on the held-out val split without inflating body token cost.

@@ -50,3 +50,17 @@
   edit only if it raises the objective on a held-out split and clears the gate.
 - **Multiple edits at once.** → You can't attribute the score change. Make ONE
   targeted edit per iteration, then re-measure.
+
+## Human-oriented writing (the meta-smell)
+The prose reads like it was written for a person, not an agent. These all *feel*
+polished to a human author and hurt the agent reader:
+- **Marketing / value-prop adjectives** ("powerful", "flexible", "seamless"). → Carry
+  no always-true, matchable information; replace with the concrete task + trigger.
+- **Describing internal mechanics instead of user intent.** → The agent matches what
+  the user asked for, not how the skill is built. Describe the intent.
+- **Narrating the why at length.** → Every body line is a recurring per-session token
+  cost; give a rule's reason in one clause, not a paragraph.
+- **First/mixed person** ("I can help…"). → Inconsistent POV hurts discovery; use
+  third-person imperative.
+See [`writing-for-agents.md`](writing-for-agents.md) for the full principle and
+checklist.

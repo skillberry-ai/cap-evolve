@@ -18,6 +18,33 @@ applies to the current task. It must:
 4. **Front-load the key use case.** The listing truncates `description +
    when_to_use` at ~1,536 chars; the most important trigger words must come first.
 
+## Decompose the capability into concrete tasks
+A single blurb ("Presentation editing") triggers worse than an enumerated task list,
+because the agent matches user intent against concrete verbs. State the **scope**
+(supported tasks), the **boundary** (unsupported tasks), and any **prerequisites**.
+
+- **Instead of:** `Presentation editing`
+- **Use:** `Create, edit, review and analyze PowerPoint (.pptx) presentations —
+  including layouts, speaker notes, comments, formatting and XML extraction. Use when
+  the user works with slides/PowerPoint/PPT/presentations, even if they don't say
+  "pptx".`
+- **Enumerate supported tasks** so each becomes a trigger surface: create
+  presentation, modify existing presentation, extract text, analyze formatting, edit
+  speaker notes.
+- **Keyword enrichment** — include the terms users actually say: `slides`,
+  `powerpoint`, `ppt`, `presentation`, `speaker notes`, `animations`.
+- **State prerequisites/scope limits** the agent needs before triggering (e.g. "input
+  must be a .pptx, not a Google Slides link").
+
+## Metrics for the description (Layer 1)
+The description is the **Description layer** — optimize it for discoverability and
+routing, and measure it as such:
+- **Selection accuracy** — right skill chosen for the task.
+- **Precision** — fires only when it should (few false positives / near-miss triggers).
+- **Recall** — fires whenever it should (few false negatives / missed triggers).
+Tune these on a held-out should-trigger / should-NOT-trigger set (near-miss negatives
+included), never on the iteration examples.
+
 ## Diagnosing the failure direction
 - **Under-trigger** (didn't fire when it should have) → the description is too
   vague or missing keywords. Enumerate the phrasings and contexts that should fire

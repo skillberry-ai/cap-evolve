@@ -144,3 +144,23 @@ re-contract.
   hijack via list_changed): https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices
 - Invariant Labs — MCP Tool Poisoning Attacks (hidden instructions in
   descriptions; shadowing): https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
+
+## Where MCP sits in the four optimization layers
+A skill decomposes into four layers: Description, Snippets, Tools, and Tool
+Implementation. For an **external** MCP server you own only part of Layer 1 and the
+composition of the tool set:
+
+| Layer | Editable here? | Why |
+|---|---|---|
+| 1. Description (client-side) | yes | you re-describe tools and params the client presents |
+| Exposed-set curation (`add`/`remove`) | yes | you choose which server tools the model sees |
+| 2. Snippets | no | agent instructions live in another capability |
+| 3. Tools wire schema | no | the server defines `inputSchema` |
+| 4. Tool implementation | no | the server owns the handler code |
+
+So routing here has exactly two safe destinations: **mis-selection → better
+client-side description; noisy/overlapping set → curate the exposed tools.** Anything
+that needs a schema, handler, or server-side logic change is out of scope — negotiate
+with the server owner or move the logic into an agent-owned tool (the `tools`
+capability). Optimize the description for **selection accuracy / precision / recall**;
+you cannot move implementation metrics from the client side.

@@ -126,3 +126,22 @@ the name is read first and weighs heavily.
 - **Detect:** `apply()` returns `changed: []` and a non-empty `refused`.
 - **Fix:** widen `inputs/policy.json` deliberately, or re-express the change as an
   allowed edit kind.
+
+## Tool granularity that fights the agent
+A tool that is too small (a one-liner the agent could inline) clutters the choice set;
+a tool that is too large (`office_tool()` doing everything) hides its real behavior and
+can't be selected precisely.
+- **Detect:** a rarely-chosen trivial tool, or one mega-tool whose description needs
+  five "use when" clauses.
+- **Fix:** one clear capability per tool; split the mega-tool into composable pieces
+  (`extract_text`, `extract_xml`, `validate_file`, `repair_document`).
+
+## Human-oriented tool text (the meta-smell)
+Descriptions and docstrings written to read well for a person — marketing adjectives,
+internal-mechanics narration, long rationale, first person — waste the surface the
+agent selects and fills from.
+- **Detect:** the description carries no always-true matchable info (triggers, units,
+  allowed values, failure modes) — just polished prose.
+- **Fix:** third-person imperative; what/when/when-not; per-argument units, allowed
+  values, defaults; retained failure modes. See
+  [`authoring-and-validation.md`](authoring-and-validation.md) §1.
