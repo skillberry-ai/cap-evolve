@@ -250,6 +250,21 @@ class Adapter(CapabilityAdapter):
             },
         )
 
+    def run_trials(self, tasks: list[Task], ctx, *, n_trials: int, base_seed: int) -> dict:
+        """Run the whole task×trial grid concurrently (bounded by TAU2_MAX_CONCURRENCY).
+
+        The harness uses this fast path (instead of looping trials sequentially) to
+        run all num_trials in parallel. Delegates to the shared pool over run_target;
+        each trial k uses seed = base_seed + k (independent draws).
+        """
+        from cap_evolve import run_trials_pool
+
+        max_workers = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
+        return run_trials_pool(
+            lambda task, seed: self.run_target(task, ctx, seed=seed),
+            tasks, n_trials=n_trials, base_seed=base_seed, max_workers=max_workers,
+        )
+
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         """Run a single task by delegating to run_batch."""
         batch = self.run_batch([task], ctx, seed=seed)

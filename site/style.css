@@ -601,6 +601,7 @@ html.js .reveal-3 { transition-delay: 0.16s; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.5rem 0; }
 .filters label { display: flex; flex-direction: column; font-size: 0.78rem; color: var(--muted); gap: 0.25rem; }
+.filters label[hidden] { display: none; }   /* custom From/To hidden unless Time = Custom (beats display:flex above) */
 .filters select, .filters input {
   font: inherit; font-size: 0.88rem; padding: 0.4rem 0.6rem;
   background: var(--bg-soft); color: var(--ink);
