@@ -1,5 +1,67 @@
 [
   {
+    "run_id": 30072009811,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30072009811",
+    "bench": "tau2",
+    "tier": "smoke",
+    "event": "workflow_dispatch",
+    "source": "manual (main)",
+    "pr": null,
+    "branch": "main",
+    "sha": "9e4e19765cf33b21113bd81b08bc22ac0134ba08",
+    "date": "2026-07-24T06:24:51Z",
+    "iterations": 3,
+    "agent_model": "aws/gpt-oss-120b",
+    "optimizer_model": "claude-opus-4-8",
+    "conclusion": "success",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "tau2",
+        "task": "35",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "flipped": false,
+        "latency_baseline_s": 110.98309803009033,
+        "latency_opt_s": 3.7931225299835205,
+        "cost_baseline_usd": 0.0,
+        "cost_opt_runner_usd": 0.0,
+        "optimizer_usd": 0.0,
+        "optimizer_tokens": 0,
+        "optimizer_seconds": 0.2850520610809326,
+        "iterations": 3,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/tau2/35/.capevolve/run_optimize",
+        "tag": "hard"
+      },
+      {
+        "bench": "tau2",
+        "task": "37",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0,
+        "reward_delta": 1.0,
+        "flipped": true,
+        "latency_baseline_s": 34.649407148361206,
+        "latency_opt_s": 10.348257780075073,
+        "cost_baseline_usd": 0.0,
+        "cost_opt_runner_usd": 0.0,
+        "optimizer_usd": 0.0,
+        "optimizer_tokens": 0,
+        "optimizer_seconds": 0.3082296848297119,
+        "iterations": 3,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/tau2/37/.capevolve/run_optimize",
+        "tag": "hard"
+      }
+    ],
+    "suite": {
+      "reward_base": 0.0,
+      "reward_opt": 0.5,
+      "flips": 1,
+      "n": 2,
+      "optimizer_usd": 0
+    }
+  },
+  {
     "run_id": 30069371397,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30069371397",
     "bench": "swebench",
