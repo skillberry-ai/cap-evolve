@@ -1,1 +1,252 @@
-[]
+[
+  {
+    "id": "0",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "1",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "2",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "3",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "4",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "5",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "6",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "7",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "8",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "9",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "10",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "11",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "12",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "13",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "14",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "15",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "16",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "17",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "18",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "19",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "20",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "21",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "22",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "23",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "24",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "25",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "26",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "27",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "28",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "29",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "30",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "31",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "32",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "33",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "34",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "35",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "36",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "37",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "38",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "39",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "40",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "41",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "42",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "43",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "44",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "45",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "46",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "47",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "48",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  },
+  {
+    "id": "49",
+    "tag": "full",
+    "agent": "aws/gpt-oss-120b"
+  }
+]
