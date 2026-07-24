@@ -131,6 +131,19 @@ class Adapter(CapabilityAdapter):
 
     # ---- running ---------------------------------------------------------
 
+    def run_trials(self, tasks: list[Task], ctx, *, n_trials: int, base_seed: int) -> dict:
+        """Generate all task×trial patches concurrently (bounded by SWEBENCH_MAX_WORKERS).
+
+        Parallelizes patch GENERATION only — the harness scores (Docker eval) each
+        returned rollout sequentially. Each trial k uses seed = base_seed + k.
+        """
+        from cap_evolve import run_trials_pool
+
+        return run_trials_pool(
+            lambda task, seed: self.run_target(task, ctx, seed=seed),
+            tasks, n_trials=n_trials, base_seed=base_seed, max_workers=MAX_WORKERS,
+        )
+
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         """Generate a patch for one SWE-bench instance using litellm.
 
