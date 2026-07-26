@@ -28,6 +28,36 @@ def _load(p: Path) -> dict:
         return {}
 
 
+def _infra_dominated(agg: dict) -> bool:
+    """True if this eval's reward≈0 is due to INFRASTRUCTURE errors, not capability.
+
+    Mirrors the core's ``_is_infra_ignore``: a task counts as infra only when a
+    MAJORITY of its trials errored AND its mean reward ≈ 0 (a partly-passing task is
+    controllable and protected). The eval is infra-DOMINATED when a majority of its
+    tasks are infra — e.g. a gateway 429 budget_exceeded kills every rollout, so the
+    whole eval reads 0.000. Distinguishing this from a real regression keeps a billing
+    outage from looking like a capability drop in the report.
+    """
+    per = agg.get("per_task") or []
+    if not per:
+        return False
+    eps = 1e-9
+    infra = 0
+    for pt in per:
+        raw = pt.get("raw") or {}
+        if not raw.get("errored"):
+            continue
+        if float(pt.get("reward", 0) or 0) > eps:
+            continue  # partially passed → controllable, not infra
+        et, nt = raw.get("errored_trials"), (raw.get("n_trials") or pt.get("n"))
+        if et is not None and nt:
+            if int(et) * 2 > int(nt):
+                infra += 1
+        else:
+            infra += 1  # no per-trial counts: any-trial-errored + mean≈0
+    return infra > 0 and infra * 2 >= len(per)
+
+
 def extract(run_dir: str, bench: str = "", task: str = "") -> dict:
     rd = Path(run_dir)
     baseline = _load(rd / "baseline.json")
@@ -45,6 +75,12 @@ def extract(run_dir: str, bench: str = "", task: str = "") -> dict:
     latency_opt_s = test.get("seconds")
     cost_opt_runner_usd = test.get("cost_usd")
 
+    # Infra-error detection: a gateway outage (e.g. 429 budget_exceeded) makes every
+    # rollout die with INFRASTRUCTURE_ERROR and the eval read 0.000 — NOT a real
+    # regression. Flag it so the table/rollup can exclude it instead of counting it.
+    opt_infra = _infra_dominated(test)
+    baseline_infra = _infra_dominated(bval)
+
     def _d(a, b):
         return round(a - b, 6) if isinstance(a, (int, float)) and isinstance(b, (int, float)) else None
 
@@ -53,8 +89,12 @@ def extract(run_dir: str, bench: str = "", task: str = "") -> dict:
         "task": task,
         "reward_baseline": reward_baseline,
         "reward_opt": reward_opt,
-        "reward_delta": _d(reward_opt, reward_baseline),
-        "flipped": bool(reward_baseline == 0 and (reward_opt or 0) > 0),
+        "reward_delta": None if (opt_infra or baseline_infra) else _d(reward_opt, reward_baseline),
+        # a flip only counts on real evals — never credit/penalize an infra-errored one
+        "flipped": bool(reward_baseline == 0 and (reward_opt or 0) > 0
+                        and not opt_infra and not baseline_infra),
+        "opt_infra": opt_infra,
+        "baseline_infra": baseline_infra,
         "latency_baseline_s": latency_baseline_s,
         "latency_opt_s": latency_opt_s,
         "cost_baseline_usd": cost_baseline_usd,
@@ -87,24 +127,38 @@ def table(rows: list[dict]) -> str:
     sep = "|---|---|---|:--:|---|---|---|:--:|"
     out = [hdr, sep]
     for r in rows:
-        reward = f"{_fmt(r['reward_baseline'])} → {_fmt(r['reward_opt'])}"
-        flip = "✅" if r.get("flipped") else ("—" if (r.get("reward_opt") or 0) == 0 else "")
+        infra = r.get("opt_infra") or r.get("baseline_infra")
+        if infra:
+            # Gateway/infra outage — reward≈0 is noise, not a result. Say so explicitly.
+            reward = f"{_fmt(r['reward_baseline'])} → ⚠️ infra-error"
+            flip = "⚠️"
+        else:
+            reward = f"{_fmt(r['reward_baseline'])} → {_fmt(r['reward_opt'])}"
+            flip = "✅" if r.get("flipped") else ("—" if (r.get("reward_opt") or 0) == 0 else "")
         lat = f"{_fmt(r['latency_baseline_s'])} → {_fmt(r['latency_opt_s'])}"
         cost = f"{_fmt(r['cost_baseline_usd'],'$')} → {_fmt(r['cost_opt_runner_usd'],'$')}"
         out.append(
             f"| {r['bench']} | `{r['task']}` | {reward} | {flip} | {lat} | {cost} | "
             f"{_fmt(r['optimizer_usd'],'$')} | {_fmt(r['iterations'])} |"
         )
-    # suite rollup
-    rew_b = [r['reward_baseline'] for r in rows if isinstance(r['reward_baseline'], (int, float))]
-    rew_o = [r['reward_opt'] for r in rows if isinstance(r['reward_opt'], (int, float))]
-    flips = sum(1 for r in rows if r.get("flipped"))
+    # suite rollup — EXCLUDE infra-errored evals from the mean + flip counts so a
+    # gateway outage can't masquerade as a regression (or a win).
+    real = [r for r in rows if not (r.get("opt_infra") or r.get("baseline_infra"))]
+    infra_n = len(rows) - len(real)
+    rew_b = [r['reward_baseline'] for r in real if isinstance(r['reward_baseline'], (int, float))]
+    rew_o = [r['reward_opt'] for r in real if isinstance(r['reward_opt'], (int, float))]
+    flips = sum(1 for r in real if r.get("flipped"))
     opt_usd = sum(r['optimizer_usd'] or 0 for r in rows)
     if rew_b and rew_o:
         out.append("")
+        suffix = f" · {infra_n} infra-errored (excluded)" if infra_n else ""
         out.append(f"**Suite:** mean reward {sum(rew_b)/len(rew_b):.3f} → "
-                   f"{sum(rew_o)/len(rew_o):.3f} · flips {flips}/{len(rows)} · "
-                   f"optimizer ${opt_usd:.4f}")
+                   f"{sum(rew_o)/len(rew_o):.3f} · flips {flips}/{len(real)} · "
+                   f"optimizer ${opt_usd:.4f}{suffix}")
+    elif infra_n:
+        out.append("")
+        out.append(f"**Suite:** ⚠️ all {infra_n} eval(s) infra-errored (gateway/runtime "
+                   "outage) — no valid optimized result. Check the model gateway (budget/429).")
     return "\n".join(out)
 
 

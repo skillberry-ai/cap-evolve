@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ci_setup.sh — idempotently prepare the self-hosted runner for ONE benchmark.
 # Creates a cached py3.12 venv + benchmark deps/clones OUTSIDE the checkout (so they
-# survive between jobs), ensures the claude-code optimizer CLI is installed (hard-fails
-# if not — a missing proposer otherwise degrades silently to best=seed/0.000), and
-# exports CAPEVOLVE_PY / SKILLSBENCH_SRC / PATH to $GITHUB_ENV.
+# survive between jobs), ensures the claude-code optimizer CLI is installed, preflights
+# the model-gateway budget (fail fast on 429 budget_exceeded rather than score all-0.000),
+# and exports CAPEVOLVE_PY / SKILLSBENCH_SRC / PATH to $GITHUB_ENV.
 #
 #   ci_setup.sh <bench>
 set -euo pipefail
@@ -39,7 +39,7 @@ esac
 # SILENTLY degrades — the optimizer fails every iteration with `cli_present:false`, no edit
 # is proposed, and every task reports best=seed / reward 0.000 as if it had "optimized".
 # Install idempotently into a user-writable prefix ($HOME/.local/bin is already on PATH and
-# exported below), then HARD-FAIL if it is still unavailable so a broken runner is loud, not silent.
+# exported below), then HARD-FAIL if it is still unavailable so a broken runner is loud.
 if ! command -v claude >/dev/null 2>&1; then
   command -v npm >/dev/null || { echo "::error:: npm required to install the claude-code optimizer"; exit 1; }
   echo "claude CLI missing — installing @anthropic-ai/claude-code into $HOME/.local"
@@ -52,6 +52,26 @@ command -v claude >/dev/null || {
   exit 1
 }
 echo "claude-code optimizer: $(command -v claude) ($(claude --version 2>/dev/null | head -1))"
+
+# Gateway budget preflight. The agent (gpt-oss) AND the optimizer (opus) share one
+# LiteLLM gateway; when it hits its spend cap it returns 429 budget_exceeded and every
+# rollout dies with INFRASTRUCTURE_ERROR → the whole suite silently scores 0.000 (looks
+# identical to a real regression). Probe once and FAIL FAST rather than burn hours. Only
+# hard-fails on the budget case; other transient errors are non-blocking.
+if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ] && command -v curl >/dev/null; then
+  probe=/tmp/capevolve_budget_probe.$$.json
+  code="$(curl -sS -m 30 -o "$probe" -w '%{http_code}' \
+    "$ANTHROPIC_BASE_URL/chat/completions" \
+    -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" -H 'Content-Type: application/json' \
+    -d '{"model":"aws/gpt-oss-120b","messages":[{"role":"user","content":"ping"}],"max_tokens":1}' 2>/dev/null || echo 000)"
+  if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
+    echo "::error:: model gateway is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
+    echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
+    head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+  fi
+  rm -f "$probe"
+  echo "gateway budget preflight: HTTP $code (not budget-blocked)"
+fi
 
 # Export for later workflow steps (no-op locally).
 if [ -n "${GITHUB_ENV:-}" ]; then
