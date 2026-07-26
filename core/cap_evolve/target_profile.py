@@ -12,6 +12,7 @@ and a project may override a tier's brief with a raw-text file (``target_profile
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -76,6 +77,33 @@ MODEL_MAP: dict[str, str] = {
 }
 
 
+def _match_model(key: str) -> tuple[str | None, str]:
+    """Resolve a lowercased model id to a tier.
+
+    Exact ``MODEL_MAP`` hit wins. Otherwise fall back to a boundary-aware
+    substring match so provider/gateway prefixes (``aws/gpt-oss-120b``,
+    ``litellm_proxy/aws/gpt-oss-120b``, ``openai/…``) and version/date suffixes
+    (``claude-haiku-4-5-20251001``) still resolve to the right tier instead of
+    silently defaulting. The match must be delimited by string ends or a
+    non-``[a-z0-9]`` char so ``gpt-oss-20b`` never matches inside
+    ``gpt-oss-120b``; when several keys match, the LONGEST (most specific) wins.
+
+    Returns ``(tier, note)`` where ``tier`` is ``None`` if nothing matched. A
+    non-empty ``note`` flags a fuzzy (non-exact) match so it stays visible.
+    """
+    if key in MODEL_MAP:
+        return MODEL_MAP[key], ""
+    matches = [mk for mk in MODEL_MAP
+               if re.search(r"(?:^|[^a-z0-9])" + re.escape(mk) + r"(?:[^a-z0-9]|$)", key)]
+    if matches:
+        best = max(matches, key=len)
+        return MODEL_MAP[best], (
+            f"model id '{key}' matched known model '{best}' (tier '{MODEL_MAP[best]}') "
+            "by substring; declare a tier keyword (frontier|strong|mid|weak) to be explicit"
+        )
+    return None, ""
+
+
 @dataclass
 class TargetProfile:
     model: str = ""
@@ -98,15 +126,14 @@ def resolve(target_model: str = "",
         return TargetProfile()  # agnostic
 
     key = decl.lower()
-    note = ""
     if key in TIERS:
-        tier = key
-    elif key in MODEL_MAP:
-        tier = MODEL_MAP[key]
+        tier, note = key, ""
     else:
-        tier = DEFAULT_TIER
-        note = (f"unknown model id '{decl}'; defaulting to tier '{DEFAULT_TIER}' — "
-                "set a tier keyword (frontier|strong|mid|weak) explicitly to override")
+        tier, note = _match_model(key)
+        if tier is None:
+            tier = DEFAULT_TIER
+            note = (f"unknown model id '{decl}'; defaulting to tier '{DEFAULT_TIER}' — "
+                    "set a tier keyword (frontier|strong|mid|weak) explicitly to override")
 
     spec = TIERS[tier]
     brief = spec["brief"]

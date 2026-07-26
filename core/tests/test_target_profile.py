@@ -26,6 +26,28 @@ def test_known_model_case_insensitive():
     assert tp.resolve("GPT-OSS-120B").tier == "mid"
 
 
+def test_provider_prefixed_model_resolves_by_substring():
+    # aws/ gateway prefix (the CI benchmark agent id) must still land on 'mid'.
+    p = tp.resolve("aws/gpt-oss-120b")
+    assert p.tier == "mid"
+    assert "substring" in p.resolution_note.lower()  # fuzzy match stays visible
+
+
+def test_double_prefixed_model_resolves():
+    assert tp.resolve("litellm_proxy/aws/gpt-oss-120b").tier == "mid"
+
+
+def test_version_suffixed_model_resolves():
+    assert tp.resolve("claude-haiku-4-5-20251001").tier == "mid"
+    assert tp.resolve("aws/claude-sonnet-5").tier == "strong"
+
+
+def test_substring_match_respects_token_boundaries():
+    # gpt-oss-20b must NOT spuriously match inside gpt-oss-120b, and longest wins.
+    assert tp.resolve("aws/gpt-oss-120b").tier == "mid"
+    assert tp.resolve("aws/gpt-oss-20b").tier == "weak"
+
+
 def test_unknown_model_defaults_to_strong_with_note():
     p = tp.resolve("some-local-llm-7b")
     assert p.tier == "strong"

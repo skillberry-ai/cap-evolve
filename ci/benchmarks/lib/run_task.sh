@@ -103,11 +103,17 @@ esac
 printf '{"train":["%s"],"val":["%s"],"test":["%s"]}\n' "$TASK_ID" "$TASK_ID" "$TASK_ID" \
   > "$PROJ/inputs/split_ids.json"
 
+# target_model = the CONSUMING/runtime model the agent-under-test reads these
+# capabilities with (here $AGENT_MODEL, e.g. aws/gpt-oss-120b), distinct from the
+# optimizer_model that PROPOSES edits. Declaring it steers the optimizer prompt to
+# optimize FOR that reader's tier. Provider prefixes (aws/, litellm_proxy/) resolve
+# via target_profile's substring matcher. Blank == today's reader-agnostic behavior.
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability
 optimizer_skill:    claude-code
 optimizer_model:    claude-opus-4-8
+target_model:       $AGENT_MODEL
 algorithm_skill:    hill-climb
 algorithm_focus:    all
 dataset_source:     adapter
