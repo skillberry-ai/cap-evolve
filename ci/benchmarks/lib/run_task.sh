@@ -114,6 +114,12 @@ capability_path:    seed_capability
 optimizer_skill:    claude-code
 optimizer_model:    claude-opus-4-8
 target_model:       $AGENT_MODEL
+# Per-iteration optimizer caps — WITHOUT these the claude-code optimizer runs unbounded
+# each iteration (observed ~26 min / iteration with target_model fan-out), making a
+# 3-iter × 10-task smoke take hours and cost hundreds of $. --max-turns bounds wall-time,
+# --max-budget-usd is a hard $ stop; whichever hits first ends the iteration. Overridable.
+optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
+optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-4.0}
 algorithm_skill:    hill-climb
 algorithm_focus:    all
 dataset_source:     adapter
