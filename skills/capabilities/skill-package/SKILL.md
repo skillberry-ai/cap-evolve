@@ -61,6 +61,15 @@ Three loading levels — optimize for the cheapest that still works:
 So a vague description → the skill never triggers; a bloated body → wasted context
 and worse behavior; detail that belongs in a reference → paid for on every trigger.
 
+## Adapting to the reader's capability tier
+Scale the SKILL.md body density to WHO follows it at runtime (see the `THE READER` block
+in your instructions, if present). A **mid/weak** reader needs more worked steps, explicit
+ordering, and examples in the body — it infers less, so a compact principle-first body
+leaves it guessing. A **frontier** reader follows a compact, principle-first body and is
+slowed by over-specification. Keep the progressive-disclosure structure and body budget
+either way (push detail into `references/`); the tier changes how *explicit* the retained
+body is, not how *long* it may be.
+
 ## The description is the trigger — optimize it as a separable step
 Most triggering failures are fixed by editing the *description*, not the body.
 

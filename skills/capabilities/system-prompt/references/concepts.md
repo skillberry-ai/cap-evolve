@@ -31,6 +31,22 @@ preambles dilute attention and can *lower* accuracy; conflicting instructions
 resolve unpredictably; instructions that fight the model's defaults produce
 inconsistent behavior. This is why "more instructions" is not "better."
 
+## Adapting to the reader's capability tier
+The right edit depends on WHO reads this prompt at runtime (see the `THE READER` block
+in your instructions, if present). Much of the advice in this file — "soften MUSTs",
+"explain the why", "newer models over-comply" — is a **frontier/strong-reader** tactic.
+Flip it for weaker readers:
+
+- **frontier / strong reader:** lean, reasoning-first prose; explain the WHY; keep
+  few-shot minimal; soften brittle imperatives — over-constraining *hurts* this reader.
+- **mid / weak reader:** be EXPLICIT. Prefer imperative step-by-step rules; include at
+  least one worked few-shot example per non-trivial behavior; keep decision chains short;
+  make the output contract rigid and literal; and push behavioral rules into tool CODE
+  (see the `tools` capability) rather than prose the reader will skip.
+
+When no reader is declared (`target_model` empty), default to the frontier/strong advice
+below — but say so in `PROCESS.md` so a later run can set the tier.
+
 ## What to optimize (and how)
 - Add a one-sentence **role line** if absent — a cheap, well-documented win that
   focuses behavior and tone.

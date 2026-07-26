@@ -423,6 +423,18 @@ follow, and each is driven by a different part of that block:
 for **fewer than ~20 tools per turn** (OpenAI's heuristic); selection degrades
 sharply past that. This is the number behind the lean caveat above.
 
+## Adapting to the reader's capability tier
+Scale the edit to WHO calls these tools at runtime (see the `THE READER` block in your
+instructions, if present). For a **mid/weak** reader, push harder on this skill's
+already-preferred **code enforcement** (in-body guards, composite atomic-write tools) — a
+weak reader skips a prose rule but a guard fires regardless — and write **literal,
+example-bearing per-parameter slot-filling docs** on every tool (name the exact format,
+units, and one concrete valid value, e.g. `date: ISO-8601 "2026-07-20"`). A weak reader
+mis-fills under-documented arguments far more often, so the marginal value of explicit
+parameter docs and a smaller, less-confusable toolset is highest there. For a **frontier**
+reader, terser parameter docs and fewer worked examples suffice; spend the budget on
+removing redundant tools instead.
+
 ## Shape the RESULT, not just the call (output/response design)
 
 What a tool *returns* steers the next turn as much as its description steers

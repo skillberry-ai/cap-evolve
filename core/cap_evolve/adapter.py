@@ -155,6 +155,17 @@ class CapabilityAdapter(ABC):
         """
         return None
 
+    def runner_model(self) -> str | None:
+        """OPTIONAL: the model id the runner drives at runtime (the CONSUMING model).
+
+        Override to enable ``cap-evolve check``'s consuming-vs-declared mismatch
+        warning: if this resolves to a different capability tier than the
+        ``target_model`` declared in ``capevolve.yaml``, check emits a non-blocking
+        note. Returns ``None`` by default — the declaration is then trusted and no
+        cross-check runs.
+        """
+        return None
+
 
 def stub_methods(adapter: object) -> list[str]:
     """Return the names of adapter methods that are still unimplemented.

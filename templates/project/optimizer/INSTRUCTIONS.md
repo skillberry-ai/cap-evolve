@@ -1,5 +1,7 @@
 # Optimize the capability — ship several REAL, SAFE, VERIFIED fixes this iteration
 
+{{TARGET_READER}}
+
 {{FOCUS_SUMMARY}}
 
 {{EMPTY_SEED}}

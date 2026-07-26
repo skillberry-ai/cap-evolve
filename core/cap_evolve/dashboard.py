@@ -454,6 +454,15 @@ def reduce_run(run_dir) -> dict:
             "implemented": [],
         }
 
+    # Consuming-LLM profile (the runtime model the capabilities are optimized FOR;
+    # distinct from the optimizer model). Absent for profile-agnostic runs.
+    tp_ev = next((e for e in events if e.get("kind") == "target_profile"), None)
+    target_profile = ({
+        "model": tp_ev.get("model") or "",
+        "tier": tp_ev.get("tier") or "",
+        "resolution_note": tp_ev.get("resolution_note") or "",
+    } if tp_ev is not None else None)
+
     # --- first-class evaluations (split-oriented, distinct from per_iteration) ---
     # An evaluation is one scoring of a candidate on one split: the seed baseline on
     # val, every candidate that earned a full val score on val, and the sealed test
@@ -554,6 +563,7 @@ def reduce_run(run_dir) -> dict:
         "per_iteration": per_iteration,
         "evaluations": evaluations,
         "intake": intake,
+        "target_profile": target_profile,
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
@@ -721,6 +731,11 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
     ]
     row = "  ".join(c(_C.DIM, k + " ") + c(col, v) for k, v, col in kpi)
     lines.append(row)
+    tp = s.get("target_profile")
+    if tp:
+        lines.append(c(_C.DIM, "consuming model ")
+                     + c(_C.CYAN, f"{tp['model']} (tier {tp['tier']})")
+                     + c(_C.DIM, "  — capabilities optimized for this reader"))
     lines.append("")
 
     # --- cumulative-best chart (per iteration) --------------------------

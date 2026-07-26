@@ -1,79 +1,172 @@
 #!/usr/bin/env bash
-# run_suite.sh — run the optimize+eval suite for ONE benchmark and emit metrics +
-# reviewable optimized-capability artifacts. Reuses the FROZEN baselines (no baseline
-# agent re-run). Called by .github/workflows/benchmarks.yml (self-hosted, ibm-vpc) and
-# usable locally.
+# run_suite.sh — MODE A: optimize ALL of a tier's tasks TOGETHER in ONE optimization run.
 #
 #   run_suite.sh <bench> [out_dir]
 #
-# Reads ci/benchmarks/<bench>/tasks.json = [{"id":..,"tag":"flip|hard"}, ...] and, per task,
-# runs `run_task.sh <bench> <id> optimize <frozen>`, extracts metrics, and captures the
-# optimizer's edits. Writes <out_dir>/{metrics.jsonl, report.md, optimized/<id>/…}.
+# NOT task-by-task. The optimizer sees EVERY failing task each iteration and proposes one
+# edit to improve across all of them. Split is a NO-HOLDOUT FIT: train == val == test ==
+# all tier tasks — baseline and optimized are both measured on the same tasks, so the
+# headline is a TRAIN-FIT number (how well the optimizer fits the tasks), NOT a
+# generalization claim. One optimization = ITERATIONS opus passes total (not × #tasks).
+#
+# Reads ci/benchmarks/<bench>/<TIER>/tasks.json. Writes <out_dir>/{metrics.jsonl, report.md,
+# optimized/}. Runs on the self-hosted runner (VPC gateway); dogfoods the adapter templates.
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench}"; OUT="${2:-$REPO/ci/benchmarks/.work/suite_$BENCH}"
-mkdir -p "$OUT/optimized"
+BENCH="${1:?bench (tau2|swebench|skillsbench)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
-TIER="${TIER:-smoke}"                          # smoke (default) | full
+TIER="${TIER:-smoke}"
+ITER="${ITERATIONS:-3}"
+AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
+NUM_TRIALS="${NUM_TRIALS:-10}"
 BASE="$REPO/ci/benchmarks/$BENCH/$TIER"
-[ -f "$BASE/tasks.json" ] || { echo "::warning::no tasks.json for $BENCH/$TIER — nothing to run"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks defined for this tier)" >> "$OUT/report.md"; exit 0; }
+OUT="${2:-$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}}"
+mkdir -p "$OUT/optimized"
 : > "$OUT/metrics.jsonl"
 
-ids_tags="$("$PY" - "$BASE/tasks.json" <<'PY'
+[ -f "$BASE/tasks.json" ] || { echo "::warning::no tasks.json for $BENCH/$TIER — nothing to run"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks defined for this tier)" >> "$OUT/report.md"; exit 0; }
+
+: "${ANTHROPIC_BASE_URL:?set ANTHROPIC_BASE_URL (IBM gateway)}"
+: "${ANTHROPIC_AUTH_TOKEN:?set ANTHROPIC_AUTH_TOKEN}"
+
+export PYTHONPATH="$REPO/core"
+export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
+
+# All task ids for this tier (mode A optimizes them together). Agent is uniform across a
+# tier; take the first task's agent and warn if the file mixes agents (mode A can't mix).
+readarray -t IDS < <("$PY" - "$BASE/tasks.json" <<'PY'
 import json,sys
 for t in json.load(open(sys.argv[1])):
-    print(f"{t['id']}\t{t.get('tag','')}\t{t.get('agent','aws/gpt-oss-120b')}")
+    print(t["id"])
 PY
-)"
-
-# NOTE: iterate on FD 3 (not stdin). The optimizer subprocess (claude -p …) reads stdin;
-# if the loop fed `read` from stdin, claude would DRAIN the here-string and the loop would
-# exit after the first task (silently ran 1/N tasks once claude-code actually ran). FD 3
-# keeps the task list isolated; run_task also gets </dev/null below.
-while IFS=$'\t' read -r id tag agent <&3; do
-  [ -n "$id" ] || continue
-  frozen="$BASE/$(echo "$id" | tr '/ ' '__')/baseline"
-  # A tier may be partially populated (e.g. full mid-freeze): run only tasks whose frozen
-  # baseline exists; skip the rest with a warning instead of failing the whole suite.
-  [ -f "$frozen/baseline.json" ] || { echo "::warning::no frozen baseline for $BENCH/$TIER $id — skipping"; continue; }
-  echo "::group::$BENCH $id ($tag, agent=$agent)"
-  out="$(AGENT_MODEL="$agent" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" optimize "$frozen" </dev/null 2>&1)" || true
-  echo "$out"
-  run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
-  echo "::endgroup::"
-  [ -n "$run_dir" ] || { echo "::warning::no run dir for $id"; continue; }
-
-  # metrics row (adds the tag)
-  row="$("$PY" "$LIB_DIR/metrics.py" extract "$run_dir" --bench "$BENCH" --task "$id")"
-  row="$("$PY" - "$row" "$tag" <<'PY'
+)
+[ "${#IDS[@]}" -gt 0 ] || { echo "::warning::tasks.json empty for $BENCH/$TIER"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks)" >> "$OUT/report.md"; exit 0; }
+AGENT_MODEL="$("$PY" - "$BASE/tasks.json" "$AGENT_MODEL" <<'PY'
 import json,sys
-d=json.loads(sys.argv[1]); d["tag"]=sys.argv[2]; print(json.dumps(d))
+ts=json.load(open(sys.argv[1])); agents={t.get("agent",sys.argv[2]) for t in ts}
+if len(agents)>1: sys.stderr.write(f"::warning::mixed agents {agents}; mode A uses one — using {sorted(agents)[0]}\n")
+print(sorted(agents)[0])
 PY
 )"
-  echo "$row" >> "$OUT/metrics.jsonl"
+IDS_CSV="$(IFS=,; echo "${IDS[*]}")"
+echo ">>> MODE A: $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MODEL, ${ITER} iters)" >&2
 
-  # reviewable optimized capability: a diff vs seed. For skillsbench the skills are
-  # Anthropic-licensed → capture only a stat summary (no content), never the files.
-  best="$(sed -n 's/.*"best_id": "\([^"]*\)".*/\1/p' "$run_dir/state.json" 2>/dev/null | head -1)"
-  seed_dir="$run_dir/candidates/seed"; opt_dir="$run_dir/candidates/${best:-seed}"
-  dst="$OUT/optimized/$(echo "$id" | tr '/ ' '__')"; mkdir -p "$dst"
-  if [ "$BENCH" = "skillsbench" ]; then
-    git --no-pager diff --no-index --stat "$seed_dir" "$opt_dir" > "$dst/capability.diffstat.txt" 2>/dev/null || true
-    echo "(skillsbench skills are Anthropic-licensed — content not published; stat only)" >> "$dst/capability.diffstat.txt"
-  else
-    git --no-pager diff --no-index "$seed_dir" "$opt_dir" > "$dst/capability.diff" 2>/dev/null || true
-    [ -d "$opt_dir" ] && cp -R "$opt_dir"/. "$dst/optimized_capability/" 2>/dev/null || true
-  fi
-done 3<<< "$ids_tags"
+# ---- scaffold ONE project over ALL tasks -----------------------------------
+WORK="$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}_proj"
+rm -rf "$WORK"; mkdir -p "$WORK/.capevolve/project/adapters" "$WORK/.capevolve/project/inputs"
+PROJ="$WORK/.capevolve/project"
+TPL="$REPO/templates/adapters"
+cp "$TPL/model_config.py" "$PROJ/adapters/" 2>/dev/null || true
 
-# render the report
-KIND="${TIER:-smoke}"
-{
-  echo "## ${KIND^} suite — $BENCH"
-  echo
-  echo "Agent \`aws/gpt-oss-120b\` · optimizer Claude Code \`claude-opus-4-8\` · ${ITERATIONS:-3} iteration(s) · baselines frozen (reused)."
-  echo
-  "$PY" "$LIB_DIR/metrics.py" table "$OUT/metrics.jsonl"
-} > "$OUT/report.md"
+case "$BENCH" in
+  tau2)
+    cp "$TPL/tau2_bench/adapter.py" "$PROJ/adapters/"
+    cp -R "$REPO/examples/tau2_airline/seed_capability" "$PROJ/seed_capability"
+    CAPS="[system-prompt, tools]"
+    cat > "$WORK/.env" <<ENV
+MODEL=litellm_proxy/$AGENT_MODEL
+LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
+LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MAX_TOKENS=8000
+TEMPERATURE=0.0
+ENV
+    export TAU2_MAX_CONCURRENCY=10
+    ;;
+  swebench)
+    cp "$TPL/swe_bench/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/swe_bench/seed_capability" "$PROJ/seed_capability"
+    CAPS="[system-prompt]"
+    cat > "$WORK/.env" <<ENV
+MODEL=litellm_proxy/$AGENT_MODEL
+LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
+LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MAX_TOKENS=8000
+TEMPERATURE=0.0
+SWEBENCH_INSTANCE_IDS=$IDS_CSV
+SWEBENCH_MAX_WORKERS=10
+SWEBENCH_NAMESPACE=${SWEBENCH_NAMESPACE:-swebench}
+SWEBENCH_ORACLE=${SWEBENCH_ORACLE:-1}
+ENV
+    export SWEBENCH_MAX_WORKERS=10
+    ;;
+  skillsbench)
+    cp "$TPL/skillsbench/adapter.py" "$PROJ/adapters/"
+    SB_SRC="${SKILLSBENCH_SRC:-$REPO/e2e/skillsbench-src}"
+    [ -d "$SB_SRC/tasks" ] || { echo "::error:: skillsbench clone not found at $SB_SRC (set SKILLSBENCH_SRC)"; exit 1; }
+    SEED="$PROJ/seed_capability"; mkdir -p "$SEED"
+    cp -R "$SB_SRC/tasks/offer-letter-generator/environment/skills/docx" "$SEED/docx"
+    cp -R "$SB_SRC/tasks/exceltable-in-ppt/environment/skills/pptx"      "$SEED/pptx"
+    cp -R "$SB_SRC/tasks/exceltable-in-ppt/environment/skills/xlsx"      "$SEED/xlsx"
+    cp -R "$SB_SRC/tasks/pdf-excel-diff/environment/skills/pdf"          "$SEED/pdf"
+    CAPS="[skill-package]"
+    cat > "$WORK/.env" <<ENV
+ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL
+ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN
+SKILLSBENCH_MODEL=$AGENT_MODEL
+SKILLSBENCH_TASKS_DIR=$SB_SRC/tasks
+SKILLSBENCH_CONCURRENCY=10
+ENV
+    export SKILLSBENCH_MODEL="$AGENT_MODEL"
+    export SKILLSBENCH_TASKS_DIR="$SB_SRC/tasks"
+    export SKILLSBENCH_CONCURRENCY=10
+    ;;
+  *) echo "unknown bench: $BENCH" >&2; exit 2;;
+esac
+
+# NO-HOLDOUT FIT split: train == val == test == ALL tier tasks.
+"$PY" - "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
+import json,sys
+ids=[s for s in sys.argv[1].split(",") if s]
+print(json.dumps({"train":ids,"val":ids,"test":ids}))
+PY
+
+cat > "$PROJ/capevolve.yaml" <<YAML
+capabilities:       $CAPS
+capability_path:    seed_capability
+optimizer_skill:    claude-code
+optimizer_model:    claude-opus-4-8
+target_model:       $AGENT_MODEL
+optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
+optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-4.0}
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter
+split_ids_file:     "inputs/split_ids.json"
+num_trials:         $NUM_TRIALS
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     $ITER
+stall:              $ITER
+store:              git
+YAML
+
+cd "$WORK"
+"$PY" -m cap_evolve.cli check .capevolve/project >&2
+
+# ONE optimization: baseline (all tasks) + ITER optimize iterations + finalize (all tasks).
+"$PY" -m cap_evolve.cli run --spec .capevolve/project/capevolve.yaml \
+      --project .capevolve/project --run-ts modeA --max-iterations "$ITER" </dev/null || \
+  echo "::warning::mode-A run exited non-zero for $BENCH"
+RUN_DIR="$WORK/.capevolve/run_modeA"
+
+# ---- metrics + report (per-task base→opt from the ONE run) -----------------
+"$PY" "$LIB_DIR/metrics.py" modea "$RUN_DIR" --bench "$BENCH" --tier "$TIER" \
+      --agent "$AGENT_MODEL" --iters "$ITER" --jsonl "$OUT/metrics.jsonl" > "$OUT/report.md" 2>/dev/null || {
+  echo "## ${TIER^} suite — $BENCH (mode A)" > "$OUT/report.md"; echo "(no metrics — run failed; check logs)" >> "$OUT/report.md"; }
+
+# reviewable optimized capability (diff vs seed). skillsbench skills are Anthropic-licensed
+# → stat only, never content.
+best="$(sed -n 's/.*"best_id": "\([^"]*\)".*/\1/p' "$RUN_DIR/state.json" 2>/dev/null | head -1)"
+seed_dir="$RUN_DIR/candidates/seed"; opt_dir="$RUN_DIR/candidates/${best:-seed}"
+dst="$OUT/optimized"; mkdir -p "$dst"
+if [ "$BENCH" = "skillsbench" ]; then
+  git --no-pager diff --no-index --stat "$seed_dir" "$opt_dir" > "$dst/capability.diffstat.txt" 2>/dev/null || true
+  echo "(skillsbench skills are Anthropic-licensed — content not published; stat only)" >> "$dst/capability.diffstat.txt"
+else
+  git --no-pager diff --no-index "$seed_dir" "$opt_dir" > "$dst/capability.diff" 2>/dev/null || true
+  [ -d "$opt_dir" ] && cp -R "$opt_dir"/. "$dst/optimized_capability/" 2>/dev/null || true
+fi
+
 cat "$OUT/report.md"
+echo "RUN_DIR=$RUN_DIR"

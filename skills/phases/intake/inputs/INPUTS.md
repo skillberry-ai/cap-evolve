@@ -105,6 +105,16 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`
   to see the available names); `optimizer_model` is the backend-specific model id.
 
+- **target_model** (default `""` = profile-agnostic): the runtime/CONSUMING LLM the
+  agent reads these capabilities with — DISTINCT from `optimizer_model`, which proposes
+  the edits. Give a concrete model id (e.g. `gpt-oss-120b`) or a capability tier
+  (`frontier | strong | mid | weak`). cap-evolve steers the optimizer prompt and the
+  capability guidance to optimize FOR this reader (a weaker reader gets more explicit
+  rules, worked examples, and code enforcement; a frontier reader gets leaner prose that
+  explains the *why*). ASK the user which model the agent runs at runtime; if unknown,
+  leave blank and note it in `PROJECT.md`. Optionally set `target_profile_file` to a raw
+  text/markdown file to override the resolved tier's built-in brief.
+
 - **runner_repo_path** (default `""`): the benchmark/runner SOURCE (a local path or
   checkout), surfaced to the optimizer as READ-ONLY context so it can consult the
   runner's tools / scoring / task structure while proposing edits. Set it when the

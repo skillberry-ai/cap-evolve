@@ -5,6 +5,21 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Fixed
+- **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
+  runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
+  installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
+  optimizer failed every iteration (`cli_present:false`) and every task reported
+  `best=seed`/0.000; (2) `ci_setup.sh` adds a **model-gateway budget preflight** — one
+  tiny gpt-oss call that aborts with a clear error on `429 budget_exceeded` (the shared
+  LiteLLM gateway hitting its spend cap 429s both the agent and the optimizer, killing
+  every rollout with `INFRASTRUCTURE_ERROR`); (3) `run_suite.sh` iterates the task list on
+  FD 3 (+ `run_task </dev/null`) so the optimizer subprocess reading stdin can no longer
+  DRAIN the here-string and cut the suite off after one task. `metrics.py` now detects an
+  infra-dominated eval (majority trials errored + reward≈0) and renders it as
+  `⚠️ infra-error`, excluding it from the suite mean/flip counts so a gateway outage no
+  longer looks like a capability regression.
+
 ### Added
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
@@ -18,6 +33,18 @@ All notable changes to cap-evolve are documented here. The format follows
   and a new **`freeze` action** on the benchmarks workflow (`freeze_suite.sh`) baselines a
   task list on the self-hosted runner and captures frozen baselines + a pass@k summary to
   pick the smoke sweet spot (0 < reward < 1).
+- **Consuming-LLM profiles.** Declare the runtime/consuming model via `target_model`
+  (a concrete model id or a capability tier: `frontier|strong|mid|weak`) in
+  `capevolve.yaml`. The optimizer prompt (new `{{TARGET_READER}}` block) and the
+  capability guidance now adapt their proposed edits to that reader — a weaker reader
+  gets more explicit rules, worked examples, literal slot-filling docs, and code
+  enforcement; a frontier reader gets leaner prose that explains the *why*. This is
+  DISTINCT from `optimizer_model` (which proposes the edits). `cap-evolve check` warns
+  (non-blocking) when the declared consuming model's tier differs from the runner's
+  actual model (via an optional `adapter.runner_model()` hook). Report + dashboard
+  surface the consuming model alongside the optimizer model. Blank `target_model`
+  preserves prior behavior exactly; optional `target_profile_file` overrides a tier's
+  built-in brief. The tau2-airline example opts in (`gpt-oss-120b`, tier `mid`).
 - **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
   timeout) from its last completed state instead of starting over. Reopens the run dir
   (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it

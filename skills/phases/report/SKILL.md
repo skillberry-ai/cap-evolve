@@ -40,6 +40,12 @@ between:
 Always report the **test stderr / CI**, not just the point: "0.71" and
 "0.71 ± 0.08" support very different decisions.
 
+When the run declared a **consuming LLM** (the `target_profile` in the run summary —
+the runtime model the capabilities were optimized FOR, distinct from the optimizer
+model that proposed the edits), print it alongside the optimizer model so the two LLM
+roles stay visibly distinct: e.g. "optimized for gpt-oss-120b (tier mid); edits proposed
+by claude-opus". Omit the line for profile-agnostic runs (no `target_profile`).
+
 ## Dual-mode
 This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:report` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
 
