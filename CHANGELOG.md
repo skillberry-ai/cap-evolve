@@ -6,6 +6,18 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
+  `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
+  gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the
+  prompt so a single-shot mid-tier reader (gpt-oss-120b) can produce a diff that actually
+  applies — blind problem-statement-only prompting is near-hopeless for weaker readers.
+  Scoring still runs on the base dataset (eval path unchanged); off by default. Adds
+  `<patch>…</patch>` extraction for the oracle output contract. New
+  `ci/benchmarks/swebench/select_candidates.py` builds a candidate pool (Verified∩Lite,
+  Easy `<15 min` difficulty, single-file/small-patch, oracle-context under a token budget)
+  and a new **`freeze` action** on the benchmarks workflow (`freeze_suite.sh`) baselines a
+  task list on the self-hosted runner and captures frozen baselines + a pass@k summary to
+  pick the smoke sweet spot (0 < reward < 1).
 - **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
   timeout) from its last completed state instead of starting over. Reopens the run dir
   (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it

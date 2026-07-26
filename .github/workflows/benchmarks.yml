@@ -23,8 +23,13 @@ name: Benchmarks
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "run = optimize+eval vs frozen baselines; freeze = baseline a task list and capture frozen baselines"
+        type: choice
+        default: run
+        options: [run, freeze]
       benchmark:
-        description: "Which benchmark to run"
+        description: "Which benchmark to run (freeze requires a specific bench, not 'all')"
         type: choice
         default: all
         options: [all, tau2, swebench, skillsbench]
@@ -37,6 +42,10 @@ on:
         description: "Optimizer iterations per task (default 3; raise to give the optimizer more budget)"
         type: string
         default: "3"
+      task_ids:
+        description: "freeze only: space-separated task ids, or blank to use ci/benchmarks/<bench>/<tier>_candidates.json"
+        type: string
+        default: ""
   pull_request:
     types: [labeled]
 
@@ -53,7 +62,7 @@ jobs:
     # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
     # (an all-label or a per-bench one). The per-matrix gate decides the exact tier×bench.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action || 'run') != 'freeze') ||
       (github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
         (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
@@ -164,13 +173,74 @@ jobs:
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
 
+  # ---- baseline freeze (workflow_dispatch, action=freeze) -------------------
+  # Baseline a task list on the self-hosted runner (VPC gateway) and CAPTURE frozen
+  # baselines for later reuse by the `bench` job. This is how a new smoke/full task
+  # set gets its frozen baselines + a pass@k summary to pick the sweet spot. The frozen
+  # baselines are uploaded as an artifact (review + commit them into the repo yourself;
+  # we intentionally do not auto-push to protected refs).
+  freeze:
+    name: freeze / ${{ github.event.inputs.benchmark }}
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'freeze'
+    runs-on: [self-hosted, ibm-vpc]
+    permissions:
+      contents: read
+    concurrency:
+      group: benchmarks-freeze-${{ github.event.inputs.benchmark }}-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      TIER: ${{ github.event.inputs.tier == 'all' && 'smoke' || github.event.inputs.tier }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          b="${{ github.event.inputs.benchmark }}"
+          if [ "$b" = "all" ]; then
+            echo "::error:: freeze needs a specific benchmark (tau2|swebench|skillsbench), not 'all'"; exit 1
+          fi
+
+      - name: Setup runner env
+        run: bash ci/benchmarks/lib/ci_setup.sh "${{ github.event.inputs.benchmark }}"
+
+      - name: Resolve task-ids source
+        id: src
+        run: |
+          bench="${{ github.event.inputs.benchmark }}"
+          ids="${{ github.event.inputs.task_ids }}"
+          if [ -n "$ids" ]; then
+            echo "src=$ids" >> "$GITHUB_OUTPUT"
+          else
+            echo "src=ci/benchmarks/$bench/${TIER}_candidates.json" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Freeze baselines
+        run: |
+          bash ci/benchmarks/lib/freeze_suite.sh \
+            "${{ github.event.inputs.benchmark }}" \
+            "${{ steps.src.outputs.src }}" \
+            "$GITHUB_WORKSPACE/ci/benchmarks/.work/freeze_${TIER}_${{ github.event.inputs.benchmark }}"
+
+      - name: Upload frozen baselines + summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeze-${{ env.TIER }}-${{ github.event.inputs.benchmark }}
+          path: |
+            ci/benchmarks/.work/freeze_${{ env.TIER }}_${{ github.event.inputs.benchmark }}/**
+            ci/benchmarks/${{ github.event.inputs.benchmark }}/${{ env.TIER }}/**/baseline/**
+          if-no-files-found: warn
+
   # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
   # writer → no push races) and regenerate benchmarks.json for the Pages history page.
   # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).
   aggregate:
     name: aggregate history
     needs: [bench]
-    if: always()
+    # Skip on a freeze dispatch (bench is skipped → nothing to aggregate).
+    if: always() && !(github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'freeze')
     runs-on: ubuntu-latest
     permissions:
       contents: write

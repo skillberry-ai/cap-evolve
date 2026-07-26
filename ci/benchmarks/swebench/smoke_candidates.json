@@ -1,0 +1,137 @@
+[
+  {
+    "id": "django__django-11179",
+    "repo": "django/django",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 1,
+    "oracle_chars": 19093
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13779",
+    "repo": "scikit-learn/scikit-learn",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 28034
+  },
+  {
+    "id": "sympy__sympy-22714",
+    "repo": "sympy/sympy",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 57770
+  },
+  {
+    "id": "pytest-dev__pytest-7432",
+    "repo": "pytest-dev/pytest",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 3,
+    "oracle_chars": 19969
+  },
+  {
+    "id": "sphinx-doc__sphinx-8721",
+    "repo": "sphinx-doc/sphinx",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 4,
+    "oracle_chars": 19700
+  },
+  {
+    "id": "astropy__astropy-14995",
+    "repo": "astropy/astropy",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 4,
+    "oracle_chars": 42410
+  },
+  {
+    "id": "psf__requests-2317",
+    "repo": "psf/requests",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 2,
+    "lines": 4,
+    "oracle_chars": 32015
+  },
+  {
+    "id": "django__django-15851",
+    "repo": "django/django",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 6807
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13439",
+    "repo": "scikit-learn/scikit-learn",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 6,
+    "oracle_chars": 46951
+  },
+  {
+    "id": "sympy__sympy-13480",
+    "repo": "sympy/sympy",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 58995
+  },
+  {
+    "id": "django__django-14787",
+    "repo": "django/django",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 12102
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13142",
+    "repo": "scikit-learn/scikit-learn",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 2,
+    "lines": 10,
+    "oracle_chars": 30523
+  },
+  {
+    "id": "sympy__sympy-17655",
+    "repo": "sympy/sympy",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 4,
+    "oracle_chars": 56420
+  },
+  {
+    "id": "django__django-16255",
+    "repo": "django/django",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 1,
+    "lines": 2,
+    "oracle_chars": 15462
+  },
+  {
+    "id": "sympy__sympy-21847",
+    "repo": "sympy/sympy",
+    "difficulty": "<15 min fix",
+    "files": 1,
+    "hunks": 2,
+    "lines": 4,
+    "oracle_chars": 36078
+  }
+]

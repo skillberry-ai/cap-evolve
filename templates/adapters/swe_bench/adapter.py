@@ -28,6 +28,10 @@ SETUP:
        SWEBENCH_TIMEOUT=1800                           # per-instance timeout (s)
        SWEBENCH_NAMESPACE=none                         # "none" builds images locally (arm64/Mac);
                                                        #   set "swebench" to pull prebuilt x86 images
+       SWEBENCH_ORACLE=1                               # attach Oracle code context (gold-patch
+                                                       #   file[s]) to the prompt — makes single-shot
+                                                       #   patching feasible for weaker readers
+       SWEBENCH_ORACLE_DATASET=princeton-nlp/SWE-bench_Lite_oracle  # source of the `text` context
 
   7. Run: cap-evolve check && cap-evolve run
 
@@ -75,6 +79,15 @@ NAMESPACE = os.environ.get("SWEBENCH_NAMESPACE", "none")
 # run (each instance is a Docker build). Empty → use the whole split.
 INSTANCE_IDS = [s.strip() for s in os.environ.get("SWEBENCH_INSTANCE_IDS", "").split(",") if s.strip()]
 
+# Oracle-retrieval mode. When on, attach the "Oracle" prompt context — the file(s)
+# the gold patch modifies — to each instance so a SINGLE-SHOT model can produce a
+# diff that actually applies (blind problem-statement-only prompting is near-hopeless
+# for a mid-tier reader). Context is borrowed from the parallel ``*_oracle`` dataset's
+# ``text`` field, keyed by instance_id; SCORING still uses the base DATASET above, so
+# the well-tested eval path is unchanged. Off by default → exactly today's behavior.
+ORACLE = os.environ.get("SWEBENCH_ORACLE", "").strip().lower() in ("1", "true", "yes", "on")
+ORACLE_DATASET = os.environ.get("SWEBENCH_ORACLE_DATASET", "princeton-nlp/SWE-bench_Lite_oracle")
+
 # Cache loaded instances so tasks() is stable across calls.
 _instances_cache: list[dict] | None = None
 
@@ -103,8 +116,39 @@ def _load_instances() -> list[dict]:
             raise RuntimeError(
                 f"None of SWEBENCH_INSTANCE_IDS={INSTANCE_IDS} are in {DATASET}/{SPLIT}."
             )
+
+    if ORACLE:
+        _attach_oracle_text(rows)
+
     _instances_cache = rows
     return _instances_cache
+
+
+def _attach_oracle_text(rows: list[dict]) -> None:
+    """Attach the Oracle-retrieval prompt (``text``) to each row, keyed by instance_id.
+
+    The ``*_oracle`` dataset packs the gold-patch file(s) + issue statement into its
+    ``text`` field; we borrow only that context for the prompt. Instances absent from
+    the oracle set keep an empty ``oracle_text`` and fall back to blind prompting.
+    """
+    from datasets import load_dataset
+
+    want = {r["instance_id"] for r in rows}
+    try:
+        ods = load_dataset(ORACLE_DATASET, split=SPLIT)
+    except Exception as e:
+        raise RuntimeError(
+            f"SWEBENCH_ORACLE is set but loading {ORACLE_DATASET}/{SPLIT} failed: {e}. "
+            "Install: pip install datasets (and check the oracle dataset name/split)."
+        ) from e
+
+    text_by_id = {
+        row["instance_id"]: row.get("text", "")
+        for row in ods
+        if row["instance_id"] in want
+    }
+    for r in rows:
+        r["oracle_text"] = text_by_id.get(r["instance_id"], "")
 
 
 class Adapter(CapabilityAdapter):
@@ -123,6 +167,7 @@ class Adapter(CapabilityAdapter):
                     "repo": inst.get("repo", ""),
                     "base_commit": inst.get("base_commit", ""),
                     "hints_text": inst.get("hints_text", ""),
+                    "oracle_text": inst.get("oracle_text", ""),
                 },
                 metadata={"benchmark": "swebench", "repo": inst.get("repo", "")},
             )
@@ -163,18 +208,28 @@ class Adapter(CapabilityAdapter):
         problem = instance.get("problem_statement", "")
         repo = instance.get("repo", "")
         hints = instance.get("hints_text", "")
+        oracle_text = instance.get("oracle_text", "")
 
-        user_message = f"""You are working on the repository: {repo}
+        if oracle_text:
+            # Oracle mode: the dataset-provided prompt already bundles the relevant
+            # code context + issue statement + a patch-output instruction, so a
+            # single-shot model can produce an APPLYING diff. Our (optimizable)
+            # system prompt still steers HOW to analyze and format the fix.
+            user_message = oracle_text
+        else:
+            # Blind mode: only the issue text — the model must reconstruct file paths
+            # and surrounding context from memory (hard for a mid-tier reader).
+            user_message = f"""You are working on the repository: {repo}
 
 ## Problem Description
 {problem}
 """
-        if hints:
-            user_message += f"""
+            if hints:
+                user_message += f"""
 ## Hints
 {hints}
 """
-        user_message += """
+            user_message += """
 ## Instructions
 Analyze the problem and produce a unified diff patch that fixes the issue.
 Output ONLY the patch in unified diff format (starting with --- and +++).
@@ -362,9 +417,14 @@ def _extract_patch(text: str) -> str:
 
     Handles raw diffs, markdown code blocks, and mixed text+diff output.
     """
-    # Try to extract from markdown code block first.
     import re
 
+    # Oracle-format output: the model is asked to wrap the diff in <patch>…</patch>.
+    patch_tag = re.search(r"<patch>\s*(.*?)\s*</patch>", text, re.DOTALL)
+    if patch_tag:
+        return patch_tag.group(1).strip()
+
+    # Try to extract from markdown code block next.
     code_block = re.search(r"```(?:diff|patch)?\s*\n(.*?)```", text, re.DOTALL)
     if code_block:
         return code_block.group(1).strip()
@@ -406,6 +466,10 @@ if __name__ == "__main__":
     # ponytail self-check: patch extraction + diff detection (no Docker / model).
     md = "Here is the fix:\n```diff\n--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@\n-a\n+b\n```\ndone"
     assert _extract_patch(md).startswith("--- a/f.py"), _extract_patch(md)
+    # Oracle-format output wraps the diff in <patch>…</patch>.
+    tagged = "Sure.\n<patch>\n--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@\n-a\n+b\n</patch>\nthanks"
+    assert _extract_patch(tagged).startswith("--- a/f.py"), _extract_patch(tagged)
+    assert _extract_patch(tagged).endswith("+b"), _extract_patch(tagged)
     assert _looks_like_diff("--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@")
     assert not _looks_like_diff("__probe_output__")  # check probe stays offline
     assert not _looks_like_diff("I could not find the bug.")

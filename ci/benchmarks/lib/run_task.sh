@@ -71,7 +71,10 @@ TEMPERATURE=0.0
 SWEBENCH_INSTANCE_IDS=$TASK_ID
 SWEBENCH_MAX_WORKERS=10
 SWEBENCH_NAMESPACE=${SWEBENCH_NAMESPACE:-swebench}
+SWEBENCH_ORACLE=${SWEBENCH_ORACLE:-1}
 ENV
+    # Oracle context ON by default for CI swebench: gpt-oss-120b cannot produce an
+    # applying diff blind. Override with SWEBENCH_ORACLE=0 to measure the blind harness.
     export SWEBENCH_MAX_WORKERS=10        # run_trials generation pool (read at adapter import)
     ;;
   skillsbench)
