@@ -27,14 +27,18 @@ for t in json.load(open(sys.argv[1])):
 PY
 )"
 
-while IFS=$'\t' read -r id tag agent; do
+# NOTE: iterate on FD 3 (not stdin). The optimizer subprocess (claude -p …) reads stdin;
+# if the loop fed `read` from stdin, claude would DRAIN the here-string and the loop would
+# exit after the first task (silently ran 1/N tasks once claude-code actually ran). FD 3
+# keeps the task list isolated; run_task also gets </dev/null below.
+while IFS=$'\t' read -r id tag agent <&3; do
   [ -n "$id" ] || continue
   frozen="$BASE/$(echo "$id" | tr '/ ' '__')/baseline"
   # A tier may be partially populated (e.g. full mid-freeze): run only tasks whose frozen
   # baseline exists; skip the rest with a warning instead of failing the whole suite.
   [ -f "$frozen/baseline.json" ] || { echo "::warning::no frozen baseline for $BENCH/$TIER $id — skipping"; continue; }
   echo "::group::$BENCH $id ($tag, agent=$agent)"
-  out="$(AGENT_MODEL="$agent" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" optimize "$frozen" 2>&1)" || true
+  out="$(AGENT_MODEL="$agent" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" optimize "$frozen" </dev/null 2>&1)" || true
   echo "$out"
   run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
   echo "::endgroup::"
@@ -61,7 +65,7 @@ PY
     git --no-pager diff --no-index "$seed_dir" "$opt_dir" > "$dst/capability.diff" 2>/dev/null || true
     [ -d "$opt_dir" ] && cp -R "$opt_dir"/. "$dst/optimized_capability/" 2>/dev/null || true
   fi
-done <<< "$ids_tags"
+done 3<<< "$ids_tags"
 
 # render the report
 KIND="${TIER:-smoke}"

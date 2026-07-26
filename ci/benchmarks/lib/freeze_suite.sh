@@ -48,12 +48,15 @@ PY
 : > "$OUT/baseline_summary.tsv"
 printf 'id\treward\tpass_metric\ttrials\n' >> "$OUT/baseline_summary.tsv"
 
-while IFS= read -r id; do
+# Iterate on FD 3 (not stdin) + feed children </dev/null: a subprocess that reads stdin
+# (e.g. the optimizer in non-baseline modes) would otherwise DRAIN this here-string and
+# the loop would exit after the first task. See run_suite.sh for the bug this prevents.
+while IFS= read -r id <&3; do
   [ -n "$id" ] || continue
   echo "::group::freeze $BENCH $id (tier=$TIER agent=$AGENT_MODEL)"
-  AGENT_MODEL="$AGENT_MODEL" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" baseline 2>&1 || \
+  AGENT_MODEL="$AGENT_MODEL" bash "$LIB_DIR/run_task.sh" "$BENCH" "$id" baseline </dev/null 2>&1 || \
     echo "::warning::baseline run failed for $id"
-  TIER="$TIER" AGENT_MODEL="$AGENT_MODEL" bash "$LIB_DIR/freeze_baseline.sh" "$BENCH" "$id" 2>&1 || \
+  TIER="$TIER" AGENT_MODEL="$AGENT_MODEL" bash "$LIB_DIR/freeze_baseline.sh" "$BENCH" "$id" </dev/null 2>&1 || \
     echo "::warning::freeze failed for $id"
   echo "::endgroup::"
 
@@ -75,7 +78,7 @@ print(f"{id}\t{r}\t{pm}\t{tr}")
 PY
 )"
   echo "$row" >> "$OUT/baseline_summary.tsv"
-done <<< "$ids"
+done 3<<< "$ids"
 
 # Render a sorted markdown summary flagging the smoke sweet spot (0 < reward < 1).
 "$PY" - "$OUT/baseline_summary.tsv" "$BENCH" "$TIER" "$AGENT_MODEL" > "$OUT/baseline_summary.md" <<'PY'
