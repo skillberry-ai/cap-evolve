@@ -298,9 +298,7 @@ body::before {
 .hero-affil-logos { display: inline-flex; align-items: center; gap: 1.2rem; }
 .hero-affil-logos img { display: block; }
 .hero-affil-logos .logo-ibm, .hero-affil-logos .logo-redhat { height: 24px; width: auto; }
-/* IBM/Red Hat marks are dark-on-transparent; lift them on the dark theme */
-:root:not([data-theme="light"]) .logo-ibm,
-:root:not([data-theme="light"]) .logo-redhat { filter: brightness(0) invert(1); opacity: 0.85; }
+/* IBM/Red Hat marks: keep full colour in both light and dark themes */
 
 /* ─────────────────────── quickstart CTA panel ─────────────────────── */
 
