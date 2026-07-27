@@ -34,7 +34,7 @@ on:
         default: smoke
         options: [all, smoke, full]
       iterations:
-        description: "Optimizer iterations per task (default 3; raise to give the optimizer more budget)"
+        description: "Optimizer iterations per task for the FULL tier (default 3; raise to give the optimizer more budget). Smoke always runs 3, regardless of this input."
         type: string
         default: "3"
   pull_request:
@@ -71,7 +71,9 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-      ITERATIONS: ${{ github.event.inputs.iterations || '3' }}
+      # Smoke always runs a fixed 3 iterations (cheap, fast regression) — decoupled
+      # from the `iterations` input, which only controls the (expensive) full tier.
+      ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || github.event.inputs.iterations || '3' }}
       TIER: ${{ matrix.tier }}
     steps:
       - uses: actions/checkout@v4
