@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benchmark runs — cap-evolve</title>
-  <meta name="description" content="Every ci/benchmarks execution (tau2 · swebench · skillsbench), on PRs and manual runs — a sortable, filterable log of reward, eval/optimizer cost, and models vs the frozen baseline.">
+  <meta name="description" content="Every ci/benchmarks execution (tau2 · swebench · skillsbench), on PRs and manual runs — a sortable, filterable log of reward, eval/optimizer cost, and models, each measured against that run's own freshly-computed baseline.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/benchmarks.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
@@ -53,9 +53,11 @@
     <h1>Benchmark runs</h1>
     <p class="lead">
       Every <code>ci/benchmarks</code> execution (tau2 · swebench · skillsbench), on PRs and manual
-      runs. Each row is one benchmark in one run vs the frozen baseline; the <strong>Type</strong>
+      runs. Each row is one benchmark in one run, measured against that run's own
+      freshly-computed baseline (all of a tier's tasks are optimized together, in one run —
+      nothing is pre-frozen or reused across runs); the <strong>Type</strong>
       column marks the tier (<code>smoke</code> or <code>full</code>). Click a row to expand its
-      per-task detail. <span id="updated" class="muted"></span>
+      per-task reward and per-iteration cost/latency detail. <span id="updated" class="muted"></span>
     </p>
     <p>
       See the hand-verified canonical numbers on the <a href="results.html">Results</a> page; this
@@ -107,6 +109,7 @@
       <th data-k="reward">Reward base→opt</th>
       <th data-k="eval_usd">Eval $</th>
       <th data-k="optimizer_usd">Optimizer $</th>
+      <th data-k="latency_s">Latency (s)</th>
       <th data-k="agent_model">Agent model</th>
       <th data-k="optimizer_model">Optimizer model</th>
       <th data-k="conclusion">Result</th>
@@ -138,7 +141,7 @@
   </div>
 </footer>
 
-<script src="benchmarks.js?v=20260724c"></script>
+<script src="benchmarks.js?v=20260727a"></script>
 <script src="js/site.js?v=20260724" defer></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_suite.sh — MODE A: optimize ALL of a tier's tasks TOGETHER in ONE optimization run.
+# run_suite.sh — optimize ALL of a tier's tasks TOGETHER in ONE optimization run.
 #
 #   run_suite.sh <bench> [out_dir]
 #
@@ -9,7 +9,7 @@
 # headline is a TRAIN-FIT number (how well the optimizer fits the tasks), NOT a
 # generalization claim. One optimization = ITERATIONS opus passes total (not × #tasks).
 #
-# Reads ci/benchmarks/<bench>/<TIER>/tasks.json. Writes <out_dir>/{metrics.jsonl, report.md,
+# Reads ci/benchmarks/<bench>/<TIER>/tasks.json. Writes <out_dir>/{metrics.jsonl, steps.jsonl, report.md,
 # optimized/}. Runs on the self-hosted runner (VPC gateway); dogfoods the adapter templates.
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,8 +33,8 @@ mkdir -p "$OUT/optimized"
 export PYTHONPATH="$REPO/core"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
 
-# All task ids for this tier (mode A optimizes them together). Agent is uniform across a
-# tier; take the first task's agent and warn if the file mixes agents (mode A can't mix).
+# All task ids for this tier (this run optimizes them together). Agent is uniform across a
+# tier; take the first task's agent and warn if the file mixes agents (this script can't mix).
 readarray -t IDS < <("$PY" - "$BASE/tasks.json" <<'PY'
 import json,sys
 for t in json.load(open(sys.argv[1])):
@@ -45,12 +45,12 @@ PY
 AGENT_MODEL="$("$PY" - "$BASE/tasks.json" "$AGENT_MODEL" <<'PY'
 import json,sys
 ts=json.load(open(sys.argv[1])); agents={t.get("agent",sys.argv[2]) for t in ts}
-if len(agents)>1: sys.stderr.write(f"::warning::mixed agents {agents}; mode A uses one — using {sorted(agents)[0]}\n")
+if len(agents)>1: sys.stderr.write(f"::warning::mixed agents {agents}; this run uses one — using {sorted(agents)[0]}\n")
 print(sorted(agents)[0])
 PY
 )"
 IDS_CSV="$(IFS=,; echo "${IDS[*]}")"
-echo ">>> MODE A: $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MODEL, ${ITER} iters)" >&2
+echo ">>> $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MODEL, ${ITER} iters)" >&2
 
 # ---- scaffold ONE project over ALL tasks -----------------------------------
 WORK="$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}_proj"
@@ -146,14 +146,15 @@ cd "$WORK"
 
 # ONE optimization: baseline (all tasks) + ITER optimize iterations + finalize (all tasks).
 "$PY" -m cap_evolve.cli run --spec .capevolve/project/capevolve.yaml \
-      --project .capevolve/project --run-ts modeA --max-iterations "$ITER" </dev/null || \
-  echo "::warning::mode-A run exited non-zero for $BENCH"
-RUN_DIR="$WORK/.capevolve/run_modeA"
+      --project .capevolve/project --run-ts suite --max-iterations "$ITER" </dev/null || \
+  echo "::warning::suite run exited non-zero for $BENCH"
+RUN_DIR="$WORK/.capevolve/run_suite"
 
 # ---- metrics + report (per-task base→opt from the ONE run) -----------------
-"$PY" "$LIB_DIR/metrics.py" modea "$RUN_DIR" --bench "$BENCH" --tier "$TIER" \
-      --agent "$AGENT_MODEL" --iters "$ITER" --jsonl "$OUT/metrics.jsonl" > "$OUT/report.md" 2>/dev/null || {
-  echo "## ${TIER^} suite — $BENCH (mode A)" > "$OUT/report.md"; echo "(no metrics — run failed; check logs)" >> "$OUT/report.md"; }
+"$PY" "$LIB_DIR/metrics.py" suite "$RUN_DIR" --bench "$BENCH" --tier "$TIER" \
+      --agent "$AGENT_MODEL" --iters "$ITER" --jsonl "$OUT/metrics.jsonl" \
+      --steps-jsonl "$OUT/steps.jsonl" > "$OUT/report.md" 2>/dev/null || {
+  echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no metrics — run failed; check logs)" >> "$OUT/report.md"; }
 
 # reviewable optimized capability (diff vs seed). skillsbench skills are Anthropic-licensed
 # → stat only, never content.

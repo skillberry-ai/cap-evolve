@@ -4,10 +4,10 @@
 #
 # Runs, per benchmark, a curated set of tasks through cap-evolve using the ADAPTER
 # TEMPLATES: agent aws/gpt-oss-120b, optimizer Claude Code @ claude-opus-4-8, 3 iterations.
-# Baselines are FROZEN (committed under ci/benchmarks/<bench>/<task>/baseline) and reused
-# via `cap-evolve run --reuse-baseline` — the baseline agent is never re-run; CI only
-# optimizes + evaluates, then reports reward/latency/cost vs the frozen baseline and
-# publishes the optimized capabilities for review.
+# All of a tier's tasks are optimized TOGETHER in ONE run (train==val==test==all tier
+# tasks — a no-holdout FIT; see ci/benchmarks/lib/run_suite.sh) — baseline and optimized
+# are both measured within that same run, then CI reports reward/latency/cost base→opt
+# and publishes the optimized capabilities for review.
 #
 # REAL models, real $ → NOT part of always-on CI. Runs ONLY when requested:
 #   * manually  — Actions → "Benchmarks" → Run workflow (pick a benchmark), or
@@ -195,11 +195,11 @@ jobs:
           for d in _artifacts/benchmarks-*; do
             [ -d "$d" ] || continue
             slug="$(basename "$d" | sed 's/^benchmarks-//')"   # e.g. smoke-tau2 / full-tau2
-            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"
+            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"; steps="$d/steps.jsonl"
             [ -f "$rm" ] || { echo "::warning::no runmeta for $slug, skipping"; continue; }
             have=$((have+1))
             rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
-            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" \
+            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" --steps "$steps" \
               > "_new_records/${rid}__${slug}.json" && built=$((built+1))
             echo "built _new_records/${rid}__${slug}.json"
           done

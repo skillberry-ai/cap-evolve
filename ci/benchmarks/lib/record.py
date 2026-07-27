@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Build & aggregate benchmark-history records for the CI history page.
 
-  record.py build <metrics.jsonl> --runmeta <runmeta.json>   # -> record JSON on stdout
+  record.py build <metrics.jsonl> --runmeta <runmeta.json> [--steps <steps.jsonl>]
+                                                             # -> record JSON on stdout
   record.py aggregate <records_dir> --now <iso> --out <dir>  # -> benchmarks.json + meta.json
 
 One record per (run x benchmark): the run metadata (from runmeta.json) merged with the
-per-task rows (from the suite's metrics.jsonl) plus a suite rollup. The aggregate step
-concatenates all committed records into benchmarks.json (newest first) for the Pages page.
+per-task reward rows (from the suite's metrics.jsonl), the per-iteration latency/cost
+timeline (from steps.jsonl), and a suite rollup. The aggregate step concatenates all
+committed records into benchmarks.json (newest first) for the Pages page.
 """
 from __future__ import annotations
 
@@ -22,34 +24,50 @@ def _num(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
 
-def rollup(tasks: list[dict]) -> dict | None:
-    """Suite rollup: mean rewards, n, total eval (runner) $, total optimizer $."""
+def rollup(tasks: list[dict], steps: list[dict] | None = None) -> dict | None:
+    """Suite rollup: mean rewards, n, total eval (runner) $/seconds, total optimizer $/seconds.
+
+    Cost/latency totals come from ``steps`` (one row per suite iteration — baseline,
+    each hill-climb step, finalize), NOT from summing a per-task field: every task row
+    in ``tasks`` shares the SAME run-level reward only, it never carried real per-task
+    cost/latency, so summing over tasks previously double/N-counted a constant value.
+    """
     rb = [t["reward_baseline"] for t in tasks if _num(t.get("reward_baseline"))]
     ro = [t["reward_opt"] for t in tasks if _num(t.get("reward_opt"))]
     if not (rb and ro):
         return None
+    steps = steps or []
     return {
         "reward_base": round(sum(rb) / len(rb), 6),
         "reward_opt": round(sum(ro) / len(ro), 6),
         "n": len(tasks),
-        # total runner/evaluation cost of running the benchmark (sum over tasks; each
-        # task's eval_usd is that run's spent.usd — 0 when the gateway hides usage)
-        "eval_usd": round(sum(t.get("eval_usd") or 0 for t in tasks), 6),
-        "optimizer_usd": round(sum(t.get("optimizer_usd") or 0 for t in tasks), 6),
+        # totals across the run's iteration timeline (baseline + each hill-climb
+        # step + finalize) — 0 when steps data is absent (e.g. older records).
+        "eval_usd": round(sum(s.get("eval_usd") or 0 for s in steps), 6),
+        "optimizer_usd": round(sum(s.get("optimizer_usd") or 0 for s in steps), 6),
+        "eval_seconds": round(sum(s.get("eval_seconds") or 0 for s in steps), 2),
+        "optimizer_seconds": round(sum(s.get("optimizer_seconds") or 0 for s in steps), 2),
     }
 
 
-def build_record(metrics_jsonl: Path, runmeta: dict) -> dict:
+def build_record(metrics_jsonl: Path, runmeta: dict, steps_jsonl: Path | None = None) -> dict:
     tasks: list[dict] = []
     if metrics_jsonl.exists():
         for line in metrics_jsonl.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line:
                 tasks.append(json.loads(line))
+    steps: list[dict] = []
+    if steps_jsonl and steps_jsonl.exists():
+        for line in steps_jsonl.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                steps.append(json.loads(line))
     rec = dict(runmeta)
     rec["schema"] = SCHEMA
     rec["tasks"] = tasks
-    rec["suite"] = rollup(tasks) if runmeta.get("conclusion") == "success" else None
+    rec["steps"] = steps
+    rec["suite"] = rollup(tasks, steps) if runmeta.get("conclusion") == "success" else None
     return rec
 
 
@@ -66,6 +84,7 @@ def main(argv: list[str]) -> int:
     b = sub.add_parser("build")
     b.add_argument("metrics")
     b.add_argument("--runmeta", required=True)
+    b.add_argument("--steps", default=None)
     a = sub.add_parser("aggregate")
     a.add_argument("records_dir")
     a.add_argument("--now", required=True)
@@ -74,7 +93,8 @@ def main(argv: list[str]) -> int:
 
     if ns.cmd == "build":
         runmeta = json.loads(Path(ns.runmeta).read_text(encoding="utf-8"))
-        print(json.dumps(build_record(Path(ns.metrics), runmeta)))
+        steps_path = Path(ns.steps) if ns.steps else None
+        print(json.dumps(build_record(Path(ns.metrics), runmeta, steps_path)))
         return 0
     if ns.cmd == "aggregate":
         recs, meta = aggregate(Path(ns.records_dir), ns.now)

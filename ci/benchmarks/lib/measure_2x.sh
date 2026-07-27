@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# measure_2x.sh — run each benchmark's suite twice (reuse frozen baselines) and assemble
+# measure_2x.sh — run each benchmark's suite twice (fresh baseline each time) and assemble
 # ci/benchmarks/RESULTS.md with run-to-run reward/latency/cost. Docker benchmarks run
 # sequentially to avoid contention. Local + CI usable.
 set -uo pipefail

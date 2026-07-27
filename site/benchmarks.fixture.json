@@ -19,32 +19,25 @@
       "reward_base": 0.0,
       "reward_opt": 0.5,
       "n": 2,
-      "optimizer_usd": 0.12,
-      "eval_usd": 0.0
+      "optimizer_usd": 0.05,
+      "eval_usd": 0.15,
+      "optimizer_seconds": 12.0,
+      "eval_seconds": 120.0
     },
     "tasks": [
-      {
-        "task": "35",
-        "reward_baseline": 0.0,
-        "reward_opt": 1.0,
-        "flipped": true,
-        "latency_baseline_s": 10.0,
-        "latency_opt_s": 11.0,
-        "cost_opt_runner_usd": 0.0,
-        "optimizer_usd": 0.06,
-        "iterations": 3
-      },
-      {
-        "task": "37",
-        "reward_baseline": 0.0,
-        "reward_opt": 0.0,
-        "flipped": false,
-        "latency_baseline_s": 9.0,
-        "latency_opt_s": 9.5,
-        "cost_opt_runner_usd": 0.0,
-        "optimizer_usd": 0.06,
-        "iterations": 3
-      }
+      { "task": "35", "reward_baseline": 0.0, "reward_opt": 1.0, "flipped": true },
+      { "task": "37", "reward_baseline": 0.0, "reward_opt": 0.0, "flipped": false }
+    ],
+    "steps": [
+      { "phase": "baseline", "iter": null, "candidate": "seed", "accepted": null,
+        "reward": 0.0, "optimizer_usd": 0.0, "optimizer_seconds": 0.0,
+        "eval_usd": 0.05, "eval_seconds": 40.0 },
+      { "phase": "iterate", "iter": 1, "candidate": "cand_0001", "accepted": true,
+        "reward": 0.5, "optimizer_usd": 0.05, "optimizer_seconds": 12.0,
+        "eval_usd": 0.05, "eval_seconds": 40.0 },
+      { "phase": "finalize", "iter": null, "candidate": null, "accepted": null,
+        "reward": 0.5, "optimizer_usd": 0.0, "optimizer_seconds": 0.0,
+        "eval_usd": 0.05, "eval_seconds": 40.0 }
     ]
   },
   {
@@ -68,9 +61,12 @@
       "reward_opt": 0.4,
       "n": 10,
       "optimizer_usd": 1.1,
-      "eval_usd": 0.0123
+      "eval_usd": 0.0123,
+      "optimizer_seconds": 300.0,
+      "eval_seconds": 900.0
     },
-    "tasks": []
+    "tasks": [],
+    "steps": []
   },
   {
     "schema": 1,
@@ -88,6 +84,7 @@
     "optimizer_model": "claude-opus-4-8",
     "conclusion": "failure",
     "suite": null,
-    "tasks": []
+    "tasks": [],
+    "steps": []
   }
 ]

@@ -4,6 +4,8 @@
 #
 # The general pipeline regression on a real benchmark: agent aws/gpt-oss-120b,
 # optimizer Claude Code @ claude-opus-4-8, 3 iterations, via the adapter template.
+# Runs the same run_suite.sh path benchmarks.yml uses, scoped to a single-task
+# "integration" tier (ci/benchmarks/tau2/integration/tasks.json = [task 9]).
 # Passes when the run COMPLETES and the sealed test does not regress vs baseline
 # (with 1 task the gate usually rejects — a legitimate PASS proving the pipeline runs).
 #
@@ -41,9 +43,11 @@ jobs:
       - name: Setup runner env (tau2)
         run: bash ci/benchmarks/lib/ci_setup.sh tau2
       - name: Run tau2 task-9 end-to-end (agent gpt-oss-120b, optimizer claude-opus-4-8)
+        env:
+          TIER: integration
         run: |
           set -euo pipefail
-          out="$(bash ci/benchmarks/lib/run_task.sh tau2 9 full)"
+          out="$(bash ci/benchmarks/lib/run_suite.sh tau2 "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_integration_tau2")"
           echo "$out"
           run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
           "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" --min-iterations 1
@@ -52,5 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tau2-itest-run
-          path: ci/benchmarks/.work/tau2/9/.capevolve/run_full/**
+          path: |
+            ci/benchmarks/.work/suite_integration_tau2_proj/.capevolve/run_suite/**
+            ci/benchmarks/.work/suite_integration_tau2/**
           if-no-files-found: ignore
