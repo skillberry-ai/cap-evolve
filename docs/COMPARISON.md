@@ -58,7 +58,7 @@ claims.
 | **EvoTool** (arXiv:2603.04900) | **original τ-Bench** airline, GPT-4.1 | ReAct 35.9 → **39.1** (+3.2) | **~+8.9%** |
 | **EvoTool** | original τ-Bench airline, Qwen3-8B | ReAct 14.4 → **15.7** (+1.3) | **~+9.0%** |
 | Evolutionary Context Search | τ²-Bench | reported **+23.3%** | +23.3% |
-| **cap-evolve** (this repo) | **τ²-Bench** airline, held-out 30/10/10 | sealed test 30.0 → **47.5** (+17.5 pp) | **+58.3%** |
+| **cap-evolve** (this repo) | **τ²-Bench** airline, held-out 30(=val)/20 | sealed test 30.0 → **47.5** (+17.5 pp) | **+58.3%** |
 
 Notes and honest caveats:
 - **EvoTool evaluates the *original* τ-Bench** (Yao et al., 2024), while cap-evolve and

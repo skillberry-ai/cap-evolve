@@ -155,11 +155,11 @@
       </section>
 
       <section class="reveal">
-        <h2 id="tau2-heldout">τ²-bench airline — held-out 30/10/10 run</h2>
+        <h2 id="tau2-heldout">τ²-bench airline — held-out 30(=val)/20 run</h2>
 
         <p>
           Same benchmark and capability, run with a real holdout split
-          (<code>split_ids.json</code>, 30 train / 10 val / 10 test) so the test number is a genuine
+          (<code>split_ids.json</code>, train=val=30, test=20) so the test number is a genuine
           generalization result.
         </p>
 
@@ -168,8 +168,8 @@
             <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.567</strong> (56.7%)</td><td class="num"><strong>0.700</strong> (70.0%)</td><td class="gain">+13.3 pp / +23.5% relative</td></tr>
-            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.300</strong> (30.0%)</td><td class="num"><strong>0.475</strong> (47.5%)</td><td class="gain">+17.5 pp / +58.3% relative</td></tr>
+            <tr><td><strong>val</strong> (30 tasks)</td><td class="num"><strong>0.567</strong> (56.7%)</td><td class="num"><strong>0.700</strong> (70.0%)</td><td class="gain">+13.3 pp / +23.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (20 tasks, scored once)</td><td class="num"><strong>0.300</strong> (30.0%)</td><td class="num"><strong>0.475</strong> (47.5%)</td><td class="gain">+17.5 pp / +58.3% relative</td></tr>
           </tbody>
         </table>
 
@@ -394,7 +394,7 @@
 
             <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
             <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
-            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (10 tasks)</text>
+            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (20 tasks)</text>
             <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
             <circle class="dot-base" cx="312" cy="142" r="6"/>
             <circle class="dot-opt"  cx="389" cy="142" r="6"/>
@@ -438,7 +438,7 @@
       <div class="toc-title">On this page</div>
       <a href="#toy-calc">toy_calc</a>
       <a href="#tau2-fit">τ²-bench — fit metric</a>
-      <a href="#tau2-heldout">τ²-bench — held-out 30/10/10</a>
+      <a href="#tau2-heldout">τ²-bench — held-out 30(=val)/20</a>
       <a href="#tau2-agent">τ²-bench — agent mode</a>
       <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
       <a href="#qwen-all">Qwen 14B — all capabilities</a>

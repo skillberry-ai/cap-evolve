@@ -59,15 +59,15 @@ lines), not just prompt tweaks — five trajectory-verified before→after edits
 
 ---
 
-## τ²-Bench airline — held-out 30/10/10 run
+## τ²-Bench airline — held-out 30(=val)/20 run
 
 Same benchmark and capability, run with a real holdout split (`split_ids.json`,
-30 train / 10 val / 10 test) so the test number is a genuine generalization result.
+train=val=30, test=20) so the test number is a genuine generalization result.
 
 | split | baseline | optimized | Δ |
 |---|---|---|---|
-| **val** (10 tasks) | **56.7** | **70.0** | **+13.3 pp / +23.5% relative** |
-| **sealed test** (10 tasks, scored once) | **30.0** | **47.5** | **+17.5 pp / +58.3% relative** |
+| **val** (30 tasks) | **56.7** | **70.0** | **+13.3 pp / +23.5% relative** |
+| **sealed test** (20 tasks, scored once) | **30.0** | **47.5** | **+17.5 pp / +58.3% relative** |
 
 > The held-out `run_full` artifact for this run is committed separately. Until it lands,
 > treat these figures as the reported held-out result; the reproducible artifact-backed
