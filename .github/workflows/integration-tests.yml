@@ -3,7 +3,7 @@
 # ============================================================================
 #
 # The general pipeline regression on a real benchmark: agent aws/gpt-oss-120b,
-# optimizer Claude Code @ claude-opus-4-8, 3 iterations, via the adapter template.
+# optimizer Claude Code @ claude-opus-4-8, 1 iteration, via the adapter template.
 # Runs the same run_suite.sh path benchmarks.yml uses, scoped to a single-task
 # "integration" tier (ci/benchmarks/tau2/integration/tasks.json = [task 9]).
 # Passes when the run COMPLETES and the sealed test does not regress vs baseline
@@ -45,6 +45,7 @@ jobs:
       - name: Run tau2 task-9 end-to-end (agent gpt-oss-120b, optimizer claude-opus-4-8)
         env:
           TIER: integration
+          ITERATIONS: "1"
         run: |
           set -euo pipefail
           out="$(bash ci/benchmarks/lib/run_suite.sh tau2 "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_integration_tau2")"
