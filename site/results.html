@@ -242,7 +242,7 @@
           <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
           <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
           <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
-          <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+          <li><strong>Split:</strong> train=val=30, test=20 — <strong>held-out</strong>.</li>
           <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
         </ul>
 
@@ -251,8 +251,8 @@
             <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.200</strong> (20.0%)</td><td class="num"><strong>0.387</strong> (38.7%)</td><td class="gain">+0.187 / +93.5% relative</td></tr>
-            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.170</strong> (17.0%)</td><td class="num"><strong>0.240</strong> (24.0%)</td><td class="gain">+0.070 / +41.2% relative</td></tr>
+            <tr><td><strong>val</strong> (30 tasks)</td><td class="num"><strong>0.200</strong> (20.0%)</td><td class="num"><strong>0.387</strong> (38.7%)</td><td class="gain">+0.187 / +93.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (20 tasks, scored once)</td><td class="num"><strong>0.170</strong> (17.0%)</td><td class="num"><strong>0.240</strong> (24.0%)</td><td class="gain">+0.070 / +41.2% relative</td></tr>
           </tbody>
         </table>
 
@@ -275,7 +275,7 @@
           <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-sonnet-4-6</code> (Vertex AI).</li>
           <li><strong>Runner + user simulator:</strong> <code>Qwen/Qwen2.5-14B-Instruct</code> via vLLM on OpenShift.</li>
           <li><strong>Tasks / trials:</strong> 50 airline tasks · <strong>5</strong> trials each.</li>
-          <li><strong>Split:</strong> 30 train / 10 val / 10 test — <strong>held-out</strong>.</li>
+          <li><strong>Split:</strong> train=val=30, test=20 — <strong>held-out</strong>.</li>
           <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations, paired significance gate <code>k_se 0.3</code>.</li>
         </ul>
 
@@ -284,8 +284,8 @@
             <tr><th>split</th><th>baseline</th><th>optimized</th><th>Δ</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>val</strong> (10 tasks)</td><td class="num"><strong>0.273</strong> (27.3%)</td><td class="num"><strong>0.520</strong> (52.0%)</td><td class="gain">+0.247 / +90.5% relative</td></tr>
-            <tr><td><strong>sealed test</strong> (10 tasks, scored once)</td><td class="num"><strong>0.120</strong> (12.0%)</td><td class="num"><strong>0.270</strong> (27.0%)</td><td class="gain">+0.150 / +125.0% relative</td></tr>
+            <tr><td><strong>val</strong> (30 tasks)</td><td class="num"><strong>0.273</strong> (27.3%)</td><td class="num"><strong>0.520</strong> (52.0%)</td><td class="gain">+0.247 / +90.5% relative</td></tr>
+            <tr><td><strong>sealed test</strong> (20 tasks, scored once)</td><td class="num"><strong>0.120</strong> (12.0%)</td><td class="num"><strong>0.270</strong> (27.0%)</td><td class="gain">+0.150 / +125.0% relative</td></tr>
           </tbody>
         </table>
 

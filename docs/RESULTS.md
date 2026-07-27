@@ -124,6 +124,56 @@ run head-to-head, and improved the single-trial held-out test +37.5%. A genuine,
 here needs a stronger runner model or tool-level edits (which drove most of the lift in the
 no-holdout run).
 
+---
+
+## τ²-Bench airline — Qwen 2.5 14B (tools only, held-out)
+
+Same benchmark, capability, split, and algorithm as the held-out run above, with a
+self-hosted open model (**Qwen 2.5 14B-Instruct** via vLLM on OpenShift) replacing the
+Claude runner.
+
+- **Capability:** airline **policy + tools** (`[system-prompt, tools]`).
+- **Optimizer:** `claude-code` @ `claude-sonnet-4-6` (Vertex AI).
+- **Runner + user simulator:** `Qwen/Qwen2.5-14B-Instruct` via vLLM on OpenShift.
+- **Tasks / trials:** all **50** airline tasks · **5** trials each.
+- **Split:** **train=val=30, test=20** — **held-out**.
+- **Algorithm / gate:** `hill-climb --focus all`, **10** iterations, paired significance gate `k_se 0.3`.
+
+| split | baseline | optimized | Δ |
+|---|---|---|---|
+| **val** (30 tasks) | **0.200** (20.0%) | **0.387** (38.7%) | **+0.187 / +93.5% relative** |
+| **sealed test** (20 tasks, scored once) | **0.170** (17.0%) | **0.240** (24.0%) | **+0.070 / +41.2% relative** |
+
+3 of 10 iterations accepted. The optimizer added code-level enforcement of cancellation
+rules, input validation guards, and pre-flight status checks — hardening tool
+implementations rather than rewriting policy prose.
+
+---
+
+## τ²-Bench airline — Qwen 2.5 14B, all capabilities (held-out)
+
+Same model and split as above, with all three capability types optimized jointly.
+
+- **Capability:** `[skill-package, system-prompt, tools]`.
+- **Optimizer:** `claude-code` @ `claude-sonnet-4-6` (Vertex AI).
+- **Runner + user simulator:** `Qwen/Qwen2.5-14B-Instruct` via vLLM on OpenShift.
+- **Tasks / trials:** all **50** airline tasks · **5** trials each.
+- **Split:** **train=val=30, test=20** — **held-out**.
+- **Algorithm / gate:** `hill-climb --focus all`, **10** iterations, paired significance gate `k_se 0.3`.
+
+| split | baseline | optimized | Δ |
+|---|---|---|---|
+| **val** (30 tasks) | **0.273** (27.3%) | **0.520** (52.0%) | **+0.247 / +90.5% relative** |
+| **sealed test** (20 tasks, scored once) | **0.120** (12.0%) | **0.270** (27.0%) | **+0.150 / +125.0% relative** |
+
+3 of 10 iterations accepted, 7 rejected. The optimizer edited tool code, policy rules,
+and skill prose jointly — combining code-level guards with policy clarifications and
+structured methodology in SKILL.md.
+
+**Best held-out test gain across all Qwen 14B runs (+125%).** On a self-hosted 14B model,
+`[skill-package, system-prompt, tools]` with `hill-climb` outperformed the tools-only run
+(+41.2%) when paired with hill-climb's conservative gating.
+
 ## SkillsBench — skill-package optimization (held-out, committed)
 
 Artifact: [`examples/skillsbench/run_full/`](../examples/skillsbench/run_full/)
