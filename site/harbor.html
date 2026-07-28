@@ -48,281 +48,143 @@
 
   <h1>Harbor integration</h1>
   <p class="lead">
-    Optimize agent capabilities with cap-evolve using
-    <a href="https://www.harborframework.com/">Harbor</a> for sandboxed benchmark
-    execution — any agent, any benchmark, any environment (Docker, OpenShift, or cloud).
+    Use <a href="https://www.harborframework.com/">Harbor</a> as cap-evolve's
+    sandboxed evaluation backend — any
+    <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">agent</a>,
+    any <a href="https://hub.harborframework.com/datasets">benchmark</a>,
+    any environment (<code>-e docker</code>, <code>-e openshift</code>,
+    <code>-e daytona</code>, <code>-e modal</code>).
   </p>
 
-  <h2>Why Harbor + cap-evolve</h2>
-  <p>cap-evolve is <strong>eval-agnostic</strong> — it only needs a list of tasks and a
-  deterministic score for each. Harbor provides robust sandboxed execution for
-  benchmark trials in isolated containers. Together:</p>
-  <ul>
-    <li><strong>Safety:</strong> Benchmarks like Terminal-Bench and SWE-bench give agents
-    full machine access. Harbor keeps these safely isolated in containers so the agent
-    cannot wreck your host during optimization.</li>
-    <li><strong>Scale:</strong> Harbor natively supports horizontal scaling (hundreds of
-    concurrent trials). This cuts down the time cap-evolve needs per optimization epoch.</li>
-    <li><strong>Honest evaluation:</strong> cap-evolve enforces strict val/test splits and
-    a sealed test scored once — preventing the agent from memorizing the benchmark Harbor
-    is running.</li>
-  </ul>
+  <h2>How it works</h2>
+  <p>cap-evolve optimizes; Harbor evaluates. The <strong>Harbor adapter</strong>
+  (<code>templates/adapters/harbor/adapter.py</code>) is the bridge — its
+  <code>run_batch()</code> calls <code>harbor run</code> as a subprocess each
+  time cap-evolve needs an evaluation. You never call <code>harbor run</code>
+  directly; cap-evolve does it for you.</p>
 
-  <h2>Architecture</h2>
-<pre><code>cap-evolve optimization loop
-  │
-  │  1. Intake &amp; Modify (cap-evolve)
-  │     └─ diagnose failures → optimizer edits prompt/tools/skills
-  │
-  │  2. Execute (Harbor)
-  │     └─ harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e openshift
-  │           ├─ pod 1: task-001 → agent runs with edited skill → verifier → reward
-  │           ├─ pod 2: task-002 → agent runs with edited skill → verifier → reward
-  │           └─ pod N: task-N   → ...
-  │
-  │  3. Verify (Harbor)
-  │     └─ verifier scripts score each task → reward.json per trial
-  │
-  │  4. Learn &amp; Commit (cap-evolve)
-  │     └─ adapter reads Harbor's job results → gate (accept/reject)
-  │           if accepted: commit the edit, new best
-  │
-  └── repeat until stall or budget exhausted
-      then: finalize on sealed test split → one honest number</code></pre>
+<pre><code>you run:   cap-evolve run --spec .capevolve/project/capevolve.yaml
+             │
+cap-evolve:  hill_climb_loop()
+             ├── evaluate → adapter.run_batch()
+             │     └─ harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e &lt;env&gt;
+             │           ├─ container/pod 1: agent + verifier → reward
+             │           ├─ container/pod 2: agent + verifier → reward
+             │           └─ ...
+             │     adapter reads reward.json → cap-evolve Score
+             ├── gate: accept if mean(Δ) &gt; k × SE(Δ)
+             ├── optimizer edits SKILL.md based on failed trajectories
+             └── repeat → finalize on sealed test split</code></pre>
 
+  <h2>Setup</h2>
+
+  <p>Assumes cap-evolve is already installed
+  (<a href="getting-started.html">getting started</a>).</p>
+
+<pre><code># 1. Install Harbor + adapter utilities
+uv tool install harbor              # CLI (v0.20+)
+pip install ./capevolve_harbor
+
+# 2. Copy the Harbor adapter into your project
+cp -r templates/adapters/harbor/* .capevolve/project/adapters/</code></pre>
+
+  <p>This places <code>adapter.py</code> (the Harbor bridge) and a seed
+  <code>SKILL.md</code> into your project. The adapter reads all Harbor config
+  from environment variables at runtime.</p>
+
+  <h2>Configure and run</h2>
+
+<pre><code># What Harbor runs
+export HARBOR_DATASET=&lt;org/dataset&gt;        # registry: swe-bench/swe-bench-verified
+                                            # or local: /path/to/dataset
+export HARBOR_AGENT=&lt;agent&gt;                 # claude-code, codex, opencode, ...
+export HARBOR_MODEL=&lt;model&gt;                 # claude-sonnet-4-6, gpt-4.1, ...
+export HARBOR_TASK_IDS=&lt;task1,task2,...&gt;     # which tasks to optimize on
+export HARBOR_TASK_PREFIX=&lt;dataset-org&gt;     # e.g. swe-bench
+
+# Where Harbor runs
+export HARBOR_EXTRA_FLAGS="-e docker -n 4"  # local Docker
+# or: "-e openshift -n 5 --ae KEY=VALUE"   # OpenShift pods
+# or: "-e daytona -n 100"                  # cloud
+
+# Run the optimization
+cap-evolve run --spec .capevolve/project/capevolve.yaml</code></pre>
+
+  <p>Each iteration, cap-evolve calls <code>harbor run</code> with the current
+  candidate skill, collects rewards, gates the edit, and repeats. Output lands in
+  <code>.capevolve/run_&lt;timestamp&gt;/</code> with <code>report.md</code>,
+  <code>dashboard.html</code>, and the optimized <code>candidates/best/SKILL.md</code>.</p>
+
+  <h2>Running on OpenShift</h2>
+  <p>Use <code>-e openshift</code> to run task pods on your cluster. The
+  orchestrator (cap-evolve + Harbor CLI) runs as a Job; Harbor creates one task
+  pod per benchmark trial on the same cluster.</p>
+
+  <h3>RBAC (once per namespace)</h3>
+<pre><code>oc apply -f openshift/manifests/service-account.yaml          # harbor-task SA + SCC
+oc apply -f openshift/manifests/harbor-orchestrator-sa.yaml   # orchestrator SA + RBAC
+oc adm policy add-scc-to-user harbor-task-scc -z harbor-task
+oc adm policy add-scc-to-user harbor-task-scc -z harbor-orchestrator</code></pre>
+
+  <h3>Orchestrator image</h3>
+  <p>Adds Harbor + <code>oc</code> to the cap-evolve runner image:</p>
+<pre><code>FROM quay.io/&lt;your-org&gt;/cap-evolve-runner:latest
+USER root
+RUN apt-get update -qq &amp;&amp; apt-get install -y -qq curl &amp;&amp; \
+    curl -sL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz \
+      | tar xzf - -C /usr/local/bin oc kubectl &amp;&amp; \
+    apt-get remove -y curl &amp;&amp; rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir "harbor&gt;=0.20.0"
+COPY capevolve_harbor/ /app/capevolve_harbor/
+COPY templates/adapters/harbor/ /app/templates/adapters/harbor/</code></pre>
+<pre><code>podman build --platform linux/amd64 -t quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest .
+podman push quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest</code></pre>
+
+  <h3>Credential patterns (<code>--ae</code> flags)</h3>
   <table>
-    <thead><tr><th>Component</th><th>Role</th><th>Provided by</th></tr></thead>
+    <thead><tr><th>Backend</th><th>Flags</th></tr></thead>
     <tbody>
-      <tr><td><strong>cap-evolve</strong></td><td>Optimization loop (diagnose → propose → gate → commit)</td><td>cap-evolve core + optimizer (claude-code, codex, etc.)</td></tr>
-      <tr><td><strong>Harbor</strong></td><td>Sandboxed benchmark execution, concurrency, trajectory capture</td><td><a href="https://www.harborframework.com/">Harbor framework</a></td></tr>
-      <tr><td><strong>Agent</strong></td><td>Completes benchmark tasks inside containers/pods</td><td>Harbor agent zoo (claude-code, codex, opencode, etc.)</td></tr>
-      <tr><td><strong>Adapter</strong></td><td>Invokes <code>harbor run</code>, reads results back for cap-evolve</td><td><code>templates/adapters/harbor/</code></td></tr>
+      <tr><td>On-cluster vLLM</td><td><code>ANTHROPIC_BASE_URL=http://&lt;svc&gt;.&lt;ns&gt;.svc:8000 ANTHROPIC_API_KEY=dummy ANTHROPIC_MODEL=&lt;model&gt;</code></td></tr>
+      <tr><td>Anthropic API</td><td><code>ANTHROPIC_API_KEY=sk-ant-...</code></td></tr>
+      <tr><td>Vertex AI</td><td><code>CLAUDE_CODE_USE_VERTEX=1 CLOUD_ML_REGION=&lt;r&gt; ANTHROPIC_VERTEX_PROJECT_ID=&lt;p&gt;</code> + <code>--mounts-json</code> for GCP credentials</td></tr>
+      <tr><td>OpenAI / Codex</td><td><code>OPENAI_API_KEY=sk-...</code></td></tr>
     </tbody>
   </table>
 
-  <h2>How it works</h2>
-  <ol>
-    <li><strong>cap-evolve proposes an edit</strong> — modifies the agent's prompts, tools,
-    or skills in the working directory based on failed execution traces.</li>
-    <li><strong>The adapter invokes Harbor</strong> — runs the full benchmark
-    (<code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -e openshift</code>) with the
-    newly modified capabilities. Harbor spins up isolated containers/pods, one per task.</li>
-    <li><strong>Harbor executes and verifies</strong> — each task pod runs the agent, then
-    the verifier script scores the result and writes <code>reward.json</code>.</li>
-    <li><strong>The adapter reads Harbor's results</strong> — parses the job directory,
-    extracts per-task rewards and trajectories, returns scores to cap-evolve.</li>
-    <li><strong>cap-evolve gates the edit</strong> — if the new capability beats the baseline
-    by a statistically significant margin on the val split, it commits the edit.</li>
-  </ol>
-
-  <p>Reference implementations:
-  <a href="https://github.com/opendatahub-io/agent-eval-harness/blob/main/docs/harbor-workflow.md">agent-eval-harness</a>
-  (Harbor workflow on OpenShift) and
-  <a href="https://github.com/redhat-et/coding_agent_bench">coding_agent_bench</a>
-  (SWE-bench with Harbor on OpenShift).</p>
-
-  <h2>Prerequisites</h2>
-  <ul>
-    <li>Harbor CLI (&ge; 0.20): <code>uv tool install harbor</code></li>
-    <li><strong>Local:</strong> Docker or Podman running</li>
-    <li><strong>OpenShift:</strong> <code>oc login</code> + RBAC (see below)</li>
-    <li>A Harbor dataset (e.g. <code>swe-bench/swe-bench-verified</code>,
-    <code>terminal-bench@2.0</code>)</li>
-    <li>Agent credentials (API key, Vertex AI ADC, or on-cluster vLLM)</li>
-  </ul>
-
-  <h2>Quick start</h2>
-  <p>The generic pattern — substitute your agent, model, dataset, and environment:</p>
-
-<pre><code># 1. Install
-uv tool install harbor
-pip install ./core ./capevolve_harbor
-
-# 2. Set up the project
-cap-evolve init
-cp -r templates/adapters/harbor/* .capevolve/project/adapters/
-
-# 3. Configure — pick your agent, dataset, and model
-export HARBOR_DATASET=&lt;org/dataset&gt;          # e.g. swe-bench/swe-bench-verified
-export HARBOR_AGENT=&lt;agent&gt;                   # e.g. claude-code, codex, opencode
-export HARBOR_MODEL=&lt;model&gt;                   # e.g. claude-sonnet-4-6, gpt-4.1
-export HARBOR_TASK_IDS=&lt;task1,task2,...&gt;       # tasks to optimize on
-export HARBOR_TASK_PREFIX=&lt;dataset-org&gt;       # e.g. swe-bench
-
-# 4. Run — locally with Docker, or on OpenShift
-cap-evolve check .capevolve/project
-cap-evolve run --spec .capevolve/project/capevolve.yaml</code></pre>
-
-  <h2>Running on OpenShift</h2>
-  <p>Harbor's <code>-e openshift</code> runs each task as a pod on your cluster.
-  Images are built remotely via OpenShift Binary Builds — no local Docker needed.
-  You can serve models on-cluster with vLLM for a fully self-contained setup.</p>
-
-<pre><code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e openshift -n 5 \
-  --ae &lt;KEY&gt;=&lt;VALUE&gt; ...</code></pre>
-
-  <p><strong><a href="harbor-openshift.html">Full OpenShift guide</a></strong> —
-  vLLM model serving, RBAC setup, SCC configuration, agent credentials
-  (vLLM / Vertex AI / API keys), and the cap-evolve optimization loop on-cluster.</p>
+  <p>For on-cluster model serving, see
+  <a href="harbor-openshift.html">vLLM on OpenShift</a>.</p>
 
   <h2>Configuration</h2>
   <table>
     <thead><tr><th>Variable</th><th>Example</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td><code>HARBOR_DATASET</code></td><td><code>swe-bench/swe-bench-verified</code></td><td>Registry dataset (<code>org/name</code>) or local path</td></tr>
-      <tr><td><code>HARBOR_AGENT</code></td><td><code>claude-code</code></td><td>Harbor agent name</td></tr>
+      <tr><td><code>HARBOR_DATASET</code></td><td><code>swe-bench/swe-bench-verified</code></td><td>Registry dataset or local path</td></tr>
+      <tr><td><code>HARBOR_AGENT</code></td><td><code>claude-code</code></td><td>Any <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agent</a></td></tr>
       <tr><td><code>HARBOR_MODEL</code></td><td><code>claude-sonnet-4-6</code></td><td>Model for the agent</td></tr>
-      <tr><td><code>HARBOR_TASK_IDS</code></td><td><code>astropy__astropy-12907,...</code></td><td>Comma-separated task IDs (required for registry datasets)</td></tr>
-      <tr><td><code>HARBOR_TASK_PREFIX</code></td><td><code>swe-bench</code></td><td>Prefix Harbor uses for task names in this dataset</td></tr>
-      <tr><td><code>HARBOR_PARALLEL</code></td><td><code>5</code></td><td>Max concurrent task pods</td></tr>
+      <tr><td><code>HARBOR_TASK_IDS</code></td><td><code>task-1,task-2,...</code></td><td>Tasks to optimize on (required for registry datasets)</td></tr>
+      <tr><td><code>HARBOR_TASK_PREFIX</code></td><td><code>swe-bench</code></td><td>Dataset org prefix for task name mapping</td></tr>
+      <tr><td><code>HARBOR_PARALLEL</code></td><td><code>5</code></td><td>Concurrent trials</td></tr>
       <tr><td><code>HARBOR_TIMEOUT</code></td><td><code>900</code></td><td>Per-task timeout (seconds)</td></tr>
-      <tr><td><code>HARBOR_EXTRA_FLAGS</code></td><td><code>-e openshift --no-delete</code></td><td>Extra flags passed to <code>harbor run</code></td></tr>
-      <tr><td><code>HARBOR_AGENT_BASE_URL</code></td><td><code>http://vllm.ns.svc:8000</code></td><td>On-cluster model endpoint (sets <code>ANTHROPIC_BASE_URL</code>)</td></tr>
-      <tr><td><code>HARBOR_JOBS_DIR</code></td><td><code>./harbor-jobs</code></td><td>Where Harbor writes job output</td></tr>
+      <tr><td><code>HARBOR_EXTRA_FLAGS</code></td><td><code>-e openshift --no-delete</code></td><td>Passed to <code>harbor run</code></td></tr>
+      <tr><td><code>HARBOR_JOBS_DIR</code></td><td><code>./harbor-jobs</code></td><td>Job output directory</td></tr>
     </tbody>
   </table>
 
-  <h2 id="agent-credentials">Agent credential reference</h2>
-  <p>Any agent in
-  <a href="https://www.harborframework.com/docs">Harbor's agent zoo</a> works.
-  Pass credentials into the task pod via <code>--ae KEY=VALUE</code> flags.
-  Below are the common agents with the exact flags needed.</p>
+  <h2>Benchmarks and agents</h2>
+  <p>Any <a href="https://hub.harborframework.com/datasets">Harbor dataset</a> and
+  any <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agent</a>
+  work — set <code>HARBOR_DATASET</code> and <code>HARBOR_AGENT</code>.</p>
 
-  <h3>Claude Code (Anthropic API)</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m claude-sonnet-4-6 -e openshift \
-  --ae ANTHROPIC_API_KEY=sk-ant-...</code></pre>
-
-  <h3>Claude Code (Vertex AI)</h3>
-  <p>Bind-mount GCP credentials into the task pod via <code>--mounts-json</code>.</p>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m claude-sonnet-4-6 -e openshift \
-  --ae CLAUDE_CODE_USE_VERTEX=1 \
-  --ae CLOUD_ML_REGION=&lt;region&gt; \
-  --ae ANTHROPIC_VERTEX_PROJECT_ID=&lt;gcp-project&gt; \
-  --ae ANTHROPIC_MODEL=claude-sonnet-4-6 \
-  --ae GOOGLE_APPLICATION_CREDENTIALS=/app/.config/gcloud/adc.json \
-  --mounts-json '[{"type":"bind","source":"~/.config/gcloud/application_default_credentials.json","target":"/app/.config/gcloud/adc.json"}]'</code></pre>
-
-  <h3>Claude Code (on-cluster vLLM)</h3>
-  <p>Point claude-code at a vLLM-served model — no external API keys needed.</p>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m &lt;model-name&gt; -e openshift \
-  --ae ANTHROPIC_BASE_URL=http://&lt;vllm-svc&gt;.&lt;namespace&gt;.svc:8000 \
-  --ae ANTHROPIC_API_KEY=dummy \
-  --ae ANTHROPIC_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_SONNET_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_HAIKU_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_OPUS_MODEL=&lt;model-name&gt;</code></pre>
-
-  <h3>Codex (OpenAI)</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a codex -m &lt;model&gt; -e openshift \
-  --ae OPENAI_API_KEY=sk-...</code></pre>
-
-  <h3>Gemini CLI</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a gemini-cli -m &lt;model&gt; -e openshift \
-  --ae GEMINI_API_KEY=...</code></pre>
-
-  <h3>OpenCode (any OpenAI-compatible provider)</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a opencode -m &lt;model&gt; -e openshift \
-  --ae OPENAI_BASE_URL=http://&lt;endpoint&gt; \
-  --ae OPENAI_API_KEY=...</code></pre>
-
-  <h3>Oracle (no LLM — for testing the pipeline)</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a oracle -e openshift -l 1</code></pre>
-
-  <h2>Execution environments</h2>
-  <p>Harbor's <code>-e</code> flag selects the execution backend. Each trial runs in
-  its own isolated container or pod.</p>
-
-  <table>
-    <thead><tr><th>Flag</th><th>Backend</th><th>Best for</th></tr></thead>
-    <tbody>
-      <tr><td><code>-e docker</code></td><td>Local Docker</td><td>Development, small benchmarks</td></tr>
-      <tr><td><code>-e openshift</code></td><td>OpenShift pods</td><td>On-cluster vLLM, enterprise, scale (<a href="https://github.com/harbor-framework/harbor/pull/1875">PR #1875</a>)</td></tr>
-      <tr><td><code>-e daytona</code></td><td>Daytona cloud</td><td>Massive parallelism, no cluster needed</td></tr>
-      <tr><td><code>-e modal</code></td><td>Modal cloud</td><td>GPU tasks, serverless</td></tr>
-      <tr><td><code>-e gke</code></td><td>Google Kubernetes</td><td>GKE clusters</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Local Docker</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e docker -n 4</code></pre>
-
-  <h3>OpenShift</h3>
-  <p>Each task runs as a pod on the cluster. See the
-  <a href="harbor-openshift.html">full OpenShift guide</a> for setup.</p>
-<pre><code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e openshift -n 5</code></pre>
-
-  <h3>Cloud sandboxes</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e daytona -n 100</code></pre>
-
-  <h2>Compatible benchmarks</h2>
-  <p>Any <a href="https://hub.harborframework.com/datasets">Harbor registry dataset</a>
-  or local dataset in
-  <a href="https://www.harborframework.com/docs">Harbor task format</a> works.
-  Browse available datasets with <code>harbor dataset list</code>.</p>
-  <table>
-    <thead><tr><th>Dataset</th><th>Flag</th><th>What it tests</th></tr></thead>
-    <tbody>
-      <tr><td>SWE-bench Verified</td><td><code>-d swe-bench/swe-bench-verified</code></td><td>Bug-fixing patches on real GitHub repos (500 tasks)</td></tr>
-      <tr><td>SWE-bench Pro</td><td><code>-d scale-ai/swe-bench-pro</code></td><td>Harder SWE-bench subset from Scale AI</td></tr>
-      <tr><td>Terminal-Bench</td><td><code>-d terminal-bench@2.0</code></td><td>Full-machine terminal tasks (stateful, complex)</td></tr>
-      <tr><td>Aider Polyglot</td><td><code>-d aider/aider-polyglot</code></td><td>Multi-language code editing</td></tr>
-      <tr><td>Custom (local)</td><td><code>-p /path/to/dataset</code></td><td>Your own tasks in Harbor task format</td></tr>
-      <tr><td>Custom (registry)</td><td><code>-d your-org/your-dataset</code></td><td>Published to <a href="https://hub.harborframework.com">Harbor Hub</a></td></tr>
-    </tbody>
-  </table>
-  <p>To select specific tasks from a dataset, use <code>-i &lt;task-name&gt;</code> (repeatable)
-  or <code>-l &lt;count&gt;</code> to limit the total. In cap-evolve, set <code>HARBOR_TASK_IDS</code>.</p>
-
-  <h2>The adapter</h2>
-  <p>The bridge between cap-evolve and Harbor is a small Python adapter that
-  fulfills the <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_CONTRACT.md">cap-evolve
-  adapter contract</a> — just <code>tasks()</code> and <code>score()</code>:</p>
+  <h2>References</h2>
   <ul>
-    <li><strong><code>tasks(split)</code></strong> — returns task IDs from the Harbor dataset</li>
-    <li><strong><code>run_batch(tasks, ctx)</code></strong> — invokes
-    <code>harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -e &lt;env&gt;</code> as a
-    single benchmark run, returns results</li>
-    <li><strong><code>score(task, rollout)</code></strong> — reads Harbor's
-    <code>reward.json</code> from the job directory and returns the score to cap-evolve</li>
+    <li><a href="https://www.harborframework.com/docs">Harbor documentation</a></li>
+    <li><a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agents</a></li>
+    <li><a href="https://hub.harborframework.com/datasets">Harbor datasets</a></li>
+    <li><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/templates/adapters/harbor/adapter.py">Harbor adapter source</a></li>
+    <li><a href="harbor-openshift.html">OpenShift guide</a> — vLLM, RBAC, credentials, Job manifest</li>
+    <li><a href="https://github.com/opendatahub-io/agent-eval-harness/blob/main/docs/harbor-workflow.md">agent-eval-harness Harbor workflow</a></li>
+    <li><a href="https://github.com/redhat-et/coding_agent_bench">coding_agent_bench</a> — SWE-bench on OpenShift</li>
   </ul>
-  <p>The <code>capevolve_harbor</code> package provides the reusable utilities:</p>
-  <table>
-    <thead><tr><th>Module</th><th>Purpose</th></tr></thead>
-    <tbody>
-      <tr><td><code>capevolve_harbor.run</code></td><td>Invoke <code>harbor run</code> via subprocess with signal forwarding</td></tr>
-      <tr><td><code>capevolve_harbor.results</code></td><td>Parse Harbor job directories → per-task rewards, trajectories, cost</td></tr>
-      <tr><td><code>capevolve_harbor.tasks</code></td><td>Generate Harbor task packages from cap-evolve tasks (optional)</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Debugging</h2>
-  <p>Keep the container or pod alive after a trial to inspect logs and state:</p>
-<pre><code># Keep task pods alive after the trial
-harbor run ... --no-delete
-
-# Inspect the task pod (OpenShift)
-oc get pods -l harbor-role=task
-oc logs &lt;pod&gt;
-oc exec -it &lt;pod&gt; -- /bin/sh</code></pre>
-  <p>Harbor captures transcripts in the job directory:</p>
-<pre><code>jobs/&lt;job-name&gt;/&lt;trial&gt;/
-  agent/trajectory.json      # agent execution trace
-  agent/claude-code.txt      # raw agent stream
-  verifier/reward.json       # verifier score
-  verifier/test-stdout.txt   # verifier output</code></pre>
-
-  <h2>Troubleshooting</h2>
-  <table>
-    <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
-    <tbody>
-      <tr><td><code>harbor</code> CLI not found</td><td>Install with <code>uv tool install harbor</code> (v0.20+ for <code>-e openshift</code>)</td></tr>
-      <tr><td>Agent RuntimeError / context exceeded</td><td>Model context too small — use a larger model or filter tasks with <code>-i &lt;task-name&gt;</code></td></tr>
-      <tr><td>No task matched the filter</td><td>Harbor prefixes task names with the dataset org. Use <code>-i &lt;org&gt;/&lt;task&gt;</code></td></tr>
-      <tr><td>Only 1 task in rollouts</td><td>Set <code>HARBOR_TASK_PREFIX</code> to match the dataset org</td></tr>
-    </tbody>
-  </table>
-  <p>For OpenShift-specific issues (SCC, builds, credentials), see the
-  <a href="harbor-openshift.html">OpenShift guide troubleshooting</a>.</p>
 
 </main>
 

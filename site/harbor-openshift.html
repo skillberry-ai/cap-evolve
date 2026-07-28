@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Harbor on OpenShift — cap-evolve</title>
-  <meta name="description" content="Step-by-step guide: run cap-evolve with Harbor on OpenShift using vLLM model serving. RBAC, SCC, agent credentials, and the full optimization loop.">
+  <title>vLLM on OpenShift — cap-evolve</title>
+  <meta name="description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor. GPU sizing, manifests, agent connection patterns.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/harbor-openshift.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
-  <meta property="og:title" content="Harbor on OpenShift — cap-evolve">
-  <meta property="og:description" content="Run cap-evolve with Harbor on OpenShift using vLLM model serving.">
+  <meta property="og:title" content="vLLM on OpenShift — cap-evolve">
+  <meta property="og:description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor.">
   <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/harbor-openshift.html">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Harbor on OpenShift — cap-evolve">
-  <meta name="twitter:description" content="Run cap-evolve with Harbor on OpenShift using vLLM model serving.">
+  <meta name="twitter:title" content="vLLM on OpenShift — cap-evolve">
+  <meta name="twitter:description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,224 +46,103 @@
 
 <main class="page-narrow doc">
 
-  <h1>Harbor on OpenShift</h1>
+  <h1>vLLM on OpenShift</h1>
   <p class="lead">
-    End-to-end guide: set up Harbor's OpenShift environment, serve models
-    with vLLM on-cluster, and run cap-evolve optimizations — all on your
-    OpenShift cluster with no external dependencies.
+    Serve models on OpenShift with
+    <a href="https://github.com/vllm-project/vllm">vLLM</a> — an
+    OpenAI-compatible endpoint that any agent (claude-code, codex, opencode)
+    or cap-evolve adapter can call. No external API keys needed.
   </p>
 
   <h2>Architecture</h2>
-<pre><code>┌──────────────────────────────────────────────────────────────────┐
-│  OpenShift cluster                                                │
-│                                                                   │
-│  Orchestrator Pod (cap-evolve + harbor CLI)                       │
-│    │                                                              │
-│    ├─ harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -e openshift          │
-│    │                                                              │
-│    ├─ Task Pod 1 ◄── agent + verifier ──► reward.json            │
-│    ├─ Task Pod 2 ◄── agent + verifier ──► reward.json            │
-│    └─ Task Pod N ◄── ...                                         │
-│                                                                   │
-│  vLLM Model Server (GPU node)                                     │
-│    └─ http://vllm-svc.namespace.svc:8000/v1                      │
-└──────────────────────────────────────────────────────────────────┘</code></pre>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  OpenShift cluster  (namespace: cap-evolve)                  │
+│                                                              │
+│  vLLM Deployment (GPU node)                                  │
+│    └─ Serves: http://vllm-svc.cap-evolve.svc:8000/v1        │
+│                                                              │
+│  Consumers:                                                  │
+│    cap-evolve runner   → MODEL=openai/&lt;model-name&gt;         │
+│    harbor task pods    → --ae ANTHROPIC_BASE_URL=http://...   │
+│    any OpenAI client   → curl http://vllm-svc:8000/v1/chat   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
 
-  <table>
-    <thead><tr><th>Component</th><th>What it does</th><th>Runs as</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Orchestrator</strong></td><td>Runs cap-evolve loop + <code>harbor run</code></td><td>Job (CPU pod)</td></tr>
-      <tr><td><strong>Task pods</strong></td><td>One per benchmark task — agent runs, verifier scores</td><td>Pods created by Harbor</td></tr>
-      <tr><td><strong>vLLM</strong></td><td>Serves the model (OpenAI-compatible API)</td><td>Deployment on GPU nodes</td></tr>
-    </tbody>
-  </table>
+  <h2>Deploy</h2>
+<pre><code># 1. Namespace
+oc new-project cap-evolve    # or use an existing namespace
 
-  <h2>Prerequisites</h2>
-  <ul>
-    <li><code>oc</code> CLI logged into your cluster</li>
-    <li>A namespace with GPU nodes (for vLLM) or access to an external model API</li>
-    <li>Harbor CLI (&ge; 0.20): <code>uv tool install harbor</code></li>
-  </ul>
+# 2. HuggingFace token (for gated models)
+oc create secret generic hf-token \
+  --from-literal=HF_TOKEN=&lt;YOUR_HF_TOKEN&gt;
 
-  <h2>Step 1 — Deploy vLLM model server</h2>
-  <p>Skip this step if you're using an external model API (Anthropic, OpenAI, Vertex AI).</p>
-
-<pre><code># Create the namespace
-oc new-project cap-evolve
-
-# Deploy vLLM (example: Qwen 2.5 14B on 2 GPUs)
+# 3. Deploy vLLM
 oc apply -f openshift/manifests/vllm-serving.yaml
 
-# Wait for the model to load (5-15 min on first deploy)
+# 4. Wait for the model to load (5-15 min first time)
 oc get pods -l component=vllm -w
 
-# Verify the endpoint
-oc exec deploy/cap-evolve-runner -- \
-  curl -s http://vllm-svc:8000/v1/models | python3 -m json.tool</code></pre>
+# 5. Verify
+curl -s http://vllm-svc:8000/v1/models</code></pre>
 
-  <p>See <a href="openshift.html">OpenShift deployment</a> for the full vLLM setup
-  including GPU sizing, model swapping, and the HuggingFace token secret.</p>
-
-  <h2>Step 2 — Set up RBAC for Harbor</h2>
-  <p>Harbor needs two ServiceAccounts with specific permissions.</p>
-
-  <h3>Task SA — runs agent containers</h3>
-  <p>Needs a custom SCC that allows <code>runAsUser: 0</code> and Linux capabilities
-  (<code>CHOWN</code>, <code>SETUID</code>, <code>SETGID</code>, <code>FOWNER</code>,
-  etc.) that agents require inside their containers.</p>
-
-<pre><code># Apply the task SA + SCC
-oc apply -f openshift/manifests/service-account.yaml
-
-# Bind the SCC
-oc adm policy add-scc-to-user harbor-task-scc -z harbor-task</code></pre>
-
-  <h3>Orchestrator SA — manages task pods</h3>
-  <p>Needs RBAC to create/delete pods, builds, image streams, and jobs.</p>
-
-<pre><code># Apply the orchestrator SA + Role + RoleBinding
-oc apply -f openshift/manifests/harbor-orchestrator-sa.yaml
-
-# Also bind the task SCC (orchestrator creates pods that use it)
-oc adm policy add-scc-to-user harbor-task-scc -z harbor-orchestrator</code></pre>
-
-  <h2>Step 3 — Verify Harbor works on the cluster</h2>
-  <p>Run a quick smoke test with the <code>oracle</code> agent (no model needed).</p>
-
-<pre><code>harbor run -d terminal-bench@2.0 -a oracle -e openshift -l 1</code></pre>
-
-  <p>You should see Harbor create a BuildConfig, build the task image, run a task
-  pod, and report a reward. If the pod fails with an SCC error, check that
-  Step 2 was completed.</p>
-
-  <h2>Step 4 — Run Harbor with your agent</h2>
-  <p>The general pattern — works with any agent, any dataset, any model backend.</p>
-
-<pre><code>harbor run \
-  -d &lt;dataset&gt; \
-  -a &lt;agent&gt; \
-  -m &lt;model&gt; \
-  -e openshift \
-  -n &lt;parallel&gt; \
-  --ae &lt;KEY&gt;=&lt;VALUE&gt; ...</code></pre>
-
-  <h3>With on-cluster vLLM</h3>
-  <p>No external API keys needed — the agent connects to vLLM via the in-cluster
-  Service DNS.</p>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m &lt;model-name&gt; -e openshift -n 5 \
-  --ae ANTHROPIC_BASE_URL=http://&lt;vllm-svc&gt;.&lt;namespace&gt;.svc:8000 \
-  --ae ANTHROPIC_API_KEY=dummy \
-  --ae ANTHROPIC_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_SONNET_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_HAIKU_MODEL=&lt;model-name&gt; \
-  --ae ANTHROPIC_DEFAULT_OPUS_MODEL=&lt;model-name&gt;</code></pre>
-
-  <h3>With Vertex AI</h3>
-  <p>Bind-mount GCP credentials into each task pod.</p>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m claude-sonnet-4-6 -e openshift -n 5 \
-  --ae CLAUDE_CODE_USE_VERTEX=1 \
-  --ae CLOUD_ML_REGION=&lt;region&gt; \
-  --ae ANTHROPIC_VERTEX_PROJECT_ID=&lt;gcp-project&gt; \
-  --ae ANTHROPIC_MODEL=claude-sonnet-4-6 \
-  --ae GOOGLE_APPLICATION_CREDENTIALS=/app/.config/gcloud/adc.json \
-  --mounts-json '[{"type":"bind","source":"~/.config/gcloud/application_default_credentials.json","target":"/app/.config/gcloud/adc.json"}]'</code></pre>
-
-  <h3>With an Anthropic API key</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a claude-code -m claude-sonnet-4-6 -e openshift -n 5 \
-  --ae ANTHROPIC_API_KEY=sk-ant-...</code></pre>
-
-  <h3>With OpenAI / Codex</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a codex -m &lt;model&gt; -e openshift -n 5 \
-  --ae OPENAI_API_KEY=sk-...</code></pre>
-
-  <h3>With any OpenAI-compatible endpoint</h3>
-<pre><code>harbor run -d &lt;dataset&gt; -a opencode -m &lt;model&gt; -e openshift -n 5 \
-  --ae OPENAI_BASE_URL=http://&lt;endpoint&gt; \
-  --ae OPENAI_API_KEY=...</code></pre>
-
-  <h2>Step 5 — Run the cap-evolve optimization loop</h2>
-  <p>Once Harbor runs successfully, wire it into cap-evolve's optimization loop
-  via the Harbor adapter.</p>
-
-<pre><code># Install cap-evolve + Harbor adapter
-pip install ./core ./capevolve_harbor
-
-# Set up the project
-cap-evolve init
-cp -r templates/adapters/harbor/* .capevolve/project/adapters/
-
-# Configure
-export HARBOR_DATASET=&lt;org/dataset&gt;
-export HARBOR_AGENT=&lt;agent&gt;
-export HARBOR_MODEL=&lt;model&gt;
-export HARBOR_TASK_IDS=&lt;task1,task2,...&gt;
-export HARBOR_TASK_PREFIX=&lt;dataset-org&gt;
-export HARBOR_EXTRA_FLAGS="-e openshift -n 5 --ae KEY=VALUE ..."
-
-# Run the optimization
-cap-evolve check .capevolve/project
-cap-evolve run --spec .capevolve/project/capevolve.yaml</code></pre>
-
-  <p>cap-evolve will iterate: evaluate via <code>harbor run</code> → diagnose
-  failures → optimizer edits the skill → re-evaluate → gate → repeat.</p>
-
-  <h2>What Harbor creates on the cluster</h2>
+  <h2>Model sizing</h2>
   <table>
-    <thead><tr><th>Resource</th><th>Name pattern</th><th>Purpose</th><th>Lifecycle</th></tr></thead>
+    <thead><tr><th>Size</th><th>GPUs</th><th><code>--tensor-parallel-size</code></th><th>Memory</th></tr></thead>
     <tbody>
-      <tr><td>BuildConfig</td><td><code>hb-build-&lt;task&gt;</code></td><td>Builds the task environment image</td><td>Cached via ImageStream</td></tr>
-      <tr><td>ImageStream</td><td><code>hb-build-&lt;task&gt;</code></td><td>Caches built images (skips rebuild on rerun)</td><td>Persists</td></tr>
-      <tr><td>Pod</td><td><code>hb-&lt;task&gt;-&lt;hash&gt;-env</code></td><td>Runs the agent + verifier</td><td>Deleted after trial (or <code>--no-delete</code>)</td></tr>
+      <tr><td>7B</td><td>1</td><td>1 (default)</td><td>8 Gi</td></tr>
+      <tr><td>14B</td><td>2</td><td>2</td><td>32 Gi</td></tr>
+      <tr><td>32B+</td><td>4</td><td>4</td><td>64 Gi</td></tr>
     </tbody>
   </table>
+  <p>Edit <code>vllm-serving.yaml</code> to change the model, GPU count, and
+  <code>--tensor-parallel-size</code>.</p>
 
-  <h2>Debugging</h2>
+  <h2>Connecting agents to vLLM</h2>
+  <p>vLLM exposes an OpenAI-compatible API. Agents connect via environment
+  variables — the exact vars depend on the agent.</p>
 
-<pre><code># Keep task pods alive after the trial for inspection
-harbor run ... --no-delete
+  <table>
+    <thead><tr><th>Agent</th><th>Env vars</th></tr></thead>
+    <tbody>
+      <tr><td>cap-evolve (litellm)</td><td><code>MODEL=openai/&lt;model&gt; OPENAI_API_BASE=http://vllm-svc:8000/v1 OPENAI_API_KEY=dummy</code></td></tr>
+      <tr><td>claude-code</td><td><code>ANTHROPIC_BASE_URL=http://vllm-svc:8000 ANTHROPIC_API_KEY=dummy ANTHROPIC_MODEL=&lt;model&gt;</code></td></tr>
+      <tr><td>codex / opencode</td><td><code>OPENAI_BASE_URL=http://vllm-svc:8000/v1 OPENAI_API_KEY=dummy</code></td></tr>
+    </tbody>
+  </table>
+  <p>For Harbor task pods, pass these via <code>--ae</code> flags. Use the full
+  Service DNS when crossing namespaces:
+  <code>http://vllm-svc.&lt;namespace&gt;.svc:8000</code>.</p>
 
-# List Harbor's task pods
-oc get pods | grep ^hb-
-
-# Check a task pod's logs
-oc logs &lt;pod-name&gt; -c main
-
-# Shell into a running task pod
-oc exec -it &lt;pod-name&gt; -- /bin/sh
-
-# Check build status
-oc get builds</code></pre>
-
-  <p>Harbor captures full transcripts in the job output directory:</p>
-<pre><code>jobs/&lt;job-name&gt;/&lt;trial&gt;/
-  agent/trajectory.json      # agent execution trace (ATIF format)
-  agent/claude-code.txt      # raw agent stream
-  verifier/reward.json       # verifier score
-  verifier/test-stdout.txt   # verifier output
-  verifier/test-stderr.txt   # verifier errors</code></pre>
+  <h2>Manifests</h2>
+  <p>All manifests live under
+  <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/openshift"><code>openshift/</code></a>:</p>
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>namespace.yaml</code></td><td>Namespace</td></tr>
+      <tr><td><code>service-account.yaml</code></td><td>ServiceAccount + SCC for Harbor task pods</td></tr>
+      <tr><td><code>vllm-serving.yaml</code></td><td>vLLM Deployment + Service + Route (agent model)</td></tr>
+      <tr><td><code>vllm-optimizer.yaml</code></td><td>Optional second vLLM for the optimizer (larger model)</td></tr>
+      <tr><td><code>pvc.yaml</code></td><td>Persistent storage for run artifacts</td></tr>
+      <tr><td><code>secrets.yaml</code></td><td>Template for HuggingFace token</td></tr>
+    </tbody>
+  </table>
 
   <h2>Troubleshooting</h2>
   <table>
     <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
     <tbody>
-      <tr><td><code>unable to validate against any security context constraint</code></td><td>Run <code>oc adm policy add-scc-to-user harbor-task-scc -z harbor-task</code> and for the orchestrator SA too</td></tr>
-      <tr><td>Build pod fails</td><td>Check <code>oc logs &lt;build-pod&gt;</code> — usually a Dockerfile issue or missing base image</td></tr>
-      <tr><td>Task pod: <code>ImagePullBackOff</code></td><td>The built image wasn't pushed to the internal registry — check <code>oc get is</code></td></tr>
-      <tr><td>Agent timeout / RuntimeError</td><td>Model context too small for the task. Use a larger model or filter with <code>-i &lt;task&gt;</code></td></tr>
-      <tr><td>Vertex AI auth fails in task pod</td><td>Ensure <code>--mounts-json</code> bind-mounts the GCP credentials file and <code>--ae GOOGLE_APPLICATION_CREDENTIALS=&lt;path&gt;</code> points to it</td></tr>
-      <tr><td>vLLM endpoint not reachable from task pod</td><td>Task pods run in the same namespace — use the full Service DNS: <code>http://&lt;svc&gt;.&lt;namespace&gt;.svc:8000</code></td></tr>
-      <tr><td>No task matched the filter</td><td>Harbor prefixes task names with the dataset org. Use <code>-i &lt;org&gt;/&lt;task&gt;</code></td></tr>
-      <tr><td>Pod evicted / OOMKilled</td><td>Increase memory with <code>--override-memory-mb 4096</code></td></tr>
+      <tr><td>Pod pending (no GPU)</td><td>Check <code>oc describe pod</code> — node selector may not match your GPU labels</td></tr>
+      <tr><td>OOMKilled</td><td>Model too large for requested memory — increase resources or use fewer GPUs with a smaller model</td></tr>
+      <tr><td>Context length exceeded</td><td>Set <code>--max-model-len</code> in the vLLM args, or use a model with larger native context</td></tr>
+      <tr><td>Connection refused from task pod</td><td>Use full DNS: <code>http://&lt;svc&gt;.&lt;namespace&gt;.svc:8000</code></td></tr>
     </tbody>
   </table>
 
-  <h2>Reference</h2>
+  <h2>References</h2>
   <ul>
-    <li><a href="harbor.html">Harbor integration</a> — the main Harbor + cap-evolve guide</li>
-    <li><a href="openshift.html">OpenShift deployment</a> — vLLM model serving on OpenShift</li>
-    <li><a href="https://github.com/harbor-framework/harbor/pull/1875">Harbor OpenShift environment PR</a></li>
-    <li><a href="https://github.com/opendatahub-io/agent-eval-harness/blob/main/docs/harbor-workflow.md">agent-eval-harness Harbor workflow</a></li>
-    <li><a href="https://github.com/redhat-et/coding_agent_bench">coding_agent_bench</a> — SWE-bench with Harbor on OpenShift</li>
+    <li><a href="harbor.html">Harbor integration</a> — using Harbor with cap-evolve (includes OpenShift orchestrator setup)</li>
+    <li><a href="https://docs.vllm.ai/">vLLM documentation</a></li>
+    <li><a href="https://github.com/skillberry-ai/cap-evolve/tree/main/openshift">OpenShift manifests</a></li>
   </ul>
 
 </main>
