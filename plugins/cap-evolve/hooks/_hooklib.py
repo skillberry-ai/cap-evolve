@@ -67,7 +67,7 @@ def find_run_dir(start: Path) -> Path | None:
     here = Path(start).resolve()
     candidates: list[Path] = []
     for parent in [here, *here.parents]:
-        for base_name in (".capevolve", ".agentcapo"):
+        for base_name in (".capevolve"):
             base = parent / base_name
             if base.is_dir():
                 runs = sorted(
@@ -83,8 +83,8 @@ def find_run_dir(start: Path) -> Path | None:
 
 
 def project_dir_for(run_dir: Path) -> Path | None:
-    """The ``.capevolve/project`` (or ``.agentcapo/project``) sibling of a run dir."""
-    base = run_dir.parent  # .capevolve/ or .agentcapo/
+    """The ``.capevolve/project`` sibling of a run dir."""
+    base = run_dir.parent  # .capevolve/
     for name in ("project",):
         proj = base / name
         if (proj / "adapters" / "adapter.py").exists():
