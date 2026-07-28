@@ -173,7 +173,10 @@ jobs:
       NUM_TRIALS: ${{ github.event.inputs.trials || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'aws/claude-opus-4-8' }}
-      OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || '0' }}
+      # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
+      # full stays unlimited by default. An explicit `optimizer_usd_per_iter`
+      # dispatch input overrides this for whichever tier(s) run in that dispatch.
+      OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || (matrix.tier == 'smoke' && '50' || '0') }}
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
       GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
       ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}

@@ -449,8 +449,15 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         env = dict(os.environ)
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if proc.returncode != 0:
-            raise RuntimeError(
+            err = RuntimeError(
                 f"optimizer failed ({proc.returncode}): {_optimizer_failure_detail(proc)}")
+            # run-optimizer prints its cost payload *before* returning its own exit
+            # code, which mirrors the underlying CLI's (e.g. non-zero on hitting
+            # --max-budget-usd though the CLI still reports real total_cost_usd) —
+            # attach whatever cost it already computed so the caller can still
+            # count real spend against the budget instead of discarding it.
+            err.cost = _parse_optimizer_cost(proc.stdout)  # type: ignore[attr-defined]
+            raise err
         # Capture optimizer spend (cost_usd/tokens) from run-optimizer's JSON payload
         # so it counts against the budget and shows in the dashboard. Returns None
         # when the agent CLI emitted no structured cost (spend stays unmeasured).
@@ -1262,6 +1269,13 @@ def run_step(
         # and the gate simply rejects it (a wasted iteration, not a crash).
         optimizer_error = str(e)
         run_dir.log_event("optimizer_error", candidate=cid, error=optimizer_error[:500])
+        # The optimizer may have already spent real money before failing (e.g. it
+        # hit its own --usd-budget/--max-turns cap mid-session) — recover that cost
+        # instead of letting it disappear as an unmeasured $0.
+        recovered_cost = getattr(e, "cost", None)
+        if isinstance(recovered_cost, dict):
+            opt_cost_usd = float(recovered_cost.get("cost_usd") or 0.0)
+            opt_tokens = int(recovered_cost.get("tokens") or 0)
     optimizer_seconds = time.time() - _opt_t0
     run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
                          optimizer_tokens=opt_tokens)

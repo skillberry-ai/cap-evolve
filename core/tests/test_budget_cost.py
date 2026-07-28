@@ -5,8 +5,8 @@ import json
 
 from cap_evolve import RunDir
 from cap_evolve.rundir import Budget, Spent
-from cap_evolve.harness import _parse_optimizer_cost
-from cap_evolve import cli, pricing
+from cap_evolve.harness import _parse_optimizer_cost, optimizer_from_command
+from cap_evolve import cli, pricing, harness
 
 
 # ---- Spent / Budget round-trip + total ------------------------------------
@@ -71,6 +71,33 @@ def test_parse_optimizer_cost_from_runner_payload():
 def test_parse_optimizer_cost_absent():
     assert _parse_optimizer_cost("just some prose, no json") is None
     assert _parse_optimizer_cost(json.dumps({"cost": {"total_cost_usd": None, "tokens": None}})) is None
+
+
+# ---- optimizer cost must survive a non-zero optimizer exit ----------------
+
+def test_optimizer_from_command_recovers_cost_on_nonzero_exit(tmp_path, monkeypatch):
+    """run-optimizer computes real cost from the CLI's JSON *before* returning its
+    own exit code, which mirrors the underlying CLI's (e.g. non-zero on hitting
+    --max-budget-usd). That already-computed cost must not be thrown away just
+    because the optimizer process failed."""
+    payload = json.dumps({"optimizer": "claude-code", "returncode": 1,
+                          "cost": {"total_cost_usd": 0.0591, "tokens": 500}})
+
+    class FakeProc:
+        returncode = 1
+        stdout = payload
+        stderr = ""
+
+    monkeypatch.setattr(harness.subprocess, "run", lambda *a, **k: FakeProc())
+
+    opt = optimizer_from_command(["fake", "--workdir", "{workdir}", "--prompt", "{prompt}"])
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    try:
+        opt(workdir, "do something")
+        assert False, "expected RuntimeError"
+    except RuntimeError as e:
+        assert getattr(e, "cost", None) == {"cost_usd": 0.0591, "tokens": 500}
 
 
 # ---- pricing table is real (not zeros) + estimate math --------------------
