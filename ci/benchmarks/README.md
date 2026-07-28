@@ -2,16 +2,18 @@
 
 Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench**,
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
-set of **hard** tasks (baseline reward 0) and reports **reward / latency / cost** base→opt
-from a single run, plus the optimizer's capability diffs — a reproducible end-to-end
-pipeline + metrics regression, not a leaderboard.
+set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
+baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
+optimizer's capability diffs — a reproducible end-to-end pipeline + metrics regression,
+not a leaderboard.
 
-> **Hard-only suite.** Every curated task has baseline reward 0. These benchmarks are
-> binary-scored, and a task a model fails at baseline is capability-bound — a few
-> optimization iterations on the prompt/policy/skill rarely carry a hard failure to a
-> pass. So this suite mainly proves the pipeline runs end-to-end and reports honest
-> non-regression metrics; the `iterations` knob gives the optimizer more budget to
-> explore if you want to push harder.
+> **Calibrated-headroom suite.** Curated tasks are picked to have room to improve at
+> baseline — solvable often enough to be meaningful, not so saturated that optimization
+> has nothing to move. These benchmarks are binary-scored, so a few optimization
+> iterations on the prompt/policy/skill can plausibly flip some but not all trials. This
+> suite mainly proves the pipeline runs end-to-end and reports honest non-regression
+> metrics; the `iterations` knob gives the optimizer more budget to explore if you want
+> to push harder.
 
 - **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
 - **One project, one run:** all of a tier's tasks are optimized TOGETHER in a single
@@ -66,7 +68,7 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 ## Trigger the suite
 
 Runs come in two **tiers** (a first-class dimension in the workflow, same workflow + history page):
-- **`smoke`** — a few hard tasks per benchmark (fast regression; the default).
+- **`smoke`** — a few representative tasks per benchmark (fast regression; the default).
 - **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks
   live under `ci/benchmarks/<bench>/full/tasks.json`; a bench with an empty list simply runs
   zero tasks until populated (see below). `tau2/full/tasks.json` is already populated (50
@@ -94,7 +96,7 @@ Just add task ids to `<bench>/full/tasks.json` (same shape as `<bench>/smoke/tas
 [{"id": "<task_id>", "tag": "full", "agent": "aws/gpt-oss-120b"}]
 ```
 No baseline-freezing step — `run_suite.sh` computes the baseline fresh, in the same run, for
-whatever ids are listed. Pick ids with baseline reward 0 (a hard task) by running
+whatever ids are listed. Pick ids with headroom (baseline not already saturated) by running
 `run_suite.sh` against a candidate list and checking the report.
 
 Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.

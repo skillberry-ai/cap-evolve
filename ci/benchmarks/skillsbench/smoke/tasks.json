@@ -1,4 +1,12 @@
 [
-  {"id": "offer-letter-generator", "tag": "hard", "agent": "aws/gpt-oss-120b"},
-  {"id": "exceltable-in-ppt", "tag": "hard", "agent": "aws/gpt-oss-120b"}
+  {"id": "offer-letter-generator", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "exceltable-in-ppt", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "xlsx-recover-data", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "sales-pivot-analysis", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "invoice-fraud-detection", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "weighted-gdp-calc", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "financial-modeling-qa", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "pdf-excel-diff", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "pptx-reference-formatting", "tag": "repr", "agent": "aws/gpt-oss-120b"},
+  {"id": "reserves-at-risk-calc", "tag": "repr", "agent": "aws/gpt-oss-120b"}
 ]

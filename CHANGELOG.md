@@ -35,6 +35,15 @@ All notable changes to cap-evolve are documented here. The format follows
   every other benchmark's smoke tier. `select_candidates.py` and its output
   (`utils/smoke_candidates.json`) live under `utils/` — not read by CI, only for
   re-picking tasks later.
+- **SkillsBench smoke tier aligned with tau2/swebench.** `ci/benchmarks/skillsbench/smoke/tasks.json`
+  grows from 2 tasks (tag `hard`) to all 10 tasks the adapter's `TASK_IDS` allowlist
+  supports (tag `repr`, matching tau2's count and the tau2/swebench tag convention) —
+  the same pool already used and baselined in `docs/REPRODUCE_skillsbench.md` (baseline
+  pass rate 0.333, not 0). `ci/benchmarks/README.md`'s "Hard-only suite" framing is
+  reworded to "Calibrated-headroom suite" to match this and swebench's own
+  `select_candidates.py` selection goal (nonzero but not saturated at baseline), rather
+  than the stricter "every curated task has baseline reward 0" claim neither benchmark
+  actually satisfies.
 - **Adapter-native batch scoring (`score_batch`).** New optional adapter hook,
   `score_batch(tasks, rollouts) -> {task_id: Score}` — the scoring-side counterpart to
   `run_batch`/`run_trials` (see `docs/ADAPTER_CONTRACT.md`). The harness calls it once
