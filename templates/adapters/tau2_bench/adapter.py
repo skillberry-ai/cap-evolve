@@ -251,19 +251,90 @@ class Adapter(CapabilityAdapter):
         )
 
     def run_trials(self, tasks: list[Task], ctx, *, n_trials: int, base_seed: int) -> dict:
-        """Run the whole task×trial grid concurrently (bounded by TAU2_MAX_CONCURRENCY).
+        """Run the whole task×trial grid through ONE tau2 run_tasks() call.
 
-        The harness uses this fast path (instead of looping trials sequentially) to
-        run all num_trials in parallel. Delegates to the shared pool over run_target;
-        each trial k uses seed = base_seed + k (independent draws).
+        tau2's run_tasks() seeds Python's process-global `random` module once
+        (`random.seed(config.seed)` + `random.randint(...)` per trial), single-threaded,
+        BEFORE spawning its own internal ThreadPoolExecutor (bounded by
+        max_concurrency) to run every (task, trial) pair. That reseed is unsynchronized
+        (no lock) and only safe under tau2's intended single-call-per-run usage.
+
+        Calling run_tasks() once per (task, trial) from cap-evolve's OWN external
+        thread pool (the previous implementation, via run_trials_pool) invoked that
+        unsynchronized reseed concurrently from up to TAU2_MAX_CONCURRENCY threads —
+        a race on the shared global RNG state that could scramble which seed a given
+        (task, trial) actually got, breaking reproducibility across separate
+        evaluations of the same nominal (candidate, base_seed) pair. Making ONE call
+        for the whole grid keeps the reseed on the main thread and reuses tau2's own
+        (safe) internal concurrency instead.
         """
-        from cap_evolve import run_trials_pool
+        from tau2.data_model.simulation import TextRunConfig
+        from tau2.runner import run_tasks
 
-        max_workers = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
-        return run_trials_pool(
-            lambda task, seed: self.run_target(task, ctx, seed=seed),
-            tasks, n_trials=n_trials, base_seed=base_seed, max_workers=max_workers,
+        n_trials = max(0, int(n_trials))
+        results: dict[str, list[Rollout]] = {t.id: [] for t in tasks}
+        if n_trials == 0 or not tasks:
+            return results
+
+        by_id = self._tau2_tasks_by_id()
+        tau2_tasks = [by_id[t.id] for t in tasks if t.id in by_id]
+        for t in tasks:
+            if t.id not in by_id:
+                results[t.id] = [
+                    Rollout(task_id=t.id, error=f"task id {t.id} not found in airline task set")
+                    for _ in range(n_trials)
+                ]
+        if not tau2_tasks:
+            return results
+
+        llm_kwargs = model_config.llm_kwargs()
+        max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
+
+        config = TextRunConfig(
+            domain=DOMAIN,
+            agent="llm_agent",
+            llm_agent=model_config.MODEL,
+            llm_args_agent=dict(llm_kwargs),
+            user="user_simulator",
+            llm_user=model_config.MODEL,
+            llm_args_user=dict(llm_kwargs),
+            num_trials=n_trials,
+            max_steps=100,
+            max_errors=10,
+            max_concurrency=max_concurrency,
+            seed=int(base_seed),
         )
+
+        import contextlib
+
+        with contextlib.redirect_stdout(sys.stderr):
+            sim_results = run_tasks(
+                config,
+                tau2_tasks,
+                save_path=None,
+                console_display=False,
+            )
+
+        by_task_trial: dict[tuple[str, int], Rollout] = {}
+        for sim in sim_results.simulations:
+            trial = int(sim.trial) if sim.trial is not None else 0
+            by_task_trial[(str(sim.task_id), trial)] = self._sim_to_rollout(sim)
+
+        for t in tasks:
+            if t.id not in by_id:
+                continue
+            results[t.id] = [
+                by_task_trial.get(
+                    (t.id, k),
+                    Rollout(
+                        task_id=t.id,
+                        error="no simulation produced for task/trial (tau2 returned nothing)",
+                        metadata={"domain": DOMAIN, "tau2_reward": 0.0},
+                    ),
+                )
+                for k in range(n_trials)
+            ]
+        return results
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         """Run a single task by delegating to run_batch."""
