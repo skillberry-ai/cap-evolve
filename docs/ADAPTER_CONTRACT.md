@@ -55,10 +55,17 @@ with `hasattr` (`core/cap_evolve/harness.py`) and uses them when present:
 ```python
 def run_batch(self, tasks, ctx, *, seed=0) -> ...                                  # drive a benchmark's OWN batch runner INSTEAD of run_target (as tau2 does)
 def run_trials(self, tasks, ctx, *, n_trials, base_seed) -> {id: [Rollout, ...]}   # batched fast path: ALL trials in ONE run
+def score_batch(self, tasks, rollouts) -> {id: Score}                             # batched fast path: score a WHOLE trial in ONE call (e.g. one Docker harness invocation, as swebench does)
 ```
 
 `run_trials` collapses N sequential eval passes into one concurrent run; per-trial
 persistence and pass^k / SE are byte-for-byte unchanged, so resume keeps working.
+`score_batch` is the scoring-side counterpart: the harness calls it once per trial with
+that trial's `{task_id: Rollout}` instead of looping `score()` per task — the point is a
+benchmark whose real evaluation cost is in an external harness (e.g. a Docker build per
+instance) can batch that harness call and let it parallelize internally. Any task id the
+batch omits falls back to a single `score()` call, so a partial implementation can never
+silently drop a score.
 
 ## Why this shape (three abstract, not prior work's three or SkillOpt's five)
 

@@ -285,40 +285,12 @@ Do not include any explanation before or after the patch.
         Runs the patch in a Docker container against the instance's test suite.
         Returns binary reward: 1.0 if all tests pass, 0.0 otherwise.
         """
-        if rollout.error:
-            return Score(
-                task_id=task.id,
-                reward=0.0,
-                feedback=(
-                    f"Rollout failed: {rollout.error}. Infrastructure error, "
-                    "not a prompt defect; do not optimize against it."
-                ),
-            )
-
-        patch = rollout.output or ""
-        if not patch.strip():
-            return Score(
-                task_id=task.id,
-                reward=0.0,
-                feedback="Empty patch produced. The prompt must instruct the model "
-                "to output a valid unified diff.",
-            )
-
-        # A non-diff can never resolve an instance — reject cheaply without paying
-        # for a Docker build. This also keeps `cap-evolve check`'s scorer probe
-        # (a synthetic non-diff rollout) offline and fast.
-        if not _looks_like_diff(patch):
-            return Score(
-                task_id=task.id,
-                reward=0.0,
-                feedback="Output is not a valid unified diff (no diff/---/@@ markers). "
-                "The prompt must instruct the model to output ONLY a unified diff.",
-            )
-
-        instance_id = task.id
+        pre = _cheap_score_precheck(task.id, rollout)
+        if pre is not None:
+            return pre
 
         try:
-            reward, feedback = self._evaluate_patch(instance_id, patch)
+            reward, feedback = self._evaluate_patch(task.id, rollout.output or "")
         except Exception as e:  # noqa: BLE001
             return Score(
                 task_id=task.id,
@@ -328,37 +300,82 @@ Do not include any explanation before or after the patch.
 
         return Score(task_id=task.id, reward=reward, feedback=feedback)
 
+    def score_batch(self, tasks: list[Task], rollouts: dict) -> dict:
+        """Score a WHOLE trial's rollouts with ONE swebench harness invocation.
+
+        A single-instance call (the ``score()`` path) has nothing for
+        ``--max_workers`` to parallelize over; batching every instance in this
+        trial into one ``run_evaluation`` call with multiple ``--instance_ids``
+        lets the harness build/run those Docker containers concurrently. Cheap
+        local checks (error/empty/non-diff) still run per-rollout first, so they
+        never occupy a Docker slot — same as ``score()``.
+        """
+        out: dict[str, Score] = {}
+        batchable: list[tuple[str, str]] = []
+        for task in tasks:
+            rollout = rollouts.get(task.id) or Rollout(task_id=task.id, error="omitted from batch result")
+            pre = _cheap_score_precheck(task.id, rollout)
+            if pre is not None:
+                out[task.id] = pre
+                continue
+            batchable.append((task.id, rollout.output or ""))
+
+        if batchable:
+            try:
+                results = self._evaluate_patches_batch(batchable)
+            except Exception as e:  # noqa: BLE001
+                results = {
+                    iid: (0.0, f"Evaluation harness error: {e}. Check Docker is running.")
+                    for iid, _ in batchable
+                }
+            for iid, (reward, feedback) in results.items():
+                out[iid] = Score(task_id=iid, reward=reward, feedback=feedback)
+
+        return out
+
     def _evaluate_patch(self, instance_id: str, patch: str) -> tuple[float, str]:
         """Run the swebench Docker harness for one instance + patch.
 
-        Uses the current ``swebench.harness.run_evaluation`` CLI
-        (``--dataset_name/--predictions_path/--max_workers/--run_id``) and reads
-        the ``<model>.<run_id>.json`` report it writes (``resolved_ids``).
-        Returns ``(reward, feedback)``.
+        Thin wrapper over ``_evaluate_patches_batch`` with a single pair, so the
+        harness-invocation/report-parsing logic exists in exactly one place.
         """
-        run_id = f"capevolve_{instance_id}"
+        return self._evaluate_patches_batch([(instance_id, patch)])[instance_id]
+
+    def _evaluate_patches_batch(self, pairs: list[tuple[str, str]]) -> dict:
+        """Run the swebench Docker harness for MULTIPLE (instance_id, patch) pairs
+        in ONE subprocess call.
+
+        Uses the current ``swebench.harness.run_evaluation`` CLI
+        (``--dataset_name/--predictions_path/--max_workers/--run_id``), passing
+        ALL instance ids as one comma-separated ``--instance_ids`` list so
+        ``--max_workers`` actually parallelizes Docker evaluation across them —
+        a single-id call has nothing to parallelize. Reads the
+        ``<model>.<run_id>.json`` report it writes (``resolved_ids``) and returns
+        ``{instance_id: (reward, feedback)}`` with one entry per input pair.
+        """
+        if not pairs:
+            return {}
+
+        run_id = f"capevolve_batch_{pairs[0][0]}_{len(pairs)}"
         with tempfile.TemporaryDirectory(prefix="swebench_eval_") as tmpdir:
             tmp = Path(tmpdir)
             predictions_path = tmp / "predictions.jsonl"
-            predictions_path.write_text(
-                json.dumps(
-                    {
+            with predictions_path.open("w", encoding="utf-8") as f:
+                for instance_id, patch in pairs:
+                    f.write(json.dumps({
                         "instance_id": instance_id,
                         "model_patch": patch,
                         "model_name_or_path": model_config.MODEL,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
-            )
+                    }) + "\n")
 
+            instance_ids_csv = ",".join(iid for iid, _ in pairs)
             cmd = [
                 sys.executable,
                 "-m",
                 "swebench.harness.run_evaluation",
                 "--dataset_name", DATASET,
                 "--split", SPLIT,
-                "--instance_ids", instance_id,
+                "--instance_ids", instance_ids_csv,
                 "--predictions_path", str(predictions_path),
                 "--max_workers", str(MAX_WORKERS),
                 "--timeout", str(TIMEOUT),
@@ -373,33 +390,25 @@ Do not include any explanation before or after the patch.
                     timeout=TIMEOUT + 600, cwd=tmpdir,
                 )
             except subprocess.TimeoutExpired:
-                return 0.0, (
+                msg = (
                     f"Evaluation timed out. Docker image builds can be slow on the "
                     f"first run; raise SWEBENCH_TIMEOUT (currently {TIMEOUT}s)."
                 )
+                return {iid: (0.0, msg) for iid, _ in pairs}
 
-            # The harness writes <model_name_or_path sanitized>.<run_id>.json to cwd.
-            reports = list(tmp.glob(f"*{run_id}.json")) + list(tmp.glob("*.json"))
-            for rf in reports:
-                try:
-                    report = json.loads(rf.read_text(encoding="utf-8"))
-                except Exception:  # not the report file — skip
-                    continue
-                resolved_ids = report.get("resolved_ids", [])
-                if instance_id in resolved_ids:
-                    return 1.0, "Instance resolved — the patch makes the tests pass."
-                if report.get("completed_ids") or report.get("submitted_instances"):
-                    return 0.0, (
-                        "Instance NOT resolved: the patch applied/ran but did not make "
-                        "the failing tests pass. Guide the model toward a correct, "
-                        "minimal fix for the described issue."
-                    )
+            report = _parse_swebench_report(tmp, run_id)
+            if report is None:
+                stderr_tail = (proc.stderr or "")[-800:]
+                msg = (
+                    f"No evaluation report produced (harness exit {proc.returncode}). "
+                    f"Check Docker is running and the image built. stderr: {stderr_tail}"
+                )
+                return {iid: (0.0, msg) for iid, _ in pairs}
 
-            stderr_tail = (proc.stderr or "")[-800:]
-            return 0.0, (
-                f"No evaluation report produced (harness exit {proc.returncode}). "
-                f"Check Docker is running and the image built. stderr: {stderr_tail}"
-            )
+            return {
+                iid: _score_from_report(iid, report, proc.returncode)
+                for iid, _ in pairs
+            }
 
 
 # ---------------------------------------------------------------------------
@@ -410,6 +419,79 @@ Do not include any explanation before or after the patch.
 def _looks_like_diff(text: str) -> bool:
     """True if ``text`` contains unified-diff markers (cheap, no Docker)."""
     return any(m in text for m in ("diff --git", "\n--- ", "--- ", "@@ ")) or text.startswith("--- ")
+
+
+def _cheap_score_precheck(instance_id: str, rollout: Rollout) -> Score | None:
+    """Local, Docker-free checks shared by ``score()`` and ``score_batch()``.
+
+    Returns a terminal ``Score`` for an infra-error/empty/non-diff rollout so it
+    never occupies a Docker slot, or ``None`` when the patch is diff-shaped and
+    should proceed to the harness. This also keeps `cap-evolve check`'s scorer
+    probe (a synthetic non-diff rollout) offline and fast.
+    """
+    if rollout.error:
+        return Score(
+            task_id=instance_id,
+            reward=0.0,
+            feedback=(
+                f"Rollout failed: {rollout.error}. Infrastructure error, "
+                "not a prompt defect; do not optimize against it."
+            ),
+        )
+
+    patch = rollout.output or ""
+    if not patch.strip():
+        return Score(
+            task_id=instance_id,
+            reward=0.0,
+            feedback="Empty patch produced. The prompt must instruct the model "
+            "to output a valid unified diff.",
+        )
+
+    if not _looks_like_diff(patch):
+        return Score(
+            task_id=instance_id,
+            reward=0.0,
+            feedback="Output is not a valid unified diff (no diff/---/@@ markers). "
+            "The prompt must instruct the model to output ONLY a unified diff.",
+        )
+
+    return None
+
+
+def _parse_swebench_report(tmp: Path, run_id: str) -> dict | None:
+    """Load the swebench harness's report JSON for ``run_id`` from ``tmp``, if any.
+
+    The harness writes ``<model_name_or_path sanitized>.<run_id>.json`` to cwd;
+    fall back to any ``*.json`` in ``tmp`` in case the naming doesn't match.
+    """
+    reports = list(tmp.glob(f"*{run_id}.json")) + list(tmp.glob("*.json"))
+    for rf in reports:
+        try:
+            return json.loads(rf.read_text(encoding="utf-8"))
+        except Exception:  # not the report file — skip
+            continue
+    return None
+
+
+def _score_from_report(instance_id: str, report: dict, harness_exit: int) -> tuple[float, str]:
+    """Read ``instance_id``'s outcome out of a (possibly multi-instance) report."""
+    resolved_ids = report.get("resolved_ids", [])
+    if instance_id in resolved_ids:
+        return 1.0, "Instance resolved — the patch makes the tests pass."
+
+    ran_ids = set(report.get("completed_ids") or []) | set(report.get("submitted_instances") or [])
+    if instance_id in ran_ids:
+        return 0.0, (
+            "Instance NOT resolved: the patch applied/ran but did not make "
+            "the failing tests pass. Guide the model toward a correct, "
+            "minimal fix for the described issue."
+        )
+
+    return 0.0, (
+        f"No evaluation report produced (harness exit {harness_exit}). "
+        f"Check Docker is running and the image built."
+    )
 
 
 def _extract_patch(text: str) -> str:
@@ -474,3 +556,23 @@ if __name__ == "__main__":
     assert not _looks_like_diff("__probe_output__")  # check probe stays offline
     assert not _looks_like_diff("I could not find the bug.")
     print("swe_bench extract/diff self-check: OK")
+
+    # Cheap precheck: error/empty/non-diff never reach Docker; a real diff passes through.
+    assert _cheap_score_precheck("i1", Rollout(task_id="i1", error="boom")) is not None
+    assert _cheap_score_precheck("i1", Rollout(task_id="i1", output="")) is not None
+    assert _cheap_score_precheck("i1", Rollout(task_id="i1", output="not a diff")) is not None
+    assert _cheap_score_precheck("i1", Rollout(task_id="i1", output="--- a/f.py\n+++ b/f.py\n@@ -1 +1 @@")) is None
+
+    # Batch report parsing (no subprocess/Docker): a multi-instance report resolves
+    # one instance, runs-but-fails a second, and never mentions a third.
+    fake_report = {
+        "resolved_ids": ["repo__a-1"],
+        "completed_ids": ["repo__a-1", "repo__b-2"],
+    }
+    assert _score_from_report("repo__a-1", fake_report, 0) == (
+        1.0, "Instance resolved — the patch makes the tests pass.")
+    reward, feedback = _score_from_report("repo__b-2", fake_report, 0)
+    assert reward == 0.0 and "NOT resolved" in feedback
+    reward, feedback = _score_from_report("repo__c-3", fake_report, 1)
+    assert reward == 0.0 and "No evaluation report" in feedback
+    print("swe_bench batch-scoring self-check: OK")

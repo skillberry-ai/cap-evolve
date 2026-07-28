@@ -58,6 +58,79 @@ def test_per_trial_seed_is_threaded(tmp_path):
     assert res.per_task[0]["stderr"] > 0.0
 
 
+# ---- score_batch hook (adapter-native batch scoring) ----------------------
+
+class _ScoreBatchAdapter:
+    """Two tasks per trial; ``score_batch`` scores them in ONE call and records
+    the id-sets it was invoked with, to prove the harness batches per-trial
+    rather than calling per task. Can omit one task id from its result to
+    exercise the harness's per-task ``score()`` fallback."""
+
+    def __init__(self, omit_task_id=None):
+        self.omit_task_id = omit_task_id
+        self.batch_calls = []          # one sorted id-list per score_batch call
+        self.single_score_calls = []   # task ids scored via the singular fallback
+
+    def tasks(self, split):
+        from cap_evolve import Task
+        return [Task(id="t0"), Task(id="t1")]
+
+    def run_target(self, task, ctx, *, seed=0):
+        from cap_evolve import Rollout
+        return Rollout(task_id=task.id, output="ok")
+
+    def score(self, task, rollout):
+        from cap_evolve import Score
+        self.single_score_calls.append(task.id)
+        return Score(task_id=task.id, reward=0.5, feedback="single")
+
+    def score_batch(self, tasks, rollouts):
+        from cap_evolve import Score
+        self.batch_calls.append(sorted(t.id for t in tasks))
+        out = {}
+        for t in tasks:
+            if t.id == self.omit_task_id:
+                continue  # let the harness's per-task fallback handle this one
+            out[t.id] = Score(task_id=t.id, reward=1.0, feedback="batched")
+        return out
+
+    def apply(self, candidate_dir, edits=None):
+        return None
+
+
+def test_score_batch_called_once_per_trial_with_all_tasks(tmp_path):
+    from cap_evolve import RunDir, harness
+    from cap_evolve.splits import Splits
+    adapter = _ScoreBatchAdapter()
+    rd = RunDir.create(tmp_path / ".capevolve", ts="sb")
+    rd.write_splits(Splits(train=[], val=["t0", "t1"], test=[], seed=0))
+    cand = tmp_path / "c"; cand.mkdir()
+    rd.snapshot("sb", cand)
+    res = harness.evaluate_candidate(adapter, rd.candidate_dir("sb"), run_dir=rd,
+                                     split="val", n_trials=2, tag="sb")
+    # one score_batch call per trial, each covering BOTH tasks -- not one per task
+    assert adapter.batch_calls == [["t0", "t1"], ["t0", "t1"]]
+    assert adapter.single_score_calls == []  # never falls back when the batch covers everything
+    assert all(row["reward"] == 1.0 for row in res.per_task)
+
+
+def test_score_batch_omission_falls_back_to_single_score(tmp_path):
+    from cap_evolve import RunDir, harness
+    from cap_evolve.splits import Splits
+    adapter = _ScoreBatchAdapter(omit_task_id="t1")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="sbfb")
+    rd.write_splits(Splits(train=[], val=["t0", "t1"], test=[], seed=0))
+    cand = tmp_path / "c"; cand.mkdir()
+    rd.snapshot("sbfb", cand)
+    res = harness.evaluate_candidate(adapter, rd.candidate_dir("sbfb"), run_dir=rd,
+                                     split="val", n_trials=1, tag="sbfb")
+    # t1 was omitted from the batch result -> the harness scored it singly instead
+    assert adapter.single_score_calls == ["t1"]
+    rewards = {row["task_id"]: row["reward"] for row in res.per_task}
+    assert rewards["t0"] == 1.0   # from the batch
+    assert rewards["t1"] == 0.5   # from the single-score fallback
+
+
 # ---- seal-on-success ------------------------------------------------------
 
 class _CrashingAdapter:

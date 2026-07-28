@@ -35,6 +35,16 @@ All notable changes to cap-evolve are documented here. The format follows
   every other benchmark's smoke tier. `select_candidates.py` and its output
   (`utils/smoke_candidates.json`) live under `utils/` — not read by CI, only for
   re-picking tasks later.
+- **Adapter-native batch scoring (`score_batch`).** New optional adapter hook,
+  `score_batch(tasks, rollouts) -> {task_id: Score}` — the scoring-side counterpart to
+  `run_batch`/`run_trials` (see `docs/ADAPTER_CONTRACT.md`). The harness calls it once
+  per trial instead of looping `score()` per task; any task id it omits falls back to a
+  single `score()` call, so a partial implementation can never silently drop a score.
+  The SWE-bench adapter now implements it, batching a trial's instances into **one**
+  `swebench.harness.run_evaluation` call with a comma-separated `--instance_ids` list —
+  previously every trial ran one Docker-harness subprocess per instance with nothing for
+  `--max_workers` to parallelize over, so `SWEBENCH_MAX_WORKERS=10` (already set in CI)
+  was a no-op. Adapters that don't implement `score_batch` are unaffected.
 - **Consuming-LLM profiles.** Declare the runtime/consuming model via `target_model`
   (a concrete model id or a capability tier: `frontier|strong|mid|weak`) in
   `capevolve.yaml`. The optimizer prompt (new `{{TARGET_READER}}` block) and the

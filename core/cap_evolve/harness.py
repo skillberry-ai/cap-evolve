@@ -200,6 +200,7 @@ def evaluate_candidate(
     from .stats import mean, stderr
     has_batch = hasattr(adapter, "run_batch")
     has_run_trials = hasattr(adapter, "run_trials")
+    has_score_batch = hasattr(adapter, "score_batch")
 
     # collect per-task trial rewards (+ last rollout/score) across trials
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
@@ -215,20 +216,36 @@ def evaluate_candidate(
         """Score + persist one trial's rollouts. The single source of truth for
         per-trial scoring/persistence/accumulation — called identically by the
         per-trial loop and the adapter.run_trials batch branch, so pass^k/SE and the
-        on-disk t{k}.json files are byte-for-byte equivalent regardless of path."""
+        on-disk t{k}.json files are byte-for-byte equivalent regardless of path.
+
+        If the adapter exposes ``score_batch(tasks, rollouts) -> {task_id: Score}``,
+        the whole trial is scored in ONE call (e.g. one Docker harness invocation for
+        swebench) instead of one ``adapter.score()`` call per task. Any task id the
+        batch omits falls back to a single ``adapter.score()`` call, so a partial
+        implementation can never silently drop a score."""
+        filled = {
+            tid: (rollouts_for_k.get(tid) or Rollout(task_id=tid, error="omitted from batch result"))
+            for tid in task_by_id
+        }
+        if has_score_batch:
+            sb = adapter.score_batch(list(task_by_id.values()), filled) or {}
+            scores_by_id = sb if isinstance(sb, dict) else {t.id: s for t, s in zip(task_by_id.values(), sb)}
+        else:
+            scores_by_id = {}
+
         for tid, task in task_by_id.items():
-            rollout = rollouts_for_k.get(tid)
-            if rollout is None:
-                # A trial omitted this task (an error/timeout inside the runner).
-                # Record it as a failed rollout (reward 0) — do NOT serially re-run
-                # it here, which would add a slow tail to every batch evaluation.
-                rollout = Rollout(task_id=tid, error="omitted from batch result")
+            # A trial may have omitted this task (an error/timeout inside the runner) —
+            # `filled` already turned that into a failed rollout above. Do NOT serially
+            # re-run it here, which would add a slow tail to every batch evaluation.
+            rollout = filled[tid]
             if getattr(rollout, "error", None):
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
-            sc = adapter.score(task, rollout)
+            sc = scores_by_id.get(tid)
+            if sc is None:  # not in has_score_batch mode, or the batch omitted this id
+                sc = adapter.score(task, rollout)
             per_task_trials[tid].append(sc.reward)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
             per_task_metrics[tid].append(sc.metrics)
