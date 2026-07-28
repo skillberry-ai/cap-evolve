@@ -4,8 +4,8 @@ per-iteration latency/cost timeline, and a suite rollup — rendered as Markdown
 optionally written to metrics.jsonl / steps.jsonl.
 
 Usage:
-  metrics.py suite <run_dir> [--bench B] [--tier T] [--agent A] [--iters N]
-                    [--jsonl PATH] [--steps-jsonl PATH]
+  metrics.py suite <run_dir> [--bench B] [--tier T] [--agent A] [--optimizer-model M]
+                    [--iters N] [--jsonl PATH] [--steps-jsonl PATH]
 
 Baseline/optimized reward comes from the run's baseline.json (val) and final.json
 (test). Because run_suite.sh pins train==val==test, this is a TRAIN-FIT metric (the
@@ -125,7 +125,7 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
 
 
 def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_path: str = "",
-                  steps_jsonl_path: str = "") -> str:
+                  steps_jsonl_path: str = "", optimizer_model: str = "claude-opus-4-8") -> str:
     """Render the per-task + per-iteration + suite-rollup report for ONE run_suite.sh
     run (all of a tier's tasks optimized together, no-holdout FIT: train==val==test).
 
@@ -172,7 +172,7 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
 
     # ---- render: per-task reward table ----
     out = [f"## {tier.capitalize()} suite — {bench}  (train-fit, no holdout)", ""]
-    out.append(f"Agent `{agent}` · optimizer Claude Code `claude-opus-4-8` · {iters} iteration(s) · "
+    out.append(f"Agent `{agent}` · optimizer Claude Code `{optimizer_model}` · {iters} iteration(s) · "
                f"**all {len(task_ids)} tasks optimized together** · `train==val==test` (FIT metric, "
                "not a generalization/held-out claim).")
     out.append("")
@@ -238,13 +238,13 @@ def main(argv: list[str]) -> int:
         args = argv[2:]
         rd = args[0]
         opt = {"bench": "", "tier": "smoke", "agent": "aws/gpt-oss-120b", "iters": "3",
-               "jsonl": "", "steps-jsonl": ""}
+               "jsonl": "", "steps-jsonl": "", "optimizer-model": "claude-opus-4-8"}
         for i, a in enumerate(args):
-            for k in ("bench", "tier", "agent", "iters", "jsonl", "steps-jsonl"):
+            for k in ("bench", "tier", "agent", "iters", "jsonl", "steps-jsonl", "optimizer-model"):
                 if a == f"--{k}" and i + 1 < len(args):
                     opt[k] = args[i + 1]
         print(suite_report(rd, opt["bench"], opt["tier"], opt["agent"], opt["iters"],
-                           opt["jsonl"], opt["steps-jsonl"]))
+                           opt["jsonl"], opt["steps-jsonl"], opt["optimizer-model"]))
         return 0
     print(__doc__)
     return 2

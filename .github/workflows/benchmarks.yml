@@ -3,7 +3,9 @@
 # ============================================================================
 #
 # Runs, per benchmark, a curated set of tasks through cap-evolve using the ADAPTER
-# TEMPLATES: agent aws/gpt-oss-120b, optimizer Claude Code @ claude-opus-4-8, 3 iterations.
+# TEMPLATES: agent aws/gpt-oss-120b, optimizer Claude Code @ claude-opus-4-8 by default —
+# both models, trials, iterations, optimizer budget, gate strictness, and hill-climb
+# focus are all workflow_dispatch inputs (see below).
 # All of a tier's tasks are optimized TOGETHER in ONE run (train==val==test==all tier
 # tasks — a no-holdout FIT; see ci/benchmarks/lib/run_suite.sh) — baseline and optimized
 # are both measured within that same run, then CI reports reward/latency/cost base→opt
@@ -37,6 +39,35 @@ on:
         description: "Optimizer iterations per task for the FULL tier (default 10; raise to give the optimizer more budget). Smoke always runs 3, regardless of this input."
         type: string
         default: "10"
+      trials:
+        description: "Trials per task per eval (default 10). Applies to whichever tier(s) run in this dispatch."
+        type: string
+        default: "10"
+      agent_model:
+        description: "Evaluation model — the agent under test (bare gateway model id)"
+        type: string
+        default: "aws/gpt-oss-120b"
+      optimizer_model:
+        description: "Optimization model — the Claude Code optimizer's model"
+        type: string
+        default: "claude-opus-4-8"
+      optimizer_usd_per_iter:
+        description: "Per-iteration $ cap on the optimizer (default $4)"
+        type: string
+        default: "4.0"
+      optimizer_max_turns:
+        description: "Per-iteration turn cap on the optimizer (default 80)"
+        type: string
+        default: "80"
+      gate_k_se:
+        description: "Acceptance-gate strictness: accept a candidate iff improvement > k_se·SE (default 1.0; lower = more lenient, higher = stricter)"
+        type: string
+        default: "1.0"
+      algorithm_focus:
+        description: "Hill-climb focus schedule: all (whole train set each iteration) | cyclic (one task at a time) | hardest-first (lowest-scoring task first)"
+        type: choice
+        default: all
+        options: [all, cyclic, hardest-first]
   pull_request:
     types: [labeled]
 
@@ -75,9 +106,13 @@ jobs:
       # from the `iterations` input, which only controls the (expensive) full tier
       # (default 10 there — see the `iterations` input above).
       ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || github.event.inputs.iterations || '10' }}
-      # 10 trials/eval for both tiers (run_suite.sh's own default — pinned explicitly
-      # here so it can't silently drift if that default ever changes).
-      NUM_TRIALS: "10"
+      NUM_TRIALS: ${{ github.event.inputs.trials || '10' }}
+      AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
+      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
+      OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || '4.0' }}
+      OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
+      GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
+      ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}
       TIER: ${{ matrix.tier }}
     steps:
       - uses: actions/checkout@v4
@@ -136,8 +171,8 @@ jobs:
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
-            "agent_model": "aws/gpt-oss-120b",
-            "optimizer_model": "claude-opus-4-8",
+            "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
+            "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
             "conclusion": "${{ job.status }}"
           }
           JSON

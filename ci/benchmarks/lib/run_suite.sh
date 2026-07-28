@@ -20,6 +20,9 @@ TIER="${TIER:-smoke}"
 ITER="${ITERATIONS:-3}"
 AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
+OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"
+GATE_K_SE="${GATE_K_SE:-1.0}"
+ALGORITHM_FOCUS="${ALGORITHM_FOCUS:-all}"
 BASE="$REPO/ci/benchmarks/$BENCH/$TIER"
 OUT="${2:-$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}}"
 mkdir -p "$OUT/optimized"
@@ -42,13 +45,18 @@ for t in json.load(open(sys.argv[1])):
 PY
 )
 [ "${#IDS[@]}" -gt 0 ] || { echo "::warning::tasks.json empty for $BENCH/$TIER"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks)" >> "$OUT/report.md"; exit 0; }
-AGENT_MODEL="$("$PY" - "$BASE/tasks.json" "$AGENT_MODEL" <<'PY'
+# AGENT_MODEL (env — the workflow's `agent_model` input, or its default) is
+# AUTHORITATIVE: it's what this run actually uses. tasks.json's per-task "agent"
+# field is only consulted to WARN on a mismatch (e.g. a curated task pinned to a
+# different model than requested) — it never silently overrides the caller's choice.
+"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" <<'PY'
 import json,sys
-ts=json.load(open(sys.argv[1])); agents={t.get("agent",sys.argv[2]) for t in ts}
-if len(agents)>1: sys.stderr.write(f"::warning::mixed agents {agents}; this run uses one — using {sorted(agents)[0]}\n")
-print(sorted(agents)[0])
+ts=json.load(open(sys.argv[1]))
+agents={t.get("agent") for t in ts if t.get("agent")}
+env_model=sys.argv[2]
+if agents and agents != {env_model}:
+    sys.stderr.write(f"::warning::tasks.json pins agent(s) {sorted(agents)} but this run uses {env_model!r} (override)\n")
 PY
-)"
 IDS_CSV="$(IFS=,; echo "${IDS[*]}")"
 echo ">>> $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MODEL, ${ITER} iters)" >&2
 
@@ -125,17 +133,17 @@ cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability
 optimizer_skill:    claude-code
-optimizer_model:    claude-opus-4-8
+optimizer_model:    $OPTIMIZER_MODEL
 target_model:       $AGENT_MODEL
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-4.0}
 algorithm_skill:    hill-climb
-algorithm_focus:    all
+algorithm_focus:    $ALGORITHM_FOCUS
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
 num_trials:         $NUM_TRIALS
 gate_mode:          paired
-gate_k_se:          1.0
+gate_k_se:          $GATE_K_SE
 max_iterations:     $ITER
 stall:              $ITER
 store:              git
@@ -152,7 +160,8 @@ RUN_DIR="$WORK/.capevolve/run_suite"
 
 # ---- metrics + report (per-task base→opt from the ONE run) -----------------
 "$PY" "$LIB_DIR/metrics.py" suite "$RUN_DIR" --bench "$BENCH" --tier "$TIER" \
-      --agent "$AGENT_MODEL" --iters "$ITER" --jsonl "$OUT/metrics.jsonl" \
+      --agent "$AGENT_MODEL" --optimizer-model "$OPTIMIZER_MODEL" --iters "$ITER" \
+      --jsonl "$OUT/metrics.jsonl" \
       --steps-jsonl "$OUT/steps.jsonl" > "$OUT/report.md" 2>/dev/null || {
   echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no metrics — run failed; check logs)" >> "$OUT/report.md"; }
 

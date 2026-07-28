@@ -13,7 +13,10 @@ pipeline + metrics regression, not a leaderboard.
 > non-regression metrics; the `iterations` knob gives the optimizer more budget to
 > explore if you want to push harder.
 
-- **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
+- **Agent:** `aws/gpt-oss-120b` (default) · **Optimizer:** Claude Code @ `claude-opus-4-8` (default) ·
+  **3 iterations** for smoke (fixed), **10** for full (default). All of this — agent/optimizer
+  model, trials, full-tier iterations, optimizer budget, gate strictness, hill-climb focus — is
+  controllable per `workflow_dispatch` run; see **Manually** below for the full input list.
 - **One project, one run:** all of a tier's tasks are optimized TOGETHER in a single
   `cap-evolve run` (`train == val == test == all tier tasks`, a no-holdout FIT — see
   `run_suite.sh`'s header). Baseline and optimized are both measured within that same run;
@@ -77,7 +80,22 @@ The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke
 has a **Type** column + filter.
 
 - **Manually:** Actions → **Benchmarks** → Run workflow → pick the **benchmark** (`all` / one) and
-  **tier** (`smoke` default / `full` / `all`).
+  **tier** (`smoke` default / `full` / `all`), plus any of these knobs (all optional, sensible
+  defaults):
+
+  | input | default | applies to |
+  |---|---|---|
+  | `iterations` | `10` | full tier only — smoke is always pinned to 3 |
+  | `trials` | `10` | whichever tier(s) run in this dispatch |
+  | `agent_model` | `aws/gpt-oss-120b` | the evaluation model (agent under test) |
+  | `optimizer_model` | `claude-opus-4-8` | the optimization model (Claude Code's model) |
+  | `optimizer_usd_per_iter` | `4.0` | per-iteration $ cap on the optimizer |
+  | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
+  | `gate_k_se` | `1.0` | acceptance-gate strictness (accept iff Δ > k_se·SE) |
+  | `algorithm_focus` | `all` | hill-climb schedule: `all` \| `cyclic` \| `hardest-first` |
+
+  Overriding `agent_model` takes precedence over any per-task `agent` a curated `tasks.json`
+  entry pins — `run_suite.sh` warns (doesn't fail) on a mismatch so you know it happened.
 - **On a PR — labels:**
   - **`benchmark-smoke`** / **`benchmark-full`** → run all three benchmarks of that tier.
   - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` · `skillsbench`)
