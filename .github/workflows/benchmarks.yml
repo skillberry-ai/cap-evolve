@@ -51,13 +51,13 @@ on:
           - "aws/gpt-oss-120b"
           - "aws/claude-sonnet-5"
           - "aws/claude-opus-5"
-          - "aws/claude-opus-4-8"
+          - "claude-opus-4-8"
           - "aws/claude-opus-4-7"
           - "aws/us.claude-opus-4-7"
-          - "aws/claude-opus-4-6"
+          - "claude-opus-4-6"
           - "aws/claude-haiku-4-5"
           - "aws/claude-sonnet-4-5"
-          - "aws/claude-sonnet-4-6"
+          - "claude-sonnet-4-6"
           - "Azure/gpt-4o"
           - "Azure/gpt-4.1"
           - "Azure/gpt-5-2025-08-07"
@@ -81,18 +81,18 @@ on:
       optimizer_model:
         description: "Optimization model — the Claude Code optimizer's model (litellm_proxy alias on the ete-litellm gateway)"
         type: choice
-        default: "aws/claude-opus-4-8"
+        default: "claude-opus-4-8"
         options:
           - "aws/gpt-oss-120b"
           - "aws/claude-sonnet-5"
           - "aws/claude-opus-5"
-          - "aws/claude-opus-4-8"
+          - "claude-opus-4-8"
           - "aws/claude-opus-4-7"
           - "aws/us.claude-opus-4-7"
-          - "aws/claude-opus-4-6"
+          - "claude-opus-4-6"
           - "aws/claude-haiku-4-5"
           - "aws/claude-sonnet-4-5"
-          - "aws/claude-sonnet-4-6"
+          - "claude-sonnet-4-6"
           - "Azure/gpt-4o"
           - "Azure/gpt-4.1"
           - "Azure/gpt-5-2025-08-07"
@@ -172,7 +172,7 @@ jobs:
       ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || github.event.inputs.iterations || '10' }}
       NUM_TRIALS: ${{ github.event.inputs.trials || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
-      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'aws/claude-opus-4-8' }}
+      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
       # full stays unlimited by default. An explicit `optimizer_usd_per_iter`
       # dispatch input overrides this for whichever tier(s) run in that dispatch.
@@ -239,7 +239,7 @@ jobs:
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
             "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
-            "optimizer_model": "${OPTIMIZER_MODEL:-aws/claude-opus-4-8}",
+            "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
             "conclusion": "${{ job.status }}"
           }
           JSON

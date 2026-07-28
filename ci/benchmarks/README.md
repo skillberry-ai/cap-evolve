@@ -90,7 +90,7 @@ has a **Type** column + filter.
   | `iterations` | `10` | full tier only — smoke is always pinned to 3 |
   | `trials` | `10` | whichever tier(s) run in this dispatch |
   | `agent_model` | `aws/gpt-oss-120b` | the evaluation model (agent under test) — dropdown, populated from the `ete-litellm` gateway's registered aliases |
-  | `optimizer_model` | `aws/claude-opus-4-8` | the optimization model (Claude Code's model) — dropdown, same gateway-alias list as `agent_model` |
+  | `optimizer_model` | `claude-opus-4-8` | the optimization model (Claude Code's model) — dropdown, same gateway-alias list as `agent_model` |
   | `optimizer_usd_per_iter` | `0` (unlimited) | per-iteration $ cap on the optimizer — `0` disables Claude Code's native `--max-budget-usd` cap entirely; set e.g. `4.0` to bound it |
   | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
   | `gate_k_se` | `1.0` | acceptance-gate strictness (accept iff Δ > k_se·SE) |
