@@ -1,6 +1,7 @@
 # Benchmark regression suite
 
-Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench**,
+Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
+spreadsheetbench**,
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
@@ -75,7 +76,7 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
 - **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks
   live under `ci/benchmarks/<bench>/full/tasks.json`; a bench with an empty list simply runs
   zero tasks until populated (see below). `tau2/full/tasks.json` is already populated (50
-  tasks); `swebench` and `skillsbench` are not yet.
+  tasks); `swebench`, `skillsbench`, and `spreadsheetbench` are not yet.
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
@@ -99,9 +100,9 @@ has a **Type** column + filter.
   Overriding `agent_model` takes precedence over any per-task `agent` a curated `tasks.json`
   entry pins — `run_suite.sh` warns (doesn't fail) on a mismatch so you know it happened.
 - **On a PR — labels:**
-  - **`benchmark-smoke`** / **`benchmark-full`** → run all three benchmarks of that tier.
-  - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` · `skillsbench`)
-    → run just that one (combine labels to run a subset).
+  - **`benchmark-smoke`** / **`benchmark-full`** → run all four benchmarks of that tier.
+  - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` ·
+    `skillsbench` · `spreadsheetbench`) → run just that one (combine labels to run a subset).
 
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests**
   workflow — the same `run_suite.sh` path as above, scoped to a single-task `integration`
@@ -134,7 +135,8 @@ per **suite iteration** (baseline → each hill-climb step → finalize): `optim
 and `eval $`/time. **Latency** is wall-time and hardware-dependent (baseline and
 optimized are both measured on the same run's runner host; treat cross-host/cross-run
 comparisons as indicative only). **Cost/tokens** are hardware-independent, but the
-tau2/skillsbench runners do not surface usage (reads 0); swebench (litellm) does.
+tau2/skillsbench runners do not surface usage (reads 0); swebench and spreadsheetbench
+(both litellm) do.
 
 ## Adding / changing tasks
 

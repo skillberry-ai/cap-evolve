@@ -29,7 +29,7 @@ on:
         description: "Which benchmark to run"
         type: choice
         default: all
-        options: [all, tau2, swebench, skillsbench]
+        options: [all, tau2, swebench, skillsbench, spreadsheetbench]
       tier:
         description: "Which tier (default smoke; full is the whole/representative benchmark and is expensive)"
         type: choice
@@ -159,7 +159,7 @@ jobs:
         # tier is a first-class dimension. full runs the whole/representative benchmark
         # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
         tier: [smoke, full]
-        bench: [tau2, swebench, skillsbench]
+        bench: [tau2, swebench, skillsbench, spreadsheetbench]
     concurrency:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
       cancel-in-progress: true

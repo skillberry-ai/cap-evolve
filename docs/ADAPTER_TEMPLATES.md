@@ -26,9 +26,10 @@ cap-evolve check && cap-evolve run
 | [`tau2_bench/`](../templates/adapters/tau2_bench/) | tau2-bench airline | System-prompt policy **+ tool code** | tau2's runner | tau2-bench |
 | [`skillsbench/`](../templates/adapters/skillsbench/) | SkillsBench | Shared Agent Skills | BenchFlow `bench eval run` | `bench` CLI, Docker |
 | [`swe_bench/`](../templates/adapters/swe_bench/) | SWE-bench / Lite | Coding-agent prompt | HuggingFace + Docker harness | `swebench`, `datasets`, Docker |
+| [`spreadsheetbench/`](../templates/adapters/spreadsheetbench/) | SpreadsheetBench | Spreadsheet-agent system prompt | fetched dataset + Docker/Jupyter harness | `pandas`, `openpyxl`, `docker`, `tornado`, `requests`; LibreOffice (optional) |
 
 The first two are **generic** — point them at your data with env vars, no code
-edits. The last three are **worked benchmark adapters** you copy and run.
+edits. The last four are **worked benchmark adapters** you copy and run.
 
 ## Providers — one line to switch
 
@@ -113,6 +114,35 @@ harness tests it. Binary reward per instance. Optimizes `seed_capability/prompt.
 | `SWEBENCH_MAX_WORKERS` | no | `4` | parallel evaluations |
 | `SWEBENCH_TIMEOUT` | no | `1800` | per-instance timeout (s); first-run image builds are slow |
 | `SWEBENCH_NAMESPACE` | no | `none` | `none` builds images locally (arm64/Mac-safe); `swebench` pulls prebuilt x86 |
+
+## `spreadsheetbench` — spreadsheet-agent system prompt
+
+The agent writes Python in a multi-round CodeAct loop (code executes in a per-task
+Docker/Jupyter sandbox vended by SpreadsheetBench's own harness) to manipulate a
+spreadsheet per a natural-language instruction; reward is the fraction of the
+instruction's 3 test cases whose output workbook matches the expected cells
+(Soft Restriction). Optimizes `seed_capability/prompt.md`.
+
+- **Prerequisites:** `pip install pandas openpyxl docker tornado requests`; Docker;
+  LibreOffice (optional — recalculates formula-only cells before scoring; scoring
+  degrades gracefully without it). Harness code is vendored at
+  `third_party/spreadsheetbench` (see its `NOTICE.md`); the dataset is fetched at
+  run time via `ci/benchmarks/spreadsheetbench/fetch_data.sh` (not committed — ~19MB
+  of xlsx files).
+- **Keep it cheap:** each task gets its own Docker container. Pin a small subset with
+  `SPREADSHEETBENCH_TASK_IDS` (comma-separated).
+
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `MODEL` + credentials | yes | — | see the provider table |
+| `SPREADSHEETBENCH_HARNESS_DIR` | yes | — | path to the vendored/cloned harness (`code_exec_docker/`, `evaluation/`, `inference/`) |
+| `SPREADSHEETBENCH_DATA_DIR` | yes | — | path to the fetched dataset root (`dataset.json` + `spreadsheet/`) |
+| `SPREADSHEETBENCH_TASK_IDS` | no | (whole dataset — 200 tasks) | comma-separated subset — the cheap-run knob |
+| `SPREADSHEETBENCH_MAX_TURNS` | no | `5` | rounds of code-exec interaction per task |
+| `SPREADSHEETBENCH_ROWS` | no | `5` | preview rows shown per sheet in the prompt |
+| `SPREADSHEETBENCH_CONCURRENCY` | no | `4` | parallel tasks (each = one Docker container) |
+| `SPREADSHEETBENCH_EXEC_TIMEOUT` | no | `180` | per code-exec call timeout (s) |
+| `SPREADSHEETBENCH_LIBREOFFICE_BIN` | no | auto-detected | override the LibreOffice/`soffice` binary path |
 
 ## Writing your own adapter
 

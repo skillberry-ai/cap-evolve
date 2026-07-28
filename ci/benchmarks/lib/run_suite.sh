@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 ITER="${ITERATIONS:-3}"
@@ -118,6 +118,27 @@ ENV
     export SKILLSBENCH_MODEL="$AGENT_MODEL"
     export SKILLSBENCH_TASKS_DIR="$SB_SRC/tasks"
     export SKILLSBENCH_CONCURRENCY=10
+    ;;
+  spreadsheetbench)
+    cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
+    SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data/sample_data_200}"
+    [ -f "$SB_DATA/dataset.json" ] || { echo "::error:: spreadsheetbench dataset not found at $SB_DATA (run ci/benchmarks/spreadsheetbench/fetch_data.sh or set SPREADSHEETBENCH_DATA_DIR)"; exit 1; }
+    CAPS="[system-prompt]"
+    cat > "$WORK/.env" <<ENV
+MODEL=litellm_proxy/$AGENT_MODEL
+LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
+LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MAX_TOKENS=8000
+TEMPERATURE=0.0
+SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
+SPREADSHEETBENCH_DATA_DIR=$SB_DATA
+SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
+SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-4}
+ENV
+    export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
+    export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
+    export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-4}"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac
