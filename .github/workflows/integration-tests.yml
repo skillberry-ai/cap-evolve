@@ -27,10 +27,13 @@ jobs:
   tau2:
     name: tau2 (task 9)
     runs-on: [self-hosted, ibm-vpc]
+    # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
+    # runner only when the PR author is a known collaborator — never for outside/
+    # first-time contributors, who could otherwise run arbitrary code with secrets.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
-        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
         contains(github.event.pull_request.labels.*.name, 'integration-test'))
     concurrency:
       group: itest-tau2-${{ github.ref }}
