@@ -114,9 +114,9 @@ on:
           - "gcp/gemini-3-flash-preview"
           - "rits/google/gemma-4-31B"
       optimizer_usd_per_iter:
-        description: "Per-iteration $ cap on the optimizer (default $4)"
+        description: "Per-iteration $ cap on the optimizer (default unlimited — 0 disables the native --max-budget-usd cap entirely; set e.g. 4.0 to bound spend)"
         type: string
-        default: "4.0"
+        default: "0"
       optimizer_max_turns:
         description: "Per-iteration turn cap on the optimizer (default 80)"
         type: string
@@ -171,7 +171,7 @@ jobs:
       NUM_TRIALS: ${{ github.event.inputs.trials || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'aws/claude-opus-4-8' }}
-      OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || '4.0' }}
+      OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || '0' }}
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
       GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
       ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}

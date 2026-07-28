@@ -136,7 +136,7 @@ optimizer_skill:    claude-code
 optimizer_model:    $OPTIMIZER_MODEL
 target_model:       $AGENT_MODEL
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
-optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-4.0}
+optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
 algorithm_skill:    hill-climb
 algorithm_focus:    $ALGORITHM_FOCUS
 dataset_source:     adapter
