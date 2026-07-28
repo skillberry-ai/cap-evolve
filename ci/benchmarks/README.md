@@ -6,15 +6,12 @@ set of **hard** tasks (baseline reward 0) and reports **reward / latency / cost*
 from a single run, plus the optimizer's capability diffs — a reproducible end-to-end
 pipeline + metrics regression, not a leaderboard.
 
-> **On flips (0→1 after optimization).** We searched extensively for tasks that would flip
-> 0→1 after optimization — ~55 task-runs across `aws/gpt-oss-120b` (1 and 3 iterations) and
-> `aws/claude-sonnet-5` (1 iteration), on all three benchmarks — and found **none**. These
-> benchmarks are **binary-scored**; a task a model fails at baseline is capability-bound, and a
-> few optimization iterations on the prompt/policy/skill don't carry a hard failure to a pass.
-> The suite therefore ships **hard-only**: it proves the loop runs and reports honest metrics
-> (reward stays 0, non-regression), and the `iterations` knob lets you give the optimizer more
-> budget to explore. The `flip`/`hard` tagging + agent-per-task are kept in the harness for
-> future use with a different model or a non-binary scorer.
+> **Hard-only suite.** Every curated task has baseline reward 0. These benchmarks are
+> binary-scored, and a task a model fails at baseline is capability-bound — a few
+> optimization iterations on the prompt/policy/skill rarely carry a hard failure to a
+> pass. So this suite mainly proves the pipeline runs end-to-end and reports honest
+> non-regression metrics; the `iterations` knob gives the optimizer more budget to
+> explore if you want to push harder.
 
 - **Agent:** `aws/gpt-oss-120b` (all benchmarks) · **Optimizer:** Claude Code @ `claude-opus-4-8` · **3 iterations** (default; configurable via the `iterations` workflow input or `ITERATIONS` env).
 - **One project, one run:** all of a tier's tasks are optimized TOGETHER in a single
@@ -31,7 +28,7 @@ ci/benchmarks/
   lib/
     run_suite.sh      # run a whole benchmark's tasks.json + emit metrics + capabilities
     metrics.py         # per-task + suite reward report (Markdown + jsonl)
-    assert_run.py      # completion + non-regression (+ optional flip) gate
+    assert_run.py      # completion + non-regression gate
     ci_setup.sh         # idempotent runner venv + deps/clones (cached outside the checkout)
     measure_2x.sh       # run the suite twice (reproducibility) + assemble RESULTS.md
     results_md.py       # RESULTS.md assembly from a measure_2x.sh run
@@ -97,8 +94,8 @@ Just add task ids to `<bench>/full/tasks.json` (same shape as `<bench>/smoke/tas
 [{"id": "<task_id>", "tag": "full", "agent": "aws/gpt-oss-120b"}]
 ```
 No baseline-freezing step — `run_suite.sh` computes the baseline fresh, in the same run, for
-whatever ids are listed. Pick ids with baseline reward 0 (a hard task; see the flips note
-above) by running `run_suite.sh` against a candidate list and checking the report.
+whatever ids are listed. Pick ids with baseline reward 0 (a hard task) by running
+`run_suite.sh` against a candidate list and checking the report.
 
 Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
 
@@ -111,8 +108,10 @@ Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
 
 ## Metrics
 
-Per task: `reward (base→opt)`, `flip`, `latency base→opt (s)`, `runner cost base→opt`,
-`optimizer $`, `iters`. **Latency** is wall-time and hardware-dependent (baseline and
+Per task: `reward (base→opt)`, `Δ` — that's it. Latency/cost are never per-task in a
+whole-suite run (every task is scored in the same eval call); instead they're reported
+per **suite iteration** (baseline → each hill-climb step → finalize): `optimizer $`/time
+and `eval $`/time. **Latency** is wall-time and hardware-dependent (baseline and
 optimized are both measured on the same run's runner host; treat cross-host/cross-run
 comparisons as indicative only). **Cost/tokens** are hardware-independent, but the
 tau2/skillsbench runners do not surface usage (reads 0); swebench (litellm) does.

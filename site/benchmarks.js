@@ -3,6 +3,13 @@ let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
 const fmt = (v, d = 3) => (typeof v === "number" ? v.toFixed(d) : "—");
+// Wall-time seconds as minutes+seconds (e.g. 14m48s), matching metrics.py's _fmt_duration.
+const fmtDuration = (v) => {
+  if (typeof v !== "number") return "—";
+  const total = Math.round(v);
+  const m = Math.floor(total / 60), s = total % 60;
+  return m ? `${m}m${String(s).padStart(2, "0")}s` : `${s}s`;
+};
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -88,7 +95,7 @@ function render() {
     const evalUsd = r.suite && r.suite.eval_usd != null ? `$${fmt(r.suite.eval_usd, 4)}` : "—";
     const optUsd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const latency = r.suite && (r.suite.eval_seconds != null || r.suite.optimizer_seconds != null)
-      ? fmt((r.suite.eval_seconds ?? 0) + (r.suite.optimizer_seconds ?? 0), 1) : "—";
+      ? fmtDuration((r.suite.eval_seconds ?? 0) + (r.suite.optimizer_seconds ?? 0)) : "—";
     const src = r.pr
       ? `<a href="https://github.com/skillberry-ai/cap-evolve/pull/${encodeURIComponent(r.pr)}">${esc(r.source)}</a>`
       : esc(r.source || "—");
@@ -97,6 +104,7 @@ function render() {
     const tier = esc(r.tier || "smoke");
     tr.innerHTML = `<td><a href="${esc(r.run_url)}">${date}</a></td>
       <td>${src}</td><td>${esc(r.bench)}</td><td>${tier}</td><td>${r.iterations ?? "—"}</td>
+      <td>${r.trials ?? "—"}</td>
       <td>${reward}</td><td>${evalUsd}</td><td>${optUsd}</td><td>${latency}</td>
       <td><code>${esc(r.agent_model || "—")}</code></td><td><code>${esc(r.optimizer_model || "—")}</code></td>
       <td>${badge}</td>`;
@@ -105,7 +113,7 @@ function render() {
     const detail = document.createElement("tr");
     detail.className = "detail-row";
     detail.hidden = true;
-    detail.innerHTML = `<td colspan="12">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
+    detail.innerHTML = `<td colspan="13">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
     tb.appendChild(detail);
 
     tr.addEventListener("click", (e) => {
@@ -118,23 +126,22 @@ function taskTable(tasks) {
   if (!tasks.length) return `<em class="muted">no per-task metrics</em>`;
   // Latency/cost are never per-task in a whole-suite optimization (every task is
   // scored together in the same eval call) — see stepsTable() for that.
-  const head = `<tr><th>task</th><th>reward base→opt</th><th>flip</th></tr>`;
+  const head = `<tr><th>task</th><th>reward base→opt</th></tr>`;
   const body = tasks.map((t) => `<tr><td><code>${esc(t.task)}</code></td>
-    <td>${fmt(t.reward_baseline)} → ${fmt(t.reward_opt)}</td>
-    <td>${t.flipped ? "✅" : ""}</td></tr>`).join("");
+    <td>${fmt(t.reward_baseline)} → ${fmt(t.reward_opt)}</td></tr>`).join("");
   return `<table class="detail">${head}${body}</table>`;
 }
 
 function stepsTable(steps) {
   if (!steps.length) return `<em class="muted">no per-iteration metrics</em>`;
   const head = `<tr><th>phase</th><th>iter</th><th>candidate</th><th>accepted</th>` +
-    `<th>reward</th><th>optimizer $</th><th>optimizer (s)</th><th>eval $</th><th>eval (s)</th></tr>`;
+    `<th>reward</th><th>optimizer $</th><th>optimizer time</th><th>eval $</th><th>eval time</th></tr>`;
   const body = steps.map((s) => `<tr><td>${esc(s.phase)}</td><td>${s.iter ?? "—"}</td>
     <td><code>${esc(s.candidate)}</code></td>
     <td>${s.accepted == null ? "—" : (s.accepted ? "✅" : "❌")}</td>
     <td>${fmt(s.reward)}</td>
-    <td>$${fmt(s.optimizer_usd, 4)}</td><td>${fmt(s.optimizer_seconds, 1)}</td>
-    <td>$${fmt(s.eval_usd, 4)}</td><td>${fmt(s.eval_seconds, 1)}</td></tr>`).join("");
+    <td>$${fmt(s.optimizer_usd, 4)}</td><td>${fmtDuration(s.optimizer_seconds)}</td>
+    <td>$${fmt(s.eval_usd, 4)}</td><td>${fmtDuration(s.eval_seconds)}</td></tr>`).join("");
   return `<table class="detail">${head}${body}</table>`;
 }
 

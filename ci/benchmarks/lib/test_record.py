@@ -7,10 +7,10 @@ import record  # same dir; run pytest from ci/benchmarks/lib
 # per-task (every task in a suite run is scored in the same eval call).
 TASK_OK = {
     "bench": "tau2", "task": "35",
-    "reward_baseline": 0.0, "reward_opt": 1.0, "reward_delta": 1.0, "flipped": True,
+    "reward_baseline": 0.0, "reward_opt": 1.0, "reward_delta": 1.0,
     "opt_infra": False, "run_dir": "/work/run_suite",
 }
-TASK2 = {**TASK_OK, "task": "37", "reward_baseline": 0.0, "reward_opt": 0.0, "flipped": False}
+TASK2 = {**TASK_OK, "task": "37", "reward_baseline": 0.0, "reward_opt": 0.0}
 
 # Real steps rows: one per suite-run iteration (baseline / each hill-climb step / finalize).
 STEPS = [

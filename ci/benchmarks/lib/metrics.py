@@ -14,10 +14,10 @@ same task set scored before/after), not a generalization/held-out claim.
 Latency/cost are NOT meaningful per task in a whole-suite optimization (every task is
 scored in the same eval call) — they're reported per SUITE ITERATION instead, read from
 the run's events.jsonl (one "step" event per hill-climb iteration, plus the baseline
-and finalize evaluate events). Latency is wall-time seconds; it is hardware-dependent (a
-local run vs a self-hosted CI run are not directly comparable). Cost/tokens are
-hardware-independent but some runners (tau2, skillsbench) do not surface usage, so cost
-may read 0 there.
+and finalize evaluate events). Latency is wall-time, shown as minutes+seconds; it is
+hardware-dependent (a local run vs a self-hosted CI run are not directly comparable).
+Cost/tokens are hardware-independent but some runners (tau2, skillsbench) do not
+surface usage, so cost may read 0 there.
 """
 from __future__ import annotations
 
@@ -41,6 +41,15 @@ def _fmt(v, unit=""):
     return f"{v}{unit}"
 
 
+def _fmt_duration(v) -> str:
+    """Wall-time seconds as minutes+seconds (e.g. 14m48s), or plain seconds under a minute."""
+    if v is None:
+        return "—"
+    total = int(round(float(v)))
+    m, s = divmod(total, 60)
+    return f"{m}m{s:02d}s" if m else f"{s}s"
+
+
 def _infra_task(pt: dict) -> bool:
     """True if this task's reward≈0 is an infrastructure error (majority trials errored
     with mean≈0), not a real capability result — so it can be flagged, not counted as 0."""
@@ -55,14 +64,16 @@ def _infra_task(pt: dict) -> bool:
     return True
 
 
-def iteration_rows(run_dir: str) -> list[dict]:
+def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
     """Per-iteration latency/cost timeline for ONE run, built from events.jsonl.
 
     Phases, in the order they occur: ``baseline`` (seed val eval) -> ``iterate`` (one
     row per hill-climb "step", accepted or rejected) -> ``finalize`` (best-on-test eval)
     -> ``finalize_baseline`` (optional seed-on-test eval, only logged when the best
     candidate isn't the seed). No optimizer call happens outside "iterate" rows, so
-    their optimizer_usd/optimizer_seconds are 0.0.
+    their optimizer_usd/optimizer_seconds are 0.0. ``best_id`` labels the ``finalize``
+    row's candidate (the "evaluate" event itself only carries a fixed tag, not the
+    actual candidate id — the caller already knows it from state.json).
     """
     events_path = Path(run_dir) / "events.jsonl"
     rows: list[dict] = []
@@ -98,7 +109,7 @@ def iteration_rows(run_dir: str) -> list[dict]:
             })
         elif kind == "evaluate" and ev.get("tag") == "FINAL" and ev.get("split") == "test":
             rows.append({
-                "phase": "finalize", "iter": None, "candidate": None, "accepted": None,
+                "phase": "finalize", "iter": None, "candidate": best_id, "accepted": None,
                 "reward": ev.get("reward"),
                 "optimizer_usd": 0.0, "optimizer_seconds": 0.0,
                 "eval_usd": ev.get("cost_usd"), "eval_seconds": ev.get("seconds"),
@@ -145,7 +156,6 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
             "bench": bench, "tier": tier, "task": tid,
             "reward_baseline": rb, "reward_opt": ro,
             "reward_delta": (round(ro - rb, 6) if isinstance(rb, (int, float)) and isinstance(ro, (int, float)) and not infra else None),
-            "flipped": bool(rb == 0 and (ro or 0) > 0 and not infra),
             "opt_infra": infra,
             "run_dir": str(rd),
         })
@@ -154,7 +164,7 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
             for r in rows:
                 f.write(json.dumps(r) + "\n")
 
-    steps = iteration_rows(str(rd))
+    steps = iteration_rows(str(rd), best_id=best_id)
     if steps_jsonl_path:
         with open(steps_jsonl_path, "w", encoding="utf-8") as f:
             for s in steps:
@@ -178,7 +188,7 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
         real.append(r)
         d = r["reward_delta"]
         dtxt = (f"{d:+.3f}" if isinstance(d, (int, float)) else "—")
-        note = "✅" if r["flipped"] else ("↓" if isinstance(d, (int, float)) and d < 0 else "")
+        note = "↓" if isinstance(d, (int, float)) and d < 0 else ""
         out.append(f"| {bench} | `{r['task']}` | {_fmt(r['reward_baseline'])} → {_fmt(r['reward_opt'])} | {dtxt} | {note} |")
 
     # Suite headline = the run's aggregate reward (baseline val → optimized test).
@@ -204,22 +214,22 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
     if not steps:
         out.append("(no iteration events found — run may have failed before logging any.)")
     else:
-        out.append("| phase | iter | candidate | accepted | reward | optimizer $ | optimizer (s) | eval $ | eval (s) |")
+        out.append("| phase | iter | candidate | accepted | reward | optimizer $ | optimizer time | eval $ | eval time |")
         out.append("|---|:--:|---|:--:|---|---|---|---|---|")
         opt_usd_t = opt_s_t = eval_usd_t = eval_s_t = 0.0
         for s in steps:
             acc = "—" if s["accepted"] is None else ("✅" if s["accepted"] else "❌")
             out.append(f"| {s['phase']} | {s['iter'] if s['iter'] is not None else '—'} | "
                        f"`{s['candidate']}` | {acc} | {_fmt(s['reward'])} | "
-                       f"{_fmt(s['optimizer_usd'], '$')} | {_fmt(s['optimizer_seconds'], 's')} | "
-                       f"{_fmt(s['eval_usd'], '$')} | {_fmt(s['eval_seconds'], 's')} |")
+                       f"{_fmt(s['optimizer_usd'], '$')} | {_fmt_duration(s['optimizer_seconds'])} | "
+                       f"{_fmt(s['eval_usd'], '$')} | {_fmt_duration(s['eval_seconds'])} |")
             opt_usd_t += s["optimizer_usd"] or 0
             opt_s_t += s["optimizer_seconds"] or 0
             eval_usd_t += s["eval_usd"] or 0
             eval_s_t += s["eval_seconds"] or 0
         out.append("")
-        out.append(f"**Totals:** optimizer ${opt_usd_t:.4f} over {opt_s_t:.1f}s · "
-                   f"eval ${eval_usd_t:.4f} over {eval_s_t:.1f}s")
+        out.append(f"**Totals:** optimizer ${opt_usd_t:.4f} over {_fmt_duration(opt_s_t)} · "
+                   f"eval ${eval_usd_t:.4f} over {_fmt_duration(eval_s_t)}")
     return "\n".join(out)
 
 
