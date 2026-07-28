@@ -87,7 +87,7 @@ has a **Type** column + filter.
   |---|---|---|
   | `iterations` | `10` | full tier only — smoke is always pinned to 3 |
   | `trials` | `10` | whichever tier(s) run in this dispatch |
-  | `agent_model` | `aws/gpt-oss-120b` | the evaluation model (agent under test) |
+  | `agent_model` | `aws/gpt-oss-120b` | the evaluation model (agent under test) — dropdown, populated from the `ete-litellm` gateway's registered aliases |
   | `optimizer_model` | `claude-opus-4-8` | the optimization model (Claude Code's model) |
   | `optimizer_usd_per_iter` | `4.0` | per-iteration $ cap on the optimizer |
   | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
