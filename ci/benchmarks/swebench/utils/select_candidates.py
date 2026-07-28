@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """select_candidates.py — build a candidate pool for the swebench SMOKE tier.
 
+Offline dev tool, run by hand when re-picking smoke tasks — NOT invoked by CI or
+run_suite.sh. Lives under utils/ so it doesn't read as runtime code.
+
 Goal: a small set of SWE-bench instances that a MID-tier reader (gpt-oss-120b) doing
 single-shot ORACLE patching can *sometimes* solve — nonzero but not saturated — so the
 benchmark shows headroom for future PRs (mirrors how the tau2 smoke set was chosen).
