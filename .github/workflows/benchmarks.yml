@@ -139,7 +139,7 @@ jobs:
     runs-on: [self-hosted, ibm-vpc]
     # Repo default token is read-only; the "Comment results on the PR" step needs write.
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
@@ -210,9 +210,33 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
+      - name: Start live snapshot poller
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          nohup bash ci/benchmarks/lib/live_push.sh "$run_dir" "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
+            > "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid"
+          disown
+
       - name: Run suite
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+
+      - name: Stop live snapshot poller
+        if: steps.gate.outputs.run == 'true' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pidfile="$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid"
+          if [ -f "$pidfile" ]; then
+            kill "$(cat "$pidfile")" 2>/dev/null || true
+            rm -f "$pidfile"
+          fi
+          bash ci/benchmarks/lib/live_push.sh --cleanup "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
+            || echo "::warning::live cleanup push failed (best-effort, no action needed)"
 
       - name: Export CapEvolve UI snapshot
         if: steps.gate.outputs.run == 'true' && always()
