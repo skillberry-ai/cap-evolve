@@ -37,9 +37,9 @@ Set with `gate_mode` in `capevolve.yaml` (strictness with `gate_k_se`, default
 |---|---|---|
 | **`paired`** — **the default** | accept iff `mean(per-task Δ) > k_se · SE(Δ)`, where `Δ[t] = cand[t] − curr[t]` over the same val tasks | default and recommended: candidate and current are scored on the *same* tasks, so cross-task variance cancels and the test is far more powerful than `significant` |
 | `significant` | accept iff `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)` | when the two sides were *not* scored on the same tasks. Less powerful — it pays for cross-task variance that the paired test cancels |
-| `threshold` | accept iff `Δ > threshold` (flat margin) | you have a domain minimum worthwhile gain ("don't bother unless +2pp") |
+| `threshold` | accept iff `Δ > threshold` (flat margin) | you have a domain minimum worthwhile gain ("don't bother unless +2pp"). Note `threshold` defaults to `0.0`, so leaving it unset makes this identical to `strict` |
 | `strict` | accept iff `Δ > 0` | only with a near-zero-variance scorer (deterministic, single correct answer) |
-| `simplicity_tiebreak` | `Δ > 0` accepts; on a near-tie (`abs(Δ) ≤ 1e-9`) accept the *smaller* candidate (`candidate_size < current_size`) | Occam bias against edits that bloat without earning it |
+| `simplicity_tiebreak` | `Δ > 0` accepts; on a near-tie (`abs(Δ) ≤ 1e-9`) accept the *smaller* candidate (`candidate_size < current_size`) | Occam bias against edits that bloat without earning it. ⚠️ **Requires `candidate_size`/`current_size`, which nothing in the harness currently populates — so today this mode behaves exactly like `strict`** ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)) |
 
 **`paired` is what actually runs by default.** `templates/project/capevolve.yaml`
 ships `gate_mode: paired`, and the harness sets `mode="paired"` itself whenever the
@@ -52,16 +52,34 @@ Note the one asymmetry: `gate.decide()`'s own `mode=` parameter still defaults t
 per-task data to pair. `paired` also falls back to `significant` when
 `paired_deltas` is empty.
 
-### Why `paired` banks single-task gains
+### The `k_se = 1.0` rule: improve ≥2 tasks, or bank nothing
 
 Under `paired`, the SE comes from the *spread between tasks' deltas*, not from
-per-trial noise — so it is non-zero even at `num_trials=1`. A candidate that fixes
-one task out of `n` and breaks nothing gets `Δ̄ = 1/n` and `SE = 1/n` exactly, so at
-the default `k_se=1.0` it just misses the strict `Δ̄ > k·SE` bar, while at the
-`gate_k_se: 0.2` the examples use it accepts. Under `significant` at
-`num_trials=1`, both SEs come from the between-task spread of the *absolute* scores
-(`combined_stderr`), which is much larger — a one-task gain on 10 tasks faces a
-`0.233·k` bar instead of `0.100·k`.
+per-trial noise — so it is non-zero even at `num_trials=1`, where `significant`
+cannot form a bar at all. But that same spread has one sharp consequence at the
+shipped default `gate_k_se: 1.0`:
+
+> **A candidate that improves exactly ONE of `n` val tasks can never be accepted at
+> `k_se = 1.0`.** Fix one task by `m`, break nothing: `Δ̄ = m/n` and `SE(Δ) = m/n` —
+> *exactly equal* — so the strict `Δ̄ > k·SE` comparison rejects it.
+
+Both parameters cancel out of that identity, which is what makes it a rule rather
+than an edge case:
+
+- **Magnitude-independent.** The `m` cancels, so fixing one task **perfectly**
+  (`m = 1.0`) is rejected identically to nudging it by `0.01`.
+- **`n`-independent.** The `n` cancels too, so a larger val split does *not* help.
+  (`n = 20` happens to accept only because `0.05` is not exactly representable in
+  IEEE-754 binary — floating-point slack, not a rule. `n = 50` rejects again.)
+
+**So: improve ≥2 tasks at `k_se = 1.0`, or lower `gate_k_se`** — the examples use
+`0.2`, where a 1-of-n gain banks. Two improved tasks of `n` clear the bar at every
+`n` (`n=10`: `Δ̄ = 0.2000 > SE = 0.1333`).
+
+This is not an argument against `paired`. For every other shape of gain it is
+strictly more powerful than `significant`, whose SEs come from the between-task
+spread of the *absolute* scores (`combined_stderr`) and are much larger — a
+one-task gain on 10 tasks faces a `0.233·k` bar there instead of `0.100·k`.
 
 ### Small-sample caveat (current behavior)
 

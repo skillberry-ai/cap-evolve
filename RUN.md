@@ -75,6 +75,8 @@ artifact.
   default rule is `gate_mode: paired` — mean(per-task Δ) over the same val tasks must
   clear `gate_k_se · SE(Δ)`. Four other modes (`significant`, `threshold`, `strict`,
   `simplicity_tiebreak`): [docs/HONEST_EVAL.md § Gate modes](docs/HONEST_EVAL.md#gate-modes).
+  At the default `gate_k_se: 1.0`, `paired` needs **≥2 improved tasks** — a gain on
+  exactly one of `n` lands `mean(Δ) = SE(Δ)` and is rejected.
 - Only the **primary** metric (the scalar reward) gates; shown-only secondaries (e.g. `cost_usd`, `db_match`) are displayed but never affect accept/reject.
 - Multi-trial scoring reports mean + stderr; pass^k is reported when trials > 1.
 - Rejected approaches are remembered and never re-proposed.

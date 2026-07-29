@@ -40,9 +40,11 @@ num_trials: 10              # gpt-oss is stochastic; 10 trials → mean+stderr +
 
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # paired (the default) | significant | threshold | strict | simplicity_tiebreak
-#   paired tests mean(per-task Δ) on the SAME tasks both sides → SE ~2-3x smaller than
-#   the combined-SE `significant` test, so a real 1-task gain actually banks instead of
-#   being lost in between-task variance. Falls back to significant when no per-task data.
+#   paired tests mean(per-task Δ) on the SAME tasks both sides, so cross-task variance
+#   cancels and the SE is smaller than the combined-SE `significant` test's. Falls back to
+#   significant (announced) when no per-task data.
+#   Why k_se 0.2 and not the default 1.0: a gain on exactly 1 of n tasks gives
+#   mean(Δ)=SE(Δ) exactly, so it never clears 1.0 — at any n, at any magnitude. 0.2 banks it.
 gate_k_se: 0.2                           # accept gains that clear a 0.2·SE bar (on the paired SE)
 
 # --- budget -----------------------------------------------------------------

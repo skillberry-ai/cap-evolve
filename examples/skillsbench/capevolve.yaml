@@ -38,8 +38,10 @@ num_trials: 3                            # the sonnet agent is STOCHASTIC: singl
 #   per-task mean + SE (and pass^k), so the paired gate distinguishes signal from noise.
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # per-task paired SE — banks real 1-task gains on train==val
-gate_k_se: 0.2                           # accept gains clearing a 0.2·SE bar
+gate_mode: paired                        # per-task paired SE, same tasks both sides (train==val here)
+gate_k_se: 0.2                           # accept gains clearing a 0.2·SE bar. Below 1.0 deliberately:
+                                         # a 1-of-n gain gives mean(Δ)=SE exactly, so it banks at 0.2 but
+                                         # NOT at the default 1.0 (which needs >=2 improved tasks).
 
 # --- budget -----------------------------------------------------------------
 max_iterations: 7

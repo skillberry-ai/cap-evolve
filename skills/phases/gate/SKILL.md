@@ -48,7 +48,15 @@ unlikely to be noise.
 identically; `significant` with single-trial `stderr=0`), the gate does **not**
 silently act strict: it logs a `gate_warning` event and applies a documented strict
 fallback (`Δ > 0`), with `SE=0 → STRICT fallback, warned` in the decision `reason`.
-Score with multiple trials (see `evaluate`) so the bar is real.
+Score with multiple trials (see `evaluate`) so the bar is real. `paired` falling back
+to `significant` (no per-task deltas) is announced the same way, prefixed
+`paired→significant (no per-task deltas):`.
+
+> **`gate_warning` events cannot be logged from this standalone script** — `run.py`
+> takes no `--run-dir`, so `decide(run_dir=...)` is always `None` here and the JSON
+> `reason` is the only channel for either fallback. In a real run the harness passes
+> the run dir, so the events land in the run log. Don't hunt for a `gate_warning`
+> after a standalone invocation; read the `reason`.
 
 ## Modes
 Set via `gate_mode` in `capevolve.yaml` (`--mode` here); strictness via `gate_k_se`.
@@ -57,8 +65,11 @@ Set via `gate_mode` in `capevolve.yaml` (`--mode` here); strictness via `gate_k_
   SAME val tasks — the most powerful test. The harness builds the deltas and selects
   this mode itself whenever per-task val data aligns; that is what the algorithms'
   `--gate-mode auto` means. Its SE comes from the spread *between* tasks' deltas, so
-  it is non-zero even at `num_trials=1` — which is why `paired` can bank a real
-  single-task gain that `significant` would drown in cross-task variance.
+  it is non-zero even at `num_trials=1` — a bar `significant` cannot even form there.
+  **The `k_se=1.0` rule:** improving exactly one of `n` tasks gives `mean(Δ) = SE(Δ)`
+  *exactly*, so the strict `>` rejects it — at every `n`, and no matter how large that
+  one gain is. **Improve ≥2 tasks at `k_se=1.0`, or bank nothing** (`gate_k_se: 0.2`,
+  as the examples use, banks a 1-of-n gain).
 - `significant`: the independent-samples form above. Weaker than `paired`. It is the
   default of this standalone script (and of `gate.decide`'s `mode=` parameter) only
   because a caller with two means and two SEs has no per-task data to pair; `paired`
@@ -66,10 +77,14 @@ Set via `gate_mode` in `capevolve.yaml` (`--mode` here); strictness via `gate_k_
 - `strict`: `Δ > 0` — any improvement. Only safe with a near-zero-variance scorer
   (deterministic, single correct answer).
 - `threshold`: `Δ > T` — a flat margin (use when you have a domain minimum
-  worthwhile gain, e.g. "don't bother unless +2pp").
+  worthwhile gain, e.g. "don't bother unless +2pp"). `T` defaults to `0.0`, so
+  `--mode threshold` without `--threshold` is exactly `strict`.
 - `simplicity_tiebreak`: like strict, but on a (near-)tie (`abs(Δ) ≤ 1e-9`) prefer
   the smaller candidate — an Occam bias against bloated edits that don't earn their
-  size.
+  size. ⚠️ **It requires `candidate_size`/`current_size`, and nothing in the harness
+  or the algorithms supplies them, so in a real run it is bit-identical to `strict`**
+  ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206) tracks plumbing
+  the sizes). Only `core/tests/test_core.py` exercises the tiebreak branch.
 
 Full table and the small-sample caveat:
 [`docs/HONEST_EVAL.md` § Gate modes](../../../docs/HONEST_EVAL.md#gate-modes).

@@ -163,7 +163,9 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   candidate where supported). See intake SKILL.md step 5.
 
 - **gate**: `gate_mode` (**`paired` — the DEFAULT**: per-task paired SE on the same tasks
-  both sides, smaller than combined-SE `significant`, so real 1-task gains bank; also:
+  both sides, smaller than combined-SE `significant`. At the default `gate_k_se: 1.0` a
+  gain on exactly 1 of `n` tasks lands *exactly* on the bar (`mean(Δ) = SE(Δ)`) and is
+  rejected, so banking needs ≥2 improved tasks or `gate_k_se < 1.0`; also:
   `significant`|`threshold`|`strict`|`simplicity_tiebreak` — see
   [docs/HONEST_EVAL.md § Gate modes](../../../../docs/HONEST_EVAL.md#gate-modes)),
   `gate_k_se` (default 1.0; the examples use 0.2). Add `--no-regression` to forbid

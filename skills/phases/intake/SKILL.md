@@ -49,12 +49,18 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
     val tasks. Cross-task variance cancels, so it is the most powerful test, and the
     harness selects it itself when per-task data aligns (`--gate-mode auto`). Its SE
     comes from the between-task spread of the deltas, so it stays real at
-    `num_trials=1` and can bank a genuine single-task gain.
+    `num_trials=1`. **At the default `gate_k_se: 1.0` a gain on exactly one of `n`
+    tasks gives `mean(Δ) = SE(Δ)` exactly and is therefore REJECTED** — at any `n`,
+    at any magnitude. Banking needs ≥2 improved tasks, or `gate_k_se < 1.0`.
   - `significant` — accept iff `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)`. Unpaired
     and weaker; it pays for cross-task variance the paired test cancels.
-  - `threshold` — accept iff `Δ > threshold` (a flat domain margin).
+  - `threshold` — accept iff `Δ > threshold` (a flat domain margin; `threshold`
+    defaults to `0.0`, so unset = `strict`).
   - `strict` — accept iff `Δ > 0`; only for a near-zero-variance scorer.
   - `simplicity_tiebreak` — `strict`, plus on a near-tie prefer the smaller candidate.
+    ⚠️ Needs `candidate_size`/`current_size`, which nothing in the harness populates —
+    it behaves as `strict` today ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)).
+    Do not offer it as a working Occam bias.
 - `gate_k_se` is how many SEs the val gain must clear (`0.2` lenient … `1.0` strict).
   Full table and the small-sample caveat:
   [`docs/HONEST_EVAL.md` § Gate modes](../../../docs/HONEST_EVAL.md#gate-modes).

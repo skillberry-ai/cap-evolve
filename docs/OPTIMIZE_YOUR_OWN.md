@@ -118,11 +118,15 @@ you want intake to ask):
 |---|---|
 | **`paired`** (**default**) | `mean(per-task Δ) > k_se · SE(Δ)` over the same val tasks — cross-task variance cancels, so this is the most powerful test and the one the harness picks itself (`--gate-mode auto`) |
 | `significant` | `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)` — unpaired, weaker |
-| `threshold` | `Δ > threshold` — flat domain margin |
+| `threshold` | `Δ > threshold` — flat domain margin. `threshold` defaults to `0.0`, so unset = `strict` |
 | `strict` | `Δ > 0` — only for a near-zero-variance scorer |
-| `simplicity_tiebreak` | `strict`, plus on a near-tie prefer the smaller candidate |
+| `simplicity_tiebreak` | `strict`, plus on a near-tie prefer the smaller candidate. ⚠️ needs `candidate_size`/`current_size`, which the harness does not populate — **behaves as `strict` today** ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)) |
 
-Details, why `paired` banks a single-task gain, and the small-sample caveat:
+**At the default `gate_k_se: 1.0`, a gain on exactly one of `n` tasks gives
+`mean(Δ) = SE(Δ)` exactly and is rejected** (at any `n`, at any magnitude) — improve
+≥2 tasks, or set `gate_k_se` below 1.0 as the examples do.
+
+That rule in full, and the small-sample caveat:
 [`HONEST_EVAL.md` § Gate modes](HONEST_EVAL.md#gate-modes).
 
 ## B — drive the `cap-evolve` CLI yourself

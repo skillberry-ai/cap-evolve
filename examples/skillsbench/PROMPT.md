@@ -255,7 +255,8 @@ exists). Here is everything intake needs:
 - per-iteration optimizer $ cap:  optimizer_usd_per_iter 40   (claude --max-budget-usd, CLI-enforced; OPTIMIZER ONLY)
 - optimizer_max_turns: 200      (generous; the $ cap is the real per-iteration ceiling)
 - max_optimizer_usd: 400        max_usd: 600   (total ceiling incl. the sonnet docker rollouts)
-- gate:             paired (per-task paired SE — banks real 1-task gains), k_se 0.2
+- gate:             paired (per-task paired SE), k_se 0.2 — below 1.0 so a 1-of-n gain banks
+                    (at k_se 1.0, mean(Δ)=SE exactly for 1-of-n, so >=2 improved tasks are needed)
 - store:            git          (every iteration committed for an inspectable process)
 - note:             Docker rollouts are slow; run the full optimization in the background.
 ```

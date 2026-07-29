@@ -211,10 +211,17 @@ you want intake to ask):
       over the same val tasks. Cross-task variance cancels, so this is the most powerful test and the
       one the engine picks itself (<code>--gate-mode auto</code>).</li>
       <li><code>significant</code> — <code>Δ(means) &gt; k_se · sqrt(SE_cand² + SE_curr²)</code>; unpaired, weaker.</li>
-      <li><code>threshold</code> — <code>Δ &gt; threshold</code>, a flat domain margin.</li>
+      <li><code>threshold</code> — <code>Δ &gt; threshold</code>, a flat domain margin. <code>threshold</code>
+      defaults to <code>0.0</code>, so leaving it unset is identical to <code>strict</code>.</li>
       <li><code>strict</code> — <code>Δ &gt; 0</code>; only for a near-zero-variance scorer.</li>
-      <li><code>simplicity_tiebreak</code> — <code>strict</code>, plus on a near-tie prefer the smaller candidate.</li>
+      <li><code>simplicity_tiebreak</code> — <code>strict</code>, plus on a near-tie prefer the smaller candidate.
+      ⚠️ Requires <code>candidate_size</code>/<code>current_size</code>, which the harness does not populate —
+      so today it behaves exactly like <code>strict</code>
+      (<a href="https://github.com/skillberry-ai/cap-evolve/issues/206">#206</a>).</li>
     </ul>
+    <p>At the default <code>gate_k_se: 1.0</code>, <code>paired</code> rejects a gain on exactly one of
+    <code>n</code> tasks — <code>mean(Δ) = SE(Δ)</code> exactly, at any <code>n</code> and any magnitude.
+    Improve &ge;2 tasks, or set <code>gate_k_se</code> below 1.0 as the examples do.</p>
   </section>
 
   <h2 class="reveal">B — Drive the <code>cap-evolve</code> CLI yourself</h2>

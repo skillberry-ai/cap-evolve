@@ -86,8 +86,10 @@ The agent then drives the loop against `run_dir`, using the phase scripts direct
 S="$CAPEVOLVE_SKILLS_DIR"; R=.capevolve/run_myrun; P=.capevolve/project
 # honest full-val eval of a candidate dir/id (writes rollouts+results):
 python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" --candidate "$R/work/cand_1" --split val --n-trials 1
-# the significance gate:
-python "$S/phases/gate/scripts/run.py" --mode paired --k-se 1.0 --current <best_mean> --candidate <cand_mean> --current-stderr <s> --candidate-stderr <s>
+# the significance gate (paired is the default mode; it NEEDS the per-task deltas —
+# without them it falls back to the weaker unpaired `significant`, which the reason says):
+python "$S/phases/gate/scripts/run.py" --mode paired --k-se 1.0 --current <best_mean> --candidate <cand_mean> --paired-deltas <d1,d2,... per-task cand-curr over the shared val tasks>
+# no per-task data? then: --mode significant --current-stderr <s> --candidate-stderr <s>
 # spend snapshot (the "see your constraints" step — no new command needed):
 python -c "from cap_evolve import RunDir; import json; print(json.dumps(RunDir.open('$R').spent.to_dict(), indent=2))"
 # seal test ONCE + report:

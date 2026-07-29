@@ -77,8 +77,14 @@ github_integration: false    # mirror-only: mirror the algorithm's work items as
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # DEFAULT: per-task paired SE, same tasks both sides — banks real 1-task gains.
+gate_mode: paired                        # DEFAULT: per-task paired SE, same tasks both sides — cross-task
+                                         # variance cancels, so it is the most powerful test and works at num_trials=1.
                                          # Others: significant | threshold | strict | simplicity_tiebreak (docs/HONEST_EVAL.md#gate-modes)
+# gate_k_se: how many SEs the val gain must clear. 1.0 is deliberately conservative:
+# improving exactly ONE of n tasks gives mean(Δ)=SE(Δ) exactly, so it does NOT clear
+# 1.0 — at any n, and no matter how large that single gain is. You need >=2 improved
+# tasks to bank at 1.0. That is the intended default (one task moving is weak evidence
+# it wasn't luck); set 0.2, as the examples do, to bank single-task gains.
 gate_k_se: 1.0
 
 # --- budget -----------------------------------------------------------------

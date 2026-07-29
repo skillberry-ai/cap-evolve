@@ -30,10 +30,16 @@ accept  ⟺  mean(Δ) > k · SE_diff
 Pairing cancels the between-task variance — a task that is simply *hard* pulls both
 sides down equally and contributes nothing to `var(Δ)` — so the paired test is
 substantially more powerful. Its SE also stays non-zero at `num_trials=1`, because it
-measures the spread between tasks' *deltas* rather than per-trial noise. That is why
-`paired` can bank a single-task gain the unpaired test rejects: fixing one task of `n`
-and breaking nothing gives `mean(Δ) = SE_diff = 1/n` exactly, which clears any
-`k < 1` (the default `k=1` just misses, since the comparison is strict).
+measures the spread between tasks' *deltas* rather than per-trial noise. It also means the
+paired bar has one sharp, easily-missed consequence at the default `k = 1`:
+
+> **Improving exactly one task of `n` can never be banked at `k_se = 1.0`.** Fixing
+> one task by `m` and breaking nothing gives `mean(Δ) = m/n` and `SE_diff = m/n` —
+> *identical* — so the strict `>` rejects it. The `m` cancels, so fixing one task
+> **perfectly** is rejected exactly as a tiny nudge is; and `n` cancels, so a bigger
+> val split does not help either. **Improve ≥2 tasks at `k_se = 1.0`, or lower
+> `gate_k_se` below 1.0** (the examples use `0.2`). `paired` is still strictly more
+> powerful than unpaired for every other shape of gain, which is why it is the default.
 
 **Unpaired (`significant`).** When the two sides were *not* scored on the same tasks,
 the two means are independent estimates, so the SE of their difference is the
@@ -107,13 +113,15 @@ mean can quietly trade away reliability.
 |-----------------------|----------------------------------------|---------------------------------------|
 | **`paired`**          | mean(per-task Δ) > k·SE(Δ), same tasks  | **the default**; most powerful test    |
 | `significant`         | Δ(means) > k·sqrt(SE_c²+SE_p²)          | unpaired comparisons; weaker           |
-| `threshold`           | Δ > T                                  | you have a domain "minimum worth it"  |
+| `threshold`           | Δ > T                                  | you have a domain "minimum worth it" (T defaults to 0.0 = `strict`) |
 | `strict`              | Δ > 0                                  | only near-zero-variance scorers       |
-| `simplicity_tiebreak` | Δ > 0, else prefer smaller on tie      | bias against edits that bloat for free |
+| `simplicity_tiebreak` | Δ > 0, else prefer smaller on tie      | ⚠️ needs `candidate_size`/`current_size`, which the harness never sets — **`strict` today** ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)) |
 
 `gate.decide`'s `mode=` parameter defaults to `significant` because a bare caller has
 no per-task data to pair; the harness passes `paired_deltas` and selects `paired`
-itself, and `paired` falls back to `significant` when no deltas are supplied.
+itself, and `paired` falls back to `significant` when no deltas are supplied — which
+is announced: the `reason` is prefixed `paired→significant (no per-task deltas):` and
+a `gate_warning` event is logged when a `run_dir` is available.
 
 ## Sources
 - Koehn, "Statistical Significance Tests for Machine Translation Evaluation"

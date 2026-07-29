@@ -101,15 +101,22 @@ Which rule turns your `reward` into an accept/reject — `gate_mode` in
   variance cancels; this is the most powerful test and what the harness picks itself.
 - `significant` — accept iff `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)`. For
   unpaired comparisons; weaker, since it pays for cross-task variance.
-- `threshold` — accept iff `Δ > threshold` (flat domain margin).
+- `threshold` — accept iff `Δ > threshold` (flat domain margin). `threshold` defaults
+  to `0.0`, so leaving it unset makes this identical to `strict`.
 - `strict` — accept iff `Δ > 0`. Only for a near-zero-variance scorer.
 - `simplicity_tiebreak` — `strict`, plus on a near-tie prefer the smaller candidate.
+  ⚠️ Requires `candidate_size`/`current_size`, which nothing in the harness populates,
+  so today it behaves exactly like `strict`
+  ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)).
+
+At the default `gate_k_se: 1.0`, `paired` rejects a gain on exactly one of `n` tasks
+(`mean(Δ) = SE(Δ)` exactly, at any `n` and any magnitude) — ≥2 improved tasks, or
+`gate_k_se < 1.0`.
 
 The bar matters for your `score()`: a deterministic scorer with graded rewards gives
 the paired test real between-task spread, whereas an all-or-nothing scorer at
 `num_trials=1` can collapse the SE to 0, which triggers a logged `gate_warning` and a
-strict fallback. Full table, the single-task-gain property, and the small-sample
-caveat: [`HONEST_EVAL.md` § Gate modes](HONEST_EVAL.md#gate-modes).
+strict fallback. Full table, the `k_se = 1.0` rule, and the small-sample caveat: [`HONEST_EVAL.md` § Gate modes](HONEST_EVAL.md#gate-modes).
 
 ## Everything else is provided
 

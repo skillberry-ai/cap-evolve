@@ -94,17 +94,28 @@ def decide(
         correct, far more powerful test: candidate and current are scored on the
         same tasks, so the cross-task variance cancels and only the *paired*
         variance counts. Requires ``paired_deltas``; the loop uses it by default
-        when per-task data is available, else falls back to ``significant``.
+        when per-task data is available, else falls back to ``significant`` (which is
+        announced: the reason is prefixed ``paired→significant`` and a
+        ``gate_warning`` is logged). NOTE at ``k_se=1.0``: a gain on exactly ONE of
+        n tasks gives mean(Δ) = SE(Δ) *exactly*, so the strict ``>`` rejects it —
+        regardless of n and regardless of how large that one gain is. Banking needs
+        ≥2 improved tasks, or ``k_se < 1.0``.
       - ``significant``: accept iff delta > k * combined_SE (treats cand & current
         as INDEPENDENT samples — correct only when they were not scored on the
         same tasks; less powerful than ``paired``).
-      - ``threshold``:   accept iff delta > ``threshold`` (a flat margin).
+      - ``threshold``:   accept iff delta > ``threshold`` (a flat margin). Note
+        ``threshold`` defaults to ``0.0``, so leaving it unset makes this mode
+        identical to ``strict``.
       - ``strict``:      accept iff delta > 0 (any improvement).
       - ``simplicity_tiebreak``: like strict, but on a (near-)tie prefer the
-        smaller candidate (``candidate_size`` < ``current_size``).
+        smaller candidate (``candidate_size`` < ``current_size``). PRECONDITION:
+        needs both sizes; nothing in the harness or the algorithms populates them
+        today, so in a real run this mode behaves exactly like ``strict`` (issue
+        #206 tracks plumbing the sizes).
 
     ``run_dir`` (optional) is used only to log a ``gate_warning`` event when an SE
-    collapses to 0 (so the silent degeneration to strict is auditable).
+    collapses to 0 or ``paired`` falls back to ``significant`` (so neither
+    degradation is silent).
     """
     if split.lower() != "val":
         raise TrainGateError(
@@ -113,14 +124,24 @@ def decide(
         )
 
     delta = candidate_val - current_val
+    fell_back = ""
 
     if mode == "paired":
         deltas = list(paired_deltas or [])
         if not deltas:
             # No paired data — fall back to the independent significance test rather
             # than silently passing. (The loop should pass paired_deltas; this guards
-            # a direct caller.)
+            # a direct caller.) Announce it: asking for the strongest test and getting
+            # the weaker one must not be invisible, same posture as _warn_se_zero.
             mode = "significant"
+            fell_back = "paired→significant (no per-task deltas): "
+            log = getattr(run_dir, "log_event", None) if run_dir is not None else None
+            if callable(log):
+                log("gate_warning", mode="paired",
+                    reason=("mode='paired' was requested but no paired_deltas were "
+                            "supplied, so the weaker unpaired 'significant' test was "
+                            "applied instead. Pass per-task cand-curr deltas over the "
+                            "same val tasks to get the paired test."))
         else:
             n = len(deltas)
             mean_d = sum(deltas) / n
@@ -159,7 +180,7 @@ def decide(
             ok = delta > 0
             return GateDecision(
                 accept=ok,
-                reason=(f"Δ={delta:+.4f} {'>' if ok else '<='} 0 "
+                reason=(f"{fell_back}Δ={delta:+.4f} {'>' if ok else '<='} 0 "
                         f"(SE=0 → STRICT fallback, warned)"),
                 delta=delta, threshold=0.0,
             )
@@ -168,7 +189,7 @@ def decide(
         return GateDecision(
             accept=ok,
             reason=(
-                f"Δ={delta:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
+                f"{fell_back}Δ={delta:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
                 f"(SE={se:.4f})"
             ),
             delta=delta,
