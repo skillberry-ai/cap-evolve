@@ -261,7 +261,9 @@ export interface RolloutDetail {
 
 /** SSE frames from GET /api/runs/{id}/stream. */
 export type StreamEvent =
-  | { type: 'snapshot'; data: RunDetail }
+  // 'snapshot' is the connection-open marker only; the client refetches the run
+  // detail through its query cache, so the frame carries no reduced run.
+  | { type: 'snapshot'; data: { run_id: string } }
   | { type: 'event'; data: Record<string, unknown> }
   | { type: 'done'; data: { run_id: string } }
   | { type: 'idle'; data: { run_id: string } }

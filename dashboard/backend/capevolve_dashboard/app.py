@@ -25,8 +25,10 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
         return {"ok": True, "base_dir": str(base)}
 
     @app.get("/api/runs")
-    def get_runs():
-        return runs.list_runs(base)
+    def get_runs(limit: int | None = Query(default=None, ge=1),
+                 offset: int = Query(default=0, ge=0)):
+        # Unpaginated by default (back-compat: the SPA hub expects a plain array).
+        return runs.list_runs(base, limit=limit, offset=offset)
 
     @app.get("/api/runs/{run_id}")
     def get_run(run_id: str):
@@ -42,8 +44,11 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="run not found")
 
     @app.get("/api/runs/{run_id}/rollouts")
-    def get_rollouts(run_id: str, split: str | None = Query(default=None)):
-        return trajectories.list_rollouts(_resolve_or_404(run_id), split)
+    def get_rollouts(run_id: str, split: str | None = Query(default=None),
+                     limit: int | None = Query(default=None, ge=1),
+                     offset: int = Query(default=0, ge=0)):
+        return trajectories.list_rollouts(_resolve_or_404(run_id), split,
+                                          limit=limit, offset=offset)
 
     @app.get("/api/runs/{run_id}/rollout/{file_name}")
     def get_rollout(run_id: str, file_name: str):
@@ -104,11 +109,12 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
         events_path = _resolve_or_404(run_id) / "events.jsonl"
 
         async def gen():
-            # Initial snapshot of the full reduced run.
-            try:
-                yield _stream.sse_format("snapshot", runs.load_run(base, run_id))
-            except runs.RunNotFound:
-                return
+            # "snapshot" used to carry the FULL reduced run, but the client ignores
+            # its payload (it only marks the connection open, then refetches
+            # /api/runs/{id} through its query cache) — so serializing a whole
+            # reduction here was pure waste on every connect. Keep the frame as the
+            # open marker; ship no payload.
+            yield _stream.sse_format("snapshot", {"run_id": run_id})
             offset = events_path.stat().st_size
             idle = 0
             while True:

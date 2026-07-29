@@ -229,8 +229,59 @@ def _step_candidate(ev: dict):
     return ev.get("candidate") or ev.get("candidate_id")
 
 
+# --- reduction cache -------------------------------------------------------
+# ``_reduce_run_uncached`` re-reads and re-folds the whole event log plus every
+# rollout file. The dashboard backend calls ``reduce_run`` on every request AND on
+# every SSE tick (~2/s), and once more per candidate in ``diff_candidate``, so a
+# long run spends most of its CPU re-deriving an answer that has not changed.
+#
+# Key: the run's ``events.jsonl`` ``(st_mtime_ns, st_size)``.
+#   * Both, not just mtime: mtime granularity is 1s on some filesystems (and plain
+#     float ``st_mtime`` rounds), so a same-second append can leave mtime looking
+#     unchanged. events.jsonl is append-only, so size always grows on a new event —
+#     size is the strong signal, mtime catches a same-length rewrite.
+#   * One key is enough for the reducer's *other* inputs (baseline.json, final.json,
+#     rollouts/, state.json, the git store) because each is written BEFORE the event
+#     that reports it is appended: harness writes baseline.json then logs "baseline",
+#     persists rollout files then logs "evaluate", finalize writes final.json then
+#     logs "finalize", the iteration commit lands then "step" is logged. So the stamp
+#     advances after those writes, never before.
+#
+# Bounded by run count: one entry per run root, holding only its newest reduction.
+_REDUCE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
+
+
+def _events_stamp(root: Path):
+    """``(st_mtime_ns, st_size)`` of the run's event log, or ``None`` if unreadable."""
+    try:
+        st = (root / "events.jsonl").stat()
+    except OSError:
+        return None  # no event log → nothing stable to key on; never cache
+    return (st.st_mtime_ns, st.st_size)
+
+
 def reduce_run(run_dir) -> dict:
-    """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
+    """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted).
+
+    Memoized on the event log's mtime+size (see ``_REDUCE_CACHE``). The returned
+    object is SHARED between callers on a cache hit — treat it as read-only.
+    """
+    root = Path(run_dir.root)
+    stamp = _events_stamp(root)
+    if stamp is not None:
+        hit = _REDUCE_CACHE.get(str(root))
+        if hit is not None and hit[0] == stamp:
+            return hit[1]
+    reduced = _reduce_run_uncached(run_dir)
+    # Re-stat after the fold: if the log grew while we were folding, this result may
+    # already be stale, so don't cache it — the next call re-folds.
+    if stamp is not None and _events_stamp(root) == stamp:
+        _REDUCE_CACHE[str(root)] = (stamp, reduced)
+    return reduced
+
+
+def _reduce_run_uncached(run_dir) -> dict:
+    """The actual fold. Call ``reduce_run`` instead; this one always re-reads."""
     root = Path(run_dir.root)
     events = _read_jsonl(root / "events.jsonl")
     baseline = _read_json(root / "baseline.json")

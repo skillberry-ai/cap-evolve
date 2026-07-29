@@ -51,9 +51,22 @@ def _status(summary: dict) -> str:
     return "live"
 
 
-def list_runs(base_dir: Path) -> list[dict]:
+def list_runs(base_dir: Path, limit: int | None = None, offset: int = 0) -> list[dict]:
+    """Newest-first run rows, optionally a window of them.
+
+    ``limit``/``offset`` page the list. The slice happens on the *discovered dirs*
+    (ordered by dir mtime, which needs only a stat) BEFORE any reduction, so asking
+    for one page costs one reduction per row on the page — not one per run in the
+    dir. A run whose reduction raises (half-written) is skipped, so a page can come
+    back shorter than ``limit``.
+    """
+    paths = sorted(discover(base_dir), key=lambda p: p.stat().st_mtime, reverse=True)
+    if offset:
+        paths = paths[offset:]
+    if limit is not None:
+        paths = paths[:limit]
     rows = []
-    for path in discover(base_dir):
+    for path in paths:
         try:
             reduced = _reduce(path)
         except Exception:  # a half-written run must not break the hub
