@@ -175,3 +175,23 @@ input (default `30`) — it deletes any record (and its paired UI snapshot) olde
 many days, directly on `benchmark-history`. This only removes files from the branch's current
 tree; it does not rewrite git history, so it doesn't reclaim `.git` object storage — that's
 an accepted tradeoff for keeping "keep forever unless a human explicitly prunes" simple.
+
+### Live monitoring while a run is in progress
+
+Each `bench` job also backgrounds `ci/benchmarks/lib/live_push.sh` around "Run suite":
+every 5 minutes it exports the in-progress run's static dashboard data and overwrites
+`live/<run_id>__<tier>-<bench>/data/` on `benchmark-history` — always the latest
+snapshot only, never a history of intermediate ones. When the job ends (any outcome),
+it deletes that `live/` entry; the permanent snapshot lands moments later via the
+`aggregate` job's `runs/<slug>/` write, same as always.
+
+`benchmarks.html` polls the GitHub Actions API client-side (unauthenticated, no new
+CI-side status reporting) to show a "Running now" panel with a "Watch live" link per
+in-progress `<tier>/<bench>` job. Unlike the finished-run UI (a full shell+data copy
+committed per run), the live view points one generic dashboard shell — built once per
+Pages deploy at `site/dashboard-ui/` — at the live data via a `?dataBase=` query param,
+so no Pages redeploy is needed while a run is in progress.
+
+Orphaned `live/` entries (e.g. a hard runner crash before cleanup runs) are harmless:
+"what's running" is always derived from the GitHub Actions API, never from `live/`'s
+existence, so an orphan is simply never linked to.
