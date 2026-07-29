@@ -1,12 +1,25 @@
 """Eval cache — skip a rollout when the same candidate was already scored on a task.
 
-Keyed by ``(hash of the candidate's editable files, task_id) -> {reward, feedback}``
-and persisted in the run dir, so re-evaluating an identical candidate (e.g. a parent
-re-sampled in GEPA, or a resumed run) costs nothing. The hash is over file CONTENTS,
-so two byte-identical candidates share cache entries even under different ids.
+Keyed by ``(hash of the candidate's editable files, task_id) ->
+{reward, feedback, rollout_file}`` and persisted in the run dir, so re-evaluating an
+identical candidate (e.g. a parent re-sampled in GEPA, or a resumed run) costs nothing.
+The hash is over file CONTENTS, so two byte-identical candidates share cache entries
+even under different ids.
+
+``rollout_file`` (#111) names the rollout json, under ``rollouts/<split>/``, that
+PRODUCED this cached score. GEPA's reflective dataset — its entire learning signal —
+needs the agent's ``output``/``trace``, not just the number; a score-only hit made
+``REFLECTION.md`` emit ``Agent output:`` (empty) for cached failing tasks and quietly
+degraded GEPA to a blind hill-climb on cached parents. Storing a POINTER rather than
+the payload keeps the cache small (~40 bytes/entry) and the reflection UNTRUNCATED:
+the rollout json is already persisted in the run dir, so a hit re-reads the real
+record instead of a redacted copy of it. A hit whose pointer no longer resolves is
+treated as a MISS by the reflection-bearing caller, so a score-only entry can never
+hollow out a reflective dataset again.
 
 Honesty notes:
-  * The cache stores only the SCORE (reward + feedback), never gold answers.
+  * The cache stores only the SCORE (reward + feedback) plus a pointer to the
+    already-persisted rollout json, never gold answers.
   * It is keyed on candidate-file content, so an edit (even whitespace) busts the
     key — a stale score can never be served for changed files.
   * It is an optimization, not a source of truth: ``events.jsonl`` still records
@@ -64,10 +77,11 @@ def hash_candidate_dir(candidate_dir: Path) -> str:
 class EvalCache:
     """A tiny JSON-file eval cache living in the run dir.
 
-    ``get(candidate_hash, task_id)`` -> ``{"reward", "feedback"}`` or ``None``;
-    ``put(candidate_hash, task_id, reward, feedback)`` persists. Persistence is a
-    single JSON object ``{ "<hash>::<task_id>": {...} }`` rewritten on each put — fine
-    for the run sizes here (a few thousand entries) and trivially portable.
+    ``get(candidate_hash, task_id)`` -> ``{"reward", "feedback", "rollout_file"}`` or
+    ``None``; ``put(candidate_hash, task_id, reward, feedback, rollout_file=...)``
+    persists. Persistence is a single JSON object ``{ "<hash>::<task_id>": {...} }``
+    rewritten on each put — fine for the run sizes here (a few thousand entries) and
+    trivially portable.
     """
 
     def __init__(self, path: Path):
@@ -86,9 +100,15 @@ class EvalCache:
     def get(self, candidate_hash: str, task_id: str) -> dict | None:
         return self._data.get(self._key(candidate_hash, task_id))
 
-    def put(self, candidate_hash: str, task_id: str, reward: float, feedback: str = "") -> None:
-        self._data[self._key(candidate_hash, task_id)] = {
-            "reward": float(reward), "feedback": str(feedback or "")}
+    def put(self, candidate_hash: str, task_id: str, reward: float, feedback: str = "",
+            rollout_file: str = "") -> None:
+        """Persist a score. ``rollout_file`` is the ``rollouts/<split>/`` filename whose
+        json holds the rollout behind this score, so a later hit can rebuild the full
+        reflective signal (output + trace) instead of only the number (#111)."""
+        entry = {"reward": float(reward), "feedback": str(feedback or "")}
+        if rollout_file:
+            entry["rollout_file"] = str(rollout_file)
+        self._data[self._key(candidate_hash, task_id)] = entry
         self._flush()
 
     def _flush(self) -> None:

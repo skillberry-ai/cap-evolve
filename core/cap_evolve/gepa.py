@@ -44,6 +44,7 @@ Pure stdlib + the cap_evolve engine.
 from __future__ import annotations
 
 import json
+import os
 import random
 import shutil
 import time
@@ -130,6 +131,17 @@ def _eval_minibatch(
       * consults the **eval cache** keyed on ``(candidate-hash, task_id)`` to skip
         a rollout that was already scored for byte-identical candidate files.
 
+    A cache hit yields the SAME reflective signal as a fresh eval (#111). The cache
+    entry points at the rollout json that produced the score; on a hit we re-read that
+    json for the real ``output``/``trace`` and re-materialize it under THIS eval's tag,
+    so ``rollouts/train/*__<tag>__t0.json`` is complete either way and the optimizer's
+    ``trajectories/`` (pinned to the tag by ``_copy_step_trajectories``) holds this
+    minibatch's rollouts verbatim. The candidate hash is over file CONTENTS, so a hit's
+    rollout genuinely IS this minibatch's record, not a lookalike from elsewhere.
+    A hit whose pointer does not resolve (a pre-#111 cache, or pruned rollouts) is
+    treated as a MISS and re-run: paying one rollout beats handing the optimizer an
+    empty "Agent output:" and calling it reflection.
+
     Minibatch tasks are drawn from TRAIN only (test stays sealed; val is for the
     honest gate). One trial per task — the minibatch is a cheap signal, not the
     significance test.
@@ -147,12 +159,9 @@ def _eval_minibatch(
     with _live(adapter, candidate_dir) as ctx:
         for task in tasks:
             cached = cache.get(chash, task.id) if cache is not None else None
-            if cached is not None:
-                reward = float(cached.get("reward", 0.0))
-                fb = str(cached.get("feedback", ""))
-                scores.append(Score(task_id=task.id, reward=reward, feedback=fb,
-                                    n=1, stderr=0.0, trial_rewards=[reward],
-                                    raw={"cached": True}))
+            replay = _replay_cached(cached, out_dir, task.id, tag) if cached else None
+            if replay is not None:
+                scores.append(replay)
                 continue
             rollout = adapter.run_target(task, ctx, seed=seed)
             if rollout is None:
@@ -169,13 +178,15 @@ def _eval_minibatch(
                      "output": _short(getattr(rollout, "output", None)),
                      "trace": _short(getattr(rollout, "trace", None))},
             ))
-            (out_dir / f"{task.id}__{tag}__t0.json").write_text(
+            rfile = f"{task.id}__{tag}__t0.json"
+            (out_dir / rfile).write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
                 encoding="utf-8",
             )
             if cache is not None:
-                cache.put(chash, task.id, sc.reward, sc.feedback or "")
+                cache.put(chash, task.id, sc.reward, sc.feedback or "",
+                          rollout_file=rfile)
 
     elapsed = time.time() - t0
     # Count ONLY rollouts actually fired (cache hits cost nothing) toward budget.
@@ -187,6 +198,51 @@ def _eval_minibatch(
                       reward=result.reward, fired=n_called,
                       cached=len(task_ids) - n_called)
     return result
+
+
+def _replay_cached(cached: dict, out_dir: Path, task_id: str, tag: str) -> Score | None:
+    """Rebuild a full ``Score`` (output + trace) from a cache hit, or ``None`` = miss.
+
+    The fix for #111. The cache entry carries ``rollout_file`` — the rollout json in
+    ``rollouts/<split>/`` that produced the cached score. We re-read it for the real
+    ``output``/``trace``, so the reflective dataset built from a cached parent minibatch
+    is identical to one built from a fresh eval, and we copy it under THIS eval's tag so
+    the tag-pinned ``trajectories/`` dir exists too.
+
+    Returning ``None`` (→ the caller re-runs the rollout) is deliberate for a pointerless
+    or unreadable entry: a score-only hit is exactly the hollow-reflection bug, so we pay
+    one rollout instead of serving empty "Agent output:" as if it were a trace.
+    """
+    rfile = str(cached.get("rollout_file") or "")
+    if not rfile:
+        return None
+    src = out_dir / rfile
+    try:
+        rec = json.loads(src.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    rollout = rec.get("rollout") or {}
+    reward = float(cached.get("reward", 0.0))
+    # Re-materialize under this eval's tag so ``_copy_step_trajectories(tag=...)`` finds
+    # this minibatch's rollouts. Same bytes, new name — no re-run, no fabrication. A
+    # hardlink keeps a cache hit free on disk too (rollout jsons are write-once); the
+    # copy fallback covers filesystems/paths where linking isn't available.
+    dst = out_dir / f"{task_id}__{tag}__t0.json"
+    if dst != src and not dst.exists():
+        try:
+            os.link(src, dst)
+        except OSError:
+            try:
+                dst.write_text(json.dumps(rec, default=str), encoding="utf-8")
+            except OSError:
+                pass  # ponytail: trajectories/ then falls back to REFLECTION.md excerpts
+    return Score(
+        task_id=task_id, reward=reward, feedback=str(cached.get("feedback", "")),
+        n=1, stderr=0.0, trial_rewards=[reward],
+        raw={"cached": True, "errored": bool(rollout.get("error")),
+             "output": _short(rollout.get("output")),
+             "trace": _short(rollout.get("trace"))},
+    )
 
 
 def _short(x, n: int = 1500) -> str:
