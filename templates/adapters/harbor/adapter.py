@@ -342,7 +342,9 @@ class Adapter(CapabilityAdapter):
             if src.exists():
                 content = src.read_text(encoding="utf-8")
                 if content.strip():
-                    tmp = Path(tempfile.mktemp(prefix="capevolve_instruction_", suffix=".md"))
+                    fd, tmp_str = tempfile.mkstemp(prefix="capevolve_instruction_", suffix=".md")
+                    tmp = Path(tmp_str)
+                    os.close(fd)
                     tmp.write_text(content, encoding="utf-8")
                     cls._instruction_tmp_files.append(tmp)
                     return tmp
