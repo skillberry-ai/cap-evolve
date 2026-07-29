@@ -10,31 +10,49 @@ from cap_evolve import RunDir, dashboard
 _ROLLOUT_RE = re.compile(r"^(?P<task>.+)__(?P<cand>cand_\d+|seed)__t(?P<trial>\d+)\.json$")
 
 
-def list_rollouts(run_path: Path, split: str | None = None) -> list[dict]:
+def list_rollouts(run_path: Path, split: str | None = None,
+                  limit: int | None = None, offset: int = 0) -> list[dict]:
+    """Rollout rows for a run, optionally a window of them.
+
+    ``limit``/``offset`` page the result. The window is applied to the sorted FILE
+    NAMES before any file is opened, so a page costs one JSON parse per row on the
+    page rather than one per rollout in the split (a long run has thousands). Order
+    is stable: splits sorted by name, then file name within a split. A file that fails
+    to parse is skipped, so a page can be shorter than ``limit`` — a SHORT PAGE IS NOT
+    THE END OF THE LIST; page until you get an empty one.
+    """
     root = Path(run_path) / "rollouts"
     rows: list[dict] = []
     if not root.is_dir():
         return rows
-    splits = [split] if split else [p.name for p in root.iterdir() if p.is_dir()]
+    splits = [split] if split else sorted(p.name for p in root.iterdir() if p.is_dir())
+    # Name-matching is a cheap regex on the filename; do it first so paging indexes
+    # over the rows the caller will actually see, then window, then open the files.
+    matched: list[tuple[str, Path, re.Match]] = []
     for sp in splits:
         sp_dir = root / sp
         if not sp_dir.is_dir():
             continue
         for f in sorted(sp_dir.glob("*.json")):
             m = _ROLLOUT_RE.match(f.name)
-            if not m:
-                continue
-            try:
-                data = json.loads(f.read_text())
-            except Exception:
-                continue
-            score = data.get("score") or {}
-            rows.append({
-                "task_id": m["task"], "candidate": m["cand"],
-                "trial": int(m["trial"]), "split": sp,
-                "reward": score.get("reward"), "feedback": score.get("feedback", ""),
-                "file": f.name,
-            })
+            if m:
+                matched.append((sp, f, m))
+    if offset:
+        matched = matched[offset:]
+    if limit is not None:
+        matched = matched[:limit]
+    for sp, f, m in matched:
+        try:
+            data = json.loads(f.read_text())
+        except Exception:
+            continue
+        score = data.get("score") or {}
+        rows.append({
+            "task_id": m["task"], "candidate": m["cand"],
+            "trial": int(m["trial"]), "split": sp,
+            "reward": score.get("reward"), "feedback": score.get("feedback", ""),
+            "file": f.name,
+        })
     return rows
 
 
