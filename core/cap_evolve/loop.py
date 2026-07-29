@@ -68,9 +68,20 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     overall = stats.aggregate(means)
     overall_se = stats.combined_stderr(means, ses)
 
+    # pass^k / pass@k are only DEFINED when every task has at least k trials. With
+    # fewer, stats.pass_k returns 0.0 (correct by its own definition) and
+    # stats.pass_at_k silently clamps k → n; emitting either as a reliability number
+    # reads as "0% reliable" when the truth is "not enough trials". So we OMIT any
+    # k > min trials — a missing key is the N/A representation (JSON: absent/null;
+    # human surfaces render "N/A"/"—").
+    trials_per_task = [len(s.trial_rewards or [s.reward]) for s in scores]
+    max_k = min(trials_per_task) if trials_per_task else 0
+
     pk: dict = {}
     pak: dict = {}
     for k in ks:
+        if k > max_k:
+            continue
         rel = [stats.pass_k(s.trial_rewards or [s.reward], k) for s in scores if (s.trial_rewards or [s.reward])]
         cap = [stats.pass_at_k(s.trial_rewards or [s.reward], k) for s in scores if (s.trial_rewards or [s.reward])]
         if rel:

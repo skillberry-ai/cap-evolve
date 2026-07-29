@@ -27,6 +27,11 @@ construction*, and the rules below are enforced in code, not just documented.
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
    `pass_k` reports the probability all k i.i.d. trials succeed (tau-bench style).
+   A `k` greater than the trial count is **undefined, not zero**: `aggregate_scores`
+   omits it from `pass_k` / `pass_at_k` entirely (so the default `num_trials: 1`
+   emits only `{"1": ...}`), and every surface renders a missing `k` as `N/A` / `—`.
+   Reporting `pass^2 = 0.0` on a single-trial run would read as "0% reliable" when
+   it only means "not enough trials".
 
 ## Why no central engine?
 
