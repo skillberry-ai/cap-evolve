@@ -51,9 +51,11 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import optimizer_context as oc
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
+    _SNAPSHOT_IGNORE,
     _augment_instructions,
     _init_memory_store,
     _live,
@@ -62,6 +64,9 @@ from .harness import (
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
+from .optimizer_context import OptimizerContext
+from .optimizer_context import inject as inject_optimizer_context
+from .optimizer_context import render_instructions
 from .rundir import RunDir
 from .types import Rollout, Score
 
@@ -75,7 +80,9 @@ _NON_COMPONENT = {
     # cross-iteration state files (clean-ownership redesign) — scratch, not capability
     "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
 }
-_NON_COMPONENT_DIRS = {".git", "__pycache__", "prior_iterations"}
+_NON_COMPONENT_DIRS = {".git", "__pycache__"} | set(oc.INJECTED_DIRS)
+# The injected agent-instructions files (CLAUDE.md / AGENTS.md / …) are read-context too.
+_NON_COMPONENT |= set(oc.INJECTED_NAMES)
 
 
 # ---- components (editable capability files) -------------------------------
@@ -274,16 +281,24 @@ def _write_focus(workdir: Path, components: list[str], focus: list[str] | None) 
     return ", ".join(focus) if focus else "(all)"
 
 
-def _instructions(reflection_summary: str, focus_label: str, mb_ids: list[str]) -> str:
+def _gepa_block(reflection_summary: str, focus_label: str, mb_ids: list[str]) -> str:
+    """GEPA's own tail block: the reflective-dataset + component-focus pointers.
+
+    This is the ``extra`` passed to ``optimizer_context.render_instructions`` — the
+    GEPA-specific part of the prompt. The shared part (capability brief, failure index,
+    bench repo, parallel note, consuming-LLM reader block, the benchmark-authored
+    template) comes from the seam, so GEPA is no longer prompt-poorer than hill-climb.
+    """
     return (
-        "# GEPA reflective optimization step\n\n"
+        "\n## GEPA reflective optimization step\n\n"
         f"Minibatch task ids: {', '.join(map(str, mb_ids))}\n"
         f"Component focus: {focus_label}\n\n"
         "Read `REFLECTION.md` (the reflective dataset over the parent's failing "
         "minibatch tasks: inputs, the agent's output/trajectory, and feedback) and "
-        "`FOCUS.md` (which component(s) to edit). Diagnose the common root cause and "
-        "make ONE targeted edit to the focused component(s) that should fix the "
-        "general pattern.\n\n"
+        "`FOCUS.md` (which component(s) to edit). `./trajectories/` holds the SAME "
+        "minibatch rollouts VERBATIM and untruncated — read them when REFLECTION.md's "
+        "excerpts are not enough. Diagnose the common root cause and make ONE targeted "
+        "edit to the focused component(s) that should fix the general pattern.\n\n"
         f"Summary: {reflection_summary}\n"
     )
 
@@ -460,6 +475,7 @@ def gepa_loop(
     seed: int = 0,
     store=None,
     resume: bool = False,
+    ctx=None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -476,6 +492,10 @@ def gepa_loop(
         frequency-weighted as GEPA prescribes).
     max_merges / merge_cadence : system-aware merge budget + how often to attempt
         a merge (every Nth accept).
+    ctx : an ``optimizer_context.OptimizerContext`` — what the optimizer is GIVEN
+        (capability guidance + brief, trajectories, the benchmark-authored instructions
+        template, bench repo, its own features reference, the consuming-LLM profile).
+        The same bundle hill-climb and SkillOpt use, so all three prompt identically.
 
     Returns a result dict in the same shape as ``hill_climb_loop`` /
     ``hill_climb_loop`` (plus GEPA-specific fields). The run's ``best_id`` is set to the
@@ -483,6 +503,7 @@ def gepa_loop(
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
+    ctx = ctx or OptimizerContext()
     cache = EvalCache(run_dir.root / "eval_cache.json")
     rng = random.Random(seed)
     run_dir.log_event("gepa_start", seed=seed, minibatch_size=minibatch_size,
@@ -557,6 +578,13 @@ def gepa_loop(
         workdir.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(parent_dir, workdir)
 
+        # Optimizer read-context (trajectories + capability/diagnose/optimizer guidance +
+        # native skills), through the SAME seam hill-climb uses. Scoped to the parent's
+        # minibatch tag so ./trajectories/ holds exactly the rollouts REFLECTION.md
+        # summarizes — verbatim and untruncated.
+        inject_optimizer_context(adapter, run_dir, workdir, split="train", ctx=ctx,
+                                 tag=f"mb_p_{n:04d}")
+
         comps = _components(workdir)
         if component_selector == "round_robin" and comps:
             focus = [comps[comp_cursor % len(comps)]]
@@ -565,7 +593,10 @@ def gepa_loop(
             focus = None  # 'all'
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
-        instructions = _instructions(refl_summary, focus_label, mb)
+        instructions = render_instructions(
+            parent_mb, mb, f"GEPA minibatch of {len(mb)} train task(s)", ctx=ctx,
+            algorithm="gepa", run_dir=run_dir, parent_id=parent["id"],
+            extra=_gepa_block(refl_summary, focus_label, mb))
         instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
         opt_error = None
@@ -625,7 +656,8 @@ def gepa_loop(
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
         if accepted:
-            run_dir.snapshot(cid, workdir)
+            # Same exclusions run_step uses: the injected read-context is not capability.
+            run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
             child_dir = run_dir.candidate_dir(cid)
             pool.append(_entry(cid, child_dir, cand_val, parent=parent["id"]))
             lineage[cid] = parent["id"]
@@ -784,7 +816,7 @@ def _try_merge(
     run_dir.update_spent(iterations=1, accepted=accepted)
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
-        run_dir.snapshot(mid, workdir)
+        run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)
         pool.append(_entry(mid, run_dir.candidate_dir(mid), cand_val, parent=base_parent["id"]))
         lineage[mid] = base_parent["id"]
         history.add(mid, summary, cand_val.reward)

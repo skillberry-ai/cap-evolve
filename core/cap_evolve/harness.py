@@ -933,7 +933,8 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     return f"{instructions}\n\n{pointer}\n"
 
 
-def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
+def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
+                            tag: str | None = None) -> None:
     """Copy ONLY the current best/parent candidate's per-tag rollouts for ``split``
     into ``workdir/trajectories/`` — the single step the optimizer builds on.
 
@@ -948,6 +949,10 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
       4. as a last resort, the whole ``rollouts/<split>/`` dir.
     The per-tag copy is preferred even when the adapter returns a native dir, because
     the native dir generally cannot be scoped to one candidate.
+
+    ``tag`` pins the eval tag explicitly instead of resolving the run's best candidate —
+    GEPA needs the PARENT's minibatch traces (tag ``mb_p_NNNN``), which are the step it
+    actually reflects on. The same fallback chain applies if that tag has no rollouts.
     """
     dst = workdir / "trajectories"
 
@@ -970,8 +975,11 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
                               what=f"trajectories/{tag}", error=str(e)[:300])
             return False
 
-    # Resolve the best/parent candidate id from run state (the parent this step forks
-    # from), falling back to the seed tag when no candidate has been accepted yet.
+    # An explicit tag (GEPA's parent-minibatch eval) wins; otherwise resolve the
+    # best/parent candidate id from run state (the parent this step forks from),
+    # falling back to the seed tag when no candidate has been accepted yet.
+    if tag and _copy_tag(str(tag)):
+        return
     best_id = None
     try:
         best_id = run_dir.best_id
@@ -1004,8 +1012,13 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
 
 def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
                               capabilities=None, optimizer_name: str | None = None,
-                              capability_sources=None, project_dir: Path | None = None) -> None:
+                              capability_sources=None, project_dir: Path | None = None,
+                              tag: str | None = None) -> None:
     """Give the optimizer everything it needs to read, inside its own working dir.
+
+    Call it through ``optimizer_context.inject`` (the shared seam every algorithm uses)
+    rather than directly, so new injected artifacts reach hill-climb, GEPA and SkillOpt
+    at once.
 
     Copies, VERBATIM and without parsing:
       - the CURRENT BEST/PARENT candidate's per-tag trajectories for the most recent
@@ -1027,7 +1040,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # this split, so the optimizer analyzes the step it builds on (not seed + every
     # rejected candidate mixed together). Always preserves the "something to read"
     # guarantee via per-tag fallback then the native dir.
-    _copy_step_trajectories(adapter, run_dir, workdir, split)
+    _copy_step_trajectories(adapter, run_dir, workdir, split, tag=tag)
 
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
@@ -1227,8 +1240,13 @@ def run_step(
     optimizer_name: str | None = None,
     capability_sources=None,
     project_dir: Path | None = None,
+    ctx=None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext``; when given it supersedes the
+    individual ``capabilities`` / ``optimizer_name`` / ``capability_sources`` /
+    ``project_dir`` kwargs (kept for direct callers).
 
     Returns a dict describing the step. On accept, the candidate is snapshotted
     and becomes the run's best.
@@ -1248,10 +1266,13 @@ def run_step(
     workdir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(parent_dir, workdir)
 
-    # Give the optimizer the full trajectories + capability guidance, in its own dir.
-    _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
-                              capabilities=capabilities, optimizer_name=optimizer_name,
-                              capability_sources=capability_sources, project_dir=project_dir)
+    # Give the optimizer the full trajectories + capability guidance, in its own dir —
+    # through the shared seam, so hill-climb / GEPA / SkillOpt inject identically.
+    from .optimizer_context import OptimizerContext, inject as _inject
+    _inject(adapter, run_dir, workdir, split=eval_split,
+            ctx=ctx or OptimizerContext(
+                capabilities=capabilities or [], optimizer_name=optimizer_name,
+                capability_sources=capability_sources or [], project_dir=project_dir))
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
@@ -1585,10 +1606,12 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
-_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
-                    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
-                    ".claude", ".agents", ".gemini", ".opencode", ".bob",
-                    "CLAUDE.md", "AGENTS.md", "GEMINI.md")
+def _snapshot_ignore() -> tuple[str, ...]:
+    from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+    return INJECTED_DIRS + INJECTED_NAMES + ("LEDGER.md", "JOURNAL.md", "RUNMAP.md")
+
+
+_SNAPSHOT_IGNORE = _snapshot_ignore()
 
 
 def _failures_block(always_fail, flaky, errored) -> str:
@@ -1848,6 +1871,7 @@ def hill_climb_loop(
     algorithm: str = "hill_climb",
     no_regression: bool = False,
     store=None,
+    ctx=None,
     capabilities=None,
     instructions_file=None,
     bench_repo: str | None = None,
@@ -1864,14 +1888,22 @@ def hill_climb_loop(
     reflection emphasizes — and (for hardest-first) the order. Parent is always
     the current best (global hill-climb). The ``gepa`` algorithm uses its own
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext`` bundling what the optimizer is
+    given (capabilities, instructions template, bench repo, optimizer name, capability
+    sources, consuming-LLM profile) — the same bundle ``gepa_loop`` / ``skillopt_loop``
+    take. The individual kwargs remain for direct callers and build a ctx when none is
+    passed.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
 
-    # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
-    from . import target_profile as _tp
-    _profile = _tp.resolve(target_model, target_profile_file, project_dir=project_dir)
-    _target_reader = _tp.reader_block(_profile)
+    from .optimizer_context import OptimizerContext, render_instructions
+    ctx = ctx or OptimizerContext(
+        capabilities=capabilities or [], optimizer_name=optimizer_name,
+        instructions_file=instructions_file, bench_repo=bench_repo,
+        capability_sources=capability_sources or [], project_dir=project_dir,
+        target_model=target_model, target_profile_file=target_profile_file)
 
     # establish a focus order over the train tasks when needed
     train_ids = run_dir.read_splits().train
@@ -1895,19 +1927,13 @@ def hill_climb_loop(
             label = f"task {focus_ids[0]}" if focus_ids else "train"
         else:
             focus_ids, label = None, focus
-        seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
-        instructions = _focus_instructions(current_val, focus_ids, label,
-                                            capabilities=capabilities, algorithm=algorithm,
-                                            instructions_file=instructions_file,
-                                            bench_repo=bench_repo, optimizer_name=optimizer_name,
-                                            seed_empty=seed_empty, target_reader=_target_reader)
+        instructions = render_instructions(current_val, focus_ids, label, ctx=ctx,
+                                          algorithm=algorithm, run_dir=run_dir)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-            rejected=rejected, history=history, store=store, capabilities=capabilities,
-            optimizer_name=optimizer_name, capability_sources=capability_sources,
-            project_dir=project_dir,
+            rejected=rejected, history=history, store=store, ctx=ctx,
         )
         steps.append(step)
         if step["accepted"]:

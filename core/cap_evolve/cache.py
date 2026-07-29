@@ -28,7 +28,23 @@ _IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOC
                  "REFLECTION.md",
                  # cross-iteration state files (clean-ownership redesign) — scratch, not capability
                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
-_IGNORE_DIRS = {".git", "__pycache__", "prior_iterations"}
+_IGNORE_DIRS = {".git", "__pycache__"}
+
+
+def _load_injected_ignores() -> None:
+    """Fold in everything the optimizer-context seam injects into a workdir.
+
+    Injected read-context (``trajectories/``, ``guidance/``, the native per-agent skills
+    dirs and instructions files) is NOT capability content, so it must not perturb the
+    hash — otherwise a GEPA minibatch would miss the cache on every iteration. Imported
+    lazily so this module stays at the bottom of the import graph.
+    """
+    from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+    _IGNORE_DIRS.update(INJECTED_DIRS)
+    _IGNORE_NAMES.update(INJECTED_NAMES)
+
+
+_load_injected_ignores()
 
 
 def hash_candidate_dir(candidate_dir: Path) -> str:
