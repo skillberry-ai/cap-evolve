@@ -291,7 +291,7 @@ def results() -> dict[str, Any]:
 
 @app.get("/api/run-config")
 def run_config() -> dict[str, Any]:
-    """The run's `.evograph/run-config.json`, if the user dropped one in. Optional and free-form:
+    """The run's `run-config.json` under the run dir, if the user dropped one in. Optional and free-form:
     the UI renders whatever JSON is there and shows nothing if it's absent."""
     p = BASE / "run-config.json"
     rel = "run-config.json"
@@ -316,9 +316,10 @@ async def progress_stream(slug: str) -> StreamingResponse:
         # re-resolve each loop so a log appearing mid-run is picked up
         nonlocal log
         while True:
-            cur = log or latest_log_for(slug)
+            cur = latest_log_for(slug) or log
             if cur and cur.exists():
-                log = cur
+                if cur != log:  # a newer round's log appeared -> start from its top
+                    log, pos = cur, 0
                 with cur.open("r", encoding="utf-8", errors="replace") as f:
                     f.seek(pos)
                     chunk = f.read()

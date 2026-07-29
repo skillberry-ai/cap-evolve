@@ -10,7 +10,7 @@ description: >-
   USE when algorithm_skill: evograph and orchestration_mode: agent.
 component: algorithm
 argument-hint: "(agent mode) driven by the coding agent per orchestration_mode: agent"
-allowed-tools: Read, Write, Edit, Bash
+allowed-tools: Read, Write, Edit, Bash, Task
 needs: [scores, traces, candidate]
 provides: [candidate]
 sources: [evo-graph]
