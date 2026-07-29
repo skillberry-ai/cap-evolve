@@ -37,7 +37,9 @@ case "$BENCH" in
     if ! command -v libreoffice >/dev/null 2>&1 && ! command -v soffice >/dev/null 2>&1; then
       echo "::warning:: LibreOffice not found — formula-only cells won't be recalculated before scoring"
     fi
-    SPREADSHEETBENCH_DATA_DIR="$("$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
+    SB_VARIANT="sample_200"
+    if [ "${TIER:-smoke}" = "full" ]; then SB_VARIANT="full_912"; fi
+    SPREADSHEETBENCH_DATA_DIR="$(SPREADSHEETBENCH_VARIANT="$SB_VARIANT" "$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
 esac
 
 "$CAPEVOLVE_PY" -c "import cap_evolve; print('cap_evolve OK')"

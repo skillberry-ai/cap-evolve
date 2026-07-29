@@ -76,7 +76,10 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
 - **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks
   live under `ci/benchmarks/<bench>/full/tasks.json`; a bench with an empty list simply runs
   zero tasks until populated (see below). `tau2/full/tasks.json` is already populated (50
-  tasks); `swebench`, `skillsbench`, and `spreadsheetbench` are not yet.
+  tasks); `spreadsheetbench/full/tasks.json` is populated with the real 912-task set (fetched
+  separately from `smoke`'s 200-task sample via `SPREADSHEETBENCH_VARIANT=full_912` — see
+  `ci/benchmarks/spreadsheetbench/fetch_data.sh`), matching the population SpreadsheetBench's
+  self-reported leaderboard is computed over; `swebench` and `skillsbench` are not yet.
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page

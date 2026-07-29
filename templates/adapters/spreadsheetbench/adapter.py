@@ -352,6 +352,18 @@ def _spreadsheet_preview(path: Path, rows: int) -> str:
     return "\n".join(chunks)
 
 
+def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
+    """Resolve a test case's real on-disk filename, tolerating upstream data quirks
+    in the 912-task set (a few ids use .xlsm; a few have a stray space before the
+    extension). Falls back to the canonical name if nothing matches, so a
+    genuinely-missing file still surfaces as a normal missing-file miss."""
+    canonical = dir_path / f"{idx}_{sid}_{kind}.xlsx"
+    if canonical.exists():
+        return canonical
+    matches = sorted(dir_path.glob(f"{idx}_{sid}_{kind}*.xls*"))
+    return matches[0] if matches else canonical
+
+
 # ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
@@ -412,10 +424,11 @@ class Adapter(CapabilityAdapter):
             host_out_dir = data_dir / "outputs" / run_tag
             host_out_dir.mkdir(parents=True, exist_ok=True)
 
-            preview = _spreadsheet_preview(local_dir / f"1_{sid}_input.xlsx", PREVIEW_ROWS)
+            input_file = _resolve_case_file(local_dir, 1, sid, "input")
+            preview = _spreadsheet_preview(input_file, PREVIEW_ROWS)
             user_msg = _TASK_TEMPLATE.format(
                 instruction=entry["instruction"],
-                spreadsheet_path=f"{container_dir}/1_{sid}_input.xlsx",
+                spreadsheet_path=f"{container_dir}/{input_file.name}",
                 spreadsheet_content=preview,
                 instruction_type=entry["instruction_type"],
                 answer_position=entry["answer_position"],
@@ -478,7 +491,8 @@ class Adapter(CapabilityAdapter):
 
             if case1_path.exists():
                 for idx in (2, 3):
-                    solution = last_code.replace(f"1_{sid}_input.xlsx", f"{idx}_{sid}_input.xlsx")
+                    case_input = _resolve_case_file(local_dir, idx, sid, "input")
+                    solution = last_code.replace(input_file.name, case_input.name)
                     solution = solution.replace(f"1_{sid}_output.xlsx", f"{idx}_{sid}_output.xlsx")
                     try:
                         vendor["exec_code"](client, solution)
@@ -527,7 +541,7 @@ class Adapter(CapabilityAdapter):
         missing: list[int] = []
         mismatched: list[int] = []
         for idx in (1, 2, 3):
-            gt_path = data_dir / "spreadsheet" / sid / f"{idx}_{sid}_answer.xlsx"
+            gt_path = _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer")
             proc_path = data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx"
             if not proc_path.exists():
                 missing.append(idx)
@@ -612,3 +626,19 @@ if __name__ == "__main__":
     fb_full = _build_feedback(fake_entry, [1, 1, 1], [], [], True)
     assert "All checks passed" in fb_full
     print("spreadsheetbench feedback self-check: OK")
+
+    import tempfile as _tempfile
+
+    with _tempfile.TemporaryDirectory() as _td:
+        _d = Path(_td)
+        (_d / "1_1000_input.xlsx").write_bytes(b"")
+        assert _resolve_case_file(_d, 1, "1000", "input") == _d / "1_1000_input.xlsx"
+
+        (_d / "2_1000_input .xlsx").write_bytes(b"")  # upstream's stray-space typo
+        assert _resolve_case_file(_d, 2, "1000", "input") == _d / "2_1000_input .xlsx"
+
+        (_d / "3_1000_input.xlsm").write_bytes(b"")  # upstream's .xlsm variant
+        assert _resolve_case_file(_d, 3, "1000", "input") == _d / "3_1000_input.xlsm"
+
+        assert _resolve_case_file(_d, 4, "1000", "input") == _d / "4_1000_input.xlsx"  # missing → canonical fallback
+    print("spreadsheetbench case-file resolver self-check: OK")

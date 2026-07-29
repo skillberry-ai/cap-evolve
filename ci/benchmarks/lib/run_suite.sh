@@ -122,7 +122,10 @@ ENV
   spreadsheetbench)
     cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
     cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
-    SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data/sample_data_200}"
+    SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
+    SB_DEFAULT="$SB_CACHE/sample_data_200"
+    if [ "$TIER" = "full" ]; then SB_DEFAULT="$SB_CACHE/all_data_912_v0.1"; fi
+    SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-$SB_DEFAULT}"
     [ -f "$SB_DATA/dataset.json" ] || { echo "::error:: spreadsheetbench dataset not found at $SB_DATA (run ci/benchmarks/spreadsheetbench/fetch_data.sh or set SPREADSHEETBENCH_DATA_DIR)"; exit 1; }
     CAPS="[system-prompt]"
     cat > "$WORK/.env" <<ENV
