@@ -42,6 +42,40 @@ describe('CostPanel', () => {
     expect(screen.getByText('Total spend')).toBeInTheDocument()
     expect(screen.getByText(/crossed 50%/)).toBeInTheDocument()
   })
+
+  // Model tiering (#132): the aux tier is part of total_usd, so the per-role tiles must
+  // add up to the total printed above them. Before aux became a role the tiles summed
+  // to 0.61 against a header total of 0.81 — a visible arithmetic gap.
+  it('per-role costs sum to the stated total on a TIERED run (aux included)', () => {
+    const summary = {
+      cost: { intake_usd: 0.01, optimizer_usd: 0.5, runner_usd: 0.1, aux_usd: 0.2, total_usd: 0.81 },
+      tokens_by_role: { runner: 5000, optimizer: 1200, intake: 100, aux: 400 },
+      optimizer_seconds: 12, runner_seconds: 30, intake_seconds: 4,
+    } as unknown as RunSummaryDetail
+    wrap(<CostPanel summary={summary} />)
+    expect(screen.getByText('Aux')).toBeInTheDocument()
+    // read the RENDERED tile figures inside the "Cost by role" card, not the props
+    const card = screen.getByText('Cost by role').closest('.p-4')!
+    const tiles = [...card.querySelectorAll('.grid > div')]
+    const shown = tiles.map((t) => ({
+      label: t.querySelector('.uppercase')!.textContent!.trim(),
+      usd: Number(t.querySelector('.font-semibold')!.textContent!.replace('$', '')),
+    }))
+    expect(shown.map((s) => s.label)).toEqual(['Intake', 'Optimizer', 'Runner', 'Aux'])
+    expect(shown.map((s) => s.usd)).toEqual([0.01, 0.5, 0.1, 0.2])
+    const sum = shown.reduce((a, s) => a + s.usd, 0)
+    expect(sum).toBeCloseTo(0.81, 6)   // == the header total, printed as $0.810
+    expect(card.querySelector('.text-accent')!.textContent).toBe(`$${sum.toFixed(3)}`)
+  })
+
+  it('hides the Aux role entirely when nothing was spent on the cheap tier', () => {
+    const summary = {
+      cost: { intake_usd: 0.1, optimizer_usd: 2.0, runner_usd: 1.0, aux_usd: 0, total_usd: 3.1 },
+      tokens_by_role: { runner: 5000, optimizer: 1200, intake: 100, aux: 0 },
+    } as unknown as RunSummaryDetail
+    wrap(<CostPanel summary={summary} />)
+    expect(screen.queryByText('Aux')).not.toBeInTheDocument()
+  })
 })
 
 describe('FileTree', () => {

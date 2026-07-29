@@ -21,6 +21,27 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Model tiering: cheap model for auxiliary steps, strong model for proposals.** Two new
+  `capevolve.yaml` keys — `proposer_model` (the STRONG model that proposes the capability
+  edit) and `aux_model` (the CHEAP model for auxiliary/mechanical steps: summarization,
+  reflection distillation, insight synthesis, rejected-summary). Both fall back to
+  `optimizer_model`, so **a single-model spec is unchanged** — same optimizer argv, same
+  estimate, same event stream. The proposal path is pinned to the strong tier and never
+  downgraded (that would trade result quality for cost). Per-tier cost stays attributable:
+  proposer spend lands in `optimizer_usd` (what `max_optimizer_usd` caps and `estimate`
+  calibrates `$/optimizer-call` from), aux spend in its own `aux_usd` bucket priced with
+  its own smaller token profile — so a cheap call is never reported at the strong model's
+  rate. `max_usd` counts both. Every dashboard surface shows the per-tier split — the ANSI/
+  HTML views and the React `CostPanel`, where `Aux` is a fourth cost-by-role bar so the bars
+  still sum to the total printed above them (hidden entirely on an untiered run, so that
+  panel is unchanged). NOTE: every auxiliary step in cap-evolve today is pure Python (zero
+  model calls — `gepa._write_reflection`/`_write_focus`/`_build_merge`,
+  `harness._build_ledger`/`_build_runmap`/`_reconcile_journal`,
+  `skillopt._failure_patterns`/`_categorize`, the whole `diagnose` phase), so `aux_model`
+  costs $0 until an LLM-backed aux step ships (#128/#129); it resolves, routes and prices
+  correctly now so those steps adopt it without a config change. The aux model reaches
+  subprocesses as `CAPEVOLVE_AUX_MODEL`, exported **only** for a genuinely tiered spec and
+  cleared otherwise, so a later in-process run cannot inherit the previous spec's tier.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

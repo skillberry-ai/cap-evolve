@@ -173,6 +173,11 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
      tier (`frontier|strong|mid|weak`); steers the optimizer prompt + capability guidance
      to optimize FOR that reader. Ask which model the agent runs at runtime; leave blank
      (profile-agnostic) if unknown. See `inputs/INPUTS.md` → `target_model`.
+   - `proposer_model` / `aux_model` — MODEL TIERING. The strong model that PROPOSES edits
+     vs the cheap model for auxiliary/mechanical steps. Both default to `optimizer_model`,
+     so leave them blank unless the user wants a cheap tier; then set only `aux_model`.
+     Never route the proposal to the cheap model — that trades result quality for cost.
+     See `inputs/INPUTS.md` → **model tiering**.
 
 ## Ask-the-user-if-missing (mandatory — the core discipline)
 Read `inputs/INPUTS.md`. It classifies every input as **NEEDED** or
