@@ -137,7 +137,7 @@ cap-evolve run ──► run_<ts>/  (events.jsonl, baseline/final.json, splits.j
                    │           SOURCE OF TRUTH — no new persistence required
                    ▼
         ┌───────────────────────────────────────────────┐
-        │ FastAPI backend  (agent-capo/dashboard/backend) │
+        │ FastAPI backend  (dashboard/backend) │
         │  reuses cap_evolve.dashboard.reduce_run()       │  ← single-sourced data contract
         │  tails events.jsonl for live updates            │
         │  GET /api/runs                  (hub list)      │
@@ -158,7 +158,7 @@ cap-evolve run ──► run_<ts>/  (events.jsonl, baseline/final.json, splits.j
 **Principles**
 
 - **Core stays clean.** The dashboard app is a **new optional package** at
-  `agent-capo/dashboard/` (own `backend/`, `frontend/`, deps). The stdlib-only **core**
+  `dashboard/` (own `backend/`, `frontend/`, deps). The stdlib-only **core**
   (`core/cap_evolve/`) is not given new third-party dependencies.
 - **Single-sourced data contract.** Backend **reuses `reduce_run()`** so the React app,
   the SSE stream, and the legacy HTML all describe a run identically. Live updates come
@@ -254,7 +254,7 @@ add the **capybara logo + evolve theme**, expand the **KPI strip**, add the
 ## 11. Layout / where it lives
 
 ```
-agent-capo/
+dashboard/
   core/cap_evolve/dashboard.py        # legacy single-file (improved); reduce_run reused by backend
   dashboard/
     backend/                          # FastAPI app (SSE, run-dir API), reuses reduce_run

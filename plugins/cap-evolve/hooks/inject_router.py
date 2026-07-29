@@ -48,9 +48,8 @@ def _looks_like_capevolve(cwd: Path) -> bool:
     if H.find_run_dir(cwd) is not None:
         return True
     for parent in [cwd, *cwd.parents]:
-        for base in (".capevolve", ".agentcapo"):
-            if (parent / base / "project").is_dir():
-                return True
+        if (parent / ".capevolve" / "project").is_dir():
+            return True
         # repo checkout (dev) — RUN.md + skills/ present
         if (parent / "RUN.md").exists() and (parent / "skills").is_dir():
             return True

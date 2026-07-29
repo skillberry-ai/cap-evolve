@@ -4,7 +4,7 @@
 
 **Goal:** A capybara-branded, dark-OLED, animated React dashboard that reads the Plan 1 backend: a Hub of all runs, a single-run Overview (KPI strip + cumulative-best chart), a Lineage (best-path spine) view, and a live SSE client — establishing the shell, theme, motion system, and data layer that Plan 3 extends with the remaining explainability tabs.
 
-**Architecture:** Vite + React + TypeScript SPA under `agent-capo/dashboard/frontend/`. Talks to the FastAPI backend at `/api/*` (dev: Vite proxy to `127.0.0.1:7878`; prod: served by the backend's static mount). State via TanStack Query (polling/caching) + a small SSE hook for live runs. Charts via Recharts; lineage spine hand-built SVG. Animation via Framer Motion behind a global reduced-motion guard.
+**Architecture:** Vite + React + TypeScript SPA under `dashboard/frontend/`. Talks to the FastAPI backend at `/api/*` (dev: Vite proxy to `127.0.0.1:7878`; prod: served by the backend's static mount). State via TanStack Query (polling/caching) + a small SSE hook for live runs. Charts via Recharts; lineage spine hand-built SVG. Animation via Framer Motion behind a global reduced-motion guard.
 
 **Tech Stack:** React 18/19, TypeScript, Vite, Tailwind CSS v3.4 (+ tailwindcss-animate), shadcn-style UI primitives (sourced/refined via 21st.dev MCP), Recharts, Framer Motion, TanStack Query, React Router, Vitest + Testing Library, lucide-react icons.
 
@@ -74,7 +74,7 @@ dashboard/frontend/
 
 ## Verification
 - Each task: `npm run build` (tsc + vite) must pass, plus its named Vitest tests.
-- Final: run backend (`cap-evolve-dashboard --base .demo/.agentcapo`) + `npm run dev`, confirm Hub lists `run_demo`, Overview KPIs + curve render, Lineage shows the 4-node graph. (Manual smoke — note in ledger.)
+- Final: run backend (`cap-evolve-dashboard --base .demo/.capevolve`) + `npm run dev`, confirm Hub lists `run_demo`, Overview KPIs + curve render, Lineage shows the 4-node graph. (Manual smoke — note in ledger.)
 
 ## Out of scope (Plan 3+)
 Phases timeline, Trajectories, Iterations/diffs viewer, Memory, Insights/dead-ends/narrative, Compare page internals, pipeline auto-start, legacy HTML upgrade.

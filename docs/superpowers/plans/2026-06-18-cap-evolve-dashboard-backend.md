@@ -4,7 +4,7 @@
 
 **Goal:** Build the FastAPI data backend that serves cap-evolve run-dir data (hub list, single-run deep-dive, trajectories, diffs, compare) plus a live SSE stream, reusing the engine's `reduce_run()` so the data contract stays single-sourced.
 
-**Architecture:** A new **optional** package `agent-capo/dashboard/backend/` (its own deps; the stdlib-only core is untouched). It imports `cap_evolve.dashboard.reduce_run` to fold each run dir into `{graph, summary}`, exposes read-only JSON endpoints over discovered run dirs, tails the append-only `events.jsonl` for live updates via Server-Sent Events, and (later tasks) serves the built React assets and provides an idempotent launch helper.
+**Architecture:** A new **optional** package `dashboard/backend/` (its own deps; the stdlib-only core is untouched). It imports `cap_evolve.dashboard.reduce_run` to fold each run dir into `{graph, summary}`, exposes read-only JSON endpoints over discovered run dirs, tails the append-only `events.jsonl` for live updates via Server-Sent Events, and (later tasks) serves the built React assets and provides an idempotent launch helper.
 
 **Tech Stack:** Python ≥3.10, FastAPI, Uvicorn, Starlette `StreamingResponse` for SSE (no extra SSE dep), pytest + Starlette `TestClient` (httpx). Reuses `cap-evolve-core` (`cap_evolve` package).
 
@@ -16,7 +16,7 @@
 - **Read-only:** the backend never writes into run dirs.
 - `reduce_run` already **redacts secrets**; do not undo or bypass `redact()`.
 - Run dirs are discovered under a base dir (default `.capevolve/`) as directories named `run_*` that contain `events.jsonl`.
-- Test fixtures available in-repo: `.demo/.agentcapo/run_demo/`, `examples/tau2_airline/run_full/hillclimb_run/`, `examples/tau2_airline/run_full/gepa_run/`. Synthetic run dirs are built with `cap_evolve.RunDir.create(...)` + writing `events.jsonl` (see existing `core/tests/test_dashboard.py` `_mk_run` helper).
+- Test fixtures available in-repo: `.demo/.capevolve/run_demo/`, `examples/tau2_airline/run_full/hillclimb_run/`, `examples/tau2_airline/run_full/gepa_run/`. Synthetic run dirs are built with `cap_evolve.RunDir.create(...)` + writing `events.jsonl` (see existing `core/tests/test_dashboard.py` `_mk_run` helper).
 
 **Graph schema** (`reduced["graph"]`): `{"nodes": [{"id","parent","children":[...],"status": seed|accepted|rejected|failed,"val","stderr","per_task":{task_id:reward},"feedback":{task_id:str},"cost_usd","tokens","seconds","optimizer_seconds","runner_seconds","iteration","reason","epoch"?,"merge_of"?,"best_so_far"}], "root": "seed", "best_id": "..."}`
 
