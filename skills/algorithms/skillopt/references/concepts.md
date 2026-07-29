@@ -62,8 +62,9 @@ best-effort file-diff count) to surface an optimizer that ignores its budget.
 Two per-epoch, bounded structures injected into the next step's prompt:
 
 - **rejected-edit buffer** — every rejected candidate's id + val Δ, so the
-  optimizer does not re-propose a dead end *this epoch* (the global RejectedMemory
-  in `run_step` still records all rejects across the run).
+  optimizer does not re-propose a dead end *this epoch*. This buffer is the only
+  reject signal that reaches the prompt; `run_step`'s `rejected.jsonl` is an audit
+  record for the dashboard, not prompt input.
 - **failure-pattern block** — the focus tasks' failing feedback clustered by a
   normalized prefix signature (infra-errored tasks excluded via the structured
   `raw.errored` flag), so the prompt carries *patterns* not raw prose.
