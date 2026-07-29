@@ -31,43 +31,88 @@ LOW_CONFIDENCE_VAL_TASKS = 5
 #: honest significance test for that run.
 _ALLOW_TINY_ENV = "CAPEVOLVE_ALLOW_TINY_VAL"
 
+#: Marker persisted into the run dir (``state.json``) the first time the escape
+#: hatch actually lets an unusable val split through. Everything downstream that
+#: publishes a number — ``final.json``, ``report.md``, the dashboard — reads it and
+#: brands the run, so a bypassed run can never be mistaken for an honest one.
+BYPASS_STATE_KEY = "tiny_val_bypass"
+
+#: The banner every human-facing artifact of a bypassed run must carry.
+BYPASS_BANNER = (
+    "⚠ NOT AN HONEST GATE — CAPEVOLVE_ALLOW_TINY_VAL was set and the val split is "
+    "below the minimum for a significance test; acceptance decisions in this run are "
+    "meaningless and the held-out numbers must not be published as a benchmark result."
+)
+
 
 class TinyValSplitError(RuntimeError):
     """Raised when the val split is too small for the gate to mean anything."""
 
 
+def tiny_val_allowed() -> bool:
+    """True when the ``CAPEVOLVE_ALLOW_TINY_VAL`` escape hatch is set.
+
+    Single source of truth so the guard and every artifact-branding site agree.
+    """
+    return bool(os.environ.get(_ALLOW_TINY_ENV))
+
+
+def mark_bypass(run_dir, *, val: int, context: str = "") -> None:
+    """Record in the run dir that the tiny-val guard was bypassed.
+
+    Durable (``state.json``), not just an event line: ``final.json``, ``report.md``
+    and the dashboard all read it back, so the brand survives into the artifacts a
+    human actually looks at.
+    """
+    if run_dir is None:
+        return
+    try:
+        state = run_dir._read_state()
+        if state.get(BYPASS_STATE_KEY):
+            return
+        state[BYPASS_STATE_KEY] = {"val": val, "context": context, "banner": BYPASS_BANNER}
+        run_dir._write_state(state)
+    except Exception:  # noqa: BLE001 — branding must never crash a run
+        pass
+    log = getattr(run_dir, "log_event", None)
+    if callable(log):
+        log("split_warning", val=val, bypass=True, context=context, reason=BYPASS_BANNER)
+
+
+def bypassed(run_dir) -> dict | None:
+    """Return the recorded bypass marker for ``run_dir``, or None."""
+    if run_dir is None:
+        return None
+    try:
+        return run_dir._read_state().get(BYPASS_STATE_KEY) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def check_val_size(splits: "Splits", *, context: str = "", run_dir=None) -> str | None:
     """Refuse an unusable val split; warn on a merely small one.
 
-    Called at split-freeze time (``ensure_splits``) and again at ``baseline`` — the
-    two moments a run commits to a val split — so a hand-written or resumed
-    ``splits.json`` cannot sneak past. Returns the warning text when val is small
-    but usable (also logged as a ``split_warning`` event), else ``None``.
+    Called from every path that commits a run to a val split (``ensure_splits``,
+    ``baseline``, ``reuse_baseline``, ``--resume``) *and* from ``gate.decide`` itself,
+    which is the point of decision no caller can route around. Returns the warning
+    text when val is small but usable (also logged as a ``split_warning`` event),
+    else ``None``.
     """
     n = len(splits.val)
     where = f" ({context})" if context else ""
-    if n < MIN_VAL_TASKS and not os.environ.get(_ALLOW_TINY_ENV):
-        detail = ("is EMPTY" if n == 0 else
-                  "has exactly 1 task, so the paired delta has 0 degrees of freedom "
-                  "(SE undefined) and the gate degenerates to 'any Δ>0 wins'")
-        raise TinyValSplitError(
-            f"val split{where} {detail} — the acceptance gate would produce a "
-            f"meaningless decision, so cap-evolve refuses to start.\n"
-            f"  train={len(splits.train)} val={n} test={len(splits.test)}\n"
-            f"Fix one of:\n"
-            f"  1. Add tasks: with the default 0.5/0.25/0.25 ratios you need >= 6 "
-            f"tasks for val >= 2, and >= 20 for val >= 5 (recommended).\n"
-            f"  2. Set explicit ratios, e.g. split_val: 0.4 in capevolve.yaml.\n"
-            f"  3. Pin the split yourself via split_ids_file "
-            f"({{\"train\": [...], \"val\": [...], \"test\": [...]}}).\n"
-            f"  4. Only if you accept a non-honest gate: export "
-            f"{_ALLOW_TINY_ENV}=1."
-        )
+    if n < MIN_VAL_TASKS:
+        if not tiny_val_allowed():
+            raise TinyValSplitError(_tiny_val_message(n, where,
+                                                     len(splits.train), len(splits.test)))
+        # Escape hatch engaged: let it through, but brand the run permanently.
+        mark_bypass(run_dir, val=n, context=context)
+        return BYPASS_BANNER
     if n < LOW_CONFIDENCE_VAL_TASKS:
-        msg = (f"val split{where} has only {n} tasks (< {LOW_CONFIDENCE_VAL_TASKS}) — "
-               f"acceptance decisions are LOW CONFIDENCE. The gate applies a "
-               f"Student-t small-sample correction (df={max(n - 1, 0)}), which widens "
-               f"the bar, but the honest fix is more val tasks.")
+        msg = (f"val split{where} has only {n} task{'' if n == 1 else 's'} "
+               f"(< {LOW_CONFIDENCE_VAL_TASKS}) — acceptance decisions are LOW "
+               f"CONFIDENCE. The gate applies a Student-t small-sample correction "
+               f"(df={n - 1}), which widens the bar, but the honest fix is more "
+               f"val tasks.")
         if run_dir is not None:
             log = getattr(run_dir, "log_event", None)
             if callable(log):
@@ -75,6 +120,41 @@ def check_val_size(splits: "Splits", *, context: str = "", run_dir=None) -> str 
                     reason=msg)
         return msg
     return None
+
+
+def _tiny_val_message(n: int, where: str, n_train: int, n_test: int) -> str:
+    detail = ("is EMPTY" if n == 0 else
+              "has exactly 1 task, so the paired delta has 0 degrees of freedom "
+              "(SE undefined) and the gate degenerates to 'any Δ>0 wins'")
+    # Remediation 2 is stated as a FULL ratio triple, because the CLI always builds
+    # all three (`split_train,split_val,split_test`) — setting only `split_val: 0.4`
+    # leaves (0.5, 0.4, 0.25), which still yields val=1 at n=3 and n=4, i.e. exactly
+    # the users who see this error. 0.25/0.5/0.25 is verified to give val>=2 AND
+    # test>=1 AND train>=1 for every n >= 4.
+    return (
+        f"val split{where} {detail} — the acceptance gate would produce a "
+        f"meaningless decision, so cap-evolve refuses to start.\n"
+        f"  train={n_train} val={n} test={n_test}\n"
+        f"Fix one of:\n"
+        f"  1. Add tasks: with the default 0.5/0.25/0.25 ratios you need >= 6 "
+        f"tasks for val >= 2, and >= 20 for val >= 5 (recommended).\n"
+        f"  2. With 4 or 5 tasks, set ALL THREE ratios so val gets the biggest "
+        f"share — in capevolve.yaml:\n"
+        f"       split_train: 0.25\n"
+        f"       split_val:   0.5\n"
+        f"       split_test:  0.25\n"
+        f"     (val >= 2 for every n >= 4. Setting split_val alone does NOT work: "
+        f"the other two keep their defaults, giving 0.5/0.4/0.25 → val=1 at n=3 "
+        f"and n=4.)\n"
+        f"  3. Pin the split yourself via split_ids_file "
+        f"({{\"train\": [...], \"val\": [...], \"test\": [...]}}) — val needs >= 2 ids "
+        f"AND test needs >= 1, or finalize fails later.\n"
+        f"  4. Only if you accept a non-honest gate: export "
+        f"{_ALLOW_TINY_ENV}=1. The run's report.md, final.json and dashboard will "
+        f"be permanently branded '{BYPASS_BANNER[:32]}…'.\n"
+        f"  NOTE: with exactly 3 tasks no ratio can work — val >= 2 leaves only 1 "
+        f"task for train+test, so one of them is empty. Add a 4th task."
+    )
 
 
 class TestSealError(RuntimeError):

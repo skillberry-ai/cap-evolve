@@ -11,7 +11,14 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .splits import LOW_CONFIDENCE_VAL_TASKS
+from .splits import (
+    LOW_CONFIDENCE_VAL_TASKS,
+    MIN_VAL_TASKS,
+    TinyValSplitError,
+    mark_bypass,
+    tiny_val_allowed,
+)
+from .stats import t_multiplier_for_z
 
 
 @dataclass
@@ -113,6 +120,29 @@ def decide(
         else:
             n = len(deltas)
             mean_d = sum(deltas) / n
+            # THE chokepoint. Every mode of every algorithm reaches an accept/reject
+            # through here, so this is the one place a guard cannot be routed around
+            # by a resumed / copied / hand-written splits.json, or by a split that was
+            # healthy but whose *realized* pair count collapsed (a candidate that
+            # errored on most val tasks: harness._paired_deltas intersects task ids).
+            # The earlier check_val_size calls stay for friendly, early, pre-budget
+            # failures; this one is the backstop that makes the guarantee true.
+            if n < MIN_VAL_TASKS:
+                if not tiny_val_allowed():
+                    raise TinyValSplitError(
+                        f"gate refused: the paired gate got only {n} matched val "
+                        f"task{'' if n == 1 else 's'} (need >= {MIN_VAL_TASKS}), so "
+                        f"SE(Δ) has {max(n - 1, 0)} degrees of freedom and any accept/"
+                        f"reject would be meaningless.\n"
+                        f"  Either the val split is too small (see the split-freeze "
+                        f"error for how to fix ratios), or the candidate failed to "
+                        f"produce a score on most val tasks so only {n} pair(s) "
+                        f"matched — check the val rollouts for adapter errors.\n"
+                        f"  Override only if you accept a non-honest gate: export "
+                        f"CAPEVOLVE_ALLOW_TINY_VAL=1 (the run's artifacts are then "
+                        f"permanently branded as not-an-honest-gate)."
+                    )
+                mark_bypass(run_dir, val=n, context="at gate decision")
             if n >= 2:
                 var = sum((d - mean_d) ** 2 for d in deltas) / (n - 1)
                 se = math.sqrt(var / n)
@@ -121,22 +151,27 @@ def decide(
             if se == 0.0:
                 # Paired SE collapsed (n=1, or every task moved identically). Do not
                 # silently act strict — warn loudly, then apply the documented strict
-                # fallback (accept any positive mean delta).
+                # fallback (accept any positive mean delta). NOTE: the Student-t
+                # small-sample correction below does NOT apply on this path — there is
+                # no SE to widen — so an all-identical-deltas candidate is accepted on
+                # Δ>0 at any n. Documented in docs/HONEST_EVAL.md guarantee 3.
                 _warn_se_zero(run_dir, "paired", context=f"n={n}")
                 ok = mean_d > 0
                 return GateDecision(
                     accept=ok,
                     reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} 0 "
-                            f"(SE=0 → STRICT fallback, warned; n={n})"),
+                            f"(SE=0 → STRICT fallback, warned; n={n}; "
+                            f"no t-correction on this path)"),
                     delta=mean_d, threshold=0.0,
                 )
             # Small-sample correction. The bar is k·SE, a *z* multiplier — valid only
             # when SE is known. Here SE(Δ) is ESTIMATED from the same n deltas, so the
             # standardized mean difference is t-distributed with df=n-1 (fatter tails).
             # Using z at small n sets the bar too LOW and accepts noise; we substitute
-            # the t multiplier at the same one-sided significance level. t >= z always,
-            # so this can only make the gate stricter, and it converges to z as n grows.
-            from .stats import t_multiplier_for_z
+            # the t multiplier at the same one-sided significance level. t_{1-α,df} >=
+            # z_{1-α} is a theorem for every finite df, so the gate can only get
+            # stricter and converges to z as n grows — no max() clamp needed (one would
+            # only hide a failed inversion, which now raises instead).
             k_eff = t_multiplier_for_z(k_se, n)
             bar = k_eff * se
             ok = mean_d > bar

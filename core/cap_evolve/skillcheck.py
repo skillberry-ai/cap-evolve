@@ -83,9 +83,14 @@ def import_module(name: str):
 
 # ---- synthetic run state for behavioral checks ----------------------------
 
-def temp_run_dir(tmp: Path, *, ids=("a", "b", "c", "d"), seed: int = 0,
+def temp_run_dir(tmp: Path, *, ids=("a", "b", "c", "d", "e", "f", "g", "h"), seed: int = 0,
                  ratios=(0.5, 0.25, 0.25)):
-    """A throwaway RunDir with a frozen seeded split over synthetic task ids."""
+    """A throwaway RunDir with a frozen seeded split over synthetic task ids.
+
+    The default is 8 ids so the frozen split satisfies the tiny-val guard (>= 2 val
+    tasks). The old 4-id default produced val=["b"] — a split cap-evolve now refuses —
+    which every skill ``check.py`` would trip on.
+    """
     from cap_evolve import RunDir
     from cap_evolve.splits import make_splits
     rd = RunDir.create(Path(tmp) / ".capevolve", ts="chk")
