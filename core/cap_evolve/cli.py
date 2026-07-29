@@ -257,7 +257,11 @@ def _cmd_run(argv):
         _provider = {"error": str(e)}      # message names env VARS, never values
 
     if args.plan_only:
-        print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
+        # `spec` is echoed verbatim here, so it carries `provider_base_url` — route the
+        # whole plan through the shared redactor (secrets AND endpoint confidentiality).
+        from .dashboard import redact as _redact
+        print(json.dumps(_redact(
+                         {"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "provider": _provider,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
@@ -270,7 +274,7 @@ def _cmd_run(argv):
                                      "max_usd": spec.get("max_usd", 0.0),
                                      "max_optimizer_usd": spec.get("max_optimizer_usd", 0.0),
                                      "optimizer_max_turns": spec.get("optimizer_max_turns", 0)},
-                          "sequence": sequence}, indent=2))
+                          "sequence": sequence}), indent=2))
         return 0
 
     print(json.dumps({"step": "provider", **_provider}))

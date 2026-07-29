@@ -50,6 +50,7 @@ import os
 import re
 import shutil
 import subprocess
+import urllib.parse
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -90,6 +91,96 @@ _INLINE_KV_RE = re.compile(
 
 _REDACTED = "«redacted»"
 
+# ---------------------------------------------------------------------------
+# Endpoint confidentiality
+# ---------------------------------------------------------------------------
+# Threat model, widened after an internal gateway base URL was printed verbatim into a
+# public PR comment (PR #190). Two things are wrong with treating a URL as harmless
+# diagnostic context:
+#
+# 1. ``https://user:token@host/path`` is a legal URL, so a credential can ride inside
+#    a field nobody classified as secret. Userinfo is stripped UNCONDITIONALLY, from
+#    every URL, public or not — there is no case where it should be rendered or stored.
+# 2. A *custom* base URL is itself confidential. The hostname is precisely what names
+#    internal infrastructure, so showing "the host only" leaks the whole thing; the
+#    path is the least interesting part. We therefore replace the value with
+#    ``<custom>`` and report the *source* of the setting instead, which is what a user
+#    debugging precedence actually needs. Well-known public endpoints (the built-in
+#    defaults) carry no information about anyone's network and stay legible.
+#
+# The rule lives here, in the shared helper, so every consumer (``model_config``'s
+# provider step, the reducer, ``dashboard.html``, and ``doctor``) inherits it.
+
+#: Public endpoints that are safe to print verbatim. Kept as a literal set rather than
+#: a heuristic: "is this host public?" has no safe default answer, so an endpoint is
+#: legible only by being on this list. Mirrors the built-in defaults in
+#: ``model_config.PROVIDERS`` (a test pins the two together).
+PUBLIC_BASE_URLS: frozenset[str] = frozenset({
+    "https://api.anthropic.com",
+    "https://api.openai.com/v1",
+    "https://generativelanguage.googleapis.com/v1beta",
+    "https://api.moonshot.ai/v1",
+    "https://api.githubcopilot.com",
+})
+
+#: What a non-public base URL renders as.
+CUSTOM_URL = "<custom>"
+
+# Credentials also hide in query params (``?api_key=...``); scrubbed alongside userinfo.
+_URL_QUERY_CRED_RE = re.compile(
+    r"([?&](?:key|api[_-]?key|access_token|token|password|sig|signature)=)[^&\s\"']+", re.I)
+
+_URL_IN_TEXT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s\"'<>]+")
+
+# Keys whose value is an endpoint, so the non-default-is-secret rule applies to the
+# whole value rather than just its userinfo.
+_URL_KEY_RE = re.compile(r"(base[_\-]?url|_url$|^url$|endpoint|api[_\-]?url|host)", re.I)
+
+
+def strip_url_userinfo(url: str) -> str:
+    """Remove ``user:password@`` (and credential-shaped query params) from ``url``.
+
+    Unconditional and lossy on purpose: userinfo is a credential, so it is dropped
+    rather than masked-in-place. Non-URL strings are returned unchanged.
+    """
+    text = str(url)
+    if "://" not in text:
+        return text
+    try:
+        parts = urllib.parse.urlsplit(text)
+    except ValueError:
+        return _URL_QUERY_CRED_RE.sub(r"\1" + _REDACTED, text)
+    if parts.username or parts.password:
+        host = parts.hostname or ""
+        if parts.port:
+            host = f"{host}:{parts.port}"
+        text = urllib.parse.urlunsplit((parts.scheme, host, parts.path,
+                                        parts.query, parts.fragment))
+    return _URL_QUERY_CRED_RE.sub(r"\1" + _REDACTED, text)
+
+
+def safe_url(url: str, *, public: frozenset[str] | set[str] | None = None) -> str:
+    """Render ``url`` for output: userinfo always stripped, non-public value hidden.
+
+    A URL matching :data:`PUBLIC_BASE_URLS` (ignoring a trailing slash) is returned
+    verbatim so ordinary setups stay debuggable; anything else becomes
+    :data:`CUSTOM_URL`. Empty stays empty.
+    """
+    clean = strip_url_userinfo(url).strip()
+    if not clean:
+        return ""
+    allow = PUBLIC_BASE_URLS if public is None else public
+    return clean if clean.rstrip("/") in {u.rstrip("/") for u in allow} else CUSTOM_URL
+
+
+def safe_urls_in_text(text: str) -> str:
+    """Apply :func:`safe_url` to every URL embedded in free text (probe reasons, errors).
+
+    Needed because an exception message ("HTTPError ... https://host/v1/models") is a
+    plain string, not a field with a URL-shaped key.
+    """
+    return _URL_IN_TEXT_RE.sub(lambda m: safe_url(m.group(0).rstrip(".,;)")), str(text))
+
 
 def _key_is_secret(key: str) -> bool:
     k = str(key)
@@ -97,7 +188,10 @@ def _key_is_secret(key: str) -> bool:
 
 
 def _scrub_value(val: str) -> str:
-    out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, val)
+    # Userinfo first: a credential inside a URL must go before the shape-based passes,
+    # which don't know that `//user:pw@` is a secret. Unconditional — public or not.
+    out = _URL_IN_TEXT_RE.sub(lambda m: strip_url_userinfo(m.group(0)), val)
+    out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, out)
     for rx in _SECRET_VALUE_RES:
         out = rx.sub(_REDACTED, out)
     return out
@@ -107,7 +201,11 @@ def redact(obj):
     """Recursively redact secrets from ``obj`` before it reaches an artifact.
 
     - Dict values under a secret-looking key are replaced wholesale.
-    - String values are scanned for secret-shaped tokens and masked in place.
+    - Dict values under an endpoint-looking key (``base_url``, ``*_url``, ``endpoint``)
+      go through :func:`safe_url`: userinfo stripped, and a non-public endpoint hidden
+      behind :data:`CUSTOM_URL` (see the "Endpoint confidentiality" note above).
+    - String values are scanned for secret-shaped tokens and masked in place, and any
+      URL they embed has its userinfo stripped.
     - Lists/tuples/dicts are walked recursively. Scalars pass through.
 
     Pure, returns a new structure; the caller's object is untouched.
@@ -117,6 +215,8 @@ def redact(obj):
         for k, v in obj.items():
             if _key_is_secret(k) and v not in (None, "", 0):
                 out[k] = _REDACTED
+            elif _URL_KEY_RE.search(str(k)) and isinstance(v, str) and v:
+                out[k] = safe_url(v)
             else:
                 out[k] = redact(v)
         return out

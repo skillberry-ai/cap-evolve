@@ -29,6 +29,14 @@ Secret handling — non-negotiable:
   not a length. Presence/absence only (``credential_present``).
 * A probe sends a credential ONLY to the base URL of the same :data:`PROVIDERS` row
   the credential came from (see :func:`probe`), so a token can't reach a third party.
+* **Endpoints are confidential too.** URL *userinfo* (``https://user:token@host/``) is a
+  credential and is stripped the moment a base URL is resolved, so it can never be
+  rendered or stored. And a base URL that is not one of the well-known public defaults
+  is treated as sensitive: :meth:`Resolved.to_dict` and :func:`describe` report
+  ``base_url: <custom>`` plus ``base_url_source`` (which precedence layer set it)
+  instead of the value, because the hostname is exactly what identifies someone's
+  internal infrastructure. The rule itself lives in ``dashboard.safe_url`` so every
+  consumer — this module, the reducer, ``dashboard.html``, ``doctor`` — inherits it.
 
 Stdlib only, zero runtime deps.
 """
@@ -40,7 +48,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .dashboard import redact
+from .dashboard import CUSTOM_URL, redact, safe_url, safe_urls_in_text, strip_url_userinfo
 from .specfile import read_yaml
 
 # ---------------------------------------------------------------------------
@@ -159,11 +167,18 @@ class Resolved:
     ``credential_env`` is the *name* of the environment variable that carries the
     secret; read it at the point of use. That keeps every repr/log/JSON of this
     object secret-free by construction rather than by remembering to redact.
+
+    ``base_url`` is the real endpoint (needed to make a request) but is
+    ``repr=False``: a custom endpoint is confidential, so it must not appear in a
+    traceback, a log line, or a JSON dump. Use :attr:`base_url_display` /
+    :meth:`to_dict` for anything a human or a file will see. Userinfo has already
+    been stripped by :func:`_resolve_base_url`, so even the in-memory value is
+    credential-free.
     """
 
     provider: str
     credential_env: str = ""          # env var NAME, "" when nothing resolved
-    base_url: str = ""
+    base_url: str = field(default="", repr=False)   # real endpoint; never rendered
     sources: dict = field(default_factory=dict)   # field -> precedence layer
     reason: str = ""                  # human note (why `auto` picked this)
 
@@ -171,12 +186,23 @@ class Resolved:
     def credential_present(self) -> bool:
         return bool(self.credential_env)
 
+    @property
+    def base_url_display(self) -> str:
+        """Safe rendering: public defaults verbatim, anything else ``<custom>``."""
+        return safe_url(self.base_url)
+
+    @property
+    def base_url_source(self) -> str:
+        """Which precedence layer set the base URL — the actionable half of the value."""
+        return self.sources.get("base_url", "built-in default" if self.base_url else "")
+
     def to_dict(self) -> dict:
         return {
             "provider": self.provider,
             "credential_env": self.credential_env,      # a NAME, not a value
             "credential_present": self.credential_present,
-            "base_url": self.base_url,
+            "base_url": self.base_url_display,          # "<custom>" unless well-known
+            "base_url_source": self.base_url_source,
             "sources": dict(self.sources),
             "reason": self.reason,
         }
@@ -315,13 +341,19 @@ def resolve(cli: dict | None = None, project: dict | None = None,
 
 
 def _resolve_base_url(provider: str, values: dict, sources: dict) -> str:
+    """The endpoint to use, with URL userinfo stripped at the single point of resolution.
+
+    Stripping here (rather than at each render site) means no downstream caller can
+    ever hold a base URL carrying ``user:token@`` — the credential is gone before the
+    value is stored on :class:`Resolved`, logged, or handed to :func:`probe`.
+    """
     row = PROVIDERS[provider]
     if values.get("base_url"):
-        return values["base_url"]
+        return strip_url_userinfo(values["base_url"])
     env_name = row["base_url_env"]
     if env_name and os.environ.get(env_name):
         sources["base_url"] = f"environment ({env_name})"
-        return os.environ[env_name]
+        return strip_url_userinfo(os.environ[env_name])
     if row["base_url"]:
         sources["base_url"] = "built-in default"
     return row["base_url"]
@@ -430,15 +462,25 @@ def probe(provider: str, base_url: str = "", *, timeout: float = 5.0) -> tuple[b
 def _safe_reason(text: str) -> str:
     """Scrub a probe failure reason before it can reach a log or an artifact.
 
-    Belt-and-braces: we never put a credential in a reason, but a library exception
-    could echo a URL that carries one as a query param. Strips those, then runs the
-    repo's shared ``dashboard.redact`` so this path obeys the same rules as artifacts.
+    A library exception routinely echoes the URL it failed on, so this is the main way
+    a custom endpoint would escape into a transcript. Order: mask credential query
+    params, replace non-public URLs with ``<custom>`` (which also drops any userinfo),
+    then run the repo's shared ``dashboard.redact`` so this path obeys exactly the same
+    rules as run artifacts.
     """
-    return redact(_URL_CRED_RE.sub(r"\1«redacted»", text))[:300]
+    scrubbed = safe_urls_in_text(_URL_CRED_RE.sub(r"\1«redacted»", str(text)))
+    return redact(scrubbed)[:300]
 
 
 def describe(res: Resolved) -> str:
-    """One-line, secret-free summary for the run transcript."""
+    """One-line, secret-free summary for the run transcript.
+
+    Prints the *source* of a custom base URL rather than its value — that is the part
+    that helps someone debug precedence, and it names no infrastructure.
+    """
     who = f"{res.credential_env} (present)" if res.credential_present else "no credential"
+    url = res.base_url_display or "(provider default)"
+    if url == CUSTOM_URL:
+        url = f"{CUSTOM_URL} (from {res.base_url_source or 'config'})"
     return (f"provider: {res.provider or 'unresolved'} | credential: {who} | "
-            f"base_url: {res.base_url or '(provider default)'} | {res.reason}")
+            f"base_url: {url} | {res.reason}")
