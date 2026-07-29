@@ -14,6 +14,13 @@ const fmtDuration = (v) => {
 };
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Elapsed time since a job started, e.g. "3m07s" or "1h05m" (no seconds once past an hour).
+const fmtElapsed = (ms) => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  if (h) return `${h}h${String(m).padStart(2, "0")}m`;
+  return m ? `${m}m${String(s).padStart(2, "0")}s` : `${s}s`;
+};
 
 async function loadRunning() {
   const panel = $("#running-now");
@@ -30,7 +37,7 @@ async function loadRunning() {
         if (job.status !== "in_progress") continue;
         const m = JOB_RE.exec(job.name);
         if (!m) continue;
-        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url });
+        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url, startedAt: job.started_at });
       }
     }
     renderRunning(items);
@@ -51,8 +58,20 @@ function renderRunning(items) {
     const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
     return `<li><span class="badge badge-accent">live</span>
       <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
+      <span class="elapsed" data-started="${esc(it.startedAt)}"></span>
       — <a href="./dashboard-ui/index.html?dataBase=${dataBase}#/runs/run_suite" target="_blank" rel="noopener">Watch live</a></li>`;
   }).join("");
+  updateElapsed();
+}
+
+// Ticks independently of loadRunning's poll interval so the elapsed time reads smoothly
+// between polls, instead of jumping only when a new snapshot of "in progress" jobs loads.
+function updateElapsed() {
+  document.querySelectorAll("#running-list .elapsed").forEach((el) => {
+    const started = el.dataset.started;
+    if (!started) return;
+    el.textContent = `· ${fmtElapsed(Date.now() - Date.parse(started))}`;
+  });
 }
 
 async function load() {
@@ -210,4 +229,9 @@ $("#f-time").addEventListener("change", () => {
 });
 load();
 loadRunning();
-setInterval(loadRunning, 60000);
+// 5 minutes, matching live_push.sh's own snapshot cadence — polling more often buys
+// nothing (the data can't have changed) and risks exhausting the unauthenticated GitHub
+// API's 60 req/hour rate limit (this call + one /jobs lookup per in-progress run, every
+// poll), which made the panel silently disappear (loadRunning's catch just hides it).
+setInterval(loadRunning, 300000);
+setInterval(updateElapsed, 1000);
