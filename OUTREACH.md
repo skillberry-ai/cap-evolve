@@ -42,11 +42,13 @@ more, plus a generic adapter for any shell-invokable agent and a deterministic m
 for CI.
 
 Benchmark adapters ship for τ²-bench, SWE-bench, SkillsBench, and generic
-JSONL/HuggingFace datasets. Some committed, reproducible results:
-- τ²-bench airline, held-out 30/10/10 split: sealed test 30.0 → 47.5 (+58% relative).
+JSONL/HuggingFace datasets. Some results — artifact-backed unless noted:
 - τ²-bench airline, fit-metric 50 tasks: 0.536 → 0.694; the edits were deep tool-code
   changes (tools.py 593 → 832 lines), not just prompt wording.
 - SkillsBench skill-package optimization, sealed test: 0.556 → 0.667.
+- τ²-bench airline, held-out 30(=val)/20 split: sealed test 30.0 → 47.5 (+58% relative)
+  — **reported only; that run's artifact is not committed**, so treat it as weaker
+  evidence than the two above.
 
 It's Python 3.10+, Apache-2.0, zero runtime deps (stdlib only). There's a two-minute
 demo that needs no API key (a deterministic toy agent + a mock optimizer, so the score

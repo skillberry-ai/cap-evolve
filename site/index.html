@@ -232,13 +232,15 @@ bash examples/toy_calc/run.sh</code></pre>
   <section class="section reveal" id="results">
     <h2>Results</h2>
     <p class="section-intro">
-      Cross-checked against committed run artifacts. Each is labeled <strong>fit metric</strong>
-      (no holdout) or <strong>held-out</strong> (test scored once on ids the optimizer never saw).
+      Each number is labeled <strong>fit metric</strong> (no holdout) or <strong>held-out</strong>
+      (test scored once on ids the optimizer never saw), and marked ✅ <em>artifact-backed</em>
+      (a committed run directory) or ⚠️ <em>reported</em> (run artifact <strong>not</strong>
+      committed — take it on trust, not on evidence).
       Full detail, models, task/trial counts, and costs: <a href="results.html">Results</a>.
     </p>
     <table class="table-hero">
       <thead>
-        <tr><th>Benchmark</th><th>Split</th><th>Baseline → Optimized</th><th>Gain</th></tr>
+        <tr><th>Benchmark</th><th>Split</th><th>Baseline → Optimized</th><th>Gain</th><th>Artifact</th></tr>
       </thead>
       <tbody>
         <tr>
@@ -246,24 +248,28 @@ bash examples/toy_calc/run.sh</code></pre>
           <td>sealed test</td>
           <td><code>0.0 → 1.0</code></td>
           <td class="gain">deterministic proof</td>
+          <td>✅ committed</td>
         </tr>
         <tr>
           <td><strong>τ²-bench airline</strong> <span class="muted">(policy + tools)</span></td>
           <td>val — <em>fit metric</em></td>
           <td><code>0.536 → 0.712</code></td>
           <td class="gain">+0.176 / +32.8%</td>
+          <td>✅ committed</td>
         </tr>
         <tr>
-          <td><strong>τ²-bench airline</strong> <span class="muted">(held-out 30/10/10)</span></td>
+          <td><strong>τ²-bench airline</strong> <span class="muted">(held-out 30(=val)/20)</span></td>
           <td>sealed <strong>test</strong></td>
           <td><code>30.0 → 47.5</code></td>
-          <td class="gain">+58.3% <span class="muted">· reported</span></td>
+          <td class="gain">+58.3%</td>
+          <td>⚠️ <a href="results.html#tau2-heldout"><strong>reported — not committed</strong></a></td>
         </tr>
         <tr>
           <td><strong>SkillsBench</strong> <span class="muted">(skill package)</span></td>
           <td>sealed <strong>test</strong> (held-out)</td>
           <td><code>0.556 → 0.667</code></td>
           <td class="gain">+0.111 / +20.0%</td>
+          <td>✅ committed</td>
         </tr>
       </tbody>
     </table>

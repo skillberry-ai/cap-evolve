@@ -1,9 +1,11 @@
 # Results
 
-The canonical results for cap-evolve. Every number here is derived from a committed
-run artifact (`examples/*/run_full/*.json`) or, where noted, from a held-out run whose
-artifact is committed separately. The README's Results section is a short snapshot of
-this page.
+The canonical results for cap-evolve. A section that opens with an **Artifact:** link is
+**artifact-backed** — its numbers are derived from a committed run directory under
+`examples/*/run_full/` that you can open and load in the dashboard. A section with no such
+link is a **reported** run: it happened, but its artifact is not in this repo, so the number
+rests on trust rather than evidence and reproducing it means paying for a fresh run. The
+README's Results section is a short snapshot of this page and carries the same markers.
 
 Each result is labeled by **split discipline**:
 - **fit metric** — `train == val == test` (no holdout); the test number is *not* held
@@ -59,19 +61,24 @@ lines), not just prompt tweaks — five trajectory-verified before→after edits
 
 ---
 
-## τ²-Bench airline — held-out 30(=val)/20 run
+## τ²-Bench airline — held-out 30(=val)/20 run — ⚠️ reported, artifact not committed
 
 Same benchmark and capability, run with a real holdout split (`split_ids.json`,
-train=val=30, test=20) so the test number is a genuine generalization result.
+train=val=30, test=20) so the test number is a generalization result *as run*.
 
 | split | baseline | optimized | Δ |
 |---|---|---|---|
 | **val** (30 tasks) | **56.7** | **70.0** | **+13.3 pp / +23.5% relative** |
 | **sealed test** (20 tasks, scored once) | **30.0** | **47.5** | **+17.5 pp / +58.3% relative** |
 
-> The held-out `run_full` artifact for this run is committed separately. Until it lands,
-> treat these figures as the reported held-out result; the reproducible artifact-backed
-> run above is the no-holdout fit metric.
+> **⚠️ Reported — the `run_full/` artifact for this run is not committed to this repo, and
+> there is no timeline for committing it.** Unlike every other row on this page, you cannot
+> open the artifact, load it in the dashboard, or re-derive these numbers from anything
+> here; reproducing them means paying for a fresh run
+> ([`REPRODUCE_tau2.md`](REPRODUCE_tau2.md)). Treat it as a reported figure, not as
+> evidence. The only artifact-backed τ²-bench run on this page is the no-holdout **fit
+> metric** above ([`examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)),
+> whose test split is *not* held out.
 
 See [`COMPARISON.md`](COMPARISON.md) for how this **+58.3% within-run relative** held-out
 gain sits next to external tool-optimization work (EvoTool, Evolutionary Context Search)

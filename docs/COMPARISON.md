@@ -58,7 +58,7 @@ claims.
 | **EvoTool** (arXiv:2603.04900) | **original τ-Bench** airline, GPT-4.1 | ReAct 35.9 → **39.1** (+3.2) | **~+8.9%** |
 | **EvoTool** | original τ-Bench airline, Qwen3-8B | ReAct 14.4 → **15.7** (+1.3) | **~+9.0%** |
 | Evolutionary Context Search | τ²-Bench | reported **+23.3%** | +23.3% |
-| **cap-evolve** (this repo) | **τ²-Bench** airline, held-out 30(=val)/20 | sealed test 30.0 → **47.5** (+17.5 pp) | **+58.3%** |
+| **cap-evolve** (this repo) | **τ²-Bench** airline, held-out 30(=val)/20 — ⚠️ *reported, artifact not committed* | sealed test 30.0 → **47.5** (+17.5 pp) | **+58.3%** |
 
 Notes and honest caveats:
 - **EvoTool evaluates the *original* τ-Bench** (Yao et al., 2024), while cap-evolve and
@@ -70,6 +70,10 @@ Notes and honest caveats:
   reference is added here.
 - cap-evolve's +58.3% is a **within-run relative** improvement on its own held-out split
   ([`RESULTS.md`](RESULTS.md)); a different split, model, and simulator than the rows above.
+- **cap-evolve's own row is the weakest-evidenced row in this table:** the `run_full/`
+  artifact for that held-out run is **not committed** to this repo, so unlike the published
+  external rows it cannot be inspected or re-derived here. See
+  [`RESULTS.md`](RESULTS.md) for the full caveat.
 
 ---
 

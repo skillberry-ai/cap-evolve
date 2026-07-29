@@ -51,10 +51,12 @@
 
   <h1>Results</h1>
   <p class="lead">
-    The canonical results for cap-evolve. Every number here is derived from a committed run
-    artifact (<code>examples/*/run_full/*.json</code>) or, where noted, from a held-out run whose
-    artifact is committed separately. The <a href="./">home page</a>'s results section is a short
-    snapshot of this page.
+    The canonical results for cap-evolve. Most numbers here are <strong>artifact-backed</strong>
+    — derived from a committed run directory (<code>examples/*/run_full/</code>) you can open and
+    load in the dashboard. One is marked <strong>⚠️ reported</strong>: that run happened, but its
+    artifact is <strong>not committed</strong>, so the number rests on trust rather than evidence
+    and reproducing it means paying for a fresh run. The <a href="./">home page</a>'s results
+    section is a short snapshot of this page and carries the same markers.
   </p>
 
   <div class="callout callout-accent">
@@ -155,12 +157,12 @@
       </section>
 
       <section class="reveal">
-        <h2 id="tau2-heldout">τ²-bench airline — held-out 30(=val)/20 run</h2>
+        <h2 id="tau2-heldout">τ²-bench airline — held-out 30(=val)/20 run <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
 
         <p>
           Same benchmark and capability, run with a real holdout split
-          (<code>split_ids.json</code>, train=val=30, test=20) so the test number is a genuine
-          generalization result.
+          (<code>split_ids.json</code>, train=val=30, test=20) so the test number is a
+          generalization result <em>as run</em>.
         </p>
 
         <table>
@@ -174,12 +176,15 @@
         </table>
 
         <div class="callout callout-warn">
-          <div class="callout-title">Reported — artifact pending (not yet committed)</div>
+          <div class="callout-title">⚠️ Reported — artifact not committed</div>
           <p>
             These held-out figures are <strong>reported</strong>: the <code>run_full</code> artifact for
-            this run is <strong>not yet committed</strong>. Until it lands, treat the numbers above as the
-            reported held-out result — <strong>not</strong> artifact-backed. The reproducible,
-            artifact-backed run is the <a href="#tau2-fit">no-holdout fit metric</a> above.
+            this run is <strong>not committed</strong> to the repo, and there is no timeline for
+            committing it. Unlike every other table on this page you cannot open the artifact, load it
+            in the dashboard, or re-derive these numbers from anything here — reproducing them means
+            paying for a fresh run. Treat them as a reported figure, not as evidence. The only
+            artifact-backed τ²-bench run here is the <a href="#tau2-fit">no-holdout fit metric</a>
+            above, whose test split is <em>not</em> held out.
           </p>
         </div>
 
@@ -363,7 +368,8 @@
               Three benchmarks, each showing the seed baseline (open circle) and the optimized
               candidate (filled green circle) on a 0–100 scale.
               τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
-              τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
+              τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points — reported only,
+              artifact not committed.
               SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
             </desc>
 
@@ -394,7 +400,7 @@
 
             <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
             <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
-            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (20 tasks)</text>
+            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (20 tasks) ⚠️ reported</text>
             <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
             <circle class="dot-base" cx="312" cy="142" r="6"/>
             <circle class="dot-opt"  cx="389" cy="142" r="6"/>
