@@ -5,7 +5,7 @@ prompt/skill/tool against a metric is trivially gameable — you can hill-climb 
 the same data you report. The substrate (`cap_evolve`) makes that hard *by
 construction*, and the rules below are enforced in code, not just documented.
 
-## The four guarantees
+## The five guarantees
 
 1. **Seeded, frozen splits.** `make_splits(task_ids, seed, ratios)` partitions
    tasks deterministically. The split is written to the run dir once
@@ -27,6 +27,18 @@ construction*, and the rules below are enforced in code, not just documented.
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
    `pass_k` reports the probability all k i.i.d. trials succeed (tau-bench style).
+
+5. **The grader is tamper-proof.** Guarantees 1–4 make the *evaluation* honest, but
+   when the capability is tool code or a skill package the optimizer is a coding
+   agent with write tools — it could "improve" by editing `score()` instead of the
+   target. `protect.py` SHA-256s the **protected paths** (by default `adapters/`,
+   `capevolve.yaml`, the spec's `dataset_source` / `split_ids_file`, and any
+   `*gold*` file) at `baseline` into `protected.json`, and re-verifies them inside
+   `evaluate_candidate` — the chokepoint *every* evaluation goes through. Any
+   change logs a `tamper_detected` event and raises `TamperError`, before the
+   candidate can be scored, snapshotted, made best, or sealed. A content hash, not
+   mtime: `os.utime` is a one-liner. Declare a different grader location with
+   `protected_paths` in `capevolve.yaml`.
 
 ## Why no central engine?
 

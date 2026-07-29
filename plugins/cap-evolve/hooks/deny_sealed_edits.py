@@ -103,6 +103,26 @@ def decide(payload: dict) -> int:
                 "read-only outside finalize()."
             )
 
+    # Declared PROTECTED paths (#142) — the scorer / eval harness / task data. Core
+    # already detects a tamper after the fact (SHA-256 manifest re-verified before
+    # every evaluation, aborting the run), but that costs a whole iteration; blocking
+    # the write here turns the same rule into feedback the model can act on. Core
+    # remains the enforcement, this is the early, model-visible half.
+    proj = H.project_dir_for(run_dir)
+    if proj is not None and H.core_importable():
+        try:
+            from cap_evolve import protect  # noqa: PLC0415
+            if protect.is_protected(proj, rt):
+                return H.emit_block(
+                    f"cap-evolve: refusing to edit {tstr} — it is a PROTECTED path "
+                    "(scorer / eval harness / task data / gold answers) for this run. "
+                    "Editing it is reward hacking: core re-verifies a SHA-256 manifest "
+                    "of these files before every evaluation and will abort the run with "
+                    "tamper_detected. Optimize the capability, not the grader."
+                )
+        except Exception:  # noqa: BLE001 — fail open, core still enforces
+            pass
+
     return 0
 
 

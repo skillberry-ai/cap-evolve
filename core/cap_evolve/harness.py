@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import protect as protect_mod
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
@@ -182,6 +183,13 @@ def evaluate_candidate(
     been computed and written — a crash mid-scoring leaves the seal unused so a
     retry can still score test exactly once. That is ``finalize``'s job.
     """
+    # Protected-paths tamper guard (#142). This is THE chokepoint every evaluation
+    # goes through — baseline, each iteration's val eval, and finalize — so the guard
+    # is on the path every run takes rather than an opt-in extra. It raises
+    # ``TamperError`` BEFORE any scoring, snapshot, ``set_best`` or ``commit_test``,
+    # so a candidate produced alongside an edited scorer can neither advance nor seal.
+    protect_mod.verify(run_dir, context=f"{split} eval of {tag}")
+
     if split == "test":
         run_dir.reserve_test()  # raises TestSealError on reuse; does NOT burn the seal yet
 
@@ -1254,6 +1262,12 @@ def run_step(
                               capability_sources=capability_sources, project_dir=project_dir)
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+
+    # Record the pristine protected-path hashes BEFORE the optimizer can touch
+    # anything. ``baseline`` normally does this first, but ``--reuse-baseline``
+    # skips the baseline eval, so without this the first manifest would be taken
+    # AFTER an optimizer step and would bless a tampered grader.
+    protect_mod.ensure_manifest(run_dir, project_dir)
 
     optimizer_error = None
     opt_cost_usd, opt_tokens = 0.0, 0

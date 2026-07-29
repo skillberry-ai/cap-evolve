@@ -567,6 +567,9 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Protected-path tamper events (#142): an honesty signal, so it rides
+        # alongside the gate warnings instead of staying buried in events.jsonl.
+        "tamper_events": [e for e in events if e.get("kind") == "tamper_detected"],
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),

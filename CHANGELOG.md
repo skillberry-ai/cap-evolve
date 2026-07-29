@@ -21,6 +21,21 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Protected-paths tamper guard (honesty).** New `cap_evolve/protect.py` proves the
+  optimizer never edited the scorer / eval harness / task data. A SHA-256 manifest of
+  the protected paths is recorded at `baseline` (`protected.json`) and re-verified
+  inside `evaluate_candidate` — the chokepoint every evaluation (baseline, each
+  iteration's val gate, `finalize`) goes through — plus GEPA's minibatch path. Any
+  modification, deletion, or newly-added protected file logs a `tamper_detected` event
+  (surfaced in the dashboard summary) and raises `TamperError` naming the file, before
+  the candidate can be scored, snapshotted, become best, or seal the test split.
+  Defaults derive from the project layout (`adapters/`, `capevolve.yaml`, the spec's
+  `dataset_source`/`split_ids_file`, any `*gold*` file); override with
+  `protected_paths` in `capevolve.yaml`. The capability dir is never protected — it
+  is the target. The existing `PreToolUse` honesty hook now also denies writes to a
+  protected path so the model gets the feedback before wasting an iteration.
+  Content hash, not mtime (spoofable); `__pycache__`/`*.pyc` excluded so importing
+  the adapter during a normal run is not a false positive. Zero new deps (`hashlib`).
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

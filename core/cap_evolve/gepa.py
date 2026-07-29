@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import protect
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
@@ -134,6 +135,12 @@ def _eval_minibatch(
     honest gate). One trial per task — the minibatch is a cheap signal, not the
     significance test.
     """
+    # Tamper guard (#142): the minibatch is its own (local) gate and it writes
+    # ``EvalCache`` entries, so it must not run against an edited scorer either.
+    # ``evaluate_candidate`` guards the full-val/test path; this guards GEPA's
+    # cheap path, which bypasses it.
+    protect.verify(run_dir, context=f"minibatch eval of {tag}")
+
     all_train = {t.id: t for t in adapter.tasks("all")}
     tasks = [all_train[tid] for tid in task_ids if tid in all_train]
     out_dir = run_dir.rollouts / "train"

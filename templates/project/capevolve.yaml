@@ -65,6 +65,17 @@ split_ids_file: ""
 # --- scoring ----------------------------------------------------------------
 num_trials: 1
 
+# --- protected paths (tamper guard) -----------------------------------------
+# Files the OPTIMIZER must never edit: the scorer / eval harness / task data / gold
+# answers. cap-evolve SHA-256s them at baseline and re-verifies before every
+# evaluation; any change aborts the run with a `tamper_detected` event (the score is
+# discarded and the test split is never sealed). Leave EMPTY for the sane defaults
+# derived from this layout: adapters/, capevolve.yaml, dataset_source,
+# split_ids_file, and any *gold* file. Setting it REPLACES those defaults — list
+# project-relative paths, dirs, or globs. The capability dir is never protected
+# (it is the target being optimized).
+protected_paths: []
+
 # --- metrics (display) ------------------------------------------------------
 # The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
 # are shown in the dashboard/results but never affect accept/reject.
