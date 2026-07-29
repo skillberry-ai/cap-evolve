@@ -57,8 +57,6 @@ def parse_job_dir(
     for trial_dir in sorted(job_dir.iterdir()):
         if not trial_dir.is_dir():
             continue
-        if trial_dir.name in ("config.json", "result.json"):
-            continue
 
         task_id = _extract_task_id(trial_dir)
         if task_ids and task_id not in task_ids:
@@ -111,33 +109,29 @@ def _parse_trial(trial_dir: Path, task_id: str) -> TrialResult:
 def _read_reward(verifier_dir: Path) -> tuple[float, dict]:
     """Read reward from verifier output.
 
-    Harbor reads reward.json first, falling back to reward.txt.
+    Tries reward.json first (``"reward"`` key). Falls back to reward.txt
+    only when reward.json is absent or unparseable — a legitimate 0.0 in
+    reward.json is honoured as-is.
     """
     reward_json: dict = {}
-    reward: float = 0.0
 
     rj_path = verifier_dir / "reward.json"
     if rj_path.exists():
         try:
             reward_json = json.loads(rj_path.read_text(encoding="utf-8"))
             if "reward" in reward_json:
-                reward = float(reward_json["reward"])
-            elif reward_json:
-                first_val = next(iter(reward_json.values()))
-                if isinstance(first_val, (int, float)):
-                    reward = float(first_val)
-        except (json.JSONDecodeError, ValueError, StopIteration):
+                return float(reward_json["reward"]), reward_json
+        except (json.JSONDecodeError, ValueError):
             pass
 
-    if reward == 0.0:
-        rt_path = verifier_dir / "reward.txt"
-        if rt_path.exists():
-            try:
-                reward = float(rt_path.read_text(encoding="utf-8").strip())
-            except ValueError:
-                pass
+    rt_path = verifier_dir / "reward.txt"
+    if rt_path.exists():
+        try:
+            return float(rt_path.read_text(encoding="utf-8").strip()), reward_json
+        except ValueError:
+            pass
 
-    return reward, reward_json
+    return 0.0, reward_json
 
 
 def _read_trajectory(agent_dir: Path) -> Any:

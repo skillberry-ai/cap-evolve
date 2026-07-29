@@ -139,10 +139,15 @@ def package_dataset(
     return output_dir
 
 
+def _toml_escape(s: str) -> str:
+    """Escape a string for safe embedding in a TOML quoted value."""
+    return s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
 def _write_task_toml(dest: Path, name: str, description: str, cfg: dict) -> None:
     content = _TASK_TOML_TEMPLATE.format(
-        name=name,
-        description=description.replace('"', '\\"'),
+        name=_toml_escape(name),
+        description=_toml_escape(description),
         docker_image=cfg.get("docker_image", _DEFAULTS["docker_image"]),
         network_mode=cfg.get("network_mode", _DEFAULTS["network_mode"]),
         cpus=cfg.get("cpus", _DEFAULTS["cpus"]),

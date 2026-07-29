@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -49,8 +50,7 @@ HARBOR_AGENT = os.environ.get("HARBOR_AGENT", "claude-code")
 HARBOR_MODEL = os.environ.get("HARBOR_MODEL", "")
 HARBOR_PARALLEL = int(os.environ.get("HARBOR_PARALLEL", "4"))
 HARBOR_TIMEOUT = int(os.environ.get("HARBOR_TIMEOUT", "1800"))
-import shlex as _shlex
-HARBOR_EXTRA_FLAGS = _shlex.split(os.environ.get("HARBOR_EXTRA_FLAGS", ""))
+HARBOR_EXTRA_FLAGS = shlex.split(os.environ.get("HARBOR_EXTRA_FLAGS", ""))
 HARBOR_JOBS_DIR = os.environ.get("HARBOR_JOBS_DIR", "")
 
 # Task IDs to include (comma-separated, without dataset prefix).
@@ -73,8 +73,14 @@ def _is_registry_dataset(ds: str) -> bool:
     return "/" in ds and not Path(ds).is_dir()
 
 
-def _build_agent_env(candidate_dir: Path) -> dict[str, str]:
-    """Build --ae flags for the Harbor agent from config + candidate skill."""
+def _build_agent_env() -> dict[str, str]:
+    """Build --ae flags for the Harbor agent from model config.
+
+    Supports three auth modes:
+    1. On-cluster vLLM (HARBOR_AGENT_BASE_URL set)
+    2. Vertex AI (CLAUDE_CODE_USE_VERTEX=1)
+    3. Anthropic API key (ANTHROPIC_API_KEY)
+    """
     ae: dict[str, str] = {}
 
     if HARBOR_AGENT_BASE_URL:
@@ -84,16 +90,34 @@ def _build_agent_env(candidate_dir: Path) -> dict[str, str]:
         ae["ANTHROPIC_DEFAULT_SONNET_MODEL"] = HARBOR_MODEL
         ae["ANTHROPIC_DEFAULT_HAIKU_MODEL"] = HARBOR_MODEL
         ae["ANTHROPIC_DEFAULT_OPUS_MODEL"] = HARBOR_MODEL
-
-    # Inject the candidate skill content so the agent can use it
-    skill_md = candidate_dir / "SKILL.md"
-    prompt_md = candidate_dir / "prompt.md"
-    if skill_md.exists():
-        ae["CAPEVOLVE_SKILL_CONTENT"] = skill_md.read_text(encoding="utf-8")[:8000]
-    elif prompt_md.exists():
-        ae["CAPEVOLVE_PROMPT_CONTENT"] = prompt_md.read_text(encoding="utf-8")[:8000]
+    elif os.environ.get("CLAUDE_CODE_USE_VERTEX", "").strip() == "1":
+        ae["CLAUDE_CODE_USE_VERTEX"] = "1"
+        ae["CLOUD_ML_REGION"] = os.environ.get("CLOUD_ML_REGION", "global")
+        ae["ANTHROPIC_VERTEX_PROJECT_ID"] = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID", "")
+        ae["ANTHROPIC_MODEL"] = HARBOR_MODEL
+        creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+        if creds:
+            ae["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/.config/gcloud/application_default_credentials.json"
+    else:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if api_key:
+            ae["ANTHROPIC_API_KEY"] = api_key
 
     return ae
+
+
+def _build_harbor_mounts() -> list[dict] | None:
+    """Build mount specs for Harbor containers (e.g., GCP credentials)."""
+    if os.environ.get("CLAUDE_CODE_USE_VERTEX", "").strip() != "1":
+        return None
+    creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+    if not creds:
+        home = os.path.expanduser("~")
+        creds = f"{home}/.config/gcloud/application_default_credentials.json"
+    if os.path.exists(creds):
+        return [{"type": "bind", "source": creds,
+                 "target": "/app/.config/gcloud/application_default_credentials.json"}]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -146,33 +170,65 @@ class Adapter(CapabilityAdapter):
     # ---- running ---------------------------------------------------------
 
     def run_batch(self, tasks: list[Task], ctx, *, seed: int = 0) -> dict:
-        """Run the full benchmark via one ``harbor run`` invocation."""
+        """Run the full benchmark via one ``harbor run`` invocation.
+
+        The candidate capability files are injected into the container via
+        ``package_dataset`` — each task's environment/capability/ dir contains
+        the current candidate's SKILL.md, scripts, references, etc.
+        """
         from capevolve_harbor import harbor_run, parse_job_dir
+        from capevolve_harbor.tasks import package_dataset
 
         candidate_dir = Path(ctx)
         jobs_dir = Path(HARBOR_JOBS_DIR) if HARBOR_JOBS_DIR else Path(tempfile.mkdtemp(prefix="harbor_jobs_"))
         jobs_dir.mkdir(parents=True, exist_ok=True)
 
-        agent_env = _build_agent_env(candidate_dir)
+        agent_env = _build_agent_env()
+        agent_env["CAPEVOLVE_SEED"] = str(seed)
 
         is_registry = _is_registry_dataset(HARBOR_DATASET)
         prefix = HARBOR_TASK_PREFIX
         if is_registry and not prefix:
             prefix = HARBOR_DATASET.split("/")[0]
 
-        harbor_task_names = [
-            f"{prefix}/{t.id}" if prefix and not t.id.startswith(prefix) else t.id
-            for t in tasks
-        ] if is_registry else None
+        # Inject the candidate capability into the agent's context.
+        # Write the candidate prompt/skill to a temp file and pass it
+        # via --extra-instruction-path so Harbor appends it to the task
+        # instruction — works for both registry and local datasets.
+        extra_flags = list(HARBOR_EXTRA_FLAGS or [])
+        mounts = _build_harbor_mounts()
+        if mounts:
+            extra_flags += ["--mounts-json", json.dumps(mounts)]
+        instruction_file = self._write_candidate_instruction(candidate_dir)
+        if instruction_file:
+            extra_flags += ["--extra-instruction-path", str(instruction_file)]
+
+        if is_registry:
+            harbor_task_names = [
+                f"{prefix}/{t.id}" if prefix and not t.id.startswith(prefix) else t.id
+                for t in tasks
+            ]
+            dataset_path = None
+            dataset_name = HARBOR_DATASET
+        else:
+            harbor_task_names = None
+            packaged_dir = Path(tempfile.mkdtemp(prefix="harbor_dataset_"))
+            package_dataset(
+                tasks=[{"id": t.id, "input": t.input} for t in tasks],
+                candidate_dir=candidate_dir,
+                output_dir=packaged_dir,
+            )
+            dataset_path = packaged_dir
+            dataset_name = None
 
         result = harbor_run(
-            dataset_path=None if is_registry else Path(HARBOR_DATASET),
-            dataset=HARBOR_DATASET if is_registry else None,
+            dataset_path=dataset_path,
+            dataset=dataset_name,
             agent=HARBOR_AGENT,
             model=HARBOR_MODEL,
             parallel=HARBOR_PARALLEL,
             timeout=HARBOR_TIMEOUT * len(tasks) + 300,
-            extra_flags=HARBOR_EXTRA_FLAGS or None,
+            extra_flags=extra_flags or None,
             jobs_dir=jobs_dir,
             include_tasks=harbor_task_names,
             agent_env=agent_env or None,
@@ -230,6 +286,7 @@ class Adapter(CapabilityAdapter):
             if t.id not in rollouts:
                 rollouts[t.id] = Rollout(task_id=t.id, error="No rollout produced")
 
+        self._cleanup_tmp_files()
         return rollouts
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
@@ -273,6 +330,32 @@ class Adapter(CapabilityAdapter):
         return Score(task_id=task.id, reward=reward, feedback=build_feedback(tr))
 
     # ---- candidate lifecycle ---------------------------------------------
+
+    _instruction_tmp_files: list[Path] = []
+
+    @classmethod
+    def _write_candidate_instruction(cls, candidate_dir: Path) -> Path | None:
+        """Write the candidate prompt/skill to a temp file for Harbor injection."""
+        candidate_dir = Path(candidate_dir)
+        for name in ("prompt.md", "SKILL.md"):
+            src = candidate_dir / name
+            if src.exists():
+                content = src.read_text(encoding="utf-8")
+                if content.strip():
+                    tmp = Path(tempfile.mktemp(prefix="capevolve_instruction_", suffix=".md"))
+                    tmp.write_text(content, encoding="utf-8")
+                    cls._instruction_tmp_files.append(tmp)
+                    return tmp
+        return None
+
+    @classmethod
+    def _cleanup_tmp_files(cls) -> None:
+        for f in cls._instruction_tmp_files:
+            try:
+                f.unlink(missing_ok=True)
+            except OSError:
+                pass
+        cls._instruction_tmp_files.clear()
 
     @contextmanager
     def live(self, candidate_dir: Path):

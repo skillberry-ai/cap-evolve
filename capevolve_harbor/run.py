@@ -25,16 +25,23 @@ class HarborRunResult:
 def find_harbor_bin() -> str:
     """Locate the ``harbor`` CLI binary.
 
-    Checks ``HARBOR_BIN`` env var first, then falls back to PATH lookup.
+    Checks ``HARBOR_BIN`` env var first, then the active venv's bin/
+    directory, then falls back to a system-wide PATH lookup.
     """
     from_env = os.environ.get("HARBOR_BIN")
     if from_env:
         return from_env
+    venv = os.environ.get("VIRTUAL_ENV")
+    if venv:
+        venv_bin = Path(venv) / "bin" / "harbor"
+        if venv_bin.exists():
+            return str(venv_bin)
     found = shutil.which("harbor")
     if found:
         return found
     raise FileNotFoundError(
-        "harbor CLI not found. Install it with: uv tool install harbor"
+        "harbor CLI not found. Set HARBOR_BIN, activate a venv with harbor "
+        "installed, or install it with: uv tool install harbor"
     )
 
 
@@ -107,18 +114,20 @@ def harbor_run(
             stderr=subprocess.PIPE,
         )
 
-        _forward_signals(proc)
+        saved_handlers = _install_signal_forwarding(proc)
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+            result.returncode = proc.returncode
+            result.elapsed_seconds = time.monotonic() - t0
+            result.stderr_tail = (stderr or b"").decode("utf-8", errors="replace")[-2000:]
 
-        stdout, stderr = proc.communicate(timeout=timeout)
-        result.returncode = proc.returncode
-        result.elapsed_seconds = time.monotonic() - t0
-        result.stderr_tail = (stderr or b"").decode("utf-8", errors="replace")[-2000:]
-
-        if proc.returncode != 0:
-            result.error = (
-                f"harbor run exited with code {proc.returncode}: "
-                f"{result.stderr_tail[:500]}"
-            )
+            if proc.returncode != 0:
+                result.error = (
+                    f"harbor run exited with code {proc.returncode}: "
+                    f"{result.stderr_tail[:500]}"
+                )
+        finally:
+            _restore_signal_handlers(saved_handlers)
 
     except subprocess.TimeoutExpired:
         proc.kill()
@@ -143,9 +152,9 @@ def harbor_run(
     return result
 
 
-def _forward_signals(proc: subprocess.Popen) -> None:
-    """Set up signal forwarding so SIGINT/SIGTERM reach the subprocess."""
-    original_handlers = {}
+def _install_signal_forwarding(proc: subprocess.Popen) -> dict:
+    """Forward SIGINT/SIGTERM to the subprocess, return saved handlers."""
+    saved = {}
 
     def _handler(sig, _frame):
         try:
@@ -155,6 +164,16 @@ def _forward_signals(proc: subprocess.Popen) -> None:
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
-            original_handlers[sig] = signal.signal(sig, _handler)
+            saved[sig] = signal.signal(sig, _handler)
+        except (OSError, ValueError):
+            pass
+    return saved
+
+
+def _restore_signal_handlers(saved: dict) -> None:
+    """Restore original signal handlers after the subprocess finishes."""
+    for sig, handler in saved.items():
+        try:
+            signal.signal(sig, handler)
         except (OSError, ValueError):
             pass
