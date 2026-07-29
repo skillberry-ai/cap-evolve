@@ -74,7 +74,7 @@
     </div>
     <div class="pill-row">
       <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Test sealed, scored once</span>
-      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Every number ships its artifact</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Artifact-backed by default</span>
       <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>0 runtime dependencies</span>
     </div>
     <div class="badges pill-row">
@@ -234,8 +234,9 @@ bash examples/toy_calc/run.sh</code></pre>
     <p class="section-intro">
       Each number is labeled <strong>fit metric</strong> (no holdout) or <strong>held-out</strong>
       (test scored once on ids the optimizer never saw), and marked ✅ <em>artifact-backed</em>
-      (a committed run directory) or ⚠️ <em>reported</em> (run artifact <strong>not</strong>
-      committed — take it on trust, not on evidence).
+      (a committed run directory, or a deterministic CI test that re-derives it) or
+      ⚠️ <em>reported</em> (run artifact <strong>not</strong> committed — take it on trust, not
+      on evidence). Every row states its own marker.
       Full detail, models, task/trial counts, and costs: <a href="results.html">Results</a>.
     </p>
     <table class="table-hero">
@@ -248,7 +249,7 @@ bash examples/toy_calc/run.sh</code></pre>
           <td>sealed test</td>
           <td><code>0.0 → 1.0</code></td>
           <td class="gain">deterministic proof</td>
-          <td>✅ committed</td>
+          <td>✅ <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/core/tests/test_e2e_slice.py">reproducible in CI</a></td>
         </tr>
         <tr>
           <td><strong>τ²-bench airline</strong> <span class="muted">(policy + tools)</span></td>

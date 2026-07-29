@@ -1,11 +1,17 @@
 # Results
 
-The canonical results for cap-evolve. A section that opens with an **Artifact:** link is
-**artifact-backed** — its numbers are derived from a committed run directory under
-`examples/*/run_full/` that you can open and load in the dashboard. A section with no such
-link is a **reported** run: it happened, but its artifact is not in this repo, so the number
-rests on trust rather than evidence and reproducing it means paying for a fresh run. The
-README's Results section is a short snapshot of this page and carries the same markers.
+The canonical results for cap-evolve. **Every section heading below carries its own
+evidence marker** — read the marker, not an average:
+
+- ✅ **artifact-backed** — the section opens with an **Artifact:** link to a committed run
+  directory under `examples/*/run_full/` that you can open and load in the dashboard.
+- ✅ **reproducible in CI** — no paid run to commit; the number is re-derived on every CI
+  run by a deterministic test.
+- ⚠️ **reported** — the run happened, but its artifact is **not** in this repo, so the
+  number rests on trust rather than evidence and reproducing it means paying for a fresh
+  run.
+
+The README's Results section is a short snapshot of this page and carries the same markers.
 
 Each result is labeled by **split discipline**:
 - **fit metric** — `train == val == test` (no holdout); the test number is *not* held
@@ -18,7 +24,9 @@ Gains are given as **absolute** and **relative %**.
 
 ---
 
-## toy_calc — deterministic, zero-API
+<a id="toy-calc"></a>
+
+## toy_calc — deterministic, zero-API — ✅ reproducible in CI
 
 | | val | test | notes |
 |---|---|---|---|
@@ -30,7 +38,9 @@ by `bash examples/toy_calc/run.sh`.
 
 ---
 
-## τ²-Bench airline — no-holdout fit-metric run (reproducible, committed)
+<a id="tau2-fit"></a>
+
+## τ²-Bench airline — no-holdout fit-metric run — ✅ artifact-backed
 
 Artifact: [`examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)
 (`final.json`, static dashboard under `ui/`). Reproduce: [`REPRODUCE_tau2.md`](REPRODUCE_tau2.md).
@@ -61,6 +71,8 @@ lines), not just prompt tweaks — five trajectory-verified before→after edits
 
 ---
 
+<a id="tau2-heldout"></a>
+
 ## τ²-Bench airline — held-out 30(=val)/20 run — ⚠️ reported, artifact not committed
 
 Same benchmark and capability, run with a real holdout split (`split_ids.json`,
@@ -72,9 +84,9 @@ train=val=30, test=20) so the test number is a generalization result *as run*.
 | **sealed test** (20 tasks, scored once) | **30.0** | **47.5** | **+17.5 pp / +58.3% relative** |
 
 > **⚠️ Reported — the `run_full/` artifact for this run is not committed to this repo, and
-> there is no timeline for committing it.** Unlike every other row on this page, you cannot
-> open the artifact, load it in the dashboard, or re-derive these numbers from anything
-> here; reproducing them means paying for a fresh run
+> committing it is not scheduled.** You cannot open the artifact, load it in the dashboard,
+> or re-derive these numbers from anything here; reproducing them means paying for a fresh
+> run
 > ([`REPRODUCE_tau2.md`](REPRODUCE_tau2.md)). Treat it as a reported figure, not as
 > evidence. The only artifact-backed τ²-bench run on this page is the no-holdout **fit
 > metric** above ([`examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)),
@@ -87,7 +99,9 @@ and budgets and are **not** an apples-to-apples comparison.
 
 ---
 
-## τ²-Bench airline — agent orchestration mode (`agent-optimize`), held-out 30(=val)/20
+<a id="tau2-agent"></a>
+
+## τ²-Bench airline — agent orchestration mode (`agent-optimize`), held-out 30(=val)/20 — ⚠️ reported, artifact not committed
 
 The first run driven in **agent orchestration mode** (`orchestration_mode: agent`,
 `algorithm_skill: agent-optimize`): the conversational agent understood the benchmark, ran the
@@ -133,7 +147,9 @@ no-holdout run).
 
 ---
 
-## τ²-Bench airline — Qwen 2.5 14B (tools only, held-out)
+<a id="qwen-tools"></a>
+
+## τ²-Bench airline — Qwen 2.5 14B (tools only, held-out) — ⚠️ reported, artifact not committed
 
 Same benchmark, capability, split, and algorithm as the held-out run above, with a
 self-hosted open model (**Qwen 2.5 14B-Instruct** via vLLM on OpenShift) replacing the
@@ -157,7 +173,9 @@ implementations rather than rewriting policy prose.
 
 ---
 
-## τ²-Bench airline — Qwen 2.5 14B, all capabilities (held-out)
+<a id="qwen-all"></a>
+
+## τ²-Bench airline — Qwen 2.5 14B, all capabilities (held-out) — ⚠️ reported, artifact not committed
 
 Same model and split as above, with all three capability types optimized jointly.
 
@@ -181,7 +199,9 @@ structured methodology in SKILL.md.
 `[skill-package, system-prompt, tools]` with `hill-climb` outperformed the tools-only run
 (+41.2%) when paired with hill-climb's conservative gating.
 
-## SkillsBench — skill-package optimization (held-out, committed)
+<a id="skillsbench"></a>
+
+## SkillsBench — skill-package optimization (held-out) — ✅ artifact-backed
 
 Artifact: [`examples/skillsbench/run_full/`](../examples/skillsbench/run_full/)
 (`report.md`, `final.json`). Reproduce: [`REPRODUCE_skillsbench.md`](REPRODUCE_skillsbench.md).

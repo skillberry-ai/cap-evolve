@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Results — cap-evolve</title>
-  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every section carries its own evidence marker: artifact-backed, reproducible in CI, or reported only.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/results.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
   <meta property="og:title" content="Results — cap-evolve">
-  <meta property="og:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta property="og:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every section carries its own evidence marker: artifact-backed, reproducible in CI, or reported only.">
   <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/results.html">
   <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Results — cap-evolve">
-  <meta name="twitter:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta name="twitter:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every section carries its own evidence marker: artifact-backed, reproducible in CI, or reported only.">
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/dashboard.png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -51,9 +51,12 @@
 
   <h1>Results</h1>
   <p class="lead">
-    The canonical results for cap-evolve. Most numbers here are <strong>artifact-backed</strong>
-    — derived from a committed run directory (<code>examples/*/run_full/</code>) you can open and
-    load in the dashboard. One is marked <strong>⚠️ reported</strong>: that run happened, but its
+    The canonical results for cap-evolve. <strong>Every section heading below carries its own
+    evidence marker</strong> — read the marker, not an average.
+    <strong>✅ artifact-backed</strong>: the section opens with an <em>Artifact:</em> link to a
+    committed run directory (<code>examples/*/run_full/</code>) you can open and load in the
+    dashboard. <strong>✅ reproducible in CI</strong>: no paid run to commit; a deterministic test
+    re-derives the number on every CI run. <strong>⚠️ reported</strong>: the run happened, but its
     artifact is <strong>not committed</strong>, so the number rests on trust rather than evidence
     and reproducing it means paying for a fresh run. The <a href="./">home page</a>'s results
     section is a short snapshot of this page and carries the same markers.
@@ -76,7 +79,7 @@
     <div class="doc-main">
 
       <section class="reveal">
-        <h2 id="toy-calc">toy_calc — deterministic, zero-API</h2>
+        <h2 id="toy-calc">toy_calc — deterministic, zero-API <span class="muted">— ✅ reproducible in CI</span></h2>
 
         <table>
           <thead><tr><th></th><th>val</th><th>test</th><th>notes</th></tr></thead>
@@ -101,7 +104,7 @@
       </section>
 
       <section class="reveal">
-        <h2 id="tau2-fit">τ²-bench airline — no-holdout fit-metric run (reproducible, committed)</h2>
+        <h2 id="tau2-fit">τ²-bench airline — no-holdout fit-metric run <span class="muted">— ✅ artifact-backed</span></h2>
 
         <p>
           Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_airline/run_full"><code>examples/tau2_airline/run_full/</code></a>
@@ -179,10 +182,9 @@
           <div class="callout-title">⚠️ Reported — artifact not committed</div>
           <p>
             These held-out figures are <strong>reported</strong>: the <code>run_full</code> artifact for
-            this run is <strong>not committed</strong> to the repo, and there is no timeline for
-            committing it. Unlike every other table on this page you cannot open the artifact, load it
-            in the dashboard, or re-derive these numbers from anything here — reproducing them means
-            paying for a fresh run. Treat them as a reported figure, not as evidence. The only
+            this run is <strong>not committed</strong> to the repo, and committing it is not
+            scheduled. You cannot open the artifact, load it in the dashboard, or re-derive these
+            numbers from anything here — reproducing them means paying for a fresh run. Treat them as a reported figure, not as evidence. The only
             artifact-backed τ²-bench run here is the <a href="#tau2-fit">no-holdout fit metric</a>
             above, whose test split is <em>not</em> held out.
           </p>
@@ -198,7 +200,7 @@
       </section>
 
       <section class="reveal">
-        <h2 id="tau2-agent">τ²-bench airline — agent orchestration mode (held-out 30 (=val) / 20)</h2>
+        <h2 id="tau2-agent">τ²-bench airline — agent orchestration mode (held-out 30 (=val) / 20) <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
 
         <p>
           The first run driven entirely in <a href="agent-orchestration.html">agent mode</a> with the
@@ -234,7 +236,7 @@
       </section>
 
       <section class="reveal">
-        <h2 id="qwen-tools">τ²-bench airline — Qwen 2.5 14B</h2>
+        <h2 id="qwen-tools">τ²-bench airline — Qwen 2.5 14B <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
 
         <p>
           Same benchmark, capability, split, and algorithm as the held-out run above, with a
@@ -269,7 +271,7 @@
       </section>
 
       <section class="reveal">
-        <h2 id="qwen-all">τ²-bench airline — Qwen 2.5 14B, all capabilities</h2>
+        <h2 id="qwen-all">τ²-bench airline — Qwen 2.5 14B, all capabilities <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
 
         <p>
           Same model and split as above, with all three capability types optimized jointly.
@@ -312,7 +314,7 @@
       </section>
 
       <section class="reveal">
-        <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
+        <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out) <span class="muted">— ✅ artifact-backed</span></h2>
 
         <p>
           Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/skillsbench/run_full"><code>examples/skillsbench/run_full/</code></a>
@@ -400,7 +402,7 @@
 
             <!-- Row 2: τ²-bench airline held-out test — 30.0 → 47.5 -->
             <text class="row-label" x="170" y="136" text-anchor="end">τ²-bench airline</text>
-            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (20 tasks) ⚠️ reported</text>
+            <text class="row-sub"   x="170" y="149" text-anchor="end">held-out test (20 tasks) — reported</text>
             <line class="connector" x1="318" y1="142" x2="383" y2="142"/>
             <circle class="dot-base" cx="312" cy="142" r="6"/>
             <circle class="dot-opt"  cx="389" cy="142" r="6"/>

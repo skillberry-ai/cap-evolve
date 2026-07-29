@@ -632,7 +632,7 @@
         <div class="diff-tile">
           <span class="badge">06</span>
           <div class="diff-title">Rigorous evaluation</div>
-          <div class="diff-desc">Sealed test, gate-verified acceptance, artifacts committed with every result.</div>
+          <div class="diff-desc">Sealed test, gate-verified acceptance, run artifacts committed wherever they exist.</div>
         </div>
       </div>
 
@@ -715,7 +715,7 @@
           <ul style="font-size:0.85em; margin:0.4em 0 0 0.9em; padding:0;">
             <li><strong>Adapter templates</strong> — τ²-bench, SkillsBench, SWE-bench: onboarding is config, not code</li>
             <li><strong>Empty-seed intake</strong> — bootstrap optimization without a starting capability</li>
-            <li><strong>Held-out runs committed</strong> — τ²-airline + SkillsBench artifacts</li>
+            <li><strong>Held-out runs committed</strong> — SkillsBench artifact (τ²-airline held-out is reported only)</li>
             <li><strong>Public docs site</strong> + "Why cap-evolve" section</li>
           </ul>
         </div>
@@ -742,7 +742,7 @@
     <section class="sec-02">
       <div class="part-pill sec-02">02 · WHERE WE STAND</div>
       <h2>Results at a glance</h2>
-      <p class="subtitle" style="font-size:0.65em;">Every number is derived from a committed run artifact.</p>
+      <p class="subtitle" style="font-size:0.65em;">Each card states its own evidence — ⚠️ <em>reported</em> means the run artifact is not committed.</p>
 
       <div class="grid-3" style="max-width:96%; margin:0.7em auto;">
         <!-- τ²-bench airline — val (fit metric) — LEFT -->
@@ -751,7 +751,7 @@
           <div class="big">+17.6</div>
           <div class="unit">pp</div>
           <div class="title">τ²-bench airline</div>
-          <div class="sub-title">val — fit metric (50 tasks · 10 trials)</div>
+          <div class="sub-title">val — fit metric (50 tasks · 10 trials) · ✅ artifact committed</div>
           <div class="ba">53.6 → <span class="after">71.2</span></div>
         </div>
         <!-- τ²-bench airline — test set — MIDDLE -->
@@ -769,7 +769,7 @@
           <div class="big">+11.1</div>
           <div class="unit">pp</div>
           <div class="title">SkillsBench</div>
-          <div class="sub-title">test set (3 tasks) · 4 skill packages</div>
+          <div class="sub-title">test set (3 tasks) · 4 skill packages · ✅ artifact committed</div>
           <div class="ba">55.6 → <span class="after">66.7</span></div>
         </div>
       </div>

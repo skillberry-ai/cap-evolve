@@ -100,15 +100,16 @@ Combine them, e.g. `[system-prompt, tools]`. See [Architecture](docs/ARCHITECTUR
 ## Results
 
 Each number is labeled **fit metric** (no holdout) or **held-out** (test scored once on ids
-the optimizer never saw), and marked ✅ *artifact-backed* (a committed `run_full/`) or
-⚠️ *reported* (run artifact **not** committed — take it on trust, not on evidence). Full
+the optimizer never saw), and marked ✅ *artifact-backed* (a committed `run_full/`, or a
+deterministic CI test that re-derives it) or ⚠️ *reported* (run artifact **not** committed —
+take it on trust, not on evidence). Full
 detail, models, task/trial counts, commits, and costs: **[docs/RESULTS.md](docs/RESULTS.md)**.
 
 | Benchmark | Split | Baseline → Optimized | Gain | Artifact |
 |---|---|---|---|---|
-| **toy_calc** (zero-API) | sealed test | `0.0 → 1.0` | deterministic proof | ✅ committed |
+| **toy_calc** (zero-API) | sealed test | `0.0 → 1.0` | deterministic proof | ✅ [reproducible in CI](core/tests/test_e2e_slice.py) |
 | **τ²-bench airline** (policy + tools) | val — *fit metric* | `0.536 → 0.712` | **+0.176 / +32.8%** | ✅ [`run_full/`](examples/tau2_airline/run_full/) |
-| **τ²-bench airline**, held-out 30(=val)/20 | sealed **test** | `30.0 → 47.5` | **+17.5 pp / +58.3%** | ⚠️ [**reported — not committed**](docs/RESULTS.md) |
+| **τ²-bench airline**, held-out 30(=val)/20 | sealed **test** | `30.0 → 47.5` | **+17.5 pp / +58.3%** | ⚠️ [**reported — not committed**](docs/RESULTS.md#tau2-heldout) |
 | **SkillsBench** (skill package) | sealed **test** (held-out) | `0.556 → 0.667` | **+0.111 / +20.0%** | ✅ [`run_full/`](examples/skillsbench/run_full/) |
 
 *Not an apples-to-apples leaderboard.* For how the held-out τ²-bench result sits next to
