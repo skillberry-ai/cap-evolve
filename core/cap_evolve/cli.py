@@ -14,6 +14,8 @@ Subcommands:
                        [--follow]  print live progress while the run works
     cap-evolve tail    [run_dir] [--base .capevolve]  attach to an ongoing run's
                        events.jsonl and print human-readable progress
+                       (exit 0 = run finished, 2 = not a possible run dir,
+                        3 = --idle-timeout elapsed with no events)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -78,18 +80,46 @@ def _events_path(base: Path, run_ts: str | None, seen: set[str] | None) -> Path 
     return (runs[-1] / "events.jsonl") if runs else None
 
 
-def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None):
+def _stderr_is_usable() -> bool:
+    """True only if progress can safely be written to a real, distinct stderr.
+
+    Under ``2>&-`` CPython either sets ``sys.stderr`` to ``None`` or hands fd 2 to the
+    next ``open()``, so writes would land *interleaved in stdout* and break the
+    machine-readable JSON contract ``--follow`` advertises. Following silently off is
+    strictly better than corrupt stdout.
+    """
+    err = sys.stderr
+    if err is None or getattr(err, "closed", False):
+        return False
+    try:
+        efd = err.fileno()
+    except Exception:  # noqa: BLE001 — a captured StringIO has no fd; safe to write to
+        return True
+    # fd 2 closed and reused by the next open() → that fd is not stderr any more.
+    # (`>f 2>&1` keeps fd 2 == 2 pointing at the same file, which is legitimate.)
+    return efd == 2
+
+
+def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
+                    offset: int = 0):
     """Print live progress from ``events.jsonl`` on a daemon thread.
 
-    Returns ``(stop_event, thread)``; set the event when the run finishes. Reads the
-    same typed event stream the dashboard's SSE route serves (``cap_evolve.eventstream``),
-    so terminal and web can't disagree. Never raises into the run.
+    Returns ``(stop_event, thread)`` — or ``(None, None)`` when stderr is unusable, in
+    which case following is disabled rather than corrupting stdout. Set the event when
+    the run finishes. Reads the same typed event stream the dashboard's SSE route
+    serves (``cap_evolve.eventstream``), so terminal and web can't disagree. Never
+    raises into the run — but never dies *quietly* either: if the follower stops, it
+    says so on stderr, because silence mistaken for progress is the bug #116 fixes.
     """
     import threading
     from . import eventstream
 
+    if not _stderr_is_usable():
+        return None, None
+
     stop = threading.Event()
-    color = eventstream.use_color(sys.stderr)
+    err = sys.stderr  # bind now: don't follow a stream reassigned mid-run
+    color = eventstream.use_color(err)
 
     def worker():
         # Progress goes to STDERR: stdout stays the machine-readable JSON contract that
@@ -104,12 +134,20 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None):
                 return
             totals: dict = {}
             for ev in eventstream.follow_events(
-                    path, poll=0.5, idle_timeout=None, should_stop=stop.is_set):
+                    path, offset=offset, poll=0.5,
+                    should_stop=lambda _last: stop.is_set()):
                 line = eventstream.render_line(ev, totals, color=color)
                 if line:
-                    print(line, file=sys.stderr, flush=True)
-        except Exception:  # noqa: BLE001 — observability must never break the run
-            pass
+                    print(line, file=err, flush=True)
+        except Exception as e:  # noqa: BLE001 — observability must never break the run
+            # ...but it must never go dark in silence either. #144: this is the hook for
+            # the forensic crash log; the user-visible line below is the minimum.
+            try:
+                print(f"[follow] live progress stopped: {e!r} — the run continues; "
+                      f"use `cap-evolve tail` or the dashboard to watch it",
+                      file=err, flush=True)
+            except Exception:  # noqa: BLE001 — stderr died too; nothing left to do
+                pass
 
     t = threading.Thread(target=worker, name="cap-evolve-follow", daemon=True)
     t.start()
@@ -133,6 +171,8 @@ def _cmd_tail(argv):
                    help="give up after N seconds of silence (0 = wait forever)")
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
+    if args.idle_timeout < 0:  # a negative timeout used to trip the check immediately
+        p.error("--idle-timeout must be >= 0 (0 = wait forever)")
 
     if args.run_dir:
         root = Path(args.run_dir)
@@ -144,23 +184,36 @@ def _cmd_tail(argv):
         root = runs[-1]
     events = root / "events.jsonl"
     # A named run dir need NOT exist yet: attaching before `cap-evolve run` creates it
-    # is the whole point. follow_events waits for the file; --idle-timeout bounds the
-    # wait, so a typo'd path exits on the timeout instead of hanging forever.
+    # is the whole point. But a path whose PARENT doesn't exist can never become a run
+    # dir, so a typo fails fast with a distinct code instead of pretend-waiting 5 min.
+    if not root.exists() and not root.parent.is_dir():
+        print(f"no such run dir: {root}", file=sys.stderr)
+        return 2
     if not events.exists():
         print(f"waiting for {events} …", file=sys.stderr, flush=True)
 
     color = not args.no_color and eventstream.use_color(sys.stdout)
     offset = 0 if args.from_start or not events.exists() else events.stat().st_size
     totals: dict = {}
+    shown, reason = 0, None
     try:
         for ev in eventstream.follow_events(
                 events, offset=offset, poll=0.5,
                 idle_timeout=(args.idle_timeout or None)):
+            if ev.get("kind") == eventstream.FOLLOW_END:
+                reason = ev.get("reason")
+                continue
             line = eventstream.render_line(ev, totals, color=color)
             if line:
                 print(line, flush=True)
+                shown += 1
     except KeyboardInterrupt:
         return 130
+    if reason == "idle" and not shown:
+        # Distinct from "the run finished": scripts can tell a timeout from a result.
+        print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
+              file=sys.stderr)
+        return 3
     return 0
 
 
@@ -380,7 +433,11 @@ def _cmd_run(argv):
     if args.follow:
         base_abs = proj_abs.parent
         seen = {p.name for p in base_abs.glob("run_*") if p.is_dir()} if not resume_ts else None
-        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen)
+        # On --resume, skip the prior log (10k old events are not "live progress"):
+        # start at the current end of file, the way `cap-evolve tail` does.
+        prior = base_abs / f"run_{resume_ts}" / "events.jsonl" if resume_ts else None
+        off = prior.stat().st_size if prior and prior.exists() else 0
+        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen, off)
 
     def done(code: int) -> int:
         """Drain + stop the follower thread, then return ``code``. Used at every exit."""
