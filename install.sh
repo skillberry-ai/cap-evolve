@@ -38,6 +38,8 @@ detect_dest() {
     # cursor/droid/copilot/kimi/pi/antigravity dirs follow each tool's dotdir
     # convention (best-guess) — override with --dest or $CAPEVOLVE_SKILLS_DIR if
     # your build differs. See skills/optimizers/run-optimizer/references/<host>.md.
+    # Per-host verified / docs-checked / best-guess status: docs/HOST_SUPPORT.md —
+    # the single source of truth every other surface links to.
     case "$HOST" in
       claude|claude-code)          echo "$HOME/.claude/skills"; return;;
       codex)                       echo "$HOME/.agents/skills"; return;;

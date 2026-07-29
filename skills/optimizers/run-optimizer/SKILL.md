@@ -44,6 +44,10 @@ new skill directory.
 `antigravity`, `openclaw`, `ibm-bob`. Per-CLI install / auth / flag details are in
 `references/<name>.md`.
 
+Only **`claude-code`** and **`mock`** are CI-executed; every other name is docs-checked
+or a best-guess dir mapping. Grades + per-row evidence live in `docs/HOST_SUPPORT.md`
+(single source of truth — do not restate the list elsewhere).
+
 - **`mock`** is fully offline (runs a shipped JSON-driven editor, never a network
   CLI), so the end-to-end proof slice costs nothing and never flakes.
 - **`generic`** / **`openclaw`** / **`antigravity`** read their command from
