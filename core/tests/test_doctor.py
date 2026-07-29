@@ -10,6 +10,7 @@ report — not even as a prefix.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -106,7 +107,18 @@ def test_core_warns_on_wrong_venv(monkeypatch, tmp_path):
     (other / "bin").mkdir(parents=True)
     monkeypatch.setenv("VIRTUAL_ENV", str(other))
     c = doctor._check_core(tmp_path)
-    assert c.status == WARN and "does not own" in c.detail and "re-activate" in c.fix
+    assert c.status == WARN and "is not this interpreter" in c.detail and "re-activate" in c.fix
+
+
+def test_core_passes_on_a_correctly_activated_venv(monkeypatch, tmp_path):
+    """Regression: comparing resolve(sys.executable) to $VIRTUAL_ENV followed bin/python's
+    symlink out to the base interpreter, so EVERY correctly activated venv warned."""
+    monkeypatch.setenv("VIRTUAL_ENV", doctor.sys.prefix)
+    assert doctor._check_core(tmp_path).status == PASS
+    # ...even when bin/python is a symlink pointing outside the venv (macOS/Homebrew).
+    exe = Path(doctor.sys.prefix) / "bin" / "python"
+    if exe.is_symlink():
+        assert not str(exe.resolve()).startswith(doctor.sys.prefix), "precondition"
 
 
 def test_cli_path_pass_and_missing(monkeypatch, tmp_path):
@@ -187,19 +199,35 @@ def test_skills_warns_on_best_guess_host_dir(monkeypatch, tmp_path):
 
 
 def test_optimizer_pass_and_none_available(monkeypatch, tmp_path):
+    """A real CLI on PATH is PASS; only local/zero-API rows is WARN; nothing is FAIL."""
     reg = {"mock": {"command_template": "python3 x.py"},
-           "nope": {"command_template": "definitely-not-installed-xyz -p"}}
+           "real": {"command_template": "git --version"}}
     monkeypatch.setattr(doctor, "_optimizer_registry", lambda: reg)
     c = doctor._check_optimizer(tmp_path)
-    assert c.status == PASS and "mock" in c.detail and "nope" in c.detail
+    assert c.status == PASS and "real" in c.detail and "mock" in c.detail
+
+    # Only mock/generic available: honest WARN, not a green light for a real run.
+    monkeypatch.setattr(doctor, "_optimizer_registry",
+                        lambda: {"mock": {"command_template": "python3 x.py"},
+                                 "nope": {"command_template": "definitely-not-installed-xyz"}})
+    c = doctor._check_optimizer(tmp_path)
+    assert c.status == WARN and "optimizer_skill: mock" in c.fix
 
     monkeypatch.setattr(doctor, "_optimizer_registry",
                         lambda: {"nope": {"command_template": "definitely-not-installed-xyz"}})
-    c = doctor._check_optimizer(tmp_path)
-    assert c.status == FAIL and "mock" in c.fix
+    assert doctor._check_optimizer(tmp_path).status == FAIL
 
+
+def test_optimizer_fails_when_registry_is_missing(monkeypatch, tmp_path):
+    """run-optimizer/scripts/run.py hard-raises FileNotFoundError without the registry, so
+    doctor must FAIL (exit nonzero) instead of WARNing and exiting 0 on an unrunnable box.
+    And the remediation must not be `run ./install.sh` — the command that caused it."""
     monkeypatch.setattr(doctor, "_optimizer_registry", lambda: {})
-    assert doctor._check_optimizer(tmp_path).status == WARN
+    monkeypatch.setattr(doctor, "_skills_dir", lambda: tmp_path / "skills")
+    c = doctor._check_optimizer(tmp_path)
+    assert c.status == FAIL
+    assert "run-optimizer cannot start" in c.detail
+    assert "CAPEVOLVE_OPTIMIZER_REGISTRY" in c.fix and "cp " in c.fix
 
 
 def test_credentials_absent_warns(monkeypatch, tmp_path):
@@ -212,6 +240,9 @@ def test_credentials_absent_warns(monkeypatch, tmp_path):
 
 
 def test_credentials_present_passes_with_names_only(monkeypatch, tmp_path):
+    for _, keys in doctor._RUNNER_ENV_GROUPS:
+        for k in keys:
+            monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key-000000000000")
     monkeypatch.setattr(doctor, "_optimizer_registry", lambda: {})
     c = doctor._check_credentials(tmp_path)
@@ -320,3 +351,180 @@ def test_report_passes_through_redaction(tmp_path):
         doctor.Check("rogue", WARN, f"OPENAI_API_KEY={_FAKE}", "")])
     text = format_report(rep)
     assert _FAKE not in text and "redacted" in text
+
+
+# ---------------------------------------------------------------------------
+# SECURITY — multi-SHAPE canaries, including the proven leak path
+# ---------------------------------------------------------------------------
+
+# The original canary was `sk-`-prefixed, i.e. exactly the shape `dashboard.redact`
+# already handled — so it proved nothing about the credentials that actually leak.
+# These are deliberately shapeless or non-`sk-` shaped:
+_CANARIES = {
+    "bare-high-entropy": "Xq7bTnV2wLpZ",                      # no prefix, no length tell
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "github-pat": "ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8",
+    "watsonx": "kJ3nQ-9xLm2PvTb4Rd7Wy",                        # IBM Cloud style, 20-ish
+    "sk-classic": "sk-ANT-DOCTOR-LEAK-CANARY-abcdef0123456789",
+}
+
+
+def _all_surfaces(rep, capsys, tmp_path):
+    """The three surfaces a user can paste into a bug report."""
+    human = format_report(rep)
+    doctor._main([str(tmp_path), "--json"])
+    json_out = capsys.readouterr().out
+    raw = json.dumps(doctor.redact(rep.to_dict()))
+    return {"human report": human, "--json": json_out, "to_dict()": raw}
+
+
+@pytest.mark.parametrize("shape", sorted(_CANARIES))
+def test_no_credential_shape_reaches_any_surface(shape, monkeypatch, tmp_path, capsys):
+    """Plant a credential of each SHAPE in every known var; assert zero surfaces carry it."""
+    secret = _CANARIES[shape]
+    names = [k for _, keys in doctor._RUNNER_ENV_GROUPS for k in keys]
+    names += ["CAPEVOLVE_OPTIMIZER_CMD", "BOB_API_KEY", "GITHUB_TOKEN", "KIMI_API_KEY"]
+    for k in names:
+        monkeypatch.setenv(k, secret)
+    rep = run_doctor(tmp_path)
+    for label, surface in _all_surfaces(rep, capsys, tmp_path).items():
+        assert secret not in surface, f"{shape} leaked into {label}"
+
+
+@pytest.mark.parametrize("shape", sorted(_CANARIES))
+def test_adapter_that_raises_with_a_credential_does_not_leak(shape, monkeypatch, tmp_path,
+                                                             capsys):
+    """THE PROVEN LEAK PATH: `project` interpolated raw `str(e)` from user adapter code
+    into the report, so an adapter raising with a credential in its message printed it
+    verbatim (reviewer reproduced it with OPENAI_API_KEY='hunter2plaintext')."""
+    secret = _CANARIES[shape]
+    monkeypatch.setenv("OPENAI_API_KEY", secret)
+    adapters = tmp_path / ".capevolve" / "project" / "adapters"
+    adapters.mkdir(parents=True)
+    (adapters / "adapter.py").write_text(
+        "import os\n"
+        "raise RuntimeError('auth failed for ' + os.environ['OPENAI_API_KEY'])\n")
+
+    rep = run_doctor(tmp_path)
+    assert _by_name(rep, "project").status == FAIL      # still diagnosed, not swallowed
+    for label, surface in _all_surfaces(rep, capsys, tmp_path).items():
+        assert secret not in surface, f"{shape} leaked from a raising adapter into {label}"
+        # nor a partial reveal: truncation must not slice a secret into an unmatched prefix
+        assert secret[:6] not in surface, f"{shape} prefix leaked into {label}"
+
+
+def test_untrusted_adapter_text_is_bounded_and_offloaded(tmp_path):
+    """Primary defense: third-party exception text is never echoed in full — it is
+    truncated in the report and written to a local file the user can inspect."""
+    adapters = tmp_path / ".capevolve" / "project" / "adapters"
+    adapters.mkdir(parents=True)
+    # filler redact() will NOT mask, so truncation is what this measures (a long run of
+    # one character is itself secret-shaped and gets masked wholesale).
+    filler = "la " * 1200
+    (adapters / "adapter.py").write_text(f"raise RuntimeError({filler!r})\n")
+    c = doctor._check_project(tmp_path)
+    assert c.status == FAIL
+    assert len(c.detail) < 800 and "chars)" in c.detail
+    log = tmp_path / ".capevolve" / "project" / "doctor-check.log"
+    assert log.exists() and filler.strip() in log.read_text()
+
+
+def test_redact_catches_shapeless_env_values():
+    """`redact` is the shared helper (dashboard artifacts use it too); shape rules alone
+    missed watsonx keys / UUIDs / PATs, so it now also scrubs this process's own
+    secret-var VALUES literally."""
+    from cap_evolve.dashboard import redact
+    for shape, secret in _CANARIES.items():
+        os.environ["WATSONX_APIKEY"] = secret
+        try:
+            assert secret not in redact({"detail": f"boom {secret}"})["detail"], shape
+        finally:
+            os.environ.pop("WATSONX_APIKEY", None)
+    # and the pure-shape rules still fire without an env var behind them
+    assert "550e8400-e29b-41d4-a716-446655440000" not in redact("id 550e8400-e29b-41d4-a716-446655440000")
+    assert "ghp_" not in redact("tok ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8")
+
+
+# ---------------------------------------------------------------------------
+# malformed input must be DIAGNOSED, never crash the diagnostic
+# ---------------------------------------------------------------------------
+
+def test_skills_handles_null_manifest_fields(monkeypatch, tmp_path):
+    """`s.get("entry", "")` returns None on an explicit null, and Path / None raises
+    TypeError — the doctor died with "please report this" on exactly the malformed
+    manifest it exists to explain."""
+    d = tmp_path / "skills"
+    (d / "_registry").mkdir(parents=True)
+    (d / "_registry" / "manifest.json").write_text(json.dumps(
+        {"skills": {"nullentry": {"path": "phases/x", "entry": None},
+                    "nullpath": {"path": None, "entry": "scripts/run.py"},
+                    "notadict": "oops"}}))
+    monkeypatch.setattr(doctor, "_skills_dir", lambda: d)
+    c = doctor._check_skills(tmp_path)
+    assert c.status == FAIL
+    assert "TypeError" not in c.detail and "stale manifest" in c.fix
+    assert "nullentry" in c.detail
+    # and the whole run stays clean (no "check raised")
+    monkeypatch.setattr(doctor, "CHECKS", (doctor._check_skills,))
+    assert "check raised" not in format_report(run_doctor(tmp_path))
+
+
+def test_skills_no_false_guess_warn_on_relative_or_flat_dir(monkeypatch, tmp_path):
+    """A relative dir failed the `str(d).endswith("/.claude/skills")` test outright, and a
+    flat ./install.sh tree was mislabeled a best-guess host dir."""
+    rel = tmp_path / ".claude" / "skills"
+    (rel / "_registry").mkdir(parents=True)
+    (rel / "_registry" / "manifest.json").write_text(json.dumps({"skills": {}}))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(doctor, "_skills_dir", lambda: Path(".claude/skills"))
+    assert doctor._check_skills(tmp_path).status == PASS
+
+    flat = tmp_path / "flat"
+    (flat / "_registry").mkdir(parents=True)
+    (flat / "optimizers").mkdir()
+    (flat / "optimizers" / "registry.yaml").write_text("mock:\n  command_template: x\n")
+    (flat / "_registry" / "manifest.json").write_text(json.dumps({"skills": {}}))
+    monkeypatch.setattr(doctor, "_skills_dir", lambda: flat)
+    assert doctor._check_skills(tmp_path).status == PASS
+
+
+# ---------------------------------------------------------------------------
+# credential sufficiency + .env
+# ---------------------------------------------------------------------------
+
+def test_credentials_warns_on_a_half_set_required_group(monkeypatch, tmp_path):
+    """TROUBLESHOOTING.md: RITS needs BOTH vars. PASSing on one was a false green."""
+    for _, keys in doctor._RUNNER_ENV_GROUPS:
+        for k in keys:
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(doctor, "_optimizer_registry", lambda: {})
+    monkeypatch.setenv("RITS_API_KEY", "x")
+    c = doctor._check_credentials(tmp_path)
+    assert c.status == WARN and "RITS_API_URL absent" in c.detail
+    monkeypatch.setenv("RITS_API_URL", "https://example.invalid")
+    assert doctor._check_credentials(tmp_path).status == PASS
+
+
+def test_credentials_sees_dotenv_names_only(monkeypatch, tmp_path):
+    """INSTALL.md mandates a repo-root .env; reading only os.environ told a user who
+    followed the docs exactly that they had no credentials."""
+    for _, keys in doctor._RUNNER_ENV_GROUPS:
+        for k in keys:
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(doctor, "_optimizer_registry", lambda: {})
+    secret = _CANARIES["bare-high-entropy"]
+    (tmp_path / ".env").write_text(f"# comment\nOPENAI_API_KEY={secret}\n")
+    sub = tmp_path / "a" / "b"
+    sub.mkdir(parents=True)
+    c = doctor._check_credentials(sub)
+    assert c.status == PASS and "OPENAI_API_KEY (.env)" in c.present
+    assert secret not in json.dumps(c.to_dict())          # the VALUE is never even read
+
+
+def test_project_fails_on_adapterless_scaffold(tmp_path):
+    """A scaffolded project with no adapter.py reported "not inside a cap-evolve project"
+    and exited 0 — a masked broken project."""
+    (tmp_path / ".capevolve" / "project").mkdir(parents=True)
+    (tmp_path / ".capevolve" / "project" / "capevolve.yaml").write_text("store: copy\n")
+    c = doctor._check_project(tmp_path)
+    assert c.status == FAIL and "scaffold incomplete" in c.fix

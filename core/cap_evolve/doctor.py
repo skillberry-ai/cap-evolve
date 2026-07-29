@@ -16,9 +16,17 @@ rather than invented ones:
   ``run-dir``      the run dir must be writable before any budget is spent
   ``project``      ``cap-evolve check`` is not green — reuses ``check.run_check``
 
-SECURITY: the credential check reports only PRESENCE/ABSENCE. No secret value —
-not even a prefix or a length — is ever emitted, and the whole report is passed
-through ``dashboard.redact`` on the way out as defense in depth.
+SECURITY (three independent layers, because shape matching alone is not enough):
+
+1. The credential check reports only PRESENCE/ABSENCE — no value, prefix or length.
+2. Third-party text (a user adapter's exception message, reached via
+   ``check.run_check``) is NEVER echoed verbatim: ``_summarize_untrusted`` bounds it
+   to a short excerpt and the full text goes to a local file instead of stdout.
+   This is the primary defense for the ``project`` check, since an adapter can raise
+   with a credential of any shape in its message.
+3. The whole report passes through ``dashboard.redact``, which masks secret *shapes*
+   AND (shape-independently) the literal values of this process's secret-looking env
+   vars — the only rule that catches an opaque watsonx key or a UUID token.
 
 Exit code: 0 when nothing FAILs (warnings are advisory), 1 on any hard failure,
 so CI can gate on ``cap-evolve doctor``.
@@ -53,10 +61,23 @@ _RUNNER_ENV_GROUPS: list[tuple[str, tuple[str, ...]]] = [
     ("gemini", ("GEMINI_API_KEY",)),
 ]
 
+# Vars the docs say must be set TOGETHER — half a pair is not usable, so PASSing on it
+# is a false green. Not every group above is like this (ANTHROPIC_API_KEY alone is fine),
+# hence an explicit list rather than "every group needs all its members".
+#   TROUBLESHOOTING.md "RITS calls fail" — set BOTH RITS_API_KEY and RITS_API_URL
+#   watsonx needs apikey + url + project id
+#   the SkillsBench gateway pair: a custom base URL needs its own token
+_REQUIRED_TOGETHER: list[tuple[str, ...]] = [
+    ("RITS_API_KEY", "RITS_API_URL"),
+    ("WATSONX_APIKEY", "WATSONX_URL", "WATSONX_PROJECT_ID"),
+    ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"),
+]
+
 # install.sh:38-40 admits these host dirs are guesses; the verified ones are documented
 # in the same comment. Surfacing which kind you're on is the whole point of check #5.
 _VERIFIED_HOST_DIRS = ("/.claude/skills", "/.agents/skills", "/.config/opencode/skills",
-                       "/.capevolve/skills", "/.gemini/extensions/cap-evolve/skills")
+                       "/.capevolve/skills", "/.gemini/extensions/cap-evolve/skills",
+                       "/.openclaw/workspace/skills")
 
 
 @dataclass
@@ -110,13 +131,16 @@ def _check_core(cwd: Path) -> Check:
         return Check("core", FAIL, f"import cap_evolve failed: {e}",
                      "pip install ./core (or export CAPEVOLVE_CORE=<repo>/core)")
     where = Path(cap_evolve.__file__).parent
-    venv = os.environ.get("VIRTUAL_ENV") or sys.prefix
-    detail = f"cap_evolve {__version__} from {where} (env {venv})"
+    active = os.environ.get("VIRTUAL_ENV")
+    detail = f"cap_evolve {__version__} from {where} (env {active or sys.prefix})"
     # "Trapped in the wrong venv": the interpreter importing core is not the one the
     # activated venv points at, so `pip install` lands somewhere the run won't see.
-    active = os.environ.get("VIRTUAL_ENV")
-    if active and not str(Path(sys.executable).resolve()).startswith(str(Path(active).resolve())):
-        return Check("core", WARN, detail + f" — but VIRTUAL_ENV={active} does not own {sys.executable}",
+    # Compare against sys.prefix — "the venv THIS interpreter belongs to". Resolving
+    # sys.executable instead would follow bin/python's symlink out to the base
+    # interpreter, which never lives under $VIRTUAL_ENV: a false WARN on every
+    # correctly activated venv (macOS/Homebrew, and pyvenv in general).
+    if active and Path(active).resolve() != Path(sys.prefix).resolve():
+        return Check("core", WARN, detail + f" — but VIRTUAL_ENV={active} is not this interpreter's prefix ({sys.prefix})",
                      "you are in one venv but running another interpreter; "
                      f"use {Path(active) / 'bin' / 'python'} -m cap_evolve.cli, or re-activate")
     return Check("core", PASS, detail)
@@ -144,7 +168,8 @@ def _check_git(cwd: Path) -> Check:
     if not exe:
         return Check("git", FAIL, "git not found on PATH",
                      "the default version store is git (every candidate is a commit) — "
-                     "install git, or set `store: none` in capevolve.yaml")
+                     "install git, or set `store: copy` in capevolve.yaml "
+                     "(store.py accepts git | copy | command — there is no `none`)")
     try:
         out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10)
         return Check("git", PASS, out.stdout.strip() or exe)
@@ -158,6 +183,21 @@ def _skills_dir() -> Path | None:
     return _find_skills_dir()
 
 
+def _build_manifest_hint() -> str:
+    """Path to ``build_manifest.py`` that is actually valid from where the user stands.
+
+    A flat install has no ``skills/_registry/`` at all, so the bare repo-relative form
+    printed a command that could not run. Prefer the real absolute path when we can see
+    the repo checkout, otherwise say where it comes from.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        cand = parent / "skills" / "_registry" / "build_manifest.py"
+        if cand.exists():
+            return str(cand)
+    return "<repo>/skills/_registry/build_manifest.py"
+
+
 def _check_skills(cwd: Path) -> Check:
     d = _skills_dir()
     if d is None:
@@ -166,25 +206,39 @@ def _check_skills(cwd: Path) -> Check:
     manifest = d / "_registry" / "manifest.json"
     if not manifest.exists():
         return Check("skills", FAIL, f"skills at {d} but no _registry/manifest.json",
-                     "rebuild it: python skills/_registry/build_manifest.py "
-                     f"{d}   (install.sh does this for you)")
+                     f"rebuild it: python {_build_manifest_hint()} {d}"
+                     "   (re-running ./install.sh does this for you)")
     try:
         skills = json.loads(manifest.read_text(encoding="utf-8")).get("skills") or {}
     except Exception as e:  # noqa: BLE001
         return Check("skills", FAIL, f"{manifest} is not valid JSON: {e}",
-                     f"rebuild it: python skills/_registry/build_manifest.py {d}")
+                     f"rebuild it: python {_build_manifest_hint()} {d}")
     # Manifest/disk consistency: a stale manifest naming a skill whose dir was removed
     # fails opaquely deep inside `cap-evolve run` (KeyError / missing entry script).
-    missing = [n for n, s in skills.items() if not (d / s.get("path", "") / s.get("entry", "")).exists()]
-    # The repo's own skills/ (component layout: skills/phases/..., an _registry sibling of
-    # optimizers/) is a first-class source, not a "best-guess host dir".
-    from_source = (d / "optimizers" / "registry.yaml").exists()
-    guessy = not from_source and not any(str(d).endswith(v) for v in _VERIFIED_HOST_DIRS)
+    # `or ""` not `.get(k, "")`: a manifest with an explicit null field yields None, and
+    # Path / None is a TypeError — a diagnostic must diagnose malformed input, not crash
+    # on it. A null entry IS a missing entry, which is what the empty string makes it.
+    missing = [n for n, s in skills.items()
+               if not isinstance(s, dict)
+               or not (s.get("entry") or "")
+               or not (d / (s.get("path") or "") / (s.get("entry") or "")).exists()]
+    # The repo's own skills/ (component layout: skills/phases/..., an _registry sibling
+    # of optimizers/) is a first-class source. A flat ./install.sh tree is equally
+    # legitimate — recognise it by the flattened skill dirs the manifest names, NOT by
+    # the registry file (which lives elsewhere and made every flat install "guessy").
+    # install.sh now copies the registry into every install, so its presence means
+    # "a cap-evolve install lives here", repo or flat — either way not a stray guess.
+    known = (d / "optimizers" / "registry.yaml").exists()
+    from_source = known and (d / "phases").is_dir()
+    # resolve() first: a relative dir like ./.claude/skills never ends with
+    # "/.claude/skills" as a raw string, so every relative dir was flagged.
+    resolved = str(d.resolve())
+    guessy = not known and not any(resolved.endswith(v) for v in _VERIFIED_HOST_DIRS)
     if missing:
         return Check("skills", FAIL,
                      f"{len(skills)} skill(s) in manifest at {d}; "
                      f"{len(missing)} entry script(s) missing: {', '.join(sorted(missing)[:5])}",
-                     f"stale manifest — rebuild: python skills/_registry/build_manifest.py {d}")
+                     f"stale manifest — rebuild: python {_build_manifest_hint()} {d}")
     if guessy:
         return Check("skills", WARN, f"{len(skills)} skill(s) at {d}",
                      "this is a best-guess host dir, not one of the ones verified in "
@@ -204,9 +258,12 @@ def _optimizer_registry() -> dict:
     if env:
         cands.append(Path(env))
     if d:
-        # repo layout, flat install root, and beside the copied run-optimizer skill dir
+        # repo layout / flat install (install.sh copies it to $DEST/optimizers/), the
+        # install root, beside the copied run-optimizer skill dir, and one level up.
         cands += [d / "optimizers" / "registry.yaml", d / "registry.yaml",
-                  d / "run-optimizer" / "registry.yaml"]
+                  d / "run-optimizer" / "registry.yaml",
+                  d / "run-optimizer" / "optimizers" / "registry.yaml",
+                  d.parent / "optimizers" / "registry.yaml"]
     for cand in cands:
         if cand.exists():
             from .specfile import read_yaml
@@ -217,26 +274,68 @@ def _optimizer_registry() -> dict:
 def _check_optimizer(cwd: Path) -> Check:
     reg = _optimizer_registry()
     if not reg:
-        return Check("optimizer", WARN, "optimizers/registry.yaml not found",
-                     "run ./install.sh, or set CAPEVOLVE_OPTIMIZER_REGISTRY")
-    available, absent = [], []
+        # FAIL, not WARN: run-optimizer/scripts/run.py raises FileNotFoundError on this
+        # exact state, so a run dies immediately. Exiting 0 here would greenlight a
+        # machine that cannot optimize — the worst thing a diagnostic can do.
+        d = _skills_dir()
+        where = f"{d}/optimizers/registry.yaml" if d else "<skills-dir>/optimizers/registry.yaml"
+        return Check("optimizer", FAIL,
+                     f"optimizers/registry.yaml not found — run-optimizer cannot start "
+                     f"(looked for {where})",
+                     "copy it from the repo: "
+                     f"mkdir -p {d or '<skills-dir>'}/optimizers && cp <repo>/skills/optimizers/"
+                     f"registry.yaml {d or '<skills-dir>'}/optimizers/   — or point at the "
+                     "checkout with CAPEVOLVE_OPTIMIZER_REGISTRY=<repo>/skills/optimizers/"
+                     "registry.yaml (older install.sh runs did not copy it; re-running the "
+                     "current ./install.sh also fixes this)")
+    # "Available" splits into CLIs actually on PATH vs. the local/zero-API rows
+    # (mock/generic/$ENV-driven) that need nothing installed. Conflating them made the
+    # FAIL branch unreachable with the shipped registry — mock alone always "passed".
+    on_path, local, absent = [], [], []
     for name, row in reg.items():
         if not isinstance(row, dict):
             continue
         tmpl = str(row.get("command_template") or "")
         exe = tmpl.split()[0] if tmpl.split() else ""
         if not exe or exe.startswith("$") or exe in ("python3", "python"):
-            available.append(name)   # mock/generic/env-driven — nothing to look up
+            local.append(name)
         elif shutil.which(exe):
-            available.append(name)
+            on_path.append(name)
         else:
             absent.append(name)
-    if not available:
-        return Check("optimizer", FAIL, f"no optimizer CLI on PATH (checked {len(reg)})",
-                     "install one (e.g. Claude Code, codex, gemini) or use "
-                     "`optimizer_skill: mock` for a zero-API run")
-    return Check("optimizer", PASS, f"available: {', '.join(sorted(available))}"
-                 + (f" | not on PATH: {', '.join(sorted(absent))}" if absent else ""))
+    tail = (f" | local/zero-API: {', '.join(sorted(local))}" if local else "") \
+           + (f" | not on PATH: {', '.join(sorted(absent))}" if absent else "")
+    if not on_path and not local:
+        return Check("optimizer", FAIL, f"no optimizer available at all (checked {len(reg)})",
+                     "install one (e.g. Claude Code, codex, gemini)")
+    if not on_path:
+        return Check("optimizer", WARN,
+                     f"no optimizer CLI on PATH{tail}",
+                     "a real run needs an agent CLI (Claude Code, codex, gemini-cli, ...); "
+                     "for a zero-API run set `optimizer_skill: mock` in capevolve.yaml")
+    return Check("optimizer", PASS, f"on PATH: {', '.join(sorted(on_path))}" + tail)
+
+
+def _dotenv_names(cwd: Path) -> set[str]:
+    """Variable NAMES declared in the nearest repo-root ``.env`` (INSTALL.md tells users
+    to put credentials there, and ``run-optimizer/scripts/run.py`` reads it).
+
+    Only the left-hand side is ever returned — the value after ``=`` is not even sliced
+    out, so there is nothing here for a leak to carry.
+    """
+    for parent in [cwd.resolve(), *cwd.resolve().parents]:
+        f = parent / ".env"
+        if f.is_file():
+            names = set()
+            try:
+                for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        names.add(line.split("=", 1)[0].strip().removeprefix("export "))
+            except OSError:  # pragma: no cover — unreadable .env is not a doctor failure
+                pass
+            return names
+    return set()
 
 
 def _check_credentials(cwd: Path) -> Check:
@@ -251,21 +350,40 @@ def _check_credentials(cwd: Path) -> Check:
     if opt_keys:
         groups.append(("optimizer-cli", tuple(dict.fromkeys(opt_keys))))
 
+    dotenv = _dotenv_names(cwd)
     seen: set[str] = set()
-    set_names, unset_names = [], []
+    set_names, unset_names, partial = [], [], []
+    def _here(k: str) -> bool:
+        # bool() of presence only — the VALUE is never read into any reported field.
+        return bool(os.environ.get(k)) or k in dotenv
+
     for _, keys in groups:
         for k in keys:
             if k in seen:
                 continue
             seen.add(k)
-            # bool() of presence only — the VALUE is never read into any reported field.
-            (set_names if os.environ.get(k) else unset_names).append(k)
+            if _here(k):
+                set_names.append(k if os.environ.get(k) else f"{k} (.env)")
+            else:
+                unset_names.append(k)
+    for group in _REQUIRED_TOGETHER:
+        missing = [k for k in group if not _here(k)]
+        if missing and len(missing) < len(group):
+            partial.append(f"{', '.join(k for k in group if _here(k))} set but "
+                           f"{', '.join(missing)} absent")
     if not set_names:
-        return Check("credentials", WARN, "no provider credentials in the environment",
+        return Check("credentials", WARN, "no provider credentials in the environment or .env",
                      "the toy example needs none; a real run needs the optimizer CLI's creds "
                      "plus runner creds in a repo-root .env — see "
                      "docs/INSTALL.md#credentials-only-for-real-runs",
                      absent=unset_names)
+    if partial:
+        return Check("credentials", WARN,
+                     f"{len(set_names)} set, {len(unset_names)} absent — "
+                     f"incomplete group(s): {'; '.join(partial)}",
+                     "these providers need every var in the group; set the missing ones — "
+                     "see docs/INSTALL.md#credentials-only-for-real-runs",
+                     present=set_names, absent=unset_names)
     return Check("credentials", PASS, f"{len(set_names)} set, {len(unset_names)} absent",
                  present=set_names, absent=unset_names)
 
@@ -283,15 +401,56 @@ def _check_run_dir(cwd: Path) -> Check:
     return Check("run-dir", PASS, f"{target} writable")
 
 
+def _summarize_untrusted(texts: list[str], limit: int = 160) -> str:
+    """Bound and de-identify third-party text before it can reach stdout.
+
+    ``check.run_check``'s problems embed ``str(e)`` from arbitrary user adapter code, so
+    their content is attacker/accident-controlled — an adapter that raises
+    ``RuntimeError(f"auth failed for {os.environ['OPENAI_API_KEY']}")`` would otherwise
+    print the key verbatim, and shape-based redaction cannot catch every credential
+    format. So: never echo untrusted text in full. Keep a short, redacted excerpt for
+    orientation and point at the file with the whole thing.
+
+    Redaction runs BEFORE truncation: cutting first can slice a secret mid-value, and a
+    partial prefix no longer matches any rule — so a truncated fragment would survive the
+    ``format_report`` pass. Redact, then bound.
+    """
+    out = []
+    for t in texts:
+        t = " ".join(str(redact(str(t))).split())
+        out.append(t if len(t) <= limit else t[:limit] + f"… (+{len(t) - limit} chars)")
+    return "; ".join(out)
+
+
 def _check_project(cwd: Path) -> Check:
     project = cwd / ".capevolve" / "project"
-    if not (project / "adapters" / "adapter.py").exists():
+    adapter = project / "adapters" / "adapter.py"
+    if not adapter.exists():
+        if project.is_dir():
+            # A scaffolded-but-adapterless project is a BROKEN project, not "no project".
+            return Check("project", FAIL, f"{project} exists but adapters/adapter.py is missing",
+                         "scaffold incomplete — implement adapters/adapter.py "
+                         "(see docs/ADAPTER_CONTRACT.md), then `cap-evolve check "
+                         f"{project}` must print {{\"ok\": true}}")
         return Check("project", PASS, "not inside a cap-evolve project (nothing to validate)")
     from .check import run_check
     rep = run_check(project)
     if rep.ok:
-        return Check("project", PASS, f"{project} — cap-evolve check green; " + "; ".join(rep.notes))
-    return Check("project", FAIL, f"{project} — cap-evolve check failed: " + "; ".join(rep.problems),
+        return Check("project", PASS, f"{project} — cap-evolve check green; "
+                     + _summarize_untrusted(list(rep.notes), limit=400))
+    # Write the FULL untrusted detail to a local file the user can inspect themselves,
+    # and print only a bounded excerpt. The report is what gets pasted into issues.
+    full = "\n".join(str(p) for p in rep.problems)
+    where = ""
+    try:
+        log = project / "doctor-check.log"
+        log.write_text(full + "\n", encoding="utf-8")
+        where = f" — full adapter output in {log} (inspect locally; may contain secrets)"
+    except OSError:  # pragma: no cover — unwritable project dir is reported by run-dir
+        pass
+    return Check("project", FAIL,
+                 f"{project} — cap-evolve check failed: "
+                 + _summarize_untrusted(list(rep.problems)) + where,
                  "this is the hard gate doing its job — fix the adapter, then "
                  f"`cap-evolve check {project}` must print {{\"ok\": true}}. "
                  "See docs/ADAPTER_CONTRACT.md")

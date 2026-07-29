@@ -80,7 +80,27 @@ _SECRET_VALUE_RES = [
     re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{6,}\b"),  # JWT
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),  # long base64
     re.compile(r"\b[0-9a-fA-F]{40,}\b"),          # long hex
+    # GitHub PATs (classic + fine-grained) and UUID-shaped tokens — both are common
+    # credential shapes that the length-based rules above miss.
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+               r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"),
 ]
+
+
+def _env_secret_values() -> list[str]:
+    """The actual VALUES of secret-looking env vars in this process.
+
+    Shape matching is a heuristic and always will be: a watsonx key, an opaque
+    session id or a bare high-entropy string has no recognizable shape. What we do
+    know for certain is the credential material this process was handed, so scrub
+    that literally — the only shape-independent defense. Longest first so a value
+    that contains another isn't half-masked.
+    """
+    vals = {v for k, v in os.environ.items()
+            if v and len(v) >= 6 and _key_is_secret(k)}
+    return sorted(vals, key=len, reverse=True)
 
 # KEY=secret / KEY: secret inside prose — mask the value, keep the key name so the
 # message still reads ("RITS_API_KEY=«redacted»"). Two groups: (prefix)(value).
@@ -100,6 +120,10 @@ def _scrub_value(val: str) -> str:
     out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, val)
     for rx in _SECRET_VALUE_RES:
         out = rx.sub(_REDACTED, out)
+    # Shape-independent pass: literal credential values from this environment.
+    for secret in _env_secret_values():
+        if secret in out:
+            out = out.replace(secret, _REDACTED)
     return out
 
 

@@ -30,9 +30,17 @@ non-zero on a hard failure (CI-friendly). It checks: Python version, core
 importability + which interpreter/venv, whether `cap-evolve` is on `PATH` and whether a
 *second* install shadows it, `git` (the default version store), the skills dir + registry
 manifest (flagging install.sh's "best-guess" host dirs), which optimizer CLIs are on
-`PATH`, provider credentials **present/absent only — never a value**, run-dir writability,
-and — when run inside a project — `cap-evolve check`. Add `--json` for machine-readable
-output.
+`PATH` **and whether `optimizers/registry.yaml` exists at all** (without it `run-optimizer`
+raises immediately, so that is a hard failure, not a warning), provider credentials
+**present/absent only — never a value** — including names declared in a repo-root `.env`,
+and a warning when only part of a group that needs all its vars is set (RITS, watsonx, the
+`ANTHROPIC_BASE_URL`+`ANTHROPIC_AUTH_TOKEN` gateway pair) — run-dir writability, and — when
+run inside a project — `cap-evolve check`. Add `--json` for machine-readable output.
+
+Third-party text (a user adapter's exception message) is never echoed verbatim: the report
+carries a short redacted excerpt and the full text goes to
+`.capevolve/project/doctor-check.log` for local inspection, so doctor output stays safe to
+paste into an issue.
 
 ```bash
 cap-evolve doctor            # diagnose the current directory
