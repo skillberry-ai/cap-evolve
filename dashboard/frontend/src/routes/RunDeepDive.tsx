@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, LivePendingError } from '../lib/api'
 import { useRunStream } from '../lib/useRunStream'
 import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
@@ -43,7 +43,14 @@ export function RunDeepDive() {
     queryKey: ['run', id],
     queryFn: ({ signal }) => api.run(id!, signal),
     enabled: !!id,
+    // A live-view run whose first snapshot hasn't landed yet 404s, not fails: settle
+    // into isError immediately (no retry backoff) so the friendly message below shows
+    // right away, then let refetchInterval poll every 10s until the poller's first
+    // push lands and the fetch succeeds.
+    retry: (failureCount, err) => (err instanceof LivePendingError ? false : failureCount < 3),
+    refetchInterval: (query) => (query.state.error instanceof LivePendingError ? 10_000 : false),
   })
+  const isLivePending = error instanceof LivePendingError
 
   // SSE: on each live event, debounce-refetch the authoritative reduced run.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -88,7 +95,16 @@ export function RunDeepDive() {
           </div>
         )}
 
-        {isError && (
+        {isError && isLivePending && (
+          <Card className="border-accent/40">
+            <div className="p-4 text-sm text-muted">
+              Hold on — this run just started. Live data will show up here in a few minutes,
+              once the first snapshot is exported.
+            </div>
+          </Card>
+        )}
+
+        {isError && !isLivePending && (
           <Card className="border-rejected/40">
             <div className="p-4 text-sm text-rejected">Couldn’t load run: {(error as Error)?.message}</div>
           </Card>

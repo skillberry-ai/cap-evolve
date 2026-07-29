@@ -64,11 +64,27 @@ export function applyDataBaseOverride(search: string = window.location.search): 
   }
 }
 
+/** True when this page load is viewing a `?dataBase=`-overridden (live) data source,
+ * as opposed to the default bundled static export or the live backend. Callers use this
+ * to distinguish "this run's data just doesn't exist yet" (live, still exporting its
+ * first snapshot) from a genuinely missing/broken run. */
+export function isLiveOverride(): boolean {
+  return Boolean((window as unknown as { __CAPEVOLVE_DATA_BASE__?: string }).__CAPEVOLVE_DATA_BASE__)
+}
+
+/** Thrown by getJSON() for a 404 while `isLiveOverride()` is true — the poller hasn't
+ * pushed this run's first snapshot yet, not a real error. */
+export class LivePendingError extends Error {}
+
 async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
   const target = STATIC_MODE ? `${dataBase()}/${staticSlug(url)}.json` : url
   const res = await fetch(target, { signal })
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText} for ${target}`)
+    const message = `${res.status} ${res.statusText} for ${target}`
+    if (res.status === 404 && isLiveOverride()) {
+      throw new LivePendingError(message)
+    }
+    throw new Error(message)
   }
   return (await res.json()) as T
 }
