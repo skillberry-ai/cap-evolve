@@ -82,6 +82,23 @@ budget (toggle with `--no-slow-update`).
 ## Agent-mode loop
 When `orchestration_mode: agent`, drive skillopt yourself: single-lineage climb with a textual learning rate over epochs/minibatches — each step propose an edit sized to the current LR, evaluate on **val** (minibatch then full as skillopt prescribes) via cap-evolve, gate Δ>k·SE, accept→snapshot / reject→revert & decay. Log steps to the run dir; between steps verify rollouts+results landed for the dashboard. Re-read `stop_condition`; stop on it/stall/budget. Seal once with `cap-evolve finalize`, then `report`.
 
+
+## What the optimizer receives each iteration
+
+Identical for all three deterministic algorithms — one shared seam,
+`core/cap_evolve/optimizer_context.py` (`inject()` writes the files, `render_instructions()`
+renders the prompt): the per-iteration `INSTRUCTIONS.md` rendered from the intake-authored
+template (`--instructions-file`) with the capability brief (`--capabilities`), the failure
+index, the bench-repo pointer (`--bench-repo`), the parallel-fan-out note and the
+consuming-LLM reader block (`--target-model` / `--target-profile-file`); plus
+`./trajectories/`, `./guidance/<cap>/`, `./guidance/diagnose/`, `./guidance/sources/`
+(`--capability-sources`), `./guidance/optimizer/<name>.md` (`--optimizer-name`), the
+native per-agent skills dir, and the cross-iteration
+`LEDGER.md` / `JOURNAL.md` / `RUNMAP.md` + `prior_iterations/`. `cap-evolve run` passes
+every one of those flags to this algorithm — see `docs/ARCHITECTURE.md`.
+
+This algorithm adds its own tail block on top (the L edit budget + the rejected/failure-pattern buffer).
+
 ## References
 - `references/concepts.md` — the SkillOpt loop in detail, the textual-LR schedule,
   the buffer/slow-update mechanics, and citations (arXiv:2605.23904).
