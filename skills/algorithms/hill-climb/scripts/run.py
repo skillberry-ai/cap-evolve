@@ -45,7 +45,7 @@ def main(argv=None) -> int:
     p.add_argument("--max-iterations", type=int, default=10)
     p.add_argument("--n-trials", type=int, default=1)
     p.add_argument("--gate-mode", default="auto",
-                   help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
+                   help="auto = let the engine pick the paired gate (the default; candidate & current share val tasks); or pin one of paired|significant|threshold|strict|simplicity_tiebreak — see docs/HONEST_EVAL.md#gate-modes")
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--store", default="git", help="git|copy|command")
     p.add_argument("--store-commit-cmd", default=None)

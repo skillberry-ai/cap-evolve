@@ -100,12 +100,34 @@ you want intake to ask):
 - max_optimizer_usd:    <cumulative optimizer-only $ cap; 0 = unlimited>
 - optimizer_usd_per_iter: <PER-ITERATION $ cap enforced by the optimizer CLI itself, e.g. claude `--max-budget-usd N`>
 - optimizer_max_turns:  <per-iteration WORK cap passed to the agent CLI, e.g. claude `--max-turns N`>
-- gate:                 <significant (k_se) | strict | threshold>
-                        # significant: accept only if Δ > k_se · SE — k_se is how many standard errors
-                        # the val gain must clear (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress
+- gate_mode:            <paired (DEFAULT) | significant | threshold | strict | simplicity_tiebreak>
+- gate_k_se:            <how many standard errors the val gain must clear; default 1.0
+                        # (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress>
+                        # paired (default): Δ = per-task cand−curr on the SAME val tasks; accept if mean(Δ) > k_se·SE(Δ)
+                        # see docs/HONEST_EVAL.md#gate-modes for all five modes
 - stall:                <stop after N consecutive rejects; 0 = run all max_iterations>
 - store:                git          # versions every iteration as a commit for an inspectable process
 ```
+
+### Gate modes
+
+`gate_mode` picks the acceptance rule; all five are val-only
+(`core/cap_evolve/gate.py`), and `gate_k_se` sets strictness (default `1.0`):
+
+| `gate_mode` | rule |
+|---|---|
+| **`paired`** (**default**) | `mean(per-task Δ) > k_se · SE(Δ)` over the same val tasks — cross-task variance cancels, so this is the most powerful test and the one the harness picks itself (`--gate-mode auto`) |
+| `significant` | `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)` — unpaired, weaker |
+| `threshold` | `Δ > threshold` — flat domain margin. `threshold` defaults to `0.0`, so unset = `strict` |
+| `strict` | `Δ > 0` — only for a near-zero-variance scorer |
+| `simplicity_tiebreak` | `strict`, plus on a near-tie prefer the smaller candidate. ⚠️ needs `candidate_size`/`current_size`, which the harness does not populate — **behaves as `strict` today** ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)) |
+
+**At the default `gate_k_se: 1.0`, a gain on exactly one of `n` tasks gives
+`mean(Δ) = SE(Δ)` exactly and is rejected** (at any `n`, at any magnitude) — improve
+≥2 tasks, or set `gate_k_se` below 1.0 as the examples do.
+
+That rule in full, and the small-sample caveat:
+[`HONEST_EVAL.md` § Gate modes](HONEST_EVAL.md#gate-modes).
 
 ## B — drive the `cap-evolve` CLI yourself
 

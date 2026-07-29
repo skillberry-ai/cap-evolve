@@ -138,7 +138,7 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
 
 Run config (from `examples/tau2_airline/capevolve.yaml`): `hill-climb --focus all`,
 `max_iterations 10`, `num_trials 10`, `split_ids_file split_ids.json` (no-holdout fit),
-`gate_mode significant` `gate_k_se 0.2`, `store git`, `max_usd 400`,
+`gate_mode paired` `gate_k_se 0.2`, `store git`, `max_usd 400`,
 `optimizer_usd_per_iter 40`, `TAU2_MAX_CONCURRENCY 125`.
 
 ## 6. Inspect the process
@@ -209,7 +209,7 @@ evaluates on **full val**, and accepts only through the paired gate — using th
 ```bash
 S="$CAPEVOLVE_SKILLS_DIR"; R=e2e/tau2/.capevolve/run_e2e; P=e2e/tau2/.capevolve/project
 python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" --candidate "$R/work/cand_1" --split val --n-trials 1
-python "$S/phases/gate/scripts/run.py"     --mode significant --k-se 1.0 --current <best_mean> --candidate <cand_mean> --candidate-stderr <se> --current-stderr <se>
+python "$S/phases/gate/scripts/run.py"     --mode paired --k-se 1.0 --current <best_mean> --candidate <cand_mean> --paired-deltas <per-task cand-curr deltas, comma-separated>   # paired is the default gate; --mode significant + --candidate-stderr/--current-stderr if you have no per-task data
 # on accept: RunDir.snapshot + set_best + log_event (see AGENT_ORCHESTRATION.md)
 python -c "from cap_evolve import RunDir; import json; print(json.dumps(RunDir.open('$R').spent.to_dict(), indent=2))"  # constraint re-read
 

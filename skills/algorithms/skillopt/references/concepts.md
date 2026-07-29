@@ -92,7 +92,7 @@ failures without breaking any STABLE SUCCESS") and run ONE extra `run_step` —
 
 - **Gate on val, test sealed.** Acceptance always routes through `gate.decide` on
   the VAL split; the test seal is only touched by `finalize`.
-- **Default to `significant`/`paired`, not strict.** A tiny val set with a naive
+- **Default to `paired` (the per-task paired test), not strict.** A tiny val set with a naive
   strict-greater gate rejects almost everything on noise. With a small val set,
   raise `--n-trials` for real per-trial variance, or use a **graded** reward so
   the paired significance test has signal.

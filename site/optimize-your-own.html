@@ -197,11 +197,31 @@ you want intake to ask):
 - max_optimizer_usd:    &lt;cumulative optimizer-only $ cap; 0 = unlimited&gt;
 - optimizer_usd_per_iter: &lt;PER-ITERATION $ cap enforced by the optimizer CLI itself, e.g. claude `--max-budget-usd N`&gt;
 - optimizer_max_turns:  &lt;per-iteration WORK cap passed to the agent CLI, e.g. claude `--max-turns N`&gt;
-- gate:                 &lt;significant (k_se) | strict | threshold&gt;
-                        # significant: accept only if Δ &gt; k_se · SE — k_se is how many standard errors
-                        # the val gain must clear (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress
+- gate_mode:            &lt;paired (DEFAULT) | significant | threshold | strict | simplicity_tiebreak&gt;
+- gate_k_se:            &lt;how many standard errors the val gain must clear; default 1.0
+                        # (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress&gt;
+                        # paired (default): Δ = per-task cand−curr on the SAME val tasks; accept if mean(Δ) &gt; k_se·SE(Δ)
 - stall:                &lt;stop after N consecutive rejects; 0 = run all max_iterations&gt;
 - store:                git          # versions every iteration as a commit for an inspectable process</code></pre>
+    <p><strong>Gate modes.</strong> <code>gate_mode</code> picks the acceptance rule; all five are
+    val-only (<code>core/cap_evolve/gate.py</code>), and <code>gate_k_se</code> sets strictness
+    (default <code>1.0</code>):</p>
+    <ul>
+      <li><code>paired</code> — <strong>the default</strong>: <code>mean(per-task Δ) &gt; k_se · SE(Δ)</code>
+      over the same val tasks. Cross-task variance cancels, so this is the most powerful test and the
+      one the engine picks itself (<code>--gate-mode auto</code>).</li>
+      <li><code>significant</code> — <code>Δ(means) &gt; k_se · sqrt(SE_cand² + SE_curr²)</code>; unpaired, weaker.</li>
+      <li><code>threshold</code> — <code>Δ &gt; threshold</code>, a flat domain margin. <code>threshold</code>
+      defaults to <code>0.0</code>, so leaving it unset is identical to <code>strict</code>.</li>
+      <li><code>strict</code> — <code>Δ &gt; 0</code>; only for a near-zero-variance scorer.</li>
+      <li><code>simplicity_tiebreak</code> — <code>strict</code>, plus on a near-tie prefer the smaller candidate.
+      ⚠️ Requires <code>candidate_size</code>/<code>current_size</code>, which the harness does not populate —
+      so today it behaves exactly like <code>strict</code>
+      (<a href="https://github.com/skillberry-ai/cap-evolve/issues/206">#206</a>).</li>
+    </ul>
+    <p>At the default <code>gate_k_se: 1.0</code>, <code>paired</code> rejects a gain on exactly one of
+    <code>n</code> tasks — <code>mean(Δ) = SE(Δ)</code> exactly, at any <code>n</code> and any magnitude.
+    Improve &ge;2 tasks, or set <code>gate_k_se</code> below 1.0 as the examples do.</p>
   </section>
 
   <h2 class="reveal">B — Drive the <code>cap-evolve</code> CLI yourself</h2>

@@ -44,8 +44,10 @@ significant margin → commit — and reports one honest number. It optimizes wh
 - **Learn from real agent failures.** Every iteration reads full trajectories and per-task
   causal feedback (which task ids a prior edit *broke* and *fixed*), so edits are large and
   don't regress the wins.
-- **Keep evaluation honest.** Acceptance is a val-only significance gate (Δ > k·SE); the
-  test split is sealed and scored exactly once. Both live in the core, not in editable docs.
+- **Keep evaluation honest.** Acceptance is a val-only significance gate (Δ > k·SE) — by
+  default the per-task [**`paired`** test](docs/HONEST_EVAL.md#gate-modes) over the same
+  val tasks; the test split is sealed and scored exactly once. Both live in the core, not
+  in editable docs.
 - **Inspect every change.** Each candidate is a git commit; the dashboard shows costs,
   timing, diffs, lineage, and a tasks × iterations pass/fail heatmap.
 

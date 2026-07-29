@@ -16,16 +16,46 @@ to admit only differences large enough that noise is an implausible explanation.
 
 ## The significance test (Δ > k·SE)
 
-Each candidate carries a val mean and a standard error. The two means are
-independent estimates, so the **standard error of their difference** is:
+Two forms, differing only in how the **standard error of the difference** is computed.
+
+**Paired (`paired`, the default in a real run).** Candidate and current are scored on
+the *same* val tasks, so the honest unit of analysis is the per-task difference:
+
+```
+Δ[t]    = cand_reward[t] − curr_reward[t]     # over the shared val tasks
+SE_diff = sqrt( var(Δ) / n )                  # sample variance, n−1 denominator
+accept  ⟺  mean(Δ) > k · SE_diff
+```
+
+Pairing cancels the between-task variance — a task that is simply *hard* pulls both
+sides down equally and contributes nothing to `var(Δ)` — so the paired test is
+substantially more powerful. Its SE also stays non-zero at `num_trials=1`, because it
+measures the spread between tasks' *deltas* rather than per-trial noise. It also means the
+paired bar has one sharp, easily-missed consequence at the default `k = 1`:
+
+> **Improving exactly one task of `n` can never be banked at `k_se = 1.0`.** Fixing
+> one task by `m` and breaking nothing gives `mean(Δ) = m/n` and `SE_diff = m/n` —
+> *identical* — so the strict `>` rejects it. The `m` cancels, so fixing one task
+> **perfectly** is rejected exactly as a tiny nudge is; and `n` cancels, so a bigger
+> val split does not help either. **Improve ≥2 tasks at `k_se = 1.0`, or lower
+> `gate_k_se` below 1.0** (the examples use `0.2`). `paired` is still strictly more
+> powerful than unpaired for every other shape of gain, which is why it is the default.
+
+**Unpaired (`significant`).** When the two sides were *not* scored on the same tasks,
+the two means are independent estimates, so the SE of their difference is the
+root-sum-of-squares of their SEs:
 
 ```
 SE_diff = sqrt(SE_candidate^2 + SE_current^2)
+accept  ⟺  Δ = candidate − current > k · SE_diff
 ```
 
-Accept iff `Δ = candidate − current > k · SE_diff`. This is the
-textual-optimization analogue of a two-sample significance test: `k` is how many
-standard errors of the difference the gap must clear.
+Each `SE` here is a `combined_stderr` over *absolute* per-task scores, so it carries
+the full between-task spread — on the same data typically a few times larger than the
+paired SE, which is exactly the power that pairing recovers.
+
+Either way `k` is how many standard errors of the difference the gap must clear — the
+textual-optimization analogue of a two-sample significance test.
 
 - **k = 1** (default): ~1σ — lenient; lets through gains that are *probably* real
   but lets some noise slip. Good early, when you want momentum.
@@ -37,9 +67,17 @@ scores is only meaningful if it survives a significance test (he uses bootstrap
 resampling). The `significant` gate enforces the same idea online, per iteration.
 
 **The SE must be real.** With one trial per task the within-task SE is 0, so
-`SE_diff` can collapse and `k·SE` → 0, silently turning `significant` into
-`strict`. Run multiple trials (see the `evaluate` reference) before trusting the
-significance gate.
+`SE_diff` can collapse and `k·SE` → 0. The gate does *not* silently become `strict`
+when that happens: it logs a `gate_warning` event and applies the documented strict
+fallback (`Δ > 0`), tagging the decision `reason` with
+`SE=0 → STRICT fallback, warned`. Run multiple trials (see the `evaluate` reference)
+before trusting the significance gate. `paired` hits this only at `n=1` shared tasks
+or when every task moved identically.
+
+**Small-sample caveat (current behavior).** The bar is a fixed `k · SE` — a z-style
+critical value with no t-correction and no minimum-val-size guard — so it is
+optimistic on tiny val splits, where a couple of lucky per-task deltas can clear it.
+Prefer a val split large enough that between-task spread is meaningful.
 
 ## No-regression: the second gate
 
@@ -71,12 +109,19 @@ mean can quietly trade away reliability.
 
 ## Modes, briefly
 
-| mode                  | rule                              | when                                  |
-|-----------------------|-----------------------------------|---------------------------------------|
-| `significant`         | Δ > k·SE                          | default; any stochastic scorer        |
-| `strict`              | Δ > 0                             | only near-zero-variance scorers       |
-| `threshold`           | Δ > T                             | you have a domain "minimum worth it"  |
-| `simplicity_tiebreak` | Δ > 0, else prefer smaller on tie | bias against edits that bloat for free |
+| mode                  | rule                                   | when                                  |
+|-----------------------|----------------------------------------|---------------------------------------|
+| **`paired`**          | mean(per-task Δ) > k·SE(Δ), same tasks  | **the default**; most powerful test    |
+| `significant`         | Δ(means) > k·sqrt(SE_c²+SE_p²)          | unpaired comparisons; weaker           |
+| `threshold`           | Δ > T                                  | you have a domain "minimum worth it" (T defaults to 0.0 = `strict`) |
+| `strict`              | Δ > 0                                  | only near-zero-variance scorers       |
+| `simplicity_tiebreak` | Δ > 0, else prefer smaller on tie      | ⚠️ needs `candidate_size`/`current_size`, which the harness never sets — **`strict` today** ([#206](https://github.com/skillberry-ai/cap-evolve/issues/206)) |
+
+`gate.decide`'s `mode=` parameter defaults to `significant` because a bare caller has
+no per-task data to pair; the harness passes `paired_deltas` and selects `paired`
+itself, and `paired` falls back to `significant` when no deltas are supplied — which
+is announced: the `reason` is prefixed `paired→significant (no per-task deltas):` and
+a `gate_warning` event is logged when a `run_dir` is available.
 
 ## Sources
 - Koehn, "Statistical Significance Tests for Machine Translation Evaluation"
