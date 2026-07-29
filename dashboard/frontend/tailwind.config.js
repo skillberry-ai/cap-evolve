@@ -19,8 +19,15 @@ export default {
         seed: 'var(--seed)',
       },
       fontFamily: {
-        sans: ['"Fira Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['"Fira Code"', 'ui-monospace', 'monospace'],
+        // No webfont: system stacks only, so the SPA renders offline/air-gapped.
+        sans: [
+          'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto',
+          '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif',
+        ],
+        mono: [
+          'ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas',
+          '"Liberation Mono"', 'monospace',
+        ],
       },
       fontVariantNumeric: ['tabular-nums'],
       boxShadow: {

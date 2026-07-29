@@ -243,3 +243,34 @@ def test_no_target_profile_event_leaves_summary_none():
         r = dashboard.reduce_run(rd)
         assert r["summary"]["target_profile"] is None
         assert "consuming model" not in dashboard.render_ansi(r, color=False)
+
+
+# ---- SPA + shipped bundles: offline/air-gapped (no CDN) -------------------
+
+def test_shipped_spa_bundles_have_no_external_cdn_reference():
+    """The self-contained dashboard.html is guarded above; the React SPA and the
+    committed prebuilt bundles served at runtime need the same guarantee, or the
+    "zero runtime deps / offline" story silently breaks in air-gapped evals.
+    Regression guard for issue #120 (a CDN webfont @import in index.css).
+    """
+    targets = [
+        REPO / "dashboard" / "frontend" / "src",
+        REPO / "dashboard" / "frontend" / "dist",
+        REPO / "dashboard" / "frontend" / "index.html",
+        REPO / "skills" / "algorithms" / "evograph" / "dashboard" / "frontend" / "dist",
+        REPO / "examples" / "tau2_airline" / "run_full" / "ui",
+    ]
+    # Hosts that would be fetched at runtime by the shipped UI.
+    banned = ("fonts.googleapis.com", "fonts.gstatic.com", "cdn.jsdelivr.net",
+              "unpkg.com", "cdnjs.cloudflare.com")
+    exts = {".css", ".js", ".jsx", ".ts", ".tsx", ".html"}
+    checked = 0
+    for t in targets:
+        files = [t] if t.is_file() else sorted(
+            p for p in t.rglob("*") if p.is_file() and p.suffix in exts)
+        for p in files:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            checked += 1
+            for host in banned:
+                assert host not in text, f"{p.relative_to(REPO)} references CDN {host}"
+    assert checked > 0, "found no SPA files to check — did the paths move?"
