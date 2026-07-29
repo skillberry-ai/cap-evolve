@@ -22,12 +22,13 @@ import hashlib
 import json
 from pathlib import Path
 
+from .rundir import SCRATCH_NAMES
+
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache.
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
-                 "REFLECTION.md",
-                 # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# ``rundir.SCRATCH_NAMES`` is the shared definition (see the note there); INSTRUCTIONS
+# and PROCESS are added because they ARE snapshotted but still are not capability bytes.
+_IGNORE_NAMES = {"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES)
 _IGNORE_DIRS = {".git", "__pycache__", "prior_iterations"}
 
 

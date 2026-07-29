@@ -26,6 +26,29 @@ from pathlib import Path
 
 from .splits import Splits
 
+# Framework/optimizer SCRATCH files the harness or an algorithm writes into the
+# optimizer's workdir. They are not capability content, so they must be excluded
+# everywhere a candidate is treated as "the capability": the candidate snapshot
+# (``harness._SNAPSHOT_IGNORE``), the eval-cache content hash
+# (``cache._IGNORE_NAMES``), GEPA's editable-component list (``gepa._NON_COMPONENT``)
+# and the edit-size count (``skillopt._changed_files``). This list lives HERE — at the
+# bottom of the import graph — because it had been copy-pasted into four modules and
+# they desynced: FOCUS.md/REFLECTION.md (GEPA's own scratch) were in the cache and
+# component lists but missing from the snapshot list, so GEPA snapshots stayed dirty
+# (#110) even after LEDGER/JOURNAL/RUNMAP were excluded. One definition, four consumers.
+#
+# NOT here: INSTRUCTIONS.md and PROCESS.md. Those are deliberately KEPT in the snapshot
+# (PROCESS.md is the candidate's explainability record) and filtered at DIFF time only —
+# see ``dashboard._DIFF_SKIP`` / ``harness._CAP_DIFF_SKIP``.
+SCRATCH_NAMES = (
+    # cross-iteration state the harness regenerates every iteration
+    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
+    # per-iteration algorithm scratch (GEPA's reflective dataset + component focus)
+    "FOCUS.md", "REFLECTION.md",
+    # optimizer rejected-edit memory, and the legacy MEMORY/STATE pair it replaced
+    "REJECTED.md", "MEMORY.md", "STATE.md",
+)
+
 
 def _atomic_write(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically (tmp file + ``os.replace``).

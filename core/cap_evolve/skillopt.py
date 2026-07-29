@@ -51,7 +51,7 @@ from pathlib import Path
 from . import harness
 from .lr_schedule import build_schedule
 from .loop import SplitResult
-from .rundir import RunDir
+from .rundir import SCRATCH_NAMES, RunDir
 
 # Buffer bounds (PITFALL: the rejected-edit buffer must be reset + bounded per
 # epoch so the optimizer prompt does not balloon).
@@ -384,6 +384,11 @@ def skillopt_loop(
     }
 
 
+# Harness-injected scaffolding that must not count as an applied edit.
+# ``rundir.SCRATCH_NAMES`` is the shared definition (see the note there).
+_SCAFFOLDING = frozenset({"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES))
+
+
 def _changed_components(parent_dir: Path, workdir: Path) -> int:
     """Best-effort count of files whose content differs between parent and the
     optimized workdir — a proxy for *applied* edits to compare against the
@@ -398,8 +403,7 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
                 continue
             rel = f.relative_to(workdir)
             # ignore harness-injected scaffolding files
-            if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+            if rel.name in _SCAFFOLDING:
                 continue
             seen.add(rel)
             pf = parent_dir / rel
@@ -408,8 +412,7 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
         for f in parent_dir.rglob("*"):
             if f.is_file() and ".git" not in f.parts:
                 rel = f.relative_to(parent_dir)
-                if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+                if rel.name in _SCAFFOLDING:
                     continue
                 if rel not in seen:
                     changed += 1  # a deletion

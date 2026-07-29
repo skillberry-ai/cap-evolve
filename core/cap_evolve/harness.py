@@ -25,7 +25,7 @@ from typing import Callable
 
 from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir, _atomic_write
+from .rundir import SCRATCH_NAMES, RunDir, _atomic_write
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -1586,9 +1586,8 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
 _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
-                    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                     ".claude", ".agents", ".gemini", ".opencode", ".bob",
-                    "CLAUDE.md", "AGENTS.md", "GEMINI.md")
+                    "CLAUDE.md", "AGENTS.md", "GEMINI.md") + SCRATCH_NAMES
 
 
 def _failures_block(always_fail, flaky, errored) -> str:

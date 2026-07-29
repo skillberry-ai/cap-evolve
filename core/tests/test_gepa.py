@@ -274,3 +274,59 @@ def test_merge_skips_gracefully_monolith(tmp_path):
         if "merge_of" in s:
             assert "accepted" in s and "local_gate" in s
     assert res["best_val"] == 1.0
+
+
+# ---- #110: candidate snapshots must be clean, identically for every algorithm ----
+
+def test_scratch_ignores_are_one_shared_definition():
+    """FAILS BEFORE THE FIX: the scratch-file list was copy-pasted into four modules
+    and desynced — FOCUS.md/REFLECTION.md were in the cache + component lists but
+    MISSING from harness._SNAPSHOT_IGNORE, so GEPA snapshots stayed dirty (#110).
+    Pin that all four consumers derive from rundir.SCRATCH_NAMES."""
+    from cap_evolve import cache, gepa, harness, skillopt
+    from cap_evolve.rundir import SCRATCH_NAMES
+    scratch = set(SCRATCH_NAMES)
+    assert {"FOCUS.md", "REFLECTION.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md"} <= scratch
+    for name, have in (("_SNAPSHOT_IGNORE", set(harness._SNAPSHOT_IGNORE)),
+                       ("cache._IGNORE_NAMES", cache._IGNORE_NAMES),
+                       ("gepa._NON_COMPONENT", gepa._NON_COMPONENT),
+                       ("skillopt._SCAFFOLDING", set(skillopt._SCAFFOLDING))):
+        assert scratch <= have, f"{name} is missing {sorted(scratch - have)}"
+    # PROCESS.md is deliberately snapshotted (explainability), so it is NOT scratch.
+    assert "PROCESS.md" not in scratch
+    assert "PROCESS.md" not in set(harness._SNAPSHOT_IGNORE)
+
+
+@pytest.mark.parametrize("algo", ["gepa", "hill-climb"])
+def test_candidate_snapshots_are_clean_for_every_algorithm(tmp_path, algo):
+    """FAILS BEFORE THE FIX for algo='gepa': both gepa.py snapshot calls omitted
+    ``ignore=``, so FOCUS.md / REFLECTION.md / LEDGER.md / JOURNAL.md / RUNMAP.md and
+    prior_iterations/ landed in every candidate, bloating candidates/ and polluting the
+    dashboard diff. Hill-climb was already clean — this pins that they now AGREE."""
+    from cap_evolve import gepa, harness
+    adapter, run_dir, base = _setup(tmp_path, f"sn_{algo[:2]}", max_iterations=4,
+                                   max_metric_calls=2000)
+    optimizer = harness.optimizer_from_command(
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}",
+         "--prompt", "{prompt}"])
+    if algo == "gepa":
+        gepa.gepa_loop(adapter, run_dir=run_dir, optimizer=optimizer, seed_val=base,
+                       max_metric_calls=1500, max_iterations=3, minibatch_size=3,
+                       max_merges=0, seed=0,
+                       gate_kwargs={"mode": "significant", "k_se": 1.0})
+    else:
+        harness.hill_climb_loop(adapter, run_dir=run_dir, optimizer=optimizer,
+                                current_val=base, max_iterations=3, focus="all",
+                                gate_kwargs={"mode": "significant", "k_se": 1.0})
+
+    cands = [d for d in run_dir.candidates.iterdir() if d.is_dir() and d.name != "seed"]
+    assert cands, f"{algo} produced no candidate snapshot to inspect"
+    dirty = {d.name: sorted(str(p.relative_to(d)) for p in d.rglob("*")
+                            if p.name in set(harness._SNAPSHOT_IGNORE)
+                            or p.parts[len(d.parts)] in set(harness._SNAPSHOT_IGNORE))
+             for d in cands}
+    assert not any(dirty.values()), f"{algo} snapshots carry scratch: {dirty}"
+    # …and only the capability + the two deliberately-kept explainability files remain.
+    for d in cands:
+        got = sorted(str(p.relative_to(d)) for p in d.rglob("*") if p.is_file())
+        assert got == ["INSTRUCTIONS.md", "PROCESS.md", "prompt.txt"], f"{d.name}: {got}"
