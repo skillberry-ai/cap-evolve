@@ -18,6 +18,16 @@ optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap pas
 #   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
 #   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
 
+# --- provider / credentials -------------------------------------------------
+# Which provider's credential this run may use. Credentials are PROVIDER-SCOPED: a key
+# for provider A is never applied to provider B (cap-evolve errors instead). Leave empty
+# to infer from optimizer_skill; set "auto" to pick the provider that actually has a
+# credential set (add --probe-provider to also require its endpoint answers).
+# Precedence: CLI flag > this file > ~/.capevolve/config.yaml > built-in default.
+provider: ""                             # anthropic | openai | gemini | rits | watsonx | mock | auto | ""
+provider_base_url: ""                    # override the base URL (else the provider's *_BASE_URL env, else built-in)
+provider_credential_env: ""              # env var NAME holding the key (must belong to `provider`); NEVER paste a key here
+
 # --- consuming (runtime) LLM the capabilities are optimized FOR --------------
 # The model the AGENT UNDER TEST reads these capabilities with at runtime — DISTINCT
 # from optimizer_model (which PROPOSES edits). May be a concrete model id (resolved to a

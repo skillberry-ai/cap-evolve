@@ -127,6 +127,17 @@ def _cmd_run(argv):
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
+    # Provider/credential flags — the TOP precedence layer (see model_config.PRECEDENCE).
+    p.add_argument("--provider", default=None,
+                   help="provider whose credential to use (e.g. anthropic|openai|gemini|rits|"
+                        "watsonx|mock), or 'auto' to pick the one that actually has a credential")
+    p.add_argument("--provider-base-url", default=None, help="override the provider's base URL")
+    p.add_argument("--provider-credential-env", default=None,
+                   help="env var NAME holding the credential (must belong to the selected "
+                        "provider; cross-provider names are refused)")
+    p.add_argument("--probe-provider", action="store_true",
+                   help="with --provider auto: also probe each candidate's OWN endpoint with "
+                        "its OWN credential before selecting it")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
@@ -229,8 +240,25 @@ def _cmd_run(argv):
     else:
         sequence = ["intake", "implement-and-check", "baseline", algorithm_name, "finalize", "report"]
 
+    # Provider/credential resolution — decided BEFORE anything is spent. The precedence
+    # (CLI > project spec > user config > built-in) and the provider-scoping rule live in
+    # model_config; here we only surface its secret-free report. `mock`/offline optimizers
+    # need no credential, so a credential is required only when a provider is named.
+    from . import model_config as _mc
+    _cli_layer = {k: v for k, v in (("provider", args.provider),
+                                    ("base_url", args.provider_base_url),
+                                    ("credential_env", args.provider_credential_env)) if v}
+    try:
+        _provider = _mc.resolve(
+            cli=_cli_layer, project=spec,
+            require_credential=bool(_cli_layer.get("provider") or spec.get("provider")),
+            probe_fn=_mc.probe if args.probe_provider else None).to_dict()
+    except _mc.CredentialError as e:
+        _provider = {"error": str(e)}      # message names env VARS, never values
+
     if args.plan_only:
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
+                          "provider": _provider,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
                           "target_model": spec.get("target_model", ""),
@@ -244,6 +272,10 @@ def _cmd_run(argv):
                                      "optimizer_max_turns": spec.get("optimizer_max_turns", 0)},
                           "sequence": sequence}, indent=2))
         return 0
+
+    print(json.dumps({"step": "provider", **_provider}))
+    if "error" in _provider:
+        return 1
 
     # Hard gate: cap-evolve check must pass before any budget is spent (intake is the
     # user's job before `run`; here we enforce the check half of implement-and-check).

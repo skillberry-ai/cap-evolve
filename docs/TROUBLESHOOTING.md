@@ -39,6 +39,19 @@ logged-in Claude Code session or `ANTHROPIC_API_KEY`) and the runner model crede
 repo-root `.env` (`OPENAI_API_KEY`, `RITS_API_KEY` + `RITS_API_URL`, `WATSONX_*`, or an
 `ANTHROPIC_BASE_URL` gateway). See [`INSTALL.md`](INSTALL.md#credentials-only-for-real-runs).
 
+**`no credential found for provider 'X'`** — credentials are **provider-scoped**: a key for
+one provider is never reused for another. The error names the env vars provider X accepts;
+set one of those, or select the provider you actually have a key for (`--provider Y`), or
+let cap-evolve choose with `--provider auto` (add `--probe-provider` to also check the
+endpoint answers). Precedence is
+`CLI flag > capevolve.yaml > ~/.capevolve/config.yaml > built-in` — see
+[`INSTALL.md`](INSTALL.md#resolution-order-provider--credentials). cap-evolve reports
+credential *presence* only and never prints a value.
+
+**`provider_credential_env=... belongs to provider ...`** — you pointed the selected
+provider at another provider's env var. `provider_credential_env` must name a var listed
+for that provider in the table in `INSTALL.md`; it is a var **name**, never a pasted key.
+
 **RITS calls fail** — set both `RITS_API_KEY` and `RITS_API_URL`; the tau2 example passes
 them per-call (no litellm monkeypatch, no tau2 fork). Check your endpoint and concurrency
 knob (`TAU2_MAX_CONCURRENCY`).
