@@ -243,7 +243,7 @@ you want intake to ask):
       </div>
       <div class="step">
         <h3>Set <code>capevolve.yaml</code></h3>
-        <p>Swapping the optimizer is one word — one runner (<code>run-optimizer</code>) resolves the name via <code>skills/optimizers/registry.yaml</code>:</p>
+        <p>Swapping the optimizer is one word — one runner (<code>run-optimizer</code>) resolves the name via <code>skills/optimizers/registry.yaml</code>. Before you swap, check the backend's verification level in <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/HOST_SUPPORT.md">Host support</a>: only <code>claude-code</code> and <code>mock</code> are executed in CI; the rest are documented-but-unrun or best-guess.</p>
 <pre><code>capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
 optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
 algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt

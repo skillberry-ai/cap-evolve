@@ -50,6 +50,11 @@ Then point the agent at [`../RUN.md`](../RUN.md) (or just say "optimize X" — t
 
 ### B. Another coding-agent host (Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, bare)
 
+> **Check the host's status first: [`HOST_SUPPORT.md`](HOST_SUPPORT.md).** Only
+> `claude-code` and `mock` are executed in CI (✅). Other hosts are documented from vendor
+> docs but never run here (🟡), or have a **best-guess** skill-dir mapping (➖) — for a ➖
+> host, pass `--dest` (or set `$CAPEVOLVE_SKILLS_DIR`) instead of trusting the guess.
+
 `install.sh` copies the skills into your host's skills directory and rebuilds the registry
 manifest — it does **not** install the Python package (do that separately):
 
@@ -62,7 +67,8 @@ pip install ./core           # or: export CAPEVOLVE_CORE="$PWD/core"
 ```
 
 Destination precedence: `$CAPEVOLVE_SKILLS_DIR` > `--host` mapping > `./.claude/skills` >
-`~/.claude/skills` > `~/.capevolve/skills`.
+`~/.claude/skills` > `~/.capevolve/skills`. The per-host destination table, with which
+mappings are verified vs best-guess, is in [`HOST_SUPPORT.md`](HOST_SUPPORT.md).
 
 ### C. Manual adapter + CLI (any language/agent)
 

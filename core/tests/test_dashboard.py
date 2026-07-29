@@ -5,6 +5,7 @@ redacted before they reach the artifact, and optional panels degrade silently.
 
 import html.parser
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -177,6 +178,14 @@ def test_render_html_self_contained_and_parseable():
         for panel in ("Summary", "Score over iterations", "Per-task pass/fail",
                       "Lineage", "Candidates", "Annotations"):
             assert panel in text, f"missing panel: {panel}"
+        # Regression: `ParentNode.append()` returns undefined, so
+        # `el.append(svg(...)).textContent = x` throws a TypeError that kills every
+        # chart on the page while leaving the panel <h2> titles asserted above
+        # intact. Labelled SVG text must go through the svg() helper's `text:`
+        # pseudo-attribute instead. See issue #126.
+        assert ".append(svg(" in text, "svg() helper no longer used"
+        assert not re.search(r"\.append\(svg\(.*\)\)\s*\.\s*\w", text), \
+            "chaining off .append(svg(...)) throws: append() returns undefined"
 
 
 def test_dashboard_degrades_without_rollouts_or_finalize():
