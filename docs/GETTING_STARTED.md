@@ -56,8 +56,8 @@ cap-evolve run --spec .capevolve/project/capevolve.yaml --follow
 ```text
 [14:02:11] splits frozen  train=4 val=2 test=2 (test sealed)
 [14:02:12] baseline  val=0.0000 ±0.0000
-[14:02:40] ACCEPT  cand_0001  val=1.0000 (parent 0.0000)  — paired Δ̄=+1.0000 > 0  [$0.1240 · 8.3k tok]
-[14:03:05] reject  cand_0002  val=1.0000 (parent 1.0000)  — paired Δ̄=+0.0000 <= 0  [$0.2480 · 16.1k tok]
+[14:02:40] ACCEPT  cand_0001  val=1.0000 (parent 0.0000)  — paired Δ̄=+1.0000 > 0  [$0.0620 · 4.1k tok]
+[14:03:05] reject  cand_0002  val=1.0000 (parent 1.0000)  — paired Δ̄=+0.0000 <= 0  [$0.1240 · 8.3k tok]
 [14:03:31] FINALIZE  test=1.0000 (baseline 0.0000, Δ+1.0000)  best=cand_0001
 ```
 
@@ -73,7 +73,14 @@ cap-evolve tail                                    # newest run under .capevolve
 cap-evolve tail .capevolve/run_20260130_140211 --from-start
 ```
 
-`tail` waits for the run dir to appear, so you can attach before the run creates it.
+`tail` waits for the run dir to appear, so you can attach before the run creates it. It
+exits `0` when the run finishes, `2` on a path that can never be a run dir, and `3` when
+`--idle-timeout` elapses with no events — so a script can tell a timeout from a result.
+
+The `[$… · … tok]` meter is the run's own recorded spend: runner cost from `evaluate`
+events plus optimizer cost from `step` events, matching `Spent.total_usd` in `state.json`.
+Event text is stripped of control characters before it reaches your terminal, so an
+optimizer's stderr can never move the cursor, clear the screen, or forge a progress line.
 
 ## 5. Where to next
 
