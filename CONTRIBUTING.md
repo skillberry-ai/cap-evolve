@@ -31,6 +31,20 @@ See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
   to stdout (the contract), and must not depend on a specific agent host.
 - **Zero runtime deps in core.** Optional features go behind extras.
 - Add a test for any core change (`core/tests/`). Run `python -m compileall core skills`.
+- **Editing `site/*.html`? The `<head>`, nav and footer are generated.** They sit
+  between `<!-- chrome:*:start -->` / `<!-- chrome:*:end -->` sentinels; edit
+  `scripts/sync-site-chrome.py` instead, then:
+
+  ```bash
+  scripts/sync-site-chrome.py           # rewrites site/*.html in place — commit the result
+  scripts/sync-site-chrome.py --check   # what CI runs; fails the PR on drift
+  ```
+
+  Body content inside `<main>` is still hand-edited. Note that changing
+  `style.css` or `js/site.js` shifts their `?v=` content hash, so a re-sync is
+  needed after that too — and after any merge that touched these files. A new
+  page must be registered in `PAGES` or `--check` fails. See
+  [site/README.md](site/README.md).
 
 ## Quality bar for skills
 - SKILL.md body under ~500 lines (it is the primary doc); references one level deep with a TOC if long, and only when filled.
