@@ -204,9 +204,15 @@ def _cmd_run(argv):
     # auxiliary step is pure Python today), so adding a flag nobody reads would be
     # dead plumbing. An LLM-backed aux step (#128/#129) reads CAPEVOLVE_AUX_MODEL and
     # reports its spend via RunDir.update_spent(aux_usd=...) to stay separately priced.
-    aux_model = _model_for_tier(spec, "aux")
+    # Set ONLY for a genuinely tiered spec, and cleared otherwise: a single-model spec
+    # has no cheap tier to announce, and leaving a stale id behind would hand the next
+    # in-process run (sequential `orchestrate` runs, a test suite) the PREVIOUS spec's
+    # aux model. Absent env == "no cheap tier; use the proposer/backend default".
+    aux_model = _model_for_tier(spec, "aux") if _is_tiered(spec) else ""
     if aux_model:
         os.environ["CAPEVOLVE_AUX_MODEL"] = aux_model
+    else:
+        os.environ.pop("CAPEVOLVE_AUX_MODEL", None)
     # Per-iteration optimizer cap: run-optimizer maps --budget to the registry row's
     # budget_flag_template (e.g. claude-code → --max-turns N), bounding each step's cost.
     if spec.get("optimizer_max_turns"):
@@ -616,7 +622,13 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
             runner_usd = metric_calls * pr
             source = source or "bundled price table (approximate)"
     if opt_usd is None:
-        po = _pricing.call_cost(opt_model, "optimizer")
+        # Priced through the TIER seam, not raw call_cost: the estimate must state which
+        # model TIER it is pricing. `tier_call_cost(m, "proposer")` is behaviour-identical
+        # to `call_cost(m, "optimizer")` (TIER_ROLE["proposer"] == "optimizer") but makes
+        # a mis-tiered estimate impossible to write by accident — pricing this call as
+        # "aux" would visibly change the number instead of silently reusing the proposer's
+        # token profile.
+        po = _pricing.tier_call_cost(opt_model, "proposer")
         if po is not None:
             opt_usd = opt_calls * po
             source = source or "bundled price table (approximate)"

@@ -15,7 +15,10 @@ What these tests pin down:
      ``run-optimizer``, not just on the parsed config), and the cheap ``aux_model``
      never appears on the proposal path.
   3. COST ACCOUNTING — per-tier spend stays separately attributed, so a cheap aux
-     call can never be reported at the strong model's rate.
+     call can never be reported at the strong model's rate, and the estimator prices
+     the proposal THROUGH the tier seam so a mis-tier changes a visible number.
+  4. NO ENV LEAK — CAPEVOLVE_AUX_MODEL is exported only for a genuinely tiered spec
+     and cleared otherwise, so it cannot leak stale across in-process runs.
 """
 
 import json
@@ -35,6 +38,9 @@ from cap_evolve.specfile import TIERS, is_tiered, model_for_tier  # noqa: E402
 
 STRONG = "claude-opus-4-8"
 CHEAP = "claude-haiku-4-5"
+# Sentinel pre-seeded into CAPEVOLVE_AUX_MODEL so "unset after the run" proves the run
+# actively CLEARED a leftover value, rather than merely never setting one.
+STALE = "stale-model-from-a-previous-run"
 
 
 # ---- 1. tier resolution ----------------------------------------------------
@@ -82,6 +88,12 @@ def _plan(tmp_path, spec_extra: dict) -> dict:
     --plan-only builds the REAL optimizer command that would be handed to the
     algorithm (and thus to ``run-optimizer``) without spending anything, so
     asserting on ``optimizer_cmd`` asserts on true routing, not on config parsing.
+
+    The returned dict carries an extra ``aux_env`` key: the value of
+    ``CAPEVOLVE_AUX_MODEL`` as observed INSIDE the run (``None`` when unset), so tests
+    can assert on the env channel even though this helper restores the environment.
+    The env is pre-seeded with a STALE sentinel first, so "unset" in a result means the
+    run actively cleared a leftover value — not merely that nothing set one.
     """
     proj = tmp_path / ".capevolve" / "project"
     proj.mkdir(parents=True)
@@ -91,8 +103,7 @@ def _plan(tmp_path, spec_extra: dict) -> dict:
     (proj / "capevolve.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     old = dict(os.environ)
     os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
-    # --plan-only must not leak tier state between cases via the aux env channel.
-    os.environ.pop("CAPEVOLVE_AUX_MODEL", None)
+    os.environ["CAPEVOLVE_AUX_MODEL"] = STALE
     import io
     import contextlib
     buf = io.StringIO()
@@ -101,7 +112,9 @@ def _plan(tmp_path, spec_extra: dict) -> dict:
             rc = cli._cmd_run(["--spec", str(proj / "capevolve.yaml"), "--project",
                                str(proj), "--plan-only", "--dashboard", "off"])
         assert rc == 0, buf.getvalue()
-        return json.loads(buf.getvalue())
+        plan = json.loads(buf.getvalue())
+        plan["aux_env"] = os.environ.get("CAPEVOLVE_AUX_MODEL")
+        return plan
     finally:
         os.environ.clear()
         os.environ.update(old)
@@ -144,8 +157,13 @@ def test_proposer_model_key_routes_the_proposal(tmp_path):
 
 
 def test_aux_model_reaches_subprocesses_via_env(tmp_path):
-    """The cheap tier travels by env (no core call site spends it yet). An
-    LLM-backed aux step reads CAPEVOLVE_AUX_MODEL rather than re-parsing the spec."""
+    """The cheap tier travels by env (no core call site spends it yet). An LLM-backed
+    aux step reads CAPEVOLVE_AUX_MODEL rather than re-parsing the spec.
+
+    Asserts the name literally: a REAL child process spawned after the run reads the
+    cheap model id out of its inherited environment.
+    """
+    import subprocess
     proj = tmp_path / ".capevolve" / "project"
     proj.mkdir(parents=True)
     (proj / "capevolve.yaml").write_text(
@@ -162,17 +180,36 @@ def test_aux_model_reaches_subprocesses_via_env(tmp_path):
             cli._cmd_run(["--spec", str(proj / "capevolve.yaml"), "--project",
                           str(proj), "--plan-only", "--dashboard", "off"])
         assert os.environ.get("CAPEVOLVE_AUX_MODEL") == CHEAP
+        # ...and a child process (where a real aux step would run) inherits it.
+        child = subprocess.run(
+            [sys.executable, "-c",
+             "import os; print(os.environ.get('CAPEVOLVE_AUX_MODEL', ''))"],
+            capture_output=True, text=True, check=True)
+        assert child.stdout.strip() == CHEAP, child.stdout
     finally:
         os.environ.clear()
         os.environ.update(old)
 
 
 def test_single_model_spec_sets_no_aux_env(tmp_path):
-    """Backward compat: a single-model spec must not start exporting a new env var
-    with a *different* meaning — but it may export the same one model harmlessly."""
+    """Backward compat: a single-model spec has no cheap tier, so it must NOT export
+    CAPEVOLVE_AUX_MODEL — and must clear a value a previous run left behind."""
     plan = _plan(tmp_path, {"optimizer_model": STRONG})
     # the aux tier is the same model, so nothing is "tiered" and nothing is logged
     assert plan["model_tiers"]["aux"] == plan["model_tiers"]["proposer"]
+    # THE NAMED BEHAVIOR: no aux env, and the pre-seeded stale value is gone.
+    assert plan["aux_env"] is None, plan["aux_env"]
+
+
+def test_untiered_run_clears_a_stale_aux_env_from_an_earlier_run(tmp_path):
+    """The env channel must not leak ACROSS in-process runs. A tiered run exports the
+    cheap model; a later untiered run in the same process must clear it, not inherit
+    it — otherwise a future aux step spends the previous spec's model."""
+    tiered = _plan(tmp_path / "a", {"optimizer_model": STRONG, "aux_model": CHEAP})
+    assert tiered["aux_env"] == CHEAP
+    # same process, different spec: no aux tier at all
+    assert _plan(tmp_path / "b", {"optimizer_model": STRONG})["aux_env"] is None
+    assert _plan(tmp_path / "c", {})["aux_env"] is None
 
 
 # ---- 3. COST ACCOUNTING: per-tier attribution stays honest -----------------
@@ -258,6 +295,27 @@ def test_estimate_prices_proposal_with_the_proposer_tier(tmp_path):
     assert a["spec_summary"]["tiered"] is False
     assert b["spec_summary"]["proposer_model"] == STRONG
     assert b["spec_summary"]["aux_model"] == CHEAP
+
+
+def test_estimator_prices_the_proposal_THROUGH_the_tier_seam(tmp_path, monkeypatch):
+    """The mis-pricing guard must be LIVE in production, not just unit-tested.
+
+    ``_estimate_core`` must reach the price table via ``tier_call_cost(m, "proposer")``,
+    so the tier a call is priced as is named at the call site. Proven two ways: the
+    seam is actually invoked (a sentinel patched over it changes the estimate), and it
+    is invoked with the PROPOSER tier (the aux profile would give a different number).
+    """
+    spec = {"num_trials": 1, "max_iterations": 4, "optimizer_model": STRONG}
+    seen: list[tuple[str | None, str]] = []
+    real = pricing.tier_call_cost
+    monkeypatch.setattr(pricing, "tier_call_cost",
+                        lambda m, t: (seen.append((m, t)), real(m, t))[1])
+    out = cli._estimate_core(spec, tmp_path)
+    assert (STRONG, "proposer") in seen, seen           # seam is on the live path
+    assert not any(t == "aux" for _, t in seen), seen   # priced as the proposer tier
+    assert out["cost_usd"]["optimizer_usd"] == round(4 * real(STRONG, "proposer"), 4)
+    # and a mis-tier would be VISIBLE, not silent: the aux profile prices differently.
+    assert real(STRONG, "aux") != real(STRONG, "proposer")
 
 
 def test_estimate_single_model_is_byte_identical_to_pre_tiering(tmp_path):

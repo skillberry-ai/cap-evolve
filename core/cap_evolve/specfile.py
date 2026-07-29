@@ -147,6 +147,10 @@ def is_tiered(spec: dict) -> bool:
 
     Used to decide whether per-tier cost accounting needs to split spend at all; a
     single-model spec keeps one undivided ``optimizer_usd`` figure as before.
+
+    A BLANK tier counts as "different": a spec setting only ``proposer_model`` is
+    tiered, because the aux tier's ``""`` resolves to the backend's own default, which
+    genuinely may be a different model than the named proposer.
     """
     return model_for_tier(spec, "aux") != model_for_tier(spec, "proposer")
 

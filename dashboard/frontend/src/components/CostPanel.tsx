@@ -7,29 +7,37 @@ import { easeEnter, fadeUpItem, staggerContainer } from '../lib/motion'
 import { Card } from './ui/Card'
 import { cn } from '../lib/cn'
 
-const ROLES = [
+const BASE_ROLES = [
   { key: 'intake', label: 'Intake', color: 'var(--seed)' },
   { key: 'optimizer', label: 'Optimizer', color: 'var(--accent)' },
   { key: 'runner', label: 'Runner', color: 'var(--accepted)' },
 ] as const
+// Model tiering (#132): the cheap AUX tier is a fourth spending role. It is part of
+// `total_usd`, so it MUST be a bar too — otherwise the chart's bars sum to less than
+// the total printed right above them. Shown only when it actually spent, so an
+// untiered run's panel is byte-identical to pre-tiering.
+const AUX_ROLE = { key: 'aux', label: 'Aux', color: 'var(--muted)' } as const
 
-/** Cost, tokens, and latency split across the three agent roles, plus budget meters
+/** Cost, tokens, and latency split across the agent roles, plus budget meters
  * that turn amber as soft warnings fire. The optimizer column is real once the loop
  * captures the agent CLI's reported cost. */
 export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
   const cost = summary.cost
   const tok = summary.tokens_by_role
-  const secs = {
+  const secs: Record<string, number> = {
     intake: summary.intake_seconds ?? 0,
     optimizer: summary.optimizer_seconds ?? 0,
     runner: summary.runner_seconds ?? 0,
+    aux: 0, // no aux wall-clock bucket yet (no LLM aux step spends one)
   }
   const usdByRole: Record<string, number> = {
     intake: cost?.intake_usd ?? 0,
     optimizer: cost?.optimizer_usd ?? 0,
     runner: cost?.runner_usd ?? 0,
+    aux: cost?.aux_usd ?? 0,
   }
-  const chartData = ROLES.map((r) => ({ ...r, usd: usdByRole[r.key] }))
+  const roles = usdByRole.aux > 0 ? [...BASE_ROLES, AUX_ROLE] : BASE_ROLES
+  const chartData = roles.map((r) => ({ ...r, usd: usdByRole[r.key] }))
   const total = cost?.total_usd ?? 0
 
   return (
@@ -47,7 +55,7 @@ export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
             </span>
           </div>
           {total > 0 ? (
-            <div style={{ width: '100%', height: 130 }}>
+            <div style={{ width: '100%', height: roles.length > 3 ? 170 : 130 }}>
               <ResponsiveContainer>
                 <BarChart layout="vertical" data={chartData} margin={{ top: 0, right: 16, bottom: 0, left: 8 }}>
                   <XAxis type="number" stroke="var(--muted)" tick={{ fontSize: 11 }} tickFormatter={(v) => usd(v)} />
@@ -71,8 +79,9 @@ export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
               (run with the cost path on).
             </p>
           )}
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            {ROLES.map((r) => (
+          <div className={cn('mt-3 grid gap-2 text-center',
+            roles.length > 3 ? 'grid-cols-4' : 'grid-cols-3')}>
+            {roles.map((r) => (
               <div key={r.key} className="rounded bg-surface-2 px-2 py-2">
                 <div className="flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
                   <span className="inline-block h-2 w-2 rounded-full" style={{ background: r.color }} />

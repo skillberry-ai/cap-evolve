@@ -54,6 +54,11 @@ ASSUMED_TOKENS = {
     # a proposal, so pricing aux with the optimizer's token counts would overstate it
     # even on the correct model. ``optimizer`` == the PROPOSER tier (name kept for
     # back-compat with the existing calibration key ``usd_per_optimizer_call``).
+    # PROVENANCE: a ROUGH DEFAULT, not a measurement — no LLM-backed aux step exists yet
+    # to measure, so the magnitude (not just the direction) is a guess: ~40% of a
+    # proposal's input, ~25% of its output. ``_calibrate`` supersedes it with a real
+    # ``usd_per_aux_call`` after the first priced run, and the estimate prints a ±2x band
+    # around it until then. Do not read it as authoritative.
     "aux": (4_000, 500),
 }
 

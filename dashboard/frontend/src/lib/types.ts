@@ -100,10 +100,11 @@ export interface RunSummaryDetail {
     optimizer_usd: number | null
     runner_usd: number | null
     intake_usd?: number | null
+    aux_usd?: number | null      // cheap AUX model tier (#132); part of total_usd
     total_usd: number | null
   }
   tokens?: number | null
-  tokens_by_role?: { runner: number; optimizer: number; intake: number }
+  tokens_by_role?: { runner: number; optimizer: number; intake: number; aux?: number }
   per_iteration?: PerIterationCost[]
   evaluations?: Evaluation[]
   intake?: { usd: number; seconds: number; tokens: number; output_summary?: string; implemented?: string[] }

@@ -753,8 +753,10 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
     mt = s.get("model_tiers")
     if mt:
         lines.append(c(_C.DIM, "model tiers ")
-                     + c(_C.CYAN, f"proposer {mt['proposer']}")
-                     + c(_C.DIM, " · ") + c(_C.GREY, f"aux {mt['aux']}")
+                     + c(_C.CYAN, f"proposer {mt['proposer'] or '(backend default)'}")
+                     # a blank tier means "backend default" — name it rather than
+                     # rendering a dangling label with no model id after it.
+                     + c(_C.DIM, " · ") + c(_C.GREY, f"aux {mt['aux'] or '(backend default)'}")
                      + c(_C.DIM, f"  — aux ${s['cost'].get('aux_usd', 0.0):.4f}"))
     lines.append("")
 
