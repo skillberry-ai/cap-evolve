@@ -19,13 +19,19 @@ def _cmd_version(argv: list[str]) -> int:
     return 0
 
 
-def _cmd_splits(argv: list[str]) -> int:
+def _cmd_splits(argv: list[str], prog: str = "cap_evolve splits") -> int:
+    """Compute the seeded train/val/test split for a set of task ids."""
     import argparse
 
-    p = argparse.ArgumentParser(prog="cap_evolve splits")
+    p = argparse.ArgumentParser(
+        prog=prog, description=_cmd_splits.__doc__,
+        epilog="examples:\n"
+               "  %(prog)s --ids a,b,c,d\n"
+               "  %(prog)s --ids @ids.txt --seed 7 --ratios 0.6,0.2,0.2",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--ids", required=True, help="comma-separated task ids OR @path to a file of ids (one per line)")
-    p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--ratios", default="0.5,0.25,0.25")
+    p.add_argument("--seed", type=int, default=0, help="split seed (default: 0)")
+    p.add_argument("--ratios", default="0.5,0.25,0.25", help="train,val,test (default: 0.5,0.25,0.25)")
     args = p.parse_args(argv)
 
     if args.ids.startswith("@"):

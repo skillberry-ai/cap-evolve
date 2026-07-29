@@ -16,7 +16,9 @@ cp "$REPO/examples/toy_calc/adapter.py"   "$D/.capevolve/project/adapters/"
 cp -R "$REPO/examples/toy_calc/capability" "$D/seed_capability"
 cp "$REPO/templates/project/capevolve.yaml"   "$D/.capevolve/project/capevolve.yaml"
 
-echo "Working directory: $D"
+# stderr, so this script's STDOUT is exactly `cap-evolve run`'s JSON object and
+# `bash run.sh | python -c 'import json,sys; json.load(sys.stdin)'` works.
+echo "Working directory: $D" >&2
 python3 -m cap_evolve.cli run \
   --spec    "$D/.capevolve/project/capevolve.yaml" \
   --project "$D/.capevolve/project" \
