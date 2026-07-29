@@ -325,6 +325,10 @@ def _cmd_run(argv):
     # primitives, and sealing with `cap-evolve finalize`. cap-evolve run does
     # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
     if orchestration_mode == "agent":
+        # Agent-mode runs never enter a deterministic loop, so stamp the algorithm
+        # event here — otherwise the dashboard label would be blank for every
+        # agent-driven run (evograph, agent-optimize, ...).
+        _RunDir.open(workdir / run_dir).log_event("algorithm", name=algorithm_name)
         print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
                           "stop_condition": str(spec.get("stop_condition", "")),
                           "next": "drive via the orchestrate Agent-mode loop; "

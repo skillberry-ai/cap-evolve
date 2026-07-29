@@ -224,7 +224,7 @@ def skillopt_loop(
     ``edit_budget_schedule`` / ``slow_updates`` / per-epoch ``epoch_stats``.
     """
     gate_kwargs = dict(gate_kwargs or {})
-    rejected, history, store = harness._init_memory_store(run_dir, store)
+    rejected, history, store = harness._init_memory_store(run_dir, store, algorithm=algorithm)
 
     train_ids = list(run_dir.read_splits().train)
     n_train = len(train_ids)

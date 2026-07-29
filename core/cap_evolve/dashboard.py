@@ -535,8 +535,16 @@ def reduce_run(run_dir) -> dict:
     elif baseline_val == 0 and best_val:
         delta_pct = None  # undefined %Δ off a zero baseline; show absolute Δ instead
 
+    # Which algorithm produced this run. Every loop logs one `algorithm` event at its
+    # start, so this is populated for LIVE runs too — final.json only exists after
+    # finalize. `final.get` is the fallback for run dirs written before that event.
+    algorithm = next((ev.get("name") for ev in reversed(events)
+                      if ev.get("kind") == "algorithm" and ev.get("name")),
+                     None) or final.get("algorithm")
+
     summary = {
         "run_id": root.name,
+        "algorithm": algorithm,
         "baseline_val": baseline_val,
         "best_val": best_val,
         "best_id": best_id,

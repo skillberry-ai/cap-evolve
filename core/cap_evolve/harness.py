@@ -1374,11 +1374,49 @@ def run_step(
 
 # ---- memory + version store wiring ----------------------------------------
 
-def _init_memory_store(run_dir: RunDir, store):
+def last_algorithm_event(run_dir: RunDir) -> str | None:
+    """The name of the run's most recent ``algorithm`` event, or None.
+
+    Same last-write-wins read the dashboard reducer does (``dashboard.py``), so a
+    re-stamp with an unchanged name is detectable and can be skipped.
+    """
+    if not run_dir.events_path.exists():
+        return None
+    name = None
+    for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or '"algorithm"' not in line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("kind") == "algorithm" and ev.get("name"):
+            name = ev["name"]
+    return name
+
+
+def _init_memory_store(run_dir: RunDir, store, algorithm: str | None = None):
     """Create the optimizer memory (rejected + accepted history) and ensure a
-    version store (default git) is initialized + holds an initial 'seed' commit."""
+    version store (default git) is initialized + holds an initial 'seed' commit.
+
+    Also stamps the run's ``algorithm`` event. Every deterministic loop (hill-climb,
+    gepa, skillopt) routes through here, so logging it once here is what makes the
+    dashboard's algorithm label work for all of them — and from iteration 1, not only
+    once ``final.json`` exists.
+
+    NOTE for #114 (removing write-only optimizer memory): if this function is renamed,
+    split or inlined, the ``algorithm`` stamp must move with it — it is the single
+    choke point the dashboard label depends on. ``test_dashboard.py``'s
+    ``test_every_deterministic_loop_stamps_the_algorithm_event`` guards the drop.
+    """
     from .memory import History, RejectedMemory
     from .store import VersionStore
+    # Idempotent: --resume re-enters here, and re-stamping the same name would add a
+    # dead duplicate row to the dashboard's event ticker. A resume that *changes*
+    # algorithm/--focus still stamps, so the label stays last-write-wins and correct.
+    if algorithm and last_algorithm_event(run_dir) != algorithm:
+        run_dir.log_event("algorithm", name=algorithm)
     rejected = RejectedMemory(run_dir.rejected_path)
     history = History(run_dir.history_path)
     if store is None:
@@ -1866,7 +1904,7 @@ def hill_climb_loop(
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
     """
     gate_kwargs = dict(gate_kwargs or {})
-    rejected, history, store = _init_memory_store(run_dir, store)
+    rejected, history, store = _init_memory_store(run_dir, store, algorithm=algorithm)
 
     # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
     from . import target_profile as _tp

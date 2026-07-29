@@ -107,6 +107,13 @@ def test_agent_mode_stops_after_baseline_with_handoff(tmp_path, capsys):
     splits = json.loads((run_dir / "splits.json").read_text(encoding="utf-8"))
     assert splits["test_used"] is False, "agent mode must not score/seal the test"
 
+    # Agent mode is the one producer NOT behind harness._init_memory_store, so the
+    # dashboard's algorithm badge depends on cli.py stamping the event here. Without
+    # this assert, dropping that stamp goes unnoticed (issue #117).
+    from cap_evolve import dashboard
+    from cap_evolve.rundir import RunDir
+    assert dashboard.reduce_run(RunDir.open(run_dir))["summary"]["algorithm"] == "hill-climb"
+
 
 def test_deterministic_mode_still_runs_full_pipeline(tmp_path, capsys):
     """The same setup in deterministic mode runs the algorithm + finalize (test sealed)."""

@@ -49,3 +49,16 @@ def test_serves_static_index(tmp_path):
     assert "cap-evolve" in r.text
     # API still wins
     assert c.get("/api/health").json()["ok"] is True
+
+
+def test_stream_replays_the_whole_log_for_a_finished_run(tmp_base, make_run):
+    """The SSE route starts at offset 0, not EOF. At EOF the Events tab was
+    permanently empty on every FINISHED run even though events.jsonl was full."""
+    make_run("run_a", events=BASE_EVENTS + [{"kind": "finalize", "test": 0.8}],
+             baseline={"val": {"reward": 0.25}, "best_id": "seed"})
+    with _client(tmp_base).stream("GET", "/api/runs/run_a/stream") as r:
+        body = "".join(r.iter_text())
+    # every historical event replayed, then `done` (finalize closes the stream)
+    assert body.count("\nevent: event\n") == len(BASE_EVENTS) + 1
+    assert "event: done" in body
+    assert '"cand_0001"' in body

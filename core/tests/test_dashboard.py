@@ -243,3 +243,71 @@ def test_no_target_profile_event_leaves_summary_none():
         r = dashboard.reduce_run(rd)
         assert r["summary"]["target_profile"] is None
         assert "consuming model" not in dashboard.render_ansi(r, color=False)
+
+
+# ---- algorithm label (issue #117) ----------------------------------------
+
+def test_algorithm_event_surfaces_in_summary_without_final():
+    """The label must work for a LIVE run — i.e. before final.json exists."""
+    from cap_evolve import dashboard
+    events = [{"kind": "algorithm", "name": "hill-climb:all"}] + _BASE_EVENTS
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=events, baseline=_BASELINE)
+        assert not (rd.root / "final.json").exists()
+        assert dashboard.reduce_run(rd)["summary"]["algorithm"] == "hill-climb:all"
+
+
+def test_algorithm_falls_back_to_final_json_then_none():
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE,
+                     final={"test": {"reward": 0.8}, "best_id": "cand_0001",
+                            "algorithm": "gepa"})
+        assert dashboard.reduce_run(rd)["summary"]["algorithm"] == "gepa"
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        assert dashboard.reduce_run(rd)["summary"]["algorithm"] is None
+
+
+def test_every_deterministic_loop_stamps_the_algorithm_event(tmp_path=None):
+    """Each loop's _init_memory_store call must log it — otherwise the badge is
+    blank for that algorithm (the actual root cause of issue #117)."""
+    from cap_evolve import Budget, RunDir, dashboard, harness
+    for algo in ("hill-climb:all", "skillopt", "gepa"):
+        with tempfile.TemporaryDirectory() as d:
+            rd = RunDir.create(Path(d), ts="t", budget=Budget())
+            harness._init_memory_store(rd, _NullStore(), algorithm=algo)
+            assert dashboard.reduce_run(rd)["summary"]["algorithm"] == algo
+
+
+class _NullStore:
+    """Minimal VersionStore stand-in: no git, no commits."""
+
+    def init(self):
+        pass
+
+    def log(self):
+        return ["seed"]  # non-empty → _init_memory_store skips the seed commit
+
+    def commit(self, *a, **k):
+        pass
+
+
+def test_resume_does_not_double_stamp_the_algorithm_event():
+    """--resume re-enters _init_memory_store; re-stamping the same name would add a
+    dead duplicate row to the dashboard event ticker (review finding 4)."""
+    from cap_evolve import Budget, RunDir, dashboard, harness
+
+    def algorithm_events(rd):
+        return [json.loads(x) for x in rd.events_path.read_text(encoding="utf-8").splitlines()
+                if x.strip() and json.loads(x).get("kind") == "algorithm"]
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = RunDir.create(Path(d), ts="t", budget=Budget())
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:all")
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:all")  # --resume
+        assert len(algorithm_events(rd)) == 1
+        # A resume that CHANGES the algorithm/--focus still corrects the label.
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:cyclic")
+        assert len(algorithm_events(rd)) == 2
+        assert dashboard.reduce_run(rd)["summary"]["algorithm"] == "hill-climb:cyclic"
