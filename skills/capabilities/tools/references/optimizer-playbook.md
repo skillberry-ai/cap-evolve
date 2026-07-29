@@ -9,7 +9,6 @@ authored INSTRUCTIONS — verbatim or tightened for the benchmark at hand.
 - [Depth mandate (tools wording)](#depth-mandate-tools-wording)
 - [The EXISTING-tool-code mandate](#the-existing-tool-code-mandate)
 - [The explicit TWO-PHASE subagent pattern](#the-explicit-two-phase-subagent-pattern)
-- [What an under-used iteration looks like](#what-an-under-used-iteration-looks-like)
 
 ## Depth mandate (tools wording)
 
@@ -19,7 +18,9 @@ When `tools` is selected, make that demand concrete with this snippet:
 > "Each iteration is a substantial, multi-root-cause pass. Diagnose ALL clusters
 > and fix as many as possible in ONE candidate — improve multiple tools' code,
 > validation, and return values/errors; add new tools; sharpen many tool docs;
-> and fix the prompt — together. Scope each fix to protect passing tasks; do NOT
+> and fix the prompt (only if `system-prompt` is ALSO among the selected
+> capabilities — on a `tools`-only run drop this clause and leave the prompt
+> alone) — together. Scope each fix to protect passing tasks; do NOT
 > trade breadth for caution. A single small edit is an under-used iteration."
 
 ## The EXISTING-tool-code mandate
@@ -49,9 +50,4 @@ Require:
 Point the optimizer at `./guidance/optimizer/<name>.md` for that agent's concrete
 trigger phrasing.
 
-## What an under-used iteration looks like
-
-Authored INSTRUCTIONS fail this playbook when they let an iteration pass by adding
-one tool + rewording docstrings (leaving violated rules as prose) — or when they
-omit the existing-tool-code mandate or the explicit two-phase (diagnose fan-out →
-implement fan-out → merge) subagent pattern.
+Authored INSTRUCTIONS fail this playbook when they omit either mandate above.

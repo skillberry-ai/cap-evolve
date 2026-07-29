@@ -108,12 +108,16 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
         features reference under `./guidance/optimizer/`. State this as an explicit
         first step.
      2. **Each selected capability's own optimizer playbook.** For EVERY capability in
-        `capevolve.yaml: capabilities`, load that capability's playbook from its skill
-        (`skills/capabilities/<cap>/references/`, e.g. `tools` →
-        [`optimizer-playbook.md`](../../capabilities/tools/references/optimizer-playbook.md))
-        and fold its edit-depth demands and subagent-fan-out pattern into the authored
-        INSTRUCTIONS. Do NOT restate one capability's playbook here — it lives with
-        that capability and evolves with it.
+        `capevolve.yaml: capabilities`, load that capability's playbook from its skill.
+        Both path forms matter, each for its own reader: YOU read it in this repo at
+        `skills/capabilities/<cap>/references/` (e.g. `tools` →
+        [`optimizer-playbook.md`](../../capabilities/tools/references/optimizer-playbook.md)),
+        but any path you WRITE INTO the authored INSTRUCTIONS must be the
+        runtime-materialized form `./guidance/<cap>/references/` — the repo-relative
+        path does not resolve in the optimizer's working dir. Fold its edit-depth
+        demands and subagent-fan-out pattern into the authored INSTRUCTIONS. Do NOT
+        restate one capability's playbook here — it lives with that capability and
+        evolves with it.
      3. **The NON-OVERFITTING guardrail.** Demand that every prompt/tool edit encode
         a GENERAL rule/policy/validation that generalizes across the whole class of
         inputs — NEVER hardcode a specific task's id/value/date/name/answer. A guard
