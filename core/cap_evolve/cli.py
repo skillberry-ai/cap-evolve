@@ -16,6 +16,11 @@ Subcommands:
                        events.jsonl and print human-readable progress
                        (exit 0 = run finished, 2 = not a possible run dir,
                         3 = --idle-timeout elapsed with no events)
+                       [--ladder]  print which output-capability rung this
+                       invocation is on (full/plain/dumb/pipe/none) and exit
+
+On an unhandled crash every subcommand writes a redacted forensic log (traceback +
+last events) and prints one line pointing at it — see ``eventstream.write_crash_log``.
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -26,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections import deque
 from pathlib import Path
 
 from . import __version__
@@ -100,6 +106,18 @@ def _stderr_is_usable() -> bool:
     return efd == 2
 
 
+def _safe_exc(e: BaseException) -> str:
+    """``TypeName: message``, redacted and sanitised — safe to print at a user.
+
+    An exception message is untrusted text: it routinely carries an optimizer's own
+    stderr (escape sequences, #191) or an echoed environment (credentials, #190/#193).
+    Every crash line the CLI prints goes through here, so no call site can forget.
+    """
+    from . import eventstream
+    from .dashboard import redact
+    return eventstream.sanitize(redact(f"{type(e).__name__}: {e}"))
+
+
 def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
                     offset: int = 0):
     """Print live progress from ``events.jsonl`` on a daemon thread.
@@ -119,13 +137,17 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
 
     stop = threading.Event()
     err = sys.stderr  # bind now: don't follow a stream reassigned mid-run
-    color = eventstream.use_color(err)
+    # The ladder decision, made once, about the stream we actually write to.
+    rung = eventstream.capability(err)
+    color = rung == "full"
+    # Rolling window of what the follower last saw, for the forensic log (#144).
+    recent: deque = deque(maxlen=eventstream.CRASH_TAIL)
 
     def worker():
         # Progress goes to STDERR: stdout stays the machine-readable JSON contract that
         # scripts parse, so `cap-evolve run --follow > out.json` keeps working.
+        path = None
         try:
-            path = None
             while path is None and not stop.is_set():
                 path = _events_path(base, run_ts, seen)
                 if path is None:
@@ -136,18 +158,22 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
             for ev in eventstream.follow_events(
                     path, offset=offset, poll=0.5,
                     should_stop=lambda _last: stop.is_set()):
+                recent.append(ev)
                 line = eventstream.render_line(ev, totals, color=color)
-                if line:
-                    print(line, file=err, flush=True)
+                # emit() downgrades glyphs an ascii/C-locale stream can't carry, and
+                # returns False once the stream is gone — stop rather than raise per line.
+                if line and not eventstream.emit(err, line):
+                    return
         except Exception as e:  # noqa: BLE001 — observability must never break the run
-            # ...but it must never go dark in silence either. #144: this is the hook for
-            # the forensic crash log; the user-visible line below is the minimum.
-            try:
-                print(f"[follow] live progress stopped: {e!r} — the run continues; "
-                      f"use `cap-evolve tail` or the dashboard to watch it",
-                      file=err, flush=True)
-            except Exception:  # noqa: BLE001 — stderr died too; nothing left to do
-                pass
+            # ...but it must never go dark in silence either: say so, and leave a
+            # forensic record so "the live view stopped" is diagnosable, not folklore.
+            log = eventstream.write_crash_log(
+                e, run_dir=(path.parent if path else None), recent=recent,
+                context={"where": "follow-thread", "terminal_rung": rung})
+            eventstream.emit(err, f"[follow] live progress stopped: {_safe_exc(e)} — the run "
+                                  f"continues; use `cap-evolve tail` or the dashboard "
+                                  f"to watch it"
+                                  + (f" (details: {log})" if log else ""))
 
     t = threading.Thread(target=worker, name="cap-evolve-follow", daemon=True)
     t.start()
@@ -170,9 +196,17 @@ def _cmd_tail(argv):
     p.add_argument("--idle-timeout", type=float, default=300.0,
                    help="give up after N seconds of silence (0 = wait forever)")
     p.add_argument("--no-color", action="store_true")
+    p.add_argument("--ladder", action="store_true",
+                   help="print which rung of the output degradation ladder this "
+                        "invocation is on (full/plain/dumb/pipe/none) and exit")
     args = p.parse_args(argv)
     if args.idle_timeout < 0:  # a negative timeout used to trip the check immediately
         p.error("--idle-timeout must be >= 0 (0 = wait forever)")
+    if args.ladder:  # a scriptable read-out of which rung this invocation is on
+        print(json.dumps({"stdout": eventstream.capability(sys.stdout),
+                          "stderr": eventstream.capability(sys.stderr),
+                          "ladder": list(eventstream.LADDER)}))
+        return 0
 
     if args.run_dir:
         root = Path(args.run_dir)
@@ -190,25 +224,36 @@ def _cmd_tail(argv):
         print(f"no such run dir: {root}", file=sys.stderr)
         return 2
     if not events.exists():
-        print(f"waiting for {events} …", file=sys.stderr, flush=True)
+        eventstream.emit(sys.stderr, f"waiting for {events} …")
 
     color = not args.no_color and eventstream.use_color(sys.stdout)
     offset = 0 if args.from_start or not events.exists() else events.stat().st_size
     totals: dict = {}
     shown, reason = 0, None
+    recent: deque = deque(maxlen=eventstream.CRASH_TAIL)
     try:
         for ev in eventstream.follow_events(
                 events, offset=offset, poll=0.5,
                 idle_timeout=(args.idle_timeout or None)):
+            recent.append(ev)
             if ev.get("kind") == eventstream.FOLLOW_END:
                 reason = ev.get("reason")
                 continue
             line = eventstream.render_line(ev, totals, color=color)
+            # emit(): survives PYTHONIOENCODING=ascii / LC_ALL=C, and reports a dead
+            # stream instead of raising a BrokenPipeError traceback at the user.
             if line:
-                print(line, flush=True)
+                if not eventstream.emit(sys.stdout, line):
+                    return 0  # `| head` closed the pipe — that's a normal exit
                 shown += 1
     except KeyboardInterrupt:
         return 130
+    except Exception as e:  # noqa: BLE001 — a crash here must be diagnosable, #144
+        log = eventstream.write_crash_log(e, run_dir=root, recent=recent,
+                                          context={"where": "tail"})
+        eventstream.emit(sys.stderr, f"cap-evolve tail crashed: {_safe_exc(e)}"
+                                     + (f" — forensic log: {log}" if log else ""))
+        return 1
     if reason == "idle" and not shown:
         # Distinct from "the run finished": scripts can tell a timeout from a result.
         print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
@@ -811,7 +856,20 @@ def main(argv=None) -> int:
     if fn is None:
         print(f"unknown command: {argv[0]}", file=sys.stderr)
         return 2
-    return fn(argv[1:])
+    try:
+        return fn(argv[1:])
+    except (KeyboardInterrupt, SystemExit):
+        raise  # Ctrl-C / an explicit exit code is not a crash
+    except BaseException as e:  # noqa: BLE001 — #144: never exit with a bare traceback
+        # A crash used to leave the user with a traceback and nothing on disk. Write a
+        # redacted forensic record, point at it in ONE line, and exit non-zero.
+        from . import eventstream
+        log = eventstream.write_crash_log(e, context={"where": f"cap-evolve {argv[0]}"})
+        eventstream.emit(sys.stderr, f"cap-evolve {argv[0]} crashed: {_safe_exc(e)}")
+        eventstream.emit(sys.stderr,
+                         f"forensic log (redacted, safe to attach to a bug report): {log}"
+                         if log else "could not write a forensic log")
+        return 1
 
 
 if __name__ == "__main__":

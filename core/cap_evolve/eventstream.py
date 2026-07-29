@@ -38,8 +38,21 @@ Public API (stdlib only, no deps):
     :func:`format_event` plus optional ANSI styling. Styling only — text safety lives
     in :func:`format_event`, so neither entry point can return an unsafe line.
 
+``capability(stream) -> str``
+    The **degradation ladder**: ``"full"`` / ``"plain"`` / ``"dumb"`` / ``"pipe"`` /
+    ``"none"``, in descending order of what the stream can carry. See
+    :func:`capability` for the rung-by-rung contract.
+
 ``use_color(stream) -> bool``
-    The single TTY / ``NO_COLOR`` decision. ``stream`` is required.
+    The single TTY / ``NO_COLOR`` decision — exactly ``capability(stream) == "full"``.
+
+``emit(stream, line) -> bool``
+    Write one already-sanitised line, transliterating glyphs the stream's encoding
+    cannot carry (``PYTHONIOENCODING=ascii``, ``LC_ALL=C``). False if the stream died.
+
+``write_crash_log(exc, *, run_dir=None, recent=(), context=None) -> Path | None``
+    Persist a **redacted** forensic record (traceback + last events) and return its
+    path, so "it just exited" becomes a filable bug.
 
 Terminal safety: :func:`format_event` is the ONLY place event text is made
 terminal-safe (see :func:`sanitize`). Event values are model/subprocess-controlled
@@ -58,7 +71,8 @@ from typing import Callable, Iterator
 
 __all__ = ["read_new_events", "follow_events", "format_event", "render_line",
            "colorize", "use_color", "sanitize", "accrue_totals",
-           "FOLLOW_END", "BOOKKEEPING_KINDS"]
+           "capability", "emit", "ascii_fallback", "write_crash_log",
+           "FOLLOW_END", "BOOKKEEPING_KINDS", "LADDER"]
 
 #: ``kind`` of the sentinel :func:`follow_events` yields last. Its ``reason`` is one
 #: of ``"stop_kind"`` / ``"idle"`` / ``"should_stop"``. #118 keys stall detection off
@@ -178,18 +192,115 @@ def follow_events(
 
 # ---- human-readable rendering ----------------------------------------------
 
+#: The degradation ladder, most capable first. See :func:`capability`.
+LADDER = ("full", "plain", "dumb", "pipe", "none")
+
+
+def capability(stream) -> str:
+    """Which rung of the degradation ladder ``stream`` sits on.
+
+    This is the explicit output contract for every live view. Rungs, in order, with
+    the ONE signal that demotes to each:
+
+    ``"full"``  real TTY, ``TERM`` is a normal terminal, no ``NO_COLOR``
+                → ANSI colour + Unicode glyphs.
+    ``"plain"`` real TTY but ``NO_COLOR`` is set
+                → same text, zero escape bytes.
+    ``"dumb"``  real TTY but ``TERM`` is ``dumb`` or ``unknown``
+                → no colour, and never assume the terminal can be addressed
+                  (no cursor moves, no repaint — append-only lines). An *unset*
+                  ``TERM`` is deliberately NOT demoted: it is normal on a real TTY
+                  outside a shell profile, and ``dumb`` is the explicit opt-out.
+    ``"pipe"``  not a TTY (piped, redirected, CI)
+                → plain append-only lines; CI logs stay grep-clean.
+    ``"none"``  the stream is missing or closed (``2>&-``)
+                → emit nothing at all; see ``cli._stderr_is_usable``.
+
+    Everything below ``"full"`` renders identically (plain text): the rungs are
+    distinct because the *reason* differs and callers/tests need to name it, not
+    because there are five renderers. Colour is the only thing on the ladder that
+    varies, deliberately — nothing here allocates a screen or moves a cursor, so
+    there is no layout to overflow on resize (issue #144's height-budget concern is
+    satisfied by never taking over the screen in the first place).
+    """
+    if stream is None or getattr(stream, "closed", False):
+        return "none"
+    try:
+        tty = bool(stream.isatty())
+    except Exception:  # noqa: BLE001 — a stub stream without isatty is "not a tty"
+        return "pipe"
+    if not tty:
+        return "pipe"
+    if os.environ.get("TERM", "").lower() in ("dumb", "unknown"):
+        return "dumb"
+    if os.environ.get("NO_COLOR"):
+        return "plain"
+    return "full"
+
+
 def use_color(stream) -> bool:
-    """True only on a real TTY without ``NO_COLOR``. Piped/CI output stays plain.
+    """True only on the ``"full"`` rung. Piped/CI/dumb/NO_COLOR output stays plain.
 
     ``stream`` is required: the decision must be made about the stream the caller
     actually writes to, never a default that could colorize stderr based on stdout.
     """
-    if os.environ.get("NO_COLOR"):
-        return False
+    return capability(stream) == "full"
+
+
+# Unicode the renderer uses, and its ASCII stand-in. Needed because a stream opened
+# with PYTHONIOENCODING=ascii or under LC_ALL=C raises UnicodeEncodeError on write —
+# which, inside the follower thread, used to take the whole live view dark.
+_ASCII_MAP = str.maketrans({
+    "±": "+/-", "·": "*", "Δ": "d", "—": "-", "…": "...", "→": "->", "⏎": "\\n",
+    "«": "<<", "»": ">>", "─": "-", "✓": "ok", "✗": "x",
+})
+
+
+def ascii_fallback(text: str) -> str:
+    """``text`` with the renderer's glyphs transliterated and anything else that
+    cannot survive ASCII replaced by ``?``. Lossy on purpose: legible beats exact."""
+    return str(text).translate(_ASCII_MAP).encode("ascii", "replace").decode("ascii")
+
+
+def _encodable(stream, line: str) -> bool:
+    """Can ``stream``'s encoding carry ``line`` losslessly?
+
+    Checked up front rather than caught, because CPython opens stderr with
+    ``errors="backslashreplace"``: under ``PYTHONIOENCODING=ascii`` the write does
+    NOT raise, it silently prints ``\\xb1`` / ``\\u2014``. Technically ASCII, but
+    unreadable — so ask first and transliterate to ``+/-`` instead.
+    """
+    enc = getattr(stream, "encoding", None)
+    if not enc or enc.lower().replace("-", "") in ("utf8", "utf16", "utf32"):
+        return True
     try:
-        return bool(stream.isatty())
-    except Exception:  # noqa: BLE001 — a stub stream without isatty is "not a tty"
+        line.encode(enc, "strict")
+        return True
+    except (UnicodeEncodeError, LookupError):
         return False
+
+
+def emit(stream, line: str) -> bool:
+    """Write ``line`` + newline to ``stream``; True if it landed.
+
+    Falls back to :func:`ascii_fallback` when the stream's encoding cannot carry a
+    glyph (``PYTHONIOENCODING=ascii``, ``LC_ALL=C``, a Windows cp1252 console).
+    Returns False when the stream is unusable, so a caller can stop following
+    instead of raising per line.
+    """
+    if capability(stream) == "none":
+        return False
+    if not _encodable(stream, line):
+        line = ascii_fallback(line)
+    for text in (line, ascii_fallback(line)):
+        try:
+            print(text, file=stream, flush=True)
+            return True
+        except UnicodeEncodeError:
+            continue
+        except Exception:  # noqa: BLE001 — stream closed mid-run; nothing to salvage
+            return False
+    return False
 
 
 _CODES = {"dim": "2", "bold": "1", "green": "32", "red": "31", "yellow": "33", "cyan": "36"}
@@ -391,3 +502,92 @@ def render_line(ev: dict, totals: dict | None = None, *, color: bool = False,
     if kind in _STEP_KINDS:
         style = "green" if ev.get("accept") else "dim"
     return colorize(line, style, enabled=True) if style else line
+
+
+# ---- forensic crash log -----------------------------------------------------
+
+#: Where a crash log lands when there is no run dir to put it in.
+CRASH_DIR = Path(os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")) \
+    / "cap-evolve" / "crashes"
+
+#: How many recent events the forensic log keeps. Enough to see the phase the run
+#: died in without turning the log into a copy of events.jsonl.
+CRASH_TAIL = 25
+
+
+def write_crash_log(exc: BaseException | None, *, run_dir=None,
+                    recent=(), context: dict | None = None) -> Path | None:
+    """Write a forensic record of a crash and return its path (``None`` if even that
+    failed — a crash reporter must never raise on top of the crash).
+
+    Contents: version, argv, python/platform, the terminal rung and encoding, the
+    exception traceback, and the last :data:`CRASH_TAIL` events seen. That is what a
+    bug report needs; anything more is the run dir's job.
+
+    **Secrets:** the whole payload goes through :func:`cap_evolve.dashboard.redact`
+    before it is written — argv, event payloads and traceback text all reach here
+    from untrusted or credential-bearing places. ``redact`` (hardened in #190/#193)
+    masks secret-looking keys, secret-shaped values AND the literal values of this
+    process's secret-looking env vars, which is the only shape-independent defence.
+    We deliberately do not write our own scrubber.
+    """
+    import platform
+    import traceback
+
+    payload = {
+        "cap_evolve_version": _version(),
+        "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "argv": list(sys.argv),
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "cwd": str(Path.cwd()),
+        "terminal": {
+            "stdout": capability(sys.stdout), "stderr": capability(sys.stderr),
+            "TERM": os.environ.get("TERM", ""),
+            "NO_COLOR": bool(os.environ.get("NO_COLOR")),
+            "stdout_encoding": getattr(sys.stdout, "encoding", None),
+            "PYTHONIOENCODING": os.environ.get("PYTHONIOENCODING", ""),
+            "locale": os.environ.get("LC_ALL") or os.environ.get("LANG") or "",
+        },
+        "context": dict(context or {}),
+        "exception": repr(exc) if exc is not None else None,
+        "traceback": ("".join(traceback.format_exception(type(exc), exc,
+                                                        exc.__traceback__))
+                      if exc is not None else None),
+        # Sanitised as well as redacted: an event payload is model-controlled, and a
+        # crash log gets `cat`ed into a terminal at least as often as it is read.
+        "recent_events": [{k: sanitize(v) if isinstance(v, str) else v
+                           for k, v in ev.items()}
+                          for ev in list(recent)[-CRASH_TAIL:] if isinstance(ev, dict)],
+    }
+    try:
+        from .dashboard import redact
+        payload = redact(payload)
+    except Exception:  # noqa: BLE001 — if redaction is unavailable, do NOT write
+        return None    # a possibly-secret-bearing file. No log beats a leaked key.
+
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    for target in _crash_targets(run_dir, stamp):
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(payload, indent=2, default=str) + "\n",
+                              encoding="utf-8")
+            return target
+        except OSError:
+            continue  # read-only run dir → fall through to the cache dir
+    return None
+
+
+def _crash_targets(run_dir, stamp: str):
+    """Candidate paths, best first: next to the run it belongs to, else the cache."""
+    if run_dir:
+        yield Path(run_dir) / f"crash-{stamp}.json"
+    yield CRASH_DIR / f"crash-{stamp}.json"
+
+
+def _version() -> str:
+    try:
+        from . import __version__
+        return __version__
+    except Exception:  # noqa: BLE001
+        return "?"

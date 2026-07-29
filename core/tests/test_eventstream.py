@@ -490,3 +490,237 @@ def test_skip_kinds_can_be_disabled_to_see_bookkeeping_events():
     assert "minibatch" in eventstream.format_event(ev, skip_kinds=())  # #138: visible
     assert "minibatch" in eventstream.render_line(ev, skip_kinds=())
     assert eventstream.BOOKKEEPING_KINDS                              # documented set
+
+
+# ---- #144: the degradation ladder ------------------------------------------
+
+class _Tty(io.StringIO):
+    def isatty(self):
+        return True
+
+
+def test_capability_names_every_rung(monkeypatch):
+    """The ladder is an explicit contract: one signal demotes to each rung."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
+    assert eventstream.capability(_Tty()) == "full"          # rung 1: TTY + colour
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert eventstream.capability(_Tty()) == "plain"         # rung 2: NO_COLOR
+    monkeypatch.delenv("NO_COLOR")
+    monkeypatch.setenv("TERM", "dumb")
+    assert eventstream.capability(_Tty()) == "dumb"          # rung 3: TERM=dumb
+    assert eventstream.capability(io.StringIO()) == "pipe"   # rung 4: not a tty
+    assert eventstream.capability(None) == "none"            # rung 5: no stream
+    closed = io.StringIO()
+    closed.close()
+    assert eventstream.capability(closed) == "none"
+    assert eventstream.capability(object()) == "pipe"        # no isatty() → assume pipe
+    assert eventstream.LADDER == ("full", "plain", "dumb", "pipe", "none")
+
+
+def test_only_the_full_rung_gets_colour(monkeypatch):
+    """use_color is exactly `capability == "full"` — one decision, not two."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    for term, want in (("xterm", True), ("dumb", False), ("unknown", False)):
+        monkeypatch.setenv("TERM", term)
+        assert eventstream.use_color(_Tty()) is want
+    monkeypatch.setenv("TERM", "xterm")
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert eventstream.use_color(_Tty()) is False
+    monkeypatch.delenv("NO_COLOR")
+    # An UNSET TERM is normal on a real TTY and must not silently kill colour.
+    monkeypatch.delenv("TERM", raising=False)
+    assert eventstream.use_color(_Tty()) is True
+
+
+def test_every_rung_below_full_emits_zero_escape_bytes(monkeypatch):
+    """The whole point of the ladder: only rung 1 may put escapes on the wire."""
+    ev = {"kind": "step", "candidate": "c1", "accept": True, "val": 0.9}
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    for env, stream, rung in (
+            ({"TERM": "xterm"}, _Tty(), "full"),
+            ({"TERM": "xterm", "NO_COLOR": "1"}, _Tty(), "plain"),
+            ({"TERM": "dumb"}, _Tty(), "dumb"),
+            ({"TERM": "xterm"}, io.StringIO(), "pipe")):
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        for k, v in env.items():
+            monkeypatch.setenv(k, v)
+        assert eventstream.capability(stream) == rung
+        line = eventstream.render_line(ev, color=eventstream.use_color(stream))
+        assert ("\033" in line) is (rung == "full"), rung
+
+
+def test_emit_returns_false_on_the_none_rung():
+    assert eventstream.emit(None, "x") is False
+    closed = io.StringIO()
+    closed.close()
+    assert eventstream.emit(closed, "x") is False
+
+
+# ---- #144: non-UTF-8 locales (PYTHONIOENCODING=ascii / LC_ALL=C) ------------
+
+def test_emit_transliterates_when_the_stream_cannot_encode(tmp_path):
+    """An ascii-encoded stream must get legible text, not a UnicodeEncodeError that
+    kills the follower thread and takes the live view dark."""
+    path = tmp_path / "out.txt"
+    with path.open("w", encoding="ascii") as fh:
+        assert eventstream.emit(fh, "baseline val=0.25 ±0.01 · Δ+0.1 ⏎") is True
+    text = path.read_text(encoding="ascii")
+    assert "+/-" in text and "d+0.1" in text and "\\n" in text
+
+
+def test_ascii_fallback_never_raises_on_arbitrary_unicode():
+    assert eventstream.ascii_fallback("— … 你好 \U0001f600") == "- ... ?? ?"
+
+
+def test_run_follow_survives_ascii_io_encoding(tmp_path):
+    """Real `cap-evolve run --follow` under PYTHONIOENCODING=ascii + LC_ALL=C."""
+    proj, env = _toy_project(tmp_path)
+    env.update(PYTHONIOENCODING="ascii", LC_ALL="C", LANG="C")
+    proc = subprocess.run(
+        [sys.executable, "-m", "cap_evolve.cli", "run", "--spec", str(proj / "capevolve.yaml"),
+         "--project", str(proj), "--run-ts", "a", "--follow", "--dashboard", "off"],
+        capture_output=True, text=True, env=env, timeout=600)
+    assert proc.returncode == 0, proc.stderr[-3000:]
+    assert "UnicodeEncodeError" not in proc.stderr
+    assert "baseline  val=" in proc.stderr and "FINALIZE" in proc.stderr
+    assert proc.stderr.encode("ascii", "strict")           # pure ASCII on the wire
+    # Legible ASCII, not CPython's backslashreplace mojibake ("\xb1" / "—").
+    assert "+/-0.0000" in proc.stderr
+    assert "\\xb1" not in proc.stderr and "\\u20" not in proc.stderr
+    assert json.loads(proc.stdout)["test_reward"] == 1.0
+
+
+# ---- #144: the forensic crash log ------------------------------------------
+
+def _crash_log(tmp_path, **kw):
+    try:
+        raise RuntimeError("kaboom")
+    except RuntimeError as e:
+        return eventstream.write_crash_log(e, run_dir=tmp_path, **kw)
+
+
+def test_crash_log_has_what_a_bug_report_needs(tmp_path):
+    log = _crash_log(tmp_path, recent=[{"kind": "baseline", "val": 0.25},
+                                       {"kind": "step", "candidate": "c1"}],
+                     context={"where": "follow-thread"})
+    assert log is not None and log.parent == tmp_path
+    d = json.loads(log.read_text())
+    assert d["exception"] == "RuntimeError('kaboom')"
+    assert "kaboom" in d["traceback"] and "_crash_log" in d["traceback"]
+    assert d["cap_evolve_version"] and d["python"] and d["platform"]
+    assert d["context"] == {"where": "follow-thread"}
+    assert [e["kind"] for e in d["recent_events"]] == ["baseline", "step"]
+    # the terminal state at crash time — the whole point of #144
+    assert set(d["terminal"]) >= {"stdout", "stderr", "TERM", "PYTHONIOENCODING", "locale"}
+    assert d["terminal"]["stdout"] in eventstream.LADDER
+
+
+def test_crash_log_keeps_only_the_recent_tail(tmp_path):
+    log = _crash_log(tmp_path, recent=[{"kind": f"k{i}"} for i in range(200)])
+    d = json.loads(log.read_text())
+    assert len(d["recent_events"]) == eventstream.CRASH_TAIL
+    assert d["recent_events"][-1]["kind"] == "k199"
+
+
+def test_crash_log_leaks_no_secret_of_any_shape(tmp_path, monkeypatch):
+    """Multi-shape canaries: a bare high-entropy value, a UUID, a ghp_ PAT and a
+    watsonx-style key must ALL be gone. Shape-matching alone leaked a plaintext key
+    once (#190/#193) — this asserts the env-value pass too."""
+    canaries = {
+        "OPENAI_API_KEY": "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
+        "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "SOME_SESSION_ID": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+        "WATSONX_APIKEY": "hIQ7bLpZ2mNvXk3TuWq9",        # bare, no recognisable shape
+        "RITS_API_KEY": "Zx91Kk22PpQq",                   # short + shapeless
+    }
+    for k, v in canaries.items():
+        monkeypatch.setenv(k, v)
+    # Every route into the log: argv, the exception text, an event payload, context.
+    monkeypatch.setattr(sys, "argv", ["cap-evolve", "run", f"--key={canaries['RITS_API_KEY']}"])
+    try:
+        raise RuntimeError(f"optimizer said: OPENAI_API_KEY={canaries['OPENAI_API_KEY']} "
+                           f"token {canaries['GITHUB_TOKEN']}")
+    except RuntimeError as e:
+        log = eventstream.write_crash_log(
+            e, run_dir=tmp_path,
+            recent=[{"kind": "optimizer_error",
+                     "error": f"auth failed with {canaries['WATSONX_APIKEY']} / "
+                              f"{canaries['SOME_SESSION_ID']}"}],
+            context={"env_dump": " ".join(canaries.values())})
+    raw = log.read_text()
+    for name, value in canaries.items():
+        assert value not in raw, f"{name} leaked into the crash log"
+    assert raw.count("redacted") >= 5       # each canary masked, not silently dropped
+    assert "optimizer said" in raw          # still diagnosable
+
+
+def test_crash_log_falls_back_to_the_cache_dir(tmp_path, monkeypatch):
+    """A read-only run dir must not lose the crash report."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    import importlib
+    importlib.reload(eventstream)
+    ro = tmp_path / "ro"
+    ro.mkdir()
+    ro.chmod(0o500)
+    try:
+        log = _crash_log(ro)
+        assert log is not None and log.parent == eventstream.CRASH_DIR
+        assert json.loads(log.read_text())["exception"] == "RuntimeError('kaboom')"
+    finally:
+        ro.chmod(0o700)
+        monkeypatch.delenv("XDG_CACHE_HOME")
+        importlib.reload(eventstream)
+
+
+def test_crash_log_event_payloads_stay_terminal_safe(tmp_path):
+    """A crash log is `cat`ed at least as often as it is read — escapes must be inert."""
+    log = _crash_log(tmp_path, recent=[{"kind": "optimizer_error",
+                                        "error": "boom\033]0;PWNED\007\033[2J"}])
+    raw = log.read_text()
+    assert "\033" not in raw and "\007" not in raw and "PWNED" in raw
+
+
+def test_cli_crash_writes_a_forensic_log_and_exits_nonzero(tmp_path, monkeypatch, capsys):
+    """An unhandled exception anywhere under a subcommand: one line, not a traceback."""
+    from cap_evolve import cli as _cli
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.setitem(_cli.COMMANDS, "version",
+                        lambda _a: (_ for _ in ()).throw(RuntimeError("exploded")))
+    assert _cli.main(["version"]) == 1
+    err = capsys.readouterr().err
+    assert "crashed: RuntimeError: exploded" in err
+    assert "forensic log" in err
+    log = Path(err.split("bug report): ")[1].strip())
+    assert log.exists() and "exploded" in log.read_text()
+
+
+def test_keyboard_interrupt_is_not_treated_as_a_crash(monkeypatch):
+    from cap_evolve import cli as _cli
+    import pytest
+    monkeypatch.setitem(_cli.COMMANDS, "version",
+                        lambda _a: (_ for _ in ()).throw(KeyboardInterrupt()))
+    with pytest.raises(KeyboardInterrupt):
+        _cli.main(["version"])
+
+
+def test_tail_ladder_flag_reports_the_rung(capsys):
+    assert _cmd_tail(["--ladder"]) == 0
+    d = json.loads(capsys.readouterr().out)
+    assert d["stdout"] in eventstream.LADDER and d["stderr"] in eventstream.LADDER
+    assert d["ladder"] == list(eventstream.LADDER)
+
+
+def test_the_user_visible_crash_line_is_also_redacted_and_inert(monkeypatch, capsys):
+    """The one line printed at the user is untrusted text too: it must not leak a
+    credential nor emit an escape sequence, even though the log beside it is clean."""
+    from cap_evolve import cli as _cli
+    monkeypatch.setenv("WATSONX_APIKEY", "hIQ7bLpZ2mNvXk3TuWq9")
+    monkeypatch.setenv("XDG_CACHE_HOME", str(Path(os.devnull).parent))  # log may fail; fine
+    monkeypatch.setitem(_cli.COMMANDS, "version", lambda _a: (_ for _ in ()).throw(
+        RuntimeError("died\033]0;PWNED\007 key=hIQ7bLpZ2mNvXk3TuWq9")))
+    assert _cli.main(["version"]) == 1
+    err = capsys.readouterr().err
+    assert "hIQ7bLpZ2mNvXk3TuWq9" not in err        # no leak
+    assert "\033" not in err and "\007" not in err   # no escape reaches the terminal
+    assert "PWNED" in err and "died" in err          # inert, still legible

@@ -82,6 +82,43 @@ events plus optimizer cost from `step` events, matching `Spent.total_usd` in `st
 Event text is stripped of control characters before it reaches your terminal, so an
 optimizer's stderr can never move the cursor, clear the screen, or forge a progress line.
 
+### The output degradation ladder
+
+Live output adapts to the terminal it actually has. There are exactly five rungs, and
+`cap-evolve tail --ladder` prints which one this invocation is on:
+
+| Rung | Detected by | Output |
+|---|---|---|
+| `full` | TTY, `TERM` not `dumb`/`unknown`, no `NO_COLOR` | ANSI colour + Unicode |
+| `plain` | TTY + `NO_COLOR` set | same text, zero escape bytes |
+| `dumb` | TTY + `TERM=dumb` / `unknown` | no colour, append-only lines |
+| `pipe` | not a TTY (redirect, CI) | plain lines, grep-clean logs |
+| `none` | stream missing/closed (`2>&-`) | nothing (following disables itself) |
+
+Nothing on the ladder repaints the screen or moves the cursor — output is append-only
+at every rung, so there is no live layout to overflow or duplicate on a resize.
+
+Under a non-UTF-8 stream (`PYTHONIOENCODING=ascii`, `LC_ALL=C`, a legacy Windows
+console) glyphs transliterate rather than crash or print mojibake: `±` → `+/-`,
+`Δ` → `d`, `—` → `-`.
+
+### When something crashes
+
+An unhandled crash writes a **forensic log** and prints one line pointing at it:
+
+```text
+cap-evolve run crashed: RuntimeError: optimizer died
+forensic log (redacted, safe to attach to a bug report): .capevolve/run_…/crash-20260130-140455.json
+```
+
+It records the version, argv, python/platform, the terminal rung and encoding, the
+traceback, and the last 25 events seen — enough to file a bug without reproducing it.
+It lands next to the run when there is one, else under
+`${XDG_CACHE_HOME:-~/.cache}/cap-evolve/crashes/`. The whole payload passes through the
+same secret redactor the dashboard uses, so it is safe to attach to an issue. A dying
+live view is handled the same way: the run continues, and the reason is on disk instead
+of vanishing.
+
 ## 5. Where to next
 
 | You want to… | Go to |

@@ -26,6 +26,30 @@ All notable changes to cap-evolve are documented here. The format follows
   (`stop_kind` / `idle` / `should_stop`). `cap-evolve tail` exits `2` on an impossible run
   dir and `3` on an idle timeout with no events.
 
+- **Terminal robustness: an explicit output degradation ladder + a forensic crash log
+  (#144).** Live output now names the five rungs it can be on — `full` (TTY + colour),
+  `plain` (`NO_COLOR`), `dumb` (`TERM=dumb`/`unknown`), `pipe` (non-TTY/CI), `none`
+  (stream closed, `2>&-`) — via `eventstream.capability(stream)`, with
+  `cap-evolve tail --ladder` as a scriptable read-out. Only `full` may put escape bytes
+  on the wire; every other rung is byte-verified plain, so CI logs stay grep-clean.
+  Nothing repaints the screen or moves the cursor at any rung, so there is no live
+  layout to overflow or duplicate on a resize. Non-UTF-8 streams
+  (`PYTHONIOENCODING=ascii`, `LC_ALL=C`, legacy Windows consoles) now transliterate
+  glyphs (`±`→`+/-`, `Δ`→`d`) instead of raising `UnicodeEncodeError` inside the
+  follower thread — or printing CPython's `\xb1` mojibake, which its
+  `backslashreplace` stderr otherwise does silently.
+
+  An unhandled crash — in a subcommand or in the live-view thread — now writes a
+  **forensic log** (version, argv, python/platform, terminal rung + encoding,
+  traceback, the last 25 events seen) next to the run, or under
+  `${XDG_CACHE_HOME:-~/.cache}/cap-evolve/crashes/`, and prints one line pointing at it
+  instead of a bare traceback. The payload — and the user-visible crash line — pass
+  through the existing `dashboard.redact`, so a crash report is safe to attach to an
+  issue; verified against bare high-entropy, UUID, `ghp_` and watsonx-shaped canaries.
+  `redact` also gained the `ghp_`/`github_pat_`/UUID shapes plus a shape-independent
+  pass over this process's secret-looking env values (the same hunk landing via #193 —
+  byte-identical, so the merge is a no-op either way).
+
 ### Fixed
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
