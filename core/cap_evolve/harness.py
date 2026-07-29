@@ -26,7 +26,7 @@ from typing import Callable
 from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
-from .splits import Splits, make_splits
+from .splits import Splits, check_val_size, make_splits
 from .types import Rollout, Score, Task
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -89,6 +89,9 @@ def ensure_splits(adapter, run_dir: RunDir, *, seed: int = 0, ratios=(0.5, 0.25,
     else:
         all_tasks = adapter.tasks("all")
         splits = make_splits([t.id for t in all_tasks], seed=seed, ratios=ratios)
+    # Refuse an unusable val split BEFORE freezing it — an empty/1-task val makes the
+    # acceptance gate meaningless, and the whole point of the gate is honesty.
+    check_val_size(splits, context="at split freeze", run_dir=run_dir)
     run_dir.write_splits(splits)
     run_dir.log_event("splits", train=len(splits.train), val=len(splits.val),
                       test=len(splits.test), seed=seed)
@@ -362,6 +365,10 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     needed and snapshotted as an empty candidate. The optimizer will create the
     initial capability content from the failing trajectories.
     """
+    # Second guard point: a hand-written / resumed splits.json never went through
+    # ensure_splits, so re-check before spending any budget on a run whose gate
+    # could not possibly be honest.
+    check_val_size(run_dir.read_splits(), context="at baseline", run_dir=run_dir)
     seed_dir = Path(seed_dir)
     if not seed_dir.exists():
         # Accept an empty seed, but make it auditable: a typo'd capability_path would

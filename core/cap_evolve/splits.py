@@ -11,9 +11,70 @@ splits written at intake/baseline time.
 
 from __future__ import annotations
 
+import os
 import random
 from dataclasses import dataclass, field
 from typing import Sequence
+
+#: Below this many val tasks the significance gate is statistically meaningless.
+#: n=0 → nothing to decide on; n=1 → SE(Δ) is undefined (df=0) so the gate always
+#: degenerates to "any Δ>0 wins". Both are hard errors.
+MIN_VAL_TASKS = 2
+
+#: Below this many val tasks the gate still runs but is flagged low-confidence:
+#: with df=n-1 <= 3 the t bar is wide and a couple of lucky per-task deltas
+#: dominate. Warned, not refused.
+LOW_CONFIDENCE_VAL_TASKS = 5
+
+#: Escape hatch for deliberately degenerate runs (smoke tests, single-task
+#: debugging). Setting it means you accept that the acceptance gate is NOT an
+#: honest significance test for that run.
+_ALLOW_TINY_ENV = "CAPEVOLVE_ALLOW_TINY_VAL"
+
+
+class TinyValSplitError(RuntimeError):
+    """Raised when the val split is too small for the gate to mean anything."""
+
+
+def check_val_size(splits: "Splits", *, context: str = "", run_dir=None) -> str | None:
+    """Refuse an unusable val split; warn on a merely small one.
+
+    Called at split-freeze time (``ensure_splits``) and again at ``baseline`` — the
+    two moments a run commits to a val split — so a hand-written or resumed
+    ``splits.json`` cannot sneak past. Returns the warning text when val is small
+    but usable (also logged as a ``split_warning`` event), else ``None``.
+    """
+    n = len(splits.val)
+    where = f" ({context})" if context else ""
+    if n < MIN_VAL_TASKS and not os.environ.get(_ALLOW_TINY_ENV):
+        detail = ("is EMPTY" if n == 0 else
+                  "has exactly 1 task, so the paired delta has 0 degrees of freedom "
+                  "(SE undefined) and the gate degenerates to 'any Δ>0 wins'")
+        raise TinyValSplitError(
+            f"val split{where} {detail} — the acceptance gate would produce a "
+            f"meaningless decision, so cap-evolve refuses to start.\n"
+            f"  train={len(splits.train)} val={n} test={len(splits.test)}\n"
+            f"Fix one of:\n"
+            f"  1. Add tasks: with the default 0.5/0.25/0.25 ratios you need >= 6 "
+            f"tasks for val >= 2, and >= 20 for val >= 5 (recommended).\n"
+            f"  2. Set explicit ratios, e.g. split_val: 0.4 in capevolve.yaml.\n"
+            f"  3. Pin the split yourself via split_ids_file "
+            f"({{\"train\": [...], \"val\": [...], \"test\": [...]}}).\n"
+            f"  4. Only if you accept a non-honest gate: export "
+            f"{_ALLOW_TINY_ENV}=1."
+        )
+    if n < LOW_CONFIDENCE_VAL_TASKS:
+        msg = (f"val split{where} has only {n} tasks (< {LOW_CONFIDENCE_VAL_TASKS}) — "
+               f"acceptance decisions are LOW CONFIDENCE. The gate applies a "
+               f"Student-t small-sample correction (df={max(n - 1, 0)}), which widens "
+               f"the bar, but the honest fix is more val tasks.")
+        if run_dir is not None:
+            log = getattr(run_dir, "log_event", None)
+            if callable(log):
+                log("split_warning", val=n, min_recommended=LOW_CONFIDENCE_VAL_TASKS,
+                    reason=msg)
+        return msg
+    return None
 
 
 class TestSealError(RuntimeError):

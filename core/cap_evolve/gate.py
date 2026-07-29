@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .splits import LOW_CONFIDENCE_VAL_TASKS
+
 
 @dataclass
 class GateDecision:
@@ -79,6 +81,9 @@ def decide(
         same tasks, so the cross-task variance cancels and only the *paired*
         variance counts. Requires ``paired_deltas``; the loop uses it by default
         when per-task data is available, else falls back to ``significant``.
+        SE(Δ) is estimated from the same n deltas, so ``k_se`` (a z multiplier)
+        is replaced by the equivalent Student-t multiplier at df=n-1 — strictly
+        wider at small n, converging to ``k_se`` as n grows.
       - ``significant``: accept iff delta > k * combined_SE (treats cand & current
         as INDEPENDENT samples — correct only when they were not scored on the
         same tasks; less powerful than ``paired``).
@@ -125,12 +130,33 @@ def decide(
                             f"(SE=0 → STRICT fallback, warned; n={n})"),
                     delta=mean_d, threshold=0.0,
                 )
-            bar = k_se * se
+            # Small-sample correction. The bar is k·SE, a *z* multiplier — valid only
+            # when SE is known. Here SE(Δ) is ESTIMATED from the same n deltas, so the
+            # standardized mean difference is t-distributed with df=n-1 (fatter tails).
+            # Using z at small n sets the bar too LOW and accepts noise; we substitute
+            # the t multiplier at the same one-sided significance level. t >= z always,
+            # so this can only make the gate stricter, and it converges to z as n grows.
+            from .stats import t_multiplier_for_z
+            k_eff = t_multiplier_for_z(k_se, n)
+            bar = k_eff * se
             ok = mean_d > bar
+            corr = "" if abs(k_eff - k_se) < 5e-5 else f", t-corrected from {k_se}·SE"
+            low_conf = ""
+            if n < LOW_CONFIDENCE_VAL_TASKS:
+                low_conf = f" [LOW CONFIDENCE: only {n} val tasks]"
+                if run_dir is not None:
+                    log = getattr(run_dir, "log_event", None)
+                    if callable(log):
+                        log("gate_warning", mode="paired", n=n, k_se=k_se, k_eff=round(k_eff, 4),
+                            reason=(f"paired gate decided on only {n} val tasks "
+                                    f"(< {LOW_CONFIDENCE_VAL_TASKS}); a Student-t correction "
+                                    f"(df={n - 1}) widened the bar from {k_se}·SE to "
+                                    f"{k_eff:.4f}·SE, but this decision is low confidence — "
+                                    f"add val tasks or raise n_trials."))
             return GateDecision(
                 accept=ok,
-                reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
-                        f"(SE={se:.4f}, n={n})"),
+                reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_eff:.4f}·SE={bar:.4f} "
+                        f"(SE={se:.4f}, n={n}, df={n - 1}{corr}){low_conf}"),
                 delta=mean_d, threshold=bar,
             )
 

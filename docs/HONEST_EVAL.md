@@ -7,9 +7,15 @@ construction*, and the rules below are enforced in code, not just documented.
 
 ## The four guarantees
 
-1. **Seeded, frozen splits.** `make_splits(task_ids, seed, ratios)` partitions
-   tasks deterministically. The split is written to the run dir once
-   (`splits.json`) and every skill reads it back — no skill re-splits or peeks.
+1. **Seeded, frozen splits — and big enough to gate on.** `make_splits(task_ids,
+   seed, ratios)` partitions tasks deterministically. The split is written to the
+   run dir once (`splits.json`) and every skill reads it back — no skill re-splits
+   or peeks. `check_val_size` (run at split freeze *and* at `baseline`) **refuses**
+   a val split with 0 or 1 tasks (`TinyValSplitError`): with n=1 the paired delta
+   has 0 degrees of freedom, so the gate could only degenerate to "any Δ>0 wins".
+   Below 5 val tasks the run proceeds but logs a `split_warning`, and each gate
+   decision is flagged `LOW CONFIDENCE`. `CAPEVOLVE_ALLOW_TINY_VAL=1` opts out —
+   and means you accept a non-honest gate.
 
 2. **The test set is sealed.** `RunDir.consume_test()` flips a `test_used` flag
    and raises `TestSealError` on any second access. The held-out number is
@@ -22,7 +28,11 @@ construction*, and the rules below are enforced in code, not just documented.
    `simplicity_tiebreak`) exist but never relax the val-only rule. The gate reads
    only the **primary** metric (the scalar `reward`); any shown-only secondary
    metrics a scorer emits (`Score.metrics`) are for display and cannot move the
-   decision.
+   decision. In `mode="paired"` (the default when per-task data exists) `k` is a
+   *z* multiplier, but SE(Δ) is estimated from the same n val deltas — so the bar
+   uses the equivalent **Student-t** multiplier at df = n−1 (`stats.t_critical`).
+   t ≥ z always, so the correction only ever makes the gate *stricter*: at n=3 the
+   bar widens 1.32×, at n=10 1.06×, at n=30 1.02×, converging to `k · SE`.
 
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
