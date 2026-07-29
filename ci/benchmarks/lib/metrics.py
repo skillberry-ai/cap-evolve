@@ -125,7 +125,7 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
 
 
 def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_path: str = "",
-                  steps_jsonl_path: str = "", optimizer_model: str = "aws/claude-opus-4-8") -> str:
+                  steps_jsonl_path: str = "", optimizer_model: str = "claude-opus-4-8") -> str:
     """Render the per-task + per-iteration + suite-rollup report for ONE run_suite.sh
     run (all of a tier's tasks optimized together, no-holdout FIT: train==val==test).
 
@@ -238,7 +238,7 @@ def main(argv: list[str]) -> int:
         args = argv[2:]
         rd = args[0]
         opt = {"bench": "", "tier": "smoke", "agent": "aws/gpt-oss-120b", "iters": "3",
-               "jsonl": "", "steps-jsonl": "", "optimizer-model": "aws/claude-opus-4-8"}
+               "jsonl": "", "steps-jsonl": "", "optimizer-model": "claude-opus-4-8"}
         for i, a in enumerate(args):
             for k in ("bench", "tier", "agent", "iters", "jsonl", "steps-jsonl", "optimizer-model"):
                 if a == f"--{k}" and i + 1 < len(args):

@@ -11,6 +11,7 @@ import type {
   CandidateDiff,
   CandidateFile,
   CompareResult,
+  CustomView,
   FileResult,
   GitCommit,
   GitDiffResult,
@@ -44,14 +45,47 @@ export function staticSlug(url: string): string {
   return slug || 'index'
 }
 
-/** Base for the static data dir. Relative so it works from any subpath/host. */
-const DATA_BASE = 'data'
+/** Base for the static data dir. Read lazily (not a module-level const) — main.tsx sets
+ * window.__CAPEVOLVE_DATA_BASE__ *after* this module has already been evaluated, so a
+ * top-level const would capture the default before the override lands. Relative default
+ * so it still works from any subpath/host when there is no override. */
+function dataBase(): string {
+  const override = (window as unknown as { __CAPEVOLVE_DATA_BASE__?: string })
+    .__CAPEVOLVE_DATA_BASE__
+  return override || 'data'
+}
+
+/** Reads a `?dataBase=` query param and, if present, sets window.__CAPEVOLVE_DATA_BASE__
+ * so getJSON() serves static requests from that (absolute) URL instead of the relative
+ * default. Called once by main.tsx before mounting. */
+export function applyDataBaseOverride(search: string = window.location.search): void {
+  const override = new URLSearchParams(search).get('dataBase')
+  if (override) {
+    (window as unknown as { __CAPEVOLVE_DATA_BASE__?: string }).__CAPEVOLVE_DATA_BASE__ = override
+  }
+}
+
+/** True when this page load is viewing a `?dataBase=`-overridden (live) data source,
+ * as opposed to the default bundled static export or the live backend. Callers use this
+ * to distinguish "this run's data just doesn't exist yet" (live, still exporting its
+ * first snapshot) from a genuinely missing/broken run. */
+export function isLiveOverride(): boolean {
+  return Boolean((window as unknown as { __CAPEVOLVE_DATA_BASE__?: string }).__CAPEVOLVE_DATA_BASE__)
+}
+
+/** Thrown by getJSON() for a 404 while `isLiveOverride()` is true — the poller hasn't
+ * pushed this run's first snapshot yet, not a real error. */
+export class LivePendingError extends Error {}
 
 async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const target = STATIC_MODE ? `${DATA_BASE}/${staticSlug(url)}.json` : url
+  const target = STATIC_MODE ? `${dataBase()}/${staticSlug(url)}.json` : url
   const res = await fetch(target, { signal })
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText} for ${target}`)
+    const message = `${res.status} ${res.statusText} for ${target}`
+    if (res.status === 404 && isLiveOverride()) {
+      throw new LivePendingError(message)
+    }
+    throw new Error(message)
   }
   return (await res.json()) as T
 }
@@ -81,6 +115,9 @@ export const api = {
 
   memory: (id: string, signal?: AbortSignal) =>
     getJSON<MemoryResult>(`/api/runs/${encodeURIComponent(id)}/memory`, signal),
+
+  customView: (id: string, signal?: AbortSignal) =>
+    getJSON<CustomView>(`/api/runs/${encodeURIComponent(id)}/custom-view`, signal),
 
   candidateFiles: (id: string, cid: string, signal?: AbortSignal) =>
     getJSON<CandidateFile[]>(

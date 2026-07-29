@@ -90,7 +90,7 @@ has a **Type** column + filter.
   | `iterations` | `10` | full tier only — smoke is always pinned to 3 |
   | `trials` | `10` | whichever tier(s) run in this dispatch |
   | `agent_model` | `aws/gpt-oss-120b` | the evaluation model (agent under test) — dropdown, populated from the `ete-litellm` gateway's registered aliases |
-  | `optimizer_model` | `aws/claude-opus-4-8` | the optimization model (Claude Code's model) — dropdown, same gateway-alias list as `agent_model` |
+  | `optimizer_model` | `claude-opus-4-8` | the optimization model (Claude Code's model) — dropdown, same gateway-alias list as `agent_model` |
   | `optimizer_usd_per_iter` | `0` (unlimited) | per-iteration $ cap on the optimizer — `0` disables Claude Code's native `--max-budget-usd` cap entirely; set e.g. `4.0` to bound it |
   | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
   | `gate_k_se` | `1.0` | acceptance-gate strictness (accept iff Δ > k_se·SE) |
@@ -159,3 +159,39 @@ echo '{"count":0,"runs":0,"updated":null}' > meta.json
 git add records/.gitkeep benchmarks.json meta.json
 git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
 ```
+
+### Per-run CapEvolve UI snapshots
+
+Each `bench` job also best-effort-exports its raw `.capevolve` run directory as a static
+CapEvolve dashboard snapshot (`export_static.py` + a `VITE_STATIC=1` Vite build), assembled
+by the `aggregate` job into `runs/<run_id>__<tier>-<bench>/ui/` on `benchmark-history`
+alongside its record, which gets `"has_ui": true`. `pages.yml` redeploys on every Benchmarks
+completion and folds `benchmark-history`'s `runs/**` into the deployed site under
+`benchmark-ui/runs/**`, so `benchmarks.html` can link "Open UI" straight to a specific run's
+dashboard. Records/snapshots are **kept forever by default** — there is no automatic expiry.
+
+To reclaim space, run **Actions → "Prune benchmark-history" → Run workflow** with a `days`
+input (default `30`) — it deletes any record (and its paired UI snapshot) older than that
+many days, directly on `benchmark-history`. This only removes files from the branch's current
+tree; it does not rewrite git history, so it doesn't reclaim `.git` object storage — that's
+an accepted tradeoff for keeping "keep forever unless a human explicitly prunes" simple.
+
+### Live monitoring while a run is in progress
+
+Each `bench` job also backgrounds `ci/benchmarks/lib/live_push.sh` around "Run suite":
+every 5 minutes it exports the in-progress run's static dashboard data and overwrites
+`live/<run_id>__<tier>-<bench>/data/` on `benchmark-history` — always the latest
+snapshot only, never a history of intermediate ones. When the job ends (any outcome),
+it deletes that `live/` entry; the permanent snapshot lands moments later via the
+`aggregate` job's `runs/<slug>/` write, same as always.
+
+`benchmarks.html` polls the GitHub Actions API client-side (unauthenticated, no new
+CI-side status reporting) to show a "Running now" panel with a "Watch live" link per
+in-progress `<tier>/<bench>` job. Unlike the finished-run UI (a full shell+data copy
+committed per run), the live view points one generic dashboard shell — built once per
+Pages deploy at `site/dashboard-ui/` — at the live data via a `?dataBase=` query param,
+so no Pages redeploy is needed while a run is in progress.
+
+Orphaned `live/` entries (e.g. a hard runner crash before cleanup runs) are harmless:
+"what's running" is always derived from the GitHub Actions API, never from `live/`'s
+existence, so an orphan is simply never linked to.

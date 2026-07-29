@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
-import { STATIC_MODE } from './lib/api'
+import { STATIC_MODE, applyDataBaseOverride } from './lib/api'
 import { Hub } from './routes/Hub'
 import { RunDeepDive } from './routes/RunDeepDive'
 import { Compare } from './routes/Compare'
@@ -16,6 +16,8 @@ const queryClient = new QueryClient({
 // (python -m http.server, GitHub Pages, etc.) without server rewrites. Live dashboard
 // keeps clean BrowserRouter paths (the backend serves index.html for unknown routes).
 const Router = STATIC_MODE ? HashRouter : BrowserRouter
+
+applyDataBaseOverride()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

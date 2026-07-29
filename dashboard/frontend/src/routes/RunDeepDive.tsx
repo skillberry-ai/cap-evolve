@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, LivePendingError } from '../lib/api'
 import { useRunStream } from '../lib/useRunStream'
 import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
@@ -43,7 +43,27 @@ export function RunDeepDive() {
     queryKey: ['run', id],
     queryFn: ({ signal }) => api.run(id!, signal),
     enabled: !!id,
+    // A live-view run whose first snapshot hasn't landed yet 404s, not fails: settle
+    // into isError immediately (no retry backoff) so the friendly message below shows
+    // right away, then let refetchInterval poll every 10s until the poller's first
+    // push lands and the fetch succeeds.
+    retry: (failureCount, err) => (err instanceof LivePendingError ? false : failureCount < 3),
+    refetchInterval: (query) => (query.state.error instanceof LivePendingError ? 10_000 : false),
   })
+  const isLivePending = error instanceof LivePendingError
+
+  // Optional algorithm-shipped custom view (e.g. evo-graph's weakness graph),
+  // mounted as an extra iframe tab when the run declares one. Absent -> no tab.
+  const { data: customView } = useQuery({
+    queryKey: ['custom-view', id],
+    queryFn: ({ signal }) => api.customView(id!, signal),
+    enabled: !!id,
+    retry: false,
+  })
+  const customUrl = customView?.url
+  const tabs: TabDef[] = customUrl
+    ? [...TABS, { id: 'custom', label: customView?.title || 'Custom view' }]
+    : TABS
 
   // SSE: on each live event, debounce-refetch the authoritative reduced run.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -52,6 +72,9 @@ export function RunDeepDive() {
     timer.current = setTimeout(() => {
       queryClient.invalidateQueries({ queryKey: ['run', id] })
       queryClient.invalidateQueries({ queryKey: ['runs'] })
+      // A run can declare (or update) its custom view mid-flight — refetch so the
+      // extra tab appears/updates live rather than only after a full reload.
+      queryClient.invalidateQueries({ queryKey: ['custom-view', id] })
     }, 400)
   }, [id, queryClient])
 
@@ -88,7 +111,16 @@ export function RunDeepDive() {
           </div>
         )}
 
-        {isError && (
+        {isError && isLivePending && (
+          <Card className="border-accent/40">
+            <div className="p-4 text-sm text-muted">
+              Hold on — this run just started. Live data will show up here in a few minutes,
+              once the first snapshot is exported.
+            </div>
+          </Card>
+        )}
+
+        {isError && !isLivePending && (
           <Card className="border-rejected/40">
             <div className="p-4 text-sm text-rejected">Couldn’t load run: {(error as Error)?.message}</div>
           </Card>
@@ -97,7 +129,7 @@ export function RunDeepDive() {
         {data && (
           <div className="space-y-5">
             <KpiStrip summary={data.summary} />
-            <Tabs tabs={TABS}>
+            <Tabs tabs={tabs}>
               {(active) =>
                 active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
@@ -119,6 +151,36 @@ export function RunDeepDive() {
                   <FileTree runId={id!} />
                 ) : active === 'insights' ? (
                   <Insights runId={id!} detail={data} />
+                ) : active === 'custom' && customUrl ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-end">
+                      <a
+                        href={customUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-bg hover:text-fg"
+                        title={`Open ${customView?.title || 'this view'} full-screen in a new tab`}
+                      >
+                        Open full view in new window
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    </div>
+                    <iframe
+                      src={customUrl}
+                      title={customView?.title || 'Custom view'}
+                      // The embedded page is data-driven (declared by the run dir), so
+                      // sandbox it: allow scripts, its own-origin storage, and forms,
+                      // but deny top-level navigation and popups. NOTE: allow-scripts +
+                      // allow-same-origin only sandboxes while `customUrl` is a *different*
+                      // origin than this dashboard (it is today — a separate localhost
+                      // port). If a run ever points this at the dashboard's own origin,
+                      // the frame could remove its own sandbox; keep custom views cross-origin.
+                      sandbox="allow-scripts allow-same-origin allow-forms"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      className="h-[80vh] w-full rounded-lg border border-border bg-surface"
+                    />
+                  </div>
                 ) : (
                   <Card>
                     <div className="p-8 text-center text-sm text-muted">Unknown view.</div>

@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from . import compare, runs, trajectories
+from . import custom_view as _custom_view
 from . import memory as _memory
 from . import stream as _stream
 from . import files as _files
@@ -59,6 +60,11 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     @app.get("/api/runs/{run_id}/memory")
     def get_memory(run_id: str):
         return _memory.read_memory(_resolve_or_404(run_id))
+
+    @app.get("/api/runs/{run_id}/custom-view")
+    def get_custom_view(run_id: str):
+        # Optional algorithm-shipped view; {} when the run declares none.
+        return _custom_view.read_custom_view(_resolve_or_404(run_id))
 
     @app.get("/api/runs/{run_id}/candidate/{candidate}/files")
     def get_candidate_files(run_id: str, candidate: str):

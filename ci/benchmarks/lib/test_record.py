@@ -106,3 +106,17 @@ def test_build_preserves_tier(tmp_path):
     rec2 = record.build_record(m, {"run_id": 9, "bench": "tau2",
                                     "conclusion": "success", "date": "d"})
     assert "tier" not in rec2
+
+
+def test_build_has_ui_true(tmp_path):
+    m = tmp_path / "metrics.jsonl"; _write_jsonl(m, [TASK_OK])
+    meta = {"run_id": 10, "bench": "tau2", "conclusion": "success", "date": "d"}
+    rec = record.build_record(m, meta, has_ui=True)
+    assert rec["has_ui"] is True
+
+
+def test_build_has_ui_defaults_false(tmp_path):
+    m = tmp_path / "metrics.jsonl"; _write_jsonl(m, [TASK_OK])
+    meta = {"run_id": 11, "bench": "tau2", "conclusion": "success", "date": "d"}
+    rec = record.build_record(m, meta)
+    assert rec["has_ui"] is False

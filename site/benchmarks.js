@@ -1,4 +1,6 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
+const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
+const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench)$/;
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
@@ -12,6 +14,65 @@ const fmtDuration = (v) => {
 };
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Elapsed time since a job started, e.g. "3m07s" or "1h05m" (no seconds once past an hour).
+const fmtElapsed = (ms) => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  if (h) return `${h}h${String(m).padStart(2, "0")}m`;
+  return m ? `${m}m${String(s).padStart(2, "0")}s` : `${s}s`;
+};
+
+async function loadRunning() {
+  const panel = $("#running-now");
+  try {
+    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?status=in_progress&per_page=20`);
+    if (!runsResp.ok) throw new Error(String(runsResp.status));
+    const { workflow_runs: runs } = await runsResp.json();
+    const items = [];
+    for (const run of runs || []) {
+      const jobsResp = await fetch(`${GH_API}/actions/runs/${run.id}/jobs`);
+      if (!jobsResp.ok) continue;
+      const { jobs } = await jobsResp.json();
+      for (const job of jobs || []) {
+        if (job.status !== "in_progress") continue;
+        const m = JOB_RE.exec(job.name);
+        if (!m) continue;
+        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url, startedAt: job.started_at });
+      }
+    }
+    renderRunning(items);
+  } catch (e) {
+    panel.hidden = true;
+  }
+}
+
+function renderRunning(items) {
+  const panel = $("#running-now");
+  const list = $("#running-list");
+  if (!items.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  list.innerHTML = items.map((it) => {
+    const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
+    return `<li><span class="badge badge-accent">live</span>
+      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
+      <span class="elapsed" data-started="${esc(it.startedAt)}"></span>
+      — <a href="./dashboard-ui/index.html?dataBase=${dataBase}#/runs/run_suite" target="_blank" rel="noopener">Watch live</a></li>`;
+  }).join("");
+  updateElapsed();
+}
+
+// Ticks independently of loadRunning's poll interval so the elapsed time reads smoothly
+// between polls, instead of jumping only when a new snapshot of "in progress" jobs loads.
+function updateElapsed() {
+  document.querySelectorAll("#running-list .elapsed").forEach((el) => {
+    const started = el.dataset.started;
+    if (!started) return;
+    el.textContent = `· ${fmtElapsed(Date.now() - Date.parse(started))}`;
+  });
+}
 
 async function load() {
   try {
@@ -96,9 +157,17 @@ function render() {
     const optUsd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const latency = r.suite && (r.suite.eval_seconds != null || r.suite.optimizer_seconds != null)
       ? fmtDuration((r.suite.eval_seconds ?? 0) + (r.suite.optimizer_seconds ?? 0)) : "—";
+    const ui = r.has_ui
+      ? `<a href="./benchmark-ui/runs/${encodeURIComponent(r.run_id)}__${esc(r.tier || "smoke")}-${encodeURIComponent(r.bench)}/ui/index.html#/runs/run_suite" target="_blank" rel="noopener">Open UI</a>`
+      : `<span class="muted">—</span>`;
+    // Source column: link to the PR when set, else to `summary_url` when set
+    // (per-run detail page for local/manual runs). Backward compatible: records
+    // without `pr` or `summary_url` render as plain text.
     const src = r.pr
       ? `<a href="https://github.com/skillberry-ai/cap-evolve/pull/${encodeURIComponent(r.pr)}">${esc(r.source)}</a>`
-      : esc(r.source || "—");
+      : r.summary_url
+        ? `<a href="${esc(r.summary_url)}" target="_blank" rel="noopener">${esc(r.source || "—")}</a>`
+        : esc(r.source || "—");
     const badge = `<span class="badge ${esc(r.conclusion)}">${esc(r.conclusion)}</span>`;
     const date = esc((r.date || "").replace("T", " ").replace("Z", ""));
     const tier = esc(r.tier || "smoke");
@@ -107,13 +176,13 @@ function render() {
       <td>${r.trials ?? "—"}</td>
       <td>${reward}</td><td>${evalUsd}</td><td>${optUsd}</td><td>${latency}</td>
       <td><code>${esc(r.agent_model || "—")}</code></td><td><code>${esc(r.optimizer_model || "—")}</code></td>
-      <td>${badge}</td>`;
+      <td>${badge}</td><td>${ui}</td>`;
     tb.appendChild(tr);
 
     const detail = document.createElement("tr");
     detail.className = "detail-row";
     detail.hidden = true;
-    detail.innerHTML = `<td colspan="13">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
+    detail.innerHTML = `<td colspan="14">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
     tb.appendChild(detail);
 
     tr.addEventListener("click", (e) => {
@@ -164,3 +233,10 @@ $("#f-time").addEventListener("change", () => {
   $("#f-to-wrap").hidden = !custom;
 });
 load();
+loadRunning();
+// 5 minutes, matching live_push.sh's own snapshot cadence — polling more often buys
+// nothing (the data can't have changed) and risks exhausting the unauthenticated GitHub
+// API's 60 req/hour rate limit (this call + one /jobs lookup per in-progress run, every
+// poll), which made the panel silently disappear (loadRunning's catch just hides it).
+setInterval(loadRunning, 300000);
+setInterval(updateElapsed, 1000);

@@ -51,13 +51,13 @@ on:
           - "aws/gpt-oss-120b"
           - "aws/claude-sonnet-5"
           - "aws/claude-opus-5"
-          - "aws/claude-opus-4-8"
+          - "claude-opus-4-8"
           - "aws/claude-opus-4-7"
           - "aws/us.claude-opus-4-7"
-          - "aws/claude-opus-4-6"
+          - "claude-opus-4-6"
           - "aws/claude-haiku-4-5"
           - "aws/claude-sonnet-4-5"
-          - "aws/claude-sonnet-4-6"
+          - "claude-sonnet-4-6"
           - "Azure/gpt-4o"
           - "Azure/gpt-4.1"
           - "Azure/gpt-5-2025-08-07"
@@ -81,18 +81,18 @@ on:
       optimizer_model:
         description: "Optimization model — the Claude Code optimizer's model (litellm_proxy alias on the ete-litellm gateway)"
         type: choice
-        default: "aws/claude-opus-4-8"
+        default: "claude-opus-4-8"
         options:
           - "aws/gpt-oss-120b"
           - "aws/claude-sonnet-5"
           - "aws/claude-opus-5"
-          - "aws/claude-opus-4-8"
+          - "claude-opus-4-8"
           - "aws/claude-opus-4-7"
           - "aws/us.claude-opus-4-7"
-          - "aws/claude-opus-4-6"
+          - "claude-opus-4-6"
           - "aws/claude-haiku-4-5"
           - "aws/claude-sonnet-4-5"
-          - "aws/claude-sonnet-4-6"
+          - "claude-sonnet-4-6"
           - "Azure/gpt-4o"
           - "Azure/gpt-4.1"
           - "Azure/gpt-5-2025-08-07"
@@ -139,7 +139,7 @@ jobs:
     runs-on: [self-hosted, ibm-vpc]
     # Repo default token is read-only; the "Comment results on the PR" step needs write.
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
@@ -172,7 +172,7 @@ jobs:
       ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || github.event.inputs.iterations || '10' }}
       NUM_TRIALS: ${{ github.event.inputs.trials || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
-      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'aws/claude-opus-4-8' }}
+      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
       # full stays unlimited by default. An explicit `optimizer_usd_per_iter`
       # dispatch input overrides this for whichever tier(s) run in that dispatch.
@@ -210,9 +210,46 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
+      - name: Start live snapshot poller
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          nohup bash ci/benchmarks/lib/live_push.sh "$run_dir" "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
+            > "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid"
+          disown
+
       - name: Run suite
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+
+      - name: Stop live snapshot poller
+        if: steps.gate.outputs.run == 'true' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pidfile="$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid"
+          if [ -f "$pidfile" ]; then
+            kill "$(cat "$pidfile")" 2>/dev/null || true
+            rm -f "$pidfile"
+          fi
+          bash ci/benchmarks/lib/live_push.sh --cleanup "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
+            || echo "::warning::live cleanup push failed (best-effort, no action needed)"
+
+      - name: Export CapEvolve UI snapshot
+        if: steps.gate.outputs.run == 'true' && always()
+        run: |
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+          if [ -f "$run_dir/events.jsonl" ]; then
+            PYTHONPATH="$GITHUB_WORKSPACE/dashboard/backend" "$CAPEVOLVE_PY" -m capevolve_dashboard.export_static \
+              --base "$(dirname "$run_dir")" --run-id run_suite --out "$out/ui/data" \
+              || echo "::warning::UI export failed for ${{ matrix.tier }}/${{ matrix.bench }} (best-effort, continuing)"
+          else
+            echo "no run dir at $run_dir (job likely failed/cancelled before producing one) — skipping UI export"
+          fi
 
       - name: Write run metadata
         if: steps.gate.outputs.run == 'true' && always()
@@ -239,7 +276,7 @@ jobs:
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
             "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
-            "optimizer_model": "${OPTIMIZER_MODEL:-aws/claude-opus-4-8}",
+            "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
             "conclusion": "${{ job.status }}"
           }
           JSON
@@ -283,6 +320,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: benchmark-history-write
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4              # for ci/benchmarks/lib/record.py
 
@@ -292,14 +332,36 @@ jobs:
           path: _artifacts
           pattern: benchmarks-*
 
-      - name: Build records
+      - name: Check for UI snapshots
+        id: uicheck
         run: |
-          mkdir -p _new_records
+          if find _artifacts -type d -path '*/ui/data' 2>/dev/null | grep -q .; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js 22
+        if: steps.uicheck.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build static dashboard shell
+        if: steps.uicheck.outputs.found == 'true'
+        working-directory: dashboard/frontend
+        run: |
+          npm ci
+          VITE_STATIC=1 npx vite build --outDir "$RUNNER_TEMP/ui_shell"
+
+      - name: Build records + assemble UI snapshots
+        run: |
           # upload-artifact stores files flat at the artifact root (the least-common-ancestor
           # of ci/benchmarks/.work/suite_<tier>_<bench>/** is that dir), so runmeta.json/
-          # metrics.jsonl live directly under _artifacts/benchmarks-<tier>-<bench>/. The dir
+          # metrics.jsonl/ui/ live directly under _artifacts/benchmarks-<tier>-<bench>/. The dir
           # suffix is the <tier>-<bench> slug — use it verbatim to keep record files unique
           # per (run, tier, bench) so smoke and full of the same bench never collide.
+          mkdir -p _new_records _hist_runs
           have=0; built=0
           for d in _artifacts/benchmarks-*; do
             [ -d "$d" ] || continue
@@ -308,7 +370,15 @@ jobs:
             [ -f "$rm" ] || { echo "::warning::no runmeta for $slug, skipping"; continue; }
             have=$((have+1))
             rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
-            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" --steps "$steps" \
+            has_ui_flag=""
+            if [ -d "$d/ui/data" ] && [ -n "$(ls -A "$d/ui/data" 2>/dev/null)" ]; then
+              dest="_hist_runs/${rid}__${slug}/ui"
+              mkdir -p "$dest"
+              cp -R "$RUNNER_TEMP/ui_shell/." "$dest/"
+              cp -R "$d/ui/data" "$dest/data"
+              has_ui_flag="--has-ui"
+            fi
+            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" --steps "$steps" $has_ui_flag \
               > "_new_records/${rid}__${slug}.json" && built=$((built+1))
             echo "built _new_records/${rid}__${slug}.json"
           done
@@ -331,10 +401,15 @@ jobs:
                 echo "branch missing — bootstrap it per ci/benchmarks/README.md"; exit 1; }
             mkdir -p _hist/records
             cp _new_records/*.json _hist/records/
+            if [ -d _hist_runs ] && [ -n "$(ls -A _hist_runs 2>/dev/null)" ]; then
+              mkdir -p _hist/runs
+              cp -R _hist_runs/. _hist/runs/
+            fi
             python3 ci/benchmarks/lib/record.py aggregate _hist/records \
               --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out _hist
             cd _hist
             git add records benchmarks.json meta.json
+            [ -d runs ] && git add runs
             git commit -m "bench: record run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
             if git push origin benchmark-history; then echo "pushed"; exit 0; fi
             echo "push race, retrying ($attempt)"; cd ..; sleep 3

@@ -151,6 +151,7 @@
     .reveal .loop-diagram .lp-name    { fill: var(--ink); font-family: Inter, sans-serif; font-size: 26px; font-weight: 700; text-anchor: middle; }
     .reveal .loop-diagram .lp-name-accent { fill: var(--accent); }
     .reveal .loop-diagram .lp-desc    { fill: var(--sub); font-family: Inter, sans-serif; font-size: 17px; font-style: italic; text-anchor: middle; }
+    .reveal .loop-diagram .lp-sub     { fill: var(--sub); font-family: Inter, sans-serif; font-size: 15px; font-weight: 400; text-anchor: middle; }
     .reveal .loop-diagram .lp-arrow   { stroke: var(--sub); stroke-width: 2.5; fill: none; }
     .reveal .loop-diagram .lp-return  { stroke: var(--accent); stroke-width: 2.5; fill: none; }
     .reveal .loop-diagram .lp-label   { fill: var(--accent); font-family: Inter, sans-serif; font-size: 20px; font-weight: 700; text-anchor: middle; letter-spacing: 0.05em; }
@@ -430,94 +431,126 @@
            xmlns="http://www.w3.org/2000/svg" role="img"
            aria-label="cap-evolve hill-climb loop: base capability starts the flow into evaluate, then gate compares candidate vs previous best, then the loop asks whether the winner is improved — if yes commit new best — then diagnose, propose, and the new candidate loops back into evaluate">
         <defs>
-          <marker id="arr-fwd" viewBox="0 0 10 10" refX="8" refY="5"
+          <!-- Group-tinted arrowheads. A=teal (inputs), B=sky (evolve), C=purple (core), D=amber (state). -->
+          <marker id="arr-a" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" fill="#b8b8b8"/>
+            <path d="M0,0 L10,5 L0,10 z" fill="#5ec6d8"/>
           </marker>
-          <marker id="arr-ret" viewBox="0 0 10 10" refX="8" refY="5"
+          <marker id="arr-b" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6ea8ff"/>
+          </marker>
+          <marker id="arr-c" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#a48bff"/>
           </marker>
-          <marker id="arr-mut" viewBox="0 0 10 10" refX="8" refY="5"
+          <marker id="arr-d" viewBox="0 0 10 10" refX="8" refY="5"
                   markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" fill="#8a8f98"/>
+            <path d="M0,0 L10,5 L0,10 z" fill="#4c7cd6"/>
           </marker>
         </defs>
 
         <!-- 3-segment U-shape return path: propose-top → up → left across → down into evaluate-top.
-             Horizontal segment sits at y=65 (below the base capability pill at y=5..51). -->
+             Purple (group C) — carries the proposed candidate back into evaluate. -->
         <path d="M 980 90 L 980 65 L 275 65 L 275 88"
               stroke="#a48bff" stroke-width="2.5" fill="none"
-              marker-end="url(#arr-ret)"/>
+              marker-end="url(#arr-c)"/>
         <text class="lp-label" x="627" y="58">new candidate</text>
 
-        <!-- Row 0 · Base capability pill (directly above EVALUATE, extra vertical breathing room) -->
+        <!-- Row 0 · Base capability pill (group A: input, teal) -->
         <rect x="140" y="-15" width="160" height="46" rx="10"
-              fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
+              fill="#141414" stroke="#5ec6d8" stroke-width="2"/>
         <text x="220" y="15" fill="#f2f2f2" font-family="Inter, sans-serif"
               font-size="20" font-weight="700" text-anchor="middle">base capability</text>
-        <!-- START arrow: straight down from base capability into EVALUATE (purple / accent) -->
+        <!-- START arrow: base capability → evaluate (within group A, teal) -->
         <line x1="220" y1="33" x2="220" y2="88"
-              stroke="#a48bff" stroke-width="2.5" fill="none"
-              marker-end="url(#arr-ret)"/>
-        <text x="185" y="63" fill="#a48bff" font-family="Inter, sans-serif"
+              stroke="#5ec6d8" stroke-width="2.5" fill="none"
+              marker-end="url(#arr-a)"/>
+        <text x="185" y="63" fill="#5ec6d8" font-family="Inter, sans-serif"
               font-size="16" font-weight="700" letter-spacing="0.08em"
               text-anchor="end">START</text>
 
-        <!-- Row 1 · 5 elements: EVAL → GATE → improved? → DIAGNOSE → PROPOSE.
-             Boxes narrower (160 wide) so the connecting arrows are visible, not just heads. -->
+        <!-- Row 1 · EVAL (A) → GATE (B) → improved? (B) → DIAGNOSE (C) → PROPOSE (C).
+             Inline style overrides the .lp-box CSS default (which sets a faint gray stroke). -->
         <g>
-          <rect class="lp-box" x="140" y="90" width="160" height="80" rx="10"/>
-          <text class="lp-name" x="220" y="138">evaluate</text>
+          <rect class="lp-box" x="140" y="90" width="160" height="80" rx="10"
+                style="stroke:#5ec6d8; stroke-width:2;"/>
+          <text class="lp-name" x="220" y="132">evaluate</text>
+          <text class="lp-sub"  x="220" y="157">N trials on val</text>
 
-          <rect class="lp-box" x="330" y="90" width="160" height="80" rx="10"/>
-          <text class="lp-name" x="410" y="138">gate</text>
+          <rect class="lp-box" x="330" y="90" width="160" height="80" rx="10"
+                style="stroke:#6ea8ff; stroke-width:2;"/>
+          <text class="lp-name" x="410" y="132">gate</text>
+          <text class="lp-sub"  x="410" y="157">Δ &gt; k·SE</text>
 
-          <!-- improved? decision diamond -->
-          <polygon points="600,90 680,130 600,170 520,130"
-                   fill="#141414" stroke="#a48bff" stroke-width="2"/>
+          <!-- improved? decision — flat-top/flat-bottom hexagon (group B, sky).
+               Same vertical extent as neighbor boxes (y=90..170) so the row aligns;
+               slightly wider (170 vs 160) with a 130-wide flat top so "improved?" fits. -->
+          <polygon points="515,130 535,90 665,90 685,130 665,170 535,170"
+                   fill="#141414" stroke="#6ea8ff" stroke-width="2"/>
           <text class="lp-name" x="600" y="138">improved?</text>
 
-          <rect class="lp-box" x="710" y="90" width="160" height="80" rx="10"/>
-          <text class="lp-name" x="790" y="138">diagnose</text>
+          <rect class="lp-box" x="710" y="90" width="160" height="80" rx="10"
+                style="stroke:#a48bff; stroke-width:2;"/>
+          <text class="lp-name" x="790" y="132">diagnose</text>
+          <text class="lp-sub"  x="790" y="157">cluster failures</text>
 
-          <rect class="lp-box" x="900" y="90" width="160" height="80" rx="10"/>
-          <text class="lp-name" x="980" y="138">propose</text>
+          <rect class="lp-box" x="900" y="90" width="160" height="80" rx="10"
+                style="stroke:#a48bff; stroke-width:2;"/>
+          <text class="lp-name" x="980" y="132">propose</text>
+          <text class="lp-sub"  x="980" y="157">optimizer edit</text>
         </g>
 
-        <!-- forward arrows between adjacent elements (now 30px each — shafts visible) -->
-        <line class="lp-arrow" x1="302" y1="130" x2="328" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="492" y1="130" x2="518" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="682" y1="130" x2="708" y2="130" marker-end="url(#arr-fwd)"/>
-        <line class="lp-arrow" x1="872" y1="130" x2="898" y2="130" marker-end="url(#arr-fwd)"/>
+        <!-- Forward arrows, colored by destination group. Inline style overrides .lp-arrow CSS. -->
+        <line class="lp-arrow" x1="302" y1="130" x2="328" y2="130"
+              style="stroke:#6ea8ff;" marker-end="url(#arr-b)"/>              <!-- eval → gate (into B) -->
+        <line class="lp-arrow" x1="492" y1="130" x2="513" y2="130"
+              style="stroke:#6ea8ff;" marker-end="url(#arr-b)"/>              <!-- gate → improved? (within B) -->
+        <line class="lp-arrow" x1="687" y1="130" x2="708" y2="130"
+              style="stroke:#a48bff;" marker-end="url(#arr-c)"/>              <!-- improved? → diagnose (into C) -->
+        <line class="lp-arrow" x1="872" y1="130" x2="898" y2="130"
+              style="stroke:#a48bff;" marker-end="url(#arr-c)"/>              <!-- diagnose → propose (within C) -->
 
-        <!-- Down arrow from improved? diamond → commit-new-best pill in row 2 -->
-        <line x1="600" y1="172" x2="600" y2="218"
-              stroke="#a48bff" stroke-width="2.5" fill="none"
-              marker-end="url(#arr-ret)"/>
+        <!-- Down arrow: improved? → new best (into group D, royal blue). "commit" rides the arrow. -->
+        <line x1="600" y1="170" x2="600" y2="218"
+              stroke="#4c7cd6" stroke-width="2.5" fill="none"
+              marker-end="url(#arr-d)"/>
+        <text x="612" y="197" fill="#4c7cd6" font-family="Inter, sans-serif"
+              font-size="16" font-weight="700" letter-spacing="0.08em"
+              text-anchor="start">commit</text>
 
-        <!-- Row 2 · previous-best side-input pill feeding into GATE from below -->
+        <!-- Row 2 · previous-best side-input pill (group D, solid — same slot as new best, read at next iter) -->
         <rect x="330" y="220" width="160" height="46" rx="10"
-              fill="#141414" stroke="#666a72" stroke-width="1.5" stroke-dasharray="5 3"/>
+              fill="#141414" stroke="#4c7cd6" stroke-width="2"/>
         <text x="410" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
               font-size="20" font-weight="700" text-anchor="middle">previous best</text>
-        <!-- Previous-best arrow up into GATE bottom -->
+        <!-- Previous-best arrow up into GATE bottom (royal blue, solid) -->
         <line x1="410" y1="218" x2="410" y2="172"
-              stroke="#8a8f98" stroke-width="2" stroke-dasharray="5 3" fill="none"
-              marker-end="url(#arr-mut)"/>
+              stroke="#4c7cd6" stroke-width="2" fill="none"
+              marker-end="url(#arr-d)"/>
 
-        <!-- Row 2 · commit-new-best pill (below improved? diamond, solid border) -->
+        <!-- Row 2 · new-best pill (group D, solid) -->
         <rect x="520" y="220" width="160" height="46" rx="10"
-              fill="#141414" stroke="#b8b8b8" stroke-width="1.5"/>
+              fill="#141414" stroke="#4c7cd6" stroke-width="2"/>
         <text x="600" y="250" fill="#f2f2f2" font-family="Inter, sans-serif"
-              font-size="20" font-weight="700" text-anchor="middle">commit new best</text>
+              font-size="20" font-weight="700" text-anchor="middle">new best</text>
 
-        <!-- HILL-CLIMB tag at the bottom -->
-        <rect x="515" y="310" width="170" height="30" rx="15"
-              fill="#241d47" stroke="#a48bff" stroke-width="1"/>
-        <text x="600" y="330" fill="#a48bff" font-family="Inter, sans-serif"
-              font-size="16" font-weight="700" letter-spacing="0.14em"
-              text-anchor="middle">HILL-CLIMB</text>
+        <!-- State-carry: new best → previous best (same slot, seen by the next iteration's gate) -->
+        <line x1="520" y1="243" x2="493" y2="243"
+              stroke="#4c7cd6" stroke-width="2" fill="none"
+              marker-end="url(#arr-d)"/>
+
+        <!-- Diagram caption (bottom-center) — figure title for the whole loop.
+             Sits in the space the old HILL-CLIMB pill occupied, but as clean typography. -->
+        <text x="600" y="303" fill="#8a8f98" font-family="Inter, sans-serif"
+              font-size="11" font-weight="600" letter-spacing="0.14em"
+              text-anchor="middle">ALGORITHM SHOWN</text>
+        <text x="600" y="328" fill="#a48bff" font-family="Inter, sans-serif"
+              font-size="22" font-weight="700"
+              text-anchor="middle">hill-climb</text>
+        <text x="600" y="350" fill="#8a8f98" font-family="Inter, sans-serif"
+              font-size="16" font-style="italic"
+              text-anchor="middle">also available: gepa · skillopt</text>
       </svg>
 
       <aside class="notes">
