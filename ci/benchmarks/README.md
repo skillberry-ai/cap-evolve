@@ -159,3 +159,19 @@ echo '{"count":0,"runs":0,"updated":null}' > meta.json
 git add records/.gitkeep benchmarks.json meta.json
 git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
 ```
+
+### Per-run CapEvolve UI snapshots
+
+Each `bench` job also best-effort-exports its raw `.capevolve` run directory as a static
+CapEvolve dashboard snapshot (`export_static.py` + a `VITE_STATIC=1` Vite build), assembled
+by the `aggregate` job into `runs/<run_id>__<tier>-<bench>/ui/` on `benchmark-history`
+alongside its record, which gets `"has_ui": true`. `pages.yml` redeploys on every Benchmarks
+completion and folds `benchmark-history`'s `runs/**` into the deployed site under
+`benchmark-ui/runs/**`, so `benchmarks.html` can link "Open UI" straight to a specific run's
+dashboard. Records/snapshots are **kept forever by default** — there is no automatic expiry.
+
+To reclaim space, run **Actions → "Prune benchmark-history" → Run workflow** with a `days`
+input (default `30`) — it deletes any record (and its paired UI snapshot) older than that
+many days, directly on `benchmark-history`. This only removes files from the branch's current
+tree; it does not rewrite git history, so it doesn't reclaim `.git` object storage — that's
+an accepted tradeoff for keeping "keep forever unless a human explicitly prunes" simple.
