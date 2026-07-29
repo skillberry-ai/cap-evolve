@@ -16,6 +16,7 @@
     "agent_model": "aws/gpt-oss-120b",
     "optimizer_model": "claude-opus-4-8",
     "conclusion": "success",
+    "has_ui": true,
     "suite": {
       "reward_base": 0.0,
       "reward_opt": 0.5,
