@@ -18,9 +18,12 @@ cd cap-evolve
 python3 -m venv .venv && source .venv/bin/activate
 pip install ./core          # package: cap-evolve-core, CLI: cap-evolve (zero runtime deps)
 cap-evolve version          # verify
+cap-evolve doctor           # diagnose the install (non-zero exit on a hard failure)
 ```
 
 > If your default pip index requires auth, append `--index-url https://pypi.org/simple`.
+> If anything above fails, `cap-evolve doctor` names the cause and the fix — see
+> [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
 
 ## 3. Run the zero-API toy example
 

@@ -9,6 +9,7 @@ Subcommands:
     cap-evolve version
     cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
     cap-evolve check   [project_dir]
+    cap-evolve doctor  [dir] [--json]   (install/health diagnostic; nonzero on hard failure)
     cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
                        [--resume [--run-ts TS]]  resume an interrupted run in place
 
@@ -439,6 +440,11 @@ def _cmd_run(argv):
     return 0
 
 
+def _cmd_doctor(argv):
+    from .doctor import _main
+    return _main(argv)
+
+
 def _cmd_dashboard(argv):
     """Launch (or focus) the live dashboard server over a base dir of runs."""
     import argparse
@@ -616,6 +622,7 @@ COMMANDS = {
     "version": _cmd_version,
     "splits": _cmd_splits,
     "check": _cmd_check,
+    "doctor": _cmd_doctor,
     "run": _cmd_run,
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
@@ -625,7 +632,8 @@ COMMANDS = {
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
+        print("usage: cap-evolve {version|splits|check|doctor|run|estimate|dashboard} [args]",
+              file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:
