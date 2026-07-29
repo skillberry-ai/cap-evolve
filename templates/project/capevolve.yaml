@@ -18,6 +18,24 @@ optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap pas
 #   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
 #   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
 
+# --- model tiering: spend compute in proportion to task difficulty -----------
+# Two tiers, because cap-evolve makes exactly two kinds of model call:
+#   proposer_model — the STRONG model that PROPOSES the capability edit. This call
+#                    determines result quality, so it is never downgraded to save money.
+#   aux_model      — the CHEAP model for auxiliary/mechanical steps (summarization,
+#                    reflection distillation, insight synthesis, rejected-summary).
+# BOTH default to `optimizer_model` when unset, so a single-model spec behaves EXACTLY
+# as before (same optimizer argv, same cost figures). Set only `aux_model` to keep your
+# current proposer and move just the cheap steps down a tier.
+# Per-tier spend is accounted separately: proposer spend lands in `optimizer_usd` (what
+# `max_optimizer_usd` caps), aux spend in its own `aux_usd` bucket — so the reported
+# cost is never a cheap call priced at the strong model's rate.
+# NOTE: every auxiliary step in cap-evolve today is pure Python (zero model calls), so
+# `aux_model` costs $0 until an LLM-backed aux step ships. It resolves and prices
+# correctly now so those steps can adopt it without a config change.
+proposer_model: ""                       # strong tier; blank = use optimizer_model
+aux_model: ""                            # cheap tier; blank = use optimizer_model (no tiering)
+
 # --- consuming (runtime) LLM the capabilities are optimized FOR --------------
 # The model the AGENT UNDER TEST reads these capabilities with at runtime — DISTINCT
 # from optimizer_model (which PROPOSES edits). May be a concrete model id (resolved to a

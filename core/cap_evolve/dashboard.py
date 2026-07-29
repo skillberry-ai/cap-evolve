@@ -35,7 +35,8 @@ The **summary** schema (``reduced["summary"]``)::
      "test_pass_k", "counts": {accepted, rejected, failed, seed, total},
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
-     "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
+     "cost": {optimizer_usd, runner_usd, intake_usd, aux_usd, total_usd}, "tokens": int,
+     "model_tiers": {proposer, aux} | None,   # None for a single-model run
      "gate_warnings": [...], "diagnoses": [...], "git_log": [...]}
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
@@ -397,16 +398,21 @@ def reduce_run(run_dir) -> dict:
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
     intake_usd = intake_tokens = intake_secs = 0.0
     opt_tokens = 0
+    # AUX tier (model tiering): cheap-model spend, kept separate from optimizer_usd so
+    # the panel shows a real per-tier breakdown instead of one blended figure.
+    aux_usd, aux_tokens = 0.0, 0
     if sp is not None and (sp.total_usd or sp.metric_calls or sp.optimizer_seconds):
         runner_usd = sp.usd
         opt_usd = sp.optimizer_usd
         intake_usd = sp.intake_usd
+        aux_usd = sp.aux_usd
         opt_secs = sp.optimizer_seconds
         run_secs = sp.runner_seconds
         intake_secs = sp.intake_seconds
         opt_tokens = sp.optimizer_tokens
         intake_tokens = sp.intake_tokens
-        tokens = sp.runner_tokens + sp.optimizer_tokens + sp.intake_tokens
+        aux_tokens = sp.aux_tokens
+        tokens = sp.runner_tokens + sp.optimizer_tokens + sp.intake_tokens + sp.aux_tokens
 
     test = final.get("test") or {}
     test_reward = test.get("reward")
@@ -462,6 +468,12 @@ def reduce_run(run_dir) -> dict:
         "tier": tp_ev.get("tier") or "",
         "resolution_note": tp_ev.get("resolution_note") or "",
     } if tp_ev is not None else None)
+
+    # Model tiering: which model each tier resolved to. Absent (None) for a
+    # single-model run, so the panel hides the row rather than showing it twice.
+    mt_ev = next((e for e in events if e.get("kind") == "model_tiers"), None)
+    model_tiers = ({"proposer": mt_ev.get("proposer") or "",
+                    "aux": mt_ev.get("aux") or ""} if mt_ev is not None else None)
 
     # --- first-class evaluations (split-oriented, distinct from per_iteration) ---
     # An evaluation is one scoring of a candidate on one split: the seed baseline on
@@ -555,15 +567,17 @@ def reduce_run(run_dir) -> dict:
         "runner_seconds": round(run_secs, 1),
         "intake_seconds": round(intake_secs, 1),
         "cost": {"optimizer_usd": round(opt_usd, 4), "runner_usd": round(runner_usd, 4),
-                 "intake_usd": round(intake_usd, 4),
-                 "total_usd": round(opt_usd + runner_usd + intake_usd, 4)},
+                 "intake_usd": round(intake_usd, 4), "aux_usd": round(aux_usd, 4),
+                 "total_usd": round(opt_usd + runner_usd + intake_usd + aux_usd, 4)},
         "tokens": tokens,
-        "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
-                           "optimizer": opt_tokens, "intake": int(intake_tokens)},
+        "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens) - int(aux_tokens),
+                           "optimizer": opt_tokens, "intake": int(intake_tokens),
+                           "aux": int(aux_tokens)},
         "per_iteration": per_iteration,
         "evaluations": evaluations,
         "intake": intake,
         "target_profile": target_profile,
+        "model_tiers": model_tiers,
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
@@ -736,6 +750,12 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
         lines.append(c(_C.DIM, "consuming model ")
                      + c(_C.CYAN, f"{tp['model']} (tier {tp['tier']})")
                      + c(_C.DIM, "  — capabilities optimized for this reader"))
+    mt = s.get("model_tiers")
+    if mt:
+        lines.append(c(_C.DIM, "model tiers ")
+                     + c(_C.CYAN, f"proposer {mt['proposer']}")
+                     + c(_C.DIM, " · ") + c(_C.GREY, f"aux {mt['aux']}")
+                     + c(_C.DIM, f"  — aux ${s['cost'].get('aux_usd', 0.0):.4f}"))
     lines.append("")
 
     # --- cumulative-best chart (per iteration) --------------------------
@@ -911,7 +931,10 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     kp('candidates',c.total,'',`${c.accepted}✓ ${c.rejected}✗ ${c.failed}⚠`),
     kp('frontier',S.frontier),
     kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
-    kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
+    // per-tier cost: the aux (cheap-model) tier is appended only when it spent
+    // anything, so a single-model run's KPI line is unchanged.
+    kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`
+       +(cost.aux_usd?` · aux $${cost.aux_usd.toFixed(4)}`:'')),
     kp('tokens',S.tokens.toLocaleString())
   );
   s.append(g);

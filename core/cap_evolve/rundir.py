@@ -130,11 +130,19 @@ class Spent:
     intake_usd: float = 0.0          # INTAKE cost (best-effort; interview phase)
     intake_tokens: int = 0           # INTAKE tokens (best-effort)
     intake_seconds: float = 0.0      # INTAKE wall time (best-effort)
+    # AUX tier (model tiering): auxiliary/mechanical model steps run on the CHEAP
+    # model. Its own bucket so per-tier cost stays attributable — aux spend must never
+    # be reported at the proposer model's rate, nor inflate ``optimizer_usd`` (which
+    # ``max_optimizer_usd`` caps and ``estimate`` calibrates $/optimizer-call from).
+    # Appended LAST: ``from_dict`` passes positionally, so order must stay stable.
+    # $0 until an LLM-backed aux step lands — every aux step in core is pure Python.
+    aux_usd: float = 0.0             # AUX cost (cheap-tier model steps)
+    aux_tokens: int = 0              # AUX tokens
 
     @property
     def total_usd(self) -> float:
         """All-role spend: what ``max_usd`` is checked against."""
-        return self.usd + self.optimizer_usd + self.intake_usd
+        return self.usd + self.optimizer_usd + self.intake_usd + self.aux_usd
 
     def to_dict(self) -> dict:
         return {"iterations": self.iterations, "metric_calls": self.metric_calls,
@@ -142,7 +150,8 @@ class Spent:
                 "runner_seconds": self.runner_seconds, "optimizer_seconds": self.optimizer_seconds,
                 "optimizer_usd": self.optimizer_usd, "optimizer_tokens": self.optimizer_tokens,
                 "intake_usd": self.intake_usd, "intake_tokens": self.intake_tokens,
-                "intake_seconds": self.intake_seconds}
+                "intake_seconds": self.intake_seconds,
+                "aux_usd": self.aux_usd, "aux_tokens": self.aux_tokens}
 
     @classmethod
     def from_dict(cls, d: dict) -> "Spent":
@@ -153,7 +162,8 @@ class Spent:
                    float(d.get("optimizer_seconds") or 0.0),
                    float(d.get("optimizer_usd") or 0.0), int(d.get("optimizer_tokens") or 0),
                    float(d.get("intake_usd") or 0.0), int(d.get("intake_tokens") or 0),
-                   float(d.get("intake_seconds") or 0.0))
+                   float(d.get("intake_seconds") or 0.0),
+                   float(d.get("aux_usd") or 0.0), int(d.get("aux_tokens") or 0))
 
 
 class RunDir:
@@ -243,6 +253,7 @@ class RunDir:
     def update_spent(self, *, iterations=0, metric_calls=0, usd=0.0, runner_tokens=0,
                      runner_seconds=0.0, optimizer_seconds=0.0, optimizer_usd=0.0,
                      optimizer_tokens=0, intake_usd=0.0, intake_tokens=0, intake_seconds=0.0,
+                     aux_usd=0.0, aux_tokens=0,
                      accepted: bool | None = None) -> Spent:
         with _file_lock(self._state_lock):
             st = self._read_state()
@@ -258,6 +269,8 @@ class RunDir:
             sp.intake_usd += intake_usd
             sp.intake_tokens += intake_tokens
             sp.intake_seconds += intake_seconds
+            sp.aux_usd += aux_usd
+            sp.aux_tokens += aux_tokens
             if accepted is True:
                 sp.stall = 0
             elif accepted is False:
@@ -292,7 +305,8 @@ class RunDir:
             return True, f"max_metric_calls reached ({s.metric_calls}/{b.max_metric_calls})"
         if b.max_usd and s.total_usd >= b.max_usd:
             return True, (f"max_usd reached (${s.total_usd:.2f}/${b.max_usd:.2f}; "
-                          f"run ${s.usd:.2f} + opt ${s.optimizer_usd:.2f} + intake ${s.intake_usd:.2f})")
+                          f"run ${s.usd:.2f} + opt ${s.optimizer_usd:.2f} + intake ${s.intake_usd:.2f}"
+                          + (f" + aux ${s.aux_usd:.2f}" if s.aux_usd else "") + ")")
         if b.max_optimizer_usd and s.optimizer_usd >= b.max_optimizer_usd:
             return True, f"max_optimizer_usd reached (${s.optimizer_usd:.2f}/${b.max_optimizer_usd:.2f})"
         if b.stall and s.stall >= b.stall:

@@ -21,6 +21,24 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Model tiering: cheap model for auxiliary steps, strong model for proposals.** Two new
+  `capevolve.yaml` keys — `proposer_model` (the STRONG model that proposes the capability
+  edit) and `aux_model` (the CHEAP model for auxiliary/mechanical steps: summarization,
+  reflection distillation, insight synthesis, rejected-summary). Both fall back to
+  `optimizer_model`, so **a single-model spec is unchanged** — same optimizer argv, same
+  estimate, same event stream. The proposal path is pinned to the strong tier and never
+  downgraded (that would trade result quality for cost). Per-tier cost stays attributable:
+  proposer spend lands in `optimizer_usd` (what `max_optimizer_usd` caps and `estimate`
+  calibrates `$/optimizer-call` from), aux spend in its own `aux_usd` bucket priced with
+  its own smaller token profile — so a cheap call is never reported at the strong model's
+  rate. `max_usd` counts both. The dashboard CostPanel shows the per-tier split (hidden on
+  an untiered run). NOTE: every auxiliary step in cap-evolve today is pure Python (zero
+  model calls — `gepa._write_reflection`/`_write_focus`/`_build_merge`,
+  `harness._build_ledger`/`_build_runmap`/`_reconcile_journal`,
+  `skillopt._failure_patterns`/`_categorize`, the whole `diagnose` phase), so `aux_model`
+  costs $0 until an LLM-backed aux step ships (#128/#129); it resolves, routes and prices
+  correctly now so those steps adopt it without a config change. Aux model reaches
+  subprocesses as `CAPEVOLVE_AUX_MODEL`.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

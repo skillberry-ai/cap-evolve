@@ -49,7 +49,18 @@ PRICING: dict[str, tuple[float, float]] = {
 ASSUMED_TOKENS = {
     "optimizer": (10_000, 2_000),  # reads INSTRUCTIONS/MEMORY + proposes an edit
     "runner": (3_000, 800),        # one agent-under-test rollout
+    # AUX tier (model tiering): a mechanical summarize/distill call — reads a
+    # reflection/trajectory slice and emits a short digest. Smaller on BOTH sides than
+    # a proposal, so pricing aux with the optimizer's token counts would overstate it
+    # even on the correct model. ``optimizer`` == the PROPOSER tier (name kept for
+    # back-compat with the existing calibration key ``usd_per_optimizer_call``).
+    "aux": (4_000, 500),
 }
+
+# Which pricing role each model tier is priced as. Model tiering only ever changes
+# WHICH MODEL a role uses — never which role a call is. Keeping the mapping explicit
+# is what stops a cheap-tier call from being silently priced at the proposer's rate.
+TIER_ROLE = {"proposer": "optimizer", "aux": "aux"}
 
 
 def lookup(model: str | None) -> tuple[float, float] | None:
@@ -64,10 +75,20 @@ def lookup(model: str | None) -> tuple[float, float] | None:
 
 
 def call_cost(model: str | None, role: str) -> float | None:
-    """Approximate USD for one ``role`` (optimizer|runner) call of ``model``."""
+    """Approximate USD for one ``role`` (optimizer|runner|aux) call of ``model``."""
     price = lookup(model)
     if price is None:
         return None
     tin, tout = ASSUMED_TOKENS.get(role, (3_000, 800))
     pin, pout = price
     return (tin * pin + tout * pout) / 1_000_000.0
+
+
+def tier_call_cost(model: str | None, tier: str) -> float | None:
+    """Approximate USD for one call of a model TIER (``proposer``|``aux``).
+
+    A thin, explicit alias over ``call_cost`` that pins each tier to its pricing
+    role, so a tiered estimate can never accidentally price the cheap tier's calls
+    with the proposer's assumed token counts (or vice-versa).
+    """
+    return call_cost(model, TIER_ROLE.get(tier, tier))

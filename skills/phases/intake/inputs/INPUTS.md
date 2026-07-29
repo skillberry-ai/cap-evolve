@@ -105,6 +105,20 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`
   to see the available names); `optimizer_model` is the backend-specific model id.
 
+- **model tiering** — `proposer_model` / `aux_model` (both default `""`): spend compute in
+  proportion to task difficulty. `proposer_model` is the STRONG model that PROPOSES the
+  capability edit (the call that determines result quality — never downgrade it to save
+  money); `aux_model` is the CHEAP model for auxiliary/mechanical steps (summarization,
+  reflection distillation, insight synthesis, rejected-summary). BOTH fall back to
+  `optimizer_model`, so leaving them blank keeps today's exact single-model behavior.
+  Typical use: keep `optimizer_model` as your strong proposer and set only `aux_model`.
+  Per-tier spend is accounted separately — proposer spend in `optimizer_usd` (what
+  `max_optimizer_usd` caps), aux spend in its own `aux_usd` bucket — so a cheap call is
+  never reported at the strong model's rate. NOTE: every auxiliary step in cap-evolve
+  today is pure Python (zero model calls), so `aux_model` costs $0 until an LLM-backed
+  aux step ships; it resolves and prices correctly now so those steps can adopt it
+  without a config change.
+
 - **target_model** (default `""` = profile-agnostic): the runtime/CONSUMING LLM the
   agent reads these capabilities with — DISTINCT from `optimizer_model`, which proposes
   the edits. Give a concrete model id (e.g. `gpt-oss-120b`) or a capability tier

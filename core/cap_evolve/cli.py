@@ -191,8 +191,22 @@ def _cmd_run(argv):
     # shows in the dashboard. Rows without a json_flag (mock/offline) ignore it.
     opt_cmd = (f"{sys.executable} {skill_run('run-optimizer')} --name {optimizer_name} "
                f"--json --workdir {{workdir}} --prompt {{prompt}}")
-    if spec.get("optimizer_model"):
-        opt_cmd += f" --model {spec['optimizer_model']}"
+    # Model tiering: the edit proposal is the quality-determining call, so it always
+    # gets the PROPOSER tier — which resolves to ``proposer_model`` if set, else the
+    # pre-existing ``optimizer_model``. A single-model spec therefore emits the exact
+    # same ``--model <optimizer_model>`` argv as before tiering existed. The cheap
+    # ``aux_model`` is NEVER routed here (that would trade result quality for cost).
+    from .specfile import is_tiered as _is_tiered, model_for_tier as _model_for_tier
+    proposer_model = _model_for_tier(spec, "proposer")
+    if proposer_model:
+        opt_cmd += f" --model {proposer_model}"
+    # The cheap tier travels by env, not argv: no core call site spends it yet (every
+    # auxiliary step is pure Python today), so adding a flag nobody reads would be
+    # dead plumbing. An LLM-backed aux step (#128/#129) reads CAPEVOLVE_AUX_MODEL and
+    # reports its spend via RunDir.update_spent(aux_usd=...) to stay separately priced.
+    aux_model = _model_for_tier(spec, "aux")
+    if aux_model:
+        os.environ["CAPEVOLVE_AUX_MODEL"] = aux_model
     # Per-iteration optimizer cap: run-optimizer maps --budget to the registry row's
     # budget_flag_template (e.g. claude-code → --max-turns N), bounding each step's cost.
     if spec.get("optimizer_max_turns"):
@@ -233,6 +247,11 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          # Per-tier model routing (proposer = quality-determining edit
+                          # proposal; aux = cheap mechanical steps). Both fall back to
+                          # optimizer_model, so a single-model spec shows it twice.
+                          "model_tiers": {"proposer": _model_for_tier(spec, "proposer"),
+                                          "aux": _model_for_tier(spec, "aux")},
                           "target_model": spec.get("target_model", ""),
                           "orchestration_mode": orchestration_mode,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
@@ -291,6 +310,18 @@ def _cmd_run(argv):
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return 1
     run_dir = json.loads(proc.stdout)["run_dir"]
+
+    # Record which model each tier resolved to, so a run's routing is auditable from
+    # events.jsonl (and the report/dashboard can show it) rather than inferred from the
+    # spec. Only logged when the spec is actually TIERED, so a single-model run's event
+    # stream is byte-identical to before. Best-effort: never breaks the run.
+    if _is_tiered(spec):
+        try:
+            from .rundir import RunDir as _RD
+            _RD.open(workdir / run_dir).log_event(
+                "model_tiers", proposer=proposer_model, aux=aux_model)
+        except Exception:  # noqa: BLE001
+            pass
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.
@@ -501,7 +532,7 @@ def _calibrate(project: Path) -> dict | None:
     """
     base = project.parent  # .capevolve/
     runs = sorted(base.glob("run_*")) if base.is_dir() else []
-    tot_mc = tot_runner = tot_iters = tot_opt = 0.0
+    tot_mc = tot_runner = tot_iters = tot_opt = tot_aux = 0.0
     for r in runs:
         sj = r / "state.json"
         if not sj.exists():
@@ -513,12 +544,18 @@ def _calibrate(project: Path) -> dict | None:
         tot_mc += float(sp.get("metric_calls") or 0)
         tot_runner += float(sp.get("usd") or 0.0)
         tot_iters += float(sp.get("iterations") or 0)
+        # ``optimizer_usd`` is PROPOSER-tier spend only: cheap-tier model work lands in
+        # its own ``aux_usd`` bucket, so calibrating $/optimizer-call from it can never
+        # be skewed by aux spend priced at a different model's rate.
         tot_opt += float(sp.get("optimizer_usd") or 0.0)
+        tot_aux += float(sp.get("aux_usd") or 0.0)
     out: dict = {}
     if tot_mc > 0 and tot_runner > 0:
         out["usd_per_metric_call"] = tot_runner / tot_mc
     if tot_iters > 0 and tot_opt > 0:
         out["usd_per_optimizer_call"] = tot_opt / tot_iters
+    if tot_iters > 0 and tot_aux > 0:
+        out["usd_per_aux_call"] = tot_aux / tot_iters
     return out or None
 
 
@@ -535,12 +572,19 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     if metric_calls is not None and cap:
         metric_calls = min(metric_calls, cap)
     opt_calls = iters
-    opt_model = spec.get("optimizer_model")
+    # Model tiering: the optimizer/proposal call is priced with the PROPOSER tier's
+    # model, which resolves to ``optimizer_model`` when no ``proposer_model`` is set —
+    # so a single-model spec estimates the exact same number as before tiering.
+    from .specfile import is_tiered as _is_tiered, model_for_tier as _model_for_tier
+    opt_model = _model_for_tier(spec, "proposer") or spec.get("optimizer_model")
+    aux_model = _model_for_tier(spec, "aux")
     run_model = spec.get("runner_model") or spec.get("model")
 
     out: dict = {
         "spec_summary": {"val_tasks": val, "num_trials": trials, "max_iterations": iters,
-                         "optimizer_model": opt_model, "runner_model": run_model},
+                         "optimizer_model": opt_model, "runner_model": run_model,
+                         "proposer_model": opt_model, "aux_model": aux_model,
+                         "tiered": _is_tiered(spec)},
         "calls": {"metric_calls": metric_calls, "optimizer_calls": opt_calls},
         "budget": {k: spec.get(k) for k in ("max_usd", "max_optimizer_usd", "max_metric_calls")},
         "dominant_cost_knob": "max_iterations (× val × trials drives runner calls)",
