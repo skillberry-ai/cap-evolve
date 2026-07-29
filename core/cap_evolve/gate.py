@@ -11,6 +11,15 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .splits import (
+    LOW_CONFIDENCE_VAL_TASKS,
+    MIN_VAL_TASKS,
+    TinyValSplitError,
+    mark_bypass,
+    tiny_val_allowed,
+)
+from .stats import t_multiplier_for_z
+
 
 @dataclass
 class GateDecision:
@@ -79,6 +88,9 @@ def decide(
         same tasks, so the cross-task variance cancels and only the *paired*
         variance counts. Requires ``paired_deltas``; the loop uses it by default
         when per-task data is available, else falls back to ``significant``.
+        SE(Δ) is estimated from the same n deltas, so ``k_se`` (a z multiplier)
+        is replaced by the equivalent Student-t multiplier at df=n-1 — strictly
+        wider at small n, converging to ``k_se`` as n grows.
       - ``significant``: accept iff delta > k * combined_SE (treats cand & current
         as INDEPENDENT samples — correct only when they were not scored on the
         same tasks; less powerful than ``paired``).
@@ -108,6 +120,29 @@ def decide(
         else:
             n = len(deltas)
             mean_d = sum(deltas) / n
+            # THE chokepoint. Every mode of every algorithm reaches an accept/reject
+            # through here, so this is the one place a guard cannot be routed around
+            # by a resumed / copied / hand-written splits.json, or by a split that was
+            # healthy but whose *realized* pair count collapsed (a candidate that
+            # errored on most val tasks: harness._paired_deltas intersects task ids).
+            # The earlier check_val_size calls stay for friendly, early, pre-budget
+            # failures; this one is the backstop that makes the guarantee true.
+            if n < MIN_VAL_TASKS:
+                if not tiny_val_allowed():
+                    raise TinyValSplitError(
+                        f"gate refused: the paired gate got only {n} matched val "
+                        f"task{'' if n == 1 else 's'} (need >= {MIN_VAL_TASKS}), so "
+                        f"SE(Δ) has {max(n - 1, 0)} degrees of freedom and any accept/"
+                        f"reject would be meaningless.\n"
+                        f"  Either the val split is too small (see the split-freeze "
+                        f"error for how to fix ratios), or the candidate failed to "
+                        f"produce a score on most val tasks so only {n} pair(s) "
+                        f"matched — check the val rollouts for adapter errors.\n"
+                        f"  Override only if you accept a non-honest gate: export "
+                        f"CAPEVOLVE_ALLOW_TINY_VAL=1 (the run's artifacts are then "
+                        f"permanently branded as not-an-honest-gate)."
+                    )
+                mark_bypass(run_dir, val=n, context="at gate decision")
             if n >= 2:
                 var = sum((d - mean_d) ** 2 for d in deltas) / (n - 1)
                 se = math.sqrt(var / n)
@@ -116,21 +151,47 @@ def decide(
             if se == 0.0:
                 # Paired SE collapsed (n=1, or every task moved identically). Do not
                 # silently act strict — warn loudly, then apply the documented strict
-                # fallback (accept any positive mean delta).
+                # fallback (accept any positive mean delta). NOTE: the Student-t
+                # small-sample correction below does NOT apply on this path — there is
+                # no SE to widen — so an all-identical-deltas candidate is accepted on
+                # Δ>0 at any n. Documented in docs/HONEST_EVAL.md guarantee 3.
                 _warn_se_zero(run_dir, "paired", context=f"n={n}")
                 ok = mean_d > 0
                 return GateDecision(
                     accept=ok,
                     reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} 0 "
-                            f"(SE=0 → STRICT fallback, warned; n={n})"),
+                            f"(SE=0 → STRICT fallback, warned; n={n}; "
+                            f"no t-correction on this path)"),
                     delta=mean_d, threshold=0.0,
                 )
-            bar = k_se * se
+            # Small-sample correction. The bar is k·SE, a *z* multiplier — valid only
+            # when SE is known. Here SE(Δ) is ESTIMATED from the same n deltas, so the
+            # standardized mean difference is t-distributed with df=n-1 (fatter tails).
+            # Using z at small n sets the bar too LOW and accepts noise; we substitute
+            # the t multiplier at the same one-sided significance level. t_{1-α,df} >=
+            # z_{1-α} is a theorem for every finite df, so the gate can only get
+            # stricter and converges to z as n grows — no max() clamp needed (one would
+            # only hide a failed inversion, which now raises instead).
+            k_eff = t_multiplier_for_z(k_se, n)
+            bar = k_eff * se
             ok = mean_d > bar
+            corr = "" if abs(k_eff - k_se) < 5e-5 else f", t-corrected from {k_se}·SE"
+            low_conf = ""
+            if n < LOW_CONFIDENCE_VAL_TASKS:
+                low_conf = f" [LOW CONFIDENCE: only {n} val tasks]"
+                if run_dir is not None:
+                    log = getattr(run_dir, "log_event", None)
+                    if callable(log):
+                        log("gate_warning", mode="paired", n=n, k_se=k_se, k_eff=round(k_eff, 4),
+                            reason=(f"paired gate decided on only {n} val tasks "
+                                    f"(< {LOW_CONFIDENCE_VAL_TASKS}); a Student-t correction "
+                                    f"(df={n - 1}) widened the bar from {k_se}·SE to "
+                                    f"{k_eff:.4f}·SE, but this decision is low confidence — "
+                                    f"add val tasks or raise n_trials."))
             return GateDecision(
                 accept=ok,
-                reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
-                        f"(SE={se:.4f}, n={n})"),
+                reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_eff:.4f}·SE={bar:.4f} "
+                        f"(SE={se:.4f}, n={n}, df={n - 1}{corr}){low_conf}"),
                 delta=mean_d, threshold=bar,
             )
 

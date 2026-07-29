@@ -130,7 +130,9 @@ def _toy_adapter():
 
     class EmptyAdapter(CapabilityAdapter):
         def tasks(self, split):
-            return [Task(id=f"t{i}", input=f"input-{i}") for i in range(4)]
+            # 8 tasks (not 4): with the default 0.5/0.25/0.25 ratios, 4 tasks yield a
+            # 1-task val split, which check_val_size now rightly refuses (issue #113).
+            return [Task(id=f"t{i}", input=f"input-{i}") for i in range(8)]
         def run_target(self, task, ctx, *, seed=0):
             return Rollout(task_id=task.id, output="empty", trace="empty trajectory")
         def score(self, task, rollout):

@@ -16,6 +16,7 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve import Budget, RunDir, harness
 from cap_evolve.check import load_adapter
+from cap_evolve.splits import check_val_size
 
 
 def main(argv=None) -> int:
@@ -55,6 +56,10 @@ def main(argv=None) -> int:
     # algorithm resumes straight from the current best. state.json is left untouched.
     if args.resume and (run_dir.root / "baseline.json").exists():
         splits = run_dir.read_splits()
+        # Resume skips ensure_splits AND baseline, so it skips both of their guards.
+        # Re-check here: a resumed (or hand-written) splits.json must not reach the
+        # algorithm's gate decisions with an unusable val split.
+        check_val_size(splits, context="at resume", run_dir=run_dir)
         recorded = json.loads((run_dir.root / "baseline.json").read_text(encoding="utf-8"))
         print(json.dumps({
             "run_dir": str(run_dir.root),

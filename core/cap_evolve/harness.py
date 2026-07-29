@@ -24,9 +24,10 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import splits as splits_mod
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
-from .splits import Splits, make_splits
+from .splits import Splits, check_val_size, make_splits
 from .types import Rollout, Score, Task
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -89,6 +90,9 @@ def ensure_splits(adapter, run_dir: RunDir, *, seed: int = 0, ratios=(0.5, 0.25,
     else:
         all_tasks = adapter.tasks("all")
         splits = make_splits([t.id for t in all_tasks], seed=seed, ratios=ratios)
+    # Refuse an unusable val split BEFORE freezing it — an empty/1-task val makes the
+    # acceptance gate meaningless, and the whole point of the gate is honesty.
+    check_val_size(splits, context="at split freeze", run_dir=run_dir)
     run_dir.write_splits(splits)
     run_dir.log_event("splits", train=len(splits.train), val=len(splits.val),
                       test=len(splits.test), seed=seed)
@@ -362,6 +366,10 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     needed and snapshotted as an empty candidate. The optimizer will create the
     initial capability content from the failing trajectories.
     """
+    # Second guard point: a hand-written / resumed splits.json never went through
+    # ensure_splits, so re-check before spending any budget on a run whose gate
+    # could not possibly be honest.
+    check_val_size(run_dir.read_splits(), context="at baseline", run_dir=run_dir)
     seed_dir = Path(seed_dir)
     if not seed_dir.exists():
         # Accept an empty seed, but make it auditable: a typo'd capability_path would
@@ -405,6 +413,10 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     prior_split_obj = Splits.from_dict(json.loads(prior_splits.read_text(encoding="utf-8")))
     fresh_split = Splits(train=list(prior_split_obj.train), val=list(prior_split_obj.val),
                          test=list(prior_split_obj.test), seed=prior_split_obj.seed)
+    # Guard BEFORE writing: a prior run created under CAPEVOLVE_ALLOW_TINY_VAL must not
+    # become a reusable seed for a fresh run that nothing marks as dishonest. Checking
+    # first also means nothing is frozen into this run dir on refusal.
+    check_val_size(fresh_split, context="at baseline reuse", run_dir=run_dir)
     run_dir.write_splits(fresh_split)
 
     # Copy baseline.json verbatim (the recorded seed val score + best_id).
@@ -1960,6 +1972,15 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
         payload["test_baseline"] = result.to_dict()
         payload["baseline_id"] = run_dir.best_id
         payload["test_delta"] = 0.0
+
+    # Brand a bypassed run in the durable artifact. A run whose acceptance gate was
+    # not a significance test must not produce a final.json that is byte-identical in
+    # shape to an honest one — report.md and the dashboard both read this back.
+    bypass = splits_mod.bypassed(run_dir)
+    if bypass:
+        payload["honest_gate"] = False
+        payload["warnings"] = [splits_mod.BYPASS_BANNER]
+        payload["tiny_val_bypass"] = bypass
 
     _atomic_write(run_dir.root / "final.json", json.dumps(payload, indent=2))
     run_dir.commit_test()  # burn the seal ONLY now that the result(s) are computed + written
