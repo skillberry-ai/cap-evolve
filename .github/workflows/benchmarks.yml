@@ -137,6 +137,10 @@ jobs:
   bench:
     name: ${{ matrix.tier }} / ${{ matrix.bench }}
     runs-on: [self-hosted, ibm-vpc]
+    # GitHub's default 360min job timeout is too tight for full/spreadsheetbench (912
+    # tasks x trials x iterations, one Docker container per task); self-hosted runners
+    # aren't GH-minute-billed, so a generous ceiling just prevents a silent mid-run kill.
+    timeout-minutes: 1440
     # Repo default token is read-only; the "Comment results on the PR" step needs write.
     permissions:
       contents: read

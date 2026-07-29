@@ -80,6 +80,10 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
   separately from `smoke`'s 200-task sample via `SPREADSHEETBENCH_VARIANT=full_912` — see
   `ci/benchmarks/spreadsheetbench/fetch_data.sh`), matching the population SpreadsheetBench's
   self-reported leaderboard is computed over; `swebench` and `skillsbench` are not yet.
+  A 912-task run is long — the `bench` job has a 1440min (`24h`) `timeout-minutes` and
+  `full` defaults `SPREADSHEETBENCH_CONCURRENCY` to `8` (vs. smoke's `4`; override either
+  via the env var / workflow input if the runner's Docker headroom can't take it — each
+  container is ~8GB RAM / 2 CPU).
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
