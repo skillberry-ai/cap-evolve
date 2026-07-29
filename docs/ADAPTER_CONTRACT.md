@@ -86,9 +86,30 @@ implemented, `tasks` is non-empty and stable, and `score` is deterministic. This
 mandatory before any budget is spent — a half-wired adapter can only produce a
 dishonest number.
 
-The gate reads only the **primary** metric (the scalar `reward`). Any shown-only
-secondaries a `score()` returns are carried through for display but can never move an
-accept/reject decision or the sealed number.
+The acceptance gate reads only the **primary** metric (the scalar `reward`). Any
+shown-only secondaries a `score()` returns are carried through for display but can
+never move an accept/reject decision or the sealed number.
+
+## Gate modes
+
+Which rule turns your `reward` into an accept/reject — `gate_mode` in
+`capevolve.yaml`, strictness via `gate_k_se` (default `1.0`). All val-only
+(`core/cap_evolve/gate.py`):
+
+- **`paired` — the default.** Accept iff `mean(per-task Δ) > k_se · SE(Δ)` over the
+  same val tasks. Candidate and current are scored on identical tasks, so cross-task
+  variance cancels; this is the most powerful test and what the harness picks itself.
+- `significant` — accept iff `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)`. For
+  unpaired comparisons; weaker, since it pays for cross-task variance.
+- `threshold` — accept iff `Δ > threshold` (flat domain margin).
+- `strict` — accept iff `Δ > 0`. Only for a near-zero-variance scorer.
+- `simplicity_tiebreak` — `strict`, plus on a near-tie prefer the smaller candidate.
+
+The bar matters for your `score()`: a deterministic scorer with graded rewards gives
+the paired test real between-task spread, whereas an all-or-nothing scorer at
+`num_trials=1` can collapse the SE to 0, which triggers a logged `gate_warning` and a
+strict fallback. Full table, the single-task-gain property, and the small-sample
+caveat: [`HONEST_EVAL.md` § Gate modes](HONEST_EVAL.md#gate-modes).
 
 ## Everything else is provided
 

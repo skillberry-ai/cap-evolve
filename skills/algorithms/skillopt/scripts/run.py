@@ -54,7 +54,7 @@ def main(argv=None) -> int:
                    help="how the edit budget decays over the run")
     p.add_argument("--n-trials", type=int, default=1)
     p.add_argument("--gate-mode", default="auto",
-                   help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
+                   help="auto = let the engine pick the paired gate (the default; candidate & current share val tasks); or pin one of paired|significant|threshold|strict|simplicity_tiebreak — see docs/HONEST_EVAL.md#gate-modes")
     p.add_argument("--k-se", type=float, default=1.0)
     su = p.add_mutually_exclusive_group()
     su.add_argument("--slow-update", dest="slow_update", action="store_true", default=True,

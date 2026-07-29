@@ -72,10 +72,13 @@ epoch-boundary meta step; `--no-regression` adds a SWE-bench-style dual gate.
 
 ## Pitfall: small val sets
 
-The default gate is `significant`/`paired` (NOT naive strict-greater) so a tiny
-val set does not reject every edit on noise. With a small val set, raise
-`--n-trials` (real per-trial variance) or use a **graded** reward so the paired
-significance test has signal. Only the slow update is a "meta" step — it is still
+The default gate is `paired` — the per-task paired significance test, which
+`--gate-mode auto` lets the engine pick — not naive strict-greater, so a tiny val set
+does not reject every edit on noise. With a small val set, raise `--n-trials` (real
+per-trial variance) or use a **graded** reward so the paired significance test has
+signal; see [`docs/HONEST_EVAL.md` § Gate
+modes](../../../docs/HONEST_EVAL.md#gate-modes) for all five modes and the
+small-sample caveat. Only the slow update is a "meta" step — it is still
 **gated on val**, never force-accepted, and its train sample is small + counted in
 budget (toggle with `--no-slow-update`).
 

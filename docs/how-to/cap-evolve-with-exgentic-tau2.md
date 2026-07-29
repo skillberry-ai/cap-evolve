@@ -74,7 +74,8 @@ Follow RUN.md to run a cap-evolve optimization. Here is everything intake needs:
 - algorithm: all-at-once
 - max_iterations: 20
 - num_trials: 5      (tau2 is stochastic — more trials = lower noise)
-- gate: significant, k_se: 0.5
+- gate_mode: significant, gate_k_se: 0.5   (deliberate override of the `paired` default —
+  this walkthrough's val is ~1 task, where paired SE collapses; see step 4 below)
 ```
 
 Claude will:
@@ -205,7 +206,10 @@ algorithm_skill:    all-at-once
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
 num_trials:         5
-gate_mode:          significant
+gate_mode:          significant   # deliberate override of the paired default: this walkthrough
+                                  # has ~1 val task, so paired (n=1) would collapse its SE to 0
+                                  # and fall back to strict. significant + num_trials 5 keeps a
+                                  # real bar. See docs/HONEST_EVAL.md#gate-modes.
 gate_k_se:          0.5
 max_iterations:     20
 stall:              5

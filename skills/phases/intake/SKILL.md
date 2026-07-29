@@ -42,6 +42,23 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
 - Which ONE gates accept/reject? — single choice → `metric_primary`. (This is the only metric the gate uses.)
 - For each shown metric, is higher or lower better? → `metric_directions` (parallel to `metrics_display`).
 
+### Gate mode
+- Ask only if the user wants to change it; **default `gate_mode: paired`** with
+  `gate_k_se: 1.0`. All five modes live in `core/cap_evolve/gate.py`, all val-only:
+  - **`paired` (default)** — accept iff `mean(per-task Δ) > k_se · SE(Δ)` over the SAME
+    val tasks. Cross-task variance cancels, so it is the most powerful test, and the
+    harness selects it itself when per-task data aligns (`--gate-mode auto`). Its SE
+    comes from the between-task spread of the deltas, so it stays real at
+    `num_trials=1` and can bank a genuine single-task gain.
+  - `significant` — accept iff `Δ(means) > k_se · sqrt(SE_cand² + SE_curr²)`. Unpaired
+    and weaker; it pays for cross-task variance the paired test cancels.
+  - `threshold` — accept iff `Δ > threshold` (a flat domain margin).
+  - `strict` — accept iff `Δ > 0`; only for a near-zero-variance scorer.
+  - `simplicity_tiebreak` — `strict`, plus on a near-tie prefer the smaller candidate.
+- `gate_k_se` is how many SEs the val gain must clear (`0.2` lenient … `1.0` strict).
+  Full table and the small-sample caveat:
+  [`docs/HONEST_EVAL.md` § Gate modes](../../../docs/HONEST_EVAL.md#gate-modes).
+
 ### GitHub integration
 - `gh auth status` = authed? Offer: mirror the algorithm's work items as issues + ship winner as PR (`Closes #n`) → `github_integration: true`; else offer `gh auth login` or skip → `false`. WHAT gets mirrored is algorithm-specific (the `algorithm_skill` defines it — e.g. evo-graph → weaknesses). GitHub is mirror-only; the run dir stays authoritative.
 

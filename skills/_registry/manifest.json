@@ -413,7 +413,7 @@
     "gate": {
       "component": "phase",
       "path": "phases/gate",
-      "summary": "Apply the acceptance decision (always on val; significance by default).",
+      "summary": "Apply the acceptance decision (always on val; paired per-task significance by default).",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",

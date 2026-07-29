@@ -1,9 +1,23 @@
 """Acceptance gate — the rule that decides whether a candidate edit is kept.
 
-The default is the *significance* gate (prior agent-optimization work's ``val_improvement_significant``):
-accept only when the val improvement exceeds k standard errors, so noise does
-not get mistaken for progress. All gates compare on VAL and never on TRAIN —
-``decide`` takes an explicit ``split`` and refuses anything but ``val``.
+The default mode for every real run is ``paired``. The harness scores candidate and
+current on the SAME val tasks, so it passes ``paired_deltas`` and sets
+``mode="paired"`` whenever the caller has not pinned a mode and per-task data
+aligns (``harness.py`` ``_gate_and_record``, ``gepa.py`` ``_full_val_gate``); the
+shipped ``gate_mode`` in ``templates/project/capevolve.yaml`` is ``paired`` too.
+Paired tests mean(per-task Δ) against the SE of those deltas, which cancels the
+cross-task variance and is far more powerful than the unpaired test.
+
+``decide``'s own ``mode`` parameter still defaults to ``significant`` (prior
+agent-optimization work's ``val_improvement_significant``) because that is the only
+mode a bare caller with no per-task data can honestly apply; ``paired`` also falls
+back to it when ``paired_deltas`` is empty.
+
+Modes: ``paired`` (default in runs) | ``significant`` | ``threshold`` | ``strict``
+| ``simplicity_tiebreak`` — see ``decide``'s docstring and the "Gate modes" table
+in ``docs/HONEST_EVAL.md``. Every mode's bar is a form of Δ > bar, every mode
+compares on VAL and never on TRAIN — ``decide`` takes an explicit ``split`` and
+refuses anything but ``val``.
 """
 
 from __future__ import annotations
@@ -72,8 +86,10 @@ def decide(
 ) -> GateDecision:
     """Decide whether to accept the candidate.
 
-    Modes:
-      - ``paired``: accept iff mean(per-task Δ) > k * SE(Δ), where Δ[t] =
+    Modes (``paired`` is the default for real runs — the harness selects it; the
+    ``mode`` parameter below defaults to ``significant`` only for bare callers that
+    have no per-task data to pair):
+      - ``paired`` (DEFAULT in runs): accept iff mean(per-task Δ) > k * SE(Δ), where Δ[t] =
         cand_reward[t] - curr_reward[t] over the SAME val tasks. This is the
         correct, far more powerful test: candidate and current are scored on the
         same tasks, so the cross-task variance cancels and only the *paired*

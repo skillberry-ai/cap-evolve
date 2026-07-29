@@ -71,7 +71,10 @@ artifact.
 
 ## The rules (enforced by cap_evolve, restated here for bare hosts)
 - Train/val/test are split once with a seed; **test is scored only at finalize**.
-- Acceptance is gated on **val**, never on the data the optimizer edited against.
+- Acceptance is gated on **val**, never on the data the optimizer edited against. The
+  default rule is `gate_mode: paired` — mean(per-task Δ) over the same val tasks must
+  clear `gate_k_se · SE(Δ)`. Four other modes (`significant`, `threshold`, `strict`,
+  `simplicity_tiebreak`): [docs/HONEST_EVAL.md § Gate modes](docs/HONEST_EVAL.md#gate-modes).
 - Only the **primary** metric (the scalar reward) gates; shown-only secondaries (e.g. `cost_usd`, `db_match`) are displayed but never affect accept/reject.
 - Multi-trial scoring reports mean + stderr; pass^k is reported when trials > 1.
 - Rejected approaches are remembered and never re-proposed.

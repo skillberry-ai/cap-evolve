@@ -65,11 +65,14 @@ Each round:
    python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" \
           --candidate "$R/work/cand_N" --split val --n-trials <num_trials>
    ```
-   Then apply the significance gate against the current best's val mean:
+   Then apply the significance gate against the current best's val mean. `paired` is the
+   default mode and needs the per-task deltas (`cand[t] − curr[t]` over the same val
+   tasks) — without them it falls back to the weaker unpaired `significant` test:
    ```bash
    python "$S/phases/gate/scripts/run.py" --mode paired --k-se <gate_k_se> \
           --current <best_mean> --candidate <cand_mean> \
-          --current-stderr <best_se> --candidate-stderr <cand_se>
+          --paired-deltas <d1,d2,...>            # per-task cand-curr over shared val tasks
+   # no per-task data? then: --mode significant --current-stderr <best_se> --candidate-stderr <cand_se>
    ```
    Accept **only** if the gate says Δ > k·SE. Also apply **no-regression**: reject if the
    candidate breaks any val task the current best passed, even when the mean rises.

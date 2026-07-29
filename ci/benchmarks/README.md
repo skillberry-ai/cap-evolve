@@ -93,7 +93,7 @@ has a **Type** column + filter.
   | `optimizer_model` | `claude-opus-4-8` | the optimization model (Claude Code's model) — dropdown, same gateway-alias list as `agent_model` |
   | `optimizer_usd_per_iter` | `0` (unlimited) | per-iteration $ cap on the optimizer — `0` disables Claude Code's native `--max-budget-usd` cap entirely; set e.g. `4.0` to bound it |
   | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
-  | `gate_k_se` | `1.0` | acceptance-gate strictness (accept iff Δ > k_se·SE) |
+  | `gate_k_se` | `1.0` | acceptance-gate strictness — accept iff Δ > k_se·SE, on the default `gate_mode: paired` (per-task paired SE over the same val tasks; see [docs/HONEST_EVAL.md](../../docs/HONEST_EVAL.md#gate-modes)) |
   | `algorithm_focus` | `all` | hill-climb schedule: `all` \| `cyclic` \| `hardest-first` |
 
   Overriding `agent_model` takes precedence over any per-task `agent` a curated `tasks.json`
