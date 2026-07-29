@@ -47,3 +47,6 @@ examples/skillsbench/seed_capability/*
 
 # CI benchmark scratch (per-task work dirs)
 ci/benchmarks/.work/
+
+# generic dashboard-ui shell built fresh by pages.yml (CI-only, never committed)
+site/dashboard-ui/

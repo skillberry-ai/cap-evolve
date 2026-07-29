@@ -51,6 +51,17 @@ jobs:
           test -f site/index.html || { echo "no site/index.html"; exit 1; }
           ls -la site/
 
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build CapEvolve dashboard shell (generic — data source is set at request time)
+        working-directory: dashboard/frontend
+        run: |
+          npm ci
+          VITE_STATIC=1 npx vite build --outDir "$GITHUB_WORKSPACE/site/dashboard-ui"
+
       - name: Fold in benchmark-history UI snapshots
         run: |
           rm -rf _bench_history
