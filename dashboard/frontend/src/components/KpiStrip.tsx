@@ -10,20 +10,18 @@ import { cn } from '../lib/cn'
 const TONE = { up: 'text-accepted', down: 'text-rejected', flat: 'text-muted' } as const
 
 /**
- * `pass^1 100.0% · pass^2 N/A` — a k missing from the dict means k > num_trials, so
- * the statistic is UNDEFINED, not 0. Never coerce a missing k to a number.
+ * `pass^1 100.0%` — a k missing from the dict means k > num_trials, so the statistic
+ * is UNDEFINED, not 0. Never coerce a missing k to a number, and never invent one:
+ * render exactly the ks the backend measured, in numeric order. A hardcoded k range
+ * would drop a measured `pass^3` and fabricate a `pass^2 N/A` nobody requested.
  */
-function passKHint(pk: RunSummaryDetail['test_pass_k']): string | undefined {
+export function passKHint(pk: RunSummaryDetail['test_pass_k']): string | undefined {
   if (pk == null || typeof pk !== 'object') return undefined
-  const ks = Object.keys(pk).map(Number).filter(Number.isFinite).sort((a, b) => a - b)
+  const ks = Object.keys(pk)
+    .filter((k) => Number.isFinite(Number(k)) && pk[k] != null)
+    .sort((a, b) => Number(a) - Number(b))
   if (ks.length === 0) return undefined
-  const maxK = ks[ks.length - 1]
-  const parts: string[] = []
-  for (let k = 1; k <= Math.max(maxK, 2); k++) {
-    const v = pk[String(k)]
-    parts.push(`pass^${k} ${v == null ? 'N/A' : pct(v)}`)
-  }
-  return parts.join(' · ')
+  return ks.map((k) => `pass^${Number(k)} ${pct(pk[k])}`).join(' · ')
 }
 
 /** Sticky, data-dense KPI header. Numbers count up on change. */

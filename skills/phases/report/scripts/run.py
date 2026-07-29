@@ -65,15 +65,16 @@ def main(argv=None) -> int:
     }
 
     # pass^k for k > n_trials is UNDEFINED, so aggregate_scores omits it (see
-    # loop.aggregate_scores). Render those as "N/A" — never 0.0, which would read as
-    # "0% reliable" instead of "not enough trials".
+    # loop.aggregate_scores) — never 0.0, which would read as "0% reliable" instead
+    # of "not enough trials". Render exactly the ks that are PRESENT, in numeric
+    # order: a hardcoded k range would drop a measured pass^3 and invent a
+    # `pass^2=N/A` that was never requested (`ks` is a caller kwarg; gepa passes a
+    # non-default one). final.json does not record which ks were asked for, so the
+    # present keys are the only honest source.
     pk = test.get("pass_k") or {}
     if not isinstance(pk, dict):  # legacy run dirs stored a bare scalar
         pk = {"1": pk}
-    pk_str = ", ".join(
-        f"pass^{k}=" + ("N/A" if pk.get(str(k)) is None else f"{pk[str(k)]:.3f}")
-        for k in (1, 2)
-    )
+    pk_str = ", ".join(f"pass^{k}={float(pk[k]):.3f}" for k in sorted(pk, key=int))
     test_line = f"- **Held-out test (optimized skills): {test_reward}**" + (
         f"  ({pk_str})" if pk else "")
     md = [

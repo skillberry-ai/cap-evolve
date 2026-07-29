@@ -6,6 +6,19 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **`pass^k` / `pass@k` report as N/A, never a fake `0.0`, when `k > num_trials` (#112).**
+  The default `num_trials: 1` run used to print `pass^2 = 0.0`, which reads as "0%
+  reliable" when the statistic is simply undefined — and `pass_at_k` was worse, since
+  `stats.pass_at_k` clamps `k → n` and so reported a k=2 capability measured from a
+  single trial. `aggregate_scores` now omits any `k` outside `1..min(trials per task)` (a
+  missing key IS the N/A representation), and `stats.pass_k` returns `None` instead of a
+  plausible `0.0` for an undefined `k` so a direct caller can't re-derive the bug. Two
+  rendering surfaces that hardcoded `k in (1, 2)` — `report.md` and the dashboard KPI
+  strip — would have dropped a measured `pass^3` while fabricating a `pass^2 N/A` nobody
+  requested; both now render exactly the measured ks. The SPA KPI hint also showed
+  `pass^k NaN%` because `types.ts` declared `test_pass_k` as `number | null` while the
+  backend has always sent the `{k: value}` dict. CI now fails on a stale committed
+  `dashboard/frontend/dist` bundle (see #188).
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
