@@ -43,9 +43,22 @@
       if (navToggle.getAttribute("aria-expanded") !== "true") return;
       if (!navLinks.contains(e.target) && !navToggle.contains(e.target)) setOpen(false);
     });
-    /* resizing up to desktop would otherwise leave aria-expanded="true" lying */
-    window.addEventListener("resize", function () {
-      if (window.innerWidth > 860) setOpen(false);
+    /* Tabbing past the last drawer control used to put focus on page controls
+       sitting *behind* the open drawer (copy buttons at y=520 under a 418px
+       drawer) — focusable but invisible. This is a disclosure widget, not a
+       modal, so release focus onward rather than cycling it: Tab keeps moving
+       forward and the drawer closes, so nothing focused is ever hidden. */
+    navLinks.addEventListener("focusout", function (e) {
+      if (navToggle.getAttribute("aria-expanded") !== "true") return;
+      var to = e.relatedTarget;
+      if (to && (navLinks.contains(to) || navToggle.contains(to))) return;
+      setOpen(false);
+    });
+    /* resizing up to desktop would otherwise leave aria-expanded="true" lying.
+       matchMedia fires once per breakpoint crossing; a resize listener fires on
+       every mobile scroll (iOS/Android URL-bar collapse) for no benefit. */
+    window.matchMedia("(min-width: 861px)").addEventListener("change", function (e) {
+      if (e.matches) setOpen(false);
     });
   }
 

@@ -637,7 +637,12 @@ table.detail { width: 100%; font-size: 0.85rem; }
 /* ── mobile nav (hamburger), < 860px ──
    The button only exists when JS is present (html.js gates it), so with JS
    disabled we fall through to the plain always-visible link strip below —
-   every destination still reachable, no dead toggle. */
+   every destination still reachable, no dead toggle.
+
+   NOTE: `.nav-toggle { display: none }` below is the base half of a two-part
+   rule — the ONLY thing that shows the button is `html.js .nav-toggle` inside
+   the media query. Both halves must be edited together; the base rule cannot
+   move inside the query (it has to apply above the breakpoint too). */
 .nav-toggle { display: none; }
 
 @media (max-width: 860px) {
