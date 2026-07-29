@@ -227,7 +227,7 @@ ask-if-missing loop — is yours, driven by this SKILL.md and `inputs/INPUTS.md`
 
 Then implement `adapters/adapter.py`, fill `capevolve.yaml`, and proceed to
 `implement-and-check`. Together, **intake → implement-and-check** is the *full
-integration*: scaffold → implement the 4 adapter methods → `cap-evolve check` green,
+integration*: scaffold → implement the 3 required adapter methods → `cap-evolve check` green,
 before any budget is spent. The using-agent (e.g. the chosen optimizer) can run
 this whole integration autonomously.
 
@@ -254,5 +254,5 @@ this whole integration autonomously.
 
 ## References
 - `references/concepts.md` — the inputs contract, NEEDED vs RECOMMENDED
-  rationale, the four adapter methods, and split/trial/budget guidance with
+  rationale, the 3 required adapter methods, and split/trial/budget guidance with
   sources.

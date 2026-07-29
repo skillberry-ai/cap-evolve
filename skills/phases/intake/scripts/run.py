@@ -9,7 +9,7 @@ What the SCRIPT does (this file):
      stub, inputs/, capevolve.yaml, PROJECT.md).
 
 What the OPTIMIZER AGENT does (driven by SKILL.md, not this script): decide the
-capability/optimizer/algorithm, **implement the 4 adapter methods**, and fill the
+capability/optimizer/algorithm, **implement the 3 required adapter methods**, and fill the
 spec. What the USER does: supply NEEDED inputs the agent cannot infer.
 
 Advancing past intake is gated by ``implement-and-check`` (runs ``cap-evolve
