@@ -187,18 +187,41 @@ def inject(adapter, run_dir: RunDir, workdir: Path, *, split: str,
     )
 
 
-def render_instructions(current: SplitResult, focus_ids, label: str, *,
+# Hard ceiling on ONE iteration's assembled INSTRUCTIONS. Every individual block is
+# already bounded (``always_fail[:10]``, ``flaky[:8]``, ``errored[:25]``,
+# ``actionable[:12]``, per-field ``[:800]``) but nothing bounded the SUM — and the
+# cross-iteration blocks (LEDGER/RUNMAP rows, the JOURNAL, the rejected buffer) grow with
+# the run, so a 100-iteration run could balloon the optimizer prompt. 60k chars ≈ 15k
+# tokens, well above every measured render (largest observed: 4,655 B, GEPA iteration 1).
+# ponytail: one global cap; per-block budgets only when a real run actually hits this.
+MAX_INSTRUCTIONS_CHARS = 60_000
+
+
+def render_instructions(scored_result: SplitResult, focus_ids, label: str, *,
                         ctx: OptimizerContext | None = None,
                         algorithm: str = "hill-climb",
                         run_dir: RunDir | None = None,
                         parent_id: str | None = None,
-                        extra: str = "") -> str:
+                        extra: str = "",
+                        max_chars: int = MAX_INSTRUCTIONS_CHARS) -> str:
     """Render one iteration's INSTRUCTIONS (the PROMPT side of the seam).
 
-    ``current`` is the result the failure index is built from (full val for hill-climb /
-    SkillOpt, the parent's minibatch for GEPA); ``focus_ids`` narrows it; ``extra`` is the
-    algorithm's own tail block. When ``run_dir`` is given the empty-seed signal is
-    computed from the parent candidate (``parent_id``, default the run's best).
+    ``scored_result`` is the evaluated result the failure index is built FROM (full val
+    for hill-climb / SkillOpt, the parent's minibatch for GEPA). ``focus_ids`` NARROWS
+    that result, so it must name tasks that are IN it — ids from another split are
+    disjoint by construction and would filter the failure index down to nothing.
+    ``harness._focus_instructions`` refuses to filter on zero overlap and says so in the
+    prompt instead of reporting a confident "0 failing of 0 tasks". The parameter is
+    named ``scored_result`` (not ``current``) so that invariant is visible at every call
+    site rather than living in this docstring.
+
+    ``extra`` is the algorithm's own tail block and stays LAST. Blocks that EVERY
+    algorithm should get belong in the shared body instead — it already receives
+    ``run_dir``, so #128's ``INSIGHTS.md`` and #129's ``rejected.jsonl`` need no
+    signature change.
+
+    When ``run_dir`` is given the empty-seed signal is computed from the parent candidate
+    (``parent_id``, default the run's best). The assembled text is capped at ``max_chars``.
     """
     from . import harness
     ctx = ctx or OptimizerContext()
@@ -209,10 +232,18 @@ def render_instructions(current: SplitResult, focus_ids, label: str, *,
             seed_empty = harness._capability_is_empty(ctx.capabilities,
                                                       run_dir.candidate_dir(cid))
     text = harness._focus_instructions(
-        current, focus_ids, label,
+        scored_result, focus_ids, label,
         capabilities=ctx.capabilities, algorithm=algorithm,
         instructions_file=ctx.instructions_file, bench_repo=ctx.bench_repo,
         optimizer_name=ctx.optimizer_name, seed_empty=seed_empty,
         target_reader=ctx.target_reader(),
     )
-    return f"{text}\n{extra}" if extra else text
+    out = f"{text}\n{extra}" if extra else text
+    if max_chars and len(out) > max_chars:
+        # Keep the head (task framing, capability brief, failure index) and the tail
+        # (the algorithm's own block); elide the middle, which is the part that grows.
+        keep = max(max_chars - 200, 200)
+        head, tail = out[: (keep * 7) // 10], out[-(keep * 3) // 10:]
+        out = (f"{head}\n\n... [{len(out) - keep} chars elided to keep this prompt under "
+               f"{max_chars} chars — the full record is in the run dir] ...\n\n{tail}")
+    return out

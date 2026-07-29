@@ -281,24 +281,39 @@ def _write_focus(workdir: Path, components: list[str], focus: list[str] | None) 
     return ", ".join(focus) if focus else "(all)"
 
 
-def _gepa_block(reflection_summary: str, focus_label: str, mb_ids: list[str]) -> str:
+def _gepa_block(reflection_summary: str, focus_label: str, mb_ids: list[str],
+                *, has_trajectories: bool = True) -> str:
     """GEPA's own tail block: the reflective-dataset + component-focus pointers.
 
     This is the ``extra`` passed to ``optimizer_context.render_instructions`` — the
     GEPA-specific part of the prompt. The shared part (capability brief, failure index,
     bench repo, parallel note, consuming-LLM reader block, the benchmark-authored
     template) comes from the seam, so GEPA is no longer prompt-poorer than hill-climb.
+
+    ``has_trajectories`` gates the "``./trajectories/`` holds the SAME minibatch
+    rollouts VERBATIM" claim: a fully-cached minibatch persists no rollout files, and
+    the seam then OMITS the dir rather than substituting another iteration's traces
+    (see ``harness._copy_step_trajectories``). Claiming a dir that isn't there — or
+    worse, one holding a different iteration's traces — is the failure mode this pins.
     """
+    traj = (
+        "`./trajectories/` holds the SAME minibatch rollouts VERBATIM and untruncated "
+        "— read them when REFLECTION.md's excerpts are not enough. "
+        if has_trajectories else
+        "This minibatch was served entirely from the eval cache, so NO rollout files "
+        "were persisted for it: there is no `./trajectories/` for this step and "
+        "REFLECTION.md's excerpts are the whole record. Do not look for traces "
+        "elsewhere in the workdir — any you find belong to a DIFFERENT iteration. "
+    )
     return (
         "\n## GEPA reflective optimization step\n\n"
         f"Minibatch task ids: {', '.join(map(str, mb_ids))}\n"
         f"Component focus: {focus_label}\n\n"
         "Read `REFLECTION.md` (the reflective dataset over the parent's failing "
         "minibatch tasks: inputs, the agent's output/trajectory, and feedback) and "
-        "`FOCUS.md` (which component(s) to edit). `./trajectories/` holds the SAME "
-        "minibatch rollouts VERBATIM and untruncated — read them when REFLECTION.md's "
-        "excerpts are not enough. Diagnose the common root cause and make ONE targeted "
-        "edit to the focused component(s) that should fix the general pattern.\n\n"
+        f"`FOCUS.md` (which component(s) to edit). {traj}Diagnose the common root cause "
+        "and make ONE targeted edit to the focused component(s) that should fix the "
+        "general pattern.\n\n"
         f"Summary: {reflection_summary}\n"
     )
 
@@ -581,9 +596,11 @@ def gepa_loop(
         # Optimizer read-context (trajectories + capability/diagnose/optimizer guidance +
         # native skills), through the SAME seam hill-climb uses. Scoped to the parent's
         # minibatch tag so ./trajectories/ holds exactly the rollouts REFLECTION.md
-        # summarizes — verbatim and untruncated.
+        # summarizes — verbatim and untruncated, or nothing at all when the minibatch
+        # came from the eval cache (never another iteration's traces).
         inject_optimizer_context(adapter, run_dir, workdir, split="train", ctx=ctx,
                                  tag=f"mb_p_{n:04d}")
+        has_traj = (workdir / "trajectories").is_dir()
 
         comps = _components(workdir)
         if component_selector == "round_robin" and comps:
@@ -596,7 +613,7 @@ def gepa_loop(
         instructions = render_instructions(
             parent_mb, mb, f"GEPA minibatch of {len(mb)} train task(s)", ctx=ctx,
             algorithm="gepa", run_dir=run_dir, parent_id=parent["id"],
-            extra=_gepa_block(refl_summary, focus_label, mb))
+            extra=_gepa_block(refl_summary, focus_label, mb, has_trajectories=has_traj))
         instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
         opt_error = None
@@ -663,6 +680,11 @@ def gepa_loop(
             lineage[cid] = parent["id"]
             history.add(cid, summary, cand_val.reward)
             accepts += 1
+            # Publish the running best NOW, not only at loop exit: LEDGER.md's
+            # "Current best:" line (and every other best_id reader) comes from run
+            # state, so leaving it at "seed" for the whole run told GEPA's optimizer
+            # its best candidate was the seed even after an accept.
+            run_dir.set_best(max(pool, key=lambda c: c["val"])["id"])
             if store is not None:
                 store.commit(f"iter {n+1}: ACCEPT {summary}", tag="best", accepted=True)
         else:

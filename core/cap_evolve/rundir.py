@@ -27,6 +27,21 @@ from pathlib import Path
 from .splits import Splits
 
 
+# Every event kind that records ONE evaluated iteration (a candidate + its gate
+# outcome + its val score). ``harness.run_step`` emits "step"; GEPA bypasses
+# run_step and emits "gepa_val_gate"; SkillOpt additionally emits "skillopt_step".
+# ONE definition, every consumer (dashboard lineage, LEDGER, RUNMAP,
+# prior_iterations/) — filtering on "step" alone makes GEPA's whole
+# cross-iteration history channel silently empty.
+ITERATION_EVENT_KINDS = ("step", "skillopt_step", "gepa_val_gate")
+
+
+def iteration_candidate(ev: dict) -> str | None:
+    """The candidate id on an iteration event (kinds differ on the field name)."""
+    cid = ev.get("candidate") or ev.get("candidate_id")
+    return str(cid) if cid else None
+
+
 def _atomic_write(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically (tmp file + ``os.replace``).
 
@@ -395,3 +410,26 @@ class RunDir:
         rec = {"t": time.time(), "kind": kind, **fields}
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
+
+    def iteration_events(self) -> list[dict]:
+        """Every event that represents ONE evaluated iteration, in order.
+
+        See :data:`ITERATION_EVENT_KINDS` — read this instead of filtering
+        ``kind == "step"`` by hand, or the algorithms that emit their own kind
+        (GEPA, SkillOpt) silently disappear from whatever you are building.
+        Best-effort: an unreadable/absent events log yields whatever parsed.
+        """
+        out: list[dict] = []
+        try:
+            if not self.events_path.exists():
+                return out
+            for line in self.events_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("kind") in ITERATION_EVENT_KINDS and iteration_candidate(rec):
+                    out.append(rec)
+        except Exception:  # noqa: BLE001
+            return out
+        return out

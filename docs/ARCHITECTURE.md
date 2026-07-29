@@ -36,7 +36,11 @@ See [`HONEST_EVAL.md`](HONEST_EVAL.md) for the splitting / gating / sealing guar
 ## What the optimizer receives each iteration
 
 The harness assembles a **capability-scoped** working dir per iteration, then runs your
-chosen coding-agent CLI in it:
+chosen coding-agent CLI in it. This is assembled by **one shared seam**,
+[`core/cap_evolve/optimizer_context.py`](../core/cap_evolve/optimizer_context.py)
+(`inject()` = the files, `render_instructions()` = the prompt), and **every deterministic
+algorithm — `hill-climb`, `gepa`, `skillopt` — routes through it**, so all three get the
+identical context. Add an artifact or a prompt block there and all three inherit it:
 
 - **The selected capability skill(s)** — both as `./guidance/<cap>/` *and* placed natively
   in the agent's own skills dir (e.g. `.claude/skills/`) so a headless agent auto-loads
@@ -59,6 +63,11 @@ chosen coding-agent CLI in it:
 | `JOURNAL.md` | optimizer | append-only HANDOVER across the run (tried / worked / regressed / refuted / focus-next) |
 | `PROCESS.md` | optimizer | EXPLAINABILITY, snapshotted per candidate |
 | `RUNMAP.md` + `prior_iterations/` | framework | a manifest plus every prior iteration's PROCESS.md and capability diff, for real prior-work access |
+
+These are built from the run's iteration events. The recognised kinds live in ONE place —
+`rundir.ITERATION_EVENT_KINDS` (`step`, `skillopt_step`, `gepa_val_gate`), read via
+`RunDir.iteration_events()` — because algorithms that emit their own kind (GEPA bypasses
+`run_step`) would otherwise be invisible to these builders and get an empty history.
 
 Because it sees all failure clusters, the protect-set, and the prior causal impact at once,
 the optimizer produces **one bold, multi-part candidate per iteration that addresses every

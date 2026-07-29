@@ -265,3 +265,177 @@ def test_agent_driven_algorithms_are_not_sent_context_flags():
     from cap_evolve import cli
     assert "evograph" not in cli._OPTIMIZER_CONTEXT_ALGORITHMS
     assert "agent-optimize" not in cli._OPTIMIZER_CONTEXT_ALGORITHMS
+
+
+# ---------------------------------------------------------------------------
+# Review-round regressions (PR #199): the three blocking findings.
+# ---------------------------------------------------------------------------
+
+def test_gepa_gets_a_populated_history_channel_and_its_true_best(tmp_path):
+    """BLOCKING 1: LEDGER/RUNMAP/prior_iterations were EMPTY for GEPA.
+
+    ``_parent_map`` / ``_build_ledger`` / ``_build_runmap`` filtered ``kind == "step"``,
+    but GEPA bypasses ``run_step`` and emits ``gepa_val_gate`` — so its whole
+    cross-iteration memory channel stayed empty while the prompt told the optimizer to
+    read it, and ``run_dir.best_id`` stayed "seed" until loop exit. #128/#129/#130 all
+    read exactly this channel.
+    """
+    from cap_evolve import gepa, harness
+    adapter, run_dir, base = _setup(tmp_path, "gh", max_iterations=2, stall=5)
+    optimizer = harness.optimizer_from_command(
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}",
+         "--prompt", "{prompt}"])
+    gepa.gepa_loop(adapter, run_dir=run_dir, optimizer=optimizer, seed_val=base,
+                   max_iterations=2, minibatch_size=3, max_merges=0,
+                   gate_kwargs={"mode": "significant", "k_se": 1.0},
+                   ctx=_ctx(tmp_path))
+
+    # The shared kind set must include GEPA's kind, for every consumer.
+    from cap_evolve.rundir import ITERATION_EVENT_KINDS
+    assert "gepa_val_gate" in ITERATION_EVENT_KINDS
+    evs = run_dir.iteration_events()
+    assert evs, "no iteration events recognised for a GEPA run"
+    assert any(e["kind"] == "gepa_val_gate" for e in evs)
+
+    # iteration 2's workdir must SEE iteration 1.
+    wd2 = run_dir.root / "work" / "gepa_0002"
+    ledger = (wd2 / "LEDGER.md").read_text(encoding="utf-8")
+    runmap = (wd2 / "RUNMAP.md").read_text(encoding="utf-8")
+    assert "(baseline only)" not in ledger, f"LEDGER still empty for GEPA:\n{ledger}"
+    assert "gepa_0001" in ledger, f"iteration 1 missing from LEDGER:\n{ledger}"
+    assert "(no prior iterations yet)" not in runmap, f"RUNMAP still empty:\n{runmap}"
+    assert "gepa_0001" in runmap
+    prior = wd2 / "prior_iterations" / "gepa_0001"
+    assert prior.is_dir() and any(prior.iterdir()), "prior_iterations/ never populated"
+
+    # ...and must be told its TRUE best, not "seed", once an accept happened.
+    assert run_dir.best_id == "gepa_0001", f"best_id is {run_dir.best_id!r}"
+    assert "## Current best: gepa_0001" in ledger
+
+
+def test_gepa_cache_hit_never_substitutes_another_iterations_trajectories(tmp_path):
+    """BLOCKING 2: the pinned ``tag=`` fell through on a cache hit.
+
+    A fully-cached minibatch persists no rollout files, so ``_copy_tag`` failed and the
+    chain silently handed the optimizer the PREVIOUS iteration's traces (including
+    ``mb_c_*`` child rollouts) while the prompt claimed they were "the SAME minibatch
+    VERBATIM". A pin must be honoured or omitted loudly — never substituted.
+    """
+    from cap_evolve import harness
+    adapter, run_dir, _ = _setup(tmp_path, "ct", max_iterations=1, stall=5)
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    stale = workdir / "trajectories"
+    stale.mkdir()
+    (stale / "a1__mb_p_0000__t0.json").write_text("{}", encoding="utf-8")
+
+    # Pin a tag that has NO persisted rollouts (exactly the cache-hit case).
+    harness._copy_step_trajectories(adapter, run_dir, workdir, "train",
+                                    tag="mb_p_0007")
+    assert not stale.exists(), "stale trajectories/ left in place for an unmet pin"
+
+    kinds = [e for e in run_dir.iteration_events()]  # touch the reader too
+    warn = [json_line for json_line in
+            run_dir.events_path.read_text(encoding="utf-8").splitlines()
+            if "optimizer_context_warning" in json_line and "mb_p_0007" in json_line]
+    assert warn, "unmet trajectory pin failed SILENTLY (no warning event)"
+    assert "OMITTED" in warn[0]
+    assert kinds == kinds  # no-op; keeps the reader exercised without asserting count
+
+    # ...and the prompt block must not claim a dir that isn't there.
+    from cap_evolve import gepa
+    with_traj = gepa._gepa_block("s", "prompt.txt", ["a1"], has_trajectories=True)
+    without = gepa._gepa_block("s", "prompt.txt", ["a1"], has_trajectories=False)
+    assert "SAME minibatch rollouts VERBATIM" in with_traj
+    assert "SAME minibatch rollouts VERBATIM" not in without
+    assert "served entirely from the eval cache" in without
+
+
+def test_focus_ids_from_a_disjoint_split_do_not_empty_the_failure_index(tmp_path):
+    """BLOCKING 3: SkillOpt's failure index was always "of 0 tasks".
+
+    ``render_instructions`` got a VAL result narrowed by TRAIN ids — disjoint by
+    construction — so the intersection was always empty and the optimizer was told
+    there was nothing to fix. Zero overlap must fall back to the unfiltered index and
+    say so, not report a confident empty one.
+    """
+    from cap_evolve import skillopt, harness
+    from cap_evolve.optimizer_context import render_instructions
+    adapter, run_dir, base = _setup(tmp_path, "fi", max_iterations=2, stall=5)
+
+    # Unit: val result + train-shaped ids => full index, with the caveat sentence.
+    train_ids = list(run_dir.read_splits().train)
+    val_ids = {pt["task_id"] for pt in base.per_task}
+    assert not (set(train_ids) & val_ids), "fixture splits are not disjoint"
+    out = render_instructions(base, train_ids, "mb", ctx=_ctx(tmp_path))
+    assert " of 0 tasks." not in out, f"failure index emptied by disjoint ids:\n{out[:400]}"
+    assert "ALWAYS-failing task(s)" in out, "no failure index rendered"
+    assert "different split than the scored result" in out, "silent fallback (no caveat)"
+
+    # End to end: a real SkillOpt step's INSTRUCTIONS.md has a non-empty index.
+    optimizer = harness.optimizer_from_command(
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}",
+         "--prompt", "{prompt}"])
+    skillopt.skillopt_loop(adapter, run_dir=run_dir, optimizer=optimizer,
+                           current_val=base, epochs=1, batch_size=2,
+                           edit_budget=2,
+                           gate_kwargs={"mode": "significant", "k_se": 1.0},
+                           ctx=_ctx(tmp_path))
+    step_dirs = sorted((run_dir.root / "work").glob("so_*"))
+    assert step_dirs, "no skillopt workdir"
+    instr = (step_dirs[0] / "INSTRUCTIONS.md").read_text(encoding="utf-8")
+    assert " of 0 tasks." not in instr, f"SkillOpt index still empty:\n{instr[:400]}"
+    assert "ALWAYS-failing task(s)" in instr
+    assert "No actionable failures in focus" not in instr
+
+
+def test_assembled_instructions_are_globally_capped():
+    """Non-blocking 7: every block was bounded, the SUM was not."""
+    from cap_evolve.loop import SplitResult
+    from cap_evolve.optimizer_context import MAX_INSTRUCTIONS_CHARS, render_instructions
+    res = SplitResult(split="val", reward=0.0, stderr=0.0, per_task=[
+        {"task_id": "a1", "reward": 0.0, "feedback": "x" * 200, "trial_rewards": [0.0]}])
+    out = render_instructions(res, None, "all", extra="Z" * 200_000, max_chars=5_000)
+    assert len(out) <= 5_000 + 300, len(out)
+    assert "chars elided to keep this prompt under" in out
+    assert MAX_INSTRUCTIONS_CHARS >= 10_000  # a normal render must never be truncated
+
+
+@pytest.mark.parametrize("algo", ["hill-climb", "gepa", "skillopt"])
+def test_target_profile_file_reaches_every_algorithms_prompt(tmp_path, algo):
+    """Non-blocking 8: ``--target-profile-file`` was only covered by a unit test.
+
+    Real fixture profile file, real loop, all three algorithms: the project-local brief
+    must OVERRIDE the tier's built-in brief in the rendered prompt.
+    """
+    from cap_evolve import gepa, harness, skillopt
+    from cap_evolve.optimizer_context import OptimizerContext
+    prof = tmp_path / "reader.md"
+    prof.write_text("FIXTURE-READER-BRIEF-199: the consuming model needs explicit rules.",
+                    encoding="utf-8")
+    tmpl = tmp_path / "t.md"
+    tmpl.write_text("{{FOCUS_SUMMARY}}\n{{TARGET_READER}}\n{{FAILURES}}\n", encoding="utf-8")
+    ctx = OptimizerContext(capabilities="system-prompt", instructions_file=str(tmpl),
+                           target_model="mid", target_profile_file=str(prof),
+                           project_dir=tmp_path)
+    adapter, run_dir, base = _setup(tmp_path, f"tp{abs(hash(algo)) % 997}",
+                                   max_iterations=1, stall=5)
+    optimizer = harness.optimizer_from_command(
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}",
+         "--prompt", "{prompt}"])
+    common = dict(run_dir=run_dir, optimizer=optimizer, ctx=ctx,
+                  gate_kwargs={"mode": "significant", "k_se": 1.0})
+    if algo == "hill-climb":
+        harness.hill_climb_loop(adapter, current_val=base, focus="all",
+                                max_iterations=1, algorithm="hill-climb", **common)
+    elif algo == "gepa":
+        gepa.gepa_loop(adapter, seed_val=base, max_iterations=1, minibatch_size=3,
+                       max_merges=0, **common)
+    else:
+        skillopt.skillopt_loop(adapter, current_val=base, epochs=1, batch_size=2,
+                               edit_budget=2, **common)
+    instrs = [p.read_text(encoding="utf-8")
+              for p in (run_dir.root / "work").glob("*/INSTRUCTIONS.md")]
+    assert instrs, f"no INSTRUCTIONS.md written for {algo}"
+    assert any("FIXTURE-READER-BRIEF-199" in i for i in instrs), \
+        f"--target-profile-file brief never reached {algo}'s prompt"
