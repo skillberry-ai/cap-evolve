@@ -1374,11 +1374,19 @@ def run_step(
 
 # ---- memory + version store wiring ----------------------------------------
 
-def _init_memory_store(run_dir: RunDir, store):
+def _init_memory_store(run_dir: RunDir, store, algorithm: str | None = None):
     """Create the optimizer memory (rejected + accepted history) and ensure a
-    version store (default git) is initialized + holds an initial 'seed' commit."""
+    version store (default git) is initialized + holds an initial 'seed' commit.
+
+    Also stamps the run's ``algorithm`` event. Every deterministic loop (hill-climb,
+    gepa, skillopt) routes through here, so logging it once here is what makes the
+    dashboard's algorithm label work for all of them — and from iteration 1, not only
+    once ``final.json`` exists.
+    """
     from .memory import History, RejectedMemory
     from .store import VersionStore
+    if algorithm:
+        run_dir.log_event("algorithm", name=algorithm)
     rejected = RejectedMemory(run_dir.rejected_path)
     history = History(run_dir.history_path)
     if store is None:
@@ -1866,7 +1874,7 @@ def hill_climb_loop(
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
     """
     gate_kwargs = dict(gate_kwargs or {})
-    rejected, history, store = _init_memory_store(run_dir, store)
+    rejected, history, store = _init_memory_store(run_dir, store, algorithm=algorithm)
 
     # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
     from . import target_profile as _tp

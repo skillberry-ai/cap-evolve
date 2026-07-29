@@ -18,12 +18,14 @@ import { IterationsDiff } from '../components/IterationsDiff'
 import { MemoryPanel } from '../components/MemoryPanel'
 import { Insights } from '../components/Insights'
 import { CostPanel } from '../components/CostPanel'
+import { EventTicker } from '../components/EventTicker'
 import { FileTree } from '../components/FileTree'
 import { GitDiff } from '../components/GitDiff'
 import type { RunStatus } from '../lib/types'
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'events', label: 'Events' },
   { id: 'cost', label: 'Cost' },
   { id: 'phases', label: 'Phases' },
   { id: 'lineage', label: 'Lineage' },
@@ -133,6 +135,8 @@ export function RunDeepDive() {
               {(active) =>
                 active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
+                ) : active === 'events' ? (
+                  <EventTicker log={stream.log} />
                 ) : active === 'cost' ? (
                   <CostPanel summary={data.summary} />
                 ) : active === 'phases' ? (

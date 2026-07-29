@@ -482,7 +482,7 @@ def gepa_loop(
     highest-val pool member; the test split is never touched.
     """
     gate_kwargs = dict(gate_kwargs or {})
-    rejected, history, store = _init_memory_store(run_dir, store)
+    rejected, history, store = _init_memory_store(run_dir, store, algorithm="gepa")
     cache = EvalCache(run_dir.root / "eval_cache.json")
     rng = random.Random(seed)
     run_dir.log_event("gepa_start", seed=seed, minibatch_size=minibatch_size,
