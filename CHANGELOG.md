@@ -103,10 +103,12 @@ All notable changes to cap-evolve are documented here. The format follows
   stub-probe silently pass.
 - Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
   significance gate, multi-trial variance, pass^k + pass@k, bootstrap CIs.
-- **19 Agent Skills**: phases (intake, implement-and-check, baseline, evaluate,
+- **20 Agent Skills** (one per `skills/<component>/<name>/SKILL.md`): phases (intake,
+  implement-and-check, baseline, evaluate,
   diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,
-  skill-package), algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
-  **gepa**, **skillopt**), one **run-optimizer** skill backed by
+  skill-package), 5 algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
+  **gepa**, **skillopt**, plus the agent-mode-only **agent-optimize** and **evograph**),
+  one **run-optimizer** skill backed by
   `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw,
   ibm-bob, generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
 - **`gepa`** (flagship): real GEPA — two-stage minibatch-then-full-val economy,

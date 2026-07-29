@@ -86,15 +86,22 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 
 ## Skill library
 
-18 skills over the core. Extending is one folder or one registry row — see
-[`EXTENDING.md`](EXTENDING.md).
+20 skills · 5 algorithms · 14 optimizer backends, all over the core. Extending is one
+folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
+
+**How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.
+one row of the generated [`skills/_registry/manifest.json`](../skills/_registry/manifest.json)
+— phases, capabilities, algorithms, optimizers and orchestrate all count. An *algorithm* is a
+skill whose `meta.yaml` `component: algorithm`; agent-mode-only algorithms count too.
+`python skills/_registry/build_manifest.py skills` prints both numbers, so they are checkable
+rather than remembered.
 
 | Component | Skills |
 |---|---|
 | orchestrate | `orchestrate` · `using-cap-evolve` |
 | phases | `intake` · `implement-and-check` · `baseline` · `evaluate` · `diagnose` · `gate` · `finalize` · `report` |
 | capabilities | `system-prompt` · `skill-package` · `tools` · `mcp-tool` |
-| algorithms | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` |
+| algorithms | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` · `agent-optimize` (agent mode only) · `evograph` (agent mode only) |
 | optimizers | `run-optimizer` + `optimizers/registry.yaml` (14 backends incl. `mock`) |
 
 **Claude Code plugin:** `claude --plugin-dir ./plugins/cap-evolve` exposes every skill as
