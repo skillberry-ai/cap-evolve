@@ -86,15 +86,21 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 
 ## Skill library
 
-20 skills · 5 algorithms · 14 optimizer backends, all over the core. Extending is one
-folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
+20 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
+the core. Extending is one folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
 
 **How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.
 one row of the generated [`skills/_registry/manifest.json`](../skills/_registry/manifest.json)
 — phases, capabilities, algorithms, optimizers and orchestrate all count. An *algorithm* is a
-skill whose `meta.yaml` `component: algorithm`; agent-mode-only algorithms count too.
-`python skills/_registry/build_manifest.py skills` prints both numbers, so they are checkable
-rather than remembered.
+skill whose `meta.yaml` `component: algorithm`; agent-mode-only algorithms count too. An
+algorithm is *run-executable* when `cap-evolve run` drives its deterministic loop; it is
+*agent-mode* when its `meta.yaml` declares agent-mode only, in which case `cap-evolve run`
+hands off to the conversational agent after baseline and the skill's `scripts/run.py` is a
+loud guard rather than a loop (`orchestration_mode: agent` is required). An *optimizer
+backend* is one top-level row of `skills/optimizers/registry.yaml`.
+`python skills/_registry/build_manifest.py skills` prints the skill and algorithm numbers and
+`core/tests/test_advertised_counts.py` asserts all of them against the repo, so every count
+above is checkable rather than remembered.
 
 | Component | Skills |
 |---|---|

@@ -104,13 +104,12 @@ All notable changes to cap-evolve are documented here. The format follows
 - Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
   significance gate, multi-trial variance, pass^k + pass@k, bootstrap CIs.
 - **20 Agent Skills** (one per `skills/<component>/<name>/SKILL.md`): phases (intake,
-  implement-and-check, baseline, evaluate,
-  diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,
-  skill-package), 5 algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
-  **gepa**, **skillopt**, plus the agent-mode-only **agent-optimize** and **evograph**),
-  one **run-optimizer** skill backed by
-  `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw,
-  ibm-bob, generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
+  implement-and-check, baseline, evaluate, diagnose, gate, finalize, report), capabilities
+  (system-prompt, tools, mcp-tool, skill-package), 5 algorithms — 3 run-executable
+  (**hill-climb** with `--focus all|cyclic|hardest-first`, **gepa**, **skillopt**) plus 2
+  agent-mode (**agent-optimize**, **evograph**) — one **run-optimizer** skill backed by
+  `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob,
+  generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
 - **`gepa`** (flagship): real GEPA — two-stage minibatch-then-full-val economy,
   per-instance Pareto frontier with frequency-weighted parent sampling, trace-based
   reflective dataset, round-robin component focus, system-aware merge across lineages,
