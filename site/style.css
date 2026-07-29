@@ -1,13 +1,20 @@
 /* ─────────────────────────────────────────────────────────────────────────
    cap-evolve site — dark-first, on-brand with the product dashboard.
-   Palette + Fira fonts match the dashboard (blue #3b82f6 primary, amber #f59e0b
-   "champion" accent). Light theme via html[data-theme="light"]; a tiny inline
-   head script sets the attribute before paint (no FOUC) and adds html.js so the
-   scroll-reveal animation only hides content when JS is present.
-   Bump the ?v=... string on the <link> in each HTML file when this changes.
+   Palette + font stacks match the dashboard (blue #3b82f6 primary, amber
+   #f59e0b "champion" accent). Light theme via html[data-theme="light"]; a tiny
+   inline head script sets the attribute before paint (no FOUC) and adds html.js
+   so the scroll-reveal animation only hides content when JS is present.
+   The ?v= cache-buster is this file's content hash, written by
+   scripts/sync-site-chrome.py — never hand-bumped.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
+  /* system font stacks — no webfont, no CDN (#120). Same stacks as the dashboard. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", monospace;
+
   /* dark (default) */
   --bg: #07090d;
   --bg-soft: #0d1117;      /* surface / cards */
@@ -83,8 +90,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--body);
-  font-family: "Fira Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-               Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
@@ -187,6 +193,14 @@ body::before {
   transition: color 0.14s ease, border-color 0.14s ease;
 }
 .theme-toggle:hover { color: var(--ink); border-color: var(--accent); }
+/* one visible focus ring for every interactive control in the chrome */
+.nav-links a:focus-visible,
+.theme-toggle:focus-visible,
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
 .theme-toggle svg { width: 16px; height: 16px; }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
@@ -315,7 +329,7 @@ pre, .cta pre {
   margin: 0; padding: 1rem 1.15rem;
   background: var(--code-bg); color: var(--code-fg);
   border: 1px solid var(--code-border); border-radius: 10px;
-  font-family: "Fira Code", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.86rem; line-height: 1.6; overflow-x: auto;
   position: relative;
 }
@@ -372,7 +386,7 @@ pre:hover .copy-btn { opacity: 1; }
 }
 .flow-step:hover { border-color: var(--accent); transform: translateY(-2px); }
 .flow-step .fs-k {
-  font-family: "Fira Code", monospace; font-size: 0.72rem; color: var(--accent-ink);
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent-ink);
   background: var(--accent-soft); border-radius: 5px; padding: 0.05rem 0.4rem;
 }
 .flow-step h4 { margin: 0.6rem 0 0.3rem; font-size: 0.98rem; color: var(--ink); font-weight: 650; }
@@ -392,7 +406,7 @@ pre:hover .copy-btn { opacity: 1; }
   padding: 1.2rem 1.3rem; text-align: center;
 }
 .stat-num {
-  font-family: "Fira Code", monospace; font-size: 2rem; font-weight: 600;
+  font-family: var(--font-mono); font-size: 2rem; font-weight: 600;
   color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
 }
 .stat-num.amber { color: var(--amber-ink); }
@@ -404,7 +418,7 @@ pre:hover .copy-btn { opacity: 1; }
   background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 1.6rem; margin: 1.5rem 0; text-align: center;
 }
-.beforeafter .ba-num { font-family: "Fira Code", monospace; font-size: 2.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.beforeafter .ba-num { font-family: var(--font-mono); font-size: 2.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .beforeafter .ba-num.base { color: var(--muted); }
 .beforeafter .ba-num.best { color: var(--amber-ink); }
 .beforeafter .ba-arrow { color: var(--accent-ink); font-size: 1.6rem; }
@@ -426,7 +440,7 @@ table tbody tr:hover { background: var(--bg-soft); }
 table code {
   background: var(--bg-code); color: var(--ink);
   padding: 0.12rem 0.4rem; border-radius: 5px; font-size: 0.86em;
-  font-family: "Fira Code", monospace;
+  font-family: var(--font-mono);
 }
 .table-hero {
   background: var(--bg-soft); border: 1px solid var(--border);
@@ -435,7 +449,7 @@ table code {
 .table-hero th, .table-hero td { border-bottom: 1px solid var(--border); }
 .table-hero tbody tr:last-child td { border-bottom: none; }
 .gain { color: var(--success-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-.num { font-family: "Fira Code", monospace; font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* ─────────────────────── generic cards / tiles ─────────────────────── */
 
@@ -454,7 +468,7 @@ table code {
 }
 .diff-tile { display: flex; flex-direction: column; position: relative; }
 .diff-tile-num {
-  font-family: "Fira Code", monospace; font-size: 0.72rem; font-weight: 600;
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
   color: var(--accent-ink); background: var(--accent-soft);
   border-radius: 5px; padding: 0.08rem 0.42rem; align-self: flex-start; margin: 0 0 0.6rem;
 }
@@ -487,7 +501,7 @@ table code {
   width: 2.1rem; height: 2.1rem; border-radius: 50%;
   display: grid; place-items: center;
   background: var(--bg-2); border: 1px solid var(--accent);
-  color: var(--accent-ink); font-family: "Fira Code", monospace; font-weight: 600; font-size: 0.9rem;
+  color: var(--accent-ink); font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem;
 }
 .step h3 { margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--ink); }
 .step > p:first-of-type { margin-top: 0; }
@@ -504,7 +518,7 @@ table code {
 .doc a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
 .doc a:hover { border-bottom-color: var(--accent); }
 .doc code {
-  font-family: "Fira Code", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   background: var(--bg-code); padding: 0.12rem 0.4rem; border-radius: 5px;
   font-size: 0.88em; color: var(--ink);
 }
@@ -590,9 +604,9 @@ html.js .reveal-3 { transition-delay: 0.16s; }
 .chart-figure .connector { stroke: var(--seed); stroke-width: 2; }
 .chart-figure .dot-base { fill: var(--bg); stroke: var(--muted); stroke-width: 2; }
 .chart-figure .dot-opt { fill: var(--success); stroke: var(--success); stroke-width: 2; }
-.chart-figure .val-label { fill: var(--body); font-size: 11px; font-family: "Fira Code", monospace; font-variant-numeric: tabular-nums; }
-.chart-figure .val-label-opt { fill: var(--success-ink); font-size: 11px; font-family: "Fira Code", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
-.chart-figure .gain-label { fill: var(--success-ink); font-size: 11px; font-family: "Fira Code", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-figure .val-label { fill: var(--body); font-size: 11px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.chart-figure .val-label-opt { fill: var(--success-ink); font-size: 11px; font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-figure .gain-label { fill: var(--success-ink); font-size: 11px; font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
 .chart-figure .legend-text { fill: var(--muted); font-size: 11px; font-family: inherit; }
 
 /* ─────────────────────── benchmark-runs history page ─────────────────────── */
@@ -620,9 +634,59 @@ table.detail { width: 100%; font-size: 0.85rem; }
 
 /* ─────────────────────── responsive ─────────────────────── */
 
+/* ── mobile nav (hamburger), < 860px ──
+   The button only exists when JS is present (html.js gates it), so with JS
+   disabled we fall through to the plain always-visible link strip below —
+   every destination still reachable, no dead toggle. */
+.nav-toggle { display: none; }
+
 @media (max-width: 860px) {
-  .nav-inner { flex-wrap: wrap; gap: 0.75rem 1rem; padding: 0.7rem 1rem; }
-  .nav-links { gap: 0.9rem; font-size: 0.84rem; margin-left: auto; overflow-x: auto; }
+  .nav-inner { gap: 1rem; padding: 0.7rem 1rem; }
+
+  html.js .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 38px; height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-soft);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .nav-toggle svg { width: 20px; height: 20px; }
+  /* burger ⇄ X: swap two whole icons, no transform math */
+  .nav-toggle .icon-close,
+  .nav-toggle[aria-expanded="true"] .icon-burger { display: none; }
+  .nav-toggle[aria-expanded="true"] .icon-close { display: block; }
+
+  /* stacked drawer under the bar */
+  html.js .nav-links {
+    display: none;
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0.4rem 1rem 0.9rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  html.js .nav-links.open { display: flex; }
+  html.js .nav-links a {
+    padding: 0.7rem 0.25rem;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 0.95rem;
+  }
+  html.js .nav-links .gh { border: 1px solid var(--border); margin-top: 0.7rem; text-align: center; }
+  html.js .nav-links .theme-toggle { margin-top: 0.7rem; width: 100%; }
+
+  /* no-JS fallback: the pre-existing horizontal strip */
+  html:not(.js) .nav-inner { flex-wrap: wrap; }
+  html:not(.js) .nav-links { gap: 0.9rem; font-size: 0.84rem; overflow-x: auto; }
 }
 @media (max-width: 640px) {
   .page, .page-narrow { padding: 2.2rem 1.1rem 3.5rem; }

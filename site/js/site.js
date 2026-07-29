@@ -1,6 +1,7 @@
 /* cap-evolve site — tiny, dependency-free progressive enhancement.
    Theme is applied pre-paint by an inline <head> script (no FOUC); this file
-   wires the toggle, scroll-reveal, TOC scrollspy, and code copy buttons. */
+   wires the theme toggle, the mobile nav, scroll-reveal, TOC scrollspy, and
+   code copy buttons. */
 (function () {
   "use strict";
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -15,6 +16,36 @@
       document.documentElement.setAttribute("data-theme", next);
       try { localStorage.setItem(KEY, next); } catch (e) {}
       toggle.setAttribute("aria-label", next === "light" ? "Switch to dark theme" : "Switch to light theme");
+    });
+  }
+
+  /* ── mobile nav ──
+     The button is CSS-hidden above the 860px breakpoint, so no media query is
+     needed here: if it can be clicked, we're on mobile. */
+  var navToggle = document.querySelector(".nav-toggle");
+  var navLinks = document.getElementById("nav-links");
+  if (navToggle && navLinks) {
+    var setOpen = function (open) {
+      navLinks.classList.toggle("open", open);
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      navToggle.setAttribute("aria-label", open ? "Close menu" : "Menu");
+    };
+    navToggle.addEventListener("click", function () {
+      setOpen(navToggle.getAttribute("aria-expanded") !== "true");
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || navToggle.getAttribute("aria-expanded") !== "true") return;
+      setOpen(false);
+      navToggle.focus();   /* never leave focus inside a closed drawer */
+    });
+    /* click outside closes; a click on a link inside navigates away anyway */
+    document.addEventListener("click", function (e) {
+      if (navToggle.getAttribute("aria-expanded") !== "true") return;
+      if (!navLinks.contains(e.target) && !navToggle.contains(e.target)) setOpen(false);
+    });
+    /* resizing up to desktop would otherwise leave aria-expanded="true" lying */
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 860) setOpen(false);
     });
   }
 
