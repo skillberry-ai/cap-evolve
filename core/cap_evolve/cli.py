@@ -11,6 +11,9 @@ Subcommands:
     cap-evolve check   [project_dir]
     cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
                        [--resume [--run-ts TS]]  resume an interrupted run in place
+                       [--follow]  print live progress while the run works
+    cap-evolve tail    [run_dir] [--base .capevolve]  attach to an ongoing run's
+                       events.jsonl and print human-readable progress
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -60,6 +63,105 @@ def _cmd_check(argv):
     rep = run_check(project)
     print(json.dumps(rep.to_dict(), indent=2))
     return 0 if rep.ok else 1
+
+
+def _events_path(base: Path, run_ts: str | None, seen: set[str] | None) -> Path | None:
+    """Locate the run's ``events.jsonl``, or ``None`` if no run dir exists yet.
+
+    With ``run_ts`` the path is known up front. Otherwise pick the newest ``run_*``
+    that is NOT in ``seen`` (the dirs that existed before this run started), so a
+    follower attaches to *this* run and not a previous one.
+    """
+    if run_ts:
+        return base / f"run_{run_ts}" / "events.jsonl"
+    runs = sorted(p for p in base.glob("run_*") if p.is_dir() and p.name not in (seen or set()))
+    return (runs[-1] / "events.jsonl") if runs else None
+
+
+def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None):
+    """Print live progress from ``events.jsonl`` on a daemon thread.
+
+    Returns ``(stop_event, thread)``; set the event when the run finishes. Reads the
+    same typed event stream the dashboard's SSE route serves (``cap_evolve.eventstream``),
+    so terminal and web can't disagree. Never raises into the run.
+    """
+    import threading
+    from . import eventstream
+
+    stop = threading.Event()
+    color = eventstream.use_color(sys.stderr)
+
+    def worker():
+        # Progress goes to STDERR: stdout stays the machine-readable JSON contract that
+        # scripts parse, so `cap-evolve run --follow > out.json` keeps working.
+        try:
+            path = None
+            while path is None and not stop.is_set():
+                path = _events_path(base, run_ts, seen)
+                if path is None:
+                    stop.wait(0.5)
+            if path is None:
+                return
+            totals: dict = {}
+            for ev in eventstream.follow_events(
+                    path, poll=0.5, idle_timeout=None, should_stop=stop.is_set):
+                line = eventstream.render_line(ev, totals, color=color)
+                if line:
+                    print(line, file=sys.stderr, flush=True)
+        except Exception:  # noqa: BLE001 — observability must never break the run
+            pass
+
+    t = threading.Thread(target=worker, name="cap-evolve-follow", daemon=True)
+    t.start()
+    return stop, t
+
+
+def _cmd_tail(argv):
+    """Attach to an existing/ongoing run dir and print its event stream."""
+    import argparse
+    from . import eventstream
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve tail",
+        description="tail a run's events.jsonl as human-readable progress lines")
+    p.add_argument("run_dir", nargs="?", default=None,
+                   help="run dir (default: newest run_* under --base)")
+    p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
+    p.add_argument("--from-start", action="store_true",
+                   help="replay the whole log first (default: only new events)")
+    p.add_argument("--idle-timeout", type=float, default=300.0,
+                   help="give up after N seconds of silence (0 = wait forever)")
+    p.add_argument("--no-color", action="store_true")
+    args = p.parse_args(argv)
+
+    if args.run_dir:
+        root = Path(args.run_dir)
+    else:
+        runs = sorted(q for q in Path(args.base).glob("run_*") if q.is_dir())
+        if not runs:
+            print(f"no run_* dirs under {args.base}", file=sys.stderr)
+            return 1
+        root = runs[-1]
+    events = root / "events.jsonl"
+    # A named run dir need NOT exist yet: attaching before `cap-evolve run` creates it
+    # is the whole point. follow_events waits for the file; --idle-timeout bounds the
+    # wait, so a typo'd path exits on the timeout instead of hanging forever.
+    if not events.exists():
+        print(f"waiting for {events} …", file=sys.stderr, flush=True)
+
+    color = not args.no_color and eventstream.use_color(sys.stdout)
+    offset = 0 if args.from_start or not events.exists() else events.stat().st_size
+    totals: dict = {}
+    try:
+        for ev in eventstream.follow_events(
+                events, offset=offset, poll=0.5,
+                idle_timeout=(args.idle_timeout or None)):
+            line = eventstream.render_line(ev, totals, color=color)
+            if line:
+                print(line, flush=True)
+    except KeyboardInterrupt:
+        return 130
+    return 0
 
 
 # Old hill-climb skill names → (skill, focus). The three byte-identical clones are
@@ -124,6 +226,9 @@ def _cmd_run(argv):
     p.add_argument("--stall", type=int, default=None)
     p.add_argument("--optimizer-max-turns", type=int, default=None,
                    help="per-iteration cap passed to the optimizer agent CLI (e.g. claude --max-turns)")
+    p.add_argument("--follow", action="store_true",
+                   help="print live progress (stage/candidate/accept-reject/cost) to stderr "
+                        "as the run writes events.jsonl; stdout stays the final JSON")
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
@@ -268,6 +373,22 @@ def _cmd_run(argv):
                 f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
             return 1
 
+    # --follow: start tailing events.jsonl now, BEFORE baseline creates the run dir, so
+    # the very first events (splits/baseline) are seen. `seen` freezes the pre-existing
+    # run dirs so an unpinned --run-ts follower attaches to this run, not the last one.
+    follow_stop = follow_thread = None
+    if args.follow:
+        base_abs = proj_abs.parent
+        seen = {p.name for p in base_abs.glob("run_*") if p.is_dir()} if not resume_ts else None
+        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen)
+
+    def done(code: int) -> int:
+        """Drain + stop the follower thread, then return ``code``. Used at every exit."""
+        if follow_stop is not None:
+            follow_stop.set()
+            follow_thread.join(timeout=3.0)
+        return code
+
     # 1) baseline (creates the run dir; capture its relative path)
     base_cmd = [py, skill_run("baseline"), "--base", base, "--project", project,
                 "--capability", cap_path, "--seed", str(spec.get("split_seed", 0)),
@@ -289,7 +410,7 @@ def _cmd_run(argv):
     proc = run(base_cmd)
     if proc.returncode != 0:
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
-        return 1
+        return done(1)
     run_dir = json.loads(proc.stdout)["run_dir"]
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
@@ -329,7 +450,7 @@ def _cmd_run(argv):
                           "stop_condition": str(spec.get("stop_condition", "")),
                           "next": "drive via the orchestrate Agent-mode loop; "
                                   "seal with `cap-evolve finalize`"}))
-        return 0
+        return done(0)
 
     # 2) algorithm (hill-climb variants select their schedule via --focus)
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
@@ -409,7 +530,7 @@ def _cmd_run(argv):
     proc = run(alg_cmd)
     if proc.returncode != 0:
         print(json.dumps({"step": "algorithm", "error": proc.stderr[-1500:]}))
-        return 1
+        return done(1)
 
     # 3) finalize  4) report
     last = proc.stdout
@@ -432,11 +553,11 @@ def _cmd_run(argv):
         proc = run(cmd)
         if proc.returncode != 0:
             print(json.dumps({"step": step, "error": proc.stderr[-1500:]}))
-            return 1
+            return done(1)
         last = proc.stdout
 
     print(last)
-    return 0
+    return done(0)
 
 
 def _cmd_dashboard(argv):
@@ -619,13 +740,15 @@ COMMANDS = {
     "run": _cmd_run,
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
+    "tail": _cmd_tail,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
+        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard|tail} [args]",
+              file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:
