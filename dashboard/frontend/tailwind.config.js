@@ -20,14 +20,10 @@ export default {
       },
       fontFamily: {
         // No webfont: system stacks only, so the SPA renders offline/air-gapped.
-        sans: [
-          'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto',
-          '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif',
-        ],
-        mono: [
-          'ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas',
-          '"Liberation Mono"', 'monospace',
-        ],
+        // Defined once in src/index.css :root — referenced here so the utilities
+        // and the raw body/.tnum rules can never drift apart.
+        sans: 'var(--font-sans)',
+        mono: 'var(--font-mono)',
       },
       fontVariantNumeric: ['tabular-nums'],
       boxShadow: {

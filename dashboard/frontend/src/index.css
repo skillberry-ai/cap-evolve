@@ -23,6 +23,14 @@
   --rejected: #ef4444;      /* rejected / regressed */
   --seed: #64748b;          /* seed / neutral */
 
+  /* Single source of truth for both stacks — tailwind.config.js's font-sans /
+     font-mono utilities reference these vars, so the utilities and the raw rules
+     below cannot drift apart. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
   color-scheme: dark;
 }
 
@@ -36,16 +44,14 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 /* Tabular figures for all numeric/score displays so columns don't jitter. */
 .tnum {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-    'Liberation Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* Skeleton shimmer for loading states (>300ms waits). */
