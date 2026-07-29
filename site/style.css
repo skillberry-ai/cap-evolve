@@ -597,6 +597,9 @@ html.js .reveal-3 { transition-delay: 0.16s; }
 
 /* ─────────────────────── benchmark-runs history page ─────────────────────── */
 
+.running-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.running-list li { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
 .filters { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.5rem 0; }
 .filters label { display: flex; flex-direction: column; font-size: 0.78rem; color: var(--muted); gap: 0.25rem; }
 .filters label[hidden] { display: none; }   /* custom From/To hidden unless Time = Custom (beats display:flex above) */

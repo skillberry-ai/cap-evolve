@@ -1,4 +1,6 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
+const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
+const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench)$/;
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
@@ -12,6 +14,46 @@ const fmtDuration = (v) => {
 };
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function loadRunning() {
+  const panel = $("#running-now");
+  try {
+    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?status=in_progress&per_page=20`);
+    if (!runsResp.ok) throw new Error(String(runsResp.status));
+    const { workflow_runs: runs } = await runsResp.json();
+    const items = [];
+    for (const run of runs || []) {
+      const jobsResp = await fetch(`${GH_API}/actions/runs/${run.id}/jobs`);
+      if (!jobsResp.ok) continue;
+      const { jobs } = await jobsResp.json();
+      for (const job of jobs || []) {
+        if (job.status !== "in_progress") continue;
+        const m = JOB_RE.exec(job.name);
+        if (!m) continue;
+        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url });
+      }
+    }
+    renderRunning(items);
+  } catch (e) {
+    panel.hidden = true;
+  }
+}
+
+function renderRunning(items) {
+  const panel = $("#running-now");
+  const list = $("#running-list");
+  if (!items.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  list.innerHTML = items.map((it) => {
+    const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
+    return `<li><span class="badge badge-accent">live</span>
+      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
+      — <a href="./dashboard-ui/index.html?dataBase=${dataBase}#/runs/run_suite" target="_blank" rel="noopener">Watch live</a></li>`;
+  }).join("");
+}
 
 async function load() {
   try {
@@ -167,3 +209,5 @@ $("#f-time").addEventListener("change", () => {
   $("#f-to-wrap").hidden = !custom;
 });
 load();
+loadRunning();
+setInterval(loadRunning, 60000);
