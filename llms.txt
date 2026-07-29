@@ -25,6 +25,8 @@ except at finalize; gate acceptance on val with a paired significance gate.
 - [README.md](README.md): what it is, quickstart, comparison, skill library.
 - [docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md): the adapter methods you implement.
 - [docs/HONEST_EVAL.md](docs/HONEST_EVAL.md): the non-negotiable eval guarantees.
+- [docs/HOST_SUPPORT.md](docs/HOST_SUPPORT.md): which hosts/optimizers are CI-verified
+  vs docs-checked vs best-guess. Single source of truth — do not restate the list.
 
 ## Extend
 - [docs/EXTENDING.md](docs/EXTENDING.md): add a capability/algorithm/optimizer skill.
@@ -38,7 +40,9 @@ except at finalize; gate acceptance on val with a paired significance gate.
   (gepa & skillopt are the sample-efficient flagships)
 - optimizers: run-optimizer + optimizers/registry.yaml (claude-code, codex, gemini-cli,
   opencode, cursor, droid, copilot, kimi, pi, antigravity, openclaw, ibm-bob, generic,
-  mock — one runner resolves the name; the agent set matches obra/superpowers)
+  mock — one runner resolves the name; the agent set matches obra/superpowers).
+  **Host-agnostic by design, but only `claude-code` and `mock` are CI-executed** — the
+  rest are docs-checked or best-guess; see [docs/HOST_SUPPORT.md](docs/HOST_SUPPORT.md).
 - orchestrate: orchestrate, using-cap-evolve (session-start router)
 
 ## Examples

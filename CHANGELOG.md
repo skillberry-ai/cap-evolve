@@ -6,6 +6,17 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Dashboard charts never rendered — 8 of 13 panels were absent from every generated
+  `dashboard.html` since `4c87ed1` (2026-06-17).** `ParentNode.append()` returns
+  `undefined`, so `el.append(svg(…)).textContent = x` threw a `TypeError` at *top level* of
+  the dashboard's single inline `<script>`, aborting it and every remaining IIFE: heatmap,
+  lineage, diffs, cost, evaluations, candidates and annotations were all missing (rendered
+  SVG `<text>` count: **0**). The `svg()` helper now accepts a `text:` pseudo-attribute —
+  mirroring the `$()` helper that has always handled `text`/`html` this way — and all 7
+  chained-append sites use it; a second latent throw (a dead no-op `addEventListener`
+  chained off `append`) is deleted. A new test executes the generated inline script under a
+  minimal DOM shim and asserts element counts, so a rendering failure inside any panel now
+  fails CI instead of passing on source-string panel titles.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the

@@ -57,11 +57,19 @@ Beyond "does it run at all", one capability is host-specific today:
 Where `install.sh` puts the skill packages. A ➖ row means **pass `--dest`** (or set
 `$CAPEVOLVE_SKILLS_DIR`) rather than trusting the guess.
 
+> **No row here can be ✅ by this page's own bar.** Nothing in CI executes `install.sh`
+> (`grep -rn 'install\.sh' .github/ ci/` → no hits); CI sets `$CAPEVOLVE_SKILLS_DIR` to the
+> repo tree, which takes the *first* precedence branch and bypasses the `--host` mapping
+> entirely. So the badges below grade **how well-attested the path is**, not whether an
+> install was executed. 🟡 on `claude` is the strongest available claim: it is the
+> vendor-documented canonical path and `core/tests/test_native_skills.py` asserts the
+> `.claude/skills` string — but no test runs the installer.
+
 | `--host` | Destination | Status |
 |---|---|---|
-| `claude` / `claude-code` | `~/.claude/skills` | ✅ verified |
+| `claude` / `claude-code` | `~/.claude/skills` | 🟡 docs-checked (vendor-canonical path; `install.sh` is **not** CI-executed) |
 | `codex` | `~/.agents/skills` | 🟡 docs-checked (**not** `~/.codex`) |
-| `gemini` / `gemini-cli` | `~/.gemini/extensions/cap-evolve/skills` | 🟡 docs-checked (skills live inside an extension) |
+| `gemini` / `gemini-cli` | `~/.gemini/extensions/cap-evolve/skills` | 🟡 docs-checked (skills live inside an extension — deliberately **not** the registry's per-workdir `skills_dir: .gemini/skills`; see [#143](https://github.com/skillberry-ai/cap-evolve/issues/143)) |
 | `opencode` | `~/.config/opencode/skills` | 🟡 docs-checked (also reads `.claude/skills`) |
 | `bob` / `ibm-bob` | `~/.bob/skills` | 🟡 docs-checked — `install.sh` notes Bob has no `SKILL.md` concept, so treat placement as advisory |
 | `cursor` | `$PWD/.cursor/skills` | ➖ best-guess |

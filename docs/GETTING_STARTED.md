@@ -33,12 +33,14 @@ bash examples/toy_calc/run.sh
 ```
 
 The seed prompt scores `0.0` on val; the optimized prompt is gate-accepted and scores
-`1.0` on the sealed test split. This is the **literal, unedited output** of the command
-above:
+`1.0` on the sealed test split. Below is real output of the command above, captured on a
+box **without** the optional live-server backend installed. Every metric line is
+deterministic — you will get those bytes exactly. The only additions are the three
+`# ← varies` markers, flagging the lines that legitimately differ per environment:
 
 ```text
-Working directory: /var/folders/zh/srgnbq_97qvb6002zsr40tgc0000gn/T/toy_calc.XXXXXX.9t5qIAzQje
-{"dashboard": "skipped", "reason": "capevolve-dashboard not installed (pip install -e dashboard/backend)"}
+Working directory: /var/folders/zh/srgnbq_97qvb6002zsr40tgc0000gn/T/toy_calc.XXXXXX.9t5qIAzQje   # ← varies (mktemp)
+{"dashboard": "skipped", "reason": "capevolve-dashboard not installed (pip install -e dashboard/backend)"}   # ← varies
 {
   "run_dir": ".capevolve/run_demo",
   "best_id": "cand_0001",
@@ -52,13 +54,23 @@ Working directory: /var/folders/zh/srgnbq_97qvb6002zsr40tgc0000gn/T/toy_calc.XXX
   },
   "iterations": 3,
   "dashboard": ".capevolve/run_demo/dashboard.html",
-  "dashboard_server": "skipped"
+  "dashboard_server": "skipped"   # ← varies
 }
 ```
 
-`"dashboard": "skipped"` is expected — that's the *optional live server*, not the
-dashboard; the self-contained `dashboard.html` is still written. `test_pass_k` `"2": 0.0`
-is honest too: with two test tasks, pass^2 requires both to pass on both trials.
+If you *did* install the optional backend (`pip install -e dashboard/backend`, as
+[`INSTALL.md`](INSTALL.md) suggests), those two lines instead read
+`{"dashboard": "http://127.0.0.1:7878"}` and `"dashboard_server": "http://127.0.0.1:78xx"`.
+Either way the self-contained `dashboard.html` is written — `"skipped"` refers only to the
+*optional live server*, never to the dashboard itself.
+
+`test_pass_k` `"2": 0.0` is honest too, and it is **not** about the number of tasks:
+pass^k is computed per task over that task's *trials*, then averaged. The toy runs
+`num_trials: 1`, so `k=2` exceeds the one trial available and the estimator returns 0
+rather than guessing. Re-run with `num_trials: 2` or more to populate it. (Once
+[PR #187](https://github.com/skillberry-ai/cap-evolve/pull/187) — issue #112 — lands, an
+unmeasurable `k` is **omitted** instead of reported as `0.0`, so the `"2"` key simply
+disappears from this block. Same fact, better rendering.)
 
 This is exactly what `core/tests/test_e2e_slice.py` asserts. Open the `dashboard.html`
 under the printed working directory in any browser:

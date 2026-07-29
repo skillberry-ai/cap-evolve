@@ -88,6 +88,8 @@ you want intake to ask):
 
 # 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
 - optimizer:   <claude-code | codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock>
+                      # only claude-code and mock are CI-executed; the rest are docs-checked
+                      # or best-guess — see docs/HOST_SUPPORT.md before relying on one.
 - model:       <backend-specific model id>
 - credentials: <e.g. ANTHROPIC_API_KEY or a logged-in Claude Code session; BOBSHELL_API_KEY for ibm-bob>
 
@@ -142,6 +144,7 @@ resolves the name via `skills/optimizers/registry.yaml`:
 ```yaml
 capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
 optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
+                                          #   (only claude-code + mock are CI-executed — docs/HOST_SUPPORT.md)
 algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt
 num_trials: 4
 store: git                                # versions every iteration
