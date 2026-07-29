@@ -4,8 +4,20 @@ All notable changes to cap-evolve are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
+[Unreleased]: https://github.com/skillberry-ai/cap-evolve/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
+
 ## [Unreleased]
+
 ### Added
+- **`evograph` — evo-graph weakness-graph algorithm and dashboard view.** New agent-mode
+  algorithm skill (`skills/algorithms/evograph/`, the 20th skill) that clusters failing
+  tasks into a weakness graph to steer edits, plus its own mounted dashboard view
+  (`scripts/view.py` + a self-contained frontend bundle) surfaced inside the cap-evolve
+  dashboard.
+- **Per-algorithm custom dashboard views.** The dashboard backend gains
+  `custom_view.py`; an algorithm skill may ship its own view, iframe-mounted into the
+  run deep-dive alongside the default template.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the
@@ -40,10 +52,19 @@ All notable changes to cap-evolve are documented here. The format follows
   `--max_workers` to parallelize over, so `SWEBENCH_MAX_WORKERS=10` (already set in CI)
   was a no-op. Adapters that don't implement `score_batch` are unaffected.
 
+### Fixed
+- **tau2 adapter no longer races tau2's global RNG seed** across concurrent trials
+  (`templates/adapters/tau2_bench/adapter.py`), so per-trial `seed` is honest under
+  parallelism.
+- **Optimizer cost is recovered on a non-zero optimizer exit** (`core/cap_evolve/harness.py`)
+  instead of being dropped, so a crashed optimizer iteration still reports its spend.
+
 ## [0.1.0] - 2026-07-27
 
 Initial release. Tag [`v0.1.0`](https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0)
-at commit `1a24604`; `core/pyproject.toml` version `0.1.0`.
+at commit `1a24604`; `core/pyproject.toml` version `0.1.0`. The date is the GitHub
+release's `publishedAt` (`2026-07-27`), not the tag-commit date (`2026-07-26`), because
+Keep a Changelog dates the *release*.
 
 ### Added
 - Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
@@ -51,7 +72,7 @@ at commit `1a24604`; `core/pyproject.toml` version `0.1.0`.
 - **19 Agent Skills**: phases (intake, implement-and-check, baseline, evaluate,
   diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,
   skill-package), algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
-  **gepa**, **skillopt**), one **run-optimizer** skill backed by
+  **gepa**, **skillopt**, **agent-optimize**), one **run-optimizer** skill backed by
   `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw,
   ibm-bob, generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
 - **`gepa`** (flagship): real GEPA — two-stage minibatch-then-full-val economy,
@@ -64,8 +85,8 @@ at commit `1a24604`; `core/pyproject.toml` version `0.1.0`.
 - Git-backed iteration store (default) + optimizer memory (MEMORY.md/STATE.md/rejected.jsonl).
 - **Self-contained** `dashboard.html` (no CDN): KPI strip, cumulative-best stair,
   tasks×iterations pass/fail heatmap, per-iteration diff, lineage tree (merges as
-  multi-parent), optimizer-vs-runner cost/tokens/latency, annotations — plus a
-  `cap-evolve report --terminal` ANSI report for in-chat progress.
+  multi-parent), optimizer-vs-runner cost/tokens/latency, annotations — plus the
+  `report` phase's `--terminal` ANSI report for in-chat progress.
 - **Claude Code plugin** (`plugins/cap-evolve/`, install `claude --plugin-dir
   ./plugins/cap-evolve`): every skill as `/cap-evolve:<skill>` (dual-mode: standalone
   slash command + orchestrator-callable + headless JSON), honesty **hooks** (PreToolUse
@@ -73,12 +94,16 @@ at commit `1a24604`; `core/pyproject.toml` version `0.1.0`.
   the gate is green) in **core-owned scripts**, read-only diagnoser + writer proposer
   subagents, and the `using-cap-evolve` router.
 - Host-agnostic installer.
-- Examples: toy_calc, json_extract, date_tool, skills_bench, tau2_airline — the last a
+- Examples: toy_calc, skillsbench, tau2_airline — the last a
   real 50-task × 10-trial run, val **0.536 → 0.712** (best candidate `cand_0007`,
   +0.176 / +32.8% relative; *fit metric*, `train == val == test`, so the test number
-  0.694 pass@1 is not held out). Canonical figures and the committed artifact:
-  [`docs/RESULTS.md`](docs/RESULTS.md) and
-  [`examples/tau2_airline/run_full/final.json`](examples/tau2_airline/run_full/final.json).
+  0.694 pass@1 is not held out). Baseline val, best val and the delta come from
+  [`examples/tau2_airline/run_full/ui/data/runs_run_full.json`](examples/tau2_airline/run_full/ui/data/runs_run_full.json)
+  (`summary.baseline_val = 0.536`, `summary.best_val = 0.712`, `best_id = cand_0007`,
+  `delta_abs = 0.176`, `delta_pct = 32.8`); the sealed-test `0.694` comes from
+  [`examples/tau2_airline/run_full/final.json`](examples/tau2_airline/run_full/final.json)
+  (`test.reward` / `test.pass_at_k.1`). Canonical prose:
+  [`docs/RESULTS.md`](docs/RESULTS.md).
 - **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
   timeout) from its last completed state instead of starting over. Reopens the run dir
   (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it
@@ -154,9 +179,4 @@ at commit `1a24604`; `core/pyproject.toml` version `0.1.0`.
   overrides. The old stub used a stale `run_target(task, candidate_dir, split)` signature
   and presented `apply` as a 4th abstract method, which a filled-in body could make the
   stub-probe silently pass.
-
-### Notes
 - Skill names are hyphenated to comply with the Agent Skills `[a-z0-9-]` rule.
-
-[Unreleased]: https://github.com/skillberry-ai/cap-evolve/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
