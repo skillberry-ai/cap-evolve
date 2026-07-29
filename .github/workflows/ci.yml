@@ -9,6 +9,8 @@
 #   3. toy-example     — runs the zero-API toy_calc example and asserts test_reward 1.0
 #   4. docs-links      — checks relative links/images in Markdown resolve (offline)
 #   5. spellcheck      — codespell over README + docs
+#   6. lint-skills     — dogfoods the skill-package authoring lint on our OWN skills
+#                        (skills/*/*/SKILL.md) + rebuilds the registry manifest
 #
 # No shared-workflow delegation needed: this is repo-specific CI.
 # ============================================================================
@@ -119,5 +121,27 @@ jobs:
           path: README.md docs
           skip: docs/sources.bib,docs/assets,docs/superpowers
           ignore_words_list: nd,te,ba,alls,ist,fo,ans,crate,ede,hel,optimizer,capevolve,noteb,fpr
+
+  lint-skills:
+    name: Skill authoring lint (dogfood)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The bar cap-evolve ships to users (skill-package/scripts/abstract.py) applied
+      # to cap-evolve's own bundled skills. Discovery is a glob, so a NEW skill is
+      # linted the day it lands, and MIN_SKILLS fails loudly if one vanishes.
+      - name: Lint every bundled SKILL.md against the authoring bar
+        run: python skills/_registry/lint_skills.py skills
+
+      - name: Rebuild the skill registry manifest
+        run: python skills/_registry/build_manifest.py skills
 
 # Made with Bob

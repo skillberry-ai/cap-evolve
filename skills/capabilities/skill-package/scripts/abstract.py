@@ -232,8 +232,11 @@ def _validate_one(capability_dir: Path) -> dict:
                 warnings.append(f"references/{f.name} is {ln} lines without an early "
                                 "table of contents")
 
-    # broken reference links the body points at
+    # broken reference links the body points at. A Markdown link may carry an
+    # anchor ("references/x.md#a-heading"); the anchor is not part of the path, so
+    # strip it before the existence check or every deep link reads as broken.
     for rel in re.findall(r"\(((?:references|scripts|assets)/[^)\s]+)\)", body):
+        rel = rel.split("#", 1)[0]
         if not (capability_dir / rel).exists():
             warnings.append(f"SKILL.md references '{rel}' which does not exist")
 
