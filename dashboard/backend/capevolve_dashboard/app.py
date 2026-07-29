@@ -25,7 +25,7 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
         return {"ok": True, "base_dir": str(base)}
 
     @app.get("/api/runs")
-    def get_runs(limit: int | None = Query(default=None, ge=1),
+    def get_runs(limit: int | None = Query(default=None, ge=1, le=1000),
                  offset: int = Query(default=0, ge=0)):
         # Unpaginated by default (back-compat: the SPA hub expects a plain array).
         return runs.list_runs(base, limit=limit, offset=offset)
@@ -45,8 +45,9 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
 
     @app.get("/api/runs/{run_id}/rollouts")
     def get_rollouts(run_id: str, split: str | None = Query(default=None),
-                     limit: int | None = Query(default=None, ge=1),
+                     limit: int | None = Query(default=None, ge=1, le=1000),
                      offset: int = Query(default=0, ge=0)):
+        # Unpaginated by default (back-compat: the SPA expects a plain array).
         return trajectories.list_rollouts(_resolve_or_404(run_id), split,
                                           limit=limit, offset=offset)
 

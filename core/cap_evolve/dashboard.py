@@ -235,48 +235,102 @@ def _step_candidate(ev: dict):
 # every SSE tick (~2/s), and once more per candidate in ``diff_candidate``, so a
 # long run spends most of its CPU re-deriving an answer that has not changed.
 #
-# Key: the run's ``events.jsonl`` ``(st_mtime_ns, st_size)``.
-#   * Both, not just mtime: mtime granularity is 1s on some filesystems (and plain
+# Key: ``events.jsonl``'s ``(st_mtime_ns, st_size, st_ino)`` PLUS the git store's
+# ``.git`` + ``.git/logs/HEAD`` stamps. Keyed on ``root.resolve()`` so an absolute and
+# a relative path to the same run dir share one entry.
+#   * Size, not just mtime: mtime granularity is 1s on some filesystems (and plain
 #     float ``st_mtime`` rounds), so a same-second append can leave mtime looking
 #     unchanged. events.jsonl is append-only, so size always grows on a new event —
-#     size is the strong signal, mtime catches a same-length rewrite.
-#   * One key is enough for the reducer's *other* inputs (baseline.json, final.json,
-#     rollouts/, state.json, the git store) because each is written BEFORE the event
-#     that reports it is appended: harness writes baseline.json then logs "baseline",
-#     persists rollout files then logs "evaluate", finalize writes final.json then
-#     logs "finalize", the iteration commit lands then "step" is logged. So the stamp
-#     advances after those writes, never before.
+#     size is the strong signal, mtime catches a same-length rewrite, and ``st_ino``
+#     catches a same-size replace-via-rename (a new file gets a new inode).
+#   * INVARIANT the events part relies on: ``events.jsonl`` is only ever APPENDED to
+#     (``RunDir.log_event`` opens it "a"). A future writer that rewrites it in place
+#     to the same byte length within one mtime tick would serve a stale reduction —
+#     if you add such a writer, hash the file or bump a counter instead.
+#   * The event stamp alone covers baseline.json, final.json, rollouts/ and state.json,
+#     because each is written BEFORE the event reporting it: baseline.json then
+#     log_event("baseline"), rollout files (harness.py:252) then log_event("evaluate")
+#     (:311), final.json (:1964) then log_event("finalize") (:1966).
+#   * It does NOT cover the git store, whose ordering is the OPPOSITE: the harness logs
+#     "step" (harness.py:1323) and only commits 33 lines LATER (:1356); GEPA likewise
+#     logs (gepa.py:718) then commits (:635). So a commit lands with the event log
+#     untouched and ``git_log`` (:623) would stay stale for the rest of the iteration.
+#     Hence ``_git_stamp``. NOT ``.git/HEAD``: that is a constant symbolic ref
+#     ("ref: refs/heads/<branch>") and never changes on a commit — measured. ``.git``'s
+#     own mtime moves on every commit (index.lock create+rename) and ``.git/logs/HEAD``
+#     is the append-only reflog; both are branch-name agnostic, and either moving is
+#     enough to invalidate.
 #
-# Bounded by run count: one entry per run root, holding only its newest reduction.
-_REDUCE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
+# Bounded: FIFO-capped at ``_REDUCE_MAX`` entries (the dashboard is a long-lived
+# process and ``list_runs`` installs one entry per discovered run).
+_REDUCE_CACHE: dict[str, tuple[tuple, dict]] = {}
+_REDUCE_MAX = 32
+
+
+def _stat_stamp(path: Path) -> tuple[int, int]:
+    """``(st_mtime_ns, st_size)``, or ``(0, 0)`` when the path is absent/unreadable."""
+    try:
+        st = path.stat()
+    except OSError:
+        return (0, 0)
+    return (st.st_mtime_ns, st.st_size)
+
+
+def _git_stamp(root: Path) -> tuple[int, int, int, int]:
+    """Stamp for the run's git store — moves on every ``VersionStore.commit``."""
+    return _stat_stamp(root / ".git") + _stat_stamp(root / ".git" / "logs" / "HEAD")
+
+
+def _resolve(root: Path) -> Path:
+    """``root.resolve()``, falling back to the path itself if resolution fails.
+
+    ``RunDir.open`` (rundir.py:201) does not resolve, and ``reduce_run`` is a public
+    API called with relative paths (report/scripts/run.py, check.py, export_static.py),
+    so without this an absolute and a relative path to one run dir get two entries.
+    """
+    try:
+        return root.resolve()
+    except OSError:
+        return root
 
 
 def _events_stamp(root: Path):
-    """``(st_mtime_ns, st_size)`` of the run's event log, or ``None`` if unreadable."""
+    """Full cache stamp for a run dir, or ``None`` when there is no event log.
+
+    ``(events mtime_ns, size, inode) + git stamp``. ~3 extra ``stat`` calls versus one
+    (~2 us each, measured) against a ~230 ms fold — noise.
+    """
     try:
         st = (root / "events.jsonl").stat()
     except OSError:
         return None  # no event log → nothing stable to key on; never cache
-    return (st.st_mtime_ns, st.st_size)
+    return (st.st_mtime_ns, st.st_size, st.st_ino) + _git_stamp(root)
 
 
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted).
 
-    Memoized on the event log's mtime+size (see ``_REDUCE_CACHE``). The returned
-    object is SHARED between callers on a cache hit — treat it as read-only.
+    Memoized on the event log's mtime+size+inode and the git store's stamp (see
+    ``_REDUCE_CACHE``). The returned object is SHARED between callers on a cache
+    hit — treat it as read-only.
     """
     root = Path(run_dir.root)
+    # ponytail: no lock around the miss path — N cold concurrent readers each fold
+    # (duplicate work, never a torn read: ``reduced`` is fully built before the
+    # single atomic dict store). Add a module lock if thundering herd shows up.
+    key = str(_resolve(root))
     stamp = _events_stamp(root)
     if stamp is not None:
-        hit = _REDUCE_CACHE.get(str(root))
+        hit = _REDUCE_CACHE.get(key)
         if hit is not None and hit[0] == stamp:
             return hit[1]
     reduced = _reduce_run_uncached(run_dir)
     # Re-stat after the fold: if the log grew while we were folding, this result may
     # already be stale, so don't cache it — the next call re-folds.
     if stamp is not None and _events_stamp(root) == stamp:
-        _REDUCE_CACHE[str(root)] = (stamp, reduced)
+        _REDUCE_CACHE[key] = (stamp, reduced)
+        while len(_REDUCE_CACHE) > _REDUCE_MAX:  # dicts are insertion-ordered → FIFO
+            _REDUCE_CACHE.pop(next(iter(_REDUCE_CACHE)))
     return reduced
 
 

@@ -132,3 +132,53 @@ def test_sse_snapshot_frame_carries_no_reduced_run(tmp_base, make_run, monkeypat
     assert frames[0] == "event: snapshot"
     # Payload is the open marker only — NOT {"graph": ..., "summary": ...}.
     assert json.loads(frames[1][len("data:"):]) == {"run_id": "run_a"}
+
+
+# ---- page-size bounds (N5) and short pages (N6) ---------------------------
+
+def test_page_size_is_capped(tmp_base, make_run):
+    """``le=1000`` makes the contract self-documenting; a huge limit is a 422, not a 200."""
+    make_run("run_a", events=BASE_EVENTS, baseline={"val": {"reward": 0.25}, "best_id": "seed"})
+    c = _client(tmp_base)
+    for url in ("/api/runs", "/api/runs/run_a/rollouts"):
+        assert c.get(f"{url}?limit=1000").status_code == 200
+        assert c.get(f"{url}?limit=1001").status_code == 422
+        assert c.get(f"{url}?limit=99999999999999999999").status_code == 422
+        assert c.get(f"{url}?limit=0").status_code == 422
+        assert c.get(f"{url}?offset=-1").status_code == 422
+
+
+def test_a_short_page_is_not_the_end_of_the_list(tmp_base, make_run):
+    """N6: a corrupt file is skipped AFTER windowing, so a page can be short mid-list.
+
+    Pins the documented contract: page until you get an EMPTY page, not a short one.
+    """
+    rd = make_run("run_a", events=BASE_EVENTS,
+                  baseline={"val": {"reward": 0.25}, "best_id": "seed"})
+    for i in range(6):
+        _write_rollout(rd, "val", f"t{i}", "cand_0001", 0)
+    (rd.root / "rollouts" / "val" / "t1__cand_0001__t0.json").write_text("{ not json",
+                                                                        encoding="utf-8")
+    c = _client(tmp_base)
+    first = c.get("/api/runs/run_a/rollouts?limit=3").json()
+    assert len(first) == 2, "short page mid-list (the corrupt row was skipped)"
+    second = c.get("/api/runs/run_a/rollouts?limit=3&offset=3").json()
+    assert len(second) == 3, "a short page did NOT mean the list was exhausted"
+    assert c.get("/api/runs/run_a/rollouts?limit=3&offset=6").json() == []  # empty = end
+    # and paging still tiles the unpaged list exactly
+    full = c.get("/api/runs/run_a/rollouts").json()
+    assert [r["file"] for r in first + second] == [r["file"] for r in full]
+
+
+def test_run_order_is_total_even_at_identical_mtimes(tmp_base, make_run):
+    """N4: name tiebreaks the mtime sort, so pagination has a total order to tile."""
+    import os
+    from capevolve_dashboard import runs as R
+    for n in ("run_c", "run_a", "run_b"):
+        make_run(n, events=BASE_EVENTS, baseline={"val": {"reward": 0.25}, "best_id": "seed"})
+        os.utime(tmp_base / n, ns=(1_000_000_000_000_000_000, 1_000_000_000_000_000_000))
+    order = [r["run_id"] for r in R.list_runs(tmp_base)]
+    assert order == ["run_a", "run_b", "run_c"], order
+    assert all([r["run_id"] for r in R.list_runs(tmp_base)] == order for _ in range(5))
+    pages = R.list_runs(tmp_base, limit=2) + R.list_runs(tmp_base, limit=2, offset=2)
+    assert [r["run_id"] for r in pages] == order  # pages tile the total order

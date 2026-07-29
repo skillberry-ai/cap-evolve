@@ -1,10 +1,16 @@
-"""``reduce_run`` is memoized on events.jsonl mtime+size (issue #119).
+"""``reduce_run`` is memoized on events.jsonl mtime+size+inode and the git store's
+stamp (issue #119).
 
 The dashboard backend re-folds the whole event log on every request and every SSE
 tick, so the reduction is memoized. A stale reduction served during a LIVE run would
 be worse than no cache at all, so the invalidation cases are the ones that matter:
-an append must re-fold, and a same-second append (mtime unchanged at 1s resolution)
-must still re-fold because the size moved.
+an append must re-fold; a same-second append (mtime unchanged at 1s resolution) must
+still re-fold because the size moved; a same-size replace-via-rename must re-fold
+because the inode moved; and a git commit must re-fold even though the harness logs
+its event BEFORE committing, so the event log has not moved at all.
+
+Also pinned here: the FIFO cap (the dashboard is long-lived) and the resolved cache
+key (an absolute and a relative path to one run dir must share one entry).
 """
 
 import json
@@ -38,7 +44,9 @@ def _mk_run(tmp: Path, events=_EVENTS):
 def _spy(monkeypatch):
     """Count real folds by wrapping the uncached reducer."""
     from cap_evolve import dashboard
-    dashboard._REDUCE_CACHE.clear()
+    # A fresh dict rather than .clear() on the shared global, so monkeypatch restores
+    # whatever the rest of the suite had instead of leaving it permanently emptied.
+    monkeypatch.setattr(dashboard, "_REDUCE_CACHE", {})
     calls = []
     real = dashboard._reduce_run_uncached
 
@@ -149,3 +157,107 @@ def test_missing_event_log_is_never_cached(monkeypatch):
         dashboard.reduce_run(rd)
         dashboard.reduce_run(rd)
         assert len(calls) == 2
+
+
+def test_a_git_commit_with_no_new_event_invalidates(monkeypatch):
+    """B1: the harness logs "step" then commits 33 lines LATER (harness.py:1323/:1356).
+
+    So a commit lands with the event log untouched. Before the git stamp was folded
+    into the key, ``git_log`` stayed stale for the rest of the iteration.
+    """
+    from cap_evolve.store import make_store
+    dashboard, calls = _spy(monkeypatch)
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d))
+        store = make_store({"kind": "git"}, rd.root)
+        store.init()
+        assert store.commit("iter 1: ACCEPT cand_0001")["ok"]
+        before = dashboard.reduce_run(rd)
+        assert len(before["summary"]["git_log"]) == 1
+        ev_stamp = rd.events_path.stat()
+        assert store.commit("iter 2: reject cand_0002")["ok"]
+        # the whole point: the event log did NOT move
+        assert rd.events_path.stat().st_mtime_ns == ev_stamp.st_mtime_ns
+        assert rd.events_path.stat().st_size == ev_stamp.st_size
+        after = dashboard.reduce_run(rd)
+        assert len(calls) == 2, "a new commit must re-fold"
+        assert len(after["summary"]["git_log"]) == 2, "git_log must show the new commit"
+
+
+def test_cache_is_capped_and_evicts_oldest(monkeypatch):
+    """B2: the dashboard is long-lived and list_runs installs one entry per run."""
+    dashboard, _ = _spy(monkeypatch)
+    monkeypatch.setattr(dashboard, "_REDUCE_MAX", 3)
+    with tempfile.TemporaryDirectory() as d:
+        roots = []
+        for i in range(6):
+            rd = _mk_run(Path(d) / f"r{i}")
+            dashboard.reduce_run(rd)
+            roots.append(str(Path(rd.root).resolve()))
+        assert len(dashboard._REDUCE_CACHE) == 3, "cap must hold"
+        # FIFO: the three newest survive, the three oldest are gone
+        assert list(dashboard._REDUCE_CACHE) == roots[-3:]
+
+
+def test_absolute_and_relative_paths_share_one_entry(monkeypatch):
+    """B3: RunDir.open does not resolve, so the key must (rundir.py:201)."""
+    from cap_evolve import RunDir
+    dashboard, calls = _spy(monkeypatch)
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d) / "base")
+        abs_root = Path(rd.root).resolve()
+        cwd = os.getcwd()
+        try:
+            os.chdir(abs_root.parent)
+            a = dashboard.reduce_run(RunDir.open(abs_root))
+            b = dashboard.reduce_run(RunDir.open(Path(abs_root.name)))
+        finally:
+            os.chdir(cwd)
+        assert len(dashboard._REDUCE_CACHE) == 1, dict.keys(dashboard._REDUCE_CACHE)
+        assert len(calls) == 1 and b is a
+
+
+def test_truncating_the_event_log_invalidates(monkeypatch):
+    """N7: shrink was untested; size moving down must invalidate like moving up."""
+    dashboard, calls = _spy(monkeypatch)
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d))
+        assert dashboard.reduce_run(rd)["summary"]["counts"]["total"] == 2
+        lines = rd.events_path.read_text(encoding="utf-8").splitlines()[:2]
+        rd.events_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        after = dashboard.reduce_run(rd)
+        assert len(calls) == 2 and after["summary"]["counts"]["total"] == 1
+
+
+def test_same_size_replace_via_rename_invalidates(monkeypatch):
+    """N1: st_ino in the key catches a same-size rename-over at an identical mtime."""
+    dashboard, calls = _spy(monkeypatch)
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d))
+        assert dashboard.reduce_run(rd)["summary"]["best_val"] == 0.75
+        st = rd.events_path.stat()
+        swapped = [dict(e) for e in _EVENTS]
+        swapped[2]["val"] = 0.95  # same JSON byte length as 0.75
+        tmp = rd.root / "events.new"
+        tmp.write_text("\n".join(json.dumps(e) for e in swapped) + "\n", encoding="utf-8")
+        assert tmp.stat().st_size == st.st_size, "probe must hold size constant"
+        os.replace(tmp, rd.events_path)
+        os.utime(rd.events_path, ns=(st.st_atime_ns, st.st_mtime_ns))
+        assert rd.events_path.stat().st_mtime_ns == st.st_mtime_ns
+        after = dashboard.reduce_run(rd)
+        assert len(calls) == 2, "a new inode must invalidate at identical mtime+size"
+        assert after["summary"]["best_val"] == 0.95
+
+
+def test_mutating_a_returned_reduction_is_visible_to_the_next_caller():
+    """N3 tripwire: the shared-object contract is read-only and NOT defended.
+
+    This pins the documented behaviour so a future deepcopy-on-hit (which would eat
+    the whole win) is a deliberate, test-breaking decision rather than an accident.
+    """
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d))
+        first = dashboard.reduce_run(rd)
+        first["summary"]["best_val"] = "MUTATED"
+        assert dashboard.reduce_run(rd)["summary"]["best_val"] == "MUTATED"

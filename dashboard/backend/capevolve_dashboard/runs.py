@@ -58,9 +58,12 @@ def list_runs(base_dir: Path, limit: int | None = None, offset: int = 0) -> list
     (ordered by dir mtime, which needs only a stat) BEFORE any reduction, so asking
     for one page costs one reduction per row on the page — not one per run in the
     dir. A run whose reduction raises (half-written) is skipped, so a page can come
-    back shorter than ``limit``.
+    back shorter than ``limit`` — a SHORT PAGE IS NOT THE END OF THE LIST; page until
+    you get an empty one.
     """
-    paths = sorted(discover(base_dir), key=lambda p: p.stat().st_mtime, reverse=True)
+    # Name tiebreaks the mtime sort: runs created in the same tick would otherwise fall
+    # back to iterdir() order, and pagination needs a total order to tile correctly.
+    paths = sorted(discover(base_dir), key=lambda p: (-p.stat().st_mtime, p.name))
     if offset:
         paths = paths[offset:]
     if limit is not None:

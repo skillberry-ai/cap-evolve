@@ -17,8 +17,9 @@ def list_rollouts(run_path: Path, split: str | None = None,
     ``limit``/``offset`` page the result. The window is applied to the sorted FILE
     NAMES before any file is opened, so a page costs one JSON parse per row on the
     page rather than one per rollout in the split (a long run has thousands). Order
-    is stable: splits sorted by name, then file name within a split. A file that
-    fails to parse is skipped, so a page can be shorter than ``limit``.
+    is stable: splits sorted by name, then file name within a split. A file that fails
+    to parse is skipped, so a page can be shorter than ``limit`` — a SHORT PAGE IS NOT
+    THE END OF THE LIST; page until you get an empty one.
     """
     root = Path(run_path) / "rollouts"
     rows: list[dict] = []
