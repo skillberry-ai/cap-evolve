@@ -52,7 +52,10 @@ def find_run_dir(start: Path) -> Path | None:
     """Locate the active CapEvolve run dir, or None if we are not inside a run.
 
     Precedence:
-      1. ``$CAPEVOLVE_RUN_DIR`` (set by the orchestrator while a run is live).
+      1. ``$CAPEVOLVE_RUN_DIR`` — an optional override the user/caller may export
+         when the run dir is not discoverable by the walk below. Nothing in this
+         repo sets it today; it is read-only escape hatch, not an orchestrator
+         contract.
       2. The newest ``.capevolve/run_*`` with a ``splits.json`` found walking up
          from ``start``.
 

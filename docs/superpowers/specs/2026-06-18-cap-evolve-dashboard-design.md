@@ -137,7 +137,7 @@ cap-evolve run ──► run_<ts>/  (events.jsonl, baseline/final.json, splits.j
                    │           SOURCE OF TRUTH — no new persistence required
                    ▼
         ┌───────────────────────────────────────────────┐
-        │ FastAPI backend  (dashboard/backend) │
+        │ FastAPI backend  (dashboard/backend)            │
         │  reuses cap_evolve.dashboard.reduce_run()       │  ← single-sourced data contract
         │  tails events.jsonl for live updates            │
         │  GET /api/runs                  (hub list)      │
@@ -254,7 +254,7 @@ add the **capybara logo + evolve theme**, expand the **KPI strip**, add the
 ## 11. Layout / where it lives
 
 ```
-dashboard/
+cap-evolve/                           # repo root
   core/cap_evolve/dashboard.py        # legacy single-file (improved); reduce_run reused by backend
   dashboard/
     backend/                          # FastAPI app (SSE, run-dir API), reuses reduce_run

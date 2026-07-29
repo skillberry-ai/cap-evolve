@@ -10,7 +10,7 @@
 
 ## Global Constraints
 - Same as Plans 1–2. Read-only; reuse `redact()`; semantic tokens; reduced-motion safe; color never sole signal; tabular figures for numbers.
-- Data shapes (verified in `.demo/.capevolve/run_demo`): `history.jsonl` = `{candidate_id, summary, val}`; `rejected.jsonl` = `{candidate_id, summary, reason, val}`; candidate dir holds `INSTRUCTIONS.md, MEMORY.md, STATE.md, prompt.txt`; rollout = `{input, rollout:{output,trace,tool_calls,error,...}, score:{reward,feedback,...}}`.
+- Data shapes (verified at authoring time, 2026-06-18, against a local demo run dir that was never committed): `history.jsonl` = `{candidate_id, summary, val}`; `rejected.jsonl` = `{candidate_id, summary, reason, val}`; candidate dir holds `INSTRUCTIONS.md, MEMORY.md, STATE.md, prompt.txt`; rollout = `{input, rollout:{output,trace,tool_calls,error,...}, score:{reward,feedback,...}}`.
 
 ## Tasks
 
