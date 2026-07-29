@@ -153,8 +153,12 @@ export function RunDeepDive() {
                       src={customUrl}
                       title={customView?.title || 'Custom view'}
                       // The embedded page is data-driven (declared by the run dir), so
-                      // sandbox it: allow it to run scripts and talk to its own origin,
-                      // but deny top-level navigation, popups, and same-origin trust.
+                      // sandbox it: allow scripts, its own-origin storage, and forms,
+                      // but deny top-level navigation and popups. NOTE: allow-scripts +
+                      // allow-same-origin only sandboxes while `customUrl` is a *different*
+                      // origin than this dashboard (it is today — a separate localhost
+                      // port). If a run ever points this at the dashboard's own origin,
+                      // the frame could remove its own sandbox; keep custom views cross-origin.
                       sandbox="allow-scripts allow-same-origin allow-forms"
                       referrerPolicy="no-referrer"
                       loading="lazy"
