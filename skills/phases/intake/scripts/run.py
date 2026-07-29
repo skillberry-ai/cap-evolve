@@ -89,7 +89,7 @@ def main(argv=None) -> int:
         "created": created,
         "next": [
             "reuse the discovered artifacts where possible (don't re-author them)",
-            "implement the 4 methods in adapters/adapter.py",
+            "implement the 3 required methods in adapters/adapter.py",
             "fill capevolve.yaml (capability / optimizer / algorithm / budget)",
             "resolve NEEDED inputs (ask the user for any that are missing)",
             "run: cap-evolve check " + str(project) + "  (implement-and-check gates this)",

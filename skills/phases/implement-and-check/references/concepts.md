@@ -15,10 +15,13 @@ cap-evolve measures everything through **3 required methods** the user implement
 | `run_target(task, ctx, *, seed=0)` | runs the agent, captures output + trace into Rollout| no behavior to score              |
 | `score(task, rollout)`             | reward ∈ [0,1] + general feedback, deterministic    | every candidate scores the same   |
 
-Beyond those three, `materialize(candidate_dir, edits=None)`, `live(candidate_dir)` and
-`apply(candidate_dir, edits=None)` are **defaulted hooks** — they already work for the
-common case, so override them only when the default does not fit. Optional extras
-(`trajectories`, `runner_model`, `run_batch`, `run_trials`) are feature-detected.
+Beyond those three, `materialize(candidate_dir, edits=None)`, `live(candidate_dir)`,
+`apply(candidate_dir, edits=None)`, `trajectories(split, ctx=None)` and `runner_model()`
+are **defaulted hooks** — they are defined on the base class with working defaults (the
+last two `return None`) and are called unconditionally, so override them only when the
+default does not fit. Separately, `run_batch` / `run_trials` / `score_batch` are **not** on
+the base class at all; the harness feature-detects them with `hasattr` and uses them only
+when an adapter defines them.
 
 If any required method is a stub, the optimization still *runs* — it just produces a number
 that measures nothing. The whole point of a pre-budget gate is to make that
@@ -32,9 +35,11 @@ failure loud and early instead of silent and expensive.
   `tasks()` is empty, there is nothing to average; if it shuffles between calls,
   the split is not reproducible and train/val/test stop being disjoint across
   reruns.
-- **`materialize()` callable.** An edit that cannot be materialized onto a capability
-  copy cannot be evaluated — the loop would propose into the void. The check probes it
-  against a temp copy; because `materialize` is pure, the host is never mutated.
+- **`materialize()` probed.** An edit that cannot be materialized onto a capability
+  copy cannot be evaluated — the loop would propose into the void. The check calls it
+  against a temp copy; because `materialize` is pure, the host is never mutated. This is a
+  **probe, not an assertion**: a raise is reported as a note and does NOT fail the check
+  (`check.py:166-167`), because a real adapter may legitimately need its full environment.
 
 ## Scorer determinism vs target stochasticity — a crucial distinction
 

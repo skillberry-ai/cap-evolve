@@ -35,10 +35,13 @@ cheaper to fail here than after a full optimization run.
      gold-answer leakage — it becomes the diagnosis signal).
 
    Then override a **defaulted hook** only if its default does not fit your capability:
-   `materialize(candidate_dir, edits=None)` (pure write of `{component: text}` edits),
+   `materialize(candidate_dir, edits=None)` (default: pure write of each
+   `{component: text}` edit as a file under `candidate_dir` — override to support a
+   capability-specific patch format),
    `live(candidate_dir)` (context manager yielding `ctx`), `apply(candidate_dir, edits=None)`
-   (back-compat inject). Optional extras: `trajectories`, `runner_model`, `run_batch`,
-   `run_trials`.
+   (back-compat inject), `trajectories(split, ctx=None)` / `runner_model()` (both default
+   to `None`). Separately, `run_batch` / `run_trials` / `score_batch` are not on the base
+   class — the harness feature-detects them with `hasattr` and uses them if you define them.
 2. **Implement any selected skill's `scripts/abstract.py`** (most are concrete and
    need nothing).
 3. **Run the gate:**
@@ -47,7 +50,7 @@ cheaper to fail here than after a full optimization run.
        --skill-check <skills>/capabilities/<cap>/scripts/check.py
    ```
    It runs `cap-evolve check` (adapter: no stubs, `tasks` non-empty + stable, scorer
-   deterministic, `materialize()` callable) and each named skill's `check.py`. **Exit 0 =
+   deterministic, `materialize()` probed) and each named skill's `check.py`. **Exit 0 =
    green; the JSON lists exactly what is still stubbed or non-deterministic.**
 4. **Pipeline-wiring self-test (runs automatically once the check is green).** A
    green adapter is necessary but not sufficient — the optimizer also needs its
@@ -81,8 +84,11 @@ cheaper to fail here than after a full optimization run.
   the "reward" includes scorer noise the optimizer cannot learn from. (Target
   *stochasticity* is fine and is handled by multi-trial evaluation; *scorer*
   nondeterminism is a bug.)
-- **`materialize()` callable** — an edit that cannot be materialized cannot be
-  evaluated. The check probes it against a temp copy (pure, so the host is untouched).
+- **`materialize()` probed** — an edit that cannot be materialized cannot be
+  evaluated, so the check calls it against a temp copy (pure, so the host is untouched).
+  This one is a probe, not an assertion: a raise is reported as a **note** and does not
+  fail the check (`core/cap_evolve/check.py:166-167`), because a real adapter may need its
+  full environment. Green here means "callable or explained", not "edit path verified".
 
 ## Do not proceed until green
 If it reports stubs or non-determinism, fix them and re-run. This is the standard
