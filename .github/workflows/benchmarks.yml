@@ -214,6 +214,19 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
 
+      - name: Export CapEvolve UI snapshot
+        if: steps.gate.outputs.run == 'true' && always()
+        run: |
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
+          if [ -f "$run_dir/events.jsonl" ]; then
+            PYTHONPATH="$GITHUB_WORKSPACE/dashboard/backend" "$CAPEVOLVE_PY" -m capevolve_dashboard.export_static \
+              --base "$(dirname "$run_dir")" --run-id run_suite --out "$out/ui/data" \
+              || echo "::warning::UI export failed for ${{ matrix.tier }}/${{ matrix.bench }} (best-effort, continuing)"
+          else
+            echo "no run dir at $run_dir (job likely failed/cancelled before producing one) — skipping UI export"
+          fi
+
       - name: Write run metadata
         if: steps.gate.outputs.run == 'true' && always()
         run: |
