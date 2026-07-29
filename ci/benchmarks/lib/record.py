@@ -50,7 +50,12 @@ def rollup(tasks: list[dict], steps: list[dict] | None = None) -> dict | None:
     }
 
 
-def build_record(metrics_jsonl: Path, runmeta: dict, steps_jsonl: Path | None = None) -> dict:
+def build_record(
+    metrics_jsonl: Path,
+    runmeta: dict,
+    steps_jsonl: Path | None = None,
+    has_ui: bool = False,
+) -> dict:
     tasks: list[dict] = []
     if metrics_jsonl.exists():
         for line in metrics_jsonl.read_text(encoding="utf-8").splitlines():
@@ -68,6 +73,7 @@ def build_record(metrics_jsonl: Path, runmeta: dict, steps_jsonl: Path | None = 
     rec["tasks"] = tasks
     rec["steps"] = steps
     rec["suite"] = rollup(tasks, steps) if runmeta.get("conclusion") == "success" else None
+    rec["has_ui"] = has_ui
     return rec
 
 
@@ -85,6 +91,7 @@ def main(argv: list[str]) -> int:
     b.add_argument("metrics")
     b.add_argument("--runmeta", required=True)
     b.add_argument("--steps", default=None)
+    b.add_argument("--has-ui", action="store_true")
     a = sub.add_parser("aggregate")
     a.add_argument("records_dir")
     a.add_argument("--now", required=True)
@@ -94,7 +101,7 @@ def main(argv: list[str]) -> int:
     if ns.cmd == "build":
         runmeta = json.loads(Path(ns.runmeta).read_text(encoding="utf-8"))
         steps_path = Path(ns.steps) if ns.steps else None
-        print(json.dumps(build_record(Path(ns.metrics), runmeta, steps_path)))
+        print(json.dumps(build_record(Path(ns.metrics), runmeta, steps_path, has_ui=ns.has_ui)))
         return 0
     if ns.cmd == "aggregate":
         recs, meta = aggregate(Path(ns.records_dir), ns.now)
