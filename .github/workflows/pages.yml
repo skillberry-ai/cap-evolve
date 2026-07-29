@@ -5,9 +5,12 @@ name: Deploy GitHub Pages
 # Triggers:
 #   - push to main that touches site/ or this workflow → auto-deploy
 #   - manual dispatch → deploy on demand
+#   - the Benchmarks workflow completing → redeploy so a new run's CapEvolve UI
+#     snapshot (benchmark-history's runs/**) becomes browsable
 #
-# What it does: uploads site/ verbatim as the Pages artifact and hands it to
-# the official Pages deploy action. No build step (static HTML/CSS/PNG only).
+# What it does: uploads site/ (plus benchmark-history's runs/** folded in under
+# site/benchmark-ui/runs/**) as the Pages artifact and hands it to the official
+# Pages deploy action. No build step for site/ itself (static HTML/CSS/PNG only).
 
 on:
   push:
@@ -16,6 +19,9 @@ on:
       - "site/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Benchmarks"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -32,13 +38,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Explicit ref: main — workflow_run's default checkout otherwise resolves to
+      # the SHA of the triggering Benchmarks run, which can be a PR branch. Pages
+      # must always deploy main's site/, regardless of what triggered this build.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Verify site/ exists
         run: |
           test -d site || { echo "no site/ directory"; exit 1; }
           test -f site/index.html || { echo "no site/index.html"; exit 1; }
           ls -la site/
+
+      - name: Fold in benchmark-history UI snapshots
+        run: |
+          rm -rf _bench_history
+          git clone --depth 1 --branch benchmark-history \
+            "https://github.com/${{ github.repository }}.git" _bench_history || {
+              echo "benchmark-history branch not found — deploying without UI snapshots"; exit 0; }
+          mkdir -p site/benchmark-ui
+          if [ -d _bench_history/runs ]; then
+            cp -R _bench_history/runs site/benchmark-ui/runs
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
