@@ -27,15 +27,36 @@ All notable changes to cap-evolve are documented here. The format follows
   inside `evaluate_candidate` — the chokepoint every evaluation (baseline, each
   iteration's val gate, `finalize`) goes through — plus GEPA's minibatch path. Any
   modification, deletion, or newly-added protected file logs a `tamper_detected` event
-  (surfaced in the dashboard summary) and raises `TamperError` naming the file, before
-  the candidate can be scored, snapshotted, become best, or seal the test split.
-  Defaults derive from the project layout (`adapters/`, `capevolve.yaml`, the spec's
-  `dataset_source`/`split_ids_file`, any `*gold*` file); override with
-  `protected_paths` in `capevolve.yaml`. The capability dir is never protected — it
-  is the target. The existing `PreToolUse` honesty hook now also denies writes to a
-  protected path so the model gets the feedback before wasting an iteration.
-  Content hash, not mtime (spoofable); `__pycache__`/`*.pyc` excluded so importing
-  the adapter during a normal run is not a false positive. Zero new deps (`hashlib`).
+  (surfaced as a red banner at the top of the dashboard and of `report.md`) and raises
+  `TamperError` naming the file, before the candidate can be scored, snapshotted,
+  become best, or seal the test split. Verification runs **both before and after** every
+  scoring pass — `evaluate_candidate`, GEPA's `_eval_minibatch`, and once more
+  immediately before `finalize` burns the seal — so a writer that lands *during* scoring
+  (a detached grandchild outliving the optimizer subprocess) invalidates the score
+  instead of being recorded. The manifest itself is protected: its digest is logged in
+  `events.jsonl`, and a manifest that goes missing, becomes unparseable, or stops
+  matching that digest is a hard failure rather than a silent re-record from the current
+  (possibly tampered) tree. Bytecode is hashed like any other file — `load_adapter` sets
+  `sys.dont_write_bytecode` and clears the adapter's `__pycache__`, closing the PEP 552
+  `UNCHECKED_HASH` pyc attack (a planted cache entry ran a hacked `score()` with the
+  source's SHA-256 unchanged) without needing a `.pyc` exclusion. A protected file
+  replaced by a symlink reads as a change rather than de-protecting itself. Defaults
+  derive from the project layout (`adapters/`, `capevolve.yaml`, the spec's
+  `dataset_source`/`split_ids_file`, `*gold*` **data** files — prose like
+  `docs/golden-rules.md` is no longer swept in); override with `protected_paths` in
+  `capevolve.yaml`, where a malformed or empty value is a hard error, never a silent
+  fallback to the defaults. The capability dir is never protected — it is the target.
+  `--reuse-baseline` inherits the prior run's manifest and refuses a prior run that
+  logged a tamper. The `PreToolUse` honesty hook denies writes to protected paths
+  (case-folded, for APFS/NTFS) and to the run's own evidence (`protected.json`,
+  `events.jsonl`, `state.json`, `best.txt`). Content hash, not mtime (spoofable). Zero
+  new deps (`hashlib`). `docs/HONEST_EVAL.md` states the guarantee as **tamper-evident**
+  — detection, not prevention — with its residual gaps named.
+- **YAML block sequences in `capevolve.yaml`.** The zero-dependency fallback parser
+  (used whenever PyYAML is absent, the documented default state) only understood the flow
+  form `key: [a, b]`; the idiomatic block form silently parsed as `{}`. Every
+  list-valued key was affected — including `protected_paths`, where it meant a declared
+  grader quietly fell back to the defaults with no warning.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

@@ -184,6 +184,13 @@ def _eval_minibatch(
             if cache is not None:
                 cache.put(chash, task.id, sc.reward, sc.feedback or "")
 
+    # POST-scoring guard (#142), matching ``evaluate_candidate``: the pre-check above
+    # only proves the grader was clean when the minibatch STARTED. This path both gates
+    # a child locally and writes ``EvalCache`` entries that later iterations trust, so a
+    # writer that lands during scoring must invalidate the result here rather than be
+    # cached as truth.
+    protect.verify(run_dir, context=f"post-minibatch eval of {tag}")
+
     elapsed = time.time() - t0
     # Count ONLY rollouts actually fired (cache hits cost nothing) toward budget.
     run_dir.update_spent(metric_calls=n_called, usd=run_cost,

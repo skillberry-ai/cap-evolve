@@ -81,6 +81,27 @@ def decide(payload: dict) -> int:
             "seed; re-partitioning would invalidate the honest test number."
         )
 
+    # The run's own EVIDENCE files (#142). ``protected.json`` is the tamper manifest;
+    # rewriting it used to let one optimizer step bless a hacked grader (core now hard-
+    # fails on a missing/altered manifest, but the manifest lives in a dir the optimizer
+    # can write, so denying the write here is the cheap outer layer). ``events.jsonl``
+    # carries the manifest digest that makes that hard-fail work; ``state.json`` and
+    # ``best.txt`` are the run's spend and lineage of record.
+    for name, why in (
+        ("protected.json", "the SHA-256 manifest of the protected scorer / eval harness "
+                           "/ task data — the evidence they were not edited"),
+        ("events.jsonl", "the append-only audit log, which carries the manifest digest"),
+        ("state.json", "the run's recorded budget spend"),
+        ("best.txt", "the run's best-candidate pointer"),
+    ):
+        if rt == (run_dir / name).resolve():
+            return H.emit_block(
+                f"cap-evolve: refusing to edit {tstr} — {name} is {why}. Editing the "
+                "run's own evidence is reward hacking whatever it would be changed to; "
+                "core aborts the run if this file goes missing or stops matching its "
+                "logged digest. Optimize the capability, not the record."
+            )
+
     # Anything under rollouts/test/ of the active run is the held-out evaluation.
     test_roll = (run_dir / "rollouts" / "test").resolve()
     try:
@@ -120,8 +141,13 @@ def decide(payload: dict) -> int:
                     "of these files before every evaluation and will abort the run with "
                     "tamper_detected. Optimize the capability, not the grader."
                 )
-        except Exception:  # noqa: BLE001 — fail open, core still enforces
-            pass
+        except Exception as e:  # noqa: BLE001 — fail open, core still enforces
+            # Say so on stderr. A silently permissive honesty hook is worse than a
+            # loud broken one: without this line a typo here degrades the model-visible
+            # half of the guard with no signal anywhere.
+            print(f"cap-evolve: protected-path hook check failed ({e}) — falling open; "
+                  "core still re-verifies the SHA-256 manifest before every evaluation.",
+                  file=sys.stderr)
 
     return 0
 

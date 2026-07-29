@@ -28,17 +28,55 @@ construction*, and the rules below are enforced in code, not just documented.
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
    `pass_k` reports the probability all k i.i.d. trials succeed (tau-bench style).
 
-5. **The grader is tamper-proof.** Guarantees 1–4 make the *evaluation* honest, but
+5. **The grader is tamper-evident.** Guarantees 1–4 make the *evaluation* honest, but
    when the capability is tool code or a skill package the optimizer is a coding
    agent with write tools — it could "improve" by editing `score()` instead of the
    target. `protect.py` SHA-256s the **protected paths** (by default `adapters/`,
-   `capevolve.yaml`, the spec's `dataset_source` / `split_ids_file`, and any
-   `*gold*` file) at `baseline` into `protected.json`, and re-verifies them inside
-   `evaluate_candidate` — the chokepoint *every* evaluation goes through. Any
-   change logs a `tamper_detected` event and raises `TamperError`, before the
-   candidate can be scored, snapshotted, made best, or sealed. A content hash, not
-   mtime: `os.utime` is a one-liner. Declare a different grader location with
-   `protected_paths` in `capevolve.yaml`.
+   `capevolve.yaml`, the spec's `dataset_source` / `split_ids_file`, and `*gold*`
+   data files) at `baseline` into `protected.json`, and re-verifies them **both before
+   and after** every scoring pass — inside `evaluate_candidate` (the chokepoint every
+   fresh score goes through), inside GEPA's `_eval_minibatch`, and once more
+   immediately before `finalize` burns the seal. Any difference logs a
+   `tamper_detected` event and raises `TamperError`, so the score is discarded rather
+   than recorded and the test split is not sealed. A content hash, not mtime:
+   `os.utime` is a one-liner. Declare a different grader location with
+   `protected_paths` in `capevolve.yaml` (a malformed `protected_paths` is a hard
+   error, never a silent fallback to the defaults).
+
+   **Exactly what is guaranteed — and what is not.** This is *detection, not
+   prevention*: nothing stops a write, and a hacked grader can execute. What is
+   guaranteed is that a **byte-level change to a declared protected file, made at any
+   point between `baseline` and `finalize`, is detected and aborts the run before the
+   affected score is recorded, made best, or sealed** — and that the evidence
+   (`protected.json` plus the `tamper_detected` event's expected/actual hashes) is
+   left on disk. Concretely covered: source edits, deletions, newly-added protected
+   files, a same-length edit with the mtime restored, a planted `.pyc` (`load_adapter`
+   sets `sys.dont_write_bytecode` and clears the cache dir, so bytecode is hashed like
+   any other file instead of being excluded), a protected file replaced by a symlink,
+   a destroyed or rewritten `protected.json` (which hard-fails against the digest
+   logged in `events.jsonl` rather than re-recording from the current tree), and a
+   writer that lands *during* scoring (the post-scoring check).
+
+   Residual gaps, stated plainly:
+   - **A narrow race remains.** The post-check brackets the scoring window; it does
+     not lock it. A writer that changes a protected file after the scorer's last read
+     and restores it before the post-check hash is not detected. Closing that would
+     require the scorer to hash the bytes it reads.
+   - **Ground truth outside the project dir is not protected** — only paths under
+     `.capevolve/project` can be hashed. A declared glob that matches nothing there
+     logs `protected_paths_unmatched`, so the omission is visible, but it is still an
+     omission.
+   - **A project with no `adapters/adapter.py` gets no protection at all**, logged as
+     `protected_manifest_skipped`.
+   - **Detection is per-run.** The manifest records the tree as it was at *this* run's
+     baseline; it does not attest that the checkout was clean to begin with.
+     `--reuse-baseline` inherits the prior run's manifest and refuses a prior run that
+     logged a tamper, but a grader hacked *before* baseline is recorded as pristine.
+   - **The `PreToolUse` hook is the advisory half, not the enforcement.** It blocks a
+     model's `Edit`/`Write` to a protected path, `protected.json`, `events.jsonl`,
+     `state.json` and `best.txt` with exit 2, but it fails open on internal error and
+     only sees Claude Code's own tools — a shell command or a subprocess bypasses it
+     entirely. Core's hash check is the guarantee.
 
 ## Why no central engine?
 

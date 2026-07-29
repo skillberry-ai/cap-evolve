@@ -311,6 +311,23 @@ def evaluate_candidate(
             metrics=_aggregate_metrics(per_task_metrics[tid], mean(tr)),
         ))
 
+    # POST-scoring tamper guard (#142 step 3). The pre-check above proves the grader
+    # was clean when scoring STARTED; on its own that is a TOCTOU fence with the whole
+    # scoring window open behind it. ``optimizer_from_command`` uses ``subprocess.run``,
+    # which waits only on the direct child — a ``Popen(start_new_session=True)``
+    # grandchild outlives it and can rewrite ground truth WHILE ``run_target`` and
+    # ``score`` read it. Re-verifying here, before ``aggregate_scores`` produces the
+    # number and before any caller can ``set_best`` / ``commit_test``, means the
+    # manifest is checked against the state the scorer actually observed: the score is
+    # discarded rather than recorded, for val and for the sealed test alike.
+    #
+    # ponytail: bracketing, not locking. The residual window is the gap between the
+    # last ``score()`` read and this hash — a writer that lands inside it and is
+    # reverted before the hash still wins. Closing that needs the scorer to hash the
+    # bytes it reads (per-read verification), which is a much bigger change; the honest
+    # claim is a bracket, and HONEST_EVAL.md states it as one.
+    protect_mod.verify(run_dir, context=f"post-{split} eval of {tag}")
+
     elapsed = time.time() - t0
     run_dir.update_spent(metric_calls=len(tasks) * n_trials, usd=run_cost,
                          runner_tokens=run_tokens, runner_seconds=elapsed)
@@ -326,6 +343,11 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
 
     Used to RESUME a run from the current best candidate (its val score is read
     back from disk) without re-scoring it.
+
+    Deliberately NOT tamper-guarded (#142): it re-reads rollouts already persisted and
+    already verified by the ``evaluate_candidate`` that produced them, and produces no
+    new score. Verifying here would only re-check the manifest at an arbitrary later
+    moment and could fail a resume for a change that post-dates the number being read.
     """
     import json as _json
     from .stats import mean, stderr
@@ -433,10 +455,40 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
 
     run_dir.set_best("seed")
 
+    # Tamper provenance for an INHERITED baseline (#142). This number was produced by
+    # another run's grader, which this run never hashed. If that run logged a tamper the
+    # baseline is fiction, so refuse it; otherwise carry its manifest forward so this
+    # run verifies against the tree the reused number was actually scored on, instead of
+    # re-recording whatever the tree looks like now.
+    prior_events = prior / "events.jsonl"
+    if prior_events.exists():
+        for line in prior_events.read_text(encoding="utf-8").splitlines():
+            if '"tamper_detected"' in line:
+                raise protect_mod.TamperError(
+                    f"cap-evolve: refusing to reuse the baseline from {prior} — that run "
+                    "logged a tamper_detected event, so its baseline was scored against a "
+                    "grader that changed mid-run. Reusing it would inherit a fabricated "
+                    "number as this run's reference point. Re-run baseline from a clean "
+                    "checkout."
+                )
+    prior_manifest = prior / protect_mod.MANIFEST_NAME
+    if prior_manifest.exists() and not (run_dir.root / protect_mod.MANIFEST_NAME).exists():
+        shutil.copyfile(prior_manifest, run_dir.root / protect_mod.MANIFEST_NAME)
+        try:
+            payload = json.loads(prior_manifest.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — an unreadable prior manifest is no provenance
+            payload = None
+        if payload is not None:
+            run_dir.log_event("protected_manifest", n_files=len(payload.get("files") or {}),
+                              globs=payload.get("globs") or [],
+                              digest=protect_mod.manifest_digest(payload),
+                              inherited_from=str(prior))
+
     baseline_data = json.loads(prior_baseline.read_text(encoding="utf-8"))
     result = SplitResult.from_dict(baseline_data["val"])
     run_dir.log_event("baseline_reused", prior_run_dir=str(prior),
-                      val=result.reward, stderr=result.stderr)
+                      val=result.reward, stderr=result.stderr,
+                      protected_manifest_inherited=prior_manifest.exists())
     return result
 
 
@@ -1267,6 +1319,12 @@ def run_step(
     # anything. ``baseline`` normally does this first, but ``--reuse-baseline``
     # skips the baseline eval, so without this the first manifest would be taken
     # AFTER an optimizer step and would bless a tampered grader.
+    #
+    # This is also what makes the guard correct under ``--resume``: the call is
+    # idempotent when the manifest is intact (it re-reads it), so a resumed run keeps
+    # verifying against the ORIGINAL baseline hashes rather than re-recording from the
+    # current tree. If the manifest is gone or altered it raises instead — deleting it
+    # was the one way ``--resume`` could launder a tampered file.
     protect_mod.ensure_manifest(run_dir, project_dir)
 
     optimizer_error = None
@@ -1974,6 +2032,12 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
         payload["test_baseline"] = result.to_dict()
         payload["baseline_id"] = run_dir.best_id
         payload["test_delta"] = 0.0
+
+    # Last gate before the seal burns (#142). ``evaluate_candidate`` already
+    # pre- and post-checks each test eval; this covers the remaining gap between the
+    # final ``score()`` and the irreversible ``commit_test``, so the headline number is
+    # never sealed against a grader that changed at any point during finalize.
+    protect_mod.verify(run_dir, context="finalize (pre-seal)")
 
     _atomic_write(run_dir.root / "final.json", json.dumps(payload, indent=2))
     run_dir.commit_test()  # burn the seal ONLY now that the result(s) are computed + written
