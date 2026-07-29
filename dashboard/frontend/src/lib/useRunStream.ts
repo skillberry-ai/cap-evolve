@@ -29,7 +29,8 @@ export type StreamAction =
   | { type: 'idle' }
   | { type: 'error' }
 
-const LOG_CAP = 200
+/** Ticker window size. Exported so the UI can say it is showing a window, not the whole run. */
+export const LOG_CAP = 200
 
 export const initialStreamState: StreamState = { status: 'connecting', log: [], count: 0 }
 

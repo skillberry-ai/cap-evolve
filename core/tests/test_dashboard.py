@@ -291,3 +291,23 @@ class _NullStore:
 
     def commit(self, *a, **k):
         pass
+
+
+def test_resume_does_not_double_stamp_the_algorithm_event():
+    """--resume re-enters _init_memory_store; re-stamping the same name would add a
+    dead duplicate row to the dashboard event ticker (review finding 4)."""
+    from cap_evolve import Budget, RunDir, dashboard, harness
+
+    def algorithm_events(rd):
+        return [json.loads(x) for x in rd.events_path.read_text(encoding="utf-8").splitlines()
+                if x.strip() and json.loads(x).get("kind") == "algorithm"]
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = RunDir.create(Path(d), ts="t", budget=Budget())
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:all")
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:all")  # --resume
+        assert len(algorithm_events(rd)) == 1
+        # A resume that CHANGES the algorithm/--focus still corrects the label.
+        harness._init_memory_store(rd, _NullStore(), algorithm="hill-climb:cyclic")
+        assert len(algorithm_events(rd)) == 2
+        assert dashboard.reduce_run(rd)["summary"]["algorithm"] == "hill-climb:cyclic"

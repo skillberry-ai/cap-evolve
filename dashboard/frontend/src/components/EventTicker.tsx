@@ -1,12 +1,15 @@
-/** Live play-by-play of the SSE event stream (newest first).
+/** Play-by-play of the run's event stream (newest first).
  *
  * The stream buffer already exists (useRunStream keeps a capped 200-entry log);
- * this only renders it. Read-only, no fetching of its own.
+ * this only renders it. Read-only, no fetching of its own. The SSE route replays
+ * the run's whole log from offset 0 before tailing, so a FINISHED run shows its
+ * history rather than an empty panel.
  */
+import { CheckCircle2, XCircle } from 'lucide-react'
 import { Card } from './ui/Card'
 import { pct } from '../lib/format'
 import { cn } from '../lib/cn'
-import type { StreamEntry } from '../lib/useRunStream'
+import { LOG_CAP, type StreamEntry, type StreamStatus } from '../lib/useRunStream'
 
 /** An event's accept/reject verdict, when it carries one. */
 function verdict(d: Record<string, unknown>): 'accepted' | 'rejected' | null {
@@ -22,16 +25,32 @@ function detail(d: Record<string, unknown>): string {
   if (cid) bits.push(String(cid))
   const val = d.val ?? d.reward
   if (typeof val === 'number') bits.push(`val ${pct(val)}`)
-  const why = d.reason ?? d.error ?? d.stop_reason ?? d.note
+  // `name` is the `algorithm` event's only field — without it that row renders blank.
+  const why = d.reason ?? d.error ?? d.stop_reason ?? d.note ?? d.name
   if (typeof why === 'string' && why) bits.push(why)
   return bits.join(' · ')
 }
 
-export function EventTicker({ log }: { log: StreamEntry[] }) {
+/** Truthful empty state: say *why* it's empty, never imply the run was silent. */
+function emptyMessage(status: StreamStatus): string {
+  if (status === 'connecting') return 'Connecting to the event stream…'
+  if (status === 'error') return 'Event stream unavailable — reload to reconnect.'
+  if (status === 'done' || status === 'idle')
+    return 'This run logged no events. See Iterations / Phases for its history.'
+  return 'No events yet — this run has just started.'
+}
+
+export function EventTicker({
+  log,
+  status = 'live',
+}: {
+  log: StreamEntry[]
+  status?: StreamStatus
+}) {
   if (!log.length) {
     return (
       <Card>
-        <div className="p-4 text-sm text-muted">No live events yet.</div>
+        <div className="p-4 text-sm text-muted">{emptyMessage(status)}</div>
       </Card>
     )
   }
@@ -50,17 +69,23 @@ export function EventTicker({ log }: { log: StreamEntry[] }) {
               <span className="tnum w-10 shrink-0 text-right text-muted">{e.seq + 1}</span>
               <span
                 className={cn(
-                  'shrink-0 rounded bg-surface-2 px-1.5 py-0.5 font-mono',
+                  'inline-flex shrink-0 items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 font-mono',
                   v === 'accepted' && 'text-accepted',
                   v === 'rejected' && 'text-rejected',
                 )}
               >
+                {/* Icon, not colour alone (WCAG 1.4.1) — same pairing as StatusBadge. */}
+                {v === 'accepted' && <CheckCircle2 size={11} aria-label="accepted" />}
+                {v === 'rejected' && <XCircle size={11} aria-label="rejected" />}
                 {e.kind}
               </span>
               <span className="truncate text-muted">{detail(e.data)}</span>
             </li>
           )
         })}
+        {log.length >= LOG_CAP && (
+          <li className="px-3 py-1.5 text-muted">showing the last {LOG_CAP} events</li>
+        )}
       </ul>
     </Card>
   )

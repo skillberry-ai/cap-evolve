@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { EventTicker } from '../components/EventTicker'
-import { initialStreamState, streamReducer } from '../lib/useRunStream'
+import { LOG_CAP, initialStreamState, streamReducer } from '../lib/useRunStream'
 
 /** Drive the real reducer so the test covers the same log shape the SPA renders. */
 function logOf(...events: Record<string, unknown>[]) {
@@ -34,8 +34,38 @@ describe('EventTicker', () => {
     expect(kinds[1]).toContain('first')
   })
 
-  it('degrades to an empty message with no events', () => {
-    render(<EventTicker log={[]} />)
-    expect(screen.getByText(/No live events yet/)).toBeInTheDocument()
+  it('marks accept/reject with an icon, not colour alone (WCAG 1.4.1)', () => {
+    render(
+      <EventTicker
+        log={logOf(
+          { kind: 'step', candidate: 'cand_0001', accept: true },
+          { kind: 'step', candidate: 'cand_0002', accept: false },
+        )}
+      />,
+    )
+    expect(screen.getByLabelText('accepted')).toBeInTheDocument()
+    expect(screen.getByLabelText('rejected')).toBeInTheDocument()
+  })
+
+  it('renders the algorithm event name instead of a blank detail column', () => {
+    render(<EventTicker log={logOf({ kind: 'algorithm', name: 'hill-climb:all' })} />)
+    expect(screen.getByText('hill-climb:all')).toBeInTheDocument()
+  })
+
+  it('says it is showing a window once the log hits the cap', () => {
+    const many = Array.from({ length: LOG_CAP }, (_, i) => ({ kind: `e${i}` }))
+    render(<EventTicker log={logOf(...many)} />)
+    expect(screen.getByText(`showing the last ${LOG_CAP} events`)).toBeInTheDocument()
+  })
+
+  it('does not claim the run was silent when it is finished', () => {
+    render(<EventTicker log={[]} status="done" />)
+    expect(screen.getByText(/logged no events/)).toBeInTheDocument()
+    expect(screen.queryByText(/No events yet/)).not.toBeInTheDocument()
+  })
+
+  it('degrades to an empty message on a live run with no events', () => {
+    render(<EventTicker log={[]} status="live" />)
+    expect(screen.getByText(/No events yet/)).toBeInTheDocument()
   })
 })

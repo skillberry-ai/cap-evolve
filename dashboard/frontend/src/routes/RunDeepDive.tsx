@@ -136,7 +136,7 @@ export function RunDeepDive() {
                 active === 'overview' ? (
                   <BestCurveChart nodes={data.graph.nodes} />
                 ) : active === 'events' ? (
-                  <EventTicker log={stream.log} />
+                  <EventTicker log={stream.log} status={stream.status} />
                 ) : active === 'cost' ? (
                   <CostPanel summary={data.summary} />
                 ) : active === 'phases' ? (

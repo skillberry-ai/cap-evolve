@@ -109,7 +109,12 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
                 yield _stream.sse_format("snapshot", runs.load_run(base, run_id))
             except runs.RunNotFound:
                 return
-            offset = events_path.stat().st_size
+            # Start at 0, not EOF: replay the run's whole ordered log, then tail.
+            # At EOF the Events tab was permanently empty on any FINISHED run —
+            # nothing arrives after the page opens — even though events.jsonl is
+            # full. A completed log ends in `finalize`, so the replay falls straight
+            # through to the `done` frame below.
+            offset = 0
             idle = 0
             while True:
                 new, offset = _stream.read_new_events(events_path, offset)
