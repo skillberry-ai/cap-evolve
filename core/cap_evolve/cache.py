@@ -30,7 +30,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES, SCRATCH_NAMES
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache. The
@@ -39,10 +39,7 @@ from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
 # definition in ``optimizer_context``, folded in here as a plain constant expression
 # (no import-time set mutation, so there is no import-order dependence to reason about;
 # ``optimizer_context`` imports only ``.loop`` and ``.rundir`` at module level).
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
-                 "REFLECTION.md",
-                 # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"} | set(INJECTED_NAMES)
+_IGNORE_NAMES = set(SCRATCH_NAMES) | set(INJECTED_NAMES)
 _IGNORE_DIRS = {".git", "__pycache__"} | set(INJECTED_DIRS)
 
 

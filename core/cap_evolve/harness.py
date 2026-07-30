@@ -582,9 +582,10 @@ _PROCESS_SEED = (
 
 
 # State/handover files that are NOT part of the capability — excluded from any
-# capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
-_CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# capability diff. ONE definition in optimizer_context.SCRATCH_NAMES (this list had
+# drifted from gepa's: it was missing GEPA's FOCUS.md/REFLECTION.md, so a GEPA
+# candidate's "capability diff" showed its reflective scratch as a real edit).
+_CAP_DIFF_SKIP = set(_oc.SCRATCH_NAMES)
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -861,6 +862,124 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
+# ---- rejected-approach constraints (#129) ---------------------------------
+#
+# Rejected candidates were already persisted to ``rejected.jsonl`` (audit + the
+# dashboard's "what not to try" panel) but nothing put them in a proposal prompt, so the
+# optimizer could — and did — re-propose an approach the gate had already killed. These
+# two functions close that: ``approach_signature`` normalizes WHAT an edit did into a
+# stable one-line signature, and ``dead_end_constraints`` renders the deduped
+# signature+reason list as a bounded prompt block.
+#
+# Enforcement is ADVISORY (prompt text), not a hard block: the optimizer is a
+# black-box agent CLI, so the framework cannot forbid it from emitting bytes. What IS
+# hard is the gate — a re-proposed dead end still gets rejected on val. See RUN.md.
+
+_MAX_DEAD_ENDS = 12        # most-recent distinct approaches injected
+_MAX_APPROACH_CHARS = 300  # per-signature budget -> block <~ 5 KB, well under the 60k cap
+
+
+def approach_signature(parent_dir: Path, cand_dir: Path, *,
+                       max_chars: int = _MAX_APPROACH_CHARS) -> str:
+    """A stable, compact signature of WHAT an edit changed — the dedupe key for #129.
+
+    Built from the capability diff (the same ``_diff_capabilities`` source the dashboard
+    and RUNMAP use, so it never picks up injected read-context or algorithm scratch):
+    per touched file, the added/removed content lines, whitespace-collapsed. Two edits
+    that add the same text to the same file produce the same signature regardless of
+    candidate id, ordering or indentation — which is exactly the "variation on an
+    already-failed approach" the optimizer keeps re-proposing.
+
+    Returns "" when there is no capability diff (e.g. the optimizer errored and the
+    workdir is still a verbatim parent copy) — a no-op is not an approach.
+    """
+    diff = _diff_capabilities(parent_dir, cand_dir)
+    parts: list[str] = []
+    fname = ""
+    for line in diff.splitlines():
+        if line.startswith("+++ b/"):
+            fname = line[6:].strip()
+            continue
+        if line[:1] not in ("+", "-") or line.startswith(("+++", "---")):
+            continue
+        body = " ".join(line[1:].split())
+        if not body:
+            continue
+        parts.append(f"{fname}: {line[0]}{body}")
+    if not parts:
+        return ""
+    sig = " | ".join(parts)
+    return sig if len(sig) <= max_chars else sig[:max_chars - 3] + "..."
+
+
+def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str:
+    """The "already tried & rejected (do not repeat)" prompt block, or "" when empty.
+
+    Reads ``rejected.jsonl`` (the live record — #114 kept these writes precisely because
+    they have real readers) and dedupes on ``approach``, keeping the FIRST rejection
+    reason per approach and counting repeats, so an approach the optimizer has already
+    re-proposed twice shows "re-proposed 2x" rather than two rows.
+
+    Bounded three ways so a long run cannot balloon the prompt (#199's
+    ``MAX_INSTRUCTIONS_CHARS``): each signature is capped (``_MAX_APPROACH_CHARS``, on
+    write AND on read), each reason at 200 chars, and only the ``limit`` MOST RECENT
+    distinct approaches are injected. Recency, not relevance: the newest rejections are
+    the ones the current lineage is closest to re-proposing, and it needs no scoring
+    model. ponytail: no LLM summarization — zero API cost, and a verbatim diff signature
+    is more actionable than a paraphrase.
+    """
+    recs = []
+    try:
+        for line in run_dir.rejected_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                recs.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        pass  # best-effort: no/partial memory file just means no constraints
+
+    # dedupe by approach, newest-last ordering preserved; count repeats.
+    seen: dict[str, dict] = {}
+    for rec in recs:
+        # Re-cap on READ as well as on write: a record may come from a direct
+        # RejectedMemory caller (or an older/edited file) that never went through
+        # approach_signature, and an unbounded row would defeat the block's budget.
+        approach = (rec.get("approach") or "").strip()[:_MAX_APPROACH_CHARS]
+        if not approach:
+            continue  # no-op edit or a pre-#129 record: nothing to constrain against
+        if approach in seen:
+            seen[approach]["count"] += 1
+            continue
+        seen[approach] = {"approach": approach, "count": 1,
+                          "reason": (rec.get("reason") or "gate rejected")[:200],
+                          "cid": rec.get("candidate_id") or "?"}
+    if not seen:
+        return ""
+    rows = list(seen.values())[-limit:]
+
+    lines = [
+        "## ALREADY TRIED & REJECTED — do not re-propose these (framework, read-only)",
+        "",
+        f"The gate has rejected {len(seen)} distinct approach(es) on this run"
+        + (f" (showing the {len(rows)} most recent)" if len(rows) < len(seen) else "")
+        + ". Each row is the EXACT capability edit that failed and why:",
+        "",
+    ]
+    for r in rows:
+        rep = f", re-proposed {r['count']}x" if r["count"] > 1 else ""
+        lines.append(f"- **{r['cid']}**{rep} — `{r['approach']}`")
+        lines.append(f"  - rejected because: {r['reason']}")
+    lines += [
+        "",
+        "**Constraint:** do NOT propose any of the above again, and do not propose a "
+        "cosmetic variation of one (same text, different wording/placement) — it shares "
+        "the same hidden assumption and will fail the same way. If you believe a rejected "
+        "direction is still right, you MUST state in `PROCESS.md` what is materially "
+        "different this time and which specific lesson above it counters. Otherwise pick "
+        "a genuinely different hypothesis.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
     """Give the optimizer its four cross-iteration files + a prompt pointer to each.
 
@@ -870,6 +989,11 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+
+    Plus the #129 rejected-approach constraint block. This is the ONLY function whose
+    output reaches the optimizer prompt (#114), and all three algorithms route through
+    it — so the constraints land identically for hill-climb, GEPA and SkillOpt with no
+    per-algorithm wiring.
     """
     _build_ledger(workdir, run_dir)
     _seed_journal(workdir, run_dir)
@@ -892,7 +1016,12 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
     )
-    return f"{instructions}\n\n{pointer}\n"
+    dead_ends = dead_end_constraints(run_dir)
+    tail = f"\n{dead_ends}" if dead_ends else ""
+    # Re-cap: render_instructions capped its OWN output, but these blocks are appended
+    # after it, so the final assembled prompt needs the ceiling applied once more.
+    from .optimizer_context import cap_instructions
+    return cap_instructions(f"{instructions}\n\n{pointer}{tail}\n")
 
 
 def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
@@ -1339,7 +1468,10 @@ def run_step(
             history.add(cid, summary, cand_val.reward)
     else:
         if rejected is not None:
-            rejected.add(cid, summary, decision.reason, cand_val.reward)
+            # Record WHAT was tried, not only the score — that signature is what the
+            # next iteration's dead-end constraint block is built from (#129).
+            rejected.add(cid, summary, decision.reason, cand_val.reward,
+                         approach=approach_signature(parent_dir, workdir))
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",

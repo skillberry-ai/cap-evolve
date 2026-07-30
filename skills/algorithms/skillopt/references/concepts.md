@@ -35,9 +35,11 @@ without gepa's frontier bookkeeping.
    avoid this epoch, the unsolved failure patterns). Parent is **always the
    current best** (single lineage). Call `harness.run_step(...)` — it materializes
    the parent, runs the optimizer, evaluates on VAL, applies the significance
-   gate, snapshots + sets best on accept, and writes the dashboard's
-   `rejected.jsonl`/`history.jsonl` audit records (write-only; the only reject signal
-   that reaches the prompt is SkillOpt's own within-epoch buffer, below).
+   gate, snapshots + sets best on accept, and writes
+   `rejected.jsonl`/`history.jsonl`. Two reject signals reach the prompt: the run-wide
+   "already tried & rejected" constraint block `run_step` builds from `rejected.jsonl`
+   (deduped edit signature + gate reason, whole run), and SkillOpt's own within-epoch
+   buffer below (candidate ids + val deltas, reset each epoch).
 4. Append a bounded record to `step_buffer`
    (`{step, epoch, accepted, n_fail, failure_patterns, rejected id + val Δ}`),
    capped (≤ 3 task ids per pattern, ≤ ~10 patterns, ≤ 12 steps) and **reset each

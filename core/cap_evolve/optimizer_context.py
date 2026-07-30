@@ -50,6 +50,18 @@ INJECTED_DIRS = ("trajectories", "guidance", "prior_iterations",
                  ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor")
 INJECTED_NAMES = ("CLAUDE.md", "AGENTS.md", "GEMINI.md")
 
+# Framework-written scratch/handover files in the optimizer's workdir that are NOT
+# capability either. Distinct from INJECTED_* (those are copied in by :func:`inject`;
+# these are written by the algorithm/harness), but every consumer that must ignore one
+# must ignore the other. ``cache._IGNORE_NAMES``, ``gepa._NON_COMPONENT``,
+# ``harness._CAP_DIFF_SKIP`` and ``dashboard._DIFF_SKIP`` each had their OWN copy of this
+# list and they had drifted: only GEPA's knew about ``FOCUS.md``/``REFLECTION.md``, so a
+# capability diff of a GEPA candidate showed its reflective scratch as a real edit. One
+# definition, four consumers.
+SCRATCH_NAMES = ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "REJECTED.md",
+                 "FOCUS.md", "REFLECTION.md",
+                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md")
+
 
 def _csv(value) -> list[str]:
     """Accept a list OR a comma-separated string (the shape CLI flags arrive in)."""
@@ -239,11 +251,21 @@ def render_instructions(scored_result: SplitResult, focus_ids, label: str, *,
         target_reader=ctx.target_reader(),
     )
     out = f"{text}\n{extra}" if extra else text
-    if max_chars and len(out) > max_chars:
+    return cap_instructions(out, max_chars)
+
+
+def cap_instructions(text: str, max_chars: int = MAX_INSTRUCTIONS_CHARS) -> str:
+    """Enforce the one-iteration prompt ceiling, keeping the head and tail.
+
+    Also called by ``harness._augment_instructions``, which appends the cross-iteration
+    blocks (LEDGER pointer + #129 rejected-approach constraints) AFTER this module has
+    rendered — so the FINAL assembled prompt, not just the rendered half, is capped.
+    """
+    if max_chars and len(text) > max_chars:
         # Keep the head (task framing, capability brief, failure index) and the tail
         # (the algorithm's own block); elide the middle, which is the part that grows.
         keep = max(max_chars - 200, 200)
-        head, tail = out[: (keep * 7) // 10], out[-(keep * 3) // 10:]
-        out = (f"{head}\n\n... [{len(out) - keep} chars elided to keep this prompt under "
-               f"{max_chars} chars — the full record is in the run dir] ...\n\n{tail}")
-    return out
+        head, tail = text[: (keep * 7) // 10], text[-(keep * 3) // 10:]
+        text = (f"{head}\n\n... [{len(text) - keep} chars elided to keep this prompt under "
+                f"{max_chars} chars — the full record is in the run dir] ...\n\n{tail}")
+    return text

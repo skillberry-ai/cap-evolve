@@ -36,7 +36,8 @@ effort; ❌ = not a goal.
 - **Onboard from a single prompt** — one intake brief installs the benchmark, wires the
   adapter, and passes `cap-evolve check` before any budget is spent.
 - **Git-versioned iterations + memory** — every candidate is a commit; rejected approaches
-  are remembered and never re-proposed.
+  are re-injected into every later proposal prompt as explicit "do not re-propose"
+  constraints (advisory at the prompt, hard at the val gate). See [`RUN.md`](../RUN.md).
 - **Live cost-aware dashboard** — per-iteration optimizer & runner cost + time, lineage,
   diffs, and a tasks × iterations heatmap.
 - **Zero runtime dependencies** — the core is pure Python stdlib.

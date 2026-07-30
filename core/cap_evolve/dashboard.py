@@ -52,6 +52,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .optimizer_context import SCRATCH_NAMES as _oc_scratch
 from .rundir import ITERATION_EVENT_KINDS, iteration_candidate as _step_candidate
 
 # ---------------------------------------------------------------------------
@@ -587,8 +588,9 @@ def reduce_run(run_dir) -> dict:
 # snapshot but are NOT capability edits — skipped when diffing iterations so the diff
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
-_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# ONE definition (optimizer_context.SCRATCH_NAMES) — this copy had drifted from GEPA's
+# and was missing FOCUS.md/REFLECTION.md, so a GEPA candidate's diff showed scratch.
+_DIFF_SKIP = set(_oc_scratch)
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
