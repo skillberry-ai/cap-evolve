@@ -62,6 +62,13 @@ _MAX_FAILURES_PER_STEP = 10      # failure-pattern clusters carried per step
 _MAX_TASK_IDS_PER_PATTERN = 3    # task ids shown per cluster
 _MAX_BUFFER_STEPS = 12           # most recent steps kept in the per-epoch buffer
 
+# Harness-injected scaffolding that is NOT an applied capability edit, so it must not
+# count toward the edit-size proxy in ``_changed_files``. Was two copy-pasted tuples,
+# which is how INSIGHTS.md (#128) would have silently registered as an edit every
+# iteration — the durable priors block changes as the run progresses.
+_SCAFFOLD = frozenset(("INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md",
+                       "JOURNAL.md", "PROCESS.md", "RUNMAP.md", "INSIGHTS.md"))
+
 
 # ---- failure-pattern clustering -------------------------------------------
 

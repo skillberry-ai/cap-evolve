@@ -365,6 +365,16 @@ def reduce_run(run_dir) -> dict:
             node["parent"] = parent
             nodes[cid] = node
 
+    # SkillOpt's epoch/edit-budget metadata rides on its own "skillopt_step" audit
+    # event, which is NOT an iteration event (it would double-count every SkillOpt
+    # iteration — see rundir.ITERATION_EVENT_KINDS). Fold it onto the node here so the
+    # lineage still carries `epoch` without the audit record becoming an iteration.
+    for ev in events:
+        if ev.get("kind") == "skillopt_step":
+            n = nodes.get(_step_candidate(ev) or "")
+            if n is not None and ev.get("epoch") is not None:
+                n["epoch"] = ev.get("epoch")
+
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
         p = n.get("parent")

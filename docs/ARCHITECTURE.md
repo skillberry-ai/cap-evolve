@@ -65,9 +65,17 @@ identical context. Add an artifact or a prompt block there and all three inherit
 | `RUNMAP.md` + `prior_iterations/` | framework | a manifest plus every prior iteration's PROCESS.md and capability diff, for real prior-work access |
 
 These are built from the run's iteration events. The recognised kinds live in ONE place —
-`rundir.ITERATION_EVENT_KINDS` (`step`, `skillopt_step`, `gepa_val_gate`), read via
+`rundir.ITERATION_EVENT_KINDS` (`step`, `gepa_val_gate`), read via
 `RunDir.iteration_events()` — because algorithms that emit their own kind (GEPA bypasses
 `run_step`) would otherwise be invisible to these builders and get an empty history.
+
+`iteration_events()` returns **one row per logged event, in log order, with no dedup** —
+candidate ids are not globally unique (SkillOpt re-mints `so_eNNsMM` after `--resume`), so
+id-keyed dedup would silently drop a resumed iteration. SkillOpt's own `skillopt_step` is
+deliberately NOT an iteration event: it duplicates the `step` that `run_step` already logs
+for the same candidate, and counting both double-counted every SkillOpt iteration in
+`LEDGER.md` / `RUNMAP.md` / `INSIGHTS.md`. It stays in `events.jsonl` as the audit record
+for `epoch` / `edit_budget` / `applied_changes`, which the dashboard folds onto the node.
 
 Because it sees all failure clusters, the protect-set, and the prior causal impact at once,
 the optimizer produces **one bold, multi-part candidate per iteration that addresses every
