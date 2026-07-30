@@ -14,7 +14,11 @@ proposal, one full-val evaluation, one accept/reject. The recurring waste is not
 idea — it is a *skipped step*. The optimizer reads a few traces, recognizes a familiar
 shape, and ships the first plausible edit: another prose rule, a retuned number, a
 reworded docstring. It scores net-zero, the gate rejects it, and the iteration is gone.
-Prior runs in this repo lost iterations exactly this way (see any run's `LEDGER.md`).
+
+**This is an unvalidated hypothesis, stated as one:** we believe an edit whose mechanism
+cannot be stated is the edit that wastes the iteration, but nothing in this repo has
+measured knob-shaped versus mechanism-shaped edit outcomes — the `proposal_quality` event
+this skill produces is the instrument that would test it, and it currently has zero rows.
 
 The probe is one question asked *before* the edit exists, when it is still cheap to
 throw away:
@@ -111,10 +115,7 @@ the next iteration reads what you predicted and whether it happened.
 
 ## Checking your own declaration
 
-```bash
-python skills/reasoning/mechanism-probe/scripts/run.py --process ./PROCESS.md
-```
-
-Prints which of the three fields are present and which are still empty or placeholders.
-Presence is all it can check — it cannot tell a mechanism from a knob, which is exactly
-why the gate is advisory.
+Re-read the three fields before you edit anything: is each one filled, and is the
+`Mechanism:` line something other than "the prompt now says X"? Presence is all any
+checker could verify anyway — nothing can tell a mechanism from a knob mechanically,
+which is exactly why the gate is advisory.

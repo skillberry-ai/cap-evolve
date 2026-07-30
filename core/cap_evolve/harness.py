@@ -1269,8 +1269,9 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # 3b) the ON-DEMAND reasoning skills (#140) as local guidance. Tiny skills, each
     # countering ONE named optimizer failure mode at ONE step — mechanism-probe sits at
     # the proposal step. Copied whole so a new reasoning skill needs no wiring here, and
-    # scripts/ is kept (unlike the capability/diagnose copies) because the probe's own
-    # run.py is what the SKILL.md tells the optimizer to run on its PROCESS.md.
+    # ``scripts`` is excluded exactly as for the capability/diagnose copies: the probe's
+    # run.py cannot import ``cap_evolve`` from a candidate workdir (no ``core/`` above it),
+    # so shipping it would only advertise a command that fails. Read-context only.
     reasoning_src = repo_root / "skills" / "reasoning"
     if reasoning_src.is_dir():
         try:
@@ -1278,7 +1279,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
             if dst.exists():
                 shutil.rmtree(dst)
             shutil.copytree(reasoning_src, dst,
-                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                            ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"))
         except Exception as e:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning", what="guidance/reasoning",
                               error=str(e)[:300])

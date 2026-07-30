@@ -35,10 +35,14 @@ FIELDS = ("mechanism", "hypothesis", "observable")
 _LABELS = {
     "mechanism": r"mechanism",
     "hypothesis": r"hypothesis",
-    "observable": r"expected\s+observable",
+    # "Expected observable" is what the seed writes, but a bare "Observable:" is the same
+    # field — requiring the adjective records a real declaration as missing.
+    "observable": r"(?:expected\s+)?observable",
 }
-# A value that is still the seed's angle-bracket prompt, or empty, is not a declaration.
-_PLACEHOLDER_RE = re.compile(r"^\s*(<.*>|[-–—.]*|n/?a|tbd|todo)\s*$", re.I)
+# A value that is still the seed's angle-bracket prompt, or empty/dashes, is not a
+# declaration. The empty case is its own alternative rather than a ``*`` quantifier that
+# happens to also match "".
+_PLACEHOLDER_RE = re.compile(r"^\s*$|^\s*(?:<.*>|[-–—.]+|n/?a|tbd|todo)\s*$", re.I)
 MAX_VALUE_CHARS = 400
 
 
@@ -47,15 +51,20 @@ def _field(text: str, label: str) -> str:
 
     Tolerant of the shapes an agent actually writes: an optional leading list marker or
     bold/emphasis markup, then the label, then ``:``, then the value up to end of line.
+
+    **Every** occurrence is scanned and placeholders are skipped — not just the first
+    match. An agent that appends its filled declaration *below* the seed's ``<...>`` block
+    is a very common shape, and a first-match-only read records that as fully undeclared,
+    inverting the exact signal this module exists to observe. (Same first-match-only
+    defect as #189's guard; ``finditer`` is the right default for this file.)
     """
-    m = re.search(rf"^[ \t]*(?:[-*+][ \t]*)?[*_]{{0,2}}{label}[*_]{{0,2}}[ \t]*:[ \t]*(.*)$",
-                  text, re.I | re.M)
-    if not m:
-        return ""
-    value = m.group(1).strip().strip("*_` ")
-    if _PLACEHOLDER_RE.match(value):
-        return ""
-    return value[:MAX_VALUE_CHARS]
+    for m in re.finditer(
+            rf"^[ \t]*(?:[-*+][ \t]*)?[*_]{{0,2}}{label}[*_]{{0,2}}[ \t]*:[ \t]*(.*)$",
+            text, re.I | re.M):
+        value = m.group(1).strip().strip("*_` ")
+        if not _PLACEHOLDER_RE.match(value):
+            return value[:MAX_VALUE_CHARS]
+    return ""
 
 
 def parse(workdir: Path) -> dict:
@@ -117,6 +126,7 @@ PROMPT_BLOCK = (
     "**How this is judged:** the declaration is RECORDED per candidate, not enforced — a "
     "missing or knob-shaped declaration does NOT reject your edit, and a well-declared one "
     "does not get it accepted. The val significance gate remains the only thing that "
-    "accepts or rejects. Declare it anyway: an edit you cannot state a mechanism and an "
-    "observable for is the edit that historically wasted the iteration.\n"
+    "accepts or rejects. Declare it anyway — our working hypothesis (unmeasured so far; "
+    "this record is how we would test it) is that an edit you cannot state a mechanism "
+    "and an observable for is the edit that wastes the iteration.\n"
 )

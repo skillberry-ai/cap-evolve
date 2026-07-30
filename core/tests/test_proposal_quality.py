@@ -130,6 +130,38 @@ def test_markup_and_marker_variants_still_parse(tmp_path):
     assert "apply_discount" in q["mechanism"]
 
 
+def test_a_declaration_appended_below_the_seed_placeholders_still_counts(tmp_path):
+    """The most likely agent shape: leave the seed block alone, append the filled one
+    below it. A first-match-only read records that as fully UNDECLARED — inverting the
+    exact signal this module exists to observe. Every occurrence must be scanned."""
+    from cap_evolve import proposal_quality
+    (tmp_path / "PROCESS.md").write_text(
+        "## Proposal declaration\n"
+        "- Mechanism: <what now behaves differently, and why>\n"
+        "- Hypothesis: <which cluster this fixes>\n"
+        "- Expected observable: <what will look different next iteration>\n"
+        "\n### My declaration\n" + DECLARED.split("## Proposal declaration\n", 1)[1],
+        encoding="utf-8")
+    q = proposal_quality.parse(tmp_path)
+    assert q["declared"] is True, (
+        "a filled declaration appended BELOW the seed placeholders read as undeclared "
+        f"— the signal is inverted: {q}")
+    assert "quote_price" in q["mechanism"] and "get_total" in q["observable"], q
+
+
+def test_a_bare_observable_label_is_the_same_field(tmp_path):
+    """``Expected observable`` is what the seed writes, but agents shorten it. Requiring
+    the adjective recorded a real declaration as missing."""
+    from cap_evolve import proposal_quality
+    (tmp_path / "PROCESS.md").write_text(
+        "- Mechanism: in-body guard in apply_discount\n"
+        "- Hypothesis: the rounding cluster, one root cause\n"
+        "- Observable: no off-by-one cents in the next trajectories\n", encoding="utf-8")
+    q = proposal_quality.parse(tmp_path)
+    assert q["declared"] is True, q
+    assert "off-by-one" in q["observable"], q
+
+
 def test_a_missing_process_md_never_raises(tmp_path):
     from cap_evolve import proposal_quality
     q = proposal_quality.parse(tmp_path / "nope")
@@ -187,6 +219,48 @@ def test_an_undeclared_proposal_is_also_not_rejected(tmp_path):
     ev = _events(run_dir, "proposal_quality")
     assert ev and ev[-1]["declared"] is False, ev
     assert ev[-1]["enforcement"] == "advisory", ev[-1]
+
+
+def test_gepas_local_gate_is_not_enforcing_the_declaration(tmp_path):
+    """PER-ALGORITHM probe. The hill-climb pair above only pins ``run_step``; an
+    enforcement injected into GEPA's *local* gate passes them all and surfaces only as
+    confusing failures in test_gepa.py. Assert here, on GEPA's own event, that an
+    UNDECLARED candidate passed the local gate on rewards alone."""
+    from cap_evolve import gepa
+    adapter, run_dir, base = _setup(tmp_path, "gpadv", max_iterations=1, stall=5)
+    gepa.gepa_loop(adapter, run_dir=run_dir, optimizer=_optimizer(), seed_val=base,
+                   max_iterations=1, minibatch_size=3, max_merges=0,
+                   gate_kwargs={"mode": "significant", "k_se": 1.0})
+    pq = _events(run_dir, "proposal_quality")
+    assert pq and pq[-1]["declared"] is False, pq
+    lg = _events(run_dir, "gepa_local_gate")
+    assert lg, "GEPA logged no local gate — the probe would be vacuous"
+    assert lg[-1]["passed"] is True, (
+        "an UNDECLARED candidate was stopped at GEPA's LOCAL gate — the advisory "
+        f"guarantee is broken for gepa: {lg[-1]}")
+    # and the local gate's verdict is exactly the reward comparison, nothing else.
+    assert (lg[-1]["child_sum"] > lg[-1]["parent_sum"]) is lg[-1]["passed"], lg[-1]
+
+
+def test_skillopts_step_does_not_enforce_the_declaration(tmp_path):
+    """PER-ALGORITHM probe, SkillOpt. It delegates to ``run_step`` today, but that is an
+    implementation detail the advisory guarantee should not depend on — pin the outcome
+    on SkillOpt's own step record for an UNDECLARED candidate."""
+    from cap_evolve import skillopt
+    adapter, run_dir, base = _setup(tmp_path, "soadv", max_iterations=2, stall=5)
+    out = skillopt.skillopt_loop(adapter, run_dir=run_dir, optimizer=_optimizer(),
+                                 current_val=base, epochs=1, batch_size=4,
+                                 gate_kwargs={"mode": "significant", "k_se": 1.0},
+                                 slow_update=False)
+    pq = _events(run_dir, "proposal_quality")
+    assert pq and pq[-1]["declared"] is False, pq
+    step = out["steps"][-1]
+    assert step["accepted"] is True, (
+        "an UNDECLARED candidate was rejected under skillopt — the advisory guarantee is "
+        f"broken for skillopt: decision={step.get('decision')}")
+    reason = str(step["decision"]["reason"]).lower()
+    for word in ("mechanism", "knob", "declar", "proposal quality"):
+        assert word not in reason, f"#140 leaked into skillopt's gate reason: {reason}"
 
 
 def test_the_bar_states_it_is_recorded_not_enforced():
