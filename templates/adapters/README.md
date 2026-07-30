@@ -7,6 +7,14 @@ write code when your task loading or scoring is genuinely custom.
 Copy a template into `.capevolve/project/adapters/`, drop `model_config.py` next
 to it, set credentials in a `.env`, and run `cap-evolve check && cap-evolve run`.
 
+> **Simpler path first:** for the common case you may not need an adapter at all.
+> `cap-evolve benchmark add <name>` scaffolds a **declarative** benchmark — a
+> `benchmark.yaml` manifest plus one `run(task, ctx, *, seed=0)` function — and
+> `cap-evolve benchmark verify <name>` proves it works. See
+> [`docs/BENCHMARK_ZOO.md`](../../docs/BENCHMARK_ZOO.md) and the curated
+> [`benchmarks/`](../../benchmarks/) library. Come back here when your task loading or
+> scoring genuinely needs the full adapter.
+
 ## Templates
 
 | Template | Best for | What it optimizes | Task source |

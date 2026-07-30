@@ -21,6 +21,67 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Benchmark zoo + `cap-evolve benchmark add|verify|list` + a declarative manifest**
+  (#141). Onboarding a benchmark no longer means hand-writing a `CapabilityAdapter`
+  subclass and pruning a ~100-line `capevolve.yaml`. Comparing the two generic bundled
+  templates showed what actually repeats — module preamble, the dataset→`Task` loop, the
+  infra-error branch of `score`, the match helper, the `Score(...)` construction, and
+  nearly the whole spec — so `benchmark.yaml` declares that, and `target.py` keeps the
+  one thing that is genuinely per-benchmark: `run(task, ctx, *, seed=0)`. There is
+  deliberately no config language for `run()`. Measured on the same benchmark
+  (`toy_calc`): **78 → 36 hand-authored lines (−54%)**; `adapters/adapter.py` and
+  `capevolve.yaml` are generated (0 hand-authored). `scoring: custom` keeps a bespoke
+  predicate as code (see the new `json_extract` entry's per-field partial credit).
+  `benchmarks/` is the curated, verifier-gated library; both bundled entries are
+  zero-API and run end to end to a sealed test number.
+  `cap-evolve benchmark verify` **executes** the benchmark rather than parsing its
+  manifest: the real `cap-evolve check` gate, a dataset load through the real adapter,
+  the seeded split plus the honest-gate floor (`val >= MIN_VAL_TASKS` + a non-empty
+  sealed test split, so a 3-task dataset fails at verify rather than mid-run inside
+  `gate.decide`), and a **real zero-API smoke eval** — every val task through `live()`
+  → `run_target()` → `score()`, twice, comparing rollout fingerprints and rewards,
+  which is what catches a non-deterministic `run_target()` (`check` never runs the
+  target). `verified.json` records the measured reward, split sizes and dataset
+  SHA-256; `benchmark list` reads that stamp from disk, not the manifest's `verified:`
+  flag. A zoo entry keeps the manifest, scorer and dataset **inside** the project dir
+  so #142's tamper guard covers them by construction (a grader at the benchmark root
+  is declared-but-unprotected). `cap-evolve --help` now generates the subcommand
+  listing from `COMMANDS` + handler docstrings instead of a literal usage string that
+  goes stale. Docs: `docs/BENCHMARK_ZOO.md`, `benchmarks/README.md`.
+
+  **Review follow-up (#233).** `verify` ran everything it claimed but *concluded*
+  nothing from the results — a review made it pass on a broken benchmark in 9 of 12
+  attacks. It now draws conclusions. A seed capability that already scores 1.0 has **no
+  headroom** and is a hard failure (opt out per-benchmark with
+  `allow_saturated_baseline: true`), closing the `score()`-wired-to-1.0,
+  `run()`-returns-`task.target` and `run()`-reads-the-answer-key hacks; a
+  **degenerate-scorer probe** scores a synthetically correct rollout against a
+  deliberately wrong one and requires the rewards to differ, so a scorer that ignores
+  its input fails at any baseline. Splits are checked for **genuine disjointness and a
+  non-empty train, on the realized split** (`train == val == test` passed before — #99
+  found the repo's own headline τ² number came from exactly that), and are built as a
+  real `Splits` rather than a throwaway class. Every path key (`tasks_file`,
+  `target_module`, `capability_path`, `split_ids_file`) must be a **plain relative path
+  whose resolved parent is inside the project dir** — an allowlist checked once in
+  `load_manifest`, after `target_module: ../../pwned.py` executed code outside the
+  project dir during `verify`. `protected_paths` is now **additive** (unioned with the
+  layout defaults and #197's globs, never substituted), the protected-paths step asserts
+  on what the **runtime guard actually resolves from the generated `capevolve.yaml`**
+  rather than on what the manifest claims (#189's wrong-artifact class), and an
+  **under-declaration sweep** flags any `.py` or answer-key-ish file under `project/`
+  outside `capability_path/` that the guard would not hash — previously a third author's
+  `helpers.py` / `scorer2.py` were silently unprotected and tampering went undetected.
+  `verified.json` now stamps the grader and manifest hashes alongside the dataset, and
+  `benchmark list` **re-checks every hash**, so a hand-written stamp and a stale one
+  both read `verified: false` with the reason in `stale_reason`. A `score()` without
+  `scoring: custom` is a hard error (it silently overrode the declared mode and made
+  `benchmark list` lie); content-duplicate task rows are refused; `--description` is
+  emitted as a quoted YAML scalar (a newline used to redefine manifest keys);
+  `tasks(split)` honours its argument instead of handing out the sealed test split; an
+  empty or uncompilable target is a dataset error; and `--refresh` **keeps a hand-edited
+  `adapters/adapter.py`** instead of clobbering it, so overriding one generated hook is
+  a supported edit rather than work the next manifest change deletes.
+
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

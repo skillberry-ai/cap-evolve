@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "at": "2026-07-30T14:08:15+00:00",
+  "cap_evolve": "0.1.0",
+  "val_reward": 0.0,
+  "n_tasks": 12,
+  "splits": {
+    "train": 6,
+    "val": 3,
+    "test": 3
+  },
+  "steps": [
+    "manifest parsed + validated",
+    "dataset loaded through the adapter: 12 task(s)",
+    "cap-evolve check executed on the generated project",
+    "splits computed: {'train': 6, 'val': 3, 'test': 3}",
+    "REAL smoke eval: 3 val task(s) x 2 passes through live() -> run_target() -> score()",
+    "degenerate-scorer probe: 3 task(s) scored with a correct vs a deliberately-wrong output",
+    "under-declaration sweep: every .py and answer-key-ish file under project/ (outside seed_capability/) is guard-hashed",
+    "protected paths resolved from the generated spec: ['adapters/adapter.py', 'benchmark.yaml', 'capevolve.yaml', 'target.py', 'tasks.jsonl']"
+  ],
+  "problems": [],
+  "dataset_sha256": "8e7d164f1d3f7440d86a604881006d3112cf055f6b7b3851a0408df5a29039a6",
+  "target_sha256": "33744fc166d055fa017654fb8b7c0400b0e033b1a41d7f5376848599219d9fd7",
+  "manifest_sha256": "11d012d109abff8f58d06d3b110ccfb842fd474597cede8c70f8b7b7617ab853"
+}

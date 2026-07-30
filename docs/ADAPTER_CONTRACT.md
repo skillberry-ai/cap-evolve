@@ -5,6 +5,11 @@ agent-specific glue is confined to a small adapter you implement once, in
 `.capevolve/project/adapters/adapter.py`. It subclasses `CapabilityAdapter`
 (`core/cap_evolve/adapter.py`).
 
+> Before writing an adapter by hand, check whether the declarative manifest covers
+> you: `cap-evolve benchmark add <name>` needs one `run(task, ctx, *, seed=0)`
+> function and a `benchmark.yaml` — see [`BENCHMARK_ZOO.md`](BENCHMARK_ZOO.md).
+> `ManifestAdapter` implements this contract for you.
+
 ## The three required methods
 
 These three are `@abstractmethod` — `cap-evolve check` refuses to run until all

@@ -1,0 +1,5 @@
+{
+  "edits": [
+    {"file": "prompt.txt", "op": "ensure_contains", "text": "\n[JSON] Reply with a single JSON object and nothing else.\n[FIELDS] Include every field: name, city, year."}
+  ]
+}

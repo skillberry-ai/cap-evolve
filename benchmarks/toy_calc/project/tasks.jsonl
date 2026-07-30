@@ -1,0 +1,8 @@
+{"id": "a1", "input": "3 + 4", "target": "7"}
+{"id": "a2", "input": "10 - 6", "target": "4"}
+{"id": "a3", "input": "2 * 5", "target": "10"}
+{"id": "a4", "input": "9 + 1", "target": "10"}
+{"id": "a5", "input": "8 - 3", "target": "5"}
+{"id": "a6", "input": "6 * 2", "target": "12"}
+{"id": "a7", "input": "7 + 5", "target": "12"}
+{"id": "a8", "input": "4 * 4", "target": "16"}
