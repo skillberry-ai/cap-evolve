@@ -51,6 +51,7 @@ from pathlib import Path
 from . import harness
 from .lr_schedule import build_schedule
 from .loop import SplitResult
+from .optimizer_context import OptimizerContext, render_instructions
 from .rundir import RunDir
 
 # Buffer bounds (PITFALL: the rejected-edit buffer must be reset + bounded per
@@ -58,6 +59,13 @@ from .rundir import RunDir
 _MAX_FAILURES_PER_STEP = 10      # failure-pattern clusters carried per step
 _MAX_TASK_IDS_PER_PATTERN = 3    # task ids shown per cluster
 _MAX_BUFFER_STEPS = 12           # most recent steps kept in the per-epoch buffer
+
+# Harness-injected scaffolding that is NOT an applied capability edit, so it must not
+# count toward the edit-size proxy in ``_changed_files``. Was two copy-pasted tuples,
+# which is how INSIGHTS.md (#128) would have silently registered as an edit every
+# iteration — the durable priors block changes as the run progresses.
+_SCAFFOLD = frozenset(("INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md",
+                       "JOURNAL.md", "PROCESS.md", "RUNMAP.md", "INSIGHTS.md"))
 
 
 # ---- failure-pattern clustering -------------------------------------------
@@ -213,6 +221,7 @@ def skillopt_loop(
     slow_update_sample: int = 20,
     algorithm: str = "skillopt",
     store=None,
+    ctx=None,
 ) -> dict:
     """Run the SkillOpt epochs × mini-batches climb.
 
@@ -220,11 +229,17 @@ def skillopt_loop(
     ``harness.hill_climb_loop`` (single lineage, parent = current best) and reuses
     ``harness.run_step`` for the honesty-critical materialize→gate→accept cycle.
 
+    ``ctx`` is an ``optimizer_context.OptimizerContext`` — what the optimizer is GIVEN
+    (capability guidance + brief, trajectories, the benchmark-authored instructions
+    template, bench repo, its own features reference, the consuming-LLM profile). The
+    same bundle hill-climb and GEPA use, so all three prompt identically.
+
     Returns a result dict shaped like ``hill_climb_loop``'s, plus ``epochs`` /
     ``edit_budget_schedule`` / ``slow_updates`` / per-epoch ``epoch_stats``.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = harness._init_memory_store(run_dir, store)
+    ctx = ctx or OptimizerContext()
 
     train_ids = list(run_dir.read_splits().train)
     n_train = len(train_ids)
@@ -287,8 +302,10 @@ def skillopt_loop(
 
             label = f"epoch {epoch}/{epochs} step {s + 1}/{steps_per_epoch} "
             label += f"(mini-batch of {len(minibatch_ids)} train tasks, L={L})"
-            instructions = harness._focus_instructions(current_val, minibatch_ids, label)
-            instructions += "\n" + _buffer_block(L, step_buffer, rejected_this_epoch)
+            instructions = render_instructions(
+                current_val, minibatch_ids, label, ctx=ctx, algorithm=algorithm,
+                run_dir=run_dir,
+                extra=_buffer_block(L, step_buffer, rejected_this_epoch))
 
             cid = f"so_e{epoch:02d}s{s + 1:02d}"
             parent_dir = run_dir.candidate_dir(run_dir.best_id)  # single lineage: always best
@@ -297,6 +314,7 @@ def skillopt_loop(
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
+                ctx=ctx,
             )
             cand_val = SplitResult.from_dict(step["candidate_val"])
             accepted = bool(step["accepted"])
@@ -348,7 +366,7 @@ def skillopt_loop(
                 prev_epoch_skill=prev_epoch_skill, prev_epoch_best_id=prev_epoch_best_id,
                 epoch=epoch, sample=slow_update_sample, edit_budget=schedule[-1] if schedule else edit_budget,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-                rejected=rejected, history=history, store=store,
+                rejected=rejected, history=history, store=store, ctx=ctx,
             )
             if slow_rec is not None:
                 slow_updates.append(slow_rec)
@@ -398,8 +416,7 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
                 continue
             rel = f.relative_to(workdir)
             # ignore harness-injected scaffolding files
-            if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+            if rel.name in _SCAFFOLD:
                 continue
             seen.add(rel)
             pf = parent_dir / rel
@@ -408,8 +425,7 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
         for f in parent_dir.rglob("*"):
             if f.is_file() and ".git" not in f.parts:
                 rel = f.relative_to(parent_dir)
-                if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+                if rel.name in _SCAFFOLD:
                     continue
                 if rel not in seen:
                     changed += 1  # a deletion
@@ -422,7 +438,7 @@ def _run_slow_update(
     adapter, *, run_dir: RunDir, optimizer, current_val: SplitResult,
     prev_epoch_skill: SplitResult, prev_epoch_best_id, epoch: int, sample: int,
     edit_budget: int, n_trials: int, gate_kwargs: dict, no_regression: bool,
-    rejected, history, store,
+    rejected, history, store, ctx=None,
 ) -> dict | None:
     """Re-evaluate the epoch-start skill vs current best on a small TRAIN subset,
     categorize, and run ONE extra gated step. Counted in budget; sample is small
@@ -461,8 +477,15 @@ def _run_slow_update(
                       stable_success=len(categories["stable_success"]),
                       improved=len(categories["improved"]))
 
-    instructions = _slow_update_instructions(epoch, categories)
-    instructions += "\n" + _buffer_block(edit_budget, [], [])  # carry the consolidating L budget
+    # The longitudinal block is this step's own framing; the shared seam still supplies
+    # the capability brief / edit space / bench repo / reader block around it, so the slow
+    # update is not prompt-poorer than a normal step.
+    extra = (_slow_update_instructions(epoch, categories) + "\n"
+             + _buffer_block(edit_budget, [], []))  # carry the consolidating L budget
+    instructions = render_instructions(
+        current_val, sample_ids, f"epoch {epoch} slow/meta update "
+        f"({len(sample_ids)} sampled train tasks)", ctx=ctx, algorithm="skillopt",
+        run_dir=run_dir, extra=extra)
 
     cid = f"so_e{epoch:02d}_slow"
     step = harness.run_step(
@@ -470,6 +493,7 @@ def _run_slow_update(
         optimizer=optimizer, instructions=instructions, current_val=current_val,
         n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
         no_regression=no_regression, rejected=rejected, history=history, store=store,
+        ctx=ctx,
     )
     step["epoch"] = epoch
     step["step_in_epoch"] = "slow"

@@ -24,8 +24,11 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+# Module-level is safe: optimizer_context imports only .loop/.rundir eagerly and
+# lazy-imports harness inside its function bodies, so there is no cycle to dodge.
+from . import optimizer_context as _oc
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir, _atomic_write
+from .rundir import RunDir, _atomic_write, iteration_candidate
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -510,7 +513,7 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 
 
 
-# The optimizer's working dir carries FOUR cross-iteration files, with clean ownership
+# The optimizer's working dir carries FIVE cross-iteration files, with clean ownership
 # so there is never confusion about who writes what (the recurring user complaint about
 # the old MEMORY.md/STATE.md pair):
 #   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the objective record:
@@ -522,7 +525,12 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 #                 subagents/features used, what to preserve).
 #   RUNMAP.md   — FRAMEWORK-owned manifest of every prior iteration's working dir, with
 #                 each prior PROCESS.md + capability diff copied into ./prior_iterations/.
+#   INSIGHTS.md — FRAMEWORK-owned, SYNTHESIZED, re-derived each iter (#128): the compact
+#                 durable priors — what helped, what hurt, what's still open. Bounded, so
+#                 it survives context loss without eating the prompt budget.
 # Rule: FACTS are deterministic + framework-owned; JUDGMENT and PROCESS are agent-owned.
+# INSIGHTS is framework-owned and deterministic too — it is a *distillation* of the facts,
+# labelled as hypotheses so a wrong prior can never masquerade as truth.
 
 _JOURNAL_MARK = "<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit anything above it -->"
 
@@ -581,7 +589,8 @@ _PROCESS_SEED = (
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
 _CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+                  "INSIGHTS.md"}
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -627,24 +636,15 @@ def _diff_capabilities(parent_dir: Path, cand_dir: Path, *, max_chars: int = 800
 
 
 def _parent_map(run_dir: RunDir) -> dict[str, str]:
-    """Map each candidate id -> the parent id it was forked from, from ``step`` events.
+    """Map each candidate id -> the parent id it was forked from, from iteration events.
 
-    Falls back to "seed" for any candidate whose parent is unknown. Best-effort: an
-    unreadable/absent events log yields an empty map."""
-    parent_of: dict[str, str] = {}
-    try:
-        if not run_dir.events_path.exists():
-            return {}
-        for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            rec = json.loads(line)
-            if rec.get("kind") == "step" and rec.get("candidate"):
-                parent_of[str(rec["candidate"])] = str(rec.get("parent") or "seed")
-    except Exception:  # noqa: BLE001
-        return parent_of
-    return parent_of
+    Reads EVERY ``ITERATION_EVENT_KINDS`` event, not just ``step`` — GEPA bypasses
+    ``run_step`` and emits ``gepa_val_gate``, so a ``kind == "step"`` filter here made
+    GEPA's whole cross-iteration history channel (LEDGER/RUNMAP/prior_iterations)
+    permanently empty. Falls back to "seed" when the parent edge is absent."""
+    return {cid: str(rec.get("parent") or rec.get("parent_id") or "seed")
+            for rec in run_dir.iteration_events()
+            if (cid := iteration_candidate(rec))}
 
 
 def _per_task_rewards(run_dir: RunDir, tag: str, split: str = "val") -> dict[str, float]:
@@ -685,6 +685,208 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
                    if par[t] < 1.0 - eps and cand[t] >= 1.0 - eps)
     delta = sum(cand[t] - par[t] for t in shared) / len(shared)
     return {"broke": broke, "fixed": fixed, "delta": delta, "parent": parent_id}
+
+
+# ---- durable synthesized insight (issue #128) -----------------------------
+
+# Bounds on the priors block. It is re-synthesized from ``events.jsonl`` + persisted
+# rollouts every iteration, so it does NOT grow monotonically with the run — but the
+# INPUT does, and an unbounded render would silently eat the prompt budget
+# (``optimizer_context.MAX_INSTRUCTIONS_CHARS``) over a 100-iteration run.
+#
+# Eviction policy differs PER SECTION, because the two sections rank for different things:
+#   * REJECTED rows — by |Δ| on val. Every row here is damage or noise, and |Δ| IS the
+#     damage: a −0.20 regression is the prior worth re-testing, a −0.001 reject is not.
+#   * ACCEPTED rows — by RECENCY. Every row here already cleared the gate, so |Δ| only
+#     re-ranks winners, and it evicts the systematically-small-but-real effect FOREVER:
+#     six +0.30 accepts permanently crowd out a reproducible +0.02 and the optimizer never
+#     learns that direction works. What makes an accept a useful prior is whether the
+#     direction GENERALIZES, which |Δ| does not measure — so rotate coverage instead of
+#     freezing a top-6 (review of #219, non-blocking 8).
+# Ties break toward the newer iteration. The char cap is the backstop for pathologically
+# long task ids / reject reasons; it RESERVES the truncation notice's length (below).
+_INSIGHT_KEEP = 6          # accepted / rejected rows each
+_INSIGHT_OPEN = 10         # still-failing task ids
+_INSIGHT_TASKS = 8         # task ids per broke/fixed set (a "+N more" marker follows)
+MAX_INSIGHT_CHARS = 4_000  # ≈1k tokens, ~6% of MAX_INSTRUCTIONS_CHARS
+_INSIGHT_TRUNC = ("\n\n... (priors truncated to stay inside the optimizer prompt budget; "
+                  "the full record is LEDGER.md)\n")
+
+
+_REASON_MAX = 200
+
+
+def _insight_reason(raw) -> str:
+    """One flat, bounded line for a gate reason rendered inside the priors block.
+
+    Every ``reason`` written today is framework-authored (``gate.decide`` f-strings over
+    floats, plus the no-regression suffix over adapter task ids), so there is no live
+    injection. But nothing in the type constrains it, and the priors block is a
+    FRAMEWORK-AUTHORED region of the prompt: a reason containing a newline plus
+    ``## What HELPED`` would render a forged section inside it — precisely the
+    misdirection this block exists to prevent. So: collapse all whitespace (no reason can
+    start a new line, hence no heading and no list item), backslash-escape the two
+    structural markdown characters that still matter mid-line (``#`` and a backtick, which
+    could otherwise open an unbalanced code span), and bound the length so one reason
+    cannot eat the block's char budget — which is also what made the cap overflow
+    (review of #219, non-blocking 4).
+    """
+    text = " ".join(str(raw or "").split())    # collapses \n, \r, \t and runs of spaces
+    text = text.replace("#", "\\#").replace("`", "\\`")
+    return text[:_REASON_MAX - 1] + "…" if len(text) > _REASON_MAX else text
+
+
+def _insight_rows(run_dir: RunDir) -> tuple[list[dict], list[dict]]:
+    """Split every evaluated iteration into (accepted, rejected) and evict per section.
+
+    Reads ``RunDir.iteration_events()`` — NOT ``kind == "step"``, which omits GEPA's
+    ``gepa_val_gate`` entirely and is the exact bug #199 fixed. Δ is the val delta vs the
+    candidate's parent, taken from the event when both sides are present (``None`` when
+    either side is missing, so an UNKNOWN Δ is never rendered as a measured ``+0.000``);
+    the per-task broke/fixed lists come from the persisted rollouts via
+    ``_candidate_task_impact`` — the same read ``_build_ledger`` uses, so the two
+    artifacts read the same SOURCE. Their RENDERING still differs (this block truncates
+    task lists at ``_INSIGHT_TASKS`` and rows at ``_INSIGHT_KEEP``, and says so).
+
+    Eviction is per-section: accepted rows keep the most RECENT, rejected rows keep the
+    largest |Δ|. See the policy note above ``_INSIGHT_KEEP``.
+    """
+    parent_of = _parent_map(run_dir)
+    accepted: list[dict] = []
+    rejected: list[dict] = []
+    for i, rec in enumerate(run_dir.iteration_events(), 1):
+        cid = iteration_candidate(rec)
+        if not cid:
+            continue
+        val, pval = rec.get("val"), rec.get("parent_val")
+        delta = (float(val) - float(pval)
+                 if isinstance(val, (int, float)) and isinstance(pval, (int, float))
+                 else None)
+        imp = _candidate_task_impact(run_dir, cid, "val", parent_of=parent_of) or {}
+        row = {"iter": i, "cid": cid, "delta": delta,
+               "accept": bool(rec.get("accept")),
+               "reason": _insight_reason(rec.get("reason")),
+               "broke": [str(t) for t in (imp.get("broke") or [])],
+               "fixed": [str(t) for t in (imp.get("fixed") or [])]}
+        (accepted if row["accept"] else rejected).append(row)
+    # A missing Δ sorts LAST among rejects (it carries no damage signal) but must not be
+    # confused with a measured 0.0 in the rendering — see ``_delta_str``.
+    by_damage = lambda r: (abs(r["delta"]) if r["delta"] is not None else -1.0, r["iter"])  # noqa: E731
+    return (sorted(accepted, key=lambda r: r["iter"], reverse=True)[:_INSIGHT_KEEP],
+            sorted(rejected, key=by_damage, reverse=True)[:_INSIGHT_KEEP])
+
+
+def _build_insights(workdir: Path, run_dir: RunDir, *,
+                    max_chars: int = MAX_INSIGHT_CHARS) -> str:
+    """Write the durable synthesized priors block (INSIGHTS.md) and return it.
+
+    "What was accepted / what was rejected / what's still open", distilled from the
+    objective record: the gate outcome + val Δ of every prior iteration, the exact tasks
+    each one broke or fixed, and the tasks the current best still fails. Written to BOTH
+    the run dir (the durable copy, which is what survives across iterations) and the
+    optimizer's workdir (the copy that reaches the prompt). The dashboard does NOT read
+    it — ``dashboard._DIFF_SKIP`` deliberately EXCLUDES it, because it is framework read
+    context, not a capability edit.
+
+    **Zero LLM calls.** The synthesis is pure Python over ``events.jsonl`` + persisted
+    rollouts, like every other auxiliary step in core (reflection distillation, the
+    ledger, the runmap, failure clustering). Distilling this with a model would add a
+    per-iteration model call to every run for a signal that is already fully determined
+    by the run's own numbers — see the ``aux_model`` tier (#132) if a future version
+    wants prose instead of rows.
+
+    Honesty: every line is labelled a CANDIDATE PRIOR, not truth. Nothing here bypasses
+    the val gate — a prior that says "X helped" is a hypothesis to re-test, and the block
+    says so. Only val rewards and val/train task ids are read; the sealed test split is
+    never touched (``_per_task_rewards`` is called with ``split="val"`` only).
+    """
+    accepted, rejected = _insight_rows(run_dir)
+    best = run_dir.best_id or "seed"
+    best_rewards = _per_task_rewards(run_dir, best, "val")
+    still_open = sorted(t for t, r in best_rewards.items() if r < 1.0 - 1e-9)
+
+    def _tasks(label: str, ids: list[str]) -> str:
+        """A bounded task-id set with an HONEST "+N more" marker.
+
+        LEDGER.md renders up to 20 ids; this block renders ``_INSIGHT_TASKS``. Silently
+        cutting at 8 made an edit that broke 20 tasks read as breaking 8, so an optimizer
+        reading only this block UNDER-WEIGHTED a catastrophic regression with nothing in
+        the text saying the list was partial (review of #219, blocking 3)."""
+        if not ids:
+            return ""
+        shown = ", ".join(ids[:_INSIGHT_TASKS])
+        extra = len(ids) - _INSIGHT_TASKS
+        return f" — {label} {{{shown}{f', +{extra} more' if extra > 0 else ''}}}"
+
+    def _delta_str(d) -> str:
+        # ``None`` = one side of the comparison was not recorded. Rendering that as
+        # "+0.000" would be indistinguishable from a measured zero.
+        return "Δ ?" if d is None else f"Δ {d:+.3f}"
+
+    lines = ["# INSIGHTS — durable priors carried across iterations (framework-synthesized)",
+             "",
+             "A compact, continually-updated summary of what this run has LEARNED SO FAR, "
+             "re-derived from the objective record every iteration so it survives even when "
+             "the transcript does not. Read it BEFORE proposing.",
+             "",
+             "**These are CANDIDATE PRIORS, not truth.** Each one is a hypothesis worth "
+             "re-testing, and every edit you make is still judged by the val significance "
+             "gate — a prior can be wrong, and acting on one earns no exemption.",
+             "",
+             f"Bounded on purpose: at most {_INSIGHT_KEEP} rows per section and "
+             f"{_INSIGHT_TASKS} task ids per set, with a `+N more` count when there are "
+             "more. `LEDGER.md` is the full, untruncated record — read it whenever a count "
+             "here is marked partial.",
+             "", "## What was ACCEPTED by the gate (most recent first)"]
+    lines += ([f"- iter {r['iter']} `{r['cid']}` val {_delta_str(r['delta'])}"
+               f"{_tasks('fixed', r['fixed'])}{_tasks('but broke', r['broke'])}"
+               for r in accepted]
+              or ["- _nothing accepted yet — this is still the baseline._"])
+    # NOT "What HURT": a candidate rejected by the SIGNIFICANCE bar can have a POSITIVE Δ
+    # and have broken nothing — it was merely indistinguishable from noise. Filing that
+    # under "HURT" tells the optimizer to avoid a direction that may well be right.
+    lines += ["", "## What was REJECTED by the gate (largest movers first — a reject is "
+              "not necessarily a regression; read the reason)"]
+    lines += ([f"- iter {r['iter']} `{r['cid']}` val {_delta_str(r['delta'])} "
+               f"({r['reason']}){_tasks('broke', r['broke'])}"
+               # Rejects' `fixed` set matters as much as `broke`: "broke t1 WHILE fixing
+               # t2" is what tells you whether the direction is salvageable. Omitting it
+               # systematically under-reported what rejected edits achieved.
+               f"{_tasks('while fixing', r['fixed'])}"
+               for r in rejected]
+              or ["- _nothing rejected yet._"])
+    lines += ["", f"## Still OPEN — tasks the current best (`{best}`) does NOT pass",
+              "",
+              "**These names are a DIAGNOSTIC of where the capability is weak, not a "
+              "target list.** Fix the general defect they expose; your edit must generalize "
+              "beyond them. The gate runs on val, so a task-specific special case for these "
+              "ids will pass the gate and FAIL the sealed test — that is a val overfit, not "
+              "progress.", ""]
+    if still_open:
+        lines += [f"{len(still_open)} of {len(best_rewards)} val tasks still failing: "
+                  + ", ".join(f"`{t}`" for t in still_open[:_INSIGHT_OPEN])
+                  + (f" (+{len(still_open) - _INSIGHT_OPEN} more)"
+                     if len(still_open) > _INSIGHT_OPEN else "")]
+    elif best_rewards:
+        lines += [f"- _none — `{best}` passes all {len(best_rewards)} scored val tasks._"]
+    else:
+        # Distinguish "perfect" from "no rollouts on disk". Rendering both as "nothing
+        # failing" told the optimizer there was nothing left to fix on a run where
+        # rollout persistence had failed.
+        lines += [f"- _UNKNOWN: no persisted val rollouts for `{best}`, so this section "
+                  "could not be computed. Do NOT read this as 'everything passes'._"]
+    text = "\n".join(lines) + "\n"
+    if len(text) > max_chars:
+        # RESERVE the notice's length before cutting, or the "bounded" output overshoots
+        # ``max_chars`` by exactly len(notice) (review of #219, blocking 2). A cap too
+        # small to hold even the notice is degenerate — hard-cut and stay inside the bound
+        # rather than emit a notice that itself breaks it.
+        room = max_chars - len(_INSIGHT_TRUNC)
+        text = (text[:room].rstrip() + _INSIGHT_TRUNC) if room > 0 else text[:max_chars]
+        text = text[:max_chars]   # rstrip can only shorten, so this is the hard backstop
+    _atomic_write(run_dir.root / "INSIGHTS.md", text)          # durable copy
+    _atomic_write(workdir / "INSIGHTS.md", text)               # the copy that reaches the prompt
+    return text
 
 
 def _journal_tail(workdir: Path) -> str:
@@ -729,33 +931,30 @@ def _build_ledger(workdir: Path, run_dir: RunDir, rejected, history) -> None:
     its outcome + the exact tasks it broke/fixed. Deterministic — the objective record;
     the optimizer's own narrative lives in JOURNAL.md."""
     parent_of = _parent_map(run_dir)
-    # Outcome per candidate from step events (accept/reject + val + parent).
-    rows: list[dict] = []
-    try:
-        if run_dir.events_path.exists():
-            for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                rec = json.loads(line)
-                if rec.get("kind") == "step" and rec.get("candidate"):
-                    rows.append(rec)
-    except Exception:  # noqa: BLE001
-        rows = []
+    # Outcome per candidate from EVERY iteration event kind (accept/reject + val +
+    # parent) — see RunDir.iteration_events; "step" alone omits GEPA entirely.
+    rows = run_dir.iteration_events()
 
     table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) | fixed |",
              "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for i, rec in enumerate(rows, 1):
-        cid = str(rec.get("candidate"))
-        par = str(rec.get("parent") or "seed")
+        cid = str(iteration_candidate(rec))
+        par = str(rec.get("parent") or rec.get("parent_id") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
         val = rec.get("val")
         pval = rec.get("parent_val")
         d = (f"{val - pval:+.3f}" if isinstance(val, (int, float))
              and isinstance(pval, (int, float)) else "")
         imp = _candidate_task_impact(run_dir, cid, "val", parent_of=parent_of) or {}
-        broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
-        fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
+
+        def _set(ids) -> str:
+            # Honest truncation: a silent cut makes a 40-task regression read as 20.
+            ids = [str(t) for t in (ids or [])]
+            extra = len(ids) - 20
+            return ("{" + ", ".join(ids[:20])
+                    + (f", +{extra} more" if extra > 0 else "") + "}")
+
+        broke, fixed = _set(imp.get("broke")), _set(imp.get("fixed"))
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
         table.append(f"| {i} | {cid} | {par} | {outcome} | {vstr} | {d} | {broke} | {fixed} |")
     if len(table) == 2:
@@ -840,25 +1039,15 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     ``workdir/prior_iterations/<cid>/`` so the optimizer has REAL in-dir access to all
     prior iterations' working dirs (not just the parent's trajectories)."""
     parent_of = _parent_map(run_dir)
-    rows: list[dict] = []
-    try:
-        if run_dir.events_path.exists():
-            for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                rec = json.loads(line)
-                if rec.get("kind") == "step" and rec.get("candidate"):
-                    rows.append(rec)
-    except Exception:  # noqa: BLE001
-        rows = []
+    # Every iteration event kind, not just "step" — GEPA emits "gepa_val_gate".
+    rows = run_dir.iteration_events()
 
     prior_root = workdir / "prior_iterations"
     table = ["| iter | candidate | parent | outcome | val | ./prior_iterations/<id>/ |",
              "| --- | --- | --- | --- | --- | --- |"]
     for i, rec in enumerate(rows, 1):
-        cid = str(rec.get("candidate"))
-        par = str(rec.get("parent") or "seed")
+        cid = str(iteration_candidate(rec))
+        par = str(rec.get("parent") or rec.get("parent_id") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
         val = rec.get("val")
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
@@ -900,7 +1089,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
                           rejected, history) -> str:
-    """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+    """Give the optimizer its five cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -908,7 +1097,14 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+      - INSIGHTS.md — framework-synthesized durable priors (#128): what helped, what
+        hurt, what's still open, bounded and re-derived every iteration.
+
+    This is the ONLY function whose output reaches the proposal prompt, and all three
+    algorithms route through it (see the note left by #114 in ``memory.py``) — so a new
+    cross-iteration channel belongs HERE, not in a per-algorithm block.
     """
+    _build_insights(workdir, run_dir)
     _build_ledger(workdir, run_dir, rejected, history)
     _seed_journal(workdir, run_dir)
     if not (workdir / "PROCESS.md").exists():
@@ -916,7 +1112,13 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     _build_runmap(workdir, run_dir)
 
     pointer = (
-        "## Cross-iteration files in THIS working dir (clean ownership — read all four)\n"
+        "## Cross-iteration files in THIS working dir (clean ownership — read all five)\n"
+        "- `INSIGHTS.md` — DURABLE PRIORS (framework, read-only): the compact "
+        "what-was-accepted / what-was-rejected / what's-still-open summary of the whole run "
+        "so far, re-synthesized every iteration so it survives context loss. Read it FIRST "
+        "for orientation, then the detail below. Its priors are hypotheses to re-test, not "
+        "truth — the val gate still judges every edit. It is BOUNDED and marks its own "
+        "truncation (`+N more`); `LEDGER.md` below is the untruncated record.\n"
         "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the exact "
         "tasks it broke/fixed. Never re-introduce a change that broke a task.\n"
         "- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole "
@@ -933,7 +1135,8 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     return f"{instructions}\n\n{pointer}\n"
 
 
-def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
+def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
+                            tag: str | None = None) -> None:
     """Copy ONLY the current best/parent candidate's per-tag rollouts for ``split``
     into ``workdir/trajectories/`` — the single step the optimizer builds on.
 
@@ -948,6 +1151,10 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
       4. as a last resort, the whole ``rollouts/<split>/`` dir.
     The per-tag copy is preferred even when the adapter returns a native dir, because
     the native dir generally cannot be scoped to one candidate.
+
+    ``tag`` pins the eval tag explicitly instead of resolving the run's best candidate —
+    GEPA needs the PARENT's minibatch traces (tag ``mb_p_NNNN``), which are the step it
+    actually reflects on. The same fallback chain applies if that tag has no rollouts.
     """
     dst = workdir / "trajectories"
 
@@ -970,8 +1177,24 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
                               what=f"trajectories/{tag}", error=str(e)[:300])
             return False
 
-    # Resolve the best/parent candidate id from run state (the parent this step forks
-    # from), falling back to the seed tag when no candidate has been accepted yet.
+    # An explicit tag (GEPA's parent-minibatch eval) is a PIN, not a preference: the
+    # prompt tells the optimizer these are that exact minibatch's rollouts verbatim.
+    # A fully-cached minibatch writes no rollout files (the eval cache stores only
+    # reward+feedback — see #111), so falling through here would hand the optimizer
+    # ANOTHER iteration's traces while still claiming they are this one's. Omit
+    # loudly instead: no trajectories/ dir, a warning event, and the prompt block
+    # is made conditional on the dir existing at the call site.
+    if tag:
+        if _copy_tag(str(tag)):
+            return
+        if dst.exists():
+            shutil.rmtree(dst, ignore_errors=True)
+        run_dir.log_event(
+            "optimizer_context_warning", what=f"trajectories/{tag}",
+            error="no rollouts persisted for the pinned eval tag (fully-cached "
+                  "minibatch); trajectories/ OMITTED rather than substituting another "
+                  "iteration's traces")
+        return
     best_id = None
     try:
         best_id = run_dir.best_id
@@ -1004,8 +1227,13 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
 
 def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
                               capabilities=None, optimizer_name: str | None = None,
-                              capability_sources=None, project_dir: Path | None = None) -> None:
+                              capability_sources=None, project_dir: Path | None = None,
+                              tag: str | None = None) -> None:
     """Give the optimizer everything it needs to read, inside its own working dir.
+
+    Call it through ``optimizer_context.inject`` (the shared seam every algorithm uses)
+    rather than directly, so new injected artifacts reach hill-climb, GEPA and SkillOpt
+    at once.
 
     Copies, VERBATIM and without parsing:
       - the CURRENT BEST/PARENT candidate's per-tag trajectories for the most recent
@@ -1027,7 +1255,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # this split, so the optimizer analyzes the step it builds on (not seed + every
     # rejected candidate mixed together). Always preserves the "something to read"
     # guarantee via per-tag fallback then the native dir.
-    _copy_step_trajectories(adapter, run_dir, workdir, split)
+    _copy_step_trajectories(adapter, run_dir, workdir, split, tag=tag)
 
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
@@ -1227,8 +1455,13 @@ def run_step(
     optimizer_name: str | None = None,
     capability_sources=None,
     project_dir: Path | None = None,
+    ctx=None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext``; when given it supersedes the
+    individual ``capabilities`` / ``optimizer_name`` / ``capability_sources`` /
+    ``project_dir`` kwargs (kept for direct callers).
 
     Returns a dict describing the step. On accept, the candidate is snapshotted
     and becomes the run's best.
@@ -1248,10 +1481,13 @@ def run_step(
     workdir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(parent_dir, workdir)
 
-    # Give the optimizer the full trajectories + capability guidance, in its own dir.
-    _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
-                              capabilities=capabilities, optimizer_name=optimizer_name,
-                              capability_sources=capability_sources, project_dir=project_dir)
+    # Give the optimizer the full trajectories + capability guidance, in its own dir —
+    # through the shared seam, so hill-climb / GEPA / SkillOpt inject identically.
+    from .optimizer_context import OptimizerContext, inject as _inject
+    _inject(adapter, run_dir, workdir, split=eval_split,
+            ctx=ctx or OptimizerContext(
+                capabilities=capabilities or [], optimizer_name=optimizer_name,
+                capability_sources=capability_sources or [], project_dir=project_dir))
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
@@ -1585,10 +1821,8 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
-_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
-                    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
-                    ".claude", ".agents", ".gemini", ".opencode", ".bob",
-                    "CLAUDE.md", "AGENTS.md", "GEMINI.md")
+_SNAPSHOT_IGNORE = (_oc.INJECTED_DIRS + _oc.INJECTED_NAMES
+                    + ("LEDGER.md", "JOURNAL.md", "RUNMAP.md"))
 
 
 def _failures_block(always_fail, flaky, errored) -> str:
@@ -1753,10 +1987,21 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     intake phase per benchmark, with a generic default shipped in ``templates/``. Only
     the per-iteration data (the focus summary, the failure index, the capability/algorithm
     briefs, the benchmark-repo pointer) is computed here and substituted.
+
+    ``focus_ids`` must name tasks that are IN ``current_val`` — it narrows that result,
+    it cannot add to it. Callers passing ids from a different split (SkillOpt handed
+    train minibatch ids against a val result, and splits are disjoint by construction)
+    would otherwise filter the failure index down to nothing and get a confident
+    "0 failing of 0 tasks" prompt. On zero overlap we do NOT filter, and we say so.
     """
     per = current_val.per_task
+    scoped = True
     if focus_ids is not None:
-        per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+        known = {pt.get("task_id") for pt in per}
+        if set(focus_ids) & known:
+            per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+        else:
+            scoped = False  # disjoint id sets: filtering would empty the failure index
     errored, always_fail, flaky, solid = _classify(per)
     n = len(per)
 
@@ -1764,6 +2009,10 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
+        + ("" if scoped else
+           " (The failure index below covers ALL scored tasks: this step's focus ids "
+           "are from a different split than the scored result, so there is no per-focus "
+           "breakdown — fix the shared root cause, which is what generalizes anyway.)")
     )
     failures = _failures_block(always_fail, flaky, errored)
     passing = _passing_block(solid)
@@ -1810,7 +2059,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
         "./guidance/optimizer/<name>.md (your subagent/parallelism features) IN FULL "
         "before diagnosing. Then read ./trajectories/ (full traces), ./guidance/sources/ "
-        "(data models/types — read before writing tool code), ./LEDGER.md (facts), the "
+        "(data models/types — read before writing tool code), ./INSIGHTS.md (durable "
+        "priors — hypotheses, not truth), ./LEDGER.md (facts), the "
         "whole ./JOURNAL.md (handover) and ./RUNMAP.md + ./prior_iterations/; fill "
         "./PROCESS.md and APPEND your entry to ./JOURNAL.md. "
         "The prompt and the tools are equally fair game.",
@@ -1848,6 +2098,7 @@ def hill_climb_loop(
     algorithm: str = "hill_climb",
     no_regression: bool = False,
     store=None,
+    ctx=None,
     capabilities=None,
     instructions_file=None,
     bench_repo: str | None = None,
@@ -1864,14 +2115,22 @@ def hill_climb_loop(
     reflection emphasizes — and (for hardest-first) the order. Parent is always
     the current best (global hill-climb). The ``gepa`` algorithm uses its own
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext`` bundling what the optimizer is
+    given (capabilities, instructions template, bench repo, optimizer name, capability
+    sources, consuming-LLM profile) — the same bundle ``gepa_loop`` / ``skillopt_loop``
+    take. The individual kwargs remain for direct callers and build a ctx when none is
+    passed.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
 
-    # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
-    from . import target_profile as _tp
-    _profile = _tp.resolve(target_model, target_profile_file, project_dir=project_dir)
-    _target_reader = _tp.reader_block(_profile)
+    from .optimizer_context import OptimizerContext, render_instructions
+    ctx = ctx or OptimizerContext(
+        capabilities=capabilities or [], optimizer_name=optimizer_name,
+        instructions_file=instructions_file, bench_repo=bench_repo,
+        capability_sources=capability_sources or [], project_dir=project_dir,
+        target_model=target_model, target_profile_file=target_profile_file)
 
     # establish a focus order over the train tasks when needed
     train_ids = run_dir.read_splits().train
@@ -1895,19 +2154,13 @@ def hill_climb_loop(
             label = f"task {focus_ids[0]}" if focus_ids else "train"
         else:
             focus_ids, label = None, focus
-        seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
-        instructions = _focus_instructions(current_val, focus_ids, label,
-                                            capabilities=capabilities, algorithm=algorithm,
-                                            instructions_file=instructions_file,
-                                            bench_repo=bench_repo, optimizer_name=optimizer_name,
-                                            seed_empty=seed_empty, target_reader=_target_reader)
+        instructions = render_instructions(current_val, focus_ids, label, ctx=ctx,
+                                          algorithm=algorithm, run_dir=run_dir)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-            rejected=rejected, history=history, store=store, capabilities=capabilities,
-            optimizer_name=optimizer_name, capability_sources=capability_sources,
-            project_dir=project_dir,
+            rejected=rejected, history=history, store=store, ctx=ctx,
         )
         steps.append(step)
         if step["accepted"]:

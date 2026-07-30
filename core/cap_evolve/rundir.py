@@ -27,6 +27,31 @@ from pathlib import Path
 from .splits import Splits
 
 
+# Every event kind that records ONE evaluated iteration (a candidate + its gate
+# outcome + its val score). ``harness.run_step`` emits "step"; GEPA bypasses
+# run_step and emits "gepa_val_gate". ONE definition, every consumer (dashboard
+# lineage, LEDGER, RUNMAP, prior_iterations/, the durable priors) — filtering on
+# "step" alone makes GEPA's whole cross-iteration history channel silently empty.
+#
+# ``skillopt_step`` is deliberately NOT here. SkillOpt routes through
+# ``harness.run_step`` (which already emits "step" for the same candidate, carrying
+# the parent edge, Δ and the gate reason) and logs "skillopt_step" only as an audit
+# record for its epoch / edit-budget / applied-changes metadata. Including it made
+# every SkillOpt iteration appear TWICE in LEDGER/RUNMAP/priors — the second copy
+# missing parent/parent_val, so it rendered a blank Δ and poisoned the parent map.
+# Deduplicating downstream by candidate id is NOT a fix: SkillOpt mints ids from
+# epoch/step counters that reset on ``--resume`` (skillopt.py), so id-keyed dedup
+# silently DROPS a resumed iteration (including a real regression) instead of
+# double-counting it. Excluding the kind at the source is the honest fix.
+ITERATION_EVENT_KINDS = ("step", "gepa_val_gate")
+
+
+def iteration_candidate(ev: dict) -> str | None:
+    """The candidate id on an iteration event (kinds differ on the field name)."""
+    cid = ev.get("candidate") or ev.get("candidate_id")
+    return str(cid) if cid else None
+
+
 def _atomic_write(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically (tmp file + ``os.replace``).
 
@@ -395,3 +420,36 @@ class RunDir:
         rec = {"t": time.time(), "kind": kind, **fields}
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
+
+    def iteration_events(self) -> list[dict]:
+        """Every event that represents ONE evaluated iteration, in order.
+
+        See :data:`ITERATION_EVENT_KINDS` — read this instead of filtering
+        ``kind == "step"`` by hand, or the algorithms that emit their own kind
+        (GEPA) silently disappear from whatever you are building.
+
+        **One row per logged event, in log order — no dedup.** That is deliberate:
+        candidate ids are NOT globally unique (SkillOpt re-mints ``so_eNNsMM`` from
+        counters that reset on ``--resume``), so any id-keyed dedup would silently
+        DISCARD a resumed iteration. The SkillOpt double-count that motivated a dedup
+        is fixed at the source instead — ``skillopt_step`` is excluded from
+        :data:`ITERATION_EVENT_KINDS`; see the note there.
+
+        Best-effort: an unreadable/absent events log yields whatever parsed.
+        """
+        rows: list[dict] = []
+        try:
+            if not self.events_path.exists():
+                return []
+            for line in self.events_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("kind") not in ITERATION_EVENT_KINDS:
+                    continue
+                if iteration_candidate(rec):
+                    rows.append(rec)
+        except Exception:  # noqa: BLE001
+            pass
+        return rows
