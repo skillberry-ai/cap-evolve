@@ -6,6 +6,27 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **Demo-first onboarding: `cap-evolve replay` — a shareable, scrubbable run artifact
+  (#122).** `dashboard.html` showed a run's *final* state; there was no way to watch the
+  search happen, and no zero-setup on-ramp. `cap-evolve replay --demo` renders a bundled
+  real `toy_calc` run (committed at `examples/toy_calc/recorded_run/`) as **one
+  self-contained HTML file** with play / pause / scrub / speed over the run's own virtual
+  timeline: candidates proposed, accepted/rejected with the gate's reason, best-so-far
+  advancing, live accepted/rejected counters. It opens from `file://` with no server, no
+  network and no credentials, references **zero external origins**, honours
+  `prefers-reduced-motion` (shows the finished state instead of autoplaying), and clamps
+  long eval pauses so playback never stalls. `cap-evolve replay [run_dir]` does the same
+  for your own runs. Each frame's text is `eventstream.format_event`'s line, so the
+  terminal and the replay narrate a run with the same words and the same sanitiser.
+
+  Because the artifact is *shared*, everything in it is routed through the dashboard's
+  `redact`, which this change hardens: it now also masks GitHub PAT and UUID shapes, and
+  gained a **shape-independent pass** over this process's credential-looking env values —
+  keyed on the *value* being opaque, not just the key name, after a canary test proved a
+  bare high-entropy secret under an innocent key (`MODEL_ENDPOINT_SUFFIX`) walked straight
+  past the key-name heuristic. Event text is also redacted *before* rendering, since
+  rendering truncates long fields and half a secret matches no rule.
+
 - **Live terminal progress: `cap-evolve run --follow` and `cap-evolve tail` (#116).** A
   classic run was silent for its whole duration — a hung multi-hour run looked exactly
   like a working one. Both new surfaces render human-readable progress (stage, baseline,
@@ -27,6 +48,15 @@ All notable changes to cap-evolve are documented here. The format follows
   dir and `3` on an idle timeout with no events.
 
 ### Fixed
+- **Model-controlled event text could blank the whole `dashboard.html` (#209).** The
+  payload embedded in the inline `<script>` was escaped with a one-sequence denylist
+  (`.replace("</", "<\\/")`), but HTML's script-data parsing also honours comment-like
+  sequences: an optimizer writing `<!--<script>` while explaining a rejected edit shifted
+  the parser and swallowed the rest of the document (sections 5 → 0, body 793 → 34 chars).
+  Not XSS — a denial-of-view on the run's primary results artifact, triggerable with no
+  attacker. Every `<`/`>`/`&` (plus U+2028/9) is now encoded via one shared
+  `dashboard.json_for_html`, so the data the JS reads is unchanged while being inert to the
+  HTML parser. Encode-everything, not another denylist.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the

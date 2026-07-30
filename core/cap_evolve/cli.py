@@ -16,6 +16,9 @@ Subcommands:
                        events.jsonl and print human-readable progress
                        (exit 0 = run finished, 2 = not a possible run dir,
                         3 = --idle-timeout elapsed with no events)
+    cap-evolve replay  [run_dir] [--demo] [-o out.html] [--open]  render a recorded
+                       run as a shareable, scrubbable single-file HTML artifact
+                       (``--demo`` uses the bundled toy_calc run: zero setup)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -214,6 +217,69 @@ def _cmd_tail(argv):
         print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
               file=sys.stderr)
         return 3
+    return 0
+
+
+#: The bundled zero-setup demo run (#122): a real, committed ``toy_calc`` run dir, so
+#: ``cap-evolve replay --demo`` produces a shareable artifact with no project, no
+#: credentials and no model calls. It lives under ``examples/`` (a repo checkout), not
+#: inside the ``cap_evolve`` wheel — the wheel is stdlib-only and 60 KB of recorded run
+#: has no business in it. ``--demo`` from a bare ``pip install`` says so, rather than
+#: failing with a bare path.
+DEMO_RUN = Path(__file__).resolve().parents[2] / "examples" / "toy_calc" / "recorded_run"
+
+
+def _cmd_replay(argv):
+    """Build the scrubbable, self-contained replay artifact from a recorded run."""
+    import argparse
+    from . import dashboard, rundir
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve replay",
+        description="render a recorded run as a shareable, scrubbable HTML artifact")
+    p.add_argument("run_dir", nargs="?", default=None,
+                   help="run dir (default: newest run_* under --base)")
+    p.add_argument("--demo", action="store_true",
+                   help="replay the bundled toy_calc run (no project needed)")
+    p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
+    p.add_argument("-o", "--out", default=None,
+                   help="write the artifact here (default: <run_dir>/replay.html)")
+    p.add_argument("--open", action="store_true", help="open it in a browser")
+    args = p.parse_args(argv)
+
+    if args.demo:
+        root = DEMO_RUN
+        if not (root / "events.jsonl").exists():
+            print("--demo needs the bundled run from a repo checkout "
+                  f"({root} not found).\nEither clone the repo, or point replay at one "
+                  "of your own runs: cap-evolve replay .capevolve/run_<ts>",
+                  file=sys.stderr)
+            return 2
+    elif args.run_dir:
+        root = Path(args.run_dir)
+    else:
+        runs = sorted(q for q in Path(args.base).glob("run_*") if (q / "state.json").exists())
+        if not runs:
+            print(f"no run_* dirs under {args.base} (try --demo)", file=sys.stderr)
+            return 1
+        root = runs[-1]
+    if not (root / "events.jsonl").exists():
+        print(f"no events.jsonl in {root}", file=sys.stderr)
+        return 2
+
+    rd = rundir.RunDir(root)
+    reduced = dashboard.reduce_run(rd)
+    frames = len(reduced.get("replay") or [])
+    # Default beside the run; --out for a read-only run dir (e.g. the bundled demo
+    # inside a pip-installed, root-owned site-packages tree).
+    out = Path(args.out) if args.out else root / "replay.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(dashboard.render_html(reduced, rd), encoding="utf-8")
+    print(json.dumps({"artifact": str(out), "frames": frames,
+                      "run": str(root), "url": out.resolve().as_uri()}))
+    if args.open:
+        import webbrowser
+        webbrowser.open(out.resolve().as_uri())
     return 0
 
 
@@ -798,13 +864,15 @@ COMMANDS = {
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
     "tail": _cmd_tail,
+    "replay": _cmd_replay,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard|tail} [args]",
+        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard|tail|replay}"
+              " [args]",
               file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])

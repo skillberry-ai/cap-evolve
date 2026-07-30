@@ -100,7 +100,14 @@
 cd cap-evolve
 python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install ./core
-bash examples/toy_calc/run.sh</code></pre>
+cap-evolve replay --demo --open   # watch a recorded run first
+bash examples/toy_calc/run.sh     # then run your own</code></pre>
+    <p class="cta-note">
+      <strong>Watch it before you configure anything.</strong>
+      <code>cap-evolve replay --demo</code> writes one self-contained HTML file that
+      plays a real recorded run back over its own timeline — play, pause, scrub, speed.
+      No server, no network, no credentials; share it by attaching the file.
+    </p>
     <p class="cta-note">
       <code>toy_calc</code> is a deterministic zero-API stand-in: the seed prompt scores
       <code>0.0</code>; the optimized prompt is gate-accepted and scores <code>1.0</code>

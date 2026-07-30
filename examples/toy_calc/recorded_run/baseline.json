@@ -1,0 +1,53 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "a1",
+        "reward": 0.0,
+        "feedback": "expected '7' but agent produced 'I think 3 + 4 is roughly some number.'; the prompt likely lacks an explicit instruction to compute and output only the number",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "a4",
+        "reward": 0.0,
+        "feedback": "expected '10' but agent produced 'I think 9 + 1 is roughly some number.'; the prompt likely lacks an explicit instruction to compute and output only the number",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 0.00039196014404296875
+  },
+  "best_id": "seed"
+}

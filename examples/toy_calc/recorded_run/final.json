@@ -1,0 +1,105 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 1.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "per_task": [
+      {
+        "task_id": "a7",
+        "reward": 1.0,
+        "feedback": "correct",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "a8",
+        "reward": 1.0,
+        "feedback": "correct",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 0.00043582916259765625
+  },
+  "best_id": "cand_0001",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "a7",
+        "reward": 0.0,
+        "feedback": "expected '12' but agent produced 'I think 7 + 5 is roughly some number.'; the prompt likely lacks an explicit instruction to compute and output only the number",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "a8",
+        "reward": 0.0,
+        "feedback": "expected '16' but agent produced 'I think 4 * 4 is roughly some number.'; the prompt likely lacks an explicit instruction to compute and output only the number",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 0.00037384033203125
+  },
+  "baseline_id": "seed",
+  "test_delta": 1.0
+}

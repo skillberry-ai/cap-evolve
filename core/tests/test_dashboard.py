@@ -5,6 +5,7 @@ redacted before they reach the artifact, and optional panels degrade silently.
 
 import html.parser
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -170,12 +171,17 @@ def test_render_html_self_contained_and_parseable():
         text = out.read_text(encoding="utf-8")
         # parses as HTML
         _parse_html(text)
-        # no external network resource (the only allowed http is the SVG XML namespace)
-        for marker in ('src="http', 'href="http', "<link", "cdn.", "fetch("):
+        # No external origin AT ALL. Shape-based, not a marker denylist: #120's CDN
+        # guard was a 5-host denylist that let fonts.bunny.net through, so ban the
+        # shape (any absolute http(s) URL) with a one-host allowlist. The replay
+        # artifact (#122) is this same renderer, so it is covered by construction.
+        hosts = set(re.findall(r"https?://([A-Za-z0-9.\-]+)", text))
+        assert hosts <= {"www.w3.org"}, f"dashboard reaches an external origin: {hosts}"
+        for marker in ("<link", "cdn.", "fetch(", "@import"):
             assert marker not in text, f"dashboard pulls an external resource: {marker}"
         # core panels present
         for panel in ("Summary", "Score over iterations", "Per-task pass/fail",
-                      "Lineage", "Candidates", "Annotations"):
+                      "Lineage", "Candidates", "Annotations", "Run replay"):
             assert panel in text, f"missing panel: {panel}"
 
 
