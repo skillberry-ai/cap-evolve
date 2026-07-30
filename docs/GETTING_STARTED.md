@@ -90,13 +90,23 @@ Live output adapts to the terminal it actually has. There are exactly five rungs
 | Rung | Detected by | Output |
 |---|---|---|
 | `full` | TTY, `TERM` not `dumb`/`unknown`, no `NO_COLOR` | ANSI colour + Unicode |
-| `plain` | TTY + `NO_COLOR` set | same text, zero escape bytes |
-| `dumb` | TTY + `TERM=dumb` / `unknown` | no colour, append-only lines |
+| `plain` | TTY + `NO_COLOR` present (any value, incl. empty) | same text, zero escape bytes |
+| `dumb` | TTY + `TERM=dumb` / `unknown`, no `FORCE_COLOR` | no colour, append-only lines |
 | `pipe` | not a TTY (redirect, CI) | plain lines, grep-clean logs |
 | `none` | stream missing/closed (`2>&-`) | nothing (following disables itself) |
 
-Nothing on the ladder repaints the screen or moves the cursor — output is append-only
-at every rung, so there is no live layout to overflow or duplicate on a resize.
+`NO_COLOR` is presence-based per [no-color.org](https://no-color.org): `export NO_COLOR`
+with no value demotes, same as `NO_COLOR=1`. `FORCE_COLOR` is the one override in the
+other direction, for a colour-capable terminal that reports `TERM=dumb` (some CI runners,
+`emacs -nw`); `NO_COLOR` still wins over it. `CI` is deliberately *not* a demotion signal —
+`isatty` already covers real CI, and demoting on it would break `docker run -t`.
+
+Nothing on the ladder repaints the screen or moves the cursor — output is append-only at
+every rung, so there is no live layout to overflow on a resize and no terminal width to
+budget. That is a deliberate scope reduction against issue #144's items 2 and 4 (height
+budget, width detection): both presuppose output that takes over the screen, and this
+does not. A future repainting view would need `dashboard._term_width` and that item
+re-opened.
 
 Under a non-UTF-8 stream (`PYTHONIOENCODING=ascii`, `LC_ALL=C`, a legacy Windows
 console) glyphs transliterate rather than crash or print mojibake: `±` → `+/-`,
@@ -108,16 +118,24 @@ An unhandled crash writes a **forensic log** and prints one line pointing at it:
 
 ```text
 cap-evolve run crashed: RuntimeError: optimizer died
-forensic log (redacted, safe to attach to a bug report): .capevolve/run_…/crash-20260130-140455.json
+forensic log (redacted, safe to attach to a bug report): .capevolve/run_…/crash-20260730-140455-8134-41207.json
 ```
 
 It records the version, argv, python/platform, the terminal rung and encoding, the
 traceback, and the last 25 events seen — enough to file a bug without reproducing it.
 It lands next to the run when there is one, else under
-`${XDG_CACHE_HOME:-~/.cache}/cap-evolve/crashes/`. The whole payload passes through the
-same secret redactor the dashboard uses, so it is safe to attach to an issue. A dying
-live view is handled the same way: the run continues, and the reason is on disk instead
-of vanishing.
+`${XDG_CACHE_HOME:-~/.cache}/cap-evolve/crashes/`, mode `0600`, with the oldest pruned
+beyond 50 files. The filename carries pid and thread id and is created with `O_EXCL`, so
+two handlers firing on the same failure in the same second each keep their own record
+instead of one truncating the other.
+
+The whole payload passes through the same secret redactor the dashboard uses. That
+redactor scrubs secret-looking *keys*, secret-shaped *values*, **and** the literal values
+of every env var in this process that looks like credential material regardless of what
+it was named — so a bare high-entropy token exported as `MODEL_ENDPOINT_SUFFIX` is masked
+too. Ctrl-C also writes a log (the exit code is unchanged). A dying live view is handled
+the same way: the run continues, the reason is on disk, and the final JSON on stdout
+gains `"follow": "stopped"` so automation can see it without parsing stderr.
 
 ## 5. Where to next
 

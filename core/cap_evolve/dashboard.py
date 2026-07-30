@@ -81,7 +81,7 @@ _SECRET_VALUE_RES = [
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),  # long base64
     re.compile(r"\b[0-9a-fA-F]{40,}\b"),          # long hex
     # GitHub PATs (classic + fine-grained) and UUID-shaped tokens — both are common
-    # credential shapes the length-based rules above miss. (Also landing via #193.)
+    # credential shapes that the length-based rules above miss.
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}\b"),
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
     re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
@@ -89,17 +89,54 @@ _SECRET_VALUE_RES = [
 ]
 
 
-def _env_secret_values() -> list[str]:
-    """The actual VALUES of secret-looking env vars in this process.
+def _looks_like_credential(value: str) -> bool:
+    """Is ``value`` credential *material*, judged only by its shape as a value?
 
-    Shape matching is a heuristic and always will be: a watsonx key, an opaque
-    session id or a bare high-entropy string has no recognizable shape. What we do
-    know for certain is the credential material this process was handed, so scrub
-    that literally — the only shape-independent defence. Longest first so a value
-    that contains another isn't half-masked. (Also landing via #193; identical hunk.)
+    Deliberately says nothing about the variable's NAME. A key-name heuristic is a
+    denylist wearing a different hat, and this epic has been bitten by that shape of
+    defence five times (#192, #209, #197, #210, and #215's own review): a bare
+    high-entropy secret exported as ``MODEL_ENDPOINT_SUFFIX`` matched no key regex and
+    no value regex, so it reached a file the docs call "safe to attach to a bug
+    report" verbatim.
+
+    A credential is an opaque single token: long, no whitespace, no path separator,
+    mixing lower/upper/digit. That excludes the env vars a crash log exists to show —
+    ``PATH``/``HOME``/``PWD`` (separators), ``TERM=screen-256color`` and ``LSCOLORS``
+    (no digit or no upper), ``LANG`` (too short) — while catching an opaque token
+    whatever it was named.
+
+    Over-redaction is the safe direction: a masked env value costs a line of
+    diagnostics, a leaked one costs a credential rotation.
+    """
+    if not 16 <= len(value) <= 512:
+        return False
+    if any(c.isspace() or c in "/\\" for c in value):
+        return False
+    return (any(c.islower() for c in value) and any(c.isupper() for c in value)
+            and any(c.isdigit() for c in value))
+
+
+def _env_secret_values() -> list[str]:
+    """The actual VALUES of this process's env vars that could be credentials.
+
+    Shape matching free text is a heuristic and always will be: a watsonx key, an
+    opaque session id or a bare high-entropy string has no recognizable shape. What we
+    do know for certain is the credential material this process was handed, so scrub
+    that literally — the only shape-independent defense. Longest first so a value
+    that contains another isn't half-masked.
+
+    Two admission rules, OR-ed: the variable is *named* like a secret
+    (``_key_is_secret`` — admits short values like ``Zx91Kk22PpQq`` that no
+    value-based floor can accept safely), OR the value *looks* like credential
+    material whatever it was named (``_looks_like_credential``). The second rule is
+    what makes this independent of both shape and key name.
+
+    # ponytail: the value floor is length + character-class mixing, not real Shannon
+    # entropy. Misses an all-lowercase 32-hex key not already caught by the
+    # ``[0-9a-fA-F]{40,}`` value rule; compute entropy if one ever shows up.
     """
     vals = {v for k, v in os.environ.items()
-            if v and len(v) >= 6 and _key_is_secret(k)}
+            if v and ((len(v) >= 6 and _key_is_secret(k)) or _looks_like_credential(v))}
     return sorted(vals, key=len, reverse=True)
 
 
@@ -108,6 +145,14 @@ def _env_secret_values() -> list[str]:
 _INLINE_KV_RE = re.compile(
     r"((?:[A-Za-z0-9_\-]*(?:api[_\-]?key|secret|token|password|credential|key)"
     r"[A-Za-z0-9_\-]*)\s*[:=]\s*)(\S+)", re.I)
+
+# ``--api-key VALUE`` — the normal CLI form, where the separator is a SPACE, not
+# ``=``. Only ``--flag``-shaped prefixes get the space treatment: widening
+# ``_INLINE_KV_RE`` to accept whitespace for bare words would mask the next word of
+# ordinary prose ("the api key is wrong" → "the api key «redacted» wrong").
+_FLAG_VALUE_RE = re.compile(
+    r"(--?[A-Za-z0-9_\-]*(?:api[_\-]?key|secret|token|password|credential|key)"
+    r"[A-Za-z0-9_\-]*\s+)(?!-)(\S+)", re.I)
 
 _REDACTED = "«redacted»"
 
@@ -118,7 +163,8 @@ def _key_is_secret(key: str) -> bool:
 
 
 def _scrub_value(val: str) -> str:
-    out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, val)
+    out = _FLAG_VALUE_RE.sub(lambda m: m.group(1) + _REDACTED, val)
+    out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, out)
     for rx in _SECRET_VALUE_RES:
         out = rx.sub(_REDACTED, out)
     # Shape-independent pass: literal credential values from this environment.
@@ -134,6 +180,11 @@ def redact(obj):
     - Dict values under a secret-looking key are replaced wholesale.
     - String values are scanned for secret-shaped tokens and masked in place.
     - Lists/tuples/dicts are walked recursively. Scalars pass through.
+    - In a list, an element FOLLOWING a secret-looking ``--flag`` is masked: an argv
+      is ``["--api-key", "VALUE"]``, and scrubbing each string in isolation can never
+      see that pair — the separator is list adjacency, not a character. Handled here
+      rather than at the ``sys.argv`` call site so every list that reaches an
+      artifact is covered, not just the one the bug was reported against.
 
     Pure, returns a new structure; the caller's object is untouched.
     """
@@ -146,7 +197,18 @@ def redact(obj):
                 out[k] = redact(v)
         return out
     if isinstance(obj, (list, tuple)):
-        return [redact(v) for v in obj]
+        items = list(obj)
+        out = []
+        mask_next = False
+        for v in items:
+            if mask_next and isinstance(v, str) and not v.startswith("-"):
+                out.append(_REDACTED)
+                mask_next = False
+                continue
+            mask_next = (isinstance(v, str) and v.startswith("-")
+                         and _key_is_secret(v.lstrip("-")))
+            out.append(redact(v))
+        return out
     if isinstance(obj, str):
         return _scrub_value(obj)
     return obj

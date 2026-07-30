@@ -118,6 +118,23 @@ def _safe_exc(e: BaseException) -> str:
     return eventstream.sanitize(redact(f"{type(e).__name__}: {e}"))
 
 
+def _with_follow_status(out: str, status: str | None) -> str:
+    """``out`` (the run's final JSON) with ``"follow": status`` folded into the SAME
+    object. Returns ``out`` untouched when there is nothing to report or it isn't a
+    single JSON object — stdout must stay exactly one parseable document (#217), so a
+    second object is never appended and unparseable output is never rewritten."""
+    if not status:
+        return out
+    try:
+        obj = json.loads(out)
+    except (json.JSONDecodeError, TypeError):
+        return out
+    if not isinstance(obj, dict):
+        return out
+    obj["follow"] = status
+    return json.dumps(obj, indent=2)
+
+
 def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
                     offset: int = 0):
     """Print live progress from ``events.jsonl`` on a daemon thread.
@@ -136,6 +153,12 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
         return None, None
 
     stop = threading.Event()
+    # Set if the follower dies before the run does. stderr already says so and a crash
+    # log already records it, but a script reading only stdout could not tell — so `run`
+    # folds this into its EXISTING final JSON object as "follow": "stopped". Never a
+    # second object on stdout: exactly one parseable JSON document is the contract
+    # (#217), and the exit code still answers "did the optimization succeed".
+    died = threading.Event()
     err = sys.stderr  # bind now: don't follow a stream reassigned mid-run
     # The ladder decision, made once, about the stream we actually write to.
     rung = eventstream.capability(err)
@@ -167,6 +190,7 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
         except Exception as e:  # noqa: BLE001 — observability must never break the run
             # ...but it must never go dark in silence either: say so, and leave a
             # forensic record so "the live view stopped" is diagnosable, not folklore.
+            died.set()
             log = eventstream.write_crash_log(
                 e, run_dir=(path.parent if path else None), recent=recent,
                 context={"where": "follow-thread", "terminal_rung": rung})
@@ -177,6 +201,7 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
 
     t = threading.Thread(target=worker, name="cap-evolve-follow", daemon=True)
     t.start()
+    t.died = died  # carried on the thread so callers need no extra return value
     return stop, t
 
 
@@ -491,6 +516,13 @@ def _cmd_run(argv):
             follow_thread.join(timeout=3.0)
         return code
 
+    def follow_status() -> str | None:
+        """``"stopped"`` if the live view died mid-run, else ``None``. Reported inside
+        the final JSON object so automation can detect a dead follower on stdout alone,
+        without an exit-code change (the run itself succeeded)."""
+        died = getattr(follow_thread, "died", None)
+        return "stopped" if died is not None and died.is_set() else None
+
     # 1) baseline (creates the run dir; capture its relative path)
     base_cmd = [py, skill_run("baseline"), "--base", base, "--project", project,
                 "--capability", cap_path, "--seed", str(spec.get("split_seed", 0)),
@@ -658,8 +690,9 @@ def _cmd_run(argv):
             return done(1)
         last = proc.stdout
 
-    print(last)
-    return done(0)
+    code = done(0)  # drain the follower FIRST: `died` is only final once it has joined
+    print(_with_follow_status(last, follow_status()))
+    return code
 
 
 def _cmd_dashboard(argv):
@@ -858,8 +891,22 @@ def main(argv=None) -> int:
         return 2
     try:
         return fn(argv[1:])
-    except (KeyboardInterrupt, SystemExit):
-        raise  # Ctrl-C / an explicit exit code is not a crash
+    except KeyboardInterrupt as e:
+        # #144 item 3 covers "crash/interrupt": an interrupt during a long run is exactly
+        # when the recent-event trace is wanted. Log it, then re-raise unchanged — the
+        # exit behaviour of Ctrl-C is not ours to redefine, and a failure to write the
+        # log must not turn a clean interrupt into a traceback.
+        try:
+            from . import eventstream
+            log = eventstream.write_crash_log(e, context={"where": f"cap-evolve {argv[0]}",
+                                                          "interrupted": True})
+            if log:
+                eventstream.emit(sys.stderr, f"interrupted — forensic log: {log}")
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+    except SystemExit:
+        raise  # an explicit exit code is not a crash
     except BaseException as e:  # noqa: BLE001 — #144: never exit with a bare traceback
         # A crash used to leave the user with a traceback and nothing on disk. Write a
         # redacted forensic record, point at it in ONE line, and exit non-zero.

@@ -533,6 +533,44 @@ def test_only_the_full_rung_gets_colour(monkeypatch):
     assert eventstream.use_color(_Tty()) is True
 
 
+def test_no_color_is_presence_based_and_force_color_can_override_dumb(monkeypatch):
+    """`export NO_COLOR` with no value is what a user types — presence demotes, per
+    no-color.org. And FORCE_COLOR is the only escape hatch in the "on" direction."""
+    monkeypatch.setenv("TERM", "xterm")
+    for value in ("1", "0", ""):     # "" was the hole: bool("") is False
+        monkeypatch.setenv("NO_COLOR", value)
+        assert eventstream.capability(_Tty()) == "plain", f"NO_COLOR={value!r}"
+    monkeypatch.delenv("NO_COLOR")
+    assert eventstream.capability(_Tty()) == "full"
+
+    monkeypatch.setenv("TERM", "dumb")
+    assert eventstream.capability(_Tty()) == "dumb"
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    assert eventstream.capability(_Tty()) == "full"
+    # "no colour" is the stronger request: NO_COLOR still wins over FORCE_COLOR.
+    monkeypatch.setenv("NO_COLOR", "")
+    assert eventstream.capability(_Tty()) == "dumb"
+
+
+def test_sanitize_strips_bidi_and_zero_width_code_points():
+    """The C0/C1 allowlist covers control BYTES; BiDi overrides are control CODE POINTS
+    and survived it. `admin<RLO>gnp.txt` renders as `admin` + reversed text \u2014 enough
+    to spoof a candidate id in a progress line (Trojan Source, CVE-2021-42574).
+
+    Built from chr()/escapes rather than literals: a test file full of real BiDi
+    overrides is itself a Trojan Source finding, and unreviewable besides.
+    """
+    rlo = "\u202e"
+    assert eventstream.sanitize(f"admin{rlo}gnp.txt") == "admingnp.txt"
+    suspects = [0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0x2028, 0x2029, 0xFEFF]
+    suspects += list(range(0x202A, 0x2030)) + list(range(0x2066, 0x206A))
+    for cp in suspects:
+        c = chr(cp)
+        assert c not in eventstream.sanitize(f"a{c}b"), f"U+{cp:04X} survived"
+    # ordinary text, including non-Latin scripts, is untouched
+    assert eventstream.sanitize("\u4e2d\u6587 caf\u00e9 \u2713 \u0394") == "\u4e2d\u6587 caf\u00e9 \u2713 \u0394"
+
+
 def test_every_rung_below_full_emits_zero_escape_bytes(monkeypatch):
     """The whole point of the ladder: only rung 1 may put escapes on the wire."""
     ev = {"kind": "step", "candidate": "c1", "accept": True, "val": 0.9}
@@ -624,35 +662,130 @@ def test_crash_log_keeps_only_the_recent_tail(tmp_path):
 
 
 def test_crash_log_leaks_no_secret_of_any_shape(tmp_path, monkeypatch):
-    """Multi-shape canaries: a bare high-entropy value, a UUID, a ghp_ PAT and a
-    watsonx-style key must ALL be gone. Shape-matching alone leaked a plaintext key
-    once (#190/#193) — this asserts the env-value pass too."""
+    """Multi-shape canaries under BOTH secret-looking and innocent key names.
+
+    The methodology matters as much as the assertion. The original version of this test
+    planted every canary under `OPENAI_API_KEY` / `WATSONX_APIKEY` — keys the redactor's
+    key regex already matched — so it only ever exercised the case that already worked,
+    and passed while a bare token under `MODEL_ENDPOINT_SUFFIX` leaked verbatim. Same
+    defect pattern as #193's original canary (an `sk-` prefix, i.e. the one shape
+    `redact` already knew). So: innocent key names are first-class canaries here.
+    """
     canaries = {
+        # secret-LOOKING key names — the case the key regex already covered
         "OPENAI_API_KEY": "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
         "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
         "SOME_SESSION_ID": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
         "WATSONX_APIKEY": "hIQ7bLpZ2mNvXk3TuWq9",        # bare, no recognisable shape
         "RITS_API_KEY": "Zx91Kk22PpQq",                   # short + shapeless
+        # INNOCENT key names — no key regex matches these. A value-based rule must.
+        "MODEL_ENDPOINT_SUFFIX": "hIQ7bLpZ2mNvXk3TuWq9x",   # the reviewer's probe
+        "DEPLOYMENT_ID": "Kf83Nq02WwZz71Pl44Bx",
+        "MY_FAVOURITE_STRING": "aB3dEf6hIj9lMn2pQr5t",
     }
     for k, v in canaries.items():
         monkeypatch.setenv(k, v)
-    # Every route into the log: argv, the exception text, an event payload, context.
-    monkeypatch.setattr(sys, "argv", ["cap-evolve", "run", f"--key={canaries['RITS_API_KEY']}"])
+    # Every route into the log: argv (=-joined AND space-separated), the exception text,
+    # an event payload, context.
+    monkeypatch.setattr(sys, "argv", [
+        "cap-evolve", "run", f"--key={canaries['RITS_API_KEY']}",
+        "--api-key", canaries["MODEL_ENDPOINT_SUFFIX"],    # space-separated form
+        "--token", canaries["DEPLOYMENT_ID"],
+    ])
     try:
         raise RuntimeError(f"optimizer said: OPENAI_API_KEY={canaries['OPENAI_API_KEY']} "
-                           f"token {canaries['GITHUB_TOKEN']}")
+                           f"token {canaries['GITHUB_TOKEN']} "
+                           f"bare={canaries['MY_FAVOURITE_STRING']}")
     except RuntimeError as e:
         log = eventstream.write_crash_log(
             e, run_dir=tmp_path,
             recent=[{"kind": "optimizer_error",
                      "error": f"auth failed with {canaries['WATSONX_APIKEY']} / "
-                              f"{canaries['SOME_SESSION_ID']}"}],
+                              f"{canaries['SOME_SESSION_ID']} / "
+                              f"{canaries['MODEL_ENDPOINT_SUFFIX']}"}],
             context={"env_dump": " ".join(canaries.values())})
     raw = log.read_text()
     for name, value in canaries.items():
         assert value not in raw, f"{name} leaked into the crash log"
     assert raw.count("redacted") >= 5       # each canary masked, not silently dropped
     assert "optimizer said" in raw          # still diagnosable
+
+
+def test_the_user_visible_crash_line_leaks_no_innocently_named_secret(monkeypatch, capsys):
+    """The stderr line is the second leak vector and needs the same innocent-key probe:
+    it went through the same redactor, so it leaked the same value."""
+    from cap_evolve import cli as _cli
+    bare = "hIQ7bLpZ2mNvXk3TuWq9x"
+    monkeypatch.setenv("MODEL_ENDPOINT_SUFFIX", bare)
+    monkeypatch.setitem(_cli.COMMANDS, "version", lambda _a: (_ for _ in ()).throw(
+        RuntimeError(f"renderer blew up bare={bare}")))
+    assert _cli.main(["version"]) == 1
+    err = capsys.readouterr().err
+    assert bare not in err, "innocently-named secret leaked onto stderr"
+    assert "renderer blew up" in err
+
+
+def test_env_values_that_are_not_credentials_survive_redaction():
+    """The value-based rule must not eat the diagnostics a crash log exists to carry."""
+    from cap_evolve.dashboard import _looks_like_credential
+    for benign in ("/usr/local/bin:/usr/bin", "xterm-256color", "en_US.UTF-8",
+                   "/Users/someone/Documents/capevo", "C", "dumb",
+                   "Python 3.14.2 (main, Jan 1 2026)", "true", "1"):
+        assert not _looks_like_credential(benign), f"{benign!r} would be over-redacted"
+    for secret in ("hIQ7bLpZ2mNvXk3TuWq9x", "Kf83Nq02WwZz71Pl44Bx",
+                   "ghp_ABCDEFGHIJKLMNOP0123456789"):
+        assert _looks_like_credential(secret), f"{secret!r} would leak"
+
+
+def test_space_separated_secret_flags_are_masked():
+    """`--api-key VALUE` is the normal CLI form; element-wise scrubbing could never see
+    the pair, because the separator is list adjacency, not a character."""
+    from cap_evolve.dashboard import redact, _REDACTED
+    assert redact(["--api-key", "hIQ7bLpZ2mNvXk3TuWq9"]) == ["--api-key", _REDACTED]
+    assert redact(["--token", "abc123"]) == ["--token", _REDACTED]
+    assert redact(["--api-key=hIQ7bLpZ2mNvXk3TuWq9"]) == [f"--api-key={_REDACTED}"]
+    # in prose, too
+    assert "hIQ7bLpZ2mNvXk3TuWq9" not in redact("ran with --api-key hIQ7bLpZ2mNvXk3TuWq9 now")
+    # a following FLAG is not a value, and an innocent flag's value is left alone
+    assert redact(["--api-key", "--verbose"]) == ["--api-key", "--verbose"]
+    assert redact(["--project", "my-proj"]) == ["--project", "my-proj"]
+    # `tokens` (the cost metric) is not a secret flag — must not eat the count
+    assert redact(["--tokens", "4200"]) == ["--tokens", "4200"]
+
+
+def test_two_crash_handlers_do_not_overwrite_each_other(tmp_path):
+    """main()'s handler and the follow thread's fire on the SAME failure, in the same
+    second. Both records must survive: that evidence is the whole point of the feature."""
+    import threading
+    paths = []
+
+    def crash(tag):
+        try:
+            raise RuntimeError(f"secret-{tag}")
+        except RuntimeError as e:
+            paths.append(eventstream.write_crash_log(
+                e, run_dir=tmp_path, context={"where": tag}))
+
+    t = threading.Thread(target=crash, args=("follow-thread",))
+    t.start()
+    crash("main")
+    t.join()
+    assert len(paths) == 2 and all(p is not None for p in paths)
+    assert paths[0] != paths[1], "one handler overwrote the other's log"
+    wheres = {json.loads(p.read_text())["context"]["where"] for p in paths}
+    assert wheres == {"main", "follow-thread"}
+    assert len(list(tmp_path.glob("crash-*.json"))) == 2
+
+
+def test_crash_logs_are_owner_only_and_pruned(tmp_path):
+    """Redacted still means argv, cwd, platform and a traceback — not world-readable,
+    and not unbounded."""
+    log = _crash_log(tmp_path)
+    assert log.stat().st_mode & 0o777 == 0o600
+    for i in range(eventstream.CRASH_KEEP + 12):
+        (tmp_path / f"crash-2026010{i // 10}-0000{i % 10:02d}-1-1.json").write_text("{}")
+    _crash_log(tmp_path)
+    assert len(list(tmp_path.glob("crash-*.json"))) <= eventstream.CRASH_KEEP
 
 
 def test_crash_log_falls_back_to_the_cache_dir(tmp_path, monkeypatch):
@@ -702,6 +835,39 @@ def test_keyboard_interrupt_is_not_treated_as_a_crash(monkeypatch):
                         lambda _a: (_ for _ in ()).throw(KeyboardInterrupt()))
     with pytest.raises(KeyboardInterrupt):
         _cli.main(["version"])
+
+
+def test_follow_status_folds_into_the_one_json_object():
+    """A dead follower must be visible on stdout alone — but stdout stays EXACTLY one
+    parseable JSON object (#217), so the key goes in the existing one."""
+    from cap_evolve.cli import _with_follow_status
+    out = json.dumps({"run_dir": ".capevolve/run_x", "test_reward": 1.0}, indent=2)
+    assert json.loads(_with_follow_status(out, None)) == json.loads(out)  # no key when alive
+    d = json.loads(_with_follow_status(out, "stopped"))                   # still ONE object
+    assert d["follow"] == "stopped" and d["test_reward"] == 1.0
+    # non-JSON or non-object stdout is never rewritten, and never gets a second document
+    assert _with_follow_status("not json", "stopped") == "not json"
+    assert _with_follow_status("[1, 2]", "stopped") == "[1, 2]"
+
+
+def test_keyboard_interrupt_writes_a_log_without_changing_the_exit(monkeypatch, tmp_path):
+    """#144 item 3 covers interrupts too — but Ctrl-C's exit behaviour is not ours."""
+    from cap_evolve import cli as _cli
+    import pytest
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    import importlib
+    importlib.reload(eventstream)
+    try:
+        monkeypatch.setitem(_cli.COMMANDS, "version",
+                            lambda _a: (_ for _ in ()).throw(KeyboardInterrupt()))
+        with pytest.raises(KeyboardInterrupt):
+            _cli.main(["version"])
+        logs = list(eventstream.CRASH_DIR.glob("crash-*.json"))
+        assert logs, "an interrupt during a long run leaves no recent-event trace"
+        assert json.loads(logs[0].read_text())["context"]["interrupted"] is True
+    finally:
+        monkeypatch.delenv("XDG_CACHE_HOME")
+        importlib.reload(eventstream)
 
 
 def test_tail_ladder_flag_reports_the_rung(capsys):

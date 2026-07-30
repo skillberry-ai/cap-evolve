@@ -65,6 +65,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Callable, Iterator
@@ -204,9 +205,11 @@ def capability(stream) -> str:
 
     ``"full"``  real TTY, ``TERM`` is a normal terminal, no ``NO_COLOR``
                 → ANSI colour + Unicode glyphs.
-    ``"plain"`` real TTY but ``NO_COLOR`` is set
+    ``"plain"`` real TTY but ``NO_COLOR`` is *present* in the environment (any value,
+                including empty — presence-based per https://no-color.org)
                 → same text, zero escape bytes.
-    ``"dumb"``  real TTY but ``TERM`` is ``dumb`` or ``unknown``
+    ``"dumb"``  real TTY but ``TERM`` is ``dumb`` or ``unknown``, and ``FORCE_COLOR``
+                is not set
                 → no colour, and never assume the terminal can be addressed
                   (no cursor moves, no repaint — append-only lines). An *unset*
                   ``TERM`` is deliberately NOT demoted: it is normal on a real TTY
@@ -231,9 +234,20 @@ def capability(stream) -> str:
         return "pipe"
     if not tty:
         return "pipe"
+    no_color = "NO_COLOR" in os.environ
     if os.environ.get("TERM", "").lower() in ("dumb", "unknown"):
+        # FORCE_COLOR is the only override in the "on" direction: some CI runners and
+        # `emacs -nw` report TERM=dumb on a terminal that renders ANSI fine, and
+        # without it the ladder can only ever be forced down. NO_COLOR still wins —
+        # "no colour" is a stronger request than "colour is possible".
+        if os.environ.get("FORCE_COLOR") and not no_color:
+            return "full"
         return "dumb"
-    if os.environ.get("NO_COLOR"):
+    if no_color:
+        # Presence-based, per https://no-color.org: `export NO_COLOR` with no value is
+        # what a user actually types, so an empty-but-set value demotes too. (The spec
+        # excludes "", but NO_COLOR=0 already demoted here, and treating "" as "colour
+        # please" while "0" means "no colour" was the inconsistency, not the spec.)
         return "plain"
     return "full"
 
@@ -292,15 +306,11 @@ def emit(stream, line: str) -> bool:
         return False
     if not _encodable(stream, line):
         line = ascii_fallback(line)
-    for text in (line, ascii_fallback(line)):
-        try:
-            print(text, file=stream, flush=True)
-            return True
-        except UnicodeEncodeError:
-            continue
-        except Exception:  # noqa: BLE001 — stream closed mid-run; nothing to salvage
-            return False
-    return False
+    try:
+        print(line, file=stream, flush=True)
+        return True
+    except Exception:  # noqa: BLE001 — stream closed mid-run; nothing to salvage
+        return False
 
 
 _CODES = {"dim": "2", "bold": "1", "green": "32", "red": "31", "yellow": "33", "cyan": "36"}
@@ -322,13 +332,25 @@ def colorize(text: str, style: str, *, enabled: bool) -> str:
 _CTRL = {c: None for c in range(0x20) if c != 0x09}
 _CTRL[0x7F] = None                       # DEL
 _CTRL.update({c: None for c in range(0x80, 0xA0)})  # C1, incl. 0x9B (8-bit CSI)
+# The rules above are an allowlist over control BYTES; these are control CODE POINTS
+# (Unicode Cf/Zl/Zp) that survived it. They cannot drive the terminal, but a BiDi
+# override (U+202E) renders "admin<RLO>gnp.txt" as "admin" followed by reversed text —
+# enough to spoof a candidate id or a file path in a progress line (Trojan Source,
+# CVE-2021-42574). Named by code point, never written as a literal, so this file stays
+# greppable and does not itself trip a Trojan Source scanner. LS/PS are here too:
+# harmless in a terminal, hostile to the JSON/HTML this same text also lands in.
+_CTRL.update({c: None for c in (0x200B, 0x200C, 0x200D, 0x200E, 0x200F,
+                                *range(0x202A, 0x2030), *range(0x2066, 0x206A),
+                                0x2028, 0x2029, 0xFEFF)})
 _CTRL[0x0A] = _CTRL[0x0D] = "⏎"
 
 
 def sanitize(text: str) -> str:
     """Strip control characters / ESC sequences so no event value can drive the
-    terminal or forge extra output lines. Applied by :func:`format_event` to the
-    whole finished line, so every field and every future event kind is covered."""
+    terminal, forge extra output lines, or spoof text by reordering it. Covers C0/C1
+    control bytes, DEL, and the Unicode ``Cf``/``Zl``/``Zp`` code points (BiDi
+    overrides, zero-widths, LS/PS). Applied by :func:`format_event` to the whole
+    finished line, so every field and every future event kind is covered."""
     return str(text).translate(_CTRL)
 
 
@@ -544,7 +566,11 @@ def write_crash_log(exc: BaseException | None, *, run_dir=None,
         "terminal": {
             "stdout": capability(sys.stdout), "stderr": capability(sys.stderr),
             "TERM": os.environ.get("TERM", ""),
-            "NO_COLOR": bool(os.environ.get("NO_COLOR")),
+            # Raw string, not bool(): the empty-vs-unset distinction is a ladder bug
+            # of its own (a `bool` reported False for `NO_COLOR=`), so record what was
+            # actually set and let the report be self-diagnosing.
+            "NO_COLOR": os.environ.get("NO_COLOR"),
+            "FORCE_COLOR": os.environ.get("FORCE_COLOR"),
             "stdout_encoding": getattr(sys.stdout, "encoding", None),
             "PYTHONIOENCODING": os.environ.get("PYTHONIOENCODING", ""),
             "locale": os.environ.get("LC_ALL") or os.environ.get("LANG") or "",
@@ -566,16 +592,48 @@ def write_crash_log(exc: BaseException | None, *, run_dir=None,
     except Exception:  # noqa: BLE001 — if redaction is unavailable, do NOT write
         return None    # a possibly-secret-bearing file. No log beats a leaked key.
 
-    stamp = time.strftime("%Y%m%d-%H%M%S")
+    # The pid+thread suffix is load-bearing, not decoration: a crash that kills the run
+    # usually kills the follow thread too, so main()'s handler and the follower's fire
+    # on the SAME failure inside the same second. With a second-resolution name and
+    # write_text (truncate), the second silently destroyed the first — a forensic tool
+    # losing exactly the evidence it exists to keep. "x" mode makes a surviving
+    # collision impossible rather than merely unlikely.
+    stamp = (f"{time.strftime('%Y%m%d-%H%M%S')}-{os.getpid()}"
+             f"-{threading.get_ident() % 100000:05d}")
     for target in _crash_targets(run_dir, stamp):
-        try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(payload, indent=2, default=str) + "\n",
-                              encoding="utf-8")
-            return target
-        except OSError:
-            continue  # read-only run dir → fall through to the cache dir
+        for attempt in range(8):
+            path = (target if not attempt
+                    else target.with_name(f"{target.stem}-{attempt}.json"))
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                # 0o600: redacted still means argv, cwd, platform and a traceback. The
+                # opener sets the mode before any byte lands, so umask can't widen it.
+                with open(path, "x", encoding="utf-8",
+                          opener=lambda p, f: os.open(p, f, 0o600)) as fh:
+                    fh.write(json.dumps(payload, indent=2, default=str) + "\n")
+                _prune_crash_logs(path.parent)
+                return path
+            except FileExistsError:
+                continue  # same pid+thread+second twice → next suffix
+            except OSError:
+                break     # read-only run dir → fall through to the cache dir
     return None
+
+
+CRASH_KEEP = 50
+
+
+def _prune_crash_logs(directory: Path, keep: int = CRASH_KEEP) -> None:
+    """Drop the oldest crash logs beyond ``keep``. Never raises: pruning is hygiene, and
+    a crash reporter that dies while tidying up is worse than a full directory.
+
+    Sorted by name, which is chronological — the stamp leads with the timestamp.
+    """
+    try:
+        for stale in sorted(directory.glob("crash-*.json"))[:-keep]:
+            stale.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _crash_targets(run_dir, stamp: str):
