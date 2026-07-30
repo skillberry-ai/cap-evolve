@@ -1,0 +1,32 @@
+# cap-evolve benchmark manifest — the DECLARATIVE half of a benchmark.
+# The only code is target.py's run(task, ctx, *, seed=0). Flat keys only, so the
+# zero-dependency spec reader can parse it.
+name: toy_calc
+description: Arithmetic accuracy of a deterministic zero-API stand-in agent whose system prompt is optimized.
+
+# --- dataset ---------------------------------------------------------------
+tasks_file: tasks.jsonl
+id_field: id
+input_field: input
+target_field: target
+
+# --- scoring ---------------------------------------------------------------
+scoring: exact                 # exact | contains | regex | numeric | custom
+metric_direction: higher
+
+# --- what is optimized -----------------------------------------------------
+capability_path: seed_capability
+target_module: target.py
+
+# --- splits (seeded once; test is sealed) ----------------------------------
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: ""
+num_trials: 1                  # the stand-in is deterministic
+
+# --- protected paths (#142 tamper guard hashes exactly these) --------------
+protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl]
+
+verified: false                # `cap-evolve benchmark verify` records the evidence

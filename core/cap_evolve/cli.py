@@ -5,12 +5,11 @@ manifest) and runs their ``scripts/run.py`` in the order a ``capevolve.yaml`` sp
 declares, threading the run dir between them. The honesty guarantees live in
 ``cap_evolve`` (splits/gate/seal); ``cap-evolve`` just orchestrates.
 
-Subcommands:
-    cap-evolve version
-    cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
-    cap-evolve check   [project_dir]
-    cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
-                       [--resume [--run-ts TS]]  resume an interrupted run in place
+The subcommand list is ``COMMANDS`` and nothing else — ``cap-evolve --help`` renders it
+from there plus each handler's first docstring line, and each handler owns its own
+``--help``. There is deliberately no second copy of the list here or in ``main()``:
+five parallel branches adding subcommands all conflicted on that literal usage string,
+and a stale copy makes the documented-CLI test pass vacuously.
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -46,20 +45,80 @@ def _find_skills_dir() -> Path | None:
 
 
 def _cmd_version(argv):
+    """Print the installed cap-evolve version as JSON."""
     print(json.dumps({"cap-evolve": __version__}))
     return 0
 
 
 def _cmd_splits(argv):
+    """Compute the seeded train/val/test split for a set of task ids."""
     from .__main__ import _cmd_splits as f
     return f(argv)
 
 
 def _cmd_check(argv):
+    """Verify a project's adapter is fully implemented and deterministic."""
     project = Path(argv[0]) if argv else Path(".capevolve/project")
     rep = run_check(project)
     print(json.dumps(rep.to_dict(), indent=2))
     return 0 if rep.ok else 1
+
+
+def _cmd_benchmark(argv):
+    """Manage the benchmark zoo: list | add | verify a declarative benchmark."""
+    import argparse
+
+    from . import zoo
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve benchmark", description=_cmd_benchmark.__doc__,
+        epilog=("examples:\n"
+                "  cap-evolve benchmark list\n"
+                "  cap-evolve benchmark add my_bench --description 'what it measures'\n"
+                "  cap-evolve benchmark add my_bench --from-zoo toy_calc\n"
+                "  cap-evolve benchmark add my_bench --refresh   # regen project from manifest\n"
+                "  cap-evolve benchmark verify my_bench\n"),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="action", required=True)
+    sub.add_parser("list", help="list the zoo with each entry's verified status")
+    a = sub.add_parser("add", help="scaffold a draft benchmark (manifest + one code file)")
+    a.add_argument("name", help="benchmark name, or a path to create it at")
+    a.add_argument("--description", default="", help="one line: what it measures")
+    a.add_argument("--from-zoo", default="", help="copy an existing zoo benchmark")
+    a.add_argument("--tasks", type=int, default=8, help="placeholder task count (default 8)")
+    a.add_argument("--refresh", action="store_true",
+                   help="regenerate the derived project files from an existing manifest")
+    v = sub.add_parser("verify", help="check gate + REAL smoke eval, then stamp verified.json")
+    v.add_argument("name", help="zoo name or path to the benchmark dir")
+    v.add_argument("--smoke-tasks", type=int, default=0,
+                   help="cap the smoke eval at N val tasks (0 = the whole val split)")
+    v.add_argument("--no-stamp", action="store_true", help="do not write verified.json")
+    args = p.parse_args(argv)
+
+    try:
+        if args.action == "list":
+            print(json.dumps({"zoo": str(zoo.zoo_dir()), "benchmarks": zoo.index()}, indent=2))
+            return 0
+        if args.action == "add":
+            dest = Path(args.name)
+            if not args.name.strip("./").count("/") and not dest.exists() and not args.refresh:
+                dest = Path.cwd() / args.name
+            info = zoo.add(dest, name=Path(args.name).name, description=args.description,
+                           from_zoo=args.from_zoo, n_tasks=args.tasks, refresh=args.refresh)
+            info["next"] = f"cap-evolve benchmark verify {info['dir']}"
+            print(json.dumps(info, indent=2))
+            return 0
+        bench = zoo.resolve(args.name)
+        rep = zoo.verify(bench, smoke_tasks=args.smoke_tasks)
+        out = rep.to_dict()
+        if not args.no_stamp:
+            out["stamp"] = str(zoo.stamp(bench, rep))
+        print(json.dumps(out, indent=2))
+        return 0 if rep.ok else 1
+    except zoo.BenchmarkError as e:
+        # stdout stays exactly one JSON object, even on the error path.
+        print(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        return 1
 
 
 # Old hill-climb skill names → (skill, focus). The three byte-identical clones are
@@ -95,6 +154,7 @@ def _resolve_skills(skills_dir: Path) -> dict:
 
 
 def _cmd_run(argv):
+    """Sequence a whole optimization run: baseline -> algorithm -> sealed test -> report."""
     import argparse
     import subprocess
     from .specfile import read_yaml
@@ -619,13 +679,23 @@ COMMANDS = {
     "run": _cmd_run,
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
+    "benchmark": _cmd_benchmark,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
+        # GENERATED from COMMANDS + each handler's docstring. There is deliberately no
+        # second literal copy of the subcommand list: five parallel branches adding a
+        # subcommand all conflicted on that string, and a stale listing breaks the
+        # "every documented `cap-evolve <word>` exists" test (#203/#214).
+        print("usage: cap-evolve {" + "|".join(COMMANDS) + "} [args]\n", file=sys.stderr)
+        for name, fn in COMMANDS.items():
+            doc = ((fn.__doc__ or "").strip().splitlines() or [""])[0]
+            print(f"  {name:<10} {doc}", file=sys.stderr)
+        print("\nrun `cap-evolve <command> --help` for a command's own options.",
+              file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:

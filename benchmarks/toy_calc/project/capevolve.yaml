@@ -1,0 +1,25 @@
+# GENERATED from benchmark.yaml by `cap-evolve benchmark add` — edit the
+# manifest and re-run `cap-evolve benchmark add --refresh`, not this file.
+capabilities: [system-prompt]
+capability_path: seed_capability
+actions: [edit]
+optimizer_skill: mock
+optimizer_model: ""
+algorithm_skill: hill-climb
+algorithm_focus: all
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: ""
+num_trials: 1
+metric_directions: [higher]
+gate_mode: paired
+gate_k_se: 1.0
+max_iterations: 5
+stall: 2
+store: copy
+# Declared by the manifest; #142's tamper guard hashes exactly these at baseline
+# and re-hashes them after every optimizer step.
+protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl]

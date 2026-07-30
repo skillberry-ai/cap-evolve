@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "at": "2026-07-30T10:29:22+00:00",
+  "cap_evolve": "0.1.0",
+  "val_reward": 0.0,
+  "n_tasks": 12,
+  "splits": {
+    "train": 6,
+    "val": 3,
+    "test": 3
+  },
+  "steps": [
+    "manifest parsed + validated",
+    "dataset loaded through the adapter: 12 task(s)",
+    "cap-evolve check executed on the generated project",
+    "splits computed: {'train': 6, 'val': 3, 'test': 3}",
+    "REAL smoke eval: 3 val task(s) x 2 passes through live() -> run_target() -> score()",
+    "protected paths declared + resolved: ['adapters', 'benchmark.yaml', 'target.py', 'tasks.jsonl']"
+  ],
+  "problems": [],
+  "dataset_sha256": "8e7d164f1d3f7440d86a604881006d3112cf055f6b7b3851a0408df5a29039a6"
+}

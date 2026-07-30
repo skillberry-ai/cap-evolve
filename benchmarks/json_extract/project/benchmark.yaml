@@ -1,0 +1,31 @@
+# cap-evolve benchmark manifest — the DECLARATIVE half of a benchmark.
+# The only code is target.py (run + a custom score). Flat keys only.
+name: json_extract
+description: Structured-JSON extraction accuracy (per-field partial credit) for a deterministic zero-API extractor whose prompt is optimized.
+
+# --- dataset ---------------------------------------------------------------
+tasks_file: tasks.jsonl
+id_field: id
+input_field: input
+target_field: target
+
+# --- scoring ---------------------------------------------------------------
+scoring: custom                # per-field partial credit lives in target.py:score
+metric_direction: higher
+
+# --- what is optimized -----------------------------------------------------
+capability_path: seed_capability
+target_module: target.py
+
+# --- splits (seeded once; test is sealed) ----------------------------------
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: ""
+num_trials: 1
+
+# --- protected paths (#142 tamper guard hashes exactly these) --------------
+protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl]
+
+verified: false

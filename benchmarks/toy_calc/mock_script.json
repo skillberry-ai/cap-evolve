@@ -1,0 +1,5 @@
+{
+  "edits": [
+    {"file": "prompt.txt", "op": "ensure_contains", "text": "\n[CALC] Compute the arithmetic expression exactly and output ONLY the resulting number."}
+  ]
+}

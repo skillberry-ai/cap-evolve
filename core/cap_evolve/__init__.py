@@ -23,6 +23,7 @@ from .splits import Splits, TestSealError, make_splits
 from .stats import aggregate, bootstrap_ci, combined_stderr, mean, pass_at_k, pass_k, stderr
 from .trials import run_trials_pool
 from .types import Candidate, Rollout, Score, Task
+from .zoo import BenchmarkError, ManifestAdapter
 
 __version__ = "0.1.0"
 
@@ -59,5 +60,7 @@ __all__ = [
     "Rollout",
     "Score",
     "Task",
+    "BenchmarkError",
+    "ManifestAdapter",
     "__version__",
 ]

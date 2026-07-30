@@ -21,6 +21,34 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Benchmark zoo + `cap-evolve benchmark add|verify|list` + a declarative manifest**
+  (#141). Onboarding a benchmark no longer means hand-writing a `CapabilityAdapter`
+  subclass and pruning a ~100-line `capevolve.yaml`. Comparing the two generic bundled
+  templates showed what actually repeats — module preamble, the dataset→`Task` loop, the
+  infra-error branch of `score`, the match helper, the `Score(...)` construction, and
+  nearly the whole spec — so `benchmark.yaml` declares that, and `target.py` keeps the
+  one thing that is genuinely per-benchmark: `run(task, ctx, *, seed=0)`. There is
+  deliberately no config language for `run()`. Measured on the same benchmark
+  (`toy_calc`): **78 → 36 hand-authored lines (−54%)**; `adapters/adapter.py` and
+  `capevolve.yaml` are generated (0 hand-authored). `scoring: custom` keeps a bespoke
+  predicate as code (see the new `json_extract` entry's per-field partial credit).
+  `benchmarks/` is the curated, verifier-gated library; both bundled entries are
+  zero-API and run end to end to a sealed test number.
+  `cap-evolve benchmark verify` **executes** the benchmark rather than parsing its
+  manifest: the real `cap-evolve check` gate, a dataset load through the real adapter,
+  the seeded split plus the honest-gate floor (`val >= MIN_VAL_TASKS` + a non-empty
+  sealed test split, so a 3-task dataset fails at verify rather than mid-run inside
+  `gate.decide`), and a **real zero-API smoke eval** — every val task through `live()`
+  → `run_target()` → `score()`, twice, comparing rollout fingerprints and rewards,
+  which is what catches a non-deterministic `run_target()` (`check` never runs the
+  target). `verified.json` records the measured reward, split sizes and dataset
+  SHA-256; `benchmark list` reads that stamp from disk, not the manifest's `verified:`
+  flag. A zoo entry keeps the manifest, scorer and dataset **inside** the project dir
+  so #142's tamper guard covers them by construction (a grader at the benchmark root
+  is declared-but-unprotected). `cap-evolve --help` now generates the subcommand
+  listing from `COMMANDS` + handler docstrings instead of a literal usage string that
+  goes stale. Docs: `docs/BENCHMARK_ZOO.md`, `benchmarks/README.md`.
+
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

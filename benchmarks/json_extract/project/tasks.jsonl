@@ -1,0 +1,12 @@
+{"id": "x01", "input": "Ada Lovelace was born in London in 1907 and later worked on compilers.", "target": "{\"city\": \"London\", \"name\": \"Ada Lovelace\", \"year\": 1907}"}
+{"id": "x02", "input": "Grace Hopper was born in Baltimore in 1914 and later worked on compilers.", "target": "{\"city\": \"Baltimore\", \"name\": \"Grace Hopper\", \"year\": 1914}"}
+{"id": "x03", "input": "Alan Turing was born in Maida Vale in 1921 and later worked on compilers.", "target": "{\"city\": \"Maida Vale\", \"name\": \"Alan Turing\", \"year\": 1921}"}
+{"id": "x04", "input": "Katherine Johnson was born in Hampton in 1928 and later worked on compilers.", "target": "{\"city\": \"Hampton\", \"name\": \"Katherine Johnson\", \"year\": 1928}"}
+{"id": "x05", "input": "Barbara Liskov was born in New York in 1935 and later worked on compilers.", "target": "{\"city\": \"New York\", \"name\": \"Barbara Liskov\", \"year\": 1935}"}
+{"id": "x06", "input": "Edsger Dijkstra was born in Rotterdam in 1942 and later worked on compilers.", "target": "{\"city\": \"Rotterdam\", \"name\": \"Edsger Dijkstra\", \"year\": 1942}"}
+{"id": "x07", "input": "Margaret Hamilton was born in Paris in 1949 and later worked on compilers.", "target": "{\"city\": \"Paris\", \"name\": \"Margaret Hamilton\", \"year\": 1949}"}
+{"id": "x08", "input": "Donald Knuth was born in Lansing in 1956 and later worked on compilers.", "target": "{\"city\": \"Lansing\", \"name\": \"Donald Knuth\", \"year\": 1956}"}
+{"id": "x09", "input": "Radia Perlman was born in Portsmouth in 1903 and later worked on compilers.", "target": "{\"city\": \"Portsmouth\", \"name\": \"Radia Perlman\", \"year\": 1903}"}
+{"id": "x10", "input": "Leslie Lamport was born in Brooklyn in 1910 and later worked on compilers.", "target": "{\"city\": \"Brooklyn\", \"name\": \"Leslie Lamport\", \"year\": 1910}"}
+{"id": "x11", "input": "Frances Allen was born in Peru in 1917 and later worked on compilers.", "target": "{\"city\": \"Peru\", \"name\": \"Frances Allen\", \"year\": 1917}"}
+{"id": "x12", "input": "Ken Thompson was born in New Orleans in 1924 and later worked on compilers.", "target": "{\"city\": \"New Orleans\", \"name\": \"Ken Thompson\", \"year\": 1924}"}
