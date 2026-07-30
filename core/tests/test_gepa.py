@@ -292,14 +292,17 @@ def test_scratch_ignores_are_one_shared_definition():
     assert NON_CAPABILITY_NAMES == scratch | set(LEGACY_SCRATCH_NAMES) | {
         "INSTRUCTIONS.md", "PROCESS.md"}
     # The DESTRUCTIVE consumer takes the live-writer subset; every read-side FILTER
-    # takes the whole union, so none of them can desync again.
+    # takes the whole union, so none of them can desync again. Superset, not equality:
+    # a filter may add its own extra read-context names (e.g. the optimizer-context
+    # INJECTED_NAMES) — what must never happen is one of them DROPPING a shared name.
     assert scratch <= set(harness._SNAPSHOT_IGNORE)
     for name, have in (("cache._IGNORE_NAMES", cache._IGNORE_NAMES),
                        ("gepa._NON_COMPONENT", gepa._NON_COMPONENT),
                        ("skillopt._SCAFFOLDING", set(skillopt._SCAFFOLDING)),
                        ("dashboard._DIFF_SKIP", set(dashboard._DIFF_SKIP)),
                        ("harness._CAP_DIFF_SKIP", set(harness._CAP_DIFF_SKIP))):
-        assert have == set(NON_CAPABILITY_NAMES), f"{name} desynced: {sorted(have)}"
+        assert set(NON_CAPABILITY_NAMES) <= have, \
+            f"{name} desynced, missing {sorted(set(NON_CAPABILITY_NAMES) - have)}"
     # PROCESS.md is deliberately snapshotted (explainability), so it is NOT scratch.
     assert "PROCESS.md" not in scratch
     assert "PROCESS.md" not in set(harness._SNAPSHOT_IGNORE)
