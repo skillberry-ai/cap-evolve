@@ -68,3 +68,10 @@ section spells out all five caveats. For real benchmarks see
   adapter implements: 3 required `@abstractmethod`s, defaulted hooks, `hasattr`-probed
   optional fast paths.
 - [`templates/project/`](../../templates/project) — the blank scaffold to copy.
+- `benchmarks/toy_calc/` — the **declarative** form of this same benchmark: a
+  `benchmark.yaml` manifest plus a one-function `project/target.py`, with the spec
+  *generated* by `cap-evolve benchmark add`. Take that path when the manifest fits; this
+  directory is the reference for the hand-written `CapabilityAdapter` when it doesn't.
+  The two are deliberately paired — the zoo entry links back here for the adapter form,
+  and this is the "before" side of its boilerplate measurement. *(Lands with #233; the
+  path is intentionally unlinked until then.)*

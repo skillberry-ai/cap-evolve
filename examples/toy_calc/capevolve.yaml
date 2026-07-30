@@ -64,7 +64,8 @@ gate_k_se: 1.0
 #  2. This run never exercises that bar. Both val tasks move 0 -> 1 together, so the
 #     spread of the deltas is zero, SE(Δ) = 0, and the gate logs a `gate_warning` and
 #     falls back to the documented STRICT rule (accept any Δ > 0). The transcript says
-#     so: `paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2)`.
+#     so: `paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2` (the stable
+#     prefix; the suffix after `n=2` varies by branch).
 # So this example proves the PIPELINE end to end. It does not demonstrate the paired
 # significance test doing real work — a deterministic scorer has no noise to reject.
 

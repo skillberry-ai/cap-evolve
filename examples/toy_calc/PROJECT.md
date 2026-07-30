@@ -69,7 +69,8 @@ Worth more than the parts that work, because these are the claims people over-re
    `gate_k_se: 1.0` are set, but both val tasks move `0 → 1` *together*, so the spread
    of the per-task deltas is zero, `SE(Δ) = 0`, and the gate logs a `gate_warning` and
    applies its documented **STRICT fallback** (accept any `Δ > 0`). The run transcript
-   says exactly that: `paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2)`.
+   says exactly that: `paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2`…
+   (the suffix varies by branch; the prefix is the stable part).
    A deterministic scorer has no noise to reject.
 2. **`k_se = 1.0` is stricter than it looks.** Improving exactly ONE of `n` val tasks
    gives `mean(Δ) = SE(Δ)` *exactly*, so the strict `>` **rejects** it — at every `n`,
@@ -77,12 +78,15 @@ Worth more than the parts that work, because these are the claims people over-re
    bank nothing.** Set `gate_k_se: 0.2` (as the other examples do) to bank a 1-of-`n`
    gain.
 3. **val = 2 is the floor, not a recommendation.** It equals the harness's
-   `MIN_VAL_TASKS = 2`; a smaller val split is *refused*, and 2 is still under the
-   low-confidence threshold. A real benchmark wants tens of val tasks.
+   `MIN_VAL_TASKS = 2`; a smaller val split is *refused*, and 2 is still under
+   `LOW_CONFIDENCE_VAL_TASKS = 5`, the threshold that flags acceptance decisions as LOW
+   CONFIDENCE. A real benchmark wants tens of val tasks.
 4. **`cap-evolve check` passing is not proof the adapter is correct.** It proves the
    three abstract methods are implemented and non-stubbed, `tasks()` is non-empty and
    stable, `score()` is deterministic, and `materialize()` is callable. It does not run
-   `run_target`, so a non-deterministic runner passes `check`. Notably a `materialize()`
+   `run_target` (except an opt-in degenerate-trials probe behind
+   `CAPEVOLVE_CHECK_TRIAL_PROBE=1` *and* `CAPEVOLVE_N_TRIALS>1`, which only ever appends
+   a WARNING note), so a non-deterministic runner passes `check`. Notably a `materialize()`
    that *raises* can still yield `{"ok": true}`.
 5. **The improvement is engineered.** The stand-in is written so `[CALC]` is the one
    thing that matters and `mock` is scripted to add it. `0.0 → 1.0` proves the loop

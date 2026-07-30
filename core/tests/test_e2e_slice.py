@@ -192,7 +192,16 @@ def test_worked_reference_check_and_spec_are_honest(tmp_path):
         left = sorted(t for t in tokens if t in body)
         assert not left, f"{name} still carries unfilled template placeholders: {left}"
     project_md = (proj / "PROJECT.md").read_text(encoding="utf-8")
-    assert "Honest limits" in project_md, "the reference must keep its honest-limits section"
+    # The reference's whole value is the caveats, so assert the SECTION and its CONTENT.
+    # A bare `"Honest limits" in project_md` also matches the cross-reference earlier in
+    # the file, so it survives both a heading rename and deleting the section outright.
+    assert "\n## Honest limits" in project_md, "the reference lost its `## Honest limits` heading"
+    limits = project_md.split("\n## Honest limits", 1)[1].split("\n## ", 1)[0]
+    for claim in ("STRICT fallback", "bank nothing", "MIN_VAL_TASKS", "run_target",
+                  "engineered"):
+        assert claim in limits, f"Honest limits lost its `{claim}` caveat"
+    caveats = re.findall(r"^\d+\. \*\*", limits, flags=re.M)
+    assert len(caveats) == 5, f"Honest limits should list 5 caveats, found {len(caveats)}"
 
 
 def test_worked_reference_runs_end_to_end(tmp_path):
