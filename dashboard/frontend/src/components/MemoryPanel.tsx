@@ -7,7 +7,8 @@ import { pct } from '../lib/format'
 import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
 
-/** Optimizer memory: accepted history, rejected ("do-not-re-propose"), and the
+/** Run audit records: accepted history, rejected candidates (an audit trail — nothing
+ * re-reads it to avoid re-proposing; see core/cap_evolve/memory.py), and the
  * per-candidate snapshot files (PROCESS.md explainability / INSTRUCTIONS.md / the
  * capability files). */
 export function MemoryPanel({ runId, graph }: { runId: string; graph: RunGraph }) {

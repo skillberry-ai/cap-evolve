@@ -1,16 +1,18 @@
 """Eval cache — skip a rollout when the same candidate was already scored on a task.
 
 Keyed by ``(hash of the candidate's editable files, task_id) -> {reward, feedback}``
-and persisted in the run dir. The hash is over file CONTENTS, so two byte-identical
-candidates share cache entries even under different ids.
+and persisted in the run dir, so re-evaluating an identical candidate (e.g. a parent
+re-sampled in GEPA, or a resumed run) costs nothing. The hash is over file CONTENTS,
+so two byte-identical candidates share cache entries even under different ids.
 
-**Scope: GEPA only.** The single consumer is ``gepa._eval_minibatch``, where the same
-parent is re-sampled from the Pareto frontier across iterations and re-scored on
-overlapping minibatches — that repetition is what the cache pays for.
-``harness.evaluate_candidate`` (every full-val and sealed-test eval, in every algorithm)
-does NOT consult it and always pays full price, so re-scoring an identical candidate on
-full val — common on ``--resume`` or a seed re-eval — is not deduplicated. Wiring it in
-there is a possible perf win, not existing behavior; there is no flag for it today.
+**Scope: GEPA only** — which bounds the "costs nothing" above. The single consumer is
+``gepa._eval_minibatch``, where the same parent is re-sampled from the Pareto frontier
+across iterations and re-scored on overlapping minibatches; that repetition is what the
+cache pays for. ``harness.evaluate_candidate`` (every full-val and sealed-test eval, in
+every algorithm) does NOT consult it and always pays full price, so re-scoring an
+identical candidate on full val — including on ``--resume`` or a seed re-eval — is NOT
+deduplicated. Wiring it in there is a possible perf win, not existing behavior, and
+there is no flag for it today (``test_w1_engine.py`` guards that claim).
 
 Honesty notes:
   * The cache stores only the SCORE (reward + feedback), never gold answers.
