@@ -567,6 +567,9 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Protected-path tamper events (#142): an honesty signal, so it rides
+        # alongside the gate warnings instead of staying buried in events.jsonl.
+        "tamper_events": [e for e in events if e.get("kind") == "tamper_detected"],
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
@@ -790,6 +793,18 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
             lines.append(line)
         lines.append("")
 
+    # Tamper events FIRST and in red (#142 N4): a guard nobody can see is half a
+    # guard. Every number in this summary is void if one of these fired.
+    if s.get("tamper_events"):
+        lines.append(c(_C.RED, f"🚨 {len(s['tamper_events'])} TAMPER EVENT(S) — "
+                               "protected scorer / eval harness / task data changed. "
+                               "Every score in this run is UNTRUSTWORTHY."))
+        for ev in s["tamper_events"][:5]:
+            for ch in (ev.get("changes") or [])[:5]:
+                lines.append(c(_C.RED, f"  {ch.get('change', '?')} {ch.get('path', '?')}"
+                                       f"  ({ev.get('context') or 'unknown context'})"))
+        lines.append("")
+
     if s["gate_warnings"]:
         lines.append(c(_C.YELLOW, f"⚠ {len(s['gate_warnings'])} gate warning(s):"))
         for w in s["gate_warnings"][:3]:
@@ -894,6 +909,24 @@ function showTip(e,txt){tip.textContent=txt;tip.style.display='block';
   tip.style.left=Math.min(e.clientX+14,innerWidth-330)+'px';tip.style.top=(e.clientY+14)+'px';}
 function hideTip(){tip.style.display='none';}
 function sec(title){const s=$('section');s.append($('h2',{text:title}));main.append(s);return s;}
+
+/* ---------- 0. TAMPER banner (#142) ----------
+   Above everything, because if a protected path changed every number below it is
+   void. A guard nobody can see is half a guard. */
+(function(){
+  const T=S.tamper_events||[]; if(!T.length)return;
+  const s=sec('🚨 Tamper detected — scores untrustworthy');
+  s.append($('p',{text:T.length+' tamper event(s): a PROTECTED path (scorer / eval '+
+    'harness / task data / gold answers) changed during this run. Every reward, gate '+
+    'decision and sealed test number in this report was produced alongside an edited '+
+    'grader and must not be reported as a result.'}));
+  T.forEach(e=>{(e.changes||[]).forEach(ch=>{const a=$('div',{class:'ann'});
+    a.append($('div',{class:'who',text:(ch.change||'?')+' · '+(e.context||'')}),
+      $('div',{text:(ch.path||'?')+'  expected '+String(ch.expected_sha256||'—').slice(0,12)+
+        '…  actual '+String(ch.actual_sha256||'—').slice(0,12)+'…'}));s.append(a);});});
+  s.querySelectorAll('.ann').forEach(a=>{a.style.borderLeftColor='#e5534b';});
+  s.querySelector('h2').style.color='#e5534b';
+})();
 
 /* ---------- 1. KPI strip ---------- */
 (function(){

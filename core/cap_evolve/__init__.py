@@ -17,6 +17,7 @@ from .cache import EvalCache, hash_candidate_dir
 from .gate import GateDecision, TrainGateError, decide
 from .lr_schedule import build_schedule
 from .memory import History, RejectedMemory
+from .protect import TamperError
 from .rundir import Budget, RunDir, Spent
 from .selection import PICKERS, STRATEGIES, pick, validate_strategy
 from .splits import Splits, TestSealError, make_splits
@@ -45,6 +46,7 @@ __all__ = [
     "RunDir",
     "Spent",
     "Splits",
+    "TamperError",
     "TestSealError",
     "make_splits",
     "aggregate",
