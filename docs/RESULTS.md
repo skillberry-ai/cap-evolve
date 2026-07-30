@@ -14,10 +14,17 @@ Each result is labeled by **split discipline**:
 Reward is mean task reward in `[0, 1]`. Where we quote externally reported results that use 0–100% units, we label them explicitly as percentages.
 Gains are given as **absolute** and **relative %**.
 
-**This page is the superset.** Every result claim on any other surface — `README.md`,
-`site/results.html`, `site/index.html`, `docs/COMPARISON.md`, `OUTREACH.md`,
-`presentation/` — must correspond to a section here, with the same value, the same split
-label, and the same evidence marker. If a number is not on this page, it is not published.
+**This page is the superset for cap-evolve's own runs.** Every result claim about a
+cap-evolve run on any other surface — `README.md`, `site/results.html`, `site/index.html`,
+`OUTREACH.md`, `presentation/` — must correspond to a section here, with the same value,
+the same split label, and the same evidence marker. If one of our numbers is not on this
+page, it is not published. Externally reported results (other papers' figures) live in
+[`COMPARISON.md`](COMPARISON.md) with their own citations and are out of scope for this
+rule; measurements that are not cap-evolve run results (e.g. a partner system's tool-API
+error rates) are out of scope too. The `site/results.html` ↔ this-page mapping is the part
+that is **mechanically enforced**, by `core/tests/test_published_results_consistency.py`
+(section identity in both directions, plus the numbers in every mapped results table); the
+other surfaces are convention.
 Numbers from runs whose artifacts are not committed are labeled ⚠️ here and everywhere
 else; run records under [`runs/`](runs/) are the provenance available in-repo for those.
 

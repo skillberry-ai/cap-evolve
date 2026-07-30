@@ -305,6 +305,10 @@
     .reveal .exp-legend .sw-done    { background: rgba( 75, 214,  87, 0.35); }
     .reveal .exp-legend .sw-planned { background: rgba(245, 197,  24, 0.35); }
     .reveal .exp-legend .sw-future  { background: rgba(138, 143, 152, 0.35); }
+    .reveal .exp-note {
+      font-size: 0.45em; color: var(--sub); line-height: 1.5;
+      max-width: 62em; margin: 0.5em auto 0; text-align: left;
+    }
 
     /* Dashboard screenshot slide */
     .reveal .dashboard-shot {
@@ -1113,6 +1117,14 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
           <span><span class="swatch sw-planned"></span>Planned (7)</span>
           <span><span class="swatch sw-future"></span>Future (1)</span>
         </div>
+        <p class="exp-note">
+          <strong>—</strong> in the Δ columns means <strong>the run happened but has no artifact
+          and no run record in this repo</strong>, so no figure is quoted; it does not mean the
+          result was withheld. One of the four is a <strong>null result</strong>: row 4
+          (5 easy τ²-bench tasks) was already at the scorer's ceiling and optimization changed
+          nothing — a saturated subset, not a hidden gain. Every published figure is on
+          slide 6 and in <code>docs/RESULTS.md</code>.
+        </p>
       </div>
 
       <aside class="notes">
@@ -1120,7 +1132,11 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
         are early τ²-bench + SWE-bench Lite pilot runs on 5-task subsets; their baseline/optimized
         numbers are deliberately NOT shown, because no run artifact and no run record for them
         exists anywhere in the repo — say "we ran these, the write-ups aren't published" rather
-        than quoting a figure. The published numbers are on slide 6 and docs/RESULTS.md.
+        than quoting a figure. That reasoning is now on the slide itself (the note under the
+        legend), not only here, including the fact that row 4 was a null result: already at the
+        scorer's ceiling on 5 easy tasks, so optimization had no headroom. A null result is a
+        real finding, so it is stated in words rather than left as a bare —. The published
+        numbers are on slide 6 and docs/RESULTS.md.
         Planned rows are the
         apples-to-apples publication comparisons — same benchmark + agent (ollama/qwen2.5:35b
         for the local runs) across cap-evolve's hill-climb, GEPA, SkillOps, and standalone
