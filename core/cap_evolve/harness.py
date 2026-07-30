@@ -28,7 +28,8 @@ from . import gate as gate_mod
 # lazy-imports harness inside its function bodies, so there is no cycle to dodge.
 from . import optimizer_context as _oc
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir, _atomic_write, iteration_candidate
+from .rundir import (NON_CAPABILITY_NAMES, SCRATCH_NAMES, RunDir, _atomic_write,
+                     iteration_candidate)
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -583,8 +584,15 @@ _PROCESS_SEED = (
 
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
-_CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+_CAP_DIFF_SKIP = set(NON_CAPABILITY_NAMES)
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -1573,8 +1581,13 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
-_SNAPSHOT_IGNORE = (_oc.INJECTED_DIRS + _oc.INJECTED_NAMES
-                    + ("LEDGER.md", "JOURNAL.md", "RUNMAP.md"))
+#
+# This is the one DESTRUCTIVE consumer of the shared list — snapshot() drops what it
+# names — so it takes ``SCRATCH_NAMES`` (live writers) ONLY, never
+# ``rundir.NON_CAPABILITY_NAMES``. A retired name with no live writer can only refer to
+# a capability file that shares it, and deleting that is silent data loss the eval-cache
+# key can't see. See the tier note in rundir.py.
+_SNAPSHOT_IGNORE = _oc.INJECTED_DIRS + _oc.INJECTED_NAMES + SCRATCH_NAMES
 
 
 def _failures_block(always_fail, flaky, errored) -> str:
