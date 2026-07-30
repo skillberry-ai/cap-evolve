@@ -448,6 +448,12 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         cmd = [c.format(workdir=str(workdir), prompt=str(prompt_path)) for c in cmd_template]
         env = dict(os.environ)
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        # The optimizer's stderr reaches the user even on success. A silent optimizer
+        # that proposes nothing still exits 0 and seals a number equal to the baseline
+        # — the wrong answer wearing success's clothes. stdout is untouched (still
+        # exactly one report object, #217).
+        if proc.stderr:
+            sys.stderr.write(proc.stderr)
         if proc.returncode != 0:
             err = RuntimeError(
                 f"optimizer failed ({proc.returncode}): {_optimizer_failure_detail(proc)}")

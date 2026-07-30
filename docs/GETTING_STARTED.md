@@ -51,15 +51,30 @@ directory of your own, from a **free or local** preset, and asks nothing:
 ```bash
 mkdir ~/my-run && cd ~/my-run
 cap-evolve quickstart --yes              # or plain `cap-evolve quickstart` for one question
+export CAPEVOLVE_MOCK_SCRIPT=~/my-run/.capevolve/mock_script.json
 cap-evolve check .capevolve/project      # already green — no adapter to implement
 cap-evolve run                           # sealed test number, $0
 ```
 
+The `export` is not optional: it points the offline `mock` optimizer at the edit script
+quickstart wrote. quickstart prints the exact line for your directory in its `next` list,
+so copy it from there. Skip it and the optimizer proposes nothing — the run still exits 0
+but seals `test_reward 0.0`, i.e. the baseline. (Since #248 it also says so loudly on
+stderr rather than passing silently.)
+
 | preset | cost | target runner | needs |
 |---|---|---|---|
 | `mock` (default) | $0 | offline deterministic stand-in | nothing at all |
-| `local` | $0 | local OpenAI-compatible server | a server on `127.0.0.1` (e.g. `ollama serve`) |
+| `local` | $0 | local OpenAI-compatible server | `ollama serve` **and** `ollama pull qwen2.5:3b` |
 | `free` | $0 | Gemini free tier (OpenAI-compatible) | `GEMINI_API_KEY` exported |
+
+**`--model` / `--base-url` need a preset with an endpoint.** `mock` is an offline
+stand-in with neither, so passing them there is refused rather than silently ignored.
+
+**A `doctor` failure does not fail the command.** quickstart's contract is "the project
+was scaffolded", and it was; health is advisory about your *environment* and is reported
+in the `health` key and on stderr. `cap-evolve check` and `cap-evolve run` are the gates
+that actually refuse.
 
 **How this differs from `intake`.** `quickstart` is the zero-question *fast path*: it
 picks a preset and writes a project that is already `cap-evolve check`-green, so the very

@@ -173,7 +173,10 @@ def test_no_canary_leaks_into_output_or_files(tmp_path, preset):
     d = tmp_path / preset
     out = _qs("--yes", "--preset", preset, "--dir", str(d), "--base-url", _SECRET_URL,
               env={**_CANARIES, "OPENAI_BASE_URL": _SECRET_URL})
-    assert out.returncode == 0, out.stderr
+    # `mock` now REFUSES --base-url rather than silently dropping it, so it exits 1 and
+    # writes nothing. The sweep still runs on that path: a refusal message that echoes
+    # the offending flag back is a prime place to leak the URL's embedded credential.
+    assert out.returncode == (1 if preset == "mock" else 0), out.stderr
 
     printed = {"stdout": out.stdout, "stderr": out.stderr}
     written = {str(f.relative_to(d)): f.read_text(errors="replace")
@@ -268,6 +271,90 @@ def test_an_existing_project_is_not_clobbered(tmp_path):
     assert (tmp_path / ".capevolve/project/adapters/adapter.py").read_text() == "# mine\n"
     assert _qs("--yes", "--force", "--dir", str(tmp_path)).returncode == 0
     assert "# mine" not in (tmp_path / ".capevolve/project/adapters/adapter.py").read_text()
+
+
+def test_an_existing_mock_script_is_not_silently_overwritten(tmp_path):
+    """The edit script lives OUTSIDE `.capevolve/project`, so it needs its own guard.
+
+    It used to be replaced without a word — a hand-edited script vanishing quietly, and
+    the `--force` guard never saw it because it only covered the project dir.
+    """
+    (tmp_path / ".capevolve").mkdir()
+    junk = tmp_path / ".capevolve" / "mock_script.json"
+    junk.write_text('{"edits": [], "mine": true}\n')
+    out = _qs("--yes", "--dir", str(tmp_path))
+    assert out.returncode == 1
+    assert json.loads(out.stdout)["ok"] is False
+    assert "mine" in junk.read_text(), "the existing script was clobbered"
+    assert _qs("--yes", "--force", "--dir", str(tmp_path)).returncode == 0
+    assert "mine" not in junk.read_text(), "--force must overwrite it"
+
+
+def test_flags_that_cannot_work_with_mock_are_refused_not_ignored(tmp_path):
+    """A silently-dead flag is the same defect family as a silently-no-op optimizer.
+
+    `mock` is an offline stand-in with no endpoint and no model, so `--model`/`--base-url`
+    had nowhere to land and were dropped without a word.
+    """
+    for flag, value in (("--model", "gpt-4o"), ("--base-url", "http://x/v1")):
+        out = _qs("--yes", flag, value, "--dir", str(tmp_path / flag.strip("-")))
+        assert out.returncode == 1, f"{flag} was silently accepted"
+        err = json.loads(out.stdout)
+        assert err["ok"] is False and flag in err["error"]
+        assert "--preset local" in err["error"], "must say what to do instead"
+    # ...and they DO work on a preset that has an endpoint.
+    rec = quickstart.scaffold(tmp_path / "ok", "local", model="m1",
+                              base_url="http://127.0.0.1:9/v1")
+    assert rec["model"] == "m1"
+
+
+def test_val_tasks_matches_what_make_splits_actually_produces(tmp_path):
+    """The reported `val_tasks` must not be a second, drifting copy of the split math."""
+    from cap_evolve import splits as _splits
+    rec = quickstart.scaffold(tmp_path, "mock")
+    rows = [json.loads(ln) for ln in
+            (tmp_path / ".capevolve/project/adapters/tasks.jsonl").read_text().splitlines() if ln.strip()]
+    sp = _splits.make_splits([r["id"] for r in rows], seed=0, ratios=(0.5, 0.25, 0.25))
+    assert rec["val_tasks"] == len(sp.val)
+
+
+def test_preset_default_endpoints_are_shown_not_masked(tmp_path):
+    """Masking the endpoint quickstart itself chose is user-hostile and protects nothing."""
+    for preset in ("local", "free"):
+        rec = quickstart.scaffold(tmp_path / preset, preset)
+        assert rec["base_url"] == quickstart.PRESETS[preset]["base_url"], preset
+    # Anything else still masks.
+    assert quickstart.safe_url("https://gw.internal.example.corp/v1") == "<custom>"
+
+
+def test_force_over_a_file_gives_an_actionable_message(tmp_path):
+    """`--force` on a plain file used to surface a bare `[Errno 20] Not a directory`."""
+    (tmp_path / ".capevolve").mkdir()
+    (tmp_path / ".capevolve" / "project").write_text("not a dir\n")
+    out = _qs("--yes", "--force", "--dir", str(tmp_path))
+    assert out.returncode == 1
+    err = json.loads(out.stdout)["error"]
+    assert "Errno" not in err, err
+    assert "is a file, not a directory" in err and "remove it first" in err
+
+
+def test_mock_optimizer_warns_on_stderr_when_no_script_is_found():
+    """Silence that looks like success: no script means every candidate is unchanged.
+
+    The run still exits 0 with a green `check` and a sealed number equal to the baseline,
+    so the JSON `note` alone is not enough — nothing surfaces it to the reader of the
+    final report. This is the shape that made the documented quickstart path wrong.
+    """
+    script = REPO / "skills/optimizers/run-optimizer/scripts/_mock_apply.py"
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        env = {k: v for k, v in ENV.items() if k != "CAPEVOLVE_MOCK_SCRIPT"}
+        out = subprocess.run([sys.executable, str(script), "--workdir", td],
+                             capture_output=True, text=True, env=env)
+    assert out.returncode == 0, out.stderr           # still a scored no-op, not a crash
+    assert json.loads(out.stdout)["applied"] == []   # stdout is still exactly one object
+    assert "NO EDIT SCRIPT FOUND" in out.stderr, f"silent no-op:\n{out.stderr!r}"
+    assert "CAPEVOLVE_MOCK_SCRIPT" in out.stderr, "must name the fix"
 
 
 def test_unknown_preset_is_refused(tmp_path):

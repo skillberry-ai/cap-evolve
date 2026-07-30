@@ -434,6 +434,12 @@ def _cmd_run(argv):
         import shlex as _shlex
         alg_cmd += _shlex.split(str(spec["algorithm_args"]))
     proc = run(alg_cmd)
+    # Relay the algorithm's stderr even on success. Warnings that do not fail the run
+    # (an optimizer that found no edit script, so every candidate is unchanged and the
+    # sealed number equals the baseline) were swallowed by capture_output and the run
+    # looked clean. stdout stays exactly one report object (#217).
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
     if proc.returncode != 0:
         print(json.dumps(_step_failure("algorithm", proc)))
         return 1

@@ -44,22 +44,28 @@ import sys
 from pathlib import Path
 
 from .dashboard import redact
+from .splits import make_splits
 
 def safe_url(url: str) -> str:
     """Public default verbatim, anything else ``<custom>``.
 
-    Prefers ``dashboard.safe_url`` — #190 moved this exact rule there so every consumer
-    inherits one definition. The local fallback exists only until that PR lands, and is
-    deliberately *stricter* (allowlist, not heuristic): a real internal gateway URL
-    already leaked into a public PR in this epic.
+    Our OWN preset endpoints are checked first, so they always print verbatim. #190's
+    rule does not know this table and masked both non-mock presets' shipped defaults as
+    ``<custom>`` — hiding the value quickstart itself just chose, which reads as a bug
+    and protects nothing (they are a documented public API and an explicit loopback).
+
+    Everything else delegates to ``dashboard.safe_url`` — #190 moved this rule there so
+    every consumer inherits one definition. The local fallback (an allowlist, so
+    deliberately stricter than a heuristic) exists only until that PR lands: a real
+    internal gateway URL already leaked into a public PR in this epic.
     """
-    from . import dashboard
-    fn = getattr(dashboard, "safe_url", None)
-    if fn is not None:
-        return fn(url)
     if not url:
         return ""
-    return url if url in _PUBLIC_DEFAULTS else "<custom>"
+    if url in _PUBLIC_DEFAULTS:
+        return url
+    from . import dashboard
+    fn = getattr(dashboard, "safe_url", None)
+    return fn(url) if fn is not None else "<custom>"
 
 
 #: The preset table. ``provider``/``credential`` are resolved through ``model_config``
@@ -82,7 +88,8 @@ PRESETS: dict[str, dict] = {
         "base_url": "http://127.0.0.1:11434/v1",
         "model": "qwen2.5:3b",
         "optimizer": "mock",
-        "needs": "a local server answering at the base URL (e.g. `ollama serve`)",
+        "needs": "a local server answering at the base URL, with the model pulled "
+                 "(`ollama serve` + `ollama pull qwen2.5:3b`)",
     },
     "free": {
         "summary": "$0 on the free tier — Gemini via its OpenAI-compatible endpoint",
@@ -147,6 +154,23 @@ _RUNNER = {runner!r}
 _BASE_URL = {base_url!r}
 _MODEL = {model!r}
 _CRED_ENV = {cred_env!r}          # an env var NAME, never a value
+_CRED_NAMES = {cred_names!r}      # the provider's candidate NAMES, in precedence order
+
+
+def _credential() -> str | None:
+    """Resolve the credential at RUN time, from names fixed at scaffold time.
+
+    Scaffolding before you export the key used to bake ``_CRED_ENV = ''``, so the
+    adapter then sent no Authorization header at all — a 401 indistinguishable from a
+    dead endpoint, and exporting the key afterwards did nothing until you re-scaffolded
+    with --force. The NAMES are provider-scoped and fixed here (so no cross-provider
+    reuse is possible); only the lookup moves to run time.
+    """
+    for name in ((_CRED_ENV,) if _CRED_ENV else ()) + _CRED_NAMES:
+        val = os.environ.get(name)
+        if val:
+            return val
+    return None
 
 
 def _safe_eval(expr: str) -> int:
@@ -168,7 +192,7 @@ def _chat(prompt: str, question: str, *, seed: int) -> str:
     req = urllib.request.Request(_BASE_URL.rstrip("/") + "/chat/completions",
                                 data=body, method="POST")
     req.add_header("Content-Type", "application/json")
-    cred = os.environ.get(_CRED_ENV) if _CRED_ENV else None
+    cred = _credential()
     if cred:
         req.add_header("Authorization", f"Bearer {{cred}}")
     with urllib.request.urlopen(req, timeout=60) as resp:
@@ -274,6 +298,15 @@ def _ask_preset(default: str = DEFAULT_PRESET) -> str:
     return answer if answer in PRESETS else default
 
 
+#: Provider-scoped credential env var NAMES, in precedence order. One table, used both
+#: for the ``model_config``-absent fallback and for the scaffolded adapter's run-time
+#: lookup — so a preset can never resolve another provider's credential.
+_CRED_NAMES: dict[str, tuple[str, ...]] = {
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "openai": ("OPENAI_API_KEY",),
+}
+
+
 def _resolve_provider(row: dict, base_url: str) -> dict:
     """Secret-free provider report: which env var NAME holds the credential, if any.
 
@@ -286,8 +319,7 @@ def _resolve_provider(row: dict, base_url: str) -> dict:
         return {"provider": "mock", "credential_env": "", "credential_present": False,
                 "base_url": "", "reason": "offline preset — no credential, no endpoint"}
     if mc is None:  # fallback while #190 is unmerged: name-only lookup, still no values
-        names = {"gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"), "openai": ("OPENAI_API_KEY",)}
-        found = next((n for n in names.get(provider, ()) if os.environ.get(n)), "")
+        found = next((n for n in _CRED_NAMES.get(provider, ()) if os.environ.get(n)), "")
         return {"provider": provider, "credential_env": found,
                 "credential_present": bool(found), "base_url": safe_url(base_url),
                 "reason": "model_config unavailable — env-name lookup only"}
@@ -340,6 +372,17 @@ def _template_spec() -> str:
             "max_iterations: 3\nstall: 2\nstore: git\n")
 
 
+def _val_tasks(n: int) -> int:
+    """How many val tasks the scaffolded spec will actually produce.
+
+    Asks ``splits.make_splits`` rather than recomputing ``round(n * 0.25)``: a second
+    copy of the split arithmetic is a number that can silently disagree with the one
+    the run uses, which is exactly the class of defect this PR is fixing elsewhere.
+    """
+    ids = [f"q{i + 1:02d}" for i in range(n)]
+    return len(make_splits(ids, seed=0, ratios=(0.5, 0.25, 0.25)).val)
+
+
 def scaffold(dest: Path, preset: str, *, model: str = "", base_url: str = "",
              force: bool = False) -> dict:
     """Write a ready-to-run project under ``dest``. Returns a secret-free record."""
@@ -350,13 +393,30 @@ def scaffold(dest: Path, preset: str, *, model: str = "", base_url: str = "",
     project = dest / ".capevolve" / "project"
     if project.exists() and not force:
         raise FileExistsError(f"{project} already exists — pass --force to overwrite")
+    if project.exists() and not project.is_dir():
+        # `--force` on a plain file used to surface a bare `[Errno 20] Not a directory`
+        # from deep inside mkdir. Say what is wrong and what to do instead.
+        raise ValueError(f"{project} exists but is a file, not a directory — "
+                         f"--force overwrites a project, not a file; remove it first")
+    # The mock edit script lives OUTSIDE `.capevolve/project`, so the guard above never
+    # saw it: an existing (possibly hand-edited) one was replaced without a word.
+    mock_script = dest / ".capevolve" / "mock_script.json"
+    if mock_script.exists() and not force:
+        raise FileExistsError(f"{mock_script} already exists — pass --force to overwrite")
 
     # Userinfo (https://user:token@host/) is a credential. Strip it at the single point
     # of resolution so it can never be written to a file, printed, or reported (#190).
     url = base_url or row["base_url"]
     mc = _optional("model_config")
-    if mc is not None and url:
-        url = mc.strip_url_userinfo(url)
+    # COUPLING NOTE (#190): `strip_url_userinfo` is DEFINED in `dashboard`; it resolves as
+    # `mc.strip_url_userinfo` only because #190 does `from .dashboard import ...` at
+    # model_config.py:51, i.e. we depend on its import list, not its public API. If #190
+    # ever switches to `from . import dashboard` + `dashboard.strip_url_userinfo(...)`,
+    # getattr fails and the manual `elif` below silently takes over. Hence `getattr`
+    # rather than a bare attribute access, so the degradation is a documented branch.
+    strip = getattr(mc, "strip_url_userinfo", None) if mc is not None else None
+    if strip is not None and url:
+        url = strip(url)
     elif url and "@" in url.split("//", 1)[-1].split("/", 1)[0]:
         scheme, _, rest = url.partition("//")
         url = scheme + "//" + rest.split("@", 1)[1]
@@ -367,7 +427,8 @@ def scaffold(dest: Path, preset: str, *, model: str = "", base_url: str = "",
     (project / "adapters").mkdir(parents=True, exist_ok=True)
     (project / "adapters" / "adapter.py").write_text(
         _ADAPTER.format(preset=preset, runner=row["runner"], base_url=url,
-                        model=model or row["model"], cred_env=cred_env), encoding="utf-8")
+                        model=model or row["model"], cred_env=cred_env,
+                        cred_names=_CRED_NAMES.get(row["provider"], ())), encoding="utf-8")
     (project / "adapters" / "tasks.jsonl").write_text(
         "".join(json.dumps(t) + "\n" for t in _tasks()), encoding="utf-8")
     (project / "capevolve.yaml").write_text(_patch_spec(_template_spec(), {
@@ -379,7 +440,6 @@ def scaffold(dest: Path, preset: str, *, model: str = "", base_url: str = "",
     }), encoding="utf-8")
     (dest / "seed_capability").mkdir(parents=True, exist_ok=True)
     (dest / "seed_capability" / "prompt.txt").write_text(_SEED_PROMPT, encoding="utf-8")
-    mock_script = dest / ".capevolve" / "mock_script.json"
     mock_script.write_text(json.dumps(_MOCK_SCRIPT, indent=2) + "\n", encoding="utf-8")
 
     created = sorted(str(p.relative_to(dest)) for p in
@@ -388,7 +448,7 @@ def scaffold(dest: Path, preset: str, *, model: str = "", base_url: str = "",
     return {"preset": preset, "dir": str(dest.resolve()), "created": created,
             "provider": provider, "model": model or row["model"],
             "base_url": safe_url(url) if url else "",
-            "val_tasks": max(1, round(_N_TASKS * 0.25)), "tasks": _N_TASKS}
+            "val_tasks": _val_tasks(_N_TASKS), "tasks": _N_TASKS}
 
 
 def _health(dest: Path) -> dict | None:
@@ -444,6 +504,17 @@ def _main(argv: list[str]) -> int:
     preset = args.preset or (_ask_preset() if not args.yes and interactive()
                              else DEFAULT_PRESET)
 
+    # `mock` has no endpoint and no model, so --model/--base-url were silently dropped.
+    # Refuse instead: a flag that is accepted and ignored is the same defect family as
+    # an optimizer that proposes nothing and still exits 0. The message names the fix.
+    dead = [f for f, v in (("--model", args.model), ("--base-url", args.base_url)) if v]
+    if preset == "mock" and dead:
+        print(json.dumps({"ok": False, "error":
+              f"{' and '.join(dead)} has no effect with preset 'mock' (offline stand-in, "
+              f"no endpoint and no model). Use --preset local or --preset free, or drop "
+              f"the flag."}))
+        return 1
+
     try:
         rec = scaffold(Path(args.dir), preset, model=args.model,
                        base_url=args.base_url, force=args.force)
@@ -451,6 +522,11 @@ def _main(argv: list[str]) -> int:
         print(json.dumps({"ok": False, "error": redact(str(e))}))
         return 1
 
+    # A doctor failure does NOT change the exit code, deliberately: quickstart's contract
+    # is "the project was scaffolded", which succeeded. Health is advisory about the
+    # environment (#121 owns that), reported in `health` and printed to stderr, and
+    # `check`/`run` are the gates that must actually refuse. Exiting non-zero here would
+    # make a scaffold that is on disk and check-green look like a failed command.
     if not args.no_doctor:
         health = _health(Path(args.dir))
         if health is not None:
