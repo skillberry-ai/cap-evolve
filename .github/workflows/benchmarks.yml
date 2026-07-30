@@ -162,7 +162,7 @@ jobs:
         bench: [tau2, swebench, skillsbench]
     concurrency:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
