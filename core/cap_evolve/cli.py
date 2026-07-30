@@ -127,6 +127,10 @@ def _cmd_run(argv):
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
+    p.add_argument("--parallel", type=int, default=None,
+                   help="evaluate up to N sibling candidates per round, each in its own "
+                        "hermetic workspace (default 1 = serial). Downgraded to 1 for an "
+                        "adapter that isn't concurrency-safe.")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
@@ -145,6 +149,10 @@ def _cmd_run(argv):
             spec[key] = v
     if args.reuse_baseline is not None:
         spec["reuse_baseline"] = args.reuse_baseline
+    if args.parallel is not None:
+        spec["max_parallel_candidates"] = args.parallel
+    from .parallel import resolve_workers as _resolve_workers
+    parallel_n = _resolve_workers(spec.get("max_parallel_candidates"))
 
     if args.dry_run:
         print(json.dumps(_estimate_core(spec, Path(args.project)), indent=2))
@@ -233,6 +241,7 @@ def _cmd_run(argv):
         print(json.dumps({"skills_dir": str(skills_dir), "workdir": str(workdir), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          "max_parallel_candidates": parallel_n,
                           "target_model": spec.get("target_model", ""),
                           "orchestration_mode": orchestration_mode,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
@@ -359,6 +368,10 @@ def _cmd_run(argv):
     # workdir. Only hill-climb accepts the flag; other algorithms ignore it.
     if algorithm_name == "hill-climb":
         alg_cmd += ["--optimizer-name", str(optimizer_name)]
+    # Bounded parallel candidate evaluation. Default 1 = serial (unchanged behaviour);
+    # only passed when >1 so a default run's command line is byte-identical to before.
+    if algorithm_name == "hill-climb" and parallel_n > 1:
+        alg_cmd += ["--parallel", str(parallel_n)]
     # Optimizer-instructions template (intake-authored, per benchmark) + benchmark repo
     # as read-only optimizer context. Both are resolved project-relative if not absolute.
     # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.

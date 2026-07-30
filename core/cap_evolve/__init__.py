@@ -17,6 +17,7 @@ from .cache import EvalCache, hash_candidate_dir
 from .gate import GateDecision, TrainGateError, decide
 from .lr_schedule import build_schedule
 from .memory import History, RejectedMemory
+from .parallel import adapter_is_parallel_safe, resolve_workers, workspace
 from .rundir import Budget, RunDir, Spent
 from .selection import PICKERS, STRATEGIES, pick, validate_strategy
 from .splits import Splits, TestSealError, make_splits
@@ -41,6 +42,9 @@ __all__ = [
     "decide",
     "History",
     "RejectedMemory",
+    "adapter_is_parallel_safe",
+    "resolve_workers",
+    "workspace",
     "Budget",
     "RunDir",
     "Spent",

@@ -20,6 +20,7 @@ import contextlib
 import json
 import os
 import shutil
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,7 +38,10 @@ def _atomic_write(path: Path, text: str) -> None:
     partial one. ``fsync`` before the replace so the bytes are durable first.
     """
     path = Path(path)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    # Unique per (process, thread): two threads writing the SAME path concurrently
+    # would otherwise share one temp file and splice each other's bytes. With distinct
+    # temps, os.replace makes last-writer-wins — never a torn file.
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}.{threading.get_ident():x}")
     try:
         with tmp.open("w", encoding="utf-8") as f:
             f.write(text)
@@ -299,6 +303,34 @@ class RunDir:
             return True, f"stalled ({s.stall} rejects in a row >= {b.stall})"
         return False, ""
 
+    def budget_headroom(self, *, metric_calls_per_candidate: int = 0) -> int:
+        """How many MORE candidates may be started before a count cap would trip.
+
+        A parallel round launches N candidates at once, so it has to look ahead: the
+        serial loop re-checks ``budget_exhausted`` between every candidate, and a round
+        that ignored the remaining headroom would overshoot ``max_iterations`` or keep
+        proposing past the ``stall`` cutoff — a parallel run that spends MORE budget
+        than a serial one with the same caps.
+
+        ``metric_calls_per_candidate`` (e.g. ``len(val) * n_trials``) converts the
+        ``max_metric_calls`` cap from rollouts into candidates; pass 0 when the caller
+        can't know it, and that cap stays checked between rounds. Cost caps are never
+        included — spend-per-candidate isn't knowable in advance, so like the serial
+        loop (which also can't stop mid-candidate) they are enforced between rounds.
+        """
+        b, s = self.budget, self.spent
+        limits = []
+        if b.max_iterations:
+            limits.append(b.max_iterations - s.iterations)
+        if b.stall:
+            limits.append(b.stall - s.stall)
+        if b.max_metric_calls and metric_calls_per_candidate > 0:
+            remaining = b.max_metric_calls - s.metric_calls
+            # Ceil: a partially-affordable candidate is still started (the serial loop
+            # starts it too — it only checks the cap BEFORE a candidate, never mid-eval).
+            limits.append(-(-remaining // metric_calls_per_candidate))
+        return max(0, min(limits)) if limits else 2 ** 31
+
     def record_spend_warnings(self) -> list[dict]:
         """Emit a ``budget_warning`` event once per crossed soft threshold.
 
@@ -392,6 +424,23 @@ class RunDir:
 
     # ---- audit log ----------------------------------------------------------
     def log_event(self, kind: str, **fields) -> None:
+        """Append one JSON line to ``events.jsonl`` — atomically, whole-line.
+
+        Live readers (the dashboard tail, the stall detector, the mtime+size cache)
+        parse this file line-by-line while it is being written, and with parallel
+        candidate evaluation several threads/processes append at once. A buffered
+        text write can split one record across multiple ``write()`` syscalls
+        (Python's default buffer is 8 KiB, and a ``reason``/``error`` field easily
+        exceeds that), which under concurrency interleaves two records into a
+        corrupt line. ``O_APPEND`` + ONE ``os.write`` of the whole encoded line is
+        atomic for a regular file on POSIX, so every reader sees complete records
+        in some total order — never a partial or spliced one.
+        """
         rec = {"t": time.time(), "kind": kind, **fields}
-        with self.events_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, default=str) + "\n")
+        line = (json.dumps(rec, default=str) + "\n").encode("utf-8")
+        self.events_path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(self.events_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        try:
+            os.write(fd, line)  # single syscall: no interleaving, no partial line
+        finally:
+            os.close(fd)

@@ -27,6 +27,20 @@ uses them when present:
     run_trials(tasks, ctx, *, n_trials, base_seed)            # batched multi-trial fast path
     score_batch(tasks, rollouts)              -> {id: Score}  # batched scoring fast path
 
+**Concurrency declaration** (optional class attribute):
+
+    parallel_safe = True    # this adapter may be driven from several threads at once
+
+Only relevant under ``cap-evolve run --parallel N`` (parallel *candidate* evaluation).
+The default is a conservative NO for any adapter that overrides ``apply`` or ``live``,
+because those hooks are allowed to be a *global* inject — the single shared slot two
+concurrent candidates would clobber. Set ``parallel_safe = True`` when the adapter is
+genuinely hermetic (it reads/writes only ``ctx`` / the candidate dir and mutates no
+process- or host-global state), or ``False`` to opt out explicitly. An adapter that
+overrides neither hook is safe automatically. A non-safe adapter is downgraded to
+sequential and the downgrade is logged (``parallel_downgraded``), so a missing
+declaration costs throughput, never correctness.
+
 Why ``materialize`` + ``live`` instead of a single ``apply``:
 ``apply(candidate_dir)`` used to be a *global* side effect (e.g. monkeypatching a
 benchmark's policy), which (a) prevented two candidates being evaluated

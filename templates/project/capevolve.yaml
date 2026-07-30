@@ -65,6 +65,16 @@ split_ids_file: ""
 # --- scoring ----------------------------------------------------------------
 num_trials: 1
 
+# --- parallel candidate evaluation ------------------------------------------
+# How many SIBLING candidates to propose+evaluate per round, each in its own
+# hermetic workspace. 1 (the default) is fully serial — identical to a run without
+# this key. >1 is a wall-clock win when rollouts dominate; the RESULT is unchanged
+# because every candidate is still committed one at a time, in candidate order,
+# behind the same val significance gate. Automatically downgraded to 1 when the
+# adapter overrides apply()/live() (a possible GLOBAL inject) and does not declare
+# `parallel_safe = True`. CLI: `cap-evolve run --parallel N`.
+max_parallel_candidates: 1
+
 # --- metrics (display) ------------------------------------------------------
 # The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
 # are shown in the dashboard/results but never affect accept/reject.

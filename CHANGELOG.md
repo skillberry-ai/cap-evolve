@@ -21,6 +21,40 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Bounded parallel candidate evaluation, isolated per candidate (#131).** `--parallel N`
+  (or `max_parallel_candidates: N` in the spec) evaluates up to N *sibling* candidates per
+  hill-climb round, each in its own hermetic workspace forked from the same champion.
+  **Default is 1 (serial) — a run without the flag is byte-identical to before**, and a
+  serial vs `--parallel 4` run on the same spec + seed produces identical `final.json`,
+  identical per-candidate val scores, and the identical sealed test number. Measured
+  ~2.4x wall-clock at N=4 with agent-latency rollouts (~0.5s each); no win when rollouts
+  are instant, so parallelism stays opt-in.
+
+  The honesty core stays **single-threaded**: `run_step` is split into
+  `propose_candidate` (workspace → optimize → val eval, parallelizable) and
+  `commit_candidate` (gate → snapshot → `best_id` → memory → store, serialized). A round's
+  proposals are committed one at a time in candidate order, each re-gated against the
+  champion as of that moment, so the accept sequence is exactly a serial run's.
+  Concurrency-unsafe adapters (an `apply`/`live` override that may be a *global* inject)
+  are automatically downgraded to serial and the downgrade is logged as
+  `parallel_downgraded`; an adapter that is genuinely hermetic opts in with
+  `parallel_safe = True`.
+
+  Shared-state hardening required by concurrency, all of which also makes serial runs
+  safer: `events.jsonl` appends are now a single `O_APPEND` `os.write` of the whole line
+  (no interleaved or partial lines for the live tail / stall detector / mtime cache);
+  rollout files under `rollouts/` are written atomically instead of truncate-in-place (a
+  truncating write mutated already-archived hardlinked evidence); `_atomic_write` temp
+  names are unique per thread; the eval cache serializes its whole-file flush so a
+  concurrent `put` can't be lost; and a parallel round is clamped to the run's remaining
+  budget headroom (new `RunDir.budget_headroom`) so N=4 spends exactly the budget N=1
+  does instead of overshooting `max_iterations`/`stall`/`max_metric_calls`.
+
+  Isolation is a plain hermetic directory, not a `git worktree`: a worktree of the run
+  repo checks out the *run dir's* shape rather than the capability-at-root shape adapters
+  and optimizers expect, the capability project need not be a git repo, and worktrees cost
+  200-500ms each and leak into `.git/worktrees` on a crash. The workspace manager cleans
+  up on normal exit, on exception, and on SIGINT/SIGTERM.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the
