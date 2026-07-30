@@ -1,23 +1,39 @@
 # Installation
 
 cap-evolve has one small required install (the honest-eval core) and a few optional
-add-ons depending on how you want to drive it. Requires **Python 3.10+** and **git**.
+add-ons depending on how you want to drive it. Requires **Python 3.10+**; the
+from-source path also needs **git**.
+
+## Required — the core (honest-eval substrate + CLI)
+
+### From PyPI — no clone
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install cap-evolve
+cap-evolve version        # verify
+```
+
+The wheel carries the CLI, the eval core, the whole skill library (so `cap-evolve run`
+resolves the manifest and the optimizer registry with nothing else installed), and the
+project templates.
+
+> **Not published yet.** `.github/workflows/release.yml` builds, verifies, and publishes
+> it on a `v*` tag; the tag has not been pushed and PyPI Trusted Publishing has not been
+> configured. Until then use the from-source path below.
+
+### From source — for development, or to get `examples/` and the site
 
 ```bash
 git clone https://github.com/skillberry-ai/cap-evolve.git
 cd cap-evolve
-python3 -m venv .venv && source .venv/bin/activate   # recommended: isolated env
-```
-
-## Required — the core (honest-eval substrate + CLI)
-
-```bash
-pip install ./core        # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
+python3 -m venv .venv && source .venv/bin/activate
+pip install ./core        # package: cap-evolve · CLI: cap-evolve · zero runtime deps
 cap-evolve version        # verify
 ```
 
 > If your default pip index requires auth, append `--index-url https://pypi.org/simple`
-> (cap-evolve-core itself has no runtime dependencies).
+> (cap-evolve itself has no runtime dependencies).
 
 The `cap-evolve` CLI has six subcommands: `version`, `splits`, `check`, `run`,
 `estimate`, `dashboard`.

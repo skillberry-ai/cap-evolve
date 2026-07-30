@@ -7,7 +7,7 @@ before they can ``import`` it. The logic used to be copy-pasted into 25
 2-line shim that finds *this* module and re-exports ``ensure_core``.
 
 Resolution order (first hit wins):
-  1. ``cap_evolve`` already importable (pip-installed ``cap-evolve-core``);
+  1. ``cap_evolve`` already importable (``pip install cap-evolve``);
   2. ``$CAPEVOLVE_CORE`` pointing at the ``core/`` dir;
   3. walk up from ``start`` looking for a sibling ``core/cap_evolve``;
   4. walk up looking for any ``cap_evolve`` package on disk.

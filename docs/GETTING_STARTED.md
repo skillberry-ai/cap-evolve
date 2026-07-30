@@ -16,7 +16,7 @@ cd cap-evolve
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install ./core          # package: cap-evolve-core, CLI: cap-evolve (zero runtime deps)
+pip install ./core          # package: cap-evolve, CLI: cap-evolve (zero runtime deps)
 cap-evolve version          # verify
 ```
 

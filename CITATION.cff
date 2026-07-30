@@ -5,5 +5,7 @@ authors:
   - name: "cap-evolve contributors"
 version: 0.1.0
 license: Apache-2.0
-date-released: 2026-06-14
+# The GitHub release's publishedAt for v0.1.0 — Keep a Changelog and CFF both date the
+# RELEASE, not the tag commit (which is 2026-07-26). Was 2026-06-14 (#186).
+date-released: 2026-07-27
 repository-code: "https://github.com/skillberry-ai/cap-evolve"

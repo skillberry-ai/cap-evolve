@@ -6,6 +6,10 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **`CITATION.cff` dated the release wrong (#186).** `date-released: 2026-06-14` for a
+  `v0.1.0` whose GitHub release published on `2026-07-27`. Machine-read metadata that
+  would have shipped a six-week-stale date to every citation; now pinned to the release
+  date and guarded by `core/tests/test_packaging.py`.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
@@ -21,6 +25,27 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **`pip install cap-evolve` — a release path with no clone (#125).** The distribution is
+  renamed `cap-evolve-core` → **`cap-evolve`** (the old name was never published, so
+  nothing to migrate) and the wheel now ships the runtime data a run cannot start
+  without: the whole skill library (`skills/`, including `optimizers/registry.yaml` and
+  `_registry/manifest.json`) and `templates/project/`, packaged as
+  `cap_evolve/_bundled/{skills,templates}` — symlinks to the repo trees, so the two can
+  never drift. Previously a wheel held only `.py` files, which is #193's `install.sh`
+  hole (a stock install that cannot read `registry.yaml`) in pip shape. New
+  `cap_evolve.resources.resource_root()` resolves the repo tree or the packaged copy, so
+  the six `parents[2]` repo-layout assumptions in `harness.py` and the CLI's
+  `_find_skills_dir()` parent-walk work in both. The version is single-sourced in
+  `cap_evolve.__version__` (`pyproject.toml` reads it dynamically); `core/tests/test_packaging.py`
+  guards that, the `CITATION.cff` agreement, and the data-file declarations.
+  New `.github/workflows/release.yml` builds sdist+wheel, `twine check`s them, asserts
+  the required data files are inside the artifacts, then **installs each artifact into a
+  clean venv and runs a real zero-API optimization from outside the checkout with `HOME`
+  redirected** — the only way to catch a missing data file, since inside the repo the
+  skills-dir fallbacks rescue a broken package. Publishes via PyPI Trusted Publishing
+  (OIDC, no stored token) on a `v*` tag and cuts a GitHub Release whose notes are the
+  CHANGELOG section for that version. Nothing is published until a human pushes the tag.
+
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

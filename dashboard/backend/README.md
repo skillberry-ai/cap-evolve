@@ -3,7 +3,7 @@
 FastAPI service over cap-evolve run dirs. Read-only; reuses `cap_evolve.dashboard.reduce_run`.
 
 ## Dev
-    pip install -e ../../core        # cap-evolve-core
+    pip install -e ../../core        # cap-evolve
     pip install -e .[dev]
     python -m pytest -q
 

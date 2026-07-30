@@ -10,7 +10,7 @@ your venv and `pip install ./core`, then `cap-evolve version`. (The toy example 
 without installing, because `run.sh` sets `PYTHONPATH=$REPO/core`.)
 
 **`pip install ./core` fails with an auth/index error** — your default pip index requires
-auth. Append `--index-url https://pypi.org/simple` (cap-evolve-core has zero runtime deps,
+auth. Append `--index-url https://pypi.org/simple` (cap-evolve has zero runtime deps,
 so nothing else is fetched).
 
 **Python too old** — cap-evolve needs **3.10+**. Check with `python3 --version`.

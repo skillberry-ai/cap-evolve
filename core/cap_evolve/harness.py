@@ -25,6 +25,7 @@ from typing import Callable
 
 from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores
+from .resources import resource_root as _resource_root
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
@@ -1032,7 +1033,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
     if caps:
-        skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+        skills_root = _resource_root() / "skills" / "capabilities"
         for c in caps:
             src = skills_root / c
             if not src.is_dir():
@@ -1065,7 +1066,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
                 run_dir.log_event("optimizer_context_warning",
                                   what=f"guidance/sources/{s}", error=str(e)[:300])
 
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = _resource_root()
 
     # 3) the diagnose phase skill (the failure-clustering method) as local guidance.
     diag_src = repo_root / "skills" / "phases" / "diagnose"
@@ -1481,7 +1482,7 @@ def _capability_brief(capabilities) -> str:
     caps = [c for c in (capabilities or []) if c]
     if not caps:
         return ""
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _resource_root() / "skills" / "capabilities"
     lines = ["## What you are editing (the allowed edit space)",
              "The capability under optimization is composed of these editable artifact(s). "
              "Use the FULL edit space below — do not limit yourself to trivial wording tweaks."]
@@ -1570,7 +1571,7 @@ def _passing_block(solid, *, max_ids: int = 60) -> str:
 # substituting the per-iteration dynamic blocks below; nothing benchmark-specific lives
 # here. ``{{...}}`` placeholders: FOCUS_SUMMARY, FAILURES, PASSING, CAP_BRIEF, ALGO_BRIEF, BENCH_REPO.
 _DEFAULT_INSTRUCTIONS_TEMPLATE = (
-    Path(__file__).resolve().parents[2] / "templates" / "project" / "optimizer" / "INSTRUCTIONS.md"
+    _resource_root() / "templates" / "project" / "optimizer" / "INSTRUCTIONS.md"
 )
 # Big read-context the harness injects into the workdir that must NOT be stored as part
 # of the candidate snapshot (it would bloat candidates/ and pollute diffs). NOTE we keep
@@ -1635,7 +1636,7 @@ def _optimizer_parallel(optimizer_name: str | None) -> bool:
     if not optimizer_name:
         return False
     try:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = _resource_root()
         reg_path = repo_root / "skills" / "optimizers" / "registry.yaml"
         if not reg_path.is_file():
             return False
@@ -1675,7 +1676,7 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
         return None
     import importlib.util
 
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _resource_root() / "skills" / "capabilities"
     complete = True  # did we get a usable is_empty() from EVERY requested capability?
     for name in caps:
         abstract_path = skills_root / name / "scripts" / "abstract.py"
