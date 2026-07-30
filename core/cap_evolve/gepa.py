@@ -54,6 +54,7 @@ from . import gate as gate_mod
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
+    _SNAPSHOT_IGNORE,
     _augment_instructions,
     _init_memory_store,
     _live,
@@ -62,19 +63,16 @@ from .harness import (
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
 
 # Optimizer-scratch / non-capability files that must NOT count as editable
 # "components" (they perturb neither the capability nor the content hash).
-_NON_COMPONENT = {
-    "MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md",
-    "FOCUS.md", "REFLECTION.md",
-    # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-    "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
-}
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition; INSTRUCTIONS/PROCESS are in it
+# because they ARE snapshotted (explainability) yet are still not editable components.
+_NON_COMPONENT = set(NON_CAPABILITY_NAMES)
 _NON_COMPONENT_DIRS = {".git", "__pycache__", "prior_iterations"}
 
 
@@ -97,6 +95,10 @@ def _components(candidate_dir: Path) -> list[str]:
         if not p.is_file():
             continue
         rel = p.relative_to(cdir)
+        # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+        # root-anchored. Harmless here (a false positive only costs precision — one
+        # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+        # would change which components GEPA may edit, which is out of scope for #110.
         if p.name in _NON_COMPONENT:
             continue
         if any(part in _NON_COMPONENT_DIRS for part in rel.parts):
@@ -625,7 +627,7 @@ def gepa_loop(
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
         if accepted:
-            run_dir.snapshot(cid, workdir)
+            run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
             child_dir = run_dir.candidate_dir(cid)
             pool.append(_entry(cid, child_dir, cand_val, parent=parent["id"]))
             lineage[cid] = parent["id"]
@@ -784,7 +786,7 @@ def _try_merge(
     run_dir.update_spent(iterations=1, accepted=accepted)
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
-        run_dir.snapshot(mid, workdir)
+        run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)
         pool.append(_entry(mid, run_dir.candidate_dir(mid), cand_val, parent=base_parent["id"]))
         lineage[mid] = base_parent["id"]
         history.add(mid, summary, cand_val.reward)

@@ -26,6 +26,51 @@ from pathlib import Path
 
 from .splits import Splits
 
+# Framework/optimizer SCRATCH files that are not capability content. Defined HERE — at
+# the bottom of the import graph — because the list had been copy-pasted into several
+# modules and they desynced: FOCUS.md/REFLECTION.md (GEPA's own scratch) were in the
+# cache and component lists but missing from the snapshot list, so GEPA snapshots stayed
+# dirty (#110) even after LEDGER/JOURNAL/RUNMAP were excluded.
+#
+# TWO tiers, because the consumers do not all perform the same OPERATION:
+#
+#   SCRATCH_NAMES        — names a live code path actually WRITES. These are the only
+#                          ones safe for the single DESTRUCTIVE consumer,
+#                          ``harness._SNAPSHOT_IGNORE``, which reaches
+#                          ``RunDir.snapshot`` → ``shutil.copytree(ignore=...)`` and so
+#                          DROPS the file permanently — and from every descendant
+#                          iteration too, since the next workdir is copied from the
+#                          snapshot.
+#   LEGACY_SCRATCH_NAMES — retired names with NO live writer anywhere in core/ (the old
+#                          MEMORY/STATE handover pair, and REJECTED.md from before
+#                          rejected-edit memory moved to ``rejected.jsonl``). Kept ONLY
+#                          in the non-destructive read-side filters, so run dirs and
+#                          eval caches produced before they were retired still behave.
+#                          They must NEVER reach the snapshot filter: with no live
+#                          writer, the only thing such a name can refer to on disk is a
+#                          CAPABILITY file that happens to share it, and deleting that
+#                          is silent data loss the cache key cannot even see (the same
+#                          name is ignored when hashing, so the mutilated candidate
+#                          keeps its parent's key → stale hit).
+#
+# NON_CAPABILITY_NAMES is the union, for every consumer whose operation is a read-side
+# FILTER (a false positive only costs precision — nothing is lost): the eval-cache
+# content hash (``cache._IGNORE_NAMES``), GEPA's editable-component list
+# (``gepa._NON_COMPONENT``), the edit-size count (``skillopt._changed_components``) and
+# the capability-diff filters (``dashboard._DIFF_SKIP`` / ``harness._CAP_DIFF_SKIP``).
+# INSTRUCTIONS.md and PROCESS.md are in the union but in neither tuple: they are
+# deliberately KEPT in the snapshot (PROCESS.md is the candidate's explainability
+# record) while still not being capability bytes.
+SCRATCH_NAMES = (
+    # cross-iteration state the harness regenerates every iteration
+    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
+    # per-iteration algorithm scratch (GEPA's reflective dataset + component focus)
+    "FOCUS.md", "REFLECTION.md",
+)
+LEGACY_SCRATCH_NAMES = ("REJECTED.md", "MEMORY.md", "STATE.md")
+NON_CAPABILITY_NAMES = frozenset(
+    {"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES) | set(LEGACY_SCRATCH_NAMES))
+
 
 def _atomic_write(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically (tmp file + ``os.replace``).
@@ -375,15 +420,25 @@ class RunDir:
     def snapshot(self, candidate_id: str, src_dir: Path, ignore=None) -> Path:
         """Persist ``src_dir`` as candidate ``candidate_id``.
 
-        ``ignore`` is an optional iterable of top-level names to exclude (e.g. the
+        ``ignore`` is an optional iterable of TOP-LEVEL names to exclude (e.g. the
         optimizer's injected scratch — ``trajectories/``, ``guidance/`` — and its
         prompt/memory files) so the stored candidate stays capability-only and
         diffs against the parent show only real edits.
+
+        Root-anchored on purpose. ``shutil.ignore_patterns`` matches by BASENAME at
+        every depth, so a nested capability file that merely shares a name with an
+        entry (``src/prompts/STATE.md``) would be silently deleted from the candidate
+        — and from the whole descendant lineage, since the next iteration's workdir is
+        copied from this snapshot. Every entry in the list is a root-level framework
+        injection, so filtering only at ``src_dir`` itself is both strictly more
+        correct and what this docstring always claimed.
         """
         dst = self.candidates / candidate_id
         if dst.exists():
             shutil.rmtree(dst)
-        ig = shutil.ignore_patterns(*ignore) if ignore else None
+        src_dir = Path(src_dir)
+        names = set(ignore or ())
+        ig = (lambda d, cs: names if Path(d) == src_dir else set()) if names else None
         shutil.copytree(src_dir, dst, ignore=ig)
         return dst
 

@@ -52,6 +52,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .rundir import NON_CAPABILITY_NAMES
+
 # ---------------------------------------------------------------------------
 # Secret redaction
 # ---------------------------------------------------------------------------
@@ -584,8 +586,15 @@ def reduce_run(run_dir) -> dict:
 # snapshot but are NOT capability edits — skipped when diffing iterations so the diff
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
-_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+_DIFF_SKIP = set(NON_CAPABILITY_NAMES)
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
