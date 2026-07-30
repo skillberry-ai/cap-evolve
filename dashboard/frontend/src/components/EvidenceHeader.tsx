@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import type { RunDetail } from '../lib/types'
 import { cumulativeBest } from '../lib/bestCurve'
 import { compactNum, duration, pct, signedPct, usd } from '../lib/format'
+import { PHASE_PRESENTATION } from '../lib/phases'
 import { Card } from './ui/Card'
 import { Sparkline } from './Sparkline'
 import { cn } from '../lib/cn'
@@ -33,9 +34,36 @@ function useSecondsSince(t: number | null | undefined): number | null {
   return Math.max(0, now - t)
 }
 
-export function EvidenceHeader({ detail }: { detail: RunDetail }) {
+/**
+ * `liveness` is the caller's verdict on whether the PROCESS is alive — `#218`'s
+ * `liveness.status` once that lands, and today the badge's own status. It exists only to
+ * stop the header contradicting the badge rendered beside it: `derive_pipeline` calls a
+ * phase `active` because it is the latest to have STARTED, which for a crashed run is a
+ * phase that stopped running, so "● Optimize" appeared next to a `crashed` badge with no
+ * way for the reader to tell which was true (#234 review). The rule: a phase may read as
+ * *currently active* only while liveness does not say the run is dead or wedged;
+ * otherwise it reads `interrupted` — where the run stopped. Plateau/stall DEPTH (`#221`)
+ * is deliberately not an input: "live and plateaued" is a coherent pair, "live and
+ * crashed" is not.
+ */
+export function EvidenceHeader({
+  detail,
+  liveness,
+}: {
+  detail: RunDetail
+  liveness?: 'live' | 'done' | 'crashed' | 'stalled' | null
+}) {
   const s = detail.summary
-  const p = s.pipeline
+  const dead = liveness === 'crashed' || liveness === 'stalled'
+  const p =
+    dead && s.pipeline
+      ? {
+          ...s.pipeline,
+          phases: s.pipeline.phases.map((ph) =>
+            ph.status === 'active' ? { ...ph, status: 'interrupted' as const } : ph,
+          ),
+        }
+      : s.pipeline
   const inState = useSecondsSince(p?.now?.since ?? null)
   const sinceEvent = useSecondsSince(p?.now?.t ?? null)
 
@@ -43,7 +71,6 @@ export function EvidenceHeader({ detail }: { detail: RunDetail }) {
   // the sparkline and the chart can never disagree about the curve.
   const best = cumulativeBest(detail.graph.nodes).map((c) => c.best)
   const burn = p?.burn
-  const direction = s.metric_direction ?? 'higher_is_better'
 
   return (
     <Card className="p-4" data-testid="evidence-header">
@@ -73,21 +100,23 @@ export function EvidenceHeader({ detail }: { detail: RunDetail }) {
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted">best on val</div>
           <div className="mt-1 flex items-center text-accent" data-testid="sparkline-cell">
-            <Sparkline values={best} direction={direction} />
+            <Sparkline values={best} />
           </div>
         </div>
 
         <Cell
           label="burn"
           value={usd(burn?.usd ?? null)}
-          // No rate for a finished run or under a minute of elapsed time: a burn rate
-          // answers "what is this costing right now", and there is no honest answer
-          // once the run is over (see dashboard._rate).
+          // No rate for a finished run, under a minute of elapsed time, or a log that
+          // has gone quiet: a burn rate answers "what is this costing right now", and
+          // there is no honest answer once the run is over — nor while nothing is being
+          // logged, when the ratio would describe only the dense part of the log
+          // (see dashboard._rate).
           hint={burn?.usd_per_min != null ? `${usd(burn.usd_per_min)}/min` : undefined}
           title={
             burn?.source === 'spent'
               ? 'state.json Spent.total_usd (runner + optimizer + intake) — the same total the budget check and the KPI strip use.'
-              : 'Accumulated from events.jsonl by eventstream.accrue_totals: runner cost from `evaluate`, optimizer cost from `step`-likes, intake from `intake` — each counted once.'
+              : 'Accumulated from events.jsonl by eventstream.accrue_totals: runner cost from `evaluate`/`minibatch`, optimizer cost from the per-iteration gate events, intake from `intake` — each counted exactly once, for every algorithm.'
           }
         />
         <Cell
@@ -129,9 +158,11 @@ export function EvidenceHeader({ detail }: { detail: RunDetail }) {
           value={s.test_reward != null ? pct(s.test_reward) : s.test_sealed ? 'sealed' : 'not finalized'}
           title="final.json → test.reward — scored once, on data the optimizer never saw"
         />
+        {/* A constant, and stated as one: `metric_direction` was a hardcoded field whose
+            `lower_is_better` branch nothing could reach (#234 nit 6). */}
         <Fact
           label="metric"
-          value={direction === 'lower_is_better' ? 'lower is better' : 'higher is better'}
+          value="higher is better"
           title="Every gate in cap-evolve accepts on val > parent_val, so reward is higher-is-better."
         />
       </dl>
@@ -181,25 +212,28 @@ function PhasePipeline({
     <ol className="flex flex-wrap items-center gap-1.5" data-testid="phase-pipeline">
       {phases.map((ph, i) => {
         const label = ph.key === 'optimize' && algorithm ? `${ph.label} · ${algorithm}` : ph.label
-        const glyph =
-          ph.status === 'done' ? '✓' : ph.status === 'active' ? '●' : ph.status === 'skipped' ? '–' : '○'
+        const { glyph, word, tone } = PHASE_PRESENTATION[ph.status] ?? PHASE_PRESENTATION.pending
         return (
           <li key={ph.key} className="flex items-center gap-1.5">
             <span
+              // aria-current="step" says "this is where you ARE". Only `active` is:
+              // `interrupted` is where the run STOPPED, a different claim.
               aria-current={ph.status === 'active' ? 'step' : undefined}
-              title={ph.detail}
+              title={`${ph.detail} — ${word}`}
               className={cn(
                 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs',
-                ph.status === 'done'
+                tone === 'good'
                   ? 'border-accepted/40 text-accepted'
-                  : ph.status === 'active'
+                  : tone === 'live'
                     ? 'border-accent/60 bg-accent/10 font-semibold text-accent'
-                    : 'border-border text-muted',
+                    : tone === 'bad'
+                      ? 'border-rejected/50 text-rejected'
+                      : 'border-border text-muted',
               )}
             >
               <span aria-hidden>{glyph}</span>
               {label}
-              <span className="sr-only"> ({ph.status})</span>
+              <span className="sr-only"> ({word})</span>
             </span>
             {i < phases.length - 1 && (
               <span className="text-muted" aria-hidden>

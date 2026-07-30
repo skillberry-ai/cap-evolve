@@ -28,7 +28,6 @@ const detail = (over: Partial<RunDetail['summary']> = {}, nodes: GraphNode[] = [
     delta_pct: 300,
     test_reward: null,
     algorithm: 'gepa',
-    metric_direction: 'higher_is_better',
     pipeline: {
       phases: [phase('baseline', 'done'), phase('optimize', 'active'), phase('finalize', 'pending')],
       current: 'optimize',
@@ -122,6 +121,50 @@ describe('EvidenceHeader', () => {
     expect(screen.getByTestId('evidence-line').textContent).toContain('20.0%')
   })
 
+  // --- the #234 review's merged-header contradiction --------------------------
+
+  it('never shows a phase as active when liveness says the run is dead', () => {
+    // Merged with #218 the header rendered "● Optimize" (lit, aria-current) beside a
+    // `crashed` StatusBadge, and the reader could not tell which was true.
+    for (const status of ['crashed', 'stalled'] as const) {
+      const { container, unmount } = render(<EvidenceHeader detail={detail()} liveness={status} />)
+      const pipeline = container.querySelector('[data-testid="phase-pipeline"]')!
+      expect(pipeline.textContent).toContain('(interrupted')
+      expect(pipeline.textContent).not.toContain('(active)')
+      // nothing claims to be the step the user is currently on
+      expect(pipeline.querySelectorAll('[aria-current="step"]')).toHaveLength(0)
+      unmount()
+    }
+  })
+
+  it('leaves the active phase alone while the run is live', () => {
+    // #221's plateau dimension is orthogonal: "live and plateaued" is a coherent pair.
+    render(<EvidenceHeader detail={detail()} liveness="live" />)
+    const pipeline = screen.getByTestId('phase-pipeline')
+    expect(pipeline.textContent).toContain('(active)')
+    expect(pipeline.querySelectorAll('[aria-current="step"]')).toHaveLength(1)
+  })
+
+  it('renders unknown and errored phases as neither done nor skipped', () => {
+    const base = detail()
+    render(
+      <EvidenceHeader
+        detail={detail({
+          pipeline: {
+            ...base.summary.pipeline!,
+            phases: [phase('check', 'unknown'), phase('optimize', 'errored')],
+          },
+        })}
+      />,
+    )
+    const pipeline = screen.getByTestId('phase-pipeline')
+    // the words, not the colour, carry it
+    expect(pipeline.textContent).toContain('no event attests this phase')
+    expect(pipeline.textContent).toContain('errored')
+    expect(pipeline.textContent).not.toContain('(done)')
+    expect(pipeline.textContent).not.toContain('(skipped)')
+  })
+
   it('draws the sparkline from the running-best curve', () => {
     render(<EvidenceHeader detail={detail({}, [node('c1', 1, 0.4), node('c2', 2, 0.8)])} />)
     const svg = screen.getByTestId('sparkline')
@@ -152,11 +195,16 @@ describe('Sparkline', () => {
     expect(container.innerHTML).not.toContain('animate-')
   })
 
-  it('inverts y for lower-is-better so up-and-right always means better', () => {
-    const { container } = render(<Sparkline values={[0.9, 0.1]} direction="lower_is_better" />)
+  // The old `lower_is_better` test asserted a value the backend cannot emit — the
+  // hardcoded `metric_direction` had no producer (#234 nit 6). Reward is
+  // higher-is-better, so assert THAT: a falling series reads as a regression.
+  it('states higher-is-better and reads a falling series as a regression', () => {
+    const { container } = render(<Sparkline values={[0.9, 0.1]} />)
     const [p0, p1] = container.querySelector('polyline')!.getAttribute('points')!.split(' ')
-    expect(Number(p1.split(',')[1])).toBeLessThan(Number(p0.split(',')[1])) // y shrinks = up
-    expect(sparklineLabel([0.9, 0.1], 'lower_is_better')).toContain('improved')
+    expect(Number(p1.split(',')[1])).toBeGreaterThan(Number(p0.split(',')[1])) // y grows = down
+    expect(sparklineLabel([0.9, 0.1])).toContain('regressed')
+    expect(sparklineLabel([0.1, 0.9])).toContain('improved')
+    expect(container.textContent).toContain('higher is better')
   })
 })
 
@@ -192,5 +240,19 @@ describe('derivePhases with the backend pipeline', () => {
       'finalize',
       'report',
     ])
+    // …and even in the fallback the hard gate is never a green tick: a pre-#138 payload
+    // has no event log, so nothing there can attest it (#234 finding 1).
+    expect(steps.find((s) => s.key === 'check')!.status).toBe('unknown')
+  })
+
+  it('carries errored/interrupted/unknown through without softening them', () => {
+    const base = detail()
+    const d = detail({
+      pipeline: {
+        ...base.summary.pipeline!,
+        phases: [phase('check', 'unknown'), phase('optimize', 'errored'), phase('finalize', 'interrupted')],
+      },
+    })
+    expect(derivePhases(d).map((s) => s.status)).toEqual(['unknown', 'errored', 'interrupted'])
   })
 })

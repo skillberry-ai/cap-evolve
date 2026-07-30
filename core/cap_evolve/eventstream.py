@@ -76,6 +76,29 @@ BOOKKEEPING_KINDS = ("minibatch", "optimizer_context_warning", "target_profile",
 # The one-iteration-finished events, each carrying the optimizer's own spend.
 _STEP_KINDS = ("step", "gepa_val_gate", "skillopt_step")
 
+#: The ONE place that says which event kind is the authoritative source for which
+#: role's spend, as ``kind -> (usd_key, tokens_key)``. Every kind appears once, so
+#: :func:`accrue_totals` cannot double-count a dollar, and a new emitter is wired up
+#: by adding one row here rather than by editing a chain of ``elif``s.
+#:
+#: Runner spend has TWO sources because there are two rollout loops:
+#: ``harness.evaluate_candidate`` (logs ``evaluate``) and GEPA's ``_eval_minibatch``
+#: (logs ``minibatch``). They never cover the same rollouts — each charges
+#: ``update_spent(usd=...)`` for its own — so both must be counted. Omitting
+#: ``minibatch`` understated GEPA's spend 3.9x (#234 review, finding 2).
+#: Optimizer spend is taken from ``gepa_local_gate`` on the GEPA path rather than
+#: ``gepa_val_gate``: the optimizer is paid on EVERY iteration, but ``gepa_val_gate``
+#: only fires on the ones that pass the cheap local gate, so keying off it would
+#: still miss every locally-rejected iteration's spend.
+_SPEND_SOURCES: dict[str, tuple[str, str]] = {
+    "evaluate": ("cost_usd", "tokens"),            # runner    — harness.py:311
+    "minibatch": ("cost_usd", "tokens"),           # runner    — gepa.py:186
+    "step": ("opt_cost_usd", "opt_tokens"),        # optimizer — harness.py:1328
+    "skillopt_step": ("opt_cost_usd", "opt_tokens"),   # optimizer — skillopt
+    "gepa_local_gate": ("opt_cost_usd", "opt_tokens"),  # optimizer — gepa.py:586
+    "intake": ("usd", "tokens"),                   # intake    — cli.py:495
+}
+
 
 def read_new_events(path: Path, offset: int) -> tuple[list[dict], int]:
     """Return (new events, new byte offset). A partial trailing line (no newline)
@@ -244,39 +267,28 @@ def accrue_totals(ev: dict, totals: dict | None) -> None:
     each dollar exactly once. Public so every live readout (terminal meter, #138's
     dashboard burn line) uses one arithmetic instead of forking it.
 
-    The harness reports the SAME runner spend twice: ``evaluate`` logs
-    ``cost_usd``/``tokens`` (``harness.py:311``) and the following ``step`` re-states
-    it alongside the optimizer's own ``opt_cost_usd``/``opt_tokens``
-    (``harness.py:1326``). So the authoritative sources are:
-
-    * runner spend    → ``evaluate`` only  (``cost_usd`` / ``tokens``)
-    * optimizer spend → ``step``-like only (``opt_cost_usd`` / ``opt_tokens``)
-    * intake spend    → ``intake`` only    (``usd`` / ``tokens``)
-
-    which reproduces ``Spent.total_usd = usd + optimizer_usd + intake_usd``
-    (``rundir.py:137``). Summing every cost-ish key on every event double-counted the
-    runner and displayed ~2x the real spend.
+    :data:`_SPEND_SOURCES` names the ONE authoritative kind per role, which is what
+    keeps each dollar counted once: the harness reports the SAME runner spend twice
+    (``evaluate`` logs ``cost_usd``, and the following ``step`` re-states it alongside
+    the optimizer's own ``opt_cost_usd``), so only ``evaluate``'s copy is read. The
+    result reproduces ``Spent.total_usd = usd + optimizer_usd + intake_usd``
+    (``rundir.py:137``) for every algorithm — including GEPA, whose runner spend flows
+    through ``minibatch`` and whose optimizer spend rides ``gepa_local_gate``.
     """
     if totals is None or not isinstance(ev, dict):
         return
-    kind = str(ev.get("kind") or "")
-    if kind == "evaluate":
-        pairs = (("cost_usd", "tokens"),)
-    elif kind in _STEP_KINDS:
-        pairs = (("opt_cost_usd", "opt_tokens"),)
-    elif kind == "intake":
-        pairs = (("usd", "tokens"),)
-    else:
+    pair = _SPEND_SOURCES.get(str(ev.get("kind") or ""))
+    if pair is None:
         return
-    for usd_key, tok_key in pairs:
-        try:
-            totals["usd"] = totals.get("usd", 0.0) + float(ev.get(usd_key) or 0.0)
-        except (TypeError, ValueError):
-            pass
-        try:
-            totals["tokens"] = totals.get("tokens", 0) + int(ev.get(tok_key) or 0)
-        except (TypeError, ValueError):
-            pass
+    usd_key, tok_key = pair
+    try:
+        totals["usd"] = totals.get("usd", 0.0) + float(ev.get(usd_key) or 0.0)
+    except (TypeError, ValueError):
+        pass
+    try:
+        totals["tokens"] = totals.get("tokens", 0) + int(ev.get(tok_key) or 0)
+    except (TypeError, ValueError):
+        pass
 
 
 

@@ -9,8 +9,6 @@
 export interface SparklineProps {
   /** Running-best values, oldest first. Fewer than 2 points renders nothing. */
   values: number[]
-  /** Stated, never assumed — the label says which way is better. */
-  direction?: 'higher_is_better' | 'lower_is_better'
   width?: number
   height?: number
   className?: string
@@ -19,26 +17,23 @@ export interface SparklineProps {
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`
 
 /** The text equivalent of the shape. Exported so a test asserts the same sentence
- * the screen reader hears. */
-export function sparklineLabel(values: number[], direction = 'higher_is_better'): string {
+ * the screen reader hears.
+ *
+ * Reward in cap-evolve is higher-is-better, full stop: every gate in the repo accepts
+ * on `val > parent_val` (`gate.decide`) and nothing emits a direction. There used to be
+ * a `lower_is_better` branch here, wired to a hardcoded `metric_direction`; it was
+ * unreachable flexibility whose only test asserted a value the backend cannot produce
+ * (#234 review, nit 6). State the constant instead of branching on a fiction. */
+export function sparklineLabel(values: number[]): string {
   if (values.length === 0) return 'No score history yet.'
   const first = values[0]
   const last = values[values.length - 1]
-  const better = direction === 'lower_is_better' ? last < first : last > first
-  const worse = direction === 'lower_is_better' ? last > first : last < first
-  const trend = better ? 'improved' : worse ? 'regressed' : 'unchanged'
-  const arrow = direction === 'lower_is_better' ? 'lower is better' : 'higher is better'
-  return `Best score over ${values.length} evaluated candidate${values.length === 1 ? '' : 's'}: ${trend} from ${pct(first)} to ${pct(last)} (${arrow}).`
+  const trend = last > first ? 'improved' : last < first ? 'regressed' : 'unchanged'
+  return `Best score over ${values.length} evaluated candidate${values.length === 1 ? '' : 's'}: ${trend} from ${pct(first)} to ${pct(last)} (higher is better).`
 }
 
-export function Sparkline({
-  values,
-  direction = 'higher_is_better',
-  width = 96,
-  height = 26,
-  className,
-}: SparklineProps) {
-  const label = sparklineLabel(values, direction)
+export function Sparkline({ values, width = 96, height = 26, className }: SparklineProps) {
+  const label = sparklineLabel(values)
   if (values.length < 2) {
     // One point is not a trend: say so in words rather than drawing a flat line that
     // would read as "no progress".
@@ -53,15 +48,11 @@ export function Sparkline({
   const max = Math.max(...values)
   const span = max - min || 1
   const dx = width / (values.length - 1)
-  // y is inverted (SVG grows downward) and, for lower-is-better, inverted again so
-  // "up and to the right" always means "better" whatever the metric direction is.
-  const norm = (v: number) =>
-    direction === 'lower_is_better' ? (max - v) / span : (v - min) / span
+  // y is inverted (SVG grows downward), so "up and to the right" means better.
+  const norm = (v: number) => (v - min) / span
   const pts = values.map((v, i) => `${(i * dx).toFixed(2)},${(height - 2 - norm(v) * (height - 4)).toFixed(2)}`)
 
-  const improved = direction === 'lower_is_better'
-    ? values[values.length - 1] < values[0]
-    : values[values.length - 1] > values[0]
+  const improved = values[values.length - 1] > values[0]
 
   return (
     <span className={className}>
@@ -91,8 +82,7 @@ export function Sparkline({
       </svg>
       {/* Direction is never colour-only: the arrow glyph and the words carry it too. */}
       <span className="tnum ml-1.5 align-middle text-xs text-muted">
-        <span aria-hidden>{improved ? '↑' : '→'}</span>{' '}
-        {direction === 'lower_is_better' ? 'lower' : 'higher'} is better
+        <span aria-hidden>{improved ? '↑' : '→'}</span> higher is better
       </span>
     </span>
   )

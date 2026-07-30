@@ -1,7 +1,9 @@
 /** Derive the pipeline phase timeline from a reduced run (no extra backend data). */
-import type { RunDetail } from './types'
+import type { PipelinePhaseStatus, RunDetail } from './types'
 
-export type PhaseStatus = 'done' | 'active' | 'skipped' | 'pending'
+/** Alias of the backend's status union, so a new status can't be added on one side
+ * only — `PhasesTimeline` and `PhasePipeline` then fail to compile until handled. */
+export type PhaseStatus = PipelinePhaseStatus
 
 export interface PhaseStep {
   key: string
@@ -9,6 +11,26 @@ export interface PhaseStep {
   status: PhaseStatus
   detail: string
   metrics: { label: string; value: string }[]
+}
+
+/** How each status reads. One table, consumed by every phase renderer, so the compact
+ * pipeline and the timeline cards can never label the same status differently.
+ * `word` is what a screen reader gets; `glyph` is decorative (always `aria-hidden`).
+ * Exhaustive over `PhaseStatus` by type, so adding a status fails to compile here. */
+export const PHASE_PRESENTATION: Record<
+  PhaseStatus,
+  { glyph: string; word: string; tone: 'good' | 'live' | 'bad' | 'muted' }
+> = {
+  done: { glyph: '✓', word: 'done', tone: 'good' },
+  active: { glyph: '●', word: 'active', tone: 'live' },
+  // Where the run STOPPED, not what is running: liveness says the process is gone or
+  // wedged, so this must not read as active (#234).
+  interrupted: { glyph: '⏸', word: 'interrupted — the run is no longer progressing', tone: 'bad' },
+  errored: { glyph: '✕', word: 'errored — reached, but it produced nothing', tone: 'bad' },
+  skipped: { glyph: '–', word: 'skipped', tone: 'muted' },
+  // Not a tick and not a skip: the evidence simply is not there.
+  unknown: { glyph: '?', word: 'unknown — no event attests this phase', tone: 'muted' },
+  pending: { glyph: '○', word: 'pending', tone: 'muted' },
 }
 
 const pctStr = (v: number | null | undefined) =>
@@ -73,8 +95,11 @@ export function derivePhases(detail: RunDetail): PhaseStep[] {
     },
     {
       key: 'check',
+      // A pre-#138 payload carries no event log, so nothing here can attest the hard
+      // gate — `total > 0 || hasBaseline` only proves the run got PAST it, which is not
+      // the same as proving it passed (#234 finding 1). `unknown`, not a green tick.
       label: 'Implement & check',
-      status: done(total > 0 || hasBaseline),
+      status: 'unknown',
       detail: 'Hard gate: the adapter must pass cap-evolve check before any budget is spent.',
       metrics: [],
     },

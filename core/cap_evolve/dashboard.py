@@ -50,6 +50,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -242,10 +243,18 @@ def _step_candidate(ev: dict):
 #: two phases apart.
 _PHASE_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("intake", "Intake", ("intake",)),
-    ("check", "Implement & check", ("seed_dir_created", "target_profile")),
+    # ONLY `check_gate` — the event `cap-evolve run` logs from the hard gate itself
+    # (``cli.py``), carrying that check's own verdict. `target_profile` used to be here
+    # and was wrong: it is logged by the ALGORITHM runner, after baseline, and only when
+    # a target model is configured, so any `--target-model` run rendered a green
+    # "✓ Implement & check" with nothing proving the gate ran (#234 review, finding 1).
+    # `seed_dir_created` was equally wrong — it fires inside `harness.baseline`, and only
+    # when the seed dir is missing. Nothing here is INFERRED: the gate attests itself, or
+    # the phase reads `unknown`.
+    ("check", "Implement & check", ("check_gate",)),
     ("baseline", "Baseline", ("splits", "splits_warning", "baseline", "baseline_reused")),
     ("optimize", "Optimize", (
-        "algorithm", "minibatch", "diagnose", "optimizer_error", "gate_warning",
+        "minibatch", "optimizer_error", "gate_warning",
         "optimizer_context_warning", "budget_warning",
         "step",                                                        # hill-climb
         "gepa_start", "gepa_select", "gepa_local_gate", "gepa_val_gate",  # gepa
@@ -256,6 +265,17 @@ _PHASE_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("finalize", "Finalize", ("finalize",)),
     ("report", "Report", ()),  # no event of its own: this artifact IS the report
 )
+
+#: Kinds that record a FAILURE inside a phase. A phase whose only evidence is one of
+#: these produced nothing, so it must not render `done` (a clean tick over an empty
+#: phase) nor `skipped` (which claims it was legitimately not run) — those are
+#: different facts (#234 review, finding 4). ``check_gate`` with ``ok=False`` is
+#: handled the same way, below.
+_PHASE_ERROR_KINDS = frozenset(("optimizer_error", "log_corruption"))
+
+#: The hard gate. Silence here can never read `done` or `skipped`: an evidence header
+#: must not state that the gate which guards all spend passed, on no evidence.
+_HARD_GATE_PHASE = "check"
 
 _PHASE_DETAIL = {
     "intake": "Interview + scaffold the project, adapter, and seed capability.",
@@ -280,47 +300,86 @@ def _event_time(ev: dict) -> float | None:
     return t if t > 0 else None
 
 
-def _rate(total, elapsed_seconds: float, *, finalized: bool, digits: int):
+#: A rate is suppressed once the log has been silent for this many seconds. A quiet log
+#: means the spend the numerator measured is not the spend happening now, and the reader
+#: trusts ``$/min`` most in exactly that case (the run is quiet BECAUSE something
+#: expensive is in flight).
+_RATE_STALE_SECONDS = 120.0
+
+
+def _rate(total, elapsed_seconds: float, *, finalized: bool, digits: int,
+          stale_seconds: float | None = None):
     """A per-minute rate, or ``None`` when reporting one would be dishonest.
 
     ``None`` for a FINALIZED run: a burn *rate* answers "what is this costing me right
     now", and a 2.6-second toy run that spent $0.81 is not burning $18.69/min — it is
     not burning anything, it is over. Also ``None`` below a minute of elapsed time,
     where extrapolating a few seconds to a per-minute figure is invention.
+
+    ``stale_seconds`` is how long the log has been silent. Both the numerator and the
+    denominator stop advancing when the log goes quiet, so the surviving ratio describes
+    only the DENSE part of the log: a run 58 minutes into one slow step reported 30x the
+    honest rate off a frozen 120s denominator (#234 review, finding 3). Past
+    :data:`_RATE_STALE_SECONDS` there is no supportable recent-burn claim, so we make
+    none. ``elapsed_seconds`` must be wall-clock elapsed (``now - first_t``), not the
+    event span, so the denominator keeps growing while the log is quiet.
     """
     if finalized or elapsed_seconds < 60.0 or not total:
+        return None
+    if stale_seconds is not None and stale_seconds > _RATE_STALE_SECONDS:
         return None
     return round(total / (elapsed_seconds / 60.0), digits)
 
 
-def derive_pipeline(events: list[dict], *, finalized: bool = False) -> dict:
+def derive_pipeline(events: list[dict], *, finalized: bool = False,
+                    now: float | None = None, liveness: str | None = None) -> dict:
     """Phase pipeline + live burn for the evidence header, from events alone.
 
     Returns ``{"phases": [...], "current", "now", "burn"}`` where each phase is
-    ``{"key", "label", "status": done|active|skipped|pending, "detail", "started_at"}``.
-    A phase is *done* once a LATER phase has started, *active* when it is the latest
-    phase to have started, *pending* when nothing has reached it yet — and *skipped*
-    when the run is already past it but it logged no event of its own. ``skipped`` is
-    not cosmetic: ``cap-evolve run`` on a pre-scaffolded project never emits ``intake``,
-    and calling that phase "pending" on a finalized run states something false.
+    ``{"key", "label", "status", "detail", "started_at"}``. Status is one of:
 
-    ``now`` is the newest renderable event as ``eventstream.format_event`` renders it
-    (the terminal's own words and the terminal's own sanitiser, so no model-controlled
-    string reaches a renderer unescaped) plus the wall-clock ``t`` a caller needs to
-    compute time-in-state client-side.
+    ``done``
+        A later phase has started, and this one logged real (non-error) evidence.
+    ``active``
+        The latest phase to have started — and the run is not known to be dead.
+    ``interrupted``
+        The latest phase to have started, but ``liveness`` says ``crashed``/``stalled``.
+        ``active`` next to a "crashed" badge is a contradiction the reader cannot
+        resolve (#234 review): the phase is where the run STOPPED, not what is running.
+    ``errored``
+        Reached, but its only evidence is failure (``optimizer_error`` and nothing
+        else). Neither ``done`` (a clean tick over a phase that produced nothing) nor
+        ``skipped`` (which claims it was legitimately not run) is true of it.
+    ``skipped``
+        Past it, and it logged nothing — a legitimately-absent stage. ``cap-evolve run``
+        on a pre-scaffolded project never emits ``intake``, and calling that phase
+        "pending" on a finished run states something false.
+    ``unknown``
+        Past it, it logged nothing, and silence is not evidence of absence. Used for
+        the ``check`` hard gate: the gate that guards all spend either attests itself
+        (``check_gate``) or its state is unknown. It never reads ``done`` or ``skipped``.
+    ``pending``
+        Nothing has reached it yet.
+
+    ``now`` (the parameter) is the wall clock, defaulting to ``time.time()``. It is the
+    burn RATE's denominator — ``now - first_t``, not ``last_t - first_t``, because the
+    event span freezes the instant the log goes quiet and the ratio then describes only
+    the dense part of the log (30x overstatement, #234 review finding 3). Pass it
+    explicitly to keep a caller deterministic. Phase detection itself still reads no
+    clock, so ``#194``'s event-log-keyed cache stays correct for everything but the rate.
 
     ``burn`` is spend accumulated with ``eventstream.accrue_totals`` — the one
-    arithmetic that counts runner cost from ``evaluate`` and optimizer cost from
-    ``step``-likes exactly once. Re-deriving it here double-counted the runner and
-    showed ~2x the real spend (#191 review); ``reduce_run`` overrides these totals with
-    ``state.json``'s authoritative ``Spent`` when the run wrote one, and records which
-    source won in ``burn["source"]``.
+    arithmetic that counts each dollar once, across all three algorithms.
+    ``reduce_run`` overrides these totals with ``state.json``'s authoritative ``Spent``
+    when the run wrote one, and records which source won in ``burn["source"]``.
     """
     from .eventstream import accrue_totals, format_event  # local: keeps import cost off report
 
     started: dict[str, float | None] = {}
     order = [k for k, _, _ in _PHASE_KINDS]
     kind_to_phase = {kind: key for key, _, kinds in _PHASE_KINDS for kind in kinds}
+    #: Phases with at least one non-error event — what separates `done` from `errored`.
+    real_evidence: set[str] = set()
 
     totals: dict = {}
     now_line: str | None = None
@@ -334,9 +393,16 @@ def derive_pipeline(events: list[dict], *, finalized: bool = False) -> dict:
         if t is not None:
             first_t = t if first_t is None else min(first_t, t)
             last_t = t if last_t is None else max(last_t, t)
-        phase = kind_to_phase.get(str(ev.get("kind") or ""))
-        if phase is not None and phase not in started:
-            started[phase] = t
+        kind = str(ev.get("kind") or "")
+        phase = kind_to_phase.get(kind)
+        if phase is not None:
+            if phase not in started:
+                started[phase] = t
+            # A gate that attests its own FAILURE is evidence of a failure, not of a
+            # pass, so it doesn't count as real evidence either.
+            failed_gate = kind == "check_gate" and not ev.get("ok", True)
+            if kind not in _PHASE_ERROR_KINDS and not failed_gate:
+                real_evidence.add(phase)
         # skip_kinds=() so the bookkeeping kinds this phase detection needs are
         # rendered too, not dropped as terminal noise.
         line = format_event(ev, totals, skip_kinds=())
@@ -346,25 +412,42 @@ def derive_pipeline(events: list[dict], *, finalized: bool = False) -> dict:
     if finalized:
         started.setdefault("finalize", last_t)
         started.setdefault("report", last_t)
+        real_evidence.update(("finalize", "report"))
 
+    dead = liveness in ("crashed", "stalled")
     latest = next((k for k in reversed(order) if k in started), None)
     reached = order.index(latest) if latest is not None else -1
     phases = []
     for i, key in enumerate(order):
         label = next(lbl for k, lbl, _ in _PHASE_KINDS if k == key)
         if key not in started:
-            # Past it but silent → skipped, not pending: a finalized run whose project
-            # was already scaffolded never logs `intake`, and "pending" would be a lie.
-            status = "skipped" if i < reached else "pending"
+            if i >= reached:
+                status = "pending"
+            elif key == _HARD_GATE_PHASE:
+                # Silence about the hard gate is NOT evidence it was skipped: unlike
+                # `intake`, there is no legitimate path that runs without it. Saying
+                # either "done" or "skipped" here would state a fact we do not have.
+                status = "unknown"
+            else:
+                status = "skipped"
+        elif key not in real_evidence:
+            status = "errored"
         elif key == latest:
-            status = "active"
+            # A phase cannot be "currently active" while liveness says the process is
+            # gone or wedged — it is where the run stopped.
+            status = "interrupted" if dead else "active"
         else:
             status = "done"
         phases.append({"key": key, "label": label, "status": status,
                        "detail": _PHASE_DETAIL[key], "started_at": started.get(key),
                        "index": i + 1})
 
-    elapsed = (last_t - first_t) if (first_t is not None and last_t is not None) else 0.0
+    span = (last_t - first_t) if (first_t is not None and last_t is not None) else 0.0
+    wall = float(time.time() if now is None else now)
+    # Wall-clock elapsed and silence, both anchored on real event timestamps. max(span)
+    # guards a clock that has moved backwards since the log was written.
+    elapsed = max(span, wall - first_t) if first_t is not None else 0.0
+    stale = max(0.0, wall - last_t) if last_t is not None else None
     usd = float(totals.get("usd") or 0.0)
     tokens = int(totals.get("tokens") or 0)
     return {
@@ -375,8 +458,12 @@ def derive_pipeline(events: list[dict], *, finalized: bool = False) -> dict:
         "burn": {
             "usd": round(usd, 6), "tokens": tokens,
             "elapsed_seconds": round(elapsed, 1),
-            "usd_per_min": _rate(usd, elapsed, finalized=finalized, digits=6),
-            "tokens_per_min": _rate(tokens, elapsed, finalized=finalized, digits=1),
+            "event_span_seconds": round(span, 1),
+            "stale_seconds": None if stale is None else round(stale, 1),
+            "usd_per_min": _rate(usd, elapsed, finalized=finalized, digits=6,
+                                 stale_seconds=stale),
+            "tokens_per_min": _rate(tokens, elapsed, finalized=finalized, digits=1,
+                                    stale_seconds=stale),
             "source": "events",
         },
     }
@@ -683,10 +770,13 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- #138 evidence header: phase pipeline + live burn ----------------
-    # Derived from events.jsonl alone, so #194's reduce cache (keyed on the event
-    # log's mtime/size/inode) invalidates exactly when this changes. Nothing here
-    # reads the wall clock: `now.since` is an event timestamp and time-in-state is
-    # computed by the viewer, so a cache hit can never serve a frozen "3m ago".
+    # PHASES are derived from events.jsonl alone, so #194's reduce cache (keyed on the
+    # event log's mtime/size/inode) invalidates exactly when they change, and `now.since`
+    # is an event timestamp with time-in-state computed by the viewer — a cache hit can
+    # never serve a frozen "3m ago". The burn RATE is the one clock-dependent field
+    # (finding 3 requires a wall-clock denominator); it is recomputed below on every
+    # reduce, and being suppressed by staleness it can only ever go from a number to
+    # `None` as a run goes quiet, never to a larger fabricated rate.
     _finalized = bool(test_reward is not None or sealed)
     pipeline = derive_pipeline(events, finalized=_finalized)
     if sp is not None and (sp.total_usd or sp.runner_tokens or sp.optimizer_tokens):
@@ -698,10 +788,13 @@ def reduce_run(run_dir) -> dict:
                                         + sp.intake_tokens)
         pipeline["burn"]["source"] = "spent"
         el = pipeline["burn"]["elapsed_seconds"] or 0.0
+        _stale = pipeline["burn"]["stale_seconds"]
         pipeline["burn"]["usd_per_min"] = _rate(pipeline["burn"]["usd"], el,
-                                               finalized=_finalized, digits=6)
+                                               finalized=_finalized, digits=6,
+                                               stale_seconds=_stale)
         pipeline["burn"]["tokens_per_min"] = _rate(pipeline["burn"]["tokens"], el,
-                                                  finalized=_finalized, digits=1)
+                                                  finalized=_finalized, digits=1,
+                                                  stale_seconds=_stale)
 
     delta_pct = None
     if baseline_val not in (None, 0) and best_val is not None:
@@ -723,11 +816,13 @@ def reduce_run(run_dir) -> dict:
         "test_sealed": sealed,
         # #138: the evidence header. `pipeline.phases` is which stage is lit,
         # `pipeline.now` the focal line, `pipeline.burn` the live spend readout.
-        # `metric_direction` is stated rather than assumed: every gate in the repo
-        # accepts on `val > parent_val`, so reward is higher-is-better, and the header
-        # says so instead of leaving an arrow's meaning to the reader.
+        # Reward is higher-is-better, period: every gate in the repo accepts on
+        # `val > parent_val`. That used to be published as a `metric_direction` field
+        # with a `lower_is_better` branch in two components — a constant dressed as a
+        # variable, whose only test asserted a value nothing could emit (#234 nit 6).
+        # The renderers state the constant; when a metric direction becomes a real spec
+        # field, publish it then.
         "pipeline": pipeline,
-        "metric_direction": "higher_is_better",
         "counts": counts,
         "frontier": frontier,
         "tasks": tasks,
@@ -1030,7 +1125,11 @@ header .tag{color:var(--muted);font-size:12px;margin-left:auto}
 .phase .nm{font-weight:600} .phase .st{font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 .phase.done{border-color:#1f3a23} .phase.done .st{color:var(--ok)}
 .phase.active{border-color:var(--accent)} .phase.active .st{color:var(--accent)}
-.phase.pending .st,.phase.skipped .st{color:var(--muted)}
+/* interrupted/errored are FAILURE states, not quiet ones: a phase the run stopped in,
+   and a phase whose only evidence is an error, must not read like a clean tick. */
+.phase.interrupted,.phase.errored{border-color:var(--bad)}
+.phase.interrupted .st,.phase.errored .st{color:var(--bad)}
+.phase.pending .st,.phase.skipped .st,.phase.unknown .st{color:var(--muted)}
 .phase .d{color:var(--muted);font-size:11px;margin-top:4px}
 .dead{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:6px 12px;margin:6px 0}
 .dead .x{color:var(--bad);font-size:11px;float:right}
@@ -1145,7 +1244,9 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
         st:p.status, d:M[p.key]||p.detail}))
     : [
     {nm:'Intake',st:D(total>0||hasBase),d:'Interview + scaffold project, adapter, seed.'},
-    {nm:'Implement & check',st:D(total>0||hasBase),d:'Hard gate before any budget is spent.'},
+    /* A pre-#138 payload has no event log, so nothing attests the hard gate. Getting
+       PAST it is not proof it passed, so this reads `unknown`, never a green tick. */
+    {nm:'Implement & check',st:'unknown',d:'Hard gate before any budget is spent — no event attests it in this payload.'},
     {nm:'Baseline',st:D(hasBase),d:M.baseline},
     {nm:'Optimize'+(S.algorithm?' · '+S.algorithm:''),st:finalized?'done':(hasBase?'active':'pending'),
      d:M.optimize},
@@ -1166,7 +1267,6 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
 (function(){
   const P=S.pipeline; if(!P) return;
   const s=sec('Evidence'); const b=P.burn||{};
-  const dir=S.metric_direction==='lower_is_better'?'lower':'higher';
   const pc=v=>v==null?'—':(v*100).toFixed(1)+'%';
 
   if(P.now&&P.now.line){
@@ -1200,7 +1300,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     if(s2)k.append($('div',{class:'s',text:s2}));return k;};
   const src=b.source==='spent'
     ?'state.json Spent.total_usd (runner + optimizer + intake) — the same total the budget check uses.'
-    :'events.jsonl via eventstream.accrue_totals — each dollar counted once.';
+    :'events.jsonl via eventstream.accrue_totals — runner from evaluate/minibatch, optimizer from the per-iteration gate events; each dollar counted once.';
   row.append(
     kp2('burn','$'+(b.usd||0).toFixed(4),b.usd_per_min!=null?'$'+b.usd_per_min.toFixed(4)+'/min':'',src),
     kp2('tokens',(b.tokens||0).toLocaleString(),

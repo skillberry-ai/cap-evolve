@@ -7,8 +7,13 @@ Two invariants worth a test:
   ``skillopt_step``. Four bugs in this epic (#224) came from a consumer assuming
   ``kind == "step"``; the Optimize stage must light for every one of them.
 * **The burn is not re-derived.** ``eventstream.accrue_totals`` counts each dollar
-  once (runner from ``evaluate``, optimizer from ``step``-likes) and must reproduce
-  ``RunDir.spent.total_usd``. Summing every cost-ish key overstates it.
+  once and must reproduce ``RunDir.spent.total_usd`` FOR EVERY ALGORITHM — the #234
+  review found it understating GEPA 3.9x because GEPA writes neither ``evaluate`` nor
+  ``opt_cost_usd``. Summing every cost-ish key overstates it in the other direction.
+* **A phase never claims more than the log proves.** The hard gate reads ``unknown``
+  unless it attested itself; a dead run's phase reads ``interrupted``, not ``active``;
+  a phase whose only evidence is an error reads ``errored``, not ``skipped``/``done``.
+* **A rate's denominator is wall clock, and goes away when the log is stale.**
 """
 from __future__ import annotations
 
@@ -53,7 +58,7 @@ def test_optimize_phase_lights_for_every_algorithm():
 def test_every_phase_reachable_for_every_algorithm():
     """Walk each algorithm through the full pipeline and see all six phases resolve."""
     for algo, steps in ALGO_STEP_EVENTS.items():
-        events = ([_ev("intake", usd=0.0), _ev("seed_dir_created", path="/x"),
+        events = ([_ev("intake", usd=0.0), _ev("check_gate", ok=True, problems=0),
                    _ev("splits", train=2, val=2, test=2), _ev("baseline", val=0.1)]
                   + steps + [_ev("finalize", test_reward=0.9, best_id="b")])
         p = dashboard.derive_pipeline(events, finalized=True)
@@ -69,7 +74,10 @@ def test_unreached_phase_is_pending_but_a_silent_past_phase_is_skipped():
         [_ev("baseline", val=0.1), _ev("step", candidate="c", val=0.2, accept=True),
          _ev("finalize", test_reward=0.5)], finalized=True)
     got = {x["key"]: x["status"] for x in p["phases"]}
-    assert got["intake"] == "skipped" and got["check"] == "skipped"
+    # intake: legitimately silent (pre-scaffolded) → skipped. check: silence about the
+    # HARD GATE is not evidence it was skipped → unknown, never a green tick.
+    assert got["intake"] == "skipped"
+    assert got["check"] == "unknown"
     assert "pending" not in got.values()
 
     early = dashboard.derive_pipeline([_ev("intake", usd=0.0)])
@@ -119,27 +127,29 @@ def test_burn_rate_is_only_reported_when_it_means_something():
     """A burn *rate* answers "what is this costing me right now". There is no honest
     answer for a finished run (a 2.6s toy run that spent $0.81 is not burning
     $18.69/min) or under a minute of elapsed time — report the total, and `None`."""
+    # `now` is passed explicitly so the assertions are about the arithmetic, not the
+    # test's own wall clock.
     one = dashboard.derive_pipeline(
-        [_ev("evaluate", t=100.0, split="val", cost_usd=0.5, tokens=10)])["burn"]
+        [_ev("evaluate", t=100.0, split="val", cost_usd=0.5, tokens=10)], now=100.0)["burn"]
     assert one["usd"] == 0.5 and one["elapsed_seconds"] == 0.0
     assert one["usd_per_min"] is None and one["tokens_per_min"] is None
 
     live = [_ev("evaluate", t=60.0, split="val", cost_usd=0.5, tokens=600),
             _ev("evaluate", t=180.0, split="val", cost_usd=0.5, tokens=600)]
-    burn = dashboard.derive_pipeline(live)["burn"]
+    burn = dashboard.derive_pipeline(live, now=180.0)["burn"]
     assert burn["elapsed_seconds"] == 120.0
     assert abs(burn["usd_per_min"] - 0.5) < 1e-9
     assert abs(burn["tokens_per_min"] - 600.0) < 1e-9
 
     # same events, but the run is over → total stands, rate goes away
-    done = dashboard.derive_pipeline(live, finalized=True)["burn"]
+    done = dashboard.derive_pipeline(live, finalized=True, now=180.0)["burn"]
     assert done["usd"] == burn["usd"]
     assert done["usd_per_min"] is None and done["tokens_per_min"] is None
 
     # under a minute: extrapolating 3 seconds to a per-minute figure is invention
     short = dashboard.derive_pipeline(
         [_ev("evaluate", t=1.0, split="val", cost_usd=0.5, tokens=10),
-         _ev("evaluate", t=4.0, split="val", cost_usd=0.5, tokens=10)])["burn"]
+         _ev("evaluate", t=4.0, split="val", cost_usd=0.5, tokens=10)], now=4.0)["burn"]
     assert short["elapsed_seconds"] == 3.0 and short["usd_per_min"] is None
 
 
@@ -184,3 +194,209 @@ def test_json_for_html_neutralises_script_data(tmp_path):
     out = dashboard.json_for_html(hostile)
     assert "<" not in out and ">" not in out and "&" not in out
     assert json.loads(out) == hostile  # the data the JS reads is unchanged
+
+
+# --- the three blocking findings from the #234 review ------------------------
+
+def test_events_burn_equals_spent_for_every_algorithm(tmp_path):
+    """The regression the #234 review found: the events-only burn understated GEPA by
+    3.9x ($0.28 vs $1.09) because `accrue_totals` read `evaluate`/`opt_cost_usd`, and
+    the GEPA path writes NEITHER — its runner spend goes through `minibatch` and its
+    optimizer spend rides the per-iteration gate.
+
+    This asserts the events-only burn against each algorithm's own `Spent`, charged
+    through the same `update_spent` calls the real code makes. It is the test whose
+    absence let a hill-climb-only proof generalise to a false claim about GEPA.
+    """
+    from cap_evolve.rundir import RunDir
+
+    # (algorithm, events, the update_spent charges the real code makes for them)
+    cases = {
+        # hill-climb / skillopt: runner spend on `evaluate`, optimizer on the step.
+        "hill-climb": ([
+            _ev("evaluate", split="val", tag="seed", cost_usd=0.30, tokens=4000),
+            _ev("evaluate", split="val", tag="c1", cost_usd=0.51, tokens=7700),
+            _ev("step", candidate="c1", val=0.5, accept=True,
+                cost_usd=0.51, tokens=7700, opt_cost_usd=0.28, opt_tokens=6000),
+        ], dict(usd=0.81, runner_tokens=11700, optimizer_usd=0.28, optimizer_tokens=6000)),
+        "skillopt": ([
+            _ev("evaluate", split="val", tag="seed", cost_usd=0.30, tokens=4000),
+            _ev("evaluate", split="val", tag="s1", cost_usd=0.51, tokens=7700),
+            _ev("skillopt_step", candidate="s1", val=0.5, accept=True, epoch=1,
+                step_in_epoch=1, opt_cost_usd=0.28, opt_tokens=6000),
+        ], dict(usd=0.81, runner_tokens=11700, optimizer_usd=0.28, optimizer_tokens=6000)),
+        # GEPA: minibatch rollouts (gepa.py:182) + a full-val eval, optimizer paid per
+        # iteration whether or not the local gate passes (gepa.py:589).
+        "gepa": ([
+            _ev("evaluate", split="val", tag="seed", cost_usd=0.30, tokens=4000),
+            _ev("gepa_start"), _ev("gepa_select", parent="seed", strategy="pareto"),
+            _ev("minibatch", tag="mb_p_0001", cost_usd=0.09, tokens=1200),
+            _ev("gepa_local_gate", candidate="g1", passed=True,
+                opt_cost_usd=0.28, opt_tokens=6000),
+            _ev("minibatch", tag="mb_c_0001", cost_usd=0.09, tokens=1300),
+            _ev("evaluate", split="val", tag="g1", cost_usd=0.33, tokens=5200),
+            _ev("gepa_val_gate", candidate="g1", val=0.5, accept=True),
+        ], dict(usd=0.81, runner_tokens=11700, optimizer_usd=0.28, optimizer_tokens=6000)),
+    }
+
+    for algo, (events, charges) in cases.items():
+        rd = RunDir.create(tmp_path / algo, ts="t")
+        rd.update_spent(**charges)
+        truth = rd.spent
+        burn = dashboard.derive_pipeline(events)["burn"]
+        assert burn["source"] == "events", algo
+        assert abs(burn["usd"] - truth.total_usd) < 1e-9, (algo, burn["usd"], truth.total_usd)
+        assert burn["tokens"] == truth.runner_tokens + truth.optimizer_tokens, algo
+
+
+def test_gepa_emits_the_cost_fields_the_burn_reads():
+    """Fixing the burn in the dashboard alone would have left #191's `--follow` meter and
+    every future consumer reading the same blind events, so the fix is at the SOURCE.
+    Pin the emitter contract: `minibatch` carries runner cost, `gepa_local_gate` carries
+    optimizer cost, and `accrue_totals` classifies both."""
+    import inspect
+    from cap_evolve import gepa
+    from cap_evolve.eventstream import _SPEND_SOURCES
+
+    mb = inspect.getsource(gepa._eval_minibatch)
+    assert 'log_event("minibatch"' in mb and "cost_usd=" in mb and "tokens=run_tokens" in mb
+    loop = inspect.getsource(gepa.gepa_loop)
+    assert 'log_event("gepa_local_gate"' in loop and "opt_cost_usd=" in loop
+
+    assert _SPEND_SOURCES["minibatch"] == ("cost_usd", "tokens")
+    assert _SPEND_SOURCES["gepa_local_gate"] == ("opt_cost_usd", "opt_tokens")
+    # …and no kind is a source for two roles, which is what keeps each dollar once.
+    assert len(_SPEND_SOURCES) == len(set(_SPEND_SOURCES))
+
+
+def test_optimizer_spend_is_counted_on_locally_rejected_gepa_iterations():
+    """The optimizer is paid every iteration; `gepa_val_gate` only fires on the ones that
+    pass the cheap local gate. Keying optimizer spend off the val gate would silently
+    lose the spend of every locally-rejected iteration."""
+    events = [_ev("gepa_start"),
+              _ev("minibatch", tag="mb_p", cost_usd=0.05, tokens=500),
+              # local gate FAILS → no gepa_val_gate is ever logged for this iteration
+              _ev("gepa_local_gate", candidate="g1", passed=False,
+                  opt_cost_usd=0.40, opt_tokens=9000),
+              _ev("minibatch", tag="mb_c", cost_usd=0.05, tokens=500)]
+    burn = dashboard.derive_pipeline(events)["burn"]
+    assert abs(burn["usd"] - 0.50) < 1e-9, burn   # 0.05 + 0.05 runner + 0.40 optimizer
+    assert burn["tokens"] == 500 + 500 + 9000
+
+
+def test_check_phase_never_claims_done_without_the_gate_attesting_itself():
+    """`target_profile` is logged by the ALGORITHM runner, after baseline, whenever a
+    target model is configured — so keying the hard gate off it rendered a green
+    "✓ Implement & check" on any `--target-model` run with nothing proving the gate ran
+    (#234 finding 1). Only `check_gate`, logged by the gate itself, counts."""
+    real_order = [_ev("splits", t=1, train=2, val=2, test=2), _ev("baseline", t=2, val=0.1),
+                  _ev("target_profile", t=3, model="gpt-oss-120b", tier="mid"),
+                  _ev("step", t=4, candidate="c1", val=0.5, accept=True),
+                  _ev("finalize", t=5, test_reward=0.9)]
+    got = {x["key"]: x["status"]
+           for x in dashboard.derive_pipeline(real_order, finalized=True)["phases"]}
+    assert got["check"] == "unknown", got
+    assert got["check"] not in ("done", "skipped")
+
+    # …and it DOES read done once the gate attests itself.
+    attested = [_ev("check_gate", t=1, ok=True, problems=0)] + real_order
+    got = {x["key"]: x["status"]
+           for x in dashboard.derive_pipeline(attested, finalized=True)["phases"]}
+    assert got["check"] == "done", got
+
+    # A gate that attested its own FAILURE is not evidence of a pass.
+    failed = [_ev("check_gate", t=1, ok=False, problems=3)] + real_order
+    got = {x["key"]: x["status"]
+           for x in dashboard.derive_pipeline(failed, finalized=True)["phases"]}
+    assert got["check"] == "errored", got
+
+
+def test_the_live_rate_uses_wall_clock_and_is_suppressed_when_the_log_is_stale():
+    """The 30x case (#234 finding 3): two events 120s apart, but the last one is 58
+    minutes old because a slow eval is in flight. `last_t - first_t` freezes at 120s, so
+    the surviving ratio describes only the dense part of the log."""
+    # t>0: `_event_time` rejects t<=0 as clock skew, so anchor on a real epoch value.
+    t0 = 1_700_000_000.0
+    events = [_ev("evaluate", t=t0, split="val", cost_usd=1.0, tokens=1200),
+              _ev("evaluate", t=t0 + 120.0, split="val", cost_usd=1.0, tokens=1200)]
+    now = t0 + 120.0 + 58 * 60.0
+
+    burn = dashboard.derive_pipeline(events, now=now)["burn"]
+    assert burn["event_span_seconds"] == 120.0          # the OLD denominator
+    assert burn["elapsed_seconds"] == now - t0          # wall clock, and still growing
+    assert burn["stale_seconds"] == 58 * 60.0
+    # Stale log → no recent-burn claim at all, rather than 30x the honest figure.
+    assert burn["usd_per_min"] is None and burn["tokens_per_min"] is None
+
+    # A live run whose log is CURRENT still gets a rate — off wall clock, not the span.
+    fresh = dashboard.derive_pipeline(events, now=t0 + 180.0)["burn"]
+    assert fresh["elapsed_seconds"] == 180.0
+    assert abs(fresh["usd_per_min"] - 2.0 / 3.0) < 1e-6   # $2 over 3 minutes (6dp)
+    # …and the event span would have claimed $1.00/min, i.e. 1.5x more.
+    assert fresh["usd_per_min"] < 2.0 / (120.0 / 60.0)
+
+
+def test_a_dead_run_shows_interrupted_not_active():
+    """Merged with #218, the header rendered "● Optimize" (lit) next to a `crashed`
+    StatusBadge and the reader could not tell which was true. `active` claims a phase is
+    RUNNING; for a dead run it is only where the run stopped."""
+    events = [_ev("splits", train=2, val=2, test=2), _ev("baseline", val=0.1),
+              _ev("step", candidate="c1", val=0.5, accept=True)]
+    assert _phase(dashboard.derive_pipeline(events), "optimize") == "active"
+    for status in ("crashed", "stalled"):
+        p = dashboard.derive_pipeline(events, liveness=status)
+        assert _phase(p, "optimize") == "interrupted", status
+        assert "active" not in {x["status"] for x in p["phases"]}, status
+        assert p["current"] == "optimize", status  # still says WHERE, just not "running"
+    # #221's plateau is orthogonal — "live and plateaued" is coherent, so `live` and any
+    # unknown liveness value leave `active` alone.
+    for status in ("live", None, "plateaued"):
+        assert _phase(dashboard.derive_pipeline(events, liveness=status), "optimize") == "active"
+
+
+def test_an_errored_phase_is_not_reported_as_skipped_or_done():
+    """`skipped` says "legitimately not run" and `done` says "completed"; a phase whose
+    only evidence is failure is neither (#234 finding 4)."""
+    events = [_ev("splits", train=2, val=2, test=2), _ev("baseline", val=0.1),
+              _ev("optimizer_error", candidate="c1", error="boom"),
+              _ev("finalize", test_reward=0.1)]
+    got = {x["key"]: x["status"]
+           for x in dashboard.derive_pipeline(events, finalized=True)["phases"]}
+    assert got["optimize"] == "errored", got
+    assert got["optimize"] not in ("done", "skipped")
+    # One successful sibling is enough to make it a real phase again.
+    ok = events[:2] + [_ev("optimizer_error", candidate="c1", error="boom"),
+                       _ev("step", candidate="c2", val=0.4, accept=True),
+                       _ev("finalize", test_reward=0.4)]
+    got = {x["key"]: x["status"]
+           for x in dashboard.derive_pipeline(ok, finalized=True)["phases"]}
+    assert got["optimize"] == "done", got
+
+
+def test_rate_survives_a_backwards_clock():
+    """A wall clock behind the log's own timestamps must not produce a negative
+    denominator (and so a negative rate)."""
+    events = [_ev("evaluate", t=1000.0, split="val", cost_usd=1.0, tokens=100),
+              _ev("evaluate", t=1120.0, split="val", cost_usd=1.0, tokens=100)]
+    burn = dashboard.derive_pipeline(events, now=0.0)["burn"]
+    assert burn["elapsed_seconds"] >= 0.0
+    assert burn["stale_seconds"] == 0.0
+    assert burn["usd_per_min"] is None or burn["usd_per_min"] > 0
+
+
+def test_every_log_event_kind_in_core_is_classified_by_at_most_one_phase():
+    """#224's failure mode is a per-consumer kind table drifting from the emitters. Pin
+    both directions: no kind is claimed by two phases, and every kind `_PHASE_KINDS`
+    names is either really emitted in the tree or the sentinel `report` has none."""
+    seen: dict[str, str] = {}
+    for key, _label, kinds in dashboard._PHASE_KINDS:
+        for k in kinds:
+            assert k not in seen, f"{k} claimed by both {seen.get(k)} and {key}"
+            seen[k] = key
+
+    import pathlib
+    root = pathlib.Path(dashboard.__file__).resolve().parent
+    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py"))
+    # `check_gate` is logged from cli.py; the rest from harness/gepa/skillopt/rundir/gate.
+    for kind, phase in seen.items():
+        assert f'"{kind}"' in src, f"{kind} ({phase}) is not emitted anywhere in core/"

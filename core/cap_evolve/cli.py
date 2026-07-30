@@ -479,6 +479,22 @@ def _cmd_run(argv):
         if overrides:
             _RunDir.open(workdir / run_dir).update_budget(**overrides)
 
+    # Attest the hard gate INTO the run's own log. The check ran above, before the run
+    # dir existed, so this is the first moment it can be recorded. It is the only
+    # evidence the dashboard's "Implement & check" phase accepts: previously that phase
+    # lit off `target_profile`/`seed_dir_created`, neither of which says anything about
+    # the gate, so a run could render "✓ Implement & check" having never proved it
+    # (#234 review, finding 1). Best-effort, like intake below: failing to log the
+    # attestation must not fail a run whose gate genuinely passed — the phase then reads
+    # `unknown`, which is the honest state.
+    try:
+        from .rundir import RunDir as _RunDir
+        _RunDir.open(workdir / run_dir).log_event(
+            "check_gate", ok=bool(chk.ok), project=str(proj_abs),
+            problems=len(getattr(chk, "problems", ()) or ()))
+    except Exception:  # noqa: BLE001 — attestation is best-effort; absence reads `unknown`
+        pass
+
     # Record the intake phase's spend + summary into the run, if the intake phase
     # wrote <project>/intake.json. Best-effort: a missing/malformed file is ignored so
     # it never breaks the run. (run_dir is workdir-relative; resolve under workdir.)
