@@ -66,11 +66,9 @@ def liveness(path: Path) -> dict:
 def _status(summary: dict, live: dict | None = None) -> str:
     """``done`` / ``failed`` / ``crashed`` / ``stalled`` / ``live``.
 
-    ``done`` and ``failed`` are decided from the reduced summary and stay FIRST: a
-    finished run must degrade to a clean "done" no matter that its process is long
-    gone and its log has been silent for a week (#118). Only a run that is neither
-    finished nor empty is subject to the liveness verdict, which is where ``stalled``
-    and ``crashed`` come from — previously such a run read ``live`` forever.
+    ``done`` is decided from the reduced summary and stays FIRST: a finished run must
+    degrade to a clean "done" no matter that its process is long gone and its log has been
+    silent for a week (#118).
     """
     verdict = (live or {}).get("status")
     # `test_sealed`/`test_reward` come from splits.json/final.json; the `finalize` EVENT
@@ -79,10 +77,18 @@ def _status(summary: dict, live: dict | None = None) -> str:
     if summary.get("test_reward") is not None or summary.get("test_sealed") \
             or verdict == "done":
         return "done"
+    # The liveness verdict comes BEFORE the zero-candidate branch. A run whose seed eval
+    # blew up (adapter raised → no candidates) and whose process then died read `failed`
+    # here while the DeepDive badge read `crashed`, because the badge prefers the fresher
+    # SSE `status` frame: two panels, two words, one run — the exact defect class #118
+    # exists to remove. `crashed`/`stalled` are also the more actionable words, naming a
+    # gone or wedged process where `failed` says only "produced nothing".
+    if verdict in ("stalled", "crashed"):
+        return verdict
     counts = summary.get("counts") or {}
     if counts.get("total", 0) == 0:
         return "failed"
-    return verdict if verdict in ("stalled", "crashed") else "live"
+    return "live"
 
 
 def list_runs(base_dir: Path) -> list[dict]:

@@ -76,16 +76,25 @@ def test_a_finalize_event_alone_is_enough_to_report_done(tmp_base, make_run):
     assert runs.load_run(tmp_base, "run_a")["summary"]["status"] == "done"
 
 
-def test_failed_and_done_outrank_the_liveness_verdict(tmp_base, make_run):
-    """Ordering: the summary-derived terminal states are decided BEFORE liveness.
+def test_done_outranks_liveness_but_the_zero_candidate_branch_does_not(tmp_base, make_run):
+    """Ordering: ``done`` is decided BEFORE liveness; zero-candidate ``failed`` AFTER it.
+
+    That second half is the review's blocking #3. A zero-candidate run with a dead process
+    read ``failed`` on the hub while the DeepDive badge read ``crashed`` (the badge prefers
+    the fresher SSE ``status`` frame): two panels, two words, one run. ``crashed``/``stalled``
+    now win — consistent, and more actionable, naming a gone or wedged process where
+    ``failed`` says only "produced nothing".
 
     Checked on ``_status`` directly because the reducer always synthesises a ``seed``
-    node, so ``counts.total == 0`` is unreachable through a real run dir — the
-    ``failed`` branch predates this PR and is left exactly as it was.
+    node, so ``counts.total == 0`` is unreachable through a real run dir.
     """
     from capevolve_dashboard import runs
     dead = {"status": "crashed"}
-    assert runs._status({"counts": {"total": 0}}, dead) == "failed"
+    assert runs._status({"counts": {"total": 0}}, dead) == "crashed"
+    assert runs._status({"counts": {"total": 0}}, {"status": "stalled"}) == "stalled"
+    # With no liveness verdict on offer, a zero-candidate run is still `failed`.
+    assert runs._status({"counts": {"total": 0}}, {"status": "live"}) == "failed"
+    assert runs._status({"counts": {"total": 0}}, None) == "failed"
     assert runs._status({"counts": {"total": 0}}, {"status": "done"}) == "done"
     assert runs._status({"test_sealed": True, "counts": {"total": 3}}, dead) == "done"
     assert runs._status({"test_reward": 0.9, "counts": {"total": 3}}, dead) == "done"
@@ -102,6 +111,26 @@ def test_a_dead_run_with_no_candidates_is_crashed_not_live(tmp_base, make_run):
     rd = make_run("run_a", events=[{"kind": "splits", "train": 1, "val": 1, "test": 1}])
     _age(rd, 99_999.0, pid=_dead_pid())
     assert runs.list_runs(tmp_base)[0]["status"] == "crashed"
+
+
+def test_the_hub_row_and_the_deepdive_badge_agree_on_a_zero_candidate_dead_run(
+        tmp_base, make_run):
+    """The review's blocking #3, end to end on a real run dir.
+
+    ``RunDeepDive.tsx`` picks the SSE ``status`` frame whenever it is not ``live``, and the
+    frame carries ``liveness.status``. So the badge shows the liveness verdict while the hub
+    showed ``failed`` — this asserts the two words are now one word, on the shape that broke
+    it: a run whose seed eval produced no candidates and whose process then died.
+    """
+    from capevolve_dashboard import runs
+    rd = make_run("run_a", events=[{"kind": "splits", "train": 1, "val": 1, "test": 1}])
+    _age(rd, 99_999.0, pid=_dead_pid())
+    hub = runs.list_runs(tmp_base)[0]
+    deep = runs.load_run(tmp_base, "run_a")["summary"]
+    sse_frame = runs.liveness(rd)["status"]                    # what /stream sends
+    badge = sse_frame if sse_frame != "live" else deep["status"]  # RunDeepDive precedence
+    assert hub["status"] == deep["status"] == badge == "crashed", (
+        hub["status"], deep["status"], badge)
 
 
 def test_a_working_run_is_live(tmp_base, make_run):

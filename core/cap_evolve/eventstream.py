@@ -408,12 +408,48 @@ def render_line(ev: dict, totals: dict | None = None, *, color: bool = False,
 # only ever rises as a run proves itself slow, and the run that sets it is the run
 # judged by it — a workload that takes 20 minutes per step raises its own bar to
 # an hour instead of tripping a global constant.
+#
+# The catch, and the reason the floor is 60 minutes rather than 5: only COMPLETED gaps
+# can be derived from, and a run's slowest step is nearly always the one it is currently
+# INSIDE. A run in its first slow step has demonstrated nothing but its opening burst of
+# sub-second events, so the floor alone judges it — and at 300s that reported `stalled`
+# on healthy runs whose owner was alive in `ps`.
+#
+# Folding the OPEN gap into the derived bar (the obvious fix) does not work, because the
+# bar is what that same silence is compared against: with any slack >= 1 the bar outruns
+# the silence forever and `stalled` becomes unreachable; with slack < 1 the bar collapses
+# onto the floor and the fold does nothing. (Pinned by
+# `test_folding_the_open_gap_into_the_bar_would_never_fire`.) So the uninformed case gets
+# a conservative PRIOR instead — a floor no legitimate first step exceeds — and the
+# derived bar takes over the moment the run completes a slower gap.
+#
+# `crashed` deliberately does not depend on any of this: it needs proof (a departed pid),
+# so the case that most needs a fast answer gets one regardless of the floor.
 
 #: Never call a run stalled before this much silence, however fast its events have
-#: been. Keeps a run that produced two events 40ms apart from being declared hung
-#: 120ms later. 300s is the old hard-coded SSE idle close (#118) — demoted from
-#: "the rule" to "the floor".
-STALL_FLOOR_SECONDS = 300.0
+#: been. This is the bar for a run that has not yet demonstrated a slow step, and it is
+#: deliberately generous, because such a run has told us nothing about its own pace: a
+#: real run opens with a burst of sub-second events (``splits``, ``evaluate val/seed``,
+#: ``baseline`` — all inside the same second) and only then makes its first genuinely
+#: slow optimizer call. Deriving a bar from that opening burst measures the burst, not
+#: the workload, so the floor is the only thing judging the FIRST slow step — and at
+#: 300s it called every run whose first step exceeded five minutes ``stalled`` while its
+#: owner was demonstrably alive in ``ps`` (review of #218: probes A, B, S).
+#:
+#: 3600s = ``STALL_SLACK`` × the ~20-minute τ²-bench step: the same slack the derived bar
+#: applies to a demonstrated gap, applied to the slowest step we consider plausible for a
+#: workload we have not observed yet. One completed gap over 20 minutes and the derived
+#: bar takes over above this.
+#:
+#: What the floor does NOT delay is ``crashed``: a dead run is caught by proof (its pid
+#: is gone), not by silence. So raising the floor costs nothing on the case that matters
+#: most — it only delays the "alive but wedged" guess, where late is the cheap direction
+#: and a false alarm gets a working run killed.
+#:
+#: ponytail: one constant, not a tier on how many gaps the log has, so a genuinely wedged
+#: FAST run is now reported at 60m rather than 5m. Add the tier if minute-scale detection
+#: on cheap runs matters; #118 is about the expensive ones.
+STALL_FLOOR_SECONDS = 3600.0
 
 #: Multiplier on the slowest gap the run has already shown. 3x is deliberately
 #: generous: the cost of waiting is a slightly late warning, the cost of being
@@ -424,18 +460,56 @@ STALL_SLACK = 3.0
 #: knows their workload better than the heuristic does. ``0``/unset = derive.
 STALL_ENV = "CAPEVOLVE_STALL_SECONDS"
 
+#: A log that moved this recently proves SOME process is writing it, which outranks any
+#: marker claiming the owner is dead. Needed because ``run.pid`` is never deleted, so a
+#: reused run dir can hold a dead pid from a previous attempt while the current writer
+#: (the per-phase skill chain writes no marker at all) is actively appending — that read
+#: ``crashed`` on a run with ``silence=0.0s`` (review of #218, probe T). Also covers a
+#: container sharing the host's UTS namespace but not its PID namespace, where the host
+#: check passes and a live pid is simply invisible.
+#:
+#: Small on purpose: a really dead process stops writing instantly, so its silence clears
+#: this within a minute and ``crashed`` still arrives promptly. It only has to be longer
+#: than the interval between two writes of a live run, not longer than a slow step.
+CRASH_MIN_SILENCE_SECONDS = 60.0
 
-def _pid_alive(pid, host) -> bool | None:
+
+def _proc_start_time(pid: int) -> float | None:
+    """Wall-clock epoch seconds at which ``pid`` began, or ``None`` if unknowable.
+
+    ``ps -o lstart=`` is the one answer available on both macOS and Linux without a
+    dependency (``/proc`` is Linux-only, ``psutil`` is a new dep for one field).
+    ``None`` on anything unexpected, so an unparseable answer degrades to the old
+    pid-only behaviour rather than to a guess.
+    """
+    import subprocess
+    try:
+        out = subprocess.run(["ps", "-o", "lstart=", "-p", str(pid)],
+                             capture_output=True, text=True, timeout=5).stdout.strip()
+        # "Thu Jul 30 04:10:04 2026" — the same format on both platforms.
+        return time.mktime(time.strptime(out, "%a %b %d %H:%M:%S %Y")) if out else None
+    except Exception:  # noqa: BLE001 — no ps, odd locale, timeout: unknown, not dead
+        return None
+
+
+#: How far a process's real start time may fall AFTER the marker's ``started`` before we
+#: call it a different process. Slack absorbs `ps` second-granularity and the clock moving
+#: between ``time.time()`` and the write; anything past it is a pid that got reused.
+_PID_START_SLACK = 60.0
+
+
+def _pid_alive(pid, host, started=None) -> bool | None:
     """True / False / ``None`` when it cannot be known.
 
     ``None`` (unknown) is a first-class answer and the reason this never guesses:
     a run recorded on another machine, or a pid file we can't parse, must NOT be
     reported crashed. Only a definite "this pid is gone" produces ``False``.
 
-    ponytail: pid-only liveness, so a recycled pid could read as alive. The window
-    needs ~32k intervening spawns plus the same host, and the failure direction is
-    the safe one (a dead run looks quiet, not a live run looking dead). Upgrade to
-    a pid+start-time pair if that ever matters.
+    ``started`` (the marker's write time) closes pid REUSE: the marker is written after
+    the owner exists, so the owner's real start time can only be *earlier*. A process at
+    this pid that began measurably later is therefore somebody else, and the run it
+    belonged to is gone — ``False``, not a false ``True``. Unknowable start time (no
+    ``ps``, odd output) falls back to pid-only rather than guessing either way.
     """
     import socket
     try:
@@ -454,6 +528,13 @@ def _pid_alive(pid, host) -> bool | None:
         return True  # exists, owned by another user
     except OSError:
         return None
+    try:
+        started = float(started)
+    except (TypeError, ValueError):
+        return True  # old marker with no `started`: pid-only, as before
+    real = _proc_start_time(pid)
+    if real is not None and real > started + _PID_START_SLACK:
+        return False  # same pid, different process — the owner really is gone
     return True
 
 
@@ -470,7 +551,7 @@ def _owner_alive(root: Path) -> bool | None:
         return None
     if not isinstance(info, dict):
         return None
-    return _pid_alive(info.get("pid"), info.get("host"))
+    return _pid_alive(info.get("pid"), info.get("host"), info.get("started"))
 
 
 def stall_threshold(gaps) -> float:
@@ -494,24 +575,10 @@ def stall_threshold(gaps) -> float:
     return max(STALL_FLOOR_SECONDS, STALL_SLACK * slowest)
 
 
-def liveness_facts(root, *, events=None, now=None) -> dict:
-    """Everything :func:`classify` needs, gathered from a run dir. Cheap: one
-    ``stat`` plus (unless ``events`` is supplied) one read of ``events.jsonl``.
-
-    ``events`` lets a caller that already has the parsed log — the dashboard reducer
-    does — avoid a second read.
-
-    Silence is measured from the events file's **mtime**, not the last event's ``t``:
-    ``t`` is wall-clock recorded by the writer and can be skewed or malformed, while
-    mtime is the filesystem's own answer to "when did this run last make a noise".
-    """
-    root = Path(root)
-    path = root / "events.jsonl"
-    now = time.time() if now is None else now
-    if events is None:
-        events, _ = read_new_events(path, 0)
-    ts = []
-    finalized = False
+def _scan(events) -> tuple[list[float], bool]:
+    """``(timestamps, saw_finalize)`` from parsed event dicts. Malformed/absent ``t`` is
+    skipped rather than raising: a half-written log must still produce a verdict."""
+    ts, finalized = [], False
     for ev in events:
         if not isinstance(ev, dict):
             continue
@@ -521,14 +588,84 @@ def liveness_facts(root, *, events=None, now=None) -> dict:
             ts.append(float(ev.get("t")))
         except (TypeError, ValueError):
             continue
-    ts.sort()
-    gaps = [b - a for a, b in zip(ts, ts[1:]) if b >= a]
+    return ts, finalized
+
+
+#: ``str(path) -> (mtime, size, offset, sorted_ts, slowest_gap, n, finalized)``. Bounds the
+#: cost of the periodic probe: the SSE route calls ``liveness()`` every 5s per open
+#: connection, and re-deriving the bar meant re-parsing the WHOLE log each time — 108ms on
+#: a 50k-event / 4.6MB log, 720×/hour/connection (review of #218, non-blocking #6).
+#:
+#: The event-derived facts change only when the file does, so new bytes are folded into the
+#: previous scan and each probe costs O(new bytes) instead of O(file). Silence is NEVER
+#: cached: it changes precisely while nothing on disk changes, which is why liveness sits
+#: outside #194's reduce cache in the first place. A shrunk/replaced file (offset > size)
+#: falls back to a full re-read.
+#:
+#: ponytail: unbounded dict keyed by path, one small tuple per run dir ever probed by this
+#: process, and the log itself is what would have to be re-read anyway. Add an LRU cap if a
+#: process ever watches enough distinct runs for that to show up.
+_FACTS_CACHE: dict = {}
+
+
+def liveness_facts(root, *, events=None, now=None) -> dict:
+    """Everything :func:`classify` needs, gathered from a run dir. Cheap: one ``stat``
+    plus a read of whatever bytes of ``events.jsonl`` are new since the last call.
+
+    ``events`` lets a caller that already has the parsed log — the dashboard reducer
+    does — pass it in and skip the read entirely.
+
+    Silence is measured from the events file's **mtime**, not the last event's ``t``:
+    ``t`` is wall-clock recorded by the writer and can be skewed or malformed, while
+    mtime is the filesystem's own answer to "when did this run last make a noise".
+
+    Note the two quantities come from different clocks — gaps from the writer's ``t``,
+    silence from the filesystem's mtime against the reader's ``now`` — so a machine whose
+    clock is skewed against the writer's gets a correct-by-luck answer (review of #218,
+    non-blocking #7). mtime is still the right pragmatic signal: it is the only one that
+    cannot be forged by a malformed event, and both surfaces read it the same way.
+    """
+    root = Path(root)
+    path = root / "events.jsonl"
+    now = time.time() if now is None else now
+    if events is not None:
+        ts, finalized = _scan(events)
+        ts.sort()
+        gaps = [b - a for a, b in zip(ts, ts[1:]) if b >= a]
+        slowest, n = max(gaps, default=0.0), len(ts)
+    else:
+        try:
+            st = path.stat()
+            stamp = (st.st_mtime, st.st_size)
+        except OSError:
+            stamp = None
+        key = str(path)
+        prev = _FACTS_CACHE.get(key)
+        if prev and stamp and (prev[0], prev[1]) == stamp:
+            _, _, _, ts, slowest, n, finalized = prev
+        else:
+            offset = prev[2] if (prev and stamp and prev[2] <= stamp[1]) else 0
+            ts, slowest, n, finalized = (list(prev[3]), prev[4], prev[5], prev[6]) \
+                if offset else ([], 0.0, 0, False)
+            new, offset = read_new_events(path, offset)
+            fresh, saw_final = _scan(new)
+            finalized = finalized or saw_final
+            n += len(fresh)
+            ts = sorted(ts + fresh)
+            gaps = [b - a for a, b in zip(ts, ts[1:]) if b >= a]
+            slowest = max(gaps, default=0.0)
+            # Only the newest timestamp is needed to extend the max on the next call, but
+            # an out-of-order `t` (two writers, a clock step) must not silently invent a
+            # huge gap, so the sorted list is kept. It is the run's event count, and the
+            # log is on disk anyway.
+            if stamp:
+                _FACTS_CACHE[key] = (stamp[0], stamp[1], offset, ts, slowest, n, finalized)
     try:
         silence = max(0.0, now - path.stat().st_mtime)
     except OSError:
         silence = None  # no events file yet — the run hasn't spoken at all
-    return {"silence": silence, "threshold": stall_threshold(gaps),
-            "slowest_gap": max(gaps, default=0.0), "events": len(ts),
+    return {"silence": silence, "threshold": stall_threshold([slowest]),
+            "slowest_gap": slowest, "events": n,
             "finalized": finalized, "alive": _owner_alive(root)}
 
 
@@ -540,9 +677,12 @@ def classify(facts: dict) -> str:
     ``done``     ``finalize`` sealed the test. Terminal state; nothing about silence
                  or a departed process can downgrade it, so a finished run degrades
                  to a clean "done" rather than "its process is gone → crashed".
-    ``crashed``  the owning process is *definitely* gone and the run never finalized.
-                 Needs proof (a pid file naming a pid on this host that no longer
-                 exists) — ``alive is None`` never reaches this branch.
+    ``crashed``  the owning process is *definitely* gone, the run never finalized, AND
+                 the log has stopped moving. Needs proof (a pid file naming a pid on this
+                 host that no longer exists) — ``alive is None`` never reaches this
+                 branch — plus the corroboration that nothing is still writing, because
+                 ``run.pid`` is never deleted and a stale marker in a reused dir would
+                 otherwise condemn a live writer.
     ``stalled``  silent for longer than the run's own derived expectation, while its
                  process is still alive or unknown. "Alive but not talking."
     ``live``     everything else, including long silences that are still within what
@@ -550,9 +690,9 @@ def classify(facts: dict) -> str:
     """
     if facts.get("finalized"):
         return "done"
-    if facts.get("alive") is False:
-        return "crashed"
     silence, threshold = facts.get("silence"), facts.get("threshold") or STALL_FLOOR_SECONDS
+    if facts.get("alive") is False and (silence or 0.0) >= CRASH_MIN_SILENCE_SECONDS:
+        return "crashed"
     if silence is not None and silence > threshold:
         return "stalled"
     return "live"

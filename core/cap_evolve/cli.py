@@ -14,8 +14,9 @@ Subcommands:
                        [--follow]  print live progress while the run works
     cap-evolve tail    [run_dir] [--base .capevolve]  attach to an ongoing run's
                        events.jsonl and print human-readable progress
-                       (exit 0 = run finished / still working, 2 = not a possible run
-                        dir, 3 = --idle-timeout elapsed with no events,
+                       (exit 0 = run finished OR still working — do NOT branch on 0 to
+                        mean "finished"; 2 = not a possible run dir; 3 = --idle-timeout
+                        elapsed with no events and nothing provably dead;
                         4 = STALLED, 5 = CRASHED)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
@@ -32,6 +33,12 @@ from pathlib import Path
 
 from . import __version__
 from .check import run_check
+
+#: How often the liveness probe (#118) runs while watching. Each probe is one log read
+#: plus a ``kill(0)``, so it is throttled well below the 0.5s event poll. `tail` is
+#: interactive and answers fast; `run --follow` owns the run and only needs to warn.
+_STALL_PROBE_SECONDS = 2.0
+_FOLLOW_STALL_PROBE_SECONDS = 30.0
 
 
 def _find_skills_dir() -> Path | None:
@@ -139,12 +146,12 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
             # WARN, don't stop: this run is ours and still going, and whether a wedged
             # phase is worth killing is the user's call — the follower's job is to say
             # so, not to give up and leave the terminal silent again.
-            warned, next_check = False, [time.monotonic() + 30.0]
+            warned, next_check = False, [time.monotonic() + _FOLLOW_STALL_PROBE_SECONDS]
 
             def should_stop(last) -> bool:
                 nonlocal warned
                 if last is not None and time.monotonic() >= next_check[0]:
-                    next_check[0] = time.monotonic() + 30.0
+                    next_check[0] = time.monotonic() + _FOLLOW_STALL_PROBE_SECONDS
                     facts = eventstream.liveness_facts(path.parent)
                     if eventstream.classify(facts) == "stalled":
                         if not warned:
@@ -232,16 +239,24 @@ def _cmd_tail(argv):
     next_check = [0.0]
 
     def should_stop(last) -> bool:
-        if last is None:  # nothing yet — only the plain idle timeout applies
-            return bool(first_deadline and time.monotonic() >= first_deadline)
+        timed_out = bool(last is None and first_deadline
+                         and time.monotonic() >= first_deadline)
         if args.no_stall_check or time.monotonic() < next_check[0]:
-            return False
-        next_check[0] = time.monotonic() + 2.0  # one log read + a kill(0), not every poll
+            return timed_out
+        next_check[0] = time.monotonic() + _STALL_PROBE_SECONDS
         facts = eventstream.liveness_facts(root)
-        if eventstream.classify(facts) in ("stalled", "crashed"):
+        status = eventstream.classify(facts)
+        # `crashed` is proof-based — a pid this host no longer has — so it holds whether or
+        # not THIS process happened to see an event. Attaching without --from-start to a
+        # dead run streams nothing, leaving `last` None forever; gating the probe on `last`
+        # meant `--idle-timeout 0` ("wait forever") hung forever on a provably dead run,
+        # and a finite timeout answered the old ambiguous exit 3 instead of the new 5.
+        # `stalled` still needs `last`: it is a guess from silence, and the run may simply
+        # not have started talking yet.
+        if status == "crashed" or (status == "stalled" and last is not None):
             verdict.update(facts)
             return True
-        return False
+        return timed_out
 
     try:
         for ev in eventstream.follow_events(

@@ -30,10 +30,13 @@ from cap_evolve.cli import _cmd_tail  # noqa: E402
 
 
 def _run_dir(tmp_path, gaps_seconds, *, silent_for=0.0, finalize=False,
-             pid=None, host=None, name="run_t") -> Path:
+             pid=None, host=None, name="run_t", started=None) -> Path:
     """A run dir whose events are spaced by ``gaps_seconds`` and whose events file was
     last touched ``silent_for`` seconds ago. mtime is set explicitly so a stall of hours
-    is testable in milliseconds."""
+    is testable in milliseconds.
+
+    ``started`` writes that value as the marker's start stamp (pid-reuse detection);
+    omitted means a legacy marker with no ``started`` at all."""
     root = tmp_path / name
     root.mkdir(parents=True, exist_ok=True)
     now = time.time()
@@ -52,8 +55,10 @@ def _run_dir(tmp_path, gaps_seconds, *, silent_for=0.0, finalize=False,
     os.utime(root / "events.jsonl", (last, last))
     if pid is not None:
         import socket
-        (root / "run.pid").write_text(json.dumps(
-            {"pid": pid, "host": host or socket.gethostname()}), encoding="utf-8")
+        marker = {"pid": pid, "host": host or socket.gethostname()}
+        if started is not None:
+            marker["started"] = started
+        (root / "run.pid").write_text(json.dumps(marker), encoding="utf-8")
     return root
 
 
@@ -83,7 +88,7 @@ def test_a_run_whose_process_is_gone_is_crashed_not_live(tmp_path):
     """The bug in the issue: 1 candidate then a crash showed 'live' forever."""
     dead = subprocess.Popen([sys.executable, "-c", "pass"])
     dead.wait()
-    root = _run_dir(tmp_path, [1.0, 1.0], silent_for=10.0, pid=dead.pid)
+    root = _run_dir(tmp_path, [1.0, 1.0], silent_for=120.0, pid=dead.pid)
     facts = eventstream.liveness_facts(root)
     assert facts["alive"] is False
     assert eventstream.classify(facts) == "crashed"
@@ -111,7 +116,7 @@ def test_a_slow_but_healthy_run_is_never_called_hung(tmp_path):
     twenty_min = 20 * 60.0
     root = _run_dir(tmp_path, [twenty_min] * 3, silent_for=25 * 60.0, pid=os.getpid())
     facts = eventstream.liveness_facts(root)
-    assert facts["silence"] > eventstream.STALL_FLOOR_SECONDS   # the old rule would fire
+    assert facts["silence"] > 300.0            # the OLD fixed 5-minute rule would fire
     assert eventstream.classify(facts) == "live"                # the new one does not
     assert facts["threshold"] == pytest.approx(twenty_min * eventstream.STALL_SLACK)
     # …and it still fires eventually: the bar rises, it does not vanish.
@@ -120,12 +125,123 @@ def test_a_slow_but_healthy_run_is_never_called_hung(tmp_path):
     assert _classify(late) == "stalled"
 
 
-def test_a_toy_run_still_gets_the_five_minute_floor(tmp_path):
+def test_a_toy_run_still_gets_the_floor(tmp_path):
     """The other direction: millisecond gaps must NOT derive a millisecond threshold."""
     root = _run_dir(tmp_path, [0.04, 0.04], silent_for=30.0, pid=os.getpid())
     facts = eventstream.liveness_facts(root)
     assert facts["threshold"] == eventstream.STALL_FLOOR_SECONDS
     assert eventstream.classify(facts) == "live"
+
+
+# ---- the false positive the #218 review caught -----------------------------
+
+def test_a_healthy_run_in_its_FIRST_slow_step_is_not_stalled(tmp_path):
+    """The review's blocking #1, and the shape that matters most.
+
+    A real run opens with a burst of sub-second events and only then makes its first
+    genuinely slow optimizer call. There is no COMPLETED slow gap to derive a bar from,
+    so the floor is what judges it — and at 300s every run whose first step ran over five
+    minutes was reported `stalled` while its owner was alive in `ps`. Nothing here is
+    pre-seeded with completed slow gaps; that pre-seeding is exactly what hid the bug.
+    """
+    for elapsed in (301.0, 900.0, 1800.0, 3000.0):
+        root = _run_dir(tmp_path, [0.2, 0.1], silent_for=elapsed, pid=os.getpid(),
+                        name=f"run_first_{int(elapsed)}")
+        facts = eventstream.liveness_facts(root)
+        assert facts["slowest_gap"] < 1.0, "no completed slow gap, by construction"
+        assert facts["alive"] is True
+        assert eventstream.classify(facts) == "live", (
+            f"a live run {elapsed}s into its first slow step must not read stalled")
+    # A single event and nothing since (review probe B) is the same shape.
+    solo = _run_dir(tmp_path, [], silent_for=600.0, pid=os.getpid(), name="run_solo")
+    assert _classify(solo) == "live"
+    # It is still not a wait-forever: past the floor, a fast run that really wedged trips.
+    wedged = _run_dir(tmp_path, [0.2, 0.1], silent_for=eventstream.STALL_FLOOR_SECONDS + 60,
+                      pid=os.getpid(), name="run_wedged")
+    assert _classify(wedged) == "stalled"
+
+
+def test_folding_the_open_gap_into_the_bar_would_never_fire(tmp_path):
+    """Why the floor was raised instead of taking the review's suggested fix.
+
+    The suggestion was to fold the CURRENT silence into the ``max`` that derives the bar.
+    But the bar is what that same silence is compared against, so with any factor >= 1 the
+    bar outruns the silence forever and ``stalled`` becomes unreachable; with a factor < 1
+    the bar collapses onto the floor and the fold does nothing. Either way it is not a fix,
+    which is why the conservative prior (a floor no legitimate first step exceeds) is.
+    """
+    for factor in (eventstream.STALL_SLACK, 1.0):
+        silence = 0.0
+        for _ in range(600):  # ten hours, one minute at a time
+            silence += 60.0
+            assert silence <= max(300.0, factor * silence), "would have fired"
+    for factor in (0.5, 0.1):
+        silence = 10_000.0
+        assert max(300.0, factor * silence) != 300.0 or silence > 3000.0
+        # …collapses to the bare floor for any silence under 300/factor.
+        assert max(300.0, factor * 100.0) == 300.0
+
+
+def test_a_live_writer_with_a_stale_dead_marker_is_not_crashed(tmp_path):
+    """The review's blocking #2 / probe T: ``run.pid`` is never deleted, so a reused run
+    dir can hold a dead pid from a previous attempt while the current writer (the
+    per-phase skill chain writes no marker at all) is actively appending. That read
+    `crashed` on a run with silence=0.0s — a demonstrably live run declared dead."""
+    dead = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead.wait()
+    root = _run_dir(tmp_path, [1.0, 1.0], silent_for=0.0, pid=dead.pid, name="run_reused")
+    facts = eventstream.liveness_facts(root)
+    assert facts["alive"] is False and facts["silence"] < 5.0
+    assert eventstream.classify(facts) == "live", "a run writing NOW is not dead"
+    # The corroboration is silence, not trust: once the log really stops, crashed lands.
+    gone = _run_dir(tmp_path, [1.0, 1.0], silent_for=120.0, pid=dead.pid, name="run_gone")
+    assert _classify(gone) == "crashed"
+
+
+def test_a_reused_pid_is_dead_because_started_disagrees(tmp_path):
+    """``started`` was written and never read. A marker naming a pid that now belongs to a
+    DIFFERENT, later-started process must read crashed — the old run really is gone."""
+    live = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        # Marker claims the owner began an hour before this process actually did.
+        root = _run_dir(tmp_path, [1.0], silent_for=600.0, pid=live.pid,
+                        started=time.time() - 3600.0, name="run_recycled")
+        facts = eventstream.liveness_facts(root)
+        if eventstream._proc_start_time(live.pid) is None:
+            pytest.skip("no usable `ps -o lstart=` on this platform")
+        assert facts["alive"] is False, "same pid, a process that started later"
+        assert eventstream.classify(facts) == "crashed"
+        # The genuine owner — marker written just after the process began — stays alive.
+        same = _run_dir(tmp_path, [1.0],
+                        silent_for=eventstream.STALL_FLOOR_SECONDS + 60, pid=live.pid,
+                        started=time.time(), name="run_genuine")
+        assert eventstream.liveness_facts(same)["alive"] is True
+        assert _classify(same) == "stalled"  # alive but quiet, never crashed
+    finally:
+        live.kill()
+        live.wait()
+
+
+def test_a_zombie_owner_is_stalled_not_crashed(tmp_path):
+    """``os.kill(pid, 0)`` succeeds on a zombie, so it reads alive → stalled. Correct: a
+    reaped-but-unwaited child is not proof the run's work is gone."""
+    z = subprocess.Popen([sys.executable, "-c", "pass"])
+    z.poll()  # do NOT wait() — leave it un-reaped so it stays a zombie
+    try:
+        root = _run_dir(tmp_path, [1.0], silent_for=7200.0, pid=z.pid, name="run_zombie")
+        facts = eventstream.liveness_facts(root)
+        assert facts["alive"] is not False   # a zombie is never proof of a dead run
+        assert eventstream.classify(facts) in ("stalled", "live")
+    finally:
+        z.wait()
+
+
+def test_a_marker_without_started_still_works(tmp_path):
+    """Backwards compatibility: a marker written by an older `cap-evolve run` has no
+    ``started`` field, and must fall back to pid-only rather than guessing."""
+    root = _run_dir(tmp_path, [1.0], silent_for=600.0, pid=os.getpid(), name="run_legacy")
+    assert "started" not in json.loads((root / "run.pid").read_text())
+    assert eventstream.liveness_facts(root)["alive"] is True
 
 
 def test_threshold_uses_the_slowest_gap_not_the_mean(tmp_path):
@@ -194,10 +310,9 @@ def test_env_override_wins_over_the_derived_threshold(tmp_path, monkeypatch):
 
 def test_tail_exits_4_and_says_stalled(tmp_path, capsys):
     """A hung run must not exit 0 with a silence that reads like success."""
-    root = _run_dir(tmp_path, [0.01, 0.01], silent_for=3600.0, pid=os.getpid(),
+    root = _run_dir(tmp_path, [0.01, 0.01],
+                    silent_for=eventstream.STALL_FLOOR_SECONDS * 2, pid=os.getpid(),
                     name="run_hung")
-    monkey = eventstream.STALL_FLOOR_SECONDS
-    assert monkey == 300.0
     rc = _cmd_tail([str(root), "--from-start"])
     err = capsys.readouterr().err
     assert rc == 4, err
@@ -212,6 +327,53 @@ def test_tail_exits_5_and_says_crashed(tmp_path, capsys):
     err = capsys.readouterr().err
     assert rc == 5, err
     assert "CRASHED" in err
+
+
+def test_tail_exits_5_on_a_dead_run_WITHOUT_from_start_too(tmp_path, capsys):
+    """The review's blocking #4, second half. Without ``--from-start`` nothing new ever
+    arrives on a dead run, so `last` stayed None, the liveness probe never ran, and the
+    crash verdict — the headline feature — degraded to the OLD ambiguous exit 3. `crashed`
+    is proof-based, so it must not depend on whether this process happened to see a line."""
+    dead = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead.wait()
+    root = _run_dir(tmp_path, [0.01], silent_for=600.0, pid=dead.pid, name="run_dead2")
+    rc = _cmd_tail([str(root), "--idle-timeout", "30"])
+    err = capsys.readouterr().err
+    assert rc == 5, err            # was 3: "timed out … with no events"
+    assert "CRASHED" in err and "timed out" not in err
+
+
+def test_tail_idle_timeout_zero_still_exits_on_a_provably_dead_run(tmp_path, capsys):
+    """`--idle-timeout 0` is documented as "wait forever" — for a run that might still
+    speak. On a run whose owner is provably gone there is nothing left to wait for, and
+    the old code hung indefinitely instead of reporting the crash."""
+    dead = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead.wait()
+    root = _run_dir(tmp_path, [0.01], silent_for=600.0, pid=dead.pid, name="run_dead0")
+    done: list = []
+
+    def watch():
+        done.append(_cmd_tail([str(root), "--idle-timeout", "0"]))
+
+    t = threading.Thread(target=watch, daemon=True)
+    t.start()
+    t.join(timeout=30)
+    assert not t.is_alive(), "tail --idle-timeout 0 hung on a provably dead run"
+    assert done == [5], capsys.readouterr().err
+
+
+def test_tail_idle_timeout_zero_still_waits_forever_when_nothing_is_proven_dead(tmp_path):
+    """The other direction: no marker → `alive is None` → no proof → keep waiting. The
+    stall branch must stay gated on having seen an event, or a run that has not started
+    talking yet would be declared wedged."""
+    root = tmp_path / "run_quiet"
+    root.mkdir()
+    (root / "events.jsonl").write_text("", encoding="utf-8")
+    t = threading.Thread(target=lambda: _cmd_tail([str(root), "--idle-timeout", "0"]),
+                         daemon=True)
+    t.start()
+    t.join(timeout=6)
+    assert t.is_alive(), "must still wait forever when nothing is provably dead"
 
 
 def test_tail_exits_0_and_says_done_for_a_finalized_run(tmp_path, capsys):
@@ -285,10 +447,27 @@ def test_tail_still_returns_3_when_nothing_ever_arrives(tmp_path, capsys):
 
 # ---- one shared source of truth -------------------------------------------
 
-def test_run_writes_a_pid_marker_so_liveness_is_knowable():
-    """`cap-evolve run` must record its pid; without it crash detection is impossible."""
+def test_run_writes_a_pid_marker_so_liveness_is_knowable(tmp_path):
+    """`cap-evolve run` must record its pid; without it crash detection is impossible.
+
+    The source-text half is unavoidable (driving the real `run` needs a skill tree, which
+    ``test_e2e_slice`` owns) but it is no longer the whole test: the review's non-blocking
+    #9 notes the old grep would pass with the marker written to the WRONG DIRECTORY. So the
+    exact expression `cli.py` writes is evaluated here and read back through the real
+    ``_owner_alive``, pinning both the field set and the location liveness looks in.
+    """
+    import socket
     src = Path(eventstream.__file__).with_name("cli.py").read_text(encoding="utf-8")
-    assert '"run.pid"' in src and "os.getpid()" in src and "gethostname()" in src
+    assert '(workdir / run_dir / "run.pid").write_text(' in src, "marker moved out of the run dir"
+    assert "os.getpid()" in src and "gethostname()" in src and '"started": time.time()' in src
+
+    run_dir = tmp_path / "run_marker"
+    run_dir.mkdir()
+    (run_dir / "run.pid").write_text(json.dumps(
+        {"pid": os.getpid(), "host": socket.gethostname(), "started": time.time()}),
+        encoding="utf-8")
+    assert eventstream._owner_alive(run_dir) is True     # found where `run` puts it
+    assert eventstream._owner_alive(tmp_path) is None    # and nowhere else
 
 
 def test_dashboard_classifies_through_the_shared_helper_not_its_own_rule():

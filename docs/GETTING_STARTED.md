@@ -82,11 +82,17 @@ branch on:
 
 | Exit | Verdict | Meaning |
 |---|---|---|
-| `0` | `done` / `working` | `finalize` sealed the test, or the run is still within its own pace |
+| `0` | `done` **or** `working` | `finalize` sealed the test, **or** the run is still within its own pace and you stopped watching |
+| `2` | — | a path that can never be a run dir |
+| `3` | — | `--idle-timeout` elapsed before the *first* event ever arrived |
 | `4` | `STALLED` | silent longer than this run has ever been, process still alive → probably wedged |
 | `5` | `CRASHED` | the process that owned the run is gone and it never finalized |
-| `3` | — | `--idle-timeout` elapsed before the *first* event ever arrived |
-| `2` | — | a path that can never be a run dir |
+
+**Do not branch on `0` to mean "it finished".** `0` also means "still working, I stopped
+watching" — a deliberate choice, because a healthy slow run must not exit non-zero. To test
+for completion, check for `finalize` in the log or `final.json` in the run dir; `tail`'s
+last stderr line also distinguishes the two (`done — finalize sealed the test split` vs
+`working — last event …`).
 
 ```text
 [02:54:58] ACCEPT  cand_0001  val=1.0000 (parent 0.0000)  — paired Δ̄=+1.0000 > 0
@@ -94,11 +100,19 @@ CRASHED — the process that owned this run is gone and it never finalized (last
 ```
 
 **The stall threshold is derived from the run, not fixed.** It is
-`max(5 min, 3 × the slowest gap between events this run has already produced)`, so a
+`max(60 min, 3 × the slowest gap between events this run has already produced)`, so a
 τ²-bench rollout that legitimately takes 20 minutes per step raises its own bar to an
 hour rather than being reported hung — a false "hung" is worse than no signal, because
 the reaction to it is to kill a working run. Set `CAPEVOLVE_STALL_SECONDS=N` to pin a
 fixed number instead, or pass `--no-stall-check` to follow forever.
+
+The 60-minute floor is the bar for a run that has not yet *completed* a slow step: a run
+opens with a burst of sub-second events and only then makes its first slow optimizer call,
+so there is no demonstrated gap to derive from and the floor is what judges it. A lower
+floor reported `STALLED` on healthy runs whose first step ran long. `crashed` is unaffected
+— it needs proof (a departed pid), not silence — so only the "wedged" guess is delayed, and
+`CAPEVOLVE_STALL_SECONDS` pins it lower for a workload you know is fast. Note the pin does
+**not** suppress `crashed`: a crash verdict is proof-based, not time-based.
 
 Crash detection needs a liveness signal, so `cap-evolve run` writes a small `run.pid`
 (`{pid, host, started}`) into the run dir and leaves it there — once the process exits,
