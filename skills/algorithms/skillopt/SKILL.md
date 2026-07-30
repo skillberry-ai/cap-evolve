@@ -25,7 +25,8 @@ hill-climb) but adds three things from the DL analogy:
   without breaking stable successes.
 
 Every step calls the shared `run_step` (materialize → optimize → eval-VAL →
-significance gate → accept/reject → snapshot/best, with RejectedMemory/History);
+significance gate → accept/reject → snapshot/best, and writes the dashboard's
+`rejected.jsonl`/`history.jsonl` audit records — write-only, they never reach a prompt);
 this skill only owns the schedule, the buffer, and the slow update. Gated on val;
 test stays sealed (that's `finalize`).
 

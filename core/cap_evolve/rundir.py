@@ -4,8 +4,8 @@ Layout under ``.capevolve/run_<ts>/``::
 
     state.json          # best candidate id, budget, spent, test_used
     splits.json         # the frozen train/val/test partition (sealed test)
-    rejected.jsonl      # RejectedMemory
-    history.jsonl       # accepted History
+    rejected.jsonl      # rejected candidates (dashboard Memory panel)
+    history.jsonl       # accepted candidates (dashboard Memory panel)
     candidates/<id>/    # snapshot of each candidate's capability dir
     rollouts/<split>/<task>__<cand>__t<k>.json
     events.jsonl        # append-only audit log

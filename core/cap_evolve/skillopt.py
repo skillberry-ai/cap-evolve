@@ -34,7 +34,8 @@ adds three things straight out of the deep-learning analogy:
      bypassing the gate to mutate best.
 
 Everything honesty-critical (materialize → optimize → eval-val → gate →
-accept/reject → snapshot/best, RejectedMemory/History, the sealed test) is
+accept/reject → snapshot/best, the write-only rejected/history audit jsonl, the sealed
+test) is
 delegated to ``harness.run_step`` / ``harness.evaluate_candidate``; this module
 only owns the *schedule*, the *buffer*, and the *slow update*. The result-dict
 shape mirrors ``hill_climb_loop`` (plus per-epoch stats + slow-update records).

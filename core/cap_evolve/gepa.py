@@ -566,7 +566,7 @@ def gepa_loop(
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
         instructions = _instructions(refl_summary, focus_label, mb)
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+        instructions = _augment_instructions(instructions, workdir, run_dir)
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0
