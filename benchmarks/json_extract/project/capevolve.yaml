@@ -22,4 +22,4 @@ stall: 2
 store: copy
 # Declared by the manifest; #142's tamper guard hashes exactly these at baseline
 # and re-hashes them after every optimizer step.
-protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl]
+protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl, capevolve.yaml, *gold*.json, *gold*.jsonl, *gold*.yaml, *gold*.yml, *gold*.csv, *gold*.txt, **/*gold*.json, **/*gold*.jsonl, **/*gold*.yaml, **/*gold*.yml, **/*gold*.csv, **/*gold*.txt]

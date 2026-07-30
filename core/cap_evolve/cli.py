@@ -100,8 +100,13 @@ def _cmd_benchmark(argv):
             print(json.dumps({"zoo": str(zoo.zoo_dir()), "benchmarks": zoo.index()}, indent=2))
             return 0
         if args.action == "add":
+            if ".." in Path(args.name).parts:
+                raise zoo.BenchmarkError(
+                    f"benchmark add {args.name!r}: a `..` component is refused. A "
+                    "benchmark is created inside cwd or at an explicit absolute path; "
+                    "`../../../x` silently scaffolding four levels up is always a typo.")
             dest = Path(args.name)
-            if not args.name.strip("./").count("/") and not dest.exists() and not args.refresh:
+            if "/" not in args.name and not dest.exists() and not args.refresh:
                 dest = Path.cwd() / args.name
             info = zoo.add(dest, name=Path(args.name).name, description=args.description,
                            from_zoo=args.from_zoo, n_tasks=args.tasks, refresh=args.refresh)

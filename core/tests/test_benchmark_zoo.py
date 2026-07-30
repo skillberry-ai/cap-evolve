@@ -194,15 +194,297 @@ def test_verify_catches_duplicate_task_ids(bench):
     assert not rep.ok and "duplicate task id" in " ".join(rep.problems)
 
 
-def test_verify_catches_undeclared_protected_paths(bench):
+def test_verify_checks_the_generated_spec_not_the_manifest(bench):
+    """B5: the guard reads capevolve.yaml, so verify must check capevolve.yaml.
+
+    Weaken ONLY the generated spec and leave the manifest declaring all four paths.
+    The old check read the manifest and reported OK while ``rep.protected`` sitting
+    right next to it showed a single file — the same wrong-artifact bug as #189.
+    """
+    cfg = bench / "project" / "capevolve.yaml"
+    cfg.write_text(cfg.read_text().replace(
+        cfg.read_text().split("protected_paths: ")[1].splitlines()[0],
+        "[adapters/adapter.py]"))
+    m = (bench / "project" / zoo.MANIFEST_NAME).read_text()
+    assert "target.py" in m, "the manifest must still declare it — that is the point"
+    rep = zoo.verify(bench)
+    assert not rep.ok, "verify read the manifest instead of the artifact the guard reads"
+    assert any("runtime tamper guard will NOT hash" in p or
+               "does not declare" in p for p in rep.problems), rep.problems
+
+
+def test_protection_is_additive_not_replacing(bench):
+    """A manifest's protected_paths must UNION with #197's defaults, never replace them.
+
+    #197's own ``protected_paths`` replaces its defaults wholesale, so a manifest that
+    declared its four known paths silently switched OFF the ``*gold*`` answer-key globs.
+    """
+    m = zoo.load_manifest(bench / "project")
+    eff = zoo.effective_protected(m)
+    for want in ("adapters", zoo.MANIFEST_NAME, "target.py", "tasks.jsonl"):
+        assert want in eff, want
+    assert any("gold" in p for p in eff), \
+        "declaring paths must not switch off the answer-key globs"
+    spec = (bench / "project" / "capevolve.yaml").read_text()
+    assert "*gold*.json" in spec, "the generated spec must carry the union"
+
+
+def test_verify_flags_a_third_authors_new_files(bench):
+    """Under-declaration must be DETECTED, not just uncovered for four hardcoded names.
+
+    A reviewer added helpers.py / scorer2.py / answers_gold.json to a zoo entry: all
+    three were silently unprotected and verify still said ok: true.
+    """
+    proj = bench / "project"
+    (proj / "helpers.py").write_text("X = 1\n", encoding="utf-8")
+    (proj / "scorer2.py").write_text("def grade(t, r):\n    return 1.0\n", encoding="utf-8")
+    (proj / "answers_gold.json").write_text('{"a1": "2"}\n', encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok, "a third author's code + answer key must not verify silently"
+    stray = " ".join(rep.problems)
+    assert "UNDER-DECLARED" in stray, rep.problems
+    # the two modules are FLAGGED (they need declaring)...
+    for name in ("helpers.py", "scorer2.py"):
+        assert name in stray, f"{name} not flagged: {rep.problems}"
+    # ...and the answer key is already COVERED, because the union keeps #197's *gold*
+    # globs alive instead of letting the manifest's list replace them.
+    assert "answers_gold.json" in rep.protected, rep.protected
+
+    # declaring them closes the finding: verify passes and all three are guard-hashed.
     m = bench / "project" / zoo.MANIFEST_NAME
     m.write_text(m.read_text().replace(
         "protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl]",
-        "protected_paths: [adapters]"))
-    zoo.add(bench, refresh=True)  # regenerate the spec from the weakened manifest
+        "protected_paths: [adapters, benchmark.yaml, target.py, tasks.jsonl, "
+        "helpers.py, scorer2.py]"), encoding="utf-8")
+    zoo.add(bench, refresh=True)
+    rep2 = zoo.verify(bench)
+    assert rep2.ok, rep2.problems
+    for name in ("helpers.py", "scorer2.py", "answers_gold.json"):
+        assert name in rep2.protected, (name, rep2.protected)
+
+
+def test_verify_fails_a_saturated_baseline_and_allows_a_declared_opt_out(bench):
+    """B1: a benchmark that is already perfect has no headroom to optimize."""
+    t = bench / "project" / "target.py"
+    t.write_text(t.read_text() + '''
+
+def _cheat(task):
+    return str(task.target)
+''', encoding="utf-8")
+    # make run() echo the gold answer
+    t.write_text(t.read_text().replace(
+        '    prompt = (Path(ctx) / "prompt.txt").read_text(encoding="utf-8")',
+        '    return {"output": str(task.target), "trace": "gold"}\n'
+        '    prompt = (Path(ctx) / "prompt.txt").read_text(encoding="utf-8")'),
+        encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok and any("NO HEADROOM" in p for p in rep.problems), rep.problems
+    # ...and the loudly-declared opt-out for a genuinely saturated reference fixture
+    m = bench / "project" / zoo.MANIFEST_NAME
+    m.write_text(m.read_text() + "allow_saturated_baseline: true\n", encoding="utf-8")
+    rep2 = zoo.verify(bench)
+    assert not any("NO HEADROOM" in p for p in rep2.problems), rep2.problems
+    assert any("SATURATED BASELINE ALLOWED" in n for n in rep2.notes), rep2.notes
+
+
+def test_verify_catches_a_constant_scorer(bench):
+    """B1: the degenerate-scorer probe — a score() that ignores its input."""
+    t = bench / "project" / "target.py"
+    t.write_text(t.read_text() + '''
+
+def score(task, rollout):
+    from cap_evolve.types import Score
+    return Score(task_id=task.id, reward=1.0, feedback="perfect", trial_rewards=[1.0])
+''', encoding="utf-8")
+    # declared, so B2's hard error is not what fires here
+    m = bench / "project" / zoo.MANIFEST_NAME
+    m.write_text(m.read_text().replace("scoring: exact", "scoring: custom"),
+                 encoding="utf-8")
     rep = zoo.verify(bench)
     assert not rep.ok
-    assert any("protected_paths does not cover" in p for p in rep.problems), rep.problems
+    assert any("DOES NOT DISCRIMINATE" in p or "NO HEADROOM" in p
+               for p in rep.problems), rep.problems
+
+
+def test_undeclared_custom_scorer_is_a_hard_error(bench):
+    """B2: a score() that silently overrides the declared mode makes `list` lie."""
+    t = bench / "project" / "target.py"
+    t.write_text(t.read_text() + '''
+
+def score(task, rollout):
+    from cap_evolve.types import Score
+    return Score(task_id=task.id, reward=1.0, trial_rewards=[1.0])
+''', encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok
+    assert any("scoring: custom" in p for p in rep.problems), rep.problems
+
+
+@pytest.mark.parametrize("key,value", [
+    ("target_module", "../../pwned.py"),
+    ("tasks_file", "../../evil.jsonl"),
+    ("capability_path", "../../elsewhere"),
+    ("split_ids_file", "/etc/passwd"),
+])
+def test_path_fields_are_contained_in_the_project_dir(bench, key, value):
+    """B4: `target_module: ../../pwned.py` EXECUTED code outside the project dir."""
+    m = bench / "project" / zoo.MANIFEST_NAME
+    txt = m.read_text()
+    import re as _re
+    txt = _re.sub(rf"(?m)^{key}:.*$", f"{key}: {value}", txt)
+    if f"{key}:" not in txt:
+        txt += f"\n{key}: {value}\n"
+    m.write_text(txt, encoding="utf-8")
+    with pytest.raises(zoo.BenchmarkError) as e:
+        zoo.load_manifest(bench / "project")
+    assert key in str(e.value) and "relative path" in str(e.value)
+
+
+def test_target_module_escape_never_imports(bench, tmp_path):
+    """The containment guard must fire BEFORE the module is executed."""
+    marker = tmp_path / "PWNED"
+    (tmp_path / "pwned.py").write_text(
+        f"from pathlib import Path\n"
+        f"Path({str(marker)!r}).write_text('x')\n"
+        "def run(task, ctx, *, seed=0):\n    return 'x'\n", encoding="utf-8")
+    m = bench / "project" / zoo.MANIFEST_NAME
+    m.write_text(m.read_text().replace("target_module: target.py",
+                                       "target_module: ../../pwned.py"),
+                 encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok
+    assert not marker.exists(), "code outside the project dir was EXECUTED during verify"
+
+
+def test_zero_holdout_and_empty_train_are_refused(bench):
+    """B6: train == val == test passed the honesty floor; #99's tau^2 number was one."""
+    ids = [t.id for t in zoo.ManifestAdapter(bench / "project").tasks("all")]
+    sf = bench / "project" / "splits.json"
+    sf.write_text(json.dumps({"train": ids, "val": ids, "test": ids}), encoding="utf-8")
+    m = bench / "project" / zoo.MANIFEST_NAME
+    m.write_text(m.read_text().replace('split_ids_file: ""',
+                                       "split_ids_file: splits.json"), encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok
+    assert any("OVERLAP" in p for p in rep.problems), rep.problems
+
+    # and an empty train split, via ratios
+    m.write_text(m.read_text().replace("split_ids_file: splits.json",
+                                       'split_ids_file: ""')
+                 .replace("split_train: 0.5", "split_train: 0.0")
+                 .replace("split_val: 0.25", "split_val: 0.9")
+                 .replace("split_test: 0.25", "split_test: 0.1"), encoding="utf-8")
+    rep2 = zoo.verify(bench)
+    assert not rep2.ok
+    assert any("train split is EMPTY" in p for p in rep2.problems), rep2.problems
+
+
+def test_content_duplicate_tasks_are_refused(bench):
+    """Fresh ids on identical rows split cleanly, so val became a copy of train."""
+    d = bench / "project" / "tasks.jsonl"
+    rows = [json.loads(x) for x in d.read_text().splitlines() if x.strip()]
+    d.write_text("".join(json.dumps(r) + "\n" for r in
+                         rows + [{**r, "id": r["id"] + "_dup"} for r in rows]),
+                 encoding="utf-8")
+    rep = zoo.verify(bench)
+    assert not rep.ok
+    assert any("CONTENT duplicate" in p for p in rep.problems), rep.problems
+
+
+def test_forged_and_stale_stamps_read_as_unverified(bench, monkeypatch, tmp_path):
+    """B3: dataset_sha256 was written and never compared."""
+    zoo_root = tmp_path / "zoo"
+    zoo_root.mkdir()
+    shutil.copytree(bench, zoo_root / "toy_calc")
+    monkeypatch.setenv("CAPEVOLVE_BENCHMARKS_DIR", str(zoo_root))
+    b = zoo_root / "toy_calc"
+    m = zoo.load_manifest(b / "project")
+
+    # forged: a hand-written stamp with no evidence
+    (b / zoo.STAMP_NAME).write_text(json.dumps(
+        {"ok": True, "val_reward": 0.99, "n_tasks": 999}), encoding="utf-8")
+    assert zoo.stamp_state(b, m)["verified"] is False
+    assert zoo.index()[0]["verified"] is False
+    assert "hand-written" in zoo.index()[0]["stale_reason"]
+
+    # real stamp, then edit the dataset
+    zoo.stamp(b, zoo.verify(b))
+    assert zoo.stamp_state(b, m)["verified"] is True
+    d = b / "project" / "tasks.jsonl"
+    d.write_text(d.read_text() + json.dumps({"id": "zz", "input": "1+1",
+                                             "target": "2"}) + "\n", encoding="utf-8")
+    st = zoo.stamp_state(b, m)
+    assert st["verified"] is False and st["stale"] is True
+    assert "dataset_sha256" in st["why"]
+
+    # a stamped grader change also invalidates it
+    zoo.stamp(b, zoo.verify(b))
+    t = b / "project" / "target.py"
+    t.write_text(t.read_text() + "\n# touched\n", encoding="utf-8")
+    assert zoo.stamp_state(b, m)["verified"] is False
+    assert "target_sha256" in zoo.stamp_state(b, m)["why"]
+
+
+def test_description_newline_cannot_redefine_manifest_keys(tmp_path):
+    """B7: --description was interpolated unquoted into YAML."""
+    zoo.add(tmp_path / "b", name="b",
+            description="oops\nscoring: contains\ntasks_file: /etc/hosts")
+    m = zoo.load_manifest(tmp_path / "b" / "project")
+    assert m["scoring"] == "exact", m
+    assert m["tasks_file"] == "tasks.jsonl", m
+    assert "\n" in m["description"], "the description itself must survive intact"
+
+
+def test_refresh_keeps_a_hand_edited_adapter_shim(bench):
+    """N2: --refresh clobbered an authored override with no warning."""
+    shim = bench / "project" / "adapters" / "adapter.py"
+    override = shim.read_text() + "\n    def trajectories(self, *a, **k):\n        return []\n"
+    shim.write_text(override, encoding="utf-8")
+    info = zoo.add(bench, refresh=True)
+    assert shim.read_text() == override, "an authored override was clobbered"
+    assert info.get("kept_hand_edited") == ["adapters/adapter.py"], info
+    # an untouched shim is still re-derived
+    shim.write_text(zoo._shim_text(zoo.load_manifest(bench / "project")), encoding="utf-8")
+    assert "kept_hand_edited" not in zoo.add(bench, refresh=True)
+
+
+def test_tasks_honours_the_split_argument(bench):
+    """N1: tasks("test") handed out the sealed test split to any caller."""
+    a = zoo.ManifestAdapter(bench / "project")
+    allt = {t.id for t in a.tasks("all")}
+    tr = {t.id for t in a.tasks("train")}
+    va = {t.id for t in a.tasks("val")}
+    te = {t.id for t in a.tasks("test")}
+    assert tr | va | te == allt
+    assert not (te & (tr | va)), "tasks() must not leak test ids into train/val"
+    assert te != allt, 'tasks("test") returned the whole dataset'
+
+
+def test_empty_target_is_not_a_free_point(tmp_path):
+    """N5: match("anything", "", "contains") is True — a missing answer scored 1.0."""
+    zoo.add(tmp_path / "b", name="b")
+    proj = tmp_path / "b" / "project"
+    m = proj / zoo.MANIFEST_NAME
+    m.write_text(m.read_text().replace("scoring: exact", "scoring: contains"),
+                 encoding="utf-8")
+    (proj / "tasks.jsonl").write_text(
+        json.dumps({"id": "t1", "input": "q", "target": ""}) + "\n", encoding="utf-8")
+    with pytest.raises(zoo.BenchmarkError, match="free"):
+        zoo.ManifestAdapter(proj).tasks("all")
+
+
+def test_bad_regex_target_fails_at_load(tmp_path):
+    """N3: an invalid pattern surfaced as a smoke-eval crash, not a dataset error."""
+    zoo.add(tmp_path / "b", name="b")
+    proj = tmp_path / "b" / "project"
+    m = proj / zoo.MANIFEST_NAME
+    m.write_text(m.read_text().replace("scoring: exact", "scoring: regex"),
+                 encoding="utf-8")
+    (proj / "tasks.jsonl").write_text(
+        json.dumps({"id": "t1", "input": "q", "target": "([unclosed"}) + "\n",
+        encoding="utf-8")
+    with pytest.raises(zoo.BenchmarkError, match="valid regex"):
+        zoo.ManifestAdapter(proj).tasks("all")
 
 
 def test_stamp_records_measured_evidence(bench):
