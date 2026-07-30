@@ -961,9 +961,7 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
               <td>5 hard</td>
               <td class="num">3</td>
               <td class="num">2</td>
-              <td class="num">0.600</td>
-              <td class="num">0.800</td>
-              <td class="num delta-pos">+33%</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
             </tr>
             <tr class="done-row">
               <td class="num">2</td>
@@ -976,9 +974,7 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
               <td>5 hard</td>
               <td class="num">3</td>
               <td class="num">2</td>
-              <td class="num">0.533</td>
-              <td class="num">0.933</td>
-              <td class="num delta-pos">+75%</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
             </tr>
             <tr class="done-row">
               <td class="num">3</td>
@@ -991,9 +987,7 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
               <td>5</td>
               <td class="num">1</td>
               <td class="num">2</td>
-              <td class="num">0.830</td>
-              <td class="num">0.900</td>
-              <td class="num delta-pos">+12%</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
             </tr>
             <tr class="done-row">
               <td class="num">4</td>
@@ -1006,9 +1000,7 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
               <td>5 easy</td>
               <td class="num">3</td>
               <td class="num">2</td>
-              <td class="num">1.000</td>
-              <td class="num">1.000</td>
-              <td class="num delta-flat">0%</td>
+              <td class="num">—</td><td class="num">—</td><td class="num">—</td>
             </tr>
             <tr class="planned-row">
               <td class="num">5</td>
@@ -1125,7 +1117,11 @@ def reserve(cabin, passengers, nonfree_baggages, ...):
 
       <aside class="notes">
         Twelve experiments in the sweep: 4 done, 7 planned, 1 future (RH internal). Done rows
-        are the τ²-bench + SWE-bench Lite results already committed. Planned rows are the
+        are early τ²-bench + SWE-bench Lite pilot runs on 5-task subsets; their baseline/optimized
+        numbers are deliberately NOT shown, because no run artifact and no run record for them
+        exists anywhere in the repo — say "we ran these, the write-ups aren't published" rather
+        than quoting a figure. The published numbers are on slide 6 and docs/RESULTS.md.
+        Planned rows are the
         apples-to-apples publication comparisons — same benchmark + agent (ollama/qwen2.5:35b
         for the local runs) across cap-evolve's hill-climb, GEPA, SkillOps, and standalone
         local-GEPA. Future row is the Parsec-adjacent RH internal benchmark once available.

@@ -309,6 +309,90 @@
       </section>
 
       <section class="reveal">
+        <h2 id="skillsbench-87-baselines">SkillsBench — full 87-task baselines, no optimization <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
+
+        <p>
+          Two seed-only measurements of the same four shared office-document skill packages
+          (<code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>) across
+          <strong>all 87</strong> SkillsBench tasks, <code>num_trials: 1</code>, fit-metric split
+          (<code>train == val == test == 87</code>), <strong>0 iterations</strong> — these establish
+          the starting point the optimization run below climbs from, they are not gains.
+        </p>
+
+        <table>
+          <thead>
+            <tr><th>agent under test</th><th>run</th><th>val_reward</th><th>pass@1 (fully passing / 87)</th><th>run record</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>claude-opus-4-6</code></td><td><code>run_baseline_opus</code></td><td class="num"><strong>0.281 ± 0.048</strong> (28.1%)</td><td class="num"><strong>23</strong> (26.4%)</td><td><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/runs/local-20260729-skillsbench-baseline-opus46.md">run record</a></td></tr>
+            <tr><td><code>aws/gpt-oss-120b</code></td><td><code>run_baseline_gptoss</code></td><td class="num"><strong>0.040 ± 0.019</strong> (4.0%)</td><td class="num"><strong>2</strong> (2.3%)</td><td><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/runs/local-20260729-skillsbench-baseline-gptoss120b.md">run record</a></td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warn">
+          <div class="callout-title">Reported — artifact not committed</div>
+          <p>
+            Both ran locally, outside CI (recorded by <code>bcarmeli</code>); the run dirs live on
+            the recording host and are <strong>not committed</strong> here. The linked run records
+            are the full provenance available in the repo — per-task rewards, rollout breakdown,
+            and wall-clock — not the artifacts themselves. Under the fit-metric split
+            <code>test == val</code> by construction, so neither row is a generalization claim.
+          </p>
+        </div>
+      </section>
+
+      <section class="reveal">
+        <h2 id="skillsbench-87">SkillsBench — full 87-task optimization (Opus 4.6) <span class="muted">— ⚠️ reported, artifact not committed</span></h2>
+
+        <p>
+          A 3-iteration <code>hill-climb</code> over the same four shared office-document skills,
+          starting from the <code>run_baseline_opus</code> frozen baseline
+          <a href="#skillsbench-87-baselines">above</a> (reused via <code>--reuse-baseline</code>).
+          Same fit-metric split (<code>train == val == test</code> = all 87),
+          <code>num_trials: 1</code>, paired gate <code>k_se: 0.2</code>.
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/runs/local-20260730-skillsbench-opus46-optimize.md">Run record</a>.
+        </p>
+
+        <table>
+          <thead>
+            <tr><th>split</th><th>baseline (seed)</th><th>best (<code>cand_0001</code>)</th><th>Δ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>val</strong> (87, fit) — mean reward</td><td class="num">0.281 ± 0.048</td><td class="num"><strong>0.357 ± 0.050</strong></td><td class="gain">+0.076 / +27.2% relative</td></tr>
+            <tr><td><strong>val</strong> (87, fit) — pass_at_1 (fully-passing / 87)</td><td class="num">23 (26.4%)</td><td class="num"><strong>28 (32.2%)</strong></td><td class="gain">+5 tasks / +22% relative</td></tr>
+            <tr><td><strong>test</strong> (87, <em>fit metric</em> — <code>test == val</code> by construction, <strong>not</strong> held out)</td><td class="num">0.281 *</td><td class="num"><strong>0.357</strong></td><td class="num">+0.076</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          * The finalize step's baseline-test re-evaluation broke overnight (VPN drop; every task
+          returned 0 across a 5-hour eval); <code>test_baseline_reward</code> is manually spliced
+          from the properly-scored seed val in <code>run_baseline_opus</code>. Under the fit-metric
+          split the seed's test reward equals its val reward by construction, so the splice is
+          exact. The raw broken artifacts remain untouched for audit.
+        </p>
+
+        <p>
+          <strong>Iterations:</strong> <code>cand_0001</code> val <strong>0.357</strong>
+          (Δ +0.077) — accepted by the paired gate; <code>cand_0002</code> 0.325 (−0.033) and
+          <code>cand_0003</code> 0.170 (−0.187) both rejected as regressions. Net
+          <strong>+5 tasks</strong> (23 → 28) on <code>pass_at_1</code>: 8 newly passing, 3
+          regressed. Optimizer spend is <strong>not recorded</strong> in the run record, so no
+          cost figure is quoted.
+        </p>
+
+        <div class="callout callout-warn">
+          <div class="callout-title">Reported — artifact not committed</div>
+          <p>
+            Artifacts live under <code>.capevolve/run_opus_optimize3/</code> on the recording host
+            and are <strong>gitignored, per-run</strong> — not committed to this repo. The linked
+            run record is the provenance available here; you cannot load this run in the dashboard
+            from this repo. Fit metric, single trial: not a generalization claim.
+          </p>
+        </div>
+      </section>
+
+      <section class="reveal">
         <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
 
         <p>
@@ -444,7 +528,9 @@
       <a href="#tau2-agent">τ²-bench — agent mode</a>
       <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
       <a href="#qwen-all">Qwen 14B — all capabilities</a>
-      <a href="#skillsbench">SkillsBench</a>
+      <a href="#skillsbench-87-baselines">SkillsBench — 87-task baselines</a>
+      <a href="#skillsbench-87">SkillsBench — 87-task optimization</a>
+      <a href="#skillsbench">SkillsBench — held-out</a>
       <a href="#at-a-glance">At a glance</a>
     </nav>
   </div>
