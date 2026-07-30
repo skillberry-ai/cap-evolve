@@ -42,16 +42,34 @@ detect_dest() {
     # anything is pip-installed; hosts.py is stdlib-only for exactly this reason.
     # Each row's verified / docs-checked / best-guess grade is in hosts.yaml and
     # rendered in docs/HOST_SUPPORT.md. Unknown host => ~/.config/<host>/skills.
-    if mapped="$(PYTHONPATH="$REPO_DIR/core${PYTHONPATH:+:$PYTHONPATH}" \
-                 python3 -m cap_evolve.hosts --dest "$HOST" 2>/dev/null)" \
+    hostpp="PYTHONPATH=$REPO_DIR/core${PYTHONPATH:+:$PYTHONPATH}"
+    if command -v python3 >/dev/null 2>&1 \
+       && mapped="$(env "$hostpp" python3 -m cap_evolve.hosts --dest "$HOST" 2>/dev/null)" \
        && [[ -n "$mapped" ]]; then
       echo "$mapped"; return
     fi
-    # No row — or the resolver itself failed (no python3, hosts.yaml missing). Warn on
-    # stderr instead of silently guessing: for a host that DOES have a row, a quiet
-    # fallback would put the skills somewhere that host never looks.
-    echo "cap-evolve: no hosts.yaml row for --host '$HOST' (or cap_evolve.hosts could" \
-         "not run) — falling back to the dotdir convention. Pass --dest to be sure." >&2
+    # Fell through. Warn on stderr instead of silently guessing — for a host that DOES
+    # have a row, a quiet fallback puts the skills somewhere that host never looks.
+    # Two very different causes, and they need different messages: telling someone with
+    # no interpreter that `claude` has no hosts.yaml row sends them to edit a file that
+    # is correct. Probe once to tell them apart.
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "cap-evolve: python3 not found on PATH — --host resolution needs it to read" \
+           "skills/_registry/hosts.yaml. hosts.yaml is fine; the interpreter is missing." \
+           "Install python3 or pass --dest DIR. Falling back to the dotdir convention." >&2
+    elif table="$(env "$hostpp" python3 -m cap_evolve.hosts --json 2>/dev/null)"; \
+         [[ "$table" != *'"dest"'* ]]; then
+      # The resolver ran but produced no table at all — hosts.yaml missing/unreadable,
+      # or $REPO_DIR/core is broken. Not a problem with the host the user named.
+      echo "cap-evolve: could not run cap_evolve.hosts (missing or unreadable" \
+           "skills/_registry/hosts.yaml, or a broken $REPO_DIR/core) — this is NOT a" \
+           "problem with your --host '$HOST'. Pass --dest DIR. Falling back to the" \
+           "dotdir convention." >&2
+    else
+      echo "cap-evolve: no hosts.yaml row for --host '$HOST' — falling back to the" \
+           "dotdir convention. Add a row to skills/_registry/hosts.yaml, or pass" \
+           "--dest to be sure." >&2
+    fi
     echo "$HOME/.config/$HOST/skills"; return
   fi
   if [[ -d "./.claude/skills" ]]; then echo "./.claude/skills"; return; fi

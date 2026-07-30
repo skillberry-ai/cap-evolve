@@ -6,7 +6,17 @@
 # tables in docs/HOST_SUPPORT.md. `core/tests/test_host_parity.py` now fails the
 # build when any of them disagrees with this file, so a new host is one row here.
 #
-# Row schema (all scalars / flat lists, so the stdlib YAML reader in
+# FLOW STYLE FOR LISTS IS REQUIRED, NOT STYLISTIC. Write `aliases: [a, b]` inline —
+# never the block spelling:
+#     aliases:          # WRONG: parses as {} when PyYAML is absent
+#       - a
+# cap_evolve.specfile.read_yaml's stdlib fallback — the parser install.sh depends on,
+# because it resolves --host *before* `pip install ./core` has run — has no
+# block-sequence handling, so a block-spelled row silently empties on exactly the bare
+# host that fallback exists to serve. core/tests/test_stdlib_only.py asserts non-empty
+# aliases as that reader sees them, so a block-style row fails the build.
+#
+# Row schema (all scalars / flow-style lists, so the stdlib YAML reader in
 # cap_evolve.specfile parses it with no PyYAML present — see test_stdlib_only.py):
 #   aliases     : every `./install.sh --host <x>` spelling that maps to this row.
 #                 MUST match install.sh's case arms exactly.

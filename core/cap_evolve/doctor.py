@@ -78,10 +78,11 @@ def _known_host_dirs() -> tuple[str, ...]:
 
     Derived from ``skills/_registry/hosts.yaml`` — the single source (issue #143).
     This used to be a hand-maintained tuple that had already drifted from
-    install.sh's ``case``: it listed 6 of the 12 real destinations, so six correct
-    host dirs were being reported as "best-guess". ``~/.capevolve/skills`` is
-    appended because it is install.sh's no-host default, which is a legitimate
-    placement with no hosts.yaml row.
+    install.sh's ``case``: it had six entries but only 5 of the 12 real destinations —
+    its ``/.capevolve/skills`` entry is the no-host default, not a host dest — so
+    **seven** correct host dirs were being reported as "best-guess".
+    ``~/.capevolve/skills`` is still appended here because it is install.sh's no-host
+    default, which is a legitimate placement with no hosts.yaml row (13 dirs total).
     """
     from .hosts import load_hosts
     # Strip the leading $HOME / $PWD token rather than an expanded path, so the

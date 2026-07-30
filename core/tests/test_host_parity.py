@@ -57,8 +57,11 @@ def test_hosts_yaml_parses_and_rows_are_well_formed():
     assert rows, "hosts.yaml is empty or unparseable"
     for name, row in rows.items():
         assert row.get("aliases"), f"{name}: no aliases"
-        assert name in row["aliases"] or name.replace("-", "") in "".join(row["aliases"]), \
-            f"{name}: key should be one of its own aliases"
+        # Strict membership only. The old `or name.replace("-","") in "".join(aliases)`
+        # escape hatch passed on unrelated substrings (a key `bo` would "match"
+        # `ibm-bob`) and no row needs it — every key is literally in its own aliases.
+        assert name in row["aliases"], \
+            f"{name}: the row key must appear verbatim in its own aliases {row['aliases']}"
         assert str(row.get("dest", "")).startswith(("$HOME/", "$PWD/")), \
             f"{name}: dest must be written with the literal $HOME/$PWD install.sh uses"
         assert row.get("status") in H.STATUSES, f"{name}: bad status {row.get('status')!r}"

@@ -66,11 +66,29 @@ def test_the_blocker_actually_blocks():
 
 
 def test_hosts_metadata_resolves_with_no_third_party_modules():
-    """What install.sh shells, with PyYAML unavailable."""
+    """What install.sh shells, with PyYAML unavailable.
+
+    Also enforces the flow-style ``aliases`` invariant. ``specfile.read_yaml``'s stdlib
+    fallback has no block-sequence handling, so a row spelled
+
+        aliases:
+          - newhost
+
+    parses as ``{}`` *only* on the no-PyYAML path — ``dest_for()`` then returns None and
+    install.sh dotdir-guesses, on exactly the bare host the fallback exists to serve,
+    while every other guard stays green. Asserting non-empty aliases *as the stdlib
+    reader sees them* turns hosts.yaml's "flow style required" header from a comment
+    into a build failure. (Teaching read_yaml block sequences is #197's job.)
+    """
     out = _run_blocked(
         "from cap_evolve import hosts\n"
         "rows = hosts.load_hosts()\n"
         "assert rows, 'no host rows'\n"
+        "bad = [n for n, r in rows.items()"
+        " if not (isinstance(r.get('aliases'), list) and r['aliases'])]\n"
+        "assert not bad, ('aliases empty under the stdlib YAML reader for %r —"
+        " hosts.yaml must spell aliases in FLOW style, aliases: [a, b], not as a"
+        " block sequence' % bad)\n"
         "import json; print(json.dumps({'n': len(rows), 'claude': hosts.dest_for('claude'),"
         " 'status': hosts.status_for('claude'), 'display': rows['claude-code']['display'],"
         " 'dests': len(hosts.verified_dests())}))\n")

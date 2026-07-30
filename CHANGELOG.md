@@ -12,7 +12,8 @@ All notable changes to cap-evolve are documented here. The format follows
     install destination, grade + the artifact justifying it, and the `display` /
     `description` / `invoke` triple a host UI needs. That list previously lived in five
     places and had drifted: `install.sh`'s `case`, `doctor._VERIFIED_HOST_DIRS` (which knew
-    6 of the 12 real destinations, so six correct host dirs were reported "best-guess"),
+    5 of the 12 real destinations — its 6th entry, `/.capevolve/skills`, is the no-host
+    default rather than a host dest — so seven correct host dirs were reported "best-guess"),
     and two `docs/HOST_SUPPORT.md` tables. `install.sh` now resolves `--host` by shelling
     `python3 -m cap_evolve.hosts --dest`, doctor derives its list, HOST_SUPPORT.md is a
     rendering, and **`core/tests/test_host_parity.py` fails the build when any of them
@@ -31,7 +32,21 @@ All notable changes to cap-evolve are documented here. The format follows
     `optimizers/registry.yaml`, the manifest build, `cap-evolve version`/`check`) in a
     subprocess whose `sys.meta_path` raises `ImportError` for every non-stdlib module, plus
     a guard-the-guard test so the hook can't silently become a no-op. `install.sh` depends
-    on this literally: it calls `cap_evolve.hosts` *before* `pip install ./core`.
+    on this literally: it calls `cap_evolve.hosts` *before* `pip install ./core`. That
+    test also **enforces the flow-style `aliases` invariant**: `read_yaml`'s stdlib
+    fallback has no block-sequence handling, so a row spelled `aliases:\n  - x` parses as
+    `{}` on the no-PyYAML path only — `dest_for()` returns `None` and `install.sh`
+    dotdir-guesses on exactly the bare host the fallback serves, with every other guard
+    green. Asserting non-empty `aliases` *as that reader sees them* turns hosts.yaml's
+    "flow style required" header from a comment into a build failure. (Teaching
+    `read_yaml` block sequences is #197's job.)
+  - `install.sh`'s `--host` fallback warning now **distinguishes its three causes** — no
+    `python3` on `PATH`, a resolver that can't run (missing/unreadable `hosts.yaml`), and a
+    genuinely unknown host. It previously reported all three as "no hosts.yaml row for
+    `<host>`", which sent a user with a missing interpreter to edit a file that was correct.
+    `ci/install_smoke.sh` now also **asserts** its skill-dir count instead of echoing it,
+    and its header states the scope gap explicitly: the job runs against the source core
+    via `PYTHONPATH`, so `pip install ./core` is deliberately **not** covered by the ✅.
 - **`cap-evolve doctor` — one-command install/health diagnostic** (issue #121). Reports
   pass/warn/fail with an actionable fix per line and exits non-zero on a hard failure, so
   CI can gate on it. Checks Python version, core importability + which interpreter/venv,

@@ -20,6 +20,14 @@
 #   * asserts test_reward == 1.0, not merely exit 0. A failing optimizer is *silent*:
 #     the run completes, keeps the seed, and reports 0.0.
 #
+# SCOPE — what this job does NOT cover: the run below sets PYTHONPATH="$REPO/core" and
+# CAPEVOLVE_CORE="$REPO/core", so it exercises the SOURCE core. Step 1 of the documented
+# install, `pip install ./core`, is deliberately out of scope here — this job's subject
+# is install.sh's skill placement, and the pip step is a plain install already covered by
+# every other CI job. Do not read the ✅ on claude-code in hosts.yaml as covering it.
+# ($CAPEVOLVE_TOY_DATA / $CAPEVOLVE_MOCK_SCRIPT also point into the repo, but those are
+# the fixture — tasks and a mock transcript — not library code.)
+#
 # Zero API calls (the `mock` optimizer). Usage: bash ci/install_smoke.sh
 set -euo pipefail
 
@@ -40,7 +48,13 @@ SKILLS="$FAKE_HOME/.claude/skills"
 for f in _registry/manifest.json _registry/hosts.yaml optimizers/registry.yaml; do
   [[ -f "$SKILLS/$f" ]] || { echo "::error::installed tree is missing $f"; exit 1; }
 done
-echo "OK: $(find "$SKILLS" -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ') skill dirs + registry + hosts.yaml"
+ndirs="$(find "$SKILLS" -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')"
+# Assert it, don't just echo it: an echoed number nothing checks is decoration. (Every
+# install-shaped failure the review could construct was already caught downstream by
+# the installed manifest; this makes the line itself mean something.)
+[[ "$ndirs" -ge 20 ]] \
+  || { echo "::error::only $ndirs skill dirs installed (expected >= 20)"; exit 1; }
+echo "OK: $ndirs skill dirs + registry + hosts.yaml"
 
 echo "== zero-API toy_calc run from OUTSIDE the repo, against the INSTALLED skills =="
 P="$WORK/.capevolve/project"
