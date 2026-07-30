@@ -29,11 +29,21 @@ from .splits import Splits
 
 # Every event kind that records ONE evaluated iteration (a candidate + its gate
 # outcome + its val score). ``harness.run_step`` emits "step"; GEPA bypasses
-# run_step and emits "gepa_val_gate"; SkillOpt additionally emits "skillopt_step".
-# ONE definition, every consumer (dashboard lineage, LEDGER, RUNMAP,
-# prior_iterations/) — filtering on "step" alone makes GEPA's whole
-# cross-iteration history channel silently empty.
-ITERATION_EVENT_KINDS = ("step", "skillopt_step", "gepa_val_gate")
+# run_step and emits "gepa_val_gate". ONE definition, every consumer (dashboard
+# lineage, LEDGER, RUNMAP, prior_iterations/, the durable priors) — filtering on
+# "step" alone makes GEPA's whole cross-iteration history channel silently empty.
+#
+# ``skillopt_step`` is deliberately NOT here. SkillOpt routes through
+# ``harness.run_step`` (which already emits "step" for the same candidate, carrying
+# the parent edge, Δ and the gate reason) and logs "skillopt_step" only as an audit
+# record for its epoch / edit-budget / applied-changes metadata. Including it made
+# every SkillOpt iteration appear TWICE in LEDGER/RUNMAP/priors — the second copy
+# missing parent/parent_val, so it rendered a blank Δ and poisoned the parent map.
+# Deduplicating downstream by candidate id is NOT a fix: SkillOpt mints ids from
+# epoch/step counters that reset on ``--resume`` (skillopt.py), so id-keyed dedup
+# silently DROPS a resumed iteration (including a real regression) instead of
+# double-counting it. Excluding the kind at the source is the honest fix.
+ITERATION_EVENT_KINDS = ("step", "gepa_val_gate")
 
 
 def iteration_candidate(ev: dict) -> str | None:
@@ -416,20 +426,18 @@ class RunDir:
 
         See :data:`ITERATION_EVENT_KINDS` — read this instead of filtering
         ``kind == "step"`` by hand, or the algorithms that emit their own kind
-        (GEPA, SkillOpt) silently disappear from whatever you are building.
+        (GEPA) silently disappear from whatever you are building.
 
-        **Deduplicated by candidate id.** SkillOpt routes through ``harness.run_step``
-        (which emits ``step``) AND logs its own ``skillopt_step`` for the SAME candidate
-        with its epoch/edit-budget metadata — so a raw kind filter yields TWO rows per
-        SkillOpt iteration. LEDGER.md, RUNMAP.md and the durable priors (#128) all
-        double-counted every SkillOpt iteration as a result, the second copy missing
-        ``parent``/``parent_val`` and therefore showing a blank Δ. First occurrence wins
-        (it carries the gate reason + parent edge); later records are MERGED in for any
-        field the first lacks, so the algorithm-specific metadata is not lost.
+        **One row per logged event, in log order — no dedup.** That is deliberate:
+        candidate ids are NOT globally unique (SkillOpt re-mints ``so_eNNsMM`` from
+        counters that reset on ``--resume``), so any id-keyed dedup would silently
+        DISCARD a resumed iteration. The SkillOpt double-count that motivated a dedup
+        is fixed at the source instead — ``skillopt_step`` is excluded from
+        :data:`ITERATION_EVENT_KINDS`; see the note there.
 
         Best-effort: an unreadable/absent events log yields whatever parsed.
         """
-        by_cid: dict[str, dict] = {}
+        rows: list[dict] = []
         try:
             if not self.events_path.exists():
                 return []
@@ -440,13 +448,8 @@ class RunDir:
                 rec = json.loads(line)
                 if rec.get("kind") not in ITERATION_EVENT_KINDS:
                     continue
-                cid = iteration_candidate(rec)
-                if not cid:
-                    continue
-                if cid in by_cid:
-                    by_cid[cid] = {**rec, **by_cid[cid]}  # first wins, later fills gaps
-                else:
-                    by_cid[cid] = rec
+                if iteration_candidate(rec):
+                    rows.append(rec)
         except Exception:  # noqa: BLE001
             pass
-        return list(by_cid.values())
+        return rows
