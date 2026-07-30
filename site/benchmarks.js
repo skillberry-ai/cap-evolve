@@ -41,10 +41,13 @@ async function loadRunning() {
       if (!jobsResp.ok) continue;
       const { jobs } = await jobsResp.json();
       for (const job of jobs || []) {
-        if (job.status !== "in_progress") continue;
+        if (job.status !== "in_progress" && job.status !== "queued") continue;
         const m = JOB_RE.exec(job.name);
         if (!m) continue;
-        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url, startedAt: job.started_at });
+        items.push({
+          runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url,
+          startedAt: job.started_at, live: job.status === "in_progress",
+        });
       }
     }
     renderRunning(items);
@@ -61,7 +64,12 @@ function renderRunning(items) {
     return;
   }
   panel.hidden = false;
-  list.innerHTML = items.map((it) => {
+  const sorted = [...items].sort((a, b) => (a.live === b.live ? 0 : a.live ? -1 : 1));
+  list.innerHTML = sorted.map((it) => {
+    if (!it.live) {
+      return `<li><span class="badge badge-amber">queued</span>
+        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a></li>`;
+    }
     const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
     return `<li><span class="badge badge-accent">live</span>
       <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
