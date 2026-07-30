@@ -900,8 +900,17 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
-                          rejected, history) -> str:
+                          rejected, history, extra: str = "") -> str:
     """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+
+    ``extra`` is an algorithm-level block that must land LAST and must be inside whatever
+    cap this function ends with (#129/PR222 makes it ``return cap_instructions(...)``).
+    Appending such a block at the call site instead does two bad things: for GEPA it
+    escapes the cap entirely, and for every algorithm it puts a *behavioural* instruction
+    in the middle of the string, which is the part ``cap_instructions`` elides — so
+    truncation would silently drop the one block that changes search behaviour while
+    keeping the two that are only context. Passing it here puts it in the preserved tail.
+    Used by ``cap_evolve.plateau.prompt_block``.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -931,7 +940,24 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
     )
-    return f"{instructions}\n\n{pointer}\n"
+    out = f"{instructions}\n\n{pointer}\n"
+    if extra:
+        out = f"{out}\n{extra}"
+    return _cap_instructions(out)
+
+
+def _cap_instructions(text: str) -> str:
+    """Apply #129/PR222's one-iteration prompt ceiling when it exists in this tree.
+
+    ponytail: no second cap invented here. #222 owns ``MAX_INSTRUCTIONS_CHARS`` and the
+    head+tail truncation in ``optimizer_context``; this is a one-line adapter so the
+    plateau block is inside that cap the moment #222 lands, and a no-op before it.
+    """
+    try:
+        from .optimizer_context import cap_instructions
+    except Exception:  # noqa: BLE001 — pre-#222 tree has no cap to apply
+        return text
+    return cap_instructions(text)
 
 
 def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
@@ -1217,6 +1243,7 @@ def run_step(
     current_val: SplitResult,
     n_trials: int = 1,
     gate_kwargs: dict | None = None,
+    extra_instructions: str = "",
     candidate_id: str | None = None,
     parent_id: str | None = None,
     no_regression: bool = False,
@@ -1254,7 +1281,10 @@ def run_step(
                               capabilities=capabilities, optimizer_name=optimizer_name,
                               capability_sources=capability_sources, project_dir=project_dir)
 
-    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+    # ``extra_instructions`` (the plateau block) goes THROUGH _augment_instructions so it
+    # lands in the capped, preserved tail rather than being appended past the cap.
+    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history,
+                                         extra=extra_instructions)
 
     optimizer_error = None
     opt_cost_usd, opt_tokens = 0.0, 0
@@ -1892,6 +1922,8 @@ def hill_climb_loop(
     pstate = plateau.PlateauState()
 
     steps = []
+    why = ""   # read after the loop, so it must be bound when the body never runs
+               # (max_iterations=0, or a resume whose budget is already spent).
     for i in range(max_iterations):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
@@ -1913,10 +1945,10 @@ def hill_climb_loop(
                                             instructions_file=instructions_file,
                                             bench_repo=bench_repo, optimizer_name=optimizer_name,
                                             seed_empty=seed_empty, target_reader=_target_reader)
-        instructions += plateau.prompt_block(pstate, rejected=rejected)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
+            extra_instructions=plateau.prompt_block(pstate),
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
             rejected=rejected, history=history, store=store, capabilities=capabilities,
             optimizer_name=optimizer_name, capability_sources=capability_sources,

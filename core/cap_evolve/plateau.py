@@ -40,10 +40,26 @@ without ever topping the incumbent best, and a naive accept-reset lets such a ru
 grind forever at flat best-val.
 
 **The ratchet:** an accept in the streak, even a non-best one, caps escalation at
-``diversify``. Only a streak with *zero* accepts can reach ``stop``. So a GEPA run
-still widening its Pareto frontier gets nudged to diversify but is never killed,
-while a run that has stopped accepting entirely does get stopped. Stopping early is
-the expensive error, so the conservative side is the default.
+``warn``. Only a streak with *zero* accepts can reach ``diversify`` or ``stop``. A run
+that is still clearing the honest val gate every iteration is doing the thing it was
+built to do — widening a per-instance Pareto frontier is *GEPA's mechanism*
+(arXiv:2507.19457), not a failure — so it gets a warning and no behavioural
+intervention: telling such an optimizer "the direction is dead, change approach" would
+be factually wrong. A run that has stopped accepting entirely does get stopped.
+Stopping early is the expensive error, so the conservative side is the default.
+
+**The honest cost of the Δ≤0 rule.** A run that produces N consecutive *regressions* and
+would have broken through on N+1 is stopped at N. No ratchet saves it (zero accepts, and
+a regression is not a near-miss). This is inherent to any rule keyed on the sign of Δ,
+it is the real price of having a ``stop`` at all, and it is why the window defaults to 6
+and ``plateau_stop: false`` exists. A genuine Pareto trade on a tiny val split (fixes one
+task, breaks another, net Δ=0) reads as dead for the same reason.
+
+**Resume carries the streak.** ``assess`` reads the whole event log, so ``--resume`` on a
+plateaued run re-derives ``stop`` before spending an iteration. That is deliberate — a
+dead region is still dead after a restart, and re-spending budget to rediscover it is the
+error this module exists to prevent. ``plateau_stop: false`` / ``--no-plateau-stop`` is
+the escape hatch.
 
 Escalation ladder (``run_length`` vs the configured window W and step E)::
 
@@ -52,15 +68,23 @@ Escalation ladder (``run_length`` vs the configured window W and step E)::
                                                + exhausted lineages de-prioritized
     run_length >= W + 2*E      -> "stop"       loop breaks (if plateau_stop)
 
-Defaults W=6, E=2 → warn at 6, diversify at 8, stop at 10 dead iterations.
+Defaults W=6, E=2 → warn at 6, diversify at 8, stop at 10 dead iterations. Any accept in
+the streak caps this at ``warn`` (the ratchet, above).
 
-Per-lineage exhaustion is a *different* question and is reported separately: a
-single parent can be exhausted (its last K children all dead) while the global
-search is fine, because another lineage is accepting. GEPA maintains many
-lineages, so it uses this to steer its Pareto sampling away from the dead region
-without stopping the run; hill-climb/skillopt are single-lineage (parent is always
-the current best), so for them exhaustion coincides with the global signal and
+Per-lineage exhaustion is a *different* question, is reported separately, and uses a
+*narrower* deadness test (:func:`_lineage_dead`): an ACCEPT is never dead ground for a
+lineage, whatever it means for global best-val velocity. A single parent can be exhausted
+(its last K children all rejected with Δ≤0) while the global search is fine, because
+another lineage is accepting. GEPA uses this to steer its Pareto sampling away from the
+dead region without stopping the run; hill-climb/skillopt are single-lineage (parent is
+always the current best), so for them exhaustion coincides with the global signal and
 only reaches the prompt.
+
+Note the asymmetry is deliberate: the global level *does* count an accept that did not
+top the best as dead-for-the-streak, because the zero-accept ratchet means such a streak
+can never be killed. Per lineage there is no ratchet — an exhausted lineage is silently
+dropped from GEPA's sampling pool — so the same clause there would steer the search off
+its most productive lineage with nothing to catch it.
 
 Not to be confused with #118's run *liveness* states (``live``/``stalled``/
 ``crashed``/``done``), which are derived from events.jsonl mtime: *stalled* means
@@ -81,7 +105,18 @@ from . import rundir as _rundir
 # added by #109/PR199). ponytail: one definition, preferred at runtime; delete this
 # literal once #199 lands. Never hand-filter on kind == "step" — GEPA emits
 # gepa_val_gate and would silently vanish.
-_FALLBACK_KINDS = ("step", "skillopt_step", "gepa_val_gate")
+#
+# ``skillopt_step`` is deliberately ABSENT. SkillOpt delegates to ``harness.run_step``,
+# which already logs ``step`` for the SAME candidate — and carries ``parent``/``parent_val``,
+# which ``skillopt_step`` does not. Listing both counted every SkillOpt iteration TWICE,
+# firing the ladder at half the configured window (stop at iteration 5 of a window=6
+# ladder) and recording a genuine near-miss once alive and once dead. PR #219 owns the
+# root fix (dropping the kind from ``rundir.ITERATION_EVENT_KINDS``); this pre-#199
+# fallback only has to agree with it. ``skillopt_step`` stays in events.jsonl as an audit
+# record — it is just not an *iteration* event. Do NOT dedupe by candidate id instead:
+# SkillOpt re-mints ``so_eNNsMM`` after ``--resume``, so id-keyed dedup drops real
+# resumed iterations (verified on #219).
+_FALLBACK_KINDS = ("step", "gepa_val_gate")
 
 # GEPA's cheap local minibatch gate. A child killed here never reaches the val gate,
 # so it emits no iteration event — but it IS a spent iteration that produced no
@@ -101,8 +136,17 @@ class PlateauConfig:
 
     @classmethod
     def from_spec(cls, spec: dict | None) -> "PlateauConfig":
+        """``plateau_stop: false`` is the off switch; a 0/negative window is NOT.
+
+        ``plateau_window: 0`` used to silently revert to the default (``or d.window``),
+        which reads like "off" and behaves like "on at 6". It now means the same thing as
+        ``plateau_stop: false`` — the honest reading of "disable this" — rather than
+        quietly ignoring the user.
+        """
         s = spec or {}
         d = cls()
+        if s.get("plateau_window") is not None and int(s["plateau_window"] or 0) <= 0:
+            return cls(stop=False, window=10 ** 9)   # unreachable ladder == disabled
         return cls(
             window=max(2, int(s.get("plateau_window") or d.window)),
             escalate_every=max(1, int(s.get("plateau_escalate_every") or d.escalate_every)),
@@ -205,8 +249,15 @@ def series(run_dir) -> list[dict]:
     for _t, ev, local in rows:
         cid = ev.get("candidate") or ev.get("candidate_id")
         if local:
+            # Carry the real signed delta the event already holds instead of hardcoding
+            # 0.0, so a tie is distinguishable from a regression in the series (review #7).
+            # This cannot change deadness: gepa.py's pass condition is a strict
+            # ``child_sum > parent_sum``, so every row reaching here already has Δ <= 0.
+            # It is diagnostic information, not a new escape hatch.
+            cs, ps = ev.get("child_sum"), ev.get("parent_sum")
+            d = (float(cs) - float(ps)) if (cs is not None and ps is not None) else 0.0
             out.append({"candidate": cid, "parent": ev.get("parent"),
-                        "accepted": False, "delta": 0.0, "local": True})
+                        "accepted": False, "delta": d, "local": True})
             continue
         accepted = bool(ev.get("accept"))
         val = ev.get("val")
@@ -236,11 +287,30 @@ def _dead(row: dict) -> bool:
     return row["delta"] <= 0.0           # rejected: a near-miss (Δ>0) is alive
 
 
+def _lineage_dead(row: dict) -> bool:
+    """Dead ground *for one parent* — a strictly narrower test than :func:`_dead`.
+
+    An ACCEPT is never dead ground for a lineage, even when it did not top the global
+    best. Widening the per-instance Pareto frontier *is* GEPA's mechanism
+    (arXiv:2507.19457): a specialist child that clears the honest val gate is the most
+    productive thing a lineage can produce. Reusing :func:`_dead` here marked a lineage
+    whose children were ALL accepted as exhausted and dropped it from GEPA's sampling
+    pool — steering the search away from its best region, with no ratchet on this path
+    and no stop event to show for it.
+
+    ``_dead``'s accepted-but-not-best clause stays at the GLOBAL level, where the
+    zero-accept ratchet means such a streak can only ever reach ``diversify``. There is
+    no ratchet per lineage, so the clause does not belong here.
+    """
+    return (not row["accepted"]) and row["delta"] <= 0.0
+
+
 def exhausted_lineages(rows: list[dict], cfg: PlateauConfig) -> list[str]:
     """Parents whose last ``lineage_window`` children were all dead.
 
     Independent of the global level: GEPA can have one exhausted lineage while
-    another is accepting every iteration.
+    another is accepting every iteration. Uses :func:`_lineage_dead`, NOT :func:`_dead` —
+    see that docstring for why an accept is never dead ground for a lineage.
     """
     by_parent: dict[str, list[dict]] = {}
     for r in rows:
@@ -250,7 +320,7 @@ def exhausted_lineages(rows: list[dict], cfg: PlateauConfig) -> list[str]:
     out = []
     for parent, children in by_parent.items():
         tail = children[-cfg.lineage_window:]
-        if len(tail) >= cfg.lineage_window and all(_dead(c) for c in tail):
+        if len(tail) >= cfg.lineage_window and all(_lineage_dead(c) for c in tail):
             out.append(parent)
     return sorted(out)
 
@@ -278,10 +348,16 @@ def assess(run_dir, cfg: PlateauConfig | None = None) -> PlateauState:
     near = sum(1 for r in tail if (not r["accepted"]) and r["delta"] > 0.0)
     accepts = sum(1 for r in rows if r["accepted"])
 
-    # The ratchet: any accept inside the streak caps escalation at `diversify`. Only a
-    # streak with zero accepts may reach `stop` — a GEPA run still widening its Pareto
-    # frontier is nudged, never killed.
-    if run_length >= cfg.stop_at and cfg.stop and accepts_in_streak == 0:
+    # The ratchet: any accept inside the streak caps escalation at `warn`. A run that is
+    # still clearing the honest val gate every iteration is doing the thing it was built
+    # to do — GEPA widening its per-instance Pareto frontier is exactly this shape — so it
+    # gets a warning and nothing more: no behavioural prompt intervention, never a stop.
+    # Only a streak with ZERO accepts may reach `diversify` or `stop`. That also keeps the
+    # diversify prompt block honest: it can only ever fire on a streak that really did
+    # fail, so it never tells the optimizer a lineage failed when it was accepting.
+    if accepts_in_streak:
+        level = "warn" if run_length >= cfg.warn_at else "ok"
+    elif run_length >= cfg.stop_at and cfg.stop:
         level = "stop"
     elif run_length >= cfg.diversify_at:
         level = "diversify"
@@ -295,12 +371,14 @@ def assess(run_dir, cfg: PlateauConfig | None = None) -> PlateauState:
                   f"(< window {cfg.window}); {near} near-miss(es) in the last "
                   f"{len(tail)}, {accepts} accept(s) total")
     else:
-        ratchet = ("" if accepts_in_streak == 0 else
-                   f"; {accepts_in_streak} non-best accept(s) in the streak cap "
-                   "escalation at diversify (frontier still widening)")
+        # Only claim "no near-miss" when the streak really contained neither a near-miss
+        # nor an accept; otherwise the string contradicts its own ratchet clause.
+        detail = ("; no near-miss in that streak" if accepts_in_streak == 0 else
+                  f"; but {accepts_in_streak} accept(s) in the streak cap escalation at "
+                  "warn (the gate is still passing — frontier still widening)")
         reason = (f"plateau: {run_length} consecutive iterations bought no new best val "
                   f"(warn {cfg.warn_at} / diversify {cfg.diversify_at} / "
-                  f"stop {cfg.stop_at}); no near-miss in that streak{ratchet}")
+                  f"stop {cfg.stop_at}){detail}")
 
     return PlateauState(
         level=level, run_length=run_length, iterations=len(rows), best_val=best_val,
@@ -331,7 +409,7 @@ def check(run_dir, cfg: PlateauConfig | None = None, *, last: PlateauState | Non
     return st
 
 
-def prompt_block(st: PlateauState, *, rejected=None, max_ids: int = 6) -> str:
+def prompt_block(st: PlateauState, *, max_ids: int = 6, max_id_chars: int = 60) -> str:
     """The escalation-level-1 intervention: a paradigm-shift block for the prompt.
 
     Empty string unless the level reached ``diversify``. This is *additive* to the
@@ -339,15 +417,21 @@ def prompt_block(st: PlateauState, *, rejected=None, max_ids: int = 6) -> str:
     "do not repeat these specific edits"; this says "the whole direction is dead,
     change strategy". Composed, they read as: avoid these, and do not just perturb
     them either.
+
+    Deliberately does NOT list rejected candidate ids: #129/PR222 already injects the
+    rejected approaches with their normalized signatures and reasons, which is strictly
+    more informative than bare ids. One channel, one owner. (The old ``rejected=``
+    parameter also called ``RejectedMemory.entries()``, which #199 removes — behind a
+    bare ``except`` that swallowed the AttributeError, so the line silently vanished in
+    the composed tree. Deleting it fixes the overlap and the silent loss at once.)
+
+    Bounded: ``max_ids`` lineages, each truncated to ``max_id_chars``, so the block has a
+    hard ceiling regardless of how many lineages a long GEPA run exhausts. The caller
+    must still route the result through ``optimizer_context.cap_instructions`` (or
+    ``render_instructions(extra=...)``) so the ASSEMBLED prompt is capped too.
     """
     if not st.should_diversify:
         return ""
-    ids = []
-    try:
-        entries = rejected.entries()[-max_ids:] if rejected is not None else []
-        ids = [str(e.get("candidate_id")) for e in entries if e.get("candidate_id")]
-    except Exception:  # noqa: BLE001 — memory shape is best-effort context
-        ids = []
     lines = [
         "",
         "## PLATEAU — CHANGE APPROACH (escalation: diversify)",
@@ -361,11 +445,12 @@ def prompt_block(st: PlateauState, *, rejected=None, max_ids: int = 6) -> str:
         "have not touched, remove something instead of adding), and state in one line "
         "which prior approach you are abandoning and why the new one differs in kind.",
     ]
-    if ids:
-        lines.append(f"Recently rejected candidates (do not re-derive these): {', '.join(ids)}.")
     if st.exhausted_lineages:
-        lines.append("Exhausted lineage(s) — every recent child of these failed, treat them "
-                     f"as dead ground: {', '.join(st.exhausted_lineages)}.")
+        shown = [str(p)[:max_id_chars] for p in st.exhausted_lineages[:max_ids]]
+        more = len(st.exhausted_lineages) - len(shown)
+        tail = f" (+{more} more)" if more > 0 else ""
+        lines.append("Exhausted lineage(s) — every recent child of these was rejected with "
+                     f"no improvement, treat them as dead ground: {', '.join(shown)}{tail}.")
     return "\n".join(lines) + "\n"
 
 

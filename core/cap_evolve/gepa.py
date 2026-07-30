@@ -589,8 +589,13 @@ def gepa_loop(
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
         instructions = _instructions(refl_summary, focus_label, mb)
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
-        instructions += plateau.prompt_block(pstate, rejected=rejected)
+        # The plateau block goes THROUGH _augment_instructions (extra=) so it lands inside
+        # #222's MAX_INSTRUCTIONS_CHARS cap, and in its PRESERVED TAIL. Appending it after
+        # this call escaped the cap entirely (measured 64941 > 60000); appending it before
+        # would put the one *behavioural* block in the middle, which is the part truncation
+        # elides — silently dropping it while keeping the two context-only blocks.
+        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history,
+                                             extra=plateau.prompt_block(pstate))
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0

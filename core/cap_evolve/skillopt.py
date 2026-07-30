@@ -303,13 +303,13 @@ def skillopt_loop(
             label += f"(mini-batch of {len(minibatch_ids)} train tasks, L={L})"
             instructions = harness._focus_instructions(current_val, minibatch_ids, label)
             instructions += "\n" + _buffer_block(L, step_buffer, rejected_this_epoch)
-            instructions += plateau.prompt_block(pstate, rejected=rejected)
 
             cid = f"so_e{epoch:02d}s{s + 1:02d}"
             parent_dir = run_dir.candidate_dir(run_dir.best_id)  # single lineage: always best
             step = harness.run_step(
                 adapter, run_dir=run_dir, parent_dir=parent_dir,
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
+                extra_instructions=plateau.prompt_block(pstate),
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
             )

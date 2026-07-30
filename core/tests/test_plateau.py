@@ -106,10 +106,12 @@ def test_plateau_stop_false_caps_at_diversify(tmp_path):
     assert st.should_diversify
 
 
-def test_non_best_accepts_are_dead_but_ratchet_caps_at_diversify(tmp_path):
+def test_non_best_accepts_are_dead_but_ratchet_caps_at_warn(tmp_path):
     """GEPA can accept a frontier specialist that beats its own parent but never tops
-    the incumbent best. Best-val velocity is 0, so those iterations ARE dead — but a
-    streak containing accepts is capped at ``diversify`` and never killed."""
+    the incumbent best. Best-val velocity is 0, so those iterations ARE dead for the
+    streak — but a streak containing accepts is capped at ``warn``: no stop, and no
+    behavioural prompt block either, because telling an optimizer that is clearing the
+    honest val gate every iteration "the direction is dead" would be false."""
     cfg = plateau.PlateauConfig(window=2, escalate_every=1)
     rd = _rd(tmp_path)
     _step(rd, "best", accept=True, val=1.0, parent_val=0.0, parent="seed")
@@ -118,8 +120,13 @@ def test_non_best_accepts_are_dead_but_ratchet_caps_at_diversify(tmp_path):
     st = plateau.assess(rd, cfg)
     assert st.run_length == 10, st
     assert st.accepts_in_streak == 10, st
-    assert st.level == "diversify", "a still-accepting run must not be stopped"
-    assert not st.should_stop and st.should_diversify
+    assert st.level == "warn", "a still-accepting run must not be stopped or redirected"
+    assert not st.should_stop and not st.should_diversify
+    # The reason must not contradict its own ratchet clause (review #6).
+    assert "no near-miss" not in st.reason, st.reason
+    assert "frontier still widening" in st.reason, st.reason
+    # No prompt block on this path: the block asserts the direction failed.
+    assert plateau.prompt_block(st) == ""
 
 
 def test_zero_accept_streak_does_reach_stop(tmp_path):
@@ -172,16 +179,48 @@ def test_gepa_local_gate_rejections_count(tmp_path):
     assert st.iterations == 5 and st.level == "stop", st
 
 
-def test_skillopt_step_events_are_seen(tmp_path):
+def test_real_skillopt_iteration_is_counted_ONCE(tmp_path):
+    """REGRESSION (review blocking #1) — the false positive that killed productive runs.
+
+    A real SkillOpt iteration logs the event PAIR: ``harness.run_step`` logs ``step``
+    (with parent + parent_val), then ``skillopt.py`` logs ``skillopt_step`` for the SAME
+    candidate as an audit record. Counting both meant one iteration counted twice, so a
+    ``window=6`` ladder reached ``stop`` at iteration 5 — with a *productive* run — and a
+    genuine near-miss was recorded once alive and once dead (the duplicate carries no
+    parent_val, so its delta was taken against the running best).
+
+    The old ``test_skillopt_step_events_are_seen`` logged ``skillopt_step`` ALONE, a shape
+    that never occurs in production, which is why 28 tests missed this.
+    """
+    cfg = plateau.PlateauConfig(window=6, escalate_every=2)   # shipped defaults
+    rd = _rd(tmp_path)
+    for i in range(1, 6):
+        cid = f"so_e01s{i:02d}"
+        # the production pair, in production order:
+        rd.log_event("step", candidate=cid, accept=False, val=0.5,
+                     parent_val=0.5, parent="seed")
+        rd.log_event("skillopt_step", candidate=cid, accept=False, val=0.5, epoch=1)
+    st = plateau.assess(rd, cfg)
+    assert st.iterations == 5, f"5 real iterations must be 5 rows, got {st.iterations}"
+    assert st.run_length == 5, st
+    assert st.level == "ok", "a window=6 ladder must NOT fire at iteration 5"
+
+
+def test_skillopt_near_miss_is_not_also_recorded_dead(tmp_path):
+    """The nastier half of blocking #1: the duplicate row had no ``parent_val``, so a
+    near-miss (Δ>0, sub-significant) was recorded alive by ``step`` and dead by
+    ``skillopt_step`` — and the dead copy was the trailing row ``assess`` reads."""
     cfg = plateau.PlateauConfig(window=2, escalate_every=1)
     rd = _rd(tmp_path)
-    for i in range(5):
-        rd.log_event("skillopt_step", candidate=f"so_{i}", accept=False, val=0.2)
+    _step(rd, "so_e01s01", accept=True, val=0.9, parent_val=0.0, parent="seed")
+    for i in range(2, 8):   # a run of genuine near-misses against a best of 0.9
+        cid = f"so_e01s{i:02d}"
+        rd.log_event("step", candidate=cid, accept=False, val=0.95,
+                     parent_val=0.90, parent="so_e01s01")
+        rd.log_event("skillopt_step", candidate=cid, accept=False, val=0.95, epoch=1)
     st = plateau.assess(rd, cfg)
-    assert st.iterations == 5, st
-    # skillopt_step carries no parent_val; delta is taken against the running best,
-    # which for a single-lineage climber IS the parent.
-    assert st.level == "stop", st
+    assert st.run_length == 0, f"near-misses must keep the streak at 0, got {st.run_length}"
+    assert st.level == "ok", st
 
 
 # ---- per-lineage exhaustion vs GLOBAL plateau -----------------------------
@@ -272,14 +311,33 @@ def test_prompt_block_only_from_diversify(tmp_path):
     assert "5 iterations" in blk
 
 
-def test_prompt_block_lists_rejected_ids(tmp_path):
-    from cap_evolve.memory import RejectedMemory
-    mem = RejectedMemory(tmp_path / "rejected.jsonl")
-    mem.add("cand_a", "summary a", "gate reject", 0.1)
-    mem.add("cand_b", "summary b", "gate reject", 0.1)
-    blk = plateau.prompt_block(plateau.PlateauState(level="diversify", run_length=5),
-                               rejected=mem)
-    assert "cand_a" in blk and "cand_b" in blk
+def test_prompt_block_does_not_duplicate_222s_rejected_channel(tmp_path):
+    """The block deliberately lists NO rejected candidate ids (review blocking #3b / #11).
+
+    #129/PR222 already injects rejected approaches with normalized signatures and reasons;
+    bare ids were strictly less informative and sat right next to that block. The old
+    implementation also called ``RejectedMemory.entries()``, which #199 REMOVES, behind a
+    bare ``except`` — so on the composed tree the line silently vanished with no error.
+    Deleting the line fixes the overlap and the silent loss in one edit; ``prompt_block``
+    no longer takes a ``rejected`` argument at all, so a caller passing one fails loudly.
+    """
+    st = plateau.PlateauState(level="diversify", run_length=5)
+    blk = plateau.prompt_block(st)
+    assert "MATERIALLY DIFFERENT" in blk
+    assert "rejected candidates" not in blk
+    with pytest.raises(TypeError):
+        plateau.prompt_block(st, rejected=object())      # type: ignore[call-arg]
+
+
+def test_prompt_block_is_bounded(tmp_path):
+    """Blocking #3a, second half: the block itself had no ceiling — ``exhausted_lineages``
+    was joined with no limit, so 200 lineages x 400-char ids grew it without bound."""
+    st = plateau.PlateauState(level="diversify", run_length=9,
+                              exhausted_lineages=[f"lineage_{i}_" + "x" * 400
+                                                  for i in range(200)])
+    blk = plateau.prompt_block(st)
+    assert len(blk) < 2000, f"block must be bounded, got {len(blk)}"
+    assert "+194 more" in blk, blk[-300:]
 
 
 # ---- config ---------------------------------------------------------------
@@ -292,8 +350,11 @@ def test_config_from_spec_and_ladder():
     assert cfg.lineage_window == 5 and cfg.stop is False
     d = plateau.PlateauConfig.from_spec({})
     assert (d.window, d.escalate_every, d.lineage_window, d.stop) == (6, 2, 4, True)
-    # an absent key must not be read as 0 (which would escalate immediately)
-    assert plateau.PlateauConfig.from_spec({"plateau_window": 0}).window == 6
+    # An absent key must not be read as 0 (which would escalate immediately)...
+    assert plateau.PlateauConfig.from_spec({}).window == 6
+    # ...but an EXPLICIT `plateau_window: 0` now means "off" (review #10), not "default 6".
+    off = plateau.PlateauConfig.from_spec({"plateau_window": 0})
+    assert off.stop is False and off.warn_at > 10 ** 6, off
 
 
 def test_empty_and_unreadable_run_is_ok(tmp_path):
@@ -401,8 +462,11 @@ def test_hill_climb_loop_injects_diversify_block(tmp_path, monkeypatch):
     n = {"i": 0}
 
     def fake_run_step(adapter, *, run_dir, parent_dir, optimizer, instructions,
-                      current_val, **kw):
-        seen.append(instructions)
+                      current_val, extra_instructions="", **kw):
+        # The block now travels as `extra_instructions` so run_step can route it THROUGH
+        # _augment_instructions (inside #222's cap, in its preserved tail) rather than
+        # having it appended past the cap at the call site. Assert on what really ships.
+        seen.append(instructions + extra_instructions)
         n["i"] += 1
         run_dir.log_event("step", candidate=f"c{n['i']}", accept=False, val=0.5,
                           parent="seed", parent_val=0.5)
@@ -436,6 +500,144 @@ def test_gepa_skips_exhausted_lineage_in_selection():
     # every lineage dead -> fall back to the whole pool, the GLOBAL level decides
     sample_pool = [c for c in pool if c["id"] not in {"seed", "a", "b"}] or pool
     assert len(sample_pool) == 3
+
+
+def test_all_accepted_lineage_is_NOT_exhausted(tmp_path):
+    """REGRESSION (review blocking #4) — GEPA steering away from its BEST lineage.
+
+    ``exhausted_lineages`` reused ``_dead()``, which counts accepted-but-not-global-best
+    as dead. So a lineage whose children were ALL accepted was marked exhausted and
+    dropped from GEPA's sampling pool — and unlike the global level there is no ratchet on
+    this path, no stop event, nothing in the summary. Widening the per-instance Pareto
+    frontier IS GEPA's mechanism, so an accept is never dead ground for a lineage.
+    """
+    cfg = plateau.PlateauConfig(lineage_window=4)
+    rd = _rd(tmp_path)
+    _step(rd, "champion", accept=True, val=1.0, parent_val=0.0, parent="other")
+    for i in range(5):   # 5 children of `p_hot`, ALL ACCEPTED, all Δ>0, none topping 1.0
+        _step(rd, f"hot{i}", accept=True, val=0.70 + i * 0.01, parent_val=0.60,
+              parent="p_hot")
+    st = plateau.assess(rd, cfg)
+    assert st.exhausted_lineages == [], \
+        f"an all-accepting lineage must stay in the pool, got {st.exhausted_lineages}"
+    # ...while a genuinely dead lineage in the same run IS still reported.
+    for i in range(4):
+        _step(rd, f"cold{i}", accept=False, val=0.5, parent_val=0.5, parent="p_cold")
+    assert plateau.assess(rd, cfg).exhausted_lineages == ["p_cold"]
+
+
+def test_lineage_with_one_accept_in_the_tail_is_not_exhausted(tmp_path):
+    """The narrower predicate at its boundary: a single accept inside the window keeps a
+    lineage alive, whatever it did for the global best."""
+    cfg = plateau.PlateauConfig(lineage_window=3)
+    rd = _rd(tmp_path)
+    _step(rd, "best", accept=True, val=1.0, parent_val=0.0, parent="seed")
+    _step(rd, "a", accept=False, val=0.4, parent_val=0.5, parent="p1")
+    _step(rd, "b", accept=True, val=0.6, parent_val=0.4, parent="p1")   # non-best accept
+    _step(rd, "c", accept=False, val=0.4, parent_val=0.5, parent="p1")
+    assert plateau.assess(rd, cfg).exhausted_lineages == []
+
+
+def test_local_gate_tie_and_regression_are_distinguishable(tmp_path):
+    """Review #7: ``series`` hardcoded ``delta: 0.0`` for every local-gate row, throwing
+    away the ``child_sum``/``parent_sum`` the event already carries. Both are still dead
+    (gepa's pass condition is a strict ``>``), but the series must not lie about which."""
+    rd = _rd(tmp_path)
+    rd.log_event("gepa_local_gate", candidate="tie", parent="seed",
+                 child_sum=2.0, parent_sum=2.0, passed=False)
+    rd.log_event("gepa_local_gate", candidate="reg", parent="seed",
+                 child_sum=1.0, parent_sum=2.0, passed=False)
+    rows = plateau.series(rd)
+    assert rows[0]["delta"] == 0.0, rows[0]
+    assert rows[1]["delta"] == -1.0, rows[1]
+    assert all(plateau._dead(r) for r in rows), "both are still dead"
+
+
+# ---- the crash and the prompt-assembly seam -------------------------------
+
+def test_zero_iteration_loop_does_not_crash(tmp_path):
+    """REGRESSION (review blocking #2) — ``NameError: cannot access local variable 'why'``.
+
+    ``why`` was only bound inside the ``for i in range(max_iterations)`` body, but read
+    after it. ``max_iterations=0`` — reachable from a spec and from a resume whose budget
+    is already spent — crashed instead of returning a clean zero-iteration result.
+    """
+    from cap_evolve import harness
+    from cap_evolve.loop import SplitResult
+    from cap_evolve.splits import Splits
+
+    rd = RunDir.create(tmp_path, budget=Budget(max_iterations=0))
+    rd.write_splits(Splits(train=["t1"], val=["v1"], test=["s1"]))
+    rd.candidate_dir("seed").mkdir(parents=True, exist_ok=True)
+    rd.set_best("seed")
+    base = SplitResult(split="val", reward=0.5, stderr=0.0,
+                       per_task=[{"task_id": "v1", "reward": 0.5}])
+
+    res = harness.hill_climb_loop(object(), run_dir=rd, optimizer=lambda w, i: None,
+                                  current_val=base, max_iterations=0)
+    assert res["iterations"] == 0 and res["steps"] == []
+    assert res["stop_reason"], "a zero-iteration run must still report why"
+
+
+def test_plateau_block_reaches_the_prompt_inside_the_cap(tmp_path):
+    """REGRESSION (review blocking #3a + the #199 merge trap).
+
+    Two things must hold at once and only one of them is about size:
+
+    1. The block must be INSIDE whatever cap the tree has. It used to be appended after
+       ``_augment_instructions``, escaping #222's ``MAX_INSTRUCTIONS_CHARS`` (measured
+       64941 > 60000), and landing where truncation elides — so the one *behavioural*
+       block would be dropped while the two context-only blocks survived.
+    2. The block must actually ARRIVE. #199 replaces ``_focus_instructions`` with
+       ``render_instructions`` and reassigns ``instructions``; resolving that conflict the
+       obvious "keep both sides" way compiles clean with the plateau feature SILENTLY
+       DEAD. This assertion is what makes a bad merge resolution fail loudly.
+    """
+    from cap_evolve import harness
+    from cap_evolve.memory import History, RejectedMemory
+
+    rd = _rd(tmp_path)
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    block = plateau.prompt_block(plateau.PlateauState(level="diversify", run_length=9,
+                                                      exhausted_lineages=["p1"]))
+    assert block, "diversify must produce a block"
+    # Signature-agnostic: #129/PR222 drops `rejected, history` from this function (it reads
+    # them off the run dir instead). Only `extra` is #221's contract, so bind by NAME and
+    # fill whatever positional memory params this tree still has.
+    import inspect
+    params = list(inspect.signature(harness._augment_instructions).parameters)
+    extras = {"rejected": RejectedMemory(tmp_path / "r.jsonl"),
+              "history": History(tmp_path / "h.jsonl")}
+    kw = {k: v for k, v in extras.items() if k in params}
+    out = harness._augment_instructions("BASE INSTRUCTIONS", workdir, rd, extra=block, **kw)
+    assert "MATERIALLY DIFFERENT" in out, "the plateau block never reached the prompt"
+    assert out.rstrip().endswith(block.rstrip()), \
+        "the behavioural block must be LAST, in the tail truncation preserves"
+    try:
+        from cap_evolve.optimizer_context import MAX_INSTRUCTIONS_CHARS
+    except Exception:                                  # pre-#222 tree: no cap to check
+        return
+    assert len(out) <= MAX_INSTRUCTIONS_CHARS, len(out)
+
+
+def test_resume_carries_the_streak(tmp_path):
+    """Review #9, documenting the intended behaviour rather than changing it: the streak
+    is derived from the whole event log, so a resumed run re-derives ``stop`` before
+    spending an iteration. A dead region is still dead after a restart; re-spending
+    budget to rediscover it is the error this module exists to prevent. The escape hatch
+    is ``plateau_stop: false`` / ``--no-plateau-stop``."""
+    cfg = plateau.PlateauConfig(window=2, escalate_every=1)
+    rd = _rd(tmp_path)
+    for i in range(6):
+        _step(rd, f"d{i}", accept=False, val=0.5, parent_val=0.5, parent="seed")
+    assert plateau.assess(rd, cfg).level == "stop"
+
+    reopened = RunDir(rd.root)                    # a fresh handle == what --resume does
+    st = plateau.assess(reopened, cfg)
+    assert st.level == "stop" and st.run_length == 6, st
+    off = plateau.PlateauConfig(window=2, escalate_every=1, stop=False)
+    assert plateau.assess(reopened, off).level == "diversify"
 
 
 # ---- surfacing ------------------------------------------------------------

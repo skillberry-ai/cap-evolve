@@ -69,6 +69,11 @@ def list_runs(base_dir: Path) -> list[dict]:
             "baseline_val": s.get("baseline_val"),
             "delta_pct": s.get("delta_pct"),
             "iterations": counts.get("accepted", 0) + counts.get("rejected", 0),
+            # PROGRESS, not liveness: "status" above says whether the process is running,
+            # this says whether anything it does helps. A plateaued run is BOTH `live` and
+            # `stop` — different questions, separate fields, never one string.
+            # See core/cap_evolve/plateau.py.
+            "plateau_level": (s.get("plateau") or {}).get("level") or "ok",
             "total_usd": (s.get("cost") or {}).get("total_usd"),
             "mtime": path.stat().st_mtime,
         })
