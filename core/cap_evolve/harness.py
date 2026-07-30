@@ -249,11 +249,14 @@ def evaluate_candidate(
             per_task_trials[tid].append(sc.reward)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
             per_task_metrics[tid].append(sc.metrics)
-            (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
-                json.dumps({"input": task.input, "rollout": rollout.to_dict(),
-                            "score": sc.to_dict()}, default=str),
-                encoding="utf-8",
-            )
+            # tmp + ``os.replace``, never ``write_text``: GEPA's cache replay hardlinks
+            # rollout jsons across tags, and truncating a shared inode would rewrite a
+            # PREVIOUS iteration's archived rollout in place. Replacing the directory
+            # entry breaks the link, keeping every archived record immutable.
+            _atomic_write(out_dir / f"{tid}__{tag}__t{k}.json",
+                          json.dumps({"input": task.input,
+                                      "rollout": rollout.to_dict(),
+                                      "score": sc.to_dict()}, default=str))
 
     # ``live()`` makes the candidate the one the target uses for this evaluation and
     # yields the ``ctx`` the runner consumes (default ctx == candidate_dir). Using a

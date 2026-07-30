@@ -77,8 +77,10 @@ def hash_candidate_dir(candidate_dir: Path) -> str:
 class EvalCache:
     """A tiny JSON-file eval cache living in the run dir.
 
-    ``get(candidate_hash, task_id)`` -> ``{"reward", "feedback", "rollout_file"}`` or
-    ``None``; ``put(candidate_hash, task_id, reward, feedback, rollout_file=...)``
+    ``get(candidate_hash, task_id)`` -> ``{"reward", "feedback"}`` plus an OPTIONAL
+    ``"rollout_file"`` (omitted when unknown — e.g. a pre-#111 entry; readers treat its
+    absence as a miss), or ``None``;
+    ``put(candidate_hash, task_id, reward, feedback, rollout_file=...)``
     persists. Persistence is a single JSON object ``{ "<hash>::<task_id>": {...} }``
     rewritten on each put — fine for the run sizes here (a few thousand entries) and
     trivially portable.

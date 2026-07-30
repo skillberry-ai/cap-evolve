@@ -64,6 +64,7 @@ from .harness import (
 )
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir
+from .rundir import _atomic_write  # separate line: keeps the #199 merge clean
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
@@ -159,7 +160,8 @@ def _eval_minibatch(
     with _live(adapter, candidate_dir) as ctx:
         for task in tasks:
             cached = cache.get(chash, task.id) if cache is not None else None
-            replay = _replay_cached(cached, out_dir, task.id, tag) if cached else None
+            replay = (_replay_cached(cached, out_dir, task.id, tag, run_dir)
+                      if cached else None)
             if replay is not None:
                 scores.append(replay)
                 continue
@@ -179,11 +181,15 @@ def _eval_minibatch(
                      "trace": _short(getattr(rollout, "trace", None))},
             ))
             rfile = f"{task.id}__{tag}__t0.json"
-            (out_dir / rfile).write_text(
-                json.dumps({"input": task.input, "rollout": rollout.to_dict(),
-                            "score": sc.to_dict()}, default=str),
-                encoding="utf-8",
-            )
+            # ``_atomic_write`` (tmp + ``os.replace``) and NOT ``write_text``: a cache
+            # hit may have HARDLINKED a previous iteration's archived rollout to this
+            # name, and ``write_text`` truncates the shared inode — silently rewriting
+            # that earlier iteration's evidence. Replacing the directory entry breaks
+            # the link instead, so the archived record is immutable once written.
+            _atomic_write(out_dir / rfile,
+                          json.dumps({"input": task.input,
+                                      "rollout": rollout.to_dict(),
+                                      "score": sc.to_dict()}, default=str))
             if cache is not None:
                 cache.put(chash, task.id, sc.reward, sc.feedback or "",
                           rollout_file=rfile)
@@ -200,7 +206,8 @@ def _eval_minibatch(
     return result
 
 
-def _replay_cached(cached: dict, out_dir: Path, task_id: str, tag: str) -> Score | None:
+def _replay_cached(cached: dict, out_dir: Path, task_id: str, tag: str,
+                   run_dir: RunDir | None = None) -> Score | None:
     """Rebuild a full ``Score`` (output + trace) from a cache hit, or ``None`` = miss.
 
     The fix for #111. The cache entry carries ``rollout_file`` — the rollout json in
@@ -212,30 +219,52 @@ def _replay_cached(cached: dict, out_dir: Path, task_id: str, tag: str) -> Score
     Returning ``None`` (→ the caller re-runs the rollout) is deliberate for a pointerless
     or unreadable entry: a score-only hit is exactly the hollow-reflection bug, so we pay
     one rollout instead of serving empty "Agent output:" as if it were a trace.
+
+    ``eval_cache.json`` is plain JSON in the optimizer-writable run dir, so ``rollout_file``
+    is UNTRUSTED input (#142's threat model). It must be a BARE FILENAME under ``out_dir``:
+    ``Path(rfile).name != rfile`` rejects ``/etc/x``, ``../y`` and ``sub/z`` in one
+    comparison — an allowlist of the only legitimate shape, not a denylist of bad ones —
+    and the resolved-parent check confines it to ``out_dir`` even through a symlink.
+    Otherwise a tampered entry reads any json-shaped file on disk straight into the
+    optimizer's prompt (and hardlinks its inode into the run dir).
     """
     rfile = str(cached.get("rollout_file") or "")
-    if not rfile:
+    if not rfile or Path(rfile).name != rfile:
         return None
     src = out_dir / rfile
     try:
+        # Second layer: the resolved path must still live directly in out_dir.
+        if src.resolve().parent != out_dir.resolve():
+            return None
         rec = json.loads(src.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
+        reward = float(cached.get("reward", 0.0))
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return None  # unreadable pointer OR malformed reward → honest MISS, never a crash
     rollout = rec.get("rollout") or {}
-    reward = float(cached.get("reward", 0.0))
     # Re-materialize under this eval's tag so ``_copy_step_trajectories(tag=...)`` finds
     # this minibatch's rollouts. Same bytes, new name — no re-run, no fabrication. A
     # hardlink keeps a cache hit free on disk too (rollout jsons are write-once); the
     # copy fallback covers filesystems/paths where linking isn't available.
+    #
+    # Overwrite unconditionally (no ``not dst.exists()`` short-circuit): on a resumed run
+    # the tag can already hold a DIFFERENT parent's rollout, and keeping it would let
+    # ``trajectories/`` serve candidate A while REFLECTION.md shows candidate B — under
+    # #199's unconditional "SAME minibatch VERBATIM" claim. ``os.link`` needs a free name,
+    # and the unlink is safe because fresh writes no longer truncate a shared inode.
     dst = out_dir / f"{task_id}__{tag}__t0.json"
-    if dst != src and not dst.exists():
+    if dst != src:
         try:
+            dst.unlink(missing_ok=True)
             os.link(src, dst)
         except OSError:
             try:
-                dst.write_text(json.dumps(rec, default=str), encoding="utf-8")
-            except OSError:
-                pass  # ponytail: trajectories/ then falls back to REFLECTION.md excerpts
+                _atomic_write(dst, json.dumps(rec, default=str))
+            except OSError as e:
+                # Loud, not silent: the Score is still complete, but trajectories/ now
+                # lacks this task while the prompt claims VERBATIM completeness.
+                if run_dir is not None:
+                    run_dir.log_event("rollout_rematerialize_failed", task_id=task_id,
+                                      tag=tag, file=dst.name, error=str(e)[:300])
     return Score(
         task_id=task_id, reward=reward, feedback=str(cached.get("feedback", "")),
         n=1, stderr=0.0, trial_rewards=[reward],
