@@ -51,6 +51,32 @@ def load_adapter(project_dir: Path) -> CapabilityAdapter:
     if adir not in sys.path:
         sys.path.insert(0, adir)
 
+    # Honesty (#142): the adapter IS the grader, so it must be executed from the
+    # source bytes the protected-paths manifest hashes — never from a bytecode cache.
+    # A PEP 552 ``UNCHECKED_HASH`` pyc planted in the adapter's cache slot skips
+    # mtime, size AND hash validation, so ``SourceFileLoader`` would happily run a
+    # hacked ``score()`` while ``adapter.py`` stayed byte-identical to the manifest.
+    # Two lines close that: drop any pre-existing cache (so only source can run) and
+    # suppress writing a new one (so ``.pyc`` files can be hashed like anything else
+    # instead of being excluded from protection).
+    # ponytail: set process-wide and never restored, on purpose. Restoring it would
+    # let a helper imported LAZILY from inside ``score()`` write a pyc mid-scoring,
+    # which the (now correctly pyc-aware) guard would read as an added protected file
+    # and abort a legitimate run on. A run process that never writes bytecode costs
+    # only a little import time.
+    import shutil
+    cache_dir = mod_path.parent / "__pycache__"
+    if cache_dir.exists():
+        # Not silent: a cache dir next to the grader is either stale build residue or a
+        # plant, and either way the operator should know we destroyed it. A plant made
+        # DURING a run is caught by the manifest instead (it reads as an added protected
+        # file); this line covers one that predates the manifest, where the outcome is
+        # neutralization rather than detection.
+        print(f"cap-evolve: removed bytecode cache {cache_dir} before loading the "
+              "adapter — the grader must execute from the hashed source only.",
+              file=sys.stderr)
+        shutil.rmtree(cache_dir, ignore_errors=True)
+    sys.dont_write_bytecode = True
     spec = importlib.util.spec_from_file_location("forge_project_adapter", mod_path)
     mod = importlib.util.module_from_spec(spec)
     assert spec and spec.loader

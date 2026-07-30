@@ -100,6 +100,36 @@ def main(argv=None) -> int:
         "",
         sealed_note,
     ]
+
+    # Tamper events (#142) go at the TOP of the report, not the bottom: if a protected
+    # path changed, every number above is void and the reader must see that first.
+    tampers = []
+    ev = run_dir.root / "events.jsonl"
+    if ev.exists():
+        for line in ev.read_text(encoding="utf-8").splitlines():
+            if '"tamper_detected"' not in line:
+                continue
+            try:
+                tampers.append(json.loads(line))
+            except Exception:  # noqa: BLE001
+                pass
+    if tampers:
+        banner = [
+            f"> ## 🚨 TAMPER DETECTED — {len(tampers)} event(s)",
+            ">",
+            "> A PROTECTED path (scorer / eval harness / task data / gold answers) changed "
+            "during this run. Every number below was produced alongside an edited grader "
+            "and **must not be reported as a result**.",
+            ">",
+        ]
+        for e in tampers:
+            for ch in (e.get("changes") or []):
+                banner.append(f"> - `{ch.get('change')}` `{ch.get('path')}` "
+                              f"({e.get('context') or 'unknown context'})")
+        banner.append("")
+        md = md[:1] + banner + md[1:]  # after the H1, before the numbers
+        summary["tamper_events"] = len(tampers)
+
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
     if not args.no_dashboard:
