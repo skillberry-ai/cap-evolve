@@ -14,13 +14,38 @@ python3 -m venv .venv && source .venv/bin/activate   # recommended: isolated env
 ```bash
 pip install ./core        # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
 cap-evolve version        # verify
+cap-evolve doctor         # diagnose the whole install (exits non-zero on a hard failure)
 ```
 
 > If your default pip index requires auth, append `--index-url https://pypi.org/simple`
 > (cap-evolve-core itself has no runtime dependencies).
 
-The `cap-evolve` CLI has six subcommands: `version`, `splits`, `check`, `run`,
-`estimate`, `dashboard`.
+The `cap-evolve` CLI has seven subcommands: `version`, `splits`, `check`, `doctor`,
+`run`, `estimate`, `dashboard`.
+
+### Diagnose the install with `cap-evolve doctor`
+
+One command that reports pass/warn/fail with an actionable fix per line, and exits
+non-zero on a hard failure (CI-friendly). It checks: Python version, core
+importability + which interpreter/venv, whether `cap-evolve` is on `PATH` and whether a
+*second* install shadows it, `git` (the default version store), the skills dir + registry
+manifest (flagging install.sh's "best-guess" host dirs), which optimizer CLIs are on
+`PATH` **and whether `optimizers/registry.yaml` exists at all** (without it `run-optimizer`
+raises immediately, so that is a hard failure, not a warning), provider credentials
+**present/absent only — never a value** — including names declared in a repo-root `.env`,
+and a warning when only part of a group that needs all its vars is set (RITS, watsonx, the
+`ANTHROPIC_BASE_URL`+`ANTHROPIC_AUTH_TOKEN` gateway pair) — run-dir writability, and — when
+run inside a project — `cap-evolve check`. Add `--json` for machine-readable output.
+
+Third-party text (a user adapter's exception message) is never echoed verbatim: the report
+carries a short redacted excerpt and the full text goes to
+`.capevolve/project/doctor-check.log` for local inspection, so doctor output stays safe to
+paste into an issue.
+
+```bash
+cap-evolve doctor            # diagnose the current directory
+cap-evolve doctor --json     # same, machine-readable
+```
 
 ## Optional — the live dashboard (separate package)
 
