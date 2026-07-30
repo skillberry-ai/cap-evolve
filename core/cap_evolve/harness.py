@@ -28,6 +28,7 @@ from . import gate as gate_mod
 # Module-level is safe: optimizer_context imports only .loop/.rundir eagerly and
 # lazy-imports harness inside its function bodies, so there is no cycle to dodge.
 from . import optimizer_context as _oc
+from . import proposal_quality
 from .loop import SplitResult, aggregate_scores
 from .rundir import (NON_CAPABILITY_NAMES, SCRATCH_NAMES, RunDir, _atomic_write,
                      iteration_candidate)
@@ -565,6 +566,16 @@ _PROCESS_SEED = (
     "Fill this in as you work. It is the human-readable record of HOW this iteration was "
     "done and is snapshotted with the candidate, so anyone — and the next iteration via "
     "./prior_iterations/ — can see your reasoning. Be concrete.\n\n"
+    "## Proposal declaration (#140 — fill BEFORE you edit; read ./guidance/reasoning/"
+    "mechanism-probe/SKILL.md first)\n"
+    "- Mechanism: <what now behaves DIFFERENTLY, and why that changes the outcome — a "
+    "knob restates a rule or retunes a value; a mechanism changes what is possible>\n"
+    "- Hypothesis: <which failure cluster this fixes, and why it generalizes past the "
+    "exact failing inputs>\n"
+    "- Expected observable: <what will look different in the NEXT iteration's "
+    "trajectories if this is right>\n"
+    "(Recorded per candidate, NOT enforced — the val gate is still the only thing that "
+    "accepts or rejects.)\n\n"
     "## Ranked issue list (clusters by # failing tasks × trials, biggest first)\n"
     "| rank | cluster | tasks | shared root cause | tag (KNOWLEDGE / BEHAVIORAL / CAPABILITY-GAP) | planned change class |\n"
     "| --- | --- | --- | --- | --- | --- |\n\n"
@@ -1073,6 +1084,9 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
     )
     dead_ends = dead_end_constraints(run_dir)
     tail = f"\n{dead_ends}" if dead_ends else ""
+    # #140's proposal-quality bar, LAST so it sits in the kept 30% tail alongside the
+    # dead-end constraints. ~1.4 KB; the tail budget is 18 KB at the default ceiling.
+    tail += f"\n{proposal_quality.PROMPT_BLOCK}"
     # Re-cap: render_instructions capped its OWN output, but these blocks are appended
     # after it, so the final assembled prompt needs the ceiling applied once more.
     return _oc.cap_instructions(f"{instructions}\n\n{pointer}{tail}\n")
@@ -1252,6 +1266,23 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
         except Exception as e:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning", what="guidance/diagnose", error=str(e)[:300])
 
+    # 3b) the ON-DEMAND reasoning skills (#140) as local guidance. Tiny skills, each
+    # countering ONE named optimizer failure mode at ONE step — mechanism-probe sits at
+    # the proposal step. Copied whole so a new reasoning skill needs no wiring here, and
+    # scripts/ is kept (unlike the capability/diagnose copies) because the probe's own
+    # run.py is what the SKILL.md tells the optimizer to run on its PROCESS.md.
+    reasoning_src = repo_root / "skills" / "reasoning"
+    if reasoning_src.is_dir():
+        try:
+            dst = workdir / "guidance" / "reasoning"
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(reasoning_src, dst,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="guidance/reasoning",
+                              error=str(e)[:300])
+
     # 4) the resolved optimizer's features reference (parallel subagents etc.).
     if optimizer_name:
         ref_src = (repo_root / "skills" / "optimizers" / "run-optimizer"
@@ -1329,6 +1360,18 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
                 except Exception as e:  # noqa: BLE001
                     run_dir.log_event("optimizer_context_warning",
                                       what=f"{skills_dir}/diagnose", error=str(e)[:300])
+            # ON-DEMAND reasoning skills (#140) — flattened into the native dir so the
+            # agent discovers them the same way it discovers the capability skills.
+            for src in sorted((repo_root / "skills" / "reasoning").glob("*/SKILL.md")):
+                try:
+                    dst = native_root / src.parent.name
+                    if dst.exists():
+                        shutil.rmtree(dst)
+                    shutil.copytree(src.parent, dst, ignore=ignore)
+                except Exception as e:  # noqa: BLE001
+                    run_dir.log_event("optimizer_context_warning",
+                                      what=f"{skills_dir}/{src.parent.name}",
+                                      error=str(e)[:300])
 
         # Always-on instructions file: write a short, generic, idempotent pointer block.
         if instructions_file:
@@ -1458,6 +1501,11 @@ def run_step(
     optimizer_seconds = time.time() - _opt_t0
     run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
                          optimizer_tokens=opt_tokens)
+
+    # #140: record what the optimizer DECLARED (mechanism/hypothesis/observable) before
+    # the gate judges it. ADVISORY — nothing below branches on this; the candidate goes
+    # to the val gate whether or not it declared anything.
+    proposal_quality.record(run_dir, workdir, cid)
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)

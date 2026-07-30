@@ -1,0 +1,11 @@
+component: reasoning
+name: mechanism-probe
+summary: On-demand reasoning skill loaded at the proposal step — forces the optimizer to name the mechanism (not a knob), its hypothesis and its expected observable before editing. Advisory: the declaration is recorded per candidate, never enforced.
+entry: scripts/run.py
+check: scripts/check.py
+needs: [traces]
+provides: []
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

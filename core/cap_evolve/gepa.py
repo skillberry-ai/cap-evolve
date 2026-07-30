@@ -52,6 +52,7 @@ from typing import Callable
 
 from . import gate as gate_mod
 from . import optimizer_context as oc
+from . import proposal_quality
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
@@ -630,6 +631,11 @@ def gepa_loop(
             run_dir.log_event("optimizer_error", candidate=cid, error=opt_error[:500])
         run_dir.update_spent(optimizer_seconds=time.time() - _t0, optimizer_usd=opt_cost_usd,
                              optimizer_tokens=opt_tokens)
+
+        # #140: record the proposal declaration (advisory — GEPA's local + val gates
+        # still decide, unchanged). Logged BEFORE the local gate so a locally-rejected
+        # candidate's declaration is on the record too.
+        proposal_quality.record(run_dir, workdir, cid)
 
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,

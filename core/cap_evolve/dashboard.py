@@ -281,6 +281,18 @@ def reduce_run(run_dir) -> dict:
             gate_warnings.append({"reason": ev.get("reason"), "context": ev.get("context"),
                                   "mode": ev.get("mode")})
             continue
+        if kind == "proposal_quality":
+            # #140: the per-candidate proposal declaration, surfaced in the existing
+            # annotations stream (no new panel). ADVISORY — it never explains an
+            # accept/reject, so it must not read like a gate outcome.
+            missing = ", ".join(ev.get("missing") or [])
+            text = (f"declared mechanism: {ev.get('mechanism')} | expected observable: "
+                    f"{ev.get('observable')}" if not missing else
+                    f"no mechanism declaration (missing: {missing}) — advisory, "
+                    "the val gate still decided this candidate")
+            diagnoses.append({"kind": kind, "candidate": _step_candidate(ev),
+                              "text": text})
+            continue
         if kind in ("diagnose", "optimizer_error"):
             diagnoses.append({
                 "kind": kind,

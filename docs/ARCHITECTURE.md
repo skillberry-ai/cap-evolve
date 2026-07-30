@@ -47,6 +47,17 @@ identical context. Add an artifact or a prompt block there and all three inherit
   them. Each carries a "What you can change here" menu and edit boundaries.
 - **The diagnose method** (`./guidance/diagnose/`) — how to cluster failures into a
   reflective dataset (per failing task: Inputs, Generated Outputs, Feedback).
+- **On-demand reasoning skills** (`./guidance/reasoning/<skill>/`, also placed natively) —
+  tiny skills loaded at ONE step to counter ONE named optimizer failure mode. Today:
+  `mechanism-probe` at the proposal step (skipping analysis and shipping a plausible
+  one-line knob tweak). It asks for a three-field **proposal declaration** — mechanism,
+  hypothesis, expected observable — in `PROCESS.md`, which the harness records per
+  candidate as a `proposal_quality` event. **Advisory: the declaration is recorded, never
+  enforced** — no missing or knob-shaped declaration rejects a candidate; the val
+  significance gate remains the only thing that accepts or rejects. "Mechanism or knob?"
+  is a judgement no heuristic can make, and a false rejection would discard a real
+  improvement invisibly, so the bar lives in the prompt and the hard decision stays on
+  val (the same split #129 settled on).
 - **Only the current best step's full trajectories** (`./trajectories/`) — the runner's
   verbatim traces of the candidate it builds on, never the seed + every rejected attempt.
 - **Supporting sources / data model** (`./guidance/sources/`) — the `capability_sources`
