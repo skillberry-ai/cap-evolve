@@ -14,8 +14,9 @@ Subcommands:
                        [--follow]  print live progress while the run works
     cap-evolve tail    [run_dir] [--base .capevolve]  attach to an ongoing run's
                        events.jsonl and print human-readable progress
-                       (exit 0 = run finished, 2 = not a possible run dir,
-                        3 = --idle-timeout elapsed with no events)
+                       (exit 0 = run finished / still working, 2 = not a possible run
+                        dir, 3 = --idle-timeout elapsed with no events,
+                        4 = STALLED, 5 = CRASHED)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -26,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from . import __version__
@@ -133,9 +135,28 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
             if path is None:
                 return
             totals: dict = {}
+            # #118: warn once when the run goes quieter than its own demonstrated pace.
+            # WARN, don't stop: this run is ours and still going, and whether a wedged
+            # phase is worth killing is the user's call — the follower's job is to say
+            # so, not to give up and leave the terminal silent again.
+            warned, next_check = False, [time.monotonic() + 30.0]
+
+            def should_stop(last) -> bool:
+                nonlocal warned
+                if last is not None and time.monotonic() >= next_check[0]:
+                    next_check[0] = time.monotonic() + 30.0
+                    facts = eventstream.liveness_facts(path.parent)
+                    if eventstream.classify(facts) == "stalled":
+                        if not warned:
+                            warned = True
+                            print(f"[follow] {eventstream.describe_status(facts)}",
+                                  file=err, flush=True)
+                    else:
+                        warned = False  # back within pace: re-arm the warning
+                return stop.is_set()
+
             for ev in eventstream.follow_events(
-                    path, offset=offset, poll=0.5,
-                    should_stop=lambda _last: stop.is_set()):
+                    path, offset=offset, poll=0.5, should_stop=should_stop):
                 line = eventstream.render_line(ev, totals, color=color)
                 if line:
                     print(line, file=err, flush=True)
@@ -168,7 +189,11 @@ def _cmd_tail(argv):
     p.add_argument("--from-start", action="store_true",
                    help="replay the whole log first (default: only new events)")
     p.add_argument("--idle-timeout", type=float, default=300.0,
-                   help="give up after N seconds of silence (0 = wait forever)")
+                   help="give up after N seconds of silence (0 = wait forever). Only "
+                        "bounds the wait BEFORE the first event; once the run has "
+                        "spoken, stall detection takes over (see --no-stall-check)")
+    p.add_argument("--no-stall-check", action="store_true",
+                   help="never stop on a suspected stall; only --idle-timeout applies")
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
     if args.idle_timeout < 0:  # a negative timeout used to trip the check immediately
@@ -196,10 +221,31 @@ def _cmd_tail(argv):
     offset = 0 if args.from_start or not events.exists() else events.stat().st_size
     totals: dict = {}
     shown, reason = 0, None
+    # #118: the run's OWN observed pace decides what counts as too much silence, so the
+    # bar is derived from the WHOLE log — not just the events we streamed. Attaching
+    # without --from-start to a run that takes 20 minutes a step would otherwise see no
+    # gaps at all, fall back to the 300s floor, and report a healthy run hung: exactly
+    # the false alarm this issue is about. `--idle-timeout` is left to bound only the
+    # wait for the FIRST event; a fixed timeout after that is the heuristic being replaced.
+    verdict: dict = {}
+    first_deadline = (time.monotonic() + args.idle_timeout) if args.idle_timeout else None
+    next_check = [0.0]
+
+    def should_stop(last) -> bool:
+        if last is None:  # nothing yet — only the plain idle timeout applies
+            return bool(first_deadline and time.monotonic() >= first_deadline)
+        if args.no_stall_check or time.monotonic() < next_check[0]:
+            return False
+        next_check[0] = time.monotonic() + 2.0  # one log read + a kill(0), not every poll
+        facts = eventstream.liveness_facts(root)
+        if eventstream.classify(facts) in ("stalled", "crashed"):
+            verdict.update(facts)
+            return True
+        return False
+
     try:
         for ev in eventstream.follow_events(
-                events, offset=offset, poll=0.5,
-                idle_timeout=(args.idle_timeout or None)):
+                events, offset=offset, poll=0.5, should_stop=should_stop):
             if ev.get("kind") == eventstream.FOLLOW_END:
                 reason = ev.get("reason")
                 continue
@@ -209,11 +255,20 @@ def _cmd_tail(argv):
                 shown += 1
     except KeyboardInterrupt:
         return 130
-    if reason == "idle" and not shown:
+    if verdict:
+        # The whole point of #118: say WHICH kind of quiet this is, with the numbers, and
+        # exit on a code a script can branch on — never a silence that reads like success.
+        status = eventstream.classify(verdict)
+        print(eventstream.describe_status(verdict), file=sys.stderr)
+        return 5 if status == "crashed" else 4
+    if reason == "should_stop" and not shown:
         # Distinct from "the run finished": scripts can tell a timeout from a result.
         print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
               file=sys.stderr)
         return 3
+    if shown:
+        print(eventstream.describe_status(eventstream.liveness_facts(root)),
+              file=sys.stderr)
     return 0
 
 
@@ -469,6 +524,19 @@ def _cmd_run(argv):
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return done(1)
     run_dir = json.loads(proc.stdout)["run_dir"]
+
+    # Liveness marker for stall/crash detection (#118). One small file, written once,
+    # NEVER deleted: once this process exits its pid stops existing, and that absence is
+    # exactly the signal that lets a viewer say "crashed" instead of "live forever" for
+    # a run that died without finalizing. Deleting it on exit would erase the evidence.
+    # Best-effort — a run must never fail because a marker could not be written.
+    try:
+        import socket
+        (workdir / run_dir / "run.pid").write_text(
+            json.dumps({"pid": os.getpid(), "host": socket.gethostname(),
+                        "started": time.time()}), encoding="utf-8")
+    except Exception:  # noqa: BLE001 — observability marker, never load-bearing
+        pass
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.

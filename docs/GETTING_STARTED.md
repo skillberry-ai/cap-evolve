@@ -73,9 +73,42 @@ cap-evolve tail                                    # newest run under .capevolve
 cap-evolve tail .capevolve/run_20260130_140211 --from-start
 ```
 
-`tail` waits for the run dir to appear, so you can attach before the run creates it. It
-exits `0` when the run finishes, `2` on a path that can never be a run dir, and `3` when
-`--idle-timeout` elapses with no events — so a script can tell a timeout from a result.
+`tail` waits for the run dir to appear, so you can attach before the run creates it.
+
+### Is it working, stuck, or dead?
+
+`tail` ends by naming which kind of quiet the run is in, and exits on a code a script can
+branch on:
+
+| Exit | Verdict | Meaning |
+|---|---|---|
+| `0` | `done` / `working` | `finalize` sealed the test, or the run is still within its own pace |
+| `4` | `STALLED` | silent longer than this run has ever been, process still alive → probably wedged |
+| `5` | `CRASHED` | the process that owned the run is gone and it never finalized |
+| `3` | — | `--idle-timeout` elapsed before the *first* event ever arrived |
+| `2` | — | a path that can never be a run dir |
+
+```text
+[02:54:58] ACCEPT  cand_0001  val=1.0000 (parent 0.0000)  — paired Δ̄=+1.0000 > 0
+CRASHED — the process that owned this run is gone and it never finalized (last event 1s ago)
+```
+
+**The stall threshold is derived from the run, not fixed.** It is
+`max(5 min, 3 × the slowest gap between events this run has already produced)`, so a
+τ²-bench rollout that legitimately takes 20 minutes per step raises its own bar to an
+hour rather than being reported hung — a false "hung" is worse than no signal, because
+the reaction to it is to kill a working run. Set `CAPEVOLVE_STALL_SECONDS=N` to pin a
+fixed number instead, or pass `--no-stall-check` to follow forever.
+
+Crash detection needs a liveness signal, so `cap-evolve run` writes a small `run.pid`
+(`{pid, host, started}`) into the run dir and leaves it there — once the process exits,
+its absence from the process table *is* the signal. A run recorded on another host, or
+one driven through the per-phase skill chain (which has no single owning process), reads
+as *unknown* and is never reported crashed; it can still be reported stalled. A finalized
+run always reports `done`, however long ago it ran.
+
+The dashboard reads the same classifier through the same `events.jsonl`, so the Hub badge,
+the run header, and `cap-evolve tail` always agree.
 
 The `[$… · … tok]` meter is the run's own recorded spend: runner cost from `evaluate`
 events plus optimizer cost from `step` events, matching `Spent.total_usd` in `state.json`.

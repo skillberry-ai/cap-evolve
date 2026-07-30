@@ -8,7 +8,7 @@
 import { useEffect, useReducer, useRef } from 'react'
 import { api, STATIC_MODE } from './api'
 
-export type StreamStatus = 'connecting' | 'live' | 'done' | 'idle' | 'error'
+export type StreamStatus = 'connecting' | 'live' | 'done' | 'idle' | 'error' | 'stalled' | 'crashed'
 
 export interface StreamEntry {
   kind: string
@@ -20,6 +20,9 @@ export interface StreamState {
   status: StreamStatus
   log: StreamEntry[]
   count: number
+  /** Why, with the numbers, from the backend's `status` frame — the same sentence
+   * `cap-evolve tail` prints for the same run dir (#118). */
+  detail?: string | null
 }
 
 export type StreamAction =
@@ -28,6 +31,7 @@ export type StreamAction =
   | { type: 'done' }
   | { type: 'idle' }
   | { type: 'error' }
+  | { type: 'status'; data: Record<string, unknown> }
 
 const LOG_CAP = 200
 
@@ -44,7 +48,16 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
         seq: state.count,
       }
       const log = [...state.log, entry].slice(-LOG_CAP)
-      return { status: 'live', log, count: state.count + 1 }
+      return { status: 'live', log, count: state.count + 1, detail: null }
+    }
+    case 'status': {
+      // The backend's periodic verdict. `live` here means "quiet but within this run's
+      // own demonstrated pace" — it must not overwrite a terminal 'done'.
+      if (state.status === 'done') return state
+      const s = String(action.data.status ?? 'live')
+      const status: StreamStatus =
+        s === 'stalled' || s === 'crashed' ? s : state.status === 'connecting' ? 'live' : state.status
+      return { ...state, status, detail: (action.data.detail as string | null) ?? null }
     }
     case 'done':
       return { ...state, status: 'done' }
@@ -88,6 +101,15 @@ export function useRunStream(id: string | undefined, onActivity?: () => void): S
     es.addEventListener('idle', () => {
       dispatch({ type: 'idle' })
       es.close()
+    })
+    // #118: the backend now names which kind of quiet a silent run is, instead of
+    // closing the connection with an ambiguous idle frame that read like completion.
+    es.addEventListener('status', (e) => {
+      try {
+        dispatch({ type: 'status', data: JSON.parse((e as MessageEvent).data) })
+      } catch {
+        /* ignore malformed frame */
+      }
     })
     es.onerror = () => dispatch({ type: 'error' })
 

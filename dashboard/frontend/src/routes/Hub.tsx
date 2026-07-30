@@ -140,7 +140,7 @@ function RunRow({
               </span>
             )}
           </div>
-          <StatusBadge status={run.status} className="mt-1" />
+          <StatusBadge status={run.status} detail={run.liveness?.detail} className="mt-1" />
         </div>
 
         <Metric label="best" value={pct(run.best_val)} accent />

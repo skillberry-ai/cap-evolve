@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -100,8 +101,9 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
         return compare.compare_runs(base, run_ids)
 
     @app.get("/api/runs/{run_id}/stream")
-    async def run_stream(run_id: str):
-        events_path = _resolve_or_404(run_id) / "events.jsonl"
+    async def run_stream(run_id: str, poll: float = 0.5, status_every: float = 5.0):
+        run_root = _resolve_or_404(run_id)
+        events_path = run_root / "events.jsonl"
 
         async def gen():
             # Initial snapshot of the full reduced run.
@@ -110,7 +112,7 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
             except runs.RunNotFound:
                 return
             offset = events_path.stat().st_size
-            idle = 0
+            last_status = 0.0
             while True:
                 new, offset = _stream.read_new_events(events_path, offset)
                 for ev in new:
@@ -118,11 +120,22 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
                     if ev.get("kind") == "finalize":
                         yield _stream.sse_format("done", {"run_id": run_id})
                         return
-                idle = idle + 1 if not new else 0
-                if idle > 600:  # ~5 min of silence -> stop holding the connection
-                    yield _stream.sse_format("idle", {"run_id": run_id})
-                    return
-                await asyncio.sleep(0.5)
+                # #118: the connection is no longer dropped after a fixed 5 idle minutes
+                # — a silent close was indistinguishable from a clean finish. Instead the
+                # client is periodically told WHICH kind of quiet this is (working /
+                # stalled / crashed), with the numbers behind the verdict. The frame
+                # doubles as the keepalive, so an idle proxy has traffic to see.
+                now = time.monotonic()
+                if now - last_status >= status_every:
+                    last_status = now
+                    live = runs.liveness(run_root)
+                    yield _stream.sse_format("status", {"run_id": run_id, **live})
+                    if live["status"] == "crashed":
+                        # No process is left to produce another event, so holding the
+                        # socket open would be a lie. Deliberately NOT "done": done means
+                        # the test split was sealed.
+                        return
+                await asyncio.sleep(poll)
 
         return StreamingResponse(gen(), media_type="text/event-stream")
 

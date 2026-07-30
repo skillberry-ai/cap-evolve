@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import _bootstrap  # noqa: F401
-from cap_evolve import RunDir, dashboard
+from cap_evolve import RunDir, dashboard, eventstream
 
 
 class RunNotFound(Exception):
@@ -40,15 +40,45 @@ def _reduce(path: Path) -> dict:
     return dashboard.reduce_run(rd)
 
 
-def _status(summary: dict) -> str:
-    # A run is "done" once finalize sealed the test; "failed" if there were no
-    # accepted/seed nodes and no candidates; otherwise "live".
+def liveness(path: Path) -> dict:
+    """Fresh stall/crash facts for a run dir — deliberately NOT part of ``_reduce``.
+
+    ``reduce_run`` is cached on the run's on-disk stamp (#119), and "how long has this
+    run been silent" is the one fact that changes precisely *while nothing on disk
+    changes*: a cached answer would be permanently 0s. So it is computed here, per
+    request, from the same ``cap_evolve.eventstream`` helpers the terminal uses — one
+    ``stat`` plus one read of ``events.jsonl``, no reduction.
+    """
+    try:
+        facts = eventstream.liveness_facts(path)
+        return {"status": eventstream.classify(facts),
+                "detail": eventstream.describe_status(facts),
+                "silence_seconds": facts["silence"],
+                "stall_threshold_seconds": facts["threshold"],
+                "slowest_gap_seconds": facts["slowest_gap"],
+                "process_alive": facts["alive"]}
+    except Exception:  # noqa: BLE001 — a hub row must never 500 over a liveness probe
+        return {"status": "live", "detail": None, "silence_seconds": None,
+                "stall_threshold_seconds": None, "slowest_gap_seconds": None,
+                "process_alive": None}
+
+
+def _status(summary: dict, live: dict | None = None) -> str:
+    """``done`` / ``failed`` / ``crashed`` / ``stalled`` / ``live``.
+
+    ``done`` and ``failed`` are decided from the reduced summary and stay FIRST: a
+    finished run must degrade to a clean "done" no matter that its process is long
+    gone and its log has been silent for a week (#118). Only a run that is neither
+    finished nor empty is subject to the liveness verdict, which is where ``stalled``
+    and ``crashed`` come from — previously such a run read ``live`` forever.
+    """
     if summary.get("test_reward") is not None or summary.get("test_sealed"):
         return "done"
     counts = summary.get("counts") or {}
     if counts.get("total", 0) == 0:
         return "failed"
-    return "live"
+    return (live or {}).get("status") if (live or {}).get("status") in (
+        "stalled", "crashed") else "live"
 
 
 def list_runs(base_dir: Path) -> list[dict]:
@@ -60,11 +90,13 @@ def list_runs(base_dir: Path) -> list[dict]:
             continue
         s = reduced["summary"]
         counts = s.get("counts") or {}
+        live = liveness(path)
         rows.append({
             "run_id": path.name,
             "path": str(path),
             "algorithm": s.get("algorithm"),
-            "status": _status(s),
+            "status": _status(s, live),
+            "liveness": live,
             "best_val": s.get("best_val"),
             "baseline_val": s.get("baseline_val"),
             "delta_pct": s.get("delta_pct"),
@@ -79,4 +111,9 @@ def list_runs(base_dir: Path) -> list[dict]:
 def load_run(base_dir: Path, run_id: str) -> dict:
     path = resolve_run(base_dir, run_id)
     reduced = _reduce(path)
+    live = liveness(path)
+    # Same key, same computation, same source of truth as the hub row and as
+    # `cap-evolve tail` — so the two surfaces cannot report different verdicts.
+    reduced["summary"]["liveness"] = live
+    reduced["summary"]["status"] = _status(reduced["summary"], live)
     return {"run_id": run_id, "path": str(path), **reduced}

@@ -58,7 +58,8 @@ from typing import Callable, Iterator
 
 __all__ = ["read_new_events", "follow_events", "format_event", "render_line",
            "colorize", "use_color", "sanitize", "accrue_totals",
-           "FOLLOW_END", "BOOKKEEPING_KINDS"]
+           "liveness_facts", "classify", "describe_status",
+           "FOLLOW_END", "BOOKKEEPING_KINDS", "STALL_FLOOR_SECONDS", "STALL_SLACK"]
 
 #: ``kind`` of the sentinel :func:`follow_events` yields last. Its ``reason`` is one
 #: of ``"stop_kind"`` / ``"idle"`` / ``"should_stop"``. #118 keys stall detection off
@@ -391,3 +392,195 @@ def render_line(ev: dict, totals: dict | None = None, *, color: bool = False,
     if kind in _STEP_KINDS:
         style = "green" if ev.get("accept") else "dim"
     return colorize(line, style, enabled=True) if style else line
+
+
+# ---- is it working, stalled, crashed, or done? ------------------------------
+#
+# The hard part is NOT noticing silence — it is deciding how much silence is
+# abnormal. A fixed 5-minute idle timeout is wrong in both directions: a toy run
+# is silent for 5 minutes only if it is dead, while one τ²-bench rollout with
+# 50 tool calls can legitimately take 20 minutes, so a constant would report a
+# healthy expensive run as hung. A false "hung" is the worst outcome available
+# here, because the user's reaction is to kill a run that was working.
+#
+# So the expectation is derived from THE SAME RUN: the bar is the slowest gap the
+# run has already demonstrated, times a slack factor, floored. The bar therefore
+# only ever rises as a run proves itself slow, and the run that sets it is the run
+# judged by it — a workload that takes 20 minutes per step raises its own bar to
+# an hour instead of tripping a global constant.
+
+#: Never call a run stalled before this much silence, however fast its events have
+#: been. Keeps a run that produced two events 40ms apart from being declared hung
+#: 120ms later. 300s is the old hard-coded SSE idle close (#118) — demoted from
+#: "the rule" to "the floor".
+STALL_FLOOR_SECONDS = 300.0
+
+#: Multiplier on the slowest gap the run has already shown. 3x is deliberately
+#: generous: the cost of waiting is a slightly late warning, the cost of being
+#: wrong is a killed run.
+STALL_SLACK = 3.0
+
+#: Env override for the derived threshold: a fixed number of seconds, for a user who
+#: knows their workload better than the heuristic does. ``0``/unset = derive.
+STALL_ENV = "CAPEVOLVE_STALL_SECONDS"
+
+
+def _pid_alive(pid, host) -> bool | None:
+    """True / False / ``None`` when it cannot be known.
+
+    ``None`` (unknown) is a first-class answer and the reason this never guesses:
+    a run recorded on another machine, or a pid file we can't parse, must NOT be
+    reported crashed. Only a definite "this pid is gone" produces ``False``.
+
+    ponytail: pid-only liveness, so a recycled pid could read as alive. The window
+    needs ~32k intervening spawns plus the same host, and the failure direction is
+    the safe one (a dead run looks quiet, not a live run looking dead). Upgrade to
+    a pid+start-time pair if that ever matters.
+    """
+    import socket
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return None
+    if pid <= 0:
+        return None
+    if host and str(host) != socket.gethostname():
+        return None  # someone else's machine — we cannot see its process table
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists, owned by another user
+    except OSError:
+        return None
+    return True
+
+
+def _owner_alive(root: Path) -> bool | None:
+    """Read ``run.pid`` (written by ``cap-evolve run``) and probe the owner.
+
+    ``None`` when there is no pid file at all: the per-phase skill-chain workflow
+    (``/cap-evolve:baseline`` … ) has no single long-lived owner, so its runs get the
+    time-based verdict only and are never labelled crashed.
+    """
+    try:
+        info = json.loads((Path(root) / "run.pid").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(info, dict):
+        return None
+    return _pid_alive(info.get("pid"), info.get("host"))
+
+
+def stall_threshold(gaps) -> float:
+    """Seconds of silence that count as abnormal, derived from ``gaps`` (the run's own
+    observed inter-event intervals). ``max(floor, slack * slowest_gap_so_far)``.
+
+    ``max`` rather than a mean/quantile on purpose: a run that alternates 1s evals with
+    20-minute optimizer calls has a mean of a couple of minutes, so a mean-based bar
+    would fire during every optimizer call. The slowest thing the run has already done
+    is the only defensible estimate of the slowest thing it might do next.
+    """
+    override = os.environ.get(STALL_ENV)
+    if override:
+        try:
+            fixed = float(override)
+            if fixed > 0:
+                return fixed
+        except ValueError:
+            pass
+    slowest = max(gaps, default=0.0)
+    return max(STALL_FLOOR_SECONDS, STALL_SLACK * slowest)
+
+
+def liveness_facts(root, *, events=None, now=None) -> dict:
+    """Everything :func:`classify` needs, gathered from a run dir. Cheap: one
+    ``stat`` plus (unless ``events`` is supplied) one read of ``events.jsonl``.
+
+    ``events`` lets a caller that already has the parsed log — the dashboard reducer
+    does — avoid a second read.
+
+    Silence is measured from the events file's **mtime**, not the last event's ``t``:
+    ``t`` is wall-clock recorded by the writer and can be skewed or malformed, while
+    mtime is the filesystem's own answer to "when did this run last make a noise".
+    """
+    root = Path(root)
+    path = root / "events.jsonl"
+    now = time.time() if now is None else now
+    if events is None:
+        events, _ = read_new_events(path, 0)
+    ts = []
+    finalized = False
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        if ev.get("kind") == "finalize":
+            finalized = True
+        try:
+            ts.append(float(ev.get("t")))
+        except (TypeError, ValueError):
+            continue
+    ts.sort()
+    gaps = [b - a for a, b in zip(ts, ts[1:]) if b >= a]
+    try:
+        silence = max(0.0, now - path.stat().st_mtime)
+    except OSError:
+        silence = None  # no events file yet — the run hasn't spoken at all
+    return {"silence": silence, "threshold": stall_threshold(gaps),
+            "slowest_gap": max(gaps, default=0.0), "events": len(ts),
+            "finalized": finalized, "alive": _owner_alive(root)}
+
+
+def classify(facts: dict) -> str:
+    """One of ``"done"`` / ``"crashed"`` / ``"stalled"`` / ``"live"``.
+
+    Order matters, and it is the whole design:
+
+    ``done``     ``finalize`` sealed the test. Terminal state; nothing about silence
+                 or a departed process can downgrade it, so a finished run degrades
+                 to a clean "done" rather than "its process is gone → crashed".
+    ``crashed``  the owning process is *definitely* gone and the run never finalized.
+                 Needs proof (a pid file naming a pid on this host that no longer
+                 exists) — ``alive is None`` never reaches this branch.
+    ``stalled``  silent for longer than the run's own derived expectation, while its
+                 process is still alive or unknown. "Alive but not talking."
+    ``live``     everything else, including long silences that are still within what
+                 this run has already shown itself capable of.
+    """
+    if facts.get("finalized"):
+        return "done"
+    if facts.get("alive") is False:
+        return "crashed"
+    silence, threshold = facts.get("silence"), facts.get("threshold") or STALL_FLOOR_SECONDS
+    if silence is not None and silence > threshold:
+        return "stalled"
+    return "live"
+
+
+def _mins(s) -> str:
+    if s is None:
+        return "?"
+    return f"{s / 60:.1f}m" if s >= 60 else f"{s:.0f}s"
+
+
+def describe_status(facts: dict) -> str:
+    """One human sentence for the terminal, always naming the numbers behind the
+    verdict — a user deciding whether to kill a run needs the bar, not just the word."""
+    status = classify(facts)
+    silence, thr = facts.get("silence"), facts.get("threshold")
+    bar = (f"threshold {_mins(thr)}"
+           + (f", derived from a slowest gap of {_mins(facts.get('slowest_gap'))}"
+              if (facts.get("slowest_gap") or 0) * STALL_SLACK > STALL_FLOOR_SECONDS else
+              " (floor)"))
+    if status == "done":
+        return "done — finalize sealed the test split"
+    if status == "crashed":
+        return (f"CRASHED — the process that owned this run is gone and it never "
+                f"finalized (last event {_mins(silence)} ago)")
+    if status == "stalled":
+        return (f"STALLED — no events for {_mins(silence)}, over this run's own "
+                f"{bar}. The process is "
+                + ("still alive" if facts.get("alive") else "not reporting a pid")
+                + " — it may be wedged rather than dead.")
+    return (f"working — last event {_mins(silence)} ago, within this run's {bar}")

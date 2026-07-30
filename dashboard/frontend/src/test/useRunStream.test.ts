@@ -39,3 +39,47 @@ describe('streamReducer', () => {
     expect(s.log[0].kind).toBe('event')
   })
 })
+
+describe('streamReducer: stall/crash status frames (#118)', () => {
+  it('promotes a stalled verdict and keeps its reason', () => {
+    let s = streamReducer(initialStreamState, { type: 'open' })
+    s = streamReducer(s, {
+      type: 'status',
+      data: { status: 'stalled', detail: 'STALLED — no events for 42.0m, over this run’s own threshold 12.0m' },
+    })
+    expect(s.status).toBe('stalled')
+    expect(s.detail).toContain('STALLED')
+  })
+
+  it('promotes a crashed verdict', () => {
+    const s = streamReducer(initialStreamState, {
+      type: 'status',
+      data: { status: 'crashed', detail: 'CRASHED — the process that owned this run is gone' },
+    })
+    expect(s.status).toBe('crashed')
+  })
+
+  it('a live verdict does NOT downgrade a finished run', () => {
+    let s = streamReducer(initialStreamState, { type: 'done' })
+    s = streamReducer(s, { type: 'status', data: { status: 'live', detail: 'working' } })
+    expect(s.status).toBe('done')
+  })
+
+  it('a stalled verdict does NOT downgrade a finished run either', () => {
+    let s = streamReducer(initialStreamState, { type: 'done' })
+    s = streamReducer(s, { type: 'status', data: { status: 'stalled', detail: 'STALLED' } })
+    expect(s.status).toBe('done')
+  })
+
+  it('a slow-but-healthy run stays live and clears a stale reason', () => {
+    let s = streamReducer(initialStreamState, { type: 'open' })
+    s = streamReducer(s, { type: 'status', data: { status: 'stalled', detail: 'STALLED' } })
+    expect(s.status).toBe('stalled')
+    // progress resumes: the next event re-arms 'live' and drops the stale reason
+    s = streamReducer(s, { type: 'event', data: { kind: 'step' } })
+    expect(s.status).toBe('live')
+    expect(s.detail).toBeNull()
+    s = streamReducer(s, { type: 'status', data: { status: 'live', detail: 'working — last event 3s ago' } })
+    expect(s.status).toBe('live')
+  })
+})
