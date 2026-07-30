@@ -32,29 +32,27 @@ done
 detect_dest() {
   if [[ -n "${CAPEVOLVE_SKILLS_DIR:-}" ]]; then echo "$CAPEVOLVE_SKILLS_DIR"; return; fi
   if [[ -n "$HOST" ]]; then
-    # Per-host skill dirs verified against current docs (2026). Codex uses
-    # .agents/skills (NOT ~/.codex); opencode reads .claude/skills natively;
-    # Gemini bundles skills inside extensions; IBM Bob has no SKILL.md concept.
-    # cursor/droid/copilot/kimi/pi/antigravity dirs follow each tool's dotdir
-    # convention (best-guess) — override with --dest or $CAPEVOLVE_SKILLS_DIR if
-    # your build differs. See skills/optimizers/run-optimizer/references/<host>.md.
-    # Per-host verified / docs-checked / best-guess status: docs/HOST_SUPPORT.md —
-    # the single source of truth every other surface links to.
-    case "$HOST" in
-      claude|claude-code)          echo "$HOME/.claude/skills"; return;;
-      codex)                       echo "$HOME/.agents/skills"; return;;
-      gemini|gemini-cli)           echo "$HOME/.gemini/extensions/cap-evolve/skills"; return;;
-      opencode)                    echo "$HOME/.config/opencode/skills"; return;;
-      openclaw)                    echo "$HOME/.openclaw/workspace/skills"; return;;
-      cursor)                      echo "$PWD/.cursor/skills"; return;;
-      droid|factory|factory-droid) echo "$HOME/.factory/skills"; return;;
-      copilot|github-copilot)      echo "$HOME/.copilot/skills"; return;;
-      kimi|kimi-code)              echo "$HOME/.kimi/skills"; return;;
-      pi)                          echo "$HOME/.pi/skills"; return;;
-      antigravity|agy)             echo "$HOME/.antigravity/skills"; return;;
-      bob|ibm-bob)                 echo "$HOME/.bob/skills"; return;;
-      *)                           echo "$HOME/.config/$HOST/skills"; return;;
-    esac
+    # Per-host skill dirs come from skills/_registry/hosts.yaml — the SINGLE source
+    # of truth (issue #143). This list used to be duplicated here, in
+    # cap_evolve.doctor, and in two docs/HOST_SUPPORT.md tables, and it drifted.
+    # core/tests/test_host_parity.py fails the build if any of them disagree, so a
+    # new host is one row in hosts.yaml and nothing else.
+    #
+    # Resolved with the repo's own core on PYTHONPATH because install.sh runs BEFORE
+    # anything is pip-installed; hosts.py is stdlib-only for exactly this reason.
+    # Each row's verified / docs-checked / best-guess grade is in hosts.yaml and
+    # rendered in docs/HOST_SUPPORT.md. Unknown host => ~/.config/<host>/skills.
+    if mapped="$(PYTHONPATH="$REPO_DIR/core${PYTHONPATH:+:$PYTHONPATH}" \
+                 python3 -m cap_evolve.hosts --dest "$HOST" 2>/dev/null)" \
+       && [[ -n "$mapped" ]]; then
+      echo "$mapped"; return
+    fi
+    # No row — or the resolver itself failed (no python3, hosts.yaml missing). Warn on
+    # stderr instead of silently guessing: for a host that DOES have a row, a quiet
+    # fallback would put the skills somewhere that host never looks.
+    echo "cap-evolve: no hosts.yaml row for --host '$HOST' (or cap_evolve.hosts could" \
+         "not run) — falling back to the dotdir convention. Pass --dest to be sure." >&2
+    echo "$HOME/.config/$HOST/skills"; return
   fi
   if [[ -d "./.claude/skills" ]]; then echo "./.claude/skills"; return; fi
   if [[ -d "$HOME/.claude/skills" ]]; then echo "$HOME/.claude/skills"; return; fi
@@ -91,6 +89,15 @@ done
 mkdir -p "$DEST/optimizers"
 cp "$SRC/optimizers/registry.yaml" "$DEST/optimizers/registry.yaml"
 echo "  + optimizers/registry.yaml"
+
+# hosts.yaml is the same class of file (a plain file under _registry/, not a skill
+# dir) and would be skipped for the same reason. build_manifest.py writes
+# manifest.json into $DEST/_registry/, so that dir exists either way; copy the
+# per-host metadata beside it so an INSTALLED tree can answer "what is this host's
+# display name / grade" without the repo.
+mkdir -p "$DEST/_registry"
+cp "$SRC/_registry/hosts.yaml" "$DEST/_registry/hosts.yaml"
+echo "  + _registry/hosts.yaml"
 
 # (Re)build the manifest for both the repo (component layout) and the installed
 # tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether

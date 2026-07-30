@@ -6,6 +6,32 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **Cross-host parity is now *checkable*, and one destination is honestly ✅** (issue #143,
+  and #208's missing job). Three parts:
+  - **`skills/_registry/hosts.yaml` is the single source of per-host metadata** — aliases,
+    install destination, grade + the artifact justifying it, and the `display` /
+    `description` / `invoke` triple a host UI needs. That list previously lived in five
+    places and had drifted: `install.sh`'s `case`, `doctor._VERIFIED_HOST_DIRS` (which knew
+    6 of the 12 real destinations, so six correct host dirs were reported "best-guess"),
+    and two `docs/HOST_SUPPORT.md` tables. `install.sh` now resolves `--host` by shelling
+    `python3 -m cap_evolve.hosts --dest`, doctor derives its list, HOST_SUPPORT.md is a
+    rendering, and **`core/tests/test_host_parity.py` fails the build when any of them
+    disagree** — including a check that a `verified` row cites an artifact that exists,
+    which is the exact defect PR #202's review caught.
+  - **`ci/install_smoke.sh` + the `install-smoke` CI job** — the first thing anywhere that
+    executes `./install.sh`. It installs through the `--host` mapping into a temp `$HOME`,
+    unsets `$CAPEVOLVE_SKILLS_DIR`, and completes a zero-API `toy_calc` run **from a cwd
+    outside the repo** (inside it, `run-optimizer`'s parent-walk finds the source tree and
+    the job proves nothing), asserting `test_reward 1.0` rather than exit 0 — a broken
+    optimizer silently keeps the seed and reports `0.0`, which is how #193 hid. This is the
+    artifact that promotes the `claude` destination row from 🟡 to **✅**; every other row
+    stays 🟡/➖ because the job exercises one destination.
+  - **The stdlib-only fallback is proven, not asserted** — `core/tests/test_stdlib_only.py`
+    runs the whole install path (host metadata + `--dest` CLI, the real
+    `optimizers/registry.yaml`, the manifest build, `cap-evolve version`/`check`) in a
+    subprocess whose `sys.meta_path` raises `ImportError` for every non-stdlib module, plus
+    a guard-the-guard test so the hook can't silently become a no-op. `install.sh` depends
+    on this literally: it calls `cap_evolve.hosts` *before* `pip install ./core`.
 - **`cap-evolve doctor` — one-command install/health diagnostic** (issue #121). Reports
   pass/warn/fail with an actionable fix per line and exits non-zero on a hard failure, so
   CI can gate on it. Checks Python version, core importability + which interpreter/venv,

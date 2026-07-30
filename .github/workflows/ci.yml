@@ -87,6 +87,28 @@ jobs:
             && echo "$out" | grep -q '"test_reward": 1.0' \
             || { echo "::error::toy_calc did not reach baseline_val 0.0 -> test_reward 1.0"; exit 1; }
 
+  install-smoke:
+    name: Install smoke (./install.sh --host, zero-API)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Deliberately NOT `pip install ./core`, and $CAPEVOLVE_SKILLS_DIR stays unset:
+      # this job exercises the documented host-agnostic install path exactly as a user
+      # hits it (issue #208). Every other job points at the repo skills tree, which
+      # bypasses install.sh's --host mapping — that is how #193 ("no stock install can
+      # run an optimizer") survived green CI. The script asserts test_reward 1.0, not
+      # exit 0, because a failing optimizer silently keeps the seed and reports 0.0.
+      - name: Install via ./install.sh --host claude, then run toy_calc from outside the repo
+        run: bash ci/install_smoke.sh
+
   docs-links:
     name: Docs link check
     runs-on: ubuntu-latest

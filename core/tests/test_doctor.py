@@ -189,7 +189,7 @@ def test_skills_pass_on_repo_source_layout(monkeypatch, tmp_path):
 
 
 def test_skills_warns_on_best_guess_host_dir(monkeypatch, tmp_path):
-    """install.sh:38-40 admits several host dirs are guesses — flag them explicitly."""
+    """A dir matching no skills/_registry/hosts.yaml row is a guess — flag it."""
     d = tmp_path / ".weirdhost" / "skills"
     (d / "_registry").mkdir(parents=True)
     (d / "_registry" / "manifest.json").write_text(json.dumps({"skills": {}}))

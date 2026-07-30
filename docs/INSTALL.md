@@ -93,7 +93,12 @@ pip install ./core           # or: export CAPEVOLVE_CORE="$PWD/core"
 
 Destination precedence: `$CAPEVOLVE_SKILLS_DIR` > `--host` mapping > `./.claude/skills` >
 `~/.claude/skills` > `~/.capevolve/skills`. The per-host destination table, with which
-mappings are verified vs best-guess, is in [`HOST_SUPPORT.md`](HOST_SUPPORT.md).
+mappings are verified vs best-guess, is in [`HOST_SUPPORT.md`](HOST_SUPPORT.md) — a
+rendering of [`../skills/_registry/hosts.yaml`](../skills/_registry/hosts.yaml), the single
+source `install.sh` itself resolves `--host` against. `--host claude` is the one
+destination CI actually installs to and runs a real optimization from
+([`../ci/install_smoke.sh`](../ci/install_smoke.sh)). Everything on that path is
+stdlib-only, so it works before `pip install ./core` and on a host with no native tooling.
 
 ### C. Manual adapter + CLI (any language/agent)
 

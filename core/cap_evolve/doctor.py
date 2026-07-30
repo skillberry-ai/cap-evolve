@@ -9,7 +9,7 @@ rather than invented ones:
   ``cli-path``     same, plus a *shadowing* second install (issue #121)
   ``git``          the default version store is git; a missing git breaks candidates
   ``skills``       ``no manifest — run install.sh``, and install.sh's own
-                   "best-guess" host dirs (install.sh:38-40)
+                   "best-guess" host dirs (skills/_registry/hosts.yaml)
   ``optimizer``    optimizer CLI missing / not logged in (TROUBLESHOOTING
                    "Missing credentials at runtime")
   ``credentials``  runner + optimizer provider creds, PRESENCE ONLY
@@ -73,11 +73,23 @@ _REQUIRED_TOGETHER: list[tuple[str, ...]] = [
     ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"),
 ]
 
-# install.sh:38-40 admits these host dirs are guesses; the verified ones are documented
-# in the same comment. Surfacing which kind you're on is the whole point of check #5.
-_VERIFIED_HOST_DIRS = ("/.claude/skills", "/.agents/skills", "/.config/opencode/skills",
-                       "/.capevolve/skills", "/.gemini/extensions/cap-evolve/skills",
-                       "/.openclaw/workspace/skills")
+def _known_host_dirs() -> tuple[str, ...]:
+    """Skills-dir suffixes install.sh's ``--host`` mapping can produce.
+
+    Derived from ``skills/_registry/hosts.yaml`` — the single source (issue #143).
+    This used to be a hand-maintained tuple that had already drifted from
+    install.sh's ``case``: it listed 6 of the 12 real destinations, so six correct
+    host dirs were being reported as "best-guess". ``~/.capevolve/skills`` is
+    appended because it is install.sh's no-host default, which is a legitimate
+    placement with no hosts.yaml row.
+    """
+    from .hosts import load_hosts
+    # Strip the leading $HOME / $PWD token rather than an expanded path, so the
+    # suffixes are independent of both the real $HOME (a temp-$HOME install still
+    # matches) and the cwd (which a $PWD row would otherwise bake in).
+    tails = [str(r.get("dest", "")).replace("$HOME", "", 1).replace("$PWD", "", 1).rstrip("/")
+             for r in load_hosts().values()]
+    return tuple(t for t in tails if t) + ("/.capevolve/skills",)
 
 
 @dataclass
@@ -233,7 +245,7 @@ def _check_skills(cwd: Path) -> Check:
     # resolve() first: a relative dir like ./.claude/skills never ends with
     # "/.claude/skills" as a raw string, so every relative dir was flagged.
     resolved = str(d.resolve())
-    guessy = not known and not any(resolved.endswith(v) for v in _VERIFIED_HOST_DIRS)
+    guessy = not known and not any(resolved.endswith(v) for v in _known_host_dirs())
     if missing:
         return Check("skills", FAIL,
                      f"{len(skills)} skill(s) in manifest at {d}; "
@@ -241,9 +253,10 @@ def _check_skills(cwd: Path) -> Check:
                      f"stale manifest — rebuild: python {_build_manifest_hint()} {d}")
     if guessy:
         return Check("skills", WARN, f"{len(skills)} skill(s) at {d}",
-                     "this is a best-guess host dir, not one of the ones verified in "
-                     "install.sh:38-40 — if your agent doesn't see the skills, re-install "
-                     "with ./install.sh --dest DIR or set $CAPEVOLVE_SKILLS_DIR")
+                     "best-guess dir: not one of the hosts in skills/_registry/hosts.yaml "
+                     "(see docs/HOST_SUPPORT.md for each one's grade) — if your agent "
+                     "doesn't see the skills, re-install with ./install.sh --dest DIR "
+                     "or set $CAPEVOLVE_SKILLS_DIR")
     return Check("skills", PASS, f"{len(skills)} skill(s) at {d}"
                  + (" (repo source layout)" if from_source else ""))
 

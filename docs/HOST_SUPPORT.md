@@ -57,32 +57,58 @@ Beyond "does it run at all", one capability is host-specific today:
 Where `install.sh` puts the skill packages. A ➖ row means **pass `--dest`** (or set
 `$CAPEVOLVE_SKILLS_DIR`) rather than trusting the guess.
 
-> **No row here can be ✅ by this page's own bar.** Nothing in CI executes `install.sh`
-> (`grep -rn 'install\.sh' .github/ ci/` → no hits); CI sets `$CAPEVOLVE_SKILLS_DIR` to the
-> repo tree, which takes the *first* precedence branch and bypasses the `--host` mapping
-> entirely. So the badges below grade **how well-attested the path is**, not whether an
-> install was executed. 🟡 on `claude` is the strongest available claim: it is the
-> vendor-documented canonical path and `core/tests/test_native_skills.py` asserts the
-> `.claude/skills` string — but no test runs the installer.
+> **This table is a rendering of [`../skills/_registry/hosts.yaml`](../skills/_registry/hosts.yaml)**,
+> the single source of truth for per-host metadata (issue #143). `install.sh` resolves
+> `--host` by shelling `python3 -m cap_evolve.hosts --dest <host>` against that same file,
+> `cap-evolve doctor` derives its known-host-dir list from it, and
+> [`../core/tests/test_host_parity.py`](../core/tests/test_host_parity.py) **fails the build
+> when this table and `hosts.yaml` disagree** on any alias, destination or badge. Each row
+> also carries a `display` / `description` / `invoke` triple for that host's UI, which lives
+> only in `hosts.yaml`.
+>
+> Historically no row here could be ✅, because nothing in CI executed `install.sh` at all
+> ([#208](https://github.com/skillberry-ai/cap-evolve/issues/208)) — and that gap hid a
+> total optimizer failure in every stock install ([#193](https://github.com/skillberry-ai/cap-evolve/pull/193)).
+> [`../ci/install_smoke.sh`](../ci/install_smoke.sh) now closes it for `claude` only: it
+> installs through the `--host` mapping into a temp `$HOME`, unsets
+> `$CAPEVOLVE_SKILLS_DIR`, and completes a zero-API `toy_calc` run **from a cwd outside the
+> repo** (inside it, `run-optimizer`'s parent-walk finds the source tree and the check
+> proves nothing), asserting `test_reward 1.0` rather than exit 0 — a broken optimizer
+> silently keeps the seed and reports `0.0`. Every other row is still 🟡/➖ because that job
+> exercises exactly one destination.
 
 | `--host` | Destination | Status |
 |---|---|---|
-| `claude` / `claude-code` | `~/.claude/skills` | 🟡 docs-checked (vendor-canonical path; `install.sh` is **not** CI-executed) |
-| `codex` | `~/.agents/skills` | 🟡 docs-checked (**not** `~/.codex`) |
-| `gemini` / `gemini-cli` | `~/.gemini/extensions/cap-evolve/skills` | 🟡 docs-checked (skills live inside an extension — deliberately **not** the registry's per-workdir `skills_dir: .gemini/skills`; see [#143](https://github.com/skillberry-ai/cap-evolve/issues/143)) |
-| `opencode` | `~/.config/opencode/skills` | 🟡 docs-checked (also reads `.claude/skills`) |
-| `bob` / `ibm-bob` | `~/.bob/skills` | 🟡 docs-checked — `install.sh` notes Bob has no `SKILL.md` concept, so treat placement as advisory |
+| `claude` / `claude-code` | `$HOME/.claude/skills` | ✅ verified — [`../ci/install_smoke.sh`](../ci/install_smoke.sh), run by the `install-smoke` job in [`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) and by [`../core/tests/test_install_smoke.py`](../core/tests/test_install_smoke.py) |
+| `codex` | `$HOME/.agents/skills` | 🟡 docs-checked (**not** `~/.codex`) |
+| `gemini` / `gemini-cli` | `$HOME/.gemini/extensions/cap-evolve/skills` | 🟡 docs-checked (skills live inside an extension — deliberately **not** the registry's per-workdir `skills_dir: .gemini/skills`) |
+| `opencode` | `$HOME/.config/opencode/skills` | 🟡 docs-checked (also reads `.claude/skills`) |
+| `bob` / `ibm-bob` | `$HOME/.bob/skills` | 🟡 docs-checked — Bob has no `SKILL.md` concept, so treat placement as advisory |
 | `cursor` | `$PWD/.cursor/skills` | ➖ best-guess |
-| `droid` / `factory` | `~/.factory/skills` | ➖ best-guess |
-| `copilot` | `~/.copilot/skills` | ➖ best-guess |
-| `kimi` | `~/.kimi/skills` | ➖ best-guess |
-| `pi` | `~/.pi/skills` | ➖ best-guess |
-| `antigravity` / `agy` | `~/.antigravity/skills` | ➖ best-guess |
-| `openclaw` | `~/.openclaw/workspace/skills` | ➖ best-guess |
-| anything else | `~/.config/<host>/skills` | ➖ best-guess |
+| `droid` / `factory` / `factory-droid` | `$HOME/.factory/skills` | ➖ best-guess |
+| `copilot` / `github-copilot` | `$HOME/.copilot/skills` | ➖ best-guess |
+| `kimi` / `kimi-code` | `$HOME/.kimi/skills` | ➖ best-guess |
+| `pi` | `$HOME/.pi/skills` | ➖ best-guess |
+| `antigravity` / `agy` | `$HOME/.antigravity/skills` | ➖ best-guess |
+| `openclaw` | `$HOME/.openclaw/workspace/skills` | ➖ best-guess |
+
+Any host not listed above falls back to `$HOME/.config/<host>/skills` — ➖ best-guess by
+definition, since it is the dotdir convention applied to a name we have never seen.
 
 Destination precedence: `$CAPEVOLVE_SKILLS_DIR` > `--host` mapping > `./.claude/skills` >
 `~/.claude/skills` > `~/.capevolve/skills`.
+
+### Running in a bare environment (no PyYAML, no host tooling)
+
+Everything on the install path is **stdlib-only**, so a host that provides no native
+tooling still works: `cap_evolve.specfile.read_yaml` uses PyYAML when present and falls
+back to its own small reader, and `install.sh` resolves `--host` through
+`python3 -m cap_evolve.hosts` for exactly that reason (it runs *before* `pip install
+./core`). [`../core/tests/test_stdlib_only.py`](../core/tests/test_stdlib_only.py) proves
+it by executing the whole path — hosts metadata, the optimizer registry, the manifest
+build and a `cap-evolve check` — under a `sys.meta_path` hook that raises `ImportError`
+for **every** non-stdlib module, so an accidental `import yaml`/`requests` in this path
+fails CI instead of degrading silently on a user's bare host.
 
 ## Promoting a host to ✅
 
