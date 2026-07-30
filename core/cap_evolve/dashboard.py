@@ -52,6 +52,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .rundir import ITERATION_EVENT_KINDS, iteration_candidate as _step_candidate
+
 # ---------------------------------------------------------------------------
 # Secret redaction
 # ---------------------------------------------------------------------------
@@ -225,8 +227,9 @@ def _git_log(root: Path) -> list[dict]:
 
 # Step-like events carry a candidate, an accept flag, and per-iteration cost/time.
 # Different algorithms name the candidate field differently; normalise here.
-def _step_candidate(ev: dict):
-    return ev.get("candidate") or ev.get("candidate_id")
+# Both live in rundir now (imported at the top), so the dashboard and the
+# LEDGER/RUNMAP/prior_iterations builders read the SAME set — a fourth algorithm
+# kind can't desync a fifth consumer.
 
 
 def reduce_run(run_dir) -> dict:
@@ -283,7 +286,7 @@ def reduce_run(run_dir) -> dict:
                 "text": ev.get("error") or ev.get("summary") or ev.get("note") or "",
             })
             continue
-        if kind not in ("step", "skillopt_step", "gepa_val_gate"):
+        if kind not in ITERATION_EVENT_KINDS:
             continue
 
         cid = _step_candidate(ev)
@@ -392,7 +395,7 @@ def reduce_run(run_dir) -> dict:
     # separately by headless backends as opt_cost_usd when present.
     opt_usd = 0.0
     for ev in events:
-        if ev.get("kind") in ("step", "skillopt_step", "gepa_val_gate"):
+        if ev.get("kind") in ITERATION_EVENT_KINDS:
             opt_usd += float(ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd") or 0.0)
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
     intake_usd = intake_tokens = intake_secs = 0.0

@@ -20,6 +20,7 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir, gepa, harness
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
+from cap_evolve.optimizer_context import OptimizerContext
 from cap_evolve.store import make_store
 
 ALGO = "gepa"
@@ -54,9 +55,12 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="reconstruct the pool/frontier from the run dir and continue the "
                         "search instead of restarting from the seed")
+    OptimizerContext.add_arguments(p)
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+    ctx = OptimizerContext.from_args(args)
+    ctx.log_profile(run_dir)   # consuming-LLM profile -> report + dashboard
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -73,7 +77,7 @@ def main(argv=None) -> int:
         gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, seed=args.seed, store=store,
-        resume=args.resume,
+        resume=args.resume, ctx=ctx,
     )
     print(json.dumps(result, indent=2))
     return 0
