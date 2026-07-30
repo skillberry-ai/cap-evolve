@@ -205,6 +205,19 @@ def _trials_from_per_task(per_task: list) -> int:
     return max(ns) if ns else 0
 
 
+def _honesty_banner(run_dir) -> str | None:
+    """The not-an-honest-gate banner when this run bypassed the tiny-val guard.
+
+    Rendered at the TOP of the dashboard, not buried in the annotations stream: a
+    bypassed run must be unmistakable in the one surface a human actually opens.
+    """
+    from .splits import BYPASS_BANNER, bypassed
+    b = bypassed(run_dir)
+    if b:
+        return f"{b.get('banner') or BYPASS_BANNER} (val tasks: {b.get('val', '?')})"
+    return None
+
+
 def _git_log(root: Path) -> list[dict]:
     """One row per iteration commit from the run dir's git store (empty if none)."""
     if not (root / ".git").exists() or not shutil.which("git"):
@@ -275,9 +288,13 @@ def reduce_run(run_dir) -> dict:
     it = 0
     for ev in events:
         kind = ev.get("kind")
-        if kind == "gate_warning":
+        if kind in ("gate_warning", "split_warning"):
+            # split_warning was previously dropped on the floor, which meant a run that
+            # bypassed the tiny-val guard rendered a dashboard indistinguishable from an
+            # honest one. Both warning kinds land in the same annotations stream now.
             gate_warnings.append({"reason": ev.get("reason"), "context": ev.get("context"),
-                                  "mode": ev.get("mode")})
+                                  "mode": ev.get("mode") or kind,
+                                  "bypass": bool(ev.get("bypass"))})
             continue
         if kind in ("diagnose", "optimizer_error"):
             diagnoses.append({
@@ -574,6 +591,7 @@ def reduce_run(run_dir) -> dict:
         # alongside the gate warnings instead of staying buried in events.jsonl.
         "tamper_events": [e for e in events if e.get("kind") == "tamper_detected"],
         "gate_warnings": gate_warnings,
+        "honesty_banner": _honesty_banner(run_dir),
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
     }
@@ -712,6 +730,13 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
     lines: list[str] = []
     title = f" cap-evolve report · {s['run_id']} "
     lines.append(c(_C.BOLD, title) + c(_C.GREY, "─" * max(0, width - len(title))))
+
+    # --- honesty banner (BEFORE any number) -----------------------------
+    if s.get("honesty_banner"):
+        import textwrap
+        for ln in textwrap.wrap(s["honesty_banner"], max(20, width - 2)):
+            lines.append(c(_C.RED + _C.BOLD, ln))
+        lines.append("")
 
     # --- KPI strip ------------------------------------------------------
     base = s["baseline_val"]
@@ -929,6 +954,15 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
         '…  actual '+String(ch.actual_sha256||'—').slice(0,12)+'…'}));s.append(a);});});
   s.querySelectorAll('.ann').forEach(a=>{a.style.borderLeftColor='#e5534b';});
   s.querySelector('h2').style.color='#e5534b';
+})();
+
+/* ---------- 0b. Honesty banner (before ANY number) ---------- */
+(function(){
+  if(!S.honesty_banner)return;
+  const b=$('div',{text:S.honesty_banner});
+  b.style.cssText='background:#7f1d1d;color:#fee2e2;border:2px solid #ef4444;'+
+    'border-radius:8px;padding:14px 16px;margin:0 0 18px;font-weight:700;line-height:1.5';
+  main.prepend(b);
 })();
 
 /* ---------- 1. KPI strip ---------- */

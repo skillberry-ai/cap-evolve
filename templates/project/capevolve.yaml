@@ -59,6 +59,11 @@ split_seed: 0
 split_train: 0.5
 split_val: 0.25
 split_test: 0.25
+# The val split needs >= 2 tasks or cap-evolve REFUSES to start (the gate would be
+# meaningless at df=0); >= 5 is recommended, below that decisions are flagged LOW
+# CONFIDENCE. With these defaults that means >= 6 tasks (>= 20 for the recommended
+# 5). With only 4-5 tasks, set ALL THREE ratios: 0.25 / 0.5 / 0.25. Setting split_val
+# alone does not work — the other two keep their defaults.
 # Optional: pin the split explicitly instead of ratios. JSON file with
 # {"train":[ids], "val":[ids], "test":[ids]}. Use to lock a benchmark's official
 # split, or to fit on the whole set (train==val==test==all ids — no holdout).
@@ -97,6 +102,14 @@ stop_condition: ""           # agent-mode free-text halt rule, re-read each roun
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant | strict | threshold | simplicity_tiebreak
 gate_k_se: 1.0
+# How strict the bar is. 0.2 = lenient, 1.0 = strict, > 3 is pointless (and > 26.5 is
+# rejected). In gate_mode: paired, k_se is consumed as a *z quantile*, NOT as the
+# multiplier directly: it becomes a one-sided significance level alpha = P(Z > k_se),
+# and the realized bar is t_{1-alpha, df=n-1} * SE where n is the number of val tasks.
+# So the effective multiplier is always >= k_se and depends on val size — at k_se 1.0
+# it is 1.32x at n=3, 1.06x at n=10, 1.02x at n=30, converging to k_se as n grows.
+# See docs/HONEST_EVAL.md guarantee 3. (In gate_mode: significant, k_se is still used
+# directly as the multiplier.)
 
 # --- budget -----------------------------------------------------------------
 # Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a

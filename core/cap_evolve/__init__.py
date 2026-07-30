@@ -21,7 +21,7 @@ from .optimizer_context import OptimizerContext
 from .protect import TamperError
 from .rundir import Budget, RunDir, Spent
 from .selection import PICKERS, STRATEGIES, pick, validate_strategy
-from .splits import Splits, TestSealError, make_splits
+from .splits import Splits, TestSealError, TinyValSplitError, check_val_size, make_splits
 from .stats import aggregate, bootstrap_ci, combined_stderr, mean, pass_at_k, pass_k, stderr
 from .trials import run_trials_pool
 from .types import Candidate, Rollout, Score, Task
@@ -50,6 +50,8 @@ __all__ = [
     "Splits",
     "TamperError",
     "TestSealError",
+    "TinyValSplitError",
+    "check_val_size",
     "make_splits",
     "aggregate",
     "bootstrap_ci",

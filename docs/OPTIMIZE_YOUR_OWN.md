@@ -100,9 +100,14 @@ you want intake to ask):
 - max_optimizer_usd:    <cumulative optimizer-only $ cap; 0 = unlimited>
 - optimizer_usd_per_iter: <PER-ITERATION $ cap enforced by the optimizer CLI itself, e.g. claude `--max-budget-usd N`>
 - optimizer_max_turns:  <per-iteration WORK cap passed to the agent CLI, e.g. claude `--max-turns N`>
-- gate:                 <significant (k_se) | strict | threshold>
+- gate:                 <paired (default) | significant (k_se) | strict | threshold>
                         # significant: accept only if Δ > k_se · SE — k_se is how many standard errors
                         # the val gain must clear (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress
+                        # paired: same idea on per-task deltas, but SE(Δ) is ESTIMATED from the n val
+                        # deltas, so k_se is read as a *z quantile*: alpha = P(Z > k_se) and the bar is
+                        # t_{1-alpha, df=n-1} · SE. The realized multiplier is >= k_se and depends on
+                        # val size (at k_se 1.0: 1.32x at n=3, 1.06x at n=10, 1.02x at n=30).
+                        # Cap k_se at 3; above 26.5 it is rejected. See docs/HONEST_EVAL.md guarantee 3.
 - stall:                <stop after N consecutive rejects; 0 = run all max_iterations>
 - store:                git          # versions every iteration as a commit for an inspectable process
 ```
