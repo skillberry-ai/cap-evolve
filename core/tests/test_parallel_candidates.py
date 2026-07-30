@@ -626,7 +626,64 @@ def test_budget_headroom(tmp_path):
     assert mc.budget_headroom(metric_calls_per_candidate=3) == 0
 
 
-# ---- 10. a failed proposal doesn't sink the round -------------------------
+# ---- 10. honesty failures must ABORT, not become a rejected candidate -----
+
+def test_seal_violation_aborts_the_round(tmp_path):
+    """A TestSealError from a worker propagates; nothing is scored or banked.
+
+    Regression for a defect found during this issue's own verification: both the
+    optimizer-call ``except Exception`` and the round's ``except Exception`` swallowed
+    honesty errors and recorded them as "a rejected candidate", so a tamper detection
+    or a seal violation was downgraded to a wasted iteration instead of aborting.
+    """
+    rd, _ = _fresh_run(tmp_path, "fatal")
+    adapter = CalcAdapter()
+    base = harness.evaluate_candidate(adapter, rd.candidate_dir("seed"), run_dir=rd,
+                                      split="val", tag="seed")
+
+    def evil_optimizer(workdir: Path, instructions: str) -> dict:
+        raise TestSealError("simulated seal violation from inside a worker")
+
+    plans = [{"candidate_id": f"cand_{i:04d}", "parent_dir": rd.candidate_dir("seed"),
+              "instructions": ""} for i in (1, 2)]
+    with pytest.raises(TestSealError):
+        harness.parallel_steps(adapter, plans, run_dir=rd, optimizer=evil_optimizer,
+                               current_val=base, workers=2, store=None)
+    recs = [json.loads(ln) for ln in rd.events_path.read_text(encoding="utf-8").splitlines()]
+    assert not [r for r in recs if r["kind"] == "step"], "a score was banked despite the abort"
+    assert rd.best_id == "seed"
+    assert rd.read_splits().test_used is False
+
+
+def test_seal_violation_also_aborts_a_serial_step(tmp_path):
+    """Same guarantee on the serial path — the fix is in shared code, not the fork."""
+    rd, _ = _fresh_run(tmp_path, "fatal2")
+    adapter = CalcAdapter()
+    base = harness.evaluate_candidate(adapter, rd.candidate_dir("seed"), run_dir=rd,
+                                      split="val", tag="seed")
+
+    def evil_optimizer(workdir: Path, instructions: str) -> dict:
+        raise TestSealError("simulated seal violation")
+
+    with pytest.raises(TestSealError):
+        harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"),
+                         optimizer=evil_optimizer, instructions="", current_val=base,
+                         candidate_id="cand_0001", store=None)
+    assert rd.best_id == "seed"
+
+
+def test_honesty_errors_includes_tamper_when_available():
+    """``TamperError`` (#142) joins the fatal set as soon as ``protect`` exists."""
+    fatal = harness._honesty_errors()
+    assert TestSealError in fatal
+    try:
+        from cap_evolve.protect import TamperError
+    except ImportError:
+        pytest.skip("protected-paths guard (#142) not merged yet")
+    assert TamperError in fatal
+
+
+# ---- 11. a failed proposal doesn't sink the round -------------------------
 
 def test_failed_proposal_becomes_a_rejected_step(tmp_path):
     rd, _ = _fresh_run(tmp_path, "fail")

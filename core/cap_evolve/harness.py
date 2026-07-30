@@ -26,7 +26,7 @@ from typing import Callable
 from . import gate as gate_mod
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
-from .splits import Splits, make_splits
+from .splits import Splits, TestSealError, make_splits
 from .types import Rollout, Score, Task
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -1315,6 +1315,12 @@ def propose_candidate(
         if isinstance(opt_report, dict):
             opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
             opt_tokens = int(opt_report.get("tokens") or 0)
+    except _honesty_errors():
+        # A tamper detection or seal violation surfacing from the optimizer call is NOT
+        # "a wasted iteration": no score computed against this tree can be trusted, so it
+        # aborts the run instead of being recorded as a rejected candidate. Serial and
+        # parallel paths agree on this — the guard is not weakened by either.
+        raise
     except Exception as e:  # noqa: BLE001
         # A failed proposal (e.g. a transient optimizer/API error) must not abort a
         # long run — leave the workdir as the parent copy so the candidate == parent
@@ -1469,6 +1475,22 @@ def commit_candidate(
     }
 
 
+def _honesty_errors() -> tuple[type[BaseException], ...]:
+    """Exceptions that must ABORT a run rather than be recorded as a bad candidate.
+
+    ``TestSealError`` (something tried to score sealed test twice) and, when the
+    protected-paths guard is present, ``TamperError`` (the scorer / eval harness / task
+    data was modified, so no score computed against this tree can be trusted). Resolved
+    dynamically because ``protect`` may not exist in every build.
+    """
+    errs: tuple[type[BaseException], ...] = (TestSealError,)
+    try:
+        from .protect import TamperError
+    except ImportError:
+        return errs
+    return (*errs, TamperError)
+
+
 def parallel_steps(
     adapter,
     plans: list[dict],
@@ -1505,7 +1527,10 @@ def parallel_steps(
 
     A worker that raises turns into a rejected step (``proposal_error``) rather than
     sinking the whole round — same policy ``propose_candidate`` already applies to an
-    optimizer failure.
+    optimizer failure. HONESTY failures are the exception: a ``TamperError`` (the grader
+    was edited, so no score from this tree is trustworthy) or a ``TestSealError`` aborts
+    the whole round, exactly as it aborts a serial ``run_step``. Downgrading either to
+    "a rejected candidate" would let parallelism silently weaken a honesty guard.
     """
     from . import parallel as _par
 
@@ -1513,6 +1538,7 @@ def parallel_steps(
     if workers > 1:
         run_dir.log_event("parallel_round", workers=workers,
                           candidates=[p["candidate_id"] for p in plans])
+    fatal = _honesty_errors()
 
     def _propose(plan: dict) -> dict:
         try:
@@ -1525,6 +1551,8 @@ def parallel_steps(
                 optimizer_name=optimizer_name, capability_sources=capability_sources,
                 project_dir=project_dir,
             )
+        except fatal:
+            raise  # tamper / seal violation: abort the round, never record a score
         except Exception as e:  # noqa: BLE001 — one bad candidate must not sink the round
             run_dir.log_event("proposal_error", candidate=plan["candidate_id"],
                               error=str(e)[:500])
