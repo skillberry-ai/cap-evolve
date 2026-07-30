@@ -628,7 +628,7 @@ def gepa_loop(
             parent_mb, mb, f"GEPA minibatch of {len(mb)} train task(s)", ctx=ctx,
             algorithm="gepa", run_dir=run_dir, parent_id=parent["id"],
             extra=_gepa_block(refl_summary, focus_label, mb, has_trajectories=has_traj))
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+        instructions = _augment_instructions(instructions, workdir, run_dir)
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0

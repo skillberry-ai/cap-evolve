@@ -779,18 +779,7 @@ def _journal_tail(workdir: Path) -> str:
     return tail.replace(_JOURNAL_MARK, "").strip()
 
 
-def _latest_journal_note(workdir: Path, *, max_chars: int = 900) -> str | None:
-    """The newest journal entry, capped — stored in the factual ledger as the candidate's
-    one-line lineage note. Returns ``None`` when the optimizer appended nothing."""
-    tail = _journal_tail(workdir)
-    if not tail:
-        return None
-    if len(tail) > max_chars:
-        tail = tail[:max_chars].rstrip() + " …"
-    return tail
-
-
-def _build_ledger(workdir: Path, run_dir: RunDir, rejected, history) -> None:
+def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     """Write the FACTUAL, framework-owned LEDGER.md: one row per prior iteration with
     its outcome + the exact tasks it broke/fixed. Deterministic — the objective record;
     the optimizer's own narrative lives in JOURNAL.md."""
@@ -944,8 +933,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
-def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
-                          rejected, history) -> str:
+def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
     """Give the optimizer its four cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
@@ -955,7 +943,7 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
     """
-    _build_ledger(workdir, run_dir, rejected, history)
+    _build_ledger(workdir, run_dir)
     _seed_journal(workdir, run_dir)
     if not (workdir / "PROCESS.md").exists():
         (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
@@ -1333,7 +1321,7 @@ def run_step(
                 capabilities=capabilities or [], optimizer_name=optimizer_name,
                 capability_sources=capability_sources or [], project_dir=project_dir))
 
-    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+    instructions = _augment_instructions(instructions, workdir, run_dir)
 
     # Record the pristine protected-path hashes BEFORE the optimizer can touch
     # anything. ``baseline`` normally does this first, but ``--reuse-baseline``
@@ -1420,30 +1408,22 @@ def run_step(
                       opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
     run_dir.record_spend_warnings()
 
-    # update optimizer memory + commit the iteration to the version store so the
-    # whole process stays inspectable (git log / LEDGER / JOURNAL). The `note` is the
-    # optimizer's own handover (its approach + lesson), taken from the entry it appended
-    # to JOURNAL.md this iteration so the lineage record carries what was tried, not just Δ/SE.
+    # Record the iteration for the dashboard's Memory/Insights panels + commit it to the
+    # version store, so the whole process stays inspectable (git log / LEDGER / JOURNAL).
     delta = cand_val.reward - current_val.reward
     summary = f"candidate {cid} (val {cand_val.reward:.3f}, Δ {delta:+.3f})"
     # Fold the optimizer's appended JOURNAL entry into the run-level append-only journal
-    # (so handover accumulates across accepted AND rejected iterations), and reuse it as
-    # the candidate's lineage note in the factual ledger.
+    # (so handover accumulates across accepted AND rejected iterations). This is the
+    # channel the NEXT iteration actually reads; _reconcile_journal stamps the objective
+    # outcome + the exact tasks broken/fixed into it.
     _reconcile_journal(workdir, run_dir, cid, accepted=accepted,
                        val=cand_val.reward, delta=delta)
-    note = _latest_journal_note(workdir)
-    # Per-task broke/fixed lists vs the parent (from the rollouts just persisted), so
-    # MEMORY records the SPECIFIC tasks a candidate broke — not just a category — and
-    # the next iteration won't retry the regression. Best-effort; None when not
-    # comparable (e.g. parent rollouts absent).
-    impact = _candidate_task_impact(run_dir, cid, "val",
-                                    parent_of={cid: parent_id})
     if accepted:
         if history is not None:
-            history.add(cid, summary, cand_val.reward, note=note, impact=impact)
+            history.add(cid, summary, cand_val.reward)
     else:
         if rejected is not None:
-            rejected.add(cid, summary, decision.reason, cand_val.reward, note=note, impact=impact)
+            rejected.add(cid, summary, decision.reason, cand_val.reward)
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",

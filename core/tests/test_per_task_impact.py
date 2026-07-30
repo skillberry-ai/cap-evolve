@@ -33,7 +33,6 @@ def test_per_task_impact_lists_broken_task():
     """A candidate that regressed a previously-passing task must be reported in the
     per-task impact block as having BROKEN that task."""
     from cap_evolve import RunDir, harness
-    from cap_evolve.memory import RejectedMemory
     import tempfile
 
     tmp = Path(tempfile.mkdtemp())
@@ -48,15 +47,13 @@ def test_per_task_impact_lists_broken_task():
 
     # Lineage: cand_0001 forked from seed (a step event), and it was rejected.
     rd.log_event("step", candidate="cand_0001", parent="seed", accept=False)
-    rejected = RejectedMemory(rd.rejected_path)
-    rejected.add("cand_0001", "candidate cand_0001 (val 0.667)", "no significant gain", 0.667)
 
     # The per-task broke/fixed signal reaches the optimizer via the framework-owned
     # factual LEDGER.md (built each iteration). Build it into a workdir and assert the
     # broken/fixed task ids are surfaced in cand_0001's row.
     import tempfile as _tf
     workdir = Path(_tf.mkdtemp())
-    harness._build_ledger(workdir, rd, rejected, None)
+    harness._build_ledger(workdir, rd)
     ledger = (workdir / "LEDGER.md").read_text(encoding="utf-8")
     assert "cand_0001" in ledger
     # Row format: | iter | candidate | parent | outcome | val | Δ | broke {..} | fixed {..} |
@@ -64,7 +61,7 @@ def test_per_task_impact_lists_broken_task():
     assert "{2}" in row   # BROKE task 2 (was passing)
     assert "{3}" in row   # FIXED task 3
 
-    # And the memory record carries the localized broke/fixed lists (C4).
+    # And the underlying signal localizes the broke/fixed task ids (C4).
     impact = harness._candidate_task_impact(rd, "cand_0001", "val",
                                             parent_of={"cand_0001": "seed"})
     assert impact["broke"] == ["2"]

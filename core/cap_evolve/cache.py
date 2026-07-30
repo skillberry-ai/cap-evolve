@@ -5,13 +5,21 @@ and persisted in the run dir, so re-evaluating an identical candidate (e.g. a pa
 re-sampled in GEPA, or a resumed run) costs nothing. The hash is over file CONTENTS,
 so two byte-identical candidates share cache entries even under different ids.
 
+**Scope: GEPA only** — which bounds the "costs nothing" above. The single consumer is
+``gepa._eval_minibatch``, where the same parent is re-sampled from the Pareto frontier
+across iterations and re-scored on overlapping minibatches; that repetition is what the
+cache pays for. ``harness.evaluate_candidate`` (every full-val and sealed-test eval, in
+every algorithm) does NOT consult it and always pays full price, so re-scoring an
+identical candidate on full val — including on ``--resume`` or a seed re-eval — is NOT
+deduplicated. Wiring it in there is a possible perf win, not existing behavior, and
+there is no flag for it today (``test_w1_engine.py`` guards that claim).
+
 Honesty notes:
   * The cache stores only the SCORE (reward + feedback), never gold answers.
   * It is keyed on candidate-file content, so an edit (even whitespace) busts the
     key — a stale score can never be served for changed files.
   * It is an optimization, not a source of truth: ``events.jsonl`` still records
-    every evaluation. Wiring into ``evaluate_candidate`` is OFF by default and gated
-    behind a flag (see ``maybe_cached_score``) so it cannot silently change behavior.
+    every evaluation.
 
 Pure stdlib (hashlib + json).
 """

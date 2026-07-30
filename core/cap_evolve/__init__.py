@@ -4,7 +4,7 @@ This is the *only* shipped code in cap-evolve. Everything user-facing is an
 Agent Skill; those skills' ``run.py`` scripts call into here for the things that
 must be consistent and honest across every run: task/score types, seeded splits
 with a sealed test set, variance-aware statistics, the acceptance gate,
-optimizer memory, the run directory, and the adapter contract.
+the run directory, and the adapter contract.
 
 Import it directly when Python is available, or invoke ``python -m
 cap_evolve <command>`` and parse the JSON it prints.
