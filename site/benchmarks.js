@@ -1,6 +1,6 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
 const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
-const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench)$/;
+const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
