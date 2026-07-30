@@ -63,6 +63,19 @@ def test_a_finalized_run_still_reports_done(tmp_base, make_run):
     assert row["liveness"]["status"] == "done"
 
 
+def test_a_finalize_event_alone_is_enough_to_report_done(tmp_base, make_run):
+    """A run whose log says `finalize` but whose final.json/splits.json lag must still
+    read `done` — otherwise the hub says `live` while `cap-evolve tail` says `done`."""
+    from capevolve_dashboard import runs
+    rd = make_run("run_a", events=BASE_EVENTS + [{"t": time.time(), "kind": "finalize",
+                                                  "test_reward": 0.9}],
+                  baseline={"val": {"reward": 0.25}})   # no final.json, test not sealed
+    row = runs.list_runs(tmp_base)[0]
+    assert row["liveness"]["status"] == "done"
+    assert row["status"] == "done"
+    assert runs.load_run(tmp_base, "run_a")["summary"]["status"] == "done"
+
+
 def test_failed_and_done_outrank_the_liveness_verdict(tmp_base, make_run):
     """Ordering: the summary-derived terminal states are decided BEFORE liveness.
 
@@ -73,6 +86,7 @@ def test_failed_and_done_outrank_the_liveness_verdict(tmp_base, make_run):
     from capevolve_dashboard import runs
     dead = {"status": "crashed"}
     assert runs._status({"counts": {"total": 0}}, dead) == "failed"
+    assert runs._status({"counts": {"total": 0}}, {"status": "done"}) == "done"
     assert runs._status({"test_sealed": True, "counts": {"total": 3}}, dead) == "done"
     assert runs._status({"test_reward": 0.9, "counts": {"total": 3}}, dead) == "done"
     # …and only a run that is neither finished nor empty inherits the liveness verdict.

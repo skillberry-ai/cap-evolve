@@ -72,13 +72,17 @@ def _status(summary: dict, live: dict | None = None) -> str:
     finished nor empty is subject to the liveness verdict, which is where ``stalled``
     and ``crashed`` come from — previously such a run read ``live`` forever.
     """
-    if summary.get("test_reward") is not None or summary.get("test_sealed"):
+    verdict = (live or {}).get("status")
+    # `test_sealed`/`test_reward` come from splits.json/final.json; the `finalize` EVENT
+    # is the same fact seen in the log, and it is what the terminal reads. Accept either,
+    # or the two surfaces disagree about a run whose artifacts lag its log.
+    if summary.get("test_reward") is not None or summary.get("test_sealed") \
+            or verdict == "done":
         return "done"
     counts = summary.get("counts") or {}
     if counts.get("total", 0) == 0:
         return "failed"
-    return (live or {}).get("status") if (live or {}).get("status") in (
-        "stalled", "crashed") else "live"
+    return verdict if verdict in ("stalled", "crashed") else "live"
 
 
 def list_runs(base_dir: Path) -> list[dict]:
