@@ -7,7 +7,7 @@ copy (the bug ``rundir.NON_CAPABILITY_NAMES`` exists to prevent).
 
 Note the deliberate asymmetry documented on ``_CAP_DIFF_SKIP``: this is a read-side
 FILTER, so it takes the whole shared union plus the injected read-context, unlike the
-single DESTRUCTIVE consumer (``hillclimb._SNAPSHOT_IGNORE``).
+single DESTRUCTIVE consumer (``step._SNAPSHOT_IGNORE``).
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from .rundir import NON_CAPABILITY_NAMES, RunDir, iteration_candidate
 # Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
 # component lists, so it takes the whole union (live + legacy scratch + the two
 # snapshotted explainability files). It must NOT be shared with
-# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# ``step._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
 # feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
 # we deliberately keep. Same predicate, different operation. See the tier note in
 # rundir.py; the split is pinned by

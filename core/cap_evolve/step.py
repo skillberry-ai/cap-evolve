@@ -24,6 +24,7 @@ from . import optimizer_context as _oc
 from . import protect as protect_mod
 from .evaluate import _paired_deltas, evaluate_candidate
 from .handover import _augment_instructions, _reconcile_journal, approach_signature
+from .loop import SplitResult
 from .optimizer_proc import OptimizerFn
 from .rundir import SCRATCH_NAMES, RunDir
 

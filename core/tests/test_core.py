@@ -155,3 +155,42 @@ def test_memory_jsonl_record_shape_matches_dashboard_contract(tmp_path):
     assert set(hrec) == {"candidate_id", "summary", "val"}
     assert hrec == {"candidate_id": "c3", "summary": "tightened the output contract",
                     "val": 0.62}
+
+
+def test_every_public_annotation_resolves():
+    """Every annotation in the package must resolve (#115 refactor guard).
+
+    ``from __future__ import annotations`` stores annotations as strings, so a moved
+    function that lost the import for one of its annotated types still compiles,
+    imports, and passes every test — the break only surfaces when something actually
+    resolves the hints (``typing.get_type_hints``, ``inspect.signature(eval_str=True)``,
+    Sphinx autodoc, runtime validators). That is exactly how the #115 split dropped
+    ``from .loop import SplitResult`` in ``step.py`` with 357 tests green. This walks
+    the whole package so the next move can't repeat it.
+    """
+    import importlib
+    import inspect
+    import pkgutil
+    import typing
+
+    import cap_evolve
+
+    broken = []
+    for mod in pkgutil.iter_modules(cap_evolve.__path__):
+        if mod.name.startswith("_"):
+            continue
+        m = importlib.import_module(f"cap_evolve.{mod.name}")
+        for attr, obj in vars(m).items():
+            if getattr(obj, "__module__", None) != m.__name__:
+                continue  # re-export; checked where it's defined
+            targets = [(attr, obj)] if inspect.isfunction(obj) else []
+            if inspect.isclass(obj):
+                targets = [(attr, obj)] + [
+                    (f"{attr}.{n}", o) for n, o in vars(obj).items() if inspect.isfunction(o)
+                ]
+            for name, target in targets:
+                try:
+                    typing.get_type_hints(target)
+                except Exception as exc:  # noqa: BLE001 - report, don't mask
+                    broken.append(f"cap_evolve.{mod.name}.{name}: {type(exc).__name__}: {exc}")
+    assert not broken, "unresolvable annotations (missing import after a move?):\n" + "\n".join(broken)

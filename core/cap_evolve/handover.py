@@ -464,6 +464,11 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     keeping the two that are only context. Passing it here puts it in the preserved tail.
     Used by ``cap_evolve.plateau.prompt_block``.
 
+    ``extra`` MUST stay POSITIONAL (never keyword-only): ``test_insights.py`` calls this
+    signature-agnostically, filling trailing params by arity
+    (``*[None] * (len(signature.parameters) - 3)``) so #212-style param drops don't break
+    it. Making it kw-only turns that test red with no merge conflict to warn you.
+
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
       - JOURNAL.md — optimizer-authored, append-only handover across the whole run;
