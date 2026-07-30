@@ -1322,7 +1322,7 @@ def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str
     return "\n".join(lines) + "\n"
 
 
-def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir, *,
+def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
                           extra: str = "") -> str:
     """Give the optimizer its five cross-iteration files + a prompt pointer to each.
 
