@@ -125,6 +125,9 @@ ENV
     SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
     SB_DEFAULT="$SB_CACHE/sample_data_200"
     if [ "$TIER" = "full" ]; then SB_DEFAULT="$SB_CACHE/all_data_912_v0.1"; fi
+    # SPREADSHEETBENCH_DATA_DIR is expected to be set (and exported to GITHUB_ENV) by
+    # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
+    # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
     SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-$SB_DEFAULT}"
     [ -f "$SB_DATA/dataset.json" ] || { echo "::error:: spreadsheetbench dataset not found at $SB_DATA (run ci/benchmarks/spreadsheetbench/fetch_data.sh or set SPREADSHEETBENCH_DATA_DIR)"; exit 1; }
     # full runs 912 tasks in one go — bump container concurrency over smoke's default

@@ -69,6 +69,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -572,6 +573,12 @@ class Adapter(CapabilityAdapter):
         soft = sum(test_results) / len(test_results)
         hard = 1.0 if all(test_results) else 0.0
         feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre))
+
+        # Clean up the per-rollout output dir now that scoring has consumed all outputs.
+        # Without this, a full run (912 tasks × iterations) would accumulate thousands of
+        # per-task output dirs inside SPREADSHEETBENCH_DATA_DIR.
+        out_dir = data_dir / "outputs" / run_tag
+        shutil.rmtree(out_dir, ignore_errors=True)
 
         return Score(
             task_id=task.id,
