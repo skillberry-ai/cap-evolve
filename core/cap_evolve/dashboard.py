@@ -618,6 +618,12 @@ def reduce_run(run_dir) -> dict:
 # we deliberately keep. Same predicate, different operation. See the tier note in
 # rundir.py; the split is pinned by
 # test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+#
+# The INJECTED_* halves are here for the same reason as in ``harness._CAP_DIFF_SKIP``:
+# the parent side of the diff is a snapshot (injected read-context stripped) and the
+# child side may be a live workdir (it is not), so without them an injected
+# ``CLAUDE.md``/``.claude/skills/`` file reads as a real capability addition. Derived,
+# never enumerated.
 _DIFF_SKIP = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
 _DIFF_SKIP_DIRS = set(INJECTED_DIRS)
 

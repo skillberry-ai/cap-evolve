@@ -34,8 +34,8 @@ adds three things straight out of the deep-learning analogy:
      bypassing the gate to mutate best.
 
 Everything honesty-critical (materialize → optimize → eval-val → gate →
-accept/reject → snapshot/best, the write-only rejected/history audit jsonl, the sealed
-test) is
+accept/reject → snapshot/best, the rejected/history jsonl (audit + the #129 dead-end
+constraint block), the sealed test) is
 delegated to ``harness.run_step`` / ``harness.evaluate_candidate``; this module
 only owns the *schedule*, the *buffer*, and the *slow update*. The result-dict
 shape mirrors ``hill_climb_loop`` (plus per-epoch stats + slow-update records).
@@ -397,8 +397,13 @@ def skillopt_loop(
     }
 
 
-# Harness-injected scaffolding that must not count as an applied edit.
-# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the note there).
+# Harness-injected scaffolding that must not count as an applied edit. The fifth
+# read-side consumer of the one shared definition (``rundir.NON_CAPABILITY_NAMES``, see
+# the tier note there) — this list used to be its own pre-drift copy, missing
+# FOCUS.md/REFLECTION.md. The INJECTED_* halves are needed because this walk, like the
+# capability diff, compares a SNAPSHOT parent (injected context stripped) against a LIVE
+# workdir (it is not), so without them every injected CLAUDE.md / .claude/skills file
+# counts as an applied edit and the requested-vs-applied budget log is nonsense.
 _SCAFFOLDING = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
 _SCAFFOLDING_DIRS = {".git"} | set(INJECTED_DIRS)
 

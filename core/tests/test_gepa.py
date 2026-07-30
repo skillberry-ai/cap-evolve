@@ -303,6 +303,24 @@ def test_scratch_ignores_are_one_shared_definition():
                        ("harness._CAP_DIFF_SKIP", set(harness._CAP_DIFF_SKIP))):
         assert set(NON_CAPABILITY_NAMES) <= have, \
             f"{name} desynced, missing {sorted(set(NON_CAPABILITY_NAMES) - have)}"
+    # #129/B1: the INJECTED_* half is not optional for the read-side filters either. Their
+    # PARENT side is a snapshot (already stripped by _SNAPSHOT_IGNORE) while their CHILD
+    # side is the LIVE workdir, so an injected CLAUDE.md / .claude/skills/<x>/SKILL.md that
+    # is missing here reads as a real capability ADDITION on every iteration — which
+    # silently poisoned the #129 approach signature, the RUNMAP diff and the dashboard diff
+    # panel for every non-mock optimizer. Both sets must be DERIVED: the dir list that broke
+    # was a hardcoded 3-of-9 subset of INJECTED_DIRS.
+    from cap_evolve.optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+    for name, names, dirs in (
+            ("cache", cache._IGNORE_NAMES, cache._IGNORE_DIRS),
+            ("gepa", gepa._NON_COMPONENT, gepa._NON_COMPONENT_DIRS),
+            ("skillopt", skillopt._SCAFFOLDING, skillopt._SCAFFOLDING_DIRS),
+            ("dashboard", dashboard._DIFF_SKIP, dashboard._DIFF_SKIP_DIRS),
+            ("harness_capdiff", harness._CAP_DIFF_SKIP, harness._CAP_DIFF_SKIP_DIRS)):
+        assert set(INJECTED_NAMES) <= set(names), \
+            f"{name} misses injected names {sorted(set(INJECTED_NAMES) - set(names))}"
+        assert set(INJECTED_DIRS) <= set(dirs), \
+            f"{name} misses injected dirs {sorted(set(INJECTED_DIRS) - set(dirs))}"
     # PROCESS.md is deliberately snapshotted (explainability), so it is NOT scratch.
     assert "PROCESS.md" not in scratch
     assert "PROCESS.md" not in set(harness._SNAPSHOT_IGNORE)

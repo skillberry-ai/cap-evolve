@@ -35,14 +35,15 @@ from .rundir import NON_CAPABILITY_NAMES
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache.
-# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the note there): the
-# union of live + legacy scratch plus INSTRUCTIONS/PROCESS, which ARE snapshotted but
-# still are not capability bytes. This is a read-side filter (skip bytes when hashing),
-# so it takes the whole union — including the legacy names, so caches written before
-# they were retired keep resolving. The INJECTED_* halves are the optimizer-context
-# read-context (``trajectories/``, ``guidance/``, the native per-agent skill dirs and
-# instructions files) — one definition in ``optimizer_context``, folded in as a plain
-# constant expression (no import-time set mutation, so no import-order dependence).
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the tier note there):
+# the union of live + legacy scratch plus INSTRUCTIONS/PROCESS, which ARE snapshotted
+# but still are not capability bytes. This is a read-side filter (skip bytes when
+# hashing), so it takes the whole union — including the legacy names, so caches written
+# before they were retired keep resolving. The INJECTED_* halves are the
+# optimizer-context read-context (``trajectories/``, ``guidance/``, the native per-agent
+# skill dirs and instructions files) — one definition in ``optimizer_context``, folded in
+# here as a plain constant expression (no import-time set mutation, so there is no
+# import-order dependence to reason about).
 _IGNORE_NAMES = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
 _IGNORE_DIRS = {".git", "__pycache__"} | set(INJECTED_DIRS)
 

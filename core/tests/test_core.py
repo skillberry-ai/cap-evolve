@@ -127,20 +127,27 @@ def test_combined_stderr_zero_for_single_certain_task():
 def test_memory_jsonl_record_shape_matches_dashboard_contract(tmp_path):
     """The jsonl records are consumed by the dashboard's ``/api/runs/{id}/memory``
     (Memory panel + Insights dead-ends), which reads exactly these keys. Writing an
-    extra/renamed key silently breaks that UI, so pin the shape."""
+    extra/renamed key silently breaks that UI, so pin the shape.
+
+    ``approach`` (#129) is part of the contract: the optimizer's dead-end constraint block
+    is built from it, and the dashboard's dead-ends panel now shows it. It defaults to ""
+    so a caller that omits it (and every pre-#129 record) stays valid."""
     import json
 
     from cap_evolve import History
 
     rp = tmp_path / "rejected.jsonl"
     rm = RejectedMemory(rp)
-    rm.add("c1", "added verbose preamble", "Δ<=0 on val", val=0.41)
+    rm.add("c1", "added verbose preamble", "Δ<=0 on val", val=0.41,
+           approach="prompt.txt: +Think step by step before answering.")
     rm.add("c2", "removed the schema hint", "regressed val", val=0.30)
     recs = [json.loads(l) for l in rp.read_text().splitlines() if l.strip()]
     assert len(recs) == 2
-    assert set(recs[0]) == {"candidate_id", "summary", "reason", "val"}
+    assert set(recs[0]) == {"candidate_id", "summary", "reason", "val", "approach"}
     assert recs[0] == {"candidate_id": "c1", "summary": "added verbose preamble",
-                       "reason": "Δ<=0 on val", "val": 0.41}
+                       "reason": "Δ<=0 on val", "val": 0.41,
+                       "approach": "prompt.txt: +Think step by step before answering."}
+    assert recs[1]["approach"] == "", "approach must default to empty, not be absent"
 
     hp = tmp_path / "history.jsonl"
     History(hp).add("c3", "tightened the output contract", 0.62)

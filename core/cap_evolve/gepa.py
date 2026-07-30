@@ -61,6 +61,7 @@ from .harness import (
     _init_memory_store,
     _live,
     _paired_deltas,
+    approach_signature,
     evaluate_candidate,
     split_result_from_rollouts,
 )
@@ -664,7 +665,8 @@ def gepa_loop(
             run_dir.update_spent(iterations=1, accepted=False)
             rejected.add(cid, f"candidate {cid} (mb {child_mb.reward:.3f} vs parent "
                               f"{parent_mb.reward:.3f})",
-                         "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward)
+                         "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward,
+                         approach=approach_signature(parent_dir, workdir))
             if store is not None:
                 store.commit(f"iter {n+1}: reject(local) {cid}", accepted=False)
             steps.append(step)
@@ -702,7 +704,8 @@ def gepa_loop(
             if store is not None:
                 store.commit(f"iter {n+1}: ACCEPT {summary}", tag="best", accepted=True)
         else:
-            rejected.add(cid, summary, decision_dict.get("reason", "val gate"), cand_val.reward)
+            rejected.add(cid, summary, decision_dict.get("reason", "val gate"), cand_val.reward,
+                         approach=approach_signature(parent_dir, workdir))
             if store is not None:
                 store.commit(f"iter {n+1}: reject(val) {summary}", accepted=False)
         steps.append(step)
@@ -833,7 +836,8 @@ def _try_merge(
     step = {"candidate_id": mid, "merge_of": [a["id"], b["id"]], "ancestor": anc,
             "origin": report["origin"], "local_gate": local_ok, "accepted": False}
     if not local_ok:
-        rejected.add(mid, f"merge {a['id']}+{b['id']}", "merge local gate: < max(parents)")
+        rejected.add(mid, f"merge {a['id']}+{b['id']}", "merge local gate: < max(parents)",
+                     approach=approach_signature(anc_dir, workdir))
         if store is not None:
             store.commit(f"merge {mid}: reject(local)", accepted=False)
         shutil.rmtree(workdir, ignore_errors=True)
@@ -859,7 +863,8 @@ def _try_merge(
         if store is not None:
             store.commit(f"merge {mid}: ACCEPT {summary}", tag="best", accepted=True)
     else:
-        rejected.add(mid, summary, decision_dict.get("reason", "val gate"), cand_val.reward)
+        rejected.add(mid, summary, decision_dict.get("reason", "val gate"), cand_val.reward,
+                     approach=approach_signature(anc_dir, workdir))
         if store is not None:
             store.commit(f"merge {mid}: reject(val)", accepted=False)
     return step
