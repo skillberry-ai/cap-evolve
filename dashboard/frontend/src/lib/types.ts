@@ -1,6 +1,19 @@
 /** Mirrors the Plan 1 backend payloads (see core/cap_evolve/dashboard.py schemas). */
 
-export type RunStatus = 'live' | 'done' | 'failed'
+export type RunStatus = 'live' | 'done' | 'failed' | 'stalled' | 'crashed'
+
+/** Stall/crash verdict for a run, computed per-request from events.jsonl by the same
+ * `cap_evolve.eventstream` helpers `cap-evolve tail` uses — so the terminal and the web
+ * UI can never report different verdicts. `stall_threshold_seconds` is derived from this
+ * run's own slowest observed gap, not a global constant (#118). */
+export interface Liveness {
+  status: RunStatus
+  detail: string | null
+  silence_seconds: number | null
+  stall_threshold_seconds: number | null
+  slowest_gap_seconds: number | null
+  process_alive: boolean | null
+}
 
 /** One row from GET /api/runs (light hub summary). */
 export interface RunSummary {
@@ -14,6 +27,7 @@ export interface RunSummary {
   iterations: number
   total_usd: number | null
   mtime: number
+  liveness?: Liveness
 }
 
 export type NodeStatus = 'seed' | 'accepted' | 'rejected' | 'failed'
@@ -88,6 +102,8 @@ export interface RunSummaryDetail {
   delta_pct: number | null
   test_reward: number | null
   test_sealed?: boolean
+  status?: RunStatus
+  liveness?: Liveness
   test_pass_k?: number | null
   counts?: { accepted: number; rejected: number; failed: number; seed: number; total: number }
   frontier?: number

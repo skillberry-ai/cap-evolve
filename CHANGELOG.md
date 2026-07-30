@@ -5,6 +5,56 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **Tell a stalled/hung run from an idle one from a finished one (#118).** A hung run used
+  to masquerade as finished: the dashboard's SSE stream closed after a fixed ~5 idle
+  minutes and the UI flipped to "idle", which reads like completion, while the hub's
+  `_status` left a run that produced one candidate and then crashed as `live` forever.
+  A run is now classified `live` / `stalled` / `crashed` / `done` by one shared
+  classifier — `cap_evolve.eventstream.classify` — used by `cap-evolve tail`,
+  `run --follow`, the hub row, the DeepDive header, and the SSE stream, so the terminal
+  and the web UI cannot disagree about the same run dir.
+
+  **The threshold is derived from the run itself, not a constant.** A fixed 5 minutes is
+  wrong in both directions: a toy run is silent that long only if it is dead, while one
+  τ²-bench rollout can legitimately take 20 minutes. The bar is
+  `max(300s, 3 × the slowest inter-event gap this run has already shown)` — so the run
+  that sets the bar is the run judged by it, and a slow-but-healthy run raises its own
+  bar instead of being reported hung. `CAPEVOLVE_STALL_SECONDS` pins a fixed number for
+  a workload the user knows better than the heuristic does.
+
+  **Liveness is proof-based.** `cap-evolve run` now writes a small `run.pid`
+  (`{pid, host, started}`) into the run dir and never deletes it: after the process exits
+  the pid stops existing, which is what distinguishes "dead" from "alive but quiet". A pid
+  from another host, or no pid file at all (the per-phase skill-chain workflow), reads as
+  *unknown* and is never reported crashed. `done` outranks everything, so a finished run
+  degrades to a clean `done` no matter how long ago it ran.
+
+  `cap-evolve tail` now exits `4` on a stall and `5` on a crash (and prints the verdict
+  with its numbers on stderr) instead of a silence that reads like success;
+  `--no-stall-check` opts out. The SSE route no longer drops the connection after a fixed
+  idle period — it periodically emits a typed `status` frame naming which kind of quiet
+  the run is in, which doubles as the keepalive.
+- **Live terminal progress: `cap-evolve run --follow` and `cap-evolve tail` (#116).** A
+  classic run was silent for its whole duration — a hung multi-hour run looked exactly
+  like a working one. Both new surfaces render human-readable progress (stage, baseline,
+  per-candidate accept/reject + reason, budget warnings, optimizer errors, finalize, plus
+  a running cost/token meter) from the run's `events.jsonl`. The byte-offset tail is now
+  ONE shared helper — `cap_evolve.eventstream` — consumed by the CLI *and* by the
+  dashboard's SSE route, so the terminal and the web view can never disagree. `--follow`
+  writes to stderr, leaving stdout as the machine-readable final JSON; output is plain
+  text on any non-TTY (piped, CI, `NO_COLOR`). Default behavior is unchanged.
+
+  Hardened after review: a malformed event can no longer kill the follower (and if the
+  follower does stop, it says so on stderr instead of going dark); every rendered line is
+  stripped of control characters, so an optimizer's stderr cannot drive the terminal or
+  forge a progress line; the cost meter counts runner spend from `evaluate` and optimizer
+  spend from `step` exactly once, matching the run's own `Spent.total_usd`; `--follow` is
+  disabled rather than falling back to stdout when stderr is closed (`2>&-`); and
+  `follow_events` yields a typed `_follow_end` sentinel naming *why* it stopped
+  (`stop_kind` / `idle` / `should_stop`). `cap-evolve tail` exits `2` on an impossible run
+  dir and `3` on an idle timeout with no events.
+
 ### Fixed
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now

@@ -18,6 +18,7 @@
   --accent-strong: #d97706;
   --accepted: #22c55e;      /* accepted / improved */
   --rejected: #ef4444;      /* rejected / regressed */
+  --warn: #eab308;          /* stalled / needs attention — distinct from live amber */
   --seed: #64748b;          /* seed / neutral */
 
   color-scheme: dark;

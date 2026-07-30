@@ -79,8 +79,14 @@ export function RunDeepDive() {
   }, [id, queryClient])
 
   const stream = useRunStream(id, onActivity)
+  // #118: 'stalled'/'crashed' come from the backend's periodic status frame; they must
+  // survive to the badge rather than being flattened into 'live' or (worse) 'done'.
   const liveStatus: RunStatus =
-    stream.status === 'live' ? 'live' : stream.status === 'idle' || stream.status === 'done' ? 'done' : 'live'
+    stream.status === 'stalled' || stream.status === 'crashed'
+      ? stream.status
+      : stream.status === 'idle' || stream.status === 'done'
+        ? 'done'
+        : 'live'
 
   return (
     <AppShell live={stream.status === 'live'}>
@@ -91,7 +97,18 @@ export function RunDeepDive() {
 
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{id}</h1>
-          {data && <StatusBadge status={data.summary.test_reward != null ? 'done' : liveStatus} />}
+          {data && (
+            <StatusBadge
+              status={
+                data.summary.test_reward != null
+                  ? 'done'
+                  : liveStatus !== 'live'
+                    ? liveStatus // the live SSE verdict is fresher than the cached snapshot
+                    : (data.summary.status ?? 'live')
+              }
+              detail={stream.detail ?? data.summary.liveness?.detail}
+            />
+          )}
           {data?.summary.algorithm && (
             <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-muted">{data.summary.algorithm}</span>
           )}

@@ -16,6 +16,7 @@ export default {
         accent: { DEFAULT: 'var(--accent)', strong: 'var(--accent-strong)' },
         accepted: 'var(--accepted)',
         rejected: 'var(--rejected)',
+        warn: 'var(--warn)',
         seed: 'var(--seed)',
       },
       fontFamily: {
