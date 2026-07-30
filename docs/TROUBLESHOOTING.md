@@ -3,6 +3,20 @@
 Fixes for the most common install and run failures. If none of these match, open an issue
 with the exact command and output.
 
+## Start here: `cap-evolve doctor`
+
+```bash
+cap-evolve doctor        # or, before the package is installed: python -m cap_evolve.cli doctor
+```
+
+It checks the whole install in one pass — Python version, core importability + which
+venv, `cap-evolve` on `PATH` (and whether a *second* install shadows it), `git`, the
+skills dir + registry manifest, optimizer CLIs, provider credentials (presence only,
+never a value), run-dir writability, and `cap-evolve check` when run inside a project —
+printing an actionable fix per failing line and exiting non-zero on a hard failure. Most
+of the sections below are the checks it automates. See
+[`INSTALL.md`](INSTALL.md#diagnose-the-install-with-cap-evolve-doctor).
+
 ## Install
 
 **`cap-evolve: command not found`** — the core isn't installed in the active env. Activate

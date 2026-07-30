@@ -5,6 +5,7 @@ redacted before they reach the artifact, and optional panels degrade silently.
 
 import html.parser
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -177,6 +178,85 @@ def test_render_html_self_contained_and_parseable():
         for panel in ("Summary", "Score over iterations", "Per-task pass/fail",
                       "Lineage", "Candidates", "Annotations"):
             assert panel in text, f"missing panel: {panel}"
+        # Cheap source-level guard for the *exact* historical regression only:
+        # `ParentNode.append()` returns undefined, so `el.append(svg(...)).textContent = x`
+        # threw a TypeError. Labelled SVG text goes through the svg() helper's `text:`
+        # pseudo-attribute instead. See issue #126.
+        # This regex catches nothing else — not a chain off `$()`, off a variable, or
+        # split across lines. `test_dashboard_js_renders_all_panels` is the assertion
+        # with teeth; this one is a fast tripwire on the known shape.
+        assert ".append(svg(" in text, "svg() helper no longer used"
+        assert not re.search(r"\.append\(svg\(.*\)\)\s*\.\s*\w", text), \
+            "chaining off .append(svg(...)) throws: append() returns undefined"
+
+
+# ---- HTML rendering: the JS actually builds the panels --------------------
+
+_DOM_SHIM = r"""
+// Smallest DOM the dashboard's inline script needs. append() returns undefined,
+// exactly like the real ParentNode.append(), so a chained property assignment
+// throws here too.
+const counts = Object.create(null);
+class El {
+  constructor(tag){ this.tagName=tag; this.children=[]; this.style={};
+                    this.attrs={}; this.textContent=''; this.innerHTML=''; }
+  setAttribute(k,v){ this.attrs[k]=v; }
+  getAttribute(k){ return this.attrs[k]; }
+  addEventListener(){}
+  append(...ks){ for(const k of ks) if(k!=null) this.children.push(k); }
+  appendChild(k){ this.children.push(k); return k; }
+}
+const mk = t => { counts[t]=(counts[t]||0)+1; return new El(t); };
+const runData = new El('script'); runData.textContent = process.env.RUN_DATA;
+const byId = {'run-data':runData, main:mk('main'), tip:mk('div'), hdr:mk('div')};
+globalThis.document = {createElement:mk, createElementNS:(ns,t)=>mk(t),
+                       getElementById:id=>byId[id]};
+globalThis.innerWidth = 1280;
+"""
+
+
+def test_dashboard_js_renders_all_panels():
+    """Execute the generated inline script and count the elements it creates.
+
+    The source-level assertions above pass even when the script throws on line 1 and
+    the page renders empty — that is precisely how issue #126 survived six weeks with
+    8 of 13 panels missing. This runs the script instead: a throw anywhere at top
+    level aborts every remaining IIFE, so the element counts collapse.
+    """
+    import os
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not available; JS execution check skipped")
+
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE,
+                     final={"test": {"reward": 0.8}, "best_id": "cand_0001"})
+        text = dashboard.write_dashboard(rd).read_text(encoding="utf-8")
+
+        run_data = re.search(r'id="run-data">(.*?)</script>', text, re.S).group(1)
+        script = re.findall(r"<script>(.*?)</script>", text, re.S)[-1]
+        probe = Path(d) / "probe.js"
+        probe.write_text(_DOM_SHIM + script + "\nconsole.log(JSON.stringify(counts));\n",
+                         encoding="utf-8")
+
+        p = subprocess.run([node, str(probe)], capture_output=True, text=True,
+                           env={**os.environ, "RUN_DATA": run_data}, timeout=60)
+        assert p.returncode == 0, f"dashboard JS threw:\n{p.stderr}"
+        counts = json.loads(p.stdout.strip().splitlines()[-1])
+
+    # Every panel is a <section> with an <h2>; the source-level check above asserts
+    # 6 titles are in the *string* — this asserts they were actually constructed.
+    assert counts.get("section", 0) >= 13, f"panels not built: {counts}"
+    assert counts.get("h2", 0) == counts.get("section", 0), f"panel/title mismatch: {counts}"
+    # SVG <text> is the signature: 0 on the broken code, 13+ once the charts render.
+    assert counts.get("text", 0) >= 10, f"charts emitted no labels: {counts}"
+    assert counts.get("svg", 0) >= 4, f"charts missing: {counts}"
 
 
 def test_dashboard_degrades_without_rollouts_or_finalize():

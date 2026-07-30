@@ -25,6 +25,11 @@ This path needs none of the Claude-only features. The optimizer step (`run-optim
 runs the chosen CLI prose-fed and sequential, so the full pipeline still completes;
 the offline `mock` optimizer keeps zero-API CI working.
 
+Host-agnostic is an architectural property, not a per-host test result: only
+`claude-code` and `mock` are executed in CI today. See
+[`docs/HOST_SUPPORT.md`](docs/HOST_SUPPORT.md) for each host's verified (✅) /
+docs-checked (🟡) / best-guess (➖) status and the artifact behind every ✅.
+
 > Under the plugin, prefix the skill names below with `/cap-evolve:` (e.g.
 > `/cap-evolve:intake`); on a bare host, "load the **`intake`** skill" means open
 > its `SKILL.md`. Either way the steps and rules are identical.

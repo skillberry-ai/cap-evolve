@@ -26,7 +26,7 @@ significant margin → commit — and reports one honest number. It optimizes wh
 <p align="center">
   <img src="site/assets/dash-overview.png" alt="cap-evolve dashboard — a real tau2-bench airline run" width="900"/>
   <br/>
-  <sub>A real τ²-bench airline run in the live dashboard — baseline → best, accepted vs rejected candidates, cost, and the fitness stair.</sub>
+  <sub>A real τ²-bench airline run in the live dashboard — baseline → best, accepted vs rejected candidates, cost, and the fitness stair. <b>Not</b> the zero-API toy: for what the two-minute quickstart actually prints and renders, see <a href="docs/GETTING_STARTED.md">Getting started</a>.</sub>
 </p>
 
 <p align="center">
@@ -80,11 +80,17 @@ Open the printed `dashboard.html` in any browser. Full walkthrough:
 | Path | Use it when | Start |
 |---|---|---|
 | **Claude Code plugin** | You use Claude Code and want slash commands + honesty hooks | `claude --plugin-dir ./plugins/cap-evolve` then follow [`RUN.md`](RUN.md) |
-| **Another coding-agent host** | Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, bare | `./install.sh --host <name>` then follow [`RUN.md`](RUN.md) |
+| **Another coding-agent host** | Codex, Gemini, opencode, Cursor, Droid, Copilot, Kimi, Pi, Antigravity, openclaw, IBM Bob, bare — per-host status in [Host support](docs/HOST_SUPPORT.md) | `./install.sh --host <name>` then follow [`RUN.md`](RUN.md) |
 | **Manual adapter + CLI** | You want to wire the adapter yourself and drive `cap-evolve` directly | [Optimize your own agent](docs/OPTIMIZE_YOUR_OWN.md) |
 
 Each path shares the same core install and the same honesty guarantees. Full setup,
 credentials, and the optional dashboard: [Installation](docs/INSTALL.md).
+
+> **How verified is each host?** cap-evolve is host-agnostic by design, but only
+> `claude-code` and `mock` are actually **executed in CI** today. Every other host is
+> documented-but-unrun (🟡) or a best-guess skill-dir mapping (➖) that needs `--dest`.
+> [`docs/HOST_SUPPORT.md`](docs/HOST_SUPPORT.md) is the single source of truth and cites
+> the proving artifact for each ✅.
 
 ## What can cap-evolve optimize?
 

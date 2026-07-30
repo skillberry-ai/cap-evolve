@@ -5,7 +5,87 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **Cross-host parity is now *checkable*, and one destination is honestly ✅** (issue #143,
+  and #208's missing job). Three parts:
+  - **`skills/_registry/hosts.yaml` is the single source of per-host metadata** — aliases,
+    install destination, grade + the artifact justifying it, and the `display` /
+    `description` / `invoke` triple a host UI needs. That list previously lived in five
+    places and had drifted: `install.sh`'s `case`, `doctor._VERIFIED_HOST_DIRS` (which knew
+    5 of the 12 real destinations — its 6th entry, `/.capevolve/skills`, is the no-host
+    default rather than a host dest — so seven correct host dirs were reported "best-guess"),
+    and two `docs/HOST_SUPPORT.md` tables. `install.sh` now resolves `--host` by shelling
+    `python3 -m cap_evolve.hosts --dest`, doctor derives its list, HOST_SUPPORT.md is a
+    rendering, and **`core/tests/test_host_parity.py` fails the build when any of them
+    disagree** — including a check that a `verified` row cites an artifact that exists,
+    which is the exact defect PR #202's review caught.
+  - **`ci/install_smoke.sh` + the `install-smoke` CI job** — the first thing anywhere that
+    executes `./install.sh`. It installs through the `--host` mapping into a temp `$HOME`,
+    unsets `$CAPEVOLVE_SKILLS_DIR`, and completes a zero-API `toy_calc` run **from a cwd
+    outside the repo** (inside it, `run-optimizer`'s parent-walk finds the source tree and
+    the job proves nothing), asserting `test_reward 1.0` rather than exit 0 — a broken
+    optimizer silently keeps the seed and reports `0.0`, which is how #193 hid. This is the
+    artifact that promotes the `claude` destination row from 🟡 to **✅**; every other row
+    stays 🟡/➖ because the job exercises one destination.
+  - **The stdlib-only fallback is proven, not asserted** — `core/tests/test_stdlib_only.py`
+    runs the whole install path (host metadata + `--dest` CLI, the real
+    `optimizers/registry.yaml`, the manifest build, `cap-evolve version`/`check`) in a
+    subprocess whose `sys.meta_path` raises `ImportError` for every non-stdlib module, plus
+    a guard-the-guard test so the hook can't silently become a no-op. `install.sh` depends
+    on this literally: it calls `cap_evolve.hosts` *before* `pip install ./core`. That
+    test also **enforces the flow-style `aliases` invariant**: `read_yaml`'s stdlib
+    fallback has no block-sequence handling, so a row spelled `aliases:\n  - x` parses as
+    `{}` on the no-PyYAML path only — `dest_for()` returns `None` and `install.sh`
+    dotdir-guesses on exactly the bare host the fallback serves, with every other guard
+    green. Asserting non-empty `aliases` *as that reader sees them* turns hosts.yaml's
+    "flow style required" header from a comment into a build failure. (Teaching
+    `read_yaml` block sequences is #197's job.)
+  - `install.sh`'s `--host` fallback warning now **distinguishes its three causes** — no
+    `python3` on `PATH`, a resolver that can't run (missing/unreadable `hosts.yaml`), and a
+    genuinely unknown host. It previously reported all three as "no hosts.yaml row for
+    `<host>`", which sent a user with a missing interpreter to edit a file that was correct.
+    `ci/install_smoke.sh` now also **asserts** its skill-dir count instead of echoing it,
+    and its header states the scope gap explicitly: the job runs against the source core
+    via `PYTHONPATH`, so `pip install ./core` is deliberately **not** covered by the ✅.
+- **`cap-evolve doctor` — one-command install/health diagnostic** (issue #121). Reports
+  pass/warn/fail with an actionable fix per line and exits non-zero on a hard failure, so
+  CI can gate on it. Checks Python version, core importability + which interpreter/venv,
+  `cap-evolve` on `PATH` (including a *shadowing* second install), `git`, the skills dir +
+  registry manifest, `optimizers/registry.yaml` presence, optimizer CLIs on `PATH`,
+  provider credentials (**presence only, never a value** — env plus names declared in a
+  repo-root `.env`, warning on a partially-set group like RITS or watsonx), run-dir
+  writability, and `cap-evolve check` when run inside a project. `--json` for
+  machine-readable output; `run_doctor()`/`format_report()` are separate so other surfaces
+  can consume the structured report.
+
 ### Fixed
+- **Dashboard charts never rendered — 8 of 13 panels were absent from every generated
+  `dashboard.html` since `4c87ed1` (2026-06-17).** `ParentNode.append()` returns
+  `undefined`, so `el.append(svg(…)).textContent = x` threw a `TypeError` at *top level* of
+  the dashboard's single inline `<script>`, aborting it and every remaining IIFE: heatmap,
+  lineage, diffs, cost, evaluations, candidates and annotations were all missing (rendered
+  SVG `<text>` count: **0**). The `svg()` helper now accepts a `text:` pseudo-attribute —
+  mirroring the `$()` helper that has always handled `text`/`html` this way — and all 7
+  chained-append sites use it; a second latent throw (a dead no-op `addEventListener`
+  chained off `append`) is deleted. A new test executes the generated inline script under a
+  minimal DOM shim and asserts element counts, so a rendering failure inside any panel now
+  fails CI instead of passing on source-string panel titles.
+- **`install.sh` produced an install that could not run an optimizer.** The copy loop only
+  walked component *directories*, so `skills/optimizers/registry.yaml` — a plain file —
+  was never installed, and `run-optimizer/scripts/run.py` raises `FileNotFoundError` the
+  moment a run starts without it. Every stock install was in this state. `install.sh` now
+  copies it to `$DEST/optimizers/registry.yaml`, exactly where `run.py`'s parent-walk looks,
+  and `cap-evolve doctor` reports a missing registry as a **FAIL** (it was a WARN with
+  "run ./install.sh" as the fix — the command that produced the state) with a remediation
+  that actually works.
+- **`dashboard.redact` missed every credential without a recognizable shape.** It matched
+  `sk-…`/`Bearer …`/JWT/40+ char hex-base64/`KEY=value` only, so a watsonx key, a UUID
+  token or a GitHub PAT passed through. Adds `ghp_`/`github_pat_`/UUID shape rules and,
+  more importantly, a shape-*independent* pass that scrubs the literal values of this
+  process's secret-looking env vars. `cap-evolve doctor` additionally never echoes
+  third-party text (a user adapter's exception message) verbatim: it is redacted, bounded
+  to a short excerpt, and the full text is written to `.capevolve/project/doctor-check.log`
+  for local inspection instead of stdout.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the

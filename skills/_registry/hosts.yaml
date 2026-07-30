@@ -1,0 +1,143 @@
+# Per-host metadata — THE single source of truth for "which hosts cap-evolve claims,
+# where its skills go on each, and how well-attested that is" (issue #143).
+#
+# Before this file the same list lived in five places and drifted: install.sh's
+# `case` on --host, core/cap_evolve/doctor.py's _VERIFIED_HOST_DIRS, and the two
+# tables in docs/HOST_SUPPORT.md. `core/tests/test_host_parity.py` now fails the
+# build when any of them disagrees with this file, so a new host is one row here.
+#
+# FLOW STYLE FOR LISTS IS REQUIRED, NOT STYLISTIC. Write `aliases: [a, b]` inline —
+# never the block spelling:
+#     aliases:          # WRONG: parses as {} when PyYAML is absent
+#       - a
+# cap_evolve.specfile.read_yaml's stdlib fallback — the parser install.sh depends on,
+# because it resolves --host *before* `pip install ./core` has run — has no
+# block-sequence handling, so a block-spelled row silently empties on exactly the bare
+# host that fallback exists to serve. core/tests/test_stdlib_only.py asserts non-empty
+# aliases as that reader sees them, so a block-style row fails the build.
+#
+# Row schema (all scalars / flow-style lists, so the stdlib YAML reader in
+# cap_evolve.specfile parses it with no PyYAML present — see test_stdlib_only.py):
+#   aliases     : every `./install.sh --host <x>` spelling that maps to this row.
+#                 MUST match install.sh's case arms exactly.
+#   dest        : install destination, written with the literal $HOME / $PWD tokens
+#                 install.sh uses. MUST match install.sh's echoed path exactly.
+#   status      : verified | docs-checked | best-guess — the DESTINATION grade from
+#                 docs/HOST_SUPPORT.md's "Skill-install destinations" table.
+#                 `verified` requires an executing artifact (a CI job / test that
+#                 installs there and runs), cited in `evidence`. Nothing else.
+#   evidence    : what justifies `status`. Required when status is `verified`.
+#   display     : human display name for this host's UI.
+#   description : one-line description a host UI can show next to the skill suite.
+#   invoke      : the default invocation to show a user of this host.
+#
+# `display` / `description` / `invoke` are the per-host presentation metadata issue
+# #143 asked for; `dest` / `status` are what the parity guard checks.
+
+claude-code:
+  aliases: [claude, claude-code]
+  dest: "$HOME/.claude/skills"
+  status: verified
+  evidence: "ci/install_smoke.sh — installs via `./install.sh --host claude` into a temp $HOME and completes a zero-API toy_calc run from a cwd outside the repo, with $CAPEVOLVE_SKILLS_DIR unset so discovery goes through this mapping. Run by the `install-smoke` job in .github/workflows/ci.yml and by core/tests/test_install_smoke.py."
+  display: "cap-evolve (Claude Code)"
+  description: "Honest capability optimization: seeded splits, a significance gate, and a sealed test split."
+  invoke: "/cap-evolve:using-cap-evolve"
+
+codex:
+  aliases: [codex]
+  dest: "$HOME/.agents/skills"
+  status: docs-checked
+  evidence: "skills/optimizers/run-optimizer/references/codex.md (NOT ~/.codex). No job installs here."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+gemini-cli:
+  aliases: [gemini, gemini-cli]
+  dest: "$HOME/.gemini/extensions/cap-evolve/skills"
+  status: docs-checked
+  evidence: "skills/optimizers/run-optimizer/references/gemini-cli.md — skills live inside an extension, so this is deliberately NOT the registry's per-workdir skills_dir. No job installs here."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+opencode:
+  aliases: [opencode]
+  dest: "$HOME/.config/opencode/skills"
+  status: docs-checked
+  evidence: "skills/optimizers/run-optimizer/references/opencode.md — also reads .claude/skills natively. No job installs here."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+ibm-bob:
+  aliases: [bob, ibm-bob]
+  dest: "$HOME/.bob/skills"
+  status: docs-checked
+  evidence: "skills/optimizers/run-optimizer/references/ibm-bob.md. Bob has no SKILL.md concept, so treat placement as advisory. No job installs here."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+openclaw:
+  aliases: [openclaw]
+  dest: "$HOME/.openclaw/workspace/skills"
+  status: best-guess
+  evidence: "references/openclaw.md states the native skill mechanism is UNVERIFIED; the registry leaves skills_dir blank. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+cursor:
+  aliases: [cursor]
+  dest: "$PWD/.cursor/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; references/cursor.md documents the flags. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+droid:
+  aliases: [droid, factory, factory-droid]
+  dest: "$HOME/.factory/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; no skills_dir in the registry (skills are not auto-discovered). Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+copilot:
+  aliases: [copilot, github-copilot]
+  dest: "$HOME/.copilot/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; no skills_dir. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+kimi:
+  aliases: [kimi, kimi-code]
+  dest: "$HOME/.kimi/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; references/kimi.md also calls the API-key env var unverified. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+pi:
+  aliases: [pi]
+  dest: "$HOME/.pi/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; no skills_dir. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"
+
+antigravity:
+  aliases: [antigravity, agy]
+  dest: "$HOME/.antigravity/skills"
+  status: best-guess
+  evidence: "Dotdir convention only; references/antigravity.md marks the headless invocation best-guess. Pass --dest."
+  display: "cap-evolve"
+  description: "Honest capability optimization with a sealed test split."
+  invoke: "Read RUN.md, then: cap-evolve run --spec .capevolve/project/capevolve.yaml"

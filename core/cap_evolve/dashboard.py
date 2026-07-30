@@ -80,7 +80,27 @@ _SECRET_VALUE_RES = [
     re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{6,}\b"),  # JWT
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),  # long base64
     re.compile(r"\b[0-9a-fA-F]{40,}\b"),          # long hex
+    # GitHub PATs (classic + fine-grained) and UUID-shaped tokens — both are common
+    # credential shapes that the length-based rules above miss.
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+               r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"),
 ]
+
+
+def _env_secret_values() -> list[str]:
+    """The actual VALUES of secret-looking env vars in this process.
+
+    Shape matching is a heuristic and always will be: a watsonx key, an opaque
+    session id or a bare high-entropy string has no recognizable shape. What we do
+    know for certain is the credential material this process was handed, so scrub
+    that literally — the only shape-independent defense. Longest first so a value
+    that contains another isn't half-masked.
+    """
+    vals = {v for k, v in os.environ.items()
+            if v and len(v) >= 6 and _key_is_secret(k)}
+    return sorted(vals, key=len, reverse=True)
 
 # KEY=secret / KEY: secret inside prose — mask the value, keep the key name so the
 # message still reads ("RITS_API_KEY=«redacted»"). Two groups: (prefix)(value).
@@ -100,6 +120,10 @@ def _scrub_value(val: str) -> str:
     out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, val)
     for rx in _SECRET_VALUE_RES:
         out = rx.sub(_REDACTED, out)
+    # Shape-independent pass: literal credential values from this environment.
+    for secret in _env_secret_values():
+        if secret in out:
+            out = out.replace(secret, _REDACTED)
     return out
 
 
@@ -885,7 +909,11 @@ const $ = (t,a={},...k)=>{const e=document.createElement(t);for(const[p,v]of Obj
   if(p==='html')e.innerHTML=v;else if(p==='text')e.textContent=v;else e.setAttribute(p,v);}
   for(const c of k)if(c!=null)e.append(c);return e;};
 const NS='http://www.w3.org/2000/svg';
-const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Object.entries(a))e.setAttribute(p,v);return e;};
+// `text` is a pseudo-attribute: SVG has no textContent attribute, and
+// ParentNode.append() returns undefined, so chaining a .textContent assignment
+// off an append() call would throw and kill every chart on the page.
+const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Object.entries(a)){
+  if(p==='text')e.textContent=v;else e.setAttribute(p,v);}return e;};
 const fmt=v=>v==null?'—':(+v).toFixed(3);
 const main=document.getElementById('main'), tip=document.getElementById('tip');
 document.getElementById('hdr').textContent =
@@ -982,7 +1010,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
   for(let g2=0;g2<=4;g2++){const v=vmin+(vmax-vmin)*g2/4;
     el.append(svg('line',{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:'#2b333d','stroke-width':1}));
-    el.append(svg('text',{x:6,y:Y(v)+4,fill:'#8b949e','font-size':10,'text-content':''})).textContent=v.toFixed(2);}
+    el.append(svg('text',{x:6,y:Y(v)+4,fill:'#8b949e','font-size':10,text:v.toFixed(2)}));}
   // stair polyline of running best
   let d='';let prevY=null;
   pts.forEach((p,i)=>{const x=X(p.iteration),y=Y(p.best_so_far);
@@ -1003,7 +1031,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const champ=pts.reduce((a,b)=>(b.best_so_far>=a.best_so_far?b:a),pts[0]);
   const cx=X(champ.iteration),cy=Y(champ.best_so_far);
   el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'#f0d040',stroke:'#0e1116'}));
-  el.append(svg('text',{x:cx+10,y:cy-8,fill:'#e6edf3','font-size':12})).textContent=fmt(champ.best_so_far);
+  el.append(svg('text',{x:cx+10,y:cy-8,fill:'#e6edf3','font-size':12,text:fmt(champ.best_so_far)}));
   s.append(el);
   s.append($('div',{class:'legend',html:
     '<span><i style="background:#3fb950"></i>running best / accept</span>'+
@@ -1026,9 +1054,9 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const cw=Math.max(10,Math.min(26,Math.floor(1000/iters.length))),ch=16,labW=120;
   const W=labW+iters.length*cw+10,H=rows.length*ch+24;
   const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,class:'heat'});
-  iters.forEach((it,j)=>{el.append(svg('text',{x:labW+j*cw+cw/2,y:12,'text-anchor':'middle'})).textContent=it.iteration;});
+  iters.forEach((it,j)=>{el.append(svg('text',{x:labW+j*cw+cw/2,y:12,'text-anchor':'middle',text:it.iteration}));});
   rows.forEach((t,i)=>{
-    el.append(svg('text',{x:labW-6,y:24+i*ch+11,'text-anchor':'end'})).textContent=t.length>16?t.slice(0,15)+'…':t;
+    el.append(svg('text',{x:labW-6,y:24+i*ch+11,'text-anchor':'end',text:t.length>16?t.slice(0,15)+'…':t}));
     iters.forEach((it,j)=>{
       const v=it.per_task[t];
       const col=v==null?'#21262d':v>=0.999?'#2ea043':v<=0.001?'#7d2622':'#9e6a1a';
@@ -1108,7 +1136,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
       stroke:spine.has(n.id)?'#f0d040':'#0e1116','stroke-width':spine.has(n.id)?2:1});
     c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
     c.addEventListener('mouseleave',hideTip); el.append(c);
-    el.append(svg('text',{x:p.x+12,y:p.y+4,fill:'#8b949e','font-size':10})).textContent=n.id;
+    el.append(svg('text',{x:p.x+12,y:p.y+4,fill:'#8b949e','font-size':10,text:n.id}));
   });
   s.append(el);
   s.append($('div',{class:'legend',html:'<span><i style="background:#f0d040"></i>best lineage spine</span>'+
@@ -1129,7 +1157,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   pts.forEach((p,i)=>{const x=m.l+i*((W-m.l-m.r)/n)+3;
     const os=(p.optimizer_seconds||0)/maxSec*(H-m.t-m.b);
     const rs=(p.runner_seconds||0)/maxSec*(H-m.t-m.b);
-    el.append(svg('rect',{x,y:H-m.b-rs,width:bw,height:rs,fill:'#3fb950'})).addEventListener('mousemove',()=>{});
+    el.append(svg('rect',{x,y:H-m.b-rs,width:bw,height:rs,fill:'#3fb950'}));
     el.append(svg('rect',{x,y:H-m.b-rs-os,width:bw,height:os,fill:'#4493f8'}));
     const bar=svg('rect',{x,y:m.t,width:bw,height:H-m.t-m.b,fill:'transparent'});
     bar.addEventListener('mousemove',e=>showTip(e,`${p.id} · iter ${p.iteration}\nopt ${(p.optimizer_seconds||0).toFixed(2)}s · run ${(p.runner_seconds||0).toFixed(2)}s\n$${(p.cost_usd||0).toFixed(4)} · ${p.tokens||0} tok`));
@@ -1157,7 +1185,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
   let d='';xy.forEach((p,i)=>d+=(i?' L':'M')+X(p[0])+','+Y(p[1]));
   el.append(svg('path',{d,fill:'none',stroke:'#4493f8','stroke-width':2}));
-  el.append(svg('text',{x:W-m.r,y:H-8,fill:'#8b949e','font-size':10,'text-anchor':'end'})).textContent=`$${xmax.toFixed(4)} total`;
+  el.append(svg('text',{x:W-m.r,y:H-8,fill:'#8b949e','font-size':10,'text-anchor':'end',text:`$${xmax.toFixed(4)} total`}));
   s.append(el);
 })();
 
