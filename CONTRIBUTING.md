@@ -28,7 +28,18 @@ See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
 - **Honesty lives only in `core/cap_evolve`** — never fork splits/gate/seal
   into a skill. Gate on val, seal test, report variance.
 - **Skills stay host-agnostic.** `scripts/run.py` must print a single JSON object
-  to stdout (the contract), and must not depend on a specific agent host.
+  to stdout (the contract), and must not depend on a specific agent host. Likewise
+  `cap-evolve run`: stdout is exactly one JSON object, human progress goes to stderr.
+  Two audited exceptions, both deliberate and neither reachable from `cap-evolve run`:
+  - `report --terminal` prints an ANSI report *instead of* the JSON summary — that is
+    the flag's documented purpose, and `cap-evolve run` never passes it.
+  - `finalize` on an already-sealed run raises `TestSealError` (exit 1, stdout empty)
+    rather than a JSON error object. The seal must not be re-burnable; `cap-evolve run`
+    guards it on `--resume`.
+
+  Error payloads on the failure paths *are* single JSON objects on stdout (then exit 1),
+  so the "exactly one JSON object" contract holds on both success and failure — that is
+  the contract this repo means, and it is what `json.loads(stdout)` relies on.
 - **Zero runtime deps in core.** Optional features go behind extras.
 - Add a test for any core change (`core/tests/`). Run `python -m compileall core skills`.
 

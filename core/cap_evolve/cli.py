@@ -5,12 +5,25 @@ manifest) and runs their ``scripts/run.py`` in the order a ``capevolve.yaml`` sp
 declares, threading the run dir between them. The honesty guarantees live in
 ``cap_evolve`` (splits/gate/seal); ``cap-evolve`` just orchestrates.
 
-Subcommands:
-    cap-evolve version
-    cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
-    cap-evolve check   [project_dir]
-    cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
-                       [--resume [--run-ts TS]]  resume an interrupted run in place
+The subcommand list is ``COMMANDS`` and nothing else — `cap-evolve --help` renders it
+from there plus each handler's docstring, and each handler owns its own ``--help``.
+There is deliberately no second copy of the list here or in ``main()``: five parallel
+branches adding subcommands all conflicted on that literal usage string (#137).
+
+``intake``/``baseline``/``finalize``/``report`` are phase SKILLS, not subcommands —
+run their ``scripts/run.py`` directly (``cap-evolve <phase>`` says so and exits 2, with
+that script's real required flags — see ``_PHASE_SCRIPTS``).
+
+Exit codes: 0 success (and ``--help``/``--version``), 1 a reported failure (a JSON error
+object on stdout), 2 misuse — no args, unknown command, or an argparse error.
+
+MERGE NOTE for #116/#118 (``cap-evolve tail``): the exit-code prose that used to live in
+this docstring's literal subcommand list must be re-homed into ``_cmd_tail``'s own
+docstring/epilog when that branch lands, not dropped. Verbatim, so it is not lost:
+
+    exit 0 = run finished OR still working — do NOT branch on 0 to mean "finished";
+    2 = not a possible run dir; 3 = --idle-timeout elapsed with no events and nothing
+    provably dead; 4 = STALLED, 5 = CRASHED.
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -45,19 +58,40 @@ def _find_skills_dir() -> Path | None:
     return None
 
 
+def _parser(cmd: str, description: str, examples: str):
+    """An argparse parser wired for `cap-evolve <cmd> --help` with examples.
+
+    Every subcommand builds its parser through here so `--help` is uniform and can
+    never drift from the top-level listing (which reads the same docstrings).
+    """
+    import argparse
+    return argparse.ArgumentParser(
+        prog=f"cap-evolve {cmd}", description=description,
+        epilog="examples:\n" + examples,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+
+
 def _cmd_version(argv):
+    """Print the installed cap-evolve version as JSON."""
+    _parser("version", _cmd_version.__doc__, "  cap-evolve version").parse_args(argv)
     print(json.dumps({"cap-evolve": __version__}))
     return 0
 
 
 def _cmd_splits(argv):
+    """Compute the seeded train/val/test split for a set of task ids."""
     from .__main__ import _cmd_splits as f
-    return f(argv)
+    return f(argv, prog="cap-evolve splits")
 
 
 def _cmd_check(argv):
-    project = Path(argv[0]) if argv else Path(".capevolve/project")
-    rep = run_check(project)
+    """Verify a project's adapter is fully implemented and deterministic."""
+    p = _parser("check", _cmd_check.__doc__,
+                "  cap-evolve check\n  cap-evolve check path/to/.capevolve/project")
+    p.add_argument("project", nargs="?", default=".capevolve/project",
+                   help="project dir (default: .capevolve/project)")
+    args = p.parse_args(argv)
+    rep = run_check(Path(args.project))
     print(json.dumps(rep.to_dict(), indent=2))
     return 0 if rep.ok else 1
 
@@ -95,18 +129,30 @@ def _resolve_skills(skills_dir: Path) -> dict:
 
 
 def _cmd_run(argv):
-    import argparse
+    """Sequence the whole optimization run: baseline → algorithm → finalize → report.
+
+    Prints a single JSON object on stdout (the final report); human progress goes to
+    stderr, so `cap-evolve run > out.json` stays machine-readable.
+    """
     import subprocess
     from .specfile import read_yaml
 
-    p = argparse.ArgumentParser(prog="cap-evolve run")
-    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml")
-    p.add_argument("--project", default=".capevolve/project")
-    p.add_argument("--skills-dir", default=None)
+    p = _parser("run", _cmd_run.__doc__,
+                "  cap-evolve run --spec .capevolve/project/capevolve.yaml\n"
+                "  cap-evolve run --plan-only          # show the plan, spend nothing\n"
+                "  cap-evolve run --dry-run            # pre-run cost estimate\n"
+                "  cap-evolve run --resume --max-iterations 20")
+    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml",
+                   help="run spec YAML (default: .capevolve/project/capevolve.yaml)")
+    p.add_argument("--project", default=".capevolve/project",
+                   help="project dir (default: .capevolve/project)")
+    p.add_argument("--skills-dir", default=None,
+                   help="skills dir (default: $CAPEVOLVE_SKILLS_DIR or auto-discovered)")
     p.add_argument("--plan-only", action="store_true", help="print the command plan, don't execute")
     p.add_argument("--dry-run", action="store_true",
                    help="print a pre-run cost estimate (call counts + $ range) and exit")
-    p.add_argument("--run-ts", default=None)
+    p.add_argument("--run-ts", default=None,
+                   help="run timestamp to create/reopen (default: now, or latest with --resume)")
     p.add_argument("--resume", action="store_true",
                    help="continue an interrupted run from its last completed state instead "
                         "of starting fresh: reopens the run dir (--run-ts, else the latest "
@@ -117,17 +163,36 @@ def _cmd_run(argv):
                         "and skip the baseline eval")
     # Budget overrides — when set, take precedence over the spec's values. Defaults
     # are None so "not passed" is distinguishable from an explicit 0 (= unlimited).
-    p.add_argument("--max-iterations", type=int, default=None)
-    p.add_argument("--max-metric-calls", type=int, default=None)
-    p.add_argument("--max-usd", type=float, default=None)
-    p.add_argument("--max-optimizer-usd", type=float, default=None)
-    p.add_argument("--stall", type=int, default=None)
+    p.add_argument("--max-iterations", type=int, default=None,
+                   help="override the spec's iteration cap (0 = unlimited)")
+    p.add_argument("--max-metric-calls", type=int, default=None,
+                   help="override the spec's metric-call cap (0 = unlimited)")
+    p.add_argument("--max-usd", type=float, default=None,
+                   help="override the spec's cumulative runner $ cap (0 = unlimited)")
+    p.add_argument("--max-optimizer-usd", type=float, default=None,
+                   help="override the spec's cumulative optimizer $ cap (0 = unlimited)")
+    p.add_argument("--stall", type=int, default=None,
+                   help="stop after N iterations with no accepted improvement (0 = off)")
     p.add_argument("--optimizer-max-turns", type=int, default=None,
                    help="per-iteration cap passed to the optimizer agent CLI (e.g. claude --max-turns)")
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
     args = p.parse_args(argv)
+    # Validation before anything is spent: a negative budget is a typo, not "unlimited"
+    # (0 means unlimited), and silently accepting it would make the cap never bind.
+    for flag in ("max_iterations", "max_metric_calls", "max_usd", "max_optimizer_usd",
+                 "stall", "optimizer_max_turns"):
+        v = getattr(args, flag)
+        if v is not None and v < 0:
+            p.error(f"--{flag.replace('_', '-')} must be >= 0 (0 = unlimited), got {v}")
+    # --dashboard-port is NOT a "0 = unlimited" flag: it's a TCP port, so it wants a
+    # range check. Without it, a negative value reached `bind()` as an uncaught
+    # OverflowError — and because maybe_launch() runs before the --plan-only early
+    # return, even a spend-nothing preview crashed. Validating here (before any launch)
+    # keeps --plan-only usable for a bad-port invocation. #137 review N2.
+    if args.dashboard_port is not None and not 1 <= args.dashboard_port <= 65535:
+        p.error(f"--dashboard-port must be 1-65535, got {args.dashboard_port}")
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
     if not skills_dir:
@@ -177,7 +242,10 @@ def _cmd_run(argv):
     if dash_mode == "auto":
         status = dashboard_launch.maybe_launch(
             proj_abs.parent, mode=dash_mode, port=dash_port, open_browser=True)
-        print(json.dumps(status))
+        # STDERR: stdout is the machine-readable contract — exactly ONE JSON object (the
+        # final report). This progress line used to go to stdout, so `cap-evolve run |
+        # json.loads` raised "Extra data" whenever the dashboard was launched or skipped.
+        print(json.dumps(status), file=sys.stderr)
     cap_path = spec.get("capability_path", "seed_capability")
     ratios = f"{spec.get('split_train',0.5)},{spec.get('split_val',0.25)},{spec.get('split_test',0.25)}"
 
@@ -441,12 +509,14 @@ def _cmd_run(argv):
 
 def _cmd_dashboard(argv):
     """Launch (or focus) the live dashboard server over a base dir of runs."""
-    import argparse
     from . import dashboard_launch
 
-    p = argparse.ArgumentParser(prog="cap-evolve dashboard")
+    p = _parser("dashboard", _cmd_dashboard.__doc__,
+                "  cap-evolve dashboard\n"
+                "  cap-evolve dashboard --base .capevolve --port 7879 --no-open")
     p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
-    p.add_argument("--port", type=int, default=dashboard_launch.DEFAULT_PORT)
+    p.add_argument("--port", type=int, default=dashboard_launch.DEFAULT_PORT,
+                   help=f"server port (default: {dashboard_launch.DEFAULT_PORT})")
     p.add_argument("--no-open", action="store_true", help="don't open a browser")
     args = p.parse_args(argv)
 
@@ -598,12 +668,15 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
 
 def _cmd_estimate(argv):
     """Pre-run cost estimate without spending anything."""
-    import argparse
     from .specfile import read_yaml
 
-    p = argparse.ArgumentParser(prog="cap-evolve estimate")
-    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml")
-    p.add_argument("--project", default=".capevolve/project")
+    p = _parser("estimate", _cmd_estimate.__doc__,
+                "  cap-evolve estimate\n"
+                "  cap-evolve estimate --price-in 3 --price-out 15")
+    p.add_argument("--spec", default=".capevolve/project/capevolve.yaml",
+                   help="run spec YAML (default: .capevolve/project/capevolve.yaml)")
+    p.add_argument("--project", default=".capevolve/project",
+                   help="project dir (default: .capevolve/project)")
     p.add_argument("--price-in", type=float, default=None, help="optimizer/runner input $/MTok")
     p.add_argument("--price-out", type=float, default=None, help="optimizer/runner output $/MTok")
     args = p.parse_args(argv)
@@ -621,15 +694,106 @@ COMMANDS = {
     "dashboard": _cmd_dashboard,
 }
 
+# Phase steps that are NOT cap-evolve subcommands: they are skill scripts run via
+# `python <skills>/phases/<name>/scripts/run.py`. Docs and five algorithm SKILL.mds used
+# to say `cap-evolve finalize` (issue #203); typing it now gets the real command back
+# instead of a bare "unknown command".
+# The value is the script's REQUIRED argparse flags. A fixed `--run-dir <dir>` template
+# was wrong for 5 of the 8 (#137 review B1): `finalize` also needs `--project`, and
+# `intake`/`implement-and-check`/`gate` reject `--run-dir` outright. A confidently WRONG
+# remediation at the SEAL step is worse than a bare "unknown command" — the agent runs
+# it, fails differently, and stops trusting the tool after the budget is spent.
+# `test_phase_redirect_commands_are_runnable` executes every rendered command against a
+# real run dir, so these cannot drift from the scripts' own argparse.
+_PHASE_SCRIPTS = {
+    "intake": "",
+    "implement-and-check": "",
+    "baseline": "--project <project> --capability <seed_capability>",
+    "diagnose": "--run-dir <dir>",
+    "evaluate": "--run-dir <dir> --project <project> --candidate <id>",
+    "gate": "--current <val> --candidate <val>",
+    "finalize": "--run-dir <dir> --project <project>",
+    "report": "--run-dir <dir>",
+}
+
+
+def _did_you_mean(name: str) -> str:
+    """The 'unknown command' body: closest subcommand, or the real phase-script path."""
+    import difflib
+
+    if name in _PHASE_SCRIPTS:
+        script = f"python $CAPEVOLVE_SKILLS_DIR/phases/{name}/scripts/run.py"
+        flags = _PHASE_SCRIPTS[name]
+        return (f"{name!r} is a phase SKILL, not a cap-evolve subcommand — run it as\n"
+                f"  {script}{' ' + flags if flags else ''}\n"
+                f"  ({script} --help for all flags; phases/{name}/SKILL.md for context)")
+    near = difflib.get_close_matches(name, COMMANDS, n=3, cutoff=0.6)
+    hint = f"did you mean: {', '.join(near)}?\n" if near else ""
+    return hint + f"available commands: {', '.join(COMMANDS)}"
+
+
+def _usage() -> str:
+    """Top-level help, generated from each subcommand's own docstring (can't drift)."""
+    width = max(len(c) for c in COMMANDS)
+    lines = [f"usage: cap-evolve {{{'|'.join(COMMANDS)}}} [args]", "",
+             "commands:"]
+    for name, fn in COMMANDS.items():
+        # A handler that only delegates (e.g. `doctor` → doctor._main) has no docstring
+        # of its own; the fallback keeps the listing from showing a blank row, so a new
+        # subcommand can be registered with one COMMANDS line and still read well.
+        # `next(iter(...))` not `[0]`: a whitespace-only docstring is truthy but strips
+        # to "" whose splitlines() is empty, so indexing raised IndexError and took down
+        # EVERY invocation including --help (only on <3.13, where __doc__ keeps the
+        # whitespace). requires-python is >=3.10, so that's a real crash. #137 review N1.
+        one_line = next(iter((fn.__doc__ or "").strip().splitlines()),
+                        f"see `cap-evolve {name} --help`")
+        lines.append(f"  {name:<{width}}  {one_line}")
+    lines += ["", "run `cap-evolve <command> --help` for a command's flags and examples."]
+    return "\n".join(lines)
+
+
+def _harden_utf8() -> None:
+    """Make **stdout** survive a non-UTF-8 locale (LC_ALL=C, PYTHONIOENCODING=ascii).
+
+    stdout is opened ``strict``, so a bad write there DOES raise: the generated help
+    listing carries ``→`` from ``_cmd_run``'s docstring, and reports carry ✓/Δ/CJK task
+    text, all of which would kill a run that had already spent money. Reconfigure to
+    UTF-8 where possible, else fall back to replacing the unencodable glyph — a mangled
+    arrow is strictly better than a crash.
+
+    **stderr is deliberately left alone.** CPython already opens it
+    ``errors="backslashreplace"`` so it can never raise, and #144's TUI ladder owns it:
+    ``eventstream._encodable()`` pre-checks ``stderr.encoding`` to decide whether to
+    transliterate (``±`` → ``+/-``). Reconfiguring it here would make that check see
+    "utf-8" under an ASCII terminal, skip the transliteration, and ship raw mojibake
+    (#215 / #137 review B2). ponytail: CLI-level guard only, stdout only.
+    """
+    for stream in (sys.stdout,):
+        enc = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        if enc in ("utf8", "utf8mb4") or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except Exception:  # noqa: BLE001 — a non-reconfigurable stream (pytest capture)
+            try:
+                stream.reconfigure(errors="backslashreplace")
+            except Exception:  # noqa: BLE001
+                pass
+
 
 def main(argv=None) -> int:
+    _harden_utf8()
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
-        return 0 if argv else 2
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        # No args is a usage ERROR (exit 2); an explicit --help is a successful request.
+        print(_usage(), file=sys.stderr if not argv else sys.stdout)
+        return 2 if not argv else 0
+    if argv[0] in ("-V", "--version"):
+        return _cmd_version([])
     fn = COMMANDS.get(argv[0])
     if fn is None:
-        print(f"unknown command: {argv[0]}", file=sys.stderr)
+        print(f"cap-evolve: unknown command {argv[0]!r}\n{_did_you_mean(argv[0])}",
+              file=sys.stderr)
         return 2
     return fn(argv[1:])
 
