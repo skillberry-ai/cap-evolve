@@ -25,11 +25,18 @@ const fmtElapsed = (ms) => {
 async function loadRunning() {
   const panel = $("#running-now");
   try {
-    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?status=in_progress&per_page=20`);
+    // No status filter: benchmarks.yml's bench job is a 6-way matrix (tier × bench) that
+    // all queue on the single self-hosted runner, so GitHub reports the *run's* top-level
+    // status as "queued" for as long as any leg hasn't started yet — even while other legs
+    // are actively in_progress. Filtering the run list to status=in_progress would miss
+    // that almost entirely; fetch recent runs instead and let the per-job check below be
+    // the real gate on what's actually running.
+    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?per_page=5`);
     if (!runsResp.ok) throw new Error(String(runsResp.status));
     const { workflow_runs: runs } = await runsResp.json();
+    const active = (runs || []).filter((r) => r.status === "in_progress" || r.status === "queued");
     const items = [];
-    for (const run of runs || []) {
+    for (const run of active) {
       const jobsResp = await fetch(`${GH_API}/actions/runs/${run.id}/jobs`);
       if (!jobsResp.ok) continue;
       const { jobs } = await jobsResp.json();
