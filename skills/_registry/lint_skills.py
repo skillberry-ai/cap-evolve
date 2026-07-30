@@ -15,12 +15,17 @@ Two deliberate differences from the shipped `validate()`:
    Description *style* heuristics (POV, all-caps, "say WHEN", truncation risk) stay
    advisory — they are judgement calls, not measurable violations.
 2. **Empty template placeholders fail** (CONTRIBUTING's "only when filled" rule):
-   a reference file that is a stub or still carries TODO/TBD/FIXME scaffolding.
+   a `references/*.md` file that is a stub or still carries TODO/TBD/FIXME
+   scaffolding. Scoped to references on purpose: `XXX` appears legitimately in four
+   SKILL.md bodies (`run_XXXX` in example commands), so scanning bodies would be
+   noise. A SKILL.md body is NOT placeholder-checked.
 
 Discovery is dynamic (a glob, never a committed list) so a NEW skill is linted the
-day it lands. `MIN_SKILLS` is the anti-vacuity guard: a renamed/deleted skill dir
-makes the glob return fewer packages and the lint fails loudly instead of silently
-shrinking its own coverage.
+day it lands. The anti-vacuity guard cross-checks that glob against the committed
+`manifest.json` — two independent views of the same tree that must agree — so a
+rename/move/deletion fails loudly even when an addition in the same commit keeps the
+total unchanged. CI pins the manifest itself with `git diff --exit-code`, so neither
+side can drift unreviewed and there is no magic floor anyone must remember to bump.
 
 Usage: python skills/_registry/lint_skills.py [skills_root]
 """
@@ -28,14 +33,10 @@ Usage: python skills/_registry/lint_skills.py [skills_root]
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
-
-# Anti-vacuity floor: the repo has 20 skill packages today. Fewer means the glob
-# stopped seeing something — a rename, a move, a deletion — and coverage silently
-# dropped. Raise this when skills are added; never lower it to make CI pass.
-MIN_SKILLS = 20
 
 # `validate()` warnings that are objectively measurable authoring violations, keyed
 # by a stable fragment of the message. Anything not matched here stays advisory.
@@ -61,6 +62,25 @@ def _load_validator(skills_root: Path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _manifest_drift(skills_root: Path) -> str:
+    """Anti-vacuity: the glob and the committed manifest are two independent views of
+    the same tree and must agree. A floor (`n < 20`) misses rename-away + add-new in
+    one commit; comparing the PATH SETS catches it, and needs no magic number."""
+    manifest = skills_root / "_registry" / "manifest.json"
+    if not manifest.is_file():
+        return f"the committed manifest is missing at {manifest}"
+    listed = {s["path"] for s in
+              json.loads(manifest.read_text(encoding="utf-8"))["skills"].values()}
+    found = {p.parent.relative_to(skills_root).as_posix()
+             for p in skills_root.glob("*/*/SKILL.md")}
+    if found == listed:
+        return ""
+    return (f"{len(found)} skill package(s) on disk do not match the {len(listed)} in "
+            f"manifest.json — on disk only: {sorted(found - listed) or 'none'}; in "
+            f"manifest only: {sorted(listed - found) or 'none'}. A skill was "
+            f"renamed/moved/removed; rebuild the manifest and re-review coverage")
 
 
 def _placeholder_errors(skill_dir: Path) -> list[str]:
@@ -116,10 +136,9 @@ def main(argv: list[str]) -> int:
         for a in advisories[key]:
             print(f"  advise  {key}: {a}")
 
-    if n < MIN_SKILLS:
-        print(f"  ERROR   discovery: found {n} skill packages, expected at least "
-              f"{MIN_SKILLS} — a skill was renamed/removed and lint coverage "
-              f"silently dropped")
+    drift = _manifest_drift(root)
+    if drift:
+        print(f"  ERROR   discovery: {drift}")
         return 1
     if errors:
         print(f"FAIL — {sum(len(v) for v in errors.values())} authoring violation(s) "

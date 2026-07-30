@@ -1,5 +1,23 @@
 # Examples — worked tool edits
 
+- [0. Turning N prose rules into N in-body checks (the DEFAULT edit)](#0-turning-n-prose-rules-into-n-in-body-checks-the-default-edit)
+- [1. Selection fix — sharpen a vague description](#1-selection-fix--sharpen-a-vague-description)
+- [2. Argument-filling fix — close the value set with an enum](#2-argument-filling-fix--close-the-value-set-with-an-enum)
+- [3. Collapse a fumbled chain — compose](#3-collapse-a-fumbled-chain--compose)
+- [3b. Collapse repeated primitive calls — a loop-in-one-call tool](#3b-collapse-repeated-primitive-calls--a-loop-in-one-call-tool)
+- [3c. Validation / rule-enforcement tool](#3c-validation--rule-enforcement-tool--wrap-then-delegate-then-remove-the-primitive)
+- [3c-bis. Validate-and-normalize inputs before a primitive](#3c-bis-validate-and-normalize-inputs-before-a-primitive)
+- [3c-ter. Wrong ARGUMENT the tool could validate](#3c-ter-wrong-argument-the-tool-could-validate--resolvevalidate-against-state-return-available)
+- [3c-quater. A required action abandoned via bail-out](#3c-quater-a-required-eligible-action-abandoned-via-bail-out--escalation--encapsulate-the-batch-as-a-composite-write)
+- [3e. Make a STALLED action un-skippable](#3e-make-a-stalled-action-un-skippable--a-composite-write-tool-then-remove-the-primitives)
+- [3d. Keep failure modes — improve, do not delete](#3d-keep-failure-modes--improve-do-not-delete-raises)
+- [3f. Shape the result](#3f-shape-the-result--high-signal-fields-readable-ids-actionable-errors)
+- [3g. A comprehensively documented tool (the doc contract)](#3g-a-comprehensively-documented-tool-the-doc-contract)
+- [4. Shrink an overlapping toolset — remove + consolidate](#4-shrink-an-overlapping-toolset--remove--consolidate)
+- [5. Behavior bug — code edit](#5-behavior-bug--code-edit)
+- [6. A policy refusal (what tightening looks like)](#6-a-policy-refusal-what-tightening-looks-like)
+- [7. SECONDARY (last resort) — a passthrough / reasoning-only tool](#7-secondary-last-resort--a-passthrough--reasoning-only-tool)
+
 Each example is an edit you would emit to `apply()`. Edit shape:
 `{"tool": <name>, "kind": <action>, "value": <...>}`. For `add`/`compose` the
 value is a full tool def; for `remove` the value is ignored.

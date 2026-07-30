@@ -43,7 +43,8 @@ and never re-add a rule/tool the run already tried and rejected.
 **Per-change SAFETY (the rule that makes multi-change work).** Scope every guard to
 fire ONLY on the exact violating condition, and check its blast radius: run it on the
 args of 1–2 currently-PASSING tasks that use the same tool and confirm it does NOT
-fire. A guard that fires on a passing task is a regression — rescope or drop it.
+fire. A guard that fires on a passing task is a regression — rescope or drop it. This
+is how you ship many changes without net-zero churn.
 
 **Generalize, never hardcode.** A guard must fire on the GENERAL condition that
 defines the failure class, never on a literal value from one task. *Good:* `if

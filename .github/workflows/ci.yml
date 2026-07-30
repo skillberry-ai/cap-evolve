@@ -10,7 +10,7 @@
 #   4. docs-links      — checks relative links/images in Markdown resolve (offline)
 #   5. spellcheck      — codespell over README + docs
 #   6. lint-skills     — dogfoods the skill-package authoring lint on our OWN skills
-#                        (skills/*/*/SKILL.md) + rebuilds the registry manifest
+#                        (skills/*/*/SKILL.md) + fails on a stale registry manifest
 #
 # No shared-workflow delegation needed: this is repo-specific CI.
 # ============================================================================
@@ -137,11 +137,17 @@ jobs:
 
       # The bar cap-evolve ships to users (skill-package/scripts/abstract.py) applied
       # to cap-evolve's own bundled skills. Discovery is a glob, so a NEW skill is
-      # linted the day it lands, and MIN_SKILLS fails loudly if one vanishes.
+      # linted the day it lands, and the glob is cross-checked against the committed
+      # manifest so a rename fails loudly even when an addition balances the total.
       - name: Lint every bundled SKILL.md against the authoring bar
         run: python skills/_registry/lint_skills.py skills
 
-      - name: Rebuild the skill registry manifest
-        run: python skills/_registry/build_manifest.py skills
+      # `git diff --exit-code` is the point: build_manifest.py WRITES the file, so
+      # without it a stale committed manifest is silently erased instead of flagged —
+      # and the lint's coverage check reads that manifest, so it must be pinned here.
+      - name: Check the committed skill registry manifest is not stale
+        run: |
+          python skills/_registry/build_manifest.py skills
+          git diff --exit-code skills/_registry/manifest.json
 
 # Made with Bob
