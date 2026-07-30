@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Minus } from 'lucide-react'
 import type { RunDetail } from '../lib/types'
 import { derivePhases, type PhaseStep } from '../lib/phases'
 import { fadeUpItem, staggerContainer } from '../lib/motion'
@@ -67,6 +67,13 @@ function Marker({ status, index }: { status: PhaseStep['status']; index: number 
     return (
       <span className={cn(base, 'bg-primary/20 text-primary')} aria-label="active">
         <Loader2 size={14} className="animate-spin" />
+      </span>
+    )
+  if (status === 'skipped')
+    // Past this stage but it logged nothing — say "skipped", never "pending".
+    return (
+      <span className={cn(base, 'bg-surface-2 text-muted')} aria-label="skipped">
+        <Minus size={14} />
       </span>
     )
   return <span className={cn(base, 'bg-surface-2 text-muted')}>{index}</span>

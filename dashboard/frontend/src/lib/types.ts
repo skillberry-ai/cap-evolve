@@ -80,12 +80,48 @@ export interface RunGraph {
   best_id: string | null
 }
 
+/** One stage of the cap-evolve pipeline, as detected from events.jsonl by
+ * `dashboard.derive_pipeline` (#138). `status` is monotone: done once a later phase
+ * started, active for the latest started phase, pending otherwise. */
+export interface PipelinePhase {
+  key: string
+  label: string
+  status: 'done' | 'active' | 'skipped' | 'pending'
+  detail: string
+  started_at: number | null
+  index: number
+}
+
+/** Live spend. `source: 'spent'` means these are state.json's authoritative Spent
+ * totals (the same numbers the KPI strip and the budget check use); `'events'` means
+ * they were accumulated from the event log by `eventstream.accrue_totals` because the
+ * run has not written a Spent yet. Either way each dollar is counted exactly once. */
+export interface Burn {
+  usd: number
+  tokens: number
+  elapsed_seconds: number
+  usd_per_min: number | null
+  tokens_per_min: number | null
+  source: 'spent' | 'events'
+}
+
+export interface Pipeline {
+  phases: PipelinePhase[]
+  current: string | null
+  /** The newest renderable event, already sanitised by `eventstream.format_event`. */
+  now: { line: string | null; t: number | null; since: number | null }
+  burn: Burn
+}
+
 export interface RunSummaryDetail {
   run_id?: string
   algorithm?: string | null
+  pipeline?: Pipeline
+  metric_direction?: 'higher_is_better' | 'lower_is_better'
   baseline_val: number | null
   best_val: number | null
   delta_pct: number | null
+  delta_abs?: number | null
   test_reward: number | null
   test_sealed?: boolean
   test_pass_k?: number | null

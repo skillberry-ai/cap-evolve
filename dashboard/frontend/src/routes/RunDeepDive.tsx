@@ -10,6 +10,7 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { StatusBadge } from '../components/StatusBadge'
 import { KpiStrip } from '../components/KpiStrip'
+import { EvidenceHeader } from '../components/EvidenceHeader'
 import { BestCurveChart } from '../components/BestCurveChart'
 import { LineageTree } from '../components/LineageTree'
 import { PhasesTimeline } from '../components/PhasesTimeline'
@@ -128,6 +129,9 @@ export function RunDeepDive() {
 
         {data && (
           <div className="space-y-5">
+            {/* #138: stage · now · sparkline · burn · evidence, above the KPI grid so the
+                four during-a-run questions are answered without opening a tab. */}
+            <EvidenceHeader detail={data} />
             <KpiStrip summary={data.summary} />
             <Tabs tabs={tabs}>
               {(active) =>

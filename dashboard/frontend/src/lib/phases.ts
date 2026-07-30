@@ -1,7 +1,7 @@
 /** Derive the pipeline phase timeline from a reduced run (no extra backend data). */
 import type { RunDetail } from './types'
 
-export type PhaseStatus = 'done' | 'active' | 'pending'
+export type PhaseStatus = 'done' | 'active' | 'skipped' | 'pending'
 
 export interface PhaseStep {
   key: string
@@ -14,13 +14,45 @@ export interface PhaseStep {
 const pctStr = (v: number | null | undefined) =>
   v == null || Number.isNaN(v) ? '—' : `${(v * 100).toFixed(1)}%`
 
+/** Per-phase metrics, keyed by the backend's phase key (and the legacy key below). */
+function metricsFor(key: string, s: RunDetail['summary']): PhaseStep['metrics'] {
+  const c = s.counts
+  if (key === 'baseline') return [{ label: 'seed val', value: pctStr(s.baseline_val) }]
+  if (key === 'optimize' || key === 'algorithm')
+    return [
+      { label: 'iterations', value: String((c?.accepted ?? 0) + (c?.rejected ?? 0)) },
+      { label: 'accepted', value: String(c?.accepted ?? 0) },
+      { label: 'best val', value: pctStr(s.best_val) },
+    ]
+  if (key === 'finalize') return [{ label: 'sealed test', value: pctStr(s.test_reward) }]
+  return []
+}
+
 /**
  * The cap-evolve sequence is intake → implement-and-check → baseline →
- * algorithm → finalize → report. We infer each phase's status from the reduced
- * summary/graph: a run that produced candidates has cleared intake/check/baseline;
- * a sealed test means finalize ran; the dashboard existing means report ran.
+ * algorithm → finalize → report.
+ *
+ * The backend detects phases from the event log itself (`summary.pipeline`, #138) —
+ * enumerating every kind each of the three deterministic algorithms emits, so GEPA's
+ * `gepa_val_gate` and SkillOpt's `skillopt_step` light the Optimize stage exactly like
+ * hill-climb's `step`. When it's present we use it verbatim and only attach the display
+ * metrics. The summary-shaped inference below stays as the fallback for a reduced
+ * payload written before #138 (a cached dashboard.html, a checked-in fixture).
  */
 export function derivePhases(detail: RunDetail): PhaseStep[] {
+  const fromBackend = detail.summary.pipeline?.phases
+  if (fromBackend?.length) {
+    return fromBackend.map((p) => ({
+      key: p.key,
+      label:
+        p.key === 'optimize' && detail.summary.algorithm
+          ? `${p.label} · ${detail.summary.algorithm}`
+          : p.label,
+      status: p.status,
+      detail: p.detail,
+      metrics: metricsFor(p.key, detail.summary),
+    }))
+  }
   const s = detail.summary
   const counts = s.counts
   const total = counts?.total ?? detail.graph.nodes.length
