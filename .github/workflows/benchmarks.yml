@@ -180,7 +180,7 @@ jobs:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, os
+          import json, os, sys
 
           # Single source of truth for the benchmark dimensions (these used to be the
           # literal `matrix.tier` / `matrix.bench` lists).
@@ -205,9 +205,14 @@ jobs:
                   if run:
                       legs.append({"tier": tier, "bench": bench})
 
+          # stdout of this heredoc IS $GITHUB_OUTPUT, which accepts ONLY `key=value`
+          # lines — so the human-readable summary has to go to stderr. Printing it to
+          # stdout fails the whole step with "Invalid format", which took down every
+          # dispatch and every labelled PR (the legs were selected correctly; only the
+          # reporting was wrong).
           print("matrix=" + json.dumps(legs))
           print("has_legs=" + ("true" if legs else "false"))
-          print(f"selected {len(legs)} leg(s): {legs}", flush=True)
+          print(f"selected {len(legs)} leg(s): {json.dumps(legs)}", file=sys.stderr, flush=True)
           PY
 
   bench:
