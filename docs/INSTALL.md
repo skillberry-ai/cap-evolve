@@ -29,6 +29,9 @@ pip install ./dashboard/backend            # package: capevolve-dashboard
 cap-evolve dashboard --base .capevolve --port 7878   # or: cap-evolve run --dashboard auto
 ```
 
+No backend needed to watch a run in the terminal: `cap-evolve run --follow` prints live
+progress, and `cap-evolve tail [run_dir]` attaches to a run started elsewhere.
+
 A prebuilt frontend is committed under `dashboard/frontend/dist/`. Every run also writes a
 self-contained static `dashboard.html` you can open with no backend.
 
