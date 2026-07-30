@@ -80,7 +80,49 @@ _SECRET_VALUE_RES = [
     re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{6,}\b"),  # JWT
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),  # long base64
     re.compile(r"\b[0-9a-fA-F]{40,}\b"),          # long hex
+    # GitHub PATs (classic + fine-grained) and UUID-shaped tokens — common credential
+    # shapes the length-based rules above miss. (Same hunk as #193/#215; whichever
+    # lands first, the others are a no-op merge.)
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+               r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"),
 ]
+
+
+# A value opaque enough to be credential material: long, unbroken, and mixing
+# character classes. Deliberately NOT keyed off the variable's NAME — #122's canary
+# test proved a bare high-entropy secret under `MODEL_ENDPOINT_SUFFIX` walks straight
+# past a key-name heuristic, and a key name is attacker/operator-chosen anyway.
+# Whitespace and path separators exclude PATH/PWD/prose settings, so the false-positive
+# cost stays "a long opaque config value shows as «redacted» in a report" — cheap next
+# to shipping a live key in a file people paste into issues.
+_OPAQUE_MIN = 20
+
+
+def _looks_opaque(v: str) -> bool:
+    if len(v) < _OPAQUE_MIN or any(c.isspace() for c in v) or "/" in v:
+        return False
+    classes = (any(c.islower() for c in v), any(c.isupper() for c in v),
+               any(c.isdigit() for c in v))
+    return sum(classes) >= 2
+
+
+def _env_secret_values() -> list[str]:
+    """The actual VALUES of credential-looking env vars in this process.
+
+    Shape matching on the *text* is a heuristic and always will be: a watsonx key, an
+    opaque session id or a bare high-entropy string has no recognizable shape. What we
+    know for certain is the credential material this process was handed, so scrub that
+    literally — the only shape-independent defence. Covered when EITHER the key looks
+    secret (short values included: a 6-char password) OR the value itself is opaque
+    (any key name, including an innocent one). Longest first so a value that contains
+    another isn't half-masked. (Extends the #193/#215 hunk.)
+    """
+    vals = {v for k, v in os.environ.items()
+            if v and ((len(v) >= 6 and _key_is_secret(k)) or _looks_opaque(v))}
+    return sorted(vals, key=len, reverse=True)
+
 
 # KEY=secret / KEY: secret inside prose — mask the value, keep the key name so the
 # message still reads ("RITS_API_KEY=«redacted»"). Two groups: (prefix)(value).
@@ -100,6 +142,10 @@ def _scrub_value(val: str) -> str:
     out = _INLINE_KV_RE.sub(lambda m: m.group(1) + _REDACTED, val)
     for rx in _SECRET_VALUE_RES:
         out = rx.sub(_REDACTED, out)
+    # Shape-independent pass: literal credential values from this environment.
+    for secret in _env_secret_values():
+        if secret in out:
+            out = out.replace(secret, _REDACTED)
     return out
 
 
@@ -573,7 +619,67 @@ def reduce_run(run_dir) -> dict:
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
-    return redact({"graph": graph, "summary": summary})
+    return redact({"graph": graph, "summary": summary,
+                   "replay": build_replay(run_dir)})
+
+
+# ---------------------------------------------------------------------------
+# Replay timeline — the scrubbable play-by-play (#122)
+# ---------------------------------------------------------------------------
+
+def build_replay(run_dir) -> list[dict]:
+    """The run's ordered play-by-play: one frame per event worth showing.
+
+    ``{"rel": seconds since the run started, "kind", "line", "cand"?, "val"?,
+    "best"?, "status"?}``. ``line`` is :func:`cap_evolve.eventstream.format_event`'s
+    text — the terminal and the replay narrate a run with the same words, and the
+    same :func:`~cap_evolve.eventstream.sanitize` pass, by construction.
+
+    Frames go into the artifact verbatim, so scrubbing to any time — forwards or
+    backwards — is an array index, no seeking and no time→offset index.
+
+    ponytail: whole log in memory. events.jsonl is a few KB for a real run (3.4 KB
+    for toy_calc, ~200 KB for a 500-iteration one) and the artifact has to inline it
+    anyway to stay a single file, so an index would buy nothing. If a run ever logs
+    enough to matter, cap the frame list here — not by making the reader seek.
+    """
+    from . import eventstream
+
+    events, _ = eventstream.read_new_events(Path(run_dir.root) / "events.jsonl", 0)
+    t0 = next((float(e["t"]) for e in events
+               if isinstance(e.get("t"), (int, float))), 0.0)
+    frames, best = [], None
+    for ev in events:
+        # Redact BEFORE rendering, not after. format_event truncates long fields
+        # (``optimizer_error`` to 200 chars), which can slice a credential in half —
+        # and half a secret matches no shape regex and no literal env value, so a
+        # later scrub of the finished line silently misses it. Caught by the #122
+        # canary test. (redact is still applied to the whole reduced payload; this is
+        # about the one place where rendering destroys the evidence.)
+        ev = redact(ev)
+        # skip_kinds=() so the replay narrates every kind, including bookkeeping —
+        # a viewer watching the search wants the minibatch steps the terminal hides.
+        line = eventstream.format_event(ev, skip_kinds=())
+        if line is None:
+            continue
+        try:
+            rel = round(float(ev.get("t")) - t0, 3)
+        except (TypeError, ValueError):
+            rel = frames[-1]["rel"] if frames else 0.0
+        f = {"rel": max(rel, 0.0), "kind": str(ev.get("kind") or ""), "line": line}
+        if _step_candidate(ev):
+            f["cand"] = eventstream.sanitize(_step_candidate(ev))
+            f["status"] = "accepted" if ev.get("accept") else "rejected"
+        for key, src in (("val", "val"), ("val", "reward")):
+            if isinstance(ev.get(src), (int, float)):
+                f[key] = float(ev[src])
+                break
+        if f.get("status") == "accepted" and isinstance(f.get("val"), float):
+            best = f["val"] if best is None else max(best, f["val"])
+        if best is not None:
+            f["best"] = best
+        frames.append(f)
+    return frames
 
 
 # ---------------------------------------------------------------------------
@@ -645,6 +751,23 @@ def build_diffs(run_dir, graph: dict) -> dict:
 # HTML rendering — self-contained (inline CSS + JS + SVG, no CDN)
 # ---------------------------------------------------------------------------
 
+def json_for_html(payload) -> str:
+    """JSON safe to interpolate into an inline ``<script>``. The ONLY such encoder.
+
+    Fixes #209: ``.replace("</", "<\\/")`` was a one-sequence denylist, and HTML's
+    script-data parsing also honours comment-like sequences — a model-written
+    ``reason`` containing ``<!--<script>`` shifted the parser and blanked the page
+    (sections 5 → 0). Every ``<``/``>``/``&`` is encoded instead of pattern-matching
+    the sequences someone already thought of; inside a JSON string literal
+    ``\\u003c`` parses back to ``<``, so the data the JS reads is bit-identical while
+    being inert to the HTML parser. Also covers ``</script>`` and U+2028/9, which
+    are valid JSON but illegal JS line terminators.
+    """
+    return (json.dumps(payload, default=str)
+            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+            .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+
+
 def render_html(reduced: dict, run_dir=None) -> str:
     """Render the self-contained dashboard HTML from a reduced run."""
     diffs = {}
@@ -653,9 +776,9 @@ def render_html(reduced: dict, run_dir=None) -> str:
             diffs = build_diffs(run_dir, reduced["graph"])
         except Exception:  # noqa: BLE001 — diff panel is optional
             diffs = {}
-    payload = {"graph": reduced["graph"], "summary": reduced["summary"], "diffs": diffs}
-    data = json.dumps(payload, default=str).replace("</", "<\\/")
-    return _HTML_TEMPLATE.replace("/*__RUN_DATA__*/null", data)
+    payload = {"graph": reduced["graph"], "summary": reduced["summary"], "diffs": diffs,
+               "replay": reduced.get("replay") or []}
+    return _HTML_TEMPLATE.replace("/*__RUN_DATA__*/null", json_for_html(payload))
 
 
 def write_dashboard(run_dir) -> Path:
@@ -865,6 +988,20 @@ border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
 .heat rect{cursor:pointer} .heat text{fill:var(--muted);font-size:10px}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
 .muted{color:var(--muted)}
+/* replay player (#122) — scrubbable play-by-play of the run */
+.rp-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.rp-bar input[type=range]{flex:1;min-width:200px;accent-color:var(--accent);cursor:pointer}
+.rp-clock{color:var(--muted);font-size:12px;min-width:88px}
+.rp-now{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--accent);
+border-radius:0 8px 8px 0;padding:8px 12px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+white-space:pre-wrap;word-break:break-word}
+.rp-log{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:#0b0e13;
+border:1px solid var(--line);border-radius:8px;padding:10px;max-height:260px;overflow:auto;margin-top:10px}
+.rp-log div{white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+.rp-log div.a{color:var(--ok)} .rp-log div.r{color:var(--warn)} .rp-log div.e{color:var(--bad)}
+.rp-log div.cur{background:#141b24;color:var(--text)}
+.rp-meters{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:10px}
+.rp-meters b{color:var(--text);font-variant-numeric:tabular-nums}
 </style></head><body>
 <header><svg class="logo" width="26" height="26" viewBox="0 0 48 48" aria-label="cap-evolve">
 <path d="M4 40 L16 34 L26 24 L36 14 L44 8" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -894,6 +1031,72 @@ function showTip(e,txt){tip.textContent=txt;tip.style.display='block';
   tip.style.left=Math.min(e.clientX+14,innerWidth-330)+'px';tip.style.top=(e.clientY+14)+'px';}
 function hideTip(){tip.style.display='none';}
 function sec(title){const s=$('section');s.append($('h2',{text:title}));main.append(s);return s;}
+
+/* ---------- 0. Replay player (#122) ----------
+   Scrubbable play-by-play over the run's virtual timeline. Frames are a plain
+   array in DATA.replay, so seeking backwards is an index lookup, not a re-read.
+   Long eval pauses are clamped (MAXGAP) so playback never stalls; autoplay is
+   suppressed under prefers-reduced-motion. */
+(function(){
+  const F=DATA.replay||[]; if(F.length<2)return;
+  const MAXGAP=1.5;                       // seconds of virtual time any one gap may cost
+  // Virtual clock: cumulative clamped gaps. Monotonic, so scrub position is exact.
+  let acc=0; const vt=F.map((f,i)=>{ if(i)acc+=Math.min(Math.max(f.rel-F[i-1].rel,0),MAXGAP); return acc; });
+  const total=vt[vt.length-1]||1;
+  const s=sec('Run replay — watch the search happen');
+  const bar=$('div',{class:'rp-bar'});
+  const play=$('button',{title:'play / pause'},'▶ play');
+  // step:'any' — a fixed step snaps the max DOWN to a multiple of it, which would put
+  // the far right of the slider *before* the run's last frames.
+  const range=$('input',{type:'range',min:0,max:String(total),step:'any',value:'0',
+                         'aria-label':'scrub run timeline'});
+  const speedSel=$('select',{'aria-label':'playback speed'});
+  for(const x of [0.5,1,2,4,8])speedSel.append($('option',{value:String(x),...(x===2?{selected:'selected'}:{})},x+'×'));
+  const clock=$('span',{class:'rp-clock'});
+  bar.append(play,range,speedSel,clock); s.append(bar);
+  const now=$('div',{class:'rp-now'}); s.append(now);
+  const meters=$('div',{class:'rp-meters'}); s.append(meters);
+  const log=$('div',{class:'rp-log'}); s.append(log);
+  const cls=f=>f.kind==='optimizer_error'?'e':f.status==='accepted'?'a':f.status==='rejected'?'r':'';
+  const rows=F.map(f=>$('div',{class:cls(f)},f.line));
+  rows.forEach(r=>log.append(r));
+  let i=-1, playing=false, last=null;
+  function draw(t){
+    let k=0; while(k+1<F.length&&vt[k+1]<=t)k++;
+    range.value=String(t);
+    clock.textContent=t.toFixed(1)+'s / '+total.toFixed(1)+'s · '+(k+1)+'/'+F.length;
+    if(k===i)return; i=k;
+    const f=F[k]; now.textContent=f.line;
+    meters.textContent='';
+    const m=(l,v)=>{const e=$('span',{},l+' ');e.append($('b',{},v));return e;};
+    const seen=F.slice(0,k+1);
+    meters.append(m('best so far',f.best!=null?fmt(f.best):'—'),
+      m('accepted',String(seen.filter(x=>x.status==='accepted').length)),
+      m('rejected',String(seen.filter(x=>x.status==='rejected').length)),
+      m('events',String(k+1)));
+    rows.forEach((r,j)=>{r.classList.toggle('cur',j===k);r.style.opacity=j<=k?'1':'.28';});
+    rows[k].scrollIntoView({block:'nearest'});
+  }
+  function tick(ts){
+    if(!playing)return;
+    if(last!=null){
+      const t=Math.min(+range.value+(ts-last)/1000*(+speedSel.value),total);
+      draw(t);
+      if(t>=total){playing=false;play.textContent='↺ replay';last=null;return;}
+    }
+    last=ts; requestAnimationFrame(tick);
+  }
+  play.addEventListener('click',()=>{
+    if(playing){playing=false;last=null;play.textContent='▶ play';return;}
+    if(+range.value>=total)draw(0);
+    playing=true;play.textContent='❚❚ pause';last=null;requestAnimationFrame(tick);
+  });
+  range.addEventListener('input',()=>{playing=false;last=null;play.textContent='▶ play';draw(+range.value);});
+  draw(0);
+  // Reduced motion: show the finished state, don't animate into it.
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)draw(total);
+  else play.click();
+})();
 
 /* ---------- 1. KPI strip ---------- */
 (function(){

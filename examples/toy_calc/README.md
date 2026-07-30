@@ -27,3 +27,14 @@ python3 -m cap_evolve.cli run --spec $D/.capevolve/project/capevolve.yaml --proj
 # -> baseline_val 0.0  ->  test_reward 1.0   (gate-accepted, test sealed) + dashboard.html
 ```
 This is exactly what `core/tests/test_e2e_slice.py` asserts.
+
+## The bundled recorded run (`recorded_run/`)
+
+A real, committed `toy_calc` run dir (events + baseline + final + rollouts, 68 KB) so
+`cap-evolve replay --demo` works with **zero setup** — no project, no credentials, no
+model calls. Regenerate it after a change to the event schema:
+
+```bash
+bash examples/toy_calc/run.sh                        # prints a working dir $D
+cp $D/.capevolve/run_demo/{events,}*.json* examples/toy_calc/recorded_run/   # + rollouts/
+```

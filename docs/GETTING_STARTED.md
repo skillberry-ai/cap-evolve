@@ -2,6 +2,25 @@
 
 Your first successful cap-evolve run, in two minutes, with **no API key**.
 
+## 0. Watch a run before you configure anything
+
+Build the **run replay** — a single self-contained HTML file that plays a real recorded
+run back over its own timeline (play / pause / scrub / speed), so you can watch
+candidates get proposed, accepted and rejected and the best-so-far advance, before
+committing to any setup:
+
+```bash
+cap-evolve replay --demo --open      # bundled toy_calc run; no project, no credentials
+```
+
+It prints the file it wrote and opens it. No server, no network, no node — one file you
+can attach to an issue or a PR. Everything in it is routed through the same secret
+redaction the dashboard uses, so a replay of *your own* run is safe to share too.
+Reduced-motion is honoured (the page shows the finished state instead of autoplaying).
+
+Already have a run? `cap-evolve replay .capevolve/run_<ts>` does the same for it, and
+`cap-evolve replay` with no argument picks your newest one.
+
 ## Prerequisites
 - Python **3.10+** and **git**.
 
