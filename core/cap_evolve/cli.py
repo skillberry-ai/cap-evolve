@@ -129,8 +129,15 @@ def _cmd_run(argv):
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
     p.add_argument("--parallel", type=int, default=None,
                    help="evaluate up to N sibling candidates per round, each in its own "
-                        "hermetic workspace (default 1 = serial). Downgraded to 1 for an "
-                        "adapter that isn't concurrency-safe.")
+                        "hermetic workspace (default 1 = serial). CHANGES THE SEARCH: N>1 "
+                        "forks N siblings from one champion (breadth) instead of one step "
+                        "per accept (depth), so the accept sequence, best_id and the final "
+                        "test number differ from serial and may be WORSE on the same "
+                        "iteration budget; only N=1 reproduces a serial run. Wins wall "
+                        "clock only when rollouts are slow (~2.2x at N=4 with ~0.5s "
+                        "rollouts); with instant rollouts it is a wash. Costs N concurrent "
+                        "copies of the capability tree under work/, kept after the round. "
+                        "Downgraded to 1 for an adapter that isn't concurrency-safe.")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()

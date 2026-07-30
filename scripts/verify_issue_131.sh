@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# Issue #131 evidence: serial vs parallel equivalence + measured speedup on toy_calc.
+# Issue #131 evidence: end-to-end integrity of a --parallel run on toy_calc.
 #
 # Runs the SAME spec + SAME seed twice through `cap-evolve run` — once at the default
-# (serial) and once at --parallel 4 — and diffs the honest artifacts: final.json, the
-# per-candidate val scores, and the sealed test number. Prints a timing for each.
+# (serial) and once at --parallel 4 — and checks the honest artifacts: final.json, the
+# per-candidate val scores, the sealed test number, events.jsonl parseability, cost
+# exactness, and absence of worktree orphans. Prints a timing for each.
+#
+# THIS IS NOT AN EQUIVALENCE PROOF. toy_calc's mock optimizer is IDEMPOTENT and the run
+# accepts on iteration 1 then plateaus, so every candidate converges to the same content
+# no matter which parent it forked — the two arms agreeing here is an artifact of the
+# fixture, not a general property. `--parallel N>1` really does change the search
+# (breadth from one champion, not depth per accept); the deterministic proof, with a
+# NON-idempotent optimizer, is
+# core/tests/test_parallel_candidates.py::test_parallel_changes_the_search_and_is_not_score_equivalent
 # Usage: PYTHONPATH=<repo>/core bash scripts/verify_issue_131.sh
 set -euo pipefail
 

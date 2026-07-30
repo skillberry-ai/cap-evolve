@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import parallel as _par
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, TestSealError, make_splits
@@ -1294,11 +1295,12 @@ def propose_candidate(
     # was forked from (the current best by default in a global hill-climb). Captured
     # before any accept flips ``best_id`` so the edge points at the true parent.
     parent_id = parent_id or run_dir.best_id
-    workdir = run_dir.root / "work" / cid
-    if workdir.exists():
-        shutil.rmtree(workdir)
-    workdir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(parent_dir, workdir)
+    # THE workspace creation point for every run, serial or parallel. Going through
+    # parallel.make_workspace instead of an inline copytree is what REGISTERS the
+    # workspace for interrupt cleanup — otherwise a real Ctrl-C mid-round leaves up to
+    # N half-built capability copies under work/. Released at the commit point, once the
+    # workspace has been snapshotted into candidates/.
+    workdir = _par.make_workspace(run_dir.root / "work", cid, parent_dir)
 
     # Give the optimizer the full trajectories + capability guidance, in its own dir.
     _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
@@ -1369,12 +1371,17 @@ def commit_candidate(
     Call this for ONE proposal at a time, in a deterministic order. Everything that
     makes the run's numbers honest lives here — the significance gate, the
     no-regression check, ``set_best``, the iteration counter, the ledger/journal, the
-    version-store commit — so it is single-threaded by construction and a parallel
-    run's accept sequence is exactly a serial run's.
+    version-store commit — so it is single-threaded by construction: every score a
+    parallel run banks cleared the same gate, against the same champion, that a serial
+    run would have gated it against.
 
     ``current_val`` is the parent this proposal is gated against; a parallel caller
     re-gates each proposal against the *current* champion as it commits, so accepting
-    one candidate correctly raises the bar for its siblings.
+    one candidate correctly raises the bar for its siblings — a sibling forked from a
+    now-superseded champion is rejected rather than banked. That keeps every recorded
+    score honest, but it does NOT make a parallel round equivalent to N serial steps:
+    the siblings were already *built* from the start-of-round champion. See
+    ``parallel_steps``.
     """
     gate_kwargs = dict(gate_kwargs or {})
     cid = proposal["candidate_id"]
@@ -1420,6 +1427,10 @@ def commit_candidate(
     # capability-only and the diff shows just the real edit. Only an accepted candidate
     # becomes the new best (parent for the next step).
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    # The candidate is durable in candidates/ now, so what is left under work/ is
+    # inspectable scratch rather than uncommitted work — drop it from the interrupt
+    # registry (the dir itself is deliberately kept, as it always has been).
+    _par.release_workspace(workdir)
     if accepted:
         run_dir.set_best(cid)
     run_dir.update_spent(iterations=1, accepted=accepted)
@@ -1523,7 +1534,16 @@ def parallel_steps(
     accept sequence — and therefore ``best_id``, the iteration counter, and every
     artifact derived from them — is deterministic. Each commit re-gates against the
     champion as of that moment: if plan 1 is accepted, plan 2 must beat the NEW
-    champion, exactly as it would have in a serial run.
+    champion.
+
+    **Determinism is not equivalence.** Siblings in one round are *built* from the parent
+    their plan names, which for a hill-climb round is the champion as of the START of the
+    round. Re-gating means a sibling forked from a now-stale champion is correctly
+    *rejected*, not that it would have been proposed at all in a serial run. With
+    ``len(plans) > 1`` this is a breadth-first search over N siblings of one champion, and
+    its accept sequence, ``best_id`` and sealed test number legitimately differ from
+    serial's. See ``resolve_workers``' note; ``workers=1``/one plan per round is the only
+    configuration with the serial guarantee.
 
     A worker that raises turns into a rejected step (``proposal_error``) rather than
     sinking the whole round — same policy ``propose_candidate`` already applies to an
@@ -1559,7 +1579,10 @@ def parallel_steps(
             # The commit path snapshots the workspace unconditionally, so make sure one
             # exists even when the failure happened before/during its creation (e.g. an
             # unreadable parent dir). An empty candidate scores 0 and is rejected — a
-            # wasted iteration recorded honestly, not a crashed run.
+            # wasted iteration recorded honestly, not a crashed run. Note an empty dir
+            # under candidates/ is indistinguishable from a real candidate whose
+            # capability was emptied; the ``proposal_error`` event above is what
+            # disambiguates them, so don't drop it.
             wd = run_dir.root / "work" / plan["candidate_id"]
             wd.mkdir(parents=True, exist_ok=True)
             return {"candidate_id": plan["candidate_id"], "parent_id": plan.get("parent_id"),

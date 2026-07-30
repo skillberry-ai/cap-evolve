@@ -28,6 +28,19 @@ or touches the seal. Workers only produce a candidate + its val ``SplitResult``;
 caller applies every result serially, in a deterministic order — that serialized
 commit point is what keeps the gate, ``best_id``, spend accounting and the test seal
 free of races. Pure stdlib (``concurrent.futures`` + ``signal``).
+
+**``N > 1`` CHANGES THE SEARCH — it is not a faster serial run.** In a hill-climb the
+parent *is* the current best, so a round of N siblings forked from one champion explores
+BREADTH (N variations of the same parent) where serial explores DEPTH (each step forked
+from the previous accept). Every banked score is still honestly gated — a sibling built
+from a champion that a peer superseded mid-round is rejected, not banked — but the accept
+sequence, ``best_id``, spend, and the sealed test number all legitimately differ from
+serial's, and on a monotone objective serial can reach a strictly better score on the same
+iteration budget (serial 1.0 vs ``--parallel 6`` 0.1667 on the deterministic probe in
+``test_parallel_candidates.py``, where each accept unlocks the next). ``N = 1`` (the
+default) is the ONLY mode that reproduces a serial trajectory. Choose ``N > 1`` when
+rollouts are slow and you want more variations per unit of wall clock, not when you want
+the same answer sooner.
 """
 
 from __future__ import annotations
@@ -110,16 +123,18 @@ def _install_handlers() -> None:
     _HANDLERS_INSTALLED = True
 
 
-@contextlib.contextmanager
-def workspace(root: Path, candidate_id: str, parent_dir: Path, *, keep: bool = True):
-    """Hermetic per-candidate workspace at ``root/<candidate_id>``, cleaned up always.
+def make_workspace(root: Path, candidate_id: str, parent_dir: Path) -> Path:
+    """Fresh hermetic copy of ``parent_dir`` at ``root/<candidate_id>``, interrupt-tracked.
 
-    Yields a fresh copy of ``parent_dir``. A pre-existing dir at that path (a resumed
-    or retried iteration) is removed first, so a candidate never inherits a previous
-    attempt's scratch. With ``keep=True`` (the default, matching today's behaviour)
-    the directory survives for post-hoc inspection and only the interrupt registry
-    entry is dropped; ``keep=False`` removes it on exit, on exception, and on
-    SIGINT/SIGTERM.
+    A pre-existing dir at that path (a resumed or retried iteration, or an orphan a
+    SIGKILL left behind) is removed first, so a candidate never inherits a previous
+    attempt's scratch. The new workspace is registered as live, so a SIGINT/SIGTERM
+    arriving before ``release_workspace`` removes it instead of orphaning it.
+
+    This is the ONE place a candidate workspace is created: ``harness.propose_candidate``
+    calls it, so the interrupt registry covers a REAL run and not just this module's own
+    tests. Not a context manager because a workspace must outlive the proposal that built
+    it — it is snapshotted later, at the serialized commit point.
     """
     root = Path(root)
     wd = root / candidate_id
@@ -130,13 +145,38 @@ def workspace(root: Path, candidate_id: str, parent_dir: Path, *, keep: bool = T
     shutil.copytree(parent_dir, wd)
     with _LIVE_LOCK:
         _LIVE.add(wd)
+    return wd
+
+
+def release_workspace(wd: Path, *, remove: bool = False) -> None:
+    """Stop tracking ``wd`` as interrupt-cleanable — its result has been committed.
+
+    Called from ``harness.commit_candidate`` once the workspace is snapshotted into
+    ``candidates/``: after that the copy under ``work/`` is inspectable scratch, not
+    uncommitted work an interrupt should reclaim. ``remove=True`` deletes it as well.
+    """
+    wd = Path(wd)
+    with _LIVE_LOCK:
+        _LIVE.discard(wd)
+    if remove:
+        shutil.rmtree(wd, ignore_errors=True)
+
+
+@contextlib.contextmanager
+def workspace(root: Path, candidate_id: str, parent_dir: Path, *, keep: bool = True):
+    """``make_workspace`` + a guaranteed ``release_workspace``, for scoped callers.
+
+    Yields the workspace; the registry entry is dropped on normal exit, on exception,
+    and on SIGINT/SIGTERM, and with ``keep=False`` the directory is removed too. The
+    harness uses the unscoped pair instead because a candidate's workspace spans
+    propose → commit, which is two different call frames (and, under ``--parallel``,
+    two different threads).
+    """
+    wd = make_workspace(root, candidate_id, parent_dir)
     try:
         yield wd
     finally:
-        with _LIVE_LOCK:
-            _LIVE.discard(wd)
-        if not keep:
-            shutil.rmtree(wd, ignore_errors=True)
+        release_workspace(wd, remove=not keep)
 
 
 def live_workspaces() -> list[Path]:
@@ -149,7 +189,9 @@ def map_ordered(fn: Callable[[T], R], items: Iterable[T], *, workers: int = 1) -
     """Apply ``fn`` over ``items`` with at most ``workers`` in flight, INPUT order out.
 
     ``workers <= 1`` runs inline — no executor, no threads — so the serial default is
-    the same call sequence it always was. Exceptions propagate (the caller decides
+    the same call sequence it always was. So does a **single item** at any ``workers``:
+    ``map_ordered(fn, [x], workers=8)`` creates no threads, because there is nothing to
+    overlap. Exceptions propagate (the caller decides
     whether a failed candidate is fatal); order is preserved regardless of completion
     order, which is what makes the caller's serialized commit loop deterministic.
     """

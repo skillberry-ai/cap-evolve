@@ -314,9 +314,30 @@ class RunDir:
 
         ``metric_calls_per_candidate`` (e.g. ``len(val) * n_trials``) converts the
         ``max_metric_calls`` cap from rollouts into candidates; pass 0 when the caller
-        can't know it, and that cap stays checked between rounds. Cost caps are never
-        included — spend-per-candidate isn't knowable in advance, so like the serial
-        loop (which also can't stop mid-candidate) they are enforced between rounds.
+        can't know it, and that cap stays checked between rounds.
+
+        The MONEY caps (``max_usd``, ``max_optimizer_usd``) are included too, projected
+        from the run's own observed average spend per iteration. Without them a round of
+        N commits N candidates before the next ``budget_exhausted()`` check and a user's
+        hard spend ceiling is overshot by up to N× (measured 2× ``max_optimizer_usd`` and
+        1.35× ``max_usd`` at N=8). Projection is floor division so it never buys a
+        candidate the remaining budget can't cover.
+
+        Every limit is floored at **1**, not 0: the serial loop also cannot stop
+        mid-candidate — it checks the cap BEFORE a candidate and then runs it to
+        completion — so "one candidate of overshoot" is the pre-existing N=1 behaviour
+        and clamping below it would make ``--parallel 1`` behave differently from a
+        pre-#131 serial run. The guarantee this buys is therefore: **at any N, a run
+        overshoots a cap by at most the single candidate that was already in flight,
+        exactly as N=1 does** — the N× overshoot is gone.
+
+        Before the first iteration completes there is nothing to project from (the
+        baseline eval has paid for rollouts but no optimizer call has happened yet, so
+        it under-estimates a candidate by exactly the unknown part). Rather than guess,
+        a money-capped run's FIRST round is limited to one candidate — after which the
+        real average is known and full-width rounds resume. One serial round is a
+        negligible cost for never blowing a spend ceiling on the very first round, which
+        is where an N× overshoot would otherwise be worst.
         """
         b, s = self.budget, self.spent
         limits = []
@@ -329,6 +350,21 @@ class RunDir:
             # Ceil: a partially-affordable candidate is still started (the serial loop
             # starts it too — it only checks the cap BEFORE a candidate, never mid-eval).
             limits.append(-(-remaining // metric_calls_per_candidate))
+        # max_usd is checked against total_usd (run + optimizer + intake), but only
+        # run+optimizer grow per iteration — project with that rate, against the same
+        # total budget_exhausted() compares.
+        for cap, rate_num, remaining in (
+            (b.max_usd, s.usd + s.optimizer_usd, (b.max_usd or 0.0) - s.total_usd),
+            (b.max_optimizer_usd, s.optimizer_usd, (b.max_optimizer_usd or 0.0) - s.optimizer_usd),
+        ):
+            if not cap:
+                continue
+            if not s.iterations:
+                limits.append(1)  # nothing to project from yet — one candidate, then re-check
+                continue
+            per = rate_num / s.iterations
+            if per > 0:
+                limits.append(max(1, int(remaining // per)))
         return max(0, min(limits)) if limits else 2 ** 31
 
     def record_spend_warnings(self) -> list[dict]:
@@ -439,6 +475,9 @@ class RunDir:
         rec = {"t": time.time(), "kind": kind, **fields}
         line = (json.dumps(rec, default=str) + "\n").encode("utf-8")
         self.events_path.parent.mkdir(parents=True, exist_ok=True)
+        # DELIBERATE: open+close per event. Caching the fd would break the MULTI-PROCESS
+        # guarantee (a dashboard, a resumed run and this run all append to one file, and
+        # a cached fd's offset/buffer is per-process). Do not "optimize" this away.
         fd = os.open(str(self.events_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
         try:
             os.write(fd, line)  # single syscall: no interleaving, no partial line

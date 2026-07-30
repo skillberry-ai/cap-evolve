@@ -41,6 +41,20 @@ overrides neither hook is safe automatically. A non-safe adapter is downgraded t
 sequential and the downgrade is logged (``parallel_downgraded``), so a missing
 declaration costs throughput, never correctness.
 
+"Mutates no process-global state" **includes the global RNGs.** ``random.seed()`` /
+``random.random()`` and ``numpy.random.seed()`` / ``numpy.random.random()`` share one
+hidden generator across all threads, so an adapter that seeds it once per batch and then
+draws per task yields DIFFERENT per-task rollouts under ``--parallel`` — and the
+divergence can be invisible in the aggregate mean, which makes it worse than a crash.
+Seed a local instance instead: ``rng = random.Random(seed)`` /
+``numpy.random.default_rng(seed)``. That is also what makes a serial run reproducible,
+and it is what every RNG in ``cap_evolve`` itself does.
+
+This is the one hazard the automatic check cannot see: an adapter overriding neither
+``apply`` nor ``live`` is auto-approved regardless of what other global state it touches.
+So ``parallel_safe`` — declared or inferred — is YOUR assertion of reentrancy, not
+something cap-evolve verified.
+
 Why ``materialize`` + ``live`` instead of a single ``apply``:
 ``apply(candidate_dir)`` used to be a *global* side effect (e.g. monkeypatching a
 benchmark's policy), which (a) prevented two candidates being evaluated

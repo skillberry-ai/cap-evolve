@@ -77,8 +77,11 @@ def main(argv=None) -> int:
                    help="optional project-local brief overriding the tier's built-in brief")
     p.add_argument("--parallel", type=int, default=1,
                    help="evaluate up to N sibling candidates per round, each in its own "
-                        "hermetic workspace, committed serially behind the val gate "
-                        "(default 1 = serial, unchanged behaviour)")
+                        "hermetic workspace, committed serially behind the val gate. "
+                        "N>1 CHANGES THE SEARCH (breadth from one champion, not depth per "
+                        "accept): the accept sequence, best_id and the final test number "
+                        "differ from serial and can be worse on the same iteration budget. "
+                        "Default 1 = serial, unchanged behaviour")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)

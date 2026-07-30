@@ -68,9 +68,18 @@ num_trials: 1
 # --- parallel candidate evaluation ------------------------------------------
 # How many SIBLING candidates to propose+evaluate per round, each in its own
 # hermetic workspace. 1 (the default) is fully serial — identical to a run without
-# this key. >1 is a wall-clock win when rollouts dominate; the RESULT is unchanged
-# because every candidate is still committed one at a time, in candidate order,
-# behind the same val significance gate. Automatically downgraded to 1 when the
+# this key, and the only value that reproduces a serial trajectory.
+#
+# >1 CHANGES THE SEARCH. It forks N siblings from ONE champion (breadth) instead of
+# one step per accept (depth), so the accept sequence, best_id and the sealed test
+# number differ from serial's and can be WORSE on the same iteration budget — on a
+# task where each accept unlocks the next, serial reached val 1.0 where N=6 reached
+# 0.1667. Every banked score is still honestly gated: candidates are committed one at
+# a time in candidate order, each re-gated against the champion as of that moment, so
+# a sibling forked from a superseded champion is rejected rather than banked. Honest
+# is not equivalent, though — use >1 to buy variations-per-unit-wall-clock when
+# rollouts are slow, not to get the same answer faster, and note it keeps N copies of
+# the capability tree under work/. Automatically downgraded to 1 when the
 # adapter overrides apply()/live() (a possible GLOBAL inject) and does not declare
 # `parallel_safe = True`. CLI: `cap-evolve run --parallel N`.
 max_parallel_candidates: 1
