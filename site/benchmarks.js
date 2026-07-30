@@ -29,7 +29,11 @@ async function loadRunning() {
     // ones: GitHub reports runs/jobs that haven't finished as "queued", "pending", or
     // "in_progress" depending on matrix position and concurrency-group state, and a
     // 6-way matrix (tier × bench) run can sit in any mix of those before its legs start.
-    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?per_page=5`);
+    // per_page=100 (the API max): PR-triggered benchmark runs churn fast (labeled event,
+    // several per PR) and can push a long-running manual dispatch — the thing this panel
+    // most needs to surface — past a small page before it finishes. Cheap to raise: only
+    // non-completed runs in the page trigger a follow-up jobs fetch below.
+    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?per_page=100`);
     if (!runsResp.ok) throw new Error(String(runsResp.status));
     const { workflow_runs: runs } = await runsResp.json();
     const active = (runs || []).filter((r) => r.status !== "completed");
