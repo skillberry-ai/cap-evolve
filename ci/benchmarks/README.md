@@ -85,6 +85,16 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
   via the env var / workflow input if the runner's Docker headroom can't take it — each
   container is ~8GB RAM / 2 CPU).
 
+  **`spreadsheetbench` runner prerequisites** (installed on `skillberry-1`):
+  - **LibreOffice** (`sudo dnf install libreoffice-calc`). Scoring uses it to recalculate
+    formula cells before comparing; without it a formula-only cell reads as empty and
+    never matches, so solved tasks silently score 0. The adapter warns rather than fails,
+    so treat `LibreOffice not found` in the log as a broken runner.
+  - **A data dir the sandbox can write to.** The executor image runs as uid 1000 while the
+    runner is uid 1004, so the adapter widens the mode of the output dirs it creates; see
+    `_make_container_writable` in the adapter. A `PermissionError` on `*_output.xlsx` in
+    the traces means that fix regressed.
+
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
 has a **Type** column + filter.

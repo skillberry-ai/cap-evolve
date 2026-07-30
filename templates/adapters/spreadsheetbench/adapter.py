@@ -17,9 +17,14 @@ SETUP:
 
   3. Install Docker (required — each task runs in its own sandboxed container) and,
      for accurate scoring of formula-bearing outputs, LibreOffice:
-       sudo apt install libreoffice-calc   # Linux
+       sudo apt install libreoffice-calc   # Debian/Ubuntu
+       sudo dnf install libreoffice-calc   # RHEL/Fedora
        brew install --cask libreoffice     # macOS
-     Scoring degrades gracefully (skips recalculation) if LibreOffice is absent.
+     Scoring degrades gracefully (skips recalculation) if LibreOffice is absent — but
+     silently: a formula-only cell then reads as empty and never matches, so a task the
+     agent actually solved scores 0. Treat the "LibreOffice not found" warning as a
+     setup error, not a nicety. Upstream's docstring asks for 7.5+; RHEL 9's 7.1.8.1
+     recalculates correctly through `--convert-to xlsx` and is verified in use.
 
   4. Install adapter deps: pip install pandas openpyxl docker tornado requests
 
