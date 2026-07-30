@@ -51,7 +51,7 @@ from pathlib import Path
 from . import harness
 from .lr_schedule import build_schedule
 from .loop import SplitResult
-from .rundir import SCRATCH_NAMES, RunDir
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 
 # Buffer bounds (PITFALL: the rejected-edit buffer must be reset + bounded per
 # epoch so the optimizer prompt does not balloon).
@@ -385,8 +385,8 @@ def skillopt_loop(
 
 
 # Harness-injected scaffolding that must not count as an applied edit.
-# ``rundir.SCRATCH_NAMES`` is the shared definition (see the note there).
-_SCAFFOLDING = frozenset({"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES))
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the note there).
+_SCAFFOLDING = NON_CAPABILITY_NAMES
 
 
 def _changed_components(parent_dir: Path, workdir: Path) -> int:
@@ -403,6 +403,10 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
                 continue
             rel = f.relative_to(workdir)
             # ignore harness-injected scaffolding files
+            # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+            # root-anchored. Harmless here (a false positive only costs precision — one
+            # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+            # would change which components GEPA may edit, which is out of scope for #110.
             if rel.name in _SCAFFOLDING:
                 continue
             seen.add(rel)

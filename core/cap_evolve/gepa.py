@@ -63,16 +63,16 @@ from .harness import (
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
-from .rundir import SCRATCH_NAMES, RunDir
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
 
 # Optimizer-scratch / non-capability files that must NOT count as editable
 # "components" (they perturb neither the capability nor the content hash).
-# ``rundir.SCRATCH_NAMES`` is the shared definition; INSTRUCTIONS/PROCESS are added
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition; INSTRUCTIONS/PROCESS are in it
 # because they ARE snapshotted (explainability) yet are still not editable components.
-_NON_COMPONENT = {"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES)
+_NON_COMPONENT = set(NON_CAPABILITY_NAMES)
 _NON_COMPONENT_DIRS = {".git", "__pycache__", "prior_iterations"}
 
 
@@ -95,6 +95,10 @@ def _components(candidate_dir: Path) -> list[str]:
         if not p.is_file():
             continue
         rel = p.relative_to(cdir)
+        # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+        # root-anchored. Harmless here (a false positive only costs precision — one
+        # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+        # would change which components GEPA may edit, which is out of scope for #110.
         if p.name in _NON_COMPONENT:
             continue
         if any(part in _NON_COMPONENT_DIRS for part in rel.parts):

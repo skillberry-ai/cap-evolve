@@ -282,19 +282,66 @@ def test_scratch_ignores_are_one_shared_definition():
     """FAILS BEFORE THE FIX: the scratch-file list was copy-pasted into four modules
     and desynced — FOCUS.md/REFLECTION.md were in the cache + component lists but
     MISSING from harness._SNAPSHOT_IGNORE, so GEPA snapshots stayed dirty (#110).
-    Pin that all four consumers derive from rundir.SCRATCH_NAMES."""
-    from cap_evolve import cache, gepa, harness, skillopt
-    from cap_evolve.rundir import SCRATCH_NAMES
+    Pin that every consumer derives from rundir, AND that the destructive consumer
+    takes the live-writer subset only (see test_snapshot_ignore_excludes_legacy)."""
+    from cap_evolve import cache, dashboard, gepa, harness, skillopt
+    from cap_evolve.rundir import (LEGACY_SCRATCH_NAMES, NON_CAPABILITY_NAMES,
+                                   SCRATCH_NAMES)
     scratch = set(SCRATCH_NAMES)
-    assert {"FOCUS.md", "REFLECTION.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md"} <= scratch
-    for name, have in (("_SNAPSHOT_IGNORE", set(harness._SNAPSHOT_IGNORE)),
-                       ("cache._IGNORE_NAMES", cache._IGNORE_NAMES),
+    assert scratch == {"FOCUS.md", "REFLECTION.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md"}
+    assert NON_CAPABILITY_NAMES == scratch | set(LEGACY_SCRATCH_NAMES) | {
+        "INSTRUCTIONS.md", "PROCESS.md"}
+    # The DESTRUCTIVE consumer takes the live-writer subset; every read-side FILTER
+    # takes the whole union, so none of them can desync again.
+    assert scratch <= set(harness._SNAPSHOT_IGNORE)
+    for name, have in (("cache._IGNORE_NAMES", cache._IGNORE_NAMES),
                        ("gepa._NON_COMPONENT", gepa._NON_COMPONENT),
-                       ("skillopt._SCAFFOLDING", set(skillopt._SCAFFOLDING))):
-        assert scratch <= have, f"{name} is missing {sorted(scratch - have)}"
+                       ("skillopt._SCAFFOLDING", set(skillopt._SCAFFOLDING)),
+                       ("dashboard._DIFF_SKIP", set(dashboard._DIFF_SKIP)),
+                       ("harness._CAP_DIFF_SKIP", set(harness._CAP_DIFF_SKIP))):
+        assert have == set(NON_CAPABILITY_NAMES), f"{name} desynced: {sorted(have)}"
     # PROCESS.md is deliberately snapshotted (explainability), so it is NOT scratch.
     assert "PROCESS.md" not in scratch
     assert "PROCESS.md" not in set(harness._SNAPSHOT_IGNORE)
+
+
+def test_snapshot_ignore_excludes_legacy_names_and_is_root_anchored(tmp_path):
+    """FAILS BEFORE THE FIX: snapshot exclusion is DESTRUCTIVE (shutil.ignore_patterns
+    inside copytree), and it matches by BASENAME AT EVERY DEPTH. Folding the retired
+    MEMORY/STATE/REJECTED names — which no live code path writes — into
+    harness._SNAPSHOT_IGNORE meant a *capability* file that merely shared one of those
+    names was silently deleted from the candidate, from every descendant iteration, and
+    WITHOUT busting the eval-cache key (cache ignores the same name), i.e. a stale hit
+    on a mutilated candidate."""
+    from cap_evolve import harness
+    from cap_evolve.cache import hash_candidate_dir
+    from cap_evolve.rundir import RunDir
+
+    # Names spelled out, not imported, so this fails BEHAVIOURALLY on any base rev.
+    LEGACY = ("REJECTED.md", "MEMORY.md", "STATE.md")
+    snap_ignore = set(harness._SNAPSHOT_IGNORE)
+    assert not (set(LEGACY) & snap_ignore), (
+        "retired names with no live writer must not reach the DESTRUCTIVE snapshot "
+        f"filter: {sorted(set(LEGACY) & snap_ignore)}")
+
+    work = tmp_path / "work"
+    (work / "src" / "prompts").mkdir(parents=True)
+    (work / "prompt.txt").write_text("cap")
+    (work / "LEDGER.md").write_text("scratch")           # live scratch, root: dropped
+    (work / "src" / "LEDGER.md").write_text("capability")  # nested: root-anchored, kept
+    for n in (*LEGACY, "keep.txt"):
+        (work / "src" / "prompts" / n).write_text(f"capability {n}")
+
+    rd = RunDir.create(tmp_path / "run")
+    snap = rd.snapshot("c1", work, ignore=harness._SNAPSHOT_IGNORE)
+    got = sorted(str(p.relative_to(snap)) for p in snap.rglob("*") if p.is_file())
+    assert got == ["prompt.txt", "src/LEDGER.md",
+                   *sorted(f"src/prompts/{n}" for n in (*LEGACY, "keep.txt"))]
+
+    # …and removing one of those capability files DOES change the cache key.
+    before = hash_candidate_dir(snap)
+    (snap / "src" / "prompts" / "STATE.md").unlink()
+    assert hash_candidate_dir(snap) != before, "capability deletion did not bust the key"
 
 
 @pytest.mark.parametrize("algo", ["gepa", "hill-climb"])
@@ -321,12 +368,8 @@ def test_candidate_snapshots_are_clean_for_every_algorithm(tmp_path, algo):
 
     cands = [d for d in run_dir.candidates.iterdir() if d.is_dir() and d.name != "seed"]
     assert cands, f"{algo} produced no candidate snapshot to inspect"
-    dirty = {d.name: sorted(str(p.relative_to(d)) for p in d.rglob("*")
-                            if p.name in set(harness._SNAPSHOT_IGNORE)
-                            or p.parts[len(d.parts)] in set(harness._SNAPSHOT_IGNORE))
-             for d in cands}
-    assert not any(dirty.values()), f"{algo} snapshots carry scratch: {dirty}"
-    # …and only the capability + the two deliberately-kept explainability files remain.
+    # The exact-set assertion below subsumes any "is it dirty?" check — it catches
+    # over- AND under-exclusion, which is the property that matters.
     for d in cands:
         got = sorted(str(p.relative_to(d)) for p in d.rglob("*") if p.is_file())
         assert got == ["INSTRUCTIONS.md", "PROCESS.md", "prompt.txt"], f"{d.name}: {got}"
