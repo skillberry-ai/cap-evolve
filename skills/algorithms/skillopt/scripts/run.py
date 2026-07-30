@@ -24,6 +24,7 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir, harness, skillopt
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
+from cap_evolve.optimizer_context import OptimizerContext
 from cap_evolve.store import make_store
 
 ALGO = "skillopt"
@@ -69,9 +70,12 @@ def main(argv=None) -> int:
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--resume", action="store_true",
                    help="continue from the run's current best instead of baseline")
+    OptimizerContext.add_arguments(p)
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+    ctx = OptimizerContext.from_args(args)
+    ctx.log_profile(run_dir)   # consuming-LLM profile -> report + dashboard
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -90,6 +94,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, slow_update=args.slow_update,
         slow_update_sample=args.slow_update_sample, algorithm=ALGO, store=store,
+        ctx=ctx,
     )
     print(json.dumps(result, indent=2))
     return 0

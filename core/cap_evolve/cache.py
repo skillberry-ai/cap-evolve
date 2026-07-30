@@ -5,13 +5,21 @@ and persisted in the run dir, so re-evaluating an identical candidate (e.g. a pa
 re-sampled in GEPA, or a resumed run) costs nothing. The hash is over file CONTENTS,
 so two byte-identical candidates share cache entries even under different ids.
 
+**Scope: GEPA only** — which bounds the "costs nothing" above. The single consumer is
+``gepa._eval_minibatch``, where the same parent is re-sampled from the Pareto frontier
+across iterations and re-scored on overlapping minibatches; that repetition is what the
+cache pays for. ``harness.evaluate_candidate`` (every full-val and sealed-test eval, in
+every algorithm) does NOT consult it and always pays full price, so re-scoring an
+identical candidate on full val — including on ``--resume`` or a seed re-eval — is NOT
+deduplicated. Wiring it in there is a possible perf win, not existing behavior, and
+there is no flag for it today (``test_w1_engine.py`` guards that claim).
+
 Honesty notes:
   * The cache stores only the SCORE (reward + feedback), never gold answers.
   * It is keyed on candidate-file content, so an edit (even whitespace) busts the
     key — a stale score can never be served for changed files.
   * It is an optimization, not a source of truth: ``events.jsonl`` still records
-    every evaluation. Wiring into ``evaluate_candidate`` is OFF by default and gated
-    behind a flag (see ``maybe_cached_score``) so it cannot silently change behavior.
+    every evaluation.
 
 Pure stdlib (hashlib + json).
 """
@@ -22,13 +30,22 @@ import hashlib
 import json
 from pathlib import Path
 
+from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+from .rundir import NON_CAPABILITY_NAMES
+
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache.
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
-                 "REFLECTION.md",
-                 # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
-_IGNORE_DIRS = {".git", "__pycache__", "prior_iterations"}
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the tier note there):
+# the union of live + legacy scratch plus INSTRUCTIONS/PROCESS, which ARE snapshotted
+# but still are not capability bytes. This is a read-side filter (skip bytes when
+# hashing), so it takes the whole union — including the legacy names, so caches written
+# before they were retired keep resolving. The INJECTED_* halves are the
+# optimizer-context read-context (``trajectories/``, ``guidance/``, the native per-agent
+# skill dirs and instructions files) — one definition in ``optimizer_context``, folded in
+# here as a plain constant expression (no import-time set mutation, so there is no
+# import-order dependence to reason about).
+_IGNORE_NAMES = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
+_IGNORE_DIRS = {".git", "__pycache__"} | set(INJECTED_DIRS)
 
 
 def hash_candidate_dir(candidate_dir: Path) -> str:
@@ -47,9 +64,15 @@ def hash_candidate_dir(candidate_dir: Path) -> str:
     for p in cdir.rglob("*"):
         if not p.is_file():
             continue
-        if p.name in _IGNORE_NAMES:
+        rel = p.relative_to(cdir)
+        # Root-anchored: every ignored name is a root-level framework injection, so a
+        # NESTED file that merely shares one (``src/prompts/STATE.md``) is capability
+        # content and MUST fold into the digest — otherwise deleting it leaves the hash
+        # unchanged and the next iteration serves the parent's cached rewards for a
+        # materially different candidate (a stale hit on a mutilated candidate).
+        if len(rel.parts) == 1 and p.name in _IGNORE_NAMES:
             continue
-        if any(part in _IGNORE_DIRS for part in p.relative_to(cdir).parts):
+        if any(part in _IGNORE_DIRS for part in rel.parts):
             continue
         files.append(p)
     for p in sorted(files, key=lambda x: str(x.relative_to(cdir))):

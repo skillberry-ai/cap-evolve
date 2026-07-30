@@ -52,6 +52,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+from .rundir import (ITERATION_EVENT_KINDS, NON_CAPABILITY_NAMES,
+                     iteration_candidate as _step_candidate)
+
 # ---------------------------------------------------------------------------
 # Secret redaction
 # ---------------------------------------------------------------------------
@@ -225,8 +229,9 @@ def _git_log(root: Path) -> list[dict]:
 
 # Step-like events carry a candidate, an accept flag, and per-iteration cost/time.
 # Different algorithms name the candidate field differently; normalise here.
-def _step_candidate(ev: dict):
-    return ev.get("candidate") or ev.get("candidate_id")
+# Both live in rundir now (imported at the top), so the dashboard and the
+# LEDGER/RUNMAP/prior_iterations builders read the SAME set — a fourth algorithm
+# kind can't desync a fifth consumer.
 
 
 def reduce_run(run_dir) -> dict:
@@ -283,7 +288,7 @@ def reduce_run(run_dir) -> dict:
                 "text": ev.get("error") or ev.get("summary") or ev.get("note") or "",
             })
             continue
-        if kind not in ("step", "skillopt_step", "gepa_val_gate"):
+        if kind not in ITERATION_EVENT_KINDS:
             continue
 
         cid = _step_candidate(ev)
@@ -392,7 +397,7 @@ def reduce_run(run_dir) -> dict:
     # separately by headless backends as opt_cost_usd when present.
     opt_usd = 0.0
     for ev in events:
-        if ev.get("kind") in ("step", "skillopt_step", "gepa_val_gate"):
+        if ev.get("kind") in ITERATION_EVENT_KINDS:
             opt_usd += float(ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd") or 0.0)
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
     intake_usd = intake_tokens = intake_secs = 0.0
@@ -584,8 +589,22 @@ def reduce_run(run_dir) -> dict:
 # snapshot but are NOT capability edits — skipped when diffing iterations so the diff
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
-_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+#
+# The INJECTED_* halves are here for the same reason as in ``harness._CAP_DIFF_SKIP``:
+# the parent side of the diff is a snapshot (injected read-context stripped) and the
+# child side may be a live workdir (it is not), so without them an injected
+# ``CLAUDE.md``/``.claude/skills/`` file reads as a real capability addition. Derived,
+# never enumerated.
+_DIFF_SKIP = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
+_DIFF_SKIP_DIRS = set(INJECTED_DIRS)
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
@@ -595,7 +614,7 @@ def _read_dir_files(d: Path) -> dict[str, str]:
     for f in sorted(d.rglob("*")):
         if f.is_file():
             rel = str(f.relative_to(d))
-            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance"):
+            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in _DIFF_SKIP_DIRS:
                 continue
             try:
                 out[rel] = f.read_text(encoding="utf-8")

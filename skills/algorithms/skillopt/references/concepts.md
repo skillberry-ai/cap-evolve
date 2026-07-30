@@ -35,7 +35,11 @@ without gepa's frontier bookkeeping.
    avoid this epoch, the unsolved failure patterns). Parent is **always the
    current best** (single lineage). Call `harness.run_step(...)` — it materializes
    the parent, runs the optimizer, evaluates on VAL, applies the significance
-   gate, snapshots + sets best on accept, and writes RejectedMemory/History.
+   gate, snapshots + sets best on accept, and writes
+   `rejected.jsonl`/`history.jsonl`. Two reject signals reach the prompt: the run-wide
+   "already tried & rejected" constraint block `run_step` builds from `rejected.jsonl`
+   (deduped edit signature + gate reason, whole run), and SkillOpt's own within-epoch
+   buffer below (candidate ids + val deltas, reset each epoch).
 4. Append a bounded record to `step_buffer`
    (`{step, epoch, accepted, n_fail, failure_patterns, rejected id + val Δ}`),
    capped (≤ 3 task ids per pattern, ≤ ~10 patterns, ≤ 12 steps) and **reset each
@@ -62,8 +66,9 @@ best-effort file-diff count) to surface an optimizer that ignores its budget.
 Two per-epoch, bounded structures injected into the next step's prompt:
 
 - **rejected-edit buffer** — every rejected candidate's id + val Δ, so the
-  optimizer does not re-propose a dead end *this epoch* (the global RejectedMemory
-  in `run_step` still records all rejects across the run).
+  optimizer does not re-propose a dead end *this epoch*. This buffer is the only
+  reject signal that reaches the prompt; `run_step`'s `rejected.jsonl` is an audit
+  record for the dashboard, not prompt input.
 - **failure-pattern block** — the focus tasks' failing feedback clustered by a
   normalized prefix signature (infra-errored tasks excluded via the structured
   `raw.errored` flag), so the prompt carries *patterns* not raw prose.

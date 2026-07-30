@@ -190,6 +190,8 @@ export interface RejectedEntry {
   summary: string
   reason: string
   val: number | null
+  /** Normalized signature of the edit that failed (#129). Absent on pre-#129 runs. */
+  approach?: string
 }
 export interface MemoryResult {
   history: HistoryEntry[]
