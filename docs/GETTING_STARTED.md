@@ -43,7 +43,42 @@ This is exactly what `core/tests/test_e2e_slice.py` asserts. The script prints a
 directory; open the `dashboard.html` it writes in any browser to see the run (KPIs,
 per-iteration diffs, the tasks × iterations heatmap).
 
-## 4. Where to next
+## 4. Scaffold your own runnable project — `cap-evolve quickstart`
+
+`toy_calc` runs *inside the repo*. `quickstart` writes the same kind of project into a
+directory of your own, from a **free or local** preset, and asks nothing:
+
+```bash
+mkdir ~/my-run && cd ~/my-run
+cap-evolve quickstart --yes              # or plain `cap-evolve quickstart` for one question
+cap-evolve check .capevolve/project      # already green — no adapter to implement
+cap-evolve run                           # sealed test number, $0
+```
+
+| preset | cost | target runner | needs |
+|---|---|---|---|
+| `mock` (default) | $0 | offline deterministic stand-in | nothing at all |
+| `local` | $0 | local OpenAI-compatible server | a server on `127.0.0.1` (e.g. `ollama serve`) |
+| `free` | $0 | Gemini free tier (OpenAI-compatible) | `GEMINI_API_KEY` exported |
+
+**How this differs from `intake`.** `quickstart` is the zero-question *fast path*: it
+picks a preset and writes a project that is already `cap-evolve check`-green, so the very
+next command is `cap-evolve run`. `intake` is the guided *interview* for your own
+capability and benchmark — it mines your working dir, asks what to optimize, and leaves an
+adapter **stub** you implement before the `implement-and-check` gate opens. Use
+`quickstart` to see the pipeline work; use `intake` when you have real work to optimize.
+
+**Non-interactive.** `--yes`, `--preset`, or a non-terminal stdin all mean "defaults,
+never read stdin" — so quickstart in CI or behind a pipe cannot hang.
+
+**No secrets.** quickstart reports which credential env var is *present* — never a value,
+a prefix, or a length — and writes only the variable's **name** into the project. A base
+URL carrying `user:token@` has its credential stripped, and a non-default endpoint is
+reported as `<custom>`.
+
+Stdout is exactly one JSON object; the human summary goes to stderr.
+
+## 5. Where to next
 
 | You want to… | Go to |
 |---|---|

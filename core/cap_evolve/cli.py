@@ -466,6 +466,12 @@ def _cmd_run(argv):
     return 0
 
 
+def _cmd_quickstart(argv):
+    """Scaffold a ready-to-run project from a free/local preset (zero questions)."""
+    from .quickstart import _main
+    return _main(argv)
+
+
 def _cmd_dashboard(argv):
     """Launch (or focus) the live dashboard server over a base dir of runs."""
     import argparse
@@ -643,6 +649,7 @@ COMMANDS = {
     "version": _cmd_version,
     "splits": _cmd_splits,
     "check": _cmd_check,
+    "quickstart": _cmd_quickstart,
     "run": _cmd_run,
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
@@ -652,7 +659,11 @@ COMMANDS = {
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
+        # Generated from COMMANDS, never a literal list: #214 replaces this whole block
+        # with a docstring-driven listing for exactly this reason (five parallel branches
+        # adding a subcommand all conflicted on the literal string). Until it lands,
+        # joining COMMANDS keeps a newly registered subcommand visible with zero edits.
+        print(f"usage: cap-evolve {{{'|'.join(COMMANDS)}}} [args]", file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:
