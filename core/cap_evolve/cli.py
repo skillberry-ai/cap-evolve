@@ -11,7 +11,19 @@ There is deliberately no second copy of the list here or in ``main()``: five par
 branches adding subcommands all conflicted on that literal usage string (#137).
 
 ``intake``/``baseline``/``finalize``/``report`` are phase SKILLS, not subcommands —
-run their ``scripts/run.py`` directly (``cap-evolve <phase>`` says so and exits 2).
+run their ``scripts/run.py`` directly (``cap-evolve <phase>`` says so and exits 2, with
+that script's real required flags — see ``_PHASE_SCRIPTS``).
+
+Exit codes: 0 success (and ``--help``/``--version``), 1 a reported failure (a JSON error
+object on stdout), 2 misuse — no args, unknown command, or an argparse error.
+
+MERGE NOTE for #116/#118 (``cap-evolve tail``): the exit-code prose that used to live in
+this docstring's literal subcommand list must be re-homed into ``_cmd_tail``'s own
+docstring/epilog when that branch lands, not dropped. Verbatim, so it is not lost:
+
+    exit 0 = run finished OR still working — do NOT branch on 0 to mean "finished";
+    2 = not a possible run dir; 3 = --idle-timeout elapsed with no events and nothing
+    provably dead; 4 = STALLED, 5 = CRASHED.
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -174,6 +186,13 @@ def _cmd_run(argv):
         v = getattr(args, flag)
         if v is not None and v < 0:
             p.error(f"--{flag.replace('_', '-')} must be >= 0 (0 = unlimited), got {v}")
+    # --dashboard-port is NOT a "0 = unlimited" flag: it's a TCP port, so it wants a
+    # range check. Without it, a negative value reached `bind()` as an uncaught
+    # OverflowError — and because maybe_launch() runs before the --plan-only early
+    # return, even a spend-nothing preview crashed. Validating here (before any launch)
+    # keeps --plan-only usable for a bad-port invocation. #137 review N2.
+    if args.dashboard_port is not None and not 1 <= args.dashboard_port <= 65535:
+        p.error(f"--dashboard-port must be 1-65535, got {args.dashboard_port}")
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
     if not skills_dir:
@@ -679,8 +698,23 @@ COMMANDS = {
 # `python <skills>/phases/<name>/scripts/run.py`. Docs and five algorithm SKILL.mds used
 # to say `cap-evolve finalize` (issue #203); typing it now gets the real command back
 # instead of a bare "unknown command".
-_PHASE_SCRIPTS = ("intake", "implement-and-check", "baseline", "diagnose", "evaluate",
-                  "gate", "finalize", "report")
+# The value is the script's REQUIRED argparse flags. A fixed `--run-dir <dir>` template
+# was wrong for 5 of the 8 (#137 review B1): `finalize` also needs `--project`, and
+# `intake`/`implement-and-check`/`gate` reject `--run-dir` outright. A confidently WRONG
+# remediation at the SEAL step is worse than a bare "unknown command" — the agent runs
+# it, fails differently, and stops trusting the tool after the budget is spent.
+# `test_phase_redirect_commands_are_runnable` executes every rendered command against a
+# real run dir, so these cannot drift from the scripts' own argparse.
+_PHASE_SCRIPTS = {
+    "intake": "",
+    "implement-and-check": "",
+    "baseline": "--project <project> --capability <seed_capability>",
+    "diagnose": "--run-dir <dir>",
+    "evaluate": "--run-dir <dir> --project <project> --candidate <id>",
+    "gate": "--current <val> --candidate <val>",
+    "finalize": "--run-dir <dir> --project <project>",
+    "report": "--run-dir <dir>",
+}
 
 
 def _did_you_mean(name: str) -> str:
@@ -688,8 +722,11 @@ def _did_you_mean(name: str) -> str:
     import difflib
 
     if name in _PHASE_SCRIPTS:
+        script = f"python $CAPEVOLVE_SKILLS_DIR/phases/{name}/scripts/run.py"
+        flags = _PHASE_SCRIPTS[name]
         return (f"{name!r} is a phase SKILL, not a cap-evolve subcommand — run it as\n"
-                f"  python $CAPEVOLVE_SKILLS_DIR/phases/{name}/scripts/run.py --run-dir <dir>")
+                f"  {script}{' ' + flags if flags else ''}\n"
+                f"  ({script} --help for all flags; phases/{name}/SKILL.md for context)")
     near = difflib.get_close_matches(name, COMMANDS, n=3, cutoff=0.6)
     hint = f"did you mean: {', '.join(near)}?\n" if near else ""
     return hint + f"available commands: {', '.join(COMMANDS)}"
@@ -704,23 +741,34 @@ def _usage() -> str:
         # A handler that only delegates (e.g. `doctor` → doctor._main) has no docstring
         # of its own; the fallback keeps the listing from showing a blank row, so a new
         # subcommand can be registered with one COMMANDS line and still read well.
-        one_line = (fn.__doc__ or "").strip().splitlines()[0] if fn.__doc__ else \
-            f"see `cap-evolve {name} --help`"
+        # `next(iter(...))` not `[0]`: a whitespace-only docstring is truthy but strips
+        # to "" whose splitlines() is empty, so indexing raised IndexError and took down
+        # EVERY invocation including --help (only on <3.13, where __doc__ keeps the
+        # whitespace). requires-python is >=3.10, so that's a real crash. #137 review N1.
+        one_line = next(iter((fn.__doc__ or "").strip().splitlines()),
+                        f"see `cap-evolve {name} --help`")
         lines.append(f"  {name:<{width}}  {one_line}")
     lines += ["", "run `cap-evolve <command> --help` for a command's flags and examples."]
     return "\n".join(lines)
 
 
 def _harden_utf8() -> None:
-    """Make stdout/stderr survive a non-UTF-8 locale (LC_ALL=C, PYTHONIOENCODING=ascii).
+    """Make **stdout** survive a non-UTF-8 locale (LC_ALL=C, PYTHONIOENCODING=ascii).
 
-    The reports and progress lines carry ✓/Δ/CJK task text; on an ascii stream those
-    raise UnicodeEncodeError deep inside a print, killing a run that had already spent
-    money. Reconfigure to UTF-8 where possible, else fall back to replacing the
-    unencodable glyph — a mangled arrow is strictly better than a crash. ponytail: the
-    CLI-level guard only; the TUI ladder is #144's job.
+    stdout is opened ``strict``, so a bad write there DOES raise: the generated help
+    listing carries ``→`` from ``_cmd_run``'s docstring, and reports carry ✓/Δ/CJK task
+    text, all of which would kill a run that had already spent money. Reconfigure to
+    UTF-8 where possible, else fall back to replacing the unencodable glyph — a mangled
+    arrow is strictly better than a crash.
+
+    **stderr is deliberately left alone.** CPython already opens it
+    ``errors="backslashreplace"`` so it can never raise, and #144's TUI ladder owns it:
+    ``eventstream._encodable()`` pre-checks ``stderr.encoding`` to decide whether to
+    transliterate (``±`` → ``+/-``). Reconfiguring it here would make that check see
+    "utf-8" under an ASCII terminal, skip the transliteration, and ship raw mojibake
+    (#215 / #137 review B2). ponytail: CLI-level guard only, stdout only.
     """
-    for stream in (sys.stdout, sys.stderr):
+    for stream in (sys.stdout,):
         enc = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
         if enc in ("utf8", "utf8mb4") or not hasattr(stream, "reconfigure"):
             continue

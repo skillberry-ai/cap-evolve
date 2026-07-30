@@ -33,8 +33,13 @@ def _run(*args):
 # error message hands back the runnable script path.
 _CE = re.compile(r"`cap-evolve ([a-z][a-z0-9-]*)")
 # "There is no `cap-evolve status` command" is documentation OF the absence, not an
-# instruction to run it — the one shape that must not be flagged.
-_DENIES = re.compile(r"\b(no|not|never|does ?n[o']t|doesn't|non-existent)\b", re.I)
+# instruction to run it — the one shape that must not be flagged. Anchored to the text
+# IMMEDIATELY before the backtick, not searched line-wide: line-wide silently skipped 19
+# of 68 sites (including four real `cap-evolve finalize` instructions whose sentence
+# happened to say "a run with no finalize has no result" later on), and any stray "not"
+# anywhere on a line switched the guard off for it. #137 review N3.
+_DENIES = re.compile(r"\b(?:no|not|never|does ?n[o']t|doesn't|non-existent)\b"
+                     r"\s+(?:such\s+)?(?:a|an|the)?\s*$", re.I)
 
 
 def _documented_subcommands():
@@ -44,9 +49,9 @@ def _documented_subcommands():
             and "specs" not in p.parts and "plans" not in p.parts]
     for doc in [*docs, *(REPO / "site").glob("*.html")]:
         for line in doc.read_text(errors="replace").splitlines():
-            for word in _CE.findall(line):
-                if not _DENIES.search(line):
-                    yield doc, word
+            for m in _CE.finditer(line):
+                if not _DENIES.search(line[:m.start()]):
+                    yield doc, m.group(1)
 
 
 def _cli():
@@ -122,6 +127,70 @@ def test_unknown_subcommand_suggests_and_exits_nonzero():
     assert out.stdout == "", f"unknown command polluted stdout: {out.stdout!r}"
 
 
+def test_phase_redirect_commands_are_runnable():
+    """The command `cap-evolve <phase>` prints must actually be accepted (#137 B1).
+
+    A fixed `--run-dir <dir>` template was wrong for 5 of the 8 phases — worse than a
+    bare "unknown command", because an agent at the SEAL step runs the advice and fails
+    a second time with the whole budget already spent. So: render each phase's message,
+    pull the flags back out of it, and hand them to the real script with dummy values.
+    Anything argparse rejects STRUCTURALLY (unknown flag, missing required) is the bug;
+    a later failure on a nonexistent path is expected and not asserted against.
+    """
+    cli = _cli()
+    dummy = {"<dir>": "/nonexistent/run", "<project>": "/nonexistent/proj",
+             "<seed_capability>": "/nonexistent/cap", "<id>": "seed", "<val>": "0.5"}
+    bad = []
+    for phase, flags in cli._PHASE_SCRIPTS.items():
+        msg = cli._did_you_mean(phase)
+        assert f"phases/{phase}/scripts/run.py" in msg and "did you mean" not in msg
+        argv = [dummy.get(tok, tok) for tok in flags.split()]
+        out = subprocess.run([sys.executable,
+                              str(REPO / "skills/phases" / phase / "scripts/run.py"), *argv],
+                             capture_output=True, text=True, cwd=REPO, env=ENV)
+        for fatal in ("unrecognized arguments", "the following arguments are required",
+                      "expected one argument", "invalid choice"):
+            if fatal in out.stderr:
+                bad.append(f"{phase}: {flags!r} → {fatal}: {out.stderr.strip().splitlines()[-1]}")
+    assert not bad, "phase redirect prints an invocation argparse rejects:\n" + "\n".join(bad)
+
+
+def test_usage_survives_a_whitespace_only_docstring():
+    """A placeholder docstring must degrade to the fallback, not IndexError (#137 N1).
+
+    `"   "` is truthy but strips to `""`, whose splitlines() is empty — the old `[0]`
+    crashed EVERY invocation including --help, on 3.10-3.12 (3.13+ strips it to "" at
+    compile time and hides the bug). requires-python is >=3.10.
+    """
+    cli = _cli()
+
+    def _blank():
+        """   """
+
+    saved = dict(cli.COMMANDS)
+    try:
+        cli.COMMANDS["blankdoc"] = _blank
+        usage = cli._usage()
+    finally:
+        cli.COMMANDS.clear()
+        cli.COMMANDS.update(saved)
+    assert "see `cap-evolve blankdoc --help`" in usage, usage
+
+
+def test_run_rejects_a_bad_dashboard_port():
+    """A port outside 1-65535 exits 2 before anything launches (#137 N2).
+
+    `--dashboard-port -5` used to reach bind() as an uncaught OverflowError, and because
+    the launch happens before the --plan-only early return, even a spend-nothing preview
+    crashed. Checked here for both a negative and an out-of-range port.
+    """
+    for port in ("-5", "70000"):
+        out = _run("run", "--dashboard-port", port, "--plan-only")
+        assert out.returncode == 2, f"--dashboard-port {port} exited {out.returncode}"
+        assert "--dashboard-port must be 1-65535" in out.stderr
+        assert out.stdout == "", f"polluted stdout: {out.stdout!r}"
+
+
 def test_run_rejects_negative_budget():
     """A negative cap is a typo, not 'unlimited' (0 is) — exit 2, spend nothing (#137)."""
     out = _run("run", "--max-usd", "-5")
@@ -145,6 +214,11 @@ def test_run_stdout_is_a_single_json_object(tmp_path):
     was ALSO printed there, so stdout held two concatenated objects and json.loads
     raised "Extra data". Human/progress output belongs on stderr (#116's convention);
     this drives the real zero-API toy_calc run and parses stdout to keep it that way.
+
+    Hermetic: `--dashboard off`. Without it `maybe_launch` spawned a real uvicorn (and
+    opened a browser tab), importing #200's port-7878 contention flake into this file.
+    The stdout contract is what's under test, and `off` covers it deterministically —
+    the launched/skipped branches are #200's to own. #137 review N4.
     """
     import json
     import shutil
@@ -158,7 +232,8 @@ def test_run_stdout_is_a_single_json_object(tmp_path):
     out = subprocess.run(
         [sys.executable, "-m", "cap_evolve.cli", "run",
          "--spec", str(tmp_path / ".capevolve/project/capevolve.yaml"),
-         "--project", str(tmp_path / ".capevolve/project"), "--run-ts", "t"],
+         "--project", str(tmp_path / ".capevolve/project"), "--run-ts", "t",
+         "--dashboard", "off"],
         capture_output=True, text=True, cwd=REPO,
         env={**ENV, "CAPEVOLVE_CORE": str(REPO / "core"),
              "CAPEVOLVE_SKILLS_DIR": str(REPO / "skills"),
