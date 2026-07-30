@@ -5,6 +5,27 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **Live terminal progress: `cap-evolve run --follow` and `cap-evolve tail` (#116).** A
+  classic run was silent for its whole duration — a hung multi-hour run looked exactly
+  like a working one. Both new surfaces render human-readable progress (stage, baseline,
+  per-candidate accept/reject + reason, budget warnings, optimizer errors, finalize, plus
+  a running cost/token meter) from the run's `events.jsonl`. The byte-offset tail is now
+  ONE shared helper — `cap_evolve.eventstream` — consumed by the CLI *and* by the
+  dashboard's SSE route, so the terminal and the web view can never disagree. `--follow`
+  writes to stderr, leaving stdout as the machine-readable final JSON; output is plain
+  text on any non-TTY (piped, CI, `NO_COLOR`). Default behavior is unchanged.
+
+  Hardened after review: a malformed event can no longer kill the follower (and if the
+  follower does stop, it says so on stderr instead of going dark); every rendered line is
+  stripped of control characters, so an optimizer's stderr cannot drive the terminal or
+  forge a progress line; the cost meter counts runner spend from `evaluate` and optimizer
+  spend from `step` exactly once, matching the run's own `Spent.total_usd`; `--follow` is
+  disabled rather than falling back to stdout when stderr is closed (`2>&-`); and
+  `follow_events` yields a typed `_follow_end` sentinel naming *why* it stopped
+  (`stop_kind` / `idle` / `should_stop`). `cap-evolve tail` exits `2` on an impossible run
+  dir and `3` on an idle timeout with no events.
+
 ### Fixed
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now

@@ -10,6 +10,7 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { StatusBadge } from '../components/StatusBadge'
 import { KpiStrip } from '../components/KpiStrip'
+import { EvidenceHeader } from '../components/EvidenceHeader'
 import { BestCurveChart } from '../components/BestCurveChart'
 import { LineageTree } from '../components/LineageTree'
 import { PhasesTimeline } from '../components/PhasesTimeline'
@@ -128,6 +129,17 @@ export function RunDeepDive() {
 
         {data && (
           <div className="space-y-5">
+            {/* #138: stage · now · sparkline · burn · evidence, above the KPI grid so the
+                four during-a-run questions are answered without opening a tab.
+                `liveness` is the SAME value the StatusBadge above renders, so the two can
+                never disagree about whether the run is progressing — the header shows the
+                latest phase as `interrupted` rather than `active` for a dead run. When
+                #218 lands, pass its richer `liveness.status` (crashed/stalled) here; the
+                header already accepts both. */}
+            <EvidenceHeader
+              detail={data}
+              liveness={data.summary.test_reward != null ? 'done' : liveStatus}
+            />
             <KpiStrip summary={data.summary} />
             <Tabs tabs={tabs}>
               {(active) =>

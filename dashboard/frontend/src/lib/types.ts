@@ -80,12 +80,71 @@ export interface RunGraph {
   best_id: string | null
 }
 
+/** One stage of the cap-evolve pipeline, as detected from events.jsonl by
+ * `dashboard.derive_pipeline` (#138):
+ * - `done` — a later phase started, and this one logged real (non-error) evidence
+ * - `active` — the latest started phase, on a run not known to be dead
+ * - `interrupted` — the latest started phase, but liveness says crashed/stalled. A
+ *   phase must never read as *currently active* next to a "crashed" badge (#234)
+ * - `errored` — reached, but its only evidence is failure. Not `done` (a clean tick
+ *   over a phase that produced nothing) and not `skipped` (a different fact)
+ * - `skipped` — past it, legitimately silent (a pre-scaffolded project logs no intake)
+ * - `unknown` — past it, silent, and silence is not evidence of absence: the `check`
+ *   hard gate either attests itself via `check_gate` or reads unknown, never `done`
+ * - `pending` — nothing has reached it yet */
+export type PipelinePhaseStatus =
+  | 'done'
+  | 'active'
+  | 'interrupted'
+  | 'errored'
+  | 'skipped'
+  | 'unknown'
+  | 'pending'
+
+export interface PipelinePhase {
+  key: string
+  label: string
+  status: PipelinePhaseStatus
+  detail: string
+  started_at: number | null
+  index: number
+}
+
+/** Live spend. `source: 'spent'` means these are state.json's authoritative Spent
+ * totals (the same numbers the KPI strip and the budget check use); `'events'` means
+ * they were accumulated from the event log by `eventstream.accrue_totals` because the
+ * run has not written a Spent yet. Either way each dollar is counted exactly once. */
+export interface Burn {
+  usd: number
+  tokens: number
+  /** Wall-clock seconds since the FIRST event — the rate's denominator. Not the event
+   * span, which freezes when the log goes quiet and inflates the rate (#234). */
+  elapsed_seconds: number
+  /** `last_t - first_t`. Kept for display; never a rate denominator. */
+  event_span_seconds?: number
+  /** Seconds of silence since the last event. Past ~2min the rates are `null`. */
+  stale_seconds?: number | null
+  usd_per_min: number | null
+  tokens_per_min: number | null
+  source: 'spent' | 'events'
+}
+
+export interface Pipeline {
+  phases: PipelinePhase[]
+  current: string | null
+  /** The newest renderable event, already sanitised by `eventstream.format_event`. */
+  now: { line: string | null; t: number | null; since: number | null }
+  burn: Burn
+}
+
 export interface RunSummaryDetail {
   run_id?: string
   algorithm?: string | null
+  pipeline?: Pipeline
   baseline_val: number | null
   best_val: number | null
   delta_pct: number | null
+  delta_abs?: number | null
   test_reward: number | null
   test_sealed?: boolean
   test_pass_k?: number | null

@@ -183,9 +183,16 @@ def _eval_minibatch(
                          runner_tokens=run_tokens, runner_seconds=elapsed)
     result = aggregate_scores("train", scores, ks=(1,))
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
+    # cost_usd/tokens mirror `evaluate` (harness.py:311) so the log carries the runner
+    # spend this function just charged to `update_spent`. Without them a burn read from
+    # events alone understated live GEPA spend 3.9x — GEPA's rollouts never pass
+    # through `evaluate_candidate`, which is the only other runner-spend event
+    # (#234 review, finding 2).
     run_dir.log_event("minibatch", tag=tag, ids=list(task_ids),
                       reward=result.reward, fired=n_called,
-                      cached=len(task_ids) - n_called)
+                      cached=len(task_ids) - n_called,
+                      cost_usd=round(run_cost, 6), tokens=run_tokens,
+                      seconds=round(elapsed, 2))
     return result
 
 
@@ -586,7 +593,12 @@ def gepa_loop(
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,
                                    cache=cache, tag=f"mb_c_{n:04d}", seed=seed)
         local_pass = _sum_reward(child_mb) > _sum_reward(parent_mb)
+        # opt_cost_usd/opt_tokens ride the LOCAL gate, not `gepa_val_gate`: the
+        # optimizer is paid on every iteration, but the val gate only fires on the ones
+        # that pass here, so putting them there would lose every locally-rejected
+        # iteration's spend (#234 review, finding 2).
         run_dir.log_event("gepa_local_gate", candidate=cid, parent=parent["id"],
+                          opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
                           child_sum=_sum_reward(child_mb), parent_sum=_sum_reward(parent_mb),
                           passed=local_pass)
 

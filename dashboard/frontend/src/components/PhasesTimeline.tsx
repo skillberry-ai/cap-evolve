@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { Check, Loader2 } from 'lucide-react'
+import { AlertTriangle, Check, HelpCircle, Loader2, Minus, PauseCircle } from 'lucide-react'
 import type { RunDetail } from '../lib/types'
-import { derivePhases, type PhaseStep } from '../lib/phases'
+import { derivePhases, PHASE_PRESENTATION, type PhaseStep } from '../lib/phases'
 import { fadeUpItem, staggerContainer } from '../lib/motion'
 import { Card } from './ui/Card'
 import { cn } from '../lib/cn'
@@ -24,13 +24,18 @@ export function PhasesTimeline({ detail }: { detail: RunDetail }) {
   )
 }
 
+const CARD_TONE: Record<PhaseStep['status'], string> = {
+  done: 'border-accepted/40',
+  active: 'border-primary/60',
+  interrupted: 'border-rejected/50',
+  errored: 'border-rejected/50',
+  skipped: 'border-border',
+  unknown: 'border-border',
+  pending: 'border-border',
+}
+
 function PhaseCard({ step, index }: { step: PhaseStep; index: number }) {
-  const tone =
-    step.status === 'done'
-      ? 'border-accepted/40'
-      : step.status === 'active'
-        ? 'border-primary/60'
-        : 'border-border'
+  const tone = CARD_TONE[step.status] ?? 'border-border'
   return (
     <Card className={cn('relative h-full p-4', tone)}>
       {step.status === 'active' && (
@@ -55,19 +60,26 @@ function PhaseCard({ step, index }: { step: PhaseStep; index: number }) {
   )
 }
 
+/** Icon per status. Icon + label always, never color alone. */
+const MARKER: Partial<
+  Record<PhaseStep['status'], { Icon: typeof Check; className: string; spin?: boolean }>
+> = {
+  done: { Icon: Check, className: 'bg-accepted/20 text-accepted' },
+  active: { Icon: Loader2, className: 'bg-primary/20 text-primary', spin: true },
+  // Not a spinner: nothing is spinning — the run stopped here.
+  interrupted: { Icon: PauseCircle, className: 'bg-rejected/20 text-rejected' },
+  errored: { Icon: AlertTriangle, className: 'bg-rejected/20 text-rejected' },
+  skipped: { Icon: Minus, className: 'bg-surface-2 text-muted' },
+  unknown: { Icon: HelpCircle, className: 'bg-surface-2 text-muted' },
+}
+
 function Marker({ status, index }: { status: PhaseStep['status']; index: number }) {
   const base = 'flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold'
-  if (status === 'done')
-    return (
-      <span className={cn(base, 'bg-accepted/20 text-accepted')} aria-label="done">
-        <Check size={14} />
-      </span>
-    )
-  if (status === 'active')
-    return (
-      <span className={cn(base, 'bg-primary/20 text-primary')} aria-label="active">
-        <Loader2 size={14} className="animate-spin" />
-      </span>
-    )
-  return <span className={cn(base, 'bg-surface-2 text-muted')}>{index}</span>
+  const m = MARKER[status]
+  if (!m) return <span className={cn(base, 'bg-surface-2 text-muted')}>{index}</span>
+  return (
+    <span className={cn(base, m.className)} aria-label={PHASE_PRESENTATION[status].word}>
+      <m.Icon size={14} className={m.spin ? 'animate-spin' : undefined} />
+    </span>
+  )
 }
