@@ -94,7 +94,10 @@ def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
     try:
         adapter = load_adapter(Path(project_dir))
     except Exception as e:  # noqa: BLE001
-        rep.problems.append(f"could not load adapter: {e}")
+        # Name the exception TYPE as well as the message: the message is arbitrary
+        # user-adapter text (which may carry a credential and is bounded/redacted by
+        # doctor before display); the type is always safe and is what a reader acts on.
+        rep.problems.append(f"could not load adapter: {type(e).__name__}: {e}")
         return rep
 
     # 1. stubs

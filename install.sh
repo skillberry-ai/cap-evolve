@@ -84,6 +84,14 @@ for comp in orchestrate phases capabilities algorithms optimizers; do
   done
 done
 
+# optimizers/registry.yaml is a FILE directly under skills/optimizers/, not a skill
+# dir, so the loop above skipped it — and `run-optimizer/scripts/run.py` hard-raises
+# FileNotFoundError without it, i.e. every install could copy the skills and still not
+# run. Copy it to $DEST/optimizers/ which is exactly where run.py's parent-walk looks.
+mkdir -p "$DEST/optimizers"
+cp "$SRC/optimizers/registry.yaml" "$DEST/optimizers/registry.yaml"
+echo "  + optimizers/registry.yaml"
+
 # (Re)build the manifest for both the repo (component layout) and the installed
 # tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether
 # it points at the repo skills or the installed dir.

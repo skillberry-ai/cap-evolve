@@ -5,6 +5,18 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **`cap-evolve doctor` — one-command install/health diagnostic** (issue #121). Reports
+  pass/warn/fail with an actionable fix per line and exits non-zero on a hard failure, so
+  CI can gate on it. Checks Python version, core importability + which interpreter/venv,
+  `cap-evolve` on `PATH` (including a *shadowing* second install), `git`, the skills dir +
+  registry manifest, `optimizers/registry.yaml` presence, optimizer CLIs on `PATH`,
+  provider credentials (**presence only, never a value** — env plus names declared in a
+  repo-root `.env`, warning on a partially-set group like RITS or watsonx), run-dir
+  writability, and `cap-evolve check` when run inside a project. `--json` for
+  machine-readable output; `run_doctor()`/`format_report()` are separate so other surfaces
+  can consume the structured report.
+
 ### Fixed
 - **Dashboard charts never rendered — 8 of 13 panels were absent from every generated
   `dashboard.html` since `4c87ed1` (2026-06-17).** `ParentNode.append()` returns
@@ -17,6 +29,22 @@ All notable changes to cap-evolve are documented here. The format follows
   chained off `append`) is deleted. A new test executes the generated inline script under a
   minimal DOM shim and asserts element counts, so a rendering failure inside any panel now
   fails CI instead of passing on source-string panel titles.
+- **`install.sh` produced an install that could not run an optimizer.** The copy loop only
+  walked component *directories*, so `skills/optimizers/registry.yaml` — a plain file —
+  was never installed, and `run-optimizer/scripts/run.py` raises `FileNotFoundError` the
+  moment a run starts without it. Every stock install was in this state. `install.sh` now
+  copies it to `$DEST/optimizers/registry.yaml`, exactly where `run.py`'s parent-walk looks,
+  and `cap-evolve doctor` reports a missing registry as a **FAIL** (it was a WARN with
+  "run ./install.sh" as the fix — the command that produced the state) with a remediation
+  that actually works.
+- **`dashboard.redact` missed every credential without a recognizable shape.** It matched
+  `sk-…`/`Bearer …`/JWT/40+ char hex-base64/`KEY=value` only, so a watsonx key, a UUID
+  token or a GitHub PAT passed through. Adds `ghp_`/`github_pat_`/UUID shape rules and,
+  more importantly, a shape-*independent* pass that scrubs the literal values of this
+  process's secret-looking env vars. `cap-evolve doctor` additionally never echoes
+  third-party text (a user adapter's exception message) verbatim: it is redacted, bounded
+  to a short excerpt, and the full text is written to `.capevolve/project/doctor-check.log`
+  for local inspection instead of stdout.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
