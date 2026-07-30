@@ -68,11 +68,17 @@ def test_insights_reach_the_prompt_and_persist_in_the_run_dir():
 
     (c) is the part that matters: a file nobody is told to read is not a signal.
     """
+    import inspect
+
     from cap_evolve import harness
 
     rd = _run("step")
     wd = Path(tempfile.mkdtemp())
-    out = harness._augment_instructions("BASE", wd, rd, None, None)
+    # Signature-agnostic: #212 drops _augment_instructions' rejected/history params, so
+    # passing them positionally would break on that merge as a TEST failure git does NOT
+    # flag as a conflict. Fill whatever trailing params this build still has with None.
+    extra = len(inspect.signature(harness._augment_instructions).parameters) - 3
+    out = harness._augment_instructions("BASE", wd, rd, *([None] * max(0, extra)))
 
     assert (rd.root / "INSIGHTS.md").exists(), "no durable copy in the run dir"
     body = (wd / "INSIGHTS.md").read_text(encoding="utf-8")
