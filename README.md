@@ -18,6 +18,10 @@
 **cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed
 evaluation traces.**
 
+> **Note on naming.** This project was previously called *Acapo*. The current name is
+> **cap-evolve** everywhere — templates, scaffolds, and hooks. The legacy `.agentcapo`
+> directory is no longer honored; use `.cap-evolve` instead.
+
 You bring the agent and the eval you already have. cap-evolve runs the loop — evaluate →
 diagnose the failures → propose an edit → keep it only if it beats a held-out split by a
 significant margin → commit — and reports one honest number. It optimizes what your agent
