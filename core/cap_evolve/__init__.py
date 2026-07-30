@@ -18,6 +18,7 @@ from .gate import GateDecision, TrainGateError, decide
 from .lr_schedule import build_schedule
 from .memory import History, RejectedMemory
 from .optimizer_context import OptimizerContext
+from .plateau import PlateauConfig, PlateauState
 from .protect import TamperError
 from .rundir import Budget, RunDir, Spent
 from .selection import PICKERS, STRATEGIES, pick, validate_strategy
@@ -44,6 +45,8 @@ __all__ = [
     "History",
     "RejectedMemory",
     "OptimizerContext",
+    "PlateauConfig",
+    "PlateauState",
     "Budget",
     "RunDir",
     "Spent",

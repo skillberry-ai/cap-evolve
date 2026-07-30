@@ -602,6 +602,13 @@ def reduce_run(run_dir) -> dict:
         # Protected-path tamper events (#142): an honesty signal, so it rides
         # alongside the gate warnings instead of staying buried in events.jsonl.
         "tamper_events": [e for e in events if e.get("kind") == "tamper_detected"],
+        # Plateau/convergence state (cap_evolve.plateau): the LAST `plateau` event is the
+        # current escalation level (ok|warn|diversify|stop). Distinct from #118's run
+        # LIVENESS (live/stalled/crashed/done, derived from events.jsonl mtime):
+        # "stalled" = nothing happening; "plateaued" = plenty happening, none of it helps.
+        "plateau": ([e for e in events if e.get("kind") == "plateau"] or [None])[-1],
+        "exhausted_lineages": sorted({str(e.get("parent")) for e in events
+                                      if e.get("kind") == "lineage_exhausted" and e.get("parent")}),
         "gate_warnings": gate_warnings,
         "honesty_banner": _honesty_banner(run_dir),
         "diagnoses": diagnoses,
@@ -857,6 +864,17 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
             for ch in (ev.get("changes") or [])[:5]:
                 lines.append(c(_C.RED, f"  {ch.get('change', '?')} {ch.get('path', '?')}"
                                        f"  ({ev.get('context') or 'unknown context'})"))
+        lines.append("")
+    pl = s.get("plateau") or {}
+    if pl.get("level") in ("warn", "diversify", "stop"):
+        col = {"warn": _C.YELLOW, "diversify": _C.YELLOW, "stop": _C.RED}[pl["level"]]
+        lines.append(c(col, f"◼ PLATEAU: {pl['level']} — {pl.get('run_length', 0)} "
+                            f"consecutive iterations bought no new best val"))
+        lines.append(c(_C.GREY, "  " + str(pl.get("reason") or "")[: width - 4]))
+    if s.get("exhausted_lineages"):
+        lines.append(c(_C.YELLOW, "◼ exhausted lineage(s): "
+                                  + ", ".join(s["exhausted_lineages"][:6])))
+    if pl or s.get("exhausted_lineages"):
         lines.append("")
 
     if s["gate_warnings"]:
@@ -1337,9 +1355,16 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
 
 /* ---------- 7. Annotations / diagnoses stream ---------- */
 (function(){
-  const W=S.gate_warnings||[], D=S.diagnoses||[];
-  if(!W.length&&!D.length)return;
+  const W=S.gate_warnings||[], D=S.diagnoses||[], P=S.plateau||null, X=S.exhausted_lineages||[];
+  const plOn = P && P.level && P.level!=='ok';
+  if(!W.length&&!D.length&&!plOn&&!X.length)return;
   const s=sec('Annotations & diagnoses');
+  if(plOn){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'plateau · '+P.level}),
+             $('div',{text:(P.reason||'')}));s.append(a);}
+  if(X.length){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'lineage exhausted'}),
+             $('div',{text:X.join(', ')}));s.append(a);}
   W.forEach(w=>{const a=$('div',{class:'ann'});a.append($('div',{class:'who',text:'gate · '+(w.mode||'')}),
     $('div',{text:w.reason||''}));s.append(a);});
   D.forEach(d=>{const a=$('div',{class:'ann diag'});a.append($('div',{class:'who',text:(d.kind||'diagnose')+(d.candidate?' · '+d.candidate:'')}),

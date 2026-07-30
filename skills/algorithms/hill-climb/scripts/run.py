@@ -23,7 +23,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, harness, plateau
 from cap_evolve.store import make_store
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
@@ -56,6 +56,14 @@ def main(argv=None) -> int:
                    help="continue from the run's current best candidate (read its val "
                         "from rollouts) instead of baseline")
     OptimizerContext.add_arguments(p)
+    p.add_argument("--plateau-window", type=int, default=None,
+                   help="dead iterations (rejected with delta<=0) before the plateau warning")
+    p.add_argument("--plateau-escalate-every", type=int, default=None,
+                   help="further dead iterations per escalation step (warn -> diversify -> stop)")
+    p.add_argument("--plateau-lineage-window", type=int, default=None,
+                   help="dead children of ONE parent before that lineage is exhausted")
+    p.add_argument("--no-plateau-stop", action="store_true",
+                   help="warn + diversify only; never stop the run on plateau")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -75,6 +83,12 @@ def main(argv=None) -> int:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    plateau_cfg = plateau.PlateauConfig.from_spec({
+        "plateau_window": args.plateau_window,
+        "plateau_escalate_every": args.plateau_escalate_every,
+        "plateau_lineage_window": args.plateau_lineage_window,
+        "plateau_stop": (False if args.no_plateau_stop else None),
+    })
     result = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
         focus=focus, max_iterations=args.max_iterations, n_trials=args.n_trials,
@@ -82,6 +96,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         algorithm=f"{ALGO}:{focus}", no_regression=args.no_regression, store=store,
         ctx=ctx,
+        plateau_cfg=plateau_cfg,
     )
     print(json.dumps(result, indent=2))
     return 0

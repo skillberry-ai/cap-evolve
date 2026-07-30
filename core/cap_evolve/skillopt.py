@@ -50,6 +50,7 @@ import random
 from pathlib import Path
 
 from . import harness
+from . import plateau
 from .lr_schedule import build_schedule
 from .loop import SplitResult
 from .optimizer_context import (INJECTED_DIRS, INJECTED_NAMES, OptimizerContext,
@@ -224,6 +225,7 @@ def skillopt_loop(
     algorithm: str = "skillopt",
     store=None,
     ctx=None,
+    plateau_cfg: "plateau.PlateauConfig | None" = None,
 ) -> dict:
     """Run the SkillOpt epochs × mini-batches climb.
 
@@ -270,11 +272,19 @@ def skillopt_loop(
     epoch_stats: list[dict] = []
     global_step = 0
     stop_reason = None
+    # Plateau detection (cap_evolve.plateau): third stop condition. SkillOpt is
+    # single-lineage (parent is always best), so lineage exhaustion coincides with the
+    # global signal and only reaches the prompt — there is no alternative parent to
+    # steer toward, which is exactly the distinction from GEPA.
+    pcfg = plateau_cfg or plateau.PlateauConfig()
+    pstate = plateau.PlateauState()
 
     for epoch in range(1, epochs + 1):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
             stop_reason = why
+            break
+        if pstate.should_stop:
             break
 
         # Per-epoch: shuffle ids (seeded by epoch for reproducibility), reset the
@@ -293,6 +303,10 @@ def skillopt_loop(
             exhausted, why = run_dir.budget_exhausted()
             if exhausted:
                 stop_reason = why
+                break
+            pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
+            if pstate.should_stop:
+                stop_reason = f"plateaued ({pstate.reason})"
                 break
 
             # mini-batch(es): the accumulation window of the shuffled order.
@@ -314,6 +328,7 @@ def skillopt_loop(
             step = harness.run_step(
                 adapter, run_dir=run_dir, parent_dir=parent_dir,
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
+                extra_instructions=plateau.prompt_block(pstate),
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
                 ctx=ctx,
@@ -383,6 +398,7 @@ def skillopt_loop(
             "slow_update": (slow_rec["action"] if slow_rec else "skipped"),
         })
 
+    pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
     if stop_reason is None:
         _, why = run_dir.budget_exhausted()
         stop_reason = why or "epochs_exhausted"
@@ -400,6 +416,7 @@ def skillopt_loop(
         "slow_updates": [{"epoch": r["epoch"], "action": r["action"],
                           "accepted": r["step"]["accepted"]} for r in slow_updates],
         "stop_reason": stop_reason,
+        "plateau": pstate.to_dict(),
         "steps": steps,
     }
 
