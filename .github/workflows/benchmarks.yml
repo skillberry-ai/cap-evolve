@@ -134,8 +134,89 @@ on:
     types: [labeled]
 
 jobs:
+  # Decide up front WHICH tier×bench legs run, and emit them as the `bench` matrix.
+  # Previously `bench` was a static 2x4 matrix and each of the 8 legs started a job that
+  # gated itself in its first step — so 7 of 8 legs typically spun up a runner slot only
+  # to no-op, and showed as queued/skipped noise in the "Running now / queued" panel on
+  # the Pages benchmarks page. Computing the matrix here means a skipped leg never
+  # becomes a job at all, so the panel only ever lists legs that will really run.
+  #
+  # NB: the selection CANNOT live in `bench`'s own job-level `if:` — the `matrix` context
+  # is not available there (only github/inputs/needs/vars are), which is exactly what made
+  # #230 an invalid workflow file. `needs` IS available in both `if:` and `strategy`, so a
+  # preceding job that publishes the list is the supported way to do this.
+  plan:
+    name: plan legs
+    # JSON + label arithmetic only — no VPC/gateway access needed, so keep it off the
+    # (scarce, serialized) self-hosted runner.
+    runs-on: ubuntu-latest
+    # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
+    # runner only when the PR author is a known collaborator — never for outside/
+    # first-time contributors, who could otherwise run arbitrary code with secrets.
+    # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
+    # (an all-label or a per-bench one); the step below picks the exact tier×bench.
+    # Guarding `plan` (not just `bench`) means an untrusted PR never even reaches the
+    # planner, and `bench` inherits the guard transitively via `needs`.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+        (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
+         contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      # An empty matrix is an error to GitHub, not a no-op, so `bench` keys its own `if:`
+      # off this instead of trying to introspect the JSON.
+      has_legs: ${{ steps.plan.outputs.has_legs }}
+    steps:
+      - name: Select tier x bench legs
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
+          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+          # toJSON (not a ','-join) so labels stay exactly comparable: label names may
+          # themselves contain commas, and the PR gate below is an exact-match test.
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+
+          # Single source of truth for the benchmark dimensions (these used to be the
+          # literal `matrix.tier` / `matrix.bench` lists).
+          # tier is a first-class dimension. full runs the whole/representative benchmark
+          # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
+          TIERS = ["smoke", "full"]
+          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench"]
+
+          event = os.environ["EVENT"]
+          tier_sel = os.environ.get("TIER_SEL") or "smoke"
+          bench_sel = os.environ.get("BENCH_SEL") or "all"
+          labels = set(json.loads(os.environ.get("LABELS") or "[]") or [])
+
+          legs = []
+          for tier in TIERS:
+              for bench in BENCHES:
+                  if event == "workflow_dispatch":
+                      run = tier_sel in ("all", tier) and bench_sel in ("all", bench)
+                  else:
+                      # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
+                      run = f"benchmark-{tier}" in labels or f"benchmark-{tier}-{bench}" in labels
+                  if run:
+                      legs.append({"tier": tier, "bench": bench})
+
+          print("matrix=" + json.dumps(legs))
+          print("has_legs=" + ("true" if legs else "false"))
+          print(f"selected {len(legs)} leg(s): {legs}", flush=True)
+          PY
+
   bench:
     name: ${{ matrix.tier }} / ${{ matrix.bench }}
+    needs: [plan]
+    # Only reached when `plan` selected at least one leg. Also covers the corner case
+    # where the coarse label check above passes but no leg matches exactly (e.g. a
+    # 'benchmark-smoke-typo' label), which would otherwise be an empty-matrix error.
+    if: needs.plan.outputs.has_legs == 'true'
     runs-on: [self-hosted, ibm-vpc]
     # GitHub's default 360min job timeout is too tight for full/spreadsheetbench (912
     # tasks x trials x iterations, one Docker container per task); self-hosted runners
@@ -146,24 +227,11 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-    # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
-    # runner only when the PR author is a known collaborator — never for outside/
-    # first-time contributors, who could otherwise run arbitrary code with secrets.
-    # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
-    # (an all-label or a per-bench one). The per-matrix gate decides the exact tier×bench.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
-        (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
-         contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
     strategy:
       fail-fast: false
       matrix:
-        # tier is a first-class dimension. full runs the whole/representative benchmark
-        # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
-        tier: [smoke, full]
-        bench: [tau2, swebench, skillsbench, spreadsheetbench]
+        # Exactly the legs `plan` selected — one job per leg, no self-skipping legs.
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     concurrency:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
       cancel-in-progress: false
@@ -188,34 +256,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Gate (decide whether this tier/bench runs)
-        id: gate
-        env:
-          # tier-agnostic exact-match label checks (evaluated by Actions, not the shell):
-          #   benchmark-<tier>  = all benches of this tier;  benchmark-<tier>-<bench> = this one
-          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}', matrix.tier)) }}
-          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}-{1}', matrix.tier, matrix.bench)) }}
-          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
-          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
-        run: |
-          run=false
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            tier_ok=false; bench_ok=false
-            { [ "$TIER_SEL" = "all" ] || [ "$TIER_SEL" = "${{ matrix.tier }}" ]; } && tier_ok=true
-            { [ "$BENCH_SEL" = "all" ] || [ "$BENCH_SEL" = "${{ matrix.bench }}" ]; } && bench_ok=true
-            if [ "$tier_ok" = true ] && [ "$bench_ok" = true ]; then run=true; fi
-          else
-            # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
-            if [ "$HAS_ALL" = "true" ] || [ "$HAS_THIS" = "true" ]; then run=true; fi
-          fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-
       - name: Setup runner env
-        if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
       - name: Start live snapshot poller
-        if: steps.gate.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -226,11 +270,10 @@ jobs:
           disown
 
       - name: Run suite
-        if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
 
       - name: Stop live snapshot poller
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -243,7 +286,7 @@ jobs:
             || echo "::warning::live cleanup push failed (best-effort, no action needed)"
 
       - name: Export CapEvolve UI snapshot
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         run: |
           run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
           out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
@@ -256,7 +299,7 @@ jobs:
           fi
 
       - name: Write run metadata
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         run: |
           out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
           mkdir -p "$out"
@@ -287,7 +330,7 @@ jobs:
           cat "$out/runmeta.json"
 
       - name: Upload artifacts (metrics + optimized capabilities)
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
@@ -295,7 +338,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Comment results on the PR
-        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
