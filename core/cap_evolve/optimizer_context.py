@@ -48,7 +48,13 @@ from .rundir import RunDir
 # consumers — add a newly injected artifact here and all three stay correct.
 INJECTED_DIRS = ("trajectories", "guidance", "prior_iterations",
                  ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor")
-INJECTED_NAMES = ("CLAUDE.md", "AGENTS.md", "GEMINI.md")
+# INSIGHTS.md is the durable synthesized priors block (#128). It is written by
+# ``harness._build_insights``, not by ``inject``, but it is the same KIND of artifact —
+# framework-owned read-context re-derived every iteration — so it belongs in the same
+# list: it must not be snapshotted as capability, must not be an editable GEPA component,
+# and must not perturb the eval-cache content hash (it changes as the run progresses, so
+# leaving it in would make every iteration miss the cache).
+INJECTED_NAMES = ("CLAUDE.md", "AGENTS.md", "GEMINI.md", "INSIGHTS.md")
 
 
 def _csv(value) -> list[str]:

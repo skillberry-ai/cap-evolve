@@ -588,7 +588,8 @@ def reduce_run(run_dir) -> dict:
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
 _DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+              "INSIGHTS.md"}
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:

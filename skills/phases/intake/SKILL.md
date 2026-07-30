@@ -142,8 +142,10 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
      as editable. If only `system-prompt` is selected, do not surface the tools file
      as editable. Each capability's "What you can change here" lives in its
      `./guidance/<cap>/SKILL.md` — point the optimizer there rather than restating it.
-   - **Always include (capability-agnostic):** READ the four cross-iteration files in
-     the working dir FIRST — `./LEDGER.md` (framework facts: each iteration's outcome +
+   - **Always include (capability-agnostic):** READ the five cross-iteration files in
+     the working dir FIRST — `./INSIGHTS.md` (framework-synthesized durable priors: what
+     helped, what hurt, what's still open — hypotheses to re-test, never truth),
+     `./LEDGER.md` (framework facts: each iteration's outcome +
      tasks broken/fixed), the whole `./JOURNAL.md` (the optimizer's append-only
      handover across the run), and `./RUNMAP.md` + `./prior_iterations/<id>/` (every
      prior iteration's PROCESS.md + capability diff) — and never re-propose an approach

@@ -417,19 +417,36 @@ class RunDir:
         See :data:`ITERATION_EVENT_KINDS` — read this instead of filtering
         ``kind == "step"`` by hand, or the algorithms that emit their own kind
         (GEPA, SkillOpt) silently disappear from whatever you are building.
+
+        **Deduplicated by candidate id.** SkillOpt routes through ``harness.run_step``
+        (which emits ``step``) AND logs its own ``skillopt_step`` for the SAME candidate
+        with its epoch/edit-budget metadata — so a raw kind filter yields TWO rows per
+        SkillOpt iteration. LEDGER.md, RUNMAP.md and the durable priors (#128) all
+        double-counted every SkillOpt iteration as a result, the second copy missing
+        ``parent``/``parent_val`` and therefore showing a blank Δ. First occurrence wins
+        (it carries the gate reason + parent edge); later records are MERGED in for any
+        field the first lacks, so the algorithm-specific metadata is not lost.
+
         Best-effort: an unreadable/absent events log yields whatever parsed.
         """
-        out: list[dict] = []
+        by_cid: dict[str, dict] = {}
         try:
             if not self.events_path.exists():
-                return out
+                return []
             for line in self.events_path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if not line:
                     continue
                 rec = json.loads(line)
-                if rec.get("kind") in ITERATION_EVENT_KINDS and iteration_candidate(rec):
-                    out.append(rec)
+                if rec.get("kind") not in ITERATION_EVENT_KINDS:
+                    continue
+                cid = iteration_candidate(rec)
+                if not cid:
+                    continue
+                if cid in by_cid:
+                    by_cid[cid] = {**rec, **by_cid[cid]}  # first wins, later fills gaps
+                else:
+                    by_cid[cid] = rec
         except Exception:  # noqa: BLE001
-            return out
-        return out
+            pass
+        return list(by_cid.values())

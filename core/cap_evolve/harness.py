@@ -513,7 +513,7 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 
 
 
-# The optimizer's working dir carries FOUR cross-iteration files, with clean ownership
+# The optimizer's working dir carries FIVE cross-iteration files, with clean ownership
 # so there is never confusion about who writes what (the recurring user complaint about
 # the old MEMORY.md/STATE.md pair):
 #   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the objective record:
@@ -525,7 +525,12 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 #                 subagents/features used, what to preserve).
 #   RUNMAP.md   — FRAMEWORK-owned manifest of every prior iteration's working dir, with
 #                 each prior PROCESS.md + capability diff copied into ./prior_iterations/.
+#   INSIGHTS.md — FRAMEWORK-owned, SYNTHESIZED, re-derived each iter (#128): the compact
+#                 durable priors — what helped, what hurt, what's still open. Bounded, so
+#                 it survives context loss without eating the prompt budget.
 # Rule: FACTS are deterministic + framework-owned; JUDGMENT and PROCESS are agent-owned.
+# INSIGHTS is framework-owned and deterministic too — it is a *distillation* of the facts,
+# labelled as hypotheses so a wrong prior can never masquerade as truth.
 
 _JOURNAL_MARK = "<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit anything above it -->"
 
@@ -584,7 +589,8 @@ _PROCESS_SEED = (
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
 _CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+                  "INSIGHTS.md"}
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -679,6 +685,116 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
                    if par[t] < 1.0 - eps and cand[t] >= 1.0 - eps)
     delta = sum(cand[t] - par[t] for t in shared) / len(shared)
     return {"broke": broke, "fixed": fixed, "delta": delta, "parent": parent_id}
+
+
+# ---- durable synthesized insight (issue #128) -----------------------------
+
+# Bounds on the priors block. It is re-synthesized from ``events.jsonl`` + persisted
+# rollouts every iteration, so it does NOT grow monotonically with the run — but the
+# INPUT does, and an unbounded render would silently eat the prompt budget
+# (``optimizer_context.MAX_INSTRUCTIONS_CHARS``) over a 100-iteration run. Eviction keeps
+# the LARGEST MOVERS (by |Δ| on val), because a +0.25 accept and a −0.20 regression are
+# the priors worth re-testing; a −0.001 reject carries no signal. Ties break toward the
+# newer iteration. The char cap is the backstop for pathologically long task ids.
+_INSIGHT_KEEP = 6          # helped / hurt rows each
+_INSIGHT_OPEN = 10         # still-failing task ids
+MAX_INSIGHT_CHARS = 4_000  # ≈1k tokens, ~6% of MAX_INSTRUCTIONS_CHARS
+
+
+def _insight_rows(run_dir: RunDir) -> tuple[list[dict], list[dict]]:
+    """Split every evaluated iteration into (helped, hurt), each sorted by |Δ| desc.
+
+    Reads ``RunDir.iteration_events()`` — NOT ``kind == "step"``, which omits GEPA's
+    ``gepa_val_gate`` entirely and is the exact bug #199 fixed. Δ is the val delta vs the
+    candidate's parent, taken from the event when both sides are present; the per-task
+    broke/fixed lists come from the persisted rollouts via ``_candidate_task_impact``
+    (the same read LEDGER.md uses, so the two artifacts can never disagree).
+    """
+    parent_of = _parent_map(run_dir)
+    helped: list[dict] = []
+    hurt: list[dict] = []
+    for i, rec in enumerate(run_dir.iteration_events(), 1):
+        cid = iteration_candidate(rec)
+        if not cid:
+            continue
+        val, pval = rec.get("val"), rec.get("parent_val")
+        delta = (float(val) - float(pval)
+                 if isinstance(val, (int, float)) and isinstance(pval, (int, float))
+                 else 0.0)
+        imp = _candidate_task_impact(run_dir, cid, "val", parent_of=parent_of) or {}
+        row = {"iter": i, "cid": cid, "delta": delta,
+               "accept": bool(rec.get("accept")),
+               "reason": str(rec.get("reason") or ""),
+               "broke": [str(t) for t in (imp.get("broke") or [])],
+               "fixed": [str(t) for t in (imp.get("fixed") or [])]}
+        (helped if row["accept"] else hurt).append(row)
+    key = lambda r: (abs(r["delta"]), r["iter"])  # noqa: E731
+    return (sorted(helped, key=key, reverse=True)[:_INSIGHT_KEEP],
+            sorted(hurt, key=key, reverse=True)[:_INSIGHT_KEEP])
+
+
+def _build_insights(workdir: Path, run_dir: RunDir, *,
+                    max_chars: int = MAX_INSIGHT_CHARS) -> str:
+    """Write the durable synthesized priors block (INSIGHTS.md) and return it.
+
+    "What helped / what hurt / what's still open", distilled from the objective record:
+    the gate outcome + val Δ of every prior iteration, the exact tasks each one broke or
+    fixed, and the tasks the current best still fails. Written to BOTH the run dir (the
+    durable copy, which is what survives across iterations and is what the dashboard
+    reads) and the optimizer's workdir (the copy that reaches the prompt).
+
+    **Zero LLM calls.** The synthesis is pure Python over ``events.jsonl`` + persisted
+    rollouts, like every other auxiliary step in core (reflection distillation, the
+    ledger, the runmap, failure clustering). Distilling this with a model would add a
+    per-iteration model call to every run for a signal that is already fully determined
+    by the run's own numbers — see the ``aux_model`` tier (#132) if a future version
+    wants prose instead of rows.
+
+    Honesty: every line is labelled a CANDIDATE PRIOR, not truth. Nothing here bypasses
+    the val gate — a prior that says "X helped" is a hypothesis to re-test, and the block
+    says so. Only val rewards and val/train task ids are read; the sealed test split is
+    never touched (``_per_task_rewards`` is called with ``split="val"`` only).
+    """
+    helped, hurt = _insight_rows(run_dir)
+    best = run_dir.best_id or "seed"
+    still_open = sorted(t for t, r in _per_task_rewards(run_dir, best, "val").items()
+                        if r < 1.0 - 1e-9)
+
+    def _tasks(label: str, ids: list[str]) -> str:
+        return f" — {label} {{" + ", ".join(ids[:8]) + "}" if ids else ""
+
+    lines = ["# INSIGHTS — durable priors carried across iterations (framework-synthesized)",
+             "",
+             "A compact, continually-updated summary of what this run has LEARNED SO FAR, "
+             "re-derived from the objective record every iteration so it survives even when "
+             "the transcript does not. Read it BEFORE proposing.",
+             "",
+             "**These are CANDIDATE PRIORS, not truth.** Each one is a hypothesis worth "
+             "re-testing, and every edit you make is still judged by the val significance "
+             "gate — a prior can be wrong, and acting on one earns no exemption.",
+             "", "## What HELPED (gate-accepted, largest movers first)"]
+    lines += ([f"- iter {r['iter']} `{r['cid']}` val Δ {r['delta']:+.3f}"
+               f"{_tasks('fixed', r['fixed'])}{_tasks('but broke', r['broke'])}"
+               for r in helped]
+              or ["- _nothing accepted yet — this is still the baseline._"])
+    lines += ["", "## What HURT (gate-rejected, largest movers first)"]
+    lines += ([f"- iter {r['iter']} `{r['cid']}` val Δ {r['delta']:+.3f} "
+               f"({r['reason']}){_tasks('broke', r['broke'])}"
+               for r in hurt]
+              or ["- _nothing rejected yet._"])
+    lines += ["", f"## Still OPEN — tasks the current best (`{best}`) does NOT pass"]
+    lines += ([", ".join(f"`{t}`" for t in still_open[:_INSIGHT_OPEN])
+               + (f" (+{len(still_open) - _INSIGHT_OPEN} more)"
+                  if len(still_open) > _INSIGHT_OPEN else "")]
+              if still_open else
+              ["- _no failing val task recorded for the current best._"])
+    text = "\n".join(lines) + "\n"
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip() + "\n\n... (priors truncated to stay inside the "
+        text += "optimizer prompt budget; the full record is LEDGER.md)\n"
+    _atomic_write(run_dir.root / "INSIGHTS.md", text)   # durable copy (dashboard reads this)
+    (workdir / "INSIGHTS.md").write_text(text, encoding="utf-8")
+    return text
 
 
 def _journal_tail(workdir: Path) -> str:
@@ -874,7 +990,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
                           rejected, history) -> str:
-    """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+    """Give the optimizer its five cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -882,7 +998,14 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+      - INSIGHTS.md — framework-synthesized durable priors (#128): what helped, what
+        hurt, what's still open, bounded and re-derived every iteration.
+
+    This is the ONLY function whose output reaches the proposal prompt, and all three
+    algorithms route through it (see the note left by #114 in ``memory.py``) — so a new
+    cross-iteration channel belongs HERE, not in a per-algorithm block.
     """
+    _build_insights(workdir, run_dir)
     _build_ledger(workdir, run_dir, rejected, history)
     _seed_journal(workdir, run_dir)
     if not (workdir / "PROCESS.md").exists():
@@ -890,7 +1013,12 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
     _build_runmap(workdir, run_dir)
 
     pointer = (
-        "## Cross-iteration files in THIS working dir (clean ownership — read all four)\n"
+        "## Cross-iteration files in THIS working dir (clean ownership — read all five)\n"
+        "- `INSIGHTS.md` — DURABLE PRIORS (framework, read-only): the compact "
+        "what-helped / what-hurt / what's-still-open summary of the whole run so far, "
+        "re-synthesized every iteration so it survives context loss. Read it FIRST for "
+        "orientation, then the detail below. Its priors are hypotheses to re-test, not "
+        "truth — the val gate still judges every edit.\n"
         "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the exact "
         "tasks it broke/fixed. Never re-introduce a change that broke a task.\n"
         "- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole "
@@ -1831,7 +1959,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
         "./guidance/optimizer/<name>.md (your subagent/parallelism features) IN FULL "
         "before diagnosing. Then read ./trajectories/ (full traces), ./guidance/sources/ "
-        "(data models/types — read before writing tool code), ./LEDGER.md (facts), the "
+        "(data models/types — read before writing tool code), ./INSIGHTS.md (durable "
+        "priors — hypotheses, not truth), ./LEDGER.md (facts), the "
         "whole ./JOURNAL.md (handover) and ./RUNMAP.md + ./prior_iterations/; fill "
         "./PROCESS.md and APPEND your entry to ./JOURNAL.md. "
         "The prompt and the tools are equally fair game.",
