@@ -5,7 +5,66 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Changed
+- **BREAKING (gate semantics): `k_se` is now a z *quantile* in `gate_mode: paired`, not
+  the multiplier.** SE(Δ) is estimated from the same n val deltas, so the standardized
+  mean difference is t-distributed with df = n−1, not normal. The gate now converts
+  `k_se` to its one-sided normal tail α = P(Z > `k_se`) and uses the bar
+  `t_{1−α, n−1} · SE`. `t ≥ z` is a theorem for every finite df, so **the gate can only
+  get stricter** — but it is strictly stricter, so **candidates that were accepted near
+  the old bar can now be rejected**, and re-running a prior optimization may take a
+  different path. The widening depends on `k_se` *and* n: at `k_se 1.0` the bar is
+  1.32× wider at n=3, 1.06× at n=10, 1.02× at n=30; at `k_se 3.0` it is 6.4× at n=3.
+  `gate_mode: significant` is unchanged (`k_se` is still the multiplier there). `k_se`
+  above 26.5 now raises (its normal tail underflows float64 for some df); use ≤ 3. Documented in
+  `docs/HONEST_EVAL.md` guarantee 3, `templates/project/capevolve.yaml`, and
+  `docs/OPTIMIZE_YOUR_OWN.md`. The one committed run artifact with real gate decisions
+  (`examples/skillsbench/run_full`, n=7, `k_se 0.2`) re-decides **identically** — zero
+  flips — and `docs/RESULTS.md`'s τ² runs (n=30, `k_se 0.3`) are far from any margin, so
+  published results still reproduce.
+- **BREAKING (adapters with < 6 tasks): a val split of 0 or 1 task is now refused.** Any
+  adapter whose task list yields `val < 2` under its ratios hard-fails at split freeze
+  with `TinyValSplitError` instead of silently running a meaningless gate. With the
+  default 0.5/0.25/0.25 ratios that means ≥ 6 tasks (≥ 20 for the recommended val ≥ 5);
+  with 4–5 tasks set all three ratios to 0.25/0.5/0.25. `CAPEVOLVE_ALLOW_TINY_VAL=1`
+  opts out, and permanently brands the run's artifacts as not-an-honest-gate.
+  `skillcheck.temp_run_dir`'s default id set grew 4 → 8 for the same reason.
+
 ### Fixed
+- **Tiny/empty val splits can no longer reach a gate decision, on any path (#113).** The
+  guard now runs at split freeze, `baseline`, `reuse_baseline`, and the `--resume`
+  fast-path — and, decisively, **inside `gate.decide` itself**, which is the chokepoint
+  every mode of every algorithm routes through. This closes three previously unguarded
+  production paths (`reuse_baseline` returned before `baseline()`, so a run created under
+  the escape hatch became a reusable seed for later runs that were never marked
+  dishonest; `--resume` and `--reuse-baseline` returned before any check) and also catches
+  a *healthy* split whose realized pair count collapsed because a candidate errored on
+  most val tasks (`_paired_deltas` intersects task ids).
+- **Escape-hatch runs are now visibly branded instead of looking honest.** A run that set
+  `CAPEVOLVE_ALLOW_TINY_VAL=1` writes a `tiny_val_bypass` marker to `state.json`;
+  `final.json` gains `honest_gate: false` and a `warnings` array; `report.md` leads with
+  `⚠ NOT AN HONEST GATE` and retracts its "held-out tasks the optimizer never saw"
+  claim; and the dashboard renders a red banner above every number (`dashboard.py` also
+  had no `split_warning` branch at all — it does now). LOW CONFIDENCE gate decisions
+  likewise now surface in `report.md`, not only in `events.jsonl`.
+- **`stats.t_critical` was silently wrong for α below ~1e-12.** It bisected on
+  `1.0 - alpha`, which is exactly `1.0` in float64 below α ≈ 1e-16, so the search
+  converged onto a garbage plateau: −5.9% at `k_se=8`, −29% at `k_se=8.3`, constant for
+  `k_se` 10…38, and at `k_se ≥ 38.5` α underflowed to 0, the function returned `0.0`, and
+  a `max(k_se, ...)` clamp **silently reverted the bar to the uncorrected z** — the exact
+  bug the correction exists to fix. It now bisects on a new cancellation-free survival
+  function `stats.t_sf`, verifies the solved value reproduces α before returning, and
+  raises rather than returning a sentinel. Cross-checked against an independent closed
+  form at df=2 to 3e-13 relative error across `k_se` 1…37. The `max()` clamp is gone
+  (it bound in 0 of ~30,000 valid cases; its only live effect was hiding this failure).
+  `betainc`'s continued fraction now raises on non-convergence instead of returning a
+  half-converged value, and `t_critical` raises `ValueError` on invalid α/df instead of
+  returning `0.0`/`inf` sentinels that would get multiplied by an SE.
+- **`check_val_size`'s remediation option 2 did not work.** It suggested `split_val: 0.4`,
+  but the CLI always builds all three ratios, so that yields (0.5, 0.4, 0.25) — still
+  `val=1` at n=3 and n=4, i.e. exactly the users hitting the error. It now gives the full
+  verified triple (0.25/0.5/0.25, correct for every n ≥ 4), notes that option 3 needs
+  `test ≥ 1` too, and states that at exactly 3 tasks no ratio can work.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
@@ -21,6 +80,42 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **Protected-paths tamper guard (honesty).** New `cap_evolve/protect.py` proves the
+  optimizer never edited the scorer / eval harness / task data. A SHA-256 manifest of
+  the protected paths is recorded at `baseline` (`protected.json`) and re-verified
+  inside `evaluate_candidate` — the chokepoint every evaluation (baseline, each
+  iteration's val gate, `finalize`) goes through — plus GEPA's minibatch path. Any
+  modification, deletion, or newly-added protected file logs a `tamper_detected` event
+  (surfaced as a red banner at the top of the dashboard and of `report.md`) and raises
+  `TamperError` naming the file, before the candidate can be scored, snapshotted,
+  become best, or seal the test split. Verification runs **both before and after** every
+  scoring pass — `evaluate_candidate`, GEPA's `_eval_minibatch`, and once more
+  immediately before `finalize` burns the seal — so a writer that lands *during* scoring
+  (a detached grandchild outliving the optimizer subprocess) invalidates the score
+  instead of being recorded. The manifest itself is protected: its digest is logged in
+  `events.jsonl`, and a manifest that goes missing, becomes unparseable, or stops
+  matching that digest is a hard failure rather than a silent re-record from the current
+  (possibly tampered) tree. Bytecode is hashed like any other file — `load_adapter` sets
+  `sys.dont_write_bytecode` and clears the adapter's `__pycache__`, closing the PEP 552
+  `UNCHECKED_HASH` pyc attack (a planted cache entry ran a hacked `score()` with the
+  source's SHA-256 unchanged) without needing a `.pyc` exclusion. A protected file
+  replaced by a symlink reads as a change rather than de-protecting itself. Defaults
+  derive from the project layout (`adapters/`, `capevolve.yaml`, the spec's
+  `dataset_source`/`split_ids_file`, `*gold*` **data** files — prose like
+  `docs/golden-rules.md` is no longer swept in); override with `protected_paths` in
+  `capevolve.yaml`, where a malformed or empty value is a hard error, never a silent
+  fallback to the defaults. The capability dir is never protected — it is the target.
+  `--reuse-baseline` inherits the prior run's manifest and refuses a prior run that
+  logged a tamper. The `PreToolUse` honesty hook denies writes to protected paths
+  (case-folded, for APFS/NTFS) and to the run's own evidence (`protected.json`,
+  `events.jsonl`, `state.json`, `best.txt`). Content hash, not mtime (spoofable). Zero
+  new deps (`hashlib`). `docs/HONEST_EVAL.md` states the guarantee as **tamper-evident**
+  — detection, not prevention — with its residual gaps named.
+- **YAML block sequences in `capevolve.yaml`.** The zero-dependency fallback parser
+  (used whenever PyYAML is absent, the documented default state) only understood the flow
+  form `key: [a, b]`; the idiomatic block form silently parsed as `{}`. Every
+  list-valued key was affected — including `protected_paths`, where it meant a declared
+  grader quietly fell back to the defaults with no warning.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

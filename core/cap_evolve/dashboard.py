@@ -52,6 +52,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+from .rundir import (ITERATION_EVENT_KINDS, NON_CAPABILITY_NAMES,
+                     iteration_candidate as _step_candidate)
+
 # ---------------------------------------------------------------------------
 # Secret redaction
 # ---------------------------------------------------------------------------
@@ -203,6 +207,19 @@ def _trials_from_per_task(per_task: list) -> int:
     return max(ns) if ns else 0
 
 
+def _honesty_banner(run_dir) -> str | None:
+    """The not-an-honest-gate banner when this run bypassed the tiny-val guard.
+
+    Rendered at the TOP of the dashboard, not buried in the annotations stream: a
+    bypassed run must be unmistakable in the one surface a human actually opens.
+    """
+    from .splits import BYPASS_BANNER, bypassed
+    b = bypassed(run_dir)
+    if b:
+        return f"{b.get('banner') or BYPASS_BANNER} (val tasks: {b.get('val', '?')})"
+    return None
+
+
 def _git_log(root: Path) -> list[dict]:
     """One row per iteration commit from the run dir's git store (empty if none)."""
     if not (root / ".git").exists() or not shutil.which("git"):
@@ -225,8 +242,9 @@ def _git_log(root: Path) -> list[dict]:
 
 # Step-like events carry a candidate, an accept flag, and per-iteration cost/time.
 # Different algorithms name the candidate field differently; normalise here.
-def _step_candidate(ev: dict):
-    return ev.get("candidate") or ev.get("candidate_id")
+# Both live in rundir now (imported at the top), so the dashboard and the
+# LEDGER/RUNMAP/prior_iterations builders read the SAME set — a fourth algorithm
+# kind can't desync a fifth consumer.
 
 
 def reduce_run(run_dir) -> dict:
@@ -272,9 +290,13 @@ def reduce_run(run_dir) -> dict:
     it = 0
     for ev in events:
         kind = ev.get("kind")
-        if kind == "gate_warning":
+        if kind in ("gate_warning", "split_warning"):
+            # split_warning was previously dropped on the floor, which meant a run that
+            # bypassed the tiny-val guard rendered a dashboard indistinguishable from an
+            # honest one. Both warning kinds land in the same annotations stream now.
             gate_warnings.append({"reason": ev.get("reason"), "context": ev.get("context"),
-                                  "mode": ev.get("mode")})
+                                  "mode": ev.get("mode") or kind,
+                                  "bypass": bool(ev.get("bypass"))})
             continue
         if kind in ("diagnose", "optimizer_error"):
             diagnoses.append({
@@ -283,7 +305,7 @@ def reduce_run(run_dir) -> dict:
                 "text": ev.get("error") or ev.get("summary") or ev.get("note") or "",
             })
             continue
-        if kind not in ("step", "skillopt_step", "gepa_val_gate"):
+        if kind not in ITERATION_EVENT_KINDS:
             continue
 
         cid = _step_candidate(ev)
@@ -343,6 +365,16 @@ def reduce_run(run_dir) -> dict:
             node["parent"] = parent
             nodes[cid] = node
 
+    # SkillOpt's epoch/edit-budget metadata rides on its own "skillopt_step" audit
+    # event, which is NOT an iteration event (it would double-count every SkillOpt
+    # iteration — see rundir.ITERATION_EVENT_KINDS). Fold it onto the node here so the
+    # lineage still carries `epoch` without the audit record becoming an iteration.
+    for ev in events:
+        if ev.get("kind") == "skillopt_step":
+            n = nodes.get(_step_candidate(ev) or "")
+            if n is not None and ev.get("epoch") is not None:
+                n["epoch"] = ev.get("epoch")
+
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
         p = n.get("parent")
@@ -392,7 +424,7 @@ def reduce_run(run_dir) -> dict:
     # separately by headless backends as opt_cost_usd when present.
     opt_usd = 0.0
     for ev in events:
-        if ev.get("kind") in ("step", "skillopt_step", "gepa_val_gate"):
+        if ev.get("kind") in ITERATION_EVENT_KINDS:
             opt_usd += float(ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd") or 0.0)
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
     intake_usd = intake_tokens = intake_secs = 0.0
@@ -567,7 +599,18 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Protected-path tamper events (#142): an honesty signal, so it rides
+        # alongside the gate warnings instead of staying buried in events.jsonl.
+        "tamper_events": [e for e in events if e.get("kind") == "tamper_detected"],
+        # Plateau/convergence state (cap_evolve.plateau): the LAST `plateau` event is the
+        # current escalation level (ok|warn|diversify|stop). Distinct from #118's run
+        # LIVENESS (live/stalled/crashed/done, derived from events.jsonl mtime):
+        # "stalled" = nothing happening; "plateaued" = plenty happening, none of it helps.
+        "plateau": ([e for e in events if e.get("kind") == "plateau"] or [None])[-1],
+        "exhausted_lineages": sorted({str(e.get("parent")) for e in events
+                                      if e.get("kind") == "lineage_exhausted" and e.get("parent")}),
         "gate_warnings": gate_warnings,
+        "honesty_banner": _honesty_banner(run_dir),
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
     }
@@ -584,8 +627,22 @@ def reduce_run(run_dir) -> dict:
 # snapshot but are NOT capability edits — skipped when diffing iterations so the diff
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
-_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+#
+# The INJECTED_* halves are here for the same reason as in ``harness._CAP_DIFF_SKIP``:
+# the parent side of the diff is a snapshot (injected read-context stripped) and the
+# child side may be a live workdir (it is not), so without them an injected
+# ``CLAUDE.md``/``.claude/skills/`` file reads as a real capability addition. Derived,
+# never enumerated.
+_DIFF_SKIP = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
+_DIFF_SKIP_DIRS = set(INJECTED_DIRS)
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
@@ -595,7 +652,7 @@ def _read_dir_files(d: Path) -> dict[str, str]:
     for f in sorted(d.rglob("*")):
         if f.is_file():
             rel = str(f.relative_to(d))
-            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance"):
+            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in _DIFF_SKIP_DIRS:
                 continue
             try:
                 out[rel] = f.read_text(encoding="utf-8")
@@ -707,6 +764,13 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
     title = f" cap-evolve report · {s['run_id']} "
     lines.append(c(_C.BOLD, title) + c(_C.GREY, "─" * max(0, width - len(title))))
 
+    # --- honesty banner (BEFORE any number) -----------------------------
+    if s.get("honesty_banner"):
+        import textwrap
+        for ln in textwrap.wrap(s["honesty_banner"], max(20, width - 2)):
+            lines.append(c(_C.RED + _C.BOLD, ln))
+        lines.append("")
+
     # --- KPI strip ------------------------------------------------------
     base = s["baseline_val"]
     best = s["best_val"]
@@ -788,6 +852,29 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
                     (f"{dlt:>+9.3f}" if dlt is not None else f"{'—':>9}") +
                     f"{n.get('iteration', 0):>6}")
             lines.append(line)
+        lines.append("")
+
+    # Tamper events FIRST and in red (#142 N4): a guard nobody can see is half a
+    # guard. Every number in this summary is void if one of these fired.
+    if s.get("tamper_events"):
+        lines.append(c(_C.RED, f"🚨 {len(s['tamper_events'])} TAMPER EVENT(S) — "
+                               "protected scorer / eval harness / task data changed. "
+                               "Every score in this run is UNTRUSTWORTHY."))
+        for ev in s["tamper_events"][:5]:
+            for ch in (ev.get("changes") or [])[:5]:
+                lines.append(c(_C.RED, f"  {ch.get('change', '?')} {ch.get('path', '?')}"
+                                       f"  ({ev.get('context') or 'unknown context'})"))
+        lines.append("")
+    pl = s.get("plateau") or {}
+    if pl.get("level") in ("warn", "diversify", "stop"):
+        col = {"warn": _C.YELLOW, "diversify": _C.YELLOW, "stop": _C.RED}[pl["level"]]
+        lines.append(c(col, f"◼ PLATEAU: {pl['level']} — {pl.get('run_length', 0)} "
+                            f"consecutive iterations bought no new best val"))
+        lines.append(c(_C.GREY, "  " + str(pl.get("reason") or "")[: width - 4]))
+    if s.get("exhausted_lineages"):
+        lines.append(c(_C.YELLOW, "◼ exhausted lineage(s): "
+                                  + ", ".join(s["exhausted_lineages"][:6])))
+    if pl or s.get("exhausted_lineages"):
         lines.append("")
 
     if s["gate_warnings"]:
@@ -894,6 +981,33 @@ function showTip(e,txt){tip.textContent=txt;tip.style.display='block';
   tip.style.left=Math.min(e.clientX+14,innerWidth-330)+'px';tip.style.top=(e.clientY+14)+'px';}
 function hideTip(){tip.style.display='none';}
 function sec(title){const s=$('section');s.append($('h2',{text:title}));main.append(s);return s;}
+
+/* ---------- 0. TAMPER banner (#142) ----------
+   Above everything, because if a protected path changed every number below it is
+   void. A guard nobody can see is half a guard. */
+(function(){
+  const T=S.tamper_events||[]; if(!T.length)return;
+  const s=sec('🚨 Tamper detected — scores untrustworthy');
+  s.append($('p',{text:T.length+' tamper event(s): a PROTECTED path (scorer / eval '+
+    'harness / task data / gold answers) changed during this run. Every reward, gate '+
+    'decision and sealed test number in this report was produced alongside an edited '+
+    'grader and must not be reported as a result.'}));
+  T.forEach(e=>{(e.changes||[]).forEach(ch=>{const a=$('div',{class:'ann'});
+    a.append($('div',{class:'who',text:(ch.change||'?')+' · '+(e.context||'')}),
+      $('div',{text:(ch.path||'?')+'  expected '+String(ch.expected_sha256||'—').slice(0,12)+
+        '…  actual '+String(ch.actual_sha256||'—').slice(0,12)+'…'}));s.append(a);});});
+  s.querySelectorAll('.ann').forEach(a=>{a.style.borderLeftColor='#e5534b';});
+  s.querySelector('h2').style.color='#e5534b';
+})();
+
+/* ---------- 0b. Honesty banner (before ANY number) ---------- */
+(function(){
+  if(!S.honesty_banner)return;
+  const b=$('div',{text:S.honesty_banner});
+  b.style.cssText='background:#7f1d1d;color:#fee2e2;border:2px solid #ef4444;'+
+    'border-radius:8px;padding:14px 16px;margin:0 0 18px;font-weight:700;line-height:1.5';
+  main.prepend(b);
+})();
 
 /* ---------- 1. KPI strip ---------- */
 (function(){
@@ -1241,9 +1355,16 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
 
 /* ---------- 7. Annotations / diagnoses stream ---------- */
 (function(){
-  const W=S.gate_warnings||[], D=S.diagnoses||[];
-  if(!W.length&&!D.length)return;
+  const W=S.gate_warnings||[], D=S.diagnoses||[], P=S.plateau||null, X=S.exhausted_lineages||[];
+  const plOn = P && P.level && P.level!=='ok';
+  if(!W.length&&!D.length&&!plOn&&!X.length)return;
   const s=sec('Annotations & diagnoses');
+  if(plOn){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'plateau · '+P.level}),
+             $('div',{text:(P.reason||'')}));s.append(a);}
+  if(X.length){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'lineage exhausted'}),
+             $('div',{text:X.join(', ')}));s.append(a);}
   W.forEach(w=>{const a=$('div',{class:'ann'});a.append($('div',{class:'who',text:'gate · '+(w.mode||'')}),
     $('div',{text:w.reason||''}));s.append(a);});
   D.forEach(d=>{const a=$('div',{class:'ann diag'});a.append($('div',{class:'who',text:(d.kind||'diagnose')+(d.candidate?' · '+d.candidate:'')}),

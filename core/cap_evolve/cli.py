@@ -86,6 +86,53 @@ def _resolve_algorithm(name: str) -> tuple[str, str | None]:
     return name, None
 
 
+# Algorithms whose run.py declares the shared optimizer-context flag set (via
+# ``OptimizerContext.add_arguments``). The agent-driven ones (evograph, agent-optimize)
+# have no deterministic loop and only tolerate the base flags, so they are excluded —
+# an explicit list, not a silent per-flag drop (issue #109).
+_OPTIMIZER_CONTEXT_ALGORITHMS = ("hill-climb", "gepa", "skillopt")
+
+
+def _optimizer_context_flags(spec: dict, project: str, optimizer_name: str) -> list[str]:
+    """Build the optimizer-context CLI flags from the spec, for ANY algorithm.
+
+    Every value here is "what context does the optimizer get" — the capability brief +
+    guidance, the intake-authored instructions template, the benchmark repo, supporting
+    source files, the optimizer's own features reference, and the consuming-LLM profile.
+    Paths are resolved project-relative when not absolute.
+    """
+    out: list[str] = []
+
+    def _project_rel(value) -> Path:
+        p = Path(str(value))
+        return p if p.is_absolute() or p.exists() else Path(project) / str(value)
+
+    def _csv(value) -> list[str]:
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return [str(v).strip() for v in (value or []) if str(v).strip()]
+
+    caps = _csv(spec.get("capabilities"))
+    if caps:
+        out += ["--capabilities", ",".join(caps)]
+    if optimizer_name:
+        out += ["--optimizer-name", str(optimizer_name)]
+    instr_p = _project_rel(spec.get("optimizer_instructions_file")
+                           or "optimizer/INSTRUCTIONS.md")
+    if instr_p.exists():
+        out += ["--instructions-file", str(instr_p)]
+    if spec.get("runner_repo_path"):
+        out += ["--bench-repo", str(_project_rel(spec["runner_repo_path"]))]
+    csrc = _csv(spec.get("capability_sources"))
+    if csrc:
+        out += ["--capability-sources", ",".join(csrc)]
+    if spec.get("target_model"):
+        out += ["--target-model", str(spec["target_model"])]
+    if spec.get("target_profile_file"):
+        out += ["--target-profile-file", str(_project_rel(spec["target_profile_file"]))]
+    return out
+
+
 def _resolve_skills(skills_dir: Path) -> dict:
     manifest = skills_dir / "_registry" / "manifest.json"
     if not manifest.exists():
@@ -345,60 +392,30 @@ def _cmd_run(argv):
         alg_cmd += ["--resume"]
     if algorithm_focus is not None:
         alg_cmd += ["--focus", algorithm_focus]
-    # Surface the selected capability skills to the optimizer prompt so it knows the
-    # allowed edit space (e.g. tools → may add composite tools). hill-climb consumes
-    # --capabilities; algorithms without the flag ignore the extra arg via argparse error,
-    # so only pass it to those that accept it.
-    caps = spec.get("capabilities") or []
-    if isinstance(caps, str):
-        caps = [c.strip() for c in caps.split(",") if c.strip()]
-    if caps and algorithm_name == "hill-climb":
-        alg_cmd += ["--capabilities", ",".join(str(c) for c in caps)]
-    # Thread the resolved optimizer NAME so the harness can copy that optimizer's
-    # features reference (parallel-subagent capabilities etc.) into each iteration's
-    # workdir. Only hill-climb accepts the flag; other algorithms ignore it.
-    if algorithm_name == "hill-climb":
-        alg_cmd += ["--optimizer-name", str(optimizer_name)]
-    # Optimizer-instructions template (intake-authored, per benchmark) + benchmark repo
-    # as read-only optimizer context. Both are resolved project-relative if not absolute.
-    # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.
-    if algorithm_name == "hill-climb":
-        instr = spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md"
-        instr_p = Path(instr)
-        if not instr_p.is_absolute() and not instr_p.exists():
-            instr_p = Path(project) / instr
-        if instr_p.exists():
-            alg_cmd += ["--instructions-file", str(instr_p)]
-        repo = spec.get("runner_repo_path")
-        if repo:
-            repo_p = Path(str(repo))
-            if not repo_p.is_absolute() and not repo_p.exists():
-                repo_p = Path(project) / str(repo)
-            alg_cmd += ["--bench-repo", str(repo_p)]
-        # Supporting source files (data models / types the tools import) copied verbatim
-        # into the optimizer's ./guidance/sources/ so it can write correct code. Resolved
-        # project-relative by the harness; we pass them through as given.
-        csrc = spec.get("capability_sources") or []
-        if isinstance(csrc, str):
-            csrc = [c.strip() for c in csrc.split(",") if c.strip()]
-        if csrc:
-            alg_cmd += ["--capability-sources", ",".join(str(c) for c in csrc)]
-        # Consuming/runtime LLM the capabilities are optimized FOR (distinct from the
-        # optimizer model). A model id or a tier keyword; steers the optimizer prompt.
-        if spec.get("target_model"):
-            alg_cmd += ["--target-model", str(spec["target_model"])]
-        tpf = spec.get("target_profile_file")
-        if tpf:
-            tpf_p = Path(str(tpf))
-            if not tpf_p.is_absolute() and not tpf_p.exists():
-                tpf_p = Path(project) / str(tpf)
-            alg_cmd += ["--target-profile-file", str(tpf_p)]
+    # Optimizer-context flags — what the optimizer is GIVEN. These used to be gated
+    # behind `algorithm_name == "hill-climb"`, so a user who configured a capability
+    # brief, an instructions template, a bench repo, capability sources or a target model
+    # had them SILENTLY DROPPED on gepa/skillopt (issue #109). Every deterministic
+    # algorithm now declares the same flag set via
+    # OptimizerContext.add_arguments, so they are passed unconditionally.
+    if algorithm_name in _OPTIMIZER_CONTEXT_ALGORITHMS:
+        alg_cmd += _optimizer_context_flags(spec, project, optimizer_name)
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):
         alg_cmd += ["--max-metric-calls", str(spec["max_metric_calls"])]
     if spec.get("store_commit_cmd"):
         alg_cmd += ["--store-commit-cmd", str(spec["store_commit_cmd"])]
+    # Plateau/convergence thresholds — one loop, every deterministic algorithm, so a
+    # new knob can't be silently dropped for gepa/skillopt the way #109's flags were.
+    if algorithm_name in ("hill-climb", "gepa", "skillopt"):
+        for key, flag in (("plateau_window", "--plateau-window"),
+                          ("plateau_escalate_every", "--plateau-escalate-every"),
+                          ("plateau_lineage_window", "--plateau-lineage-window")):
+            if spec.get(key):
+                alg_cmd += [flag, str(int(spec[key]))]
+        if spec.get("plateau_stop") is False:
+            alg_cmd += ["--no-plateau-stop"]
     # Algorithm-specific knobs without hardcoding per-algorithm: a spec may set
     # `algorithm_args` (string) to pass extra flags straight through to the
     # algorithm run.py — e.g. "--epochs 6 --lr-schedule cosine" for skillopt,

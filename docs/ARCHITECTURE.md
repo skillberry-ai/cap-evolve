@@ -36,7 +36,11 @@ See [`HONEST_EVAL.md`](HONEST_EVAL.md) for the splitting / gating / sealing guar
 ## What the optimizer receives each iteration
 
 The harness assembles a **capability-scoped** working dir per iteration, then runs your
-chosen coding-agent CLI in it:
+chosen coding-agent CLI in it. This is assembled by **one shared seam**,
+[`core/cap_evolve/optimizer_context.py`](../core/cap_evolve/optimizer_context.py)
+(`inject()` = the files, `render_instructions()` = the prompt), and **every deterministic
+algorithm — `hill-climb`, `gepa`, `skillopt` — routes through it**, so all three get the
+identical context. Add an artifact or a prompt block there and all three inherit it:
 
 - **The selected capability skill(s)** — both as `./guidance/<cap>/` *and* placed natively
   in the agent's own skills dir (e.g. `.claude/skills/`) so a headless agent auto-loads
@@ -59,6 +63,19 @@ chosen coding-agent CLI in it:
 | `JOURNAL.md` | optimizer | append-only HANDOVER across the run (tried / worked / regressed / refuted / focus-next) |
 | `PROCESS.md` | optimizer | EXPLAINABILITY, snapshotted per candidate |
 | `RUNMAP.md` + `prior_iterations/` | framework | a manifest plus every prior iteration's PROCESS.md and capability diff, for real prior-work access |
+
+These are built from the run's iteration events. The recognised kinds live in ONE place —
+`rundir.ITERATION_EVENT_KINDS` (`step`, `gepa_val_gate`), read via
+`RunDir.iteration_events()` — because algorithms that emit their own kind (GEPA bypasses
+`run_step`) would otherwise be invisible to these builders and get an empty history.
+
+`iteration_events()` returns **one row per logged event, in log order, with no dedup** —
+candidate ids are not globally unique (SkillOpt re-mints `so_eNNsMM` after `--resume`), so
+id-keyed dedup would silently drop a resumed iteration. SkillOpt's own `skillopt_step` is
+deliberately NOT an iteration event: it duplicates the `step` that `run_step` already logs
+for the same candidate, and counting both double-counted every SkillOpt iteration in
+`LEDGER.md` / `RUNMAP.md` / `INSIGHTS.md`. It stays in `events.jsonl` as the audit record
+for `epoch` / `edit_budget` / `applied_changes`, which the dashboard folds onto the node.
 
 Because it sees all failure clusters, the protect-set, and the prior causal impact at once,
 the optimizer produces **one bold, multi-part candidate per iteration that addresses every

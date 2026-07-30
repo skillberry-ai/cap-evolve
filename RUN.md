@@ -74,7 +74,12 @@ artifact.
 - Acceptance is gated on **val**, never on the data the optimizer edited against.
 - Only the **primary** metric (the scalar reward) gates; shown-only secondaries (e.g. `cost_usd`, `db_match`) are displayed but never affect accept/reject.
 - Multi-trial scoring reports mean + stderr; pass^k is reported when trials > 1.
-- Rejected approaches are remembered and never re-proposed.
+- Rejected approaches are remembered (`rejected.jsonl`) and re-injected into every later
+  proposal prompt as an explicit "already tried & rejected — do not re-propose" constraint
+  block, carrying the exact edit signature and why the gate killed it. Enforcement is
+  **advisory** at the prompt: the optimizer is a black-box agent CLI, so cap-evolve cannot
+  forbid it from re-emitting an edit. What is **hard** is the gate — a re-proposed dead end
+  is still rejected on val, and the repeat is counted in the constraint block.
 
 ## One-command alternative
 If you'd rather not drive it turn-by-turn:

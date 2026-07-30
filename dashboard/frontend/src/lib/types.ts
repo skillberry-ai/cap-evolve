@@ -2,6 +2,12 @@
 
 export type RunStatus = 'live' | 'done' | 'failed'
 
+/** Plateau escalation level (core/cap_evolve/plateau.py `LEVELS`). Orthogonal to
+ * `RunStatus`: that one is LIVENESS (is the process running), this one is PROGRESS (is
+ * anything it does help). A plateaued run is `live` and `stop` at the same time — they
+ * answer different questions, so they are separate fields and never one string. */
+export type PlateauLevel = 'ok' | 'warn' | 'diversify' | 'stop'
+
 /** One row from GET /api/runs (light hub summary). */
 export interface RunSummary {
   run_id: string
@@ -12,6 +18,8 @@ export interface RunSummary {
   baseline_val: number | null
   delta_pct: number | null
   iterations: number
+  /** Progress, not liveness — see `PlateauLevel`. Defaults to 'ok'. */
+  plateau_level?: PlateauLevel
   total_usd: number | null
   mtime: number
 }
@@ -124,6 +132,16 @@ export interface RunSummaryDetail {
   budget_warnings?: { metric: string; pct: number; spent: number; limit: number }[]
   gate_warnings?: unknown[]
   diagnoses?: unknown[]
+  /** Plateau/convergence state — see `PlateauLevel`. Null until the first plateau event. */
+  plateau?: {
+    level: PlateauLevel
+    run_length: number
+    accepts_in_streak: number
+    near_misses?: number
+    best_val?: number
+    reason?: string
+  } | null
+  exhausted_lineages?: string[]
   git_log?: { hash: string; subject: string }[]
 }
 
@@ -190,6 +208,8 @@ export interface RejectedEntry {
   summary: string
   reason: string
   val: number | null
+  /** Normalized signature of the edit that failed (#129). Absent on pre-#129 runs. */
+  approach?: string
 }
 export interface MemoryResult {
   history: HistoryEntry[]

@@ -51,31 +51,37 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import optimizer_context as oc
+from . import plateau
+from . import protect
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
+    _SNAPSHOT_IGNORE,
     _augment_instructions,
     _init_memory_store,
     _live,
     _paired_deltas,
+    approach_signature,
     evaluate_candidate,
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir
+from .optimizer_context import OptimizerContext
+from .optimizer_context import inject as inject_optimizer_context
+from .optimizer_context import render_instructions
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
 
 # Optimizer-scratch / non-capability files that must NOT count as editable
 # "components" (they perturb neither the capability nor the content hash).
-_NON_COMPONENT = {
-    "MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md",
-    "FOCUS.md", "REFLECTION.md",
-    # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-    "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
-}
-_NON_COMPONENT_DIRS = {".git", "__pycache__", "prior_iterations"}
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition; INSTRUCTIONS/PROCESS are in it
+# because they ARE snapshotted (explainability) yet are still not editable components.
+# The injected agent-instructions files (CLAUDE.md / AGENTS.md / …) are read-context too.
+_NON_COMPONENT = set(NON_CAPABILITY_NAMES) | set(oc.INJECTED_NAMES)
+_NON_COMPONENT_DIRS = {".git", "__pycache__"} | set(oc.INJECTED_DIRS)
 
 
 # ---- components (editable capability files) -------------------------------
@@ -97,6 +103,10 @@ def _components(candidate_dir: Path) -> list[str]:
         if not p.is_file():
             continue
         rel = p.relative_to(cdir)
+        # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+        # root-anchored. Harmless here (a false positive only costs precision — one
+        # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+        # would change which components GEPA may edit, which is out of scope for #110.
         if p.name in _NON_COMPONENT:
             continue
         if any(part in _NON_COMPONENT_DIRS for part in rel.parts):
@@ -134,6 +144,12 @@ def _eval_minibatch(
     honest gate). One trial per task — the minibatch is a cheap signal, not the
     significance test.
     """
+    # Tamper guard (#142): the minibatch is its own (local) gate and it writes
+    # ``EvalCache`` entries, so it must not run against an edited scorer either.
+    # ``evaluate_candidate`` guards the full-val/test path; this guards GEPA's
+    # cheap path, which bypasses it.
+    protect.verify(run_dir, context=f"minibatch eval of {tag}")
+
     all_train = {t.id: t for t in adapter.tasks("all")}
     tasks = [all_train[tid] for tid in task_ids if tid in all_train]
     out_dir = run_dir.rollouts / "train"
@@ -176,6 +192,13 @@ def _eval_minibatch(
             )
             if cache is not None:
                 cache.put(chash, task.id, sc.reward, sc.feedback or "")
+
+    # POST-scoring guard (#142), matching ``evaluate_candidate``: the pre-check above
+    # only proves the grader was clean when the minibatch STARTED. This path both gates
+    # a child locally and writes ``EvalCache`` entries that later iterations trust, so a
+    # writer that lands during scoring must invalidate the result here rather than be
+    # cached as truth.
+    protect.verify(run_dir, context=f"post-minibatch eval of {tag}")
 
     elapsed = time.time() - t0
     # Count ONLY rollouts actually fired (cache hits cost nothing) toward budget.
@@ -274,15 +297,38 @@ def _write_focus(workdir: Path, components: list[str], focus: list[str] | None) 
     return ", ".join(focus) if focus else "(all)"
 
 
-def _instructions(reflection_summary: str, focus_label: str, mb_ids: list[str]) -> str:
+def _gepa_block(reflection_summary: str, focus_label: str, mb_ids: list[str],
+                *, has_trajectories: bool = True) -> str:
+    """GEPA's own tail block: the reflective-dataset + component-focus pointers.
+
+    This is the ``extra`` passed to ``optimizer_context.render_instructions`` — the
+    GEPA-specific part of the prompt. The shared part (capability brief, failure index,
+    bench repo, parallel note, consuming-LLM reader block, the benchmark-authored
+    template) comes from the seam, so GEPA is no longer prompt-poorer than hill-climb.
+
+    ``has_trajectories`` gates the "``./trajectories/`` holds the SAME minibatch
+    rollouts VERBATIM" claim: a fully-cached minibatch persists no rollout files, and
+    the seam then OMITS the dir rather than substituting another iteration's traces
+    (see ``harness._copy_step_trajectories``). Claiming a dir that isn't there — or
+    worse, one holding a different iteration's traces — is the failure mode this pins.
+    """
+    traj = (
+        "`./trajectories/` holds the SAME minibatch rollouts VERBATIM and untruncated "
+        "— read them when REFLECTION.md's excerpts are not enough. "
+        if has_trajectories else
+        "This minibatch was served entirely from the eval cache, so NO rollout files "
+        "were persisted for it: there is no `./trajectories/` for this step and "
+        "REFLECTION.md's excerpts are the whole record. Do not look for traces "
+        "elsewhere in the workdir — any you find belong to a DIFFERENT iteration. "
+    )
     return (
-        "# GEPA reflective optimization step\n\n"
+        "\n## GEPA reflective optimization step\n\n"
         f"Minibatch task ids: {', '.join(map(str, mb_ids))}\n"
         f"Component focus: {focus_label}\n\n"
         "Read `REFLECTION.md` (the reflective dataset over the parent's failing "
         "minibatch tasks: inputs, the agent's output/trajectory, and feedback) and "
-        "`FOCUS.md` (which component(s) to edit). Diagnose the common root cause and "
-        "make ONE targeted edit to the focused component(s) that should fix the "
+        f"`FOCUS.md` (which component(s) to edit). {traj}Diagnose the common root cause "
+        "and make ONE targeted edit to the focused component(s) that should fix the "
         "general pattern.\n\n"
         f"Summary: {reflection_summary}\n"
     )
@@ -460,6 +506,8 @@ def gepa_loop(
     seed: int = 0,
     store=None,
     resume: bool = False,
+    ctx=None,
+    plateau_cfg: "plateau.PlateauConfig | None" = None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -476,6 +524,10 @@ def gepa_loop(
         frequency-weighted as GEPA prescribes).
     max_merges / merge_cadence : system-aware merge budget + how often to attempt
         a merge (every Nth accept).
+    ctx : an ``optimizer_context.OptimizerContext`` — what the optimizer is GIVEN
+        (capability guidance + brief, trajectories, the benchmark-authored instructions
+        template, bench repo, its own features reference, the consuming-LLM profile).
+        The same bundle hill-climb and SkillOpt use, so all three prompt identically.
 
     Returns a result dict in the same shape as ``hill_climb_loop`` /
     ``hill_climb_loop`` (plus GEPA-specific fields). The run's ``best_id`` is set to the
@@ -483,6 +535,7 @@ def gepa_loop(
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
+    ctx = ctx or OptimizerContext()
     cache = EvalCache(run_dir.root / "eval_cache.json")
     rng = random.Random(seed)
     run_dir.log_event("gepa_start", seed=seed, minibatch_size=minibatch_size,
@@ -521,9 +574,21 @@ def gepa_loop(
                             merges_done=merges_done, comp_cursor=comp_cursor,
                             n_steps=step_offset + len(steps))
 
+    # Plateau/convergence detection — a third stop condition next to budget and stall.
+    # GEPA is multi-lineage, so exhaustion is used to STEER (drop the dead parents from
+    # the sampling pool) while the run continues on the lineages that still move.
+    pcfg = plateau_cfg or plateau.PlateauConfig()
+    pstate = plateau.PlateauState()
+
     while True:
         ok, why = _budget_left()
         if not ok:
+            break
+
+        pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm="gepa")
+        if pstate.should_stop:
+            run_dir.log_event("gepa_stop", reason=f"plateaued ({pstate.reason})")
+            why = why or f"plateaued ({pstate.reason})"
             break
 
         # Global step index across resumes: names candidates/tags/commits so a resumed
@@ -531,11 +596,20 @@ def gepa_loop(
         n = step_offset + len(steps)
 
         # 2. select a parent from the per-instance frontier (frequency-weighted).
+        # Per-lineage exhaustion: a parent whose last K children were ALL dead is
+        # removed from the sampling pool for this iteration, so the frontier's own
+        # weighting operates over the lineages that can still move. Never emptied —
+        # if every lineage is exhausted the full pool is used and the GLOBAL level
+        # (not this filter) is what decides to stop.
+        dead_parents = set(pstate.exhausted_lineages)
+        sample_pool = [c for c in pool if c["id"] not in dead_parents] or pool
         sel_seed = rng.randrange(2 ** 31)
-        ranked, _ = selection.pick(pool, selection_strategy, seed=sel_seed)
+        ranked, _ = selection.pick(sample_pool, selection_strategy, seed=sel_seed)
         parent = ranked[0]
         run_dir.log_event("gepa_select", parent=parent["id"], strategy=selection_strategy,
-                          sel_seed=sel_seed, pool=len(pool))
+                          sel_seed=sel_seed, pool=len(pool),
+                          sampled_from=len(sample_pool),
+                          skipped_exhausted=sorted(dead_parents & {c["id"] for c in pool}))
         parent_dir = Path(parent["dir"])
 
         # 3. sample a minibatch of TRAIN ids.
@@ -557,6 +631,15 @@ def gepa_loop(
         workdir.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(parent_dir, workdir)
 
+        # Optimizer read-context (trajectories + capability/diagnose/optimizer guidance +
+        # native skills), through the SAME seam hill-climb uses. Scoped to the parent's
+        # minibatch tag so ./trajectories/ holds exactly the rollouts REFLECTION.md
+        # summarizes — verbatim and untruncated, or nothing at all when the minibatch
+        # came from the eval cache (never another iteration's traces).
+        inject_optimizer_context(adapter, run_dir, workdir, split="train", ctx=ctx,
+                                 tag=f"mb_p_{n:04d}")
+        has_traj = (workdir / "trajectories").is_dir()
+
         comps = _components(workdir)
         if component_selector == "round_robin" and comps:
             focus = [comps[comp_cursor % len(comps)]]
@@ -565,8 +648,17 @@ def gepa_loop(
             focus = None  # 'all'
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
-        instructions = _instructions(refl_summary, focus_label, mb)
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+        instructions = render_instructions(
+            parent_mb, mb, f"GEPA minibatch of {len(mb)} train task(s)", ctx=ctx,
+            algorithm="gepa", run_dir=run_dir, parent_id=parent["id"],
+            extra=_gepa_block(refl_summary, focus_label, mb, has_trajectories=has_traj))
+        # The plateau block goes THROUGH _augment_instructions (extra=) so it lands inside
+        # #222's MAX_INSTRUCTIONS_CHARS cap, and in its PRESERVED TAIL. Appending it after
+        # this call escaped the cap entirely (measured 64941 > 60000); appending it before
+        # would put the one *behavioural* block in the middle, which is the part truncation
+        # elides — silently dropping it while keeping the two context-only blocks.
+        instructions = _augment_instructions(instructions, workdir, run_dir,
+                                             extra=plateau.prompt_block(pstate))
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0
@@ -602,7 +694,8 @@ def gepa_loop(
             run_dir.update_spent(iterations=1, accepted=False)
             rejected.add(cid, f"candidate {cid} (mb {child_mb.reward:.3f} vs parent "
                               f"{parent_mb.reward:.3f})",
-                         "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward)
+                         "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward,
+                         approach=approach_signature(parent_dir, workdir))
             if store is not None:
                 store.commit(f"iter {n+1}: reject(local) {cid}", accepted=False)
             steps.append(step)
@@ -625,16 +718,23 @@ def gepa_loop(
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
         if accepted:
-            run_dir.snapshot(cid, workdir)
+            # Same exclusions run_step uses: the injected read-context is not capability.
+            run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
             child_dir = run_dir.candidate_dir(cid)
             pool.append(_entry(cid, child_dir, cand_val, parent=parent["id"]))
             lineage[cid] = parent["id"]
             history.add(cid, summary, cand_val.reward)
             accepts += 1
+            # Publish the running best NOW, not only at loop exit: LEDGER.md's
+            # "Current best:" line (and every other best_id reader) comes from run
+            # state, so leaving it at "seed" for the whole run told GEPA's optimizer
+            # its best candidate was the seed even after an accept.
+            run_dir.set_best(max(pool, key=lambda c: c["val"])["id"])
             if store is not None:
                 store.commit(f"iter {n+1}: ACCEPT {summary}", tag="best", accepted=True)
         else:
-            rejected.add(cid, summary, decision_dict.get("reason", "val gate"), cand_val.reward)
+            rejected.add(cid, summary, decision_dict.get("reason", "val gate"), cand_val.reward,
+                         approach=approach_signature(parent_dir, workdir))
             if store is not None:
                 store.commit(f"iter {n+1}: reject(val) {summary}", accepted=False)
         steps.append(step)
@@ -659,6 +759,7 @@ def gepa_loop(
     _save()
     best = max(pool, key=lambda c: c["val"])
     run_dir.set_best(best["id"])
+    pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm="gepa")
     _, why2 = run_dir.budget_exhausted()
     return {
         "algorithm": "gepa",
@@ -671,6 +772,7 @@ def gepa_loop(
         "merges": merges_done,
         "metric_calls": run_dir.spent.metric_calls,
         "stop_reason": why or why2 or "max_iterations",
+        "plateau": pstate.to_dict(),
         "steps": steps,
     }
 
@@ -765,7 +867,8 @@ def _try_merge(
     step = {"candidate_id": mid, "merge_of": [a["id"], b["id"]], "ancestor": anc,
             "origin": report["origin"], "local_gate": local_ok, "accepted": False}
     if not local_ok:
-        rejected.add(mid, f"merge {a['id']}+{b['id']}", "merge local gate: < max(parents)")
+        rejected.add(mid, f"merge {a['id']}+{b['id']}", "merge local gate: < max(parents)",
+                     approach=approach_signature(anc_dir, workdir))
         if store is not None:
             store.commit(f"merge {mid}: reject(local)", accepted=False)
         shutil.rmtree(workdir, ignore_errors=True)
@@ -784,14 +887,15 @@ def _try_merge(
     run_dir.update_spent(iterations=1, accepted=accepted)
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
-        run_dir.snapshot(mid, workdir)
+        run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)
         pool.append(_entry(mid, run_dir.candidate_dir(mid), cand_val, parent=base_parent["id"]))
         lineage[mid] = base_parent["id"]
         history.add(mid, summary, cand_val.reward)
         if store is not None:
             store.commit(f"merge {mid}: ACCEPT {summary}", tag="best", accepted=True)
     else:
-        rejected.add(mid, summary, decision_dict.get("reason", "val gate"), cand_val.reward)
+        rejected.add(mid, summary, decision_dict.get("reason", "val gate"), cand_val.reward,
+                     approach=approach_signature(anc_dir, workdir))
         if store is not None:
             store.commit(f"merge {mid}: reject(val)", accepted=False)
     return step

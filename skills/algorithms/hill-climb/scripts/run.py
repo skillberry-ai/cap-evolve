@@ -23,10 +23,11 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, harness, plateau
 from cap_evolve.store import make_store
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
+from cap_evolve.optimizer_context import OptimizerContext
 
 FOCUS_CHOICES = ("all", "cyclic", "hardest-first")
 ALGO = "hill-climb"
@@ -54,27 +55,15 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="continue from the run's current best candidate (read its val "
                         "from rollouts) instead of baseline")
-    p.add_argument("--capabilities", default="",
-                   help="comma-separated capability skills under optimization (e.g. "
-                        "'system-prompt,tools'); surfaced to the optimizer so it knows "
-                        "the allowed edit space")
-    p.add_argument("--instructions-file", default=None,
-                   help="optimizer-instructions template (intake-authored) to render the "
-                        "per-iteration prompt from; defaults to the shipped template")
-    p.add_argument("--bench-repo", default=None,
-                   help="path to the benchmark/runner source, surfaced to the optimizer "
-                        "as read-only context")
-    p.add_argument("--optimizer-name", default=None,
-                   help="resolved optimizer name (registry row); used to copy that "
-                        "optimizer's features reference into the optimizer workdir")
-    p.add_argument("--capability-sources", default="",
-                   help="comma-separated supporting source files (data models / types "
-                        "the tools import) copied verbatim into the optimizer's "
-                        "./guidance/sources/; resolved relative to --project")
-    p.add_argument("--target-model", default="",
-                   help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
-    p.add_argument("--target-profile-file", default=None,
-                   help="optional project-local brief overriding the tier's built-in brief")
+    OptimizerContext.add_arguments(p)
+    p.add_argument("--plateau-window", type=int, default=None,
+                   help="dead iterations (rejected with delta<=0) before the plateau warning")
+    p.add_argument("--plateau-escalate-every", type=int, default=None,
+                   help="further dead iterations per escalation step (warn -> diversify -> stop)")
+    p.add_argument("--plateau-lineage-window", type=int, default=None,
+                   help="dead children of ONE parent before that lineage is exhausted")
+    p.add_argument("--no-plateau-stop", action="store_true",
+                   help="warn + diversify only; never stop the run on plateau")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -83,13 +72,8 @@ def main(argv=None) -> int:
         return 2
 
     run_dir = RunDir.open(Path(args.run_dir))
-    # Record the resolved consuming-LLM profile so report + dashboard can surface it.
-    from cap_evolve import target_profile as _tp
-    _prof = _tp.resolve(args.target_model, args.target_profile_file, project_dir=args.project)
-    if not _prof.is_agnostic:
-        run_dir.log_event("target_profile", model=_prof.model, tier=_prof.tier,
-                          suggested_num_trials=_prof.suggested_num_trials,
-                          resolution_note=_prof.resolution_note)
+    ctx = OptimizerContext.from_args(args)
+    ctx.log_profile(run_dir)   # consuming-LLM profile -> report + dashboard
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -99,19 +83,20 @@ def main(argv=None) -> int:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    plateau_cfg = plateau.PlateauConfig.from_spec({
+        "plateau_window": args.plateau_window,
+        "plateau_escalate_every": args.plateau_escalate_every,
+        "plateau_lineage_window": args.plateau_lineage_window,
+        "plateau_stop": (False if args.no_plateau_stop else None),
+    })
     result = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
         focus=focus, max_iterations=args.max_iterations, n_trials=args.n_trials,
         gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         algorithm=f"{ALGO}:{focus}", no_regression=args.no_regression, store=store,
-        capabilities=[c.strip() for c in args.capabilities.split(",") if c.strip()],
-        instructions_file=args.instructions_file, bench_repo=args.bench_repo,
-        optimizer_name=args.optimizer_name,
-        capability_sources=[s.strip() for s in args.capability_sources.split(",") if s.strip()],
-        project_dir=Path(args.project),
-        target_model=args.target_model,
-        target_profile_file=args.target_profile_file,
+        ctx=ctx,
+        plateau_cfg=plateau_cfg,
     )
     print(json.dumps(result, indent=2))
     return 0

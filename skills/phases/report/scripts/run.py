@@ -18,6 +18,20 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir
 
 
+def _events(run_dir) -> list:
+    """Parse events.jsonl, skipping torn lines. Empty list when absent."""
+    path = run_dir.events_path
+    if not path.exists():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            out.append(json.loads(line))
+        except Exception:  # noqa: BLE001
+            pass
+    return out
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="report")
     p.add_argument("--run-dir", required=True)
@@ -64,11 +78,36 @@ def main(argv=None) -> int:
         "iterations": run_dir.spent.iterations,
     }
 
+    # Honesty banners must LEAD the report, before any number a human might quote.
+    # A run whose gate was bypassed (CAPEVOLVE_ALLOW_TINY_VAL) or decided on a
+    # low-confidence val split cannot look identical to an honest run.
+    from cap_evolve import splits as splits_mod
+    bypass = splits_mod.bypassed(run_dir) or (
+        {"banner": splits_mod.BYPASS_BANNER} if final.get("honest_gate") is False else None)
+    low_conf = sorted({
+        e.get("reason", "") for e in _events(run_dir)
+        if e.get("kind") in ("split_warning", "gate_warning") and "LOW CONFIDENCE" in (e.get("reason") or "")
+    })
+    summary["honest_gate"] = not bypass
+    if bypass:
+        summary["warnings"] = [bypass.get("banner") or splits_mod.BYPASS_BANNER]
+    if low_conf:
+        summary.setdefault("warnings", []).extend(low_conf)
+
     test_line = f"- **Held-out test (optimized skills): {test_reward}**" + (
         f"  (pass^k={test.get('pass_k')})" if test.get("pass_k") else "")
-    md = [
-        f"# cap-evolve run report — {run_dir.root.name}",
-        "",
+    md = [f"# cap-evolve run report — {run_dir.root.name}", ""]
+    if bypass:
+        md += [f"> {bypass.get('banner') or splits_mod.BYPASS_BANNER}",
+               f">", f"> val tasks: {bypass.get('val', '?')}. "
+               f"Do NOT cite the numbers below as a benchmark result.", ""]
+    elif low_conf:
+        md += ["> ⚠ LOW CONFIDENCE — the acceptance gate decided on a val split below "
+               f"the recommended minimum ({splits_mod.LOW_CONFIDENCE_VAL_TASKS} tasks). "
+               "The Student-t correction widened the bar, but these decisions are still "
+               "noisy; add val tasks.", ""]
+        md += [f">   {w}" for w in low_conf] + [""]
+    md += [
         f"- Best candidate: `{run_dir.best_id}`",
         f"- Baseline val: {base_val}",
         test_line,
@@ -95,11 +134,54 @@ def main(argv=None) -> int:
             if best_is_seed else
             "Test was scored exactly once on the sealed split."
         )
+    if bypass:
+        # The sealed-test mechanics still hold, but "honest improvement" does NOT: which
+        # candidate got here was decided by a gate that is not a significance test. The
+        # retraction must come FIRST — a reader who stops after one sentence must not
+        # come away with the honesty claim.
+        sealed_note = (
+            "**NOT AN HONEST RESULT — this run's acceptance gate was bypassed** (see the "
+            "banner above). The test split was still sealed and scored exactly once, but "
+            "the candidate that reached it was selected by a gate with no statistical "
+            "meaning, so the numbers above are not an honest optimization result and must "
+            "not be published as one.\n\n" + sealed_note
+        )
     md += [
         f"- Iterations: {run_dir.spent.iterations}",
+        f"- Honest gate: {'no — BYPASSED' if bypass else 'yes'}",
         "",
         sealed_note,
     ]
+
+    # Tamper events (#142) go at the TOP of the report, not the bottom: if a protected
+    # path changed, every number above is void and the reader must see that first.
+    tampers = []
+    ev = run_dir.root / "events.jsonl"
+    if ev.exists():
+        for line in ev.read_text(encoding="utf-8").splitlines():
+            if '"tamper_detected"' not in line:
+                continue
+            try:
+                tampers.append(json.loads(line))
+            except Exception:  # noqa: BLE001
+                pass
+    if tampers:
+        banner = [
+            f"> ## 🚨 TAMPER DETECTED — {len(tampers)} event(s)",
+            ">",
+            "> A PROTECTED path (scorer / eval harness / task data / gold answers) changed "
+            "during this run. Every number below was produced alongside an edited grader "
+            "and **must not be reported as a result**.",
+            ">",
+        ]
+        for e in tampers:
+            for ch in (e.get("changes") or []):
+                banner.append(f"> - `{ch.get('change')}` `{ch.get('path')}` "
+                              f"({e.get('context') or 'unknown context'})")
+        banner.append("")
+        md = md[:1] + banner + md[1:]  # after the H1, before the numbers
+        summary["tamper_events"] = len(tampers)
+
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
     if not args.no_dashboard:

@@ -27,6 +27,37 @@ def test_list_runs_projects_light_summary(tmp_base, make_run):
     assert row["status"] in {"live", "done", "failed"}
 
 
+def test_plateau_is_surfaced_and_is_not_liveness(tmp_base, make_run):
+    """Plateau state must reach the REACT dashboard, not only the static HTML.
+
+    A stop decision the user cannot see is half a feature. It is a field separate from
+    ``status`` on purpose: ``status`` is liveness (is the process running), plateau is
+    progress (is anything it does helping) — a plateaued run is BOTH ``live`` and ``stop``.
+    """
+    from capevolve_dashboard import runs
+    events = BASE_EVENTS + [
+        {"kind": "plateau", "level": "stop", "run_length": 7, "accepts_in_streak": 0,
+         "algorithm": "gepa", "reason": "plateau: 7 consecutive iterations bought no best val"},
+        {"kind": "lineage_exhausted", "parent": "cand_0001", "window": 4,
+         "plateau_level": "stop"},
+    ]
+    make_run("run_a", events=events, baseline={"val": {"reward": 0.25}, "best_id": "seed"})
+
+    row = runs.list_runs(tmp_base)[0]
+    assert row["plateau_level"] == "stop"
+    assert row["status"] == "live", "liveness and plateau answer different questions"
+
+    s = runs.load_run(tmp_base, "run_a")["summary"]
+    assert s["plateau"]["level"] == "stop" and s["plateau"]["run_length"] == 7
+    assert s["exhausted_lineages"] == ["cand_0001"]
+
+
+def test_plateau_level_defaults_to_ok(tmp_base, make_run):
+    from capevolve_dashboard import runs
+    make_run("run_a", events=BASE_EVENTS)
+    assert runs.list_runs(tmp_base)[0]["plateau_level"] == "ok"
+
+
 def test_load_run_returns_graph_and_summary(tmp_base, make_run):
     from capevolve_dashboard import runs
     make_run("run_a", events=BASE_EVENTS,

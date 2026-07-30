@@ -77,19 +77,37 @@ def read_yaml(text: str) -> dict:
         pass
     data: dict = {}
     stack = [(-1, data)]  # (indent, container)
+    pending: tuple[dict, str] | None = None  # (container, key) awaiting a block list
     for raw in text.splitlines():
         line = _strip_comment(raw).rstrip()
-        if not line.strip() or ":" not in line:
+        if not line.strip():
             continue
         indent = len(line) - len(line.lstrip())
-        key, _, val = line.strip().partition(":")
+        stripped = line.strip()
+        # Block sequences (``key:`` then ``  - item``). Without this the flow form
+        # ``key: [a, b]`` parsed but the idiomatic block form silently became ``{}``,
+        # so e.g. a ``protected_paths`` block list fell back to defaults with no
+        # warning — a config that quietly does not apply (#142 N3).
+        if stripped.startswith("- "):
+            if pending is not None:
+                cont, k = pending
+                if not isinstance(cont.get(k), list):
+                    cont[k] = []
+                cont[k].append(_coerce(stripped[2:]))
+            continue
+        if ":" not in stripped:
+            continue
+        pending = None
+        key, _, val = stripped.partition(":")
         key = key.strip()
         while stack and indent <= stack[-1][0]:
             stack.pop()
         container = stack[-1][1] if stack else data
         if val.strip() == "":
+            # Could be a nested mapping OR a block sequence — decide on the next line.
             container[key] = {}
             stack.append((indent, container[key]))
+            pending = (container, key)
         else:
             container[key] = _coerce(val)
     return data

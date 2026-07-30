@@ -81,6 +81,27 @@ def decide(payload: dict) -> int:
             "seed; re-partitioning would invalidate the honest test number."
         )
 
+    # The run's own EVIDENCE files (#142). ``protected.json`` is the tamper manifest;
+    # rewriting it used to let one optimizer step bless a hacked grader (core now hard-
+    # fails on a missing/altered manifest, but the manifest lives in a dir the optimizer
+    # can write, so denying the write here is the cheap outer layer). ``events.jsonl``
+    # carries the manifest digest that makes that hard-fail work; ``state.json`` and
+    # ``best.txt`` are the run's spend and lineage of record.
+    for name, why in (
+        ("protected.json", "the SHA-256 manifest of the protected scorer / eval harness "
+                           "/ task data — the evidence they were not edited"),
+        ("events.jsonl", "the append-only audit log, which carries the manifest digest"),
+        ("state.json", "the run's recorded budget spend"),
+        ("best.txt", "the run's best-candidate pointer"),
+    ):
+        if rt == (run_dir / name).resolve():
+            return H.emit_block(
+                f"cap-evolve: refusing to edit {tstr} — {name} is {why}. Editing the "
+                "run's own evidence is reward hacking whatever it would be changed to; "
+                "core aborts the run if this file goes missing or stops matching its "
+                "logged digest. Optimize the capability, not the record."
+            )
+
     # Anything under rollouts/test/ of the active run is the held-out evaluation.
     test_roll = (run_dir / "rollouts" / "test").resolve()
     try:
@@ -102,6 +123,31 @@ def decide(payload: dict) -> int:
                 f"task id under a test rollout directory. Held-out test artifacts are "
                 "read-only outside finalize()."
             )
+
+    # Declared PROTECTED paths (#142) — the scorer / eval harness / task data. Core
+    # already detects a tamper after the fact (SHA-256 manifest re-verified before
+    # every evaluation, aborting the run), but that costs a whole iteration; blocking
+    # the write here turns the same rule into feedback the model can act on. Core
+    # remains the enforcement, this is the early, model-visible half.
+    proj = H.project_dir_for(run_dir)
+    if proj is not None and H.core_importable():
+        try:
+            from cap_evolve import protect  # noqa: PLC0415
+            if protect.is_protected(proj, rt):
+                return H.emit_block(
+                    f"cap-evolve: refusing to edit {tstr} — it is a PROTECTED path "
+                    "(scorer / eval harness / task data / gold answers) for this run. "
+                    "Editing it is reward hacking: core re-verifies a SHA-256 manifest "
+                    "of these files before every evaluation and will abort the run with "
+                    "tamper_detected. Optimize the capability, not the grader."
+                )
+        except Exception as e:  # noqa: BLE001 — fail open, core still enforces
+            # Say so on stderr. A silently permissive honesty hook is worse than a
+            # loud broken one: without this line a typo here degrades the model-visible
+            # half of the guard with no signal anywhere.
+            print(f"cap-evolve: protected-path hook check failed ({e}) — falling open; "
+                  "core still re-verifies the SHA-256 manifest before every evaluation.",
+                  file=sys.stderr)
 
     return 0
 

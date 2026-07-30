@@ -1,7 +1,7 @@
 """Tests for the honest-evaluation substrate.
 
 These encode the non-negotiable guarantees: deterministic splits, a sealed test
-set, the significance gate, pass^k math, and rejected-memory rendering.
+set, the significance gate, pass^k math, and the memory jsonl record shape.
 """
 
 import math
@@ -122,16 +122,75 @@ def test_combined_stderr_zero_for_single_certain_task():
     assert stats.combined_stderr([1.0], [0.0]) == 0.0
 
 
-# ---- rejected memory ------------------------------------------------------
+# ---- memory jsonl records (the dashboard's Memory panel contract) ----------
 
-def test_rejected_memory_roundtrip_and_render(tmp_path):
-    rm = RejectedMemory(tmp_path / "rejected.jsonl")
-    rm.add("c1", "added verbose preamble", "Δ<=0 on val", val=0.41)
+def test_memory_jsonl_record_shape_matches_dashboard_contract(tmp_path):
+    """The jsonl records are consumed by the dashboard's ``/api/runs/{id}/memory``
+    (Memory panel + Insights dead-ends), which reads exactly these keys. Writing an
+    extra/renamed key silently breaks that UI, so pin the shape.
+
+    ``approach`` (#129) is part of the contract: the optimizer's dead-end constraint block
+    is built from it, and the dashboard's dead-ends panel now shows it. It defaults to ""
+    so a caller that omits it (and every pre-#129 record) stays valid."""
+    import json
+
+    from cap_evolve import History
+
+    rp = tmp_path / "rejected.jsonl"
+    rm = RejectedMemory(rp)
+    rm.add("c1", "added verbose preamble", "Δ<=0 on val", val=0.41,
+           approach="prompt.txt: +Think step by step before answering.")
     rm.add("c2", "removed the schema hint", "regressed val", val=0.30)
-    assert len(rm.entries()) == 2
-    rendered = rm.render()
-    assert "added verbose preamble" in rendered
-    # The block is reframed as STEERING (regressed-as-implemented), not a hard ban:
-    # it must still steer the optimizer away from re-submitting the rejected edit.
-    low = rendered.lower()
-    assert "regressed" in low and "re-submit" in low
+    recs = [json.loads(l) for l in rp.read_text().splitlines() if l.strip()]
+    assert len(recs) == 2
+    assert set(recs[0]) == {"candidate_id", "summary", "reason", "val", "approach"}
+    assert recs[0] == {"candidate_id": "c1", "summary": "added verbose preamble",
+                       "reason": "Δ<=0 on val", "val": 0.41,
+                       "approach": "prompt.txt: +Think step by step before answering."}
+    assert recs[1]["approach"] == "", "approach must default to empty, not be absent"
+
+    hp = tmp_path / "history.jsonl"
+    History(hp).add("c3", "tightened the output contract", 0.62)
+    hrec = json.loads(hp.read_text().strip())
+    assert set(hrec) == {"candidate_id", "summary", "val"}
+    assert hrec == {"candidate_id": "c3", "summary": "tightened the output contract",
+                    "val": 0.62}
+
+
+def test_every_public_annotation_resolves():
+    """Every annotation in the package must resolve (#115 refactor guard).
+
+    ``from __future__ import annotations`` stores annotations as strings, so a moved
+    function that lost the import for one of its annotated types still compiles,
+    imports, and passes every test — the break only surfaces when something actually
+    resolves the hints (``typing.get_type_hints``, ``inspect.signature(eval_str=True)``,
+    Sphinx autodoc, runtime validators). That is exactly how the #115 split dropped
+    ``from .loop import SplitResult`` in ``step.py`` with 357 tests green. This walks
+    the whole package so the next move can't repeat it.
+    """
+    import importlib
+    import inspect
+    import pkgutil
+    import typing
+
+    import cap_evolve
+
+    broken = []
+    for mod in pkgutil.iter_modules(cap_evolve.__path__):
+        if mod.name.startswith("_"):
+            continue
+        m = importlib.import_module(f"cap_evolve.{mod.name}")
+        for attr, obj in vars(m).items():
+            if getattr(obj, "__module__", None) != m.__name__:
+                continue  # re-export; checked where it's defined
+            targets = [(attr, obj)] if inspect.isfunction(obj) else []
+            if inspect.isclass(obj):
+                targets = [(attr, obj)] + [
+                    (f"{attr}.{n}", o) for n, o in vars(obj).items() if inspect.isfunction(o)
+                ]
+            for name, target in targets:
+                try:
+                    typing.get_type_hints(target)
+                except Exception as exc:  # noqa: BLE001 - report, don't mask
+                    broken.append(f"cap_evolve.{mod.name}.{name}: {type(exc).__name__}: {exc}")
+    assert not broken, "unresolvable annotations (missing import after a move?):\n" + "\n".join(broken)

@@ -5,11 +5,29 @@ prompt/skill/tool against a metric is trivially gameable — you can hill-climb 
 the same data you report. The substrate (`cap_evolve`) makes that hard *by
 construction*, and the rules below are enforced in code, not just documented.
 
-## The four guarantees
+## The five guarantees
 
-1. **Seeded, frozen splits.** `make_splits(task_ids, seed, ratios)` partitions
-   tasks deterministically. The split is written to the run dir once
-   (`splits.json`) and every skill reads it back — no skill re-splits or peeks.
+1. **Seeded, frozen splits — and big enough to gate on.** `make_splits(task_ids,
+   seed, ratios)` partitions tasks deterministically. The split is written to the
+   run dir once (`splits.json`) and every skill reads it back — no skill re-splits
+   or peeks. `check_val_size` **refuses** a val split with 0 or 1 tasks
+   (`TinyValSplitError`): with n=1 the paired delta has 0 degrees of freedom, so the
+   gate could only degenerate to "any Δ>0 wins". It runs at every point a run commits
+   to a val split — split freeze, `baseline`, `reuse_baseline`, `--resume` — **and
+   `gate.decide` itself refuses fewer than 2 matched pairs**, which is the chokepoint
+   no caller can route around: a copied or hand-written `splits.json`, or a healthy
+   split whose *realized* pair count collapsed because a candidate errored on most val
+   tasks, is caught there. Below 5 val tasks the run proceeds but logs a
+   `split_warning`, each gate decision is flagged `LOW CONFIDENCE`, and `report.md`
+   leads with a low-confidence banner.
+
+   `CAPEVOLVE_ALLOW_TINY_VAL=1` opts out — and means you accept a non-honest gate.
+   Such a run is **permanently branded**: a `tiny_val_bypass` marker is written to
+   `state.json`, `final.json` carries `honest_gate: false` plus a `warnings` array,
+   `report.md` leads with `⚠ NOT AN HONEST GATE` and retracts its "held-out tasks the
+   optimizer never saw" claim, and the dashboard renders a red banner above every
+   number. The bypass does not travel across runs: `reuse_baseline` re-checks the
+   copied split, so a bypassed run cannot become an unmarked seed for a later one.
 
 2. **The test set is sealed.** `RunDir.consume_test()` flips a `test_used` flag
    and raises `TestSealError` on any second access. The held-out number is
@@ -22,11 +40,81 @@ construction*, and the rules below are enforced in code, not just documented.
    `simplicity_tiebreak`) exist but never relax the val-only rule. The gate reads
    only the **primary** metric (the scalar `reward`); any shown-only secondary
    metrics a scorer emits (`Score.metrics`) are for display and cannot move the
-   decision.
+   decision. In `mode="paired"` (the default when per-task data exists) SE(Δ) is
+   estimated from the same n val deltas, so the standardized mean difference is
+   t-distributed, not normal. `k_se` is therefore consumed as a **z quantile**: it is
+   converted to its one-sided normal tail α = P(Z > k_se), and the realized bar is
+   `t_{1−α, df=n−1} · SE`. t ≥ z is a theorem for every finite df, so the correction
+   only ever makes the gate *stricter*, and the widening depends on both `k_se` and n:
+
+   | `k_se` | α | ratio at n=3 | n=7 | n=10 | n=30 |
+   |---|---|---|---|---|---|
+   | 0.2 | 0.4207 | 1.135× | 1.044× | 1.029× | 1.009× |
+   | 1.0 | 0.1587 | 1.321× | 1.091× | 1.059× | 1.018× |
+   | 3.0 | 0.0013 | 6.402× | 1.635× | 1.365× | 1.093× |
+
+   **Two caveats, stated plainly.** (a) This is a *change in the meaning of `k_se`* —
+   before, it was the multiplier itself. See `CHANGELOG.md`; previously-accepted
+   candidates near the old bar can now be rejected. (b) The correction does **not**
+   apply on the SE=0 path: when every val delta is identical (common with a binary
+   scorer that flips the same task set) the paired SE collapses, and the gate takes the
+   documented, loudly-warned STRICT fallback — accept on Δ̄ > 0 with no bar — at any n.
+   `k_se` above 3 is unnecessary and above 26.5 raises: its normal tail underflows
+   float64, and returning an uncorrected z bar instead would be silently wrong.
 
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
    `pass_k` reports the probability all k i.i.d. trials succeed (tau-bench style).
+
+5. **The grader is tamper-evident.** Guarantees 1–4 make the *evaluation* honest, but
+   when the capability is tool code or a skill package the optimizer is a coding
+   agent with write tools — it could "improve" by editing `score()` instead of the
+   target. `protect.py` SHA-256s the **protected paths** (by default `adapters/`,
+   `capevolve.yaml`, the spec's `dataset_source` / `split_ids_file`, and `*gold*`
+   data files) at `baseline` into `protected.json`, and re-verifies them **both before
+   and after** every scoring pass — inside `evaluate_candidate` (the chokepoint every
+   fresh score goes through), inside GEPA's `_eval_minibatch`, and once more
+   immediately before `finalize` burns the seal. Any difference logs a
+   `tamper_detected` event and raises `TamperError`, so the score is discarded rather
+   than recorded and the test split is not sealed. A content hash, not mtime:
+   `os.utime` is a one-liner. Declare a different grader location with
+   `protected_paths` in `capevolve.yaml` (a malformed `protected_paths` is a hard
+   error, never a silent fallback to the defaults).
+
+   **Exactly what is guaranteed — and what is not.** This is *detection, not
+   prevention*: nothing stops a write, and a hacked grader can execute. What is
+   guaranteed is that a **byte-level change to a declared protected file, made at any
+   point between `baseline` and `finalize`, is detected and aborts the run before the
+   affected score is recorded, made best, or sealed** — and that the evidence
+   (`protected.json` plus the `tamper_detected` event's expected/actual hashes) is
+   left on disk. Concretely covered: source edits, deletions, newly-added protected
+   files, a same-length edit with the mtime restored, a planted `.pyc` (`load_adapter`
+   sets `sys.dont_write_bytecode` and clears the cache dir, so bytecode is hashed like
+   any other file instead of being excluded), a protected file replaced by a symlink,
+   a destroyed or rewritten `protected.json` (which hard-fails against the digest
+   logged in `events.jsonl` rather than re-recording from the current tree), and a
+   writer that lands *during* scoring (the post-scoring check).
+
+   Residual gaps, stated plainly:
+   - **A narrow race remains.** The post-check brackets the scoring window; it does
+     not lock it. A writer that changes a protected file after the scorer's last read
+     and restores it before the post-check hash is not detected. Closing that would
+     require the scorer to hash the bytes it reads.
+   - **Ground truth outside the project dir is not protected** — only paths under
+     `.capevolve/project` can be hashed. A declared glob that matches nothing there
+     logs `protected_paths_unmatched`, so the omission is visible, but it is still an
+     omission.
+   - **A project with no `adapters/adapter.py` gets no protection at all**, logged as
+     `protected_manifest_skipped`.
+   - **Detection is per-run.** The manifest records the tree as it was at *this* run's
+     baseline; it does not attest that the checkout was clean to begin with.
+     `--reuse-baseline` inherits the prior run's manifest and refuses a prior run that
+     logged a tamper, but a grader hacked *before* baseline is recorded as pristine.
+   - **The `PreToolUse` hook is the advisory half, not the enforcement.** It blocks a
+     model's `Edit`/`Write` to a protected path, `protected.json`, `events.jsonl`,
+     `state.json` and `best.txt` with exit 2, but it fails open on internal error and
+     only sees Claude Code's own tools — a shell command or a subprocess bypasses it
+     entirely. Core's hash check is the guarantee.
 
 ## Why no central engine?
 
