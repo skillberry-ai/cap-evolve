@@ -472,3 +472,16 @@ def test_cache_get_put_roundtrip(tmp_path):
     # persisted: a fresh instance reads it back
     c2 = EvalCache(tmp_path / "cache.json")
     assert c2.get("h", "t0")["reward"] == 0.7
+
+
+def test_no_docs_cite_a_nonexistent_cache_flag():
+    """#114: ``cache.py``'s docstring long claimed the cache was gated behind a flag
+    named ``maybe_cached_score`` — a function that exists nowhere. Docs that name
+    fictional symbols mislead readers into wiring against them, so pin the absence
+    repo-wide (a revert of the docstring fix, or a re-add elsewhere, fails here)."""
+    root = Path(__file__).resolve().parents[2]
+    me = Path(__file__).resolve()
+    hits = [str(f) for pat in ("core/**/*.py", "core/**/*.md", "skills/**/*.py", "skills/**/*.md")
+            for f in root.glob(pat)
+            if f.resolve() != me and "maybe_cached_score" in f.read_text(errors="ignore")]
+    assert hits == [], f"docs cite a nonexistent cache flag: {hits}"
