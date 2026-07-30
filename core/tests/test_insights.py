@@ -1,21 +1,27 @@
 """Durable synthesized priors — INSIGHTS.md (issue #128).
 
-The durable signal is: what HELPED (gate-accepted edits + the tasks they fixed), what
-HURT (gate-rejected edits + the tasks they broke, with the reject reason), and what is
+The durable signal is: what the gate ACCEPTED (and the tasks those edits fixed), what it
+REJECTED (and what those edits broke *and* fixed, with the reject reason), and what is
 still OPEN (the val tasks the current best still fails). It is re-synthesized from
 ``events.jsonl`` + persisted rollouts every iteration — pure Python, zero LLM calls —
 so it survives across iterations independent of the transcript.
 
-The tests here pin the four properties that can silently break:
+The tests here pin the properties that can silently break:
   1. it reaches the prompt via ``_augment_instructions`` (the ONE function whose output
      the optimizer actually reads, and which all three algorithms route through);
   2. it is built from ``RunDir.iteration_events()``, so it is NON-EMPTY for GEPA — whose
      ``gepa_val_gate`` events a ``kind == "step"`` filter would drop entirely (#199);
-  3. it is BOUNDED and evicts by |Δ| on val, so a long run cannot balloon the prompt;
-  4. it leaks no ground truth — only val rewards and val task ids, never the sealed test
-     split's ids or any gold answer.
+  3. it is BOUNDED — inclusive of the truncation notice — and evicts per section, so a
+     long run cannot balloon the prompt;
+  4. every truncation is DISCLOSED (``+N more``), so it cannot quietly disagree with the
+     untruncated LEDGER.md;
+  5. a gate reason cannot forge a section heading inside this framework-authored block;
+  6. it leaks no ground truth — only val rewards and val task ids, never the sealed test
+     split's ids or any gold answer;
+  7. a SkillOpt iteration is counted exactly ONCE, and a resumed one is not dropped.
 """
 
+import inspect
 import json
 import sys
 import tempfile
@@ -68,8 +74,6 @@ def test_insights_reach_the_prompt_and_persist_in_the_run_dir():
 
     (c) is the part that matters: a file nobody is told to read is not a signal.
     """
-    import inspect
-
     from cap_evolve import harness
 
     rd = _run("step")
@@ -201,7 +205,10 @@ def test_insights_task_sets_are_truncated_honestly_past_eight_tasks():
 
     wd = Path(tempfile.mkdtemp())
     body = harness._build_insights(wd, rd)
-    harness._build_ledger(wd, rd, None, None)
+    # Signature-agnostic for the same reason as _augment_instructions above: #212 drops
+    # _build_ledger's rejected/history params.
+    n_extra = len(inspect.signature(harness._build_ledger).parameters) - 2
+    harness._build_ledger(wd, rd, *([None] * max(0, n_extra)))
     ledger = (wd / "LEDGER.md").read_text(encoding="utf-8")
 
     # INSIGHTS shows 8 + an explicit count of the rest; LEDGER shows all 20.
