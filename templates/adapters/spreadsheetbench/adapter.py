@@ -62,6 +62,13 @@ NOTE ON SCORING:
   Jupyter Kernel Gateway container per task, all bind-mounting the same dataset dir at
   /mnt/data). Ensure Docker is running and has enough headroom for
   SPREADSHEETBENCH_CONCURRENCY containers (8GB RAM / 2 CPU each) at once.
+
+  The executor image runs as uid 1000, so unless SPREADSHEETBENCH_DATA_DIR happens to be
+  owned by uid 1000 the container can read the inputs but not create the output file.
+  The adapter widens the mode of the outputs dirs it creates to compensate (see
+  _make_container_writable); if a write is still denied, the rollout is reported as an
+  infrastructure error rather than as a zero-reward miss, so the optimizer is not sent
+  chasing a mount problem it cannot fix from the prompt.
 """
 
 from __future__ import annotations
@@ -329,6 +336,89 @@ def _sanitize_conv_id(s: str) -> str:
     return out if out and out[0].isalnum() else f"t{out}"
 
 
+def _make_container_writable(p: Path, *, sticky: bool = False) -> None:
+    """Widen a bind-mounted dir so the sandbox container can create files in it.
+
+    The executor image (docker.io/xingyaoww/codeact-executor) runs as a FIXED uid
+    (1000), which is generally NOT the uid running this adapter. A dir we create here
+    is owned by our uid at mode 0755, so the container gets r-x: it can READ the input
+    workbooks but cannot create the output file, and every rollout dies with
+    `PermissionError: [Errno 13] ... <n>_<id>_output.xlsx` and scores 0. Widening the
+    mode is the least invasive fix — running the container as our uid instead breaks
+    the image's own jupyter HOME.
+
+    `sticky` (0o1777, as on /tmp) is for the shared outputs root, where many
+    concurrent rollouts write side by side: it lets each create its own subdir while
+    preventing one from deleting another's. Best-effort — if we do not own a
+    pre-existing dir the chmod fails, and the write itself then surfaces the real
+    error instead of this being silently papered over.
+    """
+    try:
+        os.chmod(p, 0o1777 if sticky else 0o777)
+    except OSError:
+        pass
+
+
+_FENCE_RE = re.compile(r"```[a-zA-Z0-9_+-]*[ \t]*\r?\n(.*?)```", re.DOTALL)
+
+_NO_CODE_REMINDER = (
+    "No python code block was found in your reply, so NOTHING was executed and the "
+    "round was wasted. Reply with exactly ONE ```python fenced code block containing "
+    "runnable code, with no prose or XML outside the block."
+)
+
+
+def _extract_python(vendor, response: str) -> str | None:
+    """Extract the fenced python block, or None when the reply contains no code fence.
+
+    The vendored `extract_code` falls back to the RAW response when there is no
+    ```python fence, so a reply that is prose — or a literal `<function_calls>` block,
+    which some models emit — gets sent to the Jupyter kernel verbatim and burns a
+    round on `SyntaxError: invalid syntax`. Returning None lets the caller re-state the
+    contract instead of spending the round.
+    """
+    if "```python" in response:
+        # Delegate so fenced replies stay byte-identical to upstream's behaviour.
+        return vendor["extract_code"](response)
+    m = _FENCE_RE.search(response)
+    return m.group(1).rstrip("\n") if m else None
+
+
+def _cleanup_output_dir(rollout) -> None:
+    """Drop a rollout's per-rollout output dir once nothing more will read it.
+
+    Without this a full run (912 tasks × trials × iterations) accumulates thousands of
+    per-rollout dirs inside SPREADSHEETBENCH_DATA_DIR. Safe on every path: the dir is
+    owned by us (we created it), so rmtree succeeds even though the files inside were
+    written by the container's uid.
+    """
+    run_tag = (getattr(rollout, "metadata", None) or {}).get("run_tag")
+    if not run_tag:
+        return
+    try:
+        shutil.rmtree(_data_dir() / "outputs" / run_tag, ignore_errors=True)
+    except RuntimeError:
+        pass  # _data_dir() unset — nothing was created, nothing to clean
+
+
+def _output_write_blocked(exec_results: list[str], container_out_dir: str) -> str | None:
+    """Return the offending line if the sandbox was denied writes to the output dir.
+
+    A PermissionError/OSError on output_path is an INFRASTRUCTURE fault (the bind mount
+    is not writable by the container's uid — see _make_container_writable), not a defect
+    in the prompt under optimization. Reporting it as a plain zero-reward miss sends the
+    optimizer chasing an unfixable wall; surfacing it as a rollout error routes it
+    through score()'s "do not optimize against it" path instead.
+    """
+    for res in reversed(exec_results):
+        if "PermissionError" not in res and "OSError" not in res:
+            continue
+        for line in res.splitlines():
+            if ("PermissionError" in line or "OSError" in line) and container_out_dir in line:
+                return line.strip()
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Prompting
 # ---------------------------------------------------------------------------
@@ -422,8 +512,15 @@ class Adapter(CapabilityAdapter):
             local_dir = data_dir / "spreadsheet" / sid
             container_dir = f"/mnt/data/spreadsheet/{sid}"
             container_out_dir = f"/mnt/data/outputs/{run_tag}"
-            host_out_dir = data_dir / "outputs" / run_tag
+            outputs_root = data_dir / "outputs"
+            host_out_dir = outputs_root / run_tag
+            # Both levels must be writable by the container's uid, not just the leaf:
+            # the generated code typically re-mkdir's the leaf, which needs write on the
+            # parent too.
+            outputs_root.mkdir(parents=True, exist_ok=True)
+            _make_container_writable(outputs_root, sticky=True)
             host_out_dir.mkdir(parents=True, exist_ok=True)
+            _make_container_writable(host_out_dir)
 
             input_file = _resolve_case_file(local_dir, 1, sid, "input")
             preview = _spreadsheet_preview(input_file, PREVIEW_ROWS)
@@ -441,7 +538,10 @@ class Adapter(CapabilityAdapter):
                 sandbox = _get_sandbox()
                 client = sandbox.client_for(conv_id)
             except Exception as e:  # noqa: BLE001
-                return Rollout(task_id=task.id, error=f"sandbox startup failed: {e}")
+                return Rollout(
+                    task_id=task.id, error=f"sandbox startup failed: {e}",
+                    metadata={"run_tag": run_tag},
+                )
 
             system_prompt = _read_system_prompt(ctx)
             messages = [
@@ -451,7 +551,8 @@ class Adapter(CapabilityAdapter):
 
             cost = 0.0
             tokens = 0
-            last_code = ""
+            last_code = ""  # last code actually EXECUTED (what cases 2/3 replay)
+            exec_results: list[str] = []
             case1_path = host_out_dir / f"1_{sid}_output.xlsx"
 
             import litellm
@@ -465,7 +566,10 @@ class Adapter(CapabilityAdapter):
                         **model_config.llm_kwargs(),
                     )
                 except Exception as e:  # noqa: BLE001
-                    return Rollout(task_id=task.id, error=f"LLM call failed: {e}", cost_usd=cost, tokens=tokens)
+                    return Rollout(
+                        task_id=task.id, error=f"LLM call failed: {e}", cost_usd=cost,
+                        tokens=tokens, metadata={"run_tag": run_tag},
+                    )
 
                 cost += float(getattr(response, "_hidden_params", {}).get("response_cost", 0) or 0)
                 usage = getattr(response, "usage", None)
@@ -473,7 +577,14 @@ class Adapter(CapabilityAdapter):
 
                 assistant_text = response.choices[0].message.content or ""
                 messages.append({"role": "assistant", "content": assistant_text})
-                last_code = vendor["extract_code"](assistant_text)
+
+                code = _extract_python(vendor, assistant_text)
+                if code is None or not code.strip():
+                    # Nothing runnable in the reply — re-state the contract rather than
+                    # feeding prose to the kernel for a guaranteed SyntaxError.
+                    messages.append({"role": "user", "content": _NO_CODE_REMINDER})
+                    continue
+                last_code = code
 
                 try:
                     exec_result = vendor["exec_code"](client, last_code)
@@ -483,14 +594,33 @@ class Adapter(CapabilityAdapter):
                     # exec_code's own traceback handling) — infrastructure, not fixable by
                     # the prompt.
                     return Rollout(
-                        task_id=task.id, error=f"sandbox exec failed: {e}", cost_usd=cost, tokens=tokens
+                        task_id=task.id, error=f"sandbox exec failed: {e}", cost_usd=cost,
+                        tokens=tokens, metadata={"run_tag": run_tag},
                     )
 
+                exec_results.append(exec_result)
                 messages.append({"role": "user", "content": exec_result})
                 if case1_path.exists():
                     break
 
-            if case1_path.exists():
+            if not case1_path.exists():
+                blocked = _output_write_blocked(exec_results, container_out_dir)
+                if blocked:
+                    return Rollout(
+                        task_id=task.id,
+                        output=last_code,
+                        trace=messages,
+                        cost_usd=cost,
+                        tokens=tokens,
+                        error=(
+                            f"sandbox denied writes to the bind-mounted output dir "
+                            f"{container_out_dir} ({blocked}) — the host dir is not "
+                            f"writable by the container's uid; see _make_container_writable"
+                        ),
+                        metadata={"run_tag": run_tag, "id": sid, "model": model_config.MODEL, "seed": seed},
+                    )
+            else:
+                # Case 1 solved — replay the SAME code onto cases 2 and 3 (no new LLM calls).
                 for idx in (2, 3):
                     case_input = _resolve_case_file(local_dir, idx, sid, "input")
                     solution = last_code.replace(input_file.name, case_input.name)
@@ -515,6 +645,10 @@ class Adapter(CapabilityAdapter):
 
     def score(self, task: Task, rollout: Rollout) -> Score:
         if rollout.error:
+            # Errored rollouts leave their output dir behind too — clean it up on this
+            # path as well, or a long run accumulates one stale dir per failed rollout
+            # inside SPREADSHEETBENCH_DATA_DIR.
+            _cleanup_output_dir(rollout)
             return Score(
                 task_id=task.id,
                 reward=0.0,
@@ -526,6 +660,7 @@ class Adapter(CapabilityAdapter):
 
         entry = _entries_by_id().get(task.id)
         if entry is None:
+            _cleanup_output_dir(rollout)
             return Score(task_id=task.id, reward=0.0, feedback="Unknown task id.")
 
         meta = rollout.metadata or {}
@@ -574,11 +709,8 @@ class Adapter(CapabilityAdapter):
         hard = 1.0 if all(test_results) else 0.0
         feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre))
 
-        # Clean up the per-rollout output dir now that scoring has consumed all outputs.
-        # Without this, a full run (912 tasks × iterations) would accumulate thousands of
-        # per-task output dirs inside SPREADSHEETBENCH_DATA_DIR.
-        out_dir = data_dir / "outputs" / run_tag
-        shutil.rmtree(out_dir, ignore_errors=True)
+        # Scoring has consumed every output; drop the per-rollout dir.
+        _cleanup_output_dir(rollout)
 
         return Score(
             task_id=task.id,
@@ -649,3 +781,61 @@ if __name__ == "__main__":
 
         assert _resolve_case_file(_d, 4, "1000", "input") == _d / "4_1000_input.xlsx"  # missing → canonical fallback
     print("spreadsheetbench case-file resolver self-check: OK")
+
+    # Code extraction: a fenced block runs; prose / tool-call XML must NOT be executed.
+    _vendor_stub = {"extract_code": lambda r: r[r.find("```python") + 9:].split("```")[0].strip("\n")}
+    assert _extract_python(_vendor_stub, "sure!\n```python\nwb.save(p)\n```\ndone") == "wb.save(p)"
+    assert _extract_python(_vendor_stub, "```\nwb.save(p)\n```") == "wb.save(p)"
+    assert _extract_python(_vendor_stub, "```py\nwb.save(p)\n```") == "wb.save(p)"
+    assert _extract_python(_vendor_stub, "I'll start by examining the spreadsheet.") is None
+    assert _extract_python(_vendor_stub, "<function_calls>\n<invoke>x</invoke>") is None
+    assert _extract_python(_vendor_stub, "") is None
+    print("spreadsheetbench code-extraction self-check: OK")
+
+    # Denied output-dir writes are infra, and must be told apart from other errors.
+    _out = "/mnt/data/outputs/160-6_0_dead"
+    _perm = (
+        "PermissionError                        Traceback (most recent call last)\n"
+        "Cell In[1], line 76\n"
+        "---> 76 wb.save(output_path)\n"
+        f"PermissionError: [Errno 13] Permission denied: '{_out}/1_160-6_output.xlsx'"
+    )
+    assert _output_write_blocked([_perm], _out) is not None
+    assert _output_write_blocked(["ok", _perm], _out) is not None
+    assert _output_write_blocked([_perm], "/mnt/data/outputs/other_tag") is None  # different rollout's dir
+    assert _output_write_blocked(["NameError: name 'wb' is not defined"], _out) is None
+    assert _output_write_blocked([], _out) is None
+    print("spreadsheetbench output-write-blocked self-check: OK")
+
+    with _tempfile.TemporaryDirectory() as _td:
+        _p = Path(_td) / "outputs"
+        _p.mkdir()
+        _make_container_writable(_p, sticky=True)
+        assert (_p.stat().st_mode & 0o1777) == 0o1777
+        _leaf = _p / "tag"
+        _leaf.mkdir()
+        _make_container_writable(_leaf)
+        assert (_leaf.stat().st_mode & 0o777) == 0o777
+        _make_container_writable(Path(_td) / "does-not-exist")  # best-effort, must not raise
+    print("spreadsheetbench container-writable self-check: OK")
+
+    class _FakeRollout:
+        def __init__(self, metadata):
+            self.metadata = metadata
+
+    with _tempfile.TemporaryDirectory() as _td:
+        _saved = DATA_DIR
+        try:
+            DATA_DIR = _td  # module global — this is what _data_dir() reads
+            (Path(_td) / "dataset.json").write_text("[]", encoding="utf-8")
+            _tag_dir = Path(_td) / "outputs" / "160-6_0_dead"
+            _tag_dir.mkdir(parents=True)
+            (_tag_dir / "1_160-6_output.xlsx").write_bytes(b"")
+            _cleanup_output_dir(_FakeRollout({"run_tag": "160-6_0_dead"}))
+            assert not _tag_dir.exists(), "output dir should be removed after scoring"
+            _cleanup_output_dir(_FakeRollout({}))            # no run_tag → no-op
+            _cleanup_output_dir(_FakeRollout(None))          # no metadata at all → no-op
+            _cleanup_output_dir(_FakeRollout({"run_tag": "never-created"}))  # already gone
+        finally:
+            DATA_DIR = _saved
+    print("spreadsheetbench output-cleanup self-check: OK")

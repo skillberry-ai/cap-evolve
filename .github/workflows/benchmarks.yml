@@ -357,6 +357,24 @@ jobs:
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
 
+      # Completion gate — LAST, so metrics/UI/artifacts/PR-comment are all published
+      # before the job is allowed to go red. Without this the suite is green whenever
+      # `cap-evolve run` exits non-zero: run_suite.sh only emits an annotation, so a run
+      # that crashed mid-optimization and never produced a sealed test number still
+      # reports "success". Regression is NOT asserted here (see --allow-regression in
+      # assert_run.py) — real model rewards are noisy; this checks the run COMPLETED.
+      - name: Assert the suite run completed
+        if: always()
+        run: |
+          tasks="ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/tasks.json"
+          if [ ! -f "$tasks" ]; then
+            echo "no tasks.json for ${{ matrix.tier }}/${{ matrix.bench }} — nothing to assert"
+            exit 0
+          fi
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" \
+            --min-iterations 1 --allow-regression
+
   # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
   # writer → no push races) and regenerate benchmarks.json for the Pages history page.
   # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).

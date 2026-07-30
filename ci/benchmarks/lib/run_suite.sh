@@ -185,9 +185,13 @@ cd "$WORK"
 "$PY" -m cap_evolve.cli check .capevolve/project >&2
 
 # ONE optimization: baseline (all tasks) + ITER optimize iterations + finalize (all tasks).
+# A non-zero exit is deliberately NOT fatal here: metrics/report/UI below still turn the
+# partial run dir into reviewable artifacts. The job is failed afterwards by the workflow's
+# "Assert the suite run completed" gate (ci/benchmarks/lib/assert_run.py), so a crashed run
+# cannot be mistaken for a clean one.
 "$PY" -m cap_evolve.cli run --spec .capevolve/project/capevolve.yaml \
       --project .capevolve/project --run-ts suite --max-iterations "$ITER" </dev/null || \
-  echo "::warning::suite run exited non-zero for $BENCH"
+  echo "::error::suite run exited non-zero for $BENCH — see the algorithm step's returncode/stderr above"
 RUN_DIR="$WORK/.capevolve/run_suite"
 
 # ---- metrics + report (per-task base→opt from the ONE run) -----------------

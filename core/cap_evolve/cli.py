@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -92,6 +93,32 @@ def _resolve_skills(skills_dir: Path) -> dict:
         raise FileNotFoundError(
             "no manifest — run install.sh or skills/_registry/build_manifest.py first")
     return json.loads(manifest.read_text()).get("skills", {})
+
+
+def _step_failure(step: str, proc) -> dict:
+    """Build the failure record for a step that exited non-zero.
+
+    Steps run under ``capture_output``, so this record is the ONLY evidence of what
+    happened. A stderr tail alone is not enough: when a step is killed by a signal
+    (the OOM killer, most often) it leaves no Python traceback at all, so the tail is
+    whatever harmless warnings happened to be last and the record reads as if nothing
+    went wrong. The returncode — and, for a signal, its name — is what distinguishes
+    "raised" from "was killed".
+    """
+    rec: dict = {"step": step, "returncode": proc.returncode}
+    if proc.returncode < 0:
+        try:
+            rec["signal"] = signal.Signals(-proc.returncode).name
+        except ValueError:
+            rec["signal"] = f"signal {-proc.returncode}"
+        rec["hint"] = (
+            f"{step} was killed by a signal, not a Python exception — there is no "
+            "traceback to find. SIGKILL is usually the OOM killer; check dmesg/journalctl -k."
+        )
+    rec["error"] = proc.stderr[-8000:] if proc.stderr else ""
+    if proc.stdout:
+        rec["stdout_tail"] = proc.stdout[-2000:]
+    return rec
 
 
 def _cmd_run(argv):
@@ -408,7 +435,7 @@ def _cmd_run(argv):
         alg_cmd += _shlex.split(str(spec["algorithm_args"]))
     proc = run(alg_cmd)
     if proc.returncode != 0:
-        print(json.dumps({"step": "algorithm", "error": proc.stderr[-1500:]}))
+        print(json.dumps(_step_failure("algorithm", proc)))
         return 1
 
     # 3) finalize  4) report
@@ -431,7 +458,7 @@ def _cmd_run(argv):
         cmd += extra
         proc = run(cmd)
         if proc.returncode != 0:
-            print(json.dumps({"step": step, "error": proc.stderr[-1500:]}))
+            print(json.dumps(_step_failure(step, proc)))
             return 1
         last = proc.stdout
 
