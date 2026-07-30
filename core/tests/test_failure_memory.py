@@ -197,6 +197,70 @@ def test_constraints_bounded_on_a_long_run(tmp_path):
     assert len(block) < MAX_INSTRUCTIONS_CHARS
 
 
+def test_a_re_proposed_dead_end_is_never_the_one_evicted(tmp_path):
+    """Recency is LAST-seen, not first-seen.
+
+    With more distinct dead ends than the cap, the row the optimizer JUST re-proposed is
+    the single most predictive one — evicting it in favour of a newer one-off drops exactly
+    the constraint that was about to be violated again, and falsifies the block's own
+    "12 most recent" wording. A 50-distinct-approach bound test cannot catch this because
+    it contains no repeat."""
+    from cap_evolve import Budget, RunDir
+    from cap_evolve.harness import _MAX_DEAD_ENDS, dead_end_constraints
+    from cap_evolve.memory import RejectedMemory
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="evict", budget=Budget())
+    mem = RejectedMemory(run_dir.rejected_path)
+    old = "prompt.txt: +THE OLD IDEA"
+    mem.add("c000", "first", "gate said no", 0.1, approach=old)
+    for i in range(1, _MAX_DEAD_ENDS + 3):          # push the old row well past the cap
+        mem.add(f"c{i:03d}", "x", "gate said no", 0.1, approach=f"prompt.txt: +IDEA {i}")
+    mem.add("c099", "repeat", "gate said no", 0.1, approach=old)   # re-proposed NOW
+
+    block = dead_end_constraints(run_dir)
+    assert "THE OLD IDEA" in block, "the just-re-proposed dead end was evicted"
+    assert "re-proposed 2x" in block, "the repeat was not counted"
+    assert "(latest c099)" in block, "the repeat's latest candidate id is not shown"
+    assert block.count("- **c") == _MAX_DEAD_ENDS
+    assert "IDEA 1`" not in block, "displaced a newer one-off instead of the oldest"
+
+
+def test_signature_is_distinct_for_edits_sharing_a_long_prefix(tmp_path):
+    """The dedupe key must be a function of the WHOLE edit.
+
+    A plain head truncation makes two genuinely different edits that share a long prefix
+    (any realistic SKILL.md or system prompt) produce ONE signature — the block would then
+    tell the optimizer "re-proposed 2x" about an approach it never proposed, which is
+    strictly worse than injecting no constraint at all."""
+    from cap_evolve.harness import _MAX_APPROACH_CHARS, approach_signature
+    shared = "\n".join(f"RULE {i}: a fairly long boilerplate rule line here" for i in range(20))
+    parent = tmp_path / "p"
+    parent.mkdir()
+    (parent / "prompt.txt").write_text("seed\n")
+    sigs = []
+    for tag in ("ALPHA", "OMEGA"):
+        child = tmp_path / f"c_{tag}"
+        child.mkdir()
+        (child / "prompt.txt").write_text(f"seed\n{shared}\nFINAL: {tag}\n")
+        sigs.append(approach_signature(parent, child))
+    assert len(sigs[0]) == _MAX_APPROACH_CHARS, "prefix too short to exercise the overflow"
+    assert sigs[0] != sigs[1], f"different edits collapsed to one signature: {sigs[0]!r}"
+
+
+def test_signature_strips_control_and_bidi_characters(tmp_path):
+    """``approach`` is quoted into a markdown prompt and (once #191/#220 land) into a
+    terminal writer. Strip the ANSI/C0 half AND the bidi-override half once here rather
+    than in every future consumer. Legitimate content (emoji, non-latin text) survives."""
+    from cap_evolve.harness import approach_signature
+    parent, child = tmp_path / "p", tmp_path / "c"
+    parent.mkdir(), child.mkdir()
+    (parent / "prompt.txt").write_text("seed\n")
+    (child / "prompt.txt").write_text("seed\n\x1b[31mRED\x07 ‮RTL ⁦iso⁩ 😀 עברית\n")
+    sig = approach_signature(parent, child)
+    assert "RED" in sig and "😀" in sig and "עברית" in sig, repr(sig)
+    banned = set(range(32)) | {127} | set(range(0x202A, 0x202F)) | set(range(0x2066, 0x206A))
+    assert not any(ord(ch) in banned for ch in sig), repr(sig)
+
+
 # ---- reaches the prompt, for all three algorithms -------------------------
 
 def _seed_rejection(run_dir, approach="prompt.txt: +DEAD END APPROACH"):
@@ -275,6 +339,41 @@ def test_a_real_rejection_records_its_approach_signature(tmp_path):
     assert "[CALC]" in approach, f"signature does not carry the mock's edit: {approach}"
     # and it is immediately usable as a constraint
     assert "[CALC]" in harness.dead_end_constraints(run_dir)
+
+
+def test_signature_names_the_real_edit_under_a_native_skills_optimizer(tmp_path):
+    """The regression the ``mock`` optimizer structurally cannot show.
+
+    ``mock`` has no ``skills_dir``/``instructions_file`` registry row, so nothing is
+    injected and any skip-list gap stays invisible. Every REAL agent optimizer
+    (claude-code, codex, gemini-cli, opencode, ibm-bob, cursor) gets ``CLAUDE.md`` +
+    ``.claude/skills/<cap>/SKILL.md`` written into its workdir — and because the PARENT
+    side of the capability diff is a snapshot (already stripped by ``_SNAPSHOT_IGNORE``)
+    while the CHILD side is the live workdir, each of those files used to read as a
+    capability addition, sort ahead of the real edit, and truncate it away entirely."""
+    import json
+
+    from cap_evolve import harness
+    adapter, run_dir, base = _setup(tmp_path, "native", max_iterations=1, stall=3)
+    harness.hill_climb_loop(
+        adapter, run_dir=run_dir, optimizer=_optimizer(), current_val=base,
+        focus="all", max_iterations=1, capabilities=["system-prompt"],
+        optimizer_name="claude-code",          # <- the only difference from the mock case
+        gate_kwargs={"mode": "threshold", "threshold": 1e9}, algorithm="hill-climb")
+
+    workdir = next((run_dir.root / "work").iterdir())
+    injected = sorted(p.name for p in workdir.iterdir())
+    assert ".claude" in injected or "CLAUDE.md" in injected, \
+        f"native injection did not happen, so this test proves nothing: {injected}"
+
+    recs = [json.loads(ln) for ln in
+            run_dir.rejected_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert recs, "no rejection recorded"
+    approach = recs[-1]["approach"]
+    assert "prompt.txt" in approach and "[CALC]" in approach, \
+        f"signature does not carry the real edit: {approach}"
+    for leak in (".claude", "CLAUDE.md", "SKILL.md", "AGENTS.md"):
+        assert leak not in approach, f"injected read-context {leak} leaked in: {approach}"
 
 
 def test_no_val_or_test_ground_truth_in_the_constraint_block(tmp_path):

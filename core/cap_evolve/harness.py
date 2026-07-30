@@ -14,6 +14,7 @@ builds one from a skill's ``run.py`` so external agents plug in the same way.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import shutil
@@ -28,7 +29,8 @@ from . import gate as gate_mod
 # lazy-imports harness inside its function bodies, so there is no cycle to dodge.
 from . import optimizer_context as _oc
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir, _atomic_write, iteration_candidate
+from .rundir import (NON_CAPABILITY_NAMES, SCRATCH_NAMES, RunDir, _atomic_write,
+                     iteration_candidate)
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -582,10 +584,25 @@ _PROCESS_SEED = (
 
 
 # State/handover files that are NOT part of the capability — excluded from any
-# capability diff. ONE definition in optimizer_context.SCRATCH_NAMES (this list had
-# drifted from gepa's: it was missing GEPA's FOCUS.md/REFLECTION.md, so a GEPA
-# candidate's "capability diff" showed its reflective scratch as a real edit).
-_CAP_DIFF_SKIP = set(_oc.SCRATCH_NAMES)
+# capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+#
+# The INJECTED_* halves matter as much as the scratch half here, for a subtler reason:
+# the PARENT side of a capability diff is a snapshot (``_SNAPSHOT_IGNORE`` stripped the
+# injected read-context) while the CHILD side is the live workdir (it did not) — so
+# without this union every injected ``CLAUDE.md`` / ``.claude/skills/<x>/SKILL.md`` reads
+# as an ADDITION, sorts to the front of the diff, and buries the real edit. Both sets are
+# derived, never enumerated: a hardcoded subset of ``INJECTED_DIRS`` is exactly how the
+# previous four copies drifted.
+_CAP_DIFF_SKIP = set(NON_CAPABILITY_NAMES) | set(_oc.INJECTED_NAMES)
+_CAP_DIFF_SKIP_DIRS = set(_oc.INJECTED_DIRS)
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -601,7 +618,7 @@ def _capability_files(d: Path) -> dict[str, str]:
             continue
         rel = str(f.relative_to(d))
         top = rel.split("/", 1)[0]
-        if rel in _CAP_DIFF_SKIP or top in ("trajectories", "guidance", "prior_iterations"):
+        if rel in _CAP_DIFF_SKIP or top in _CAP_DIFF_SKIP_DIRS:
             continue
         try:
             out[rel] = f.read_text(encoding="utf-8")
@@ -876,7 +893,15 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 # hard is the gate — a re-proposed dead end still gets rejected on val. See RUN.md.
 
 _MAX_DEAD_ENDS = 12        # most-recent distinct approaches injected
-_MAX_APPROACH_CHARS = 300  # per-signature budget -> block <~ 5 KB, well under the 60k cap
+_MAX_APPROACH_CHARS = 300  # per-signature budget -> block <8 KB, well under the 60k cap
+# Control chars stripped from a signature: it is quoted into a markdown prompt block and
+# (once #191's format_event / #220's replay read rejected.jsonl) into a terminal writer.
+# Closed here, once, for every present and future consumer rather than per renderer.
+# C0 + DEL are the ANSI/escape half; the bidi overrides are the visual-spoofing half — a
+# capability file can legitimately contain either, a dedupe key quoted into a prompt cannot.
+_CTRL_STRIP = ({c: None for c in range(32)} | {127: None}
+               | {c: None for c in range(0x202A, 0x202F)}      # LRE..PDF bidi embedding
+               | {c: None for c in range(0x2066, 0x206A)})     # LRI..PDI bidi isolates
 
 
 def approach_signature(parent_dir: Path, cand_dir: Path, *,
@@ -890,10 +915,25 @@ def approach_signature(parent_dir: Path, cand_dir: Path, *,
     candidate id, ordering or indentation — which is exactly the "variation on an
     already-failed approach" the optimizer keeps re-proposing.
 
+    The dedupe key must be a FUNCTION OF THE WHOLE EDIT, so when the readable form
+    exceeds ``max_chars`` the overflow is closed with a digest of the full body rather
+    than simply cut: a plain head-truncation makes two different edits that share a long
+    prefix (any realistic SKILL.md or system prompt) collapse to one signature, and the
+    block would then tell the optimizer "re-proposed 2x" about something it never
+    proposed — strictly worse than injecting nothing.
+
     Returns "" when there is no capability diff (e.g. the optimizer errored and the
     workdir is still a verbatim parent copy) — a no-op is not an approach.
+
+    ponytail: re-reads both capability trees (an ``rglob`` + ``read_text`` pass each)
+    rather than threading a cached diff through the five rejection call sites. Negligible
+    next to the rollouts that just ran, and it costs nothing on an ACCEPT. Upgrade path if
+    a repo-sized capability makes it measurable: accept the already-computed
+    ``_diff_capabilities`` text as an optional argument.
     """
-    diff = _diff_capabilities(parent_dir, cand_dir)
+    # Generous diff budget: the signature's digest must cover the whole edit, and
+    # _diff_capabilities' own default (8 KB, for display) would silently cap it.
+    diff = _diff_capabilities(parent_dir, cand_dir, max_chars=200_000)
     parts: list[str] = []
     fname = ""
     for line in diff.splitlines():
@@ -902,14 +942,20 @@ def approach_signature(parent_dir: Path, cand_dir: Path, *,
             continue
         if line[:1] not in ("+", "-") or line.startswith(("+++", "---")):
             continue
-        body = " ".join(line[1:].split())
+        body = " ".join(line[1:].split()).translate(_CTRL_STRIP)
         if not body:
             continue
         parts.append(f"{fname}: {line[0]}{body}")
     if not parts:
         return ""
     sig = " | ".join(parts)
-    return sig if len(sig) <= max_chars else sig[:max_chars - 3] + "..."
+    if len(sig) <= max_chars:
+        return sig
+    # Overflow: keep a readable head, then pin the identity of the WHOLE body with a
+    # digest so distinct edits never share a signature (see the docstring).
+    digest = hashlib.sha256(sig.encode("utf-8")).hexdigest()[:12]
+    tail = f" … [+{len(sig) - max_chars} chars, sha {digest}]"
+    return sig[:max_chars - len(tail)] + tail
 
 
 def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str:
@@ -925,8 +971,10 @@ def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str
     write AND on read), each reason at 200 chars, and only the ``limit`` MOST RECENT
     distinct approaches are injected. Recency, not relevance: the newest rejections are
     the ones the current lineage is closest to re-proposing, and it needs no scoring
-    model. ponytail: no LLM summarization — zero API cost, and a verbatim diff signature
-    is more actionable than a paraphrase.
+    model. Recency means LAST-seen, not first — a re-proposal requeues its row, so the
+    single most predictive entry (the dead end the optimizer just re-emitted) can never be
+    the one evicted in favour of an older one-off. ponytail: no LLM summarization — zero
+    API cost, and a verbatim diff signature is more actionable than a paraphrase.
     """
     recs = []
     try:
@@ -946,12 +994,16 @@ def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str
         approach = (rec.get("approach") or "").strip()[:_MAX_APPROACH_CHARS]
         if not approach:
             continue  # no-op edit or a pre-#129 record: nothing to constrain against
+        cid = rec.get("candidate_id") or "?"
         if approach in seen:
-            seen[approach]["count"] += 1
+            row = seen.pop(approach)  # re-proposed => it IS the most recent; requeue it
+            row["count"] += 1
+            row["latest"] = cid
+            seen[approach] = row
             continue
         seen[approach] = {"approach": approach, "count": 1,
                           "reason": (rec.get("reason") or "gate rejected")[:200],
-                          "cid": rec.get("candidate_id") or "?"}
+                          "cid": cid, "latest": cid}
     if not seen:
         return ""
     rows = list(seen.values())[-limit:]
@@ -965,7 +1017,10 @@ def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str
         "",
     ]
     for r in rows:
-        rep = f", re-proposed {r['count']}x" if r["count"] > 1 else ""
+        # cid = where the approach FIRST died (whose reason is quoted); latest = the most
+        # recent repeat, so "re-proposed 3x" cannot be misread as belonging to cid alone.
+        rep = (f", re-proposed {r['count']}x (latest {r['latest']})"
+               if r["count"] > 1 else "")
         lines.append(f"- **{r['cid']}**{rep} — `{r['approach']}`")
         lines.append(f"  - rejected because: {r['reason']}")
     lines += [
@@ -1020,8 +1075,7 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
     tail = f"\n{dead_ends}" if dead_ends else ""
     # Re-cap: render_instructions capped its OWN output, but these blocks are appended
     # after it, so the final assembled prompt needs the ceiling applied once more.
-    from .optimizer_context import cap_instructions
-    return cap_instructions(f"{instructions}\n\n{pointer}{tail}\n")
+    return _oc.cap_instructions(f"{instructions}\n\n{pointer}{tail}\n")
 
 
 def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
@@ -1705,8 +1759,13 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
-_SNAPSHOT_IGNORE = (_oc.INJECTED_DIRS + _oc.INJECTED_NAMES
-                    + ("LEDGER.md", "JOURNAL.md", "RUNMAP.md"))
+#
+# This is the one DESTRUCTIVE consumer of the shared list — snapshot() drops what it
+# names — so it takes ``SCRATCH_NAMES`` (live writers) ONLY, never
+# ``rundir.NON_CAPABILITY_NAMES``. A retired name with no live writer can only refer to
+# a capability file that shares it, and deleting that is silent data loss the eval-cache
+# key can't see. See the tier note in rundir.py.
+_SNAPSHOT_IGNORE = _oc.INJECTED_DIRS + _oc.INJECTED_NAMES + SCRATCH_NAMES
 
 
 def _failures_block(always_fail, flaky, errored) -> str:

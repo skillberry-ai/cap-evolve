@@ -43,24 +43,25 @@ from .rundir import RunDir
 
 # Everything :func:`inject` writes into the optimizer's workdir. These are READ-context,
 # never part of the capability, so they must be excluded from: the candidate snapshot
-# (``harness._SNAPSHOT_IGNORE``), GEPA's editable-component list (``gepa._components``)
-# and the eval-cache content hash (``cache.hash_candidate_dir``). One list, three
-# consumers — add a newly injected artifact here and all three stay correct.
+# (``harness._SNAPSHOT_IGNORE``), GEPA's editable-component list (``gepa._components``),
+# the eval-cache content hash (``cache.hash_candidate_dir``), the capability-diff filters
+# (``harness._CAP_DIFF_SKIP`` / ``dashboard._DIFF_SKIP``) and SkillOpt's applied-edit count
+# (``skillopt._changed_components``). One list — add a newly injected artifact here and
+# every consumer stays correct.
+#
+# The diff/count consumers need them for a non-obvious reason: their PARENT side is a
+# snapshot (already stripped by ``_SNAPSHOT_IGNORE``) while their CHILD side is the live
+# workdir, so an injected file that is missing from the filter shows up as a real
+# capability ADDITION on every single iteration.
+#
+# The complementary set — framework-WRITTEN scratch, as opposed to this copied-in
+# read-context — lives in ``rundir`` (``SCRATCH_NAMES`` / ``LEGACY_SCRATCH_NAMES`` /
+# ``NON_CAPABILITY_NAMES``), split by OPERATION because the one destructive consumer must
+# not take the retired names. See the tier note there; the read-side filters compose the
+# two sets and ``rundir`` stays unaware of these.
 INJECTED_DIRS = ("trajectories", "guidance", "prior_iterations",
                  ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor")
 INJECTED_NAMES = ("CLAUDE.md", "AGENTS.md", "GEMINI.md")
-
-# Framework-written scratch/handover files in the optimizer's workdir that are NOT
-# capability either. Distinct from INJECTED_* (those are copied in by :func:`inject`;
-# these are written by the algorithm/harness), but every consumer that must ignore one
-# must ignore the other. ``cache._IGNORE_NAMES``, ``gepa._NON_COMPONENT``,
-# ``harness._CAP_DIFF_SKIP`` and ``dashboard._DIFF_SKIP`` each had their OWN copy of this
-# list and they had drifted: only GEPA's knew about ``FOCUS.md``/``REFLECTION.md``, so a
-# capability diff of a GEPA candidate showed its reflective scratch as a real edit. One
-# definition, four consumers.
-SCRATCH_NAMES = ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "REJECTED.md",
-                 "FOCUS.md", "REFLECTION.md",
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md")
 
 
 def _csv(value) -> list[str]:
@@ -260,6 +261,12 @@ def cap_instructions(text: str, max_chars: int = MAX_INSTRUCTIONS_CHARS) -> str:
     Also called by ``harness._augment_instructions``, which appends the cross-iteration
     blocks (LEDGER pointer + #129 rejected-approach constraints) AFTER this module has
     rendered — so the FINAL assembled prompt, not just the rendered half, is capped.
+
+    The kept TAIL is 30% of the budget (18 KB at the default 60 KB ceiling) and those
+    appended blocks live in it, which is why the #129 constraint block survives an
+    overflow whole — header, rows and footer — instead of being cut mid-list: it measures
+    ~7 KB even at 200 rejections. Anything appended after this point must stay well under
+    that 30%, or it starts eating itself rather than the middle.
     """
     if max_chars and len(text) > max_chars:
         # Keep the head (task framing, capability brief, failure index) and the tail
