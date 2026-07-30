@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import plateau
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
@@ -1856,6 +1857,7 @@ def hill_climb_loop(
     project_dir: Path | None = None,
     target_model: str = "",
     target_profile_file: str | None = None,
+    plateau_cfg: "plateau.PlateauConfig | None" = None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1883,10 +1885,20 @@ def hill_climb_loop(
         score_by = {pt["task_id"]: pt["reward"] for pt in train_res.per_task}
         order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
 
+    # Plateau/convergence detection (see cap_evolve.plateau): a THIRD stop condition,
+    # orthogonal to budget and to the `stall` reject-counter. It escalates
+    # warn -> diversify (prompt intervention) -> stop.
+    pcfg = plateau_cfg or plateau.PlateauConfig()
+    pstate = plateau.PlateauState()
+
     steps = []
     for i in range(max_iterations):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
+            break
+        pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
+        if pstate.should_stop:
+            why = f"plateaued ({pstate.reason})"
             break
         if focus == "all":
             focus_ids, label = None, "whole train set"
@@ -1901,6 +1913,7 @@ def hill_climb_loop(
                                             instructions_file=instructions_file,
                                             bench_repo=bench_repo, optimizer_name=optimizer_name,
                                             seed_empty=seed_empty, target_reader=_target_reader)
+        instructions += plateau.prompt_block(pstate, rejected=rejected)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
@@ -1913,14 +1926,17 @@ def hill_climb_loop(
         if step["accepted"]:
             current_val = SplitResult.from_dict(step["candidate_val"])
 
-    _, why = run_dir.budget_exhausted()
+    pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
+    stop_why = why if why and why.startswith("plateaued") else None
+    _, budget_why = run_dir.budget_exhausted()
     return {
         "algorithm": algorithm,
         "best_id": run_dir.best_id,
         "best_val": current_val.reward,
         "iterations": len(steps),
         "accepts": sum(1 for s in steps if s["accepted"]),
-        "stop_reason": why or "max_iterations",
+        "stop_reason": stop_why or budget_why or "max_iterations",
+        "plateau": pstate.to_dict(),
         "steps": steps,
     }
 

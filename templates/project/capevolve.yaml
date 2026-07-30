@@ -89,6 +89,16 @@ max_metric_calls: 0         # 0 = unlimited; else stop after N runner evals
 max_usd: 0.0                # 0 = unlimited; total $ cap (runner + optimizer + intake)
 max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
 
+# --- plateau / convergence detection ----------------------------------------
+# Counts only DEAD iterations: rejected with Δ<=0 on val. A near-miss (rejected but
+# Δ>0 — common on small val splits under the Student-t gate) or an accept RESETS the
+# counter, so a spiky-but-progressing run never escalates.
+# Ladder: warn at plateau_window, diversify at +escalate_every, stop at +2*escalate_every.
+plateau_window: 6           # dead iterations before the plateau warning
+plateau_escalate_every: 2   # further dead iterations per escalation step
+plateau_lineage_window: 4   # dead children of ONE parent before that lineage is exhausted
+plateau_stop: true          # false = warn + diversify only, never stop the run
+
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command
 # store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)

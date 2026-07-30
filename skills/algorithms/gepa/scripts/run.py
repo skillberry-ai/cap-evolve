@@ -17,7 +17,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from cap_evolve import RunDir, gepa, harness
+from cap_evolve import RunDir, gepa, harness, plateau
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
 from cap_evolve.store import make_store
@@ -54,6 +54,14 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="reconstruct the pool/frontier from the run dir and continue the "
                         "search instead of restarting from the seed")
+    p.add_argument("--plateau-window", type=int, default=None,
+                   help="dead iterations (rejected with delta<=0) before the plateau warning")
+    p.add_argument("--plateau-escalate-every", type=int, default=None,
+                   help="further dead iterations per escalation step (warn -> diversify -> stop)")
+    p.add_argument("--plateau-lineage-window", type=int, default=None,
+                   help="dead children of ONE parent before that lineage is exhausted")
+    p.add_argument("--no-plateau-stop", action="store_true",
+                   help="warn + diversify only; never stop the run on plateau")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -63,6 +71,12 @@ def main(argv=None) -> int:
     seed_val = SplitResult.from_dict(
         json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    plateau_cfg = plateau.PlateauConfig.from_spec({
+        "plateau_window": args.plateau_window,
+        "plateau_escalate_every": args.plateau_escalate_every,
+        "plateau_lineage_window": args.plateau_lineage_window,
+        "plateau_stop": (False if args.no_plateau_stop else None),
+    })
     result = gepa.gepa_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, seed_val=seed_val,
         max_metric_calls=args.max_metric_calls, max_iterations=args.max_iterations,
@@ -74,6 +88,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, seed=args.seed, store=store,
         resume=args.resume,
+        plateau_cfg=plateau_cfg,
     )
     print(json.dumps(result, indent=2))
     return 0

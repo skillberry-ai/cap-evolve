@@ -23,7 +23,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, harness, plateau
 from cap_evolve.store import make_store
 from cap_evolve.check import load_adapter
 from cap_evolve.loop import SplitResult
@@ -75,6 +75,14 @@ def main(argv=None) -> int:
                    help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
     p.add_argument("--target-profile-file", default=None,
                    help="optional project-local brief overriding the tier's built-in brief")
+    p.add_argument("--plateau-window", type=int, default=None,
+                   help="dead iterations (rejected with delta<=0) before the plateau warning")
+    p.add_argument("--plateau-escalate-every", type=int, default=None,
+                   help="further dead iterations per escalation step (warn -> diversify -> stop)")
+    p.add_argument("--plateau-lineage-window", type=int, default=None,
+                   help="dead children of ONE parent before that lineage is exhausted")
+    p.add_argument("--no-plateau-stop", action="store_true",
+                   help="warn + diversify only; never stop the run on plateau")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -99,6 +107,12 @@ def main(argv=None) -> int:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    plateau_cfg = plateau.PlateauConfig.from_spec({
+        "plateau_window": args.plateau_window,
+        "plateau_escalate_every": args.plateau_escalate_every,
+        "plateau_lineage_window": args.plateau_lineage_window,
+        "plateau_stop": (False if args.no_plateau_stop else None),
+    })
     result = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
         focus=focus, max_iterations=args.max_iterations, n_trials=args.n_trials,
@@ -112,6 +126,7 @@ def main(argv=None) -> int:
         project_dir=Path(args.project),
         target_model=args.target_model,
         target_profile_file=args.target_profile_file,
+        plateau_cfg=plateau_cfg,
     )
     print(json.dumps(result, indent=2))
     return 0
