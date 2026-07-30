@@ -52,8 +52,9 @@ from pathlib import Path
 from . import harness
 from .lr_schedule import build_schedule
 from .loop import SplitResult
-from .optimizer_context import OptimizerContext, render_instructions
-from .rundir import RunDir
+from .optimizer_context import (INJECTED_DIRS, INJECTED_NAMES, OptimizerContext,
+                                 render_instructions)
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 
 # Buffer bounds (PITFALL: the rejected-edit buffer must be reset + bounded per
 # epoch so the optimizer prompt does not balloon).
@@ -396,6 +397,12 @@ def skillopt_loop(
     }
 
 
+# Harness-injected scaffolding that must not count as an applied edit.
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the note there).
+_SCAFFOLDING = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
+_SCAFFOLDING_DIRS = {".git"} | set(INJECTED_DIRS)
+
+
 def _changed_components(parent_dir: Path, workdir: Path) -> int:
     """Best-effort count of files whose content differs between parent and the
     optimized workdir — a proxy for *applied* edits to compare against the
@@ -406,22 +413,24 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
         changed = 0
         seen = set()
         for f in workdir.rglob("*"):
-            if not f.is_file() or ".git" in f.parts:
+            if not f.is_file():
                 continue
             rel = f.relative_to(workdir)
             # ignore harness-injected scaffolding files
-            if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+            # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+            # root-anchored. Harmless here (a false positive only costs precision — one
+            # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+            # would change which components GEPA may edit, which is out of scope for #110.
+            if rel.name in _SCAFFOLDING or set(rel.parts[:-1]) & _SCAFFOLDING_DIRS:
                 continue
             seen.add(rel)
             pf = parent_dir / rel
             if not pf.exists() or pf.read_bytes() != f.read_bytes():
                 changed += 1
         for f in parent_dir.rglob("*"):
-            if f.is_file() and ".git" not in f.parts:
+            if f.is_file():
                 rel = f.relative_to(parent_dir)
-                if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                            "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
+                if rel.name in _SCAFFOLDING or set(rel.parts[:-1]) & _SCAFFOLDING_DIRS:
                     continue
                 if rel not in seen:
                     changed += 1  # a deletion

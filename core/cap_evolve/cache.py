@@ -31,18 +31,19 @@ import json
 from pathlib import Path
 
 from .optimizer_context import INJECTED_DIRS, INJECTED_NAMES
+from .rundir import NON_CAPABILITY_NAMES
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
-# must not perturb the content hash or every iteration would miss the cache. The
-# INJECTED_* halves are the optimizer-context read-context (``trajectories/``,
-# ``guidance/``, the native per-agent skill dirs and instructions files) — one
-# definition in ``optimizer_context``, folded in here as a plain constant expression
-# (no import-time set mutation, so there is no import-order dependence to reason about;
-# ``optimizer_context`` imports only ``.loop`` and ``.rundir`` at module level).
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
-                 "REFLECTION.md",
-                 # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"} | set(INJECTED_NAMES)
+# must not perturb the content hash or every iteration would miss the cache.
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition (see the note there): the
+# union of live + legacy scratch plus INSTRUCTIONS/PROCESS, which ARE snapshotted but
+# still are not capability bytes. This is a read-side filter (skip bytes when hashing),
+# so it takes the whole union — including the legacy names, so caches written before
+# they were retired keep resolving. The INJECTED_* halves are the optimizer-context
+# read-context (``trajectories/``, ``guidance/``, the native per-agent skill dirs and
+# instructions files) — one definition in ``optimizer_context``, folded in as a plain
+# constant expression (no import-time set mutation, so no import-order dependence).
+_IGNORE_NAMES = set(NON_CAPABILITY_NAMES) | set(INJECTED_NAMES)
 _IGNORE_DIRS = {".git", "__pycache__"} | set(INJECTED_DIRS)
 
 
@@ -62,9 +63,15 @@ def hash_candidate_dir(candidate_dir: Path) -> str:
     for p in cdir.rglob("*"):
         if not p.is_file():
             continue
-        if p.name in _IGNORE_NAMES:
+        rel = p.relative_to(cdir)
+        # Root-anchored: every ignored name is a root-level framework injection, so a
+        # NESTED file that merely shares one (``src/prompts/STATE.md``) is capability
+        # content and MUST fold into the digest — otherwise deleting it leaves the hash
+        # unchanged and the next iteration serves the parent's cached rewards for a
+        # materially different candidate (a stale hit on a mutilated candidate).
+        if len(rel.parts) == 1 and p.name in _IGNORE_NAMES:
             continue
-        if any(part in _IGNORE_DIRS for part in p.relative_to(cdir).parts):
+        if any(part in _IGNORE_DIRS for part in rel.parts):
             continue
         files.append(p)
     for p in sorted(files, key=lambda x: str(x.relative_to(cdir))):

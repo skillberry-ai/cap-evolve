@@ -68,22 +68,18 @@ from .loop import SplitResult, aggregate_scores
 from .optimizer_context import OptimizerContext
 from .optimizer_context import inject as inject_optimizer_context
 from .optimizer_context import render_instructions
-from .rundir import RunDir
+from .rundir import NON_CAPABILITY_NAMES, RunDir
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
 
 # Optimizer-scratch / non-capability files that must NOT count as editable
 # "components" (they perturb neither the capability nor the content hash).
-_NON_COMPONENT = {
-    "MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md",
-    "FOCUS.md", "REFLECTION.md",
-    # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-    "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
-}
-_NON_COMPONENT_DIRS = {".git", "__pycache__"} | set(oc.INJECTED_DIRS)
+# ``rundir.NON_CAPABILITY_NAMES`` is the shared definition; INSTRUCTIONS/PROCESS are in it
+# because they ARE snapshotted (explainability) yet are still not editable components.
 # The injected agent-instructions files (CLAUDE.md / AGENTS.md / …) are read-context too.
-_NON_COMPONENT |= set(oc.INJECTED_NAMES)
+_NON_COMPONENT = set(NON_CAPABILITY_NAMES) | set(oc.INJECTED_NAMES)
+_NON_COMPONENT_DIRS = {".git", "__pycache__"} | set(oc.INJECTED_DIRS)
 
 
 # ---- components (editable capability files) -------------------------------
@@ -105,6 +101,10 @@ def _components(candidate_dir: Path) -> list[str]:
         if not p.is_file():
             continue
         rel = p.relative_to(cdir)
+        # ponytail: matches by basename at any depth, unlike cache/snapshot which are
+        # root-anchored. Harmless here (a false positive only costs precision — one
+        # fewer editable component / one uncounted edit, nothing is lost); anchoring it
+        # would change which components GEPA may edit, which is out of scope for #110.
         if p.name in _NON_COMPONENT:
             continue
         if any(part in _NON_COMPONENT_DIRS for part in rel.parts):
