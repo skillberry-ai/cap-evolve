@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import plateau
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
@@ -460,6 +461,7 @@ def gepa_loop(
     seed: int = 0,
     store=None,
     resume: bool = False,
+    plateau_cfg: "plateau.PlateauConfig | None" = None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -521,9 +523,21 @@ def gepa_loop(
                             merges_done=merges_done, comp_cursor=comp_cursor,
                             n_steps=step_offset + len(steps))
 
+    # Plateau/convergence detection — a third stop condition next to budget and stall.
+    # GEPA is multi-lineage, so exhaustion is used to STEER (drop the dead parents from
+    # the sampling pool) while the run continues on the lineages that still move.
+    pcfg = plateau_cfg or plateau.PlateauConfig()
+    pstate = plateau.PlateauState()
+
     while True:
         ok, why = _budget_left()
         if not ok:
+            break
+
+        pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm="gepa")
+        if pstate.should_stop:
+            run_dir.log_event("gepa_stop", reason=f"plateaued ({pstate.reason})")
+            why = why or f"plateaued ({pstate.reason})"
             break
 
         # Global step index across resumes: names candidates/tags/commits so a resumed
@@ -531,11 +545,20 @@ def gepa_loop(
         n = step_offset + len(steps)
 
         # 2. select a parent from the per-instance frontier (frequency-weighted).
+        # Per-lineage exhaustion: a parent whose last K children were ALL dead is
+        # removed from the sampling pool for this iteration, so the frontier's own
+        # weighting operates over the lineages that can still move. Never emptied —
+        # if every lineage is exhausted the full pool is used and the GLOBAL level
+        # (not this filter) is what decides to stop.
+        dead_parents = set(pstate.exhausted_lineages)
+        sample_pool = [c for c in pool if c["id"] not in dead_parents] or pool
         sel_seed = rng.randrange(2 ** 31)
-        ranked, _ = selection.pick(pool, selection_strategy, seed=sel_seed)
+        ranked, _ = selection.pick(sample_pool, selection_strategy, seed=sel_seed)
         parent = ranked[0]
         run_dir.log_event("gepa_select", parent=parent["id"], strategy=selection_strategy,
-                          sel_seed=sel_seed, pool=len(pool))
+                          sel_seed=sel_seed, pool=len(pool),
+                          sampled_from=len(sample_pool),
+                          skipped_exhausted=sorted(dead_parents & {c["id"] for c in pool}))
         parent_dir = Path(parent["dir"])
 
         # 3. sample a minibatch of TRAIN ids.
@@ -566,7 +589,13 @@ def gepa_loop(
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
         instructions = _instructions(refl_summary, focus_label, mb)
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+        # The plateau block goes THROUGH _augment_instructions (extra=) so it lands inside
+        # #222's MAX_INSTRUCTIONS_CHARS cap, and in its PRESERVED TAIL. Appending it after
+        # this call escaped the cap entirely (measured 64941 > 60000); appending it before
+        # would put the one *behavioural* block in the middle, which is the part truncation
+        # elides — silently dropping it while keeping the two context-only blocks.
+        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history,
+                                             extra=plateau.prompt_block(pstate))
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0
@@ -659,6 +688,7 @@ def gepa_loop(
     _save()
     best = max(pool, key=lambda c: c["val"])
     run_dir.set_best(best["id"])
+    pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm="gepa")
     _, why2 = run_dir.budget_exhausted()
     return {
         "algorithm": "gepa",
@@ -671,6 +701,7 @@ def gepa_loop(
         "merges": merges_done,
         "metric_calls": run_dir.spent.metric_calls,
         "stop_reason": why or why2 or "max_iterations",
+        "plateau": pstate.to_dict(),
         "steps": steps,
     }
 

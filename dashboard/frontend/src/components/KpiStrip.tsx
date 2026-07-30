@@ -50,6 +50,20 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
       <Kpi label="frontier">{summary.frontier ?? 0}</Kpi>
       <Kpi label="wall clock">{duration(summary.wall_clock_seconds)}</Kpi>
       <Kpi label="$ / +1%">{dollarPerPct != null ? usd(dollarPerPct) : '—'}</Kpi>
+      {/* PROGRESS, not liveness — the run status badge answers "is it running", this
+          answers "is anything it does helping". A `live` run can read `stop` here. */}
+      <Kpi
+        label="plateau"
+        tone={summary.plateau?.level === 'ok' || !summary.plateau ? undefined : 'rejected'}
+        hint={summary.plateau?.reason}
+      >
+        {summary.plateau ? `${summary.plateau.level} · ${summary.plateau.run_length} dead` : 'ok'}
+      </Kpi>
+      {!!summary.exhausted_lineages?.length && (
+        <Kpi label="exhausted lineages" tone="rejected" hint={summary.exhausted_lineages.join(', ')}>
+          {summary.exhausted_lineages.length}
+        </Kpi>
+      )}
     </motion.div>
   )
 }

@@ -84,10 +84,28 @@ gate_k_se: 1.0
 # Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a
 # $ range before spending. All caps below are hard stops; 0 = unlimited/off.
 max_iterations: 10          # optimizer iterations (dominant cost knob)
-stall: 2                    # stop after N consecutive rejects
+# `stall` counts CONSECUTIVE REJECTS, which is not the same thing as a lack of progress:
+# a few rejects then a breakthrough is the normal shape of a run, and #113's Student-t
+# gate makes sub-significant near-misses (Δ>0, rejected) strictly MORE common on small
+# val splits. The old default of 2 killed such runs at iteration 3 — and it always fired
+# before `plateau_window` below, which made the whole plateau ladder unreachable for all
+# three algorithms in a default project. Plateau detection replaces it and counts DEAD
+# iterations (Δ<=0) instead of rejections. Set a positive value to get the blunt
+# reject-counter back; the two conditions coexist, whichever trips first wins.
+stall: 0                    # 0 = off (plateau detection below is the progress-based stop)
 max_metric_calls: 0         # 0 = unlimited; else stop after N runner evals
 max_usd: 0.0                # 0 = unlimited; total $ cap (runner + optimizer + intake)
 max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
+
+# --- plateau / convergence detection ----------------------------------------
+# Counts only DEAD iterations: rejected with Δ<=0 on val. A near-miss (rejected but
+# Δ>0 — common on small val splits under the Student-t gate) or an accept RESETS the
+# counter, so a spiky-but-progressing run never escalates.
+# Ladder: warn at plateau_window, diversify at +escalate_every, stop at +2*escalate_every.
+plateau_window: 6           # dead iterations before the plateau warning
+plateau_escalate_every: 2   # further dead iterations per escalation step
+plateau_lineage_window: 4   # dead children of ONE parent before that lineage is exhausted
+plateau_stop: true          # false = warn + diversify only, never stop the run
 
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command

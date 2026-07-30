@@ -567,6 +567,13 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Plateau/convergence state (cap_evolve.plateau): the LAST `plateau` event is the
+        # current escalation level (ok|warn|diversify|stop). Distinct from #118's run
+        # LIVENESS (live/stalled/crashed/done, derived from events.jsonl mtime):
+        # "stalled" = nothing happening; "plateaued" = plenty happening, none of it helps.
+        "plateau": ([e for e in events if e.get("kind") == "plateau"] or [None])[-1],
+        "exhausted_lineages": sorted({str(e.get("parent")) for e in events
+                                      if e.get("kind") == "lineage_exhausted" and e.get("parent")}),
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
@@ -788,6 +795,18 @@ def render_ansi(reduced: dict, *, color: bool = True, top_n: int = 8) -> str:
                     (f"{dlt:>+9.3f}" if dlt is not None else f"{'—':>9}") +
                     f"{n.get('iteration', 0):>6}")
             lines.append(line)
+        lines.append("")
+
+    pl = s.get("plateau") or {}
+    if pl.get("level") in ("warn", "diversify", "stop"):
+        col = {"warn": _C.YELLOW, "diversify": _C.YELLOW, "stop": _C.RED}[pl["level"]]
+        lines.append(c(col, f"◼ PLATEAU: {pl['level']} — {pl.get('run_length', 0)} "
+                            f"consecutive iterations bought no new best val"))
+        lines.append(c(_C.GREY, "  " + str(pl.get("reason") or "")[: width - 4]))
+    if s.get("exhausted_lineages"):
+        lines.append(c(_C.YELLOW, "◼ exhausted lineage(s): "
+                                  + ", ".join(s["exhausted_lineages"][:6])))
+    if pl or s.get("exhausted_lineages"):
         lines.append("")
 
     if s["gate_warnings"]:
@@ -1241,9 +1260,16 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
 
 /* ---------- 7. Annotations / diagnoses stream ---------- */
 (function(){
-  const W=S.gate_warnings||[], D=S.diagnoses||[];
-  if(!W.length&&!D.length)return;
+  const W=S.gate_warnings||[], D=S.diagnoses||[], P=S.plateau||null, X=S.exhausted_lineages||[];
+  const plOn = P && P.level && P.level!=='ok';
+  if(!W.length&&!D.length&&!plOn&&!X.length)return;
   const s=sec('Annotations & diagnoses');
+  if(plOn){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'plateau · '+P.level}),
+             $('div',{text:(P.reason||'')}));s.append(a);}
+  if(X.length){const a=$('div',{class:'ann diag'});
+    a.append($('div',{class:'who',text:'lineage exhausted'}),
+             $('div',{text:X.join(', ')}));s.append(a);}
   W.forEach(w=>{const a=$('div',{class:'ann'});a.append($('div',{class:'who',text:'gate · '+(w.mode||'')}),
     $('div',{text:w.reason||''}));s.append(a);});
   D.forEach(d=>{const a=$('div',{class:'ann diag'});a.append($('div',{class:'who',text:(d.kind||'diagnose')+(d.candidate?' · '+d.candidate:'')}),

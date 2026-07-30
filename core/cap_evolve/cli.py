@@ -426,6 +426,16 @@ def _cmd_run(argv):
         alg_cmd += ["--max-metric-calls", str(spec["max_metric_calls"])]
     if spec.get("store_commit_cmd"):
         alg_cmd += ["--store-commit-cmd", str(spec["store_commit_cmd"])]
+    # Plateau/convergence thresholds — one loop, every deterministic algorithm, so a
+    # new knob can't be silently dropped for gepa/skillopt the way #109's flags were.
+    if algorithm_name in ("hill-climb", "gepa", "skillopt"):
+        for key, flag in (("plateau_window", "--plateau-window"),
+                          ("plateau_escalate_every", "--plateau-escalate-every"),
+                          ("plateau_lineage_window", "--plateau-lineage-window")):
+            if spec.get(key):
+                alg_cmd += [flag, str(int(spec[key]))]
+        if spec.get("plateau_stop") is False:
+            alg_cmd += ["--no-plateau-stop"]
     # Algorithm-specific knobs without hardcoding per-algorithm: a spec may set
     # `algorithm_args` (string) to pass extra flags straight through to the
     # algorithm run.py — e.g. "--epochs 6 --lr-schedule cosine" for skillopt,

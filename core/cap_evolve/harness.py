@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import plateau
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
@@ -899,8 +900,17 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
-                          rejected, history) -> str:
+                          rejected, history, extra: str = "") -> str:
     """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+
+    ``extra`` is an algorithm-level block that must land LAST and must be inside whatever
+    cap this function ends with (#129/PR222 makes it ``return cap_instructions(...)``).
+    Appending such a block at the call site instead does two bad things: for GEPA it
+    escapes the cap entirely, and for every algorithm it puts a *behavioural* instruction
+    in the middle of the string, which is the part ``cap_instructions`` elides — so
+    truncation would silently drop the one block that changes search behaviour while
+    keeping the two that are only context. Passing it here puts it in the preserved tail.
+    Used by ``cap_evolve.plateau.prompt_block``.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -930,7 +940,24 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
     )
-    return f"{instructions}\n\n{pointer}\n"
+    out = f"{instructions}\n\n{pointer}\n"
+    if extra:
+        out = f"{out}\n{extra}"
+    return _cap_instructions(out)
+
+
+def _cap_instructions(text: str) -> str:
+    """Apply #129/PR222's one-iteration prompt ceiling when it exists in this tree.
+
+    ponytail: no second cap invented here. #222 owns ``MAX_INSTRUCTIONS_CHARS`` and the
+    head+tail truncation in ``optimizer_context``; this is a one-line adapter so the
+    plateau block is inside that cap the moment #222 lands, and a no-op before it.
+    """
+    try:
+        from .optimizer_context import cap_instructions
+    except Exception:  # noqa: BLE001 — pre-#222 tree has no cap to apply
+        return text
+    return cap_instructions(text)
 
 
 def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
@@ -1216,6 +1243,7 @@ def run_step(
     current_val: SplitResult,
     n_trials: int = 1,
     gate_kwargs: dict | None = None,
+    extra_instructions: str = "",
     candidate_id: str | None = None,
     parent_id: str | None = None,
     no_regression: bool = False,
@@ -1253,7 +1281,10 @@ def run_step(
                               capabilities=capabilities, optimizer_name=optimizer_name,
                               capability_sources=capability_sources, project_dir=project_dir)
 
-    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+    # ``extra_instructions`` (the plateau block) goes THROUGH _augment_instructions so it
+    # lands in the capped, preserved tail rather than being appended past the cap.
+    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history,
+                                         extra=extra_instructions)
 
     optimizer_error = None
     opt_cost_usd, opt_tokens = 0.0, 0
@@ -1856,6 +1887,7 @@ def hill_climb_loop(
     project_dir: Path | None = None,
     target_model: str = "",
     target_profile_file: str | None = None,
+    plateau_cfg: "plateau.PlateauConfig | None" = None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1883,10 +1915,22 @@ def hill_climb_loop(
         score_by = {pt["task_id"]: pt["reward"] for pt in train_res.per_task}
         order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
 
+    # Plateau/convergence detection (see cap_evolve.plateau): a THIRD stop condition,
+    # orthogonal to budget and to the `stall` reject-counter. It escalates
+    # warn -> diversify (prompt intervention) -> stop.
+    pcfg = plateau_cfg or plateau.PlateauConfig()
+    pstate = plateau.PlateauState()
+
     steps = []
+    why = ""   # read after the loop, so it must be bound when the body never runs
+               # (max_iterations=0, or a resume whose budget is already spent).
     for i in range(max_iterations):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
+            break
+        pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
+        if pstate.should_stop:
+            why = f"plateaued ({pstate.reason})"
             break
         if focus == "all":
             focus_ids, label = None, "whole train set"
@@ -1904,6 +1948,7 @@ def hill_climb_loop(
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
+            extra_instructions=plateau.prompt_block(pstate),
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
             rejected=rejected, history=history, store=store, capabilities=capabilities,
             optimizer_name=optimizer_name, capability_sources=capability_sources,
@@ -1913,14 +1958,17 @@ def hill_climb_loop(
         if step["accepted"]:
             current_val = SplitResult.from_dict(step["candidate_val"])
 
-    _, why = run_dir.budget_exhausted()
+    pstate = plateau.check(run_dir, pcfg, last=pstate, algorithm=algorithm)
+    stop_why = why if why and why.startswith("plateaued") else None
+    _, budget_why = run_dir.budget_exhausted()
     return {
         "algorithm": algorithm,
         "best_id": run_dir.best_id,
         "best_val": current_val.reward,
         "iterations": len(steps),
         "accepts": sum(1 for s in steps if s["accepted"]),
-        "stop_reason": why or "max_iterations",
+        "stop_reason": stop_why or budget_why or "max_iterations",
+        "plateau": pstate.to_dict(),
         "steps": steps,
     }
 
