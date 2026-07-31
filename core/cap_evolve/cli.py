@@ -18,6 +18,7 @@ already resolves the manifest and validates the spec so the wiring is testable.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import signal
@@ -119,6 +120,43 @@ def _step_failure(step: str, proc) -> dict:
     if proc.stdout:
         rec["stdout_tail"] = proc.stdout[-2000:]
     return rec
+
+
+def _json_payload(text: str) -> dict:
+    """Extract a phase subprocess's JSON payload from its captured stdout.
+
+    Phases are *supposed* to print nothing but their JSON object; the harness
+    redirects adapter output to stderr to keep that true. This is the second line of
+    defense: one stray ``print`` anywhere under an adapter used to take down the whole
+    run with ``JSONDecodeError: Expecting value: line 1 column 1`` — after the
+    expensive part had already succeeded and been written to disk. Losing an 11-minute
+    baseline to a log line is not a reasonable failure mode.
+
+    A phase prints its payload LAST, so candidate object starts are tried newest-first
+    and the first one that decodes wins. Raises ``json.JSONDecodeError`` when stdout
+    holds no JSON object at all, so a genuinely broken phase still fails loudly.
+    """
+    text = text or ""
+    with contextlib.suppress(json.JSONDecodeError):
+        return json.loads(text)
+
+    decoder = json.JSONDecoder()
+    # Candidate starts: every line that begins a JSON object, newest first. Matching on
+    # line starts (not every "{" in the buffer) keeps this linear and avoids decoding
+    # from inside a nested object, which would return a fragment of the real payload.
+    starts, offset = [], 0
+    for line in text.splitlines(keepends=True):
+        if line.lstrip().startswith("{"):
+            starts.append(offset + (len(line) - len(line.lstrip())))
+        offset += len(line)
+    for start in reversed(starts):
+        try:
+            obj, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    raise json.JSONDecodeError("no JSON object found in phase stdout", text, 0)
 
 
 def _cmd_run(argv):
@@ -317,7 +355,7 @@ def _cmd_run(argv):
     if proc.returncode != 0:
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return 1
-    run_dir = json.loads(proc.stdout)["run_dir"]
+    run_dir = _json_payload(proc.stdout)["run_dir"]
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.

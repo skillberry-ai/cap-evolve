@@ -6,6 +6,21 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A printing scorer no longer destroys a completed run (`cap-evolve run` stdout contract).**
+  `harness.evaluate_candidate` now wraps the whole run+score body in
+  `redirect_stdout(sys.stderr)`, not just the rollout pool. Only the RUN phase was guarded
+  (`run_trials_pool`, for tau2's progress output); SCORING was free to print, and
+  SpreadsheetBench's vendored comparator prints `"Cell values in the specified range are
+  identical."` on every *passing* check (its LibreOffice recalc helper prints on every
+  failure path). That prose landed on the baseline phase's stdout, so `cap-evolve run`'s
+  `json.loads(proc.stdout)` died with `Expecting value: line 1 column 1` — *after* an
+  11-minute, $2.65 baseline had already succeeded and been written to disk, and before any
+  optimization iteration ran ([run 30553822478](https://github.com/skillberry-ai/cap-evolve/actions/runs/30553822478)).
+  The bug was latent until spreadsheetbench first scored above zero: no passing comparison,
+  no print. As a second line of defense, `cli._json_payload` now extracts a phase's JSON
+  payload from stdout newest-object-first instead of assuming the buffer is pure JSON, so
+  one stray `print` anywhere under an adapter can no longer discard finished work — while
+  stdout carrying no JSON at all still fails loudly.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
