@@ -6,6 +6,22 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A failed benchmark run was recorded as `"conclusion": "success"`.** The completion gate
+  (`Assert the suite run completed`) ran *after* `Write run metadata`, and `job.status` is
+  evaluated when a step runs — so a run that crashed mid-optimization and failed the gate still
+  wrote `success` into `runmeta.json`, which the aggregate job then published to
+  `benchmark-history`. Runs 30553822478 and 30608405812 are both recorded as successes on the
+  history page despite failing. The gate now runs before the publishing steps; everything
+  downstream is `if: always()`, so metrics/UI/artifacts/PR-comment are still published on
+  failure — only the recorded conclusion changes.
+- **Command-injection vector in the benchmark job's metadata step.** `github.head_ref` (an
+  attacker-controlled PR branch name) was interpolated straight into an inline script on a
+  **self-hosted** runner. It now travels via the environment, and both free-form fields
+  (`branch`, `source`) are emitted as JSON string literals — shell quoting alone let a branch
+  name containing a double quote produce an unparseable `runmeta.json`. Verified against 24
+  combinations of hostile branch name x event x job status. `benchmarks.yml` is now
+  actionlint-clean.
+
 - **SpreadsheetBench formula recalculation was silently never running (#256).** #240 widened the
   *directories* the adapter creates so the uid-1000 container could write its output; the output
   *file* it writes is still owned by uid 1000 at ~0644, so the host-side scorer could not rewrite

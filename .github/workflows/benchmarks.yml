@@ -303,16 +303,53 @@ jobs:
             echo "no run dir at $run_dir (job likely failed/cancelled before producing one) — skipping UI export"
           fi
 
+      # Completion gate. Without this the suite is green whenever `cap-evolve run` exits
+      # non-zero: run_suite.sh only emits an annotation, so a run that crashed
+      # mid-optimization and never produced a sealed test number still reports "success".
+      # Regression is NOT asserted here (see --allow-regression in assert_run.py) — real
+      # model rewards are noisy; this checks the run COMPLETED.
+      #
+      # Ordered BEFORE the publishing steps, not last. `job.status` is evaluated when a step
+      # runs, so a gate placed after "Write run metadata" leaves runmeta.json recording
+      # "conclusion": "success" for a run that then fails the gate — and the aggregate job
+      # publishes that to benchmark-history, where a crashed run reads as a clean success
+      # (runs 30553822478 and 30608405812 are both recorded that way). Everything downstream
+      # is `if: always()`, so metrics/UI/artifacts/PR-comment are still published on failure;
+      # only the recorded conclusion changes.
+      - name: Assert the suite run completed
+        if: always()
+        run: |
+          tasks="ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/tasks.json"
+          if [ ! -f "$tasks" ]; then
+            echo "no tasks.json for ${{ matrix.tier }}/${{ matrix.bench }} — nothing to assert"
+            exit 0
+          fi
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" \
+            --min-iterations 1 --allow-regression
+
       - name: Write run metadata
         if: always()
+        env:
+          # A PR branch name is attacker-controlled and this job runs on a SELF-HOSTED
+          # runner, so interpolating it straight into the shell is a command-injection
+          # vector (actionlint [expression]). Pass it through the environment, where the
+          # shell treats it as data instead of source text.
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
           mkdir -p "$out"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            source="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
+            SOURCE_TEXT="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
           else
-            source="manual (${{ github.ref_name }})"; pr="null"
+            SOURCE_TEXT="manual ($BRANCH_NAME)"; pr="null"
           fi
+          export SOURCE_TEXT
+          # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
+          # enough: a branch name containing a double quote would close the string early and
+          # produce a runmeta.json the aggregate job cannot parse (verified locally).
+          branch_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["BRANCH_NAME"]))')
+          source_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["SOURCE_TEXT"]))')
           cat > "$out/runmeta.json" <<JSON
           {
             "run_id": ${{ github.run_id }},
@@ -320,9 +357,9 @@ jobs:
             "bench": "${{ matrix.bench }}",
             "tier": "${{ matrix.tier }}",
             "event": "${{ github.event_name }}",
-            "source": "$source",
+            "source": $source_json,
             "pr": $pr,
-            "branch": "${{ github.head_ref || github.ref_name }}",
+            "branch": $branch_json,
             "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "iterations": ${ITERATIONS:-3},
@@ -361,24 +398,6 @@ jobs:
             } else {
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
-
-      # Completion gate — LAST, so metrics/UI/artifacts/PR-comment are all published
-      # before the job is allowed to go red. Without this the suite is green whenever
-      # `cap-evolve run` exits non-zero: run_suite.sh only emits an annotation, so a run
-      # that crashed mid-optimization and never produced a sealed test number still
-      # reports "success". Regression is NOT asserted here (see --allow-regression in
-      # assert_run.py) — real model rewards are noisy; this checks the run COMPLETED.
-      - name: Assert the suite run completed
-        if: always()
-        run: |
-          tasks="ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/tasks.json"
-          if [ ! -f "$tasks" ]; then
-            echo "no tasks.json for ${{ matrix.tier }}/${{ matrix.bench }} — nothing to assert"
-            exit 0
-          fi
-          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
-          "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" \
-            --min-iterations 1 --allow-regression
 
   # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
   # writer → no push races) and regenerate benchmarks.json for the Pages history page.
