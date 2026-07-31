@@ -115,27 +115,20 @@ async function mountDeepDive() {
 }
 
 describe('#139 tab consolidation', () => {
-  it('exposes seven tabs, with the four diff/file surfaces folded into Changes & files', async () => {
+  it('folds the four diff/file surfaces into one Changes & files tab', async () => {
     await mountDeepDive()
     const list = await screen.findByRole('tablist')
     const labels = within(list)
       .getAllByRole('tab')
       .map((t) => t.textContent)
-    expect(labels).toEqual([
-      'Fitness',
-      'Cost',
-      'Phases',
-      'Lineage',
-      'Trajectories',
-      'Changes & files',
-      'Insights',
-    ])
-    // The old top-level tabs are gone from the TOP list, not from the app.
-    expect(labels).not.toContain('Iterations')
-    expect(labels).not.toContain('Git diffs')
-    expect(labels).not.toContain('Memory')
-    expect(labels).not.toContain('Files')
-    expect(labels).not.toContain('Overview')
+    // Asserted as a subset, not an exact list: sibling PRs in this epic legitimately add
+    // top-level tabs (#204's Events), and pinning the exact array would fail the merge
+    // for a reason that has nothing to do with consolidation.
+    expect(labels).toEqual(expect.arrayContaining(['Fitness', 'Trajectories', 'Changes & files']))
+    // The four overlapping surfaces are gone from the TOP list, not from the app.
+    for (const gone of ['Iterations', 'Git diffs', 'Memory', 'Files', 'Overview']) {
+      expect(labels).not.toContain(gone)
+    }
   })
 
   it('Changes & files still reaches candidate diff, commit diff, memory and raw files', async () => {
@@ -197,11 +190,16 @@ describe('#139 accessibility', () => {
     // Selection is bold + aria-selected, not colour alone.
     expect(tabs[0].className).toContain('font-semibold')
 
+    // Arrow keys move selection AND focus together; asserted by position rather than by
+    // tab name so a sibling PR inserting a tab (#204's Events) doesn't fail this.
+    const names = tabs.map((t) => t.textContent!)
     tabs[0].focus()
     await user.keyboard('{ArrowRight}')
-    expect(await screen.findByRole('tab', { name: 'Cost', selected: true })).toHaveFocus()
+    expect(await screen.findByRole('tab', { name: names[1], selected: true })).toHaveFocus()
     await user.keyboard('{End}')
-    expect(await screen.findByRole('tab', { name: 'Insights', selected: true })).toHaveFocus()
+    expect(await screen.findByRole('tab', { name: names[names.length - 1], selected: true })).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(await screen.findByRole('tab', { name: names[0], selected: true })).toHaveFocus()
   })
 
   it('the rollout drawer traps focus, closes on Escape, and returns focus to its opener', async () => {
