@@ -1,6 +1,6 @@
 """Ensure the stdlib-only ``cap_evolve`` core is importable.
 
-Prefer an installed ``cap-evolve-core``; fall back to the in-repo ``core/`` dir
+Prefer an installed ``cap-evolve``; fall back to the in-repo ``core/`` dir
 so tests and dev runs work from a checkout (mirrors core's own _bootstrap.py).
 """
 from __future__ import annotations

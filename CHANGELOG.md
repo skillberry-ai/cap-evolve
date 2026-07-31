@@ -6,6 +6,10 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **`CITATION.cff` dated the release wrong (#186).** `date-released: 2026-06-14` for a
+  `v0.1.0` whose GitHub release published on `2026-07-27`. Machine-read metadata that
+  would have shipped a six-week-stale date to every citation; now pinned to the release
+  date and guarded by `core/tests/test_packaging.py`.
 - **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
   runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
   installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
@@ -21,6 +25,50 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **`pip install cap-evolve` — a release path with no clone (#125).** The distribution is
+  renamed `cap-evolve-core` → **`cap-evolve`** (the old name was never published, so
+  nothing to migrate) and the wheel now ships the runtime data a run cannot start
+  without: the whole skill library (`skills/`, including `optimizers/registry.yaml` and
+  `_registry/manifest.json`) and `templates/project/`, packaged as
+  `cap_evolve/_bundled/{skills,templates}` — symlinks to the repo trees, so the two can
+  never drift. Previously a wheel held only `.py` files, which is #193's `install.sh`
+  hole (a stock install that cannot read `registry.yaml`) in pip shape. New
+  `cap_evolve.resources.resource_root()` resolves the repo tree or the packaged copy, so
+  the six `parents[2]` repo-layout assumptions in `harness.py` and the CLI's
+  `_find_skills_dir()` parent-walk work in both. The version is single-sourced in
+  `cap_evolve.__version__` (`pyproject.toml` reads it dynamically); `core/tests/test_packaging.py`
+  guards that, the `CITATION.cff` agreement, and the data-file declarations.
+  New `.github/workflows/release.yml` builds sdist+wheel, `twine check`s them, asserts
+  the required data files are inside the artifacts, then **installs each artifact into a
+  clean venv and runs a real zero-API optimization from outside the checkout with `HOME`
+  redirected** — the only way to catch a missing data file, since inside the repo the
+  skills-dir fallbacks rescue a broken package. Publishes via PyPI Trusted Publishing
+  (OIDC, no stored token) on a `v*` tag and cuts a GitHub Release whose notes are the
+  CHANGELOG section for that version. Nothing is published until a human pushes the tag.
+  **Every validation gate runs before the irreversible upload.** The CHANGELOG slice used to
+  live in `github-release` (`needs: publish-pypi`), so a tag whose CHANGELOG had no section
+  would publish to PyPI and only *then* fail. It now runs in `build`, alongside the
+  tag/version match, a `_bundled` symlink precondition, `twine check`, the artifact-contents
+  assertion, and the install-and-run — `publish-pypi` contains nothing but the upload, and
+  `github-release` validates nothing (it consumes the notes artifact `build` produced). This
+  also removes the workflow's dependency on the CHANGELOG landing first (#184): a premature
+  tag now fails in `build`, uploading nothing. Artifact renamed `dist` → `dist-core` so a
+  second distribution can never collide with it.
+  **No `[dashboard]` extra.** It named `capevolve-dashboard`, which is 404 on PyPI and
+  published by no workflow, so the `pip install 'cap-evolve[dashboard]'` on the rendered PyPI
+  page could not resolve — and extras bake into the wheel METADATA, unfixable after a publish.
+  The extra is dropped, `core/README.md` points at the from-clone install (every run already
+  writes a standalone `dashboard.html` with nothing extra installed), and a new
+  `test_documented_pip_installs_can_resolve` asserts every documented `pip install` on the two
+  *published* surfaces (`core/README.md`, `docs/INSTALL.md`) names a declared extra.
+  `core/README.md`'s skill/algorithm/optimizer counts are guarded too — the one place a stale
+  count is *published* rather than merely wrong on an editable page.
+  On a checkout without symlink support (`core.symlinks=false`, the Windows git default)
+  `_bundled/{skills,templates}` degrade to 15-byte text files and `python -m build` emits a
+  data-free wheel that `twine check` PASSES; the `build` job now asserts the symlinks before
+  building, the artifact assertion's failure message names that cause, and
+  `docs/TROUBLESHOOTING.md` documents both it and `CAPEVOLVE_RESOURCE_ROOT`.
+
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the

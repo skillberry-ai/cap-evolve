@@ -1,0 +1,269 @@
+# ============================================================================
+# Release — build, verify, and publish `cap-evolve` to PyPI
+# ============================================================================
+#
+# PURPOSE:
+#   Turn a `v*` tag into a published wheel + sdist on PyPI, and a GitHub Release
+#   whose body is the matching CHANGELOG section.
+#
+# EVERY GATE RUNS BEFORE THE IRREVERSIBLE PUBLISH:
+#   A PyPI upload can be yanked but never replaced, so no check may run after it.
+#   `build` + `verify` hold ALL of them — tag/version agreement, the CHANGELOG section
+#   for the tag, the symlink precondition, `twine check`, the artifact-contents
+#   assertion, and a real install-and-run. `publish-pypi` holds nothing but the upload.
+#   `github-release` runs after the upload and validates nothing: it consumes the
+#   `release-notes` artifact `build` already proved non-empty. Originally the CHANGELOG
+#   gate lived in `github-release` (`needs: publish-pypi`), so a tag whose CHANGELOG had
+#   no section published irreversibly and only *then* failed. Moving it into `build`
+#   also removes this workflow's dependency on the CHANGELOG landing first (#184): a
+#   premature tag now fails in `build`, uploading nothing.
+#
+# WHY THE VERIFY JOB IS NOT OPTIONAL:
+#   The core is pure `.py`, but a run also needs the skill library and the project
+#   templates — `skills/optimizers/registry.yaml`, `skills/_registry/manifest.json`,
+#   `templates/project/`. #193 shipped an `install.sh` that omitted `registry.yaml`,
+#   so every stock install looked fine and could not run an optimizer. A wheel can
+#   fail the same way silently. So `verify` installs the built ARTIFACT into a clean
+#   venv and runs a real zero-API optimization **from a temp dir outside the repo,
+#   with `HOME` redirected** — inside the checkout, `_find_skills_dir()`'s fallbacks
+#   (`./.claude/skills`, `~/.claude/skills`, the repo's own `skills/`) rescue a broken
+#   package and prove nothing.
+#
+# PUBLISH AUTH — Trusted Publishing (OIDC), no stored token:
+#   Requires a one-time setup on PyPI: project `cap-evolve` → Publishing → add a
+#   GitHub publisher (owner `skillberry-ai`, repo `cap-evolve`, workflow
+#   `release.yml`, environment `pypi`). Until that exists the publish step fails
+#   with an auth error and nothing is uploaded.
+#
+# HOW TO USE:
+#   - `workflow_dispatch` with target `none`     → build + verify only (safe, default)
+#   - `workflow_dispatch` with target `testpypi` → also upload to TestPyPI
+#   - push tag `vX.Y.Z`                          → build + verify + upload to PyPI
+#                                                  + create the GitHub Release
+#   A PyPI version can be yanked but NEVER replaced. The tag path is the point of
+#   no return; use the dispatch paths first.
+# ============================================================================
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Upload target (none = build + verify only)'
+        type: choice
+        options: [none, testpypi]
+        default: none
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      # The version is single-sourced in cap_evolve.__init__.__version__ (pyproject
+      # reads it dynamically). On a tag, the tag must agree — otherwise we would
+      # publish `0.1.0` under a `v0.2.0` tag and the two could never be reconciled.
+      - name: Version agrees with the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          pkg=$(PYTHONPATH=core python -c 'import cap_evolve; print(cap_evolve.__version__)')
+          tag=${GITHUB_REF_NAME#v}
+          echo "package=$pkg tag=$tag"
+          [ "$pkg" = "$tag" ] || { echo "::error::__version__ $pkg != tag $tag"; exit 1; }
+
+      # PRECONDITION for the build: `cap_evolve/_bundled/{skills,templates}` are
+      # symlinks into the repo trees and setuptools dereferences them into the artifact.
+      # On a checkout without symlink support (`git config core.symlinks=false`, the
+      # Windows default) each link is instead a ~15-byte text file naming its target:
+      # the globs match nothing, `python -m build` emits a data-free wheel, and
+      # `twine check` PASSES it. Fail loudly here instead.
+      - name: _bundled symlinks survived the checkout
+        run: |
+          for n in skills templates; do
+            p="core/cap_evolve/_bundled/$n"
+            [ -L "$p" ] || { echo "::error::$p is not a symlink — this checkout lost symlink support (git config core.symlinks=false, the Windows default). The build would emit a data-free wheel that passes twine check. Re-clone with symlinks enabled."; exit 1; }
+            [ -d "$p" ] || { echo "::error::$p is a broken symlink"; exit 1; }
+          done
+          echo "_bundled/skills and _bundled/templates are live symlinks"
+
+      # The release notes must exist BEFORE anything is uploaded — see the header note.
+      # Slice = the CHANGELOG section for this version, `## [X.Y.Z]` to the next `## [`.
+      # #101 moved the `[X.Y.Z]: <url>` link definitions ABOVE the first section so they
+      # cannot land inside a slice. Empty slice = no section for this tag → fail here,
+      # while failing is still free.
+      - name: CHANGELOG has a section for the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          awk -v v="$v" '
+            $0 ~ "^## \\[" v "\\]" {on=1; next}
+            on && /^## \[/ {exit}
+            on {print}
+          ' CHANGELOG.md | sed '/./,$!d' > notes.md
+          [ -s notes.md ] || { echo "::error::no CHANGELOG section for [$v] — add one before tagging"; exit 1; }
+          ! grep -qE '^\[[^]]+\]: https?://' notes.md || { echo "::error::link definitions leaked into notes"; exit 1; }
+          cat notes.md
+
+      - name: Build
+        working-directory: core
+        run: python -m build
+
+      - name: twine check
+        working-directory: core
+        run: twine check dist/*
+
+      # The data files a run cannot start without. Asserted on the ARTIFACT, not the
+      # checkout, so a packaging regression fails here instead of after upload.
+      - name: Artifact contains the runtime data files
+        working-directory: core
+        run: |
+          python - <<'PY'
+          import glob, tarfile, zipfile
+          need = ["_bundled/skills/optimizers/registry.yaml",
+                  "_bundled/skills/_registry/manifest.json",
+                  "_bundled/skills/algorithms/hill-climb/scripts/run.py",
+                  "_bundled/templates/project/capevolve.yaml"]
+          whl = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          sdist = tarfile.open(glob.glob("dist/*.tar.gz")[0]).getnames()
+          for label, names in (("wheel", whl), ("sdist", sdist)):
+              for n in need:
+                  assert any(x.endswith(n) for x in names), (
+                      f"{label} missing {n} — this step is load-bearing: it is the only "
+                      "check that reads the ARTIFACT rather than the checkout. Most likely "
+                      "cause: cap_evolve/_bundled/{skills,templates} were not live symlinks "
+                      "at build time (a core.symlinks=false checkout turns them into 15-byte "
+                      "text files, the package-data globs match nothing, and twine check "
+                      "still PASSES the empty wheel). Otherwise: a package-data glob in "
+                      "core/pyproject.toml stopped matching.")
+              bad = [x for x in names if "__pycache__" in x or x.endswith(".pyc")]
+              assert not bad, f"{label} ships build detritus: {bad[:5]}"
+              print(f"{label}: {len(names)} entries, all required data files present")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-core          # named per-distribution so a second dist can't collide
+          path: core/dist/
+
+      # Proved non-empty above; `github-release` consumes it instead of re-deriving it,
+      # so no validation lives downstream of the upload.
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: release-notes
+          path: notes.md
+
+  verify:
+    name: Fresh install from artifact runs for real
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        artifact: [wheel, sdist]
+    steps:
+      # The checkout supplies only the toy example's data (a user would bring their
+      # own project); the package under test comes solely from the artifact.
+      - uses: actions/checkout@v4
+        with: { path: repo }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with: { name: dist-core, path: dist }
+
+      - name: Install ${{ matrix.artifact }} into a clean venv
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          case "${{ matrix.artifact }}" in
+            wheel) pkg=$(ls dist/*.whl) ;;
+            sdist) pkg=$(ls dist/*.tar.gz) ;;
+          esac
+          "$RUNNER_TEMP/venv/bin/pip" install --no-cache-dir "$pkg"
+          "$RUNNER_TEMP/venv/bin/cap-evolve" version
+
+      # A real optimization to a sealed test number, run from OUTSIDE the checkout with
+      # HOME redirected, so nothing but the installed package can supply skills/.
+      - name: Zero-API run outside the repo
+        run: |
+          set -euo pipefail
+          D="$RUNNER_TEMP/outside"; mkdir -p "$D/.capevolve/project/adapters" "$D/home"
+          toy="$GITHUB_WORKSPACE/repo/examples/toy_calc"
+          cp "$toy/adapter.py" "$D/.capevolve/project/adapters/"
+          cp -R "$toy/capability" "$D/seed_capability"
+          sp=$("$RUNNER_TEMP/venv/bin/python" -c 'import cap_evolve,pathlib;print(pathlib.Path(cap_evolve.__file__).parent)')
+          cp "$sp/_bundled/templates/project/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
+          cd "$D"
+          env -u CAPEVOLVE_SKILLS_DIR -u CAPEVOLVE_CORE -u CAPEVOLVE_RESOURCE_ROOT -u PYTHONPATH \
+              HOME="$D/home" CAPEVOLVE_TOY_DATA="$toy" \
+              CAPEVOLVE_MOCK_SCRIPT="$toy/mock_script.json" \
+            "$RUNNER_TEMP/venv/bin/cap-evolve" run \
+              --spec "$D/.capevolve/project/capevolve.yaml" \
+              --project "$D/.capevolve/project" --run-ts ci --dashboard off | tee out.json
+          python -c "import json,sys; d=json.load(open('out.json')); \
+            assert d['test_reward']==1.0, d; print('sealed test_reward', d['test_reward'])"
+
+  publish-testpypi:
+    name: Publish to TestPyPI (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist-core, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist-core, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist-core, path: dist }
+      # Notes were sliced and asserted non-empty in `build`. Nothing is validated here:
+      # this job runs after the irreversible upload, so it must not be able to fail on
+      # anything a pre-publish gate could have caught.
+      - uses: actions/download-artifact@v4
+        with: { name: release-notes, path: . }
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md

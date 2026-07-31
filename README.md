@@ -60,7 +60,7 @@ git clone https://github.com/skillberry-ai/cap-evolve.git
 cd cap-evolve
 
 python3 -m venv .venv && source .venv/bin/activate
-pip install ./core                 # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
+pip install ./core                 # package: cap-evolve · CLI: cap-evolve · zero runtime deps
 
 bash examples/toy_calc/run.sh
 ```

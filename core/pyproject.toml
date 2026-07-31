@@ -3,19 +3,45 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cap-evolve-core"
-version = "0.1.0"
-description = "Tiny stdlib-only honest-evaluation substrate for the cap-evolve skills library."
+name = "cap-evolve"
+# Single source of truth: cap_evolve.__version__ (see [tool.setuptools.dynamic]).
+# CITATION.cff must agree — core/tests/test_packaging.py enforces it.
+dynamic = ["version"]
+description = "Skills-native, host-agnostic harness for honestly optimizing AI-agent capabilities — CLI + zero-dependency eval core."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
+authors = [{ name = "cap-evolve contributors" }]
+keywords = ["agents", "llm", "prompt-optimization", "evaluation", "agent-skills", "gepa"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Testing",
+]
 # Zero hard runtime dependencies — pure stdlib by design.
 dependencies = []
 
 [project.optional-dependencies]
-judge = []        # llm-judge evaluator extras (filled when that evaluator lands)
-dashboard = []    # static-HTML / Flask dashboard extras
+judge = []                                # llm-judge evaluator extras (filled when that evaluator lands)
 dev = ["pytest>=7"]
+# NO `dashboard` extra. It was `dashboard = ["capevolve-dashboard"]`, naming a
+# distribution that is 404 on PyPI and that no workflow publishes — so
+# `pip install 'cap-evolve[dashboard]'` could not resolve, and extras are baked into the
+# wheel's METADATA where they cannot be corrected after a publish. The live dashboard is
+# a separate package installed from a clone (docs/INSTALL.md); every run also writes a
+# self-contained static `dashboard.html` with nothing extra installed. Re-add it the day
+# `capevolve-dashboard` is actually published, not before.
+# Guarded by core/tests/test_packaging.py::test_documented_pip_installs_can_resolve.
 
 [project.scripts]
 cap-evolve = "cap_evolve.cli:main"
@@ -25,9 +51,34 @@ Homepage      = "https://skillberry-ai.github.io/cap-evolve/"
 Documentation = "https://skillberry-ai.github.io/cap-evolve/"
 Repository    = "https://github.com/skillberry-ai/cap-evolve"
 Issues        = "https://github.com/skillberry-ai/cap-evolve/issues"
+Changelog     = "https://github.com/skillberry-ai/cap-evolve/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = { attr = "cap_evolve.__version__" }
 
 [tool.setuptools]
 packages = ["cap_evolve"]
+
+# The skill library and project templates are RUNTIME DATA, not docs: without them a
+# pip install cannot resolve the manifest, read optimizers/registry.yaml, or scaffold a
+# project — exactly the hole #193 found in install.sh. cap_evolve/_bundled/{skills,
+# templates} are symlinks to the repo trees; setuptools follows them into both wheel
+# and sdist, so the two copies can never drift.
+#
+# CONSTRAINT the symlinks impose: the checkout you build from must support them. With
+# `core.symlinks=false` (the Windows git default) each link is a ~15-byte text file, these
+# globs match nothing, and `python -m build` emits a data-free wheel that `twine check`
+# PASSES. `release.yml`'s build job therefore asserts the symlinks before building and the
+# data files inside the artifact after; see docs/TROUBLESHOOTING.md for the local fix.
+[tool.setuptools.package-data]
+cap_evolve = ["_bundled/skills/**/*", "_bundled/templates/**/*"]
+
+# Local build detritus (a dev's pytest run leaves __pycache__ inside skills/scripts/).
+# Not in git, so CI would never see it — but a local `python -m build` would otherwise
+# ship a wheel that differs from CI's, which is exactly how "works on my machine"
+# packaging bugs get published.
+[tool.setuptools.exclude-package-data]
+cap_evolve = ["_bundled/**/__pycache__/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

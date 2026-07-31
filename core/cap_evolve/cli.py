@@ -37,13 +37,11 @@ def _find_skills_dir() -> Path | None:
     ]:
         if cand and Path(cand).is_dir():
             return Path(cand)
-    # fall back to the repo's own skills/ if running from source
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        s = parent / "skills"
-        if s.is_dir():
-            return s
-    return None
+    # fall back to the skills/ that ships with the core: the repo's own tree when
+    # running from a checkout, the packaged copy when pip-installed.
+    from .resources import resource_root
+    s = resource_root() / "skills"
+    return s if s.is_dir() else None
 
 
 def _cmd_version(argv):
