@@ -45,6 +45,29 @@ All notable changes to cap-evolve are documented here. The format follows
   skills-dir fallbacks rescue a broken package. Publishes via PyPI Trusted Publishing
   (OIDC, no stored token) on a `v*` tag and cuts a GitHub Release whose notes are the
   CHANGELOG section for that version. Nothing is published until a human pushes the tag.
+  **Every validation gate runs before the irreversible upload.** The CHANGELOG slice used to
+  live in `github-release` (`needs: publish-pypi`), so a tag whose CHANGELOG had no section
+  would publish to PyPI and only *then* fail. It now runs in `build`, alongside the
+  tag/version match, a `_bundled` symlink precondition, `twine check`, the artifact-contents
+  assertion, and the install-and-run — `publish-pypi` contains nothing but the upload, and
+  `github-release` validates nothing (it consumes the notes artifact `build` produced). This
+  also removes the workflow's dependency on the CHANGELOG landing first (#184): a premature
+  tag now fails in `build`, uploading nothing. Artifact renamed `dist` → `dist-core` so a
+  second distribution can never collide with it.
+  **No `[dashboard]` extra.** It named `capevolve-dashboard`, which is 404 on PyPI and
+  published by no workflow, so the `pip install 'cap-evolve[dashboard]'` on the rendered PyPI
+  page could not resolve — and extras bake into the wheel METADATA, unfixable after a publish.
+  The extra is dropped, `core/README.md` points at the from-clone install (every run already
+  writes a standalone `dashboard.html` with nothing extra installed), and a new
+  `test_documented_pip_installs_can_resolve` asserts every documented `pip install` on the two
+  *published* surfaces (`core/README.md`, `docs/INSTALL.md`) names a declared extra.
+  `core/README.md`'s skill/algorithm/optimizer counts are guarded too — the one place a stale
+  count is *published* rather than merely wrong on an editable page.
+  On a checkout without symlink support (`core.symlinks=false`, the Windows git default)
+  `_bundled/{skills,templates}` degrade to 15-byte text files and `python -m build` emits a
+  data-free wheel that `twine check` PASSES; the `build` job now asserts the symlinks before
+  building, the artifact assertion's failure message names that cause, and
+  `docs/TROUBLESHOOTING.md` documents both it and `CAPEVOLVE_RESOURCE_ROOT`.
 
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the

@@ -15,6 +15,39 @@ so nothing else is fetched).
 
 **Python too old** — cap-evolve needs **3.10+**. Check with `python3 --version`.
 
+**`skills dir not found` / a run reads the *wrong* `skills/`** — the harness resolves the
+skill library and project templates itself (`cap_evolve.resources.resource_root()`): repo
+root if you're in a clone, else the copy bundled in the wheel. Two ways it goes wrong,
+both fixed by the same override — a `pip install cap-evolve` whose bundled data is
+missing, or a **stale `~/.claude/skills`** shadowing the version you meant to run (#208),
+which the CLI's `_find_skills_dir()` falls back to.
+
+```bash
+export CAPEVOLVE_RESOURCE_ROOT=/path/to/dir-containing-skills-and-templates
+# a clone:            export CAPEVOLVE_RESOURCE_ROOT=$PWD
+# the installed copy: export CAPEVOLVE_RESOURCE_ROOT=$(python -c \
+#   'import cap_evolve,pathlib;print(pathlib.Path(cap_evolve.__file__).parent/"_bundled")')
+python -c 'from cap_evolve.resources import resource_root; print(resource_root())'   # confirm
+```
+
+It is ignored unless the path really contains `skills/`, so a typo falls back rather than
+breaking the run silently. `CAPEVOLVE_SKILLS_DIR` overrides only the skills lookup;
+`CAPEVOLVE_RESOURCE_ROOT` covers skills **and** templates.
+
+**A locally built wheel installs and answers `version` but cannot run** — you built from a
+checkout without symlink support. `core/cap_evolve/_bundled/{skills,templates}` are
+symlinks into the repo trees; with `core.symlinks=false` (**the Windows git default**) they
+become ~15-byte text files, the `package-data` globs match nothing, and `python -m build`
+emits a data-free wheel that `twine check` **passes**:
+
+```bash
+test -L core/cap_evolve/_bundled/skills && echo "symlinks ok" || echo "BROKEN: re-clone with symlinks"
+git -c core.symlinks=true clone https://github.com/skillberry-ai/cap-evolve.git
+```
+
+CI cannot ship such a wheel: `release.yml`'s `build` job asserts the symlinks before
+`python -m build`, then asserts the data files **inside the artifact**.
+
 ## Toy example
 
 **`bash examples/toy_calc/run.sh` doesn't print `test_reward 1.0`** — re-run from the

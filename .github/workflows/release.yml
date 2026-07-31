@@ -6,6 +6,18 @@
 #   Turn a `v*` tag into a published wheel + sdist on PyPI, and a GitHub Release
 #   whose body is the matching CHANGELOG section.
 #
+# EVERY GATE RUNS BEFORE THE IRREVERSIBLE PUBLISH:
+#   A PyPI upload can be yanked but never replaced, so no check may run after it.
+#   `build` + `verify` hold ALL of them — tag/version agreement, the CHANGELOG section
+#   for the tag, the symlink precondition, `twine check`, the artifact-contents
+#   assertion, and a real install-and-run. `publish-pypi` holds nothing but the upload.
+#   `github-release` runs after the upload and validates nothing: it consumes the
+#   `release-notes` artifact `build` already proved non-empty. Originally the CHANGELOG
+#   gate lived in `github-release` (`needs: publish-pypi`), so a tag whose CHANGELOG had
+#   no section published irreversibly and only *then* failed. Moving it into `build`
+#   also removes this workflow's dependency on the CHANGELOG landing first (#184): a
+#   premature tag now fails in `build`, uploading nothing.
+#
 # WHY THE VERIFY JOB IS NOT OPTIONAL:
 #   The core is pure `.py`, but a run also needs the skill library and the project
 #   templates — `skills/optimizers/registry.yaml`, `skills/_registry/manifest.json`,
@@ -73,6 +85,39 @@ jobs:
           echo "package=$pkg tag=$tag"
           [ "$pkg" = "$tag" ] || { echo "::error::__version__ $pkg != tag $tag"; exit 1; }
 
+      # PRECONDITION for the build: `cap_evolve/_bundled/{skills,templates}` are
+      # symlinks into the repo trees and setuptools dereferences them into the artifact.
+      # On a checkout without symlink support (`git config core.symlinks=false`, the
+      # Windows default) each link is instead a ~15-byte text file naming its target:
+      # the globs match nothing, `python -m build` emits a data-free wheel, and
+      # `twine check` PASSES it. Fail loudly here instead.
+      - name: _bundled symlinks survived the checkout
+        run: |
+          for n in skills templates; do
+            p="core/cap_evolve/_bundled/$n"
+            [ -L "$p" ] || { echo "::error::$p is not a symlink — this checkout lost symlink support (git config core.symlinks=false, the Windows default). The build would emit a data-free wheel that passes twine check. Re-clone with symlinks enabled."; exit 1; }
+            [ -d "$p" ] || { echo "::error::$p is a broken symlink"; exit 1; }
+          done
+          echo "_bundled/skills and _bundled/templates are live symlinks"
+
+      # The release notes must exist BEFORE anything is uploaded — see the header note.
+      # Slice = the CHANGELOG section for this version, `## [X.Y.Z]` to the next `## [`.
+      # #101 moved the `[X.Y.Z]: <url>` link definitions ABOVE the first section so they
+      # cannot land inside a slice. Empty slice = no section for this tag → fail here,
+      # while failing is still free.
+      - name: CHANGELOG has a section for the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          awk -v v="$v" '
+            $0 ~ "^## \\[" v "\\]" {on=1; next}
+            on && /^## \[/ {exit}
+            on {print}
+          ' CHANGELOG.md | sed '/./,$!d' > notes.md
+          [ -s notes.md ] || { echo "::error::no CHANGELOG section for [$v] — add one before tagging"; exit 1; }
+          ! grep -qE '^\[[^]]+\]: https?://' notes.md || { echo "::error::link definitions leaked into notes"; exit 1; }
+          cat notes.md
+
       - name: Build
         working-directory: core
         run: python -m build
@@ -96,7 +141,14 @@ jobs:
           sdist = tarfile.open(glob.glob("dist/*.tar.gz")[0]).getnames()
           for label, names in (("wheel", whl), ("sdist", sdist)):
               for n in need:
-                  assert any(x.endswith(n) for x in names), f"{label} missing {n}"
+                  assert any(x.endswith(n) for x in names), (
+                      f"{label} missing {n} — this step is load-bearing: it is the only "
+                      "check that reads the ARTIFACT rather than the checkout. Most likely "
+                      "cause: cap_evolve/_bundled/{skills,templates} were not live symlinks "
+                      "at build time (a core.symlinks=false checkout turns them into 15-byte "
+                      "text files, the package-data globs match nothing, and twine check "
+                      "still PASSES the empty wheel). Otherwise: a package-data glob in "
+                      "core/pyproject.toml stopped matching.")
               bad = [x for x in names if "__pycache__" in x or x.endswith(".pyc")]
               assert not bad, f"{label} ships build detritus: {bad[:5]}"
               print(f"{label}: {len(names)} entries, all required data files present")
@@ -104,8 +156,16 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-core          # named per-distribution so a second dist can't collide
           path: core/dist/
+
+      # Proved non-empty above; `github-release` consumes it instead of re-deriving it,
+      # so no validation lives downstream of the upload.
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: release-notes
+          path: notes.md
 
   verify:
     name: Fresh install from artifact runs for real
@@ -125,7 +185,7 @@ jobs:
           python-version: '3.11'
 
       - uses: actions/download-artifact@v4
-        with: { name: dist, path: dist }
+        with: { name: dist-core, path: dist }
 
       - name: Install ${{ matrix.artifact }} into a clean venv
         run: |
@@ -149,7 +209,7 @@ jobs:
           sp=$("$RUNNER_TEMP/venv/bin/python" -c 'import cap_evolve,pathlib;print(pathlib.Path(cap_evolve.__file__).parent)')
           cp "$sp/_bundled/templates/project/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
           cd "$D"
-          env -u CAPEVOLVE_SKILLS_DIR -u CAPEVOLVE_CORE -u PYTHONPATH \
+          env -u CAPEVOLVE_SKILLS_DIR -u CAPEVOLVE_CORE -u CAPEVOLVE_RESOURCE_ROOT -u PYTHONPATH \
               HOME="$D/home" CAPEVOLVE_TOY_DATA="$toy" \
               CAPEVOLVE_MOCK_SCRIPT="$toy/mock_script.json" \
             "$RUNNER_TEMP/venv/bin/cap-evolve" run \
@@ -168,7 +228,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: dist, path: dist }
+        with: { name: dist-core, path: dist }
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -184,7 +244,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: dist, path: dist }
+        with: { name: dist-core, path: dist }
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
@@ -195,25 +255,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        with: { name: dist, path: dist }
-
-      # Release notes = the CHANGELOG section for this version, from `## [X.Y.Z]` to
-      # the next `## [`. #101 moved the `[X.Y.Z]: <url>` link definitions ABOVE the
-      # first section so they cannot land inside a slice. An empty slice means the
-      # CHANGELOG has no section for this tag — fail rather than ship blank notes.
-      - name: Slice release notes from CHANGELOG
-        run: |
-          v=${GITHUB_REF_NAME#v}
-          awk -v v="$v" '
-            $0 ~ "^## \\[" v "\\]" {on=1; next}
-            on && /^## \[/ {exit}
-            on {print}
-          ' CHANGELOG.md | sed '/./,$!d' > notes.md
-          [ -s notes.md ] || { echo "::error::no CHANGELOG section for [$v]"; exit 1; }
-          ! grep -qE '^\[[^]]+\]: https?://' notes.md || { echo "::error::link definitions leaked into notes"; exit 1; }
-          cat notes.md
+        with: { name: dist-core, path: dist }
+      # Notes were sliced and asserted non-empty in `build`. Nothing is validated here:
+      # this job runs after the irreversible upload, so it must not be able to fail on
+      # anything a pre-publish gate could have caught.
+      - uses: actions/download-artifact@v4
+        with: { name: release-notes, path: . }
 
       - name: Create the release
         env:

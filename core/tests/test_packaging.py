@@ -53,6 +53,56 @@ def test_runtime_data_is_declared_as_package_data():
         assert pattern in PYPROJECT, f"{pattern} not in package-data — a wheel would ship no {pattern.split('/')[1]}"
 
 
+# The surfaces where a `pip install` line is PUBLISHED rather than merely written down:
+# core/README.md is rendered as the PyPI project page, docs/INSTALL.md is the doc it
+# points at. A `pip install 'cap-evolve[x]'` there must name an extra that
+# pyproject.toml actually declares — `[dashboard]` named `capevolve-dashboard`, which is
+# 404 on PyPI and published by no workflow, and extras bake into the wheel METADATA
+# where they cannot be corrected after a publish. #214 does this for documented CLI
+# commands; this is the same idea for documented installs.
+PUBLISHED_INSTALL_DOCS = ("core/README.md", "docs/INSTALL.md")
+
+
+def test_documented_pip_installs_can_resolve():
+    declared = set(re.findall(r"^(\w[\w.-]*) = \[", PYPROJECT.split("[project.optional-dependencies]")[1]
+                              .split("\n[")[0], re.M))
+    for rel in PUBLISHED_INSTALL_DOCS:
+        text = (REPO / rel).read_text(encoding="utf-8")
+        for name, extra in re.findall(r"pip install '?([A-Za-z][\w.-]*)\[([\w,-]+)\]'?", text):
+            assert name == "cap-evolve", f"{rel}: extras documented for unknown dist {name}"
+            for e in extra.split(","):
+                assert e in declared, (
+                    f"{rel} documents `pip install '{name}[{e}]'` but pyproject declares no "
+                    f"[{e}] extra (declared: {sorted(declared)}) — that install cannot resolve")
+        # A bare `pip install <name>` must be this dist or a local path, not an unpublished sibling.
+        for name in re.findall(r"pip install (?:--[\w-]+ )*([A-Za-z][\w.-]*)\s*$", text, re.M):
+            assert name == "cap-evolve", f"{rel}: `pip install {name}` names a dist this repo does not publish"
+
+
+def test_pypi_page_counts_match_the_repo():
+    """core/README.md is the rendered PyPI page — a stale count there is *published*.
+
+    #189's counts guard covers ``README.md``/``llms.txt``/the site, not this file. The
+    3-exec + 2-agent split is left to #189's own rule; these three are mechanical.
+    """
+    readme = (REPO / "core" / "README.md").read_text(encoding="utf-8")
+    import yaml  # noqa: PLC0415 — dev-only, not a runtime dep
+
+    actual = {
+        "skills": len(list(REPO.glob("skills/*/*/SKILL.md"))),
+        "algorithms": len([p for p in (REPO / "skills" / "algorithms").iterdir() if p.is_dir()]),
+        "optimizers": len(yaml.safe_load(
+            (REPO / "skills" / "optimizers" / "registry.yaml").read_text(encoding="utf-8"))),
+    }
+    for key, pattern in (("skills", r"\*\*(\d+) Agent\s*\n?Skills\*\*"),
+                         ("algorithms", r"\*\*(\d+) algorithms\*\*"),
+                         ("optimizers", r"\*\*(\d+) optimizer backends\*\*")):
+        m = re.search(pattern, readme)
+        assert m, f"core/README.md: no {key} count matching {pattern!r} — did the wording change?"
+        assert int(m.group(1)) == actual[key], (
+            f"core/README.md (the PyPI page) claims {m.group(1)} {key}, repo has {actual[key]}")
+
+
 def test_bundled_symlinks_point_at_the_repo_trees():
     """One copy of skills/ and templates/, so the wheel can never drift from the repo."""
     bundled = REPO / "core" / "cap_evolve" / "_bundled"

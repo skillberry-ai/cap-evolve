@@ -12,6 +12,17 @@ no repo, so the same trees are packaged inside the package as
 for ``root / "skills" / ...`` unchanged. This is the hole that #193 found in
 ``install.sh`` (a stock install could not read ``optimizers/registry.yaml``), in
 the pip shape: a wheel that ships only ``*.py`` cannot run an optimizer at all.
+
+``$CAPEVOLVE_RESOURCE_ROOT`` overrides both — documented in
+``docs/TROUBLESHOOTING.md``; it is the escape hatch for a broken install or for a stale
+``~/.claude/skills`` shadowing the tree you meant to run (#208).
+
+BUILD CONSTRAINT: ``_bundled/{skills,templates}`` are symlinks, so the packaged copy can
+never drift from the repo. A checkout without symlink support (``core.symlinks=false`` —
+the Windows git default) turns them into ~15-byte text files; the ``package-data`` globs
+then match nothing and ``python -m build`` produces a data-free wheel that ``twine check``
+still passes. ``release.yml``'s ``build`` job asserts the symlinks before building and the
+data files inside the artifact after.
 """
 
 from __future__ import annotations

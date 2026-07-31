@@ -23,11 +23,10 @@ Skills** (phases, capabilities, **5 algorithms** — 3 run-executable + 2 agent-
 `run-optimizer` over **14 optimizer backends**), and the project templates all ship in
 the wheel. No clone, no `node`, no API key for the toy run.
 
-Optional live dashboard (FastAPI + a prebuilt SPA, a separate package):
-
-```bash
-pip install 'cap-evolve[dashboard]'
-```
+Every run also writes a self-contained static `dashboard.html` you can open directly — no
+extra install. The optional **live** dashboard (FastAPI + a prebuilt SPA) is a separate
+package that is not on PyPI yet; install it from a clone — see
+[INSTALL.md](https://github.com/skillberry-ai/cap-evolve/blob/main/docs/INSTALL.md).
 
 ## Usage
 

@@ -33,8 +33,15 @@ dependencies = []
 
 [project.optional-dependencies]
 judge = []                                # llm-judge evaluator extras (filled when that evaluator lands)
-dashboard = ["capevolve-dashboard"]        # optional live FastAPI dashboard + prebuilt SPA
 dev = ["pytest>=7"]
+# NO `dashboard` extra. It was `dashboard = ["capevolve-dashboard"]`, naming a
+# distribution that is 404 on PyPI and that no workflow publishes — so
+# `pip install 'cap-evolve[dashboard]'` could not resolve, and extras are baked into the
+# wheel's METADATA where they cannot be corrected after a publish. The live dashboard is
+# a separate package installed from a clone (docs/INSTALL.md); every run also writes a
+# self-contained static `dashboard.html` with nothing extra installed. Re-add it the day
+# `capevolve-dashboard` is actually published, not before.
+# Guarded by core/tests/test_packaging.py::test_documented_pip_installs_can_resolve.
 
 [project.scripts]
 cap-evolve = "cap_evolve.cli:main"
@@ -57,6 +64,12 @@ packages = ["cap_evolve"]
 # project — exactly the hole #193 found in install.sh. cap_evolve/_bundled/{skills,
 # templates} are symlinks to the repo trees; setuptools follows them into both wheel
 # and sdist, so the two copies can never drift.
+#
+# CONSTRAINT the symlinks impose: the checkout you build from must support them. With
+# `core.symlinks=false` (the Windows git default) each link is a ~15-byte text file, these
+# globs match nothing, and `python -m build` emits a data-free wheel that `twine check`
+# PASSES. `release.yml`'s build job therefore asserts the symlinks before building and the
+# data files inside the artifact after; see docs/TROUBLESHOOTING.md for the local fix.
 [tool.setuptools.package-data]
 cap_evolve = ["_bundled/skills/**/*", "_bundled/templates/**/*"]
 
