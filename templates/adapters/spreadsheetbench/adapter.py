@@ -107,6 +107,7 @@ PREVIEW_ROWS = int(os.environ.get("SPREADSHEETBENCH_ROWS", "5"))
 CONCURRENCY = int(os.environ.get("SPREADSHEETBENCH_CONCURRENCY", "4"))
 EXEC_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_EXEC_TIMEOUT", "180"))
 LIBREOFFICE_BIN = os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_BIN", "")
+LIBRE_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_TIMEOUT", "120"))
 
 _TASK_TEMPLATE = """You need to solve the following spreadsheet manipulation question. It contains six pieces of information:
 - instruction: the question about spreadsheet manipulation.
@@ -191,7 +192,9 @@ class _Vendor:
             "exec_code": _code_exec.exec_code,
             "compare_workbooks": _sb_evaluation.compare_workbooks,
             "find_libreoffice": _open_spreadsheet.find_libreoffice,
-            "just_open_libreoffice": _open_spreadsheet.just_open_libreoffice,
+            # NB: the vendored `just_open_libreoffice` is deliberately NOT used — see
+            # _recalc_workbook. It shares one implicit LibreOffice user profile across calls,
+            # so it can only run serialized, and it prints to stdout on every failure path.
         }
         return cls._mod
 
@@ -321,7 +324,8 @@ class _Sandbox:
 
 _sandbox: _Sandbox | None = None
 _sandbox_lock = threading.Lock()
-_libre_lock = threading.Lock()
+# NOTE: there is deliberately NO global LibreOffice lock. _recalc_workbook gives every
+# invocation its own user-profile dir, which is what previously forced serialization.
 
 
 def _get_sandbox() -> _Sandbox:
@@ -401,6 +405,57 @@ def _reclaim_container_file(p: Path) -> bool:
         except OSError:
             pass
         return False
+
+
+def _recalc_workbook(path: Path, soffice: str, *, timeout: float = LIBRE_TIMEOUT) -> bool:
+    """Recalculate a workbook's cached formula values in place. True on success.
+
+    openpyxl reads cached values with ``data_only=True``; a formula cell the agent wrote has
+    no cached value until something recalculates it, so it reads as ``None`` and can never
+    match. Round-tripping through headless LibreOffice fills the cache.
+
+    This replaces the vendored ``just_open_libreoffice``, for two reasons:
+
+    1. CONCURRENCY. The vendored helper lets soffice use its default user profile, and two
+       headless instances sharing one profile conflict — so it had to run behind a global
+       lock. That lock is the full tier's scoring bottleneck: 912 tasks x 3 test cases is
+       2,736 serialized soffice startups per evaluation, and no amount of
+       SPREADSHEETBENCH_CONCURRENCY helps, because the lock is process-wide. Giving each
+       invocation its own ``-env:UserInstallation`` profile removes the conflict, so recalc
+       parallelizes with the rest of scoring.
+    2. STDOUT. It prints on every failure path, and phase stdout is a pure-JSON contract.
+       ``capture_output`` keeps that here regardless of the harness-level guard.
+
+    Failure is reported, never raised: the caller records it so a run cannot silently score
+    un-recalculated cells (which reads as a prompt defect and burns optimizer budget).
+    """
+    path = Path(path)
+    with tempfile.TemporaryDirectory(prefix="capevolve_sb_libre_") as td:
+        outdir = Path(td) / "out"
+        outdir.mkdir()
+        profile = Path(td) / "profile"          # unique per call -> safe to run concurrently
+        cmd = [
+            soffice, "--headless", "--calc",
+            f"-env:UserInstallation=file://{profile}",
+            "--convert-to", "xlsx:Calc MS Excel 2007 XML",
+            "--outdir", str(outdir), str(path),
+        ]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+        if proc.returncode != 0:
+            return False
+        produced = outdir / f"{path.stem}.xlsx"
+        if not produced.is_file():
+            return False
+        try:
+            # Cross-filesystem (/tmp -> data dir), so this is copy2+unlink under the hood;
+            # it needs `path` to be writable by us, which _reclaim_container_file ensures.
+            shutil.move(str(produced), str(path))
+        except OSError:
+            return False
+        return True
 
 
 _FENCE_RE = re.compile(r"```[a-zA-Z0-9_+-]*[ \t]*\r?\n(.*?)```", re.DOTALL)
@@ -773,25 +828,21 @@ class Adapter(CapabilityAdapter):
                 continue
 
             if libre:
-                # Recalculate cached formula values before comparing. Serialized: concurrent
-                # headless LibreOffice invocations against the same profile conflict. Only the
-                # rollout-owned proc file is mutated — the shared gt/answer file never is.
+                # Recalculate cached formula values before comparing. NOT serialized: each
+                # _recalc_workbook call gets its own LibreOffice profile dir, so concurrent
+                # invocations no longer conflict. Only the rollout-owned proc file is mutated —
+                # the shared gt/answer file never is.
                 #
                 # Take ownership first: the file was created by the uid-1000 container and is
-                # not writable by us, which makes the helper's move-back fail with EACCES (see
+                # not writable by us, which makes the move-back fail with EACCES (see
                 # _reclaim_container_file). Still best-effort — the comparison below runs on
-                # whatever is cached either way — but a failure is now RECORDED rather than
+                # whatever is cached either way — but a failure is RECORDED rather than
                 # swallowed, because silently comparing un-recalculated formula cells
                 # understates every score and looks like a prompt defect.
                 if not _reclaim_container_file(proc_path):
                     recalc_failed.append(idx)
-                else:
-                    with _libre_lock:
-                        try:
-                            if vendor["just_open_libreoffice"](str(proc_path), libre) is False:
-                                recalc_failed.append(idx)
-                        except Exception:
-                            recalc_failed.append(idx)
+                elif not _recalc_workbook(proc_path, libre):
+                    recalc_failed.append(idx)
 
             try:
                 ok, _ = vendor["compare_workbooks"](

@@ -130,6 +130,9 @@ on:
         type: choice
         default: all
         options: [all, cyclic, hardest-first]
+      # NB: workflow_dispatch allows at most 10 inputs and this list is full. SPLIT_SEED is
+      # therefore driven by the repo variable `vars.BENCH_SPLIT_SEED` (see the job env) rather
+      # than an 11th input, which would make this workflow invalid.
   pull_request:
     types: [labeled]
 
@@ -257,6 +260,14 @@ jobs:
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
       GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
       ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}
+      # Run seed. With a tier that ships a committed split_ids.json the partition is FIXED, so
+      # this varies only the per-trial rollout seeding — which is what makes the independent
+      # seeds a paper comparison needs (">=3 seeds") possible on one split. Set the repo
+      # variable BENCH_SPLIT_SEED (Settings > Variables) to 42, then 43, then 44 between
+      # dispatches. Unset => 0, i.e. exactly the previous behaviour for every benchmark.
+      # (A workflow input would be cleaner, but workflow_dispatch caps inputs at 10 and the
+      # list above is full — see the note there.)
+      SPLIT_SEED: ${{ vars.BENCH_SPLIT_SEED || '0' }}
       TIER: ${{ matrix.tier }}
     steps:
       - uses: actions/checkout@v4

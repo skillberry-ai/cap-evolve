@@ -135,6 +135,13 @@ ENV
     # unless the caller already pinned SPREADSHEETBENCH_CONCURRENCY explicitly.
     SB_CONCURRENCY_DEFAULT=4
     if [ "$TIER" = "full" ]; then SB_CONCURRENCY_DEFAULT=8; fi
+    # Rounds of code-exec interaction the agent gets per task. SkillOpt runs SpreadsheetBench
+    # as "multi-round codegen with up to 30 turns" (arXiv 2605.23904), and the adapter's own
+    # default is 5 — a real handicap on a multi-round benchmark, so full (the comparison tier)
+    # matches 30. Smoke stays at 5 to keep it a cheap, fast signal whose numbers remain
+    # comparable to its own history. Override with SPREADSHEETBENCH_MAX_TURNS.
+    SB_MAX_TURNS_DEFAULT=5
+    if [ "$TIER" = "full" ]; then SB_MAX_TURNS_DEFAULT=30; fi
     CAPS="[system-prompt]"
     cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL
@@ -146,20 +153,57 @@ SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
 SPREADSHEETBENCH_DATA_DIR=$SB_DATA
 SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
 SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
+SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}
 ENV
     export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
     export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
     export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}"
+    export SPREADSHEETBENCH_MAX_TURNS="${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac
 
-# NO-HOLDOUT FIT split: train == val == test == ALL tier tasks.
-"$PY" - "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
+# SPLIT. A tier that ships its own split_ids.json gets a genuine HELD-OUT split (disjoint
+# train/val/test, so `finalize` produces a real generalization number that can be compared
+# against papers reporting held-out test scores). Otherwise: the NO-HOLDOUT FIT split
+# (train == val == test == ALL tier tasks), which every tier used before and which the
+# report labels as a FIT metric, not a generalization claim.
+#
+# Opt-in by committing <bench>/<tier>/split_ids.json — no other tier ships one, so this is a
+# no-op for them. See ci/benchmarks/spreadsheetbench/utils/make_split.py for a generator.
+if [ -f "$BASE/split_ids.json" ]; then
+  echo ">>> held-out split: using $BASE/split_ids.json (NOT the no-holdout FIT split)"
+  "$PY" - "$BASE/split_ids.json" "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
+import json,sys
+split = json.load(open(sys.argv[1]))
+want = {s for s in sys.argv[2].split(",") if s}
+have = set()
+for k in ("train", "val", "test"):
+    ids = [str(i) for i in split.get(k, [])]
+    if not ids and k != "train":
+        raise SystemExit(f"::error:: committed split has an empty '{k}' split")
+    have |= set(ids)
+    split[k] = ids
+# The split must describe exactly the tier's task list — a stale split silently evaluating a
+# different task set is the kind of error that invalidates a whole comparison run.
+if have != want:
+    missing, extra = sorted(want - have)[:5], sorted(have - want)[:5]
+    raise SystemExit(f"::error:: split_ids.json does not match {len(want)} tier tasks "
+                     f"(missing e.g. {missing}, unexpected e.g. {extra})")
+for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
+    dup = set(split[a]) & set(split[b])
+    if dup:
+        raise SystemExit(f"::error:: committed split is not held out — {a}/{b} overlap "
+                         f"on {len(dup)} task(s), e.g. {sorted(dup)[:5]}")
+print(json.dumps({k: split[k] for k in ("train", "val", "test")}))
+PY
+else
+  "$PY" - "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
 import json,sys
 ids=[s for s in sys.argv[1].split(",") if s]
 print(json.dumps({"train":ids,"val":ids,"test":ids}))
 PY
+fi
 
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
@@ -173,6 +217,10 @@ algorithm_skill:    hill-climb
 algorithm_focus:    $ALGORITHM_FOCUS
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
+# With an explicit split_ids_file the partition is fixed, so split_seed only varies the
+# per-trial ROLLOUT seeding (harness base_seed reads splits.seed). That is what makes
+# ">=3 seeds" possible on one committed split: dispatch the same run with 42/43/44.
+split_seed:         ${SPLIT_SEED:-0}
 num_trials:         $NUM_TRIALS
 gate_mode:          paired
 gate_k_se:          $GATE_K_SE
