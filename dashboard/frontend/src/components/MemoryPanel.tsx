@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, FileText, XCircle } from 'lucide-react'
 import { api } from '../lib/api'
@@ -10,7 +10,16 @@ import { Skeleton } from './ui/Skeleton'
 /** Optimizer memory: accepted history, rejected ("do-not-re-propose"), and the
  * per-candidate snapshot files (PROCESS.md explainability / INSTRUCTIONS.md / the
  * capability files). */
-export function MemoryPanel({ runId, graph }: { runId: string; graph: RunGraph }) {
+export function MemoryPanel({
+  runId,
+  graph,
+  candidate,
+}: {
+  runId: string
+  graph: RunGraph
+  /** #139 cross-link: preselect this candidate's scratch files. */
+  candidate?: string | null
+}) {
   const { data, isLoading } = useQuery({
     queryKey: ['memory', runId],
     queryFn: ({ signal }) => api.memory(runId, signal),
@@ -20,7 +29,10 @@ export function MemoryPanel({ runId, graph }: { runId: string; graph: RunGraph }
     () => graph.nodes.map((n) => n.id).filter((id) => id !== graph.root || id === 'seed'),
     [graph],
   )
-  const [cid, setCid] = useState<string>(graph.best_id ?? graph.nodes[0]?.id ?? 'seed')
+  const [picked, setCid] = useState<string | undefined>(undefined)
+  const linked = candidate && candidateIds.includes(candidate) ? candidate : undefined
+  useEffect(() => setCid(undefined), [linked])
+  const cid = picked ?? linked ?? graph.best_id ?? graph.nodes[0]?.id ?? 'seed'
 
   return (
     <div className="space-y-4">

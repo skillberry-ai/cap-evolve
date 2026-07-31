@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, Wrench, XCircle, X } from 'lucide-react'
 import { api } from '../lib/api'
@@ -7,39 +7,95 @@ import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
 import { cn } from '../lib/cn'
 
+/** A cross-link target (#139): open this task's rollout for this candidate. */
+export interface RolloutFocus {
+  task: string
+  candidate: string
+}
+
 /** Per-task rollouts, worst-first, with a detail drawer (trace + tools used). */
-export function Trajectories({ runId }: { runId: string }) {
+export function Trajectories({
+  runId,
+  candidate,
+  focus,
+  onClearFocus,
+}: {
+  runId: string
+  /** Cross-link from the fitness curve: show only this candidate's rollouts. */
+  candidate?: string | null
+  /** Cross-link from the heatmap: auto-open this rollout's drawer. */
+  focus?: RolloutFocus | null
+  onClearFocus?: () => void
+}) {
   const [split, setSplit] = useState<string>('val')
   const [openFile, setOpenFile] = useState<string | null>(null)
 
+  // A cross-link may point at a rollout in another split, so a focused view fetches every
+  // split and filters client-side. Unfocused behaviour is unchanged (one split fetched).
+  const wide = !!focus
   const { data, isLoading } = useQuery({
-    queryKey: ['rollouts', runId, split],
-    queryFn: ({ signal }) => api.rollouts(runId, split, signal),
+    queryKey: ['rollouts', runId, wide ? undefined : split],
+    queryFn: ({ signal }) => api.rollouts(runId, wide ? undefined : split, signal),
   })
 
-  const rows = useMemo(
-    () => [...(data ?? [])].sort((a, b) => (a.reward ?? 0) - (b.reward ?? 0)),
-    [data],
-  )
+  const rows = useMemo(() => {
+    let r = [...(data ?? [])]
+    if (wide) r = r.filter((x) => x.split === split)
+    if (candidate) r = r.filter((x) => x.candidate === candidate)
+    return r.sort((a, b) => (a.reward ?? 0) - (b.reward ?? 0))
+  }, [data, candidate, wide, split])
+
   const splits = useMemo(() => {
     const s = new Set<string>(['val', 'test'])
     ;(data ?? []).forEach((r) => s.add(r.split))
     return [...s]
   }, [data])
 
+  // Resolve the cross-link to a real rollout file rather than guessing the filename, and
+  // switch the split selector to wherever the target actually lives.
+  useEffect(() => {
+    if (!focus || !data) return
+    const hit = data.find((r) => r.task_id === focus.task && r.candidate === focus.candidate)
+    if (!hit) return
+    setSplit(hit.split)
+    setOpenFile(hit.file)
+  }, [focus, data])
+
+  const missing =
+    focus && data && !data.some((r) => r.task_id === focus.task && r.candidate === focus.candidate)
+
   return (
     <Card className="p-4">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium">Trajectories</h3>
+        {candidate && (
+          <span className="inline-flex items-center gap-1.5 rounded bg-surface-2 px-2 py-0.5 text-xs">
+            <span className="text-muted">candidate</span>
+            <span className="font-mono">{candidate}</span>
+            {onClearFocus && (
+              <button
+                type="button"
+                onClick={onClearFocus}
+                className="rounded text-muted hover:text-foreground"
+                aria-label={`Clear the ${candidate} filter and show all candidates`}
+              >
+                <X size={12} aria-hidden />
+              </button>
+            )}
+          </span>
+        )}
         <div className="ml-auto flex gap-1">
           {splits.map((s) => (
             <button
               key={s}
               type="button"
+              aria-pressed={s === split}
               onClick={() => setSplit(s)}
               className={cn(
                 'rounded px-2 py-1 text-xs transition-colors',
-                s === split ? 'bg-surface-2 text-foreground' : 'text-muted hover:text-foreground',
+                s === split
+                  ? 'bg-surface-2 font-semibold text-foreground'
+                  : 'text-muted hover:text-foreground',
               )}
             >
               {s}
@@ -48,9 +104,19 @@ export function Trajectories({ runId }: { runId: string }) {
         </div>
       </div>
 
+      {missing && (
+        <p className="mb-3 rounded border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted">
+          No stored rollout for <span className="font-mono">{focus.task}</span> ·{' '}
+          <span className="font-mono">{focus.candidate}</span> — the per-task score exists but
+          its trajectory file wasn’t kept.
+        </p>
+      )}
+
       {isLoading && <Skeleton className="h-40 w-full" />}
       {data && rows.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted">No rollouts for “{split}”.</p>
+        <p className="py-8 text-center text-sm text-muted">
+          No rollouts for “{split}”{candidate ? ` and candidate ${candidate}` : ''}.
+        </p>
       )}
 
       {rows.length > 0 && (
@@ -73,7 +139,19 @@ export function Trajectories({ runId }: { runId: string }) {
                 <td className="py-1.5 pr-3">
                   <span className="inline-flex items-center gap-1.5">
                     <PassIcon reward={r.reward} />
-                    {r.task_id}
+                    {/* The row is the mouse target; this button is the keyboard one, so a
+                        rollout is openable without a pointer. */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenFile(r.file)
+                      }}
+                      aria-label={`Open the trajectory for ${r.task_id}`}
+                      className="rounded text-left hover:text-primary"
+                    >
+                      {r.task_id}
+                    </button>
                   </span>
                 </td>
                 <td className="py-1.5 pr-3 text-muted">{r.candidate}</td>
@@ -111,14 +189,65 @@ function RolloutDrawer({ runId, file, onClose }: { runId: string; file: string; 
     return acc
   }, {})
 
+  // #196: focus must not escape behind an open drawer. Move focus in on open, cycle Tab
+  // inside the panel, close on Escape, and hand focus back to whatever opened it.
+  const panel = useRef<HTMLDivElement>(null)
+  const closeBtn = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const active = document.activeElement as HTMLElement | null
+    // A cross-linked drawer has no live opener: the heatmap cell that triggered it lives on
+    // another tab and was unmounted by the navigation, so `activeElement` is already
+    // <body>. Restoring to <body> — or to a detached node — silently drops the keyboard
+    // user back to the top of the document, so fall back to the surrounding tabpanel.
+    const opener = active && active !== document.body ? active : null
+    const fallback = panel.current?.closest<HTMLElement>('[role="tabpanel"]') ?? null
+    closeBtn.current?.focus()
+    return () => {
+      if (opener?.isConnected) opener.focus()
+      else fallback?.focus()
+    }
+  }, [])
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onClose()
+      return
+    }
+    if (e.key !== 'Tab') return
+    const f = panel.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    if (!f || f.length === 0) return
+    const first = f[0]
+    const last = f[f.length - 1]
+    if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true">
-      <button aria-label="Close" className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface p-5 shadow-xl">
+    <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" onKeyDown={onKeyDown}>
+      {/* Backdrop: presentational, and NOT in the tab order — a focusable backdrop is
+          exactly how focus lands "behind" the panel (#196). Escape and the × close it. */}
+      <div aria-hidden className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        ref={panel}
+        className="relative h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface p-5 shadow-xl"
+      >
         <div className="mb-3 flex items-center justify-between">
           <h4 className="font-mono text-sm">{file}</h4>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-foreground">
-            <X size={18} />
+          <button
+            ref={closeBtn}
+            onClick={onClose}
+            aria-label="Close (Escape)"
+            className="rounded text-muted hover:text-foreground"
+          >
+            <X size={18} aria-hidden />
           </button>
         </div>
         {isLoading && <Skeleton className="h-64 w-full" />}

@@ -21,8 +21,21 @@ const COLOR: Record<GraphNode['status'], string> = {
   failed: 'var(--muted)',
 }
 
-/** Per-iteration val scatter under the amber cumulative-best stair. */
-export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
+/** Per-iteration val scatter under the amber cumulative-best stair.
+ *
+ * `onSelect` (#139) is the cross-link: picking a candidate jumps to its trajectories and
+ * its diff. It is wired to the recharts `Scatter` onClick for the mouse AND to a real
+ * `<button>` per row of the data table below for the keyboard — an SVG scatter shape is
+ * not a focusable control, and that table already existed as the accessible alternative,
+ * so it becomes the keyboard path to the same link rather than a second widget.
+ */
+export function BestCurveChart({
+  nodes,
+  onSelect,
+}: {
+  nodes: GraphNode[]
+  onSelect?: (candidateId: string) => void
+}) {
   const data = cumulativeBest(nodes)
   const reduce = prefersReducedMotion()
 
@@ -77,15 +90,24 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
             <Scatter
               dataKey="val"
               isAnimationActive={!reduce}
+              cursor={onSelect ? 'pointer' : undefined}
+              onClick={(p: unknown) => {
+                const id = (p as { payload?: CurvePoint })?.payload?.id
+                if (id && onSelect) onSelect(id)
+              }}
               shape={(props: unknown) => <CandidateDot {...(props as DotProps)} championBest={championBest} />}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Accessible table alternative */}
-      <details className="mt-2">
-        <summary className="cursor-pointer text-xs text-muted">View data table</summary>
+      {/* Accessible alternative to the scatter — and, when onSelect is wired, the keyboard
+          path to the same cross-link the dots offer the mouse. Open by default in that
+          case: a link that only exists inside a collapsed <details> is not discoverable. */}
+      <details className="mt-2" open={!!onSelect}>
+        <summary className="cursor-pointer text-xs text-muted">
+          {onSelect ? 'Candidates — select one to inspect its rollouts and diff' : 'View data table'}
+        </summary>
         <table className="mt-2 w-full text-left text-xs">
           <thead className="text-muted">
             <tr>
@@ -99,7 +121,20 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
             {data.map((d) => (
               <tr key={d.id} className="border-t border-border">
                 <td className="py-1 pr-3">{d.iteration}</td>
-                <td className="py-1 pr-3">{d.id}</td>
+                <td className="py-1 pr-3">
+                  {onSelect ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(d.id)}
+                      aria-label={`Inspect ${d.id}: its per-task rollouts and its diff`}
+                      className="rounded text-left underline decoration-dotted underline-offset-2 hover:text-primary"
+                    >
+                      {d.id}
+                    </button>
+                  ) : (
+                    d.id
+                  )}
+                </td>
                 <td className="py-1 pr-3">{pct(d.val)}</td>
                 <td className="py-1">{pct(d.best)}</td>
               </tr>
