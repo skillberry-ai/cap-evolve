@@ -12,7 +12,7 @@ its arithmetic — no rung is advertised on a guess.
 | Rung | What is real | Runtime | Cost | How |
 |---|---|---|---|---|
 | **1. free** | pipeline, gate, sealed test — **no model** | seconds | **$0** | [`examples/toy_calc`](../examples/toy_calc/) · §3 |
-| **2. cheap-real** | **a real LLM**, real gate, real sealed test | **36 s**–**5.4 min** measured | **$0** local, or **$0.54** measured with a hosted proposer | [`examples/cheap_real`](../examples/cheap_real/) · §4 |
+| **2. cheap-real** | **a real LLM**, a real accept/reject decision, a real sealed test | **~30 s**–**5.4 min** measured | **$0** local, **$0.0115** with a hosted runner, or **$0.54** with a hosted proposer — all measured | [`examples/cheap_real`](../examples/cheap_real/) · §4 |
 | **3. full** | a published benchmark (τ²-bench airline) | hours | ~$148 | [`REPRODUCE_tau2.md`](REPRODUCE_tau2.md) |
 
 ### Where rung 2's numbers come from
@@ -27,8 +27,10 @@ proposer calls = max_iterations                                  =  3
 ```
 
 - **Free variant** — local `ollama/llama3.2:3b` runner + `mock` proposer.
-  **MEASURED: 36 s wall clock, $0.00.** A local model is not metered and the `mock`
-  proposer makes no network call at all, so this is $0 by construction, not by luck.
+  **MEASURED: ~30 s wall clock, $0.00** (30.4 s, 33.9 s and 34.2 s across three runs on
+  two machines — single-run timing is noise at this scale, so treat it as "about half a
+  minute", not as a figure). A local model is not metered and the `mock` proposer makes
+  no network call at all, so the $0 is by construction, not by luck.
 - **Cheap variant** — same local runner, `claude-code`/Haiku proposer. The 30 runner
   calls stay $0; only the 3 proposals cost anything. **MEASURED** from the run's own
   accounting (`state.json` → `spent`): **$0.5427 total, 321 s (5.4 min) wall clock,
@@ -36,14 +38,25 @@ proposer calls = max_iterations                                  =  3
   $0.159 / $0.199 / $0.185, so budget **~$0.15–0.35 per iteration**. Proposal latency
   dominates: 293 s of the 321 s was the optimizer, and only 27 s the runner.
 - **Hosted-runner variant** — no local model available, so the runner is
-  `claude-haiku-4-5` too. 30 runner calls at the bundled price table's Haiku rate and
-  cap-evolve's assumed 3 000 in / 800 out tokens per rollout:
-  `30 x (3000 x $1.00 + 800 x $5.00) / 1e6` ≈ **$0.21 — an ESTIMATE**, derived from
-  `core/cap_evolve/pricing.py`, not measured.
+  `claude-haiku-4-5` and `mock` proposes for free. **MEASURED: $0.011478 total, 98 s
+  wall clock, the same 30 `metric_calls`, `baseline_val 0.0` → sealed `test_reward
+  1.0`.** The six eval costs sum to the total exactly
+  (`0.003466 + 3 x 0.000681 + 0.000687 + 0.005282 = 0.011478`); the two seed evals
+  dominate because the unoptimized prompt answers in prose and burns output tokens.
+  This is **20x cheaper than the prior estimate** of $0.21, which assumed
+  `pricing.py`'s generic 3 000-in/800-out rollout — a one-line date is far smaller than
+  that. The estimate is retired: this row is now measured.
 
 The preset's `max_usd: 3.0` / `max_optimizer_usd: 2.5` are hard stops, so rung 2
 cannot quietly become rung 3. Rung 3's ~$148 is the committed τ² run's own reported
 optimizer spend ([`RESULTS.md`](RESULTS.md)).
+
+**What rung 2 does *not* show.** Val saturates at 1.0 on iteration 1 in every variant,
+so the two candidates that follow are rejected against a ceiling, not on merit — and at
+`num_trials: 1` the decision is `Δ > 0`, not a significance test (the run says so:
+`SE=0 → STRICT fallback`). The gate runs and decides for real; it is never asked a hard
+question. For the significance machinery under load, see `examples/skillsbench`
+(`num_trials: 3`).
 
 ## Prerequisites
 - Python **3.10+** and **git**.
@@ -112,17 +125,25 @@ CHEAP_REAL_OPTIMIZER=claude-code CHEAP_REAL_OPT_MODEL=claude-haiku-4-5 \
   bash examples/cheap_real/run.sh
 ```
 
-No local model? Point the runner at a cheap hosted one — one env var, no code change:
+No local model? Point the runner at a cheap hosted one — one env var, no code change.
+Needs that provider's credential in the environment (e.g. `ANTHROPIC_API_KEY`).
+**MEASURED: 98 s, $0.0115.**
 
 ```bash
 CHEAP_REAL_MODEL=claude-haiku-4-5 bash examples/cheap_real/run.sh
 ```
 
 `run.sh` is also the **programmatic entry point**: every knob is an env var with a
-default and the last object on stdout is the run's summary JSON. It preflights the
-model endpoint before spending anything, because the adapter (correctly) turns a
-failed model call into reward `0.0`, which otherwise makes a broken run look like a
-clean one. Details, all three variants and the honest limits:
+default and **all of stdout is the run's summary JSON** — progress goes to stderr
+(#116) and the script keeps only the last object, so `json.loads(stdout)` works even
+under `CAPEVOLVE_DASHBOARD=auto`, where the CLI prints a second object (#217).
+
+It preflights **every** variant before spending anything, because the adapter
+(correctly) turns a failed model call into reward `0.0`, which otherwise makes a broken
+run look like a clean one. Local: the endpoint answers *and* the model is actually
+pulled. Hosted: one real 1-token completion through the same wiring the adapter uses,
+so a rejected parameter, a missing credential or a typo'd model name fails loudly
+instead of scoring 0.0 thirty times. Details, all variants and the honest limits:
 [`examples/cheap_real/README.md`](../examples/cheap_real/README.md).
 
 ## 5. Where to next

@@ -1,7 +1,7 @@
 """The cheap_real preset's honesty invariants — the things a "make it cheaper" edit breaks.
 
 The preset (``examples/cheap_real/capevolve.yaml``) exists to be the CHEAP rung, so the
-obvious future edit is to shrink it further. Two of its values are load-bearing and
+obvious future edit is to shrink it further. Several of its values are load-bearing and
 would fail silently or confusingly if changed:
 
 * the dataset size and split ratios must land ``val`` at or above the floors in
@@ -9,10 +9,21 @@ would fail silently or confusingly if changed:
   (#113) *after* the budget is spent, and below ``LOW_CONFIDENCE_VAL_TASKS`` every
   decision is branded low-confidence. So val is pinned by a test, not by a comment.
 * ``protected_paths`` must stay ABSENT. Since #142/#197 an empty list is a hard error
-  and a present list REPLACES the layout defaults, so the only way this preset gets the
-  adapter + dataset + spec guarded is to omit the key entirely.
+  and a present list REPLACES the layout defaults. Precisely: an omitted key resolves
+  to ``[*_DEFAULT_GLOBS, *spec['dataset_source']]`` (``protect.py:168-170``), and
+  ``tasks.jsonl`` matches **none** of the default globs (``adapters``,
+  ``capevolve.yaml``, ``*gold*`` suffixes) — the answer key is guarded *by the
+  dataset_source fold-in*, which only happens when the key is absent. Omission is
+  load-bearing for the dataset specifically, not merely tidier.
+* ``optimizer_max_turns`` must stay at or above the MEASURED floor: at 12 the agent
+  exits ``Reached max turns``, which cap-evolve correctly reports as a failed
+  iteration, so every candidate is discarded and the run looks like "the optimizer
+  proposed nothing".
+* ``run.sh``'s YAML rewrite is a line-PREFIX string rewriter over this preset, so it
+  silently no-ops if a key it targets is ever indented or renamed. Pinned here because
+  a no-op means the paid rung runs with ``optimizer_skill: mock``.
 
-Both are cheap file reads: no model, no run.
+All are cheap file reads: no model, no run.
 """
 
 from pathlib import Path
@@ -82,3 +93,44 @@ def test_budget_is_bounded():
     assert 0 < float(spec["max_usd"]) <= 5.0
     assert 0 < float(spec["max_optimizer_usd"]) <= float(spec["max_usd"])
     assert 0 < int(spec["max_iterations"]) <= 5
+
+
+def test_optimizer_max_turns_clears_the_measured_floor():
+    # MEASURED, not guessed: at 12 the agent exits `Reached max turns (12)`, cap-evolve
+    # reports a failed iteration, and every candidate is discarded — the run looks like
+    # "the optimizer proposed nothing". A "tighten the caps" edit must not go back there.
+    assert int(_spec()["optimizer_max_turns"]) >= 40, (
+        "optimizer_max_turns below 40 was MEASURED to make every iteration fail with "
+        "`Reached max turns`, so no candidate survives. Raise it back.")
+
+
+def test_run_sh_yaml_rewrite_still_matches_the_preset():
+    # run.sh flips the optimizer keys with a line-PREFIX rewriter, so it silently
+    # no-ops if a targeted key is ever indented or renamed — and a no-op means the
+    # paid rung quietly runs `optimizer_skill: mock`. Run the real heredoc, not a copy.
+    import re
+    import tempfile
+    run_sh = (REPO / "examples" / "cheap_real" / "run.sh").read_text(encoding="utf-8")
+    m = re.search(r"<<'SED'\n(.*?)\nSED\n", run_sh, re.S)
+    assert m, "run.sh no longer has the SED heredoc this test pins"
+
+    with tempfile.TemporaryDirectory() as td:
+        target = Path(td) / "capevolve.yaml"
+        target.write_text(PRESET.read_text(encoding="utf-8"), encoding="utf-8")
+        old_argv = sys.argv
+        sys.argv = ["-", str(target), "claude-code", "claude-haiku-4-5"]
+        try:
+            exec(compile(m.group(1), "run.sh:SED", "exec"), {"__name__": "__main__"})
+        finally:
+            sys.argv = old_argv
+        out = target.read_text(encoding="utf-8")
+
+    assert "optimizer_skill: claude-code\n" in out, "the optimizer_skill flip no-opped"
+    assert "optimizer_model: claude-haiku-4-5\n" in out
+    assert "proposer_model: claude-haiku-4-5\n" in out
+    instr = [ln for ln in out.splitlines()
+             if ln.startswith("optimizer_instructions_file:")]
+    assert len(instr) == 1, f"expected exactly one instructions line, got {instr}"
+    assert Path(instr[0].split(":", 1)[1].strip()).is_absolute(), (
+        "the instructions path must be ABSOLUTE: cli.py resolves a relative one against "
+        "its own cwd and silently falls back to the generic template (see #252)")

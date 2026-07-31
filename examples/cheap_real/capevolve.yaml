@@ -3,8 +3,11 @@
 # Only the values that differ from templates/project/capevolve.yaml are set; the
 # omitted keys keep their documented defaults. In particular `protected_paths` is
 # OMITTED, not set to []: since #142/#197 an empty list is a hard error, and omitting
-# the key is what selects the layout defaults (adapters/, capevolve.yaml, the dataset,
-# *gold* globs).
+# the key resolves to [*_DEFAULT_GLOBS, *dataset_source] (protect.py:168-170). The
+# distinction matters: the default globs are `adapters`, `capevolve.yaml` and *gold*
+# suffixes — `tasks.jsonl` matches NONE of them. The answer key is guarded because
+# `dataset_source` is folded in when the key is absent, so declaring the key would
+# silently drop it.
 capabilities: [system-prompt]
 capability_path: seed_capability
 actions: [edit]
@@ -60,7 +63,11 @@ gate_mode: paired
 gate_k_se: 1.0
 
 # --- budget ----------------------------------------------------------------
-# 3 iterations x 5 val tasks x 1 trial = 15 runner calls, plus 3 proposer calls.
+# 30 runner calls, plus 3 proposer calls. The full derivation — the baseline val eval
+# and both test evals are easy to forget:
+#   val  5 x trials 1 x (1 baseline + 3 candidates)  = 20
+#   test 5 x (best FINAL + baseline FINAL_seed)      = 10
+#                                             total  = 30   (= state.json metric_calls)
 # These are hard stops, so the run cannot become the thing this example exists to
 # avoid even if a model is priced differently than assumed. Sized at roughly 2x the
 # measured spend (~$0.15-0.40 per Haiku proposal x 3), not at it: a cap set at the
