@@ -32,7 +32,9 @@ const TABS: TabDef[] = [
   { id: 'phases', label: 'Phases' },
   { id: 'lineage', label: 'Lineage' },
   { id: 'trajectories', label: 'Trajectories' },
-  { id: 'changes', label: 'Changes & files' },
+  // Named for all four sub-modes, not just the diffs: Memory and Files were never diff
+  // surfaces, so a label that says only "changes" hides them.
+  { id: 'changes', label: 'Changes, memory & files' },
   { id: 'insights', label: 'Insights' },
 ]
 
@@ -75,6 +77,12 @@ export function RunDeepDive() {
     refetchInterval: (query) => (query.state.error instanceof LivePendingError ? 10_000 : false),
   })
   const isLivePending = error instanceof LivePendingError
+
+  // A stale or typo'd `?candidate` must not be *named* by the cross-link headers: the
+  // panels below already fall back to a real candidate, so claiming the bad id would make
+  // the page assert it is showing something it isn't.
+  const knownCandidate =
+    candidate && data?.graph.nodes.some((n) => n.id === candidate) ? candidate : null
 
   // Optional algorithm-shipped custom view (e.g. evo-graph's weakness graph),
   // mounted as an extra iframe tab when the run declares one. Absent -> no tab.
@@ -153,7 +161,12 @@ export function RunDeepDive() {
         {data && (
           <div className="space-y-5">
             <KpiStrip summary={data.summary} />
-            <Tabs tabs={tabs} value={tab} onChange={(next) => goto({ tab: next })}>
+            <Tabs
+              tabs={tabs}
+              label="Run views"
+              value={tab}
+              onChange={(next) => goto({ tab: next })}
+            >
               {(active) =>
                 active === 'fitness' ? (
                   <div className="space-y-4">
@@ -178,13 +191,13 @@ export function RunDeepDive() {
                   <LineageTree graph={data.graph} />
                 ) : active === 'trajectories' ? (
                   <div className="space-y-3">
-                    {candidate && (
+                    {knownCandidate && (
                       <button
                         type="button"
                         onClick={() => goto({ tab: 'changes', mode: 'candidate', task: null })}
                         className="rounded text-xs text-primary underline decoration-dotted underline-offset-2"
                       >
-                        See what {candidate} changed →
+                        See what {knownCandidate} changed →
                       </button>
                     )}
                     <Trajectories
@@ -192,18 +205,25 @@ export function RunDeepDive() {
                       candidate={candidate}
                       focus={focus}
                       onClearFocus={() => goto({ candidate: null, task: null })}
+                      onCloseRollout={() => goto({ task: null })}
                     />
                   </div>
                 ) : active === 'changes' ? (
                   <div className="space-y-3">
-                    {candidate && (
+                    {knownCandidate && (
                       <button
                         type="button"
                         onClick={() => goto({ tab: 'trajectories', task: null })}
                         className="rounded text-xs text-primary underline decoration-dotted underline-offset-2"
                       >
-                        ← See how {candidate} scored per task
+                        ← See how {knownCandidate} scored per task
                       </button>
+                    )}
+                    {candidate && !knownCandidate && (
+                      <p className="text-xs text-muted">
+                        No candidate <span className="font-mono">{candidate}</span> in this run —
+                        showing the newest one instead.
+                      </p>
                     )}
                     <ChangesPanel
                       runId={id!}

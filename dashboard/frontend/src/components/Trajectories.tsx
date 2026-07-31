@@ -19,6 +19,7 @@ export function Trajectories({
   candidate,
   focus,
   onClearFocus,
+  onCloseRollout,
 }: {
   runId: string
   /** Cross-link from the fitness curve: show only this candidate's rollouts. */
@@ -26,6 +27,10 @@ export function Trajectories({
   /** Cross-link from the heatmap: auto-open this rollout's drawer. */
   focus?: RolloutFocus | null
   onClearFocus?: () => void
+  /** Closing the drawer clears `?task` — opening writes the URL, so closing must unwrite
+   *  it, or the link records a state the user dismissed and the drawer resurrects itself
+   *  on the next remount. */
+  onCloseRollout?: () => void
 }) {
   const [split, setSplit] = useState<string>('val')
   const [openFile, setOpenFile] = useState<string | null>(null)
@@ -163,7 +168,16 @@ export function Trajectories({
         </table>
       )}
 
-      {openFile && <RolloutDrawer runId={runId} file={openFile} onClose={() => setOpenFile(null)} />}
+      {openFile && (
+        <RolloutDrawer
+          runId={runId}
+          file={openFile}
+          onClose={() => {
+            setOpenFile(null)
+            onCloseRollout?.()
+          }}
+        />
+      )}
     </Card>
   )
 }

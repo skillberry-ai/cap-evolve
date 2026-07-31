@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '../../lib/cn'
 
@@ -26,21 +26,31 @@ export function Tabs({
   initial,
   value,
   onChange,
+  label,
   children,
 }: {
   tabs: TabDef[]
   initial?: string
   value?: string
   onChange?: (id: string) => void
+  /** Accessible name for the tablist — two nested tablists with no names are
+   *  indistinguishable to a screen reader. */
+  label?: string
   children: (active: string) => ReactNode
 }) {
   const firstEnabled = tabs.find((t) => !t.disabled)?.id ?? tabs[0]?.id
   const [internal, setInternal] = useState(initial ?? firstEnabled)
   // An unknown `value` (e.g. a stale ?tab= in a shared URL) falls back to the first tab
   // rather than rendering an empty panel.
-  const active =
-    value == null ? internal : tabs.some((t) => t.id === value) ? value : firstEnabled
+  const unknown = value != null && !tabs.some((t) => t.id === value)
+  const active = value == null ? internal : unknown ? firstEnabled : value
   const select = (id: string) => (onChange ? onChange(id) : setInternal(id))
+
+  // ...and normalise the URL to what is actually rendered, so a bad param doesn't sit in a
+  // link that otherwise looks fine.
+  useEffect(() => {
+    if (unknown && firstEnabled) onChange?.(firstEnabled)
+  }, [unknown, firstEnabled, onChange])
 
   // Unique per instance so nested Tabs don't share a framer layoutId (two underlines
   // fighting over one animated element) or duplicate DOM ids.
@@ -70,6 +80,7 @@ export function Tabs({
       <div
         ref={listRef}
         role="tablist"
+        aria-label={label}
         onKeyDown={onKeyDown}
         className="flex flex-wrap gap-1 border-b border-border"
       >
@@ -79,6 +90,7 @@ export function Tabs({
             <button
               key={t.id}
               data-tab-id={t.id}
+              id={`${uid}-tab-${t.id}`}
               role="tab"
               type="button"
               aria-selected={isActive}
@@ -113,7 +125,13 @@ export function Tabs({
       </div>
       {/* tabIndex=-1: not a tab stop, but a programmatic focus target — closing an overlay
           whose opener has unmounted hands focus here instead of dropping it to <body>. */}
-      <div id={`${uid}-panel`} role="tabpanel" tabIndex={-1} className="pt-4">
+      <div
+        id={`${uid}-panel`}
+        role="tabpanel"
+        aria-labelledby={active ? `${uid}-tab-${active}` : undefined}
+        tabIndex={-1}
+        className="pt-4"
+      >
         {children(active)}
       </div>
     </div>

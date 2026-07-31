@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { GraphNode } from '../lib/types'
 import { pct } from '../lib/format'
 import { Card } from './ui/Card'
@@ -14,9 +14,13 @@ import { cn } from '../lib/cn'
  * to that task's rollout for that candidate.
  *
  * Rendered as a real `<table>` of `<button>` cells rather than SVG rects, so cell
- * activation is keyboard-native (Tab/Enter/Space, visible focus ring from index.css)
- * without re-implementing any of it. Each cell states its outcome as a glyph and an
- * aria-label as well as a colour — colour is never the only signal.
+ * activation is keyboard-native (Enter/Space, visible focus ring from index.css) without
+ * re-implementing any of it. Each cell states its outcome as a glyph and an aria-label as
+ * well as a colour — colour is never the only signal.
+ *
+ * The WAI-ARIA *grid* pattern, not one tab stop per cell: a 50×50 run is 2500 cells, and
+ * 2500 tab stops is a keyboard trap in practice. Roving tabIndex gives the whole grid one
+ * stop; Arrow/Home/End move the active cell inside it.
  */
 
 type Outcome = 'pass' | 'fail' | 'partial' | 'skip'
@@ -63,6 +67,39 @@ export function TaskHeatmap({
     return [...tasks].sort((a, b) => mean(a) - mean(b))
   }, [tasks, iters])
 
+  // Roving tabIndex over the grid: one tab stop, arrows move within.
+  const [pos, setAt] = useState<[number, number]>([0, 0])
+  // Clamp on read: rows/iters can shrink under a live run and a stale index would leave the
+  // grid with no tab stop at all.
+  const at: [number, number] = [
+    Math.min(pos[0], Math.max(0, rows.length - 1)),
+    Math.min(pos[1], Math.max(0, iters.length - 1)),
+  ]
+  const gridRef = useRef<HTMLTableSectionElement>(null)
+  const focusCell = (r: number, c: number) => {
+    const rr = Math.max(0, Math.min(rows.length - 1, r))
+    const cc = Math.max(0, Math.min(iters.length - 1, c))
+    setAt([rr, cc])
+    gridRef.current?.querySelector<HTMLElement>(`[data-cell="${rr}-${cc}"]`)?.focus()
+  }
+  const onGridKeyDown = (e: KeyboardEvent) => {
+    const [r, c] = at
+    const move: Record<string, [number, number]> = {
+      ArrowRight: [r, c + 1],
+      ArrowLeft: [r, c - 1],
+      ArrowDown: [r + 1, c],
+      ArrowUp: [r - 1, c],
+      Home: [r, 0],
+      End: [r, iters.length - 1],
+      PageUp: [0, c],
+      PageDown: [rows.length - 1, c],
+    }
+    const next = move[e.key]
+    if (!next) return
+    e.preventDefault()
+    focusCell(next[0], next[1])
+  }
+
   if (rows.length === 0 || iters.length === 0) {
     return (
       <Card>
@@ -78,12 +115,12 @@ export function TaskHeatmap({
       <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
         <h3 className="text-sm font-medium">Per-task pass/fail across iterations</h3>
         <span className="text-xs text-muted">
-          rows worst-first · select a cell to open that rollout
+          rows worst-first · arrow keys move, Enter opens that rollout
         </span>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="text-left text-xs" data-testid="task-heatmap">
+        <table role="grid" className="text-left text-xs" data-testid="task-heatmap">
           <caption className="sr-only">
             Per-task reward for every evaluated candidate. Rows are tasks, worst mean reward
             first; columns are iterations. Each cell states pass, fail, partial or not run.
@@ -105,8 +142,8 @@ export function TaskHeatmap({
               ))}
             </tr>
           </thead>
-          <tbody>
-            {rows.map((t) => (
+          <tbody ref={gridRef} onKeyDown={onGridKeyDown}>
+            {rows.map((t, ri) => (
               <tr key={t}>
                 <th
                   scope="row"
@@ -115,7 +152,7 @@ export function TaskHeatmap({
                 >
                   {t}
                 </th>
-                {iters.map((it) => {
+                {iters.map((it, ci) => {
                   const v = it.per_task?.[t]
                   const o = outcome(v)
                   const { glyph, word, cls } = CELL[o]
@@ -125,12 +162,17 @@ export function TaskHeatmap({
                   }${fb ? ` — ${fb}` : ''}`
                   const linkable = o !== 'skip' && !!onOpenRollout
                   return (
-                    <td key={it.id} className="p-[1px]">
+                    <td key={it.id} role="gridcell" className="p-[1px]">
+                      {/* aria-disabled, not `disabled`: a disabled button is unfocusable,
+                          which would punch holes in the arrow-key walk. */}
                       <button
                         type="button"
+                        data-cell={`${ri}-${ci}`}
                         aria-label={label}
                         title={label}
-                        disabled={!linkable}
+                        aria-disabled={!linkable}
+                        tabIndex={at[0] === ri && at[1] === ci ? 0 : -1}
+                        onFocus={() => setAt([ri, ci])}
                         onClick={() => linkable && onOpenRollout(t, it.id)}
                         className={cn(
                           'flex h-4 w-5 items-center justify-center rounded-[2px] text-[9px] leading-none',

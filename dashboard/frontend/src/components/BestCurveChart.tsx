@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   CartesianGrid,
   ComposedChart,
@@ -102,12 +103,13 @@ export function BestCurveChart({
       </div>
 
       {/* Accessible alternative to the scatter — and, when onSelect is wired, the keyboard
-          path to the same cross-link the dots offer the mouse. Open by default in that
-          case: a link that only exists inside a collapsed <details> is not discoverable. */}
-      <details className="mt-2" open={!!onSelect}>
-        <summary className="cursor-pointer text-xs text-muted">
-          {onSelect ? 'Candidates — select one to inspect its rollouts and diff' : 'View data table'}
-        </summary>
+          path to the same cross-link the dots offer the mouse. A cross-link inside a
+          collapsed <details> is not discoverable, and a <details> that is never closed is
+          just a heading wearing a disclosure triangle — so use an actual heading there. */}
+      <Disclosure
+        summary={onSelect ? 'Candidates — select one to inspect its rollouts and diff' : 'View data table'}
+        alwaysOpen={!!onSelect}
+      >
         <table className="mt-2 w-full text-left text-xs">
           <thead className="text-muted">
             <tr>
@@ -141,8 +143,34 @@ export function BestCurveChart({
             ))}
           </tbody>
         </table>
-      </details>
+      </Disclosure>
     </Card>
+  )
+}
+
+/** A heading + content when the content must always be visible, a real <details> when it
+ *  is genuinely collapsible. */
+function Disclosure({
+  summary,
+  alwaysOpen,
+  children,
+}: {
+  summary: string
+  alwaysOpen: boolean
+  children: ReactNode
+}) {
+  if (alwaysOpen)
+    return (
+      <div className="mt-2">
+        <h4 className="text-xs text-muted">{summary}</h4>
+        {children}
+      </div>
+    )
+  return (
+    <details className="mt-2">
+      <summary className="cursor-pointer text-xs text-muted">{summary}</summary>
+      {children}
+    </details>
   )
 }
 

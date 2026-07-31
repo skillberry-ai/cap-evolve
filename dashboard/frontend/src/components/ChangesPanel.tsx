@@ -6,7 +6,7 @@ import { FileTree } from './FileTree'
 import type { RunGraph } from '../lib/types'
 
 /**
- * "Changes & files" (#139): the one place to inspect what a candidate changed.
+ * "Changes, memory & files" (#139): the one place to inspect what a candidate changed.
  *
  * Four top-level tabs — Iterations (candidate-vs-parent snapshot diff), Git diffs
  * (commit-to-commit), Memory (accepted/rejected history + candidate scratch), Files (the
@@ -46,7 +46,7 @@ export function ChangesPanel({
         Everything a candidate changed — its diff against its parent, the real commit, what
         the optimizer remembered about it, and the raw run directory.
       </p>
-      <Tabs tabs={MODES} value={mode} onChange={onModeChange}>
+      <Tabs tabs={MODES} label="Change surfaces" value={mode} onChange={onModeChange}>
         {(active) =>
           active === 'commit' ? (
             <GitDiff runId={runId} />

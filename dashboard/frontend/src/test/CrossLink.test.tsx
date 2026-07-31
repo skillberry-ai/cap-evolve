@@ -9,7 +9,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RunDeepDive } from '../routes/RunDeepDive'
 import { TaskHeatmap } from '../components/TaskHeatmap'
@@ -82,7 +82,15 @@ vi.mock('../lib/useRunStream', () => ({
 
 afterEach(() => vi.restoreAllMocks())
 
-async function mountDeepDive() {
+/** The live URL, read back out of the router so a test can assert what a user would copy
+ *  out of the address bar. */
+function UrlProbe() {
+  const [p] = useSearchParams()
+  return <span data-testid="url">{`?${p.toString()}`}</span>
+}
+const url = () => screen.getByTestId('url').textContent
+
+async function mountDeepDive(entry = '/runs/run_demo') {
   const { api } = await import('../lib/api')
   vi.mocked(api.run).mockResolvedValue(DETAIL)
   vi.mocked(api.rollouts).mockImplementation(async (_id, split) =>
@@ -104,9 +112,17 @@ async function mountDeepDive() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/runs/run_demo']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
-          <Route path="/runs/:id" element={<RunDeepDive />} />
+          <Route
+            path="/runs/:id"
+            element={
+              <>
+                <UrlProbe />
+                <RunDeepDive />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -115,7 +131,7 @@ async function mountDeepDive() {
 }
 
 describe('#139 tab consolidation', () => {
-  it('folds the four diff/file surfaces into one Changes & files tab', async () => {
+  it('folds the four diff/file surfaces into one Changes, memory & files tab', async () => {
     await mountDeepDive()
     const list = await screen.findByRole('tablist')
     const labels = within(list)
@@ -124,16 +140,16 @@ describe('#139 tab consolidation', () => {
     // Asserted as a subset, not an exact list: sibling PRs in this epic legitimately add
     // top-level tabs (#204's Events), and pinning the exact array would fail the merge
     // for a reason that has nothing to do with consolidation.
-    expect(labels).toEqual(expect.arrayContaining(['Fitness', 'Trajectories', 'Changes & files']))
+    expect(labels).toEqual(expect.arrayContaining(['Fitness', 'Trajectories', 'Changes, memory & files']))
     // The four overlapping surfaces are gone from the TOP list, not from the app.
     for (const gone of ['Iterations', 'Git diffs', 'Memory', 'Files', 'Overview']) {
       expect(labels).not.toContain(gone)
     }
   })
 
-  it('Changes & files still reaches candidate diff, commit diff, memory and raw files', async () => {
+  it('Changes, memory & files still reaches candidate diff, commit diff, memory and raw files', async () => {
     const user = await mountDeepDive()
-    await user.click(await screen.findByRole('tab', { name: 'Changes & files' }))
+    await user.click(await screen.findByRole('tab', { name: 'Changes, memory & files' }))
     const lists = await screen.findAllByRole('tablist')
     const sub = within(lists[1])
       .getAllByRole('tab')
@@ -160,7 +176,7 @@ describe('#139 cross-links', () => {
     expect(screen.queryByText('seed')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /See what cand_0001 changed/ }))
-    expect(await screen.findByRole('tab', { name: 'Changes & files', selected: true })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: 'Changes, memory & files', selected: true })).toBeInTheDocument()
     // The diff is preselected to the cross-linked candidate, not the default.
     const picker = await screen.findByLabelText('candidate')
     expect((picker as HTMLSelectElement).value).toBe('cand_0001')
@@ -179,7 +195,103 @@ describe('#139 cross-links', () => {
   })
 })
 
+describe('#139 URL is state, not a write-only log', () => {
+  it('closing the drawer clears ?task, and it stays closed across a tab round-trip', async () => {
+    // Deep-linked open: exactly the link a recipient would receive.
+    const user = await mountDeepDive('/runs/run_demo?tab=trajectories&candidate=seed&task=t2')
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    // The URL a user would now copy no longer records the state they dismissed.
+    expect(url()).not.toContain('task=t2')
+
+    // ...and the drawer does not resurrect itself on the next remount of the panel.
+    await user.click(screen.getByRole('tab', { name: 'Cost' }))
+    expect(url()).not.toContain('task=')
+    await user.click(screen.getByRole('tab', { name: 'Trajectories' }))
+    await waitFor(() => expect(screen.getAllByText('t2').length).toBeGreaterThan(0))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('deep-links straight into a ?mode sub-surface', async () => {
+    await mountDeepDive('/runs/run_demo?tab=changes&candidate=cand_0001&mode=memory')
+    expect(await screen.findByRole('tab', { name: 'Memory', selected: true })).toBeInTheDocument()
+    expect(await screen.findByText('Accepted history')).toBeInTheDocument()
+  })
+
+  it('normalises an unknown ?tab / ?mode out of the URL instead of leaving a bad param', async () => {
+    await mountDeepDive('/runs/run_demo?tab=nope')
+    expect(await screen.findByRole('tab', { name: 'Fitness', selected: true })).toBeInTheDocument()
+    await waitFor(() => expect(url()).toContain('tab=fitness'))
+
+    screen.getByTestId('url') // sanity: probe mounted
+  })
+
+  it('does not claim a candidate it is not showing', async () => {
+    await mountDeepDive('/runs/run_demo?tab=changes&candidate=cand_9999&mode=candidate')
+    expect(await screen.findByText(/No candidate/)).toBeInTheDocument()
+    expect(screen.queryByText(/cand_9999 scored per task/)).not.toBeInTheDocument()
+    // The panel below falls back to a real candidate, and the header agrees with it.
+    const picker = (await screen.findByLabelText('candidate')) as HTMLSelectElement
+    expect(picker.value).toBe('cand_0001')
+  })
+})
+
 describe('#139 accessibility', () => {
+  it('the heatmap is one tab stop with arrow-key navigation, not one stop per cell', () => {
+    // 30 tasks × 20 iterations = 600 cells: the scale at which per-cell tab stops become a
+    // keyboard trap.
+    const tasks = Array.from({ length: 30 }, (_, i) => `t${i}`)
+    const nodes: GraphNode[] = Array.from({ length: 20 }, (_, i) => ({
+      id: `c${i}`,
+      parent: null,
+      children: [],
+      status: 'accepted' as const,
+      val: 0.5,
+      iteration: i,
+      per_task: Object.fromEntries(tasks.map((t) => [t, 1])),
+    }))
+    render(<TaskHeatmap nodes={nodes} tasks={tasks} onOpenRollout={() => {}} />)
+    const grid = screen.getByTestId('task-heatmap')
+    const cells = grid.querySelectorAll('button')
+    expect(cells.length).toBe(600)
+    // One tab stop for 600 cells.
+    expect(grid.querySelectorAll('button[tabindex="0"]').length).toBe(1)
+    expect(grid).toHaveAttribute('role', 'grid')
+    expect(grid.querySelectorAll('[role="gridcell"]').length).toBe(600)
+  })
+
+  it('arrow keys move the heatmap’s active cell', async () => {
+    const user = userEvent.setup()
+    render(<TaskHeatmap nodes={NODES} tasks={['t1', 't2']} onOpenRollout={() => {}} />)
+    const grid = screen.getByTestId('task-heatmap')
+    const cell = (r: number, c: number) => grid.querySelector(`[data-cell="${r}-${c}"]`)!
+    ;(cell(0, 0) as HTMLElement).focus()
+    expect(cell(0, 0)).toHaveFocus()
+    await user.keyboard('{ArrowRight}')
+    expect(cell(0, 1)).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(cell(1, 1)).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(cell(1, 0)).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(cell(1, 1)).toHaveFocus()
+    // Roving: still exactly one tab stop, and it followed the arrows.
+    expect(grid.querySelectorAll('button[tabindex="0"]').length).toBe(1)
+    expect(cell(1, 1)).toHaveAttribute('tabindex', '0')
+  })
+
+  it('both tablists have accessible names so the nested one is announceable', async () => {
+    const user = await mountDeepDive()
+    expect(await screen.findByRole('tablist', { name: 'Run views' })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Changes, memory & files' }))
+    expect(await screen.findByRole('tablist', { name: 'Change surfaces' })).toBeInTheDocument()
+    // ...and the panel is named by its own tab, not left anonymous.
+    const panels = screen.getAllByRole('tabpanel')
+    for (const p of panels) expect(p).toHaveAttribute('aria-labelledby')
+  })
+
   it('tabs are a single tab stop with arrow-key navigation and a non-colour selected state', async () => {
     const user = await mountDeepDive()
     const list = await screen.findByRole('tablist')
