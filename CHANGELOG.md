@@ -6,6 +6,28 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **SpreadsheetBench formula recalculation was silently never running (#256).** #240 widened the
+  *directories* the adapter creates so the uid-1000 container could write its output; the output
+  *file* it writes is still owned by uid 1000 at ~0644, so the host-side scorer could not rewrite
+  it. `just_open_libreoffice` recalculates into a `/tmp` tempdir and moves the result back —
+  cross-filesystem, so `shutil.move` falls back to `copy2`, which opens the container-owned file
+  for writing and dies with `[Errno 13] Permission denied: <n>_<id>_output.xlsx`. The adapter
+  swallowed that with `except Exception: pass`, so comparisons ran on **stale cached values** and
+  formula-only cells read as empty — every score a floor, and the noise looked like model variance
+  (baseline 0.293 vs 0.393 on two runs of the same 10 tasks). `chmod` cannot fix this (you may not
+  chmod a file you do not own), so `_reclaim_container_file` replaces the file with a byte-identical
+  copy we own — the create and rename need write+execute on the *directory*, which is already
+  `0o777` and deliberately non-sticky for per-rollout dirs. A recalc that still fails is now
+  reported as an `INFRASTRUCTURE:` line in the task feedback instead of being swallowed, so the
+  optimizer is told not to spend budget on it.
+- **A native crash in a phase process left no evidence (#257).** Run 30608405812's algorithm step
+  died with `{"returncode": -11, "signal": "SIGSEGV"}` and nothing usable: a segfault has no Python
+  traceback, and `_step_failure` captured only `stderr[-8000:]` — a window filled entirely with
+  routine per-rollout scoring chatter emitted long after the crash-relevant output. Now:
+  `cap_evolve` enables `faulthandler` on import (stderr only, so the stdout JSON contract is
+  untouched; opt out with `CAPEVOLVE_NO_FAULTHANDLER=1`), the captured stderr keeps a head *and* a
+  tail with an explicit omission marker, and the signal hint is signal-specific — SIGSEGV no longer
+  misdirects the reader to the OOM killer and `dmesg`.
 - **A printing scorer no longer destroys a completed run (`cap-evolve run` stdout contract).**
   `harness.evaluate_candidate` now wraps the whole run+score body in
   `redirect_stdout(sys.stderr)`, not just the rollout pool. Only the RUN phase was guarded

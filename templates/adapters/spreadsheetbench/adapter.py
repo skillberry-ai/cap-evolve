@@ -364,6 +364,45 @@ def _make_container_writable(p: Path, *, sticky: bool = False) -> None:
         pass
 
 
+def _reclaim_container_file(p: Path) -> bool:
+    """Make a container-created output file writable by US. Returns True if it now is.
+
+    ``_make_container_writable`` widens the DIRS we create so the uid-1000 container can
+    create its output file — but that file is then owned by uid 1000 at its umask (~0644),
+    so WE cannot write it. Scoring needs to: ``just_open_libreoffice`` recalculates cached
+    formula values by converting into a ``/tmp`` tempdir and moving the result back over the
+    original. ``/tmp`` and the data dir are different filesystems, so that move falls back
+    to ``copy2``, which opens the existing container-owned file for WRITING and dies with
+    ``[Errno 13] Permission denied: <n>_<id>_output.xlsx``.
+
+    ``chmod`` cannot fix this — you may not chmod a file you do not own. Replacing the file
+    with a byte-identical copy we DO own can: the file stays readable (0644), and both the
+    create and the rename need write+execute on the *directory*, which is already 0o777 and
+    deliberately NOT sticky for these per-rollout dirs. ``os.replace`` is atomic, so a
+    concurrent reader never observes a partial file.
+
+    Best-effort: on failure the caller reports the recalc as failed rather than silently
+    comparing stale cached values, which is how this hid for so long.
+    """
+    if os.access(p, os.W_OK):
+        return True
+    try:
+        data = p.read_bytes()
+    except OSError:
+        return False
+    tmp = p.with_name(p.name + ".hostcopy")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, p)
+        return True
+    except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        return False
+
+
 _FENCE_RE = re.compile(r"```[a-zA-Z0-9_+-]*[ \t]*\r?\n(.*?)```", re.DOTALL)
 
 _NO_CODE_REMINDER = (
@@ -681,6 +720,7 @@ class Adapter(CapabilityAdapter):
         test_results: list[int] = []
         missing: list[int] = []
         mismatched: list[int] = []
+        recalc_failed: list[int] = []   # cases whose formula recalc could not run
         for idx in (1, 2, 3):
             gt_path = _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer")
             proc_path = data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx"
@@ -693,11 +733,22 @@ class Adapter(CapabilityAdapter):
                 # Recalculate cached formula values before comparing. Serialized: concurrent
                 # headless LibreOffice invocations against the same profile conflict. Only the
                 # rollout-owned proc file is mutated — the shared gt/answer file never is.
-                with _libre_lock:
-                    try:
-                        vendor["just_open_libreoffice"](str(proc_path), libre)
-                    except Exception:
-                        pass  # best-effort; comparison below still runs on whatever is cached
+                #
+                # Take ownership first: the file was created by the uid-1000 container and is
+                # not writable by us, which makes the helper's move-back fail with EACCES (see
+                # _reclaim_container_file). Still best-effort — the comparison below runs on
+                # whatever is cached either way — but a failure is now RECORDED rather than
+                # swallowed, because silently comparing un-recalculated formula cells
+                # understates every score and looks like a prompt defect.
+                if not _reclaim_container_file(proc_path):
+                    recalc_failed.append(idx)
+                else:
+                    with _libre_lock:
+                        try:
+                            if vendor["just_open_libreoffice"](str(proc_path), libre) is False:
+                                recalc_failed.append(idx)
+                        except Exception:
+                            recalc_failed.append(idx)
 
             try:
                 ok, _ = vendor["compare_workbooks"](
@@ -712,7 +763,8 @@ class Adapter(CapabilityAdapter):
 
         soft = sum(test_results) / len(test_results)
         hard = 1.0 if all(test_results) else 0.0
-        feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre))
+        feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre),
+                                   recalc_failed)
 
         # Scoring has consumed every output; drop the per-rollout dir.
         _cleanup_output_dir(rollout)
@@ -730,7 +782,8 @@ class Adapter(CapabilityAdapter):
 
 
 def _build_feedback(
-    entry: dict, test_results: list[int], missing: list[int], mismatched: list[int], had_libreoffice: bool
+    entry: dict, test_results: list[int], missing: list[int], mismatched: list[int],
+    had_libreoffice: bool, recalc_failed: list[int] | None = None,
 ) -> str:
     """Gold-SAFE feedback: which test cases passed/failed and why, never gold cell values."""
     n_pass = sum(test_results)
@@ -749,6 +802,15 @@ def _build_feedback(
         lines.append(
             "Note: LibreOffice was unavailable, so formula-only cells (never assigned a "
             "literal value) could not be recalculated before comparison."
+        )
+    if recalc_failed:
+        # An INFRASTRUCTURE fault, not a prompt defect: the comparison ran on stale cached
+        # values, so this score is a floor. Say so, or the optimizer spends budget rewriting
+        # a prompt against a broken mount (exactly what happened in run 30520700500).
+        lines.append(
+            f"INFRASTRUCTURE: formula recalculation FAILED for test case(s) {recalc_failed}, "
+            "so comparison used stale cached values and this score may understate the real "
+            "result. Not a prompt defect — do not optimize against it."
         )
     if n_pass == len(test_results):
         lines.append("All checks passed.")
@@ -823,6 +885,20 @@ if __name__ == "__main__":
         assert (_leaf.stat().st_mode & 0o777) == 0o777
         _make_container_writable(Path(_td) / "does-not-exist")  # best-effort, must not raise
     print("spreadsheetbench container-writable self-check: OK")
+
+    with _tempfile.TemporaryDirectory() as _td:
+        # A container-created output is readable but not writable by us; scoring's recalc
+        # rewrite needs it writable, and chmod cannot deliver that on a foreign-owned file.
+        _f = Path(_td) / "1_42_output.xlsx"
+        _f.write_bytes(b"workbook")
+        os.chmod(_f, 0o444)
+        assert not os.access(_f, os.W_OK)
+        assert _reclaim_container_file(_f) is True
+        assert os.access(_f, os.W_OK)
+        assert _f.read_bytes() == b"workbook"      # bytes preserved
+        assert not list(Path(_td).glob("*.hostcopy"))
+        assert _reclaim_container_file(_f) is True  # idempotent once ours
+    print("spreadsheetbench reclaim-container-file self-check: OK")
 
     class _FakeRollout:
         def __init__(self, metadata):

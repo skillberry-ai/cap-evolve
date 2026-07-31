@@ -108,18 +108,45 @@ def _step_failure(step: str, proc) -> dict:
     """
     rec: dict = {"step": step, "returncode": proc.returncode}
     if proc.returncode < 0:
+        sig = -proc.returncode
         try:
-            rec["signal"] = signal.Signals(-proc.returncode).name
+            name = signal.Signals(sig).name
         except ValueError:
-            rec["signal"] = f"signal {-proc.returncode}"
-        rec["hint"] = (
-            f"{step} was killed by a signal, not a Python exception — there is no "
-            "traceback to find. SIGKILL is usually the OOM killer; check dmesg/journalctl -k."
-        )
-    rec["error"] = proc.stderr[-8000:] if proc.stderr else ""
+            name = f"signal {sig}"
+        rec["signal"] = name
+        # Signal-specific, because the remedy differs and a wrong hint sends the reader
+        # to the wrong place: SIGKILL is usually the OOM killer, but SIGSEGV is a native
+        # crash in a C extension and dmesg will say nothing useful about it.
+        if name == "SIGSEGV":
+            rec["hint"] = (
+                f"{step} died in NATIVE code (SIGSEGV), not a Python exception — most likely a "
+                "C extension the adapter pulls in (numpy/pandas in a scorer, a client library). "
+                "cap_evolve enables faulthandler, so look for a 'Fatal Python error' block with "
+                "a native traceback in this record's error field."
+            )
+        else:
+            rec["hint"] = (
+                f"{step} was killed by {name}, not a Python exception — there is no Python "
+                "traceback to find. SIGKILL is usually the OOM killer; check dmesg/journalctl -k."
+            )
+    # Head AND tail. A tail alone loses the crash: a chatty scoring phase can emit tens of
+    # kilobytes AFTER the interesting output, so the window shows routine per-rollout noise
+    # and the record reads as if nothing went wrong (exactly what masked run 30608405812's
+    # SIGSEGV). faulthandler's native traceback lands at the very end, so keep more tail
+    # than head.
+    rec["error"] = _clip(proc.stderr, head=4000, tail=12000)
     if proc.stdout:
         rec["stdout_tail"] = proc.stdout[-2000:]
     return rec
+
+
+def _clip(text: str | None, *, head: int, tail: int) -> str:
+    """Keep the first ``head`` and last ``tail`` characters, marking what was dropped."""
+    text = text or ""
+    if len(text) <= head + tail:
+        return text
+    dropped = len(text) - head - tail
+    return f"{text[:head]}\n\n... [{dropped} chars omitted] ...\n\n{text[-tail:]}"
 
 
 def _json_payload(text: str) -> dict:

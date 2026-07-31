@@ -12,6 +12,24 @@ cap_evolve <command>`` and parse the JSON it prints.
 
 from __future__ import annotations
 
+import faulthandler as _faulthandler
+import os as _os
+
+# Dump a native traceback to stderr if this process dies on a fatal signal.
+#
+# A phase/algorithm process that segfaults leaves NO Python-level evidence: the CLI records
+# `{"returncode": -11, "signal": "SIGSEGV"}` and nothing else, so there is nothing to debug
+# from CI logs alone (see run 30608405812, killed mid-iteration with the cause unrecoverable).
+# faulthandler costs nothing until a fatal signal arrives, and adapters here routinely pull in
+# C extensions (numpy/pandas via scorers, LibreOffice/Docker clients) where a hard crash is
+# possible. Writes to stderr, never stdout, so the JSON-on-stdout contract is untouched.
+# Opt out with CAPEVOLVE_NO_FAULTHANDLER=1 if a host needs the default signal disposition.
+if not _os.environ.get("CAPEVOLVE_NO_FAULTHANDLER"):
+    try:
+        _faulthandler.enable()
+    except Exception:  # noqa: BLE001 — e.g. stderr replaced by a non-file object
+        pass
+
 from .adapter import CapabilityAdapter, stub_methods
 from .cache import EvalCache, hash_candidate_dir
 from .gate import GateDecision, TrainGateError, decide
