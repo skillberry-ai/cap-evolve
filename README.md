@@ -19,8 +19,9 @@
 evaluation traces.**
 
 > **Note on naming.** This project was previously called *Acapo*. The current name is
-> **cap-evolve** everywhere — templates, scaffolds, and hooks. The legacy `.agentcapo`
-> directory is no longer honored; use `.cap-evolve` instead.
+> **cap-evolve** everywhere — templates, scaffolds, and hooks. New projects use the
+> `.capevolve` run directory (no hyphen); the legacy `.agentcapo` directory is still
+> honored as a fallback.
 
 You bring the agent and the eval you already have. cap-evolve runs the loop — evaluate →
 diagnose the failures → propose an edit → keep it only if it beats a held-out split by a
