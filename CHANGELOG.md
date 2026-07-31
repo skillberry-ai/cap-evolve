@@ -6,6 +6,19 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **SpreadsheetBench rollouts could segfault the whole run (pandas 3.x + PyArrow strings).**
+  `_spreadsheet_preview` builds its preview with `pd.read_excel`; pandas 3.x makes `str`
+  columns `ArrowStringArray`, so construction goes through pyarrow's C++ layer. Called
+  concurrently from the rollout thread pool that crashed with SIGSEGV in
+  `ArrowStringArray._from_sequence` — uncatchable, so one bad preview killed the algorithm
+  process and every completed iteration with it (run 30634898569 lost 68 minutes and ~$6
+  after an accepted baseline). The adapter now pins `mode.string_storage = "python"` once per
+  process, so the crashing frame is never reached; verified on pandas 3.0.5 / pyarrow 25.0.0
+  that the preview text is byte-identical to the default, so the agent's prompt — and result
+  comparability — are unchanged. Set once at import rather than per call, because
+  `pd.option_context` restores a process-global option on exit and would race the other
+  rollout threads. Guarded by both runtime tests and dependency-free AST checks, since
+  `core[dev]` has no pandas and a skipped guard is no guard.
 - **A failed benchmark run was recorded as `"conclusion": "success"`.** The completion gate
   (`Assert the suite run completed`) ran *after* `Write run metadata`, and `job.status` is
   evaluated when a step runs — so a run that crashed mid-optimization and failed the gate still

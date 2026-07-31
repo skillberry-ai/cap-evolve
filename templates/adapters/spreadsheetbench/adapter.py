@@ -475,8 +475,51 @@ def _read_system_prompt(ctx) -> str:
     return _DEFAULT_SYSTEM_PROMPT
 
 
-def _spreadsheet_preview(path: Path, rows: int) -> str:
+_pandas_configured = False
+
+
+def _pandas():
+    """Import pandas with the PyArrow-backed string dtype turned OFF, once per process.
+
+    pandas 3.x makes `str` columns `ArrowStringArray` by default, so `read_excel` constructs
+    them through pyarrow's C++ layer. Called concurrently from the rollout thread pool that
+    is exactly where a run died:
+
+        Current thread (most recent call first):
+          File ".../pandas/core/arrays/string_arrow.py", line 241 in _from_sequence
+          File ".../pandas/core/construction.py", line 616 in sanitize_array
+          ...
+          File ".../pandas/io/excel/_base.py", line 1780 in parse
+          File ".../adapter.py", line ... in _spreadsheet_preview
+          File ".../cap_evolve/trials.py", line 49 in _one      <- ThreadPoolExecutor worker
+
+    SIGSEGV, so nothing catches it: one bad preview takes down the whole algorithm process
+    and every completed iteration with it (run 30634898569 lost 68 minutes and ~$6 that way).
+
+    `mode.string_storage = "python"` keeps the `str` dtype but backs it with Python objects,
+    so `ArrowStringArray._from_sequence` — the frame that crashed — is never called. Verified
+    locally on pandas 3.0.5 / pyarrow 25.0.0 that the resulting preview text is BYTE-IDENTICAL
+    to the default, so the agent's prompt does not change and results stay comparable.
+
+    Set once at import rather than per call via `pd.option_context`: that context manager
+    mutates a process-global option and restores it on exit, which in a thread pool lets one
+    thread restore the Arrow backend while another is still reading — the same class of race
+    `run_trials_pool` documents for `redirect_stdout`.
+    """
+    global _pandas_configured
     import pandas as pd
+
+    if not _pandas_configured:
+        try:
+            pd.options.mode.string_storage = "python"
+        except Exception:  # noqa: BLE001 — older pandas without the option; nothing to disable
+            pass
+        _pandas_configured = True
+    return pd
+
+
+def _spreadsheet_preview(path: Path, rows: int) -> str:
+    pd = _pandas()
 
     excel_file = pd.ExcelFile(path)
     chunks = []
