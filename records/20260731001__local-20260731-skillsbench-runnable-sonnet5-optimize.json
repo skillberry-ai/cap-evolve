@@ -1,0 +1,60 @@
+{
+  "run_id": 20260731001,
+  "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/benchmark-history/docs/runs/local-20260730-skillsbench-runnable-sonnet5-optimize.md",
+  "bench": "skillsbench",
+  "tier": "runnable-subset-43",
+  "event": "local",
+  "source": "bcarmeli",
+  "pr": null,
+  "branch": null,
+  "sha": null,
+  "date": "2026-07-30T19:18:00Z",
+  "iterations": 2,
+  "trials": 3,
+  "agent_model": "claude-sonnet-5",
+  "optimizer_model": "claude-opus-4-8",
+  "conclusion": "in_progress",
+  "schema": 1,
+  "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/benchmark-history/docs/runs/local-20260730-skillsbench-runnable-sonnet5-optimize.md",
+  "tasks": [],
+  "steps": [
+    {
+      "phase": "optimize",
+      "iter": 1,
+      "candidate": "cand_0001",
+      "accepted": true,
+      "reward": 0.14728682170542634,
+      "optimizer_usd": 14.013555,
+      "optimizer_seconds": 1398.96,
+      "eval_usd": 0,
+      "eval_seconds": 13253.79
+    },
+    {
+      "phase": "optimize",
+      "iter": 2,
+      "candidate": "cand_0002",
+      "accepted": true,
+      "reward": 0.17054263565891473,
+      "optimizer_usd": 15.33239,
+      "optimizer_seconds": 2702.66,
+      "eval_usd": 0,
+      "eval_seconds": 11746.84
+    }
+  ],
+  "suite": {
+    "reward_base": 0.13953488372093023,
+    "reward_opt": 0.17054263565891473,
+    "n": 43,
+    "eval_usd": 0,
+    "optimizer_usd": 29.35,
+    "eval_seconds": 39522.62,
+    "optimizer_seconds": 4101.62
+  },
+  "counts": {
+    "passed": 4,
+    "partial": 7,
+    "errored": 0,
+    "failed": 32
+  },
+  "note": "In-progress run on the 43-task RUNNABLE subset of SkillsBench (filtered on the CCC-podman environment to exclude 44 tasks with base-image or docker-compose infrastructure failures — see docs/runs/local-20260730-skillsbench-runnable-sonnet5-optimize.md for the excluded list). Baseline + iters 1-2 landed; iter 3 rollouts in flight. Sonnet 5 as agent (cheaper alternative to Opus 4.6 for the runner); Opus 4.8 as optimizer. LSF submission id 1412177 on CCC compute cccxc445. Splits are fit-metric (train==val==43 tasks; test=3 tasks overlapping val — retained purely to satisfy cap-evolve's finalize step). Counts reflect best candidate (cand_0002) so far. Will be updated at run completion (7 iters + finalize)."
+}
