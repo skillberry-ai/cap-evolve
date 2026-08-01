@@ -5,6 +5,26 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Fixed
+- **gpt-5.x rejected our temperature override, failing every rollout at $0.00 spend.** The
+  gateway answers `400 Unsupported value: 'temperature' does not support 0.0 with this model.
+  Only the default (1) value is supported.` — so run 30682720920 lost an entire pilot: all 60
+  tasks errored on their first LLM call, the run finished in 9 minutes having billed nothing,
+  and reported **success** with a clean-looking 0.000. `model_config` (shared by five adapters)
+  now sends no `temperature` for model families that pin it, making the effective temperature
+  the model's own default — 1 for gpt-5.x, the only value they accept. Safer than sending the
+  value the error names, since a deployment may reject the parameter outright. A blank or
+  `default`/`model`/`none` TEMPERATURE now also means "use the model default"; every other
+  model still gets 0.0, so this is a no-op for tau2/swebench/skillsbench.
+- **An infra-dominated run reported success.** Completion is not sufficient: a run whose every
+  rollout died on infrastructure still writes `baseline.json`/`final.json`, records iterations,
+  passes the gate, and publishes 0.000 to `benchmark-history` as though it measured something.
+  `assert_run.py` now FAILS when more than `--max-infra-frac` (default 0.5) of baseline tasks
+  are infrastructure errors, reusing `metrics.py`'s existing `_infra_task` rule — which already
+  rendered those tasks as `⚠️ infra-error` in the report while the job went green. Verified by
+  replaying run 30682720920's real `baseline.json`: the old gate exits 0, the new one exits 1.
+  A genuine all-zero run with no infra errors still passes.
+
 ### Added
 - **`pilot` tier — a cost/runtime measurement rig for SpreadsheetBench.** Answers the three
   things a ~$450 full run depends on and nobody has measured: cost and wall-clock per rollout at
