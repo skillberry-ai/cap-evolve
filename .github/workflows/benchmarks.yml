@@ -172,6 +172,14 @@ jobs:
       # off this instead of trying to introspect the JSON.
       has_legs: ${{ steps.plan.outputs.has_legs }}
     steps:
+      # REQUIRED: the planner reads ci/benchmarks/<bench>/<tier>/tasks.json to decide which
+      # tiers a benchmark has populated. Without a checkout every path lookup misses and the
+      # planner selects ZERO legs — which is exactly what happened in run 30682558719, where
+      # a dispatch produced "skip pilot/spreadsheetbench: no tasks.json" and a skipped matrix.
+      # If you remove this step, remove the filesystem filter below with it.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@v4
+
       - name: Select tier x bench legs
         id: plan
         env:
@@ -200,6 +208,12 @@ jobs:
           # that names the tier deliberately.
           EXPLICIT_ONLY_TIERS = {"pilot"}
 
+          # Is the repository actually checked out here? See the fail-open note below.
+          tree_present = os.path.isdir("ci/benchmarks")
+          if not tree_present:
+              print("WARNING: no ci/benchmarks tree — tier-population filter disabled",
+                    file=sys.stderr, flush=True)
+
           event = os.environ["EVENT"]
           tier_sel = os.environ.get("TIER_SEL") or "smoke"
           bench_sel = os.environ.get("BENCH_SEL") or "all"
@@ -221,7 +235,12 @@ jobs:
                   # the waste this planner was introduced to remove. Filtering here keeps a
                   # partially-populated tier (e.g. only one benchmark ships `pilot/`) free for
                   # everyone else. No-op for smoke/full, which every benchmark populates.
-                  if run and not os.path.isfile(f"ci/benchmarks/{bench}/{tier}/tasks.json"):
+                  # FAIL OPEN if the working tree is not here at all: filtering on a missing
+                  # checkout would silently select ZERO legs for every benchmark, turning a
+                  # dispatch into a no-op that still reports success. Only trust the filter
+                  # when there is a tree to look at.
+                  if run and tree_present and not os.path.isfile(
+                          f"ci/benchmarks/{bench}/{tier}/tasks.json"):
                       print(f"skip {tier}/{bench}: no tasks.json for that tier",
                             file=sys.stderr, flush=True)
                       run = False

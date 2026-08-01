@@ -118,3 +118,38 @@ def test_only_spreadsheetbench_ships_a_pilot_tier():
     shipped = sorted(p.parent.parent.name
                      for p in (REPO / "ci" / "benchmarks").glob("*/pilot/tasks.json"))
     assert shipped == ["spreadsheetbench"], shipped
+
+
+# ---- the missing-checkout regression (run 30682558719) -----------------------
+
+def _run_plan_in(cwd, *, event, tier_sel=None, bench_sel=None, labels=None):
+    env = dict(os.environ, EVENT=event, LABELS=json.dumps(labels or []))
+    if tier_sel is not None:
+        env["TIER_SEL"] = tier_sel
+    if bench_sel is not None:
+        env["BENCH_SEL"] = bench_sel
+    proc = subprocess.run([sys.executable, "-c", _plan_script()], capture_output=True,
+                          text=True, cwd=str(cwd), env=env)
+    assert proc.returncode == 0, proc.stderr
+    legs = json.loads(re.search(r"^matrix=(.*)$", proc.stdout, re.M).group(1))
+    return [(l["tier"], l["bench"]) for l in legs], proc.stderr
+
+
+def test_planner_fails_open_without_a_checked_out_tree(tmp_path):
+    """The bug: the plan job had no checkout, so the tasks.json filter matched NOTHING and a
+    dispatch selected zero legs while still reporting success. Filtering must only apply when
+    there is a tree to inspect."""
+    legs, err = _run_plan_in(tmp_path, event="workflow_dispatch", tier_sel="smoke", bench_sel="all")
+    assert sorted(legs) == sorted(("smoke", b) for b in ALL_BENCHES), (
+        f"planner selected {legs} with no checkout — it must fall back to unfiltered selection"
+    )
+    assert "filter disabled" in err
+
+
+def test_plan_job_checks_out_the_repo():
+    """The filter is only meaningful with a tree, so the job must provide one."""
+    src = WORKFLOW.read_text(encoding="utf-8")
+    plan = src[src.index("\n  plan:"):src.index("\n  bench:")]
+    assert "actions/checkout" in plan, (
+        "plan job reads ci/benchmarks/**/tasks.json but does not check out the repository"
+    )
