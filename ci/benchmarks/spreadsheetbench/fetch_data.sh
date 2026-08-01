@@ -36,6 +36,9 @@ esac
 OUT="$DEST/$INNER"
 
 if [ -f "$OUT/dataset.json" ]; then
+  # A tree cached by an older revision of this script may still carry the archive's
+  # restrictive root mode, and the root is the one that matters (see below). O(1).
+  chmod a+rX "$OUT" 2>/dev/null || true
   echo "$OUT"
   exit 0
 fi
@@ -50,6 +53,15 @@ tar -xzf "$tmp/$INNER.tar.gz" -C "$tmp"
 [ -f "$tmp/$INNER/dataset.json" ] || { echo "::error:: $INNER.tar.gz did not contain dataset.json" >&2; exit 1; }
 rm -rf "$OUT"
 mv "$tmp/$INNER" "$OUT"
+
+# Normalize modes for the sandbox container. `tar` preserves the modes STORED in the
+# archive, and the upstream 912 archive stores its top-level dir as `drwx------` (the
+# 200-task sample stores 0755). The adapter bind-mounts that top-level dir AT /mnt/data
+# inside a container running as uid 1000, so a non-traversable root makes every path under
+# the mount unreachable — reads included — and a whole run scores 0.000 with 50 EACCES
+# tracebacks (run 30691123806: $77 and ~3h). a+rX adds traverse/read only, never write:
+# this tree is read-only INPUT.
+chmod -R a+rX "$OUT"
 echo "::endgroup::" >&2
 
 echo "$OUT"

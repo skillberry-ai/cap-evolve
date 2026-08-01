@@ -74,6 +74,15 @@ NOTE ON SCORING:
   _make_container_writable); if a write is still denied, the rollout is reported as an
   infrastructure error rather than as a zero-reward miss, so the optimizer is not sent
   chasing a mount problem it cannot fix from the prompt.
+
+  The SAME uid mismatch also applies to the dataset root itself, which is what gets
+  bind-mounted AT /mnt/data — and there it is worse, because a root the container cannot
+  TRAVERSE makes every path under the mount unreachable, reads included. The upstream
+  912-task archive ships its top-level dir as 0700 (the 200-task sample ships 0755), and
+  `tar` preserves stored modes, so extracting it yields a mount no container can enter.
+  _preflight_mount widens the root and then VERIFIES the mount before any LLM call, so
+  this fails in seconds with a precise message instead of burning a full eval (it cost
+  $77 and ~3h of wall time once — run 30691123806).
 """
 
 from __future__ import annotations
@@ -107,6 +116,10 @@ PREVIEW_ROWS = int(os.environ.get("SPREADSHEETBENCH_ROWS", "5"))
 CONCURRENCY = int(os.environ.get("SPREADSHEETBENCH_CONCURRENCY", "4"))
 EXEC_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_EXEC_TIMEOUT", "180"))
 LIBREOFFICE_BIN = os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_BIN", "")
+
+# Where the vendored sandbox bind-mounts SPREADSHEETBENCH_DATA_DIR inside every container
+# (code_exec_docker/jupyter.py hardcodes this bind target).
+_CONTAINER_DATA_ROOT = "/mnt/data"
 LIBRE_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_TIMEOUT", "120"))
 
 _TASK_TEMPLATE = """You need to solve the following spreadsheet manipulation question. It contains six pieces of information:
@@ -332,6 +345,11 @@ def _get_sandbox() -> _Sandbox:
     global _sandbox
     with _sandbox_lock:
         if _sandbox is None:
+            # Check the mount BEFORE the first container exists. run_target calls us
+            # before its first LLM call, so an unusable mount costs ~$0 per rollout and
+            # every rollout carries the same precise reason — which the report renders as
+            # an infra error and assert_run.py's >50% gate turns into a failed job.
+            _preflight_mount(_data_dir())
             _sandbox = _Sandbox()
             import atexit
 
@@ -366,6 +384,123 @@ def _make_container_writable(p: Path, *, sticky: bool = False) -> None:
         os.chmod(p, 0o1777 if sticky else 0o777)
     except OSError:
         pass
+
+
+# a+rX, minus the owner bits already present: enough for the container to enter a dir and
+# read what is inside, and deliberately NOT a+w — the dataset tree is INPUT, nothing in the
+# sandbox may rewrite it.
+#
+# BOTH the group and other classes must be granted, not just other. POSIX checks the
+# classes in order and the FIRST match decides: the executor image runs as uid 1000 gid
+# 100(users) and the dataset is typically owned by <runner>:users, so the container matches
+# the GROUP class and never falls through to other. A file at 0o604 (`-rw----r--`) is
+# therefore still EACCES for it — verified against the real image, which is why this is
+# 0o055/0o044 rather than 0o005/0o004.
+_TRAVERSE_BITS = 0o055   # dirs: g+rx, o+rx
+_READ_BITS = 0o044       # files: g+r, o+r
+
+
+def _make_container_readable(p: Path) -> int:
+    """OR o+rX onto `p` so the container's uid can traverse/read it. Returns the mode.
+
+    Unlike _make_container_writable this widens as LITTLE as possible, because it is
+    applied to the dataset tree rather than to a scratch dir we own. Best-effort: a
+    foreign-owned dir cannot be chmod'ed, and _preflight_mount then reports the real
+    mode instead of this failing silently.
+    """
+    try:
+        mode = os.stat(p).st_mode & 0o7777
+    except OSError:
+        return 0
+    if mode & _TRAVERSE_BITS != _TRAVERSE_BITS:
+        try:
+            os.chmod(p, mode | _TRAVERSE_BITS)
+            mode = os.stat(p).st_mode & 0o7777
+        except OSError:
+            pass
+    return mode
+
+
+def _widen_tree_for_container(root: Path) -> None:
+    """OR o+rX across the dataset tree, the `chmod -R a+rX` fetch_data.sh applies on extract.
+
+    Needed for a tree extracted by an older revision of the fetcher, or fetched by hand: the
+    modes `tar` writes come from the archive AND the extracting shell's umask, so the input
+    workbooks themselves can land 0640. Best-effort per entry (a foreign-owned file simply
+    stays as it is and the caller then reports it), and O(files) with no stat churn beyond
+    the walk — a few thousand entries, well under a second, once per process.
+    """
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in (*dirnames, *filenames):
+            p = Path(dirpath) / name
+            try:
+                mode = os.stat(p).st_mode & 0o7777
+                want = mode | (_TRAVERSE_BITS if p.is_dir() else _READ_BITS)
+                if want != mode:
+                    os.chmod(p, want)
+            except OSError:
+                continue
+
+
+def _preflight_mount(data_dir: Path) -> None:
+    """Verify the container can actually USE the bind mount, before any LLM call.
+
+    The dataset root is bind-mounted at /mnt/data, so if the container's uid cannot
+    traverse it then EVERY path under the mount is unreachable — `open()` on an input
+    workbook and even `Path.exists()` raise EACCES (a missing search bit, not a missing
+    file). The upstream 912-task archive ships its top-level dir as 0700, and `tar`
+    preserves that, so the extracted tree looks perfect on inspection (`spreadsheet/` and
+    the workbooks are 0755/0644) while the ONE dir at the top locks everyone out.
+
+    We widen what we can and then check, rather than assuming the chmod worked: the data
+    dir may be owned by another uid (a shared cache), in which case the run must stop
+    here. Raising is the whole point — a silent mount fault reads as a capability score
+    of 0.000, and the optimizer then "fixes" it by editing infrastructure. Run
+    30691123806 spent $77.49 and ~3h before this became visible.
+
+    Host-side and O(1): no container is started, so it is safe to call per process.
+    """
+    mode = _make_container_readable(data_dir)
+    if mode & _TRAVERSE_BITS != _TRAVERSE_BITS:
+        raise RuntimeError(
+            f"spreadsheetbench mount is unusable: SPREADSHEETBENCH_DATA_DIR={data_dir} is "
+            f"mode 0o{mode & 0o777:03o}, so the sandbox container's uid cannot traverse it "
+            f"— every read AND write under /mnt/data would fail with EACCES. The upstream "
+            f"912-task archive ships this dir as 0700; fix with "
+            f"`chmod -R a+rX {data_dir}` (fetch_data.sh does this on extract)."
+        )
+
+    # The inputs themselves must be readable through the mount, not just the root. Which
+    # modes `tar` leaves depends on the extracting shell's umask (the runner's 077 yields a
+    # 0700 root, an interactive 027 yields 0750 dirs and 0640 workbooks), so check a real
+    # file rather than trusting the root's mode alone.
+    probe = next((data_dir / "spreadsheet").glob("*/*_input.xls*"), None)
+
+    def _readable(p: Path) -> bool:
+        # Both classes, for the group-precedence reason documented at _READ_BITS.
+        return os.stat(p).st_mode & _READ_BITS == _READ_BITS
+
+    if probe is not None and not _readable(probe):
+        _widen_tree_for_container(data_dir)  # we own it → heal it, same as fetch_data.sh
+    if probe is not None and not _readable(probe):
+        raise RuntimeError(
+            f"spreadsheetbench mount is unusable: input workbook {probe} is mode "
+            f"0o{os.stat(probe).st_mode & 0o777:03o} — not readable by the container's uid, "
+            f"and we do not own it so it cannot be widened here. "
+            f"Fix with `chmod -R a+rX {data_dir}`."
+        )
+
+    # And the outputs root must be writable by the container, or nothing can be scored.
+    outputs_root = data_dir / "outputs"
+    outputs_root.mkdir(parents=True, exist_ok=True)
+    _make_container_writable(outputs_root, sticky=True)
+    if os.stat(outputs_root).st_mode & 0o022 != 0o022:  # both classes, as above
+        raise RuntimeError(
+            f"spreadsheetbench mount is unusable: {outputs_root} is mode "
+            f"0o{os.stat(outputs_root).st_mode & 0o777:03o} — the container's uid cannot "
+            f"create its output file there. It must be world-writable (see "
+            f"_make_container_writable); a foreign-owned outputs dir cannot be widened by us."
+        )
 
 
 def _reclaim_container_file(p: Path) -> bool:
@@ -500,20 +635,33 @@ def _cleanup_output_dir(rollout) -> None:
         pass  # _data_dir() unset — nothing was created, nothing to clean
 
 
-def _output_write_blocked(exec_results: list[str], container_out_dir: str) -> str | None:
-    """Return the offending line if the sandbox was denied writes to the output dir.
+def _sandbox_access_denied(exec_results: list[str], container_out_dir: str) -> str | None:
+    """Return the offending line if the sandbox was denied access through the bind mount.
 
-    A PermissionError/OSError on output_path is an INFRASTRUCTURE fault (the bind mount
-    is not writable by the container's uid — see _make_container_writable), not a defect
-    in the prompt under optimization. Reporting it as a plain zero-reward miss sends the
-    optimizer chasing an unfixable wall; surfacing it as a rollout error routes it
+    A PermissionError/OSError on a path under the mount is an INFRASTRUCTURE fault, not a
+    defect in the prompt under optimization. Reporting it as a plain zero-reward miss sends
+    the optimizer chasing an unfixable wall; surfacing it as a rollout error routes it
     through score()'s "do not optimize against it" path instead.
+
+    Two distinct faults land here, and telling them apart is what makes the report
+    actionable — the earlier write-only version of this function reported BOTH as "the
+    output dir is not writable", which cost hours of hunting the wrong thing:
+      - a denial under `container_out_dir` → the OUTPUT dir is not writable (the classic
+        uid mismatch on a dir we created; see _make_container_writable).
+      - a denial anywhere else under _CONTAINER_DATA_ROOT — typically on an INPUT workbook
+        — → the mount ROOT is not traversable, so nothing under it is reachable at all
+        (see _preflight_mount). Another rollout's output dir is NOT ours: ignore it.
     """
+    other_out_dirs = f"{_CONTAINER_DATA_ROOT}/outputs/"
     for res in reversed(exec_results):
         if "PermissionError" not in res and "OSError" not in res:
             continue
         for line in res.splitlines():
-            if ("PermissionError" in line or "OSError" in line) and container_out_dir in line:
+            if "PermissionError" not in line and "OSError" not in line:
+                continue
+            if container_out_dir in line:
+                return line.strip()
+            if _CONTAINER_DATA_ROOT in line and other_out_dirs not in line:
                 return line.strip()
     return None
 
@@ -652,8 +800,8 @@ class Adapter(CapabilityAdapter):
             conv_id = _sanitize_conv_id(f"capevolve-{run_tag}")
 
             local_dir = data_dir / "spreadsheet" / sid
-            container_dir = f"/mnt/data/spreadsheet/{sid}"
-            container_out_dir = f"/mnt/data/outputs/{run_tag}"
+            container_dir = f"{_CONTAINER_DATA_ROOT}/spreadsheet/{sid}"
+            container_out_dir = f"{_CONTAINER_DATA_ROOT}/outputs/{run_tag}"
             outputs_root = data_dir / "outputs"
             host_out_dir = outputs_root / run_tag
             # Both levels must be writable by the container's uid, not just the leaf:
@@ -746,19 +894,33 @@ class Adapter(CapabilityAdapter):
                     break
 
             if not case1_path.exists():
-                blocked = _output_write_blocked(exec_results, container_out_dir)
+                blocked = _sandbox_access_denied(exec_results, container_out_dir)
                 if blocked:
+                    # Name the fault precisely: a denial on the OUTPUT dir is the uid
+                    # mismatch on a dir we created, while a denial anywhere else under the
+                    # mount means the container cannot traverse the dataset root at all —
+                    # a different fix, and _preflight_mount should have caught it.
+                    if container_out_dir in blocked:
+                        why = (
+                            f"sandbox denied writes to the bind-mounted output dir "
+                            f"{container_out_dir} ({blocked}) — the host dir is not "
+                            f"writable by the container's uid; see _make_container_writable"
+                        )
+                    else:
+                        why = (
+                            f"sandbox denied access through the bind mount "
+                            f"{_CONTAINER_DATA_ROOT} ({blocked}) — the container's uid cannot "
+                            f"traverse/read SPREADSHEETBENCH_DATA_DIR, so no path under the "
+                            f"mount is reachable; run `chmod -R a+rX` on it (see "
+                            f"_preflight_mount)"
+                        )
                     return Rollout(
                         task_id=task.id,
                         output=last_code,
                         trace=messages,
                         cost_usd=cost,
                         tokens=tokens,
-                        error=(
-                            f"sandbox denied writes to the bind-mounted output dir "
-                            f"{container_out_dir} ({blocked}) — the host dir is not "
-                            f"writable by the container's uid; see _make_container_writable"
-                        ),
+                        error=why,
                         metadata={"run_tag": run_tag, "id": sid, "model": model_config.MODEL, "seed": seed},
                     )
             else:
@@ -961,12 +1123,46 @@ if __name__ == "__main__":
         "---> 76 wb.save(output_path)\n"
         f"PermissionError: [Errno 13] Permission denied: '{_out}/1_160-6_output.xlsx'"
     )
-    assert _output_write_blocked([_perm], _out) is not None
-    assert _output_write_blocked(["ok", _perm], _out) is not None
-    assert _output_write_blocked([_perm], "/mnt/data/outputs/other_tag") is None  # different rollout's dir
-    assert _output_write_blocked(["NameError: name 'wb' is not defined"], _out) is None
-    assert _output_write_blocked([], _out) is None
-    print("spreadsheetbench output-write-blocked self-check: OK")
+    assert _sandbox_access_denied([_perm], _out) is not None
+    assert _sandbox_access_denied(["ok", _perm], _out) is not None
+    assert _sandbox_access_denied([_perm], "/mnt/data/outputs/other_tag") is None  # different rollout's dir
+    assert _sandbox_access_denied(["NameError: name 'wb' is not defined"], _out) is None
+    assert _sandbox_access_denied([], _out) is None
+
+    # A non-traversable mount ROOT denies the INPUT read — the 912-archive fault. It must
+    # classify as infra too, or 50 rollouts get reported as plain zero-reward misses.
+    _read_denied = (
+        "PermissionError                        Traceback (most recent call last)\n"
+        "Cell In[1], line 3\n"
+        "----> 3 wb = openpyxl.load_workbook(path)\n"
+        "PermissionError: [Errno 13] Permission denied: "
+        "'/mnt/data/spreadsheet/110-2/1_110-2_input.xlsx'"
+    )
+    _hit = _sandbox_access_denied([_read_denied], _out)
+    assert _hit is not None and "1_110-2_input.xlsx" in _hit
+    print("spreadsheetbench sandbox-access-denied self-check: OK")
+
+    # The mount preflight: heal a 0700 dataset root, and refuse to run when we cannot.
+    with _tempfile.TemporaryDirectory() as _td:
+        _root = Path(_td) / "all_data_912_v0.1"
+        (_root / "spreadsheet" / "110-2").mkdir(parents=True)
+        (_root / "spreadsheet" / "110-2" / "1_110-2_input.xlsx").write_bytes(b"PK\x03\x04")
+        os.chmod(_root, 0o700)                      # exactly what the 912 tarball ships
+        _preflight_mount(_root)                     # must widen, not raise
+        assert (_root.stat().st_mode & 0o055) == 0o055
+        assert (_root / "outputs").is_dir() and (_root / "outputs").stat().st_mode & 0o002
+        _preflight_mount(_root)                     # idempotent on a healthy tree
+
+        # tar ANDs stored modes with the extracting umask, so the workbooks can land 0640
+        # too — a root-only fix would still deny the read. We own this tree, so heal it.
+        _wb = _root / "spreadsheet" / "110-2" / "1_110-2_input.xlsx"
+        os.chmod(_wb, 0o600)
+        _preflight_mount(_root)
+        # BOTH classes — the container's gid matches the tree's group and POSIX stops at
+        # the first matching class, so 0o604 (`-rw----r--`) is still EACCES for it.
+        assert _wb.stat().st_mode & 0o044 == 0o044, "workbook must be container-readable"
+        assert not _wb.stat().st_mode & 0o022, "read-only input stays read-only"
+    print("spreadsheetbench mount-preflight self-check: OK")
 
     with _tempfile.TemporaryDirectory() as _td:
         _p = Path(_td) / "outputs"

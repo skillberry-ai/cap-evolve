@@ -122,6 +122,20 @@ ENV
   spreadsheetbench)
     cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
     cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
+    # Prompt-only optimizer instructions. The default template shipped in
+    # templates/project/optimizer/INSTRUCTIONS.md is written for a capability that
+    # includes TOOL CODE: it tells the optimizer to prefer in-body guards, names
+    # `tools.py` and tau2's `get_*_details`, and its self-check demands "edits across BOTH
+    # policy.md AND tools.py". This capability is `[system-prompt]` — one prompt.md, no
+    # tools — so that guidance sends the optimizer hunting for code to change (in run
+    # 30691123806 it went and edited adapter.py). The harness picks up
+    # $PROJ/optimizer/INSTRUCTIONS.md automatically, and OPT_INSTRUCTIONS pins it by
+    # absolute path so it cannot silently fall back to the generic template (#252). No
+    # core change is needed either way.
+    mkdir -p "$PROJ/optimizer"
+    cp "$REPO/templates/project/optimizer/INSTRUCTIONS.prompt-only.md" \
+       "$PROJ/optimizer/INSTRUCTIONS.md"
+    OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
     SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
     SB_DEFAULT="$SB_CACHE/sample_data_200"
     # pilot draws its tasks from full's train split, so it needs the 912-task dataset too.
@@ -215,6 +229,12 @@ optimizer_model:    $OPTIMIZER_MODEL
 target_model:       $AGENT_MODEL
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
+# Set (to an ABSOLUTE path) only by an arm that ships its own optimizer instructions;
+# empty is falsy in core, which then uses its default optimizer/INSTRUCTIONS.md lookup —
+# so this line is a no-op for every other benchmark. Absolute on purpose: a RELATIVE value
+# resolves against different cwds in check vs run and can silently fall back to the generic
+# template (issue #252), which would erase an arm's instructions with no error.
+optimizer_instructions_file: "${OPT_INSTRUCTIONS:-}"
 algorithm_skill:    hill-climb
 algorithm_focus:    $ALGORITHM_FOCUS
 dataset_source:     adapter

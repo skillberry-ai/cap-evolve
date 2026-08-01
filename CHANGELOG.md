@@ -6,6 +6,44 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The 912-task dataset's own top-level directory locked the sandbox out of everything.**
+  The upstream `spreadsheetbench_912_v0.1.tar.gz` stores its top-level dir as `drwx------`
+  (the 200-task sample stores `0755`), and `tar` preserves stored modes. The adapter
+  bind-mounts exactly that dir at `/mnt/data` in a container running as uid 1000, so a
+  non-traversable root makes every path under the mount unreachable — **reads too, not just
+  writes**: `open()` on an input workbook and even `Path.exists()` raise `EACCES`, because a
+  missing search bit is not a missing file. Only the `full`/`pilot` tiers were affected;
+  `smoke` uses the 200-task sample. Pilot run 30691123806 spent **$77.49 and ~3h** to
+  discover this, scored 0.000 across 50 tasks with an EACCES traceback in all 50 rollouts,
+  and blamed "the output dir is not writable" — a diagnosis that costs hours, because the
+  output dir was fine and so were `spreadsheet/` and the workbooks (0755/0644). Fixed at
+  three levels: `fetch_data.sh` normalizes modes on extract (`chmod -R a+rX` — traverse and
+  read only; the dataset is read-only INPUT) and re-normalizes the root for trees cached by
+  an older revision; the adapter widens the root it can own and then **verifies the mount
+  before the first LLM call** (`_preflight_mount`), so an unusable mount aborts in seconds at
+  ~$0 instead of burning a full eval; and the denial classifier now recognizes denied
+  *reads* anywhere under the mount and reports the traverse fault distinctly from the
+  output-dir fault, since the two need different fixes.
+- **The optimizer was told to edit `tools.py` on a benchmark that has no tools.** The shared
+  `templates/project/optimizer/INSTRUCTIONS.md` is written for a capability that includes
+  tool CODE: it instructs "prefer code", names `tools.py` and tau2's `get_*_details`, and its
+  self-check demands "edits across BOTH policy.md AND tools.py". SpreadsheetBench's
+  capability is `[system-prompt]` — a single `prompt.md` — so that guidance contradicts the
+  correctly-rendered "what you are editing" block and sends the optimizer hunting for code.
+  In run 30691123806 it found some: `cand_0002` scored 0.567 by patching **`adapter.py`** to
+  chmod the data root while leaving `prompt.md` byte-identical to the seed, so that run's
+  apparent 0.000 → 0.567 gain was infrastructure repair, not capability. A prompt-only
+  instructions template (`INSTRUCTIONS.prompt-only.md`) now ships alongside the default:
+  prompt-appropriate levers (output contract, ordered/unavoidable step, worked method,
+  narrowing predicate, consolidation), an explicit boundary that the adapter/harness/scorer
+  are not editable, and a rule that an ENVIRONMENT fault is to be *diagnosed and handed
+  back*, not worked around. `run_suite.sh` selects it for the spreadsheetbench arm at the
+  path `cli.py` already defaults to, and additionally pins it by ABSOLUTE path — a relative
+  `optimizer_instructions_file` resolves against different cwds in check vs run and can
+  silently fall back to the generic template (#252), which would erase this fix with no
+  error. That spec line is empty (a verified no-op in both the PyYAML and the fallback
+  parser) for every other benchmark, so no `core/` change was needed and tau2's
+  code-bearing guidance is untouched.
 - **A running `pilot` leg was invisible on the benchmarks page.** `site/benchmarks.js`'s
   `JOB_RE` hardcoded `smoke|full`, so it never matched the `pilot / spreadsheetbench` job name:
   no "Running now" entry and no way to open the run's UI while it executed. Nothing errored —
