@@ -1,5 +1,584 @@
 [
   {
+    "run_id": 30691123806,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30691123806",
+    "bench": "spreadsheetbench",
+    "tier": "pilot",
+    "event": "workflow_dispatch",
+    "source": "manual (main)",
+    "pr": null,
+    "branch": "main",
+    "sha": "b315e09ba5e2a1f97bf1ddf80fa06fe56e844fc8",
+    "date": "2026-08-01T11:31:10Z",
+    "iterations": 2,
+    "trials": 1,
+    "agent_model": "azure/gpt-5.5",
+    "optimizer_model": "claude-opus-4-8",
+    "conclusion": "failure",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "73-45",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "94-8",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "160-6",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "185-13",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "110-2",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "325-44",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "353-29",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "435-38",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "448-11",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "450-9",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "458-49",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "575-16",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "587-38",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "CF_11072",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "38332",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "39046",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "41297",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "48354",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "50630",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "51359",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "52021",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "53167",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "53367",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "1563",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "3911",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "5192",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "11842",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "16511",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "30709",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "44266",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "46897",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "50051",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "51958",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "55060",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "55667",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "55931",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "56996",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "57232",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "58047",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "58147",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "59259",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "59667",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "47741",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "55609",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "56427",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "56637",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "56975",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "57090",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "58109",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "spreadsheetbench",
+        "tier": "pilot",
+        "task": "59743",
+        "reward_baseline": 0.0,
+        "reward_opt": null,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_pilot_spreadsheetbench_proj/.capevolve/run_suite"
+      }
+    ],
+    "steps": [
+      {
+        "phase": "baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.0,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 46.49678999999999,
+        "eval_seconds": 6972.86
+      },
+      {
+        "phase": "iterate",
+        "iter": 1,
+        "candidate": "cand_0001",
+        "accepted": false,
+        "reward": 0.0,
+        "optimizer_usd": 2.061258,
+        "optimizer_seconds": 459.65,
+        "eval_usd": 30.991535000000002,
+        "eval_seconds": 3197.1
+      },
+      {
+        "phase": "iterate",
+        "iter": 2,
+        "candidate": "cand_0002",
+        "accepted": true,
+        "reward": 0.5666666666666667,
+        "optimizer_usd": 2.980713,
+        "optimizer_seconds": 641.88,
+        "eval_usd": 2.8669250000000015,
+        "eval_seconds": 592.25
+      },
+      {
+        "phase": "finalize",
+        "iter": null,
+        "candidate": "cand_0002",
+        "accepted": null,
+        "reward": 0.4,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.2616,
+        "eval_seconds": 90.03
+      },
+      {
+        "phase": "finalize_baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.4,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.35262000000000004,
+        "eval_seconds": 145.52
+      }
+    ],
+    "suite": null,
+    "has_ui": true
+  },
+  {
     "run_id": 30684845463,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30684845463",
     "bench": "tau2",
