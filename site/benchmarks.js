@@ -1,6 +1,10 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
 const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
-const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
+// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full, …) and
+// hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
+// invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
+// ("plan legs", "aggregate history") never match.
+const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);

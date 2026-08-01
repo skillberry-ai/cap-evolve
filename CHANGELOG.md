@@ -6,6 +6,15 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A running `pilot` leg was invisible on the benchmarks page.** `site/benchmarks.js`'s
+  `JOB_RE` hardcoded `smoke|full`, so it never matched the `pilot / spreadsheetbench` job name:
+  no "Running now" entry and no way to open the run's UI while it executed. Nothing errored —
+  the run simply could not be seen. The tier is now matched generically (the bench allowlist
+  stays explicit so "plan legs"/"aggregate history" still never match), and the history table's
+  tier filter offers `pilot`. A test ties the site's matcher to the workflow's `TIERS` list so
+  adding a tier cannot silently hide it again.
+
+### Fixed
 - **gpt-5.x rejected our temperature override, failing every rollout at $0.00 spend.** The
   gateway answers `400 Unsupported value: 'temperature' does not support 0.0 with this model.
   Only the default (1) value is supported.` — so run 30682720920 lost an entire pilot: all 60
