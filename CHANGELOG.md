@@ -6,6 +6,26 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Sandbox containers were never released, and the leftovers ran forever.** The vendored
+  server reclaims a container only on a hardcoded 10-minute idle timeout
+  (`api.py`'s `KERNEL_TIMEOUT`) or on a force-cleanup at SIGINT, and nothing released a
+  kernel when its rollout ended — every rollout mints a fresh `conv_id`. At 8-way
+  concurrency that leaves ~50 containers alive at all times, and the ones still alive when
+  the server is asked to stop are stopped **serially** inside the adapter's flat 60s
+  shutdown budget: whatever the budget doesn't reach is orphaned and then runs forever,
+  because the only process that knew about it is gone. Run 30691123806 left **176**
+  `conv-capevolve-*` containers running on the self-hosted runner (all "unhealthy", load
+  average 14), with `ConnectionRefusedError: Failed to reconnect to kernel websocket`
+  throughout its sandbox log — at three full seeds (2,279 rollouts each) that is a
+  runner-health problem, not a cosmetic one. The adapter now releases each rollout's
+  container in a `finally`, so the live count tracks concurrency instead of run length, and
+  the shutdown budget scales with however many are actually left (~0 now) instead of being a
+  flat 60s. Done **without touching `third_party/`** — that directory is a filtered subtree
+  which must stay byte-identical to upstream for `git subtree pull` to work, so the adapter
+  serves a small wrapper that imports the vendored `ExecuteHandler`/`cleanup_kernels`
+  unchanged and adds `/release` (plus `/health`, which is what lets shutdown size its
+  budget). Verified live on the runner: container created → released → `live_kernels: 0` →
+  shutdown in 0.1s with nothing left to stop.
 - **The 912-task dataset's own top-level directory locked the sandbox out of everything.**
   The upstream `spreadsheetbench_912_v0.1.tar.gz` stores its top-level dir as `drwx------`
   (the 200-task sample stores `0755`), and `tar` preserves stored modes. The adapter
