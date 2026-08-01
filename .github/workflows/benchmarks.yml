@@ -31,10 +31,10 @@ on:
         default: all
         options: [all, tau2, swebench, skillsbench, spreadsheetbench]
       tier:
-        description: "Which tier (default smoke; full is the whole/representative benchmark and is expensive)"
+        description: "Which tier (default smoke; pilot is a small cost/runtime measurement rig — its rewards are NOT comparable; full is the whole benchmark and is expensive). A tier only runs for benchmarks that populate it."
         type: choice
         default: smoke
-        options: [all, smoke, full]
+        options: [all, smoke, pilot, full]
       iterations:
         description: "Optimizer iterations per task for the FULL tier (default 10; raise to give the optimizer more budget). Smoke always runs 3, regardless of this input."
         type: string
@@ -189,8 +189,16 @@ jobs:
           # literal `matrix.tier` / `matrix.bench` lists).
           # tier is a first-class dimension. full runs the whole/representative benchmark
           # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
-          TIERS = ["smoke", "full"]
+          TIERS = ["smoke", "pilot", "full"]
           BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench"]
+
+          # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
+          # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
+          # so its rewards are not comparable to anything, and the aggregate job publishes
+          # EVERY leg to benchmark-history. Letting "all" pick it up would put meaningless
+          # numbers on the benchmarks page. A `benchmark-pilot` label still works, because
+          # that names the tier deliberately.
+          EXPLICIT_ONLY_TIERS = {"pilot"}
 
           event = os.environ["EVENT"]
           tier_sel = os.environ.get("TIER_SEL") or "smoke"
@@ -201,10 +209,22 @@ jobs:
           for tier in TIERS:
               for bench in BENCHES:
                   if event == "workflow_dispatch":
-                      run = tier_sel in ("all", tier) and bench_sel in ("all", bench)
+                      tier_ok = (tier_sel == tier
+                                 or (tier_sel == "all" and tier not in EXPLICIT_ONLY_TIERS))
+                      run = tier_ok and bench_sel in ("all", bench)
                   else:
                       # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
                       run = f"benchmark-{tier}" in labels or f"benchmark-{tier}-{bench}" in labels
+                  # A tier only exists for a benchmark that populates it. run_suite.sh already
+                  # no-ops on a missing tasks.json, but emitting the leg anyway claims a slot on
+                  # the single serialized self-hosted runner just to warn and exit — precisely
+                  # the waste this planner was introduced to remove. Filtering here keeps a
+                  # partially-populated tier (e.g. only one benchmark ships `pilot/`) free for
+                  # everyone else. No-op for smoke/full, which every benchmark populates.
+                  if run and not os.path.isfile(f"ci/benchmarks/{bench}/{tier}/tasks.json"):
+                      print(f"skip {tier}/{bench}: no tasks.json for that tier",
+                            file=sys.stderr, flush=True)
+                      run = False
                   if run:
                       legs.append({"tier": tier, "bench": bench})
 

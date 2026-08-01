@@ -109,10 +109,61 @@ def test_smoke_tier_still_has_no_committed_split():
 
 
 def test_no_other_benchmark_opted_into_a_committed_split():
-    """The run_suite hook is behaviour-neutral only while no other tier ships this file."""
-    others = sorted(
-        p.relative_to(REPO).as_posix()
-        for p in (REPO / "ci" / "benchmarks").glob("*/*/split_ids.json")
-        if p != SPLIT
-    )
-    assert others == [], f"unexpected committed splits would change those tiers: {others}"
+    """The run_suite hook is behaviour-neutral only while no OTHER benchmark ships this file.
+
+    SpreadsheetBench deliberately ships two: `full` (the held-out comparison split) and
+    `pilot` (the measurement rig). Any third path here means another benchmark's tier just
+    changed meaning from FIT to held-out — which should be a deliberate decision, not a
+    side effect, so this test is the place it gets noticed.
+    """
+    expected = {"ci/benchmarks/spreadsheetbench/full/split_ids.json",
+                "ci/benchmarks/spreadsheetbench/pilot/split_ids.json"}
+    found = {p.relative_to(REPO).as_posix()
+             for p in (REPO / "ci" / "benchmarks").glob("*/*/split_ids.json")}
+    unexpected = sorted(found - expected)
+    assert not unexpected, f"unexpected committed splits would change those tiers: {unexpected}"
+    assert found == expected, f"a documented split went missing: {sorted(expected - found)}"
+
+
+# ---- the pilot tier (a measurement rig, not a comparison) --------------------
+
+PILOT = BENCH / "pilot"
+
+
+def test_pilot_tasks_come_only_from_fulls_train_split(split):
+    """A pilot must never touch tasks whose scores will later be reported."""
+    ids = {str(e["id"]) for e in json.loads((PILOT / "tasks.json").read_text(encoding="utf-8"))}
+    assert ids <= set(split["train"]), "pilot tasks must be a subset of full's TRAIN split"
+    assert not ids & set(split["val"]), "pilot touches full's selection split"
+    assert not ids & set(split["test"]), "pilot touches full's SEALED test split"
+
+
+def test_pilot_split_is_sized_for_measurement_not_comparison():
+    """val large (that is what each iteration evaluates), train/test small and cheap."""
+    ps = json.loads((PILOT / "split_ids.json").read_text(encoding="utf-8"))
+    assert (len(ps["train"]), len(ps["val"]), len(ps["test"])) == (5, 50, 5)
+    tr, va, te = set(ps["train"]), set(ps["val"]), set(ps["test"])
+    assert not (tr & va) and not (tr & te) and not (va & te)
+
+
+def test_pilot_split_covers_exactly_the_pilot_tasks():
+    ids = {str(e["id"]) for e in json.loads((PILOT / "tasks.json").read_text(encoding="utf-8"))}
+    ps = json.loads((PILOT / "split_ids.json").read_text(encoding="utf-8"))
+    assert set(ps["train"]) | set(ps["val"]) | set(ps["test"]) == ids
+
+
+def test_pilot_is_reproducible_from_its_generator():
+    gen = BENCH / "utils" / "make_pilot.py"
+    before = ((PILOT / "tasks.json").read_text(encoding="utf-8"),
+              (PILOT / "split_ids.json").read_text(encoding="utf-8"))
+    subprocess.run([sys.executable, str(gen), "--write"], capture_output=True, text=True, check=True)
+    after = ((PILOT / "tasks.json").read_text(encoding="utf-8"),
+             (PILOT / "split_ids.json").read_text(encoding="utf-8"))
+    assert before == after, "pilot tier differs from make_pilot.py output — regenerate it"
+
+
+def test_pilot_pins_the_skillopt_comparison_model():
+    """The pilot exists partly to prove azure/gpt-5.5 works on the gateway at all."""
+    tasks = json.loads((PILOT / "tasks.json").read_text(encoding="utf-8"))
+    assert {t["agent"] for t in tasks} == {"azure/gpt-5.5"}
+    assert {t["tag"] for t in tasks} == {"pilot"}

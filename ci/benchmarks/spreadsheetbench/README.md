@@ -1,19 +1,48 @@
 # SpreadsheetBench tier configuration
 
-Two tiers, with **different purposes and different honesty guarantees**.
+Three tiers, with **different purposes and different honesty guarantees**.
 
-| | `smoke` | `full` |
-|---|---|---|
-| Tasks | 10 | 912 (all of SpreadsheetBench original) |
-| Split | **no-holdout FIT** — `train == val == test` | **held-out** — 182 / 91 / 639, disjoint |
-| `finalize` number is | a FIT metric | a real generalization number |
-| Agent turns | 5 | **30** (SkillOpt parity) |
-| Container concurrency | 4 | 8 |
-| Purpose | cheap, fast CI signal | paper comparison |
+| | `smoke` | `pilot` | `full` |
+|---|---|---|---|
+| Tasks | 10 | 60 (from `full`'s train split) | 912 (all of SpreadsheetBench original) |
+| Split | **no-holdout FIT** | 5 / **50** / 5 — sized to measure | **held-out** — 182 / 91 / 639, disjoint |
+| `finalize` number is | a FIT metric | **meaningless** | a real generalization number |
+| Agent turns | 5 | **30** | **30** (SkillOpt parity) |
+| Container concurrency | 4 | 8 | 8 |
+| Runs on `tier=all`? | yes | **no — explicit only** | yes |
+| Purpose | cheap, fast CI signal | cost/runtime measurement | paper comparison |
 
-The smoke tier's number is **not** comparable to any published result — the report labels it
-`train==val==test (FIT metric, not a generalization/held-out claim)` for that reason. Only
-`full` produces a number that may be put next to a paper.
+Only `full` produces a number that may be put next to a paper. The smoke report labels itself
+`train==val==test (FIT metric, not a generalization/held-out claim)`.
+
+## The `pilot` tier — a measurement rig, not a benchmark
+
+`pilot` exists to answer three questions before a ~$450 full run is launched:
+
+1. **What does a rollout cost and take at `MAX_TURNS=30`?** Every other anchor comes from
+   smoke at 5 turns and does not transfer.
+2. **Does `azure/gpt-5.5` work on the gateway at all?** Nothing has exercised it yet.
+3. **Does the parallel LibreOffice recalc hold up at non-trivial volume?**
+
+Its split is deliberately *not* 2:1:7. `val` is 50 because that is what every iteration
+evaluates (full's is 91, so one pilot iteration extrapolates directly); `test` is 5 because
+`finalize` evaluates it twice and teaches nothing new about per-rollout cost; `train` is 5
+because with `algorithm_focus: all` the train split is never evaluated.
+
+> **Pilot reward numbers are not comparable to anything** — not to SkillOpt, not to `full`, not
+> across pilot runs. A 5-task test split is a cost probe, not a measurement of quality. This is
+> why `pilot` is excluded from `tier=all`: the aggregate job publishes every leg to
+> `benchmark-history`, and sweeping it in would put meaningless rows on the benchmarks page.
+
+Pilot tasks are drawn **only from `full`'s train ids**, so `full`'s selection and test splits
+stay untouched by any pilot run. Regenerate with:
+
+```bash
+python3 ci/benchmarks/spreadsheetbench/utils/make_pilot.py --write
+```
+
+Suggested dispatch — `tier=pilot`, `trials=1`, `iterations=2`, `agent_model=azure/gpt-5.5`.
+At those settings it is `50 + 2×50 + 2×5` = **160 rollouts**.
 
 ## The held-out split
 

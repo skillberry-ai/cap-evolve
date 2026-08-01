@@ -6,6 +6,24 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **`pilot` tier — a cost/runtime measurement rig for SpreadsheetBench.** Answers the three
+  things a ~$450 full run depends on and nobody has measured: cost and wall-clock per rollout at
+  `MAX_TURNS=30` (every existing anchor is smoke at 5 turns, so it does not transfer), whether
+  `azure/gpt-5.5` works on the gateway at all, and recalc throughput at non-trivial volume.
+  60 tasks drawn **only from `full`'s train ids**, so `full`'s selection and test splits stay
+  untouched. Its split is deliberately not 2:1:7 but 5/50/5 — `val` sized to be a solid anchor
+  (full's is 91, so one pilot iteration extrapolates directly), `test` tiny because `finalize`
+  evaluates it twice and teaches nothing new. **Pilot rewards are not comparable to anything**,
+  which is why the tier is excluded from `tier=all`: the aggregate job publishes every leg to
+  `benchmark-history` and sweeping it in would put meaningless rows on the benchmarks page.
+- **Tiers are now populated per benchmark.** The planner only emits a leg when
+  `ci/benchmarks/<bench>/<tier>/tasks.json` exists. `run_suite.sh` already no-opped on a missing
+  file, but emitting the leg anyway claimed a slot on the single serialized self-hosted runner
+  just to warn and exit — the waste the planner was introduced to remove. A partially-populated
+  tier (only one benchmark ships `pilot/`) now costs the others nothing. Verified no-op: all 30
+  pre-existing dispatch/label selections produce byte-identical legs.
+
+### Added
 - **SpreadsheetBench full tier can now produce a SkillOpt-comparable number.** Four gaps closed,
   all without touching `core/`:
   - **Held-out split.** A tier that commits `<bench>/<tier>/split_ids.json` now gets that exact

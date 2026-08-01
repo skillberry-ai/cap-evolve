@@ -38,7 +38,8 @@ case "$BENCH" in
       echo "::warning:: LibreOffice not found — formula-only cells won't be recalculated before scoring"
     fi
     SB_VARIANT="sample_200"
-    if [ "${TIER:-smoke}" = "full" ]; then SB_VARIANT="full_912"; fi
+    # pilot's tasks are drawn from full's train split, so it needs the 912-task dataset too.
+    case "${TIER:-smoke}" in full|pilot) SB_VARIANT="full_912";; esac
     SPREADSHEETBENCH_DATA_DIR="$(SPREADSHEETBENCH_VARIANT="$SB_VARIANT" "$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
 esac
 

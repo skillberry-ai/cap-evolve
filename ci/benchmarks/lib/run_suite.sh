@@ -124,7 +124,8 @@ ENV
     cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
     SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
     SB_DEFAULT="$SB_CACHE/sample_data_200"
-    if [ "$TIER" = "full" ]; then SB_DEFAULT="$SB_CACHE/all_data_912_v0.1"; fi
+    # pilot draws its tasks from full's train split, so it needs the 912-task dataset too.
+    case "$TIER" in full|pilot) SB_DEFAULT="$SB_CACHE/all_data_912_v0.1";; esac
     # SPREADSHEETBENCH_DATA_DIR is expected to be set (and exported to GITHUB_ENV) by
     # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
     # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
@@ -134,14 +135,15 @@ ENV
     # (still bounded; each container is ~8GB RAM / 2 CPU, see adapter.py's NOTE ON SCORING)
     # unless the caller already pinned SPREADSHEETBENCH_CONCURRENCY explicitly.
     SB_CONCURRENCY_DEFAULT=4
-    if [ "$TIER" = "full" ]; then SB_CONCURRENCY_DEFAULT=8; fi
+    case "$TIER" in full|pilot) SB_CONCURRENCY_DEFAULT=8;; esac
     # Rounds of code-exec interaction the agent gets per task. SkillOpt runs SpreadsheetBench
     # as "multi-round codegen with up to 30 turns" (arXiv 2605.23904), and the adapter's own
     # default is 5 — a real handicap on a multi-round benchmark, so full (the comparison tier)
     # matches 30. Smoke stays at 5 to keep it a cheap, fast signal whose numbers remain
     # comparable to its own history. Override with SPREADSHEETBENCH_MAX_TURNS.
     SB_MAX_TURNS_DEFAULT=5
-    if [ "$TIER" = "full" ]; then SB_MAX_TURNS_DEFAULT=30; fi
+    # pilot exists to MEASURE the full tier, so it must match full's turn budget.
+    case "$TIER" in full|pilot) SB_MAX_TURNS_DEFAULT=30;; esac
     CAPS="[system-prompt]"
     cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL

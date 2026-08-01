@@ -133,9 +133,30 @@ def test_generated_spec_threads_split_seed():
     assert "split_seed:         ${SPLIT_SEED:-0}" in src
 
 
-def test_full_tier_matches_skillopts_30_turns():
-    """SkillOpt runs SpreadsheetBench with up to 30 turns; the adapter default is 5."""
+@pytest.mark.parametrize("tier,turns,concurrency,dataset", [
+    # smoke stays cheap and comparable to its own history; pilot must match full, since its
+    # entire purpose is to MEASURE what a full run will cost.
+    ("smoke", "5", "4", "sample_data_200"),
+    ("pilot", "30", "8", "all_data_912_v0.1"),
+    ("full", "30", "8", "all_data_912_v0.1"),
+])
+def test_spreadsheetbench_tier_defaults(tier, turns, concurrency, dataset):
+    """Executes the arm's tier conditions rather than string-matching their current form."""
     src = RUN_SUITE.read_text(encoding="utf-8")
-    assert "SB_MAX_TURNS_DEFAULT=5" in src, "smoke must stay cheap at 5 turns"
-    assert 'if [ "$TIER" = "full" ]; then SB_MAX_TURNS_DEFAULT=30; fi' in src
+    arm = src[src.index("  spreadsheetbench)"):src.index("  *) echo \"unknown bench")]
+    lines = [ln for ln in arm.splitlines()
+             if any(k in ln for k in ("SB_DEFAULT=", "SB_CONCURRENCY_DEFAULT=",
+                                      "SB_MAX_TURNS_DEFAULT=", 'case "$TIER"'))]
+    script = "\n".join([f'TIER={tier}', 'SB_CACHE=/cache', *lines,
+                        'echo "$SB_MAX_TURNS_DEFAULT $SB_CONCURRENCY_DEFAULT $SB_DEFAULT"'])
+    out = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    got_turns, got_conc, got_data = out.stdout.split()
+    assert got_turns == turns, f"{tier}: turns {got_turns} != {turns}"
+    assert got_conc == concurrency, f"{tier}: concurrency {got_conc} != {concurrency}"
+    assert got_data.endswith(dataset), f"{tier}: dataset {got_data} != .../{dataset}"
+
+
+def test_max_turns_is_overridable():
+    src = RUN_SUITE.read_text(encoding="utf-8")
     assert "SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}" in src
