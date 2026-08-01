@@ -6,6 +6,25 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **tau2 runs reported $0.0000 of eval spend despite real rollouts, so they could not be
+  costed at all.** `sim.agent_cost`/`sim.user_cost` come from tau2's `get_cost`, which is
+  **all-or-nothing**: it returns `None` the moment any non-tool message lacks a per-message
+  `cost`. The adapter's `sim.agent_cost or 0.0` collapsed that `None` into `0.0`, so "the
+  provider did not price this" and "this was free" produced the identical number — and
+  `litellm_proxy/...` gateway aliases, which is what every CI benchmark uses, are exactly the
+  unpriced case. Run 30684845463 spent real money across 10 tasks × 3 iterations and reported
+  eval $0.00, with only the $25.90 optimizer cost visible. The adapter now (a) recovers
+  **tokens**, which tau2 exposes per message and which the adapter was discarding with a
+  hardcoded `tokens=0` — the honest fallback unit, since spend can be derived from them
+  out-of-band; (b) salvages a **partial** cost from whatever the provider did price, instead
+  of dropping the whole run's cost over one unpriced message; and (c) records `cost_source`
+  (`tau2` / `partial_messages` / `unpriced`) plus the missing-cost and missing-usage counts in
+  the rollout metadata, so a `0.0` can be read as *unpriced* rather than *free*. It
+  deliberately does **not** price tokens from a public rate table — the gateway's real rates
+  are not knowable client-side, and a fabricated dollar figure sitting next to measured ones
+  is worse than an absent one; a test enforces that. `Rollout.cost_usd` is a non-optional
+  float that coerces `None` to `0.0`, so representing "unknown" in the field itself would
+  need a `core/` change and is left alone.
 - **Sandbox containers were never released, and the leftovers ran forever.** The vendored
   server reclaims a container only on a hardcoded 10-minute idle timeout
   (`api.py`'s `KERNEL_TIMEOUT`) or on a force-cleanup at SIGINT, and nothing released a
