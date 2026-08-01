@@ -6,6 +6,27 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Held-out runs published no base→opt reward at all — the benchmarks page showed "—" for
+  exactly the runs whose numbers matter.** `metrics.suite_report` paired per-task baseline
+  from `baseline.json` (the **val** split) against optimized from `final.json` (the **test**
+  split). That was correct while every tier was no-holdout, which its docstring stated
+  outright — but #266 gave `full`/`pilot` genuinely disjoint splits, after which no task id
+  could ever match. Every `reward_opt` came back `null`, `record.rollup` then returned `None`
+  for the whole suite (it requires both sides), and `benchmarks.js` renders `—` when
+  `suite` is null. Verified on the published record for run 30708908659: 50/50 tasks with
+  `reward_baseline`, **0/50** with `reward_opt`, `suite: null`. The honest pairing was
+  available all along: `final.json` carries `test_baseline` (the seed) and `test` (the best
+  candidate) over the **same sealed tasks**, which is the comparison a held-out run exists to
+  produce, so that is what a held-out run now reports — and the report stops claiming
+  `train==val==test` on runs where it is false. Conditioned on the val and test splits being
+  genuinely disjoint, so no-holdout `smoke` keeps byte-identical behaviour (a test pins
+  this; an earlier draft of the fix would have quietly shifted smoke's numbers).
+- **`ci/benchmarks/utils/rebuild_record.py`** repairs records that were already published,
+  reconstructing the per-task rows and suite rollup from the run's artifact (which retains
+  `final.json`) using the aggregate job's own `rollup`. Needed because the aggregate job
+  checks out at the dispatch SHA, so a run already in flight when this merges still publishes
+  a stale record. It refuses to touch any record whose rows already carry an opt reward, so it
+  is safe to point at the whole directory, and it is idempotent.
 - **tau2 runs reported $0.0000 of eval spend despite real rollouts, so they could not be
   costed at all.** `sim.agent_cost`/`sim.user_cost` come from tau2's `get_cost`, which is
   **all-or-nothing**: it returns `None` the moment any non-tool message lacks a per-message
