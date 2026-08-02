@@ -12,9 +12,14 @@ WHY THIS EXISTS
     fix merged will also publish a stale record. This repairs those too.
 
 USAGE
-    # 1. get the run's artifact (contains ui/data/runs_*_file_path_final_json.json)
+    # From the run dir directly — PREFERRED whenever the workspace still exists, because the
+    # artifact's UI snapshot is size-capped and truncates on a large test split (the 639-task
+    # full tier does not fit, so the artifact route simply cannot rebuild it).
+    scp runner:.../run_suite/final.json /tmp/final.json
+    python3 ci/benchmarks/utils/rebuild_record.py /tmp/final.json records/<run_id>__<tier>-<bench>.json
+
+    # Or from a downloaded artifact, for a run whose workspace is long gone:
     gh run download <run_id> --repo <owner>/<repo> --dir /tmp/art
-    # 2. rewrite the record in place
     python3 ci/benchmarks/utils/rebuild_record.py /tmp/art records/<run_id>__<tier>-<bench>.json
     # 3. inspect, then commit the record to the benchmark-history branch
 
@@ -31,7 +36,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from record import rollup  # noqa: E402  (the SAME rollup the aggregate job uses)
 
 
-def _find_final_json(artifact_dir: Path) -> dict:
+def _load_final(source: Path) -> dict:
+    """`final.json` itself, or the copy inside a downloaded artifact's UI snapshot.
+
+    Prefer the real file: the UI snapshot is size-capped and silently truncates, which a
+    639-task test split exceeds — so for a full-tier run the artifact route cannot work at all
+    and would otherwise look like a mysterious failure.
+    """
+    if source.is_file():
+        return json.loads(source.read_text(encoding="utf-8"))
+    return _find_final_json_in_artifact(source)
+
+
+def _find_final_json_in_artifact(artifact_dir: Path) -> dict:
     """Pull `final.json`'s contents out of a downloaded artifact's UI snapshot."""
     hits = sorted(artifact_dir.rglob("*file_path_final_json.json"))
     if not hits:
@@ -40,7 +57,11 @@ def _find_final_json(artifact_dir: Path) -> dict:
     wrapper = json.loads(hits[0].read_text(encoding="utf-8"))
     text = wrapper.get("text")
     if wrapper.get("truncated"):
-        raise SystemExit(f"{hits[0]} is truncated — cannot rebuild from it")
+        raise SystemExit(
+            f"{hits[0]} is truncated (the UI snapshot is size-capped, and a large test split "
+            f"does not fit) — pass the run's real final.json instead: "
+            f"scp runner:.../run_suite/final.json /tmp/final.json"
+        )
     if not text:
         raise SystemExit(f"{hits[0]} carries no text payload")
     return json.loads(text)
@@ -88,13 +109,14 @@ def rebuild_tasks(record: dict, final: dict) -> list[dict]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("artifact_dir", type=Path)
+    ap.add_argument("source", type=Path,
+                    help="the run's final.json, or a downloaded artifact directory")
     ap.add_argument("record", type=Path)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
     record = json.loads(args.record.read_text(encoding="utf-8"))
-    final = _find_final_json(args.artifact_dir)
+    final = _load_final(args.source)
 
     before_opt = sum(1 for t in (record.get("tasks") or []) if t.get("reward_opt") is not None)
     tasks = rebuild_tasks(record, final)

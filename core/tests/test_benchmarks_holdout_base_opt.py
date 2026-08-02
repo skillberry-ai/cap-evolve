@@ -18,6 +18,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 LIB = REPO / "ci" / "benchmarks" / "lib"
 UTILS = REPO / "ci" / "benchmarks" / "utils"
@@ -200,6 +202,30 @@ def test_rebuild_record_skips_when_sides_cover_different_tasks(tmp_path):
     final = {"test": {"per_task": [_pt("t1", 1.0)]},
              "test_baseline": {"per_task": [_pt("OTHER", 0.5)]}}
     assert rb.rebuild_tasks(stale, final) == original
+
+
+def test_rebuild_accepts_the_runs_real_final_json(tmp_path):
+    """The artifact's UI snapshot is size-capped and truncates on a large test split — the
+    639-task full tier does not fit — so the run's own final.json must be a valid source."""
+    rb = _load("_rebuild_record", UTILS / "rebuild_record.py")
+    fj = tmp_path / "final.json"
+    fj.write_text(json.dumps({
+        "test": {"reward": 0.75, "per_task": [_pt("t1", 1.0), _pt("t2", 0.5)]},
+        "test_baseline": {"reward": 0.25, "per_task": [_pt("t1", 0.5), _pt("t2", 0.0)]},
+    }), encoding="utf-8")
+    assert rb._load_final(fj)["test"]["reward"] == 0.75
+
+
+def test_a_truncated_artifact_snapshot_says_what_to_do_instead(tmp_path):
+    """Failing with 'is truncated' and no remedy is how this wasted a cycle the first time."""
+    rb = _load("_rebuild_record", UTILS / "rebuild_record.py")
+    art = tmp_path / "art" / "ui" / "data"
+    art.mkdir(parents=True)
+    (art / "runs_run_suite_file_path_final_json.json").write_text(
+        json.dumps({"truncated": True, "text": "{}"}), encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        rb._load_final(tmp_path / "art")
+    assert "final.json" in str(e.value) and "truncated" in str(e.value)
 
 
 def test_rebuild_is_idempotent(tmp_path):
