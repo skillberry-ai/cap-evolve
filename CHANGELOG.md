@@ -6,6 +6,25 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **The agent's job description is optimizable capability text now, not frozen code.** On run
+  30714307266 the SpreadsheetBench agent read 359 words before starting a task: 144 in
+  `prompt.md` (optimizable) and **215 frozen in `adapter.py`** — so 60% of its instruction
+  surface could not be optimized. That frozen text is not boilerplate: it defines what
+  `instruction_type` means (Cell-Level = exact cells, Sheet-Level = the *maximum* range you may
+  modify), it defines the interaction contract, and it tells the agent **"once that file
+  exists, you are done"** — which is the precise behaviour behind that run's dominant failure
+  mode (40 of 91 val tasks produced an output file whose values were wrong). The one accepted
+  candidate added a *"verify before you save"* checklist to `prompt.md`, i.e. it was arguing
+  with a sentence it was not allowed to delete. Comparable published work optimizes a single
+  skill document which, in a Claude Code / Codex harness, covers this same ground, so freezing
+  it made our editable surface strictly smaller than what we were comparing against. A
+  capability may now ship `task_template.md`; absent, the built-in is used, so existing
+  capabilities are unchanged. Because a bad edit here would tell every rollout to write its
+  answer to a path it was never given, `live()` validates the placeholder contract **once per
+  evaluation** and rejects the candidate before any task runs — missing required placeholders,
+  invented ones (a `KeyError` on every task), and unbalanced braces are all fatal, while the
+  cosmetic `{max_turns}` may be dropped. The optimizer-facing contract is documented in an
+  HTML comment inside the file, which is stripped before the agent sees it.
 - **Two knobs for comparing SpreadsheetBench against published skill-optimization results**,
   both defaulting to existing behaviour so no current run changes.
   `BENCH_SB_SCORING=hard` optimizes and reports the benchmark's **hard** score (all three

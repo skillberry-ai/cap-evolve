@@ -45,11 +45,16 @@ SETUP:
 
   8. Run: cap-evolve check && cap-evolve run
 
-WHAT THIS OPTIMIZES:
-  - The spreadsheet agent's system prompt (prompt.md in the seed capability).
-  - The prompt guides HOW the agent reads instructions, respects answer_position, and
-    writes results — the task-specific scaffold (instruction/paths/preview/rounds
-    protocol) is fixed, not optimizable.
+WHAT THIS OPTIMIZES — ALL the text the agent reads, in two files:
+  - prompt.md         the system prompt: who the agent is, how it should work.
+  - task_template.md  the per-task user message: how the job is framed, what the fields
+                      mean, and the interaction contract. Optional — no file falls back to
+                      the built-in _TASK_TEMPLATE, so older capabilities are unaffected.
+  Keeping the job description frozen in this file used to leave ~60% of the agent's
+  instruction surface un-optimizable, including the line "once that file exists, you are
+  done" — which encourages exactly the dominant failure (a wrong-but-present output file).
+  Per-task VALUES (instruction, paths, preview, answer_position) are still supplied by the
+  adapter through placeholders that live() validates; see _validate_task_template.
 
 HOW IT WORKS:
   - tasks()       → loads all SpreadsheetBench instances from the fetched dataset.json.
@@ -95,6 +100,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import string
 import shutil
 import signal
 import socket
@@ -104,6 +110,7 @@ import tempfile
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -822,6 +829,71 @@ def _sandbox_access_denied(exec_results: list[str], container_out_dir: str) -> s
 # ---------------------------------------------------------------------------
 
 
+_TEMPLATE_COMMENT_RE = re.compile(r"<!--.*?-->\s*", re.DOTALL)
+# Filled in per task, so they must survive any edit the optimizer makes. {max_turns} is
+# cosmetic (it only tells the agent its round budget) and may be dropped.
+_TEMPLATE_REQUIRED = frozenset({
+    "instruction", "spreadsheet_path", "spreadsheet_content",
+    "instruction_type", "answer_position", "output_path",
+})
+_TEMPLATE_OPTIONAL = frozenset({"max_turns"})
+
+
+def _read_task_template(ctx) -> str:
+    """The agent's first user message, as editable capability text.
+
+    Previously this lived only in _TASK_TEMPLATE, i.e. frozen in the adapter — so ~60% of the
+    text the agent reads (the field semantics, the interaction contract, and the line "once
+    that file exists, you are done") could not be optimized, while the thing it most needs to
+    fix — writing a wrong-but-present output file — is exactly what that line encourages.
+    Comparable published work optimizes a single skill document that covers this same ground,
+    so keeping it frozen made our editable surface strictly smaller than theirs.
+
+    A capability that ships `task_template.md` overrides the built-in; the leading HTML
+    comment (which documents the placeholder contract for the optimizer) is stripped so the
+    agent never sees it. No file ⇒ the built-in, so older capabilities are unaffected.
+    """
+    path = Path(ctx) / "task_template.md"
+    if not path.exists():
+        return _TASK_TEMPLATE
+    return _TEMPLATE_COMMENT_RE.sub("", path.read_text(encoding="utf-8"), count=1).strip() + "\n"
+
+
+def _validate_task_template(ctx) -> None:
+    """Reject a candidate whose template broke the placeholder contract, BEFORE any task runs.
+
+    Called from live(), so this costs one check per evaluation instead of discovering the
+    breakage as N failed rollouts. Both directions are fatal: a MISSING required placeholder
+    means the agent is never told (say) where to write its answer, and an UNKNOWN one raises
+    KeyError inside str.format on every single task.
+    """
+    path = Path(ctx) / "task_template.md"
+    if not path.exists():
+        return
+    text = _read_task_template(ctx)
+    try:
+        found = {f for _, f, _, _ in string.Formatter().parse(text) if f}
+    except ValueError as e:  # unbalanced braces — a literal brace must be doubled
+        raise RuntimeError(
+            f"task_template.md is not a valid format string ({e}). A literal brace must be "
+            f"written as {{{{ or }}}}."
+        ) from e
+    missing = sorted(_TEMPLATE_REQUIRED - found)
+    unknown = sorted(found - _TEMPLATE_REQUIRED - _TEMPLATE_OPTIONAL)
+    if missing or unknown:
+        problems = []
+        if missing:
+            problems.append(f"missing required placeholder(s): {', '.join('{%s}' % m for m in missing)}")
+        if unknown:
+            problems.append(f"unknown placeholder(s): {', '.join('{%s}' % u for u in unknown)}")
+        raise RuntimeError(
+            "task_template.md broke the placeholder contract — " + "; ".join(problems)
+            + f". Required: {', '.join('{%s}' % r for r in sorted(_TEMPLATE_REQUIRED))}"
+            + f" · optional: {', '.join('{%s}' % o for o in sorted(_TEMPLATE_OPTIONAL))}."
+            + " The edit is rejected; no task was run against it."
+        )
+
+
 def _read_system_prompt(ctx) -> str:
     """The capability text. An EMPTY prompt.md means deliberately NO skill text.
 
@@ -947,6 +1019,17 @@ class Adapter(CapabilityAdapter):
             tasks, n_trials=n_trials, base_seed=base_seed, max_workers=CONCURRENCY,
         )
 
+    @contextmanager
+    def live(self, candidate_dir):
+        """Validate the candidate's editable job description ONCE, then run against it.
+
+        live() is entered once per evaluation, so a template that broke the placeholder
+        contract fails here — loudly, with the reason — instead of surfacing as N rollouts
+        that were each told to write their answer to a path they were never given.
+        """
+        _validate_task_template(candidate_dir)
+        yield candidate_dir
+
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         """Multi-round CodeAct loop for one task, then replay onto test cases 2 and 3."""
         # Bound before the try so the finally can release the container on EVERY exit path —
@@ -979,7 +1062,7 @@ class Adapter(CapabilityAdapter):
 
             input_file = _resolve_case_file(local_dir, 1, sid, "input")
             preview = _spreadsheet_preview(input_file, PREVIEW_ROWS)
-            user_msg = _TASK_TEMPLATE.format(
+            user_msg = _read_task_template(ctx).format(
                 instruction=entry["instruction"],
                 spreadsheet_path=f"{container_dir}/{input_file.name}",
                 spreadsheet_content=preview,
