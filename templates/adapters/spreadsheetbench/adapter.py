@@ -130,6 +130,12 @@ EXEC_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_EXEC_TIMEOUT", "180"))
 # Container teardown is bookkeeping, not work: keep it short so a hung server delays a
 # finished rollout by seconds, never by the exec timeout.
 RELEASE_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_RELEASE_TIMEOUT", "30"))
+# How many further rounds the agent gets AFTER it has first written a graded output file, to
+# re-open it, check the values and correct them. Was effectively 0: the loop broke the instant
+# the file appeared, so "verify your work" was unreachable no matter what the skill said, and
+# agents used ~2 of 30 available turns. Bounded rather than unbounded because each round is a
+# real LLM call: at MAX_TURNS=30 an unbounded loop is ~15x the token cost of the old behaviour.
+VERIFY_TURNS = int(os.environ.get("SPREADSHEETBENCH_VERIFY_TURNS", "3"))
 LIBREOFFICE_BIN = os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_BIN", "")
 
 # Which of SpreadsheetBench's two OJ-style metrics becomes the optimization target.
@@ -839,6 +845,22 @@ _TEMPLATE_REQUIRED = frozenset({
 _TEMPLATE_OPTIONAL = frozenset({"max_turns"})
 
 
+def _artifact_stamp(path: Path):
+    """A change-detecting stamp for the graded output file, or None when it does not exist.
+
+    Used to tell "the code that WROTE the answer" apart from "the code that merely inspected
+    it". That distinction only started to matter once the agent was allowed to keep working
+    after its first write: cases 2 and 3 are scored by REPLAYING the agent's code, so replaying
+    a verification snippet (which writes nothing) would produce no output for them and score 0
+    on two of three test cases — turning a fix into a large regression.
+    """
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (st.st_mtime_ns, st.st_size)
+
+
 def _read_task_template(ctx) -> str:
     """The agent's first user message, as editable capability text.
 
@@ -1108,7 +1130,11 @@ class Adapter(CapabilityAdapter):
 
             cost = 0.0
             tokens = 0
-            last_code = ""  # last code actually EXECUTED (what cases 2/3 replay)
+            last_code = ""      # last code executed at all (diagnostics)
+            solution_code = ""  # last code that actually WROTE case 1's output — what 2/3 replay
+            artifact = None     # stamp of case 1's output, to detect which code wrote it
+            verify_left = VERIFY_TURNS
+            no_code_replies = 0
             exec_results: list[str] = []
             case1_path = host_out_dir / f"1_{sid}_output.xlsx"
 
@@ -1137,8 +1163,15 @@ class Adapter(CapabilityAdapter):
 
                 code = _extract_python(vendor, assistant_text)
                 if code is None or not code.strip():
-                    # Nothing runnable in the reply — re-state the contract rather than
-                    # feeding prose to the kernel for a guaranteed SyntaxError.
+                    # Nothing runnable in the reply. Once an answer exists this is the agent
+                    # saying it is FINISHED — honour that instead of nagging it into burning a
+                    # round. Before that, re-state the contract rather than feeding prose to
+                    # the kernel for a guaranteed SyntaxError.
+                    if solution_code:
+                        break
+                    no_code_replies += 1
+                    if no_code_replies >= 3:
+                        break  # it is not going to produce code; stop paying for rounds
                     messages.append({"role": "user", "content": _NO_CODE_REMINDER})
                     continue
                 last_code = code
@@ -1157,8 +1190,19 @@ class Adapter(CapabilityAdapter):
 
                 exec_results.append(exec_result)
                 messages.append({"role": "user", "content": exec_result})
-                if case1_path.exists():
-                    break
+
+                stamp = _artifact_stamp(case1_path)
+                if stamp is not None and stamp != artifact:
+                    # This round produced or changed the graded file, so THIS is the solution
+                    # to replay onto cases 2 and 3 — and a later correction supersedes it.
+                    artifact, solution_code = stamp, code
+                elif solution_code:
+                    # A round that did not touch the answer is inspection/verification. Give a
+                    # bounded number of them, then stop: the benchmark grades the file, not the
+                    # commentary, and every extra round is another LLM call.
+                    verify_left -= 1
+                    if verify_left <= 0:
+                        break
 
             if not case1_path.exists():
                 blocked = _sandbox_access_denied(exec_results, container_out_dir)
@@ -1194,7 +1238,7 @@ class Adapter(CapabilityAdapter):
                 # Case 1 solved — replay the SAME code onto cases 2 and 3 (no new LLM calls).
                 for idx in (2, 3):
                     case_input = _resolve_case_file(local_dir, idx, sid, "input")
-                    solution = last_code.replace(input_file.name, case_input.name)
+                    solution = solution_code.replace(input_file.name, case_input.name)
                     solution = solution.replace(f"1_{sid}_output.xlsx", f"{idx}_{sid}_output.xlsx")
                     try:
                         vendor["exec_code"](client, solution)
@@ -1203,7 +1247,7 @@ class Adapter(CapabilityAdapter):
 
             return Rollout(
                 task_id=task.id,
-                output=last_code,
+                output=solution_code or last_code,
                 trace=messages,
                 cost_usd=cost,
                 tokens=tokens,

@@ -6,6 +6,24 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The agent could not check its own answer: the loop ended the instant a file appeared.**
+  Measured on run 30740145597, the agent used **2.2 of 30 available turns** (seed: 1.9) because
+  the CodeAct loop did `if case1_path.exists(): break`. Every behaviour that has to happen
+  *after* writing was therefore unreachable — and not hypothetically: that run's champion had
+  itself rewritten the job description to add *"3. Verification code: re-open output_path …
+  You are done only once that verification looks correct"*, and turn usage moved 1.9 → 2.2. The
+  optimizer wrote the right skill and the harness refused to run it. It also explains the
+  dominant failure mode, 40% of tasks producing a file whose values were wrong while **0%**
+  failed to produce a file at all. The loop now continues after the first write, ending when the
+  agent replies without code (its way of saying it is finished), when `VERIFY_TURNS` idle rounds
+  have passed (default 3), or at `MAX_TURNS`. Two traps came with it, both covered by tests:
+  cases 2 and 3 are scored by **replaying** the agent's code, so replay now uses the code that
+  actually *wrote* the answer (tracked by an mtime/size stamp) rather than whatever ran last —
+  replaying a trailing verification snippet writes nothing and would have scored 0 on two of
+  three test cases, turning the fix into a large regression; and the post-answer phase is
+  **bounded**, because each round is an LLM call and an unbounded 30-turn loop is ~15× the token
+  cost per rollout. The seed job description was updated to match, since it still told the agent
+  the old rule.
 - **The editable job description was inert: the optimizer was never told it existed.** #282
   made `task_template.md` optimizable, and pilot 30736646559 showed the optimizer ignoring it
   entirely — its `PROCESS.md` reported *"Changes made this iteration (all in `prompt.md` — the
