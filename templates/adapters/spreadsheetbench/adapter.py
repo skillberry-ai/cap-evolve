@@ -125,6 +125,19 @@ EXEC_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_EXEC_TIMEOUT", "180"))
 RELEASE_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_RELEASE_TIMEOUT", "30"))
 LIBREOFFICE_BIN = os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_BIN", "")
 
+# Which of SpreadsheetBench's two OJ-style metrics becomes the optimization target.
+#   soft (default) — matches / 3, i.e. partial credit per test case.
+#   hard           — 1.0 only when ALL THREE test cases match, 0.0 otherwise.
+# Both are computed on every rollout regardless (see score()); this only decides which one
+# is `reward`, and therefore what the gate and the headline are measured on. `hard` exists
+# for comparisons against work that reports the benchmark's "native hard score" — mixing the
+# two silently flatters us, because soft >= hard by construction.
+SCORING = os.environ.get("SPREADSHEETBENCH_SCORING", "soft").strip().lower()
+if SCORING not in ("soft", "hard"):
+    raise RuntimeError(
+        f"SPREADSHEETBENCH_SCORING={SCORING!r} is not recognized (want 'soft' or 'hard')."
+    )
+
 # Where the vendored sandbox bind-mounts SPREADSHEETBENCH_DATA_DIR inside every container
 # (code_exec_docker/jupyter.py hardcodes this bind target).
 _CONTAINER_DATA_ROOT = "/mnt/data"
@@ -810,6 +823,16 @@ def _sandbox_access_denied(exec_results: list[str], container_out_dir: str) -> s
 
 
 def _read_system_prompt(ctx) -> str:
+    """The capability text. An EMPTY prompt.md means deliberately NO skill text.
+
+    The distinction matters for a no-skill control: a file that EXISTS but is empty is the
+    capability saying "there is nothing here", and must not silently fall back to
+    _DEFAULT_SYSTEM_PROMPT — that would measure the built-in prompt while claiming to measure
+    an unskilled agent. A MISSING file still falls back, since that means the capability was
+    never materialized rather than deliberately blank. Callers must treat "" as "send no
+    system message at all" (an empty system message is not the same thing, and some
+    providers reject it).
+    """
     prompt_path = Path(ctx) / "prompt.md"
     if prompt_path.exists():
         return prompt_path.read_text(encoding="utf-8")
@@ -976,10 +999,11 @@ class Adapter(CapabilityAdapter):
                 )
 
             system_prompt = _read_system_prompt(ctx)
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_msg},
-            ]
+            # A blank capability means NO system message — that is the no-skill control, and
+            # it must not degrade into an empty-string system turn (providers differ on
+            # whether they accept one, and a run that half-sends it measures neither thing).
+            messages = [{"role": "system", "content": system_prompt}] if system_prompt.strip() else []
+            messages.append({"role": "user", "content": user_msg})
 
             cost = 0.0
             tokens = 0
@@ -1177,12 +1201,16 @@ class Adapter(CapabilityAdapter):
 
         return Score(
             task_id=task.id,
-            reward=soft,
+            reward=hard if SCORING == "hard" else soft,
             feedback=feedback,
             raw={"test_case_results": test_results},
+            # Both are always recorded, whichever is the target — so the other metric can be
+            # recovered from any past run's rollouts without re-running it.
             metrics=[
-                {"name": "soft_restriction", "value": soft, "primary": True, "direction": "higher"},
-                {"name": "hard_restriction", "value": hard, "primary": False, "direction": "higher"},
+                {"name": "soft_restriction", "value": soft,
+                 "primary": SCORING == "soft", "direction": "higher"},
+                {"name": "hard_restriction", "value": hard,
+                 "primary": SCORING == "hard", "direction": "higher"},
             ],
         )
 

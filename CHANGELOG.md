@@ -5,6 +5,29 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **Two knobs for comparing SpreadsheetBench against published skill-optimization results**,
+  both defaulting to existing behaviour so no current run changes.
+  `BENCH_SB_SCORING=hard` optimizes and reports the benchmark's **hard** score (all three
+  OJ-style test cases must match) instead of the default **soft** score (`matches/3`).
+  Published comparisons report a benchmark's "native hard score", and the two are not
+  interchangeable — soft ≥ hard by construction, so quoting soft against someone else's hard
+  silently flatters us. On run 30714307266 the same champion is **63.4% soft but 56.0% hard**.
+  Both metrics were already recorded on every rollout and still are, so either number is
+  recoverable from any past run without re-running it; only which one is `reward` (and hence
+  the gate's target) changes. `BENCH_SB_EMPTY_SEED=1` blanks the seed prompt to reproduce a
+  "no skill" control: the committed seed is already a short expert prompt — it states the
+  `answer_position` restriction, literal-values-over-formulas, the exact `output_path` and
+  error recovery — so the default configuration measures *refining an existing prompt*, not
+  *authoring a skill from nothing*, and the two have very different headroom. An **empty**
+  `prompt.md` now means no system message at all and deliberately does **not** fall back to
+  the adapter's built-in default, which would otherwise measure that prompt while the run
+  claimed to measure an unskilled agent (a missing file still falls back — absent and
+  deliberately-blank are different situations). Both are repo variables rather than workflow
+  inputs because `workflow_dispatch` caps inputs at 10 and that list is full, following the
+  existing `BENCH_SPLIT_SEED` precedent. Gate strictness needed no new knob — `gate_k_se` is
+  already a dispatch input.
+
 ### Fixed
 - **Held-out runs published no base→opt reward at all — the benchmarks page showed "—" for
   exactly the runs whose numbers matter.** `metrics.suite_report` paired per-task baseline

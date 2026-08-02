@@ -17,6 +17,14 @@ REPO="$(cd "$LIB_DIR/../../.." && pwd)"
 BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
+
+# Committed per-tier overrides (optional): ci/benchmarks/<bench>/<tier>/overrides.env.
+# Env wins; the file only fills in what the dispatch did not set. See load_overrides.sh for
+# why this is a committed file rather than a repo variable.
+# shellcheck source=ci/benchmarks/lib/load_overrides.sh
+. "$LIB_DIR/load_overrides.sh"
+load_overrides "$REPO/ci/benchmarks/$BENCH/$TIER/overrides.env"
+
 ITER="${ITERATIONS:-3}"
 AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
@@ -122,6 +130,19 @@ ENV
   spreadsheetbench)
     cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
     cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
+    # NO-SKILL CONTROL. Comparisons against published skill-optimization results (e.g.
+    # SkillOpt, arXiv 2605.23904) report a "no skill" baseline: the same model with no skill
+    # document at all. Our committed seed_capability/prompt.md is already a short expert
+    # prompt (it states the answer_position restriction, literal-values-over-formulas, the
+    # exact output_path and error-recovery), so a run against it measures "refine an existing
+    # prompt", NOT "author a skill from nothing" — a materially easier task with far less
+    # headroom. Blanking the seed reproduces their control; the adapter treats an EMPTY
+    # prompt.md as "send no system message" and the harness's is_empty() path tells the
+    # optimizer to author the capability from scratch.
+    if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
+      : > "$PROJ/seed_capability/prompt.md"
+      echo ">>> spreadsheetbench: EMPTY seed (no-skill control) — prompt.md blanked" >&2
+    fi
     # Prompt-only optimizer instructions. The default template shipped in
     # templates/project/optimizer/INSTRUCTIONS.md is written for a capability that
     # includes TOOL CODE: it tells the optimizer to prefer in-body guards, names
@@ -170,11 +191,16 @@ SPREADSHEETBENCH_DATA_DIR=$SB_DATA
 SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
 SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
 SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}
+SPREADSHEETBENCH_SCORING=${SB_SCORING:-soft}
 ENV
     export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
     export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
     export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}"
     export SPREADSHEETBENCH_MAX_TURNS="${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}"
+    # soft (default, matches this benchmark's own headline) | hard (all 3 test cases must
+    # match — the "native hard score" that published comparisons report). Both are recorded
+    # on every rollout either way; this picks the one the GATE optimizes against.
+    export SPREADSHEETBENCH_SCORING="${SB_SCORING:-soft}"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac
