@@ -6,6 +6,18 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The editable job description was inert: the optimizer was never told it existed.** #282
+  made `task_template.md` optimizable, and pilot 30736646559 showed the optimizer ignoring it
+  entirely — its `PROCESS.md` reported *"Changes made this iteration (all in `prompt.md` — the
+  system prompt)"*. Both files were in its workdir; the rendered instructions mentioned
+  **neither filename**, and the shared prompt-only template speaks of "the prompt" in the
+  singular, so editing only the obvious artifact was the reasonable reading. The
+  spreadsheetbench arm now appends a section naming both files, stating what share of the
+  agent's words each accounts for (~40% / ~60%), inviting deletion of unhelpful guidance
+  (pointing at the "you are done once the file exists" line specifically), and spelling out the
+  placeholder contract so the optimizer learns it from instructions rather than from a rejected
+  candidate. Appended to the per-benchmark copy, so the shared template stays benchmark-neutral
+  — a test asserts that.
 - **A broken `task_template.md` would have aborted the whole run instead of costing one
   candidate.** #282's guard raised from `live()`, and `harness.run_step` wraps the *optimizer*
   call in `try/except` — with a comment saying a bad proposal "must not abort a long run" —

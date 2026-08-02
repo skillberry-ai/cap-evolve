@@ -156,6 +156,38 @@ ENV
     mkdir -p "$PROJ/optimizer"
     cp "$REPO/templates/project/optimizer/INSTRUCTIONS.prompt-only.md" \
        "$PROJ/optimizer/INSTRUCTIONS.md"
+    # NAME THE ARTIFACTS. The shared template speaks of "the prompt" in the singular and the
+    # rendered instructions mention no filename at all, so an optimizer handed TWO editable
+    # files reasonably edits only the obvious one: in pilot 30736646559 it reported "all in
+    # prompt.md — the system prompt" and never touched task_template.md, leaving the unlocked
+    # surface inert. Both files are in its workdir; it just had no reason to know the second
+    # one was fair game. This appendix is benchmark-specific, which is why it lives here
+    # rather than in the shared template.
+    cat >> "$PROJ/optimizer/INSTRUCTIONS.md" <<'OPTNOTE'
+
+## The TWO files you may edit (this benchmark)
+Your capability is BOTH of these, and an iteration that only touches the first is leaving
+most of the agent's instruction surface untouched:
+
+1. **`prompt.md`** — the agent's SYSTEM message: who it is, how it should work, what to
+   check. ~40% of the words the agent reads.
+
+2. **`task_template.md`** — the agent's FIRST USER message: how the job is framed, what each
+   field means, and the interaction contract. ~60% of the words the agent reads. It is
+   ordinary prose and you may reword, restructure, add to, or DELETE from it — including
+   guidance that is actively unhelpful. (Read it critically: a line telling the agent it is
+   finished as soon as an output file exists will discourage it from verifying values, which
+   is the most common way tasks fail here.)
+
+   The `{placeholders}` in it are filled in per task and are LOAD-BEARING. Keep every one of
+   `{instruction}` `{spreadsheet_path}` `{spreadsheet_content}` `{instruction_type}`
+   `{answer_position}` `{output_path}`; `{max_turns}` is optional; invent no others; write a
+   literal brace as `{{` or `}}`. Break that and EVERY task scores 0 — the agent is never
+   told where to write its answer — so the candidate is rejected outright.
+
+Decide per cluster which file is the right place to fix it, and say which you chose in
+PROCESS.md.
+OPTNOTE
     OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
     SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
     SB_DEFAULT="$SB_CACHE/sample_data_200"

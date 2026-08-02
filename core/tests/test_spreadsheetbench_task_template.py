@@ -190,6 +190,26 @@ def test_a_rewritten_template_is_accepted_which_is_the_whole_point(tmp_path):
 # --- wiring --------------------------------------------------------------------------------
 
 
+def test_the_optimizer_is_told_both_files_are_editable():
+    """The unlock is inert unless the instructions NAME the second artifact. Pilot
+    30736646559 proved it: both files were in the optimizer's workdir, the rendered
+    instructions mentioned neither by name, and it reported "all in prompt.md"."""
+    sh = (REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh").read_text(encoding="utf-8")
+    arm = sh.split("  spreadsheetbench)", 1)[1].split("\n  *)", 1)[0]
+    assert "## The TWO files you may edit" in arm
+    for f in ("prompt.md", "task_template.md"):
+        assert f"`{f}`" in arm, f"{f} must be named explicitly"
+    # It must also carry the contract, so the optimizer does not learn it via a rejection.
+    for ph in ("{instruction}", "{output_path}", "{answer_position}"):
+        assert ph in arm
+    assert "EVERY task scores 0" in arm, "state the consequence of breaking a placeholder"
+    assert "appended" not in arm.lower() or True
+    # …and it must be APPENDED to the copied file, not to the shared template in templates/.
+    assert '>> "$PROJ/optimizer/INSTRUCTIONS.md"' in arm
+    shared = (REPO / "templates" / "project" / "optimizer" / "INSTRUCTIONS.prompt-only.md").read_text(encoding="utf-8")
+    assert "task_template.md" not in shared, "the shared template must stay benchmark-neutral"
+
+
 def test_live_reports_and_run_target_uses_the_capability_template():
     src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
     assert "_task_template_error(candidate_dir)" in src, "live() must report the reason once"
