@@ -185,7 +185,33 @@ def test_a_missing_overrides_file_is_a_no_op(tmp_path):
     assert out.returncode == 0 and "ok=0" in out.stdout
 
 
-def test_no_tier_ships_overrides_yet_so_every_run_is_unchanged():
-    """Adding the mechanism must not change any existing run. When a comparison run does ship
-    one, this test is the reminder to state which tier and why."""
-    assert not sorted((REPO / "ci" / "benchmarks").glob("*/*/overrides.env"))
+def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
+    """Every committed override is a deliberate deviation from the default, so each one is
+    pinned here: a tier acquiring a config silently is how a run's numbers stop meaning what
+    the reader thinks they mean.
+
+    spreadsheetbench pilot+full optimize the HARD score, to be comparable with published work
+    that reports a benchmark's native hard score (soft >= hard by construction).
+    """
+    shipped = {
+        str(p.relative_to(REPO)): dict(
+            line.split("=", 1) for line in p.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")
+        )
+        for p in sorted((REPO / "ci" / "benchmarks").glob("*/*/overrides.env"))
+    }
+    assert shipped == {
+        "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
+        "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {"SB_SCORING": "hard"},
+    }, "a tier gained or changed a committed override — say which and why in the PR"
+
+
+def test_the_shipped_overrides_do_not_pretend_to_set_workflow_owned_vars():
+    """The workflow always sets GATE_K_SE/NUM_TRIALS/ITERATIONS/AGENT_MODEL, and the loader
+    lets the environment win — so putting them here would look configured but do nothing."""
+    workflow_owned = {"GATE_K_SE", "NUM_TRIALS", "ITERATIONS", "AGENT_MODEL",
+                      "OPTIMIZER_MODEL", "SPLIT_SEED", "TIER", "ALGORITHM_FOCUS"}
+    for p in sorted((REPO / "ci" / "benchmarks").glob("*/*/overrides.env")):
+        keys = {l.split("=", 1)[0] for l in p.read_text(encoding="utf-8").splitlines()
+                if l.strip() and not l.startswith("#")}
+        assert not (keys & workflow_owned), f"{p.name} sets workflow-owned {keys & workflow_owned}"
