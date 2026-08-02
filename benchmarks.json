@@ -1,27 +1,5 @@
 [
   {
-    "run_id": 30740145597,
-    "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30740145597",
-    "bench": "spreadsheetbench",
-    "tier": "full",
-    "event": "workflow_dispatch",
-    "source": "manual (main)",
-    "pr": null,
-    "branch": "main",
-    "sha": "60634630542379934a27286d6f00c0e711e6dd35",
-    "date": "2026-08-02T18:46:03Z",
-    "iterations": 10,
-    "trials": 1,
-    "agent_model": "azure/gpt-5.5",
-    "optimizer_model": "claude-opus-4-8",
-    "conclusion": "cancelled",
-    "schema": 1,
-    "tasks": [],
-    "steps": [],
-    "suite": null,
-    "has_ui": true
-  },
-  {
     "run_id": 30738598399,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/30738598399",
     "bench": "spreadsheetbench",
