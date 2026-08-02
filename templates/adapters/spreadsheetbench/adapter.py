@@ -54,7 +54,7 @@ WHAT THIS OPTIMIZES — ALL the text the agent reads, in two files:
   instruction surface un-optimizable, including the line "once that file exists, you are
   done" — which encourages exactly the dominant failure (a wrong-but-present output file).
   Per-task VALUES (instruction, paths, preview, answer_position) are still supplied by the
-  adapter through placeholders that live() validates; see _validate_task_template.
+  adapter through placeholders that live() validates; see _task_template_error.
 
 HOW IT WORKS:
   - tasks()       → loads all SpreadsheetBench instances from the fetched dataset.json.
@@ -859,25 +859,31 @@ def _read_task_template(ctx) -> str:
     return _TEMPLATE_COMMENT_RE.sub("", path.read_text(encoding="utf-8"), count=1).strip() + "\n"
 
 
-def _validate_task_template(ctx) -> None:
-    """Reject a candidate whose template broke the placeholder contract, BEFORE any task runs.
+def _task_template_error(ctx) -> str | None:
+    """Why this candidate's template is unusable, or None if it is fine.
 
-    Called from live(), so this costs one check per evaluation instead of discovering the
-    breakage as N failed rollouts. Both directions are fatal: a MISSING required placeholder
-    means the agent is never told (say) where to write its answer, and an UNKNOWN one raises
-    KeyError inside str.format on every single task.
+    Returns a message rather than raising, because the CALLER decides the consequence and the
+    consequence must never be "abort the run". harness.run_step wraps the optimizer call in
+    try/except precisely so a bad proposal costs one iteration rather than the whole run — but
+    the evaluate_candidate call right below it is NOT wrapped, so anything this raised from
+    live() would propagate and kill a multi-hour run, destroying the sealed evaluation over one
+    bad text edit. Instead every rollout returns this as its error: the candidate scores 0, the
+    gate rejects it, the run continues, and the optimizer READS the reason in its next
+    trajectories and learns not to break the contract.
+
+    Both directions are unusable: a MISSING required placeholder means the agent is never told
+    (say) where to write its answer, and an UNKNOWN one raises KeyError inside str.format on
+    every single task.
     """
     path = Path(ctx) / "task_template.md"
     if not path.exists():
-        return
+        return None
     text = _read_task_template(ctx)
     try:
         found = {f for _, f, _, _ in string.Formatter().parse(text) if f}
     except ValueError as e:  # unbalanced braces — a literal brace must be doubled
-        raise RuntimeError(
-            f"task_template.md is not a valid format string ({e}). A literal brace must be "
-            f"written as {{{{ or }}}}."
-        ) from e
+        return (f"task_template.md is not a valid format string ({e}). A literal brace must "
+                f"be written as {{{{ or }}}}.")
     missing = sorted(_TEMPLATE_REQUIRED - found)
     unknown = sorted(found - _TEMPLATE_REQUIRED - _TEMPLATE_OPTIONAL)
     if missing or unknown:
@@ -886,12 +892,14 @@ def _validate_task_template(ctx) -> None:
             problems.append(f"missing required placeholder(s): {', '.join('{%s}' % m for m in missing)}")
         if unknown:
             problems.append(f"unknown placeholder(s): {', '.join('{%s}' % u for u in unknown)}")
-        raise RuntimeError(
+        return (
             "task_template.md broke the placeholder contract — " + "; ".join(problems)
             + f". Required: {', '.join('{%s}' % r for r in sorted(_TEMPLATE_REQUIRED))}"
             + f" · optional: {', '.join('{%s}' % o for o in sorted(_TEMPLATE_OPTIONAL))}."
-            + " The edit is rejected; no task was run against it."
+            + " Restore the placeholder and this candidate can be scored; as it stands every"
+            + " task scores 0 because the agent is not told where to write its answer."
         )
+    return None
 
 
 def _read_system_prompt(ctx) -> str:
@@ -1021,13 +1029,16 @@ class Adapter(CapabilityAdapter):
 
     @contextmanager
     def live(self, candidate_dir):
-        """Validate the candidate's editable job description ONCE, then run against it.
+        """Report a broken job description ONCE per evaluation, loudly — but do not raise.
 
-        live() is entered once per evaluation, so a template that broke the placeholder
-        contract fails here — loudly, with the reason — instead of surfacing as N rollouts
-        that were each told to write their answer to a path they were never given.
+        Raising here would propagate through harness.evaluate_candidate, which run_step does
+        NOT wrap in try/except, and abort the whole run. So this only logs; run_target turns
+        the same message into a per-rollout error, which costs the candidate its score and
+        nothing else.
         """
-        _validate_task_template(candidate_dir)
+        err = _task_template_error(candidate_dir)
+        if err:
+            print(f"spreadsheetbench: candidate rejected — {err}", file=sys.stderr)
         yield candidate_dir
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
@@ -1037,6 +1048,13 @@ class Adapter(CapabilityAdapter):
         sandbox: _Sandbox | None = None
         conv_id = ""
         try:
+            # Before ANY work: a candidate whose job description lost a required placeholder
+            # cannot be scored, and must fail cheaply rather than either aborting the run or
+            # burning 30 turns per task on a prompt with no output path in it.
+            tmpl_error = _task_template_error(ctx)
+            if tmpl_error:
+                return Rollout(task_id=task.id, error=tmpl_error)
+
             entry = _entries_by_id().get(task.id)
             if entry is None:
                 return Rollout(task_id=task.id, error=f"task id {task.id} not found in dataset")

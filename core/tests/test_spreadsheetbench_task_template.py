@@ -97,35 +97,69 @@ def _write(tmp_path, body: str) -> Path:
     return tmp_path
 
 
-def test_a_dropped_placeholder_is_rejected_before_any_task_runs(tmp_path):
-    """Without this, every rollout is told to write its answer to a path it never got."""
+def test_a_dropped_placeholder_is_reported_not_raised(tmp_path):
+    """Reporting rather than raising is the whole point: harness.run_step does NOT wrap
+    evaluate_candidate in try/except, so anything raised from live() aborts the entire run —
+    losing a multi-hour sealed evaluation over one bad text edit."""
     mod = _adapter()
     ctx = _write(tmp_path, "Do {instruction} on {spreadsheet_path}. {spreadsheet_content} "
                            "{instruction_type} {answer_position}\n")   # no {output_path}
-    with pytest.raises(RuntimeError) as e:
-        mod._validate_task_template(ctx)
-    msg = str(e.value)
-    assert "{output_path}" in msg and "missing required placeholder" in msg
-    assert "no task was run" in msg
+    msg = mod._task_template_error(ctx)
+    assert msg and "{output_path}" in msg and "missing required placeholder" in msg
+    assert "every" in msg and "scores 0" in msg, "the message must say what the consequence is"
 
 
-def test_an_unknown_placeholder_is_rejected(tmp_path):
+def test_an_unknown_placeholder_is_reported(tmp_path):
     """An invented field raises KeyError inside str.format on every single task."""
     mod = _adapter()
     body = "{instruction} {spreadsheet_path} {spreadsheet_content} {instruction_type} " \
            "{answer_position} {output_path} {sheet_name}\n"
-    with pytest.raises(RuntimeError) as e:
-        mod._validate_task_template(_write(tmp_path, body))
-    assert "unknown placeholder" in str(e.value) and "{sheet_name}" in str(e.value)
+    msg = mod._task_template_error(_write(tmp_path, body))
+    assert msg and "unknown placeholder" in msg and "{sheet_name}" in msg
 
 
-def test_unbalanced_braces_are_rejected_with_the_doubling_rule(tmp_path):
+def test_unbalanced_braces_are_reported_with_the_doubling_rule(tmp_path):
     mod = _adapter()
     body = "{instruction} {spreadsheet_path} {spreadsheet_content} {instruction_type} " \
            "{answer_position} {output_path} then write {\n"
-    with pytest.raises(RuntimeError) as e:
-        mod._validate_task_template(_write(tmp_path, body))
-    assert "not a valid format string" in str(e.value)
+    msg = mod._task_template_error(_write(tmp_path, body))
+    assert msg and "not a valid format string" in msg
+
+
+def test_a_good_template_reports_no_error(tmp_path):
+    mod = _adapter()
+    assert mod._task_template_error(SEED) is None
+    assert mod._task_template_error(tmp_path) is None       # no file at all
+
+
+def test_live_never_raises_so_a_bad_edit_cannot_abort_the_run(tmp_path):
+    """The bug this fixes: live() raising propagates through evaluate_candidate, which
+    run_step leaves unprotected, and kills the run."""
+    mod = _adapter()
+    ad = object.__new__(mod.Adapter)
+    ctx = _write(tmp_path, "only {instruction}\n")          # badly broken
+    with ad.live(ctx) as yielded:                            # must NOT raise
+        assert yielded == ctx
+
+
+def test_the_harness_path_also_survives_a_broken_template(tmp_path):
+    """Exercised through harness._live, which is what the eval actually calls."""
+    mod = _adapter()
+    sys.path.insert(0, str(REPO / "core"))
+    from cap_evolve import harness
+    ad = object.__new__(mod.Adapter)
+    ctx = _write(tmp_path, "only {instruction}\n")
+    with harness._live(ad, ctx) as yielded:
+        assert yielded == ctx
+
+
+def test_run_target_refuses_before_spending_anything(tmp_path):
+    """The candidate must cost ~nothing: no LLM call, no container, no 30-turn loop."""
+    src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
+    body = src.split("def run_target(", 1)[1].split("def score(", 1)[0]
+    check = body.index("_task_template_error(ctx)")
+    for later in ("import litellm", "_get_sandbox()", "_entries_by_id()"):
+        assert check < body.index(later), f"the template check must precede {later}"
 
 
 def test_dropping_the_cosmetic_turn_budget_is_allowed(tmp_path):
@@ -135,7 +169,7 @@ def test_dropping_the_cosmetic_turn_budget_is_allowed(tmp_path):
     body = "{instruction} {spreadsheet_path} {spreadsheet_content} {instruction_type} " \
            "{answer_position} {output_path}\n"
     ctx = _write(tmp_path, body)
-    mod._validate_task_template(ctx)                      # must not raise
+    assert mod._task_template_error(ctx) is None           # accepted
     assert mod._read_task_template(ctx).format(**_FIELDS)  # and still renders
 
 
@@ -147,7 +181,7 @@ def test_a_rewritten_template_is_accepted_which_is_the_whole_point(tmp_path):
             "Write to: {output_path}\nVERIFY your values before saving. Do NOT stop merely "
             "because a file exists.\n")
     ctx = _write(tmp_path, body)
-    mod._validate_task_template(ctx)
+    assert mod._task_template_error(ctx) is None
     out = mod._read_task_template(ctx).format(**_FIELDS)
     assert "Do NOT stop merely because a file exists" in out
     assert "once that file exists, you are done" not in out
@@ -156,16 +190,17 @@ def test_a_rewritten_template_is_accepted_which_is_the_whole_point(tmp_path):
 # --- wiring --------------------------------------------------------------------------------
 
 
-def test_live_validates_and_run_target_uses_the_capability_template():
+def test_live_reports_and_run_target_uses_the_capability_template():
     src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
-    assert "_validate_task_template(candidate_dir)" in src, "live() must validate"
+    assert "_task_template_error(candidate_dir)" in src, "live() must report the reason once"
     assert "def live(self, candidate_dir)" in src
+    assert "raise RuntimeError" not in src.split("def live(", 1)[1].split("def run_target", 1)[0]
     assert "user_msg = _read_task_template(ctx).format(" in src, "run_target must use it"
     assert "_TASK_TEMPLATE.format(" not in src, "the frozen template must no longer be used directly"
 
 
-def test_live_validates_once_per_evaluation_not_once_per_task():
-    """91 (or 639) identical failures is not a useful way to learn the template is broken."""
+def test_live_logs_the_reason_once_per_evaluation():
+    """One loud line per eval, not 639 — while run_target still fails each rollout cheaply."""
     src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
-    run_target = src.split("def run_target(", 1)[1]
-    assert "_validate_task_template" not in run_target.split("def score(", 1)[0]
+    live = src.split("def live(", 1)[1].split("def run_target", 1)[0]
+    assert "file=sys.stderr" in live

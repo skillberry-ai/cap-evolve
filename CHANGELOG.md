@@ -5,6 +5,19 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Fixed
+- **A broken `task_template.md` would have aborted the whole run instead of costing one
+  candidate.** #282's guard raised from `live()`, and `harness.run_step` wraps the *optimizer*
+  call in `try/except` — with a comment saying a bad proposal "must not abort a long run" —
+  but leaves the `evaluate_candidate` call directly below it unprotected. So one bad text edit
+  would have propagated out and killed a multi-hour run, destroying the sealed evaluation it
+  existed to produce. The validation now RETURNS the reason instead of raising: `live()` logs
+  it once, loudly, and `run_target` returns it as each rollout's error before any LLM call,
+  container or turn loop — so the candidate scores 0, the gate rejects it, the run continues,
+  and the optimizer reads the reason in its next trajectories and learns the contract. Tests
+  now assert `live()` cannot raise, including through the real `harness._live()` path, and that
+  the check precedes `import litellm`/`_get_sandbox()` so a rejected candidate costs nothing.
+
 ### Added
 - **The agent's job description is optimizable capability text now, not frozen code.** On run
   30714307266 the SpreadsheetBench agent read 359 words before starting a task: 144 in
