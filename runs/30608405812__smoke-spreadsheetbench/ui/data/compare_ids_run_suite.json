@@ -1,1 +1,0 @@
-{"runs":[{"run_id":"run_suite","algorithm":null,"baseline_val":0.39333333333333337,"best_val":0.54,"delta_pct":37.3,"test_reward":null,"total_usd":9.4413,"tokens":1248551,"iterations":1,"series":[{"iteration":0,"best_so_far":0.39333333333333337},{"iteration":1,"best_so_far":0.54}]}],"tasks":["55457","47484","418-29","374-9","40467","52216","347-49","32468","53161","160-6"]}
