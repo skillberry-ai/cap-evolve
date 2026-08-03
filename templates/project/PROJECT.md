@@ -3,6 +3,9 @@
 Filled by the `intake` skill. Records the decisions behind this run so anyone
 (human or agent) can understand and reproduce it.
 
+> For a **filled** worked example of this file (and of `capevolve.yaml`), see
+> `examples/toy_calc/` — a runnable, zero-API reference project.
+
 ## What we're optimizing
 - Capability: <skill-package | tools | mcp-tool | system-prompt | ...>
 - Artifact: `<path>`

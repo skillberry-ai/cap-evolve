@@ -14,9 +14,14 @@ D="$(mktemp -d -t toy_calc.XXXXXX)"
 mkdir -p "$D/.capevolve/project/adapters"
 cp "$REPO/examples/toy_calc/adapter.py"   "$D/.capevolve/project/adapters/"
 cp -R "$REPO/examples/toy_calc/capability" "$D/seed_capability"
-cp "$REPO/templates/project/capevolve.yaml"   "$D/.capevolve/project/capevolve.yaml"
+# The FILLED spec (examples/toy_calc/capevolve.yaml), not the blank template — this
+# example IS the worked reference for what a finished project dir looks like.
+cp "$REPO/examples/toy_calc/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
+cp "$REPO/examples/toy_calc/PROJECT.md"     "$D/.capevolve/project/PROJECT.md"
 
 echo "Working directory: $D"
+# The hard gate: refuses to proceed unless the adapter contract actually holds.
+python3 -m cap_evolve.cli check "$D/.capevolve/project"
 python3 -m cap_evolve.cli run \
   --spec    "$D/.capevolve/project/capevolve.yaml" \
   --project "$D/.capevolve/project" \

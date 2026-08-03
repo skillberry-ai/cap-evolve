@@ -1,0 +1,80 @@
+# toy_calc — a FILLED cap-evolve run spec (the worked reference).
+#
+# This is the template at `templates/project/capevolve.yaml` with every decision
+# actually made, and a note on WHY. To start your own project, copy the TEMPLATE
+# (it carries the full option list); read this file to see what a finished one
+# looks like and what each choice costs you.
+#
+# `run.sh` copies this file to `<workdir>/.capevolve/project/capevolve.yaml` — the
+# project dir the harness reads. Only keys that differ from the template's default,
+# or that are load-bearing here, are kept; every omitted key takes its default.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt]     # the artifact is one prompt file, so one capability
+capability_path: seed_capability  # resolved project-relative; run.sh puts the seed copy here
+actions: [edit]                   # edit the prompt text; no add/remove of files
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: mock             # `mock` = deterministic, ZERO API calls. It applies
+                                  # CAPEVOLVE_MOCK_SCRIPT verbatim, which is why this
+                                  # example is a CI gate and not a flaky model call.
+optimizer_model: ""               # unused by `mock`
+target_model: ""                  # no consuming LLM: the "agent" is a Python stand-in,
+                                  # so there is no reader tier to tune edits for
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb       # parent is always the current best — the simplest loop
+algorithm_focus: all              # reflect over the whole train set each iteration
+orchestration_mode: deterministic # cap-evolve sequences the loop; honesty is code-enforced
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter           # tasks come from Adapter.tasks(); there is no file
+                                  # loader in this path — the adapter reads tasks.jsonl
+                                  # itself (see adapter.py), and the harness filters by
+                                  # the frozen split.
+split_seed: 0                     # frozen ONCE into <run>/splits.json; test is sealed
+split_train: 0.5                  # 8 tasks -> train 4 / val 2 / test 2
+split_val: 0.25
+split_test: 0.25
+# HONEST LIMIT: val = 2 tasks. That is exactly the floor the harness enforces
+# (`MIN_VAL_TASKS = 2`); a 3-task dataset with these ratios would be REFUSED, not
+# silently run. 2 is still below the low-confidence threshold, so a real benchmark
+# wants tens of val tasks. This example gets away with it only because the scorer is
+# exact and the stand-in is deterministic.
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1                     # the stand-in is deterministic: extra trials are
+                                  # byte-identical, so they buy no variance information
+
+# --- protected paths (tamper guard) -----------------------------------------
+# DELIBERATELY OMITTED, which means "use the defaults derived from this layout"
+# (adapters/, capevolve.yaml, the dataset, and *gold* data files). Do NOT write
+# `protected_paths: []` to mean that — an empty list is a HARD ERROR, because
+# "protects nothing" must never happen by accident.
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired                 # the default in every real run: mean(per-task Δ) vs
+                                  # k·SE(Δ) over the SAME val tasks
+gate_k_se: 1.0
+# HONEST LIMIT — read this before quoting the gate. Two things are true here:
+#  1. At k_se = 1.0, improving exactly ONE of n val tasks gives mean(Δ) = SE(Δ)
+#     EXACTLY, so the strict `>` REJECTS it — at every n, and however large that one
+#     gain is. You need >= 2 improved tasks to bank anything at 1.0. (The examples
+#     that want single-task gains set `gate_k_se: 0.2`.)
+#  2. This run never exercises that bar. Both val tasks move 0 -> 1 together, so the
+#     spread of the deltas is zero, SE(Δ) = 0, and the gate logs a `gate_warning` and
+#     falls back to the documented STRICT rule (accept any Δ > 0). The transcript says
+#     so: `paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2` (the stable
+#     prefix; the suffix after `n=2` varies by branch).
+# So this example proves the PIPELINE end to end. It does not demonstrate the paired
+# significance test doing real work — a deterministic scorer has no noise to reject.
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 5                 # the winning edit lands on iteration 1; 5 leaves room
+stall: 2                          # ...and `stall` stops it 2 rejects later, so the run
+                                  # ends after 3 iterations, not 5
+max_usd: 0.0                      # 0 = off, and honest here: `mock` spends nothing
+
+# --- iteration store --------------------------------------------------------
+store: git                        # every iteration is a commit in the run dir, so the
+                                  # process is inspectable after the fact

@@ -370,6 +370,30 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **A filled, runnable worked reference project (`examples/toy_calc/`).** The repo shipped
+  a blank scaffold (`templates/project/`) and zero filled `PROJECT.md` / commented
+  `capevolve.yaml` anywhere — so the first concrete artifact after intake taught nothing.
+  `examples/toy_calc/` now carries both: a filled `PROJECT.md` (what is optimized, how it
+  runs, how it scores, the splits, the budget, the resolved/skipped inputs) and a filled
+  `capevolve.yaml` with a note on **why** for every decision. `run.sh` uses that spec
+  instead of the blank template and runs `cap-evolve check` first, so the documented hard
+  gate is actually exercised.
+
+  Each doc leads with what the example does **not** prove, because that is what readers
+  over-read: `gate_mode: paired` / `gate_k_se: 1.0` are set but never tested here — both
+  val tasks move together, so `SE(Δ)=0` and the gate takes its documented **STRICT
+  fallback** (`paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2)`); at
+  `k_se=1.0` improving exactly one of `n` tasks gives `mean(Δ)=SE(Δ)` *exactly* and is
+  **rejected** at any `n` and any magnitude; `val=2` is the harness floor, not a
+  recommendation; and `check` passing does not run `run_target`, so it proves less than it
+  looks. `protected_paths` is deliberately **omitted** (an empty list is a hard error,
+  never a "use defaults" shorthand).
+
+  Two tests in `core/tests/test_e2e_slice.py` drive the committed files through the real
+  CLI — `cap-evolve check` → a full zero-API `run` → the sealed test — and assert the spec
+  rules (no declared `protected_paths`, val ≥ 2, no leftover template placeholders) plus
+  the gate's `gate_warning`. A contract change now breaks a test instead of silently
+  rotting the prose.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the
