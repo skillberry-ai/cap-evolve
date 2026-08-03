@@ -62,7 +62,7 @@ from .harness import (
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir
+from .rundir import RunDir, _atomic_write
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
@@ -169,10 +169,13 @@ def _eval_minibatch(
                      "output": _short(getattr(rollout, "output", None)),
                      "trace": _short(getattr(rollout, "trace", None))},
             ))
-            (out_dir / f"{task.id}__{tag}__t0.json").write_text(
+            # Same atomic, never-truncate rule as evaluate_candidate: a truncating
+            # write would mutate an already-archived hardlinked copy, and under
+            # parallel evaluation could be read half-written.
+            _atomic_write(
+                out_dir / f"{task.id}__{tag}__t0.json",
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
-                encoding="utf-8",
             )
             if cache is not None:
                 cache.put(chash, task.id, sc.reward, sc.feedback or "")

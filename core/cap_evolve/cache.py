@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 from pathlib import Path
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
@@ -72,6 +73,14 @@ class EvalCache:
 
     def __init__(self, path: Path):
         self.path = Path(path)
+        # Serializes put/_flush: with parallel candidate evaluation two workers can
+        # put concurrently, and the flush is a read-modify-write of the WHOLE file.
+        # Without this, one flush's dict snapshot overwrites the other's entry (a
+        # lost cache write — harmless for correctness, wasteful for cost) and two
+        # threads could race the same temp path. Entries are keyed on the candidate
+        # CONTENT hash, so two workers on different candidates can never collide on
+        # a key; only the file write needs serializing.
+        self._lock = threading.Lock()
         self._data: dict = {}
         if self.path.exists():
             try:
@@ -87,17 +96,22 @@ class EvalCache:
         return self._data.get(self._key(candidate_hash, task_id))
 
     def put(self, candidate_hash: str, task_id: str, reward: float, feedback: str = "") -> None:
-        self._data[self._key(candidate_hash, task_id)] = {
-            "reward": float(reward), "feedback": str(feedback or "")}
-        self._flush()
+        with self._lock:
+            self._data[self._key(candidate_hash, task_id)] = {
+                "reward": float(reward), "feedback": str(feedback or "")}
+            self._flush_locked()
 
     def _flush(self) -> None:
-        # Atomic-ish write (tmp + replace) so a crash mid-write can't corrupt the cache.
-        import os
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_name(f".{self.path.name}.tmp.{os.getpid()}")
-        tmp.write_text(json.dumps(self._data), encoding="utf-8")
-        os.replace(tmp, self.path)
+        with self._lock:
+            self._flush_locked()
+
+    def _flush_locked(self) -> None:
+        # Atomic write (tmp + replace) so neither a crash nor a concurrent put can
+        # leave a torn cache. Route through rundir._atomic_write, whose temp name is
+        # unique per (process, thread) — a shared temp path would let two writers
+        # splice bytes into one file before the replace.
+        from .rundir import _atomic_write
+        _atomic_write(self.path, json.dumps(self._data))
 
     def __len__(self) -> int:
         return len(self._data)

@@ -24,9 +24,10 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import parallel as _par
 from .loop import SplitResult, aggregate_scores
 from .rundir import RunDir, _atomic_write
-from .splits import Splits, make_splits
+from .splits import Splits, TestSealError, make_splits
 from .types import Rollout, Score, Task
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -249,10 +250,15 @@ def evaluate_candidate(
             per_task_trials[tid].append(sc.reward)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
             per_task_metrics[tid].append(sc.metrics)
-            (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
+            # Atomic (tmp + os.replace), never truncate-in-place: a rollout file may
+            # share its inode with an already-archived copy (hardlinked evidence), and
+            # a truncating write would mutate that archive. os.replace swaps a NEW
+            # inode in, leaving any archived link untouched — and under parallel
+            # evaluation a reader never sees a half-written rollout.
+            _atomic_write(
+                out_dir / f"{tid}__{tag}__t{k}.json",
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
-                encoding="utf-8",
             )
 
     # ``live()`` makes the candidate the one the target uses for this evaluation and
@@ -1247,18 +1253,66 @@ def run_step(
 
     ``no_regression`` adds a SWE-bench-style dual gate: even if the mean improves,
     reject the candidate if it breaks any val task the parent already passed.
+
+    This is ``propose_candidate`` followed immediately by ``commit_candidate`` — the
+    two halves parallel evaluation drives separately (see ``parallel_steps``). The
+    serial path is unchanged: same calls, same order, same artifacts.
     """
-    gate_kwargs = dict(gate_kwargs or {})
+    proposal = propose_candidate(
+        adapter, run_dir=run_dir, parent_dir=parent_dir, optimizer=optimizer,
+        instructions=instructions, n_trials=n_trials, candidate_id=candidate_id,
+        parent_id=parent_id, rejected=rejected, history=history,
+        capabilities=capabilities, eval_split=eval_split, optimizer_name=optimizer_name,
+        capability_sources=capability_sources, project_dir=project_dir,
+    )
+    return commit_candidate(
+        proposal, run_dir=run_dir, current_val=current_val, gate_kwargs=gate_kwargs,
+        no_regression=no_regression, rejected=rejected, history=history, store=store,
+    )
+
+
+def propose_candidate(
+    adapter,
+    *,
+    run_dir: RunDir,
+    parent_dir: Path,
+    optimizer: OptimizerFn,
+    instructions: str,
+    n_trials: int = 1,
+    candidate_id: str | None = None,
+    parent_id: str | None = None,
+    rejected=None,
+    history=None,
+    capabilities=None,
+    eval_split: str = "val",
+    optimizer_name: str | None = None,
+    capability_sources=None,
+    project_dir: Path | None = None,
+) -> dict:
+    """The PARALLELIZABLE half of a step: workspace → optimize → evaluate on val.
+
+    Produces a candidate in its own hermetic workspace and its val ``SplitResult``,
+    and NOTHING else: it does not gate, does not snapshot, does not move ``best_id``,
+    does not touch the run-level JOURNAL, and never reads the test split. Every
+    run-dir mutation it does make is either an atomic whole-line ``log_event`` or a
+    locked read-modify-write (``update_spent``), so N of these can run concurrently
+    without losing spend or corrupting the audit log.
+
+    The returned dict is the input to ``commit_candidate``, which applies results one
+    at a time — the serialized commit point that keeps the honesty core
+    single-threaded.
+    """
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
     # Lineage edge for the dashboard/report: the parent is the candidate this step
     # was forked from (the current best by default in a global hill-climb). Captured
     # before any accept flips ``best_id`` so the edge points at the true parent.
     parent_id = parent_id or run_dir.best_id
-    workdir = run_dir.root / "work" / cid
-    if workdir.exists():
-        shutil.rmtree(workdir)
-    workdir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(parent_dir, workdir)
+    # THE workspace creation point for every run, serial or parallel. Going through
+    # parallel.make_workspace instead of an inline copytree is what REGISTERS the
+    # workspace for interrupt cleanup — otherwise a real Ctrl-C mid-round leaves up to
+    # N half-built capability copies under work/. Released at the commit point, once the
+    # workspace has been snapshotted into candidates/.
+    workdir = _par.make_workspace(run_dir.root / "work", cid, parent_dir)
 
     # Give the optimizer the full trajectories + capability guidance, in its own dir.
     _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
@@ -1275,6 +1329,12 @@ def run_step(
         if isinstance(opt_report, dict):
             opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
             opt_tokens = int(opt_report.get("tokens") or 0)
+    except _honesty_errors():
+        # A tamper detection or seal violation surfacing from the optimizer call is NOT
+        # "a wasted iteration": no score computed against this tree can be trusted, so it
+        # aborts the run instead of being recorded as a rejected candidate. Serial and
+        # parallel paths agree on this — the guard is not weakened by either.
+        raise
     except Exception as e:  # noqa: BLE001
         # A failed proposal (e.g. a transient optimizer/API error) must not abort a
         # long run — leave the workdir as the parent copy so the candidate == parent
@@ -1294,6 +1354,56 @@ def run_step(
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
+
+    return {
+        "candidate_id": cid,
+        "parent_id": parent_id,
+        "workdir": workdir,
+        "candidate_val": cand_val,
+        "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
+        "optimizer_error": optimizer_error,
+    }
+
+
+def commit_candidate(
+    proposal: dict,
+    *,
+    run_dir: RunDir,
+    current_val: SplitResult,
+    gate_kwargs: dict | None = None,
+    no_regression: bool = False,
+    rejected=None,
+    history=None,
+    store=None,
+) -> dict:
+    """The SERIALIZED half of a step: gate → snapshot → best/memory/store → step event.
+
+    Call this for ONE proposal at a time, in a deterministic order. Everything that
+    makes the run's numbers honest lives here — the significance gate, the
+    no-regression check, ``set_best``, the iteration counter, the ledger/journal, the
+    version-store commit — so it is single-threaded by construction: every score a
+    parallel run banks cleared the same gate, against the same champion, that a serial
+    run would have gated it against.
+
+    ``current_val`` is the parent this proposal is gated against; a parallel caller
+    re-gates each proposal against the *current* champion as it commits, so accepting
+    one candidate correctly raises the bar for its siblings — a sibling forked from a
+    now-superseded champion is rejected rather than banked. That keeps every recorded
+    score honest, but it does NOT make a parallel round equivalent to N serial steps:
+    the siblings were already *built* from the start-of-round champion. See
+    ``parallel_steps``.
+    """
+    gate_kwargs = dict(gate_kwargs or {})
+    cid = proposal["candidate_id"]
+    parent_id = proposal.get("parent_id")
+    workdir = Path(proposal["workdir"])
+    cand_val = proposal["candidate_val"]
+    optimizer_seconds = float(proposal.get("optimizer_seconds") or 0.0)
+    opt_cost_usd = float(proposal.get("optimizer_usd") or 0.0)
+    opt_tokens = int(proposal.get("optimizer_tokens") or 0)
+    optimizer_error = proposal.get("optimizer_error")
 
     # Paired gate is the default when per-task data is available: candidate and
     # current were scored on the SAME val tasks, so the correct (and far more
@@ -1329,6 +1439,10 @@ def run_step(
     # capability-only and the diff shows just the real edit. Only an accepted candidate
     # becomes the new best (parent for the next step).
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    # The candidate is durable in candidates/ now, so what is left under work/ is
+    # inspectable scratch rather than uncommitted work — drop it from the interrupt
+    # registry (the dir itself is deliberately kept, as it always has been).
+    _par.release_workspace(workdir)
     if accepted:
         run_dir.set_best(cid)
     run_dir.update_spent(iterations=1, accepted=accepted)
@@ -1382,6 +1496,125 @@ def run_step(
         "optimizer_error": optimizer_error,
         "workdir": str(workdir),
     }
+
+
+def _honesty_errors() -> tuple[type[BaseException], ...]:
+    """Exceptions that must ABORT a run rather than be recorded as a bad candidate.
+
+    ``TestSealError`` (something tried to score sealed test twice) and, when the
+    protected-paths guard is present, ``TamperError`` (the scorer / eval harness / task
+    data was modified, so no score computed against this tree can be trusted). Resolved
+    dynamically because ``protect`` may not exist in every build.
+    """
+    errs: tuple[type[BaseException], ...] = (TestSealError,)
+    try:
+        from .protect import TamperError
+    except ImportError:
+        return errs
+    return (*errs, TamperError)
+
+
+def parallel_steps(
+    adapter,
+    plans: list[dict],
+    *,
+    run_dir: RunDir,
+    optimizer: OptimizerFn,
+    current_val: SplitResult,
+    workers: int = 1,
+    n_trials: int = 1,
+    gate_kwargs: dict | None = None,
+    no_regression: bool = False,
+    rejected=None,
+    history=None,
+    store=None,
+    capabilities=None,
+    eval_split: str = "val",
+    optimizer_name: str | None = None,
+    capability_sources=None,
+    project_dir: Path | None = None,
+) -> list[dict]:
+    """Propose ``len(plans)`` candidates with up to ``workers`` in flight, then commit
+    them one at a time in ``plans`` order.
+
+    Each plan is ``{"candidate_id", "parent_dir", "instructions"[, "parent_id"]}``.
+    ``workers=1`` (the default) runs proposal-then-commit inline per plan, so the call
+    sequence is identical to looping ``run_step`` — which is why a default run's
+    artifacts are byte-identical to before this feature existed.
+
+    Commit order is ``plans`` order regardless of which worker finished first, so the
+    accept sequence — and therefore ``best_id``, the iteration counter, and every
+    artifact derived from them — is deterministic. Each commit re-gates against the
+    champion as of that moment: if plan 1 is accepted, plan 2 must beat the NEW
+    champion.
+
+    **Determinism is not equivalence.** Siblings in one round are *built* from the parent
+    their plan names, which for a hill-climb round is the champion as of the START of the
+    round. Re-gating means a sibling forked from a now-stale champion is correctly
+    *rejected*, not that it would have been proposed at all in a serial run. With
+    ``len(plans) > 1`` this is a breadth-first search over N siblings of one champion, and
+    its accept sequence, ``best_id`` and sealed test number legitimately differ from
+    serial's. See ``resolve_workers``' note; ``workers=1``/one plan per round is the only
+    configuration with the serial guarantee.
+
+    A worker that raises turns into a rejected step (``proposal_error``) rather than
+    sinking the whole round — same policy ``propose_candidate`` already applies to an
+    optimizer failure. HONESTY failures are the exception: a ``TamperError`` (the grader
+    was edited, so no score from this tree is trustworthy) or a ``TestSealError`` aborts
+    the whole round, exactly as it aborts a serial ``run_step``. Downgrading either to
+    "a rejected candidate" would let parallelism silently weaken a honesty guard.
+    """
+    from . import parallel as _par
+
+    workers = _par.resolve_workers_for(adapter, workers, run_dir=run_dir)
+    if workers > 1:
+        run_dir.log_event("parallel_round", workers=workers,
+                          candidates=[p["candidate_id"] for p in plans])
+    fatal = _honesty_errors()
+
+    def _propose(plan: dict) -> dict:
+        try:
+            return propose_candidate(
+                adapter, run_dir=run_dir, parent_dir=Path(plan["parent_dir"]),
+                optimizer=optimizer, instructions=plan["instructions"],
+                n_trials=n_trials, candidate_id=plan["candidate_id"],
+                parent_id=plan.get("parent_id"), rejected=rejected, history=history,
+                capabilities=capabilities, eval_split=eval_split,
+                optimizer_name=optimizer_name, capability_sources=capability_sources,
+                project_dir=project_dir,
+            )
+        except fatal:
+            raise  # tamper / seal violation: abort the round, never record a score
+        except Exception as e:  # noqa: BLE001 — one bad candidate must not sink the round
+            run_dir.log_event("proposal_error", candidate=plan["candidate_id"],
+                              error=str(e)[:500])
+            # The commit path snapshots the workspace unconditionally, so make sure one
+            # exists even when the failure happened before/during its creation (e.g. an
+            # unreadable parent dir). An empty candidate scores 0 and is rejected — a
+            # wasted iteration recorded honestly, not a crashed run. Note an empty dir
+            # under candidates/ is indistinguishable from a real candidate whose
+            # capability was emptied; the ``proposal_error`` event above is what
+            # disambiguates them, so don't drop it.
+            wd = run_dir.root / "work" / plan["candidate_id"]
+            wd.mkdir(parents=True, exist_ok=True)
+            return {"candidate_id": plan["candidate_id"], "parent_id": plan.get("parent_id"),
+                    "workdir": wd,
+                    "candidate_val": SplitResult(split=eval_split, reward=0.0, stderr=0.0),
+                    "optimizer_seconds": 0.0, "optimizer_usd": 0.0, "optimizer_tokens": 0,
+                    "optimizer_error": f"proposal failed: {e}"}
+
+    proposals = _par.map_ordered(_propose, plans, workers=workers)
+
+    steps: list[dict] = []
+    for proposal in proposals:  # SERIALIZED COMMIT POINT — one at a time, in plan order
+        step = commit_candidate(
+            proposal, run_dir=run_dir, current_val=current_val, gate_kwargs=gate_kwargs,
+            no_regression=no_regression, rejected=rejected, history=history, store=store,
+        )
+        steps.append(step)
+        if step["accepted"]:
+            current_val = SplitResult.from_dict(step["candidate_val"])
+    return steps
 
 
 # ---- memory + version store wiring ----------------------------------------
@@ -1868,6 +2101,7 @@ def hill_climb_loop(
     project_dir: Path | None = None,
     target_model: str = "",
     target_profile_file: str | None = None,
+    parallel: int = 1,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1876,6 +2110,12 @@ def hill_climb_loop(
     reflection emphasizes — and (for hardest-first) the order. Parent is always
     the current best (global hill-climb). The ``gepa`` algorithm uses its own
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
+
+    ``parallel`` (default 1 = serial, unchanged) evaluates up to N sibling candidates
+    per round, each in its own hermetic workspace, forked from the SAME champion and
+    given the next N focus slots. They are committed one at a time in candidate order
+    behind the usual val gate, so results are deterministic and the honesty core stays
+    single-threaded. Downgraded to 1 for an adapter that is not concurrency-safe.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
@@ -1895,11 +2135,10 @@ def hill_climb_loop(
         score_by = {pt["task_id"]: pt["reward"] for pt in train_res.per_task}
         order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
 
-    steps = []
-    for i in range(max_iterations):
-        exhausted, why = run_dir.budget_exhausted()
-        if exhausted:
-            break
+    from . import parallel as _par
+    workers = _par.resolve_workers_for(adapter, parallel, run_dir=run_dir)
+
+    def _instructions_for(i: int) -> str:
         if focus == "all":
             focus_ids, label = None, "whole train set"
         elif focus in ("cyclic", "hardest-first"):
@@ -1908,22 +2147,51 @@ def hill_climb_loop(
         else:
             focus_ids, label = None, focus
         seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
-        instructions = _focus_instructions(current_val, focus_ids, label,
-                                            capabilities=capabilities, algorithm=algorithm,
-                                            instructions_file=instructions_file,
-                                            bench_repo=bench_repo, optimizer_name=optimizer_name,
-                                            seed_empty=seed_empty, target_reader=_target_reader)
-        step = run_step(
-            adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
-            optimizer=optimizer, instructions=instructions, current_val=current_val,
-            n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-            rejected=rejected, history=history, store=store, capabilities=capabilities,
-            optimizer_name=optimizer_name, capability_sources=capability_sources,
-            project_dir=project_dir,
+        return _focus_instructions(current_val, focus_ids, label,
+                                   capabilities=capabilities, algorithm=algorithm,
+                                   instructions_file=instructions_file,
+                                   bench_repo=bench_repo, optimizer_name=optimizer_name,
+                                   seed_empty=seed_empty, target_reader=_target_reader)
+
+    steps = []
+    i = 0
+    while i < max_iterations:
+        exhausted, why = run_dir.budget_exhausted()
+        if exhausted:
+            break
+        # A round is `workers` siblings forked from the SAME champion (1 = today's
+        # single step). Candidate ids are derived from the iteration index, not from
+        # the live `spent.iterations` counter, so concurrent proposals can't collide
+        # on a name and the numbering is identical to the serial run's.
+        # Clamp the round to the remaining budget headroom, not just the loop counter:
+        # a serial loop re-checks budget_exhausted() between candidates, so a round that
+        # launched `workers` candidates regardless would overshoot max_iterations /
+        # max_metric_calls / stall and make a parallel run LONGER than a serial one with
+        # the same budget. With this clamp, N=1 and N=4 spend the same budget and produce
+        # the same steps.
+        batch = min(workers, max_iterations - i,
+                    run_dir.budget_headroom(
+                        metric_calls_per_candidate=len(run_dir.read_splits().val) * n_trials))
+        if batch < 1:
+            break
+        base_iter = run_dir.spent.iterations
+        parent_dir = run_dir.candidate_dir(run_dir.best_id)
+        parent_id = run_dir.best_id
+        plans = [{"candidate_id": f"cand_{base_iter + j + 1:04d}",
+                  "parent_dir": parent_dir, "parent_id": parent_id,
+                  "instructions": _instructions_for(i + j)} for j in range(batch)]
+        round_steps = parallel_steps(
+            adapter, plans, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
+            workers=workers, n_trials=n_trials, gate_kwargs=gate_kwargs,
+            no_regression=no_regression, rejected=rejected, history=history, store=store,
+            capabilities=capabilities, optimizer_name=optimizer_name,
+            capability_sources=capability_sources, project_dir=project_dir,
         )
-        steps.append(step)
-        if step["accepted"]:
-            current_val = SplitResult.from_dict(step["candidate_val"])
+        steps.extend(round_steps)
+        for step in round_steps:
+            if step["accepted"]:
+                current_val = SplitResult.from_dict(step["candidate_val"])
+        i += batch
 
     _, why = run_dir.budget_exhausted()
     return {

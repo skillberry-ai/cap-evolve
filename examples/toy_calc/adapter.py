@@ -31,6 +31,13 @@ def _safe_eval(expr: str) -> int:
 
 class Adapter(CapabilityAdapter):
 
+    # Hermetic: run_target reads ONLY ``ctx`` (the candidate dir), and ``apply`` below is a
+    # documented no-op — no global slot, nothing written outside the candidate dir. Declaring
+    # this is what lets ``--parallel N`` actually evaluate N candidates at once; without it
+    # the engine conservatively downgrades to serial, because an ``apply`` override *may* be
+    # a global inject. Only set it when the adapter really is per-candidate hermetic.
+    parallel_safe = True
+
     def tasks(self, split: str) -> list[Task]:
         import json
         tasks = []

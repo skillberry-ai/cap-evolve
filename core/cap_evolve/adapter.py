@@ -27,6 +27,34 @@ uses them when present:
     run_trials(tasks, ctx, *, n_trials, base_seed)            # batched multi-trial fast path
     score_batch(tasks, rollouts)              -> {id: Score}  # batched scoring fast path
 
+**Concurrency declaration** (optional class attribute):
+
+    parallel_safe = True    # this adapter may be driven from several threads at once
+
+Only relevant under ``cap-evolve run --parallel N`` (parallel *candidate* evaluation).
+The default is a conservative NO for any adapter that overrides ``apply`` or ``live``,
+because those hooks are allowed to be a *global* inject — the single shared slot two
+concurrent candidates would clobber. Set ``parallel_safe = True`` when the adapter is
+genuinely hermetic (it reads/writes only ``ctx`` / the candidate dir and mutates no
+process- or host-global state), or ``False`` to opt out explicitly. An adapter that
+overrides neither hook is safe automatically. A non-safe adapter is downgraded to
+sequential and the downgrade is logged (``parallel_downgraded``), so a missing
+declaration costs throughput, never correctness.
+
+"Mutates no process-global state" **includes the global RNGs.** ``random.seed()`` /
+``random.random()`` and ``numpy.random.seed()`` / ``numpy.random.random()`` share one
+hidden generator across all threads, so an adapter that seeds it once per batch and then
+draws per task yields DIFFERENT per-task rollouts under ``--parallel`` — and the
+divergence can be invisible in the aggregate mean, which makes it worse than a crash.
+Seed a local instance instead: ``rng = random.Random(seed)`` /
+``numpy.random.default_rng(seed)``. That is also what makes a serial run reproducible,
+and it is what every RNG in ``cap_evolve`` itself does.
+
+This is the one hazard the automatic check cannot see: an adapter overriding neither
+``apply`` nor ``live`` is auto-approved regardless of what other global state it touches.
+So ``parallel_safe`` — declared or inferred — is YOUR assertion of reentrancy, not
+something cap-evolve verified.
+
 Why ``materialize`` + ``live`` instead of a single ``apply``:
 ``apply(candidate_dir)`` used to be a *global* side effect (e.g. monkeypatching a
 benchmark's policy), which (a) prevented two candidates being evaluated

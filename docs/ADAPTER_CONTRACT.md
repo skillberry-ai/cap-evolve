@@ -68,6 +68,59 @@ instance) can batch that harness call and let it parallelize internally. Any tas
 batch omits falls back to a single `score()` call, so a partial implementation can never
 silently drop a score.
 
+## Concurrency: `parallel_safe` (optional class attribute)
+
+Only relevant under `cap-evolve run --parallel N`, which evaluates N *sibling* candidates
+per round, each in its own hermetic workspace, from N threads of one process. **A
+third-party adapter is not required to be reentrant** — omitting the attribute is always
+safe, it just costs throughput.
+
+```python
+class MyAdapter(CapabilityAdapter):
+    parallel_safe = True    # I assert: this adapter may be driven from several threads at once
+```
+
+Resolution is **default-deny** for the hook that can be a global inject:
+
+| Adapter | Resolved | Why |
+|---|---|---|
+| declares `parallel_safe = True` / `False` | as declared | your declaration is authoritative |
+| overrides `apply` or `live`, no declaration | **serial** | those hooks are allowed to be a *global* inject — one shared slot two concurrent candidates would clobber |
+| overrides neither, no declaration | parallel | uses the pure default `live()`, which only yields the candidate dir |
+
+A downgrade is logged as a `parallel_downgraded` event, so a silent loss of speedup is
+never mistaken for a speedup that failed to materialize.
+
+**What `parallel_safe = True` obliges you to.** It asserts that `materialize → live →
+run_target → score` for candidate A cannot observe or disturb candidate B: read and write
+only `ctx` / the candidate dir, and mutate no process- or host-global state — no module
+globals, no shared cache, no `chdir`, no writes to one fixed temp path, no env-var
+injection, and **no global RNG**.
+
+The global RNG is the trap worth naming explicitly. `random.seed()` / `random.random()`
+and `numpy.random.seed()` / `numpy.random.random()` share one hidden generator across all
+threads, so an adapter that seeds it once per batch and then draws per task produces
+different per-task rollouts under `--parallel` — and the divergence can be invisible in
+the aggregate mean, which is worse than a crash. Seed a local instance:
+
+```python
+rng = random.Random(seed)                # not random.seed(seed)
+rng = numpy.random.default_rng(seed)     # not numpy.random.seed(seed)
+```
+
+That is also what makes a *serial* run reproducible, and it is what every RNG inside
+`cap_evolve` itself does.
+
+Note the one gap: an adapter overriding neither `apply` nor `live` is auto-approved as
+parallel-safe no matter what other global state it touches. So `parallel_safe` — declared
+or inferred — is **your** assertion of reentrancy, not something cap-evolve verified. When
+in doubt set `parallel_safe = False` and lose the throughput.
+
+Finally, `--parallel N > 1` **changes the search**: it forks N siblings from one champion
+(breadth) rather than one step per accept (depth), so the accept sequence, `best_id` and
+the sealed test number differ from a serial run's and can be worse on the same iteration
+budget. `N = 1` (the default) is the only mode that reproduces a serial trajectory.
+
 ## Why this shape (three abstract, not prior work's three or SkillOpt's five)
 
 Prior agent-optimization work split injection across `runner_adapter` + `inject`;

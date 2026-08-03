@@ -75,6 +75,13 @@ def main(argv=None) -> int:
                    help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
     p.add_argument("--target-profile-file", default=None,
                    help="optional project-local brief overriding the tier's built-in brief")
+    p.add_argument("--parallel", type=int, default=1,
+                   help="evaluate up to N sibling candidates per round, each in its own "
+                        "hermetic workspace, committed serially behind the val gate. "
+                        "N>1 CHANGES THE SEARCH (breadth from one champion, not depth per "
+                        "accept): the accept sequence, best_id and the final test number "
+                        "differ from serial and can be worse on the same iteration budget. "
+                        "Default 1 = serial, unchanged behaviour")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -112,6 +119,7 @@ def main(argv=None) -> int:
         project_dir=Path(args.project),
         target_model=args.target_model,
         target_profile_file=args.target_profile_file,
+        parallel=args.parallel,
     )
     print(json.dumps(result, indent=2))
     return 0
