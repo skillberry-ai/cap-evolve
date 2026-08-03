@@ -1338,8 +1338,26 @@ class Adapter(CapabilityAdapter):
 
         soft = sum(test_results) / len(test_results)
         hard = 1.0 if all(test_results) else 0.0
+
+        # Localize the failure while the produced workbook is still on disk. Only for a MISS,
+        # and only on test case 1 — the diagnosis generalizes across the three cases and this
+        # keeps scoring cheap. Best-effort: a diagnostic that cannot be computed must never
+        # cost a score.
+        localized: list[str] = []
+        if mismatched:
+            try:
+                idx = mismatched[0]
+                localized = _localize_failure(
+                    entry,
+                    data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx",
+                    _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "input"),
+                    _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer"),
+                )
+            except Exception:  # noqa: BLE001
+                localized = []
+
         feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre),
-                                   recalc_failed)
+                                   recalc_failed, localized)
 
         # Scoring has consumed every output; drop the per-rollout dir.
         _cleanup_output_dir(rollout)
@@ -1360,9 +1378,117 @@ class Adapter(CapabilityAdapter):
         )
 
 
+def _range_cells(answer_position: str):
+    """Yield (sheet, min_col, min_row, max_col, max_row) for each part of answer_position.
+
+    answer_position is SpreadsheetBench's own notation and may name several ranges across
+    several sheets, e.g. "MINUS'!B2:E11,'PLUS'!B2:E5200". Parsed here only to describe the
+    agent's own output against the range it was GIVEN — no gold data is consulted.
+    """
+    for part in str(answer_position).split(","):
+        part = part.strip()
+        sheet = None
+        if "!" in part:
+            sheet, _, part = part.rpartition("!")
+            sheet = sheet.strip().strip("'")
+        m = re.fullmatch(r"\$?([A-Za-z]+)\$?(\d+)(?::\$?([A-Za-z]+)\$?(\d+))?", part.strip())
+        if not m:
+            continue
+        c1, r1, c2, r2 = m.group(1), int(m.group(2)), m.group(3) or m.group(1), int(m.group(4) or m.group(2))
+        col = lambda t: sum((ord(ch.upper()) - 64) * 26 ** i for i, ch in enumerate(reversed(t)))
+        yield sheet, col(c1), r1, col(c2), r2
+
+
+def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> list[str]:
+    """WHY a produced workbook missed, in terms the optimizer can act on.
+
+    The previous feedback said only "values did not match", which is one bit. The optimizer
+    could therefore learn generic discipline rules ("do not hardcode", "verify your work") but
+    had no way to discover that LOCATING and COVERING the target range was the failing
+    sub-step — which is exactly the pair of rules comparable published work reports learning
+    and ours never did. On run 30762167950, 197 of 639 sealed tasks failed ALL THREE test
+    cases, and nothing in the logs said why.
+
+    GOLD SAFETY. Three of the four signals never open the gold file at all — they compare the
+    agent's output against its own INPUT and against the range it was handed, both of which it
+    already knows. The fourth reports a value's TYPE (e.g. "text where a date was expected"),
+    which is metadata rather than an answer; it is the single most actionable diagnostic for
+    this benchmark and is judged worth that narrow disclosure. No cell VALUE is ever emitted.
+    """
+    notes: list[str] = []
+    try:
+        import openpyxl
+        pw = openpyxl.load_workbook(produced, data_only=True)
+        sw = openpyxl.load_workbook(source, data_only=True)
+    except Exception:  # noqa: BLE001
+        return notes
+
+    total = written = 0
+    untouched_sheets: list[str] = []
+    for sheet, c1, r1, c2, r2 in _range_cells(entry.get("answer_position", "")):
+        name = sheet if sheet in pw.sheetnames else pw.sheetnames[0]
+        ws = pw[name]
+        src = sw[name] if name in sw.sheetnames else None
+        span = (c2 - c1 + 1) * (r2 - r1 + 1)
+        filled = same_as_input = 0
+        for row in range(r1, r2 + 1):
+            for cc in range(c1, c2 + 1):
+                v = ws.cell(row, cc).value
+                if v is not None and str(v) != "":
+                    filled += 1
+                if src is not None and v == src.cell(row, cc).value:
+                    same_as_input += 1
+        total += span
+        written += filled
+        if span and same_as_input == span:
+            untouched_sheets.append(name)
+
+    if total:
+        notes.append(
+            f"COVERAGE: the target range spans {total} cell(s); your output has a value in "
+            f"{written} of them."
+        )
+        if written == 0:
+            notes.append("The target range is EMPTY in your output — nothing was written there.")
+        elif written * 4 < total:
+            notes.append(
+                "Most of the target range was left unfilled — check where the data actually "
+                "ends rather than assuming the extent from the preview."
+            )
+    if untouched_sheets:
+        notes.append(
+            f"UNCHANGED: sheet(s) {sorted(set(untouched_sheets))} are byte-identical to the "
+            f"input across the target range — that part of answer_position was never modified."
+        )
+
+    # TYPE mismatch (reports the expected TYPE, never a value).
+    try:
+        gw = openpyxl.load_workbook(gold, data_only=True)
+        bad: dict[str, int] = {}
+        for sheet, c1, r1, c2, r2 in _range_cells(entry.get("answer_position", "")):
+            name = sheet if sheet in pw.sheetnames else pw.sheetnames[0]
+            gname = sheet if sheet in gw.sheetnames else gw.sheetnames[0]
+            ws, gs = pw[name], gw[gname]
+            for row in range(r1, min(r2, r1 + 200) + 1):
+                for cc in range(c1, c2 + 1):
+                    a, b = ws.cell(row, cc).value, gs.cell(row, cc).value
+                    if a is None or b is None or type(a) is type(b):
+                        continue
+                    bad[f"{type(a).__name__} where {type(b).__name__} was expected"] = \
+                        bad.get(f"{type(a).__name__} where {type(b).__name__} was expected", 0) + 1
+        if bad:
+            worst = sorted(bad.items(), key=lambda kv: -kv[1])[:2]
+            notes.append("TYPE: " + "; ".join(f"{n} cell(s) hold {k}" for k, n in worst)
+                         + " — write real numbers/dates, not their text form.")
+    except Exception:  # noqa: BLE001
+        pass
+    return notes
+
+
 def _build_feedback(
     entry: dict, test_results: list[int], missing: list[int], mismatched: list[int],
     had_libreoffice: bool, recalc_failed: list[int] | None = None,
+    localized: list[str] | None = None,
 ) -> str:
     """Gold-SAFE feedback: which test cases passed/failed and why, never gold cell values."""
     n_pass = sum(test_results)
@@ -1377,6 +1503,8 @@ def _build_feedback(
             f"Test case(s) {mismatched} produced an output file but its values in "
             f"{entry['answer_position']} did not match the expected result."
         )
+    for note in (localized or []):
+        lines.append(note)
     if not had_libreoffice and (missing or mismatched):
         lines.append(
             "Note: LibreOffice was unavailable, so formula-only cells (never assigned a "

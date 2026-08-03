@@ -5,6 +5,25 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Added
+- **Scoring now localizes a failure instead of only saying "values did not match".** On run
+  30762167950, **197 of 639 sealed tasks failed all three test cases**, and the entire signal
+  the optimizer got for each was one bit — *wrong* — plus the range name. So it could learn
+  generic discipline ("do not hardcode", "verify your work") but had no way to discover that
+  **locating and covering** the target range was the failing sub-step: our champion learned six
+  of the nine rules comparable published work reports and missed exactly the two about full
+  range coverage and cross-sheet location. Task `19-7` is the archetype — `answer_position` of
+  `MINUS'!B2:E11,'PLUS'!B2:E5200`, two sheets and ~5,200 rows, and the agent spent two turns
+  (write, then "Done.") from a five-row preview. A miss now reports **coverage** (cells written
+  vs the span of the range it was given), **unchanged sheets** (parts of `answer_position`
+  byte-identical to the input), and **type mismatches** (*"text where a date was expected"*).
+  Gold safety: coverage and unchanged-sheet notes never open the gold file at all — they use
+  the agent's own input and the range it was handed, both already known to it — and a test
+  proves that by deleting the gold file. The type note discloses a value's *type*, never a
+  value; that narrow disclosure is a deliberate judgment, being the most actionable diagnostic
+  for this benchmark. Runs only on a miss, only on one test case, and is wrapped so a
+  diagnostic can never cost a score.
+
 ### Fixed
 - **The agent could not check its own answer: the loop ended the instant a file appeared.**
   Measured on run 30740145597, the agent used **2.2 of 30 available turns** (seed: 1.9) because
