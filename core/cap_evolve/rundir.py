@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 import shutil
 import time
@@ -25,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .splits import Splits
+
+_log = logging.getLogger(__name__)
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -167,6 +170,7 @@ class RunDir:
         self.history_path = self.root / "history.jsonl"
         self.events_path = self.root / "events.jsonl"
         self._state_lock = self.root / ".state.lock"
+        self._observers: list = []  # list[RunObserver]
 
     # ---- creation / loading -------------------------------------------------
     @classmethod
@@ -395,3 +399,56 @@ class RunDir:
         rec = {"t": time.time(), "kind": kind, **fields}
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
+        self._notify_observers(rec)
+
+    # ---- observers ----------------------------------------------------------
+    def add_observer(self, observer) -> None:
+        """Attach a :class:`~cap_evolve.observers.RunObserver` to this run.
+
+        All subsequent ``log_event`` calls will also be forwarded to
+        *observer*.  Multiple observers can be attached; each is called in
+        order.  Failures in observers are logged but never propagate.
+        """
+        self._observers.append(observer)
+
+    def notify_run_start(self, metadata: dict | None = None) -> None:
+        """Signal observers that the optimisation run has started."""
+        run_id = self.root.name
+        for obs in self._observers:
+            try:
+                obs.on_run_start(run_id, metadata or {})
+            except Exception:
+                _log.warning("observer %s.on_run_start failed", type(obs).__name__, exc_info=True)
+
+    def notify_run_end(self, summary: dict | None = None) -> None:
+        """Signal observers that the run has finished, then flush + close."""
+        for obs in self._observers:
+            try:
+                obs.on_run_end(summary or {})
+            except Exception:
+                _log.warning("observer %s.on_run_end failed", type(obs).__name__, exc_info=True)
+        self.flush_observers()
+
+    def flush_observers(self) -> None:
+        """Flush all attached observers."""
+        for obs in self._observers:
+            try:
+                obs.flush()
+            except Exception:
+                _log.warning("observer %s.flush failed", type(obs).__name__, exc_info=True)
+
+    def close_observers(self) -> None:
+        """Close all attached observers and release their resources."""
+        for obs in self._observers:
+            try:
+                obs.close()
+            except Exception:
+                _log.warning("observer %s.close failed", type(obs).__name__, exc_info=True)
+
+    def _notify_observers(self, event: dict) -> None:
+        """Forward an event dict to every attached observer (fire-and-forget)."""
+        for obs in self._observers:
+            try:
+                obs.on_event(event)
+            except Exception:
+                _log.warning("observer %s.on_event failed", type(obs).__name__, exc_info=True)
