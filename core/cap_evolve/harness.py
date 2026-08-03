@@ -1268,6 +1268,7 @@ def run_step(
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
     optimizer_error = None
+    opt_report = None
     opt_cost_usd, opt_tokens = 0.0, 0
     _opt_t0 = time.time()
     try:
@@ -1280,7 +1281,9 @@ def run_step(
         # long run — leave the workdir as the parent copy so the candidate == parent
         # and the gate simply rejects it (a wasted iteration, not a crash).
         optimizer_error = str(e)
-        run_dir.log_event("optimizer_error", candidate=cid, error=optimizer_error[:500])
+        run_dir.log_event("optimizer_error", candidate=cid,
+                          error=optimizer_error[:500],
+                          error_full=optimizer_error)
         # The optimizer may have already spent real money before failing (e.g. it
         # hit its own --usd-budget/--max-turns cap mid-session) — recover that cost
         # instead of letting it disappear as an unmeasured $0.
@@ -1332,12 +1335,16 @@ def run_step(
     if accepted:
         run_dir.set_best(cid)
     run_dir.update_spent(iterations=1, accepted=accepted)
+    _step_extra = {}
+    if isinstance(opt_report, dict):
+        _step_extra["optimizer_report"] = opt_report
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=decision.reason,
                       val=cand_val.reward, parent=parent_id, parent_val=current_val.reward,
                       optimizer_seconds=round(optimizer_seconds, 2),
                       runner_seconds=round(cand_val.seconds, 2),
                       cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
-                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
+                      **_step_extra)
     run_dir.record_spend_warnings()
 
     # update optimizer memory + commit the iteration to the version store so the

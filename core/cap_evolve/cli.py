@@ -367,7 +367,8 @@ def _cmd_run(argv):
                 "--stall", str(spec.get("stall", 0)), "--n-trials", str(spec.get("num_trials", 1)),
                 "--max-metric-calls", str(spec.get("max_metric_calls", 0)),
                 "--max-usd", str(spec.get("max_usd", 0.0)),
-                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0))]
+                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0)),
+                "--spec", str(args.spec)]
     if spec.get("split_ids_file"):
         base_cmd += ["--split-ids", str(spec["split_ids_file"])]
     # reuse_baseline: copy a prior run's split/baseline/seed/val-rollouts and skip the

@@ -42,6 +42,8 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="reopen an existing run dir instead of failing; skip the baseline "
                         "eval when it already ran (baseline.json present)")
+    p.add_argument("--spec", default=None,
+                   help="path to capevolve.yaml spec (for observer config)")
     args = p.parse_args(argv)
 
     Path(args.base).mkdir(parents=True, exist_ok=True)
@@ -49,6 +51,43 @@ def main(argv=None) -> int:
                     max_metric_calls=args.max_metric_calls, max_usd=args.max_usd,
                     max_optimizer_usd=args.max_optimizer_usd)
     run_dir = RunDir.create(Path(args.base), ts=args.run_ts, budget=budget, exist_ok=args.resume)
+
+    try:
+        from cap_evolve.specfile import read_yaml
+        from capevolve_telemetry import load_observers
+        spec_path = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
+        spec_text = spec_path.read_text(encoding="utf-8")
+        full_spec = read_yaml(spec_text)
+        obs_config = full_spec.get("observers")
+        run_name = str(full_spec.get("run_name", "")).strip()
+        if not run_name:
+            parts = [run_dir.root.name]
+            for key in ("algorithm_skill", "optimizer_skill", "target_model"):
+                v = str(full_spec.get(key, "")).strip()
+                if v:
+                    parts.append(v)
+            caps = full_spec.get("capabilities")
+            if isinstance(caps, list):
+                parts.append("+".join(str(c) for c in caps))
+            elif caps:
+                parts.append(str(caps))
+            run_name = " | ".join(parts)
+        run_tags = {}
+        for key in ("algorithm_skill", "optimizer_skill", "optimizer_model",
+                     "target_model", "max_iterations", "gate_mode", "num_trials",
+                     "dataset_source"):
+            v = full_spec.get(key)
+            if v is not None and str(v).strip():
+                run_tags[key] = str(v)
+        if caps:
+            run_tags["capabilities"] = "+".join(str(c) for c in caps) if isinstance(caps, list) else str(caps)
+        for obs in load_observers(obs_config,
+                                  run_dir_root=str(run_dir.root),
+                                  run_name=run_name,
+                                  run_tags=run_tags):
+            run_dir.add_observer(obs)
+    except Exception:  # noqa: BLE001
+        pass
 
     # Resume fast-path: baseline already ran → the split is frozen, the seed is scored,
     # best_id is set. Re-print the recorded baseline and skip the (expensive) eval so the
@@ -104,6 +143,8 @@ def main(argv=None) -> int:
         if cand.exists():
             cap_path = cand
     result = harness.baseline(adapter, cap_path, run_dir=run_dir, n_trials=args.n_trials)
+
+    run_dir.close_observers()
 
     print(json.dumps({
         "run_dir": str(run_dir.root),
