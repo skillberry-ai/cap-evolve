@@ -478,6 +478,9 @@ jobs:
         with:
           path: _artifacts
           pattern: benchmarks-*
+          # Don't fail when no benchmarks ran (e.g. PR has no benchmark label
+          # so all bench matrix jobs were skipped). Build-records handles empty.
+          if-no-files-found: ignore
 
       - name: Check for UI snapshots
         id: uicheck
