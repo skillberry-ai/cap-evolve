@@ -65,6 +65,19 @@ def main(argv=None) -> int:
     workdir = Path(args.workdir)
     script = _find_script(workdir)
     if script is None:
+        # Loud on stderr, not just a JSON `note` nobody reads. "No script" means every
+        # candidate is byte-identical to its parent, so the run still exits 0, `check`
+        # stays green, and the sealed number equals the baseline — a wrong answer that
+        # looks like success. That silence bit `quickstart` (whose script lives in
+        # `<dest>/.capevolve/`, outside both search locations) and bites `toy_calc` the
+        # same way if its export is missed.
+        print("mock optimizer: NO EDIT SCRIPT FOUND — proposing no edits, so this run "
+              "cannot improve on its baseline.\n"
+              f"  looked at: $CAPEVOLVE_MOCK_SCRIPT="
+              f"{os.environ.get('CAPEVOLVE_MOCK_SCRIPT') or '<unset>'}, "
+              f"{workdir / 'mock_script.json'}, {workdir.parent / 'mock_script.json'}\n"
+              "  fix: export CAPEVOLVE_MOCK_SCRIPT=/path/to/mock_script.json",
+              file=sys.stderr)
         print(json.dumps({"optimizer": "mock", "applied": [],
                           "note": "no mock_script.json found; no edits made"}))
         return 0

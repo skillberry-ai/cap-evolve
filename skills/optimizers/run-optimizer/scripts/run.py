@@ -296,6 +296,12 @@ def main(argv=None) -> int:
     env.update(auth["env"])
 
     proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, env=env)
+    # Relay the agent's stderr rather than only burying it in `stderr_tail`: a warning
+    # on a run that still exits 0 (e.g. mock's "no edit script found") is invisible
+    # otherwise, because nothing surfaces a per-candidate payload field to the person
+    # reading the final report. stdout stays exactly the one JSON object below.
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
     result = {"optimizer": name, "cli_present": True, "returncode": proc.returncode,
               "auth_present": auth["present"],
               "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-500:]}
