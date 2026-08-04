@@ -984,7 +984,28 @@ def _pandas():
     return pd
 
 
+def _col_letter(n: int) -> str:
+    """1 -> A, 26 -> Z, 27 -> AA. Local so the pandas path needs no openpyxl import."""
+    s = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
 def _spreadsheet_preview(path: Path, rows: int) -> str:
+    """The first `rows` rows of every sheet, each annotated with its REAL data extent.
+
+    The extent comes from the shape of the frame we already parse, NOT from openpyxl's
+    `ws.max_row`/`max_column`: those count formatted-but-empty cells, so they overstate the
+    extent, and an overstated extent would teach the agent to write cells that should stay
+    empty — a regression risk against the 28 of 50 val tasks that already pass.
+
+    Why state it at all: on pilot 30799393875 task `110-2` filled 9 of its 39 target cells,
+    exactly `3 rows x 3 cols`, because five preview rows were the only extent signal it had.
+    Asking the agent to go and measure does not work — turn usage over that run FELL from
+    3.52 to 3.32 against a cap of 30.
+    """
     pd = _pandas()
 
     excel_file = pd.ExcelFile(path)
@@ -992,8 +1013,96 @@ def _spreadsheet_preview(path: Path, rows: int) -> str:
     for sheet_name in excel_file.sheet_names:
         df = excel_file.parse(sheet_name)
         n = rows if df.shape[0] > rows else df.shape[0]
-        chunks.append(f"Sheet Name: {sheet_name}\n{df.head(n).to_string()}\n" + "-" * 50)
+        nrows, ncols = df.shape
+        # +1: pandas consumed row 1 as the header, and Excel addressing is 1-based.
+        extent = (
+            f"  [data extent: rows 1-{nrows + 1}, cols A-{_col_letter(ncols)}"
+            f"  ({nrows} data row(s) x {ncols} column(s))]"
+            if ncols else ""
+        )
+        shown = f"\n(showing the first {n} of {nrows} data row(s))" if nrows > n else ""
+        chunks.append(
+            f"Sheet Name: {sheet_name}{extent}\n{df.head(n).to_string()}{shown}\n" + "-" * 50
+        )
     return "\n".join(chunks)
+
+
+def _target_facts(answer_position: str) -> str:
+    """How big the target range is — derived from the string the agent was already given.
+
+    Reuses `_range_cells`, the same helper `_localize_failure` grades with, so the number the
+    agent is shown is exactly the denominator the COVERAGE diagnostic will hold it to. No file
+    is opened and no gold is consulted: this is arithmetic on `answer_position`.
+
+    Deliberately FACTUAL. It states the size and stops; it does not tell the agent to cover the
+    range, verify it, or self-test. Those are the rules we want the OPTIMIZER to discover, so
+    that a gain is credited to the optimizer instead of hand-supplied here (cf. issue #276).
+    """
+    total = 0
+    sheets: list[str] = []
+    for sheet, c1, r1, c2, r2 in _range_cells(answer_position):
+        total += (c2 - c1 + 1) * (r2 - r1 + 1)
+        if sheet and sheet not in sheets:
+            sheets.append(sheet)
+    if not total:
+        return ""
+    where = f", across {len(sheets)} sheet(s): {', '.join(sheets)}" if sheets else ""
+    return f"TARGET SIZE: answer_position covers {total} cell(s){where}."
+
+
+def _sibling_inputs(local_dir: Path, sid: str, container_dir: str) -> str:
+    """Name the other two graded copies, and the constraint the replay imposes.
+
+    This task is scored on three copies of the workbook whose data differs, and the other two
+    are already on disk beside the input. On pilot 30799393875 the agent was told 201 times
+    across 150 rollouts that its code would be "replayed on two other copies" and referenced
+    them ZERO times — it was never told where they are, and never enumerated the directory.
+    8 of 50 val tasks failed only on those copies.
+
+    The final paragraph is load-bearing, not advice. Cases 2 and 3 are produced by replaying
+    the agent's FINAL code block with the input/output filenames substituted (see run_target).
+    A final block that itself loops over several copies would have those names rewritten too,
+    corrupting the very outputs being graded — so the one-input constraint must be stated.
+    """
+    others = [
+        f"{container_dir}/{p.name}"
+        for p in (_resolve_case_file(local_dir, idx, sid, "input") for idx in (2, 3))
+        if p.exists()
+    ]
+    if not others:
+        return ""
+    listing = "\n  ".join(others)
+    return (
+        "OTHER GRADED COPIES: this task is scored on three copies of this workbook whose data "
+        "differs (row counts and values change). The other two are already on disk at:\n  "
+        f"{listing}\n"
+        "Your FINAL code block is replayed verbatim on each of them with the input and output "
+        "filenames substituted, so that final block must read exactly ONE input — the "
+        "spreadsheet_path given above. Anything you run across several copies belongs in an "
+        "EARLIER turn."
+    )
+
+
+def _workbook_context(
+    input_file: Path, local_dir: Path, sid: str, container_dir: str,
+    answer_position: str, rows: int,
+) -> str:
+    """The full `spreadsheet_content` block: target size, sibling copies, then the preview.
+
+    The preview is computed first and returned alone if anything about the added facts fails.
+    That ordering is deliberate: this call site used to be unwrapped, and a pandas/PyArrow
+    SIGSEGV in exactly this path once took down a whole algorithm process (run 30634898569,
+    ~68 minutes and ~$6). New facts must never be able to cost a rollout.
+    """
+    preview = _spreadsheet_preview(input_file, rows)
+    try:
+        blocks = [
+            b for b in (_target_facts(answer_position),
+                        _sibling_inputs(local_dir, sid, container_dir)) if b
+        ]
+    except Exception:  # noqa: BLE001 — facts are a bonus; the preview is the contract
+        return preview
+    return "\n\n".join([*blocks, preview]) if blocks else preview
 
 
 def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
@@ -1101,7 +1210,10 @@ class Adapter(CapabilityAdapter):
             _make_container_writable(host_out_dir)
 
             input_file = _resolve_case_file(local_dir, 1, sid, "input")
-            preview = _spreadsheet_preview(input_file, PREVIEW_ROWS)
+            preview = _workbook_context(
+                input_file, local_dir, sid, container_dir,
+                entry["answer_position"], PREVIEW_ROWS,
+            )
             user_msg = _read_task_template(ctx).format(
                 instruction=entry["instruction"],
                 spreadsheet_path=f"{container_dir}/{input_file.name}",

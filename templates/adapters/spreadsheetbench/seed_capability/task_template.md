@@ -17,7 +17,8 @@
 You need to solve the following spreadsheet manipulation question. It contains six pieces of information:
 - instruction: the question about spreadsheet manipulation.
 - spreadsheet_path: the path of the spreadsheet file you need to manipulate.
-- spreadsheet_content: the first few rows of the content of the spreadsheet file.
+- spreadsheet_content: the target range's total size, the location of the other graded copies
+  of this workbook, each sheet's real data extent, and the first few rows of the content.
 - instruction_type: Cell-Level Manipulation (answer_position is exact cell(s)) or Sheet-Level Manipulation (answer_position is the maximum range you may modify).
 - answer_position: the cell(s)/range you must modify or fill in.
 - output_path: write the modified spreadsheet file to this exact path.

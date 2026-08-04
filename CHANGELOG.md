@@ -6,6 +6,40 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **The agent is now told where the other two graded copies are, and how big its target is.**
+  PR #289 fixed the *signal* — the optimizer duly named coverage as failure cluster rank 2 and
+  added a "count non-empty cells versus range size" rule. It changed no behaviour: over pilot
+  30799393875 turn usage went **3.52 → 3.32 against a cap of 30**, and −0.21 on the very tasks
+  where reconnaissance was the prescribed fix. Prose cannot buy reconnaissance, so these facts
+  are now stated rather than requested. Of the champion's 22 failures on 50 val tasks, **8
+  passed only 1/3 or 2/3** — right for copy 1, wrong for the two other graded copies. The agent
+  is told 201 times across 150 rollouts that its code is "replayed on two other copies" and
+  referenced them **zero** times: nothing ever said where they are, and it never enumerated the
+  directory, though they sit beside its input in the mount. `spreadsheet_content` now carries
+  (a) `TARGET SIZE`, computed with `_range_cells` — the same helper the scorer grades with, so
+  the agent sees exactly the denominator `COVERAGE` will hold it to; (b) the paths of copies 2
+  and 3; and (c) each sheet's real data extent, from the already-parsed frame's shape and
+  explicitly **not** `openpyxl`'s `max_row`, which counts formatted-but-empty cells and would
+  teach overfilling. Task `110-2` is the archetype: it wrote 9 of 39 target cells, exactly
+  `3 rows × 3 cols`, from a five-row preview; it is now told *39 cells* and *rows 1-13*.
+  Deliberately **factual, not prescriptive** — nothing instructs the agent to self-test on the
+  copies, so if that strategy emerges the gain belongs to the optimizer rather than to us
+  (cf. #276). One hazard closed: cases 2 and 3 are produced by replaying the agent's *final*
+  code block with filenames substituted, so a final block looping over copies would have those
+  names rewritten and corrupt the graded outputs — the injected text states that the final
+  block must read exactly one input. The added facts are computed after the preview and inside
+  a `try`, because this call site was previously unwrapped and a pandas/PyArrow `SIGSEGV` here
+  once cost a whole algorithm process (run 30634898569, ~68 min and ~$6).
+
+### Fixed
+- **`openpyxl`/`pandas` are now dev extras, so the spreadsheetbench tests actually run.** They
+  were declared nowhere, so every test that builds or reads a real `.xlsx` hit
+  `pytest.importorskip` and vanished — including the whole of PR #289's
+  `test_spreadsheetbench_failure_localization.py`, in CI as well as locally. Enabling them
+  surfaced a stale test: `test_preview_text_is_unchanged_by_the_backend_switch` re-implemented
+  the preview's format string inline and compared against that, so it tested the format rather
+  than the python-vs-pyarrow invariant the file exists to pin. It now compares
+  `_spreadsheet_preview` against itself under both backends, and skips when `pyarrow` is absent.
 - **Scoring now localizes a failure instead of only saying "values did not match".** On run
   30762167950, **197 of 639 sealed tasks failed all three test cases**, and the entire signal
   the optimizer got for each was one bit — *wrong* — plus the range name. So it could learn
