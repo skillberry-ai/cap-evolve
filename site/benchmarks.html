@@ -38,6 +38,7 @@
       <a href="benchmarks.html" class="active">Benchmarks</a>
       <a href="architecture.html">Architecture</a>
       <a href="agent-orchestration.html">Agent mode</a>
+      <a href="harbor.html">Harbor</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
       <button class="theme-toggle" type="button" aria-label="Switch theme">
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -66,7 +67,7 @@
   </div>
 
   <div id="running-now" class="callout callout-accent" hidden>
-    <p class="callout-title">Running now</p>
+    <p class="callout-title">Running now / queued</p>
     <ul id="running-list" class="running-list"></ul>
   </div>
 
@@ -91,7 +92,7 @@
       <select id="f-bench"><option value="">all</option><option>tau2</option><option>swebench</option><option>skillsbench</option></select>
     </label>
     <label>Type
-      <select id="f-tier"><option value="">all</option><option>smoke</option><option>full</option></select>
+      <select id="f-tier"><option value="">all</option><option>smoke</option><option>pilot</option><option>full</option></select>
     </label>
     <label>Source
       <select id="f-source"><option value="">all</option><option value="pr">PR</option><option value="manual">manual</option></select>
@@ -148,7 +149,7 @@
   </div>
 </footer>
 
-<script src="benchmarks.js?v=20260729c"></script>
+<script src="benchmarks.js?v=20260730d"></script>
 <script src="js/site.js?v=20260724" defer></script>
 </body>
 </html>

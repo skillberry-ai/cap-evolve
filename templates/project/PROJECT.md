@@ -1,4 +1,4 @@
-# Acapo project — <target name>
+# cap-evolve project — <target name>
 
 Filled by the `intake` skill. Records the decisions behind this run so anyone
 (human or agent) can understand and reproduce it.

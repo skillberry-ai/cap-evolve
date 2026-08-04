@@ -679,3 +679,8 @@ python scripts/run.py --path <capability_dir>     # candidate + policy + validit
   fill, toolset design, the policy) with cited sources.
 - [`references/examples.md`](references/examples.md) — worked before/after edits.
 - [`references/pitfalls.md`](references/pitfalls.md) — failure modes and how to detect them.
+- [`references/optimizer-playbook.md`](references/optimizer-playbook.md) — what the
+  authored optimizer INSTRUCTIONS must demand when `tools` is selected: the
+  existing-tool-code mandate, the depth mandate's tools wording, and the two-phase
+  (diagnose fan-out → implement fan-out → merge) subagent pattern. `intake` points
+  here rather than inlining it.

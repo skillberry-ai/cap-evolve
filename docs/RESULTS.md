@@ -174,6 +174,71 @@ structured methodology in SKILL.md.
 `[skill-package, system-prompt, tools]` with `hill-climb` outperformed the tools-only run
 (+41.2%) when paired with hill-climb's conservative gating.
 
+## SkillsBench — full 87-task optimization (fit metric, Opus 4.6)
+
+A 3-iteration hill-climb over the same four shared office-document skills as the
+baseline section above, starting from the `run_baseline_opus` frozen baseline
+(reused via `--reuse-baseline`). Same fit-metric split (train == val == test =
+all 87), `num_trials: 1`, paired gate `k_se: 0.2`.
+
+Artifacts under `.capevolve/run_opus_optimize3/` (gitignored, per-run): `SUMMARY.md`,
+`summary.json`, `baseline.json`, `final.json`, `events.jsonl`, `PATCH_NOTE.md`,
+`rollouts/val/*.json` (348: 87 seed + 87 × 3 candidates), `rollouts/test/*.json`
+(174: 87 optimized + 87 baseline-seed).
+
+| | baseline (seed) | best (`cand_0001`) | Δ |
+|---|---|---|---|
+| val_reward (mean) | 0.281 ± 0.048 | **0.357 ± 0.050** | **+0.076 (+27.2% relative)** |
+| pass_at_1 (fully-passing tasks / 87) | 23 (26.4%) | **28 (32.2%)** | **+5 tasks (+22% relative)** |
+| test_reward (fit metric = val by construction) | 0.281 * | **0.357** | +0.076 |
+
+\* The finalize step's baseline-test re-evaluation broke overnight (VPN drop; every
+task returned 0 across a 5-hour eval); `test_baseline_reward` here is manually
+spliced from the properly-scored seed val in `run_baseline_opus`. Under the fit-
+metric split (train == val == test = same 87 tasks) the seed's test reward is
+identical to its val reward by construction, so the splice is exact.
+Documented in a `PATCH_NOTE.md` file inside the (gitignored) run dir on the
+recording host; the raw broken artifacts remain untouched for audit.
+
+### Iterations
+
+| iter | candidate | parent | val | Δ vs parent | accepted? |
+|---|---|---|---|---|---|
+| 1 | `cand_0001` | `seed` | **0.357** | **+0.077** | ✓ (paired gate: Δ > 0.2·SE) |
+| 2 | `cand_0002` | `cand_0001` | 0.325 | −0.033 | ✗ regressed |
+| 3 | `cand_0003` | `cand_0001` | 0.170 | −0.187 | ✗ large regression |
+
+The optimizer converged to `cand_0001`; two follow-up attempts both regressed
+and were correctly rejected. Optimizer spend: ~$32 total (well below the $400 cap).
+
+### What the optimizer changed (net delta on task passes)
+
+**8 tasks newly passing under `cand_0001`** (5 non-office + 3 office):
+`bike-rebalance`, `energy-ac-optimal-power-flow`, `energy-market-pricing`,
+**`exceltable-in-ppt`** (xlsx+pptx), `grid-dispatch-operator`,
+`paper-anonymizer`, `paratransit-routing`, **`weighted-gdp-calc`** (xlsx).
+
+**3 tasks regressed from baseline**: `citation-check`,
+`crystallographic-wyckoff-position-analysis`, **`pptx-reference-formatting`** (pptx).
+
+Net: **+5 tasks** (23 → 28) on `pass_at_1`. Two of the newly-passing tasks and
+one of the regressed tasks are shared-office-skill tasks — the optimizer's edits
+to `xlsx`/`pptx` had real cross-task effect.
+
+### Caveats
+
+- **Fit metric, not held-out.** `test == val` by construction; the `test_delta`
+  above just re-affirms the val_delta at higher confidence. Not a generalization
+  claim.
+- **Single trial.** `num_trials: 1` — one draw per task per iteration. The paired
+  gate still ran cleanly on the accepted iteration (Δ = +0.077 > 0.007 = 0.2·SE).
+- **Not directly comparable to EvoSkills' 71.1%.** Different paradigm (shared
+  4-skill package vs per-task skills), different setup (BenchFlow strips each
+  task's own bundled skills and mounts ours). This is the same
+  shared-skill approach as the baselines above.
+
+---
+
 ## SkillsBench — skill-package optimization (held-out, committed)
 
 Artifact: [`examples/skillsbench/run_full/`](../examples/skillsbench/run_full/)

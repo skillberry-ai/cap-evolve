@@ -14,9 +14,17 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
+
+# Committed per-tier overrides (optional): ci/benchmarks/<bench>/<tier>/overrides.env.
+# Env wins; the file only fills in what the dispatch did not set. See load_overrides.sh for
+# why this is a committed file rather than a repo variable.
+# shellcheck source=ci/benchmarks/lib/load_overrides.sh
+. "$LIB_DIR/load_overrides.sh"
+load_overrides "$REPO/ci/benchmarks/$BENCH/$TIER/overrides.env"
+
 ITER="${ITERATIONS:-3}"
 AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
@@ -119,15 +127,196 @@ ENV
     export SKILLSBENCH_TASKS_DIR="$SB_SRC/tasks"
     export SKILLSBENCH_CONCURRENCY=10
     ;;
+  spreadsheetbench)
+    cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
+    # NO-SKILL CONTROL. Comparisons against published skill-optimization results (e.g.
+    # SkillOpt, arXiv 2605.23904) report a "no skill" baseline: the same model with no skill
+    # document at all. Our committed seed_capability/prompt.md is already a short expert
+    # prompt (it states the answer_position restriction, literal-values-over-formulas, the
+    # exact output_path and error-recovery), so a run against it measures "refine an existing
+    # prompt", NOT "author a skill from nothing" — a materially easier task with far less
+    # headroom. Blanking the seed reproduces their control; the adapter treats an EMPTY
+    # prompt.md as "send no system message" and the harness's is_empty() path tells the
+    # optimizer to author the capability from scratch.
+    if [ "${SB_EMPTY_SEED:-0}" = "1" ] && [ "${SB_WARM_SEED:-0}" = "1" ]; then
+      echo "::error:: SB_EMPTY_SEED and SB_WARM_SEED are mutually exclusive — 'no skill at all'" \
+           "and 'start from an already-optimized skill' cannot both be the baseline." >&2
+      exit 1
+    fi
+    if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
+      : > "$PROJ/seed_capability/prompt.md"
+      echo ">>> spreadsheetbench: EMPTY seed (no-skill control) — prompt.md blanked" >&2
+    fi
+    # WARM START. Learning was not cumulative: every run began from the pristine seed, so each
+    # explored a different subset of rules and forgot the rest. Across the two pilots' champions,
+    # 30799393875 learned "spill/volatile functions do not survive LibreOffice recalc — write the
+    # literal" (_xlfn x4, TEXTJOIN x3) and fixed tasks 47741 and 51958; 30890657732 carried NONE
+    # of it and both regressed. That is 2 tasks lost to forgetting, not to variance.
+    #
+    # seed_capability_warm/ is a verbatim optimizer artifact, never hand-edited — see its
+    # PROVENANCE.md. A warm-started run's base->opt delta is NOT comparable to a pristine run's:
+    # the baseline is already optimized, so the absolute score is higher and the measured gain
+    # smaller. Hence opt-in only, and disclosed in runmeta.json as "warm_seed".
+    if [ "${SB_WARM_SEED:-0}" = "1" ]; then
+      WARM="$TPL/spreadsheetbench/seed_capability_warm"
+      if [ ! -f "$WARM/prompt.md" ] || [ ! -f "$WARM/task_template.md" ]; then
+        echo "::error:: SB_WARM_SEED=1 but $WARM is missing prompt.md/task_template.md" >&2
+        exit 1
+      fi
+      cp "$WARM/prompt.md" "$WARM/task_template.md" "$PROJ/seed_capability/"
+      echo ">>> spreadsheetbench: WARM seed — baseline is the champion of run 30890657732" \
+           "(cand_0002, val 0.580). base->opt is NOT comparable to a pristine-seed run." >&2
+    fi
+    # Gate strictness vs scoring mode. Hard scoring makes per-task reward Bernoulli, which widens
+    # the gate's SE, so the k_se that is sane under soft scoring rejects almost everything under
+    # hard. This bit us twice and silently: pilots 30799393875 and 30890657732 both ran the
+    # default k_se=1.0 against SB_SCORING=hard, and 30890657732's cand_0003 scored 0.600 — ABOVE
+    # its accepted champion's 0.580 — and was rejected on a delta of 0.020. GATE_K_SE is always
+    # set by the workflow so it cannot be corrected from overrides.env; warn loudly instead.
+    if [ "${SB_SCORING:-soft}" = "hard" ]; then
+      if awk "BEGIN{exit !(${GATE_K_SE:-1.0} >= 0.5)}"; then
+        echo "::warning:: SB_SCORING=hard with gate_k_se=${GATE_K_SE:-1.0}. Bernoulli per-task" \
+             "reward widens the gate's SE, so real gains are likely to be REJECTED (run" \
+             "30890657732 rejected a 0.600 candidate in favour of 0.580). Dispatch with" \
+             "gate_k_se=0.2 for hard scoring." >&2
+      fi
+    fi
+    # Prompt-only optimizer instructions. The default template shipped in
+    # templates/project/optimizer/INSTRUCTIONS.md is written for a capability that
+    # includes TOOL CODE: it tells the optimizer to prefer in-body guards, names
+    # `tools.py` and tau2's `get_*_details`, and its self-check demands "edits across BOTH
+    # policy.md AND tools.py". This capability is `[system-prompt]` — one prompt.md, no
+    # tools — so that guidance sends the optimizer hunting for code to change (in run
+    # 30691123806 it went and edited adapter.py). The harness picks up
+    # $PROJ/optimizer/INSTRUCTIONS.md automatically, and OPT_INSTRUCTIONS pins it by
+    # absolute path so it cannot silently fall back to the generic template (#252). No
+    # core change is needed either way.
+    mkdir -p "$PROJ/optimizer"
+    cp "$REPO/templates/project/optimizer/INSTRUCTIONS.prompt-only.md" \
+       "$PROJ/optimizer/INSTRUCTIONS.md"
+    # NAME THE ARTIFACTS. The shared template speaks of "the prompt" in the singular and the
+    # rendered instructions mention no filename at all, so an optimizer handed TWO editable
+    # files reasonably edits only the obvious one: in pilot 30736646559 it reported "all in
+    # prompt.md — the system prompt" and never touched task_template.md, leaving the unlocked
+    # surface inert. Both files are in its workdir; it just had no reason to know the second
+    # one was fair game. This appendix is benchmark-specific, which is why it lives here
+    # rather than in the shared template.
+    cat >> "$PROJ/optimizer/INSTRUCTIONS.md" <<'OPTNOTE'
+
+## The TWO files you may edit (this benchmark)
+Your capability is BOTH of these, and an iteration that only touches the first is leaving
+most of the agent's instruction surface untouched:
+
+1. **`prompt.md`** — the agent's SYSTEM message: who it is, how it should work, what to
+   check. ~40% of the words the agent reads.
+
+2. **`task_template.md`** — the agent's FIRST USER message: how the job is framed, what each
+   field means, and the interaction contract. ~60% of the words the agent reads. It is
+   ordinary prose and you may reword, restructure, add to, or DELETE from it — including
+   guidance that is actively unhelpful. (Read it critically: a line telling the agent it is
+   finished as soon as an output file exists will discourage it from verifying values, which
+   is the most common way tasks fail here.)
+
+   The `{placeholders}` in it are filled in per task and are LOAD-BEARING. Keep every one of
+   `{instruction}` `{spreadsheet_path}` `{spreadsheet_content}` `{instruction_type}`
+   `{answer_position}` `{output_path}`; `{max_turns}` is optional; invent no others; write a
+   literal brace as `{{` or `}}`. Break that and EVERY task scores 0 — the agent is never
+   told where to write its answer — so the candidate is rejected outright.
+
+Decide per cluster which file is the right place to fix it, and say which you chose in
+PROCESS.md.
+OPTNOTE
+    OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
+    SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
+    SB_DEFAULT="$SB_CACHE/sample_data_200"
+    # pilot draws its tasks from full's train split, so it needs the 912-task dataset too.
+    case "$TIER" in full|pilot) SB_DEFAULT="$SB_CACHE/all_data_912_v0.1";; esac
+    # SPREADSHEETBENCH_DATA_DIR is expected to be set (and exported to GITHUB_ENV) by
+    # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
+    # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
+    SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-$SB_DEFAULT}"
+    [ -f "$SB_DATA/dataset.json" ] || { echo "::error:: spreadsheetbench dataset not found at $SB_DATA (run ci/benchmarks/spreadsheetbench/fetch_data.sh or set SPREADSHEETBENCH_DATA_DIR)"; exit 1; }
+    # full runs 912 tasks in one go — bump container concurrency over smoke's default
+    # (still bounded; each container is ~8GB RAM / 2 CPU, see adapter.py's NOTE ON SCORING)
+    # unless the caller already pinned SPREADSHEETBENCH_CONCURRENCY explicitly.
+    SB_CONCURRENCY_DEFAULT=4
+    case "$TIER" in full|pilot) SB_CONCURRENCY_DEFAULT=8;; esac
+    # Rounds of code-exec interaction the agent gets per task. SkillOpt runs SpreadsheetBench
+    # as "multi-round codegen with up to 30 turns" (arXiv 2605.23904), and the adapter's own
+    # default is 5 — a real handicap on a multi-round benchmark, so full (the comparison tier)
+    # matches 30. Smoke stays at 5 to keep it a cheap, fast signal whose numbers remain
+    # comparable to its own history. Override with SPREADSHEETBENCH_MAX_TURNS.
+    SB_MAX_TURNS_DEFAULT=5
+    # pilot exists to MEASURE the full tier, so it must match full's turn budget.
+    case "$TIER" in full|pilot) SB_MAX_TURNS_DEFAULT=30;; esac
+    CAPS="[system-prompt]"
+    cat > "$WORK/.env" <<ENV
+MODEL=litellm_proxy/$AGENT_MODEL
+LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
+LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MAX_TOKENS=8000
+TEMPERATURE=0.0
+SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
+SPREADSHEETBENCH_DATA_DIR=$SB_DATA
+SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
+SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
+SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}
+SPREADSHEETBENCH_SCORING=${SB_SCORING:-soft}
+ENV
+    export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
+    export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
+    export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}"
+    export SPREADSHEETBENCH_MAX_TURNS="${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}"
+    # soft (default, matches this benchmark's own headline) | hard (all 3 test cases must
+    # match — the "native hard score" that published comparisons report). Both are recorded
+    # on every rollout either way; this picks the one the GATE optimizes against.
+    export SPREADSHEETBENCH_SCORING="${SB_SCORING:-soft}"
+    ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac
 
-# NO-HOLDOUT FIT split: train == val == test == ALL tier tasks.
-"$PY" - "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
+# SPLIT. A tier that ships its own split_ids.json gets a genuine HELD-OUT split (disjoint
+# train/val/test, so `finalize` produces a real generalization number that can be compared
+# against papers reporting held-out test scores). Otherwise: the NO-HOLDOUT FIT split
+# (train == val == test == ALL tier tasks), which every tier used before and which the
+# report labels as a FIT metric, not a generalization claim.
+#
+# Opt-in by committing <bench>/<tier>/split_ids.json — no other tier ships one, so this is a
+# no-op for them. See ci/benchmarks/spreadsheetbench/utils/make_split.py for a generator.
+if [ -f "$BASE/split_ids.json" ]; then
+  echo ">>> held-out split: using $BASE/split_ids.json (NOT the no-holdout FIT split)"
+  "$PY" - "$BASE/split_ids.json" "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
+import json,sys
+split = json.load(open(sys.argv[1]))
+want = {s for s in sys.argv[2].split(",") if s}
+have = set()
+for k in ("train", "val", "test"):
+    ids = [str(i) for i in split.get(k, [])]
+    if not ids and k != "train":
+        raise SystemExit(f"::error:: committed split has an empty '{k}' split")
+    have |= set(ids)
+    split[k] = ids
+# The split must describe exactly the tier's task list — a stale split silently evaluating a
+# different task set is the kind of error that invalidates a whole comparison run.
+if have != want:
+    missing, extra = sorted(want - have)[:5], sorted(have - want)[:5]
+    raise SystemExit(f"::error:: split_ids.json does not match {len(want)} tier tasks "
+                     f"(missing e.g. {missing}, unexpected e.g. {extra})")
+for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
+    dup = set(split[a]) & set(split[b])
+    if dup:
+        raise SystemExit(f"::error:: committed split is not held out — {a}/{b} overlap "
+                         f"on {len(dup)} task(s), e.g. {sorted(dup)[:5]}")
+print(json.dumps({k: split[k] for k in ("train", "val", "test")}))
+PY
+else
+  "$PY" - "$IDS_CSV" > "$PROJ/inputs/split_ids.json" <<'PY'
 import json,sys
 ids=[s for s in sys.argv[1].split(",") if s]
 print(json.dumps({"train":ids,"val":ids,"test":ids}))
 PY
+fi
 
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
@@ -137,10 +326,20 @@ optimizer_model:    $OPTIMIZER_MODEL
 target_model:       $AGENT_MODEL
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
+# Set (to an ABSOLUTE path) only by an arm that ships its own optimizer instructions;
+# empty is falsy in core, which then uses its default optimizer/INSTRUCTIONS.md lookup —
+# so this line is a no-op for every other benchmark. Absolute on purpose: a RELATIVE value
+# resolves against different cwds in check vs run and can silently fall back to the generic
+# template (issue #252), which would erase an arm's instructions with no error.
+optimizer_instructions_file: "${OPT_INSTRUCTIONS:-}"
 algorithm_skill:    hill-climb
 algorithm_focus:    $ALGORITHM_FOCUS
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
+# With an explicit split_ids_file the partition is fixed, so split_seed only varies the
+# per-trial ROLLOUT seeding (harness base_seed reads splits.seed). That is what makes
+# ">=3 seeds" possible on one committed split: dispatch the same run with 42/43/44.
+split_seed:         ${SPLIT_SEED:-0}
 num_trials:         $NUM_TRIALS
 gate_mode:          paired
 gate_k_se:          $GATE_K_SE
@@ -153,9 +352,13 @@ cd "$WORK"
 "$PY" -m cap_evolve.cli check .capevolve/project >&2
 
 # ONE optimization: baseline (all tasks) + ITER optimize iterations + finalize (all tasks).
+# A non-zero exit is deliberately NOT fatal here: metrics/report/UI below still turn the
+# partial run dir into reviewable artifacts. The job is failed afterwards by the workflow's
+# "Assert the suite run completed" gate (ci/benchmarks/lib/assert_run.py), so a crashed run
+# cannot be mistaken for a clean one.
 "$PY" -m cap_evolve.cli run --spec .capevolve/project/capevolve.yaml \
       --project .capevolve/project --run-ts suite --max-iterations "$ITER" </dev/null || \
-  echo "::warning::suite run exited non-zero for $BENCH"
+  echo "::error::suite run exited non-zero for $BENCH — see the algorithm step's returncode/stderr above"
 RUN_DIR="$WORK/.capevolve/run_suite"
 
 # ---- metrics + report (per-task base→opt from the ONE run) -----------------

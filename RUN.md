@@ -38,7 +38,7 @@ sends "optimize X" here). It interviews the user, scaffolds `.capevolve/project/
 > Never fabricate a NEEDED input.
 
 ## 2. Implement & check — make the contract real
-Load **`implement-and-check`**. Implement the 4 adapter methods in
+Load **`implement-and-check`**. Implement the 3 required adapter methods in
 `.capevolve/project/adapters/adapter.py` (and any selected skill's `abstract.py`),
 then run each skill's `check.py` and:
 ```
