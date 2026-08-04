@@ -395,6 +395,12 @@ jobs:
             SOURCE_TEXT="manual ($BRANCH_NAME)"; pr="null"
           fi
           export SOURCE_TEXT
+          # SB_* flags live in the tier's committed overrides.env, which only run_suite.sh
+          # sources — so resolve them here too, or the disclosure field below would always read
+          # as "not warm" even on a warm-started run. An env var still wins over the file.
+          ov="$GITHUB_WORKSPACE/ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/overrides.env"
+          warm_file=$(sed -n 's/^[[:space:]]*SB_WARM_SEED=\([01]\).*/\1/p' "$ov" 2>/dev/null | tail -1)
+          if [ "${SB_WARM_SEED:-${warm_file:-0}}" = "1" ]; then warm_json=true; else warm_json=false; fi
           # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
           # enough: a branch name containing a double quote would close the string early and
           # produce a runmeta.json the aggregate job cannot parse (verified locally).
@@ -416,6 +422,8 @@ jobs:
             "trials": ${NUM_TRIALS:-10},
             "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
             "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
+            "gate_k_se": ${GATE_K_SE:-1.0},
+            "warm_seed": $warm_json,
             "conclusion": "${{ job.status }}"
           }
           JSON

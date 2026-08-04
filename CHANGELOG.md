@@ -5,7 +5,41 @@ All notable changes to cap-evolve are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
 ## [Unreleased]
+### Fixed
+- **The TYPE diagnostic's advice was unconditionally backwards half the time.** PR #289 appended
+  one static clause to every type mismatch — *"write real numbers/dates, not their text form"* —
+  regardless of direction. On pilot 30890657732 it fired on 6 tasks and was **wrong on two**:
+  `57232` held `float where str was expected` and `50630` held `datetime where str was expected`,
+  and both were told to write real numbers. Pilot 30799393875's own `PROCESS.md` had already
+  root-caused `50630` correctly — *"GT keeps the fragment as the original text string"* — so the
+  optimizer was reading its correct diagnosis and our contradictory advice at once. Feedback that
+  points the wrong way is worse than none: the optimizer writes capability rules from it, and a
+  rule pushing the wrong direction can regress a passing task. Advice is now direction-aware, and
+  a mismatch between two non-textual types (`int` vs `float`) gets no directional claim at all.
+
 ### Added
+- **Learning now carries across runs (opt-in warm start).** Every run began from the pristine
+  seed, so each explored a different subset of rules and forgot the rest. Measured across the two
+  pilots' champions: 30799393875 learned "spill/volatile functions do not survive LibreOffice
+  recalculation — write the literal" (`_xlfn`×4, `TEXTJOIN`×3) and fixed tasks `47741` and
+  `51958`; 30890657732 carried **zero** of it and both regressed. That is 2 tasks (0.04 val) lost
+  to forgetting, which also means part of the apparent run-to-run noise was lost knowledge rather
+  than variance. `SB_WARM_SEED=1` now starts from `seed_capability_warm/` — a **verbatim optimizer
+  artifact, never hand-edited** (see its `PROVENANCE.md`), because hand-authoring rules there
+  would make the next measured "optimizer gain" partly ours (#276). A warm-started run's
+  `base→opt` delta is **not** comparable to a pristine run's — absolute score higher, measured
+  gain smaller — so it is opt-in, mutually exclusive with the `SB_EMPTY_SEED` no-skill control,
+  disclosed in the log, and recorded as `"warm_seed"` in `runmeta.json`. Enabled for `pilot`;
+  `full` deliberately stays pristine so the headline stays a from-scratch measurement, pinned by
+  a test.
+- **A loud warning when the acceptance gate is too strict for hard scoring.** The committed
+  overrides already documented that hard scoring makes per-task reward Bernoulli, widening the
+  gate's SE, and that it must be paired with `gate_k_se=0.2` — but `GATE_K_SE` is always set by
+  the workflow, so `overrides.env` cannot enforce it and nothing warned. Both pilots consequently
+  ran `k_se=1.0` against hard scoring, and 30890657732's `cand_0003` scored **0.600 — above its
+  accepted champion's 0.580 — and was rejected** on a delta of 0.020. `run_suite.sh` now emits a
+  `::warning::` whenever `SB_SCORING=hard` meets `gate_k_se >= 0.5`. `runmeta.json` also records
+  `gate_k_se`, so a run's strictness travels with its number.
 - **The agent is now told where the other two graded copies are, and how big its target is.**
   PR #289 fixed the *signal* — the optimizer duly named coverage as failure cluster rank 2 and
   added a "count non-empty cells versus range size" rule. It changed no behaviour: over pilot

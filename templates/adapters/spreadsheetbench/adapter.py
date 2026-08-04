@@ -1511,6 +1511,42 @@ def _range_cells(answer_position: str):
         yield sheet, col(c1), r1, col(c2), r2
 
 
+_TEXTUAL = {"str"}
+
+
+def _type_advice(pairs: list[tuple[str, str]]) -> str:
+    """Advice that matches the DIRECTION of each type mismatch.
+
+    This clause used to be the unconditional string "— write real numbers/dates, not their text
+    form", appended whichever way the mismatch went. Measured on pilot 30890657732 it was
+    therefore backwards for a third of the tasks it fired on: task `57232` held `float where str
+    was expected` and `50630` held `datetime where str was expected`, and both were told to write
+    real numbers. Worse, pilot 30799393875's own PROCESS.md had already root-caused `50630`
+    correctly — "GT keeps the fragment as the original text string" — so the optimizer was
+    reading our advice and its own correct diagnosis in direct contradiction.
+
+    Feedback that points the wrong way is worse than no feedback: the optimizer writes rules from
+    it, and a rule pushing the wrong direction can regress a task that currently passes.
+    """
+    to_text = [(g, w) for g, w in pairs if w in _TEXTUAL and g not in _TEXTUAL]
+    from_text = [(g, w) for g, w in pairs if g in _TEXTUAL and w not in _TEXTUAL]
+    tips: list[str] = []
+    if from_text:
+        tips.append(
+            "where a number or date is expected, write the real typed value rather than its "
+            "text form"
+        )
+    if to_text:
+        tips.append(
+            "where a str is expected, KEEP the original text — do not parse or convert it into "
+            "a number or date"
+        )
+    if not tips:
+        # e.g. int vs float: neither side is textual, so no directional advice applies.
+        return " — match the expected type exactly."
+    return " — " + "; ".join(tips) + "."
+
+
 def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> list[str]:
     """WHY a produced workbook missed, in terms the optimizer can act on.
 
@@ -1576,7 +1612,7 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
     # TYPE mismatch (reports the expected TYPE, never a value).
     try:
         gw = openpyxl.load_workbook(gold, data_only=True)
-        bad: dict[str, int] = {}
+        bad: dict[tuple[str, str], int] = {}
         for sheet, c1, r1, c2, r2 in _range_cells(entry.get("answer_position", "")):
             name = sheet if sheet in pw.sheetnames else pw.sheetnames[0]
             gname = sheet if sheet in gw.sheetnames else gw.sheetnames[0]
@@ -1586,12 +1622,16 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
                     a, b = ws.cell(row, cc).value, gs.cell(row, cc).value
                     if a is None or b is None or type(a) is type(b):
                         continue
-                    bad[f"{type(a).__name__} where {type(b).__name__} was expected"] = \
-                        bad.get(f"{type(a).__name__} where {type(b).__name__} was expected", 0) + 1
+                    key = (type(a).__name__, type(b).__name__)
+                    bad[key] = bad.get(key, 0) + 1
         if bad:
             worst = sorted(bad.items(), key=lambda kv: -kv[1])[:2]
-            notes.append("TYPE: " + "; ".join(f"{n} cell(s) hold {k}" for k, n in worst)
-                         + " — write real numbers/dates, not their text form.")
+            notes.append(
+                "TYPE: "
+                + "; ".join(f"{n} cell(s) hold {got} where {want} was expected"
+                            for (got, want), n in worst)
+                + _type_advice([pair for pair, _ in worst])
+            )
     except Exception:  # noqa: BLE001
         pass
     return notes

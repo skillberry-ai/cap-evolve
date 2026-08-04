@@ -139,9 +139,48 @@ ENV
     # headroom. Blanking the seed reproduces their control; the adapter treats an EMPTY
     # prompt.md as "send no system message" and the harness's is_empty() path tells the
     # optimizer to author the capability from scratch.
+    if [ "${SB_EMPTY_SEED:-0}" = "1" ] && [ "${SB_WARM_SEED:-0}" = "1" ]; then
+      echo "::error:: SB_EMPTY_SEED and SB_WARM_SEED are mutually exclusive — 'no skill at all'" \
+           "and 'start from an already-optimized skill' cannot both be the baseline." >&2
+      exit 1
+    fi
     if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
       : > "$PROJ/seed_capability/prompt.md"
       echo ">>> spreadsheetbench: EMPTY seed (no-skill control) — prompt.md blanked" >&2
+    fi
+    # WARM START. Learning was not cumulative: every run began from the pristine seed, so each
+    # explored a different subset of rules and forgot the rest. Across the two pilots' champions,
+    # 30799393875 learned "spill/volatile functions do not survive LibreOffice recalc — write the
+    # literal" (_xlfn x4, TEXTJOIN x3) and fixed tasks 47741 and 51958; 30890657732 carried NONE
+    # of it and both regressed. That is 2 tasks lost to forgetting, not to variance.
+    #
+    # seed_capability_warm/ is a verbatim optimizer artifact, never hand-edited — see its
+    # PROVENANCE.md. A warm-started run's base->opt delta is NOT comparable to a pristine run's:
+    # the baseline is already optimized, so the absolute score is higher and the measured gain
+    # smaller. Hence opt-in only, and disclosed in runmeta.json as "warm_seed".
+    if [ "${SB_WARM_SEED:-0}" = "1" ]; then
+      WARM="$TPL/spreadsheetbench/seed_capability_warm"
+      if [ ! -f "$WARM/prompt.md" ] || [ ! -f "$WARM/task_template.md" ]; then
+        echo "::error:: SB_WARM_SEED=1 but $WARM is missing prompt.md/task_template.md" >&2
+        exit 1
+      fi
+      cp "$WARM/prompt.md" "$WARM/task_template.md" "$PROJ/seed_capability/"
+      echo ">>> spreadsheetbench: WARM seed — baseline is the champion of run 30890657732" \
+           "(cand_0002, val 0.580). base->opt is NOT comparable to a pristine-seed run." >&2
+    fi
+    # Gate strictness vs scoring mode. Hard scoring makes per-task reward Bernoulli, which widens
+    # the gate's SE, so the k_se that is sane under soft scoring rejects almost everything under
+    # hard. This bit us twice and silently: pilots 30799393875 and 30890657732 both ran the
+    # default k_se=1.0 against SB_SCORING=hard, and 30890657732's cand_0003 scored 0.600 — ABOVE
+    # its accepted champion's 0.580 — and was rejected on a delta of 0.020. GATE_K_SE is always
+    # set by the workflow so it cannot be corrected from overrides.env; warn loudly instead.
+    if [ "${SB_SCORING:-soft}" = "hard" ]; then
+      if awk "BEGIN{exit !(${GATE_K_SE:-1.0} >= 0.5)}"; then
+        echo "::warning:: SB_SCORING=hard with gate_k_se=${GATE_K_SE:-1.0}. Bernoulli per-task" \
+             "reward widens the gate's SE, so real gains are likely to be REJECTED (run" \
+             "30890657732 rejected a 0.600 candidate in favour of 0.580). Dispatch with" \
+             "gate_k_se=0.2 for hard scoring." >&2
+      fi
     fi
     # Prompt-only optimizer instructions. The default template shipped in
     # templates/project/optimizer/INSTRUCTIONS.md is written for a capability that
