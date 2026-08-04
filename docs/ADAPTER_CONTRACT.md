@@ -47,9 +47,10 @@ def materialize(self, candidate_dir, edits=None) -> None   # PURE write of {comp
 def live(self, candidate_dir)                              # @contextmanager: make the candidate live for ONE eval, yield ctx
 def apply(self, candidate_dir, edits=None) -> None         # back-compat inject hook (env var / config patch / copy)
 def trajectories(self, split, ctx=None) -> Path | None     # the runner's NATIVE trace dir for the last eval (default: None)
+def runner_model(self) -> str | None                       # the CONSUMING model id, for check's mismatch note (default: None)
 ```
 
-Two more optional methods are **not** on the base class — the harness probes for them
+Three more optional fast paths are **not** on the base class — the harness probes for them
 with `hasattr` (`core/cap_evolve/harness.py`) and uses them when present:
 
 ```python

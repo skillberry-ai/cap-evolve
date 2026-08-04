@@ -1,15 +1,31 @@
 """The adapter contract — the small set of methods the OPTIMIZER agent implements.
 
-This is cap-evolve's generalization device (prior agent-optimization work had 3 adapters, SkillOpt had 5;
-we use 4, cleaner). The using-agent implements these once in
-``.capevolve/project/adapters/`` so that *any* target agent, *any* benchmark, and
-*any* capability can be driven by the same pipeline:
+This is cap-evolve's generalization device (prior agent-optimization work had 3 adapter
+*classes*, SkillOpt had 5; we require **3 methods**, plus defaulted hooks). The
+using-agent implements these once in ``.capevolve/project/adapters/`` so that *any*
+target agent, *any* benchmark, and *any* capability can be driven by the same pipeline.
+
+**3 required** (``@abstractmethod``; ``cap-evolve check`` refuses to run until all three are real):
 
     tasks(split)                              -> list[Task]   # where eval data comes from
-    run_target(task, ctx, *, seed)            -> Rollout      # run the agent under test
+    run_target(task, ctx, *, seed=0)          -> Rollout      # run the agent under test
     score(task, rollout)                      -> Score        # 0..1 reward + ASI feedback
+
+**Defaulted hooks** (override only when the default does not fit):
+
     materialize(candidate_dir, edits=None)    -> None         # write edits into the dir (pure)
     live(candidate_dir)                       -> ctx (CM)     # make the candidate LIVE for a rollout
+    apply(candidate_dir, edits=None)          -> None         # back-compat inject hook
+    trajectories(split, ctx=None)             -> Path | None  # native trace dir (default: None)
+    runner_model()                            -> str | None   # consuming model (default: None)
+
+**Optional fast paths** — NOT on the base class; the harness feature-detects them with
+``hasattr`` (``harness.py`` ``has_batch``/``has_run_trials``/``has_score_batch``) and only
+uses them when present:
+
+    run_batch(tasks, ctx, *, seed)                            # batched eval fast path
+    run_trials(tasks, ctx, *, n_trials, base_seed)            # batched multi-trial fast path
+    score_batch(tasks, rollouts)              -> {id: Score}  # batched scoring fast path
 
 Why ``materialize`` + ``live`` instead of a single ``apply``:
 ``apply(candidate_dir)`` used to be a *global* side effect (e.g. monkeypatching a

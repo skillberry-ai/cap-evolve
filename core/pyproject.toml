@@ -15,7 +15,11 @@ dependencies = []
 [project.optional-dependencies]
 judge = []        # llm-judge evaluator extras (filled when that evaluator lands)
 dashboard = []    # static-HTML / Flask dashboard extras
-dev = ["pytest>=7"]
+# openpyxl/pandas are the spreadsheetbench adapter's workbook stack. They are TEST deps, not
+# runtime deps of cap-evolve itself — but without them every test that builds or reads a real
+# .xlsx `importorskip`s, which silently skipped the whole of PR #289's
+# test_spreadsheetbench_failure_localization.py in CI as well as locally.
+dev = ["pytest>=7", "openpyxl>=3.1", "pandas>=2.0"]
 
 [project.scripts]
 cap-evolve = "cap_evolve.cli:main"

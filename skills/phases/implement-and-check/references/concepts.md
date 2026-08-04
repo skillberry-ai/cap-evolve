@@ -6,17 +6,24 @@
 
 ## The adapter is the contract
 
-cap-evolve measures everything through four methods the user implements. The
-check verifies each is real:
+cap-evolve measures everything through **3 required methods** the user implements
+(plus defaulted hooks). The check verifies each required one is real:
 
-| method        | contract                                            | failure if stubbed                |
-|---------------|-----------------------------------------------------|-----------------------------------|
-| `tasks(split)`| non-empty, stable across calls                      | mean over nothing; unstable split |
-| `run_target`  | runs the agent, captures output + trace into Rollout| no behavior to score              |
-| `score`       | reward ∈ [0,1] + general feedback, deterministic    | every candidate scores the same   |
-| `apply`       | materializes an edit onto a copy                    | candidates can't be built         |
+| method                             | contract                                            | failure if stubbed                |
+|------------------------------------|-----------------------------------------------------|-----------------------------------|
+| `tasks(split)`                     | non-empty, stable across calls                      | mean over nothing; unstable split |
+| `run_target(task, ctx, *, seed=0)` | runs the agent, captures output + trace into Rollout| no behavior to score              |
+| `score(task, rollout)`             | reward ∈ [0,1] + general feedback, deterministic    | every candidate scores the same   |
 
-If any method is a stub, the optimization still *runs* — it just produces a number
+Beyond those three, `materialize(candidate_dir, edits=None)`, `live(candidate_dir)`,
+`apply(candidate_dir, edits=None)`, `trajectories(split, ctx=None)` and `runner_model()`
+are **defaulted hooks** — they are defined on the base class with working defaults (the
+last two `return None`) and are called unconditionally, so override them only when the
+default does not fit. Separately, `run_batch` / `run_trials` / `score_batch` are **not** on
+the base class at all; the harness feature-detects them with `hasattr` and uses them only
+when an adapter defines them.
+
+If any required method is a stub, the optimization still *runs* — it just produces a number
 that measures nothing. The whole point of a pre-budget gate is to make that
 failure loud and early instead of silent and expensive.
 
@@ -28,8 +35,11 @@ failure loud and early instead of silent and expensive.
   `tasks()` is empty, there is nothing to average; if it shuffles between calls,
   the split is not reproducible and train/val/test stop being disjoint across
   reruns.
-- **`apply` callable.** An edit that cannot be materialized onto a capability copy
-  cannot be evaluated — the loop would propose into the void.
+- **`materialize()` probed.** An edit that cannot be materialized onto a capability
+  copy cannot be evaluated — the loop would propose into the void. The check calls it
+  against a temp copy; because `materialize` is pure, the host is never mutated. This is a
+  **probe, not an assertion**: a raise is reported as a note and does NOT fail the check
+  (`check.py:166-167`), because a real adapter may legitimately need its full environment.
 
 ## Scorer determinism vs target stochasticity — a crucial distinction
 

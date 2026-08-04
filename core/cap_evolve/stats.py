@@ -53,17 +53,21 @@ def combined_stderr(per_task_means: Sequence[float], per_task_stderrs: Sequence[
     return math.sqrt(between_se_sq + within_se_sq)
 
 
-def pass_k(trial_rewards: Sequence[float], k: int, threshold: float = 1.0) -> float:
+def pass_k(trial_rewards: Sequence[float], k: int, threshold: float = 1.0) -> float | None:
     """pass^k: estimated probability that k independent trials all 'pass'.
 
     A trial 'passes' when its reward >= threshold (default exact success). With
     ``c`` passes out of ``n`` trials, the unbiased estimate of all-k-pass is the
-    hypergeometric C(c, k) / C(n, k). Returns 0 when k > n.
+    hypergeometric C(c, k) / C(n, k).
+
+    Returns **None** when the statistic is UNDEFINED (``k < 1`` or ``k > n``) —
+    never 0.0, which would read as "0% reliable" instead of "not enough trials"
+    (issue #112). Callers must not coerce the None to a number.
     """
     rewards = list(trial_rewards)
     n = len(rewards)
-    if k <= 0 or k > n:
-        return 0.0
+    if k < 1 or k > n:
+        return None
     c = sum(1 for r in rewards if r >= threshold)
     if c < k:
         return 0.0

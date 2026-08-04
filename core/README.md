@@ -5,7 +5,7 @@
 [![deps](https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success)](#)
 
 Tiny stdlib-only honest-evaluation substrate for the
-[AgentCapTune](https://github.com/skillberry-ai/cap-evolve) skills library.
+[cap-evolve](https://github.com/skillberry-ai/cap-evolve) skills library.
 
 Provides the `cap-evolve` CLI and the four-phase eval loop (baseline → optimize → gate → finalize).
 Zero runtime dependencies — pure Python 3.10+ stdlib.
@@ -29,7 +29,7 @@ cap-evolve check --spec .capevolve/project/capevolve.yaml   # validate adapter
 cap-evolve report                                        # regenerate dashboard
 ```
 
-See the [AgentCapTune repository](https://github.com/skillberry-ai/cap-evolve) for full
+See the [cap-evolve repository](https://github.com/skillberry-ai/cap-evolve) for full
 documentation, examples, and the skills library.
 
 ## License

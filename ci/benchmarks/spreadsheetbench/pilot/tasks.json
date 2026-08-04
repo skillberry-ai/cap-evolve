@@ -1,0 +1,302 @@
+[
+  {
+    "id": "110-2",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "118-8",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "11842",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "1563",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "160-6",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "16511",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "185-13",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "203-16",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "30709",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "325-44",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "353-29",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "36097",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "38332",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "39046",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "3911",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "41297",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "41575",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "43213",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "435-38",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "44266",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "448-11",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "450-9",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "458-49",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "46856",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "46897",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "47741",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "48354",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "50051",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "50630",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "51359",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "5192",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "51958",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "52021",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "53167",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "53367",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55060",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55609",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55667",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55877",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55931",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "55977",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "56427",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "56637",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "56975",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "56996",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "57090",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "57232",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "57448",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "575-16",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "58047",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "58109",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "58147",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "587-38",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "59259",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "59340",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "59667",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "59743",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "73-45",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "94-8",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  },
+  {
+    "id": "CF_11072",
+    "tag": "pilot",
+    "agent": "azure/gpt-5.5"
+  }
+]

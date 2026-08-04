@@ -1,0 +1,27 @@
+# Harbor adapter — cap-evolve configuration
+#
+# Optimizes a skill-package capability against any Harbor benchmark.
+# Harbor handles sandboxed execution; cap-evolve drives the optimization loop.
+#
+# Required env vars:
+#   HARBOR_DATASET=swe-bench/swe-bench-verified   # registry or local path
+#   HARBOR_AGENT=claude-code                       # any Harbor agent
+#   HARBOR_MODEL=claude-sonnet-4-6                 # model for the agent
+#   HARBOR_TASK_IDS=swe-bench/task-1,swe-bench/task-2  # tasks to optimize on
+#
+# For OpenShift with on-cluster vLLM:
+#   HARBOR_EXTRA_FLAGS=-e openshift
+#   HARBOR_AGENT_BASE_URL=http://vllm-svc.namespace.svc:8000
+
+capabilities:       [skill-package]
+capability_path:    seed_capability
+optimizer_skill:    mock
+algorithm_skill:    hill-climb
+algorithm_focus:    all
+dataset_source:     adapter
+num_trials:         1
+gate_mode:          paired
+gate_k_se:          1.0
+max_iterations:     3
+stall:              2
+store:              copy

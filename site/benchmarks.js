@@ -1,6 +1,10 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
 const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
-const JOB_RE = /^(smoke|full) \/ (tau2|swebench|skillsbench)$/;
+// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full, …) and
+// hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
+// invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
+// ("plan legs", "aggregate history") never match.
+const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
@@ -25,19 +29,31 @@ const fmtElapsed = (ms) => {
 async function loadRunning() {
   const panel = $("#running-now");
   try {
-    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?status=in_progress&per_page=20`);
+    // Filter on the terminal state ("completed") rather than enumerating non-terminal
+    // ones: GitHub reports runs/jobs that haven't finished as "queued", "pending", or
+    // "in_progress" depending on matrix position and concurrency-group state, and a
+    // 6-way matrix (tier × bench) run can sit in any mix of those before its legs start.
+    // per_page=100 (the API max): PR-triggered benchmark runs churn fast (labeled event,
+    // several per PR) and can push a long-running manual dispatch — the thing this panel
+    // most needs to surface — past a small page before it finishes. Cheap to raise: only
+    // non-completed runs in the page trigger a follow-up jobs fetch below.
+    const runsResp = await fetch(`${GH_API}/actions/workflows/benchmarks.yml/runs?per_page=100`);
     if (!runsResp.ok) throw new Error(String(runsResp.status));
     const { workflow_runs: runs } = await runsResp.json();
+    const active = (runs || []).filter((r) => r.status !== "completed");
     const items = [];
-    for (const run of runs || []) {
+    for (const run of active) {
       const jobsResp = await fetch(`${GH_API}/actions/runs/${run.id}/jobs`);
       if (!jobsResp.ok) continue;
       const { jobs } = await jobsResp.json();
       for (const job of jobs || []) {
-        if (job.status !== "in_progress") continue;
+        if (job.status === "completed") continue;
         const m = JOB_RE.exec(job.name);
         if (!m) continue;
-        items.push({ runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url, startedAt: job.started_at });
+        items.push({
+          runId: run.id, tier: m[1], bench: m[2], jobUrl: job.html_url,
+          startedAt: job.started_at, live: job.status === "in_progress",
+        });
       }
     }
     renderRunning(items);
@@ -54,7 +70,12 @@ function renderRunning(items) {
     return;
   }
   panel.hidden = false;
-  list.innerHTML = items.map((it) => {
+  const sorted = [...items].sort((a, b) => (a.live === b.live ? 0 : a.live ? -1 : 1));
+  list.innerHTML = sorted.map((it) => {
+    if (!it.live) {
+      return `<li><span class="badge badge-amber">queued</span>
+        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a></li>`;
+    }
     const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
     return `<li><span class="badge badge-accent">live</span>
       <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>

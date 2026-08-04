@@ -27,6 +27,14 @@ construction*, and the rules below are enforced in code, not just documented.
 4. **Variance is measured, not assumed.** With `num_trials > 1`, each task gets a
    mean and stderr; `combined_stderr` mixes between-task and within-task error;
    `pass_k` reports the probability all k i.i.d. trials succeed (tau-bench style).
+   A `k` greater than the trial count is **undefined, not zero**: `aggregate_scores`
+   omits it from `pass_k` / `pass_at_k` entirely (so the default `num_trials: 1`
+   emits only `{"1": ...}`), `stats.pass_k` returns `None` rather than a plausible
+   `0.0` for such a `k`, and no surface renders a `k` it did not measure — human
+   surfaces (`report.md`, the dashboard KPI strip) list exactly the measured ks, and
+   the JSON surfaces simply omit the key. Reporting `pass^2 = 0.0` on a single-trial
+   run would read as "0% reliable" when it only means "not enough trials"; inventing
+   a `pass^2 = N/A` on a run where `ks` never included 2 is the same defect mirrored.
 
 ## Why no central engine?
 

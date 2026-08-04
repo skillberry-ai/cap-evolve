@@ -260,7 +260,19 @@ def evaluate_candidate(
     # context manager (instead of a bare global ``apply``) means the live state is
     # scoped + torn down per evaluation, which is what lets independent candidates be
     # evaluated without clobbering a single shared global slot.
-    with _live(adapter, candidate_dir) as ctx:
+    #
+    # The whole run+score body is wrapped in redirect_stdout(sys.stderr) because the
+    # phase skills' stdout is a pure-JSON contract (`cap-evolve run` parses it), and
+    # BOTH halves of this body print: runners emit progress (tau2's run_batch), and
+    # scorers emit comparison chatter (SpreadsheetBench's vendored comparator prints
+    # "Cell values in the specified range are identical." on every PASSING check, and
+    # its LibreOffice recalc helper prints on every failure path). Guarding only the
+    # rollout pool — as run_trials_pool does internally — left scoring free to corrupt
+    # the payload, which killed a run right after a successful 11-minute baseline the
+    # first time spreadsheetbench actually scored above zero. Wrapping here also makes
+    # real stdout never the "current" redirect target inside the thread pool, which is
+    # exactly the invariant run_trials_pool documents for its own thread-safety.
+    with contextlib.redirect_stdout(sys.stderr), _live(adapter, candidate_dir) as ctx:
         if has_run_trials:
             # Adapter-owned fast path: ask for ALL trials in one batch
             # ({task_id: [rollout_t0, rollout_t1, ...]}, trial-ordered), then run the
