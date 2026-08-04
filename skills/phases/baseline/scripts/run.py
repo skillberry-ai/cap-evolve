@@ -59,6 +59,7 @@ def main(argv=None) -> int:
         spec_text = spec_path.read_text(encoding="utf-8")
         full_spec = read_yaml(spec_text)
         obs_config = full_spec.get("observers")
+        caps = full_spec.get("capabilities")
         run_name = str(full_spec.get("run_name", "")).strip()
         if not run_name:
             parts = [run_dir.root.name]
@@ -66,7 +67,6 @@ def main(argv=None) -> int:
                 v = str(full_spec.get(key, "")).strip()
                 if v:
                     parts.append(v)
-            caps = full_spec.get("capabilities")
             if isinstance(caps, list):
                 parts.append("+".join(str(c) for c in caps))
             elif caps:
@@ -95,6 +95,7 @@ def main(argv=None) -> int:
     if args.resume and (run_dir.root / "baseline.json").exists():
         splits = run_dir.read_splits()
         recorded = json.loads((run_dir.root / "baseline.json").read_text(encoding="utf-8"))
+        run_dir.close_observers()
         print(json.dumps({
             "run_dir": str(run_dir.root),
             "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},
@@ -110,6 +111,7 @@ def main(argv=None) -> int:
     if args.reuse_baseline:
         result = harness.reuse_baseline(Path(args.reuse_baseline), run_dir=run_dir)
         splits = run_dir.read_splits()
+        run_dir.close_observers()
         print(json.dumps({
             "run_dir": str(run_dir.root),
             "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},

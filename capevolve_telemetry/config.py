@@ -40,7 +40,7 @@ def load_observers(
                 entry, run_dir_root=run_dir_root, run_name=run_name,
                 run_tags=run_tags,
             )
-            mlflow_run_id = obs._run_id
+            mlflow_run_id = obs.run_id
             observers.append(obs)
         elif backend == "otel":
             from .otel_observer import OtelObserver

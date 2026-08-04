@@ -41,6 +41,7 @@ class MlflowObserver:
         self._finalized = False
         self._autolog = autolog
         self._run_dir_root = run_dir_root
+        self._created_at_ms = int(__import__("time").time() * 1000)
         if autolog:
             self._enable_autolog()
 
@@ -121,6 +122,8 @@ class MlflowObserver:
             autolog=bool(state.get("autolog", False)),
             run_dir_root=state.get("run_dir_root", ""),
         )
+        if "created_at_ms" in state:
+            obs._created_at_ms = int(state["created_at_ms"])
 
     # ---- helpers -----------------------------------------------------------
 
@@ -300,15 +303,19 @@ class MlflowObserver:
             "step_counter": self._step,
             "autolog": self._autolog,
             "run_dir_root": self._run_dir_root,
+            "created_at_ms": self._created_at_ms,
         }
+
+    @property
+    def run_id(self) -> str:
+        return self._run_id
 
     def _link_traces_to_run(self) -> None:
         """Tag all unlinked traces in this experiment with this run's ID."""
-        import time
-
-        time.sleep(3)
         if not self._tracking_uri:
             return
+        import time
+        time.sleep(3)
         try:
             import mlflow
 
@@ -321,12 +328,15 @@ class MlflowObserver:
             )
             for t in traces:
                 tags = t.info.tags or {}
-                if "mlflow.source.run_id" not in tags:
-                    client.set_trace_tag(
-                        t.info.request_id,
-                        "mlflow.source.run_id",
-                        self._run_id,
-                    )
+                if "mlflow.source.run_id" in tags:
+                    continue
+                if t.info.timestamp_ms and t.info.timestamp_ms < self._created_at_ms:
+                    continue
+                client.set_trace_tag(
+                    t.info.request_id,
+                    "mlflow.source.run_id",
+                    self._run_id,
+                )
         except Exception as e:  # noqa: BLE001
             if self._run_dir_root:
                 try:

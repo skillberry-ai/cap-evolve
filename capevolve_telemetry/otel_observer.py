@@ -71,6 +71,8 @@ class OtelObserver:
             )
             provider.add_span_processor(BatchSpanProcessor(exporter))
 
+        # Global override — safe in cap-evolve's subprocess-per-phase model
+        # but would conflict with a host app that already configured OTel.
         trace.set_tracer_provider(provider)
         self._tracer = trace.get_tracer("capevolve")
         self._setup_done = True
