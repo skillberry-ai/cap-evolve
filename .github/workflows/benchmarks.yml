@@ -295,6 +295,11 @@ jobs:
         with:
           path: _artifacts
           pattern: benchmarks-*
+          merge-multiple: false
+          # Don't fail when no benchmarks ran in this workflow (e.g. the bench
+          # job was skipped because no benchmark-smoke/benchmark-full label was
+          # present on the PR). The Build-records step handles the empty case.
+          if-no-files-found: ignore
 
       - name: Build records
         run: |
