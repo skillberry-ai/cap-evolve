@@ -79,7 +79,7 @@ Follow RUN.md to run a cap-evolve optimization. Here is everything intake needs:
 
 Claude will:
 1. Run **intake** — scaffold `.capevolve/project/` with the adapter, capevolve.yaml, and split_ids.json
-2. Run **implement-and-check** — implement all 4 adapter methods and verify with `cap-evolve check`
+2. Run **implement-and-check** — implement the 3 required adapter methods and verify with `cap-evolve check`
 3. Run **baseline** — score the seed capability on val
 4. Run **all-at-once** — propose edits, gate on val, commit accepted candidates to git
 5. Run **finalize** and **report** — sealed test score + dashboard

@@ -6,7 +6,8 @@ succeeds when the system prompt contains the marker `[CALC]`, so the optimizatio
 (the `mock` optimizer adds `[CALC]`) provably raises the score. Used as the CI gate.
 
 ## Files
-- `adapter.py` — the 4-method `CapabilityAdapter` (deterministic agent + exact-match scorer).
+- `adapter.py` — a `CapabilityAdapter`: the 3 required methods (deterministic agent +
+  exact-match scorer) plus an `apply` hook override.
 - `capability/prompt.txt` — the seed system prompt (no `[CALC]`).
 - `mock_script.json` — the deterministic edit the `mock` optimizer applies.
 - `tasks.jsonl` — 8 arithmetic tasks.

@@ -1,6 +1,6 @@
 ---
 name: implement-and-check
-description: The HARD GATE that must pass before any optimization budget is spent. Use right after intake. Walks the agent through implementing the 4 adapter methods (and any selected skill's abstract methods), then runs `cap-evolve check` on the project plus each involved skill's check.py, refusing to proceed until everything is implemented and deterministic — and listing exactly what is still stubbed.
+description: The HARD GATE that must pass before any optimization budget is spent. Use right after intake. Walks the agent through implementing the 3 required adapter methods plus any defaulted hooks that need overriding (and any selected skill's abstract methods), then runs `cap-evolve check` on the project plus each involved skill's check.py, refusing to proceed until everything is implemented and deterministic — and listing exactly what is still stubbed.
 component: phase
 argument-hint: "--project .capevolve/project --skill-check PATH"
 allowed-tools: Read, Write, Edit, Bash
@@ -24,14 +24,24 @@ cheaper to fail here than after a full optimization run.
   is fully implemented and deterministic. `baseline` will not run without it.
 
 ## Steps
-1. **Implement the four adapter methods** in
-   `.capevolve/project/adapters/adapter.py` (see `docs/ADAPTER_CONTRACT.md`):
+1. **Implement the 3 required adapter methods** in
+   `.capevolve/project/adapters/adapter.py` (see `docs/ADAPTER_CONTRACT.md`). These
+   three are `@abstractmethod` — the gate refuses to run until all three are real:
    - `tasks(split)` — yield the evaluation tasks (non-empty, stable across calls).
-   - `run_target(task, capability)` — run the agent under test; capture output +
-     trace into a `Rollout`.
+   - `run_target(task, ctx, *, seed=0)` — run the agent under test with the candidate
+     live as `ctx`; capture output + trace into a `Rollout`. Forward `seed` if the
+     runner is stochastic.
    - `score(task, rollout)` — return a reward in `[0,1]` + general feedback (no
      gold-answer leakage — it becomes the diagnosis signal).
-   - `apply(capability, edit)` — materialize a proposed edit onto a copy.
+
+   Then override a **defaulted hook** only if its default does not fit your capability:
+   `materialize(candidate_dir, edits=None)` (default: pure write of each
+   `{component: text}` edit as a file under `candidate_dir` — override to support a
+   capability-specific patch format),
+   `live(candidate_dir)` (context manager yielding `ctx`), `apply(candidate_dir, edits=None)`
+   (back-compat inject), `trajectories(split, ctx=None)` / `runner_model()` (both default
+   to `None`). Separately, `run_batch` / `run_trials` / `score_batch` are not on the base
+   class — the harness feature-detects them with `hasattr` and uses them if you define them.
 2. **Implement any selected skill's `scripts/abstract.py`** (most are concrete and
    need nothing).
 3. **Run the gate:**
@@ -40,7 +50,7 @@ cheaper to fail here than after a full optimization run.
        --skill-check <skills>/capabilities/<cap>/scripts/check.py
    ```
    It runs `cap-evolve check` (adapter: no stubs, `tasks` non-empty + stable, scorer
-   deterministic, `apply` callable) and each named skill's `check.py`. **Exit 0 =
+   deterministic, `materialize()` probed) and each named skill's `check.py`. **Exit 0 =
    green; the JSON lists exactly what is still stubbed or non-deterministic.**
 4. **Pipeline-wiring self-test (runs automatically once the check is green).** A
    green adapter is necessary but not sufficient — the optimizer also needs its
@@ -74,7 +84,11 @@ cheaper to fail here than after a full optimization run.
   the "reward" includes scorer noise the optimizer cannot learn from. (Target
   *stochasticity* is fine and is handled by multi-trial evaluation; *scorer*
   nondeterminism is a bug.)
-- **`apply` callable** — an edit that cannot be materialized cannot be evaluated.
+- **`materialize()` probed** — an edit that cannot be materialized cannot be
+  evaluated, so the check calls it against a temp copy (pure, so the host is untouched).
+  This one is a probe, not an assertion: a raise is reported as a **note** and does not
+  fail the check (`core/cap_evolve/check.py:166-167`), because a real adapter may need its
+  full environment. Green here means "callable or explained", not "edit path verified".
 
 ## Do not proceed until green
 If it reports stubs or non-determinism, fix them and re-run. This is the standard
@@ -83,7 +97,7 @@ apparatus works before you trust any measurement it produces. A green check is
 the only honest entry into `baseline`.
 
 ## What good vs bad looks like
-- **Good:** `{"ok": true}` with all four methods concrete, a deterministic scorer,
+- **Good:** `{"ok": true}` with all 3 required methods concrete, a deterministic scorer,
   and every involved skill's check green.
 - **Bad:** proceeding on a red check "to save time"; a scorer that returns
   different rewards for the same rollout; an empty/placeholder `tasks()`; feedback

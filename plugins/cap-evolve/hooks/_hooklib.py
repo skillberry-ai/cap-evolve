@@ -52,9 +52,12 @@ def find_run_dir(start: Path) -> Path | None:
     """Locate the active CapEvolve run dir, or None if we are not inside a run.
 
     Precedence:
-      1. ``$CAPEVOLVE_RUN_DIR`` (set by the orchestrator while a run is live).
-      2. The newest ``.capevolve/run_*`` (or legacy ``.agentcapo/run_*``) with a
-         ``splits.json`` found walking up from ``start``.
+      1. ``$CAPEVOLVE_RUN_DIR`` — an optional override the user/caller may export
+         when the run dir is not discoverable by the walk below. Nothing in this
+         repo sets it today; it is read-only escape hatch, not an orchestrator
+         contract.
+      2. The newest ``.capevolve/run_*`` with a ``splits.json`` found walking up
+         from ``start``.
 
     Returns None when nothing matches — the caller then no-ops (exit 0).
     """
@@ -67,15 +70,14 @@ def find_run_dir(start: Path) -> Path | None:
     here = Path(start).resolve()
     candidates: list[Path] = []
     for parent in [here, *here.parents]:
-        for base_name in (".capevolve", ".agentcapo"):
-            base = parent / base_name
-            if base.is_dir():
-                runs = sorted(
-                    (r for r in base.glob("run_*")
-                     if (r / "splits.json").exists() or (r / "state.json").exists()),
-                    key=lambda r: r.name,
-                )
-                candidates.extend(runs)
+        base = parent / ".capevolve"
+        if base.is_dir():
+            runs = sorted(
+                (r for r in base.glob("run_*")
+                 if (r / "splits.json").exists() or (r / "state.json").exists()),
+                key=lambda r: r.name,
+            )
+            candidates.extend(runs)
         if candidates:
             # newest run under the nearest base wins
             return candidates[-1]
@@ -83,13 +85,9 @@ def find_run_dir(start: Path) -> Path | None:
 
 
 def project_dir_for(run_dir: Path) -> Path | None:
-    """The ``.capevolve/project`` (or ``.agentcapo/project``) sibling of a run dir."""
-    base = run_dir.parent  # .capevolve/ or .agentcapo/
-    for name in ("project",):
-        proj = base / name
-        if (proj / "adapters" / "adapter.py").exists():
-            return proj
-    return None
+    """The ``.capevolve/project`` sibling of a run dir."""
+    proj = run_dir.parent / "project"  # run_dir.parent is .capevolve/
+    return proj if (proj / "adapters" / "adapter.py").exists() else None
 
 
 def load_sealed_test_ids(run_dir: Path) -> list[str]:

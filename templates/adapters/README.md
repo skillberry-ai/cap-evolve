@@ -16,9 +16,10 @@ to it, set credentials in a `.env`, and run `cap-evolve check && cap-evolve run`
 | [`tau2_bench/`](tau2_bench/) | [tau2-bench](https://github.com/sierra-research/tau2-bench) airline | System-prompt policy + tools | tau2's own runner |
 | [`skillsbench/`](skillsbench/) | [SkillsBench](https://github.com/benchflow-ai/skillsbench) | Shared Agent Skills | BenchFlow `bench eval run` |
 | [`swe_bench/`](swe_bench/) | [SWE-bench / Lite](https://github.com/swe-bench/SWE-bench) | Coding-agent prompt | HuggingFace + Docker harness |
+| [`spreadsheetbench/`](spreadsheetbench/) | [SpreadsheetBench](https://github.com/RUCKBReasoning/SpreadsheetBench) | Spreadsheet-agent system prompt | Fetched dataset + Docker/Jupyter harness |
 
 The first two are **generic** — point them at your data with env vars, no code
-edits. The last three are **worked benchmark adapters** you copy and run.
+edits. The last four are **worked benchmark adapters** you copy and run.
 
 ## Shared helper
 
