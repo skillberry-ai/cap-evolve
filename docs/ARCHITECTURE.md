@@ -36,13 +36,28 @@ See [`HONEST_EVAL.md`](HONEST_EVAL.md) for the splitting / gating / sealing guar
 ## What the optimizer receives each iteration
 
 The harness assembles a **capability-scoped** working dir per iteration, then runs your
-chosen coding-agent CLI in it:
+chosen coding-agent CLI in it. This is assembled by **one shared seam**,
+[`core/cap_evolve/optimizer_context.py`](../core/cap_evolve/optimizer_context.py)
+(`inject()` = the files, `render_instructions()` = the prompt), and **every deterministic
+algorithm — `hill-climb`, `gepa`, `skillopt` — routes through it**, so all three get the
+identical context. Add an artifact or a prompt block there and all three inherit it:
 
 - **The selected capability skill(s)** — both as `./guidance/<cap>/` *and* placed natively
   in the agent's own skills dir (e.g. `.claude/skills/`) so a headless agent auto-loads
   them. Each carries a "What you can change here" menu and edit boundaries.
 - **The diagnose method** (`./guidance/diagnose/`) — how to cluster failures into a
   reflective dataset (per failing task: Inputs, Generated Outputs, Feedback).
+- **On-demand reasoning skills** (`./guidance/reasoning/<skill>/`, also placed natively) —
+  tiny skills loaded at ONE step to counter ONE named optimizer failure mode. Today:
+  `mechanism-probe` at the proposal step (skipping analysis and shipping a plausible
+  one-line knob tweak). It asks for a three-field **proposal declaration** — mechanism,
+  hypothesis, expected observable — in `PROCESS.md`, which the harness records per
+  candidate as a `proposal_quality` event. **Advisory: the declaration is recorded, never
+  enforced** — no missing or knob-shaped declaration rejects a candidate; the val
+  significance gate remains the only thing that accepts or rejects. "Mechanism or knob?"
+  is a judgement no heuristic can make, and a false rejection would discard a real
+  improvement invisibly, so the bar lives in the prompt and the hard decision stays on
+  val (the same split #129 settled on).
 - **Only the current best step's full trajectories** (`./trajectories/`) — the runner's
   verbatim traces of the candidate it builds on, never the seed + every rejected attempt.
 - **Supporting sources / data model** (`./guidance/sources/`) — the `capability_sources`
@@ -59,6 +74,11 @@ chosen coding-agent CLI in it:
 | `JOURNAL.md` | optimizer | append-only HANDOVER across the run (tried / worked / regressed / refuted / focus-next) |
 | `PROCESS.md` | optimizer | EXPLAINABILITY, snapshotted per candidate |
 | `RUNMAP.md` + `prior_iterations/` | framework | a manifest plus every prior iteration's PROCESS.md and capability diff, for real prior-work access |
+
+These are built from the run's iteration events. The recognised kinds live in ONE place —
+`rundir.ITERATION_EVENT_KINDS` (`step`, `skillopt_step`, `gepa_val_gate`), read via
+`RunDir.iteration_events()` — because algorithms that emit their own kind (GEPA bypasses
+`run_step`) would otherwise be invisible to these builders and get an empty history.
 
 Because it sees all failure clusters, the protect-set, and the prior causal impact at once,
 the optimizer produces **one bold, multi-part candidate per iteration that addresses every

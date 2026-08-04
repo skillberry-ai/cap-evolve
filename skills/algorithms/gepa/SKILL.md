@@ -105,6 +105,23 @@ test stays sealed for `finalize`.
 ## Agent-mode loop
 When `orchestration_mode: agent`, drive gepa yourself: maintain the candidate pool/Pareto frontier; each round pick a parent (per gepa's selection), reflect on its val feedback to propose an edit, evaluate on **val** via cap-evolve, gate Δ>k·SE, accept→snapshot & add to the frontier / reject→drop. Metric-calls is the primary budget. Log rounds to the run dir; between rounds verify rollouts+results landed so the dashboard reflects the frontier. Re-read `stop_condition`; stop on it/budget. Seal once with `cap-evolve finalize`, then `report`.
 
+
+## What the optimizer receives each iteration
+
+Identical for all three deterministic algorithms — one shared seam,
+`core/cap_evolve/optimizer_context.py` (`inject()` writes the files, `render_instructions()`
+renders the prompt): the per-iteration `INSTRUCTIONS.md` rendered from the intake-authored
+template (`--instructions-file`) with the capability brief (`--capabilities`), the failure
+index, the bench-repo pointer (`--bench-repo`), the parallel-fan-out note and the
+consuming-LLM reader block (`--target-model` / `--target-profile-file`); plus
+`./trajectories/`, `./guidance/<cap>/`, `./guidance/diagnose/`, `./guidance/sources/`
+(`--capability-sources`), `./guidance/optimizer/<name>.md` (`--optimizer-name`), the
+native per-agent skills dir, and the cross-iteration
+`LEDGER.md` / `JOURNAL.md` / `RUNMAP.md` + `prior_iterations/`. `cap-evolve run` passes
+every one of those flags to this algorithm — see `docs/ARCHITECTURE.md`.
+
+This algorithm adds its own tail block on top (`REFLECTION.md` + `FOCUS.md` pointers).
+
 ## References
 
 - `references/concepts.md` — the GEPA economy, reflective dataset / actionable side

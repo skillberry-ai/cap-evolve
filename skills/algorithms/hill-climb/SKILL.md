@@ -52,5 +52,20 @@ Back-compat: `--focus all-at-once` is accepted and treated as `all`.
 ## Agent-mode loop
 When `orchestration_mode: agent`, drive hill-climb yourself: from the baseline best, each iteration — propose ONE edit to the capability (per `--focus`: all / cyclic / hardest-first), evaluate the candidate on **val** via cap-evolve (writes rollouts+results), gate Δ>k·SE, accept→snapshot via the store / reject→revert. Log each iteration to the run dir's event log. Re-read `stop_condition`; stop on it or on stall/budget. Between iterations, confirm the run dir got this iteration's rollouts + event so the dashboard stays current. Seal once with `cap-evolve finalize`, then `report`.
 
+
+## What the optimizer receives each iteration
+
+Identical for all three deterministic algorithms — one shared seam,
+`core/cap_evolve/optimizer_context.py` (`inject()` writes the files, `render_instructions()`
+renders the prompt): the per-iteration `INSTRUCTIONS.md` rendered from the intake-authored
+template (`--instructions-file`) with the capability brief (`--capabilities`), the failure
+index, the bench-repo pointer (`--bench-repo`), the parallel-fan-out note and the
+consuming-LLM reader block (`--target-model` / `--target-profile-file`); plus
+`./trajectories/`, `./guidance/<cap>/`, `./guidance/diagnose/`, `./guidance/sources/`
+(`--capability-sources`), `./guidance/optimizer/<name>.md` (`--optimizer-name`), the
+native per-agent skills dir, and the cross-iteration
+`LEDGER.md` / `JOURNAL.md` / `RUNMAP.md` + `prior_iterations/`. `cap-evolve run` passes
+every one of those flags to this algorithm — see `docs/ARCHITECTURE.md`.
+
 ## References
 - `references/focus-schedules.md` — how each schedule builds its focus set.

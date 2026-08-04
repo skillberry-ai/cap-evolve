@@ -71,6 +71,11 @@ export function Insights({ runId, detail }: { runId: string; detail: RunDetail }
                   {d.count > 1 && <span className="tnum text-xs text-rejected">×{d.count}</span>}
                 </div>
                 <div className="text-xs text-foreground/80">{d.reason}</div>
+                {d.approaches.map((a, j) => (
+                  <div key={j} className="mt-1 break-all font-mono text-[10px] text-muted">
+                    {a}
+                  </div>
+                ))}
               </li>
             ))}
           </ul>

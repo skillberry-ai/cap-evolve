@@ -14,6 +14,7 @@ builds one from a skill's ``run.py`` so external agents plug in the same way.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import shutil
@@ -24,8 +25,13 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+# Module-level is safe: optimizer_context imports only .loop/.rundir eagerly and
+# lazy-imports harness inside its function bodies, so there is no cycle to dodge.
+from . import optimizer_context as _oc
+from . import proposal_quality
 from .loop import SplitResult, aggregate_scores
-from .rundir import RunDir, _atomic_write
+from .rundir import (NON_CAPABILITY_NAMES, SCRATCH_NAMES, RunDir, _atomic_write,
+                     iteration_candidate)
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
 
@@ -572,6 +578,16 @@ _PROCESS_SEED = (
     "Fill this in as you work. It is the human-readable record of HOW this iteration was "
     "done and is snapshotted with the candidate, so anyone — and the next iteration via "
     "./prior_iterations/ — can see your reasoning. Be concrete.\n\n"
+    "## Proposal declaration (#140 — fill BEFORE you edit; read ./guidance/reasoning/"
+    "mechanism-probe/SKILL.md first)\n"
+    "- Mechanism: <what now behaves DIFFERENTLY, and why that changes the outcome — a "
+    "knob restates a rule or retunes a value; a mechanism changes what is possible>\n"
+    "- Hypothesis: <which failure cluster this fixes, and why it generalizes past the "
+    "exact failing inputs>\n"
+    "- Expected observable: <what will look different in the NEXT iteration's "
+    "trajectories if this is right>\n"
+    "(Recorded per candidate, NOT enforced — the val gate is still the only thing that "
+    "accepts or rejects.)\n\n"
     "## Ranked issue list (clusters by # failing tasks × trials, biggest first)\n"
     "| rank | cluster | tasks | shared root cause | tag (KNOWLEDGE / BEHAVIORAL / CAPABILITY-GAP) | planned change class |\n"
     "| --- | --- | --- | --- | --- | --- |\n\n"
@@ -592,8 +608,24 @@ _PROCESS_SEED = (
 
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
-_CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+# Derived from ``rundir.NON_CAPABILITY_NAMES`` — a read-side FILTER like the cache and
+# component lists, so it takes the whole union (live + legacy scratch + the two
+# snapshotted explainability files). It must NOT be shared with
+# ``harness._SNAPSHOT_IGNORE``, which is DESTRUCTIVE and takes ``SCRATCH_NAMES`` only:
+# feeding this list to the snapshot would DELETE PROCESS.md, the explainability record
+# we deliberately keep. Same predicate, different operation. See the tier note in
+# rundir.py; the split is pinned by
+# test_gepa.py::test_scratch_ignores_are_one_shared_definition.
+#
+# The INJECTED_* halves matter as much as the scratch half here, for a subtler reason:
+# the PARENT side of a capability diff is a snapshot (``_SNAPSHOT_IGNORE`` stripped the
+# injected read-context) while the CHILD side is the live workdir (it did not) — so
+# without this union every injected ``CLAUDE.md`` / ``.claude/skills/<x>/SKILL.md`` reads
+# as an ADDITION, sorts to the front of the diff, and buries the real edit. Both sets are
+# derived, never enumerated: a hardcoded subset of ``INJECTED_DIRS`` is exactly how the
+# previous four copies drifted.
+_CAP_DIFF_SKIP = set(NON_CAPABILITY_NAMES) | set(_oc.INJECTED_NAMES)
+_CAP_DIFF_SKIP_DIRS = set(_oc.INJECTED_DIRS)
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -609,7 +641,7 @@ def _capability_files(d: Path) -> dict[str, str]:
             continue
         rel = str(f.relative_to(d))
         top = rel.split("/", 1)[0]
-        if rel in _CAP_DIFF_SKIP or top in ("trajectories", "guidance", "prior_iterations"):
+        if rel in _CAP_DIFF_SKIP or top in _CAP_DIFF_SKIP_DIRS:
             continue
         try:
             out[rel] = f.read_text(encoding="utf-8")
@@ -639,24 +671,15 @@ def _diff_capabilities(parent_dir: Path, cand_dir: Path, *, max_chars: int = 800
 
 
 def _parent_map(run_dir: RunDir) -> dict[str, str]:
-    """Map each candidate id -> the parent id it was forked from, from ``step`` events.
+    """Map each candidate id -> the parent id it was forked from, from iteration events.
 
-    Falls back to "seed" for any candidate whose parent is unknown. Best-effort: an
-    unreadable/absent events log yields an empty map."""
-    parent_of: dict[str, str] = {}
-    try:
-        if not run_dir.events_path.exists():
-            return {}
-        for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            rec = json.loads(line)
-            if rec.get("kind") == "step" and rec.get("candidate"):
-                parent_of[str(rec["candidate"])] = str(rec.get("parent") or "seed")
-    except Exception:  # noqa: BLE001
-        return parent_of
-    return parent_of
+    Reads EVERY ``ITERATION_EVENT_KINDS`` event, not just ``step`` — GEPA bypasses
+    ``run_step`` and emits ``gepa_val_gate``, so a ``kind == "step"`` filter here made
+    GEPA's whole cross-iteration history channel (LEDGER/RUNMAP/prior_iterations)
+    permanently empty. Falls back to "seed" when the parent edge is absent."""
+    return {cid: str(rec.get("parent") or rec.get("parent_id") or "seed")
+            for rec in run_dir.iteration_events()
+            if (cid := iteration_candidate(rec))}
 
 
 def _per_task_rewards(run_dir: RunDir, tag: str, split: str = "val") -> dict[str, float]:
@@ -725,41 +748,20 @@ def _journal_tail(workdir: Path) -> str:
     return tail.replace(_JOURNAL_MARK, "").strip()
 
 
-def _latest_journal_note(workdir: Path, *, max_chars: int = 900) -> str | None:
-    """The newest journal entry, capped — stored in the factual ledger as the candidate's
-    one-line lineage note. Returns ``None`` when the optimizer appended nothing."""
-    tail = _journal_tail(workdir)
-    if not tail:
-        return None
-    if len(tail) > max_chars:
-        tail = tail[:max_chars].rstrip() + " …"
-    return tail
-
-
-def _build_ledger(workdir: Path, run_dir: RunDir, rejected, history) -> None:
+def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     """Write the FACTUAL, framework-owned LEDGER.md: one row per prior iteration with
     its outcome + the exact tasks it broke/fixed. Deterministic — the objective record;
     the optimizer's own narrative lives in JOURNAL.md."""
     parent_of = _parent_map(run_dir)
-    # Outcome per candidate from step events (accept/reject + val + parent).
-    rows: list[dict] = []
-    try:
-        if run_dir.events_path.exists():
-            for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                rec = json.loads(line)
-                if rec.get("kind") == "step" and rec.get("candidate"):
-                    rows.append(rec)
-    except Exception:  # noqa: BLE001
-        rows = []
+    # Outcome per candidate from EVERY iteration event kind (accept/reject + val +
+    # parent) — see RunDir.iteration_events; "step" alone omits GEPA entirely.
+    rows = run_dir.iteration_events()
 
     table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) | fixed |",
              "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for i, rec in enumerate(rows, 1):
-        cid = str(rec.get("candidate"))
-        par = str(rec.get("parent") or "seed")
+        cid = str(iteration_candidate(rec))
+        par = str(rec.get("parent") or rec.get("parent_id") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
         val = rec.get("val")
         pval = rec.get("parent_val")
@@ -852,25 +854,15 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     ``workdir/prior_iterations/<cid>/`` so the optimizer has REAL in-dir access to all
     prior iterations' working dirs (not just the parent's trajectories)."""
     parent_of = _parent_map(run_dir)
-    rows: list[dict] = []
-    try:
-        if run_dir.events_path.exists():
-            for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                rec = json.loads(line)
-                if rec.get("kind") == "step" and rec.get("candidate"):
-                    rows.append(rec)
-    except Exception:  # noqa: BLE001
-        rows = []
+    # Every iteration event kind, not just "step" — GEPA emits "gepa_val_gate".
+    rows = run_dir.iteration_events()
 
     prior_root = workdir / "prior_iterations"
     table = ["| iter | candidate | parent | outcome | val | ./prior_iterations/<id>/ |",
              "| --- | --- | --- | --- | --- | --- |"]
     for i, rec in enumerate(rows, 1):
-        cid = str(rec.get("candidate"))
-        par = str(rec.get("parent") or "seed")
+        cid = str(iteration_candidate(rec))
+        par = str(rec.get("parent") or rec.get("parent_id") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
         val = rec.get("val")
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
@@ -910,8 +902,163 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
-def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
-                          rejected, history) -> str:
+# ---- rejected-approach constraints (#129) ---------------------------------
+#
+# Rejected candidates were already persisted to ``rejected.jsonl`` (audit + the
+# dashboard's "what not to try" panel) but nothing put them in a proposal prompt, so the
+# optimizer could — and did — re-propose an approach the gate had already killed. These
+# two functions close that: ``approach_signature`` normalizes WHAT an edit did into a
+# stable one-line signature, and ``dead_end_constraints`` renders the deduped
+# signature+reason list as a bounded prompt block.
+#
+# Enforcement is ADVISORY (prompt text), not a hard block: the optimizer is a
+# black-box agent CLI, so the framework cannot forbid it from emitting bytes. What IS
+# hard is the gate — a re-proposed dead end still gets rejected on val. See RUN.md.
+
+_MAX_DEAD_ENDS = 12        # most-recent distinct approaches injected
+_MAX_APPROACH_CHARS = 300  # per-signature budget -> block <8 KB, well under the 60k cap
+# Control chars stripped from a signature: it is quoted into a markdown prompt block and
+# (once #191's format_event / #220's replay read rejected.jsonl) into a terminal writer.
+# Closed here, once, for every present and future consumer rather than per renderer.
+# C0 + DEL are the ANSI/escape half; the bidi overrides are the visual-spoofing half — a
+# capability file can legitimately contain either, a dedupe key quoted into a prompt cannot.
+_CTRL_STRIP = ({c: None for c in range(32)} | {127: None}
+               | {c: None for c in range(0x202A, 0x202F)}      # LRE..PDF bidi embedding
+               | {c: None for c in range(0x2066, 0x206A)})     # LRI..PDI bidi isolates
+
+
+def approach_signature(parent_dir: Path, cand_dir: Path, *,
+                       max_chars: int = _MAX_APPROACH_CHARS) -> str:
+    """A stable, compact signature of WHAT an edit changed — the dedupe key for #129.
+
+    Built from the capability diff (the same ``_diff_capabilities`` source the dashboard
+    and RUNMAP use, so it never picks up injected read-context or algorithm scratch):
+    per touched file, the added/removed content lines, whitespace-collapsed. Two edits
+    that add the same text to the same file produce the same signature regardless of
+    candidate id, ordering or indentation — which is exactly the "variation on an
+    already-failed approach" the optimizer keeps re-proposing.
+
+    The dedupe key must be a FUNCTION OF THE WHOLE EDIT, so when the readable form
+    exceeds ``max_chars`` the overflow is closed with a digest of the full body rather
+    than simply cut: a plain head-truncation makes two different edits that share a long
+    prefix (any realistic SKILL.md or system prompt) collapse to one signature, and the
+    block would then tell the optimizer "re-proposed 2x" about something it never
+    proposed — strictly worse than injecting nothing.
+
+    Returns "" when there is no capability diff (e.g. the optimizer errored and the
+    workdir is still a verbatim parent copy) — a no-op is not an approach.
+
+    ponytail: re-reads both capability trees (an ``rglob`` + ``read_text`` pass each)
+    rather than threading a cached diff through the five rejection call sites. Negligible
+    next to the rollouts that just ran, and it costs nothing on an ACCEPT. Upgrade path if
+    a repo-sized capability makes it measurable: accept the already-computed
+    ``_diff_capabilities`` text as an optional argument.
+    """
+    # Generous diff budget: the signature's digest must cover the whole edit, and
+    # _diff_capabilities' own default (8 KB, for display) would silently cap it.
+    diff = _diff_capabilities(parent_dir, cand_dir, max_chars=200_000)
+    parts: list[str] = []
+    fname = ""
+    for line in diff.splitlines():
+        if line.startswith("+++ b/"):
+            fname = line[6:].strip()
+            continue
+        if line[:1] not in ("+", "-") or line.startswith(("+++", "---")):
+            continue
+        body = " ".join(line[1:].split()).translate(_CTRL_STRIP)
+        if not body:
+            continue
+        parts.append(f"{fname}: {line[0]}{body}")
+    if not parts:
+        return ""
+    sig = " | ".join(parts)
+    if len(sig) <= max_chars:
+        return sig
+    # Overflow: keep a readable head, then pin the identity of the WHOLE body with a
+    # digest so distinct edits never share a signature (see the docstring).
+    digest = hashlib.sha256(sig.encode("utf-8")).hexdigest()[:12]
+    tail = f" … [+{len(sig) - max_chars} chars, sha {digest}]"
+    return sig[:max_chars - len(tail)] + tail
+
+
+def dead_end_constraints(run_dir: RunDir, *, limit: int = _MAX_DEAD_ENDS) -> str:
+    """The "already tried & rejected (do not repeat)" prompt block, or "" when empty.
+
+    Reads ``rejected.jsonl`` (the live record — #114 kept these writes precisely because
+    they have real readers) and dedupes on ``approach``, keeping the FIRST rejection
+    reason per approach and counting repeats, so an approach the optimizer has already
+    re-proposed twice shows "re-proposed 2x" rather than two rows.
+
+    Bounded three ways so a long run cannot balloon the prompt (#199's
+    ``MAX_INSTRUCTIONS_CHARS``): each signature is capped (``_MAX_APPROACH_CHARS``, on
+    write AND on read), each reason at 200 chars, and only the ``limit`` MOST RECENT
+    distinct approaches are injected. Recency, not relevance: the newest rejections are
+    the ones the current lineage is closest to re-proposing, and it needs no scoring
+    model. Recency means LAST-seen, not first — a re-proposal requeues its row, so the
+    single most predictive entry (the dead end the optimizer just re-emitted) can never be
+    the one evicted in favour of an older one-off. ponytail: no LLM summarization — zero
+    API cost, and a verbatim diff signature is more actionable than a paraphrase.
+    """
+    recs = []
+    try:
+        for line in run_dir.rejected_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                recs.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        pass  # best-effort: no/partial memory file just means no constraints
+
+    # dedupe by approach, newest-last ordering preserved; count repeats.
+    seen: dict[str, dict] = {}
+    for rec in recs:
+        # Re-cap on READ as well as on write: a record may come from a direct
+        # RejectedMemory caller (or an older/edited file) that never went through
+        # approach_signature, and an unbounded row would defeat the block's budget.
+        approach = (rec.get("approach") or "").strip()[:_MAX_APPROACH_CHARS]
+        if not approach:
+            continue  # no-op edit or a pre-#129 record: nothing to constrain against
+        cid = rec.get("candidate_id") or "?"
+        if approach in seen:
+            row = seen.pop(approach)  # re-proposed => it IS the most recent; requeue it
+            row["count"] += 1
+            row["latest"] = cid
+            seen[approach] = row
+            continue
+        seen[approach] = {"approach": approach, "count": 1,
+                          "reason": (rec.get("reason") or "gate rejected")[:200],
+                          "cid": cid, "latest": cid}
+    if not seen:
+        return ""
+    rows = list(seen.values())[-limit:]
+
+    lines = [
+        "## ALREADY TRIED & REJECTED — do not re-propose these (framework, read-only)",
+        "",
+        f"The gate has rejected {len(seen)} distinct approach(es) on this run"
+        + (f" (showing the {len(rows)} most recent)" if len(rows) < len(seen) else "")
+        + ". Each row is the EXACT capability edit that failed and why:",
+        "",
+    ]
+    for r in rows:
+        # cid = where the approach FIRST died (whose reason is quoted); latest = the most
+        # recent repeat, so "re-proposed 3x" cannot be misread as belonging to cid alone.
+        rep = (f", re-proposed {r['count']}x (latest {r['latest']})"
+               if r["count"] > 1 else "")
+        lines.append(f"- **{r['cid']}**{rep} — `{r['approach']}`")
+        lines.append(f"  - rejected because: {r['reason']}")
+    lines += [
+        "",
+        "**Constraint:** do NOT propose any of the above again, and do not propose a "
+        "cosmetic variation of one (same text, different wording/placement) — it shares "
+        "the same hidden assumption and will fail the same way. If you believe a rejected "
+        "direction is still right, you MUST state in `PROCESS.md` what is materially "
+        "different this time and which specific lesson above it counters. Otherwise pick "
+        "a genuinely different hypothesis.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
     """Give the optimizer its four cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
@@ -920,8 +1067,13 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+
+    Plus the #129 rejected-approach constraint block. This is the ONLY function whose
+    output reaches the optimizer prompt (#114), and all three algorithms route through
+    it — so the constraints land identically for hill-climb, GEPA and SkillOpt with no
+    per-algorithm wiring.
     """
-    _build_ledger(workdir, run_dir, rejected, history)
+    _build_ledger(workdir, run_dir)
     _seed_journal(workdir, run_dir)
     if not (workdir / "PROCESS.md").exists():
         (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
@@ -942,10 +1094,18 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir,
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
     )
-    return f"{instructions}\n\n{pointer}\n"
+    dead_ends = dead_end_constraints(run_dir)
+    tail = f"\n{dead_ends}" if dead_ends else ""
+    # #140's proposal-quality bar, LAST so it sits in the kept 30% tail alongside the
+    # dead-end constraints. ~1.4 KB; the tail budget is 18 KB at the default ceiling.
+    tail += f"\n{proposal_quality.PROMPT_BLOCK}"
+    # Re-cap: render_instructions capped its OWN output, but these blocks are appended
+    # after it, so the final assembled prompt needs the ceiling applied once more.
+    return _oc.cap_instructions(f"{instructions}\n\n{pointer}{tail}\n")
 
 
-def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str) -> None:
+def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
+                            tag: str | None = None) -> None:
     """Copy ONLY the current best/parent candidate's per-tag rollouts for ``split``
     into ``workdir/trajectories/`` — the single step the optimizer builds on.
 
@@ -960,6 +1120,10 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
       4. as a last resort, the whole ``rollouts/<split>/`` dir.
     The per-tag copy is preferred even when the adapter returns a native dir, because
     the native dir generally cannot be scoped to one candidate.
+
+    ``tag`` pins the eval tag explicitly instead of resolving the run's best candidate —
+    GEPA needs the PARENT's minibatch traces (tag ``mb_p_NNNN``), which are the step it
+    actually reflects on. The same fallback chain applies if that tag has no rollouts.
     """
     dst = workdir / "trajectories"
 
@@ -982,8 +1146,24 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
                               what=f"trajectories/{tag}", error=str(e)[:300])
             return False
 
-    # Resolve the best/parent candidate id from run state (the parent this step forks
-    # from), falling back to the seed tag when no candidate has been accepted yet.
+    # An explicit tag (GEPA's parent-minibatch eval) is a PIN, not a preference: the
+    # prompt tells the optimizer these are that exact minibatch's rollouts verbatim.
+    # A fully-cached minibatch writes no rollout files (the eval cache stores only
+    # reward+feedback — see #111), so falling through here would hand the optimizer
+    # ANOTHER iteration's traces while still claiming they are this one's. Omit
+    # loudly instead: no trajectories/ dir, a warning event, and the prompt block
+    # is made conditional on the dir existing at the call site.
+    if tag:
+        if _copy_tag(str(tag)):
+            return
+        if dst.exists():
+            shutil.rmtree(dst, ignore_errors=True)
+        run_dir.log_event(
+            "optimizer_context_warning", what=f"trajectories/{tag}",
+            error="no rollouts persisted for the pinned eval tag (fully-cached "
+                  "minibatch); trajectories/ OMITTED rather than substituting another "
+                  "iteration's traces")
+        return
     best_id = None
     try:
         best_id = run_dir.best_id
@@ -1016,8 +1196,13 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str)
 
 def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
                               capabilities=None, optimizer_name: str | None = None,
-                              capability_sources=None, project_dir: Path | None = None) -> None:
+                              capability_sources=None, project_dir: Path | None = None,
+                              tag: str | None = None) -> None:
     """Give the optimizer everything it needs to read, inside its own working dir.
+
+    Call it through ``optimizer_context.inject`` (the shared seam every algorithm uses)
+    rather than directly, so new injected artifacts reach hill-climb, GEPA and SkillOpt
+    at once.
 
     Copies, VERBATIM and without parsing:
       - the CURRENT BEST/PARENT candidate's per-tag trajectories for the most recent
@@ -1039,7 +1224,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # this split, so the optimizer analyzes the step it builds on (not seed + every
     # rejected candidate mixed together). Always preserves the "something to read"
     # guarantee via per-tag fallback then the native dir.
-    _copy_step_trajectories(adapter, run_dir, workdir, split)
+    _copy_step_trajectories(adapter, run_dir, workdir, split, tag=tag)
 
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
@@ -1092,6 +1277,24 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
             )
         except Exception as e:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning", what="guidance/diagnose", error=str(e)[:300])
+
+    # 3b) the ON-DEMAND reasoning skills (#140) as local guidance. Tiny skills, each
+    # countering ONE named optimizer failure mode at ONE step — mechanism-probe sits at
+    # the proposal step. Copied whole so a new reasoning skill needs no wiring here, and
+    # ``scripts`` is excluded exactly as for the capability/diagnose copies: the probe's
+    # run.py cannot import ``cap_evolve`` from a candidate workdir (no ``core/`` above it),
+    # so shipping it would only advertise a command that fails. Read-context only.
+    reasoning_src = repo_root / "skills" / "reasoning"
+    if reasoning_src.is_dir():
+        try:
+            dst = workdir / "guidance" / "reasoning"
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(reasoning_src, dst,
+                            ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"))
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="guidance/reasoning",
+                              error=str(e)[:300])
 
     # 4) the resolved optimizer's features reference (parallel subagents etc.).
     if optimizer_name:
@@ -1170,6 +1373,18 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
                 except Exception as e:  # noqa: BLE001
                     run_dir.log_event("optimizer_context_warning",
                                       what=f"{skills_dir}/diagnose", error=str(e)[:300])
+            # ON-DEMAND reasoning skills (#140) — flattened into the native dir so the
+            # agent discovers them the same way it discovers the capability skills.
+            for src in sorted((repo_root / "skills" / "reasoning").glob("*/SKILL.md")):
+                try:
+                    dst = native_root / src.parent.name
+                    if dst.exists():
+                        shutil.rmtree(dst)
+                    shutil.copytree(src.parent, dst, ignore=ignore)
+                except Exception as e:  # noqa: BLE001
+                    run_dir.log_event("optimizer_context_warning",
+                                      what=f"{skills_dir}/{src.parent.name}",
+                                      error=str(e)[:300])
 
         # Always-on instructions file: write a short, generic, idempotent pointer block.
         if instructions_file:
@@ -1239,8 +1454,13 @@ def run_step(
     optimizer_name: str | None = None,
     capability_sources=None,
     project_dir: Path | None = None,
+    ctx=None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext``; when given it supersedes the
+    individual ``capabilities`` / ``optimizer_name`` / ``capability_sources`` /
+    ``project_dir`` kwargs (kept for direct callers).
 
     Returns a dict describing the step. On accept, the candidate is snapshotted
     and becomes the run's best.
@@ -1260,12 +1480,15 @@ def run_step(
     workdir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(parent_dir, workdir)
 
-    # Give the optimizer the full trajectories + capability guidance, in its own dir.
-    _inject_optimizer_context(adapter, run_dir, workdir, split=eval_split,
-                              capabilities=capabilities, optimizer_name=optimizer_name,
-                              capability_sources=capability_sources, project_dir=project_dir)
+    # Give the optimizer the full trajectories + capability guidance, in its own dir —
+    # through the shared seam, so hill-climb / GEPA / SkillOpt inject identically.
+    from .optimizer_context import OptimizerContext, inject as _inject
+    _inject(adapter, run_dir, workdir, split=eval_split,
+            ctx=ctx or OptimizerContext(
+                capabilities=capabilities or [], optimizer_name=optimizer_name,
+                capability_sources=capability_sources or [], project_dir=project_dir))
 
-    instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+    instructions = _augment_instructions(instructions, workdir, run_dir)
 
     optimizer_error = None
     opt_cost_usd, opt_tokens = 0.0, 0
@@ -1291,6 +1514,11 @@ def run_step(
     optimizer_seconds = time.time() - _opt_t0
     run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
                          optimizer_tokens=opt_tokens)
+
+    # #140: record what the optimizer DECLARED (mechanism/hypothesis/observable) before
+    # the gate judges it. ADVISORY — nothing below branches on this; the candidate goes
+    # to the val gate whether or not it declared anything.
+    proposal_quality.record(run_dir, workdir, cid)
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
@@ -1340,30 +1568,25 @@ def run_step(
                       opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
     run_dir.record_spend_warnings()
 
-    # update optimizer memory + commit the iteration to the version store so the
-    # whole process stays inspectable (git log / LEDGER / JOURNAL). The `note` is the
-    # optimizer's own handover (its approach + lesson), taken from the entry it appended
-    # to JOURNAL.md this iteration so the lineage record carries what was tried, not just Δ/SE.
+    # Record the iteration for the dashboard's Memory/Insights panels + commit it to the
+    # version store, so the whole process stays inspectable (git log / LEDGER / JOURNAL).
     delta = cand_val.reward - current_val.reward
     summary = f"candidate {cid} (val {cand_val.reward:.3f}, Δ {delta:+.3f})"
     # Fold the optimizer's appended JOURNAL entry into the run-level append-only journal
-    # (so handover accumulates across accepted AND rejected iterations), and reuse it as
-    # the candidate's lineage note in the factual ledger.
+    # (so handover accumulates across accepted AND rejected iterations). This is the
+    # channel the NEXT iteration actually reads; _reconcile_journal stamps the objective
+    # outcome + the exact tasks broken/fixed into it.
     _reconcile_journal(workdir, run_dir, cid, accepted=accepted,
                        val=cand_val.reward, delta=delta)
-    note = _latest_journal_note(workdir)
-    # Per-task broke/fixed lists vs the parent (from the rollouts just persisted), so
-    # MEMORY records the SPECIFIC tasks a candidate broke — not just a category — and
-    # the next iteration won't retry the regression. Best-effort; None when not
-    # comparable (e.g. parent rollouts absent).
-    impact = _candidate_task_impact(run_dir, cid, "val",
-                                    parent_of={cid: parent_id})
     if accepted:
         if history is not None:
-            history.add(cid, summary, cand_val.reward, note=note, impact=impact)
+            history.add(cid, summary, cand_val.reward)
     else:
         if rejected is not None:
-            rejected.add(cid, summary, decision.reason, cand_val.reward, note=note, impact=impact)
+            # Record WHAT was tried, not only the score — that signature is what the
+            # next iteration's dead-end constraint block is built from (#129).
+            rejected.add(cid, summary, decision.reason, cand_val.reward,
+                         approach=approach_signature(parent_dir, workdir))
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",
@@ -1597,10 +1820,13 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
-_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
-                    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
-                    ".claude", ".agents", ".gemini", ".opencode", ".bob",
-                    "CLAUDE.md", "AGENTS.md", "GEMINI.md")
+#
+# This is the one DESTRUCTIVE consumer of the shared list — snapshot() drops what it
+# names — so it takes ``SCRATCH_NAMES`` (live writers) ONLY, never
+# ``rundir.NON_CAPABILITY_NAMES``. A retired name with no live writer can only refer to
+# a capability file that shares it, and deleting that is silent data loss the eval-cache
+# key can't see. See the tier note in rundir.py.
+_SNAPSHOT_IGNORE = _oc.INJECTED_DIRS + _oc.INJECTED_NAMES + SCRATCH_NAMES
 
 
 def _failures_block(always_fail, flaky, errored) -> str:
@@ -1765,10 +1991,21 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     intake phase per benchmark, with a generic default shipped in ``templates/``. Only
     the per-iteration data (the focus summary, the failure index, the capability/algorithm
     briefs, the benchmark-repo pointer) is computed here and substituted.
+
+    ``focus_ids`` must name tasks that are IN ``current_val`` — it narrows that result,
+    it cannot add to it. Callers passing ids from a different split (SkillOpt handed
+    train minibatch ids against a val result, and splits are disjoint by construction)
+    would otherwise filter the failure index down to nothing and get a confident
+    "0 failing of 0 tasks" prompt. On zero overlap we do NOT filter, and we say so.
     """
     per = current_val.per_task
+    scoped = True
     if focus_ids is not None:
-        per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+        known = {pt.get("task_id") for pt in per}
+        if set(focus_ids) & known:
+            per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+        else:
+            scoped = False  # disjoint id sets: filtering would empty the failure index
     errored, always_fail, flaky, solid = _classify(per)
     n = len(per)
 
@@ -1776,6 +2013,10 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
+        + ("" if scoped else
+           " (The failure index below covers ALL scored tasks: this step's focus ids "
+           "are from a different split than the scored result, so there is no per-focus "
+           "breakdown — fix the shared root cause, which is what generalizes anyway.)")
     )
     failures = _failures_block(always_fail, flaky, errored)
     passing = _passing_block(solid)
@@ -1860,6 +2101,7 @@ def hill_climb_loop(
     algorithm: str = "hill_climb",
     no_regression: bool = False,
     store=None,
+    ctx=None,
     capabilities=None,
     instructions_file=None,
     bench_repo: str | None = None,
@@ -1876,14 +2118,22 @@ def hill_climb_loop(
     reflection emphasizes — and (for hardest-first) the order. Parent is always
     the current best (global hill-climb). The ``gepa`` algorithm uses its own
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
+
+    ``ctx`` is an ``optimizer_context.OptimizerContext`` bundling what the optimizer is
+    given (capabilities, instructions template, bench repo, optimizer name, capability
+    sources, consuming-LLM profile) — the same bundle ``gepa_loop`` / ``skillopt_loop``
+    take. The individual kwargs remain for direct callers and build a ctx when none is
+    passed.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
 
-    # Resolve the consuming-LLM profile once; its brief steers every iteration's prompt.
-    from . import target_profile as _tp
-    _profile = _tp.resolve(target_model, target_profile_file, project_dir=project_dir)
-    _target_reader = _tp.reader_block(_profile)
+    from .optimizer_context import OptimizerContext, render_instructions
+    ctx = ctx or OptimizerContext(
+        capabilities=capabilities or [], optimizer_name=optimizer_name,
+        instructions_file=instructions_file, bench_repo=bench_repo,
+        capability_sources=capability_sources or [], project_dir=project_dir,
+        target_model=target_model, target_profile_file=target_profile_file)
 
     # establish a focus order over the train tasks when needed
     train_ids = run_dir.read_splits().train
@@ -1907,19 +2157,13 @@ def hill_climb_loop(
             label = f"task {focus_ids[0]}" if focus_ids else "train"
         else:
             focus_ids, label = None, focus
-        seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
-        instructions = _focus_instructions(current_val, focus_ids, label,
-                                            capabilities=capabilities, algorithm=algorithm,
-                                            instructions_file=instructions_file,
-                                            bench_repo=bench_repo, optimizer_name=optimizer_name,
-                                            seed_empty=seed_empty, target_reader=_target_reader)
+        instructions = render_instructions(current_val, focus_ids, label, ctx=ctx,
+                                          algorithm=algorithm, run_dir=run_dir)
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-            rejected=rejected, history=history, store=store, capabilities=capabilities,
-            optimizer_name=optimizer_name, capability_sources=capability_sources,
-            project_dir=project_dir,
+            rejected=rejected, history=history, store=store, ctx=ctx,
         )
         steps.append(step)
         if step["accepted"]:

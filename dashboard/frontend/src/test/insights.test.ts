@@ -38,6 +38,23 @@ describe('normalizeReason + deadEnds', () => {
     expect(out[0].count).toBe(2) // the two numeric gate rejections collapse
     expect(out[0].examples).toEqual(['a', 'b'])
   })
+
+  it('collects distinct rejected-edit signatures, deduped and capped at 3 (#129)', () => {
+    const out = deadEnds([
+      { candidate_id: 'a', summary: '', reason: 'same gate', val: 0, approach: 'prompt.txt: +A' },
+      { candidate_id: 'b', summary: '', reason: 'same gate', val: 0, approach: 'prompt.txt: +A' },
+      { candidate_id: 'c', summary: '', reason: 'same gate', val: 0, approach: 'prompt.txt: +B' },
+      { candidate_id: 'd', summary: '', reason: 'same gate', val: 0, approach: 'prompt.txt: +C' },
+      { candidate_id: 'e', summary: '', reason: 'same gate', val: 0, approach: 'prompt.txt: +D' },
+    ])
+    expect(out[0].count).toBe(5)
+    expect(out[0].approaches).toEqual(['prompt.txt: +A', 'prompt.txt: +B', 'prompt.txt: +C'])
+  })
+
+  it('leaves approaches empty on pre-#129 records with no approach field', () => {
+    const out = deadEnds([{ candidate_id: 'a', summary: '', reason: 'old record', val: 0 }])
+    expect(out[0].approaches).toEqual([])
+  })
 })
 
 describe('toolUsage', () => {

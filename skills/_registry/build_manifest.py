@@ -22,7 +22,11 @@ from pathlib import Path
 # Components are SINGULAR (matching what meta.yaml actually carries); the old list
 # had plurals that matched nothing, so validation was dead. The directory layout
 # uses the plural (skills/<plural>/<skill>/) but the meta `component` is singular.
-COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate"}
+# "reasoning" (#140) is an ON-DEMAND component: unlike a phase it is never sequenced by
+# the orchestrate DAG — it is loaded at ONE step (the proposal step) to counter ONE named
+# optimizer failure mode, and reaches the optimizer as injected read-context rather than
+# as a subprocess. It still registers and validates like every other skill.
+COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate", "reasoning"}
 
 # The needs/provides token vocabulary. Every needs/provides entry must be one of
 # these; a misspelling ("score" for "scores") fails the build instead of silently

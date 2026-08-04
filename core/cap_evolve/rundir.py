@@ -4,8 +4,8 @@ Layout under ``.capevolve/run_<ts>/``::
 
     state.json          # best candidate id, budget, spent, test_used
     splits.json         # the frozen train/val/test partition (sealed test)
-    rejected.jsonl      # RejectedMemory
-    history.jsonl       # accepted History
+    rejected.jsonl      # rejected candidates (dashboard Memory panel)
+    history.jsonl       # accepted candidates (dashboard Memory panel)
     candidates/<id>/    # snapshot of each candidate's capability dir
     rollouts/<split>/<task>__<cand>__t<k>.json
     events.jsonl        # append-only audit log
@@ -25,6 +25,66 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .splits import Splits
+
+# Framework/optimizer SCRATCH files that are not capability content. Defined HERE — at
+# the bottom of the import graph — because the list had been copy-pasted into several
+# modules and they desynced: FOCUS.md/REFLECTION.md (GEPA's own scratch) were in the
+# cache and component lists but missing from the snapshot list, so GEPA snapshots stayed
+# dirty (#110) even after LEDGER/JOURNAL/RUNMAP were excluded.
+#
+# TWO tiers, because the consumers do not all perform the same OPERATION:
+#
+#   SCRATCH_NAMES        — names a live code path actually WRITES. These are the only
+#                          ones safe for the single DESTRUCTIVE consumer,
+#                          ``harness._SNAPSHOT_IGNORE``, which reaches
+#                          ``RunDir.snapshot`` → ``shutil.copytree(ignore=...)`` and so
+#                          DROPS the file permanently — and from every descendant
+#                          iteration too, since the next workdir is copied from the
+#                          snapshot.
+#   LEGACY_SCRATCH_NAMES — retired names with NO live writer anywhere in core/ (the old
+#                          MEMORY/STATE handover pair, and REJECTED.md from before
+#                          rejected-edit memory moved to ``rejected.jsonl``). Kept ONLY
+#                          in the non-destructive read-side filters, so run dirs and
+#                          eval caches produced before they were retired still behave.
+#                          They must NEVER reach the snapshot filter: with no live
+#                          writer, the only thing such a name can refer to on disk is a
+#                          CAPABILITY file that happens to share it, and deleting that
+#                          is silent data loss the cache key cannot even see (the same
+#                          name is ignored when hashing, so the mutilated candidate
+#                          keeps its parent's key → stale hit).
+#
+# NON_CAPABILITY_NAMES is the union, for every consumer whose operation is a read-side
+# FILTER (a false positive only costs precision — nothing is lost): the eval-cache
+# content hash (``cache._IGNORE_NAMES``), GEPA's editable-component list
+# (``gepa._NON_COMPONENT``), the edit-size count (``skillopt._changed_components``) and
+# the capability-diff filters (``dashboard._DIFF_SKIP`` / ``harness._CAP_DIFF_SKIP``).
+# INSTRUCTIONS.md and PROCESS.md are in the union but in neither tuple: they are
+# deliberately KEPT in the snapshot (PROCESS.md is the candidate's explainability
+# record) while still not being capability bytes.
+SCRATCH_NAMES = (
+    # cross-iteration state the harness regenerates every iteration
+    "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
+    # per-iteration algorithm scratch (GEPA's reflective dataset + component focus)
+    "FOCUS.md", "REFLECTION.md",
+)
+LEGACY_SCRATCH_NAMES = ("REJECTED.md", "MEMORY.md", "STATE.md")
+NON_CAPABILITY_NAMES = frozenset(
+    {"INSTRUCTIONS.md", "PROCESS.md"} | set(SCRATCH_NAMES) | set(LEGACY_SCRATCH_NAMES))
+
+
+# Every event kind that records ONE evaluated iteration (a candidate + its gate
+# outcome + its val score). ``harness.run_step`` emits "step"; GEPA bypasses
+# run_step and emits "gepa_val_gate"; SkillOpt additionally emits "skillopt_step".
+# ONE definition, every consumer (dashboard lineage, LEDGER, RUNMAP,
+# prior_iterations/) — filtering on "step" alone makes GEPA's whole
+# cross-iteration history channel silently empty.
+ITERATION_EVENT_KINDS = ("step", "skillopt_step", "gepa_val_gate")
+
+
+def iteration_candidate(ev: dict) -> str | None:
+    """The candidate id on an iteration event (kinds differ on the field name)."""
+    cid = ev.get("candidate") or ev.get("candidate_id")
+    return str(cid) if cid else None
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -375,15 +435,25 @@ class RunDir:
     def snapshot(self, candidate_id: str, src_dir: Path, ignore=None) -> Path:
         """Persist ``src_dir`` as candidate ``candidate_id``.
 
-        ``ignore`` is an optional iterable of top-level names to exclude (e.g. the
+        ``ignore`` is an optional iterable of TOP-LEVEL names to exclude (e.g. the
         optimizer's injected scratch — ``trajectories/``, ``guidance/`` — and its
         prompt/memory files) so the stored candidate stays capability-only and
         diffs against the parent show only real edits.
+
+        Root-anchored on purpose. ``shutil.ignore_patterns`` matches by BASENAME at
+        every depth, so a nested capability file that merely shares a name with an
+        entry (``src/prompts/STATE.md``) would be silently deleted from the candidate
+        — and from the whole descendant lineage, since the next iteration's workdir is
+        copied from this snapshot. Every entry in the list is a root-level framework
+        injection, so filtering only at ``src_dir`` itself is both strictly more
+        correct and what this docstring always claimed.
         """
         dst = self.candidates / candidate_id
         if dst.exists():
             shutil.rmtree(dst)
-        ig = shutil.ignore_patterns(*ignore) if ignore else None
+        src_dir = Path(src_dir)
+        names = set(ignore or ())
+        ig = (lambda d, cs: names if Path(d) == src_dir else set()) if names else None
         shutil.copytree(src_dir, dst, ignore=ig)
         return dst
 
@@ -395,3 +465,26 @@ class RunDir:
         rec = {"t": time.time(), "kind": kind, **fields}
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
+
+    def iteration_events(self) -> list[dict]:
+        """Every event that represents ONE evaluated iteration, in order.
+
+        See :data:`ITERATION_EVENT_KINDS` — read this instead of filtering
+        ``kind == "step"`` by hand, or the algorithms that emit their own kind
+        (GEPA, SkillOpt) silently disappear from whatever you are building.
+        Best-effort: an unreadable/absent events log yields whatever parsed.
+        """
+        out: list[dict] = []
+        try:
+            if not self.events_path.exists():
+                return out
+            for line in self.events_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("kind") in ITERATION_EVENT_KINDS and iteration_candidate(rec):
+                    out.append(rec)
+        except Exception:  # noqa: BLE001
+            return out
+        return out

@@ -25,16 +25,22 @@ export interface DeadEnd {
   reason: string
   count: number
   examples: string[]
+  /** Distinct rejected-edit signatures behind this reason (#129); [] on pre-#129 runs. */
+  approaches: string[]
 }
 
-/** Rejected reasons, deduped with occurrence counts (the "what not to try" list). */
+/** Rejected reasons, deduped with occurrence counts (the "what not to try" list).
+ *  Carries the rejected-edit signatures the optimizer is constrained against (#129),
+ *  so the panel shows WHAT failed and not only why. */
 export function deadEnds(rejected: MemoryResult['rejected']): DeadEnd[] {
   const map = new Map<string, DeadEnd>()
   for (const r of rejected) {
     const key = normalizeReason(r.reason)
-    const cur = map.get(key) ?? { reason: key, count: 0, examples: [] }
+    const cur = map.get(key) ?? { reason: key, count: 0, examples: [], approaches: [] }
     cur.count += 1
     if (cur.examples.length < 3) cur.examples.push(r.candidate_id)
+    const a = (r.approach ?? '').trim()
+    if (a && cur.approaches.length < 3 && !cur.approaches.includes(a)) cur.approaches.push(a)
     map.set(key, cur)
   }
   return [...map.values()].sort((a, b) => b.count - a.count)
