@@ -1,0 +1,80 @@
+# cheap_real — the "step 2" preset: a REAL LLM run for cents and minutes.
+#
+# Only the values that differ from templates/project/capevolve.yaml are set; the
+# omitted keys keep their documented defaults. In particular `protected_paths` is
+# OMITTED, not set to []: since #142/#197 an empty list is a hard error, and omitting
+# the key resolves to [*_DEFAULT_GLOBS, *dataset_source] (protect.py:168-170). The
+# distinction matters: the default globs are `adapters`, `capevolve.yaml` and *gold*
+# suffixes — `tasks.jsonl` matches NONE of them. The answer key is guarded because
+# `dataset_source` is folded in when the key is absent, so declaring the key would
+# silently drop it.
+capabilities: [system-prompt]
+capability_path: seed_capability
+actions: [edit]
+
+# --- who proposes edits ----------------------------------------------------
+# `mock` is the zero-cost default so `run.sh` is free out of the box. Set
+# CHEAP_REAL_OPTIMIZER=claude-code (see run.sh) for the cents-scale agent rung.
+optimizer_skill: mock
+# The proposer is set DELIBERATELY to a cheap tier (#132): adding an output-format rule
+# to a prompt does not need the frontier model the full tau2 run uses, and Haiku is
+# ~5x cheaper per proposal. BOTH keys are set on purpose — `optimizer_model` is what
+# ships today, `proposer_model` is #132's tier name, and #132 falls back to
+# `optimizer_model` when the tier is blank, so setting both is correct before and
+# after that merge. `aux_model` is deliberately NOT set: every auxiliary step in
+# cap-evolve is still pure Python, so an aux tier would route nothing and cost $0.
+optimizer_model: claude-haiku-4-5
+proposer_model: claude-haiku-4-5
+# Per-iteration WORK cap (claude-code → --max-turns). MEASURED, not guessed: at 12 the
+# agent reliably exits `Reached max turns (12)` — a non-zero exit cap-evolve correctly
+# reports as a failed iteration, so every candidate was discarded and the run looked
+# like "the optimizer proposed nothing" rather than "the cap was too tight". 40 leaves
+# room to read the trajectories, edit, and write its journal.
+optimizer_max_turns: 40
+# Per-iteration $ cap, enforced by the agent CLI itself (claude-code →
+# --max-budget-usd). Set ABOVE the observed ~$0.10-0.40 per proposal on purpose: the
+# CLI exits non-zero when it trips this, which cap-evolve correctly reports as a failed
+# iteration — a cap set at the expected spend turns normal variance into a dead run.
+# `max_optimizer_usd` below is the real ceiling.
+optimizer_usd_per_iter: 1.0
+
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ---------------------------------------------------------
+# 20 tasks at the default 0.5/0.25/0.25 → train 10 / val 5 / test 5. Deliberately
+# NOT smaller: #113's floor refuses a gate on fewer than MIN_VAL_TASKS=2 matched val
+# pairs, and warns below LOW_CONFIDENCE_VAL_TASKS=5. val=5 is the smallest split that
+# clears both, so this is the cheapest honest configuration, not merely a cheap one.
+# Named as the FILE, not `adapter`: #142/#197's guard hashes the path the spec's
+# `dataset_source` names, so naming tasks.jsonl is what gets the answer key covered.
+# run.sh copies it inside the project dir for exactly that reason. (Nothing in core
+# reads this key at runtime — the adapter loads TASKS_FILE either way — so this is a
+# truthful declaration, not a behavior change.)
+dataset_source: tasks.jsonl
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+
+num_trials: 1
+
+gate_mode: paired
+gate_k_se: 1.0
+
+# --- budget ----------------------------------------------------------------
+# 30 runner calls, plus 3 proposer calls. The full derivation — the baseline val eval
+# and both test evals are easy to forget:
+#   val  5 x trials 1 x (1 baseline + 3 candidates)  = 20
+#   test 5 x (best FINAL + baseline FINAL_seed)      = 10
+#                                             total  = 30   (= state.json metric_calls)
+# These are hard stops, so the run cannot become the thing this example exists to
+# avoid even if a model is priced differently than assumed. Sized at roughly 2x the
+# measured spend (~$0.15-0.40 per Haiku proposal x 3), not at it: a cap set at the
+# expected number makes ordinary variance look like a budget failure.
+max_iterations: 3
+stall: 2
+max_usd: 3.0
+max_optimizer_usd: 2.5
+
+store: copy

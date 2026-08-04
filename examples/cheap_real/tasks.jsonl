@@ -1,0 +1,20 @@
+{"id": "d01", "input": "March 3rd, 2021", "target": "2021-03-03"}
+{"id": "d02", "input": "the 5th of July 1999", "target": "1999-07-05"}
+{"id": "d03", "input": "12/25/2020", "target": "2020-12-25"}
+{"id": "d04", "input": "Jan 1 2000", "target": "2000-01-01"}
+{"id": "d05", "input": "29 Feb 2024", "target": "2024-02-29"}
+{"id": "d06", "input": "7 August 1985", "target": "1985-08-07"}
+{"id": "d07", "input": "October 31, 1993", "target": "1993-10-31"}
+{"id": "d08", "input": "2/9/2011", "target": "2011-02-09"}
+{"id": "d09", "input": "the 22nd of November, 1963", "target": "1963-11-22"}
+{"id": "d10", "input": "Sept 30 2018", "target": "2018-09-30"}
+{"id": "d11", "input": "1 Apr 2005", "target": "2005-04-01"}
+{"id": "d12", "input": "June 6th 1944", "target": "1944-06-06"}
+{"id": "d13", "input": "11/11/1918", "target": "1918-11-11"}
+{"id": "d14", "input": "20 January 2009", "target": "2009-01-20"}
+{"id": "d15", "input": "Dec 8, 1980", "target": "1980-12-08"}
+{"id": "d16", "input": "the 4th of March 1997", "target": "1997-03-04"}
+{"id": "d17", "input": "5/17/2016", "target": "2016-05-17"}
+{"id": "d18", "input": "14 July 1789", "target": "1789-07-14"}
+{"id": "d19", "input": "Feb 2 2002", "target": "2002-02-02"}
+{"id": "d20", "input": "August 15th, 1947", "target": "1947-08-15"}

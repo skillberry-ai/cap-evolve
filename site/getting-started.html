@@ -107,7 +107,49 @@ cap-evolve version          # verify</code></pre>
       </figure>
     </div>
 
+    <div class="step">
+      <h3>Run the cheap FIRST REAL example</h3>
+      <p>
+        <code>toy_calc</code> proves the machinery but calls no model. This is the rung between it
+        and the multi-hour benchmark run: a <strong>real LLM</strong>, a real accept/reject decision
+        and a real sealed test split, in minutes, for <strong>$0</strong> on a local model. The task is
+        normalizing a human-written date (<code>"the 22nd of November, 1963"</code>) to ISO
+        (<code>1963-11-22</code>), scored by exact match.
+      </p>
+<pre><code>pip install litellm            # the runner's provider shim
+ollama pull llama3.2:3b        # ~2 GB, free, local
+
+bash examples/cheap_real/run.sh</code></pre>
+      <p>
+        To have a real agent propose the edit instead of the deterministic <code>mock</code>
+        optimizer (the runner stays local and free — measured ~$0.15–0.35 per iteration):
+      </p>
+<pre><code>CHEAP_REAL_OPTIMIZER=claude-code CHEAP_REAL_OPT_MODEL=claude-haiku-4-5 \
+  bash examples/cheap_real/run.sh</code></pre>
+      <p>
+        No local model? <code>CHEAP_REAL_MODEL=claude-haiku-4-5</code> points the runner at a cheap
+        hosted one instead — one env var, no code change, plus that provider's credential in the
+        environment. <strong>Measured: 98 s, $0.0115</strong> for the whole run.
+      </p>
+    </div>
+
   </div>
+
+  <h2>The three rungs, with costs</h2>
+  <p>
+    So "see it work" and "run it for real" are not the same decision. Every figure is either
+    measured on the run it describes or labelled an estimate with its arithmetic — the full
+    derivation is in
+    <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a>.
+  </p>
+  <table>
+    <thead><tr><th>Rung</th><th>What is real</th><th>Runtime</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. free</strong> — <code>toy_calc</code></td><td>pipeline, gate, sealed test — no model</td><td>seconds</td><td class="num"><strong>$0</strong></td></tr>
+      <tr><td><strong>2. cheap-real</strong> — <code>cheap_real</code></td><td>a real LLM, a real accept/reject decision, a real sealed test</td><td>~30 s – 5.4 min <em>measured</em></td><td class="num"><strong>$0</strong> local, $0.0115 with a hosted runner, or $0.54 with a hosted proposer — all <em>measured</em></td></tr>
+      <tr><td><strong>3. full</strong> — τ²-bench airline</td><td>a published benchmark</td><td>hours</td><td class="num">~$148</td></tr>
+    </tbody>
+  </table>
 
   <h2>Where to next</h2>
   <div class="card-grid reveal">

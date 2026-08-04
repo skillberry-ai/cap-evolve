@@ -8,6 +8,11 @@ under the champion `cand_0007`. Rollouts live at
 `<run_dir>/rollouts/val/<task_id>__<tag>__t<k>.json` (full message transcript +
 `reward_info`); every example below was read directly from those files.
 
+> These come from the **full** ~$148 run. To watch an optimizer propose an edit on a
+> real model for cents and minutes first, run rung 2 of the ladder —
+> [`examples/cheap_real/`](../examples/cheap_real/) — and read the `candidates/*/`
+> diffs it writes. Same mechanism, three orders of magnitude cheaper.
+
 The throughline: **argument-level feedback from failing rollouts is converted into
 executable guards inside the existing tools** — code where the agent already "knew"
 the rule but skipped it, prose only for genuine knowledge gaps. Across the run

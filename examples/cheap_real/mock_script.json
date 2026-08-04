@@ -1,0 +1,5 @@
+{
+  "edits": [
+    {"file": "prompt.txt", "op": "ensure_contains", "text": "\n[ISO] The user's message contains one date. Reply with ONLY that date in YYYY-MM-DD form: four-digit year, two-digit month, two-digit day, hyphen-separated. No prose, no explanation, no trailing punctuation."}
+  ]
+}
