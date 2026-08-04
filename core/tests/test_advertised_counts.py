@@ -53,7 +53,8 @@ N_OPTIMIZERS = len(re.findall(
 CLAIMS = [
     ("README.md", r"agent%20skills-(\d+)-", N_SKILLS),
     ("llms.txt", r"## Skills \((\d+)\)", N_SKILLS),
-    ("CHANGELOG.md", r"\*\*(\d+) Agent Skills\*\*", N_SKILLS),
+    # Changelogs intentionally preserve historical counts; unlike the other
+    # surfaces, they are not current claims.
     ("docs/ARCHITECTURE.md", r"(\d+) skills · \d+ algorithms", N_SKILLS),
     ("docs/ARCHITECTURE.md", r"\d+ skills · (\d+) algorithms", N_ALGOS),
     ("site/index.html", r"(\d+) skills · \d+ algorithms", N_SKILLS),
