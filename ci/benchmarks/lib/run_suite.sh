@@ -41,7 +41,7 @@ mkdir -p "$OUT/optimized"
 : "${ANTHROPIC_BASE_URL:?set ANTHROPIC_BASE_URL (IBM gateway)}"
 : "${ANTHROPIC_AUTH_TOKEN:?set ANTHROPIC_AUTH_TOKEN}"
 
-export PYTHONPATH="$REPO/core"
+export PYTHONPATH="$REPO/core:$REPO"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
 
 # All task ids for this tier (this run optimizes them together). Agent is uniform across a
@@ -90,10 +90,26 @@ ENV
     export TAU2_MAX_CONCURRENCY=10
     ;;
   swebench)
-    cp "$TPL/swe_bench/adapter.py" "$PROJ/adapters/"
-    cp -R "$TPL/swe_bench/seed_capability" "$PROJ/seed_capability"
-    CAPS="[system-prompt]"
-    cat > "$WORK/.env" <<ENV
+    if [ "${SWEBENCH_ADAPTER:-}" = "harbor" ]; then
+      # Harbor-based SWE-bench: full coding agent in sandboxed containers.
+      # Harbor adapter reads os.environ (not .env/dotenv), so we export directly.
+      cp "$TPL/harbor/adapter.py" "$PROJ/adapters/"
+      cp -R "$TPL/harbor/seed_capability" "$PROJ/seed_capability"
+      CAPS="[skill-package]"
+      export HARBOR_DATASET=swe-bench/swe-bench-verified
+      export HARBOR_AGENT=claude-code
+      export HARBOR_MODEL="$AGENT_MODEL"
+      export HARBOR_PARALLEL="${HARBOR_PARALLEL:-4}"
+      export HARBOR_TIMEOUT="${HARBOR_TIMEOUT:-1800}"
+      export HARBOR_TASK_IDS="$IDS_CSV"
+      export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+      : > "$WORK/.env"
+    else
+      # litellm-based SWE-bench: single-shot patch generation
+      cp "$TPL/swe_bench/adapter.py" "$PROJ/adapters/"
+      cp -R "$TPL/swe_bench/seed_capability" "$PROJ/seed_capability"
+      CAPS="[system-prompt]"
+      cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL
 LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
 LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
@@ -104,7 +120,8 @@ SWEBENCH_MAX_WORKERS=10
 SWEBENCH_NAMESPACE=${SWEBENCH_NAMESPACE:-swebench}
 SWEBENCH_ORACLE=${SWEBENCH_ORACLE:-1}
 ENV
-    export SWEBENCH_MAX_WORKERS=10
+      export SWEBENCH_MAX_WORKERS=10
+    fi
     ;;
   skillsbench)
     cp "$TPL/skillsbench/adapter.py" "$PROJ/adapters/"

@@ -1,1 +1,1252 @@
-[]
+[
+  {
+    "id": "astropy__astropy-12907",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "astropy__astropy-13236",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "astropy__astropy-13453",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "astropy__astropy-14182",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "astropy__astropy-7671",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "astropy__astropy-8707",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-10554",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-10880",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-10973",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11095",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11133",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11211",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11292",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11299",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11333",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11477",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11490",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11551",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11555",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11603",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11728",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11740",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11790",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11815",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11880",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-11999",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12039",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12143",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12155",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12273",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12276",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12304",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12308",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12325",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12406",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12419",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12663",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12708",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12713",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-12965",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13089",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13121",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13128",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13158",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13279",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13343",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13344",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13401",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13410",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13449",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13568",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13569",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13670",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13809",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13820",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13821",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13837",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-13933",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14007",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14011",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14034",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14140",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14155",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14238",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14349",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14351",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14373",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14376",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14404",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14493",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14539",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14580",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14608",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14672",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14752",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14771",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-14855",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15022",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15098",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15103",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15104",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15127",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15128",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15268",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15277",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15278",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15280",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15380",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15382",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15467",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15499",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15561",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15563",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15629",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15695",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15731",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15732",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15741",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15851",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15863",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15930",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15957",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-15987",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16032",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16116",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16256",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16333",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16485",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16502",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16527",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16560",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16612",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16631",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16662",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16667",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16819",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16877",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16901",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16938",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-16950",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-17084",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "django__django-9296",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-13989",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-14623",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-21568",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-22865",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-22871",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-23314",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-23412",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-24177",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-24637",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-24870",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-25775",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-25960",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-26113",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-26208",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-26291",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "matplotlib__matplotlib-26342",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "mwaskom__seaborn-3187",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pallets__flask-5014",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "psf__requests-1724",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "psf__requests-1921",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "psf__requests-2317",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "psf__requests-2931",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-2905",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-3095",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-3677",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-4075",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-4094",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-4629",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-6461",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-6599",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-6938",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-6992",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-7233",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pydata__xarray-7393",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pylint-dev__pylint-4604",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pylint-dev__pylint-4661",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pylint-dev__pylint-4970",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pylint-dev__pylint-6903",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pylint-dev__pylint-7080",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-10051",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-10356",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-5787",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-7205",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-7236",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-7432",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "pytest-dev__pytest-7490",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-10844",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-10908",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-11578",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-12682",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-12973",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13124",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13135",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13439",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-13496",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14053",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14087",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14496",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14710",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14894",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-14983",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-25102",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-25232",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-25931",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-25973",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "scikit-learn__scikit-learn-26194",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-10449",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-11510",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-7440",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-7454",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-7910",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-7985",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8035",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8056",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8475",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8548",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8551",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8593",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8595",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8621",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8638",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-8721",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-9230",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-9258",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-9281",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-9367",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sphinx-doc__sphinx-9711",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-11618",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-12096",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-12419",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-12481",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-13480",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-13551",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-13647",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-13798",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-14711",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-14976",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-15017",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-15345",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-15599",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-15875",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-15976",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-16450",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-16597",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-17139",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-17630",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-18199",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-18211",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-18698",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-19040",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-19346",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-19637",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-19783",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-19954",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-20428",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-20438",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-20801",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-20916",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-21612",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-21930",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-22456",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-22914",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-23262",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-23413",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-23950",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-24066",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-24213",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  },
+  {
+    "id": "sympy__sympy-24443",
+    "tag": "full",
+    "agent": "Azure/gpt-5-mini-2025-08-07"
+  }
+]

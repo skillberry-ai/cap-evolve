@@ -23,7 +23,8 @@ uv pip install -p "$CAPEVOLVE_PY" -q $IDX "$REPO/core" litellm
 
 case "$BENCH" in
   swebench)
-    uv pip install -p "$CAPEVOLVE_PY" -q $IDX swebench datasets ;;
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX swebench datasets "$REPO/capevolve_harbor"
+    command -v harbor >/dev/null 2>&1 || uv tool install $IDX harbor >/dev/null 2>&1 || true ;;
   tau2)
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
     uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
