@@ -38,6 +38,7 @@
       <a href="benchmarks.html">Benchmarks</a>
       <a href="architecture.html">Architecture</a>
       <a href="agent-orchestration.html" class="active">Agent mode</a>
+      <a href="harbor.html">Harbor</a>
       <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
       <button class="theme-toggle" type="button" aria-label="Switch theme">
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -94,8 +95,10 @@ orchestration_mode: agent           # the conversational agent drives the loop i
     <h2>The <code>agent-optimize</code> algorithm — free-form, fully agentic</h2>
     <p>
       Every algorithm has an Agent-mode loop, so <code>hill-climb</code> / <code>gepa</code> /
-      <code>skillopt</code> can all be agent-driven. The one purpose-built for agent mode is
-      <code>agent-optimize</code>: no fixed schedule, no delegated optimizer. The agent owns the
+      <code>skillopt</code> can all be agent-driven. Two algorithms are built for this mode and run
+      <em>only</em> here: <code>agent-optimize</code> (free-form, below) and <code>evograph</code>
+      (collaborative weakness-graph search).
+      <code>agent-optimize</code> has no fixed schedule and no delegated optimizer — the agent owns the
       whole search, bounded only by the honesty invariants (code-enforced) and the free-text
       <code>stop_condition</code> it re-reads with the run-dir spend.
     </p>

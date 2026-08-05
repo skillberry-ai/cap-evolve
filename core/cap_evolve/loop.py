@@ -18,6 +18,19 @@ from . import stats
 from .types import Score
 
 
+def _as_k_dict(v) -> dict:
+    """{k: value} pass^k/pass@k, tolerating the legacy bare-scalar shape.
+
+    Old run dirs (and ``report/scripts/check.py``) stored ``pass_k`` as a single
+    float, which ``dict(...)`` cannot consume (TypeError). Read it as k=1.
+    """
+    if isinstance(v, dict):
+        return dict(v)
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return {"1": float(v)}
+    return {}
+
+
 @dataclass
 class SplitResult:
     """Aggregate evaluation of one candidate on one split."""
@@ -52,8 +65,8 @@ class SplitResult:
             split=d.get("split", "val"),
             reward=float(d.get("reward") or 0.0),
             stderr=float(d.get("stderr") or 0.0),
-            pass_k=dict(d.get("pass_k") or {}),
-            pass_at_k=dict(d.get("pass_at_k") or {}),
+            pass_k=_as_k_dict(d.get("pass_k")),
+            pass_at_k=_as_k_dict(d.get("pass_at_k")),
             per_task=list(d.get("per_task") or []),
             cost_usd=float(d.get("cost_usd") or 0.0),
             tokens=int(d.get("tokens") or 0),
@@ -68,11 +81,22 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     overall = stats.aggregate(means)
     overall_se = stats.combined_stderr(means, ses)
 
+    # pass^k / pass@k are only DEFINED when every task has at least k trials. With
+    # fewer, stats.pass_k returns None (undefined) and stats.pass_at_k silently
+    # clamps k → n; emitting either as a reliability number reads as "0% reliable"
+    # when the truth is "not enough trials". So we OMIT any k > min trials — a
+    # missing key is the N/A representation (JSON: absent/null; human surfaces
+    # render "N/A"/"—"). k < 1 is undefined too.
+    trials_per_task = [len(s.trial_rewards or [s.reward]) for s in scores]
+    max_usable_k = min(trials_per_task) if trials_per_task else 0
+
     pk: dict = {}
     pak: dict = {}
     for k in ks:
-        rel = [stats.pass_k(s.trial_rewards or [s.reward], k) for s in scores if (s.trial_rewards or [s.reward])]
-        cap = [stats.pass_at_k(s.trial_rewards or [s.reward], k) for s in scores if (s.trial_rewards or [s.reward])]
+        if k < 1 or k > max_usable_k:
+            continue
+        rel = [stats.pass_k(s.trial_rewards or [s.reward], k) for s in scores]
+        cap = [stats.pass_at_k(s.trial_rewards or [s.reward], k) for s in scores]
         if rel:
             pk[str(k)] = stats.mean(rel)      # pass^k: reliability (all k pass)
         if cap:

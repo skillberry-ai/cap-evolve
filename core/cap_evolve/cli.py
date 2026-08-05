@@ -11,6 +11,11 @@ Subcommands:
     cap-evolve check   [project_dir]
     cap-evolve run     --spec .capevolve/project/capevolve.yaml   (sequences phase skills)
                        [--resume [--run-ts TS]]  resume an interrupted run in place
+                       [--follow]  print live progress while the run works
+    cap-evolve tail    [run_dir] [--base .capevolve]  attach to an ongoing run's
+                       events.jsonl and print human-readable progress
+                       (exit 0 = run finished, 2 = not a possible run dir,
+                        3 = --idle-timeout elapsed with no events)
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -18,8 +23,10 @@ already resolves the manifest and validates the spec so the wiring is testable.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -62,6 +69,156 @@ def _cmd_check(argv):
     return 0 if rep.ok else 1
 
 
+def _events_path(base: Path, run_ts: str | None, seen: set[str] | None) -> Path | None:
+    """Locate the run's ``events.jsonl``, or ``None`` if no run dir exists yet.
+
+    With ``run_ts`` the path is known up front. Otherwise pick the newest ``run_*``
+    that is NOT in ``seen`` (the dirs that existed before this run started), so a
+    follower attaches to *this* run and not a previous one.
+    """
+    if run_ts:
+        return base / f"run_{run_ts}" / "events.jsonl"
+    runs = sorted(p for p in base.glob("run_*") if p.is_dir() and p.name not in (seen or set()))
+    return (runs[-1] / "events.jsonl") if runs else None
+
+
+def _stderr_is_usable() -> bool:
+    """True only if progress can safely be written to a real, distinct stderr.
+
+    Under ``2>&-`` CPython either sets ``sys.stderr`` to ``None`` or hands fd 2 to the
+    next ``open()``, so writes would land *interleaved in stdout* and break the
+    machine-readable JSON contract ``--follow`` advertises. Following silently off is
+    strictly better than corrupt stdout.
+    """
+    err = sys.stderr
+    if err is None or getattr(err, "closed", False):
+        return False
+    try:
+        efd = err.fileno()
+    except Exception:  # noqa: BLE001 — a captured StringIO has no fd; safe to write to
+        return True
+    # fd 2 closed and reused by the next open() → that fd is not stderr any more.
+    # (`>f 2>&1` keeps fd 2 == 2 pointing at the same file, which is legitimate.)
+    return efd == 2
+
+
+def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
+                    offset: int = 0):
+    """Print live progress from ``events.jsonl`` on a daemon thread.
+
+    Returns ``(stop_event, thread)`` — or ``(None, None)`` when stderr is unusable, in
+    which case following is disabled rather than corrupting stdout. Set the event when
+    the run finishes. Reads the same typed event stream the dashboard's SSE route
+    serves (``cap_evolve.eventstream``), so terminal and web can't disagree. Never
+    raises into the run — but never dies *quietly* either: if the follower stops, it
+    says so on stderr, because silence mistaken for progress is the bug #116 fixes.
+    """
+    import threading
+    from . import eventstream
+
+    if not _stderr_is_usable():
+        return None, None
+
+    stop = threading.Event()
+    err = sys.stderr  # bind now: don't follow a stream reassigned mid-run
+    color = eventstream.use_color(err)
+
+    def worker():
+        # Progress goes to STDERR: stdout stays the machine-readable JSON contract that
+        # scripts parse, so `cap-evolve run --follow > out.json` keeps working.
+        try:
+            path = None
+            while path is None and not stop.is_set():
+                path = _events_path(base, run_ts, seen)
+                if path is None:
+                    stop.wait(0.5)
+            if path is None:
+                return
+            totals: dict = {}
+            for ev in eventstream.follow_events(
+                    path, offset=offset, poll=0.5,
+                    should_stop=lambda _last: stop.is_set()):
+                line = eventstream.render_line(ev, totals, color=color)
+                if line:
+                    print(line, file=err, flush=True)
+        except Exception as e:  # noqa: BLE001 — observability must never break the run
+            # ...but it must never go dark in silence either. #144: this is the hook for
+            # the forensic crash log; the user-visible line below is the minimum.
+            try:
+                print(f"[follow] live progress stopped: {e!r} — the run continues; "
+                      f"use `cap-evolve tail` or the dashboard to watch it",
+                      file=err, flush=True)
+            except Exception:  # noqa: BLE001 — stderr died too; nothing left to do
+                pass
+
+    t = threading.Thread(target=worker, name="cap-evolve-follow", daemon=True)
+    t.start()
+    return stop, t
+
+
+def _cmd_tail(argv):
+    """Attach to an existing/ongoing run dir and print its event stream."""
+    import argparse
+    from . import eventstream
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve tail",
+        description="tail a run's events.jsonl as human-readable progress lines")
+    p.add_argument("run_dir", nargs="?", default=None,
+                   help="run dir (default: newest run_* under --base)")
+    p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
+    p.add_argument("--from-start", action="store_true",
+                   help="replay the whole log first (default: only new events)")
+    p.add_argument("--idle-timeout", type=float, default=300.0,
+                   help="give up after N seconds of silence (0 = wait forever)")
+    p.add_argument("--no-color", action="store_true")
+    args = p.parse_args(argv)
+    if args.idle_timeout < 0:  # a negative timeout used to trip the check immediately
+        p.error("--idle-timeout must be >= 0 (0 = wait forever)")
+
+    if args.run_dir:
+        root = Path(args.run_dir)
+    else:
+        runs = sorted(q for q in Path(args.base).glob("run_*") if q.is_dir())
+        if not runs:
+            print(f"no run_* dirs under {args.base}", file=sys.stderr)
+            return 1
+        root = runs[-1]
+    events = root / "events.jsonl"
+    # A named run dir need NOT exist yet: attaching before `cap-evolve run` creates it
+    # is the whole point. But a path whose PARENT doesn't exist can never become a run
+    # dir, so a typo fails fast with a distinct code instead of pretend-waiting 5 min.
+    if not root.exists() and not root.parent.is_dir():
+        print(f"no such run dir: {root}", file=sys.stderr)
+        return 2
+    if not events.exists():
+        print(f"waiting for {events} …", file=sys.stderr, flush=True)
+
+    color = not args.no_color and eventstream.use_color(sys.stdout)
+    offset = 0 if args.from_start or not events.exists() else events.stat().st_size
+    totals: dict = {}
+    shown, reason = 0, None
+    try:
+        for ev in eventstream.follow_events(
+                events, offset=offset, poll=0.5,
+                idle_timeout=(args.idle_timeout or None)):
+            if ev.get("kind") == eventstream.FOLLOW_END:
+                reason = ev.get("reason")
+                continue
+            line = eventstream.render_line(ev, totals, color=color)
+            if line:
+                print(line, flush=True)
+                shown += 1
+    except KeyboardInterrupt:
+        return 130
+    if reason == "idle" and not shown:
+        # Distinct from "the run finished": scripts can tell a timeout from a result.
+        print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
+              file=sys.stderr)
+        return 3
+    return 0
+
+
 # Old hill-climb skill names → (skill, focus). The three byte-identical clones are
 # now one ``hill-climb`` skill parameterized by ``--focus``.
 _ALGO_FOCUS_ALIASES = {
@@ -94,6 +251,96 @@ def _resolve_skills(skills_dir: Path) -> dict:
     return json.loads(manifest.read_text()).get("skills", {})
 
 
+def _step_failure(step: str, proc) -> dict:
+    """Build the failure record for a step that exited non-zero.
+
+    Steps run under ``capture_output``, so this record is the ONLY evidence of what
+    happened. A stderr tail alone is not enough: when a step is killed by a signal
+    (the OOM killer, most often) it leaves no Python traceback at all, so the tail is
+    whatever harmless warnings happened to be last and the record reads as if nothing
+    went wrong. The returncode — and, for a signal, its name — is what distinguishes
+    "raised" from "was killed".
+    """
+    rec: dict = {"step": step, "returncode": proc.returncode}
+    if proc.returncode < 0:
+        sig = -proc.returncode
+        try:
+            name = signal.Signals(sig).name
+        except ValueError:
+            name = f"signal {sig}"
+        rec["signal"] = name
+        # Signal-specific, because the remedy differs and a wrong hint sends the reader
+        # to the wrong place: SIGKILL is usually the OOM killer, but SIGSEGV is a native
+        # crash in a C extension and dmesg will say nothing useful about it.
+        if name == "SIGSEGV":
+            rec["hint"] = (
+                f"{step} died in NATIVE code (SIGSEGV), not a Python exception — most likely a "
+                "C extension the adapter pulls in (numpy/pandas in a scorer, a client library). "
+                "cap_evolve enables faulthandler, so look for a 'Fatal Python error' block with "
+                "a native traceback in this record's error field."
+            )
+        else:
+            rec["hint"] = (
+                f"{step} was killed by {name}, not a Python exception — there is no Python "
+                "traceback to find. SIGKILL is usually the OOM killer; check dmesg/journalctl -k."
+            )
+    # Head AND tail. A tail alone loses the crash: a chatty scoring phase can emit tens of
+    # kilobytes AFTER the interesting output, so the window shows routine per-rollout noise
+    # and the record reads as if nothing went wrong (exactly what masked run 30608405812's
+    # SIGSEGV). faulthandler's native traceback lands at the very end, so keep more tail
+    # than head.
+    rec["error"] = _clip(proc.stderr, head=4000, tail=12000)
+    if proc.stdout:
+        rec["stdout_tail"] = proc.stdout[-2000:]
+    return rec
+
+
+def _clip(text: str | None, *, head: int, tail: int) -> str:
+    """Keep the first ``head`` and last ``tail`` characters, marking what was dropped."""
+    text = text or ""
+    if len(text) <= head + tail:
+        return text
+    dropped = len(text) - head - tail
+    return f"{text[:head]}\n\n... [{dropped} chars omitted] ...\n\n{text[-tail:]}"
+
+
+def _json_payload(text: str) -> dict:
+    """Extract a phase subprocess's JSON payload from its captured stdout.
+
+    Phases are *supposed* to print nothing but their JSON object; the harness
+    redirects adapter output to stderr to keep that true. This is the second line of
+    defense: one stray ``print`` anywhere under an adapter used to take down the whole
+    run with ``JSONDecodeError: Expecting value: line 1 column 1`` — after the
+    expensive part had already succeeded and been written to disk. Losing an 11-minute
+    baseline to a log line is not a reasonable failure mode.
+
+    A phase prints its payload LAST, so candidate object starts are tried newest-first
+    and the first one that decodes wins. Raises ``json.JSONDecodeError`` when stdout
+    holds no JSON object at all, so a genuinely broken phase still fails loudly.
+    """
+    text = text or ""
+    with contextlib.suppress(json.JSONDecodeError):
+        return json.loads(text)
+
+    decoder = json.JSONDecoder()
+    # Candidate starts: every line that begins a JSON object, newest first. Matching on
+    # line starts (not every "{" in the buffer) keeps this linear and avoids decoding
+    # from inside a nested object, which would return a fragment of the real payload.
+    starts, offset = [], 0
+    for line in text.splitlines(keepends=True):
+        if line.lstrip().startswith("{"):
+            starts.append(offset + (len(line) - len(line.lstrip())))
+        offset += len(line)
+    for start in reversed(starts):
+        try:
+            obj, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    raise json.JSONDecodeError("no JSON object found in phase stdout", text, 0)
+
+
 def _cmd_run(argv):
     import argparse
     import subprocess
@@ -124,6 +371,9 @@ def _cmd_run(argv):
     p.add_argument("--stall", type=int, default=None)
     p.add_argument("--optimizer-max-turns", type=int, default=None,
                    help="per-iteration cap passed to the optimizer agent CLI (e.g. claude --max-turns)")
+    p.add_argument("--follow", action="store_true",
+                   help="print live progress (stage/candidate/accept-reject/cost) to stderr "
+                        "as the run writes events.jsonl; stdout stays the final JSON")
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
@@ -268,6 +518,26 @@ def _cmd_run(argv):
                 f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
             return 1
 
+    # --follow: start tailing events.jsonl now, BEFORE baseline creates the run dir, so
+    # the very first events (splits/baseline) are seen. `seen` freezes the pre-existing
+    # run dirs so an unpinned --run-ts follower attaches to this run, not the last one.
+    follow_stop = follow_thread = None
+    if args.follow:
+        base_abs = proj_abs.parent
+        seen = {p.name for p in base_abs.glob("run_*") if p.is_dir()} if not resume_ts else None
+        # On --resume, skip the prior log (10k old events are not "live progress"):
+        # start at the current end of file, the way `cap-evolve tail` does.
+        prior = base_abs / f"run_{resume_ts}" / "events.jsonl" if resume_ts else None
+        off = prior.stat().st_size if prior and prior.exists() else 0
+        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen, off)
+
+    def done(code: int) -> int:
+        """Drain + stop the follower thread, then return ``code``. Used at every exit."""
+        if follow_stop is not None:
+            follow_stop.set()
+            follow_thread.join(timeout=3.0)
+        return code
+
     # 1) baseline (creates the run dir; capture its relative path)
     base_cmd = [py, skill_run("baseline"), "--base", base, "--project", project,
                 "--capability", cap_path, "--seed", str(spec.get("split_seed", 0)),
@@ -275,7 +545,8 @@ def _cmd_run(argv):
                 "--stall", str(spec.get("stall", 0)), "--n-trials", str(spec.get("num_trials", 1)),
                 "--max-metric-calls", str(spec.get("max_metric_calls", 0)),
                 "--max-usd", str(spec.get("max_usd", 0.0)),
-                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0))]
+                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0)),
+                "--spec", str(args.spec)]
     if spec.get("split_ids_file"):
         base_cmd += ["--split-ids", str(spec["split_ids_file"])]
     # reuse_baseline: copy a prior run's split/baseline/seed/val-rollouts and skip the
@@ -290,7 +561,7 @@ def _cmd_run(argv):
     if proc.returncode != 0:
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
         return 1
-    run_dir = json.loads(proc.stdout)["run_dir"]
+    run_dir = _json_payload(proc.stdout)["run_dir"]
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.
@@ -329,7 +600,7 @@ def _cmd_run(argv):
                           "stop_condition": str(spec.get("stop_condition", "")),
                           "next": "drive via the orchestrate Agent-mode loop; "
                                   "seal with `cap-evolve finalize`"}))
-        return 0
+        return done(0)
 
     # 2) algorithm (hill-climb variants select their schedule via --focus)
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
@@ -408,7 +679,7 @@ def _cmd_run(argv):
         alg_cmd += _shlex.split(str(spec["algorithm_args"]))
     proc = run(alg_cmd)
     if proc.returncode != 0:
-        print(json.dumps({"step": "algorithm", "error": proc.stderr[-1500:]}))
+        print(json.dumps(_step_failure("algorithm", proc)))
         return 1
 
     # 3) finalize  4) report
@@ -431,12 +702,12 @@ def _cmd_run(argv):
         cmd += extra
         proc = run(cmd)
         if proc.returncode != 0:
-            print(json.dumps({"step": step, "error": proc.stderr[-1500:]}))
+            print(json.dumps(_step_failure(step, proc)))
             return 1
         last = proc.stdout
 
     print(last)
-    return 0
+    return done(0)
 
 
 def _cmd_dashboard(argv):
@@ -619,13 +890,15 @@ COMMANDS = {
     "run": _cmd_run,
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
+    "tail": _cmd_tail,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard} [args]", file=sys.stderr)
+        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard|tail} [args]",
+              file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])
     if fn is None:

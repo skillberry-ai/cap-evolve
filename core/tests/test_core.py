@@ -99,8 +99,14 @@ def test_pass_k_partial():
     assert math.isclose(pass_k([1, 1, 0, 0], 2), 1 / 6, rel_tol=1e-9)
 
 
-def test_pass_k_k_gt_n_is_zero():
-    assert pass_k([1.0], 2) == 0.0
+def test_pass_k_k_gt_n_is_undefined_not_zero():
+    # Issue #112: pass^k for k > n is UNDEFINED, not zero. Returning a well-formed
+    # 0.0 reads as "0% reliable" when the truth is "not enough trials".
+    assert pass_k([1.0], 2) is None
+    assert pass_k([], 1) is None
+    assert pass_k([1.0], 0) is None          # k < 1 is undefined too
+    assert pass_k([1.0], 1) == 1.0           # the k == n boundary stays DEFINED
+    assert pass_k([0.0], 1) == 0.0           # a genuinely measured zero is still 0.0
 
 
 def test_pass_at_k_capability_vs_reliability():

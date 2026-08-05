@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vLLM on OpenShift — cap-evolve</title>
+  <meta name="description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor. GPU sizing, manifests, agent connection patterns.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/harbor-openshift.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="vLLM on OpenShift — cap-evolve">
+  <meta property="og:description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/harbor-openshift.html">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="vLLM on OpenShift — cap-evolve">
+  <meta name="twitter:description" content="Deploy vLLM on OpenShift to serve models for cap-evolve and Harbor.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="style.css?v=20260724b">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <div class="nav-links">
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
+      <a href="results.html">Results</a>
+      <a href="benchmarks.html">Benchmarks</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
+      <a href="harbor.html">Harbor</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>vLLM on OpenShift</h1>
+  <p class="lead">
+    Serve models on OpenShift with
+    <a href="https://github.com/vllm-project/vllm">vLLM</a> — an
+    OpenAI-compatible endpoint that any agent (claude-code, codex, opencode)
+    or cap-evolve adapter can call. No external API keys needed.
+  </p>
+
+  <h2>Architecture</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  OpenShift cluster  (namespace: cap-evolve)                  │
+│                                                              │
+│  vLLM Deployment (GPU node)                                  │
+│    └─ Serves: http://vllm-svc.cap-evolve.svc:8000/v1        │
+│                                                              │
+│  Consumers:                                                  │
+│    cap-evolve runner   → MODEL=openai/&lt;model-name&gt;         │
+│    harbor task pods    → --ae ANTHROPIC_BASE_URL=http://...   │
+│    any OpenAI client   → curl http://vllm-svc:8000/v1/chat   │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+
+  <h2>Deploy</h2>
+<pre><code># 1. Namespace
+oc new-project cap-evolve    # or use an existing namespace
+
+# 2. HuggingFace token (for gated models)
+oc create secret generic hf-token \
+  --from-literal=HF_TOKEN=&lt;YOUR_HF_TOKEN&gt;
+
+# 3. Deploy vLLM
+oc apply -f openshift/manifests/vllm-serving.yaml
+
+# 4. Wait for the model to load (5-15 min first time)
+oc get pods -l component=vllm -w
+
+# 5. Verify
+curl -s http://vllm-svc:8000/v1/models</code></pre>
+
+  <h2>Model sizing</h2>
+  <table>
+    <thead><tr><th>Size</th><th>GPUs</th><th><code>--tensor-parallel-size</code></th><th>Memory</th></tr></thead>
+    <tbody>
+      <tr><td>7B</td><td>1</td><td>1 (default)</td><td>8 Gi</td></tr>
+      <tr><td>14B</td><td>2</td><td>2</td><td>32 Gi</td></tr>
+      <tr><td>32B+</td><td>4</td><td>4</td><td>64 Gi</td></tr>
+    </tbody>
+  </table>
+  <p>Edit <code>vllm-serving.yaml</code> to change the model, GPU count, and
+  <code>--tensor-parallel-size</code>.</p>
+
+  <h2>Connecting agents to vLLM</h2>
+  <p>vLLM exposes an OpenAI-compatible API. Agents connect via environment
+  variables — the exact vars depend on the agent.</p>
+
+  <table>
+    <thead><tr><th>Agent</th><th>Env vars</th></tr></thead>
+    <tbody>
+      <tr><td>cap-evolve (litellm)</td><td><code>MODEL=openai/&lt;model&gt; OPENAI_API_BASE=http://vllm-svc:8000/v1 OPENAI_API_KEY=dummy</code></td></tr>
+      <tr><td>claude-code</td><td><code>ANTHROPIC_BASE_URL=http://vllm-svc:8000 ANTHROPIC_API_KEY=dummy ANTHROPIC_MODEL=&lt;model&gt;</code></td></tr>
+      <tr><td>codex / opencode</td><td><code>OPENAI_BASE_URL=http://vllm-svc:8000/v1 OPENAI_API_KEY=dummy</code></td></tr>
+    </tbody>
+  </table>
+  <p>For Harbor task pods, pass these via <code>--ae</code> flags. Use the full
+  Service DNS when crossing namespaces:
+  <code>http://vllm-svc.&lt;namespace&gt;.svc:8000</code>.</p>
+
+  <h2>Manifests</h2>
+  <p>All manifests live under
+  <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/openshift"><code>openshift/</code></a>:</p>
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>namespace.yaml</code></td><td>Namespace</td></tr>
+      <tr><td><code>service-account.yaml</code></td><td>ServiceAccount + SCC for Harbor task pods</td></tr>
+      <tr><td><code>vllm-serving.yaml</code></td><td>vLLM Deployment + Service + Route (agent model)</td></tr>
+      <tr><td><code>vllm-optimizer.yaml</code></td><td>Optional second vLLM for the optimizer (larger model)</td></tr>
+      <tr><td><code>pvc.yaml</code></td><td>Persistent storage for run artifacts</td></tr>
+      <tr><td><code>secrets.yaml</code></td><td>Template for HuggingFace token</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Pod pending (no GPU)</td><td>Check <code>oc describe pod</code> — node selector may not match your GPU labels</td></tr>
+      <tr><td>OOMKilled</td><td>Model too large for requested memory — increase resources or use fewer GPUs with a smaller model</td></tr>
+      <tr><td>Context length exceeded</td><td>Set <code>--max-model-len</code> in the vLLM args, or use a model with larger native context</td></tr>
+      <tr><td>Connection refused from task pod</td><td>Use full DNS: <code>http://&lt;svc&gt;.&lt;namespace&gt;.svc:8000</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="harbor.html">Harbor integration</a> — using Harbor with cap-evolve (includes OpenShift orchestrator setup)</li>
+    <li><a href="https://docs.vllm.ai/">vLLM documentation</a></li>
+    <li><a href="https://github.com/skillberry-ai/cap-evolve/tree/main/openshift">OpenShift manifests</a></li>
+  </ul>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js?v=20260724" defer></script>
+</body>
+</html>

@@ -80,6 +80,40 @@ MODEL: str = _env("MODEL", "gpt-4.1-mini")
 """The litellm model string — set via the ``MODEL`` env var."""
 
 
+# Model families that PIN temperature to their own default and reject any override — even
+# the value they claim to support. The gateway answers HTTP 400:
+#
+#   Unsupported value: 'temperature' does not support 0.0 with this model.
+#   Only the default (1) value is supported.
+#
+# That fails EVERY rollout of a run, at $0.00 spend and in a few minutes, which reads exactly
+# like a capability of 0.000 rather than a misconfiguration (run 30682720920 lost a whole
+# pilot to it). Sending no override at all is safer than sending the value the error names,
+# because a deployment may reject the parameter outright; the effective temperature is then
+# the model's default, which for gpt-5.x IS 1.
+#
+# Matched against the last path segment of the resolved model id, so `azure/gpt-5.5`,
+# `litellm_proxy/azure/gpt-5.6-luna` and `azure/gpt-5.3-codex` are all covered.
+_TEMPERATURE_PINNED = ("gpt-5",)
+
+
+def _temperature() -> float | None:
+    """Resolve TEMPERATURE, or None meaning "send no override, use the model's default".
+
+    A blank/`default`/`model` value is the explicit way to ask for the model's own default,
+    which some models are the only way to call successfully.
+    """
+    raw = os.environ.get("TEMPERATURE", "0.0").strip()
+    if raw == "" or raw.lower() in ("default", "model", "none"):
+        return None
+    return float(raw)
+
+
+def _pins_temperature(model: str) -> bool:
+    name = model.lower().rsplit("/", 1)[-1]
+    return any(p in name for p in _TEMPERATURE_PINNED)
+
+
 def llm_kwargs() -> dict[str, Any]:
     """Return provider-appropriate kwargs for ``litellm.completion(**llm_kwargs())``.
 
@@ -113,7 +147,9 @@ def llm_kwargs() -> dict[str, Any]:
     if api_key:
         kwargs["api_key"] = api_key
 
-    kwargs["temperature"] = float(os.environ.get("TEMPERATURE", "0.0"))
+    temperature = _temperature()
+    if temperature is not None and not _pins_temperature(MODEL):
+        kwargs["temperature"] = temperature
     # Optional output cap. Set high for reasoning models (they spend tokens on a
     # hidden reasoning pass before the visible answer), or for long outputs (patches).
     max_tokens = os.environ.get("MAX_TOKENS")

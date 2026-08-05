@@ -167,6 +167,8 @@ class RunDir:
         self.history_path = self.root / "history.jsonl"
         self.events_path = self.root / "events.jsonl"
         self._state_lock = self.root / ".state.lock"
+        self._observers: list = []
+        self._observer_state_path = self.root / "observer_state.json"
 
     # ---- creation / loading -------------------------------------------------
     @classmethod
@@ -390,8 +392,55 @@ class RunDir:
     def candidate_dir(self, candidate_id: str) -> Path:
         return self.candidates / candidate_id
 
+    # ---- observers -----------------------------------------------------------
+    def add_observer(self, observer) -> None:
+        """Register a :class:`~cap_evolve.observer.RunObserver`."""
+        self._observers.append(observer)
+
+    def save_observer_state(self) -> None:
+        """Persist observer state so subsequent sub-processes can resume them."""
+        states = []
+        for obs in self._observers:
+            try:
+                s = obs.state()
+                if isinstance(s, dict):
+                    states.append(s)
+            except Exception:  # noqa: BLE001
+                pass
+        if states:
+            _atomic_write(self._observer_state_path,
+                          json.dumps({"observers": states}, indent=2))
+
+    def load_observer_state(self) -> list:
+        """Read persisted observer state.  Returns ``[]`` if none."""
+        if not self._observer_state_path.exists():
+            return []
+        try:
+            data = json.loads(self._observer_state_path.read_text(encoding="utf-8"))
+            return data.get("observers", [])
+        except Exception:  # noqa: BLE001
+            return []
+
+    def close_observers(self) -> None:
+        """Flush and close all observers, then persist their state.
+
+        Closed in reverse order so exporters (OTel) flush before
+        aggregators (MLflow) that may reference their output.
+        """
+        for obs in reversed(self._observers):
+            try:
+                obs.close()
+            except Exception:  # noqa: BLE001
+                pass
+        self.save_observer_state()
+
     # ---- audit log ----------------------------------------------------------
     def log_event(self, kind: str, **fields) -> None:
         rec = {"t": time.time(), "kind": kind, **fields}
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
+        for obs in self._observers:
+            try:
+                obs.on_event(kind, rec)
+            except Exception:  # noqa: BLE001
+                pass

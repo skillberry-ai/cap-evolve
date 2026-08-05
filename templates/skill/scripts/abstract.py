@@ -5,8 +5,9 @@ NotImplementedError with the "IMPLEMENT ME" marker so `check.py` can detect and
 report exactly what is unfilled. Replace the body, keep the signature.
 
 Many skills delegate to the project-level adapter in
-``.capevolve/project/adapters/adapter.py`` (the 4-method CapabilityAdapter). If this
-skill's work is fully covered there, import and call it rather than duplicating.
+``.capevolve/project/adapters/adapter.py`` (the CapabilityAdapter: 3 required methods
+plus defaulted hooks). If this skill's work is fully covered there, import and call it
+rather than duplicating.
 """
 
 from __future__ import annotations

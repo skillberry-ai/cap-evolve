@@ -9,6 +9,21 @@ import { cn } from '../lib/cn'
 
 const TONE = { up: 'text-accepted', down: 'text-rejected', flat: 'text-muted' } as const
 
+/**
+ * `pass^1 100.0%` — a k missing from the dict means k > num_trials, so the statistic
+ * is UNDEFINED, not 0. Never coerce a missing k to a number, and never invent one:
+ * render exactly the ks the backend measured, in numeric order. A hardcoded k range
+ * would drop a measured `pass^3` and fabricate a `pass^2 N/A` nobody requested.
+ */
+export function passKHint(pk: RunSummaryDetail['test_pass_k']): string | undefined {
+  if (pk == null || typeof pk !== 'object') return undefined
+  const ks = Object.keys(pk)
+    .filter((k) => Number.isFinite(Number(k)) && pk[k] != null)
+    .sort((a, b) => Number(a) - Number(b))
+  if (ks.length === 0) return undefined
+  return ks.map((k) => `pass^${Number(k)} ${pct(pk[k])}`).join(' · ')
+}
+
 /** Sticky, data-dense KPI header. Numbers count up on change. */
 export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
   const c = summary.counts
@@ -34,7 +49,7 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
       <Kpi label="Δ vs baseline" className={TONE[tone]}>
         <CountUp value={summary.delta_pct} format={(v) => signedPct(v)} />
       </Kpi>
-      <Kpi label="sealed test" tone="accent" hint={summary.test_pass_k != null ? `pass^k ${pct(summary.test_pass_k)}` : undefined}>
+      <Kpi label="sealed test" tone="accent" hint={passKHint(summary.test_pass_k)}>
         <CountUp value={summary.test_reward} format={pct} />
       </Kpi>
       <Kpi label="cost (opt+run)" hint={summary.cost ? `${usd(summary.cost.optimizer_usd)} + ${usd(summary.cost.runner_usd)}` : undefined}>

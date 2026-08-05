@@ -29,12 +29,12 @@ on:
         description: "Which benchmark to run"
         type: choice
         default: all
-        options: [all, tau2, swebench, skillsbench]
+        options: [all, tau2, swebench, skillsbench, spreadsheetbench]
       tier:
-        description: "Which tier (default smoke; full is the whole/representative benchmark and is expensive)"
+        description: "Which tier (default smoke; pilot is a small cost/runtime measurement rig — its rewards are NOT comparable; full is the whole benchmark and is expensive). A tier only runs for benchmarks that populate it."
         type: choice
         default: smoke
-        options: [all, smoke, full]
+        options: [all, smoke, pilot, full]
       iterations:
         description: "Optimizer iterations per task for the FULL tier (default 10; raise to give the optimizer more budget). Smoke always runs 3, regardless of this input."
         type: string
@@ -130,39 +130,158 @@ on:
         type: choice
         default: all
         options: [all, cyclic, hardest-first]
+      # NB: workflow_dispatch allows at most 10 inputs and this list is full. SPLIT_SEED is
+      # therefore driven by the repo variable `vars.BENCH_SPLIT_SEED` (see the job env) rather
+      # than an 11th input, which would make this workflow invalid.
   pull_request:
     types: [labeled]
 
 jobs:
-  bench:
-    name: ${{ matrix.tier }} / ${{ matrix.bench }}
-    runs-on: [self-hosted, ibm-vpc]
-    # Repo default token is read-only; the "Comment results on the PR" step needs write.
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+  # Decide up front WHICH tier×bench legs run, and emit them as the `bench` matrix.
+  # Previously `bench` was a static 2x4 matrix and each of the 8 legs started a job that
+  # gated itself in its first step — so 7 of 8 legs typically spun up a runner slot only
+  # to no-op, and showed as queued/skipped noise in the "Running now / queued" panel on
+  # the Pages benchmarks page. Computing the matrix here means a skipped leg never
+  # becomes a job at all, so the panel only ever lists legs that will really run.
+  #
+  # NB: the selection CANNOT live in `bench`'s own job-level `if:` — the `matrix` context
+  # is not available there (only github/inputs/needs/vars are), which is exactly what made
+  # #230 an invalid workflow file. `needs` IS available in both `if:` and `strategy`, so a
+  # preceding job that publishes the list is the supported way to do this.
+  plan:
+    name: plan legs
+    # JSON + label arithmetic only — no VPC/gateway access needed, so keep it off the
+    # (scarce, serialized) self-hosted runner.
+    runs-on: ubuntu-latest
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
     # runner only when the PR author is a known collaborator — never for outside/
     # first-time contributors, who could otherwise run arbitrary code with secrets.
     # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
-    # (an all-label or a per-bench one). The per-matrix gate decides the exact tier×bench.
+    # (an all-label or a per-bench one); the step below picks the exact tier×bench.
+    # Guarding `plan` (not just `bench`) means an untrusted PR never even reaches the
+    # planner, and `bench` inherits the guard transitively via `needs`.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
         (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
          contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      # An empty matrix is an error to GitHub, not a no-op, so `bench` keys its own `if:`
+      # off this instead of trying to introspect the JSON.
+      has_legs: ${{ steps.plan.outputs.has_legs }}
+    steps:
+      # REQUIRED: the planner reads ci/benchmarks/<bench>/<tier>/tasks.json to decide which
+      # tiers a benchmark has populated. Without a checkout every path lookup misses and the
+      # planner selects ZERO legs — which is exactly what happened in run 30682558719, where
+      # a dispatch produced "skip pilot/spreadsheetbench: no tasks.json" and a skipped matrix.
+      # If you remove this step, remove the filesystem filter below with it.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@v4
+
+      - name: Select tier x bench legs
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
+          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+          # toJSON (not a ','-join) so labels stay exactly comparable: label names may
+          # themselves contain commas, and the PR gate below is an exact-match test.
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, sys
+
+          # Single source of truth for the benchmark dimensions (these used to be the
+          # literal `matrix.tier` / `matrix.bench` lists).
+          # tier is a first-class dimension. full runs the whole/representative benchmark
+          # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
+          TIERS = ["smoke", "pilot", "full"]
+          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench"]
+
+          # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
+          # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
+          # so its rewards are not comparable to anything, and the aggregate job publishes
+          # EVERY leg to benchmark-history. Letting "all" pick it up would put meaningless
+          # numbers on the benchmarks page. A `benchmark-pilot` label still works, because
+          # that names the tier deliberately.
+          EXPLICIT_ONLY_TIERS = {"pilot"}
+
+          # Is the repository actually checked out here? See the fail-open note below.
+          tree_present = os.path.isdir("ci/benchmarks")
+          if not tree_present:
+              print("WARNING: no ci/benchmarks tree — tier-population filter disabled",
+                    file=sys.stderr, flush=True)
+
+          event = os.environ["EVENT"]
+          tier_sel = os.environ.get("TIER_SEL") or "smoke"
+          bench_sel = os.environ.get("BENCH_SEL") or "all"
+          labels = set(json.loads(os.environ.get("LABELS") or "[]") or [])
+
+          legs = []
+          for tier in TIERS:
+              for bench in BENCHES:
+                  if event == "workflow_dispatch":
+                      tier_ok = (tier_sel == tier
+                                 or (tier_sel == "all" and tier not in EXPLICIT_ONLY_TIERS))
+                      run = tier_ok and bench_sel in ("all", bench)
+                  else:
+                      # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
+                      run = f"benchmark-{tier}" in labels or f"benchmark-{tier}-{bench}" in labels
+                  # A tier only exists for a benchmark that populates it. run_suite.sh already
+                  # no-ops on a missing tasks.json, but emitting the leg anyway claims a slot on
+                  # the single serialized self-hosted runner just to warn and exit — precisely
+                  # the waste this planner was introduced to remove. Filtering here keeps a
+                  # partially-populated tier (e.g. only one benchmark ships `pilot/`) free for
+                  # everyone else. No-op for smoke/full, which every benchmark populates.
+                  # FAIL OPEN if the working tree is not here at all: filtering on a missing
+                  # checkout would silently select ZERO legs for every benchmark, turning a
+                  # dispatch into a no-op that still reports success. Only trust the filter
+                  # when there is a tree to look at.
+                  if run and tree_present and not os.path.isfile(
+                          f"ci/benchmarks/{bench}/{tier}/tasks.json"):
+                      print(f"skip {tier}/{bench}: no tasks.json for that tier",
+                            file=sys.stderr, flush=True)
+                      run = False
+                  if run:
+                      legs.append({"tier": tier, "bench": bench})
+
+          # stdout of this heredoc IS $GITHUB_OUTPUT, which accepts ONLY `key=value`
+          # lines — so the human-readable summary has to go to stderr. Printing it to
+          # stdout fails the whole step with "Invalid format", which took down every
+          # dispatch and every labelled PR (the legs were selected correctly; only the
+          # reporting was wrong).
+          print("matrix=" + json.dumps(legs))
+          print("has_legs=" + ("true" if legs else "false"))
+          print(f"selected {len(legs)} leg(s): {json.dumps(legs)}", file=sys.stderr, flush=True)
+          PY
+
+  bench:
+    name: ${{ matrix.tier }} / ${{ matrix.bench }}
+    needs: [plan]
+    # Only reached when `plan` selected at least one leg. Also covers the corner case
+    # where the coarse label check above passes but no leg matches exactly (e.g. a
+    # 'benchmark-smoke-typo' label), which would otherwise be an empty-matrix error.
+    if: needs.plan.outputs.has_legs == 'true'
+    runs-on: [self-hosted, ibm-vpc]
+    # GitHub's default 360min job timeout is too tight for full/spreadsheetbench (912
+    # tasks x trials x iterations, one Docker container per task); self-hosted runners
+    # aren't GH-minute-billed, so a generous ceiling just prevents a silent mid-run kill.
+    timeout-minutes: 1440
+    # Repo default token is read-only; the "Comment results on the PR" step needs write.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     strategy:
       fail-fast: false
       matrix:
-        # tier is a first-class dimension. full runs the whole/representative benchmark
-        # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
-        tier: [smoke, full]
-        bench: [tau2, swebench, skillsbench]
+        # Exactly the legs `plan` selected — one job per leg, no self-skipping legs.
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     concurrency:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
@@ -180,38 +299,22 @@ jobs:
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
       GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
       ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}
+      # Run seed. With a tier that ships a committed split_ids.json the partition is FIXED, so
+      # this varies only the per-trial rollout seeding — which is what makes the independent
+      # seeds a paper comparison needs (">=3 seeds") possible on one split. Set the repo
+      # variable BENCH_SPLIT_SEED (Settings > Variables) to 42, then 43, then 44 between
+      # dispatches. Unset => 0, i.e. exactly the previous behaviour for every benchmark.
+      # (A workflow input would be cleaner, but workflow_dispatch caps inputs at 10 and the
+      # list above is full — see the note there.)
+      SPLIT_SEED: ${{ vars.BENCH_SPLIT_SEED || '0' }}
       TIER: ${{ matrix.tier }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Gate (decide whether this tier/bench runs)
-        id: gate
-        env:
-          # tier-agnostic exact-match label checks (evaluated by Actions, not the shell):
-          #   benchmark-<tier>  = all benches of this tier;  benchmark-<tier>-<bench> = this one
-          HAS_ALL: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}', matrix.tier)) }}
-          HAS_THIS: ${{ contains(github.event.pull_request.labels.*.name, format('benchmark-{0}-{1}', matrix.tier, matrix.bench)) }}
-          TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
-          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
-        run: |
-          run=false
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            tier_ok=false; bench_ok=false
-            { [ "$TIER_SEL" = "all" ] || [ "$TIER_SEL" = "${{ matrix.tier }}" ]; } && tier_ok=true
-            { [ "$BENCH_SEL" = "all" ] || [ "$BENCH_SEL" = "${{ matrix.bench }}" ]; } && bench_ok=true
-            if [ "$tier_ok" = true ] && [ "$bench_ok" = true ]; then run=true; fi
-          else
-            # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
-            if [ "$HAS_ALL" = "true" ] || [ "$HAS_THIS" = "true" ]; then run=true; fi
-          fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-
       - name: Setup runner env
-        if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
       - name: Start live snapshot poller
-        if: steps.gate.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -222,11 +325,10 @@ jobs:
           disown
 
       - name: Run suite
-        if: steps.gate.outputs.run == 'true'
         run: bash ci/benchmarks/lib/run_suite.sh "${{ matrix.bench }}" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
 
       - name: Stop live snapshot poller
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -239,7 +341,7 @@ jobs:
             || echo "::warning::live cleanup push failed (best-effort, no action needed)"
 
       - name: Export CapEvolve UI snapshot
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         run: |
           run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
           out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
@@ -251,16 +353,59 @@ jobs:
             echo "no run dir at $run_dir (job likely failed/cancelled before producing one) — skipping UI export"
           fi
 
+      # Completion gate. Without this the suite is green whenever `cap-evolve run` exits
+      # non-zero: run_suite.sh only emits an annotation, so a run that crashed
+      # mid-optimization and never produced a sealed test number still reports "success".
+      # Regression is NOT asserted here (see --allow-regression in assert_run.py) — real
+      # model rewards are noisy; this checks the run COMPLETED.
+      #
+      # Ordered BEFORE the publishing steps, not last. `job.status` is evaluated when a step
+      # runs, so a gate placed after "Write run metadata" leaves runmeta.json recording
+      # "conclusion": "success" for a run that then fails the gate — and the aggregate job
+      # publishes that to benchmark-history, where a crashed run reads as a clean success
+      # (runs 30553822478 and 30608405812 are both recorded that way). Everything downstream
+      # is `if: always()`, so metrics/UI/artifacts/PR-comment are still published on failure;
+      # only the recorded conclusion changes.
+      - name: Assert the suite run completed
+        if: always()
+        run: |
+          tasks="ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/tasks.json"
+          if [ ! -f "$tasks" ]; then
+            echo "no tasks.json for ${{ matrix.tier }}/${{ matrix.bench }} — nothing to assert"
+            exit 0
+          fi
+          run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" \
+            --min-iterations 1 --allow-regression
+
       - name: Write run metadata
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
+        env:
+          # A PR branch name is attacker-controlled and this job runs on a SELF-HOSTED
+          # runner, so interpolating it straight into the shell is a command-injection
+          # vector (actionlint [expression]). Pass it through the environment, where the
+          # shell treats it as data instead of source text.
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           out="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}"
           mkdir -p "$out"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            source="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
+            SOURCE_TEXT="PR #${{ github.event.pull_request.number }}"; pr="${{ github.event.pull_request.number }}"
           else
-            source="manual (${{ github.ref_name }})"; pr="null"
+            SOURCE_TEXT="manual ($BRANCH_NAME)"; pr="null"
           fi
+          export SOURCE_TEXT
+          # SB_* flags live in the tier's committed overrides.env, which only run_suite.sh
+          # sources — so resolve them here too, or the disclosure field below would always read
+          # as "not warm" even on a warm-started run. An env var still wins over the file.
+          ov="$GITHUB_WORKSPACE/ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/overrides.env"
+          warm_file=$(sed -n 's/^[[:space:]]*SB_WARM_SEED=\([01]\).*/\1/p' "$ov" 2>/dev/null | tail -1)
+          if [ "${SB_WARM_SEED:-${warm_file:-0}}" = "1" ]; then warm_json=true; else warm_json=false; fi
+          # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
+          # enough: a branch name containing a double quote would close the string early and
+          # produce a runmeta.json the aggregate job cannot parse (verified locally).
+          branch_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["BRANCH_NAME"]))')
+          source_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["SOURCE_TEXT"]))')
           cat > "$out/runmeta.json" <<JSON
           {
             "run_id": ${{ github.run_id }},
@@ -268,22 +413,24 @@ jobs:
             "bench": "${{ matrix.bench }}",
             "tier": "${{ matrix.tier }}",
             "event": "${{ github.event_name }}",
-            "source": "$source",
+            "source": $source_json,
             "pr": $pr,
-            "branch": "${{ github.head_ref || github.ref_name }}",
+            "branch": $branch_json,
             "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
             "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
             "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
+            "gate_k_se": ${GATE_K_SE:-1.0},
+            "warm_seed": $warm_json,
             "conclusion": "${{ job.status }}"
           }
           JSON
           cat "$out/runmeta.json"
 
       - name: Upload artifacts (metrics + optimized capabilities)
-        if: steps.gate.outputs.run == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
@@ -291,7 +438,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Comment results on the PR
-        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -331,6 +478,9 @@ jobs:
         with:
           path: _artifacts
           pattern: benchmarks-*
+          # Don't fail when no benchmarks ran (e.g. PR has no benchmark label
+          # so all bench matrix jobs were skipped). Build-records handles empty.
+          if-no-files-found: ignore
 
       - name: Check for UI snapshots
         id: uicheck

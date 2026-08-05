@@ -126,12 +126,22 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
 
 def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_path: str = "",
                   steps_jsonl_path: str = "", optimizer_model: str = "claude-opus-4-8") -> str:
-    """Render the per-task + per-iteration + suite-rollup report for ONE run_suite.sh
-    run (all of a tier's tasks optimized together, no-holdout FIT: train==val==test).
+    """Render the per-task + per-iteration + suite-rollup report for ONE run_suite.sh run.
 
-    Per-task base→opt come from the run's per_task arrays: baseline from ``baseline.json``
-    (val) and optimized from ``final.json`` (test), which — because the split is no-holdout —
-    are the same task set scored before/after. This is a TRAIN-FIT metric, labelled as such.
+    Per-task base→opt must compare the SAME tasks scored before and after, and where that
+    pairing comes from depends on whether the run held anything out:
+
+    * HELD-OUT run (``full``/``pilot`` since #266) — take both sides from ``final.json``:
+      ``test_baseline`` (the seed) and ``test`` (the best candidate), evaluated on the SAME
+      sealed split. This is the honest headline comparison the run exists to produce.
+    * NO-HOLDOUT run (``smoke``: train==val==test) — fall back to ``baseline.json`` (val)
+      vs ``final.json`` (test), which is the same task set either way. A TRAIN-FIT metric.
+
+    Pairing val against test unconditionally — as this did — silently produced
+    ``reward_opt: null`` for EVERY task on held-out runs, because the two splits are
+    disjoint by construction, so no task id could ever match. ``record.rollup`` then
+    returned None for the whole suite (it needs both sides), and the benchmarks page
+    rendered "—" in the reward column for exactly the runs whose numbers matter most.
     """
     rd = Path(run_dir)
     baseline = _load(rd / "baseline.json")
@@ -142,9 +152,20 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
 
     bval = baseline.get("val") or {}
     ftest = final.get("test") or {}
-    base_pt = {p["task_id"]: p for p in (bval.get("per_task") or [])}
     opt_pt = {p["task_id"]: p for p in (ftest.get("per_task") or [])}
-    task_ids = list(base_pt) or list(opt_pt)
+    sealed_pt = {p["task_id"]: p for p in ((final.get("test_baseline") or {}).get("per_task") or [])}
+    val_pt = {p["task_id"]: p for p in (bval.get("per_task") or [])}
+    # "Held out" means the val and test SPLITS are genuinely disjoint — not merely that
+    # final.json happens to carry both sides. On a no-holdout tier test_baseline/test also
+    # share a task set, and switching that pairing would silently shift smoke's published
+    # numbers; smoke is not broken, so it keeps exactly the behaviour it had.
+    held_out = bool(val_pt and opt_pt and set(val_pt).isdisjoint(opt_pt))
+    if held_out and sealed_pt and set(sealed_pt) == set(opt_pt):
+        base_pt, task_ids = sealed_pt, list(opt_pt)
+    else:
+        held_out = False
+        base_pt = val_pt
+        task_ids = list(base_pt) or list(opt_pt)
 
     rows = []
     for tid in task_ids:
@@ -171,10 +192,17 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
                 f.write(json.dumps(s) + "\n")
 
     # ---- render: per-task reward table ----
-    out = [f"## {tier.capitalize()} suite — {bench}  (train-fit, no holdout)", ""]
-    out.append(f"Agent `{agent}` · optimizer Claude Code `{optimizer_model}` · {iters} iteration(s) · "
-               f"**all {len(task_ids)} tasks optimized together** · `train==val==test` (FIT metric, "
-               "not a generalization/held-out claim).")
+    kind = "held-out test split" if held_out else "train-fit, no holdout"
+    out = [f"## {tier.capitalize()} suite — {bench}  ({kind})", ""]
+    if held_out:
+        out.append(f"Agent `{agent}` · optimizer Claude Code `{optimizer_model}` · {iters} iteration(s) · "
+                   f"base→opt is the seed vs the best candidate on the **same {len(task_ids)} "
+                   "SEALED test tasks**, which the optimizer never saw (selection happened on a "
+                   "disjoint val split). This is a held-out generalization number.")
+    else:
+        out.append(f"Agent `{agent}` · optimizer Claude Code `{optimizer_model}` · {iters} iteration(s) · "
+                   f"**all {len(task_ids)} tasks optimized together** · `train==val==test` (FIT metric, "
+                   "not a generalization/held-out claim).")
     out.append("")
     out.append("| bench | task | reward (base→opt) | Δ | note |")
     out.append("|---|---|---|---|:--:|")
@@ -191,13 +219,18 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
         note = "↓" if isinstance(d, (int, float)) and d < 0 else ""
         out.append(f"| {bench} | `{r['task']}` | {_fmt(r['reward_baseline'])} → {_fmt(r['reward_opt'])} | {dtxt} | {note} |")
 
-    # Suite headline = the run's aggregate reward (baseline val → optimized test).
-    agg_b, agg_o = bval.get("reward"), ftest.get("reward")
+    # Suite headline. Held-out: seed vs best on the SAME sealed test split (both from
+    # final.json). No-holdout: baseline val → optimized test, which is the same task set.
+    if held_out:
+        agg_b = (final.get("test_baseline") or {}).get("reward")
+    else:
+        agg_b = bval.get("reward")
+    agg_o = ftest.get("reward")
     accepted = "seed (no candidate beat baseline)" if best_id in ("seed", "", None) else f"`{best_id}`"
     out.append("")
     if isinstance(agg_b, (int, float)) and isinstance(agg_o, (int, float)):
         rel = f" ({(agg_o-agg_b)/agg_b*100:+.0f}% rel)" if agg_b else ""
-        out.append(f"**Suite (train-fit):** mean reward {agg_b:.3f} → {agg_o:.3f} "
+        out.append(f"**Suite ({'held-out' if held_out else 'train-fit'}):** mean reward {agg_b:.3f} → {agg_o:.3f} "
                    f"(Δ {agg_o-agg_b:+.3f}{rel}) · best = {accepted} · "
                    f"optimizer ${spent.get('optimizer_usd',0) or 0:.2f} over {spent.get('iterations','?')} iter(s)"
                    + (f" · {infra_n} task(s) infra-errored" if infra_n else ""))
