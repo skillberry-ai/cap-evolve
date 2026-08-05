@@ -77,20 +77,20 @@ def test_pandas_string_storage_is_python(tmp_path):
 
 
 def test_preview_text_is_unchanged_by_the_backend_switch(tmp_path):
-    """Results must stay comparable: the agent's prompt may not change."""
+    """Results must stay comparable: the agent's prompt may not change with the backend.
+
+    Compares `_spreadsheet_preview` against ITSELF under the pyarrow backend. The previous
+    version re-implemented the preview's format string inline and compared against that, so it
+    broke whenever the preview legitimately changed — which is a test of the format, not of the
+    backend-independence invariant this file exists to pin.
+    """
+    pytest.importorskip("pyarrow", reason="the python-vs-pyarrow comparison needs pyarrow")
     mod = _load_adapter_module()
     book = _workbook(tmp_path)
     ours = mod._spreadsheet_preview(book, 5)
 
-    # Recompute the same preview under pandas' DEFAULT backend for comparison.
     with pd.option_context("mode.string_storage", "pyarrow"):
-        xf = pd.ExcelFile(book)
-        chunks = []
-        for name in xf.sheet_names:
-            df = xf.parse(name)
-            n = 5 if df.shape[0] > 5 else df.shape[0]
-            chunks.append(f"Sheet Name: {name}\n{df.head(n).to_string()}\n" + "-" * 50)
-        default = "\n".join(chunks)
+        default = mod._spreadsheet_preview(book, 5)
 
     assert ours == default, "preview text changed — the agent would see a different prompt"
 

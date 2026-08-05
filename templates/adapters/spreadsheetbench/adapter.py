@@ -984,7 +984,28 @@ def _pandas():
     return pd
 
 
+def _col_letter(n: int) -> str:
+    """1 -> A, 26 -> Z, 27 -> AA. Local so the pandas path needs no openpyxl import."""
+    s = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
 def _spreadsheet_preview(path: Path, rows: int) -> str:
+    """The first `rows` rows of every sheet, each annotated with its REAL data extent.
+
+    The extent comes from the shape of the frame we already parse, NOT from openpyxl's
+    `ws.max_row`/`max_column`: those count formatted-but-empty cells, so they overstate the
+    extent, and an overstated extent would teach the agent to write cells that should stay
+    empty — a regression risk against the 28 of 50 val tasks that already pass.
+
+    Why state it at all: on pilot 30799393875 task `110-2` filled 9 of its 39 target cells,
+    exactly `3 rows x 3 cols`, because five preview rows were the only extent signal it had.
+    Asking the agent to go and measure does not work — turn usage over that run FELL from
+    3.52 to 3.32 against a cap of 30.
+    """
     pd = _pandas()
 
     excel_file = pd.ExcelFile(path)
@@ -992,8 +1013,96 @@ def _spreadsheet_preview(path: Path, rows: int) -> str:
     for sheet_name in excel_file.sheet_names:
         df = excel_file.parse(sheet_name)
         n = rows if df.shape[0] > rows else df.shape[0]
-        chunks.append(f"Sheet Name: {sheet_name}\n{df.head(n).to_string()}\n" + "-" * 50)
+        nrows, ncols = df.shape
+        # +1: pandas consumed row 1 as the header, and Excel addressing is 1-based.
+        extent = (
+            f"  [data extent: rows 1-{nrows + 1}, cols A-{_col_letter(ncols)}"
+            f"  ({nrows} data row(s) x {ncols} column(s))]"
+            if ncols else ""
+        )
+        shown = f"\n(showing the first {n} of {nrows} data row(s))" if nrows > n else ""
+        chunks.append(
+            f"Sheet Name: {sheet_name}{extent}\n{df.head(n).to_string()}{shown}\n" + "-" * 50
+        )
     return "\n".join(chunks)
+
+
+def _target_facts(answer_position: str) -> str:
+    """How big the target range is — derived from the string the agent was already given.
+
+    Reuses `_range_cells`, the same helper `_localize_failure` grades with, so the number the
+    agent is shown is exactly the denominator the COVERAGE diagnostic will hold it to. No file
+    is opened and no gold is consulted: this is arithmetic on `answer_position`.
+
+    Deliberately FACTUAL. It states the size and stops; it does not tell the agent to cover the
+    range, verify it, or self-test. Those are the rules we want the OPTIMIZER to discover, so
+    that a gain is credited to the optimizer instead of hand-supplied here (cf. issue #276).
+    """
+    total = 0
+    sheets: list[str] = []
+    for sheet, c1, r1, c2, r2 in _range_cells(answer_position):
+        total += (c2 - c1 + 1) * (r2 - r1 + 1)
+        if sheet and sheet not in sheets:
+            sheets.append(sheet)
+    if not total:
+        return ""
+    where = f", across {len(sheets)} sheet(s): {', '.join(sheets)}" if sheets else ""
+    return f"TARGET SIZE: answer_position covers {total} cell(s){where}."
+
+
+def _sibling_inputs(local_dir: Path, sid: str, container_dir: str) -> str:
+    """Name the other two graded copies, and the constraint the replay imposes.
+
+    This task is scored on three copies of the workbook whose data differs, and the other two
+    are already on disk beside the input. On pilot 30799393875 the agent was told 201 times
+    across 150 rollouts that its code would be "replayed on two other copies" and referenced
+    them ZERO times — it was never told where they are, and never enumerated the directory.
+    8 of 50 val tasks failed only on those copies.
+
+    The final paragraph is load-bearing, not advice. Cases 2 and 3 are produced by replaying
+    the agent's FINAL code block with the input/output filenames substituted (see run_target).
+    A final block that itself loops over several copies would have those names rewritten too,
+    corrupting the very outputs being graded — so the one-input constraint must be stated.
+    """
+    others = [
+        f"{container_dir}/{p.name}"
+        for p in (_resolve_case_file(local_dir, idx, sid, "input") for idx in (2, 3))
+        if p.exists()
+    ]
+    if not others:
+        return ""
+    listing = "\n  ".join(others)
+    return (
+        "OTHER GRADED COPIES: this task is scored on three copies of this workbook whose data "
+        "differs (row counts and values change). The other two are already on disk at:\n  "
+        f"{listing}\n"
+        "Your FINAL code block is replayed verbatim on each of them with the input and output "
+        "filenames substituted, so that final block must read exactly ONE input — the "
+        "spreadsheet_path given above. Anything you run across several copies belongs in an "
+        "EARLIER turn."
+    )
+
+
+def _workbook_context(
+    input_file: Path, local_dir: Path, sid: str, container_dir: str,
+    answer_position: str, rows: int,
+) -> str:
+    """The full `spreadsheet_content` block: target size, sibling copies, then the preview.
+
+    The preview is computed first and returned alone if anything about the added facts fails.
+    That ordering is deliberate: this call site used to be unwrapped, and a pandas/PyArrow
+    SIGSEGV in exactly this path once took down a whole algorithm process (run 30634898569,
+    ~68 minutes and ~$6). New facts must never be able to cost a rollout.
+    """
+    preview = _spreadsheet_preview(input_file, rows)
+    try:
+        blocks = [
+            b for b in (_target_facts(answer_position),
+                        _sibling_inputs(local_dir, sid, container_dir)) if b
+        ]
+    except Exception:  # noqa: BLE001 — facts are a bonus; the preview is the contract
+        return preview
+    return "\n\n".join([*blocks, preview]) if blocks else preview
 
 
 def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
@@ -1101,7 +1210,10 @@ class Adapter(CapabilityAdapter):
             _make_container_writable(host_out_dir)
 
             input_file = _resolve_case_file(local_dir, 1, sid, "input")
-            preview = _spreadsheet_preview(input_file, PREVIEW_ROWS)
+            preview = _workbook_context(
+                input_file, local_dir, sid, container_dir,
+                entry["answer_position"], PREVIEW_ROWS,
+            )
             user_msg = _read_task_template(ctx).format(
                 instruction=entry["instruction"],
                 spreadsheet_path=f"{container_dir}/{input_file.name}",
@@ -1384,19 +1496,170 @@ def _range_cells(answer_position: str):
     answer_position is SpreadsheetBench's own notation and may name several ranges across
     several sheets, e.g. "MINUS'!B2:E11,'PLUS'!B2:E5200". Parsed here only to describe the
     agent's own output against the range it was GIVEN — no gold data is consulted.
+
+    The dataset's quoting is INCONSISTENT, and a part this function cannot read costs the task
+    every localization signal AND its agent-facing TARGET SIZE line (both route through here).
+    Measured across all 912 tasks, 23 (2.5%) are affected in seven families; six are handled:
+
+        'Vendor!'A1:D101          the ! is quoted with the sheet name        (16 tasks)
+        'Data'!'A2:C150           the quote lands before the range          (450-9, 374-9, 488-14)
+        'T_Data!A1:AB700'         quotes wrap sheet AND range together      (172-10, 188-47, 156-14)
+        'Received'!'Received!A1:G16'   the sheet is named on both sides     (532-3)
+        'Sheet1'!BD2:308          the end COLUMN is omitted, not the row    (73-45)
+        G12：J15                  authored with a full-width colon U+FF1A   (37456)
+
+    The seventh — bare "A:G" with no row numbers (1 task) — is deliberately still skipped: no
+    workbook is in scope to resolve the extent, and inventing a bound would corrupt the
+    COVERAGE denominator, which is the class of defect this module works to remove.
     """
     for part in str(answer_position).split(","):
-        part = part.strip()
+        part = part.strip().replace("：", ":")
+        # Quotes here are noise, not structure: strip a symmetric pair wrapping the whole part
+        # so that "'T_Data!A1:AB700'" reduces to the ordinary "sheet!range" form.
+        if len(part) > 1 and part[0] == "'" and part[-1] == "'":
+            part = part[1:-1]
         sheet = None
         if "!" in part:
             sheet, _, part = part.rpartition("!")
-            sheet = sheet.strip().strip("'")
-        m = re.fullmatch(r"\$?([A-Za-z]+)\$?(\d+)(?::\$?([A-Za-z]+)\$?(\d+))?", part.strip())
+            # Whatever survives on the left may still hold quotes, a stray bang, or the sheet
+            # name twice ("'Received'!'Received"). The last non-empty token is the sheet.
+            tokens = [t for t in re.split(r"['!]", sheet) if t.strip()]
+            sheet = tokens[-1].strip() if tokens else None
+        part = part.strip().strip("'").strip()
+        m = re.fullmatch(r"\$?([A-Za-z]+)\$?(\d+)(?::\$?([A-Za-z]*)\$?(\d+))?", part)
         if not m:
             continue
-        c1, r1, c2, r2 = m.group(1), int(m.group(2)), m.group(3) or m.group(1), int(m.group(4) or m.group(2))
+        c1, r1 = m.group(1), int(m.group(2))
+        # An empty end column is the "BD2:308" form — one column, many rows — not a truncation.
+        c2 = m.group(3) or c1
+        r2 = int(m.group(4) or m.group(2))
         col = lambda t: sum((ord(ch.upper()) - 64) * 26 ** i for i, ch in enumerate(reversed(t)))
         yield sheet, col(c1), r1, col(c2), r2
+
+
+_TEXTUAL = {"str"}
+
+
+def _type_advice(pairs: list[tuple[str, str]]) -> str:
+    """Advice that matches the DIRECTION of each type mismatch.
+
+    This clause used to be the unconditional string "— write real numbers/dates, not their text
+    form", appended whichever way the mismatch went. Measured on pilot 30890657732 it was
+    therefore backwards for a third of the tasks it fired on: task `57232` held `float where str
+    was expected` and `50630` held `datetime where str was expected`, and both were told to write
+    real numbers. Worse, pilot 30799393875's own PROCESS.md had already root-caused `50630`
+    correctly — "GT keeps the fragment as the original text string" — so the optimizer was
+    reading our advice and its own correct diagnosis in direct contradiction.
+
+    Feedback that points the wrong way is worse than no feedback: the optimizer writes rules from
+    it, and a rule pushing the wrong direction can regress a task that currently passes.
+    """
+    to_text = [(g, w) for g, w in pairs if w in _TEXTUAL and g not in _TEXTUAL]
+    from_text = [(g, w) for g, w in pairs if g in _TEXTUAL and w not in _TEXTUAL]
+    tips: list[str] = []
+    if from_text:
+        tips.append(
+            "where a number or date is expected, write the real typed value rather than its "
+            "text form"
+        )
+    if to_text:
+        tips.append(
+            "where a str is expected, KEEP the original text — do not parse or convert it into "
+            "a number or date"
+        )
+    if not tips:
+        # e.g. int vs float: neither side is textual, so no directional advice applies.
+        return " — match the expected type exactly."
+    return " — " + "; ".join(tips) + "."
+
+
+_CELL_SCAN_CAP = 50_000
+
+_EXCEL_ERROR = re.compile(r"^#(N/A|VALUE!|REF!|DIV/0!|NAME\?|NUM!|NULL!|SPILL!|CALC!|GETTING_DATA)$")
+
+
+def _is_number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _mismatch_classes(diffs: list[tuple]) -> list[str]:
+    """Name WHY the differing cells differ, as counted classes — never as values.
+
+    Each differing cell is assigned exactly ONE class, most specific first, so the counts sum to
+    the number of differences and cannot double-count. `kept` is reported separately and is
+    explicitly a SUBSET ("of these"), because "the expected value is the cell's original input"
+    overlaps every other class and is the single most actionable of them.
+
+    Every class below was measured on pilot 30906175891's own failures; see the module tests for
+    the task each shape came from.
+    """
+    if not diffs:
+        return []
+    buckets: dict[str, int] = {}
+    kept = 0
+    prefix_short = 0
+    for got, want, inp in diffs:
+        if want == inp and got != inp:
+            kept += 1
+        if want is None and got is not None:
+            key = "extra"
+        elif got is None and want is not None:
+            key = "missing"
+        elif str(got) == str(want):
+            key = "textform"
+        elif isinstance(got, str) and _EXCEL_ERROR.match(got.strip()):
+            key = "sent_written"
+        elif isinstance(want, str) and _EXCEL_ERROR.match(want.strip()):
+            key = "sent_expected"
+        elif isinstance(got, str) and isinstance(want, str) and \
+                got.strip().casefold() == want.strip().casefold():
+            key = "ws_case"
+        elif isinstance(got, str) and isinstance(want, str) and \
+                (want.startswith(got) or got.startswith(want)):
+            key = "prefix"
+            if want.startswith(got):
+                prefix_short += 1
+        elif _is_number(got) and _is_number(want):
+            key = "num_low" if got < want else "num_high"
+        elif type(got) is not type(want):
+            key = "type_other"
+        else:
+            key = "value"
+        buckets[key] = buckets.get(key, 0) + 1
+
+    def phrase(key: str, c: int) -> str:
+        n = f"{c} cell(s)"
+        return {
+            "extra": f"{n} hold a value where the expected output has none — written past where "
+                     f"the answer ends",
+            "missing": f"{n} are empty in your output where a value is expected",
+            "textform": f"{n} hold the CORRECT value stored as text instead of as a number/date",
+            "sent_written": f"{n} hold an Excel error text (e.g. #N/A) — an unresolved "
+                            f"formula/lookup was written out as its error string",
+            "sent_expected": f"{n} expect an Excel error text and you wrote a computed value — "
+                             f"an unmatched lookup is meant to stay unresolved",
+            "ws_case": f"{n} differ only in surrounding whitespace or letter case",
+            "prefix": (f"{n} hold text that is a PREFIX of the expected text (cut short)"
+                       if prefix_short else
+                       f"{n} hold text that EXTENDS the expected text (too long)"),
+            "num_low": f"{n} hold a number LOWER than expected",
+            "num_high": f"{n} hold a number HIGHER than expected",
+            "type_other": f"{n} hold a value of the wrong type",
+            "value": f"{n} hold a different value of the right type",
+        }[key]
+
+    # A direction claim is only worth making when EVERY numeric difference agrees; a mixed bag
+    # ("some low, some high") points at nothing and would read as a pattern that is not there.
+    if buckets.get("num_low") and buckets.get("num_high"):
+        buckets["value"] = buckets.pop("num_low") + buckets.pop("num_high") + buckets.get("value", 0)
+
+    ranked = sorted(buckets.items(), key=lambda kv: -kv[1])[:3]
+    out = "; ".join(phrase(k, c) for k, c in ranked)
+    if kept:
+        out += (f". Of these, {kept} cell(s) were CHANGED although the expected value is the "
+                f"cell's own original input — leave untouched what the instruction does not "
+                f"ask for")
+    return [out]
 
 
 def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> list[str]:
@@ -1409,11 +1672,19 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
     and ours never did. On run 30762167950, 197 of 639 sealed tasks failed ALL THREE test
     cases, and nothing in the logs said why.
 
-    GOLD SAFETY. Three of the four signals never open the gold file at all — they compare the
-    agent's output against its own INPUT and against the range it was handed, both of which it
-    already knows. The fourth reports a value's TYPE (e.g. "text where a date was expected"),
-    which is metadata rather than an answer; it is the single most actionable diagnostic for
-    this benchmark and is judged worth that narrow disclosure. No cell VALUE is ever emitted.
+    COVERAGE is measured against the EXPECTED OUTPUT's own fill, not against the span. Across
+    all 912 tasks the expected output fills under a quarter of answer_position on 90 of them
+    (10.1%) and under 60% on 203 (22.8%) — so comparing to the span told a perfect answer it had
+    left the range unfilled. Task 56427 in pilot 30906175891 was scolded for ~300 cells it was
+    never meant to write, while its actual defects went unnamed.
+
+    GOLD SAFETY. Coverage and untouched-sheet notes still never open the gold. Three signals now
+    do: the TYPE note (a value's type), the expected FILL COUNT (one integer per range), and the
+    MISMATCH classes (how many cells differ and in which category, including whether the expected
+    value is an Excel error marker). All three are metadata ABOUT the answer rather than the
+    answer: a count, a type, a category. No cell VALUE is ever emitted — asserted by
+    test_no_gold_value_leaks_through_the_mismatch_note. The one value that does appear, "#N/A" in
+    the sent_written class, is the AGENT's own text, not the gold's.
     """
     notes: list[str] = []
     try:
@@ -1423,12 +1694,24 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
     except Exception:  # noqa: BLE001
         return notes
 
-    total = written = 0
+    # The gold is opened ONCE and shared by three signals below. It may be unreadable (a
+    # diagnostic must never cost a score), in which case every gold-derived claim is withheld
+    # rather than guessed — guessing is what made the old coverage scold wrong.
+    try:
+        gw = openpyxl.load_workbook(gold, data_only=True)
+    except Exception:  # noqa: BLE001
+        gw = None
+
+    total = written = expected = 0
+    scanned = capped = 0
     untouched_sheets: list[str] = []
+    diffs: list[tuple] = []
+    bad: dict[tuple[str, str], int] = {}
     for sheet, c1, r1, c2, r2 in _range_cells(entry.get("answer_position", "")):
         name = sheet if sheet in pw.sheetnames else pw.sheetnames[0]
         ws = pw[name]
         src = sw[name] if name in sw.sheetnames else None
+        gs = gw[sheet if gw and sheet in gw.sheetnames else gw.sheetnames[0]] if gw else None
         span = (c2 - c1 + 1) * (r2 - r1 + 1)
         filled = same_as_input = 0
         for row in range(r1, r2 + 1):
@@ -1436,23 +1719,43 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
                 v = ws.cell(row, cc).value
                 if v is not None and str(v) != "":
                     filled += 1
-                if src is not None and v == src.cell(row, cc).value:
+                inp = src.cell(row, cc).value if src is not None else None
+                if src is not None and v == inp:
                     same_as_input += 1
+                if gs is None:
+                    continue
+                if scanned >= _CELL_SCAN_CAP:
+                    capped = 1
+                    continue
+                scanned += 1
+                want = gs.cell(row, cc).value
+                if want is not None:
+                    expected += 1
+                if v == want:
+                    continue
+                diffs.append((v, want, inp))
+                if v is not None and want is not None and type(v) is not type(want):
+                    key = (type(v).__name__, type(want).__name__)
+                    bad[key] = bad.get(key, 0) + 1
         total += span
         written += filled
         if span and same_as_input == span:
             untouched_sheets.append(name)
 
     if total:
-        notes.append(
-            f"COVERAGE: the target range spans {total} cell(s); your output has a value in "
-            f"{written} of them."
-        )
+        # The span is stated because it is what the agent was handed (and what TARGET SIZE tells
+        # it); the expected fill is stated because it is the only honest denominator for "did you
+        # cover the answer".
+        line = (f"COVERAGE: the target range spans {total} cell(s); your output has a value in "
+                f"{written} of them")
+        if gw is not None and not capped:
+            line += f"; the expected output has a value in {expected}"
+        notes.append(line + ".")
         if written == 0:
             notes.append("The target range is EMPTY in your output — nothing was written there.")
-        elif written * 4 < total:
+        elif expected and not capped and written * 4 < expected:
             notes.append(
-                "Most of the target range was left unfilled — check where the data actually "
+                "Most of the expected answer is missing — check where the data actually "
                 "ends rather than assuming the extent from the preview."
             )
     if untouched_sheets:
@@ -1461,27 +1764,24 @@ def _localize_failure(entry: dict, produced: Path, source: Path, gold: Path) -> 
             f"input across the target range — that part of answer_position was never modified."
         )
 
+    # MISMATCH: how many cells differ, and in which named class. This is the signal that was
+    # missing entirely: on pilot 30906175891, 11 of the champion's 17 failures had full coverage
+    # and matching types, so every other note was silent while 1-of-146 cells was wrong.
+    if diffs:
+        head = f"MISMATCH: {len(diffs)} of {scanned} cell(s) differ from the expected output"
+        if capped:
+            head += f" (first {_CELL_SCAN_CAP} of {total} cells inspected)"
+        notes.append(head + ": " + "; ".join(_mismatch_classes(diffs)) + ".")
+
     # TYPE mismatch (reports the expected TYPE, never a value).
-    try:
-        gw = openpyxl.load_workbook(gold, data_only=True)
-        bad: dict[str, int] = {}
-        for sheet, c1, r1, c2, r2 in _range_cells(entry.get("answer_position", "")):
-            name = sheet if sheet in pw.sheetnames else pw.sheetnames[0]
-            gname = sheet if sheet in gw.sheetnames else gw.sheetnames[0]
-            ws, gs = pw[name], gw[gname]
-            for row in range(r1, min(r2, r1 + 200) + 1):
-                for cc in range(c1, c2 + 1):
-                    a, b = ws.cell(row, cc).value, gs.cell(row, cc).value
-                    if a is None or b is None or type(a) is type(b):
-                        continue
-                    bad[f"{type(a).__name__} where {type(b).__name__} was expected"] = \
-                        bad.get(f"{type(a).__name__} where {type(b).__name__} was expected", 0) + 1
-        if bad:
-            worst = sorted(bad.items(), key=lambda kv: -kv[1])[:2]
-            notes.append("TYPE: " + "; ".join(f"{n} cell(s) hold {k}" for k, n in worst)
-                         + " — write real numbers/dates, not their text form.")
-    except Exception:  # noqa: BLE001
-        pass
+    if bad:
+        worst = sorted(bad.items(), key=lambda kv: -kv[1])[:2]
+        notes.append(
+            "TYPE: "
+            + "; ".join(f"{n} cell(s) hold {got} where {want} was expected"
+                        for (got, want), n in worst)
+            + _type_advice([pair for pair, _ in worst])
+        )
     return notes
 
 

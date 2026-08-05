@@ -273,9 +273,27 @@
       <h2 id="skill-library">Skill library</h2>
 
       <p>
-        18 skills · 4 algorithms · 14 optimizer backends, all over the core. Extending is one
+        20 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends,
+        all over the core. Extending is one
         folder or one registry row — see
         <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/EXTENDING.md">EXTENDING.md</a>.
+      </p>
+
+      <p>
+        <strong>How the counts are defined.</strong> A <em>skill</em> is one
+        <code>skills/&lt;component&gt;/&lt;name&gt;/SKILL.md</code>, i.e. one row of the generated
+        <code>skills/_registry/manifest.json</code> — phases, capabilities, algorithms, optimizers
+        and orchestrate all count. An <em>algorithm</em> is a skill whose <code>meta.yaml</code> says
+        <code>component: algorithm</code>; agent-mode-only algorithms count too. An algorithm is
+        <em>run-executable</em> when <code>cap-evolve run</code> drives its deterministic loop; it is
+        <em>agent-mode</em> when its <code>meta.yaml</code> declares agent-mode only, in which case
+        <code>cap-evolve run</code> hands off to the conversational agent after baseline and the skill's
+        <code>scripts/run.py</code> is a loud guard rather than a loop
+        (<code>orchestration_mode: agent</code> is required). An <em>optimizer backend</em> is one
+        top-level row of <code>skills/optimizers/registry.yaml</code>.
+        <code>python skills/_registry/build_manifest.py skills</code> prints the skill and algorithm
+        numbers and <code>core/tests/test_advertised_counts.py</code> asserts all of them against the
+        repo, so every count above is checkable rather than remembered.
       </p>
 
       <table>
@@ -284,7 +302,7 @@
           <tr><td>orchestrate</td><td><code>orchestrate</code> · <code>using-cap-evolve</code></td></tr>
           <tr><td>phases</td><td><code>intake</code> · <code>implement-and-check</code> · <code>baseline</code> · <code>evaluate</code> · <code>diagnose</code> · <code>gate</code> · <code>finalize</code> · <code>report</code></td></tr>
           <tr><td>capabilities</td><td><code>system-prompt</code> · <code>skill-package</code> · <code>tools</code> · <code>mcp-tool</code></td></tr>
-          <tr><td>algorithms</td><td><code>hill-climb</code> (<code>--focus all|cyclic|hardest-first</code>) · <code>gepa</code> · <code>skillopt</code></td></tr>
+          <tr><td>algorithms</td><td><code>hill-climb</code> (<code>--focus all|cyclic|hardest-first</code>) · <code>gepa</code> · <code>skillopt</code> · <code>agent-optimize</code> (agent mode only) · <code>evograph</code> (agent mode only)</td></tr>
           <tr><td>optimizers</td><td><code>run-optimizer</code> + <code>optimizers/registry.yaml</code> (14 backends incl. <code>mock</code>)</td></tr>
         </tbody>
       </table>

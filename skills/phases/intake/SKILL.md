@@ -93,34 +93,32 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
    guidance, skill references, and edit-space ONLY for the capabilities actually
    listed in `capevolve.yaml: capabilities`.
    - **DEPTH MANDATE — address ALL failure clusters each iteration.** The authored
-     instructions must demand a substantial multi-root-cause pass. Produce this
-     target snippet:
-     > "Each iteration is a substantial, multi-root-cause pass. Diagnose ALL clusters
-     > and fix as many as possible in ONE candidate — improve multiple tools' code,
-     > validation, and return values/errors; add new tools; sharpen many tool docs;
-     > and fix the prompt — together. Scope each fix to protect passing tasks; do NOT
-     > trade breadth for caution. A single small edit is an under-used iteration."
+     instructions must demand a substantial multi-root-cause pass: diagnose ALL
+     clusters and fix as many as possible in ONE candidate, spanning EVERY edit class
+     the selected capabilities offer (each capability's SKILL.md enumerates its own).
+     Scope each fix to protect passing tasks; do NOT trade breadth for caution. State
+     plainly that a single small edit is an under-used iteration. For the concrete
+     per-capability wording of this mandate, use the selected capability's own
+     optimizer playbook (see the capability-playbook rule below).
    - **State the GOAL up front:** maximize the eval score — make the largest
      improvement you can this iteration, grounded in the trajectories.
-   - **The authored INSTRUCTIONS MUST encode all three of these (generic, capability-scoped):**
+   - **The authored INSTRUCTIONS MUST encode all of these (generic, capability-scoped):**
      1. **STEP-0 reading mandate.** Before diagnosing, the optimizer must READ
         `./guidance/<cap>/SKILL.md` (for EACH selected capability) and the optimizer
         features reference under `./guidance/optimizer/`. State this as an explicit
         first step.
-     2. **The EXISTING-tool-code mandate** (when `tools` is selected). Demand: convert
-        violated textual rules into in-code checks across MANY EXISTING tool bodies —
-        most violated rules govern a tool that already exists, so the fix is an in-body
-        guard there, not a new tool. State plainly: *a docstring-only iteration (or one
-        that only adds a single new tool + rewords docstrings, leaving rules as prose)
-        is under-used.*
-     3. **The explicit TWO-PHASE subagent pattern.** Require: Phase 1 — diagnose
-        fan-out (one read-only subagent per trajectory-group → tight issue list; main
-        dedups into clusters); Phase 2 — implement fan-out (one edit-subagent per
-        ISSUE, each in its own worktree, each PREFERRING to edit the EXISTING tool's
-        code body to enforce its rule); then the main agent MERGES all edits into ONE
-        candidate. Point at `./guidance/optimizer/<name>.md` for the agent's concrete
-        trigger phrasing.
-     4. **The NON-OVERFITTING guardrail.** Demand that every prompt/tool edit encode
+     2. **Each selected capability's own optimizer playbook.** For EVERY capability in
+        `capevolve.yaml: capabilities`, load that capability's playbook from its skill.
+        Both path forms matter, each for its own reader: YOU read it in this repo at
+        `skills/capabilities/<cap>/references/` (e.g. `tools` →
+        [`optimizer-playbook.md`](../../capabilities/tools/references/optimizer-playbook.md)),
+        but any path you WRITE INTO the authored INSTRUCTIONS must be the
+        runtime-materialized form `./guidance/<cap>/references/` — the repo-relative
+        path does not resolve in the optimizer's working dir. Fold its edit-depth
+        demands and subagent-fan-out pattern into the authored INSTRUCTIONS. Do NOT
+        restate one capability's playbook here — it lives with that capability and
+        evolves with it.
+     3. **The NON-OVERFITTING guardrail.** Demand that every prompt/tool edit encode
         a GENERAL rule/policy/validation that generalizes across the whole class of
         inputs — NEVER hardcode a specific task's id/value/date/name/answer. A guard
         must fire on the general condition (e.g. "id not in the user's profile"), not
@@ -128,13 +126,13 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
         only helps one task is forbidden — it overfits, fails the held-out gate, and
         hurts other tasks. Per-task specifics are for understanding the failure CLASS
         only; the fix must be general.
-     5. **EXPLOIT ground-truth/eval present in the trajectories (diagnosis only).**
+     4. **EXPLOIT ground-truth/eval present in the trajectories (diagnosis only).**
         Tell the optimizer that when `./trajectories/` include ground-truth /
         expected actions / a reward breakdown, it should USE them during diagnosis to
         localize the exact defect (expected vs actual action/argument/value) — and if
         not present, infer from the traces + feedback. State plainly that ground truth
         informs the failure class only; the resulting edit must still be GENERAL
-        (guardrail 4) and never copy a gold value.
+        (guardrail 3) and never copy a gold value.
    - **Capability-scoping (the key rule):** reference `./guidance/<cap>/SKILL.md`
      and present the editable artifacts **for the selected caps only**. If only
      `tools` is selected, do NOT include any prompt-editing guidance, do NOT
@@ -247,10 +245,9 @@ this whole integration autonomously.
   the gold answer into feedback; test == train with no note; budget left at a
   default that cannot possibly find a gain; the run proceeded past a missing
   NEEDED input "to keep moving".
-- **Bad:** authored INSTRUCTIONS that let an iteration pass by adding one tool +
-  rewording docstrings (leaving violated rules as prose) — or that omit the STEP-0
-  reading mandate, the existing-tool-code mandate, or the explicit two-phase
-  (diagnose fan-out → implement fan-out → merge) subagent pattern.
+- **Bad:** authored INSTRUCTIONS that omit the STEP-0 reading mandate, or that skip a
+  selected capability's own optimizer playbook — so an iteration can pass on a
+  cosmetic edit that the capability's playbook calls under-used.
 
 ## References
 - `references/concepts.md` — the inputs contract, NEEDED vs RECOMMENDED

@@ -120,3 +120,49 @@ def test_close_after_finalize_terminates_run():
                                "test_reward": 0.9, "best_id": "cand_0001"})
     obs.close()
     obs._client.set_terminated.assert_called_once_with("test_run")
+
+
+def test_from_state_restores_created_at_ms():
+    obs = MlflowObserver.from_state({
+        "backend": "mlflow",
+        "run_id": "test_run",
+        "tracking_uri": "",
+        "experiment_name": "test",
+        "step_counter": 2,
+        "autolog": False,
+        "run_dir_root": "/tmp/run",
+        "created_at_ms": 1234,
+    })
+    assert obs._created_at_ms == 1234
+
+
+def test_link_traces_scoped_to_run_dir():
+    obs = _make_observer(tracking_uri="http://mlflow", run_dir_root="/tmp/run")
+    obs._created_at_ms = 100
+    trace_match = MagicMock()
+    trace_match.info.tags = {"run_dir": "/tmp/run"}
+    trace_match.info.timestamp_ms = 150
+    trace_match.info.request_id = "req-1"
+    trace_other = MagicMock()
+    trace_other.info.tags = {"run_dir": "/tmp/other"}
+    trace_other.info.timestamp_ms = 150
+    trace_other.info.request_id = "req-2"
+
+    client = MagicMock()
+    client.get_experiment_by_name.return_value = MagicMock(experiment_id="exp-1")
+    client.search_traces.return_value = [trace_match, trace_other]
+
+    import sys
+    from unittest.mock import patch
+
+    mlflow_module = MagicMock()
+    mlflow_module.MlflowClient.return_value = client
+    with patch.dict(sys.modules, {"mlflow": mlflow_module}):
+        with patch("time.sleep"):
+            obs._link_traces_to_run()
+
+    client.set_trace_tag.assert_called_once_with(
+        "req-1",
+        "mlflow.source.run_id",
+        "test_run",
+    )

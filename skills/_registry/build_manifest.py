@@ -144,8 +144,11 @@ def main(argv=None) -> int:
     by_comp: dict[str, list[str]] = {}
     for name, s in sorted(manifest["skills"].items()):
         by_comp.setdefault(s["component"], []).append(name)
+    # Per-component counts printed alongside the names: the advertised "N skills ·
+    # M algorithms" in README/site/docs is checkable against this line instead of
+    # remembered (see test_advertised_counts.py, which asserts they agree).
     for comp in sorted(by_comp):
-        print(f"  {comp}: {', '.join(by_comp[comp])}")
+        print(f"  {comp} ({len(by_comp[comp])}): {', '.join(by_comp[comp])}")
     return 0
 
 

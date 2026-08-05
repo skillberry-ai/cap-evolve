@@ -192,6 +192,17 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
 
     spreadsheetbench pilot+full optimize the HARD score, to be comparable with published work
     that reports a benchmark's native hard score (soft >= hard by construction).
+
+    The pilot ALSO sets `SB_WARM_SEED=1`, and that is exactly the kind of deviation this test
+    exists to make loud. Learning was not cumulative across runs: pilot 30799393875 learned
+    "spill/volatile functions do not survive LibreOffice recalculation — write the literal" and
+    fixed tasks 47741 and 51958, while pilot 30890657732 carried none of it and both regressed —
+    2 tasks lost to forgetting rather than variance. The pilot therefore starts from the previous
+    champion (a verbatim optimizer artifact; see seed_capability_warm/PROVENANCE.md). Its
+    base->opt delta is consequently NOT comparable to a pristine-seed run's: absolute score
+    higher, measured optimizer gain smaller. runmeta.json records "warm_seed": true so the
+    difference travels with the number. The `full` tier deliberately stays pristine, so the
+    headline result remains a from-scratch measurement.
     """
     shipped = {
         str(p.relative_to(REPO)): dict(
@@ -202,8 +213,17 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     }
     assert shipped == {
         "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
-        "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {"SB_SCORING": "hard"},
+        "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
+            "SB_SCORING": "hard", "SB_WARM_SEED": "1",
+        },
     }, "a tier gained or changed a committed override — say which and why in the PR"
+
+
+def test_the_full_tier_stays_pristine_so_the_headline_is_from_scratch():
+    """A warm-started `full` run would publish a sealed number whose baseline was already
+    optimized — the one number that must stay a from-scratch measurement."""
+    full = (REPO / "ci" / "benchmarks" / "spreadsheetbench" / "full" / "overrides.env")
+    assert "SB_WARM_SEED" not in full.read_text(encoding="utf-8")
 
 
 def test_the_shipped_overrides_do_not_pretend_to_set_workflow_owned_vars():

@@ -4,8 +4,134 @@ All notable changes to cap-evolve are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/) (currently `0.x` — anything may change).
 
+[Unreleased]: https://github.com/skillberry-ai/cap-evolve/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
+
 ## [Unreleased]
+### Fixed
+- **The COVERAGE diagnostic measured the agent against the wrong denominator, and so scolded
+  correct answers.** It compared how many cells the agent filled against the SIZE of
+  `answer_position`, and complained when the ratio was low. But measured across all 912 tasks,
+  the expected output fills **under a quarter of that range on 90 of them (10.1%)** and under 60%
+  on 203 (22.8%) — so on a tenth of the benchmark a *perfect* answer was told *"Most of the target
+  range was left unfilled — check where the data actually ends"*. Task `56427` in pilot
+  30906175891 got exactly that: it filled 15 cells, the expected output fills 20, the span is 324.
+  It was scolded for ~300 cells it was never meant to write while its real defects (14 numbers
+  written as text, 5 cells left empty) went unnamed. Conversely `50051` filled 32 of 32 and was
+  told nothing at all, when the expected output fills **3** — its whole bug was writing 29 cells
+  that should stay empty. COVERAGE now states the expected fill alongside the span, and the
+  "mostly unfilled" warning is measured against that expected fill. When the gold cannot be read
+  no fill claim is made at all, rather than guessed — guessing is what made this wrong. Same
+  defect class as the TYPE-direction bug below, and 10× the blast radius.
+- **`answer_position` strings the parser could not read made a task silently invisible.** 23 of
+  the 912 tasks (2.5%) quote their range in ways the strict pattern rejected, in seven families:
+  `'Vendor!'A1:D101` (the `!` quoted with the sheet, 16 tasks), `'Data'!'A2:C150` (quote before
+  the range), `'T_Data!A1:AB700'` (quotes wrapping sheet and range together),
+  `'Received'!'Received!A1:G16'` (sheet named twice), `'Sheet1'!BD2:308` (end *column* omitted,
+  not the row), and `G12：J15` (a full-width U+FF1A colon). Every localization signal AND the
+  agent-facing `TARGET SIZE` line route through `_range_cells`, so those tasks received the
+  one-sentence feedback PR #289 existed to eliminate — and their prompts carried no target size
+  at all. Verified on the real dataset: **23 unparseable → 1**, the remaining case being bare
+  `A:G`, which names no rows and is deliberately left skipped rather than given an invented bound.
+  Task `450-9` goes from zero diagnostics to a full localization (212 of 447 cells differing, 38
+  empty, 32 written past the end).
+- **`pass^k` / `pass@k` report as N/A, never a fake `0.0`, when `k > num_trials` (#112).**
+  The default `num_trials: 1` run used to print `pass^2 = 0.0`, which reads as "0%
+  reliable" when the statistic is simply undefined — and `pass_at_k` was worse, since
+  `stats.pass_at_k` clamps `k → n` and so reported a k=2 capability measured from a
+  single trial. `aggregate_scores` now omits any `k` outside `1..min(trials per task)` (a
+  missing key IS the N/A representation), and `stats.pass_k` returns `None` instead of a
+  plausible `0.0` for an undefined `k` so a direct caller can't re-derive the bug. Two
+  rendering surfaces that hardcoded `k in (1, 2)` — `report.md` and the dashboard KPI
+  strip — would have dropped a measured `pass^3` while fabricating a `pass^2 N/A` nobody
+  requested; both now render exactly the measured ks. The SPA KPI hint also showed
+  `pass^k NaN%` because `types.ts` declared `test_pass_k` as `number | null` while the
+  backend has always sent the `{k: value}` dict. CI now fails on a stale committed
+  `dashboard/frontend/dist` bundle (see #188).
+- **The TYPE diagnostic's advice was unconditionally backwards half the time.** PR #289 appended
+  one static clause to every type mismatch — *"write real numbers/dates, not their text form"* —
+  regardless of direction. On pilot 30890657732 it fired on 6 tasks and was **wrong on two**:
+  `57232` held `float where str was expected` and `50630` held `datetime where str was expected`,
+  and both were told to write real numbers. Pilot 30799393875's own `PROCESS.md` had already
+  root-caused `50630` correctly — *"GT keeps the fragment as the original text string"* — so the
+  optimizer was reading its correct diagnosis and our contradictory advice at once. Feedback that
+  points the wrong way is worse than none: the optimizer writes capability rules from it, and a
+  rule pushing the wrong direction can regress a passing task. Advice is now direction-aware, and
+  a mismatch between two non-textual types (`int` vs `float`) gets no directional claim at all.
+
 ### Added
+- **A `MISMATCH` diagnostic: how many cells differ, and in which named class.** Replaying each of
+  pilot 30906175891's champion failures against the gold shows that **11 of its 17 failures
+  received the line "the target range spans N cell(s); your output has a value in N of them" and
+  nothing else** — full coverage, matching types, so every existing signal was silent. What that
+  silence hid: task `56637` differed in **1 cell of 146**, `5192` in 1 of 3, `53367` in 1 of 1,
+  `11842` in 2 of 96. "1 of 146 cells differs" and "wrong" are different instructions to an
+  optimizer. Each differing cell is now assigned exactly one class, so the counts cannot
+  double-count: the correct value stored as text (`325-44` ×15, `56427` ×14), an Excel error text
+  the agent wrote out (`55931` ×8 `#N/A`), a cell whose expected value *is* an error marker while
+  the agent computed a number (`57232` ×15), values written where the expected output has none
+  (`50051` ×29), text that is a prefix of the expected text (`5192`), and numeric direction when
+  every difference agrees (`11842`, `59743` low; `57090` high). A separate subset count names the
+  cells CHANGED although the expected value equals the cell's own input — which is the entire bug
+  in `56637`. Cheap because it reuses the pass the other signals already make; capped at 50,000
+  cells (4 tasks of 912 span more), and the cap is disclosed in the note rather than silently
+  truncating.
+- **Learning now carries across runs (opt-in warm start).** Every run began from the pristine
+  seed, so each explored a different subset of rules and forgot the rest. Measured across the two
+  pilots' champions: 30799393875 learned "spill/volatile functions do not survive LibreOffice
+  recalculation — write the literal" (`_xlfn`×4, `TEXTJOIN`×3) and fixed tasks `47741` and
+  `51958`; 30890657732 carried **zero** of it and both regressed. That is 2 tasks (0.04 val) lost
+  to forgetting, which also means part of the apparent run-to-run noise was lost knowledge rather
+  than variance. `SB_WARM_SEED=1` now starts from `seed_capability_warm/` — a **verbatim optimizer
+  artifact, never hand-edited** (see its `PROVENANCE.md`), because hand-authoring rules there
+  would make the next measured "optimizer gain" partly ours (#276). A warm-started run's
+  `base→opt` delta is **not** comparable to a pristine run's — absolute score higher, measured
+  gain smaller — so it is opt-in, mutually exclusive with the `SB_EMPTY_SEED` no-skill control,
+  disclosed in the log, and recorded as `"warm_seed"` in `runmeta.json`. Enabled for `pilot`;
+  `full` deliberately stays pristine so the headline stays a from-scratch measurement, pinned by
+  a test.
+- **A loud warning when the acceptance gate is too strict for hard scoring.** The committed
+  overrides already documented that hard scoring makes per-task reward Bernoulli, widening the
+  gate's SE, and that it must be paired with `gate_k_se=0.2` — but `GATE_K_SE` is always set by
+  the workflow, so `overrides.env` cannot enforce it and nothing warned. Both pilots consequently
+  ran `k_se=1.0` against hard scoring, and 30890657732's `cand_0003` scored **0.600 — above its
+  accepted champion's 0.580 — and was rejected** on a delta of 0.020. `run_suite.sh` now emits a
+  `::warning::` whenever `SB_SCORING=hard` meets `gate_k_se >= 0.5`. `runmeta.json` also records
+  `gate_k_se`, so a run's strictness travels with its number.
+- **The agent is now told where the other two graded copies are, and how big its target is.**
+  PR #289 fixed the *signal* — the optimizer duly named coverage as failure cluster rank 2 and
+  added a "count non-empty cells versus range size" rule. It changed no behaviour: over pilot
+  30799393875 turn usage went **3.52 → 3.32 against a cap of 30**, and −0.21 on the very tasks
+  where reconnaissance was the prescribed fix. Prose cannot buy reconnaissance, so these facts
+  are now stated rather than requested. Of the champion's 22 failures on 50 val tasks, **8
+  passed only 1/3 or 2/3** — right for copy 1, wrong for the two other graded copies. The agent
+  is told 201 times across 150 rollouts that its code is "replayed on two other copies" and
+  referenced them **zero** times: nothing ever said where they are, and it never enumerated the
+  directory, though they sit beside its input in the mount. `spreadsheet_content` now carries
+  (a) `TARGET SIZE`, computed with `_range_cells` — the same helper the scorer grades with, so
+  the agent sees exactly the denominator `COVERAGE` will hold it to; (b) the paths of copies 2
+  and 3; and (c) each sheet's real data extent, from the already-parsed frame's shape and
+  explicitly **not** `openpyxl`'s `max_row`, which counts formatted-but-empty cells and would
+  teach overfilling. Task `110-2` is the archetype: it wrote 9 of 39 target cells, exactly
+  `3 rows × 3 cols`, from a five-row preview; it is now told *39 cells* and *rows 1-13*.
+  Deliberately **factual, not prescriptive** — nothing instructs the agent to self-test on the
+  copies, so if that strategy emerges the gain belongs to the optimizer rather than to us
+  (cf. #276). One hazard closed: cases 2 and 3 are produced by replaying the agent's *final*
+  code block with filenames substituted, so a final block looping over copies would have those
+  names rewritten and corrupt the graded outputs — the injected text states that the final
+  block must read exactly one input. The added facts are computed after the preview and inside
+  a `try`, because this call site was previously unwrapped and a pandas/PyArrow `SIGSEGV` here
+  once cost a whole algorithm process (run 30634898569, ~68 min and ~$6).
+
+### Fixed
+- **`openpyxl`/`pandas` are now dev extras, so the spreadsheetbench tests actually run.** They
+  were declared nowhere, so every test that builds or reads a real `.xlsx` hit
+  `pytest.importorskip` and vanished — including the whole of PR #289's
+  `test_spreadsheetbench_failure_localization.py`, in CI as well as locally. Enabling them
+  surfaced a stale test: `test_preview_text_is_unchanged_by_the_backend_switch` re-implemented
+  the preview's format string inline and compared against that, so it tested the format rather
+  than the python-vs-pyarrow invariant the file exists to pin. It now compares
+  `_spreadsheet_preview` against itself under both backends, and skips when `pyarrow` is absent.
 - **Scoring now localizes a failure instead of only saying "values did not match".** On run
   30762167950, **197 of 639 sealed tasks failed all three test cases**, and the entire signal
   the optimizer got for each was one bit — *wrong* — plus the range name. So it could learn
@@ -370,6 +496,14 @@ All notable changes to cap-evolve are documented here. The format follows
   longer looks like a capability regression.
 
 ### Added
+- **`evograph` — evo-graph weakness-graph algorithm and dashboard view.** New agent-mode
+  algorithm skill (`skills/algorithms/evograph/`, the 20th skill) that clusters failing
+  tasks into a weakness graph to steer edits, plus its own mounted dashboard view
+  (`scripts/view.py` + a self-contained frontend bundle) surfaced inside the cap-evolve
+  dashboard.
+- **Per-algorithm custom dashboard views.** The dashboard backend gains
+  `custom_view.py`; an algorithm skill may ship its own view, iframe-mounted into the
+  run deep-dive alongside the default template.
 - **SWE-bench oracle mode + calibrated smoke selection.** The SWE-bench adapter gains
   `SWEBENCH_ORACLE=1`, which attaches the "Oracle" retrieval context (the file[s] the
   gold patch touches, from `princeton-nlp/SWE-bench_Lite_oracle`'s `text` field) to the
@@ -403,6 +537,69 @@ All notable changes to cap-evolve are documented here. The format follows
   previously every trial ran one Docker-harness subprocess per instance with nothing for
   `--max_workers` to parallelize over, so `SWEBENCH_MAX_WORKERS=10` (already set in CI)
   was a no-op. Adapters that don't implement `score_batch` are unaffected.
+
+### Fixed
+- **tau2 adapter no longer races tau2's global RNG seed** across concurrent trials
+  (`templates/adapters/tau2_bench/adapter.py`), so per-trial `seed` is honest under
+  parallelism.
+- **Optimizer cost is recovered on a non-zero optimizer exit** (`core/cap_evolve/harness.py`)
+  instead of being dropped, so a crashed optimizer iteration still reports its spend.
+
+## [0.1.0] - 2026-07-27
+
+Initial release. Tag [`v0.1.0`](https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0)
+at commit `1a24604`; `core/pyproject.toml` version `0.1.0`. The date is the GitHub
+release's `publishedAt` (`2026-07-27`), not the tag-commit date (`2026-07-26`), because
+Keep a Changelog dates the *release*.
+
+### Added
+- Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
+  significance gate, multi-trial variance, pass^k + pass@k, bootstrap CIs.
+- **19 Agent Skills**: phases (intake, implement-and-check, baseline, evaluate,
+  diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,
+  skill-package), algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
+  **gepa**, **skillopt**, **agent-optimize**), one **run-optimizer** skill backed by
+  `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw,
+  ibm-bob, generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
+- **`gepa`** (flagship): real GEPA — two-stage minibatch-then-full-val economy,
+  per-instance Pareto frontier with frequency-weighted parent sampling, trace-based
+  reflective dataset, round-robin component focus, system-aware merge across lineages,
+  rollout/metric-call budget, eval cache (arXiv:2507.19457).
+- **`skillopt`** (flagship): epochs × mini-batches with a textual learning rate
+  (integer edit budget on a constant|linear|cosine schedule), within-epoch
+  rejected-edit buffer, and a gated epoch-boundary slow/meta update (arXiv:2605.23904).
+- Git-backed iteration store (default) + optimizer memory (MEMORY.md/STATE.md/rejected.jsonl).
+- **Self-contained** `dashboard.html` (no CDN): KPI strip, cumulative-best stair,
+  tasks×iterations pass/fail heatmap, per-iteration diff, lineage tree (merges as
+  multi-parent), optimizer-vs-runner cost/tokens/latency, annotations — plus the
+  `report` phase's `--terminal` ANSI report for in-chat progress.
+- **Claude Code plugin** (`plugins/cap-evolve/`, install `claude --plugin-dir
+  ./plugins/cap-evolve`): every skill as `/cap-evolve:<skill>` (dual-mode: standalone
+  slash command + orchestrator-callable + headless JSON), honesty **hooks** (PreToolUse
+  denies edits to the sealed test/gold; Stop/SubagentStop block until `cap-evolve check`/
+  the gate is green) in **core-owned scripts**, read-only diagnoser + writer proposer
+  subagents, and the `using-cap-evolve` router.
+- Host-agnostic installer.
+- Examples: toy_calc, skillsbench, tau2_airline — the last a
+  real 50-task × 10-trial run, val **0.536 → 0.712** (best candidate `cand_0007`,
+  +0.176 / +32.8% relative; *fit metric*, `train == val == test`, so the test number
+  0.694 pass@1 is not held out). Baseline val, best val and the delta come from
+  [`examples/tau2_airline/run_full/ui/data/runs_run_full.json`](examples/tau2_airline/run_full/ui/data/runs_run_full.json)
+  (`summary.baseline_val = 0.536`, `summary.best_val = 0.712`, `best_id = cand_0007`,
+  `delta_abs = 0.176`, `delta_pct = 32.8`); the sealed-test `0.694` comes from
+  [`examples/tau2_airline/run_full/final.json`](examples/tau2_airline/run_full/final.json)
+  (`test.reward` / `test.pass_at_k.1`). Canonical prose:
+  [`docs/RESULTS.md`](docs/RESULTS.md).
+- **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
+  timeout) from its last completed state instead of starting over. Reopens the run dir
+  (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it
+  no longer fails with `FileExistsError`; skips the baseline when it already ran; picks
+  the loop up at iteration N+1 from the current best (spend, journal, git history, and
+  the test seal are all preserved); and skips a re-finalize when the test seal is already
+  burned. Explicit budget flags (`--max-iterations`, …) **extend** a resumed run. Works
+  across every algorithm — `hill-climb`/`skillopt` already resumed from rollouts, and
+  **`gepa` now reconstructs its full pool/lineage/frontier** from the run dir (a tiny
+  `gepa_state.json` checkpoint + rollouts) so its Pareto search continues where it stopped.
 - **Consuming-LLM profiles.** Declare the runtime/consuming model via `target_model`
   (a concrete model id or a capability tier: `frontier|strong|mid|weak`) in
   `capevolve.yaml`. The optimizer prompt (new `{{TARGET_READER}}` block) and the
@@ -415,16 +612,6 @@ All notable changes to cap-evolve are documented here. The format follows
   surface the consuming model alongside the optimizer model. Blank `target_model`
   preserves prior behavior exactly; optional `target_profile_file` overrides a tier's
   built-in brief. The tau2-airline example opts in (`gpt-oss-120b`, tier `mid`).
-- **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,
-  timeout) from its last completed state instead of starting over. Reopens the run dir
-  (`--run-ts`, else the latest under the base) via `RunDir.create(exist_ok=True)` so it
-  no longer fails with `FileExistsError`; skips the baseline when it already ran; picks
-  the loop up at iteration N+1 from the current best (spend, journal, git history, and
-  the test seal are all preserved); and skips a re-finalize when the test seal is already
-  burned. Explicit budget flags (`--max-iterations`, …) **extend** a resumed run. Works
-  across every algorithm — `hill-climb`/`skillopt` already resumed from rollouts, and
-  **`gepa` now reconstructs its full pool/lineage/frontier** from the run dir (a tiny
-  `gepa_state.json` checkpoint + rollouts) so its Pareto search continues where it stopped.
 - **Six more coding agents as optimizers** — `cursor` (Cursor `cursor-agent`),
   `droid` (Factory Droid), `copilot` (GitHub Copilot CLI), `kimi` (Moonshot Kimi),
   `pi` (earendil-works Pi), and `antigravity` (Google `agy`, a configurable wrapper).
@@ -443,6 +630,7 @@ All notable changes to cap-evolve are documented here. The format follows
 - intake `INPUTS.md` now covers the **runner model + credentials + custom
   OpenAI-compatible/RITS endpoint** and **obtaining/installing a benchmark repo** (with
   the resolved commit recorded), aligning the interview contract with the README.
+
 ### Fixed
 - Scaffolded project adapter template (`templates/project/adapters/adapter.py`) matched
   the real `CapabilityAdapter` contract: abstract `tasks` / `run_target(task, ctx, *, seed)`
@@ -452,12 +640,13 @@ All notable changes to cap-evolve are documented here. The format follows
   stub-probe silently pass.
 - Honest-eval core (`cap_evolve`): seeded splits with a sealed test set,
   significance gate, multi-trial variance, pass^k + pass@k, bootstrap CIs.
-- **19 Agent Skills**: phases (intake, implement-and-check, baseline, evaluate,
-  diagnose, gate, finalize, report), capabilities (system-prompt, tools, mcp-tool,
-  skill-package), algorithms (**hill-climb** with `--focus all|cyclic|hardest-first`,
-  **gepa**, **skillopt**), one **run-optimizer** skill backed by
-  `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw,
-  ibm-bob, generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
+- **20 Agent Skills** (one per `skills/<component>/<name>/SKILL.md`): phases (intake,
+  implement-and-check, baseline, evaluate, diagnose, gate, finalize, report), capabilities
+  (system-prompt, tools, mcp-tool, skill-package), 5 algorithms — 3 run-executable
+  (**hill-climb** with `--focus all|cyclic|hardest-first`, **gepa**, **skillopt**) plus 2
+  agent-mode (**agent-optimize**, **evograph**) — one **run-optimizer** skill backed by
+  `optimizers/registry.yaml` (claude-code, codex, gemini-cli, opencode, openclaw, ibm-bob,
+  generic, mock), and orchestrate + a `using-cap-evolve` session-start router.
 - **`gepa`** (flagship): real GEPA — two-stage minibatch-then-full-val economy,
   per-instance Pareto frontier with frequency-weighted parent sampling, trace-based
   reflective dataset, round-robin component focus, system-aware merge across lineages,
@@ -495,5 +684,24 @@ All notable changes to cap-evolve are documented here. The format follows
   **seal-on-success** (a finalize crash no longer burns the headline); infra-vs-capability
   failures use a structured `Rollout.error` signal instead of substring-matching feedback.
 
-### Notes
+### Fixed
+- **Benchmark CI robustness (skillberry-1 self-hosted runner).** Three fixes so a broken
+  runner or gateway is *loud*, not a silent all-0.000 "success": (1) `ci_setup.sh` now
+  installs + hard-verifies the `claude-code` optimizer CLI — when it was missing the
+  optimizer failed every iteration (`cli_present:false`) and every task reported
+  `best=seed`/0.000; (2) `ci_setup.sh` adds a **model-gateway budget preflight** — one
+  tiny gpt-oss call that aborts with a clear error on `429 budget_exceeded` (the shared
+  LiteLLM gateway hitting its spend cap 429s both the agent and the optimizer, killing
+  every rollout with `INFRASTRUCTURE_ERROR`); (3) `run_suite.sh` iterates the task list on
+  FD 3 (+ `run_task </dev/null`) so the optimizer subprocess reading stdin can no longer
+  DRAIN the here-string and cut the suite off after one task. `metrics.py` now detects an
+  infra-dominated eval (majority trials errored + reward≈0) and renders it as
+  `⚠️ infra-error`, excluding it from the suite mean/flip counts so a gateway outage no
+  longer looks like a capability regression.
+- Scaffolded project adapter template (`templates/project/adapters/adapter.py`) matched
+  the real `CapabilityAdapter` contract: abstract `tasks` / `run_target(task, ctx, *, seed)`
+  / `score`, with `materialize`/`live`/`apply`/`run_batch` documented as optional
+  overrides. The old stub used a stale `run_target(task, candidate_dir, split)` signature
+  and presented `apply` as a 4th abstract method, which a filled-in body could make the
+  stub-probe silently pass.
 - Skill names are hyphenated to comply with the Agent Skills `[a-z0-9-]` rule.

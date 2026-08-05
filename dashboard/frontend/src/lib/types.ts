@@ -88,7 +88,8 @@ export interface RunSummaryDetail {
   delta_pct: number | null
   test_reward: number | null
   test_sealed?: boolean
-  test_pass_k?: number | null
+  /** {k: pass^k}. A k is ABSENT when k > num_trials (undefined ⇒ show "N/A", never 0). */
+  test_pass_k?: Record<string, number> | null
   counts?: { accepted: number; rejected: number; failed: number; seed: number; total: number }
   frontier?: number
   tasks?: string[]

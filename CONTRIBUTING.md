@@ -7,7 +7,7 @@ touching core — you add a self-contained skill.
 ```bash
 git clone <repo> cap-evolve && cd cap-evolve
 pip install -e ./core        # or: export CAPEVOLVE_CORE=$PWD/core
-python -m pytest core/tests -q          # 28 tests, zero API cost
+python -m pytest core/tests -q          # whole suite, zero API cost
 python skills/_registry/build_manifest.py skills   # rebuild the registry
 ```
 

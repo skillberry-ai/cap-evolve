@@ -95,8 +95,10 @@ orchestration_mode: agent           # the conversational agent drives the loop i
     <h2>The <code>agent-optimize</code> algorithm — free-form, fully agentic</h2>
     <p>
       Every algorithm has an Agent-mode loop, so <code>hill-climb</code> / <code>gepa</code> /
-      <code>skillopt</code> can all be agent-driven. The one purpose-built for agent mode is
-      <code>agent-optimize</code>: no fixed schedule, no delegated optimizer. The agent owns the
+      <code>skillopt</code> can all be agent-driven. Two algorithms are built for this mode and run
+      <em>only</em> here: <code>agent-optimize</code> (free-form, below) and <code>evograph</code>
+      (collaborative weakness-graph search).
+      <code>agent-optimize</code> has no fixed schedule and no delegated optimizer — the agent owns the
       whole search, bounded only by the honesty invariants (code-enforced) and the free-text
       <code>stop_condition</code> it re-reads with the run-dir spend.
     </p>

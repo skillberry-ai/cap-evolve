@@ -114,7 +114,7 @@ class MlflowObserver:
     @classmethod
     def from_state(cls, state: dict[str, Any]) -> "MlflowObserver":
         tracking_uri = state.get("tracking_uri", "")
-        return cls(
+        obs = cls(
             run_id=state["run_id"],
             tracking_uri=tracking_uri,
             experiment_name=state.get("experiment_name", "cap-evolve"),
@@ -124,6 +124,7 @@ class MlflowObserver:
         )
         if "created_at_ms" in state:
             obs._created_at_ms = int(state["created_at_ms"])
+        return obs
 
     # ---- helpers -----------------------------------------------------------
 
@@ -311,7 +312,7 @@ class MlflowObserver:
         return self._run_id
 
     def _link_traces_to_run(self) -> None:
-        """Tag all unlinked traces in this experiment with this run's ID."""
+        """Tag this run's unlinked traces in the experiment with this run's ID."""
         if not self._tracking_uri:
             return
         import time
@@ -331,6 +332,8 @@ class MlflowObserver:
                 if "mlflow.source.run_id" in tags:
                     continue
                 if t.info.timestamp_ms and t.info.timestamp_ms < self._created_at_ms:
+                    continue
+                if tags.get("run_dir") != self._run_dir_root:
                     continue
                 client.set_trace_tag(
                     t.info.request_id,
