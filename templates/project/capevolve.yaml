@@ -92,3 +92,28 @@ max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command
 # store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)
+
+# --- run display name (optional, for MLflow/telemetry) ----------------------
+# run_name: my-experiment-v1       # custom name shown in MLflow UI
+#   (auto-generated from algorithm + optimizer + capabilities if omitted)
+
+# --- observability (optional, requires capevolve-telemetry) ------------------
+# Observers receive every RunDir event and forward to external systems.
+# Install: pip install capevolve-telemetry[all]   (or [mlflow] / [otel])
+# Requires PyYAML (pulled in by mlflow).
+#
+# MLflow metrics + OTel traces routed to MLflow's Traces tab:
+# observers:
+#   - backend: mlflow
+#     tracking_uri: http://localhost:5000
+#     experiment_name: cap-evolve
+#   - backend: otel
+#     mlflow_tracking_uri: http://localhost:5000
+#     experiment_name: cap-evolve
+#     service_name: cap-evolve-engine
+#
+# OTel traces to a standalone collector (Jaeger, Grafana Tempo):
+# observers:
+#   - backend: otel
+#     endpoint: http://localhost:4318/v1/traces
+#     service_name: cap-evolve-engine

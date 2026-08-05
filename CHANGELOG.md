@@ -8,7 +8,54 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **Live terminal progress: `cap-evolve run --follow` and `cap-evolve tail` (#116).** A
+  classic run was silent for its whole duration — a hung multi-hour run looked exactly
+  like a working one. Both new surfaces render human-readable progress (stage, baseline,
+  per-candidate accept/reject + reason, budget warnings, optimizer errors, finalize, plus
+  a running cost/token meter) from the run's `events.jsonl`. The byte-offset tail is now
+  ONE shared helper — `cap_evolve.eventstream` — consumed by the CLI *and* by the
+  dashboard's SSE route, so the terminal and the web view can never disagree. `--follow`
+  writes to stderr, leaving stdout as the machine-readable final JSON; output is plain
+  text on any non-TTY (piped, CI, `NO_COLOR`). Default behavior is unchanged.
+
+  Hardened after review: a malformed event can no longer kill the follower (and if the
+  follower does stop, it says so on stderr instead of going dark); every rendered line is
+  stripped of control characters, so an optimizer's stderr cannot drive the terminal or
+  forge a progress line; the cost meter counts runner spend from `evaluate` and optimizer
+  spend from `step` exactly once, matching the run's own `Spent.total_usd`; `--follow` is
+  disabled rather than falling back to stdout when stderr is closed (`2>&-`); and
+  `follow_events` yields a typed `_follow_end` sentinel naming *why* it stopped
+  (`stop_kind` / `idle` / `should_stop`). `cap-evolve tail` exits `2` on an impossible run
+  dir and `3` on an idle timeout with no events.
+
 ### Fixed
+- **The COVERAGE diagnostic measured the agent against the wrong denominator, and so scolded
+  correct answers.** It compared how many cells the agent filled against the SIZE of
+  `answer_position`, and complained when the ratio was low. But measured across all 912 tasks,
+  the expected output fills **under a quarter of that range on 90 of them (10.1%)** and under 60%
+  on 203 (22.8%) — so on a tenth of the benchmark a *perfect* answer was told *"Most of the target
+  range was left unfilled — check where the data actually ends"*. Task `56427` in pilot
+  30906175891 got exactly that: it filled 15 cells, the expected output fills 20, the span is 324.
+  It was scolded for ~300 cells it was never meant to write while its real defects (14 numbers
+  written as text, 5 cells left empty) went unnamed. Conversely `50051` filled 32 of 32 and was
+  told nothing at all, when the expected output fills **3** — its whole bug was writing 29 cells
+  that should stay empty. COVERAGE now states the expected fill alongside the span, and the
+  "mostly unfilled" warning is measured against that expected fill. When the gold cannot be read
+  no fill claim is made at all, rather than guessed — guessing is what made this wrong. Same
+  defect class as the TYPE-direction bug below, and 10× the blast radius.
+- **`answer_position` strings the parser could not read made a task silently invisible.** 23 of
+  the 912 tasks (2.5%) quote their range in ways the strict pattern rejected, in seven families:
+  `'Vendor!'A1:D101` (the `!` quoted with the sheet, 16 tasks), `'Data'!'A2:C150` (quote before
+  the range), `'T_Data!A1:AB700'` (quotes wrapping sheet and range together),
+  `'Received'!'Received!A1:G16'` (sheet named twice), `'Sheet1'!BD2:308` (end *column* omitted,
+  not the row), and `G12：J15` (a full-width U+FF1A colon). Every localization signal AND the
+  agent-facing `TARGET SIZE` line route through `_range_cells`, so those tasks received the
+  one-sentence feedback PR #289 existed to eliminate — and their prompts carried no target size
+  at all. Verified on the real dataset: **23 unparseable → 1**, the remaining case being bare
+  `A:G`, which names no rows and is deliberately left skipped rather than given an invented bound.
+  Task `450-9` goes from zero diagnostics to a full localization (212 of 447 cells differing, 38
+  empty, 32 written past the end).
 - **`pass^k` / `pass@k` report as N/A, never a fake `0.0`, when `k > num_trials` (#112).**
   The default `num_trials: 1` run used to print `pass^2 = 0.0`, which reads as "0%
   reliable" when the statistic is simply undefined — and `pass_at_k` was worse, since
@@ -34,6 +81,22 @@ All notable changes to cap-evolve are documented here. The format follows
   a mismatch between two non-textual types (`int` vs `float`) gets no directional claim at all.
 
 ### Added
+- **A `MISMATCH` diagnostic: how many cells differ, and in which named class.** Replaying each of
+  pilot 30906175891's champion failures against the gold shows that **11 of its 17 failures
+  received the line "the target range spans N cell(s); your output has a value in N of them" and
+  nothing else** — full coverage, matching types, so every existing signal was silent. What that
+  silence hid: task `56637` differed in **1 cell of 146**, `5192` in 1 of 3, `53367` in 1 of 1,
+  `11842` in 2 of 96. "1 of 146 cells differs" and "wrong" are different instructions to an
+  optimizer. Each differing cell is now assigned exactly one class, so the counts cannot
+  double-count: the correct value stored as text (`325-44` ×15, `56427` ×14), an Excel error text
+  the agent wrote out (`55931` ×8 `#N/A`), a cell whose expected value *is* an error marker while
+  the agent computed a number (`57232` ×15), values written where the expected output has none
+  (`50051` ×29), text that is a prefix of the expected text (`5192`), and numeric direction when
+  every difference agrees (`11842`, `59743` low; `57090` high). A separate subset count names the
+  cells CHANGED although the expected value equals the cell's own input — which is the entire bug
+  in `56637`. Cheap because it reuses the pass the other signals already make; capped at 50,000
+  cells (4 tasks of 912 span more), and the cap is disclosed in the note rather than silently
+  truncating.
 - **Learning now carries across runs (opt-in warm start).** Every run began from the pristine
   seed, so each explored a different subset of rules and forgot the rest. Measured across the two
   pilots' champions: 30799393875 learned "spill/volatile functions do not survive LibreOffice

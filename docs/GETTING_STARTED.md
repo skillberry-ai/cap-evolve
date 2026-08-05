@@ -43,7 +43,46 @@ This is exactly what `core/tests/test_e2e_slice.py` asserts. The script prints a
 directory; open the `dashboard.html` it writes in any browser to see the run (KPIs,
 per-iteration diffs, the tasks × iterations heatmap).
 
-## 4. Where to next
+## 4. Watch a run live in the terminal
+
+A run is otherwise silent until it finishes. `--follow` prints progress from the run's
+`events.jsonl` — the same typed event stream the web dashboard reads, so the two can
+never disagree:
+
+```bash
+cap-evolve run --spec .capevolve/project/capevolve.yaml --follow
+```
+
+```text
+[14:02:11] splits frozen  train=4 val=2 test=2 (test sealed)
+[14:02:12] baseline  val=0.0000 ±0.0000
+[14:02:40] ACCEPT  cand_0001  val=1.0000 (parent 0.0000)  — paired Δ̄=+1.0000 > 0  [$0.0620 · 4.1k tok]
+[14:03:05] reject  cand_0002  val=1.0000 (parent 1.0000)  — paired Δ̄=+0.0000 <= 0  [$0.1240 · 8.3k tok]
+[14:03:31] FINALIZE  test=1.0000 (baseline 0.0000, Δ+1.0000)  best=cand_0001
+```
+
+Progress goes to **stderr**; stdout stays the machine-readable final JSON, so
+`cap-evolve run --follow > result.json` still works for scripts. Output is plain text
+whenever the stream is not a TTY (piped, CI, `NO_COLOR`) — no ANSI in your logs.
+
+To watch a run started elsewhere (another shell, `nohup`, a CI job), attach to its run
+dir instead:
+
+```bash
+cap-evolve tail                                    # newest run under .capevolve/
+cap-evolve tail .capevolve/run_20260130_140211 --from-start
+```
+
+`tail` waits for the run dir to appear, so you can attach before the run creates it. It
+exits `0` when the run finishes, `2` on a path that can never be a run dir, and `3` when
+`--idle-timeout` elapses with no events — so a script can tell a timeout from a result.
+
+The `[$… · … tok]` meter is the run's own recorded spend: runner cost from `evaluate`
+events plus optimizer cost from `step` events, matching `Spent.total_usd` in `state.json`.
+Event text is stripped of control characters before it reaches your terminal, so an
+optimizer's stderr can never move the cursor, clear the screen, or forge a progress line.
+
+## 5. Where to next
 
 | You want to… | Go to |
 |---|---|

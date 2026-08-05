@@ -21,6 +21,14 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+
+    try:
+        from capevolve_telemetry import load_observers_from_state
+        for obs in load_observers_from_state(run_dir.load_observer_state()):
+            run_dir.add_observer(obs)
+    except Exception:  # noqa: BLE001
+        pass
+
     adapter = load_adapter(Path(args.project))
     best_dir = run_dir.candidate_dir(run_dir.best_id)
     # Also score the unmodified seed (baseline) on the sealed test split, so the headline
@@ -36,6 +44,9 @@ def main(argv=None) -> int:
         )
     payload = harness.finalize(adapter, run_dir=run_dir, best_dir=best_dir,
                                n_trials=args.n_trials, baseline_dir=seed_dir)
+
+    run_dir.close_observers()
+
     print(json.dumps(payload, indent=2))
     return 0
 

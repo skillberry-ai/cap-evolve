@@ -179,6 +179,9 @@ git add records/.gitkeep benchmarks.json meta.json
 git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
 ```
 
+To publish a run the `aggregate` job never handled — one you resumed by hand, or drove directly on
+the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
+
 ### Per-run CapEvolve UI snapshots
 
 Each `bench` job also best-effort-exports its raw `.capevolve` run directory as a static
