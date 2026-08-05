@@ -159,7 +159,9 @@ def main(argv=None) -> int:
         }, indent=2))
         return 0
     finally:
-        run_dir.close_observers()
+        close_observers = getattr(run_dir, "close_observers", None)
+        if callable(close_observers):
+            close_observers()
 
 
 if __name__ == "__main__":
