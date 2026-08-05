@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "capevolve-telemetry"
+version = "0.1.0"
+description = "MLflow and OpenTelemetry observer backends for cap-evolve."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+[project.optional-dependencies]
+mlflow = ["mlflow>=2.10"]
+otel = [
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
+all = ["capevolve-telemetry[mlflow,otel]"]
+dev = ["pytest>=7", "cap-evolve-core"]
+
+[project.urls]
+Repository = "https://github.com/skillberry-ai/cap-evolve"
+
+[tool.setuptools]
+packages = ["capevolve_telemetry"]
+package-dir = { "capevolve_telemetry" = "." }
