@@ -32,6 +32,14 @@ See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
 - **Zero runtime deps in core.** Optional features go behind extras.
 - Add a test for any core change (`core/tests/`). Run `python -m compileall core skills`.
 
+## Publishing benchmark results
+Runs dispatched from **Actions → Benchmarks** publish themselves. When the CI job never got
+there — an interrupted run you resumed by hand, or one driven directly on the runner — see
+[ci/benchmarks/PUBLISHING.md](ci/benchmarks/PUBLISHING.md) for the manual path to the
+[benchmarks page](https://skillberry-ai.github.io/cap-evolve/benchmarks.html). It runs the same
+scripts CI does; disclose hand-finished runs in the record's `source` field rather than passing
+them off as clean CI runs.
+
 ## Quality bar for skills
 - SKILL.md body under ~500 lines (it is the primary doc); references one level deep with a TOC if long, and only when filled.
 - A real `check.py` smoke test (not just an import) that fails on stubs and on
