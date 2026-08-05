@@ -83,6 +83,14 @@ def main(argv=None) -> int:
         return 2
 
     run_dir = RunDir.open(Path(args.run_dir))
+
+    try:
+        from capevolve_telemetry import load_observers_from_state
+        for obs in load_observers_from_state(run_dir.load_observer_state()):
+            run_dir.add_observer(obs)
+    except Exception:  # noqa: BLE001
+        pass
+
     # Record the resolved consuming-LLM profile so report + dashboard can surface it.
     from cap_evolve import target_profile as _tp
     _prof = _tp.resolve(args.target_model, args.target_profile_file, project_dir=args.project)
@@ -113,6 +121,8 @@ def main(argv=None) -> int:
         target_model=args.target_model,
         target_profile_file=args.target_profile_file,
     )
+    run_dir.close_observers()
+
     print(json.dumps(result, indent=2))
     return 0
 

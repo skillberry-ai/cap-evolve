@@ -31,11 +31,16 @@ except at finalize; gate acceptance on val with a paired significance gate.
 - [CONTRIBUTING.md](CONTRIBUTING.md): dev setup and house rules.
 - [docs/ROADMAP.md](docs/ROADMAP.md): prioritized next work.
 
-## Skills (18; each is skills/<component>/<name>/SKILL.md)
+## Skills (20)
+Counting rule: one skill = one skills/<component>/<name>/SKILL.md, i.e. every row of
+skills/_registry/manifest.json — phases + capabilities + algorithms + optimizers +
+orchestrate.
 - phases: intake, implement-and-check, baseline, evaluate, diagnose, gate, finalize, report
 - capabilities: system-prompt, skill-package, tools, mcp-tool
-- algorithms: hill-climb (--focus all|cyclic|hardest-first), gepa, skillopt
-  (gepa & skillopt are the sample-efficient flagships)
+- algorithms (5): 3 run-executable + 2 agent-mode. Run-executable via `cap-evolve run`:
+  hill-climb (--focus all|cyclic|hardest-first), gepa, skillopt (gepa & skillopt are the
+  sample-efficient flagships). Agent-mode only (orchestration_mode: agent; their
+  scripts/run.py is a loud guard, not a loop): agent-optimize and evograph
 - optimizers: run-optimizer + optimizers/registry.yaml (claude-code, codex, gemini-cli,
   opencode, cursor, droid, copilot, kimi, pi, antigravity, openclaw, ibm-bob, generic,
   mock — one runner resolves the name; the agent set matches obra/superpowers)

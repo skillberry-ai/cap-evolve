@@ -7,20 +7,26 @@
 
 ## The adapter is the whole interface
 
-Everything cap-evolve measures flows through four methods the user implements in
-`.capevolve/project/adapters/adapter.py`. intake's job is to make sure each one
-*can* be implemented from real inputs:
+Everything cap-evolve measures flows through **3 required methods** the user implements in
+`.capevolve/project/adapters/adapter.py` (plus defaulted hooks). intake's job is to make
+sure each one *can* be implemented from real inputs:
 
-| method        | question it answers                              | NEEDED input behind it |
-|---------------|--------------------------------------------------|------------------------|
-| `tasks(split)`| what problems do we evaluate on?                 | tasks dataset          |
-| `run_target(task, capability)` | how do we run the agent under test? | target agent / runner |
-| `score(task, rollout)` | how does a rollout become a reward in [0,1] + feedback? | scorer |
-| `apply(capability, edit)` | how is a proposed edit materialized?      | capability artifact    |
+| method                             | question it answers                              | NEEDED input behind it |
+|------------------------------------|--------------------------------------------------|------------------------|
+| `tasks(split)`                     | what problems do we evaluate on?                 | tasks dataset          |
+| `run_target(task, ctx, *, seed=0)` | how do we run the agent under test?              | target agent / runner  |
+| `score(task, rollout)`             | how does a rollout become a reward in [0,1] + feedback? | scorer          |
+
+The defaulted hooks `materialize(candidate_dir, edits=None)` / `live(candidate_dir)` /
+`apply(candidate_dir, edits=None)` answer "how is a proposed edit materialized and made
+live?". Their defaults already work for file-shaped capabilities, but they still need a
+real **capability artifact** to write into — so that is a NEEDED input too.
 
 If any of these cannot be filled from a real input, the optimization cannot
-produce a meaningful number. That is why those four inputs are NEEDED, not
-RECOMMENDED.
+produce a meaningful number. That is why the tasks dataset, the runner, the scorer and
+the capability artifact are NEEDED, not RECOMMENDED (`inputs/INPUTS.md` lists two more
+NEEDED inputs — metric-extraction source and trajectories path — which back the
+same three methods rather than adding new ones).
 
 ## NEEDED vs RECOMMENDED — and why the split exists
 

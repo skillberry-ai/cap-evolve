@@ -1,6 +1,7 @@
 # Benchmark regression suite
 
-Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench**,
+Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
+spreadsheetbench**,
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
@@ -75,7 +76,24 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
 - **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks
   live under `ci/benchmarks/<bench>/full/tasks.json`; a bench with an empty list simply runs
   zero tasks until populated (see below). `tau2/full/tasks.json` is already populated (50
-  tasks); `swebench` and `skillsbench` are not yet.
+  tasks); `spreadsheetbench/full/tasks.json` is populated with the real 912-task set (fetched
+  separately from `smoke`'s 200-task sample via `SPREADSHEETBENCH_VARIANT=full_912` — see
+  `ci/benchmarks/spreadsheetbench/fetch_data.sh`), matching the population SpreadsheetBench's
+  self-reported leaderboard is computed over; `swebench` and `skillsbench` are not yet.
+  A 912-task run is long — the `bench` job has a 1440min (`24h`) `timeout-minutes` and
+  `full` defaults `SPREADSHEETBENCH_CONCURRENCY` to `8` (vs. smoke's `4`; override either
+  via the env var / workflow input if the runner's Docker headroom can't take it — each
+  container is ~8GB RAM / 2 CPU).
+
+  **`spreadsheetbench` runner prerequisites** (installed on `skillberry-1`):
+  - **LibreOffice** (`sudo dnf install libreoffice-calc`). Scoring uses it to recalculate
+    formula cells before comparing; without it a formula-only cell reads as empty and
+    never matches, so solved tasks silently score 0. The adapter warns rather than fails,
+    so treat `LibreOffice not found` in the log as a broken runner.
+  - **A data dir the sandbox can write to.** The executor image runs as uid 1000 while the
+    runner is uid 1004, so the adapter widens the mode of the output dirs it creates; see
+    `_make_container_writable` in the adapter. A `PermissionError` on `*_output.xlsx` in
+    the traces means that fix regressed.
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
@@ -99,9 +117,9 @@ has a **Type** column + filter.
   Overriding `agent_model` takes precedence over any per-task `agent` a curated `tasks.json`
   entry pins — `run_suite.sh` warns (doesn't fail) on a mismatch so you know it happened.
 - **On a PR — labels:**
-  - **`benchmark-smoke`** / **`benchmark-full`** → run all three benchmarks of that tier.
-  - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` · `skillsbench`)
-    → run just that one (combine labels to run a subset).
+  - **`benchmark-smoke`** / **`benchmark-full`** → run all four benchmarks of that tier.
+  - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` ·
+    `skillsbench` · `spreadsheetbench`) → run just that one (combine labels to run a subset).
 
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests**
   workflow — the same `run_suite.sh` path as above, scoped to a single-task `integration`
@@ -134,7 +152,8 @@ per **suite iteration** (baseline → each hill-climb step → finalize): `optim
 and `eval $`/time. **Latency** is wall-time and hardware-dependent (baseline and
 optimized are both measured on the same run's runner host; treat cross-host/cross-run
 comparisons as indicative only). **Cost/tokens** are hardware-independent, but the
-tau2/skillsbench runners do not surface usage (reads 0); swebench (litellm) does.
+tau2/skillsbench runners do not surface usage (reads 0); swebench and spreadsheetbench
+(both litellm) do.
 
 ## Adding / changing tasks
 

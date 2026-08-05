@@ -44,7 +44,8 @@ for CI.
 Benchmark adapters ship for τ²-bench, SWE-bench, SkillsBench, and generic
 JSONL/HuggingFace datasets. Some committed, reproducible results:
 - τ²-bench airline, held-out 30/10/10 split: sealed test 30.0 → 47.5 (+58% relative).
-- τ²-bench airline, fit-metric 50 tasks: 0.536 → 0.694; the edits were deep tool-code
+- τ²-bench airline, fit-metric 50 tasks: val 0.536 → 0.712 (sealed-test pass@1 0.694,
+  not held out — `train == val == test`); the edits were deep tool-code
   changes (tools.py 593 → 832 lines), not just prompt wording.
 - SkillsBench skill-package optimization, sealed test: 0.556 → 0.667.
 

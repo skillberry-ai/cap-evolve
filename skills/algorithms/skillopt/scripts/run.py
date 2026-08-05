@@ -72,6 +72,14 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+
+    try:
+        from capevolve_telemetry import load_observers_from_state
+        for obs in load_observers_from_state(run_dir.load_observer_state()):
+            run_dir.add_observer(obs)
+    except Exception:  # noqa: BLE001
+        pass
+
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -91,6 +99,8 @@ def main(argv=None) -> int:
         no_regression=args.no_regression, slow_update=args.slow_update,
         slow_update_sample=args.slow_update_sample, algorithm=ALGO, store=store,
     )
+    run_dir.close_observers()
+
     print(json.dumps(result, indent=2))
     return 0
 

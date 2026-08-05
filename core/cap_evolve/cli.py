@@ -23,8 +23,10 @@ already resolves the manifest and validates the spec so the wiring is testable.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -249,6 +251,96 @@ def _resolve_skills(skills_dir: Path) -> dict:
     return json.loads(manifest.read_text()).get("skills", {})
 
 
+def _step_failure(step: str, proc) -> dict:
+    """Build the failure record for a step that exited non-zero.
+
+    Steps run under ``capture_output``, so this record is the ONLY evidence of what
+    happened. A stderr tail alone is not enough: when a step is killed by a signal
+    (the OOM killer, most often) it leaves no Python traceback at all, so the tail is
+    whatever harmless warnings happened to be last and the record reads as if nothing
+    went wrong. The returncode — and, for a signal, its name — is what distinguishes
+    "raised" from "was killed".
+    """
+    rec: dict = {"step": step, "returncode": proc.returncode}
+    if proc.returncode < 0:
+        sig = -proc.returncode
+        try:
+            name = signal.Signals(sig).name
+        except ValueError:
+            name = f"signal {sig}"
+        rec["signal"] = name
+        # Signal-specific, because the remedy differs and a wrong hint sends the reader
+        # to the wrong place: SIGKILL is usually the OOM killer, but SIGSEGV is a native
+        # crash in a C extension and dmesg will say nothing useful about it.
+        if name == "SIGSEGV":
+            rec["hint"] = (
+                f"{step} died in NATIVE code (SIGSEGV), not a Python exception — most likely a "
+                "C extension the adapter pulls in (numpy/pandas in a scorer, a client library). "
+                "cap_evolve enables faulthandler, so look for a 'Fatal Python error' block with "
+                "a native traceback in this record's error field."
+            )
+        else:
+            rec["hint"] = (
+                f"{step} was killed by {name}, not a Python exception — there is no Python "
+                "traceback to find. SIGKILL is usually the OOM killer; check dmesg/journalctl -k."
+            )
+    # Head AND tail. A tail alone loses the crash: a chatty scoring phase can emit tens of
+    # kilobytes AFTER the interesting output, so the window shows routine per-rollout noise
+    # and the record reads as if nothing went wrong (exactly what masked run 30608405812's
+    # SIGSEGV). faulthandler's native traceback lands at the very end, so keep more tail
+    # than head.
+    rec["error"] = _clip(proc.stderr, head=4000, tail=12000)
+    if proc.stdout:
+        rec["stdout_tail"] = proc.stdout[-2000:]
+    return rec
+
+
+def _clip(text: str | None, *, head: int, tail: int) -> str:
+    """Keep the first ``head`` and last ``tail`` characters, marking what was dropped."""
+    text = text or ""
+    if len(text) <= head + tail:
+        return text
+    dropped = len(text) - head - tail
+    return f"{text[:head]}\n\n... [{dropped} chars omitted] ...\n\n{text[-tail:]}"
+
+
+def _json_payload(text: str) -> dict:
+    """Extract a phase subprocess's JSON payload from its captured stdout.
+
+    Phases are *supposed* to print nothing but their JSON object; the harness
+    redirects adapter output to stderr to keep that true. This is the second line of
+    defense: one stray ``print`` anywhere under an adapter used to take down the whole
+    run with ``JSONDecodeError: Expecting value: line 1 column 1`` — after the
+    expensive part had already succeeded and been written to disk. Losing an 11-minute
+    baseline to a log line is not a reasonable failure mode.
+
+    A phase prints its payload LAST, so candidate object starts are tried newest-first
+    and the first one that decodes wins. Raises ``json.JSONDecodeError`` when stdout
+    holds no JSON object at all, so a genuinely broken phase still fails loudly.
+    """
+    text = text or ""
+    with contextlib.suppress(json.JSONDecodeError):
+        return json.loads(text)
+
+    decoder = json.JSONDecoder()
+    # Candidate starts: every line that begins a JSON object, newest first. Matching on
+    # line starts (not every "{" in the buffer) keeps this linear and avoids decoding
+    # from inside a nested object, which would return a fragment of the real payload.
+    starts, offset = [], 0
+    for line in text.splitlines(keepends=True):
+        if line.lstrip().startswith("{"):
+            starts.append(offset + (len(line) - len(line.lstrip())))
+        offset += len(line)
+    for start in reversed(starts):
+        try:
+            obj, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    raise json.JSONDecodeError("no JSON object found in phase stdout", text, 0)
+
+
 def _cmd_run(argv):
     import argparse
     import subprocess
@@ -453,7 +545,8 @@ def _cmd_run(argv):
                 "--stall", str(spec.get("stall", 0)), "--n-trials", str(spec.get("num_trials", 1)),
                 "--max-metric-calls", str(spec.get("max_metric_calls", 0)),
                 "--max-usd", str(spec.get("max_usd", 0.0)),
-                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0))]
+                "--max-optimizer-usd", str(spec.get("max_optimizer_usd", 0.0)),
+                "--spec", str(args.spec)]
     if spec.get("split_ids_file"):
         base_cmd += ["--split-ids", str(spec["split_ids_file"])]
     # reuse_baseline: copy a prior run's split/baseline/seed/val-rollouts and skip the
@@ -467,8 +560,8 @@ def _cmd_run(argv):
     proc = run(base_cmd)
     if proc.returncode != 0:
         print(json.dumps({"step": "baseline", "error": proc.stderr[-1500:]}))
-        return done(1)
-    run_dir = json.loads(proc.stdout)["run_dir"]
+        return 1
+    run_dir = _json_payload(proc.stdout)["run_dir"]
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.
@@ -586,8 +679,8 @@ def _cmd_run(argv):
         alg_cmd += _shlex.split(str(spec["algorithm_args"]))
     proc = run(alg_cmd)
     if proc.returncode != 0:
-        print(json.dumps({"step": "algorithm", "error": proc.stderr[-1500:]}))
-        return done(1)
+        print(json.dumps(_step_failure("algorithm", proc)))
+        return 1
 
     # 3) finalize  4) report
     last = proc.stdout
@@ -609,8 +702,8 @@ def _cmd_run(argv):
         cmd += extra
         proc = run(cmd)
         if proc.returncode != 0:
-            print(json.dumps({"step": step, "error": proc.stderr[-1500:]}))
-            return done(1)
+            print(json.dumps(_step_failure(step, proc)))
+            return 1
         last = proc.stdout
 
     print(last)

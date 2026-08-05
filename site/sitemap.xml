@@ -45,4 +45,14 @@
     <lastmod>2026-07-24</lastmod>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/harbor.html</loc>
+    <lastmod>2026-07-28</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/harbor-openshift.html</loc>
+    <lastmod>2026-07-28</lastmod>
+    <priority>0.6</priority>
+  </url>
 </urlset>

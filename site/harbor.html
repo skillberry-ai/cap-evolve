@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harbor integration — cap-evolve</title>
+  <meta name="description" content="Optimize agent capabilities with cap-evolve using Harbor for sandboxed benchmark execution. Any agent, any benchmark, any environment — Docker, OpenShift, or cloud.">
+  <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/harbor.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="cap-evolve">
+  <meta property="og:title" content="Harbor integration — cap-evolve">
+  <meta property="og:description" content="Optimize agent capabilities with cap-evolve using Harbor for sandboxed benchmark execution.">
+  <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/harbor.html">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Harbor integration — cap-evolve">
+  <meta name="twitter:description" content="Run cap-evolve evaluations in isolated Docker containers via Harbor.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="style.css?v=20260724b">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./"><img src="assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <div class="nav-links">
+      <a href="getting-started.html">Get started</a>
+      <a href="run-end-to-end.html">Run end-to-end</a>
+      <a href="results.html">Results</a>
+      <a href="benchmarks.html">Benchmarks</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="agent-orchestration.html">Agent mode</a>
+      <a href="harbor.html" class="active">Harbor</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+
+  <h1>Harbor integration</h1>
+  <p class="lead">
+    Use <a href="https://www.harborframework.com/">Harbor</a> as cap-evolve's
+    sandboxed evaluation backend — any
+    <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">agent</a>,
+    any <a href="https://hub.harborframework.com/datasets">benchmark</a>,
+    any environment (<code>-e docker</code>, <code>-e openshift</code>,
+    <code>-e daytona</code>, <code>-e modal</code>).
+  </p>
+
+  <h2>How it works</h2>
+  <p>cap-evolve optimizes; Harbor evaluates. The <strong>Harbor adapter</strong>
+  (<code>templates/adapters/harbor/adapter.py</code>) is the bridge — its
+  <code>run_batch()</code> calls <code>harbor run</code> as a subprocess each
+  time cap-evolve needs an evaluation. You never call <code>harbor run</code>
+  directly; cap-evolve does it for you.</p>
+
+<pre><code>you run:   cap-evolve run --spec .capevolve/project/capevolve.yaml
+             │
+cap-evolve:  hill_climb_loop()
+             ├── evaluate → adapter.run_batch()
+             │     └─ harbor run -d &lt;dataset&gt; -a &lt;agent&gt; -m &lt;model&gt; -e &lt;env&gt;
+             │           ├─ container/pod 1: agent + verifier → reward
+             │           ├─ container/pod 2: agent + verifier → reward
+             │           └─ ...
+             │     adapter reads reward.json → cap-evolve Score
+             ├── gate: accept if mean(Δ) &gt; k × SE(Δ)
+             ├── optimizer edits SKILL.md based on failed trajectories
+             └── repeat → finalize on sealed test split</code></pre>
+
+  <h2>Setup</h2>
+
+  <p>Assumes cap-evolve is already installed
+  (<a href="getting-started.html">getting started</a>).</p>
+
+<pre><code># 1. Install Harbor + adapter utilities
+uv tool install harbor              # CLI (v0.20+)
+pip install ./capevolve_harbor
+
+# 2. Copy the Harbor adapter into your project
+cp -r templates/adapters/harbor/* .capevolve/project/adapters/</code></pre>
+
+  <p>This places <code>adapter.py</code> (the Harbor bridge) and a seed
+  <code>SKILL.md</code> into your project. The adapter reads all Harbor config
+  from environment variables at runtime.</p>
+
+  <h2>Configure and run</h2>
+
+<pre><code># What Harbor runs
+export HARBOR_DATASET=&lt;org/dataset&gt;        # registry: swe-bench/swe-bench-verified
+                                            # or local: /path/to/dataset
+export HARBOR_AGENT=&lt;agent&gt;                 # claude-code, codex, opencode, ...
+export HARBOR_MODEL=&lt;model&gt;                 # claude-sonnet-4-6, gpt-4.1, ...
+export HARBOR_TASK_IDS=&lt;task1,task2,...&gt;     # which tasks to optimize on
+export HARBOR_TASK_PREFIX=&lt;dataset-org&gt;     # e.g. swe-bench
+
+# Where Harbor runs
+export HARBOR_EXTRA_FLAGS="-e docker -n 4"  # local Docker
+# or: "-e openshift -n 5 --ae KEY=VALUE"   # OpenShift pods
+# or: "-e daytona -n 100"                  # cloud
+
+# Run the optimization
+cap-evolve run --spec .capevolve/project/capevolve.yaml</code></pre>
+
+  <p>Each iteration, cap-evolve calls <code>harbor run</code> with the current
+  candidate skill, collects rewards, gates the edit, and repeats. Output lands in
+  <code>.capevolve/run_&lt;timestamp&gt;/</code> with <code>report.md</code>,
+  <code>dashboard.html</code>, and the optimized <code>candidates/best/SKILL.md</code>.</p>
+
+  <h2>Running on OpenShift</h2>
+  <p>Use <code>-e openshift</code> to run task pods on your cluster. The
+  orchestrator (cap-evolve + Harbor CLI) runs as a Job; Harbor creates one task
+  pod per benchmark trial on the same cluster.</p>
+
+  <h3>RBAC (once per namespace)</h3>
+<pre><code>oc apply -f openshift/manifests/service-account.yaml          # harbor-task SA + SCC
+oc apply -f openshift/manifests/harbor-orchestrator-sa.yaml   # orchestrator SA + RBAC
+oc adm policy add-scc-to-user harbor-task-scc -z harbor-task
+oc adm policy add-scc-to-user harbor-task-scc -z harbor-orchestrator</code></pre>
+
+  <h3>Orchestrator image</h3>
+  <p>Adds Harbor + <code>oc</code> to the cap-evolve runner image:</p>
+<pre><code>FROM quay.io/&lt;your-org&gt;/cap-evolve-runner:latest
+USER root
+RUN apt-get update -qq &amp;&amp; apt-get install -y -qq curl &amp;&amp; \
+    curl -sL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz \
+      | tar xzf - -C /usr/local/bin oc kubectl &amp;&amp; \
+    apt-get remove -y curl &amp;&amp; rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir "harbor&gt;=0.20.0"
+COPY capevolve_harbor/ /app/capevolve_harbor/
+COPY templates/adapters/harbor/ /app/templates/adapters/harbor/</code></pre>
+<pre><code>podman build --platform linux/amd64 -t quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest .
+podman push quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest</code></pre>
+
+  <h3>Credential patterns (<code>--ae</code> flags)</h3>
+  <table>
+    <thead><tr><th>Backend</th><th>Flags</th></tr></thead>
+    <tbody>
+      <tr><td>On-cluster vLLM</td><td><code>ANTHROPIC_BASE_URL=http://&lt;svc&gt;.&lt;ns&gt;.svc:8000 ANTHROPIC_API_KEY=dummy ANTHROPIC_MODEL=&lt;model&gt;</code></td></tr>
+      <tr><td>Anthropic API</td><td><code>ANTHROPIC_API_KEY=sk-ant-...</code></td></tr>
+      <tr><td>Vertex AI</td><td><code>CLAUDE_CODE_USE_VERTEX=1 CLOUD_ML_REGION=&lt;r&gt; ANTHROPIC_VERTEX_PROJECT_ID=&lt;p&gt;</code> + <code>--mounts-json</code> for GCP credentials</td></tr>
+      <tr><td>OpenAI / Codex</td><td><code>OPENAI_API_KEY=sk-...</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>For on-cluster model serving, see
+  <a href="harbor-openshift.html">vLLM on OpenShift</a>.</p>
+
+  <h2>Configuration</h2>
+  <table>
+    <thead><tr><th>Variable</th><th>Example</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>HARBOR_DATASET</code></td><td><code>swe-bench/swe-bench-verified</code></td><td>Registry dataset or local path</td></tr>
+      <tr><td><code>HARBOR_AGENT</code></td><td><code>claude-code</code></td><td>Any <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agent</a></td></tr>
+      <tr><td><code>HARBOR_MODEL</code></td><td><code>claude-sonnet-4-6</code></td><td>Model for the agent</td></tr>
+      <tr><td><code>HARBOR_TASK_IDS</code></td><td><code>task-1,task-2,...</code></td><td>Tasks to optimize on (required for registry datasets)</td></tr>
+      <tr><td><code>HARBOR_TASK_PREFIX</code></td><td><code>swe-bench</code></td><td>Dataset org prefix for task name mapping</td></tr>
+      <tr><td><code>HARBOR_PARALLEL</code></td><td><code>5</code></td><td>Concurrent trials</td></tr>
+      <tr><td><code>HARBOR_TIMEOUT</code></td><td><code>900</code></td><td>Per-task timeout (seconds)</td></tr>
+      <tr><td><code>HARBOR_EXTRA_FLAGS</code></td><td><code>-e openshift --no-delete</code></td><td>Passed to <code>harbor run</code></td></tr>
+      <tr><td><code>HARBOR_JOBS_DIR</code></td><td><code>./harbor-jobs</code></td><td>Job output directory</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Benchmarks and agents</h2>
+  <p>Any <a href="https://hub.harborframework.com/datasets">Harbor dataset</a> and
+  any <a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agent</a>
+  work — set <code>HARBOR_DATASET</code> and <code>HARBOR_AGENT</code>.</p>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://www.harborframework.com/docs">Harbor documentation</a></li>
+    <li><a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agents</a></li>
+    <li><a href="https://hub.harborframework.com/datasets">Harbor datasets</a></li>
+    <li><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/templates/adapters/harbor/adapter.py">Harbor adapter source</a></li>
+    <li><a href="harbor-openshift.html">OpenShift guide</a> — vLLM, RBAC, credentials, Job manifest</li>
+    <li><a href="https://github.com/opendatahub-io/agent-eval-harness/blob/main/docs/harbor-workflow.md">agent-eval-harness Harbor workflow</a></li>
+    <li><a href="https://github.com/redhat-et/coding_agent_bench">coding_agent_bench</a> — SWE-bench on OpenShift</li>
+  </ul>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div class="footer-affil">
+      <span>Made at</span>
+      <span class="footer-affil-logos">
+        <img src="assets/ibm-logo.svg" alt="IBM" class="logo-ibm">
+        <img src="assets/redhat-logo.svg" alt="Red Hat" class="logo-redhat">
+      </span>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js?v=20260724" defer></script>
+</body>
+</html>

@@ -142,7 +142,7 @@ resolves the name via `skills/optimizers/registry.yaml`:
 ```yaml
 capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
 optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
-algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt
+algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt | agent-optimize | evograph (last two REQUIRE orchestration_mode: agent)
 num_trials: 4
 store: git                                # versions every iteration
 ```
