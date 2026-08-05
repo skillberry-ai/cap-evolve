@@ -117,7 +117,8 @@ def test_no_other_benchmark_opted_into_a_committed_split():
     side effect, so this test is the place it gets noticed.
     """
     expected = {"ci/benchmarks/spreadsheetbench/full/split_ids.json",
-                "ci/benchmarks/spreadsheetbench/pilot/split_ids.json"}
+                "ci/benchmarks/spreadsheetbench/pilot/split_ids.json",
+                "ci/benchmarks/swebench/full/split_ids.json"}
     found = {p.relative_to(REPO).as_posix()
              for p in (REPO / "ci" / "benchmarks").glob("*/*/split_ids.json")}
     unexpected = sorted(found - expected)

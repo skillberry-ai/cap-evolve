@@ -216,6 +216,9 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
             "SB_SCORING": "hard", "SB_WARM_SEED": "1",
         },
+        "ci/benchmarks/swebench/full/overrides.env": {
+            "SWEBENCH_ADAPTER": "harbor",
+        },
     }, "a tier gained or changed a committed override — say which and why in the PR"
 
 
