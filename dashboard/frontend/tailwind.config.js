@@ -19,8 +19,11 @@ export default {
         seed: 'var(--seed)',
       },
       fontFamily: {
-        sans: ['"Fira Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['"Fira Code"', 'ui-monospace', 'monospace'],
+        // No webfont: system stacks only, so the SPA renders offline/air-gapped.
+        // Defined once in src/index.css :root — referenced here so the utilities
+        // and the raw body/.tnum rules can never drift apart.
+        sans: 'var(--font-sans)',
+        mono: 'var(--font-mono)',
       },
       fontVariantNumeric: ['tabular-nums'],
       boxShadow: {

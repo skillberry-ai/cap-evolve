@@ -5,6 +5,7 @@ redacted before they reach the artifact, and optional panels degrade silently.
 
 import html.parser
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -243,3 +244,56 @@ def test_no_target_profile_event_leaves_summary_none():
         r = dashboard.reduce_run(rd)
         assert r["summary"]["target_profile"] is None
         assert "consuming model" not in dashboard.render_ansi(r, color=False)
+
+
+# ---- SPA + shipped bundles: offline/air-gapped (no CDN) -------------------
+
+def test_shipped_spa_bundles_have_no_external_cdn_reference():
+    """The self-contained dashboard.html is guarded above; the React SPA and the
+    committed prebuilt bundles served at runtime need the same guarantee, or the
+    "zero runtime deps / offline" story silently breaks in air-gapped evals.
+    Regression guard for issue #120 (a CDN webfont @import in index.css).
+
+    Deliberately NOT a denylist of known CDN hosts: that only ever catches the
+    CDNs someone already thought of (fonts.bunny.net, typekit.net, the next one).
+    We ban the *shape* — any absolute http(s) subresource — with a tiny allowlist.
+    Targets are discovered by glob, so a bundle added later is covered by
+    construction, and a floor on the discovered count fails loudly if one vanishes.
+    """
+    exts = {".css", ".js", ".jsx", ".ts", ".tsx", ".html"}
+    # Every shipped/served bundle dir, discovered — not enumerated.
+    bundles = sorted(
+        p for pat in ("**/dist", "**/ui") for p in REPO.glob(pat)
+        if p.is_dir() and "node_modules" not in p.parts
+        and p.relative_to(REPO).parts[0] != "site"  # site/ is issue #123
+    )
+    # Glob alone can't notice a bundle that MOVED (it just stops finding it), so the
+    # known served bundles are also named and asserted to exist. Glob = new coverage,
+    # this list = no silent loss of coverage.
+    required = [
+        REPO / "dashboard" / "frontend" / "src",
+        REPO / "dashboard" / "frontend" / "index.html",
+        REPO / "dashboard" / "frontend" / "dist",
+        REPO / "skills" / "algorithms" / "evograph" / "dashboard" / "frontend" / "dist",
+        REPO / "examples" / "tau2_airline" / "run_full" / "ui",
+    ]
+    targets = sorted(set(bundles) | set(required))
+    # Anything absolute in a subresource position: @import, url(), href=, src=, import from.
+    external = re.compile(
+        r"""(?:@import\s+|url\(|href\s*=\s*|src\s*=\s*|from\s+)['"]?\s*"""
+        r"""(https?://([A-Za-z0-9.\-]+)[^'"\s)]*)""")
+    allowed = {"localhost", "127.0.0.1", "www.w3.org", "w3.org"}  # SVG/XML ns, dev server
+    checked = 0
+    for t in targets:
+        assert t.exists(), f"guard target vanished (renamed/moved?): {t}"
+        files = [t] if t.is_file() else sorted(
+            p for p in t.rglob("*") if p.is_file() and p.suffix in exts)
+        for p in files:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            checked += 1
+            for url, host in external.findall(text):
+                assert host in allowed, (
+                    f"{p.relative_to(REPO)} loads an external subresource: {url[:120]}")
+    # Floors: a vanished bundle dir or an emptied bundle must fail, not silently pass.
+    assert len(bundles) >= 4, f"expected >=4 bundle dirs, discovered {len(bundles)}: {bundles}"
+    assert checked >= 60, f"expected >=60 shipped SPA files, checked only {checked} — paths moved?"
