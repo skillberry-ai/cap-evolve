@@ -18789,7 +18789,7 @@
     "iterations": 7,
     "trials": 1,
     "agent_model": "claude-sonnet-4-6",
-    "optimizer_model": "claude-sonnet-4-6",
+    "optimizer_model": "claude-opus-4-6",
     "gate_k_se": 1.0,
     "warm_seed": false,
     "conclusion": "success",
