@@ -1,0 +1,1193 @@
+{
+  "run_id": "manual__full-rh-swebench-v4",
+  "run_url": "https://github.com/skillberry-ai/cap-evolve/pull/290",
+  "bench": "rh-swebench",
+  "tier": "full",
+  "event": "manual",
+  "source": "manual (feat/telemetry-observers)",
+  "pr": 290,
+  "branch": "feat/telemetry-observers",
+  "sha": "be6552400c5884c568acbce5ebc793149318b096",
+  "date": "2026-08-03T00:00:00Z",
+  "iterations": 7,
+  "trials": 1,
+  "agent_model": "claude-sonnet-4-6",
+  "optimizer_model": "claude-sonnet-4-6",
+  "gate_k_se": 1.0,
+  "warm_seed": false,
+  "conclusion": "success",
+  "schema": 1,
+  "tasks": [
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0007",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0009",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0010",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0023",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0025",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0029",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0037",
+      "reward_baseline": 1.0,
+      "reward_opt": 0.0,
+      "reward_delta": -1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0039",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0041",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0042",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0053",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0059",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0061",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0069",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0072",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0082",
+      "reward_baseline": 1.0,
+      "reward_opt": 0.0,
+      "reward_delta": -1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0086",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0093",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0098",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0102",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0103",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0132",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0161",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0163",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0180",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0183",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0194",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0202",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0205",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0208",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0225",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0229",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0230",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0231",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0245",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0246",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0258",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0263",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0264",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0276",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0278",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0297",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0304",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0305",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0309",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0319",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0322",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0323",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0331",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0333",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0342",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0347",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0357",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0359",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0360",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0363",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0370",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0371",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0385",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0388",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0389",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0392",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0395",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0404",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0421",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0425",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0426",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0427",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0428",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0439",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0440",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0442",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0447",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0448",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0461",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0462",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0470",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0471",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0478",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0485",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0496",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0498",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0500",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0507",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0509",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0517",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0519",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0522",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0526",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0536",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0538",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0542",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0543",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0544",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0547",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0550",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0551",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0552",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0554",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0562",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0563",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0572",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0573",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0576",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0578",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0579",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0583",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0587",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0588",
+      "reward_baseline": 0.0,
+      "reward_opt": 1.0,
+      "reward_delta": 1.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0590",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0591",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0593",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0597",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0600",
+      "reward_baseline": 1.0,
+      "reward_opt": 1.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0604",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0606",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0608",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0611",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    },
+    {
+      "bench": "rh-swebench",
+      "tier": "full",
+      "task": "task-0613",
+      "reward_baseline": 0.0,
+      "reward_opt": 0.0,
+      "reward_delta": 0.0,
+      "opt_infra": false
+    }
+  ],
+  "steps": [
+    {
+      "phase": "baseline",
+      "iter": null,
+      "candidate": "seed",
+      "accepted": null,
+      "reward": 0.5798,
+      "optimizer_usd": 0.0,
+      "optimizer_seconds": 0.0,
+      "eval_usd": 0.0,
+      "eval_seconds": 0.0
+    },
+    {
+      "phase": "iterate",
+      "iter": 1,
+      "candidate": "cand_0001",
+      "accepted": true,
+      "reward": 0.6975,
+      "optimizer_usd": 9.32,
+      "optimizer_seconds": 674.23,
+      "eval_usd": 0.0,
+      "eval_seconds": 7061.28
+    },
+    {
+      "phase": "iterate",
+      "iter": 2,
+      "candidate": "cand_0002",
+      "accepted": true,
+      "reward": 0.7647,
+      "optimizer_usd": 8.29,
+      "optimizer_seconds": 959.81,
+      "eval_usd": 0.0,
+      "eval_seconds": 7545.55
+    },
+    {
+      "phase": "iterate",
+      "iter": 3,
+      "candidate": "cand_0003",
+      "accepted": false,
+      "reward": 0.7563,
+      "optimizer_usd": 10.05,
+      "optimizer_seconds": 493.55,
+      "eval_usd": 0.0,
+      "eval_seconds": 8664.8
+    },
+    {
+      "phase": "iterate",
+      "iter": 4,
+      "candidate": "cand_0004",
+      "accepted": false,
+      "reward": 0.7227,
+      "optimizer_usd": 10.07,
+      "optimizer_seconds": 529.77,
+      "eval_usd": 0.0,
+      "eval_seconds": 8492.99
+    },
+    {
+      "phase": "iterate",
+      "iter": 5,
+      "candidate": "cand_0005",
+      "accepted": false,
+      "reward": 0.7059,
+      "optimizer_usd": 8.26,
+      "optimizer_seconds": 648.27,
+      "eval_usd": 0.0,
+      "eval_seconds": 7777.69
+    },
+    {
+      "phase": "iterate",
+      "iter": 6,
+      "candidate": "cand_0006",
+      "accepted": false,
+      "reward": 0.0336,
+      "optimizer_usd": 7.48,
+      "optimizer_seconds": 923.75,
+      "eval_usd": 0.0,
+      "eval_seconds": 1791.09
+    },
+    {
+      "phase": "iterate",
+      "iter": 7,
+      "candidate": "cand_0007",
+      "accepted": false,
+      "reward": 0.7227,
+      "optimizer_usd": 7.29,
+      "optimizer_seconds": 663.14,
+      "eval_usd": 0.0,
+      "eval_seconds": 8281.26
+    }
+  ],
+  "suite": {
+    "reward_base": 0.5798,
+    "reward_opt": 0.7647,
+    "n": 119,
+    "eval_usd": 0.0,
+    "optimizer_usd": 60.75,
+    "eval_seconds": 56147.79,
+    "optimizer_seconds": 4892.53
+  },
+  "has_ui": true
+}
