@@ -31,6 +31,30 @@ def _as_k_dict(v) -> dict:
     return {}
 
 
+def has_valid_trials(pt) -> bool:
+    """Did this task produce at least one real measurement?
+
+    ``raw.valid_trials`` is written by the harness as the count of trials whose
+    rollout carried NO ``error``. A task at 0 was never actually run (image build
+    failure, agent-setup timeout, runner crash), so its reward is missing data
+    rather than evidence of failure, and it must stay out of the split mean and
+    out of paired deltas.
+
+    Tolerant of shapes that predate the field: older run dirs and hand-built
+    Scores have no ``valid_trials``, and for those we fall back to "at least one
+    trial did not error", finally defaulting to True so absent metadata can never
+    silently erase a task from a mean.
+    """
+    raw = (pt.get("raw") if isinstance(pt, dict) else getattr(pt, "raw", None)) or {}
+    if "valid_trials" in raw:
+        return int(raw.get("valid_trials") or 0) > 0
+    n = raw.get("n_trials")
+    errored = raw.get("errored_trials")
+    if n is not None and errored is not None:
+        return int(errored) < int(n)
+    return True
+
+
 @dataclass
 class SplitResult:
     """Aggregate evaluation of one candidate on one split."""
@@ -45,6 +69,19 @@ class SplitResult:
     cost_usd: float = 0.0
     tokens: int = 0
     seconds: float = 0.0
+    # Honest denominator: how many of the split's tasks actually produced a
+    # measurement. ``reward`` is the mean over ``n_scored`` tasks, NOT over
+    # ``n_tasks`` — so a caller can tell "scored 0.08" from "0.08 because two
+    # thirds of the split never ran".
+    n_tasks: int = 0
+    n_scored: int = 0
+
+    @property
+    def coverage(self) -> float:
+        """Fraction of the split that produced a measurement (1.0 if unknown)."""
+        if not self.n_tasks:
+            return 1.0
+        return self.n_scored / self.n_tasks
 
     def to_dict(self) -> dict:
         return {
@@ -57,6 +94,8 @@ class SplitResult:
             "cost_usd": self.cost_usd,
             "tokens": self.tokens,
             "seconds": self.seconds,
+            "n_tasks": self.n_tasks,
+            "n_scored": self.n_scored,
         }
 
     @classmethod
@@ -71,13 +110,24 @@ class SplitResult:
             cost_usd=float(d.get("cost_usd") or 0.0),
             tokens=int(d.get("tokens") or 0),
             seconds=float(d.get("seconds") or 0.0),
+            n_tasks=int(d.get("n_tasks") or 0),
+            n_scored=int(d.get("n_scored") or 0),
         )
 
 
 def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1, 2)) -> SplitResult:
-    """Turn per-task ``Score`` objects into a ``SplitResult`` with honest stats."""
-    means = [s.reward for s in scores]
-    ses = [s.stderr for s in scores]
+    """Turn per-task ``Score`` objects into a ``SplitResult`` with honest stats.
+
+    Tasks that produced NO valid trial are excluded from every statistic. They
+    are still reported in ``per_task`` (nothing is hidden), but counting their
+    0.0 would understate the capability and — worse — hand the optimizer a
+    phantom regression to chase. ``n_tasks``/``n_scored`` expose the real
+    denominator so callers can refuse to gate on a decimated split.
+    """
+    scored = [s for s in scores if has_valid_trials(s)]
+
+    means = [s.reward for s in scored]
+    ses = [s.stderr for s in scored]
     overall = stats.aggregate(means)
     overall_se = stats.combined_stderr(means, ses)
 
@@ -87,7 +137,7 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     # when the truth is "not enough trials". So we OMIT any k > min trials — a
     # missing key is the N/A representation (JSON: absent/null; human surfaces
     # render "N/A"/"—"). k < 1 is undefined too.
-    trials_per_task = [len(s.trial_rewards or [s.reward]) for s in scores]
+    trials_per_task = [len(s.trial_rewards or [s.reward]) for s in scored]
     max_usable_k = min(trials_per_task) if trials_per_task else 0
 
     pk: dict = {}
@@ -95,8 +145,8 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     for k in ks:
         if k < 1 or k > max_usable_k:
             continue
-        rel = [stats.pass_k(s.trial_rewards or [s.reward], k) for s in scores]
-        cap = [stats.pass_at_k(s.trial_rewards or [s.reward], k) for s in scores]
+        rel = [stats.pass_k(s.trial_rewards or [s.reward], k) for s in scored]
+        cap = [stats.pass_at_k(s.trial_rewards or [s.reward], k) for s in scored]
         if rel:
             pk[str(k)] = stats.mean(rel)      # pass^k: reliability (all k pass)
         if cap:
@@ -107,7 +157,9 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
         stderr=overall_se,
         pass_k=pk,
         pass_at_k=pak,
-        per_task=[s.to_dict() for s in scores],
+        per_task=[s.to_dict() for s in scores],   # ALL tasks, including unscored
+        n_tasks=len(scores),
+        n_scored=len(scored),
     )
 
 

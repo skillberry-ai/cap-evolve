@@ -86,12 +86,20 @@ def _extract_task_id(trial_dir: Path) -> str:
 
 
 def _parse_trial(trial_dir: Path, task_id: str) -> TrialResult:
-    """Parse a single trial directory into a TrialResult."""
+    """Parse a single trial directory into a TrialResult.
+
+    ``error`` is set when the trial never produced a score — Harbor raised before
+    or during the verifier (image build failure, agent-setup timeout, agent
+    timeout). That distinction matters: an unscored trial is *missing data*, not a
+    reward of 0.0, and only ``error`` tells the harness to exclude it from the
+    mean instead of feeding the optimizer a phantom regression.
+    """
     tr = TrialResult(task_id=task_id)
 
+    scored = False
     verifier_dir = trial_dir / "verifier"
     if verifier_dir.is_dir():
-        tr.reward, tr.reward_json = _read_reward(verifier_dir)
+        tr.reward, tr.reward_json, scored = _read_reward(verifier_dir)
         tr.verifier_stdout = _read_text(verifier_dir / "test-stdout.txt")
         tr.verifier_stderr = _read_text(verifier_dir / "test-stderr.txt")
 
@@ -103,15 +111,67 @@ def _parse_trial(trial_dir: Path, task_id: str) -> TrialResult:
     if result_path.exists():
         tr.cost_usd, tr.tokens = _extract_cost_tokens(result_path)
 
+    # A reward file is the authoritative "this trial was measured" signal. If one
+    # exists, honour it even alongside an exception (a crash in teardown must not
+    # discard a genuine measurement). Only when nothing scored do we look for the
+    # cause and mark the trial errored.
+    if not scored:
+        tr.error = _read_error(trial_dir)
+
     return tr
 
 
-def _read_reward(verifier_dir: Path) -> tuple[float, dict]:
+def _read_error(trial_dir: Path) -> str:
+    """Why this trial produced no score, as a bounded single-line string.
+
+    Prefers ``result.json``'s structured ``exception_info`` (Harbor's own record)
+    and falls back to the ``exception.txt`` traceback. Returns a generic reason
+    when neither exists, because "no reward and no explanation" is still not a
+    measurement.
+    """
+    info = {}
+    result_path = trial_dir / "result.json"
+    if result_path.exists():
+        try:
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+            info = data.get("exception_info") or {}
+        except (json.JSONDecodeError, ValueError, AttributeError, OSError):
+            info = {}
+
+    if isinstance(info, dict) and (info.get("exception_type") or info.get("exception_message")):
+        etype = str(info.get("exception_type") or "Error")
+        msg = " ".join(str(info.get("exception_message") or "").split())
+        return _clip(f"{etype}: {msg}" if msg else etype)
+
+    text = _read_text(trial_dir / "exception.txt", max_chars=8000)
+    if text.strip():
+        # The last traceback line is the exception itself ("RuntimeError: ...");
+        # everything above it is frames the reader does not need here.
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        for ln in reversed(lines):
+            if not ln.startswith(" ") and ":" in ln:
+                return _clip(" ".join(ln.split()))
+        return _clip(" ".join(lines[-1].split()))
+
+    return "Trial produced no reward and no verifier output (no result recorded)"
+
+
+def _clip(text: str, limit: int = 2000) -> str:
+    """Bound an error string — it flows into feedback, event logs and rollout JSON."""
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _read_reward(verifier_dir: Path) -> tuple[float, dict, bool]:
     """Read reward from verifier output.
 
     Tries reward.json first (``"reward"`` key). Falls back to reward.txt
     only when reward.json is absent or unparseable — a legitimate 0.0 in
     reward.json is honoured as-is.
+
+    Returns ``(reward, reward_json, scored)``. ``scored`` is False when no reward
+    could be read at all, which is the difference between "the verifier scored
+    this 0.0" and "this trial was never scored". Callers must not conflate them:
+    the second is missing data and belongs out of the mean entirely.
     """
     reward_json: dict = {}
 
@@ -120,18 +180,18 @@ def _read_reward(verifier_dir: Path) -> tuple[float, dict]:
         try:
             reward_json = json.loads(rj_path.read_text(encoding="utf-8"))
             if "reward" in reward_json:
-                return float(reward_json["reward"]), reward_json
+                return float(reward_json["reward"]), reward_json, True
         except (json.JSONDecodeError, ValueError):
             pass
 
     rt_path = verifier_dir / "reward.txt"
     if rt_path.exists():
         try:
-            return float(rt_path.read_text(encoding="utf-8").strip()), reward_json
+            return float(rt_path.read_text(encoding="utf-8").strip()), reward_json, True
         except ValueError:
             pass
 
-    return 0.0, reward_json
+    return 0.0, reward_json, False
 
 
 def _read_trajectory(agent_dir: Path) -> Any:

@@ -18,6 +18,10 @@ class GateDecision:
     reason: str
     delta: float
     threshold: float = 0.0
+    #: True when the gate declined to judge at all (not "the edit was bad"). The
+    #: caller must not treat this as a content rejection: it should not count
+    #: toward the stall counter and it says nothing about the candidate's quality.
+    indecisive: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -25,6 +29,7 @@ class GateDecision:
             "reason": self.reason,
             "delta": self.delta,
             "threshold": self.threshold,
+            "indecisive": self.indecisive,
         }
 
 
@@ -55,6 +60,27 @@ def _warn_se_zero(run_dir, mode: str, context: str) -> None:
             context=context)
 
 
+def _warn_low_coverage(run_dir, *, coverage: float, min_coverage: float) -> None:
+    """Log a ``gate_warning`` when too little of the split actually ran.
+
+    Loud and auditable on purpose: a run that keeps producing indecisive steps is
+    burning budget on an infrastructure fault, and the event stream is where an
+    operator (or the CI assert) can see that rather than reading a plausible-looking
+    val score that happens to be meaningless.
+    """
+    if run_dir is None:
+        return
+    log = getattr(run_dir, "log_event", None)
+    if callable(log):
+        log("gate_warning",
+            mode="coverage",
+            reason=("too few val tasks produced a valid score — the gate is "
+                    "declining to judge this candidate. This is an infrastructure "
+                    "failure (runner/environment), not a bad edit: fix the runner "
+                    "before spending more budget."),
+            context=f"coverage={coverage:.3f} < min_coverage={min_coverage:.3f}")
+
+
 def decide(
     current_val: float,
     candidate_val: float,
@@ -68,6 +94,8 @@ def decide(
     candidate_size: int | None = None,
     current_size: int | None = None,
     paired_deltas: list | None = None,
+    coverage: float | None = None,
+    min_coverage: float = 0.6,
     run_dir=None,
 ) -> GateDecision:
     """Decide whether to accept the candidate.
@@ -87,6 +115,14 @@ def decide(
       - ``simplicity_tiebreak``: like strict, but on a (near-)tie prefer the
         smaller candidate (``candidate_size`` < ``current_size``).
 
+    ``coverage`` is the fraction of val tasks that produced a real measurement
+    (``SplitResult.coverage``). Below ``min_coverage`` the gate REFUSES TO JUDGE and
+    returns an ``indecisive`` decision rather than a rejection: when most of the
+    split never ran, the val number describes the infrastructure, not the edit, and
+    calling that a regression both discards a possibly-good candidate and tells the
+    optimizer to go fix content that was never evaluated. Pass ``min_coverage=0.0``
+    to disable the guard.
+
     ``run_dir`` (optional) is used only to log a ``gate_warning`` event when an SE
     collapses to 0 (so the silent degeneration to strict is auditable).
     """
@@ -97,6 +133,17 @@ def decide(
         )
 
     delta = candidate_val - current_val
+
+    if coverage is not None and min_coverage > 0.0 and coverage < min_coverage:
+        pct, bar = coverage * 100.0, min_coverage * 100.0
+        reason = (
+            f"INDECISIVE: only {pct:.0f}% of val tasks produced a valid score "
+            f"(< {bar:.0f}% required). The evaluation measured the infrastructure, "
+            "not the edit — not counted as a rejection."
+        )
+        _warn_low_coverage(run_dir, coverage=coverage, min_coverage=min_coverage)
+        return GateDecision(accept=False, reason=reason, delta=delta,
+                            threshold=0.0, indecisive=True)
 
     if mode == "paired":
         deltas = list(paired_deltas or [])

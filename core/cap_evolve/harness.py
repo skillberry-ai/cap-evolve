@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
-from .loop import SplitResult, aggregate_scores
+from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
 from .types import Rollout, Score, Task
@@ -238,7 +238,8 @@ def evaluate_candidate(
             # `filled` already turned that into a failed rollout above. Do NOT serially
             # re-run it here, which would add a slow tail to every batch evaluation.
             rollout = filled[tid]
-            if getattr(rollout, "error", None):
+            errored = bool(getattr(rollout, "error", None))
+            if errored:
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
@@ -246,9 +247,16 @@ def evaluate_candidate(
             sc = scores_by_id.get(tid)
             if sc is None:  # not in has_score_batch mode, or the batch omitted this id
                 sc = adapter.score(task, rollout)
-            per_task_trials[tid].append(sc.reward)
+            # An errored trial never ran the target, so its reward is not a
+            # measurement — it is missing data. Averaging its 0.0 in would state
+            # that the capability failed a task it was never given, which is how a
+            # Docker Hub 429 storm became a val score of 0.000 and taught the
+            # optimizer to "fix" content that was never at fault. Keep the rollout
+            # file (written below) for forensics, but leave the number out.
+            if not errored:
+                per_task_trials[tid].append(sc.reward)
+                per_task_metrics[tid].append(sc.metrics)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
-            per_task_metrics[tid].append(sc.metrics)
             (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
@@ -302,15 +310,19 @@ def evaluate_candidate(
 
     scores: list[Score] = []
     for tid in task_by_id:
-        tr = per_task_trials[tid]
+        tr = per_task_trials[tid]   # VALID (non-errored) trial rewards only
         # ``raw.errored`` carries the structured infra signal (rollout.error was set
         # on some trial) into the per-task record, so the focus builder can classify
         # uncontrollable failures without substring-matching feedback prose.
+        # ``raw.valid_trials`` is what downstream honesty depends on: 0 means this
+        # task produced no measurement at all and must be excluded from the split
+        # mean and from paired deltas rather than counted as a 0.0.
         scores.append(Score(
             task_id=tid, reward=mean(tr), feedback=per_task_feedback[tid],
             n=n_trials, stderr=stderr(tr), trial_rewards=tr,
             raw={"errored": per_task_errored[tid],
                  "errored_trials": per_task_errored_trials[tid],
+                 "valid_trials": len(tr),
                  "n_trials": n_trials},
             metrics=_aggregate_metrics(per_task_metrics[tid], mean(tr)),
         ))
@@ -343,18 +355,34 @@ def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
-            by_task.setdefault(tid, []).append(float(sc.get("reward", 0.0)))
             feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
-            metrics_by_task.setdefault(tid, []).append(sc.get("metrics") or [])
             # carry the structured infra flag + trial counts forward across resume.
             # Each rollout file is one trial, so count an errored trial here and tally
             # the total trials seen — letting _is_infra_ignore reconstruct the
             # majority-errored condition from disk.
+            #
+            # The authoritative per-trial signal is the persisted ``rollout.error``:
+            # ``score.raw`` is whatever the ADAPTER returned for a single trial, and
+            # adapters (harbor's included) legitimately leave it empty — the errored
+            # flag is synthesised later during per-task aggregation. Reading only
+            # ``score.raw`` therefore reconstructed every infra failure as a real
+            # 0.0 on resume, silently re-introducing the bug this path exists to
+            # carry across.
+            errored = bool((rec.get("rollout") or {}).get("error")
+                           or (sc.get("raw") or {}).get("errored"))
             r0 = raw.setdefault(tid, {})
             r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
-            if (sc.get("raw") or {}).get("errored"):
+            by_task.setdefault(tid, [])
+            if errored:
                 r0["errored"] = True
                 r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
+            else:
+                # Valid trials only — mirrors evaluate_candidate so a resumed score
+                # equals the score the run originally computed.
+                by_task[tid].append(float(sc.get("reward", 0.0)))
+                metrics_by_task.setdefault(tid, []).append(sc.get("metrics") or [])
+    for tid, r0 in raw.items():
+        r0["valid_trials"] = len(by_task.get(tid, []))
     scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
                     n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}),
                     metrics=_aggregate_metrics(metrics_by_task.get(t, []), mean(r)))
@@ -387,7 +415,22 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
                                split="val", n_trials=n_trials, ks=ks, tag="seed")
     (run_dir.root / "baseline.json").write_text(
         json.dumps({"val": result.to_dict(), "best_id": "seed"}, indent=2), encoding="utf-8")
-    run_dir.log_event("baseline", val=result.reward, stderr=result.stderr)
+    run_dir.log_event("baseline", val=result.reward, stderr=result.stderr,
+                      n_scored=result.n_scored, n_tasks=result.n_tasks)
+    # The baseline is the number every later delta is measured against, so a
+    # partially-evaluated one poisons the whole run rather than a single iteration.
+    # Nothing downstream can detect this after the fact — baseline.json looks like a
+    # perfectly ordinary score — so say it loudly, here, once.
+    if result.n_tasks and result.coverage < 1.0:
+        run_dir.log_event(
+            "baseline_incomplete",
+            n_scored=result.n_scored, n_tasks=result.n_tasks,
+            coverage=round(result.coverage, 4), val=result.reward,
+            reason=("the baseline was measured on only part of the val split "
+                    f"({result.n_scored}/{result.n_tasks} tasks produced a score) — "
+                    "the remaining tasks failed with runner/infrastructure errors. "
+                    "Every Δ in this run is measured against this partial number; "
+                    "fix the runner and re-baseline before trusting the result."))
     return result
 
 
@@ -511,13 +554,24 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
     Returns ``None`` if either side lacks per-task data or they share no task ids
     (so the caller falls back to the unpaired significance test). Tasks present in
     only one side are dropped — a paired test needs both halves of the pair.
+
+    A task is also dropped when EITHER side failed to produce a valid trial. This
+    matters more here than anywhere else: pairing is per-task, so an unscored task
+    on the candidate side that the parent happened to pass contributes a full
+    -1.0 delta — the gate reads an infrastructure outage as the single largest
+    regression the candidate could possibly have caused. That is exactly how a
+    Docker Hub 429 storm produced ``paired Δ̄=-0.6400`` and rejected candidates
+    whose content was never evaluated.
     """
-    cur = {pt.get("task_id"): pt.get("reward", 0.0) for pt in (current_val.per_task or [])}
-    cand = {pt.get("task_id"): pt.get("reward", 0.0) for pt in (cand_val.per_task or [])}
-    shared = [t for t in cand if t in cur]
+    cur = {pt.get("task_id"): pt for pt in (current_val.per_task or [])}
+    cand = {pt.get("task_id"): pt for pt in (cand_val.per_task or [])}
+    shared = [t for t in cand
+              if t in cur and has_valid_trials(cand[t]) and has_valid_trials(cur[t])]
     if not shared:
         return None
-    return [float(cand[t]) - float(cur[t]) for t in sorted(shared)]
+    return [float(cand[t].get("reward", 0.0) or 0.0)
+            - float(cur[t].get("reward", 0.0) or 0.0)
+            for t in sorted(shared)]
 
 
 
@@ -1309,7 +1363,7 @@ def run_step(
     decision = gate_mod.decide(
         current_val.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
-        paired_deltas=paired_deltas, run_dir=run_dir,
+        paired_deltas=paired_deltas, coverage=cand_val.coverage, run_dir=run_dir,
         **gate_kwargs,
     )
 
@@ -1317,12 +1371,17 @@ def run_step(
     regressions = []
     if accepted and no_regression:
         # A regression is ANY task whose reward strictly dropped (works for graded
-        # rewards too, not just binary pass/fail).
+        # rewards too, not just binary pass/fail). Restricted to tasks BOTH sides
+        # actually measured — an unscored task is missing data, and treating its
+        # 0.0 as "broke a task the parent passed" would let a single image-pull
+        # failure veto a genuinely better candidate.
         eps = 1e-9
-        parent_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in current_val.per_task}
-        cand_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task}
+        parent_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in current_val.per_task
+                         if has_valid_trials(pt)}
+        cand_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task
+                       if has_valid_trials(pt)}
         regressions = sorted(t for t, pr in parent_reward.items()
-                             if cand_reward.get(t, 0.0) < pr - eps)
+                             if t in cand_reward and cand_reward[t] < pr - eps)
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
@@ -1334,7 +1393,11 @@ def run_step(
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
     if accepted:
         run_dir.set_best(cid)
-    run_dir.update_spent(iterations=1, accepted=accepted)
+    # ``accepted=None`` leaves the stall counter untouched. An indecisive step is not
+    # evidence that the optimizer has run out of ideas — the candidate was never
+    # judged — so it must not push the run toward an early "stalled" stop.
+    run_dir.update_spent(iterations=1,
+                         accepted=None if decision.indecisive else accepted)
     _step_extra = {}
     if isinstance(opt_report, dict):
         _step_extra["optimizer_report"] = opt_report
@@ -1368,6 +1431,14 @@ def run_step(
     if accepted:
         if history is not None:
             history.add(cid, summary, cand_val.reward, note=note, impact=impact)
+    elif decision.indecisive:
+        # Do NOT record an indecisive step as a rejection. The rejected list is fed
+        # back to the optimizer as "these edits did not work" guidance, and an
+        # infrastructure outage says nothing about the edit — filing it there teaches
+        # the optimizer to avoid a change that was never actually evaluated.
+        run_dir.log_event("step_indecisive", candidate=cid, reason=decision.reason,
+                          val=cand_val.reward, n_scored=cand_val.n_scored,
+                          n_tasks=cand_val.n_tasks)
     else:
         if rejected is not None:
             rejected.add(cid, summary, decision.reason, cand_val.reward, note=note, impact=impact)

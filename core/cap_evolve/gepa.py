@@ -61,7 +61,7 @@ from .harness import (
     evaluate_candidate,
     split_result_from_rollouts,
 )
-from .loop import SplitResult, aggregate_scores
+from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir
 from .types import Rollout, Score
 
@@ -704,14 +704,19 @@ def _full_val_gate(
     decision = gate_mod.decide(
         parent_result.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=parent_result.stderr,
-        paired_deltas=paired, run_dir=run_dir, **gk,
+        paired_deltas=paired, coverage=cand_val.coverage, run_dir=run_dir, **gk,
     )
     accepted = decision.accept
     if accepted and no_regression:
         eps = 1e-9
-        pr = {pt["task_id"]: pt.get("reward", 0.0) for pt in parent_result.per_task}
-        cr = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task}
-        regressions = sorted(t for t, v in pr.items() if cr.get(t, 0.0) < v - eps)
+        # Compare only tasks BOTH sides actually measured: an unscored candidate
+        # task is missing data, and reading its 0.0 as "broke a task the parent
+        # passed" would let one image-pull failure veto a genuinely better edit.
+        pr = {pt["task_id"]: pt.get("reward", 0.0) for pt in parent_result.per_task
+              if has_valid_trials(pt)}
+        cr = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task
+              if has_valid_trials(pt)}
+        regressions = sorted(t for t, v in pr.items() if t in cr and cr[t] < v - eps)
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
