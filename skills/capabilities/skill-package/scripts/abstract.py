@@ -32,10 +32,20 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.S)
 XML_TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")  # an actual tag, not a stray "<"
+BLOCK_SCALAR_RE = re.compile(r"^([>|])[+-]?\d*$")  # "description: >-" and friends
+# WHEN can be stated conditionally ("Use when …") or positionally/imperatively
+# ("Use after intake", "Use as the last evaluation step") — both are real triggering
+# signals, so demanding the literal "use when" bigram flags good descriptions.
+SAYS_WHEN_RE = re.compile(
+    r"\bwhen\b|\buse (after|before|as|at|to|between|right|during|only|this|the moment)\b",
+    re.I)
 MAX_BODY_LINES = 500
 MAX_BODY_TOKENS = 5000            # ~chars/4; Level-2 body budget
 CHARS_PER_TOKEN = 4
 LONG_REF_LINES = 300
+TOC_LINK_RE = re.compile(r"\]\(#[^)\s]+\)")   # an in-document anchor link
+TOC_SCAN_CHARS = 1500                         # "early" = within the first ~1.5k chars
+MIN_TOC_LINKS = 3                             # a list of links, not one stray cross-ref
 LISTING_CAP_CHARS = 1536          # description + when_to_use truncation in the listing
 LONG_DESC_CHARS = 1024            # hard cap; also the front-load advisory threshold
 
@@ -45,9 +55,30 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     if not m:
         return {}, text
     fm = {}
-    for line in m.group(1).splitlines():
-        if ":" in line and not line.startswith(" "):
-            k, _, v = line.partition(":")
+    lines = m.group(1).splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if ":" not in line or line.startswith((" ", "\t")):
+            continue
+        k, _, v = line.partition(":")
+        blk = BLOCK_SCALAR_RE.match(v.strip())
+        if blk:
+            # A YAML block scalar ("description: >-") holds its value on the FOLLOWING
+            # indented lines. Without this the value parses as the literal ">-" and
+            # every description check below passes vacuously on it.
+            # ponytail: folds with spaces / keeps newlines for "|", and always strips.
+            # The +/-/digit chomping and indentation indicators only affect trailing
+            # whitespace, which no check here looks at.
+            chunk = []
+            while i < len(lines) and (not lines[i].strip()
+                                      or lines[i].startswith((" ", "\t"))):
+                chunk.append(lines[i].strip())
+                i += 1
+            joiner = " " if blk.group(1) == ">" else "\n"
+            fm[k.strip()] = joiner.join(c for c in chunk if c).strip()
+        else:
             fm[k.strip()] = v.strip().strip('"').strip("'")
     body = text[m.end():]
     return fm, body
@@ -194,7 +225,7 @@ def _validate_one(capability_dir: Path) -> dict:
             problems.append(f"description is {len(desc)} chars (>{LONG_DESC_CHARS})")
         if XML_TAG_RE.search(desc):
             problems.append("description must not contain XML tags")
-        if not re.search(r"\b(use when|when )\b", desc, re.I):
+        if not SAYS_WHEN_RE.search(desc):
             warnings.append("description should say WHEN to use the skill "
                             "('Use when …') — it is the primary triggering signal")
         # point-of-view drift: descriptions must be third person.
@@ -227,13 +258,22 @@ def _validate_one(capability_dir: Path) -> dict:
                 warnings.append(f"references/{sub.name}/ is nested >1 level deep; "
                                 "keep references one level deep")
         for f in refs.glob("*.md"):
-            ln = f.read_text(encoding="utf-8").count("\n") + 1
-            if ln > LONG_REF_LINES and "## " not in f.read_text(encoding="utf-8")[:1500]:
+            ref_text = f.read_text(encoding="utf-8")
+            ln = ref_text.count("\n") + 1
+            # A TOC is a LIST OF ANCHOR LINKS, not merely "some '## ' appears in the
+            # first 1500 chars" — that older condition was satisfied by ordinary prose,
+            # so the check was near-tautological.
+            if ln > LONG_REF_LINES and len(
+                    TOC_LINK_RE.findall(ref_text[:TOC_SCAN_CHARS])) < MIN_TOC_LINKS:
                 warnings.append(f"references/{f.name} is {ln} lines without an early "
-                                "table of contents")
+                                f"table of contents (needs >={MIN_TOC_LINKS} "
+                                "'[section](#anchor)' links up front)")
 
-    # broken reference links the body points at
+    # broken reference links the body points at. A Markdown link may carry an
+    # anchor ("references/x.md#a-heading"); the anchor is not part of the path, so
+    # strip it before the existence check or every deep link reads as broken.
     for rel in re.findall(r"\(((?:references|scripts|assets)/[^)\s]+)\)", body):
+        rel = rel.split("#", 1)[0]
         if not (capability_dir / rel).exists():
             warnings.append(f"SKILL.md references '{rel}' which does not exist")
 
