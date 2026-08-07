@@ -1,1 +1,0 @@
-{"runs":[{"run_id":"run_suite","algorithm":null,"baseline_val":0.5,"best_val":0.5,"delta_pct":0.0,"test_reward":null,"total_usd":3.9024,"tokens":142656,"iterations":1,"series":[{"iteration":0,"best_so_far":0.5},{"iteration":1,"best_so_far":0.5}]}],"tasks":["django__django-11179","django__django-15851","psf__requests-2317","pytest-dev__pytest-7432","sympy__sympy-13480"]}
