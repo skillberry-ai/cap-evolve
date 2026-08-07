@@ -1,0 +1,1 @@
+{"path":"events.jsonl","binary":false,"size":93,"truncated":false,"text":"{\"t\": 1786094583.9811802, \"kind\": \"splits\", \"train\": 100, \"val\": 50, \"test\": 100, \"seed\": 0}\n"}
