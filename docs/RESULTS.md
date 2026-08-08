@@ -14,6 +14,20 @@ Each result is labeled by **split discipline**:
 Reward is mean task reward in `[0, 1]`. Where we quote externally reported results that use 0–100% units, we label them explicitly as percentages.
 Gains are given as **absolute** and **relative %**.
 
+**This page is the superset for cap-evolve's own runs.** Every result claim about a
+cap-evolve run on any other surface — `README.md`, `site/results.html`, `site/index.html`,
+`OUTREACH.md`, `presentation/` — must correspond to a section here, with the same value,
+the same split label, and the same evidence marker. If one of our numbers is not on this
+page, it is not published. Externally reported results (other papers' figures) live in
+[`COMPARISON.md`](COMPARISON.md) with their own citations and are out of scope for this
+rule; measurements that are not cap-evolve run results (e.g. a partner system's tool-API
+error rates) are out of scope too. The `site/results.html` ↔ this-page mapping is the part
+that is **mechanically enforced**, by `core/tests/test_published_results_consistency.py`
+(section identity in both directions, plus the numbers in every mapped results table); the
+other surfaces are convention.
+Numbers from runs whose artifacts are not committed are labeled ⚠️ here and everywhere
+else; run records under [`runs/`](runs/) are the provenance available in-repo for those.
+
 ---
 
 ## toy_calc — deterministic, zero-API
@@ -66,8 +80,8 @@ train=val=30, test=20) so the test number is a genuine generalization result.
 
 | split | baseline | optimized | Δ |
 |---|---|---|---|
-| **val** (30 tasks) | **56.7** | **70.0** | **+13.3 pp / +23.5% relative** |
-| **sealed test** (20 tasks, scored once) | **30.0** | **47.5** | **+17.5 pp / +58.3% relative** |
+| **val** (30 tasks) | **0.567** (56.7%) | **0.700** (70.0%) | **+13.3 pp / +23.5% relative** |
+| **sealed test** (20 tasks, scored once) | **0.300** (30.0%) | **0.475** (47.5%) | **+17.5 pp / +58.3% relative** |
 
 > The held-out `run_full` artifact for this run is committed separately. Until it lands,
 > treat these figures as the reported held-out result; the reproducible artifact-backed
@@ -174,23 +188,53 @@ structured methodology in SKILL.md.
 `[skill-package, system-prompt, tools]` with `hill-climb` outperformed the tools-only run
 (+41.2%) when paired with hill-climb's conservative gating.
 
-## SkillsBench — full 87-task optimization (fit metric, Opus 4.6)
+---
 
-A 3-iteration hill-climb over the same four shared office-document skills as the
-baseline section above, starting from the `run_baseline_opus` frozen baseline
-(reused via `--reuse-baseline`). Same fit-metric split (train == val == test =
-all 87), `num_trials: 1`, paired gate `k_se: 0.2`.
+<a id="skillsbench-87-baselines"></a>
 
-Artifacts under `.capevolve/run_opus_optimize3/` (gitignored, per-run): `SUMMARY.md`,
-`summary.json`, `baseline.json`, `final.json`, `events.jsonl`, `PATCH_NOTE.md`,
-`rollouts/val/*.json` (348: 87 seed + 87 × 3 candidates), `rollouts/test/*.json`
-(174: 87 optimized + 87 baseline-seed).
+## SkillsBench — full 87-task baselines, no optimization — ⚠️ reported, artifact not committed
 
-| | baseline (seed) | best (`cand_0001`) | Δ |
+Two seed-only measurements of the same four shared office-document skill packages
+(`docx`/`pptx`/`xlsx`/`pdf`) across **all 87** SkillsBench tasks, `num_trials: 1`,
+fit-metric split (`train == val == test == 87`), **0 iterations** — these establish
+the starting point the optimization run below climbs from, they are not gains.
+
+| agent under test | run | val_reward | pass@1 (fully passing / 87) | run record |
+|---|---|---|---|---|
+| `claude-opus-4-6` | `run_baseline_opus` | **0.281 ± 0.048** (28.1%) | **23** (26.4%) | [`runs/local-20260729-skillsbench-baseline-opus46.md`](runs/local-20260729-skillsbench-baseline-opus46.md) |
+| `aws/gpt-oss-120b` | `run_baseline_gptoss` | **0.040 ± 0.019** (4.0%) | **2** (2.3%) | [`runs/local-20260729-skillsbench-baseline-gptoss120b.md`](runs/local-20260729-skillsbench-baseline-gptoss120b.md) |
+
+> **⚠️ Reported.** Both ran locally, outside CI (recorded by `bcarmeli`); the run dirs
+> live on the recording host and are **not** committed here. The linked run records are
+> the full provenance available in this repo — per-task rewards, rollout breakdown, and
+> wall-clock — not the artifacts themselves. Under the fit-metric split `test == val` by
+> construction, so neither row is a generalization claim.
+
+---
+
+<a id="skillsbench-87"></a>
+
+## SkillsBench — full 87-task optimization (Opus 4.6) — ⚠️ reported, artifact not committed
+
+A 3-iteration hill-climb over the same four shared office-document skills, starting from
+the `run_baseline_opus` frozen baseline in
+[the baselines section above](#skillsbench-87-baselines) (reused via `--reuse-baseline`).
+Same fit-metric split (train == val == test = all 87), `num_trials: 1`, paired gate
+`k_se: 0.2`. Run record:
+[`runs/local-20260730-skillsbench-opus46-optimize.md`](runs/local-20260730-skillsbench-opus46-optimize.md).
+
+> **⚠️ Reported.** Artifacts live under `.capevolve/run_opus_optimize3/` on the recording
+> host and are **gitignored, per-run** — not committed to this repo: `SUMMARY.md`,
+> `summary.json`, `baseline.json`, `final.json`, `events.jsonl`, `PATCH_NOTE.md`,
+> `rollouts/val/*.json` (348: 87 seed + 87 × 3 candidates), `rollouts/test/*.json`
+> (174: 87 optimized + 87 baseline-seed). The linked run record is the provenance
+> available here; you cannot load this run in the dashboard from this repo.
+
+| split | baseline (seed) | best (`cand_0001`) | Δ |
 |---|---|---|---|
-| val_reward (mean) | 0.281 ± 0.048 | **0.357 ± 0.050** | **+0.076 (+27.2% relative)** |
-| pass_at_1 (fully-passing tasks / 87) | 23 (26.4%) | **28 (32.2%)** | **+5 tasks (+22% relative)** |
-| test_reward (fit metric = val by construction) | 0.281 * | **0.357** | +0.076 |
+| **val** (87, fit) — mean reward | 0.281 ± 0.048 | **0.357 ± 0.050** | **+0.076 (+27.2% relative)** |
+| **val** (87, fit) — pass_at_1 (fully-passing / 87) | 23 (26.4%) | **28 (32.2%)** | **+5 tasks (+22% relative)** |
+| **test** (87, *fit metric* — `test == val` by construction, **not** held out) | 0.281 * | **0.357** | +0.076 |
 
 \* The finalize step's baseline-test re-evaluation broke overnight (VPN drop; every
 task returned 0 across a 5-hour eval); `test_baseline_reward` here is manually
@@ -209,7 +253,8 @@ recording host; the raw broken artifacts remain untouched for audit.
 | 3 | `cand_0003` | `cand_0001` | 0.170 | −0.187 | ✗ large regression |
 
 The optimizer converged to `cand_0001`; two follow-up attempts both regressed
-and were correctly rejected. Optimizer spend: ~$32 total (well below the $400 cap).
+and were correctly rejected. Optimizer spend for this run is **not recorded** in the
+run record, so no cost figure is quoted here.
 
 ### What the optimizer changed (net delta on task passes)
 
@@ -232,10 +277,13 @@ to `xlsx`/`pptx` had real cross-task effect.
   claim.
 - **Single trial.** `num_trials: 1` — one draw per task per iteration. The paired
   gate still ran cleanly on the accepted iteration (Δ = +0.077 > 0.007 = 0.2·SE).
-- **Not directly comparable to EvoSkills' 71.1%.** Different paradigm (shared
-  4-skill package vs per-task skills), different setup (BenchFlow strips each
-  task's own bundled skills and mounts ours). This is the same
-  shared-skill approach as the baselines above.
+- **Not directly comparable to per-task-skill work such as EvoSkill**
+  (arXiv:2604.01687v1). Different paradigm (shared 4-skill package vs per-task
+  skills), different setup (BenchFlow strips each task's own bundled skills and
+  mounts ours). This is the same shared-skill approach as the
+  [baselines above](#skillsbench-87-baselines). No external score is quoted here:
+  none is cited in [`sources.bib`](sources.bib), and an uncited number is not
+  evidence.
 
 ---
 

@@ -63,10 +63,13 @@ First-time setup (once per repo, done in GitHub Settings):
   carries a `?v=YYYYMMDD` query. **Bump it when the file changes** so returning
   visitors don't cache the old asset.
 - **Sub-pages summarize the source markdown docs, they do not replace them.**
-- **Honest numbers.** This project's premise is honest evaluation. Label every
-  figure `fit metric` (no holdout) or `held-out`; never present a reported-but-
-  not-yet-committed number as artifact-backed. Cross-check against `docs/RESULTS.md`
-  and the committed run artifacts before editing a results figure.
+- **Honest numbers.** This project's premise is honest evaluation.
+  **`docs/RESULTS.md` is the superset**: a figure may only appear on a site page if it
+  already has a section there, and it must carry the *same* value, the same split label
+  (`fit metric` = no holdout, or `held-out`), and the same evidence marker
+  (✅ artifact-backed / ✅ reproducible in CI / ⚠️ reported, artifact not committed).
+  Never present a reported number as artifact-backed. Adding a number to a site page
+  means adding its `docs/RESULTS.md` section first, not the other way round.
 - **External links go to `github.com/skillberry-ai/cap-evolve/blob/main/...`.**
 
 ## Adding a new sub-page
