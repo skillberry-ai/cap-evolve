@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { api, LivePendingError } from '../lib/api'
@@ -11,33 +11,59 @@ import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { StatusBadge } from '../components/StatusBadge'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
+import { TaskHeatmap } from '../components/TaskHeatmap'
 import { LineageTree } from '../components/LineageTree'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
-import { IterationsDiff } from '../components/IterationsDiff'
-import { MemoryPanel } from '../components/MemoryPanel'
+import { ChangesPanel } from '../components/ChangesPanel'
 import { Insights } from '../components/Insights'
 import { CostPanel } from '../components/CostPanel'
-import { FileTree } from '../components/FileTree'
-import { GitDiff } from '../components/GitDiff'
 import type { RunStatus } from '../lib/types'
 
+/**
+ * #139 consolidated ten tabs into seven. The four overlapping file/diff surfaces
+ * (Iterations · Git diffs · Memory · Files) are now sub-modes of `changes`; `overview`
+ * became `fitness` and carries both candidate-selection charts, because those are the
+ * sources of the cross-links rather than a tab spent on one chart.
+ */
 const TABS: TabDef[] = [
-  { id: 'overview', label: 'Overview' },
+  { id: 'fitness', label: 'Fitness' },
   { id: 'cost', label: 'Cost' },
   { id: 'phases', label: 'Phases' },
   { id: 'lineage', label: 'Lineage' },
   { id: 'trajectories', label: 'Trajectories' },
-  { id: 'iterations', label: 'Iterations' },
-  { id: 'git', label: 'Git diffs' },
-  { id: 'memory', label: 'Memory' },
-  { id: 'files', label: 'Files' },
+  // Named for all four sub-modes, not just the diffs: Memory and Files were never diff
+  // surfaces, so a label that says only "changes" hides them.
+  { id: 'changes', label: 'Changes, memory & files' },
   { id: 'insights', label: 'Insights' },
 ]
 
 export function RunDeepDive() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
+
+  // Tab + cross-link state lives in the URL, not component state: a cross-link must change
+  // the tab AND what that tab shows in one navigation, the back button must undo it, and
+  // "look at this candidate" should be a shareable link.
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') ?? undefined
+  const candidate = params.get('candidate')
+  const focusTask = params.get('task')
+  const focus = focusTask && candidate ? { task: focusTask, candidate } : null
+
+  const goto = useCallback(
+    (next: Record<string, string | null | undefined>) => {
+      setParams((prev) => {
+        const p = new URLSearchParams(prev)
+        for (const [k, v] of Object.entries(next)) {
+          if (v == null) p.delete(k)
+          else p.set(k, v)
+        }
+        return p
+      })
+    },
+    [setParams],
+  )
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['run', id],
@@ -51,6 +77,12 @@ export function RunDeepDive() {
     refetchInterval: (query) => (query.state.error instanceof LivePendingError ? 10_000 : false),
   })
   const isLivePending = error instanceof LivePendingError
+
+  // A stale or typo'd `?candidate` must not be *named* by the cross-link headers: the
+  // panels below already fall back to a real candidate, so claiming the bad id would make
+  // the page assert it is showing something it isn't.
+  const knownCandidate =
+    candidate && data?.graph.nodes.some((n) => n.id === candidate) ? candidate : null
 
   // Optional algorithm-shipped custom view (e.g. evo-graph's weakness graph),
   // mounted as an extra iframe tab when the run declares one. Absent -> no tab.
@@ -129,10 +161,28 @@ export function RunDeepDive() {
         {data && (
           <div className="space-y-5">
             <KpiStrip summary={data.summary} />
-            <Tabs tabs={tabs}>
+            <Tabs
+              tabs={tabs}
+              label="Run views"
+              value={tab}
+              onChange={(next) => goto({ tab: next })}
+            >
               {(active) =>
-                active === 'overview' ? (
-                  <BestCurveChart nodes={data.graph.nodes} />
+                active === 'fitness' ? (
+                  <div className="space-y-4">
+                    <BestCurveChart
+                      nodes={data.graph.nodes}
+                      // Cross-link: a candidate goes to its rollouts; its diff is one click
+                      // further, preselected to the same id.
+                      onSelect={(cid) => goto({ tab: 'trajectories', candidate: cid, task: null })}
+                    />
+                    <TaskHeatmap
+                      nodes={data.graph.nodes}
+                      tasks={data.summary.tasks ?? []}
+                      // Cross-link: a cell opens that task's rollout drawer directly.
+                      onOpenRollout={(task, cid) => goto({ tab: 'trajectories', candidate: cid, task })}
+                    />
+                  </div>
                 ) : active === 'cost' ? (
                   <CostPanel summary={data.summary} />
                 ) : active === 'phases' ? (
@@ -140,15 +190,49 @@ export function RunDeepDive() {
                 ) : active === 'lineage' ? (
                   <LineageTree graph={data.graph} />
                 ) : active === 'trajectories' ? (
-                  <Trajectories runId={id!} />
-                ) : active === 'iterations' ? (
-                  <IterationsDiff runId={id!} graph={data.graph} />
-                ) : active === 'git' ? (
-                  <GitDiff runId={id!} />
-                ) : active === 'memory' ? (
-                  <MemoryPanel runId={id!} graph={data.graph} />
-                ) : active === 'files' ? (
-                  <FileTree runId={id!} />
+                  <div className="space-y-3">
+                    {knownCandidate && (
+                      <button
+                        type="button"
+                        onClick={() => goto({ tab: 'changes', mode: 'candidate', task: null })}
+                        className="rounded text-xs text-primary underline decoration-dotted underline-offset-2"
+                      >
+                        See what {knownCandidate} changed →
+                      </button>
+                    )}
+                    <Trajectories
+                      runId={id!}
+                      candidate={candidate}
+                      focus={focus}
+                      onClearFocus={() => goto({ candidate: null, task: null })}
+                      onCloseRollout={() => goto({ task: null })}
+                    />
+                  </div>
+                ) : active === 'changes' ? (
+                  <div className="space-y-3">
+                    {knownCandidate && (
+                      <button
+                        type="button"
+                        onClick={() => goto({ tab: 'trajectories', task: null })}
+                        className="rounded text-xs text-primary underline decoration-dotted underline-offset-2"
+                      >
+                        ← See how {knownCandidate} scored per task
+                      </button>
+                    )}
+                    {candidate && !knownCandidate && (
+                      <p className="text-xs text-muted">
+                        No candidate <span className="font-mono">{candidate}</span> in this run —
+                        showing the newest one instead.
+                      </p>
+                    )}
+                    <ChangesPanel
+                      runId={id!}
+                      graph={data.graph}
+                      candidate={candidate}
+                      mode={params.get('mode') ?? undefined}
+                      onModeChange={(m) => goto({ mode: m })}
+                    />
+                  </div>
                 ) : active === 'insights' ? (
                   <Insights runId={id!} detail={data} />
                 ) : active === 'custom' && customUrl ? (

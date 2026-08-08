@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import type { RunGraph } from '../lib/types'
@@ -7,8 +7,19 @@ import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
 import { DiffFileView } from './DiffRows'
 
-/** Per-candidate diff vs parent — what changed each iteration, and did it help. */
-export function IterationsDiff({ runId, graph }: { runId: string; graph: RunGraph }) {
+/** Per-candidate diff vs parent — what changed each iteration, and did it help.
+ *
+ * `candidate` (#139) preselects a candidate so the fitness-curve cross-link lands on the
+ * right diff; the picker still overrides it from there. */
+export function IterationsDiff({
+  runId,
+  graph,
+  candidate,
+}: {
+  runId: string
+  graph: RunGraph
+  candidate?: string | null
+}) {
   // Candidates with a parent (i.e. an actual change), newest first.
   const candidates = useMemo(
     () =>
@@ -18,7 +29,13 @@ export function IterationsDiff({ runId, graph }: { runId: string; graph: RunGrap
     [graph.nodes],
   )
   const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph.nodes])
-  const [cid, setCid] = useState<string | undefined>(candidates[0]?.id)
+  const [picked, setCid] = useState<string | undefined>(undefined)
+  // The cross-linked candidate wins until the user picks another; a NEW cross-link then
+  // wins again (otherwise a second dot click would silently show the earlier pick). The
+  // seed has no parent so it has no diff — fall back to the newest candidate that does.
+  const linked = candidate && candidates.some((c) => c.id === candidate) ? candidate : undefined
+  useEffect(() => setCid(undefined), [linked])
+  const cid = picked ?? linked ?? candidates[0]?.id
 
   const { data, isLoading } = useQuery({
     queryKey: ['diff', runId, cid],
