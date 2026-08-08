@@ -39,6 +39,41 @@ logged-in Claude Code session or `ANTHROPIC_API_KEY`) and the runner model crede
 repo-root `.env` (`OPENAI_API_KEY`, `RITS_API_KEY` + `RITS_API_URL`, `WATSONX_*`, or an
 `ANTHROPIC_BASE_URL` gateway). See [`INSTALL.md`](INSTALL.md#credentials-only-for-real-runs).
 
+**`no credential found for provider 'X'`** — credentials are **provider-scoped**: a key for
+one provider is never reused for another. The error names the env vars provider X accepts;
+set one of those, or select the provider you actually have a key for (`--provider Y`), or
+let cap-evolve choose with `--provider auto` (add `--probe-provider` to also check the
+endpoint answers). Precedence is
+`CLI flag > capevolve.yaml > ~/.capevolve/config.yaml > built-in` — see
+[`INSTALL.md`](INSTALL.md#resolution-order-provider--credentials). cap-evolve reports
+credential *presence* only and never prints a value.
+
+**`provider_credential_env=... belongs to provider ...`** — you pointed the selected
+provider at another provider's env var. `provider_credential_env` must name a var listed
+for that provider in the table in `INSTALL.md`; it is a var **name**, never a pasted key.
+
+**`base_url: <custom>` — why isn't my endpoint shown?** By design. A base URL you set
+yourself (via `provider_base_url`, `--provider-base-url`, or a `*_BASE_URL` env var) names
+*your* infrastructure, so cap-evolve prints `<custom>` plus which layer set it
+(`base_url_source: user config`) instead of the value. Only the well-known public defaults
+(`https://api.anthropic.com`, `https://api.openai.com/v1`, ...) are shown verbatim, because
+they identify nobody. URL *userinfo* (`https://user:token@host/`) is a credential and is
+stripped unconditionally the moment the URL is resolved — it is never stored or rendered,
+public endpoint or not. To confirm what your endpoint actually resolved to, read the env
+var or config file directly on your own machine; cap-evolve will not echo it.
+
+### What a run directory contains before you share it
+
+`.capevolve/run_*/` — `events.jsonl`, `dashboard.html`, `candidates/`, `rollouts/` — is
+built to be attached to an issue or PR, and credential values and custom endpoint URLs are
+redacted on the way in. It is **not** a scrubbed export, though: it still carries your
+**endpoint configuration** in the sense that it records *that* a custom base URL was in
+use, which precedence layer supplied it, and which provider and env var names were
+selected. It also carries your task data, prompts, capability source, and model outputs
+verbatim — those are the point of the artifact and are not redacted at all. Skim
+`events.jsonl` before attaching a run dir or a `dashboard.html` to anything public. If a
+custom endpoint's *hostname* ever appears in one, that is a bug — please report it.
+
 **RITS calls fail** — set both `RITS_API_KEY` and `RITS_API_URL`; the tau2 example passes
 them per-call (no litellm monkeypatch, no tau2 fork). Check your endpoint and concurrency
 knob (`TAU2_MAX_CONCURRENCY`).

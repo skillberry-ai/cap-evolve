@@ -88,3 +88,58 @@ The toy example needs none. Optimizing a real agent needs, in a repo-root `.env`
 
 Never hardcode a secret; cap-evolve executes untrusted optimizer/adapter/tool code — see
 [`../SECURITY.md`](../SECURITY.md). Trouble? [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
+
+### Resolution order (provider + credentials)
+
+One documented precedence, applied **per field** (`provider`, `provider_base_url`,
+`provider_credential_env`) — the highest layer that sets a non-empty value wins:
+
+**CLI flag > project `capevolve.yaml` > user config (`~/.capevolve/config.yaml`, or
+`$CAPEVOLVE_CONFIG`) > built-in default.**
+
+CLI flags: `--provider`, `--provider-base-url`, `--provider-credential-env`,
+`--probe-provider`. Spec keys: `provider`, `provider_base_url`,
+`provider_credential_env`. With no `provider` anywhere, it is inferred from
+`optimizer_skill` (`claude-code`→`anthropic`, `codex`→`openai`, …).
+
+### Credentials are provider-scoped
+
+Each provider reads **only its own** env vars. A key for provider A is **never** applied
+to provider B — cap-evolve fails with a message naming the vars B accepts. This is the
+whole point: a stale `ANTHROPIC_API_KEY` from another project cannot silently
+authenticate (or confusingly fail) an `openai` run.
+
+| provider | credential env vars (first set wins) | base URL env | built-in base URL |
+|---|---|---|---|
+| `anthropic` | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` |
+| `openai` | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `https://api.openai.com/v1` |
+| `gemini` | `GEMINI_API_KEY`, `GOOGLE_API_KEY` | `GEMINI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta` |
+| `rits` | `RITS_API_KEY` | `RITS_API_URL` | — (required) |
+| `watsonx` | `WATSONX_APIKEY`, `WATSONX_API_KEY` | `WATSONX_URL` | — (required) |
+| `moonshot` | `MOONSHOT_API_KEY`, `KIMI_API_KEY` | `MOONSHOT_BASE_URL` | `https://api.moonshot.ai/v1` |
+| `github-copilot` | `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` | `COPILOT_BASE_URL` | `https://api.githubcopilot.com` |
+| `bob` | `BOBSHELL_API_KEY`, `BOB_API_KEY` | `BOBSHELL_URL` | — (required) |
+| `cursor` | `CURSOR_API_KEY` | `CURSOR_BASE_URL` | — (required) |
+| `factory` | `FACTORY_API_KEY` | `FACTORY_BASE_URL` | — (required) |
+| `mock` | none (offline) | — | — |
+
+`provider_credential_env` names an **env var**, never a pasted key — a value belonging to
+a different provider is refused. Secret **values** live only in the process environment;
+cap-evolve reports presence/absence and never logs a value (not a prefix, not a length).
+
+### `provider: auto`
+
+`provider: auto` (or `--provider auto`) picks the first provider in the table above that
+has **its own** credential set, and prints which and why. Add `--probe-provider` to also
+require that candidate's endpoint answer before selecting it. A probe only ever sends a
+credential to the base URL of the **same** provider row the credential came from, so a
+token can never reach a third party.
+
+```
+$ cap-evolve run --provider auto --probe-provider --spec ...
+{"step": "provider", "provider": "anthropic", "credential_env": "ANTHROPIC_API_KEY",
+ "credential_present": true, "base_url": "https://api.anthropic.com",
+ "reason": "auto selected 'anthropic': ANTHROPIC_API_KEY is set and it is the
+            highest-priority provider with its own credential; probe of anthropic
+            base URL succeeded."}
+```
