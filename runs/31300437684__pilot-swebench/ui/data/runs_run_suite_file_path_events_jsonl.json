@@ -1,0 +1,1 @@
+{"path":"events.jsonl","binary":false,"size":260,"truncated":false,"text":"{\"t\": 1786259296.6565197, \"kind\": \"splits_warning\", \"msg\": \"test overlaps train/val (no-holdout fit) \\u2014 the test number is NOT held out; report it as a fit metric\"}\n{\"t\": 1786259296.6596441, \"kind\": \"splits\", \"train\": 50, \"val\": 50, \"test\": 50, \"seed\": 0}\n"}
