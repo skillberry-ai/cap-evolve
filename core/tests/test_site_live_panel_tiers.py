@@ -66,10 +66,24 @@ def test_live_panel_ignores_non_leg_jobs():
 
 
 def test_tier_filter_offers_every_tier():
-    """The history table filters on tier; a tier missing from the dropdown is unselectable."""
+    """The history table filters on tier dynamically from records — no hardcoded list can drift.
+
+    As of feat(site): "default to successful runs, derive the filter lists, show local time",
+    the f-tier dropdown is populated at load time by hydrateFilter from the actual RECORDS data.
+    Any tier present in benchmark-history will appear automatically; no markup change is needed.
+    This test asserts that the JS uses that dynamic path (not a hardcoded option list), which is
+    the invariant that prevents cross-file drift between benchmarks.yml TIERS and the UI.
+    """
+    # 1. The select element must exist in the HTML (as a pre-hydration stub).
     html = HTML.read_text(encoding="utf-8")
-    sel = re.search(r'<select id="f-tier">(.*?)</select>', html, re.S)
-    assert sel, "f-tier select not found"
-    options = set(re.findall(r"<option[^>]*>([^<]+)</option>", sel.group(1)))
-    missing = [t for t in _workflow_tiers() if t not in options]
-    assert not missing, f"tier filter is missing {missing} (offers {sorted(options)})"
+    assert re.search(r'<select[^>]*id="f-tier"', html), "f-tier select not found in benchmarks.html"
+
+    # 2. benchmarks.js must call hydrateFilter for f-tier using record-derived values —
+    #    not a hardcoded list of tier names.  If this call is absent the filter would be
+    #    whatever the static HTML says, and a new tier would be invisible until someone
+    #    remembered to update the markup.
+    js = JS.read_text(encoding="utf-8")
+    assert re.search(r'hydrateFilter\(\s*"#f-tier"', js), (
+        'site/benchmarks.js must call hydrateFilter("#f-tier", …) to populate the tier '
+        "dropdown from records; a static option list silently hides tiers not in the markup"
+    )
