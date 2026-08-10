@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Results — cap-evolve</title>
-  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), RH-SWE-bench (Harbor), SkillsBench. Every number cross-checked against committed run artifacts.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/results.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
@@ -309,6 +309,52 @@
       </section>
 
       <section class="reveal">
+        <h2 id="rh-swebench">RH-SWE-bench — Harbor SWE-bench Verified (fit metric)</h2>
+
+        <p>
+          cap-evolve optimizing a coding agent's system prompt + skill on
+          <strong>SWE-bench Verified</strong> via
+          <a href="harbor.html">Harbor</a> for sandboxed evaluation.
+          Each task runs a full <code>claude-code</code> agent inside an isolated Docker container.
+        </p>
+
+        <ul>
+          <li><strong>Capability:</strong> agent <strong>skill-package + system-prompt</strong> (<code>[skill-package, system-prompt]</code>).</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-6</code>.</li>
+          <li><strong>Agent under test:</strong> <code>claude-sonnet-4-6</code> via Harbor in Docker containers.</li>
+          <li><strong>Tasks:</strong> <strong>119</strong> val tasks from SWE-bench Verified.</li>
+          <li><strong>Split:</strong> <code>train == val == test == 119</code> — <strong>fit metric</strong> (no holdout).</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>7</strong> iterations, paired significance gate <code>k_se 1.0</code>.</li>
+        </ul>
+
+        <table>
+          <thead>
+            <tr><th></th><th>reward (119 tasks)</th><th>Δ vs baseline</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Baseline</strong> (seed prompt + skill)</td><td class="num"><strong>0.580</strong> (58.0%)</td><td class="num">—</td></tr>
+            <tr><td><strong>Best candidate</strong> (<code>cand_0002</code>) — val</td><td class="num"><strong>0.765</strong> (76.5%)</td><td class="gain">+0.185 / +31.9% relative</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          2 of 7 iterations accepted: iter 1 <code>+0.118</code> (0.580→0.698),
+          iter 2 <code>+0.067</code> (→0.765). Per-task: 24 improved, 2 regressed, 93 unchanged.
+          Optimizer spend: $60.75 over ~82 minutes.
+        </p>
+
+        <blockquote>
+          <p>
+            Honest reading: because <code>train == val == test</code>, the reward is a
+            <em>fit metric</em>, not a generalization claim. The lift comes from the optimizer
+            editing the coding agent's system prompt and skill to improve how it diagnoses and
+            patches open-source bugs. Harbor provides sandboxed, reproducible evaluation —
+            each task runs the agent in its own Docker container against the repo's test suite.
+          </p>
+        </blockquote>
+      </section>
+
+      <section class="reveal">
         <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
 
         <p>
@@ -357,32 +403,33 @@
         <h2 id="at-a-glance">At a glance — baseline → optimized</h2>
 
         <figure class="chart-figure">
-          <svg viewBox="0 0 720 320" role="img"
+          <svg viewBox="0 0 720 370" role="img"
                aria-labelledby="chart-title chart-desc"
                xmlns="http://www.w3.org/2000/svg">
             <title id="chart-title">Baseline vs optimized reward across benchmarks</title>
             <desc id="chart-desc">
-              Three benchmarks, each showing the seed baseline (open circle) and the optimized
+              Four benchmarks, each showing the seed baseline (open circle) and the optimized
               candidate (filled green circle) on a 0–100 scale.
               τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
               τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
+              RH-SWE-bench fit metric: 58.0 to 76.5, a gain of 18.5 points.
               SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
             </desc>
 
             <!-- gridlines at 0/25/50/75/100 (plot: x=180..620) -->
-            <line class="grid-line" x1="180" y1="60" x2="180" y2="230"/>
-            <line class="grid-line" x1="290" y1="60" x2="290" y2="230"/>
-            <line class="grid-line" x1="400" y1="60" x2="400" y2="230"/>
-            <line class="grid-line" x1="510" y1="60" x2="510" y2="230"/>
-            <line class="grid-line" x1="620" y1="60" x2="620" y2="230"/>
+            <line class="grid-line" x1="180" y1="60" x2="180" y2="280"/>
+            <line class="grid-line" x1="290" y1="60" x2="290" y2="280"/>
+            <line class="grid-line" x1="400" y1="60" x2="400" y2="280"/>
+            <line class="grid-line" x1="510" y1="60" x2="510" y2="280"/>
+            <line class="grid-line" x1="620" y1="60" x2="620" y2="280"/>
 
             <!-- axis tick labels -->
-            <text class="axis-label" x="180" y="252" text-anchor="middle">0</text>
-            <text class="axis-label" x="290" y="252" text-anchor="middle">25</text>
-            <text class="axis-label" x="400" y="252" text-anchor="middle">50</text>
-            <text class="axis-label" x="510" y="252" text-anchor="middle">75</text>
-            <text class="axis-label" x="620" y="252" text-anchor="middle">100</text>
-            <text class="axis-label" x="400" y="272" text-anchor="middle">reward × 100</text>
+            <text class="axis-label" x="180" y="302" text-anchor="middle">0</text>
+            <text class="axis-label" x="290" y="302" text-anchor="middle">25</text>
+            <text class="axis-label" x="400" y="302" text-anchor="middle">50</text>
+            <text class="axis-label" x="510" y="302" text-anchor="middle">75</text>
+            <text class="axis-label" x="620" y="302" text-anchor="middle">100</text>
+            <text class="axis-label" x="400" y="322" text-anchor="middle">reward × 100</text>
 
             <!-- Row 1: τ²-bench airline fit metric — 53.6 → 71.2 -->
             <text class="row-label" x="170" y="86" text-anchor="end">τ²-bench airline</text>
@@ -404,18 +451,28 @@
             <text class="val-label-opt" x="389" y="129" text-anchor="middle">47.5</text>
             <text class="gain-label" x="406" y="146">+17.5 pp · +58.3%</text>
 
-            <!-- Row 3: SkillsBench held-out — 55.6 → 66.7 -->
-            <text class="row-label" x="170" y="186" text-anchor="end">SkillsBench</text>
-            <text class="row-sub"   x="170" y="199" text-anchor="end">held-out test (3 tasks)</text>
-            <line class="connector" x1="431" y1="192" x2="468" y2="192"/>
-            <circle class="dot-base" cx="425" cy="192" r="6"/>
-            <circle class="dot-opt"  cx="473" cy="192" r="6"/>
-            <text class="val-label"     x="425" y="179" text-anchor="middle">55.6</text>
-            <text class="val-label-opt" x="473" y="179" text-anchor="middle">66.7</text>
-            <text class="gain-label" x="490" y="196">+11.1 pp · +20.0%</text>
+            <!-- Row 3: RH-SWE-bench fit — 58.0 → 76.5 -->
+            <text class="row-label" x="170" y="186" text-anchor="end">RH-SWE-bench</text>
+            <text class="row-sub"   x="170" y="199" text-anchor="end">fit metric (119 tasks)</text>
+            <line class="connector" x1="436" y1="192" x2="517" y2="192"/>
+            <circle class="dot-base" cx="435" cy="192" r="6"/>
+            <circle class="dot-opt"  cx="517" cy="192" r="6"/>
+            <text class="val-label"     x="435" y="179" text-anchor="middle">58.0</text>
+            <text class="val-label-opt" x="517" y="179" text-anchor="middle">76.5</text>
+            <text class="gain-label" x="534" y="196">+18.5 pp · +31.9%</text>
+
+            <!-- Row 4: SkillsBench held-out — 55.6 → 66.7 -->
+            <text class="row-label" x="170" y="236" text-anchor="end">SkillsBench</text>
+            <text class="row-sub"   x="170" y="249" text-anchor="end">held-out test (3 tasks)</text>
+            <line class="connector" x1="431" y1="242" x2="468" y2="242"/>
+            <circle class="dot-base" cx="425" cy="242" r="6"/>
+            <circle class="dot-opt"  cx="473" cy="242" r="6"/>
+            <text class="val-label"     x="425" y="229" text-anchor="middle">55.6</text>
+            <text class="val-label-opt" x="473" y="229" text-anchor="middle">66.7</text>
+            <text class="gain-label" x="490" y="246">+11.1 pp · +20.0%</text>
 
             <!-- Legend -->
-            <g transform="translate(230,296)">
+            <g transform="translate(230,346)">
               <circle class="dot-base" cx="6" cy="0" r="6"/>
               <text class="legend-text" x="20" y="4">baseline (seed)</text>
               <circle class="dot-opt" cx="180" cy="0" r="6"/>
@@ -444,6 +501,7 @@
       <a href="#tau2-agent">τ²-bench — agent mode</a>
       <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
       <a href="#qwen-all">Qwen 14B — all capabilities</a>
+      <a href="#rh-swebench">RH-SWE-bench</a>
       <a href="#skillsbench">SkillsBench</a>
       <a href="#at-a-glance">At a glance</a>
     </nav>
