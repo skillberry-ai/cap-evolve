@@ -105,10 +105,30 @@ models, task/trial counts, commits, and costs: **[docs/RESULTS.md](docs/RESULTS.
 
 | Benchmark | Split | Baseline → Optimized | Gain |
 |---|---|---|---|
+| **RH-SWE-bench** (skill-package + system-prompt, Harbor) | val — *fit metric* (119 tasks) | `0.580 → 0.765` | **+0.185 / +31.9%** |
 | **toy_calc** (zero-API) | sealed test | `0.0 → 1.0` | deterministic proof |
 | **τ²-bench airline** (policy + tools) | val — *fit metric* | `0.536 → 0.712` | **+0.176 / +32.8%** |
 | **τ²-bench airline**, held-out 30(=val)/20 | sealed **test** | `30.0 → 47.5` | **+17.5 pp / +58.3%** |
 | **SkillsBench** (skill package) | sealed **test** (held-out) | `0.556 → 0.667` | **+0.111 / +20.0%** |
+
+<p align="center">
+  <img src="site/assets/rh_swe_bench.png" alt="RH-SWE-bench run overview — baseline vs optimized across 119 SWE-bench Verified tasks" width="800"/>
+  <br/>
+  <sub>RH-SWE-bench: cap-evolve optimizing a coding agent on SWE-bench Verified via Harbor — baseline (58.0%) → optimized (76.5%) across 119 tasks.</sub>
+</p>
+
+**At a glance — baseline → optimized across all benchmarks:**
+
+```
+reward × 100
+─────────────────────────────────────────────────────────────────────
+RH-SWE-bench (119 tasks, fit metric)    ●────────────●  58.0 → 76.5  +18.5 pp / +31.9%
+τ²-bench airline (50 tasks, fit metric) ●──────────●    53.6 → 71.2  +17.6 pp / +32.8%
+τ²-bench airline (20 tasks, held-out)   ●──────────●    30.0 → 47.5  +17.5 pp / +58.3%
+SkillsBench (3 tasks, held-out)         ●──────●        55.6 → 66.7  +11.1 pp / +20.0%
+─────────────────────────────────────────────────────────────────────
+○ = baseline (seed)   ● = optimized (best candidate)
+```
 
 *Not an apples-to-apples leaderboard.* For how the held-out τ²-bench result sits next to
 external tool-optimization work ([EvoTool](https://arxiv.org/abs/2603.04900) on the
