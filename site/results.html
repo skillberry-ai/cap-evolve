@@ -458,6 +458,43 @@
       </section>
 
       <section class="reveal">
+        <h2 id="rh-swebench">RH-SWE-bench — Harbor SWE-bench Verified (fit metric)</h2>
+
+        <p>
+          cap-evolve optimizing a coding agent's system prompt + skill on
+          <strong>SWE-bench Verified</strong> via
+          <a href="harbor.html">Harbor</a> for sandboxed evaluation.
+          Each task runs a full <code>claude-code</code> agent inside an isolated Docker container.
+        </p>
+
+        <ul>
+          <li><strong>Capability:</strong> agent <strong>skill-package + system-prompt</strong> (<code>[skill-package, system-prompt]</code>).</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-4-6</code>.</li>
+          <li><strong>Agent under test:</strong> <code>claude-sonnet-4-6</code> via Harbor in Docker containers.</li>
+          <li><strong>Tasks:</strong> <strong>119</strong> val tasks from SWE-bench Verified.</li>
+          <li><strong>Split:</strong> <code>train == val == test == 119</code> — <strong>fit metric</strong> (no holdout).</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>7</strong> iterations, paired significance gate <code>k_se 1.0</code>.</li>
+        </ul>
+
+        <table>
+          <thead>
+            <tr><th></th><th>reward (119 tasks)</th><th>Δ vs baseline</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Baseline</strong> (seed prompt + skill)</td><td class="num"><strong>0.580</strong> (58.0%)</td><td class="num">—</td></tr>
+            <tr><td><strong>Best candidate</strong> (<code>cand_0002</code>) — val</td><td class="num"><strong>0.765</strong> (76.5%)</td><td class="gain">+0.185 / +31.9% relative</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          2 of 7 iterations accepted: iter 1 <code>+0.118</code> (0.580→0.698),
+          iter 2 <code>+0.067</code> (→0.765). Per-task: 24 improved, 2 regressed, 93 unchanged.
+          Optimizer spend: $60.75 over ~82 minutes.
+        </p>
+
+      </section>
+
+      <section class="reveal">
         <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
 
         <p>
