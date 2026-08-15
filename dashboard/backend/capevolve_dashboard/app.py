@@ -122,6 +122,27 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
 
     if static_dir is not None and Path(static_dir).is_dir():
         from fastapi.staticfiles import StaticFiles
-        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        class _Spa(StaticFiles):
+            """StaticFiles that falls back to index.html for client-side routes.
+
+            ``html=True`` only serves index.html for DIRECTORY requests, so every
+            BrowserRouter path (``/runs/<id>``, ``/compare``) returned a bare 404 JSON
+            body: deep links and plain page refreshes both broke, and only in-app
+            navigation worked. A 404 for a real missing ASSET must stay a 404, or a typo'd
+            bundle path would silently serve HTML and surface as a confusing parse error --
+            so only extensionless paths fall through to the app.
+            """
+
+            async def get_response(self, path, scope):
+                try:
+                    return await super().get_response(path, scope)
+                except StarletteHTTPException as exc:
+                    if exc.status_code == 404 and not Path(path).suffix:
+                        return await super().get_response("index.html", scope)
+                    raise
+
+        app.mount("/", _Spa(directory=str(static_dir), html=True), name="static")
 
     return app
