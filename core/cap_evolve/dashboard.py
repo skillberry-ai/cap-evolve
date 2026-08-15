@@ -518,8 +518,14 @@ def reduce_run(run_dir) -> dict:
     # An algorithm-specific event kind is the strongest evidence; the project spec that
     # launched the run is the fallback (a free-form agent run emits no marker). Both are
     # read from the run's own artifacts — never inferred from the run name.
-    algorithm = _infer_algorithm(kinds)
-    algorithm_source = "events" if algorithm else None
+    # `run_config` wins when present: it is what the CLI actually RESOLVED for this run,
+    # not an inference. It is also the only reliable source for the agent-driven algorithms
+    # (agent-optimize, evograph), which emit no distinctive event kind at all -- inferring
+    # from kinds alone leaves those runs permanently labelled "algorithm not recorded".
+    cfg_algo = next((str(e.get("algorithm")) for e in events
+                     if e.get("kind") == "run_config" and e.get("algorithm")), None)
+    algorithm = cfg_algo or _infer_algorithm(kinds)
+    algorithm_source = "run_config" if cfg_algo else ("events" if algorithm else None)
     if algorithm is None or (root / "wiki").is_dir():
         from_spec = _algorithm_from_spec(root)
         if (root / "wiki").is_dir():
