@@ -75,6 +75,56 @@ baseline_val 0.0  ->  test_reward 1.0   (gate-accepted, test sealed) + dashboard
 Open the printed `dashboard.html` in any browser. Full walkthrough:
 [Getting started](docs/GETTING_STARTED.md).
 
+## Watch a run, live
+
+```bash
+cap-evolve watch                   # live view of the newest run
+cap-evolve replay --demo           # no API key, no config — replays a bundled recording
+cap-evolve run --tui               # the live view instead of the line log
+```
+
+<p align="center">
+  <img src="docs/assets/demo/tui-live.png" alt="cap-evolve live terminal view — lineage, fitness stair, and each candidate's gate decision" width="900"/>
+  <br/>
+  <sub>The live view: candidate lineage, the cumulative-best stair, and the paired-gate
+  reason behind every accept, reject and indecisive step.</sub>
+</p>
+
+▶️ **[Watch the 60-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — the terminal
+footage is a real recording of `cap-evolve replay --demo`, so it is the renderer you get,
+not a mockup. Rebuild it with [`scripts/demo-video/`](scripts/demo-video/README.md).
+
+> The bundled demo session's numbers are hand-authored and make **no benchmark claim** —
+> it exists to show the UI with no API key. Measured results are in
+> [Results](docs/RESULTS.md). The one number measured live on camera is the parallel
+> speedup below.
+
+`watch` and `replay` render the same projection the dashboard does (`events.jsonl` →
+`reduce_run`), so the terminal and the browser can never disagree about what happened.
+Piped or non-TTY output falls back to a plain line log, and `run --tui` leaves stdout
+byte-identical so scripts can still parse it as JSON.
+
+## Evaluate in parallel
+
+The tasks × trials grid is embarrassingly parallel. Opt in per run:
+
+```yaml
+algorithm_args: "--workers 8"
+```
+
+Measured on one machine, 16 tasks × 2 trials
+([`scripts/demo-video/par_demo.py`](scripts/demo-video/par_demo.py)):
+
+| workers | wallclock | speedup | `SplitResult` |
+|--:|--:|--:|---|
+| 1 | 6.60 s | — | reference |
+| 4 | 1.69 s | 3.9× | identical |
+| 8 | 0.84 s | 7.9× | identical |
+
+The identity column is the point: parallelism may change the wallclock and nothing else,
+so `par_demo.py` exits non-zero if any statistic diverges. The default is `workers=1`, so
+every published result stays reproducible.
+
 ## Choose your path
 
 | Path | Use it when | Start |
