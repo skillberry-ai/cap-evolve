@@ -53,7 +53,22 @@ export function CostLedger({ summary }: { summary: RunSummaryDetail }) {
     }))
   }, [rows])
 
-  if (!ledger || rows.length === 0) {
+  // Two different situations, and conflating them states a falsehood. No `cost_ledger` key
+  // at all means this run dir predates the ledger (an older static export) -- it may well
+  // have spent plenty, and saying "nothing has been charged" would be simply untrue. An
+  // EMPTY ledger is the real "nothing charged yet".
+  if (!ledger) {
+    return (
+      <Card>
+        <div className="px-4 py-12 text-center text-sm text-muted">
+          This run dir records no cost <em>ledger</em> — it predates per-phase cost
+          attribution, so spend cannot be broken down by phase here. That is not a claim
+          that nothing was spent; any totals this run did record are shown above.
+        </div>
+      </Card>
+    )
+  }
+  if (rows.length === 0) {
     return (
       <Card>
         <div className="px-4 py-12 text-center text-sm text-muted">

@@ -10,6 +10,9 @@ export type RunStatus =
   | 'stalled'
   | 'interrupted'
   | 'failed'
+  // A run whose artifacts predate status derivation (e.g. an older static export).
+  // Absence of evidence is NOT evidence of failure, so it gets its own state.
+  | 'unknown'
 
 export type Verdict = 'accept' | 'reject' | 'indecisive' | 'no measurement'
 

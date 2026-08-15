@@ -13,7 +13,10 @@ export function StatusBadge({
   reason?: string
   className?: string
 }) {
-  const meta = (status && RUN_STATUS[status]) || RUN_STATUS.failed
+  // Falls back to `unknown`, never `failed`: an absent status means the run dir carries no
+  // evidence either way (an older export, say), and rendering that as a red "failed" pill
+  // asserts a verdict nothing in the data supports.
+  const meta = (status && RUN_STATUS[status]) || RUN_STATUS.unknown
   const { label, tone, ring, Icon, blurb } = meta
   return (
     <span

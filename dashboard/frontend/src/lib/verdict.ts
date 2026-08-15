@@ -81,6 +81,15 @@ export const RUN_STATUS: Record<RunStatus, Meta> = {
     Icon: XCircle,
     blurb: 'Nothing was ever evaluated.',
   },
+  unknown: {
+    label: 'status not recorded',
+    tone: 'text-muted',
+    ring: 'border-line',
+    Icon: HelpCircle,
+    blurb:
+      'This run dir carries no status evidence — typically an artifact exported before ' +
+      'status was derived. It is NOT a failure; nothing is known either way.',
+  },
 }
 
 export const VERDICT: Record<Verdict, Meta> = {
