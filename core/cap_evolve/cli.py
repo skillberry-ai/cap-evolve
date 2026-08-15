@@ -16,6 +16,10 @@ Subcommands:
                        events.jsonl and print human-readable progress
                        (exit 0 = run finished, 2 = not a possible run dir,
                         3 = --idle-timeout elapsed with no events)
+    cap-evolve watch   [run_dir] [--base .capevolve]  the same stream as a live
+                       full-screen view (same exit codes as tail)
+    cap-evolve replay  <run_dir>|--demo [--speed N]  re-feed a recorded
+                       events.jsonl through the live view; --demo needs no API key
 
 ``run`` is intentionally minimal in Phase 0 and grows as phase skills land; it
 already resolves the manifest and validates the spec so the wiring is testable.
@@ -103,7 +107,7 @@ def _stderr_is_usable() -> bool:
 
 
 def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
-                    offset: int = 0):
+                    offset: int = 0, tui_mode: bool = False):
     """Print live progress from ``events.jsonl`` on a daemon thread.
 
     Returns ``(stop_event, thread)`` — or ``(None, None)`` when stderr is unusable, in
@@ -133,6 +137,12 @@ def _spawn_follower(base: Path, run_ts: str | None, seen: set[str] | None,
                 if path is None:
                     stop.wait(0.5)
             if path is None:
+                return
+            if tui_mode:
+                # Same event stream, same stderr, full-screen instead of one line each.
+                from . import tui
+                tui.watch(path.parent, stream=err, color=color,
+                          should_stop=lambda _last: stop.is_set())
                 return
             totals: dict = {}
             for ev in eventstream.follow_events(
@@ -216,6 +226,94 @@ def _cmd_tail(argv):
         print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
               file=sys.stderr)
         return 3
+    return 0
+
+
+def _resolve_run_dir(run_dir: str | None, base: str):
+    """(root, exit_code) — the run dir to attach to. Mirrors ``_cmd_tail``'s rules:
+    explicit path wins, else the newest ``run_*`` under ``--base``; exit 1 when the
+    base has no runs, 2 when the named path can never become a run dir."""
+    if run_dir:
+        root = Path(run_dir)
+        if not root.exists() and not root.parent.is_dir():
+            print(f"no such run dir: {root}", file=sys.stderr)
+            return None, 2
+        return root, 0
+    runs = sorted(q for q in Path(base).glob("run_*") if q.is_dir())
+    if not runs:
+        print(f"no run_* dirs under {base}", file=sys.stderr)
+        return None, 1
+    return runs[-1], 0
+
+
+def _cmd_watch(argv):
+    """Live full-screen view of a run. Same exit codes as ``tail``."""
+    import argparse
+    from . import tui
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve watch",
+        description="live full-screen view of a running or finished run")
+    p.add_argument("run_dir", nargs="?", default=None,
+                   help="run dir (default: newest run_* under --base)")
+    p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
+    p.add_argument("--idle-timeout", type=float, default=300.0,
+                   help="give up after N seconds of silence (0 = wait forever)")
+    p.add_argument("--no-color", action="store_true")
+    args = p.parse_args(argv)
+    if args.idle_timeout < 0:
+        p.error("--idle-timeout must be >= 0 (0 = wait forever)")
+
+    root, code = _resolve_run_dir(args.run_dir, args.base)
+    if root is None:
+        return code
+    events = root / "events.jsonl"
+    if not events.exists():
+        print(f"waiting for {events} …", file=sys.stderr, flush=True)
+    # The view goes to stderr so stdout stays the machine-readable contract.
+    color = None if not args.no_color else False
+    reason = tui.watch(root, stream=sys.stderr, color=color,
+                       idle_timeout=(args.idle_timeout or None))
+    if reason == "interrupt":
+        return 130
+    if reason == "idle":
+        print(f"timed out after {args.idle_timeout:g}s with no events from {events}",
+              file=sys.stderr)
+        return 3
+    return 0
+
+
+def _cmd_replay(argv):
+    """Re-feed a recorded events.jsonl through the live view."""
+    import argparse
+    from . import tui
+
+    p = argparse.ArgumentParser(
+        prog="cap-evolve replay",
+        description="replay a recorded run through the live view (no API key needed)")
+    p.add_argument("run_dir", nargs="?", default=None, help="run dir to replay")
+    p.add_argument("--demo", action="store_true",
+                   help=f"replay the bundled demo session. {tui.DEMO_BANNER}")
+    p.add_argument("--speed", type=float, default=1.0, help="playback speed multiplier")
+    p.add_argument("--max-gap", type=float, default=1.0,
+                   help="cap the sleep between events (seconds)")
+    p.add_argument("--no-color", action="store_true")
+    args = p.parse_args(argv)
+    if args.speed <= 0:
+        p.error("--speed must be > 0")
+    if bool(args.demo) == bool(args.run_dir):
+        p.error("pass exactly one of run_dir or --demo")
+
+    src = tui.DEMO_DIR if args.demo else Path(args.run_dir)
+    if not (src / "events.jsonl").exists():
+        print(f"no events.jsonl under {src}", file=sys.stderr)
+        return 2
+    try:
+        tui.replay(src, stream=sys.stderr, color=(False if args.no_color else None),
+                   speed=args.speed, max_gap=args.max_gap,
+                   banner=(tui.DEMO_BANNER if args.demo else None))
+    except KeyboardInterrupt:
+        return 130
     return 0
 
 
@@ -374,6 +472,9 @@ def _cmd_run(argv):
     p.add_argument("--follow", action="store_true",
                    help="print live progress (stage/candidate/accept-reject/cost) to stderr "
                         "as the run writes events.jsonl; stdout stays the final JSON")
+    p.add_argument("--tui", action="store_true",
+                   help="like --follow, but a live full-screen view (stderr) instead of "
+                        "one line per event; stdout stays the final JSON")
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
@@ -522,14 +623,15 @@ def _cmd_run(argv):
     # the very first events (splits/baseline) are seen. `seen` freezes the pre-existing
     # run dirs so an unpinned --run-ts follower attaches to this run, not the last one.
     follow_stop = follow_thread = None
-    if args.follow:
+    if args.follow or args.tui:
         base_abs = proj_abs.parent
         seen = {p.name for p in base_abs.glob("run_*") if p.is_dir()} if not resume_ts else None
         # On --resume, skip the prior log (10k old events are not "live progress"):
         # start at the current end of file, the way `cap-evolve tail` does.
         prior = base_abs / f"run_{resume_ts}" / "events.jsonl" if resume_ts else None
         off = prior.stat().st_size if prior and prior.exists() else 0
-        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen, off)
+        follow_stop, follow_thread = _spawn_follower(base_abs, resume_ts, seen, off,
+                                                     tui_mode=args.tui)
 
     def done(code: int) -> int:
         """Drain + stop the follower thread, then return ``code``. Used at every exit."""
@@ -664,6 +766,16 @@ def _cmd_run(argv):
             if not tpf_p.is_absolute() and not tpf_p.exists():
                 tpf_p = Path(project) / str(tpf)
             alg_cmd += ["--target-profile-file", str(tpf_p)]
+    # Protected-path seal + graded convergence signal. Both are OPT-IN: absent keys
+    # add no flags at all, so an existing spec runs byte-identically.
+    if algorithm_name in ("hill-climb", "skillopt", "gepa"):
+        pp = spec.get("protected_paths") or []
+        if isinstance(pp, str):
+            pp = [p.strip() for p in pp.split(",") if p.strip()]
+        if pp:
+            alg_cmd += ["--protected-paths", ",".join(str(p) for p in pp)]
+    if algorithm_name == "hill-climb" and spec.get("convergence"):
+        alg_cmd += ["--convergence"]
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):
@@ -891,13 +1003,16 @@ COMMANDS = {
     "estimate": _cmd_estimate,
     "dashboard": _cmd_dashboard,
     "tail": _cmd_tail,
+    "watch": _cmd_watch,
+    "replay": _cmd_replay,
 }
 
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: cap-evolve {version|splits|check|run|estimate|dashboard|tail} [args]",
+        print("usage: cap-evolve "
+              "{version|splits|check|run|estimate|dashboard|tail|watch|replay} [args]",
               file=sys.stderr)
         return 0 if argv else 2
     fn = COMMANDS.get(argv[0])

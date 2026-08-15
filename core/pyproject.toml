@@ -33,5 +33,11 @@ Issues        = "https://github.com/skillberry-ai/cap-evolve/issues"
 [tool.setuptools]
 packages = ["cap_evolve"]
 
+# The keyless demo session replayed by `cap-evolve replay --demo` ships with the
+# package (synthetic numbers — see cap_evolve.tui.DEMO_BANNER). Data files only, so
+# the zero-dependency promise above is untouched.
+[tool.setuptools.package-data]
+cap_evolve = ["demo_session/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
