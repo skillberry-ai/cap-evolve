@@ -87,15 +87,20 @@ PHASES = ("intake", "check", "baseline", "optimize", "finalize", "report")
 # Height budget. (name, min, max) in PRIORITY order — under pressure the earlier
 # sections keep their rows and the later ones collapse to zero.
 _SECTIONS = (
-    ("header", 1, 6),
+    ("header", 1, 7),
     ("footer", 1, 2),
     ("tree", 3, 40),
     ("activity", 1, 6),
-    ("chart", 7, 12),
+    ("algo", 1, 3),
+    # diff before heatmap: the diff panel only exists when the user asked for it
+    # (--diff), so on a short terminal it outranks a panel they did not request.
+    ("diff", 4, 14),
+    ("heatmap", 2, 10),
+    ("chart", 5, 10),
 )
 # Growth order once every section has its minimum: give spare rows to the panels
 # that carry information density before letting the chart stretch.
-_GROW = ("header", "footer", "activity", "tree", "chart")
+_GROW = ("header", "footer", "tree", "diff", "algo", "heatmap", "activity", "chart")
 
 
 # ---- small formatters -------------------------------------------------------
@@ -168,7 +173,11 @@ def terminal_size(stream=None, default=(100, 30)) -> tuple[int, int]:
 # ---- height budget (the correctness-critical bit) ---------------------------
 
 def plan_section_sizes(avail_rows: int, *, has_chart: bool = True, has_tree: bool = True,
-                       has_activity: bool = True, tree_rows: int | None = None) -> dict[str, int]:
+                       has_activity: bool = True, tree_rows: int | None = None,
+                       has_algo: bool = False, has_heatmap: bool = False,
+                       has_diff: bool = False, heatmap_rows: int | None = None,
+                       diff_rows: int | None = None,
+                       header_rows: int | None = None) -> dict[str, int]:
     """Row allocation whose sum NEVER exceeds ``avail_rows``.
 
     Minimums are granted in :data:`_SECTIONS` priority order (a section starved by a
@@ -181,7 +190,8 @@ def plan_section_sizes(avail_rows: int, *, has_chart: bool = True, has_tree: boo
     leaving a duplicated half-frame on screen.
     """
     want = {"header": True, "footer": True, "tree": has_tree,
-            "activity": has_activity, "chart": has_chart}
+            "activity": has_activity, "chart": has_chart,
+            "algo": has_algo, "heatmap": has_heatmap, "diff": has_diff}
     out = {name: 0 for name, _, _ in _SECTIONS}
     try:
         left = max(0, int(avail_rows))
@@ -198,8 +208,12 @@ def plan_section_sizes(avail_rows: int, *, has_chart: bool = True, has_tree: boo
         if out[name] == 0:
             continue  # starved above; don't resurrect a section the budget rejected
         hi = next(h for n, _lo, h in _SECTIONS if n == name)
-        if name == "tree" and tree_rows is not None:
-            hi = min(hi, max(1, int(tree_rows)))
+        # Cap a panel at the rows it actually has, so spare space reaches the chart
+        # instead of becoming a band of padding under a 3-row panel.
+        for who, cap in (("tree", tree_rows), ("heatmap", heatmap_rows),
+                         ("diff", diff_rows), ("header", header_rows)):
+            if name == who and cap is not None:
+                hi = min(hi, max(1, int(cap)))
         grow = min(max(0, hi - out[name]), left)
         out[name], left = out[name] + grow, left - grow
     return out
@@ -248,7 +262,7 @@ def _phase(summary: dict) -> str:
     return "check"
 
 
-def _breadcrumb(current: str, color: bool) -> str:
+def _breadcrumb(current: str, width: int, color: bool) -> str:
     cells = []
     for i, name in enumerate(PHASES):
         if i:
@@ -257,11 +271,17 @@ def _breadcrumb(current: str, color: bool) -> str:
             cells.append((name, _C.BOLD + _C.CYAN))
         else:
             cells.append((name, _C.GREY))
-    return _fit(cells, 200, color)
+    return _fit(cells, width, color)
 
 
-def _header(summary: dict, graph: dict, width: int, *, color: bool, totals: dict | None,
-            elapsed: float | None, n: int) -> list[str]:
+def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
+                  totals: dict | None, elapsed: float | None) -> list[str]:
+    """The header's content, unpadded — the caller decides how many rows it gets.
+
+    Returned unpadded so :func:`render_frame` can cap the header's row budget at the
+    rows it actually needs; a fixed maximum let the header absorb every spare row and
+    starve the lineage panel down to its minimum.
+    """
     counts = summary.get("counts") or {}
     nodes = [x for x in (graph.get("nodes") or []) if (x.get("iteration") or 0) > 0]
     best_series = [x.get("best_so_far") for x in
@@ -298,8 +318,22 @@ def _header(summary: dict, graph: dict, width: int, *, color: bool, totals: dict
         (f"${float(usd or 0.0):.4f} · {_fmt_tokens(tok)} tok", _C.GREY),
     ]
 
-    lines = [_fit(title, width, color), _breadcrumb(_phase(summary), color),
+    lines = [_fit(title, width, color), _breadcrumb(_phase(summary), width, color),
              _fit(kpi, width, color)]
+    # Spend split (runner vs optimizer vs intake). Only ever the numbers the run
+    # actually recorded: a role with no recorded spend is omitted, not shown as $0.
+    cost = summary.get("cost") or {}
+    parts = [(label, cost.get(key)) for label, key in
+             (("runner", "runner_usd"), ("optimizer", "optimizer_usd"),
+              ("intake", "intake_usd"))]
+    have = [(label, v) for label, v in parts if isinstance(v, (int, float)) and v]
+    if have and width >= 60:
+        cells: list = [("spend  ", _C.GREY)]
+        for i, (label, v) in enumerate(have):
+            if i:
+                cells.append((" · ", _C.GREY))
+            cells += [(f"{label} ", _C.GREY), (f"${float(v):.4f}", None)]
+        lines.append(_fit(cells, width, color))
     if summary.get("test_reward") is not None:
         seal = " (sealed)" if summary.get("test_sealed") else ""
         lines.append(_fit([(f"test{seal} {_fmt_val(summary.get('test_reward'))}", _C.BOLD),
@@ -312,7 +346,11 @@ def _header(summary: dict, graph: dict, width: int, *, color: bool, totals: dict
         txt = eventstream.sanitize(str((warns[-1] or {}).get("reason") or ""))
         lines.append(_fit([(f"⚠ {len(warns)} gate warning(s): {txt}", _C.YELLOW)], width, color))
     lines.append(_c("─" * width, _C.GREY, color))
-    # The rule always closes the header, even when the budget crops the middle rows.
+    return lines
+
+
+def _header(lines: list[str], n: int) -> list[str]:
+    """Fit prebuilt header lines into ``n`` rows, always keeping the closing rule."""
     if n and len(lines) > n:
         lines = lines[: n - 1] + [lines[-1]]
     return _pad(lines, n)
@@ -346,18 +384,25 @@ def _chart(graph: dict, width: int, height: int, *, color: bool) -> list[str]:
     cols = [c for c in cols for _ in range(rep)][:grid_w]
     grid = [[" "] * len(cols) for _ in range(grid_h)]
     for x, (_, b, v, st) in enumerate(cols):
-        grid[grid_h - 1 - int(round((b - lo) / span * (grid_h - 1)))][x] = "█"
+        top = grid_h - 1 - int(round((b - lo) / span * (grid_h - 1)))
+        # Filled stair, not a one-pixel line: the area under the cumulative best is
+        # what makes a 4-iteration run readable instead of three dots in a big box.
+        for y in range(top + 1, grid_h):
+            grid[y][x] = "▒"
+        grid[top][x] = "█"
         if v is not None:
             y = grid_h - 1 - int(round((v - lo) / span * (grid_h - 1)))
-            if grid[y][x] == " ":
+            if grid[y][x] in (" ", "▒"):
                 grid[y][x] = {"rejected": "·", "failed": "x"}.get(st, "○")
-    paint = {"█": _C.GREEN, "x": _C.RED, "·": _C.YELLOW, "○": _C.CYAN}
+    paint = {"█": _C.GREEN, "▒": _C.DIM + _C.GREEN, "x": _C.RED, "·": _C.YELLOW,
+             "○": _C.CYAN}
     out = [_c("cumulative best", _C.BOLD, color)]
     for r, row in enumerate(grid):
         axis = f"{hi:.2f}" if r == 0 else (f"{lo:.2f}" if r == grid_h - 1 else "")
         out.append(_c(axis.rjust(5), _C.GREY, color) + " "
                    + "".join(_c(ch, paint.get(ch), color) for ch in row))
-    out.append(_c("      █ best  ○ accept  · reject  x fail", _C.GREY, color))
+    out.append(_fit([("      █ best  ○ accept  · reject  x fail", _C.GREY)],
+                    width, color))
     return _pad(out, height)
 
 
@@ -461,10 +506,233 @@ def _activity(activity, running: str | None, width: int, height: int,
     return _pad(out, height)
 
 
-def _footer(root, width: int, height: int, *, color: bool) -> list[str]:
+# ---- generic panel: per-task heatmap ---------------------------------------
+
+#: reward → glyph. ``·`` is reserved for "this task was NOT evaluated for this
+#: candidate" — a free-form/agentic run may score a task SUBSET, and a missing
+#: measurement must never render as the same cell as a measured 0.0.
+_HEAT = ("░", "▒", "▓", "█")
+_HEAT_STYLE = (_C.RED, _C.YELLOW, _C.CYAN, _C.GREEN)
+_MISSING = "·"
+
+
+def _heat_cell(v) -> tuple[str, str]:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return _MISSING, _C.GREY
+    i = 0 if f <= 0.0 else min(len(_HEAT) - 1, int(f * len(_HEAT)))
+    return _HEAT[i], _HEAT_STYLE[i]
+
+
+def has_per_task(graph: dict) -> bool:
+    """True when at least one candidate recorded per-task rewards (the panel's gate)."""
+    for n in (graph.get("nodes") or []):
+        if isinstance(n, dict) and isinstance(n.get("per_task"), dict) and n["per_task"]:
+            return True
+    return False
+
+
+def _heatmap(graph: dict, summary: dict, width: int, height: int, *,
+             color: bool) -> list[str]:
+    """Per-task val reward, one row per candidate, one column per task.
+
+    Algorithm-agnostic: it reads ``node["per_task"]``, which every algorithm fills via
+    the same ``evaluate`` phase. A task a candidate never ran shows :data:`_MISSING`,
+    never a zero — an unmeasured task is missing data, not a failure.
+    """
+    if height <= 1:
+        return _pad([], height)
+    tasks = [str(t) for t in (summary.get("tasks") or [])]
+    nodes = [n for n in (graph.get("nodes") or []) if isinstance(n, dict)]
+    if not tasks:  # fall back to the union of whatever the nodes measured
+        seen: list[str] = []
+        for n in nodes:
+            for t in (n.get("per_task") or {}):
+                if t not in seen:
+                    seen.append(str(t))
+        tasks = seen
+    rows = [n for n in nodes if isinstance(n.get("per_task"), dict) and n["per_task"]]
+    if not tasks or not rows:
+        return _pad([], height)
+    rows.sort(key=lambda n: n.get("iteration") or 0)
+    label_w = 14
+    avail = max(1, width - label_w - 6)
+    # A 2-task split should not render as two lonely characters: widen the cell until
+    # the row fills the panel (capped, so a 200-task split stays one column each).
+    cell_w = max(1, min(6, avail // max(1, len(tasks))))
+    cols = max(1, avail // cell_w)
+    shown, hidden = tasks[:cols], max(0, len(tasks) - cols)
+    best = str(summary.get("best_id") or "")
+    head = [("per-task val", _C.BOLD), ("  ", None),
+            (f"{len(shown)}/{len(tasks)} tasks", _C.GREY), ("   ", None),
+            (f"{_HEAT[0]} low  {_HEAT[-1]} high  {_MISSING} not evaluated", _C.GREY)]
+    out = [_fit(head, width, color)]
+    body = height - 1
+    if len(rows) > body:
+        rows = rows[-body:]
+    for n in rows:
+        per = n.get("per_task") or {}
+        nid = eventstream.sanitize(str(n.get("id") or "?"))
+        mark = GLYPHS["best"][0] if nid == best else " "
+        cells = [(f"{(nid[:label_w - 2]):<{label_w - 2}}", None), (mark, _C.BOLD), (" ", None)]
+        for t in shown:
+            glyph, style = _heat_cell(per.get(t))
+            cells.append((glyph * cell_w, style))
+        if hidden:
+            cells.append((f" …{hidden}", _C.GREY))
+        out.append(_fit(cells, width, color))
+    return _pad(out, height)
+
+
+# ---- per-algorithm extras (capability-gated) --------------------------------
+
+def fold_algo_stats(ev: dict, stats: dict | None) -> None:
+    """Accumulate per-algorithm signal from ONE event into ``stats``.
+
+    Kept separate from :func:`dashboard.reduce_run` on purpose: the algorithm-specific
+    kinds (``gepa_select`` / ``gepa_local_gate`` / ``skillopt_slow_update`` …) are real
+    emitted events the reducer does not project, and the live view is where they matter.
+    Counts only; a kind that never fires leaves no key, which is what lets
+    :func:`algo_panel` omit a panel instead of rendering a fabricated zero.
+    """
+    if stats is None or not isinstance(ev, dict):
+        return
+    kind = str(ev.get("kind") or "")
+    if not kind or kind == eventstream.FOLLOW_END:
+        return
+    kinds = stats.setdefault("kinds", {})
+    kinds[kind] = kinds.get(kind, 0) + 1
+    if kind == "gepa_local_gate":
+        key = "mb_pass" if ev.get("passed") else "mb_fail"
+        stats[key] = stats.get(key, 0) + 1
+    elif kind == "gepa_select":
+        stats["parent"] = eventstream.sanitize(str(ev.get("parent") or ""))
+        stats["strategy"] = eventstream.sanitize(str(ev.get("strategy") or ""))
+    elif kind == "skillopt_step":
+        for src, dst in (("epoch", "epoch"), ("step_in_epoch", "step_in_epoch"),
+                         ("lr", "lr"), ("edit_budget", "lr")):
+            if ev.get(src) is not None:
+                stats[dst] = eventstream.sanitize(str(ev.get(src)))
+    elif kind in ("skillopt_start", "gepa_start"):
+        for k in ("epochs", "lr_schedule", "minibatch_size", "component_selector",
+                  "max_metric_calls"):
+            if ev.get(k) is not None:
+                stats[k] = eventstream.sanitize(str(ev.get(k)))
+
+
+def algo_panel(stats: dict | None, summary: dict) -> tuple[str, list[str]]:
+    """``(algorithm_name, extra_lines)`` — or ``("", [])`` when the log evidences none.
+
+    The name is DERIVED from the kinds actually in the log, never guessed: a
+    ``hill-climb`` run and an agent-driven run emit the same ``step`` events, so
+    neither is named. Missing capability ⇒ no panel.
+    """
+    kinds = (stats or {}).get("kinds") or {}
+    if any(k.startswith("gepa") for k in kinds):
+        bits = []
+        if kinds.get("gepa_select"):
+            sel = f"parent picks {kinds['gepa_select']}"
+            if (stats or {}).get("strategy"):
+                sel += f" ({stats['strategy']})"
+            bits.append(sel)
+        if (stats or {}).get("mb_pass") or (stats or {}).get("mb_fail"):
+            bits.append(f"minibatch gate {stats.get('mb_pass', 0)}✓ "
+                        f"{stats.get('mb_fail', 0)}✗")
+        if kinds.get("gepa_val_gate"):
+            bits.append(f"full-val gates {kinds['gepa_val_gate']}")
+        if summary.get("frontier") is not None:
+            bits.append(f"pareto frontier {summary['frontier']}")
+        if (stats or {}).get("minibatch_size"):
+            bits.append(f"minibatch size {stats['minibatch_size']}")
+        return "gepa", bits
+    if any(k.startswith("skillopt") for k in kinds):
+        bits = []
+        ep, eps = (stats or {}).get("epoch"), (stats or {}).get("epochs")
+        if ep is not None:
+            bits.append(f"epoch {ep}" + (f"/{eps}" if eps else ""))
+        if (stats or {}).get("step_in_epoch") is not None:
+            bits.append(f"step {stats['step_in_epoch']} in epoch")
+        if (stats or {}).get("lr") is not None:
+            bits.append(f"edit budget {stats['lr']}"
+                        + (f" ({stats['lr_schedule']})" if (stats or {}).get("lr_schedule") else ""))
+        if kinds.get("skillopt_slow_update"):
+            bits.append(f"epoch-boundary updates {kinds['skillopt_slow_update']}")
+        return "skillopt", bits
+    return "", []
+
+
+def _algo(stats: dict | None, summary: dict, width: int, height: int, *,
+          color: bool) -> list[str]:
+    if height <= 0:
+        return []
+    name, bits = algo_panel(stats, summary)
+    if not name:
+        return _pad([], height)
+    out = [_fit([(f"algorithm  {name}", _C.BOLD)], width, color)]
+    for i in range(0, len(bits), 2):
+        out.append(_fit([("  ", None),
+                         (" · ".join(bits[i:i + 2]), _C.GREY)], width, color))
+    return _pad(out, height)
+
+
+# ---- diff panel (what the accepted candidate actually changed) --------------
+
+def _diff(diff: dict | None, width: int, height: int, *, color: bool) -> list[str]:
+    """Render a precomputed diff payload: ``{"title": str, "lines": [str]}``.
+
+    The lines are produced by :mod:`cap_evolve.diffview` (which sanitizes every one of
+    them — candidate files are model-authored) and simply cropped here, so the renderer
+    stays pure and testable.
+    """
+    if height <= 1 or not diff:
+        return _pad([], height)
+    title = eventstream.sanitize(str(diff.get("title") or "changes"))
+    out = [_fit([("changes  ", _C.BOLD), (title, _C.GREY)], width, color)]
+    lines = list(diff.get("lines") or [])
+    body = height - 1
+    if len(lines) > body:
+        lines, extra = lines[: body - 1], len(lines) - (body - 1)
+        lines.append(_c(f"  … {extra} more line(s) — cap-evolve diff for the rest",
+                        _C.GREY, color))
+    out += [_crop_ansi(ln, width) for ln in lines]
+    return _pad(out, height)
+
+
+def _crop_ansi(line: str, width: int) -> str:
+    """Crop to ``width`` VISIBLE columns, counting no ANSI escape as a column.
+
+    The diff payload arrives pre-styled, so a plain slice could both cut mid-escape and
+    (worse) leave a line wider than the terminal — one wrapped line breaks the inline
+    repaint's row arithmetic and duplicates half a frame.
+    """
+    out, used, i = [], 0, 0
+    while i < len(line) and used < width:
+        ch = line[i]
+        if ch == "\x1b":
+            j = i + 1
+            if j < len(line) and line[j] == "[":
+                j += 1
+                while j < len(line) and not line[j].isalpha():
+                    j += 1
+            out.append(line[i: j + 1])
+            i = j + 1
+            continue
+        out.append(ch)
+        used += 1
+        i += 1
+    # Close any style the crop may have cut off from its reset.
+    if "\x1b" in line:
+        out.append(_C.RESET)
+    return "".join(out)
+
+
+def _footer(root, width: int, height: int, *, color: bool,
+            hint: str = "") -> list[str]:
     return _pad([_c("─" * width, _C.GREY, color),
                  _fit([(str(root), _C.GREY), ("   ", None),
-                       ("Ctrl-C to detach (run continues)", _C.DIM)], width, color)],
+                       (hint or "Ctrl-C to detach (run continues)", _C.DIM)],
+                      width, color)],
                 height)
 
 
@@ -472,7 +740,9 @@ def _footer(root, width: int, height: int, *, color: bool) -> list[str]:
 
 def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: bool = False,
                  root: str = "", activity=(), running: str | None = None,
-                 totals: dict | None = None, elapsed: float | None = None) -> str:
+                 totals: dict | None = None, elapsed: float | None = None,
+                 algo_stats: dict | None = None, diff: dict | None = None,
+                 hint: str = "") -> str:
     """One frame for ``reduced`` (a :func:`dashboard.reduce_run` result).
 
     Pure: no terminal, no clock, no filesystem — everything time-dependent
@@ -490,20 +760,31 @@ def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: boo
     try:
         graph = reduced.get("graph") or {}
         summary = reduced.get("summary") or {}
+        hdr = _header_lines(summary, graph, width, color=color, totals=totals,
+                            elapsed=elapsed)
         sizes = plan_section_sizes(
             rows,
+            header_rows=len(hdr),
             has_chart=bool([n for n in (graph.get("nodes") or [])
                             if n.get("best_so_far") is not None]),
             has_tree=True, has_activity=bool(activity or running),
             tree_rows=len(_tree_rows(graph)) + 2,
+            has_algo=bool(algo_panel(algo_stats, summary)[0]),
+            has_heatmap=has_per_task(graph),
+            has_diff=bool(diff and diff.get("lines")),
+            heatmap_rows=1 + sum(1 for n in (graph.get("nodes") or [])
+                                 if isinstance(n, dict) and (n.get("per_task") or {})),
+            diff_rows=1 + len((diff or {}).get("lines") or []),
         )
         out: list[str] = []
-        out += _header(summary, graph, width, color=color, totals=totals,
-                       elapsed=elapsed, n=sizes["header"])
+        out += _header(hdr, sizes["header"])
         out += _chart(graph, width, sizes["chart"], color=color)
         out += _tree(graph, summary, width, sizes["tree"], color=color)
+        out += _heatmap(graph, summary, width, sizes["heatmap"], color=color)
+        out += _algo(algo_stats, summary, width, sizes["algo"], color=color)
+        out += _diff(diff, width, sizes["diff"], color=color)
         out += _activity(activity, running, width, sizes["activity"], color=color)
-        out += _footer(root, width, sizes["footer"], color=color)
+        out += _footer(root, width, sizes["footer"], color=color, hint=hint)
         return "\n".join(out[:rows])
     except Exception as e:  # noqa: BLE001 — a frame that raises silences the whole run
         return _c(f"[tui] frame unavailable ({e!r}) — the run continues",
@@ -620,12 +901,49 @@ def _live_feed(path: Path, *, offset: int, idle_timeout: float | None, poll: flo
         yield ev
 
 
-def _drive(root, feed, *, stream, color: bool, poll: float = 0.4) -> str | None:
+def latest_diff(root, reduced: dict, width: int, *, color: bool,
+                rows: int = 12) -> dict | None:
+    """``{"title", "lines"}`` for the newest accepted candidate vs its parent.
+
+    Impure by design (it reads the two snapshots off disk) so :func:`render_frame` stays
+    pure. Returns ``None`` when the run kept no snapshots — a run whose store did not
+    persist candidate dirs has nothing honest to show here.
+    """
+    try:
+        from . import diffview
+        nodes = [n for n in ((reduced.get("graph") or {}).get("nodes") or [])
+                 if isinstance(n, dict) and n.get("status") == "accepted"]
+        if not nodes:
+            return None
+        node = max(nodes, key=lambda n: n.get("iteration") or 0)
+        cid = str(node.get("id") or "")
+        parent = str(node.get("parent") or "seed")
+        cand = Path(root) / "candidates"
+        a, b = cand / parent, cand / cid
+        if not (a.is_dir() and b.is_dir()):
+            return None
+        ta, tb = diffview.read_tree(a), diffview.read_tree(b)
+        lines = diffview.render(ta, tb, width=width, color=color, context=1,
+                               side_by_side=False, max_lines=max(2, rows))
+        if not lines:
+            return None
+        return {"title": f"{parent} → {cid}   {diffview.summary_line(ta, tb)}",
+                "lines": lines}
+    except Exception:  # noqa: BLE001 — an optional panel must never kill the view
+        return None
+
+
+def _drive(root, feed, *, stream, color: bool, poll: float = 0.4,
+           show_diff: bool = False, reserved_rows: int = 0) -> str | None:
     """The one loop both modes share: fold events → repaint on a dirty flag + tick."""
     activity: deque = deque(maxlen=8)
     totals: dict = {}
+    algo_stats: dict = {}
+    diff: dict | None = None
     reduced = _reduce(root)
     dirty, reason, done = False, None, False
+    hint = ("Ctrl-C to detach (run continues)" if show_diff else
+            "Ctrl-C to detach · --diff shows what each accepted candidate changed")
     last_event = time.monotonic()
 
     with _Painter(stream) as painter:
@@ -645,20 +963,26 @@ def _drive(root, feed, *, stream, color: bool, poll: float = 0.4) -> str | None:
                         reason, done = ev.get("reason"), True
                     else:
                         eventstream.accrue_totals(ev, totals)
+                        fold_algo_stats(ev, algo_stats)
                         line = eventstream.render_line(ev, None)
                         if line:
                             activity.append(line)
                         last_event = time.monotonic()
                     dirty = True
+                cols, rows_avail = terminal_size(stream)
+                size = (cols, max(4, rows_avail - reserved_rows))
                 if dirty:
                     reduced = _reduce(root)
+                    if show_diff:
+                        diff = latest_diff(root, reduced, size[0], color=color)
                     dirty = False
                 running = None if done else (
                     f"{_spinner()} working… {_fmt_dur(time.monotonic() - last_event)} "
                     f"since last event")
-                painter.paint(render_frame(reduced, terminal_size(stream), color=color,
+                painter.paint(render_frame(reduced, size, color=color,
                                            root=root, activity=activity, running=running,
-                                           totals=totals))
+                                           totals=totals, algo_stats=algo_stats,
+                                           diff=diff, hint=hint))
         except KeyboardInterrupt:
             return "interrupt"
         finally:
@@ -670,9 +994,35 @@ def _drive(root, feed, *, stream, color: bool, poll: float = 0.4) -> str | None:
     return reason
 
 
+def headline(stream, *, color: bool) -> int:
+    """Print the brand headline ONCE, above the repaint region.
+
+    Deliberately not part of the frame: the capybara is 9 rows tall and the frame's
+    height budget is for live data. Printed before the painter starts, it stays in
+    scrollback (and in a screen recording) without costing a row every repaint.
+    """
+    if not color:
+        return 0  # the mark only exists in truecolor; a pipe gets the line log anyway
+    try:
+        from . import branding
+        cols, rows = terminal_size(stream)
+        art = branding.banner(cols, color=True)
+        # Only when the frame can still breathe underneath it. The caller subtracts
+        # these rows from the frame budget, so the headline stays pinned above the
+        # repaint region instead of scrolling away on the first paint.
+        if not art or len(art) + 18 > rows:
+            return 0
+        print("\n".join(art), file=stream, flush=True)
+        # +2: the shell line the view was launched from, and the newline the painter
+        # writes after each frame. One row of overshoot scrolls the headline away.
+        return len(art) + 2
+    except Exception:  # noqa: BLE001 — decoration must never block the view
+        return 0
+
+
 def watch(root, *, stream=None, color: bool | None = None, from_start: bool = True,
           idle_timeout: float | None = None, poll: float = 0.4,
-          should_stop=None) -> str | None:
+          should_stop=None, show_diff: bool = False) -> str | None:
     """Live TUI over a run dir. Returns the FOLLOW_END reason (or ``"interrupt"``).
 
     Writes to ``stream`` (default stderr) so stdout stays the machine-readable
@@ -688,9 +1038,11 @@ def watch(root, *, stream=None, color: bool | None = None, from_start: bool = Tr
     if not _is_tty(stream):
         return _stream_lines(events, stream, color=color, offset=offset,
                              idle_timeout=idle_timeout, should_stop=should_stop)
+    used = headline(stream, color=color)
     return _drive(root, _live_feed(events, offset=offset, idle_timeout=idle_timeout,
                                    poll=poll, should_stop=should_stop),
-                  stream=stream, color=color, poll=poll)
+                  stream=stream, color=color, poll=poll, show_diff=show_diff,
+                  reserved_rows=used)
 
 
 def _is_tty(stream) -> bool:
@@ -701,7 +1053,8 @@ def _is_tty(stream) -> bool:
 
 
 def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
-           max_gap: float = 1.0, banner: str | None = None) -> None:
+           max_gap: float = 1.0, banner: str | None = None,
+           show_diff: bool = False) -> None:
     """Re-feed a recorded ``events.jsonl`` through the SAME reducer + renderer.
 
     Events are appended to a scratch run dir one at a time and re-reduced, so replay
@@ -720,6 +1073,7 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
     if banner:
         print(_c(banner, _C.YELLOW, color), file=stream, flush=True)
     tty = _is_tty(stream)
+    reserved = headline(stream, color=color) if tty else 0
 
     with tempfile.TemporaryDirectory(prefix="capevolve-replay-") as d:
         scratch = Path(d) / src.name  # keeps the header's run_id honest, not "tmpXXXX"
@@ -728,6 +1082,8 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
         painter = _Painter(stream, inline=tty)
         reduced = _reduce(scratch)
         totals: dict = {}
+        algo_stats: dict = {}
+        diff: dict | None = None
         activity: deque = deque(maxlen=8)
         with painter:
             prev_t = None
@@ -747,6 +1103,7 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
                 if gap:
                     time.sleep(min(gap, max_gap))
                 eventstream.accrue_totals(ev, totals)
+                fold_algo_stats(ev, algo_stats)
                 line = eventstream.render_line(ev, None)
                 if line:
                     activity.append(line)
@@ -754,13 +1111,22 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
                         print(line, file=stream, flush=True)
                 reduced = _reduce(scratch)
                 if tty:
-                    painter.paint(render_frame(reduced, terminal_size(stream), color=color,
+                    _cols, _rows = terminal_size(stream)
+                    size = (_cols, max(4, _rows - reserved))
+                    if show_diff:
+                        # Snapshots live in the SOURCE run dir, not the replay scratch.
+                        diff = latest_diff(src, reduced, size[0], color=color)
+                    painter.paint(render_frame(reduced, size, color=color,
                                                root=str(src), activity=activity,
-                                               totals=totals))
+                                               totals=totals, algo_stats=algo_stats,
+                                               diff=diff,
+                                               hint="replay of a recorded run · "
+                                                    "Ctrl-C to stop"))
             if not tty:
                 # Still end on a frame so a piped replay shows the same final state.
                 print(render_frame(reduced, (terminal_size(stream)[0], 200), color=color,
-                                   root=str(src), activity=activity, totals=totals),
+                                   root=str(src), activity=activity, totals=totals,
+                                   algo_stats=algo_stats),
                       file=stream, flush=True)
         if banner:
             print(_c(banner, _C.YELLOW, color), file=stream, flush=True)
