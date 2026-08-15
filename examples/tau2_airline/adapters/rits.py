@@ -145,19 +145,59 @@ def llm_args() -> dict:
 # gateway (e.g. the on-demand integration test: TAU2_AGENT_MODEL=anthropic/claude-haiku-4-5).
 
 
+# Vendor prefixes served by the IBM litellm PROXY (an OpenAI-compatible /v1 endpoint
+# at ANTHROPIC_BASE_URL, catalog readable at /v1/models). A proxy model is reached as
+# ``openai/<catalog-id>`` with api_base=<base>/v1 — NOT via litellm's native provider
+# for that vendor, which would try to talk to AWS/Azure/GCP directly and 401.
+_PROXY_PREFIXES = ("aws/", "azure/", "Azure/", "gcp/", "GCP/", "rits/")
+
+
+def _is_proxy(model: str) -> bool:
+    """True for a litellm-proxy catalog id, e.g. ``aws/gpt-oss-120b``.
+
+    Checked BEFORE _is_anthropic, because ``aws/claude-opus-5`` is a proxy id that
+    happens to contain "claude": routing it to the native anthropic provider would
+    send a catalog id the Anthropic Messages API has never heard of.
+    """
+    return (model or "").startswith(_PROXY_PREFIXES)
+
+
 def _is_anthropic(model: str) -> bool:
     m = (model or "").lower()
     return m.startswith("anthropic/") or "claude" in m
 
 
+def _normalize(model: str) -> str:
+    """Prefix a proxy catalog id with ``openai/`` so litellm uses the OpenAI route."""
+    return f"openai/{model}" if _is_proxy(model) else model
+
+
 def agent_model() -> str:
     """litellm model string for the agent under test (default: RITS gpt-oss)."""
-    return os.environ.get("TAU2_AGENT_MODEL") or LITELLM_MODEL
+    return _normalize(os.environ.get("TAU2_AGENT_MODEL") or LITELLM_MODEL)
 
 
 def user_model() -> str:
     """litellm model string for the user simulator (default: RITS gpt-oss)."""
-    return os.environ.get("TAU2_USER_MODEL") or LITELLM_MODEL
+    return _normalize(os.environ.get("TAU2_USER_MODEL") or LITELLM_MODEL)
+
+
+def _proxy_args() -> dict:
+    """litellm args for the IBM litellm proxy's OpenAI-compatible /v1 endpoint."""
+    _load_env()
+    base = os.environ.get("ANTHROPIC_BASE_URL")
+    token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    missing = [n for n, v in (("ANTHROPIC_BASE_URL", base), ("ANTHROPIC_AUTH_TOKEN", token)) if not v]
+    if missing:
+        raise RuntimeError(
+            f"{' and '.join(missing)} not set. Put them in the repo-root .env to run the "
+            "agent/user on a litellm-proxy model (e.g. TAU2_AGENT_MODEL=aws/gpt-oss-120b)."
+        )
+    return {
+        "api_base": base.rstrip("/") + "/v1",
+        "api_key": token,
+        "temperature": 0.0,
+    }
 
 
 def _gateway_args() -> dict:
@@ -186,7 +226,57 @@ def _gateway_args() -> dict:
 
 
 def llm_args_for(model: str) -> dict:
-    """Per-model litellm args: claude models -> IBM gateway; anything else -> RITS."""
-    if _is_anthropic(model):
+    """Per-model litellm args: proxy ids -> litellm proxy; claude -> IBM gateway; else RITS.
+
+    ``model`` may already be normalized (``openai/aws/...``), so strip that prefix
+    before classifying — otherwise a normalized proxy id falls through to RITS and
+    the run dies on a missing RITS_API_KEY.
+    """
+    bare = model[len("openai/"):] if (model or "").startswith("openai/") else model
+    if _is_proxy(bare):
+        return _proxy_args()
+    if _is_anthropic(bare):
         return _gateway_args()
     return llm_args()
+
+
+if __name__ == "__main__":  # ponytail: self-check, no framework — `python adapters/rits.py`
+    # Routing is a credential path: a mis-classified model silently 401s against the
+    # wrong provider, or dies demanding a RITS_API_KEY the run never needed. The
+    # ORDER (proxy before anthropic) is the part that regresses, so pin it.
+    import os as _os
+
+    _cases = [
+        # model string                        -> route      (why it matters)
+        ("aws/gpt-oss-120b",                     "proxy"),   # the agent under test
+        ("aws/claude-opus-5",                    "proxy"),   # contains "claude" but IS a proxy id
+        ("openai/aws/gpt-oss-120b",              "proxy"),   # already normalized — must not fall through
+        ("azure/gpt-5.4",                        "proxy"),
+        ("rits/google/gemma-4-31B",              "proxy"),
+        ("anthropic/claude-haiku-4-5",           "gateway"), # native Anthropic-compatible gateway
+        ("claude-sonnet-4-6",                    "gateway"),
+        ("hosted_vllm/openai/gpt-oss-120b",      "rits"),    # the RITS default
+    ]
+
+    def _route(m: str) -> str:
+        bare = m[len("openai/"):] if m.startswith("openai/") else m
+        return "proxy" if _is_proxy(bare) else ("gateway" if _is_anthropic(bare) else "rits")
+
+    for _m, _want in _cases:
+        _got = _route(_m)
+        assert _got == _want, f"{_m!r} routed to {_got}, expected {_want}"
+        print(f"  ok  {_m:34s} -> {_got}")
+
+    # _normalize must be idempotent: agent_model() is called more than once per run.
+    assert _normalize("aws/gpt-oss-120b") == "openai/aws/gpt-oss-120b"
+    assert _normalize(_normalize("aws/gpt-oss-120b")) == "openai/aws/gpt-oss-120b", \
+        "double-normalized — openai/openai/... would 404"
+    assert _normalize(LITELLM_MODEL) == LITELLM_MODEL, "RITS default must pass through untouched"
+
+    # Env overrides reach the normalizer.
+    _os.environ["TAU2_AGENT_MODEL"] = "aws/gpt-oss-120b"
+    assert agent_model() == "openai/aws/gpt-oss-120b", agent_model()
+    _os.environ.pop("TAU2_AGENT_MODEL")
+    assert agent_model() == LITELLM_MODEL, "default must be the RITS model"
+
+    print("rits.py self-check OK")
