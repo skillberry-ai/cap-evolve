@@ -8,6 +8,40 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **The self-contained `dashboard.html` rendered a seventh of its content.**
+  `el.append(svg('text', …)).textContent = x` — `ParentNode.append()` returns `undefined`, so a
+  `TypeError` on the first axis label aborted the inline script and silently dropped the heatmap,
+  diffs, lineage, cost, evaluations and candidates. Measured on one run: 941 → 6,782 characters of
+  rendered body text, zero JS errors. This is why costs and logs were invisible.
+- **Run status was always wrong.** Everything unfinalized collapsed to `"live"`, so a run that died
+  weeks ago reported as running. Now derived from event evidence, with `awaiting_agent` for the
+  agent-mode handoff — which is a normal state, not a failure.
+- **Indecisive verdicts rendered as `rejected`**, conflating "could not measure" with "measured and
+  lost". Now a first-class status that never sets `best_so_far`.
+- **Missing data rendered as confident values**: `pass^k NaN%` (a dict reached a percent
+  formatter), a red `failed` badge for an absent status, and "nothing has been charged yet" for an
+  absent cost ledger. All now degrade to an explicit missing state.
+- **`cap-evolve run --project X` silently read a different project's `capevolve.yaml`**, which
+  also changed `orchestration_mode` and so whether a paid optimizer subprocess ran at all.
+- **Dashboard deep links returned HTTP 404** (`/runs/<id>`, `/compare`) — only in-app navigation
+  worked; a shared link or page refresh broke.
+- `agent-optimize`'s documented gate, commit and copy steps could not run; `check.py` now executes
+  every command the skill documents. Prose budget parsing turned `$1,200` into `$1.00` and
+  `2,000 USD` into `$0.00`.
+
+### Added
+- **A real CLI surface**: branded home screen, `help <command>` with runnable examples, `init`,
+  `doctor` (readiness check that names the fix for each failure), `algorithms`, and `cap-evolve
+  diff` to read the edit that moved the number. Help was previously one usage line.
+- **An algorithm-agnostic live view and dashboard.** The same panels and tabs for all five
+  algorithms, with per-algorithm extras derived from event kinds that were already emitted and
+  previously ignored. Includes a reconciled cost ledger that reports *unattributed* spend rather
+  than hiding it, and a full event log.
+- **Subset screening for `agent-optimize`** — a cheap tier that can only `kill` or `promote`, never
+  accept; deterministic, recorded, and biased against false kills.
+- `ci/e2e_all_algorithms.sh`, which drives every algorithm end to end on the zero-API example.
+
 ### Removed
 - **The evograph dashboard iframe, and with it the `custom_view` extension point.** The
   weakness graph used to be a separate bundled React app + FastAPI backend
