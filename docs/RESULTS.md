@@ -16,6 +16,54 @@ Gains are given as **absolute** and **relative %**.
 
 ---
 
+## RH-SWE-bench (SWE-bench Verified via Harbor, fit metric, no committed artifact)
+
+> **Read the caveats before quoting this one.** It is the only entry on this page whose run
+> artifact is **not committed to this repo**, so it is the only one that cannot be
+> re-derived from `examples/*/run_full/*.json`. It is recorded here because the README
+> quotes it and points at this page; it is flagged rather than dropped so the gap is
+> visible instead of implied.
+
+- **Capabilities:** `[skill-package, system-prompt]`. **Harness:** Harbor (each task runs a
+  full `claude-code` agent inside an isolated Docker container).
+- **Optimizer:** `claude-code` @ `claude-opus-4-6`.
+- **Agent under test:** `claude-sonnet-4-6` via Harbor.
+- **Tasks:** 119 val tasks from SWE-bench Verified.
+- **Split:** `train == val == test == 119` — **fit metric**, no holdout. The optimizer saw
+  every task it was scored on, so this is *not* a generalization claim.
+
+| | reward (119 tasks) | Δ vs baseline |
+|---|---|---|
+| Baseline (seed prompt + skill) | **0.580** (58.0%) | — |
+| Best candidate (`cand_0002`), val | **0.765** (76.5%) | +0.185 / +31.9% relative |
+
+2 of 7 iterations accepted: iter 1 `+0.118` (0.580 → 0.698), iter 2 `+0.067` (→ 0.765).
+Per-task: 24 improved, 2 regressed, 93 unchanged.
+
+### Caveats — three, and the third is unresolved
+
+1. **Fit metric, no holdout.** `train == val == test`, so the +0.185 measures how well the
+   optimizer fit 119 known tasks, not how it generalizes. Every held-out number on this page
+   is a stronger claim than this one.
+2. **No committed artifact.** There is no `run_full/` for this benchmark. The numbers above
+   are transcribed from `site/results.html`; there is no run dir, commit hash, trial count,
+   or cost figure in the repo to check them against. `ci/benchmarks/swebench/` holds task
+   lists and split ids, not results.
+3. **The published figure disagrees with these numbers, and I could not resolve which is
+   authoritative.** `site/assets/rh_swe_bench.png` — the image README and `site/results.html`
+   both embed next to this result — is a cross-model / cross-harness bar chart. Its bars read
+   `Sonnet 4.6 Claude Code optimized with cap-evolve 73.1`, `Opus 4.6 Claude Code 63.3`,
+   `Sonnet 4.6 Claude Code 55.7`, and three RedHatAI/NVIDIA-Nemotron rows at 30.8 / 22.4 /
+   21.6. It contains neither 58.0 nor 76.5, and `73.1`/`55.7` appear nowhere else in the
+   repo. The chart is clearly the *same* body of work — its optimized bar is labelled
+   "Sonnet 4.6 Claude Code optimized with cap-evolve" and the agent under test above is
+   `claude-sonnet-4-6` — so this is two scorings of one optimization, not two unrelated
+   experiments. What is unresolved is **which scoring is authoritative**: either the chart is
+   a later re-measurement and 58.0 → 76.5 is stale, or the two use different subsets/scoring
+   and are not comparable. Until someone with the run says which, **treat both pairs as
+   unconfirmed.** Note the chart is the weaker of the two (+17.4 pp vs +18.5 pp), so this is
+   not a case of a figure flattering the text.
+
 ## toy_calc — deterministic, zero-API
 
 | | val | test | notes |

@@ -149,9 +149,12 @@ Combine them, e.g. `[system-prompt, tools]`. See [Architecture](docs/ARCHITECTUR
 
 ## Results
 
-Numbers are cross-checked against committed run artifacts; each is labeled **fit metric**
-(no holdout) or **held-out** (test scored once on ids the optimizer never saw). Full detail,
-models, task/trial counts, commits, and costs: **[docs/RESULTS.md](docs/RESULTS.md)**.
+Each result is labeled **fit metric** (no holdout) or **held-out** (test scored once on ids
+the optimizer never saw). Full detail, models, task/trial counts, commits, and costs:
+**[docs/RESULTS.md](docs/RESULTS.md)**. Every row is cross-checked against a committed run
+artifact **except RH-SWE-bench**, whose artifact is not in this repo — see the caveats in
+[docs/RESULTS.md](docs/RESULTS.md#rh-swe-bench-swe-bench-verified-via-harbor-fit-metric-no-committed-artifact)
+before quoting it.
 
 | Benchmark | Split | Baseline → Optimized | Gain |
 |---|---|---|---|
@@ -162,9 +165,14 @@ models, task/trial counts, commits, and costs: **[docs/RESULTS.md](docs/RESULTS.
 | **SkillsBench** (skill package) | sealed **test** (held-out) | `0.556 → 0.667` | **+0.111 / +20.0%** |
 
 <p align="center">
-  <img src="site/assets/rh_swe_bench.png" alt="RH-SWE-bench run overview — baseline vs optimized across 119 SWE-bench Verified tasks" width="800"/>
+  <img src="site/assets/rh_swe_bench.png" alt="RH SWE-Bench scores by model and harness: cap-evolve-optimized Sonnet 4.6 at 73.1, Opus 4.6 at 63.3, Sonnet 4.6 at 55.7, and three RedHatAI/NVIDIA-Nemotron rows at 30.8, 22.4 and 21.6" width="800"/>
   <br/>
-  <sub>RH-SWE-bench: cap-evolve optimizing a coding agent on SWE-bench Verified via Harbor — baseline (58.0%) → optimized (76.5%) across 119 tasks.</sub>
+  <sub>RH SWE-Bench by model and harness: a cap-evolve-optimized Sonnet 4.6 (73.1) scores
+  above an unoptimized Opus 4.6 (63.3) and its own unoptimized baseline (55.7).
+  <br/>
+  <em>This chart's numbers are a different measurement from the 58.0 → 76.5 fit-metric run in
+  the table above, and the relationship between the two is unresolved — see
+  <a href="docs/RESULTS.md#rh-swe-bench-swe-bench-verified-via-harbor-fit-metric-no-committed-artifact">the caveats</a>.</em></sub>
 </p>
 
 **At a glance — baseline → optimized across all benchmarks:**
