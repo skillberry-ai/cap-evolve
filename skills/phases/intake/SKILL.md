@@ -43,7 +43,7 @@ inputs. The metric / GitHub / stop-condition questions below feed directly into 
 - For each shown metric, is higher or lower better? → `metric_directions` (parallel to `metrics_display`).
 
 ### GitHub integration
-- `gh auth status` = authed? Offer: mirror the algorithm's work items as issues + ship winner as PR (`Closes #n`) → `github_integration: true`; else offer `gh auth login` or skip → `false`. WHAT gets mirrored is algorithm-specific (the `algorithm_skill` defines it — e.g. evo-graph → weaknesses). GitHub is mirror-only; the run dir stays authoritative.
+- `gh auth status` = authed? Offer: mirror the algorithm's work items as issues + ship winner as PR (`Closes #n`) → `github_integration: true`; else offer `gh auth login` or skip → `false`. WHAT gets mirrored is algorithm-specific (the `algorithm_skill` defines it — e.g. evograph → weaknesses). GitHub is mirror-only; the run dir stays authoritative.
 
 ### Orchestration mode
 - Ask: deterministic or agent? → `orchestration_mode` (default `deterministic`).

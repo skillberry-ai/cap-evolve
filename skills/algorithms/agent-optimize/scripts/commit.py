@@ -53,8 +53,16 @@ def main(argv=None) -> int:
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
         run_dir.set_best(args.candidate_id)
+    # Carry the proposer's own spend on the EVENT as well as into state.json. update_spent
+    # alone leaves the dashboard's cost ledger unable to attribute it: state.json has the
+    # total, but no cost-bearing event exists to explain it, so an agent-mode run reported
+    # 100% of its optimizer spend as unattributed. opt_cost_usd/opt_tokens are the field
+    # names the ledger already reads from headless optimizer backends.
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
-                      note=args.note)
+                      note=args.note,
+                      opt_cost_usd=args.optimizer_usd or None,
+                      opt_tokens=args.optimizer_tokens or None,
+                      opt_seconds=args.optimizer_seconds or None)
     spent = run_dir.update_spent(iterations=1, accepted=accepted,
                                  optimizer_usd=args.optimizer_usd,
                                  optimizer_tokens=args.optimizer_tokens,

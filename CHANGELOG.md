@@ -8,6 +8,17 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Removed
+- **The evograph dashboard iframe, and with it the `custom_view` extension point.** The
+  weakness graph used to be a separate bundled React app + FastAPI backend
+  (`skills/algorithms/evograph/dashboard/`, `scripts/view.py`) mounted into the main
+  dashboard through `custom_view.py`. Every algorithm now renders in the *same* dashboard
+  with the same visual language, and per-algorithm detail is a first-class tab rather than
+  an embedded document — the weakness graph reads the run dir's `wiki/` directly. This
+  supersedes the `custom_view` mechanism described under 0.1.0 below: an algorithm no
+  longer ships its own view.
+- **The "Insights" panel** and three duplicated cost sections in the static dashboard.
+
 ### Added
 - **Live terminal progress: `cap-evolve run --follow` and `cap-evolve tail` (#116).** A
   classic run was silent for its whole duration — a hung multi-hour run looked exactly
