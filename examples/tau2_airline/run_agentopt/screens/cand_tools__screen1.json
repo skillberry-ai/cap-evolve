@@ -1,0 +1,67 @@
+{
+  "tag": "cand_tools",
+  "screen_tag": "cand_tools__screen1",
+  "tier": 1,
+  "current": "seed",
+  "subset": {
+    "ids": [
+      "16",
+      "44",
+      "8"
+    ],
+    "broken": [],
+    "holdout": [
+      "16"
+    ],
+    "informative": [
+      "44",
+      "8"
+    ],
+    "k": 3,
+    "requested_k": 3,
+    "seed": 1,
+    "holdout_frac": 0.34,
+    "pool_n": 12
+  },
+  "reused_from_earlier_tiers": [],
+  "fired_ids": [
+    "16",
+    "44",
+    "8"
+  ],
+  "paired": {
+    "deltas": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "ids": [
+      "16",
+      "44",
+      "8"
+    ],
+    "regressed": [],
+    "fixed": [
+      "8"
+    ],
+    "dropped": []
+  },
+  "decision": "promote",
+  "inconclusive": true,
+  "n": 3,
+  "mean_delta": 0.3333333333333333,
+  "se": 0.33333333333333337,
+  "threshold": -0.33333333333333337,
+  "regressed": [],
+  "reason": "subset \u0394\u0304=+0.3333, SE=0.3333, n=3: not significantly harmful \u2192 promote (inconclusive: promoted without positive evidence \u2014 the screen is biased against false kills)",
+  "savings": {
+    "fired": 3,
+    "full_val_rollouts": 12,
+    "avoided": 0,
+    "net_rollouts": -3,
+    "decision": "promote",
+    "screen_cost_usd": 0.303703
+  },
+  "promote_to": "full-val evaluate + gate_check.py",
+  "note": "A screen is TRIAGE. It may kill; it may never accept. Only gate_check.py on FULL val (\u0394\u0304 > k\u00b7SE and no regression) accepts."
+}

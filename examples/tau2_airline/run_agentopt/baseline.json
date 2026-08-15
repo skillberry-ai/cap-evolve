@@ -1,0 +1,453 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.8333333333333334,
+    "stderr": 0.11236664374387367,
+    "pass_k": {
+      "1": 0.8333333333333334
+    },
+    "pass_at_k": {
+      "1": 0.8333333333333334
+    },
+    "per_task": [
+      {
+        "task_id": "0",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.022952,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "4",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='KC18K6'; get_reservation_details: agent used reservation_id='KC18K6'; get_reservation_details: agent used reservation_id='KC18K6'; get_reservation_details: agent used reservation_id='KC18K6'.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.052530999999999994,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "8",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='PHL', flight_type='one_way', flights=[{'flight_number': 'HAT271', 'date': '2024-05-26'}], insurance='no', nonfree_baggages=0, origin='ORD', passengers=[{'first_name': 'Sophia', 'last_name': 'Silva', 'dob': '1957-10-05'}, {'first_name': 'Kevin', 'last_name': 'Smith', 'dob': '2001-04-12'}], payment_methods=[{'payment_id': 'certificate_8045380', 'amount': 348}] (not on the user's profile; available=['certificate_8045380', 'certificate_3887113', 'credit_card_4196779', 'gift_card_5094406']), total_baggages=2, user_id='sophia_silva_7557'.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.116066,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "12",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): calculate: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.082965,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "16",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.101897,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "20",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.09825099999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "24",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.126149,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "28",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.05086399999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "32",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.211103,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "36",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.021293,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "40",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.035511,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "44",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly); update_reservation_flights: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.025047,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      }
+    ],
+    "cost_usd": 0.944629,
+    "tokens": 0,
+    "seconds": 119.06319093704224,
+    "n_tasks": 12,
+    "n_scored": 12
+  },
+  "best_id": "seed"
+}

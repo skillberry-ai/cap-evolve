@@ -1,0 +1,905 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.4166666666666667,
+    "stderr": 0.1486470975026408,
+    "pass_k": {
+      "1": 0.4166666666666667
+    },
+    "pass_at_k": {
+      "1": 0.4166666666666667
+    },
+    "per_task": [
+      {
+        "task_id": "1",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.061862,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "5",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.08183499999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "9",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.064273,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "13",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.037527,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "17",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: was never called (or not called correctly); update_reservation_passengers: was never called (or not called correctly); update_reservation_baggages: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.061737,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "21",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT078', 'date': '2024-05-27'}, {'flight_number': 'HAT118', 'date': '2024-05-27'}, {'flight_number': 'HAT084', 'date': '2024-05-27'}, {'flight_number': 'HAT266', 'date': '2024-05-27'}], payment_id='credit_card_9879898', reservation_id='OBUT9V'; update_reservation_baggages: agent used nonfree_baggages=1, payment_id='credit_card_9879898', reservation_id='OBUT9V', total_baggages=2.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.173836,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "25",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SEA', flight_type='one_way', flights=[{'flight_number': 'HAT097', 'date': '2024-05-17'}, {'flight_number': 'HAT251', 'date': '2024-05-17'}], insurance='no', nonfree_baggages=0, origin='DTW', passengers=[{'first_name': 'Ivan', 'last_name': 'Smith', 'dob': '1986-03-14'}], payment_methods=[{'payment_id': 'gift_card_8516878', 'amount': 128}, {'payment_id': 'credit_card_3563913', 'amount': 171}] (not on the user's profile; available=['certificate_8998287', 'credit_card_3563913', 'gift_card_8516878']), total_baggages=3, user_id='ivan_muller_7015'.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.12479599999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "29",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: was never called (or not called correctly); book_reservation: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.100848,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "33",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): search_direct_flight: agent used date='2024-05-23', destination='IAH', origin='SFO'; update_reservation_baggages: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.135687,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "37",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.124394,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "41",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.060929,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "45",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.094369,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      }
+    ],
+    "cost_usd": 1.122093,
+    "tokens": 0,
+    "seconds": 125.33380770683289,
+    "n_tasks": 12,
+    "n_scored": 12
+  },
+  "best_id": "seed",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.4166666666666667,
+    "stderr": 0.1486470975026408,
+    "pass_k": {
+      "1": 0.4166666666666667
+    },
+    "pass_at_k": {
+      "1": 0.4166666666666667
+    },
+    "per_task": [
+      {
+        "task_id": "1",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.061862,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "5",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.08183499999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "9",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.064273,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "13",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.037527,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "17",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: was never called (or not called correctly); update_reservation_passengers: was never called (or not called correctly); update_reservation_baggages: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.061737,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "21",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT078', 'date': '2024-05-27'}, {'flight_number': 'HAT118', 'date': '2024-05-27'}, {'flight_number': 'HAT084', 'date': '2024-05-27'}, {'flight_number': 'HAT266', 'date': '2024-05-27'}], payment_id='credit_card_9879898', reservation_id='OBUT9V'; update_reservation_baggages: agent used nonfree_baggages=1, payment_id='credit_card_9879898', reservation_id='OBUT9V', total_baggages=2.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.173836,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "25",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SEA', flight_type='one_way', flights=[{'flight_number': 'HAT097', 'date': '2024-05-17'}, {'flight_number': 'HAT251', 'date': '2024-05-17'}], insurance='no', nonfree_baggages=0, origin='DTW', passengers=[{'first_name': 'Ivan', 'last_name': 'Smith', 'dob': '1986-03-14'}], payment_methods=[{'payment_id': 'gift_card_8516878', 'amount': 128}, {'payment_id': 'credit_card_3563913', 'amount': 171}] (not on the user's profile; available=['certificate_8998287', 'credit_card_3563913', 'gift_card_8516878']), total_baggages=3, user_id='ivan_muller_7015'.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.12479599999999999,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "29",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): cancel_reservation: was never called (or not called correctly); book_reservation: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.100848,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "33",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): search_direct_flight: agent used date='2024-05-23', destination='IAH', origin='SFO'; update_reservation_baggages: was never called (or not called correctly).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.135687,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "37",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 0.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 0.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.124394,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "41",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.060929,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      },
+      {
+        "task_id": "45",
+        "reward": 1.0,
+        "feedback": "Task reward: 1.000. All checks passed.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": [
+          {
+            "name": "reward",
+            "value": 1.0,
+            "primary": true,
+            "direction": "higher"
+          },
+          {
+            "name": "db_match",
+            "value": 1.0,
+            "primary": false,
+            "direction": "higher"
+          },
+          {
+            "name": "cost_usd",
+            "value": 0.094369,
+            "primary": false,
+            "direction": "lower"
+          }
+        ]
+      }
+    ],
+    "cost_usd": 1.122093,
+    "tokens": 0,
+    "seconds": 125.33380770683289,
+    "n_tasks": 12,
+    "n_scored": 12
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.0
+}

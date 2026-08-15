@@ -174,6 +174,100 @@ no-holdout run).
 
 ---
 
+## τ²-Bench airline — `agent-optimize` with subset screening, disjoint 26/12/12 — **null result**
+
+The run that exercised subset screening and prose-constraint parsing for the first time.
+**Nothing cleared the gate.** Recorded because a null result with a diagnosed cause is
+evidence, and because two integrity findings came out of it.
+
+- **Spec:** `examples/tau2_airline/capevolve.agentopt.yaml`, `orchestration_mode: agent`,
+  `algorithm_skill: agent-optimize`, capabilities `[system-prompt, tools]`.
+- **Agent + user simulator:** `claude-haiku-4-5` via the IBM Anthropic-compatible gateway.
+- **Split:** disjoint **26 train / 12 val / 12 test**, `num_trials: 1`, `paired`, `k_se 0.2`.
+- **Cost:** **$12.98** ($10.58 runner including screens + $2.40 optimizer), 5 iterations,
+  110 metric calls. Stopped on its own `stall` rule (3 consecutive rejects), not on a cap.
+
+| split | n | seed | best (`= seed`) | paired Δ̄ |
+|---|--:|--:|--:|--:|
+| train | 26 | 0.6154 ± 0.0973 | 0.6154 ± 0.0973 | 0.0 |
+| val | 12 | 0.8333 ± 0.1124 | 0.8333 ± 0.1124 | 0.0 |
+| **test** (sealed once) | 12 | **0.4167 ± 0.1486** | 0.4167 ± 0.1486 | 0.0 |
+
+Every `0.0` is **by construction, not by measurement** — `best_id == seed`, so `finalize`
+scored the same capability on both sides. `measure.py` emits that warning itself.
+
+### All four candidates, rejected with their own reasons
+
+| candidate | val | Δ̄ | bar (`k·SE`) | SE | n | regressed | fixed |
+|---|--:|--:|--:|--:|--:|---|---|
+| `cand_tools` | 0.8333 | **+0.0000** | 0.0246 | 0.1231 | 12 | `24` | `8` |
+| `cand_r1` | 0.5833 | −0.2500 | 0.0359 | 0.1794 | 12 | `16 20 24 36` | `8` |
+| `cand_r2` | 0.7500 | −0.0833 | 0.0167 | 0.0833 | 12 | `32` | — |
+| `cand_r3` | 0.4167 | −0.4167 | 0.0297 | 0.1486 | 12 | `12 16 20 24 36` | — |
+
+Re-derived from the persisted rollouts in
+[`run_agentopt/val_per_task.json`](../examples/tau2_airline/run_agentopt/val_per_task.json);
+the seed fails exactly two tasks, `8` and `44`.
+
+`cand_tools` is **churn**: mean identical to the seed, different tasks passing (fixed 8, broke
+24). That is the failure mode the no-regression veto exists for, now observed a third time
+across runs. **No candidate ever fixed task 44** — only `cand_tools` and `cand_r1` moved
+anything, both unlocking task 8 and both breaking task 24 to do it. The edits were audited as
+general, not task-keyed. This is a real capability trade-off, correctly refused.
+
+### Both levers were genuinely exercised
+
+Every candidate edited **both** the prompt and the tool code — `policy/policy.md` +2 to +11
+lines and `tools/tools.py` +71 to +87 across 3 hunks (new `_to_minutes()` /
+`_scheduled_duration_hours()` helpers, `get_flight_status` returning `duration_hours` with a
+`+1` next-day-arrival rule). So the qualitative claim — it edits prompts *and* tool code
+jointly — is demonstrated. The statistical claim is not.
+
+### Why it found nothing — four causes
+
+1. **The effect size is below the noise floor.** Baseline is 10/12, so only 2 tasks are
+   winnable and one flipped task is Δ̄ ≈ 0.083 against a paired SE of 0.08–0.18. This split
+   cannot resolve a one-task gain. A measurement-power limit, not an optimizer failure.
+   `k_se 0.2` was already permissive and was **not** loosened to manufacture an accept.
+2. **`num_trials: 1` collapses the paired gate on identical trials** (`SE = 0` → STRICT
+   fallback, emitted as a `gate_warning`).
+3. **Subset screening was pure overhead here — a measured loss.** 4 screens, **0 kills, 4
+   promotes**, 12 rollouts fired, 0 avoided, `net_rollouts −12`, `screen_usd $1.367`. All four
+   returned `inconclusive: true`. Worse, `cand_r3`'s screen produced a **false positive**: its
+   subset was `[16, 44, 8]` with `regressed: ["16"]` and `mean_delta 0.0`, which requires a
+   `+1` on 44 or 8 to average out — yet full val shows `cand_r3` fixed *neither*. So a 3-task
+   screen read an improvement that does not exist. That vindicates the rule that a screen may
+   never accept, and undercuts 3 as a sufficient triage width. The ladder behaved as designed;
+   this run does not demonstrate the cost win it exists for.
+   *Recording gap found while auditing this:* `screens/*.json` persists `regressed` but leaves
+   `fixed: null`, so a screen's positive signal is not auditable from the artifact — the
+   false positive above had to be inferred from `mean_delta` and `regressed`.
+4. **val does not predict test on this split.** val 0.8333 vs sealed test 0.4167 for the *same*
+   seed capability, despite index-stride stratification. Second observation across runs.
+
+### Integrity finding: a tag collision invalidated one decision
+
+Two concurrent optimizer drivers both tagged a candidate `cand_r2`. The event log holds **two**
+`reject cand_r2` events with different notes describing different edits, but only **one**
+`evaluate cand_r2`, one `screen cand_r2`, and one set of 12 rollouts — so one edit was rejected
+on the other's evidence, and the second snapshot overwrote the first in `candidates/cand_r2`.
+
+Direction of harm matters: it produced a spurious **reject**, not a spurious accept, and
+`best_id` is `seed`, so no reported number rests on it. This is `agent-optimize`'s own
+unique-tag invariant (rollouts are `<task>__<tag>__t<k>.json`, so a shared tag silently
+collapses two candidates into one) being violated by real concurrent agents. By contrast the
+`<tag>__screenN` isolation held perfectly under the same pressure — 12 files per candidate
+tag, 3 per screen tag, no bleed.
+
+### Reproducibility gap
+
+The run only works with `TAU2_AGENT_MODEL` / `TAU2_USER_MODEL` set to an anthropic-looking
+model string; otherwise `rits.llm_args_for()` falls through and demands `RITS_API_KEY`. Neither
+appears in the spec. This broke the first `finalize` attempt (the seal survived — the failure
+preceded `mark_test_used()`). Worth recording in the spec or the adapter docstring.
+
+---
+
 ## τ²-Bench airline — Qwen 2.5 14B (tools only, held-out)
 
 Same benchmark, capability, split, and algorithm as the held-out run above, with a

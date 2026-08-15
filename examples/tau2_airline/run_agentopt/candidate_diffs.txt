@@ -1,0 +1,305 @@
+===== cand_tools :: policy/policy.md =====
+--- .capevolve-agentopt/run_20260815_181613/candidates/seed/policy/policy.md	2026-08-15 18:04:47
++++ .capevolve-agentopt/run_20260815_181613/candidates/cand_tools/policy/policy.md	2026-08-15 18:30:57
+@@ -14,6 +14,8 @@
+ 
+ You should transfer the user to a human agent if and only if the request cannot be handled within the scope of your actions. To transfer, first make a tool call to transfer_to_human_agents, and then send the message 'YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.' to the user.
+ 
++Before you transfer, or tell the user that some detail is unavailable to you, check whether any tool you have can supply it. A record you already fetched not showing a field is not evidence that the field is unavailable — look it up with the tool that provides it. Only transfer when the request genuinely cannot be served by any of your tools.
++
+ ## Domain Basic
+ 
+ ### User
+@@ -37,6 +39,8 @@
+ - destination
+ - scheduled departure and arrival time (local time)
+ 
++Scheduled departure/arrival times — and therefore a flight's duration — are always obtainable from the tools: use `get_flight_status` for a flight you already know by number (for example one already on a reservation), and `search_direct_flight`/`search_onestop_flight` for a route. Never tell a user that flight times or durations are unavailable to you.
++
+ A flight can be available at multiple dates. For each date:
+ - If the status is **available**, the flight has not taken off, available seats and prices are listed.
+ - If the status is **delayed** or **on time**, the flight has not taken off, cannot be booked.
+===== cand_tools :: tools/tools.py =====
+--- .capevolve-agentopt/run_20260815_181613/candidates/seed/tools/tools.py	2026-08-15 18:04:47
++++ .capevolve-agentopt/run_20260815_181613/candidates/cand_tools/tools/tools.py	2026-08-15 18:30:07
+@@ -47,6 +47,39 @@
+ REMOVE_TOOLS: set[str] = set()
+ 
+ 
++def _to_minutes(clock: str) -> int:
++    """'HH:MM:SS' (optionally suffixed '+1' for a next-day arrival) -> minutes.
++
++    General string parsing over the domain's own time format; carries no
++    flight-, date- or task-specific data.
++    """
++    text = str(clock).strip()
++    extra_days = 0
++    if "+" in text:
++        text, _, tail = text.partition("+")
++        try:
++            extra_days = int(tail.strip() or 1)
++        except ValueError:
++            extra_days = 1
++    parts = [int(p) for p in text.strip().split(":") if p.strip().isdigit()]
++    hours = parts[0] if parts else 0
++    minutes = parts[1] if len(parts) > 1 else 0
++    return extra_days * 24 * 60 + hours * 60 + minutes
++
++
++def _scheduled_duration_hours(departure: str, arrival: str) -> float:
++    """Scheduled flight duration in hours between two EST clock strings.
++
++    A '+1'-suffixed arrival means the flight lands the following day; a bare
++    arrival earlier than the departure is also treated as landing the next day.
++    """
++    dep = _to_minutes(departure)
++    arr = _to_minutes(arrival)
++    if arr < dep:
++        arr += 24 * 60
++    return round((arr - dep) / 60.0, 2)
++
++
+ class AirlineTools(_BaseAirlineTools):
+     """The full airline toolset. Subclasses tau2's ``AirlineTools`` to inherit the
+     private helpers + ``ToolKitBase`` machinery; every agent-callable tool is
+@@ -578,16 +611,60 @@
+     @is_tool(ToolType.READ)
+     def get_flight_status(self, flight_number: str, date: str) -> str:
+         """
+-        Get the status of a flight.
++        Get the status, scheduled times and scheduled duration of one flight on one date.
+ 
++        Use this whenever you need a flight's departure time, arrival time or duration and
++        you already know its flight number — for example a flight that is already on a
++        reservation, where a route search is not appropriate. Flight times and durations
++        are therefore always obtainable; never tell a user they are unavailable.
++
+         Args:
+-            flight_number: The flight number.
+-            date: The date of the flight.
++            flight_number: The flight number, such as 'HAT001'.
++            date: The date of the flight in the format 'YYYY-MM-DD', such as '2024-05-01'.
+ 
+         Returns:
+-            The status of the flight.
++            A JSON object with the flight's status, origin, destination,
++            scheduled_departure_time_est, scheduled_arrival_time_est and duration_hours
++            (scheduled arrival minus scheduled departure, counting an arrival marked '+1'
++            as landing the next day), plus any estimated/actual times, available seats and
++            prices that the date's status carries.
+ 
+         Raises:
+-            ValueError: If the flight is not found.
++            ValueError: If the flight or the date is not found.
+         """
+-        return self._get_flight_instance(flight_number, date).status
++        import json as _json
++
++        flight = self._get_flight(flight_number)
++        instance = self._get_flight_instance(flight_number, date)
++        out = {
++            "flight_number": flight_number,
++            "date": date,
++            "status": str(getattr(instance, "status", "")),
++            "origin": flight.origin,
++            "destination": flight.destination,
++            "scheduled_departure_time_est": flight.scheduled_departure_time_est,
++            "scheduled_arrival_time_est": flight.scheduled_arrival_time_est,
++            "duration_hours": _scheduled_duration_hours(
++                flight.scheduled_departure_time_est,
++                flight.scheduled_arrival_time_est,
++            ),
++        }
++        try:  # the date's status also carries seats/prices or estimated/actual times
++            out.update(instance.model_dump(mode="json"))
++        except Exception:  # pragma: no cover — a status object without model_dump
++            pass
++        return _json.dumps(out)
++
++
++def _self_check() -> None:
++    """Smallest runnable check for the duration parser (the only non-trivial logic)."""
++    assert _scheduled_duration_hours("06:00:00", "07:30:00") == 1.5
++    assert _scheduled_duration_hours("19:00:00", "21:00:00") == 2.0
++    assert _scheduled_duration_hours("22:00:00", "02:00:00") == 4.0      # implicit next day
++    assert _scheduled_duration_hours("22:00:00", "02:00:00+1") == 4.0    # explicit next day
++    assert _scheduled_duration_hours("06:00", "11:45") == 5.75           # HH:MM tolerated
++    print("ok")
++
++
++if __name__ == "__main__":
++    _self_check()
+===== cand_r1 :: policy/policy.md =====
+--- .capevolve-agentopt/run_20260815_181613/candidates/seed/policy/policy.md	2026-08-15 18:04:47
++++ .capevolve-agentopt/run_20260815_181613/candidates/cand_r1/policy/policy.md	2026-08-15 18:49:53
+@@ -14,6 +14,8 @@
+ 
+ You should transfer the user to a human agent if and only if the request cannot be handled within the scope of your actions. To transfer, first make a tool call to transfer_to_human_agents, and then send the message 'YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.' to the user.
+ 
++Before you transfer, or tell the user that some detail is unavailable to you, check whether any tool you have can supply it. A record you already fetched not showing a field is not evidence that the field is unavailable — look it up with the tool that provides it. Only transfer when the request genuinely cannot be served by any of your tools.
++
+ ## Domain Basic
+ 
+ ### User
+@@ -37,6 +39,8 @@
+ - destination
+ - scheduled departure and arrival time (local time)
+ 
++Scheduled departure/arrival times — and therefore a flight's duration — are always obtainable from the tools: use `get_flight_status` for a flight you already know by number (for example one already on a reservation), and `search_direct_flight`/`search_onestop_flight` for a route. Never tell a user that flight times or durations are unavailable to you.
++
+ A flight can be available at multiple dates. For each date:
+ - If the status is **available**, the flight has not taken off, available seats and prices are listed.
+ - If the status is **delayed** or **on time**, the flight has not taken off, cannot be booked.
+@@ -96,6 +100,11 @@
+ 
+ Do not add checked bags that the user does not need.
+ 
++The free allowance above is only a *limit*, never a request. `total_baggages` is the number of bags the user actually intends to check on this reservation, and `nonfree_baggages` is how many of those exceed the free allowance:
++- If the user does not ask to check any bags, or says they do not need any extra/additional baggage, book `total_baggages=0` and `nonfree_baggages=0`. Do not fill the free allowance on their behalf.
++- Only if the user states a number of bags they want to check do you set `total_baggages` to that number, and `nonfree_baggages` to however many of them exceed the free allowance.
++- The same rule applies when modifying baggage on an existing reservation.
++
+ Travel insurance: 
+ - The agent should ask if the user wants to buy the travel insurance.
+ - The travel insurance is 30 dollars per passenger and enables full refund if the user needs to cancel the flight given health or weather reasons.
+@@ -148,6 +157,12 @@
+ 
+ The API does not check that cancellation rules are met, so the agent must make sure the rules apply before calling the API!
+ 
++Because the API will silently cancel an ineligible reservation, treat `cancel_reservation` as a last step you must earn:
++- Before calling it, state to yourself which ONE of the four conditions above is satisfied, using facts you have actually read (the reservation's `cabin`, its `created_at` compared with the current time, an airline cancellation, or `insurance`).
++- Travel insurance only covers cancellation for **health or weather** reasons. A reason such as change of plan, a schedule that is too long or inconvenient, cost, or "streamlining my trip" is **not** covered by insurance, and insurance does not make such a reservation cancellable.
++- "It is a business flight" means the reservation's cabin is `business`. Basic economy and economy do not qualify.
++- If none of the four conditions holds, do **not** call `cancel_reservation`. Explain to the user which rule blocks it and offer what you can legitimately do instead (for example modifying the flights or the cabin). A user asking again, or being unhappy, does not create eligibility.
++
+ Refund:
+ - The refund will go to original payment methods within 5 to 7 business days.
+ 
+===== cand_r1 :: tools/tools.py =====
+--- .capevolve-agentopt/run_20260815_181613/candidates/seed/tools/tools.py	2026-08-15 18:04:47
++++ .capevolve-agentopt/run_20260815_181613/candidates/cand_r1/tools/tools.py	2026-08-15 18:50:01
+@@ -47,6 +47,39 @@
+ REMOVE_TOOLS: set[str] = set()
+ 
+ 
++def _to_minutes(clock: str) -> int:
++    """'HH:MM:SS' (optionally suffixed '+1' for a next-day arrival) -> minutes.
++
++    General string parsing over the domain's own time format; carries no
++    flight-, date- or task-specific data.
++    """
++    text = str(clock).strip()
++    extra_days = 0
++    if "+" in text:
++        text, _, tail = text.partition("+")
++        try:
++            extra_days = int(tail.strip() or 1)
++        except ValueError:
++            extra_days = 1
++    parts = [int(p) for p in text.strip().split(":") if p.strip().isdigit()]
++    hours = parts[0] if parts else 0
++    minutes = parts[1] if len(parts) > 1 else 0
++    return extra_days * 24 * 60 + hours * 60 + minutes
++
++
++def _scheduled_duration_hours(departure: str, arrival: str) -> float:
++    """Scheduled flight duration in hours between two EST clock strings.
++
++    A '+1'-suffixed arrival means the flight lands the following day; a bare
++    arrival earlier than the departure is also treated as landing the next day.
++    """
++    dep = _to_minutes(departure)
++    arr = _to_minutes(arrival)
++    if arr < dep:
++        arr += 24 * 60
++    return round((arr - dep) / 60.0, 2)
++
++
+ class AirlineTools(_BaseAirlineTools):
+     """The full airline toolset. Subclasses tau2's ``AirlineTools`` to inherit the
+     private helpers + ``ToolKitBase`` machinery; every agent-callable tool is
+@@ -213,7 +246,16 @@
+     @is_tool(ToolType.WRITE)
+     def cancel_reservation(self, reservation_id: str) -> Reservation:
+         """
+-        Cancel the whole reservation.
++        Cancel the whole reservation and refund every payment on it.
++
++        This is an irreversible write and the API does NOT check that the reservation is
++        eligible for cancellation — you must. Only call this once you have read the
++        reservation and confirmed at least one of: the booking was made within the last
++        24 hours; the airline cancelled the flight; the reservation's cabin is 'business';
++        or the reservation has travel insurance AND the user's reason is a health or
++        weather reason (insurance does not cover a change of plan, cost, or an
++        inconvenient schedule). If none of those holds, do not call this tool — say which
++        rule blocks the cancellation instead.
+ 
+         Args:
+             reservation_id: The reservation ID, such as 'ZFA04Y'.
+@@ -578,16 +620,60 @@
+     @is_tool(ToolType.READ)
+     def get_flight_status(self, flight_number: str, date: str) -> str:
+         """
+-        Get the status of a flight.
++        Get the status, scheduled times and scheduled duration of one flight on one date.
++
++        Use this whenever you need a flight's departure time, arrival time or duration and
++        you already know its flight number — for example a flight that is already on a
++        reservation, where a route search is not appropriate. Flight times and durations
++        are therefore always obtainable; never tell a user they are unavailable.
+ 
+         Args:
+-            flight_number: The flight number.
+-            date: The date of the flight.
++            flight_number: The flight number, such as 'HAT001'.
++            date: The date of the flight in the format 'YYYY-MM-DD', such as '2024-05-01'.
+ 
+         Returns:
+-            The status of the flight.
++            A JSON object with the flight's status, origin, destination,
++            scheduled_departure_time_est, scheduled_arrival_time_est and duration_hours
++            (scheduled arrival minus scheduled departure, counting an arrival marked '+1'
++            as landing the next day), plus any estimated/actual times, available seats and
++            prices that the date's status carries.
+ 
+         Raises:
+-            ValueError: If the flight is not found.
++            ValueError: If the flight or the date is not found.
+         """
+-        return self._get_flight_instance(flight_number, date).status
++        import json as _json
++
++        flight = self._get_flight(flight_number)
++        instance = self._get_flight_instance(flight_number, date)
++        out = {
++            "flight_number": flight_number,
++            "date": date,
++            "status": str(getattr(instance, "status", "")),
++            "origin": flight.origin,
++            "destination": flight.destination,
++            "scheduled_departure_time_est": flight.scheduled_departure_time_est,
++            "scheduled_arrival_time_est": flight.scheduled_arrival_time_est,
++            "duration_hours": _scheduled_duration_hours(
++                flight.scheduled_departure_time_est,
++                flight.scheduled_arrival_time_est,
++            ),
++        }
++        try:  # the date's status also carries seats/prices or estimated/actual times
++            out.update(instance.model_dump(mode="json"))
++        except Exception:  # pragma: no cover — a status object without model_dump
++            pass
++        return _json.dumps(out)
++
++
++def _self_check() -> None:
++    """Smallest runnable check for the duration parser (the only non-trivial logic)."""
++    assert _scheduled_duration_hours("06:00:00", "07:30:00") == 1.5
++    assert _scheduled_duration_hours("19:00:00", "21:00:00") == 2.0
++    assert _scheduled_duration_hours("22:00:00", "02:00:00") == 4.0      # implicit next day
++    assert _scheduled_duration_hours("22:00:00", "02:00:00+1") == 4.0    # explicit next day
++    assert _scheduled_duration_hours("06:00", "11:45") == 5.75           # HH:MM tolerated
++    print("ok")
++
++
++if __name__ == "__main__":
++    _self_check()
