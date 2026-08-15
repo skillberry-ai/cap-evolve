@@ -213,6 +213,7 @@ def skillopt_loop(
     slow_update_sample: int = 20,
     algorithm: str = "skillopt",
     store=None,
+    protected_patterns=None,
 ) -> dict:
     """Run the SkillOpt epochs × mini-batches climb.
 
@@ -297,7 +298,16 @@ def skillopt_loop(
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
+                protected_patterns=protected_patterns,
             )
+            if step.get("candidate_val") is None:
+                # Indecisive (protected-path tamper): no measurement exists, so it must
+                # not enter the failure/rejected buffers — those teach the optimizer
+                # about edits that were actually evaluated.
+                steps.append(step)
+                epoch_steps += 1
+                global_step += 1
+                continue
             cand_val = SplitResult.from_dict(step["candidate_val"])
             accepted = bool(step["accepted"])
 
@@ -349,11 +359,12 @@ def skillopt_loop(
                 epoch=epoch, sample=slow_update_sample, edit_budget=schedule[-1] if schedule else edit_budget,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
                 rejected=rejected, history=history, store=store,
+                protected_patterns=protected_patterns,
             )
             if slow_rec is not None:
                 slow_updates.append(slow_rec)
                 steps.append(slow_rec["step"])
-                if slow_rec["step"]["accepted"]:
+                if slow_rec["step"]["accepted"] and slow_rec["step"].get("candidate_val"):
                     current_val = SplitResult.from_dict(slow_rec["step"]["candidate_val"])
                     epoch_accepts += 1
 
@@ -422,7 +433,7 @@ def _run_slow_update(
     adapter, *, run_dir: RunDir, optimizer, current_val: SplitResult,
     prev_epoch_skill: SplitResult, prev_epoch_best_id, epoch: int, sample: int,
     edit_budget: int, n_trials: int, gate_kwargs: dict, no_regression: bool,
-    rejected, history, store,
+    rejected, history, store, protected_patterns=None,
 ) -> dict | None:
     """Re-evaluate the epoch-start skill vs current best on a small TRAIN subset,
     categorize, and run ONE extra gated step. Counted in budget; sample is small
@@ -470,11 +481,15 @@ def _run_slow_update(
         optimizer=optimizer, instructions=instructions, current_val=current_val,
         n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
         no_regression=no_regression, rejected=rejected, history=history, store=store,
+        protected_patterns=protected_patterns,
     )
     step["epoch"] = epoch
     step["step_in_epoch"] = "slow"
     step["edit_budget"] = edit_budget
-    action = "accepted" if step["accepted"] else "rejected"
+    if step.get("candidate_val") is None:
+        action = "indecisive"   # never measured (tamper) — not a verdict on the edit
+    else:
+        action = "accepted" if step["accepted"] else "rejected"
     run_dir.log_event("skillopt_slow_update", epoch=epoch, candidate=cid,
                       accept=step["accepted"], action=action,
                       regressed=len(categories["regressed"]))

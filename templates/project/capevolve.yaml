@@ -89,6 +89,23 @@ max_metric_calls: 0         # 0 = unlimited; else stop after N runner evals
 max_usd: 0.0                # 0 = unlimited; total $ cap (runner + optimizer + intake)
 max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
 
+# --- anti-reward-hacking: seal the evaluation surface (optional, OFF by default)
+# Globs, relative to the candidate dir, that the optimizer may NOT change. They are
+# content-hashed before the optimizer runs and re-verified BEFORE any rollout is paid
+# for, so the seal holds for EVERY optimizer CLI (not just the ones with a Claude-Code
+# PreToolUse hook). A candidate that edits one is INDECISIVE — never scored 0.0: the
+# measurement is void, so the stall counter and the best candidate are untouched.
+# The literal `default` expands to the built-in set (*gold*, tasks/*, data/*, tests/*,
+# conftest.py, scorer.py, adapter.py, splits.json, ...). Absent/empty = off.
+# protected_paths: [default]
+# protected_paths: ["*gold*", "tasks/*", "scorer.py"]
+
+# --- convergence: escalate on a plateau instead of only stopping (hill-climb, OFF)
+# Variance-aware plateau detection: warn -> require a paradigm shift -> stop. The
+# advice is appended to the optimizer prompt so budget stays productive instead of
+# spending the remaining iterations on more of what already failed. Absent = off.
+# convergence: true
+
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command
 # store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)
