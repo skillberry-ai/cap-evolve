@@ -26,7 +26,34 @@ def _screens(width, color):
         "algorithms": branding.algorithms_screen(None, width, color=color, env=env),
         "algorithms_one": branding.algorithms_screen("gepa", width, color=color, env=env),
         "banner": branding.banner(width, color=color, env=env),
+        "masthead": branding.banner(width, color=color, env=env, lines=("",), pairs=(
+            ("run", "run_x"), ("algorithm", "hill-climb · deterministic"),
+            ("spec", "/very/long/path/to/a/project/capevolve.yaml"),
+            ("split", "train 8 · val 6 · test 6   seed 0"),
+            ("gate", "paired   k_se 0.20   trials 2"), ("target", "m-1"))),
     }
+
+
+# ---- the masthead (the block beside the logo) -------------------------------
+
+def test_masthead_pairs_render_beside_the_logo_and_stay_inside_the_width():
+    from cap_evolve import branding
+    for width in (64, 80, 100, 200):
+        lines = _screens(width, False)["masthead"]
+        text = "\n".join(lines)
+        assert "run_x" in text and "hill-climb · deterministic" in text
+        # aligned label column: every value starts at the same offset
+        starts = {ln.index("run_x") for ln in lines if "run_x" in ln}
+        assert len(starts) == 1
+        for ln in lines:
+            assert len(_ANSI.sub("", ln)) <= width, (width, ln)
+    # exactly LOGO_ROWS rows in truecolor: the block ends level with the capybara
+    art = _screens(100, True)["masthead"]
+    assert len(art) == branding.LOGO_ROWS
+    # a long value is cropped, not wrapped onto a row the logo does not have
+    narrow = branding.banner(70, color=False, env={"NO_COLOR": "1"},
+                             pairs=(("spec", "x" * 300),))
+    assert all(len(ln) <= 70 for ln in narrow)
 
 
 # ---- ANSI discipline --------------------------------------------------------
