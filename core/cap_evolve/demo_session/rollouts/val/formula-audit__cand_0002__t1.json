@@ -1,0 +1,15 @@
+{
+ "input": "illustrative sample task formula-audit (no model was called)",
+ "rollout": {
+  "output": "",
+  "seconds": 0.0,
+  "error": ""
+ },
+ "score": {
+  "task_id": "formula-audit",
+  "reward": 0.0,
+  "feedback": "Wrong total in the summary row; the merged header was skipped.",
+  "metrics": [],
+  "raw": {}
+ }
+}

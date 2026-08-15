@@ -1,0 +1,15 @@
+{
+ "input": "illustrative sample task date-coercion (no model was called)",
+ "rollout": {
+  "output": "",
+  "seconds": 0.0,
+  "error": ""
+ },
+ "score": {
+  "task_id": "date-coercion",
+  "reward": 1.0,
+  "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+  "metrics": [],
+  "raw": {}
+ }
+}

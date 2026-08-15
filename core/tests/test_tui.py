@@ -450,6 +450,246 @@ def test_headline_is_skipped_without_color_and_on_a_short_terminal():
     assert buf.getvalue() == ""
 
 
+# ---- the distributed-surplus layout ----------------------------------------
+
+def test_plan_section_sizes_sweep_with_stretch_and_activity_caps():
+    """The invariant still holds with the stretch pass and the activity cap in play."""
+    from cap_evolve.tui import plan_section_sizes
+    for rows in list(range(0, 61)) + [80, 120, 200, 500]:
+        for caps in (None, 0, 1, 4, 99):
+            for st in (None, {}, {"tree": 0}, {"tree": 99, "activity": 40},
+                       {"nope": 5}, {"chart": 3}):
+                s = plan_section_sizes(rows, has_algo=True, has_heatmap=True,
+                                       has_diff=True, tree_rows=caps,
+                                       heatmap_rows=caps, diff_rows=caps,
+                                       header_rows=caps, activity_rows=caps,
+                                       stretch=st)
+                assert all(v >= 0 for v in s.values()), (rows, s)
+                assert sum(s.values()) <= rows, (rows, s)
+
+
+def test_plan_section_sizes_leaves_no_unused_rows():
+    """Item: the bottom of the frame must not be dead space.
+
+    Once the chart exists there is always somewhere for a surplus row to go, so the
+    allocation must spend the whole terminal.
+    """
+    from cap_evolve.tui import plan_section_sizes
+    for rows in range(14, 200):
+        s = plan_section_sizes(rows, tree_rows=4, heatmap_rows=3, has_heatmap=True,
+                               header_rows=6, activity_rows=3)
+        assert sum(s.values()) == rows, (rows, s)
+
+
+def test_render_frame_fills_the_terminal_at_every_height():
+    from cap_evolve import tui
+    with tempfile.TemporaryDirectory() as d:
+        r = _reduced(Path(d))
+        for rows in range(16, 90):
+            frame = tui.render_frame(r, (120, rows), activity=["a", "b"])
+            assert frame.count("\n") + 1 == rows, rows
+
+
+# ---- reason strings: wrapped when there is room, ellipsized when not --------
+
+_LONG = ("indecisive: paired mean=+0.0000 within noise (SE=0.1054, n=6) "
+         "— no evidence either way")
+
+
+def _long_reason_reduced():
+    return {"summary": {"best_id": "cand_0001"},
+            "graph": {"root": "seed", "nodes": [
+                {"id": "seed", "iteration": 0, "val": 0.25, "status": "seed"},
+                {"id": "cand_0001", "iteration": 1, "parent": "seed", "val": 0.25,
+                 "parent_val": 0.25, "status": "rejected", "reason": _LONG},
+            ]}}
+
+
+def test_a_long_gate_reason_wraps_onto_a_continuation_line():
+    from cap_evolve import tui
+    out = tui.render_frame(_long_reason_reduced(), (100, 40), color=False)
+    joined = " ".join(" ".join(out.split("\n")).split())
+    # the whole reason is readable, across however many lines it took
+    assert _LONG in joined, out
+    assert "no evidence either way" in out
+
+
+def test_a_cropped_reason_is_marked_and_never_ends_mid_word():
+    """`... SE=0 → STRICT fallback, wa` reads as a rendering bug; `…` does not."""
+    from cap_evolve import tui
+    # 70 columns: the reason's column is too narrow to wrap into, so it is cropped
+    out = tui.render_frame(_long_reason_reduced(), (70, 30), color=False)
+    row = next(ln for ln in out.split("\n") if "cand_0001" in ln).rstrip()
+    assert row.endswith("…"), row
+    assert row.rstrip("…").endswith(" "), row       # cut at a word boundary
+    assert "…" not in _LONG                          # the source text had none
+
+
+def test_ell_marks_only_what_it_cropped():
+    from cap_evolve.tui import _ell
+    assert _ell("short", 10) == "short"          # fits → untouched, no ellipsis
+    assert _ell("", 10) == "" and _ell("abc", 0) == ""
+    assert _ell("abcdefghij", 5).endswith("…")
+    assert len(_ell("abcdefghij", 5)) <= 5
+    # a word boundary in reach is preferred to a mid-word cut
+    assert _ell("alpha beta gammagamma", 18) == "alpha beta …"
+    # ...but an unbroken token still shows as much of itself as fits
+    assert _ell("/very/long/path/without/spaces", 12) == "/very/long/…"
+
+
+def test_wrapped_reason_lines_are_still_sanitized():
+    """The escape-smuggling property must survive the new continuation lines."""
+    from cap_evolve import tui
+    hostile = ("\x1b]0;pwned\x07\x1b[2J boom " + "word " * 40)
+    reduced = {"summary": {}, "graph": {"root": "seed", "nodes": [
+        {"id": "seed", "iteration": 0, "val": 0.1},
+        {"id": "c1", "iteration": 1, "parent": "seed", "val": 0.2,
+         "status": "rejected", "reason": hostile}]}}
+    for color in (False, True):
+        out = tui.render_frame(reduced, (100, 50), color=color,
+                               activity=[hostile], running=None)
+        assert "\x1b]0;" not in out and "\x1b[2J" not in out
+        assert "\x07" not in out and "\r" not in out
+        if not color:
+            assert "\x1b" not in out
+        assert "pwned" in out and "boom" in out
+
+
+def test_activity_wraps_a_long_line_and_marks_it_when_it_cannot():
+    from cap_evolve import tui
+    reduced = {"summary": {}, "graph": {"nodes": []}}
+    tall = tui.render_frame(reduced, (60, 40), activity=[_LONG], color=False)
+    assert _LONG.split("—")[-1].strip() in " ".join(" ".join(
+        tall.split("\n")).split()), tall
+    # one row for the panel: the line is cropped, and says so
+    short = tui._activity([_LONG], None, 60, 1, color=False)
+    assert len(short) == 1 and short[0].endswith("…")
+
+
+# ---- the chart legend names every glyph it draws ---------------------------
+
+def test_chart_legend_explains_the_shaded_area_and_the_markers():
+    from cap_evolve import tui
+    reduced = {"summary": {}, "graph": {"nodes": [
+        {"id": f"c{i}", "iteration": i, "best_so_far": 0.1 * i, "val": 0.1 * i,
+         "status": "accepted"} for i in range(1, 6)]}}
+    out = tui.render_frame(reduced, (110, 40), color=False)
+    legend = next(ln for ln in out.split("\n") if "best so far" in ln)
+    for glyph in ("█", "▒", "○", "·", "x"):
+        assert glyph in legend, (glyph, legend)
+    # every glyph drawn on the grid is one the legend names (no unexplained visuals)
+    grid = [ln for ln in out.split("\n")
+            if any(g in ln for g in ("█", "▒")) and not re.search(r"[A-Za-z]", ln)]
+    assert grid, out
+    for ln in grid:
+        assert set(ln) <= set(" 0123456789.-█▒○·x"), ln
+
+
+def test_chart_marks_one_point_per_iteration_not_a_dotted_line():
+    """A stretched run must not paint a reject marker across its whole band."""
+    from cap_evolve import tui
+    reduced = {"summary": {}, "graph": {"nodes": [
+        {"id": "c1", "iteration": 1, "best_so_far": 1.0, "val": 1.0,
+         "status": "accepted"},
+        {"id": "c2", "iteration": 2, "best_so_far": 1.0, "val": 0.0,
+         "status": "rejected"}]}}
+    out = tui.render_frame(reduced, (120, 30), color=False)
+    grid = [ln for ln in out.split("\n")
+            if any(g in ln for g in ("█", "▒")) and not re.search(r"[A-Za-z]", ln)]
+    assert sum(ln.count("·") for ln in grid) == 1, grid
+
+
+# ---- run provenance (which spec produced this run) -------------------------
+
+def test_run_meta_is_honest_about_what_the_run_did_not_record():
+    from cap_evolve.tui import run_meta
+    pairs = dict(run_meta({}))
+    assert pairs["spec"] == "—" and pairs["split"] == "—"
+    assert pairs["algorithm"] == "—"
+    assert "trials —" in pairs["gate"] and "k_se —" in pairs["gate"]
+    assert "0" not in pairs["split"]           # never a fabricated zero
+
+
+def test_run_meta_reports_the_resolved_spec_and_mode_sanitized():
+    from cap_evolve.tui import run_meta
+    pairs = dict(run_meta({
+        "run_id": "run_x", "algorithm": "gepa",
+        "run_config": {"spec": "/p/capevolve.yaml\x1b[2J",
+                       "orchestration_mode": "agent"},
+        "splits": {"train": 8, "val": 6, "test": 6, "seed": 0},
+        "target_profile": {"model": "m-1"},
+        "evaluations": [{"trials": 3}, {"trials": 3}],
+        "gate_decisions": [{"reason": "paired Δ=+0.1 > 0.2·SE=0.02", "k_se": 0.2}],
+    }))
+    assert "\x1b" not in pairs["spec"] and pairs["spec"].startswith("/p/capevolve.yaml")
+    assert pairs["algorithm"] == "gepa · agent"
+    assert pairs["split"] == "train 8 · val 6 · test 6   seed 0"
+    assert pairs["gate"] == "paired   k_se 0.20   trials 3"
+    assert pairs["target"] == "m-1"
+
+
+def test_header_states_the_spec_that_produced_the_run():
+    """A run started against the wrong project's spec must be visible in seconds."""
+    from cap_evolve import tui
+    reduced = {"summary": {"run_id": "r", "algorithm": "hill-climb",
+                           "run_config": {"spec": "/x/y/capevolve.yaml",
+                                          "orchestration_mode": "deterministic"}},
+               "graph": {"nodes": []}}
+    out = tui.render_frame(reduced, (120, 30), color=False)
+    assert "/x/y/capevolve.yaml" in out
+    assert "hill-climb · deterministic" in out
+    # and a run that recorded none says so instead of implying one
+    plain = tui.render_frame({"summary": {"algorithm": "gepa"},
+                              "graph": {"nodes": []}}, (120, 30), color=False)
+    assert "not recorded" in plain
+
+
+def test_reduce_projects_the_run_config_event():
+    from cap_evolve import tui
+    with tempfile.TemporaryDirectory() as d:
+        root = _mk_run(Path(d), events=[
+            {"t": 1.0, "kind": "run_config", "spec": "/a/capevolve.yaml",
+             "algorithm": "skillopt", "orchestration_mode": "deterministic"}] + _EVENTS)
+        cfg = tui._reduce(root)["summary"]["run_config"]
+        assert cfg["spec"] == "/a/capevolve.yaml"
+        assert cfg["algorithm"] == "skillopt"
+    with tempfile.TemporaryDirectory() as d:      # no such event → empty, never guessed
+        assert tui._reduce(_mk_run(Path(d)))["summary"]["run_config"] == {}
+
+
+# ---- the per-task heatmap covers every candidate, not just the seed --------
+
+def test_the_bundled_demo_session_has_per_task_data_for_every_candidate():
+    """The README/demo-video frame: a half-populated heatmap looks broken."""
+    from cap_evolve import tui
+    nodes = (tui._reduce(tui.DEMO_DIR)["graph"] or {})["nodes"]
+    assert len(nodes) >= 8
+    for n in nodes:
+        assert n.get("per_task"), n["id"]
+        # ...and each row's mean is the val the log reports for that candidate
+        if n.get("val") is not None:
+            per = list(n["per_task"].values())
+            assert abs(sum(per) / len(per) - n["val"]) < 5e-4, n["id"]
+
+
+def test_replay_carries_rollouts_into_the_scratch_dir_as_their_event_arrives():
+    """Without this the heatmap could only ever show the seed row on a replay."""
+    from cap_evolve import tui
+    with tempfile.TemporaryDirectory() as d:
+        src, scratch = Path(d) / "src", Path(d) / "scratch"
+        (src / "rollouts" / "val").mkdir(parents=True)
+        scratch.mkdir()
+        for name in ("t1__cand_0001__t0.json", "t1__seed__t0.json"):
+            (src / "rollouts" / "val" / name).write_text("{}", encoding="utf-8")
+        tui._copy_rollouts(src, scratch, {"kind": "evaluate", "split": "val",
+                                          "tag": "cand_0001"})
+        got = [p.name for p in (scratch / "rollouts" / "val").glob("*.json")]
+        assert got == ["t1__cand_0001__t0.json"]   # only the tag that was measured
+        # unrelated events copy nothing, and a missing source dir is not an error
+        tui._copy_rollouts(src, scratch, {"kind": "step", "candidate": "c"})
+        tui._copy_rollouts(Path(d) / "nope", scratch, {"kind": "evaluate", "tag": "x"})
+
+
 def test_spend_split_omits_roles_with_no_recorded_spend():
     from cap_evolve import tui
     reduced = {"summary": {"cost": {"runner_usd": 0.0, "optimizer_usd": 1.25,

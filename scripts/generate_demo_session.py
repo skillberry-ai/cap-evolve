@@ -45,7 +45,11 @@ ITERS = [
     ("cand_0003", "cand_0001", 0.6667, True,
      "paired Δ̄=+0.1667 > 0.2·SE=0.0236 (SE=0.1178, n=6)"),
     ("cand_0004", "cand_0003", 0.6667, False,
-     "indecisive: paired Δ̄=+0.0000 within noise (SE=0.1054, n=6) — no evidence either way"),
+     # Kept under ~62 chars so it renders in FULL on one lineage row rather than being
+     # ellipsized. This is the one reason string a reader most needs whole: it is what
+     # distinguishes "we could not measure this" from "we measured it and it lost", and a
+     # row that trails off at "— no …" teaches the opposite of the point.
+     "indecisive: Δ̄=0 within noise (SE=0.105, n=6) — not a reject"),
     ("cand_0005", "cand_0003", 0.7500, True,
      "paired Δ̄=+0.0833 > 0.2·SE=0.0192 (SE=0.0962, n=6)"),
     ("cand_0006", "cand_0005", 0.5833, False,
@@ -56,15 +60,76 @@ ITERS = [
 
 _BASE_VAL = 0.3333333333333333
 
+#: Trials per task. TWO, not three, because every per-task table below must average
+#: EXACTLY to the val reward its ``evaluate`` event reports (0.4167 = 2.5/6 needs a half),
+#: and a fixture whose per-task rows contradict its own means is not an honest fixture.
+_N_TRIALS = 2
+
+#: Per-task val reward per candidate. Each row's mean is exactly the val number the
+#: matching ``evaluate``/``step`` event reports — see the assertion in :func:`main`.
+#: cand_0004 deliberately has the SAME mean as its parent with the mass moved between
+#: tasks: that is what "indecisive — no evidence either way" looks like per task.
+PER_TASK_VAL = {
+    "seed":      [1.0, 0.0, 0.0, 1.0, 0.0, 0.0],   # 0.3333
+    "cand_0001": [1.0, 0.5, 0.0, 1.0, 0.5, 0.0],   # 0.5000
+    "cand_0002": [1.0, 0.5, 0.0, 1.0, 0.0, 0.0],   # 0.4167
+    "cand_0003": [1.0, 1.0, 0.5, 1.0, 0.5, 0.0],   # 0.6667
+    "cand_0004": [1.0, 1.0, 0.0, 1.0, 1.0, 0.0],   # 0.6667 — same mean, mass moved
+    "cand_0005": [1.0, 1.0, 0.5, 1.0, 1.0, 0.0],   # 0.7500
+    "cand_0006": [1.0, 1.0, 0.0, 1.0, 0.5, 0.0],   # 0.5833
+    "cand_0007": [1.0, 1.0, 1.0, 1.0, 1.0, 0.0],   # 0.8333
+}
+
+_FB_PASS = "Task fully solved (all verifier tests passed; reward 1.0)."
+_FB_FAIL = "Wrong total in the summary row; the merged header was skipped."
+_FB_FLAKY = "Passed on one trial and failed on the other — unstable on this task."
+
+
+def _feedback(r: float) -> str:
+    return _FB_PASS if r >= 1.0 else (_FB_FAIL if r <= 0.0 else _FB_FLAKY)
+
+
+def _trial_rewards(r: float) -> list[float]:
+    """``_N_TRIALS`` trial outcomes whose mean is ``r`` (a half means one of each)."""
+    if r >= 1.0 or r <= 0.0:
+        return [r] * _N_TRIALS
+    return [1.0, 0.0]
+
 
 def _per_task(rewards):
     """A SplitResult-shaped ``per_task`` list (see harness.SplitResult.to_dict)."""
-    return [{"task_id": t, "reward": r, "n": 3, "stderr": 0.0,
-             "feedback": ("Task fully solved (all verifier tests passed; reward 1.0)."
-                          if r >= 1.0 else
-                          "Wrong total in the summary row; the merged header was skipped."),
-             "trial_rewards": [r, r, r]}
+    return [{"task_id": t, "reward": r, "n": _N_TRIALS, "stderr": 0.0,
+             "feedback": _feedback(r), "trial_rewards": _trial_rewards(r)}
             for t, r in zip(TASKS, rewards)]
+
+
+def _pass_k(rewards) -> dict:
+    """pass^1 / pass^2 computed from the trials, not asserted by hand.
+
+    pass^k here is "solved on at least one of k trials", which for this fixture's
+    two-trial tables is the fraction of tasks with any passing trial.
+    """
+    n = len(rewards) or 1
+    return {"1": sum(rewards) / n,
+            "2": sum(1 for r in rewards if max(_trial_rewards(r)) > 0) / n}
+
+
+def _rollout_files(tag: str, rewards, split: str = "val") -> dict[str, str]:
+    """``{relative path: json text}`` — one file per (task, trial), as harness writes them.
+
+    This is the ONLY source the reducer has for a candidate's per-task rewards
+    (``dashboard._per_task_from_rollouts``), so without these files the per-task heatmap
+    can show the seed row (which comes from ``baseline.json``) and nothing else.
+    """
+    out: dict[str, str] = {}
+    for task, r in zip(TASKS, rewards):
+        for k, tr in enumerate(_trial_rewards(r)):
+            rec = {"input": f"illustrative sample task {task} (no model was called)",
+                   "rollout": {"output": "", "seconds": 0.0, "error": ""},
+                   "score": {"task_id": task, "reward": tr, "feedback": _feedback(r),
+                             "metrics": [], "raw": {}}}
+            out[f"rollouts/{split}/{task}__{tag}__t{k}.json"] = json.dumps(rec, indent=1)
+    return out
 
 
 def build() -> tuple[list[dict], dict, dict]:
@@ -74,6 +139,17 @@ def build() -> tuple[list[dict], dict, dict]:
     def add(kind: str, **fields):
         ev.append({"t": round(t, 3), "kind": kind, **fields})
 
+    # Provenance, exactly as `cap-evolve run` records it: which spec/project/algorithm
+    # produced this run. The live header reads it back, so the demo shows the field a
+    # real operator uses to catch "--project X silently read Y's capevolve.yaml".
+    # A ~/ path, deliberately: this fixture is illustrative, and an `examples/...` path would
+    # read as a real directory in THIS repo. There is no examples/spreadsheet-agent, so a
+    # viewer who went looking would find nothing -- and the provenance line exists precisely
+    # to be trusted about which spec produced a run.
+    add("run_config", spec="~/projects/spreadsheet-agent/capevolve.yaml",
+        project="~/projects/spreadsheet-agent",
+        algorithm="hill-climb", optimizer="claude-code",
+        orchestration_mode="deterministic")
     add("splits", train=8, val=6, test=6, seed=0)
     t += 2.0
     add("target_profile", model="demo-runner-8b", tier="small",
@@ -125,16 +201,21 @@ def build() -> tuple[list[dict], dict, dict]:
         test_delta=0.333333, best_id=best_id)
 
     baseline = {"val": {"split": "val", "reward": _BASE_VAL, "stderr": 0.1925,
-                        "pass_k": {"1": _BASE_VAL, "2": 0.4444},
-                        "per_task": _per_task([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
+                        "pass_k": _pass_k(PER_TASK_VAL["seed"]),
+                        "per_task": _per_task(PER_TASK_VAL["seed"]),
                         "cost_usd": 0.0180, "tokens": 14200, "seconds": 118.4},
                 "best_id": "seed"}
+    _TEST_PER_TASK = [1.0, 1.0, 1.0, 1.0, 0.0, 1.0]
+    _BASE_TEST_PER_TASK = [1.0, 0.0, 1.0, 1.0, 0.0, 0.0]
     test = {"split": "test", "reward": 0.8333333333333333, "stderr": 0.1667,
-            "pass_k": {"1": 0.8333333333333333, "2": 0.8333333333333333},
-            "per_task": _per_task([1.0, 1.0, 1.0, 1.0, 0.0, 1.0]),
+            "pass_k": _pass_k(_TEST_PER_TASK),
+            "per_task": _per_task(_TEST_PER_TASK),
             "cost_usd": 0.0191, "tokens": 15050, "seconds": 130.2}
+    # pass_k recomputed, not inherited: dict(test, reward=0.5) used to keep the WINNER's
+    # pass^k next to the seed's reward, which is a fabricated number.
     base_test = dict(test, reward=0.5, stderr=0.2236,
-                     per_task=_per_task([1.0, 0.0, 1.0, 1.0, 0.0, 0.0]),
+                     pass_k=_pass_k(_BASE_TEST_PER_TASK),
+                     per_task=_per_task(_BASE_TEST_PER_TASK),
                      cost_usd=0.0188, tokens=14800, seconds=126.5)
     final = {"test": test, "best_id": best_id, "baseline_id": "seed",
              "test_baseline": base_test, "test_delta": 0.333333}
@@ -150,7 +231,23 @@ def main() -> int:
     for e in ev:
         line = eventstream.format_event(e, {})
         assert line is not None or e["kind"] in eventstream.BOOKKEEPING_KINDS, e
+    # Every per-task table must average EXACTLY to the val number its event reports.
+    # A fixture that contradicts itself would teach the reader to distrust the panel.
+    means = {"seed": _BASE_VAL, **{cid: val for cid, _p, val, _a, _r in ITERS}}
+    for tag, rewards in PER_TASK_VAL.items():
+        got = sum(rewards) / len(rewards)
+        assert abs(got - means[tag]) < 5e-5, (tag, got, means[tag])
     OUT.mkdir(parents=True, exist_ok=True)
+    # Rollouts: the per-candidate per-task rewards the heatmap reads. Written before the
+    # JSON summaries so a partial regeneration can never leave a run dir claiming a
+    # per-task row it has no rollout for.
+    for stale in sorted((OUT / "rollouts").rglob("*.json")):
+        stale.unlink()
+    for tag, rewards in PER_TASK_VAL.items():
+        for rel, text in _rollout_files(tag, rewards).items():
+            path = OUT / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
     body = "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in ev)
     (OUT / "events.jsonl").write_text(
         json.dumps({"kind": "log_note", "note": _HEADER}, ensure_ascii=False) + "\n" + body,

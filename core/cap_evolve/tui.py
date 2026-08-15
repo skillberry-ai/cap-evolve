@@ -44,6 +44,7 @@ import json
 import shutil
 import signal
 import sys
+import textwrap
 import time
 from collections import deque
 from pathlib import Path
@@ -87,20 +88,29 @@ PHASES = ("intake", "check", "baseline", "optimize", "finalize", "report")
 # Height budget. (name, min, max) in PRIORITY order — under pressure the earlier
 # sections keep their rows and the later ones collapse to zero.
 _SECTIONS = (
-    ("header", 1, 7),
+    ("header", 1, 9),
     ("footer", 1, 2),
     ("tree", 3, 40),
-    ("activity", 1, 6),
+    # 12: an 8-entry backlog plus the title and the in-flight line, with room for one
+    # wrapped reason. Capped for real by ``activity_rows`` (the lines it actually has).
+    ("activity", 1, 12),
     ("algo", 1, 3),
     # diff before heatmap: the diff panel only exists when the user asked for it
     # (--diff), so on a short terminal it outranks a panel they did not request.
     ("diff", 4, 14),
     ("heatmap", 2, 10),
+    # 10 is the chart's CONTENT size; it is also the surplus sink (see :data:`_FILL`),
+    # where it grows past this without limit once every panel has its own rows.
     ("chart", 5, 10),
 )
 # Growth order once every section has its minimum: give spare rows to the panels
 # that carry information density before letting the chart stretch.
 _GROW = ("header", "footer", "tree", "diff", "algo", "heatmap", "activity", "chart")
+#: Where a genuine SURPLUS goes once every section is at its content size AND its
+#: stretch size, in order of preference. The chart is first: more rows there is more
+#: vertical resolution, which is real information, whereas more rows anywhere else is
+#: padding. The rest are fallbacks for a frame with no chart yet.
+_FILL = ("chart", "tree", "activity", "diff", "heatmap")
 
 
 # ---- small formatters -------------------------------------------------------
@@ -177,17 +187,27 @@ def plan_section_sizes(avail_rows: int, *, has_chart: bool = True, has_tree: boo
                        has_algo: bool = False, has_heatmap: bool = False,
                        has_diff: bool = False, heatmap_rows: int | None = None,
                        diff_rows: int | None = None,
-                       header_rows: int | None = None) -> dict[str, int]:
+                       header_rows: int | None = None,
+                       activity_rows: int | None = None,
+                       stretch: dict | None = None) -> dict[str, int]:
     """Row allocation whose sum NEVER exceeds ``avail_rows``.
 
-    Minimums are granted in :data:`_SECTIONS` priority order (a section starved by a
-    tiny terminal gets 0 rows and is simply not drawn), then spare rows are handed out
-    in :data:`_GROW` order up to each section's maximum. ``tree_rows`` caps the lineage
-    panel at the number of rows it actually has, so spare space reaches the chart.
+    Three passes:
 
-    This is the invariant that keeps an inline repaint honest: emit one row more than
-    the terminal has and the previous frame scrolls out of reach of the cursor-up,
-    leaving a duplicated half-frame on screen.
+    1. **minimums**, in :data:`_SECTIONS` priority order — a section starved by a tiny
+       terminal gets 0 rows and is simply not drawn.
+    2. **content**, in :data:`_GROW` order up to each section's maximum, where the
+       ``*_rows`` arguments cap a panel at the rows its content actually occupies. This
+       is what stops a 3-row panel from sitting under a band of padding.
+    3. **stretch/surplus**, in :data:`_FILL` order: leftover rows go to the panels that
+       turn height into information — ``stretch[name]`` is the rows a panel could use
+       for its *nice-to-have* lines (a wrapped gate reason), and the chart takes whatever
+       remains as real vertical resolution. Without this pass a tall terminal ended with
+       a quarter of the frame blank: every panel was at its cap and nobody took the rest.
+
+    ``sum(...) <= avail_rows`` is the invariant that keeps an inline repaint honest: emit
+    one row more than the terminal has and the previous frame scrolls out of reach of the
+    cursor-up, leaving a duplicated half-frame on screen.
     """
     want = {"header": True, "footer": True, "tree": has_tree,
             "activity": has_activity, "chart": has_chart,
@@ -211,11 +231,29 @@ def plan_section_sizes(avail_rows: int, *, has_chart: bool = True, has_tree: boo
         # Cap a panel at the rows it actually has, so spare space reaches the chart
         # instead of becoming a band of padding under a 3-row panel.
         for who, cap in (("tree", tree_rows), ("heatmap", heatmap_rows),
-                         ("diff", diff_rows), ("header", header_rows)):
+                         ("diff", diff_rows), ("header", header_rows),
+                         ("activity", activity_rows)):
             if name == who and cap is not None:
                 hi = min(hi, max(1, int(cap)))
         grow = min(max(0, hi - out[name]), left)
         out[name], left = out[name] + grow, left - grow
+    # Stretch pass: the panels that can turn extra rows into extra text (wrapped gate
+    # reasons) get them before the chart, but only up to what they would actually use.
+    for name, cap in (stretch or {}).items():
+        if left <= 0:
+            break
+        if name not in out or out[name] == 0:
+            continue
+        grow = min(max(0, int(cap) - out[name]), left)
+        out[name], left = out[name] + grow, left - grow
+    # Surplus pass: rows still unspent, so hand them to the first panel that can use
+    # height for real rather than leaving a band of dead frame at the bottom.
+    for name in _FILL:
+        if left <= 0:
+            break
+        if out[name] == 0:
+            continue  # starved by the budget; do not resurrect it here either
+        out[name], left = out[name] + left, 0
     return out
 
 
@@ -241,6 +279,40 @@ def _fit(cells, width: int, color: bool) -> str:
         used += len(t)
         out.append(_c(t, style, color))
     return "".join(out)
+
+
+def _ell(text: str, width: int) -> str:
+    """``text`` in at most ``width`` columns, marking a crop with ``…``.
+
+    A silently clipped sentence (``… SE=0 → STRICT fallback, wa``) reads as a rendering
+    bug; the ellipsis says "there is more" instead. Only ever applied to already
+    sanitized text, and never to a line that fits.
+    """
+    text = str(text)
+    if width <= 0:
+        return ""
+    if len(text) <= width:
+        return text
+    cut = text[: max(0, width - 1)]
+    # Back up to a word boundary when one is close: "— no evid…" reads as a rendering
+    # bug, "— no …" reads as a deliberate crop. Only a short reach back, so a long
+    # unbroken token (a path, a hash) still shows as much of itself as it can.
+    space = cut.rfind(" ")
+    if space >= 8 and len(cut) - space <= 14:
+        cut = cut[:space + 1]
+    return cut + "…"
+
+
+def _wrap(text: str, width: int) -> list[str]:
+    """``text`` wrapped on word boundaries, or ``[]`` when there is no usable width.
+
+    The gate reason justifies every accept/reject/indecisive decision, so when the frame
+    has vertical room the reason is continued on the next line rather than truncated.
+    """
+    text = str(text).strip()
+    if not text or width < 8:
+        return []
+    return textwrap.wrap(text, width) or []
 
 
 def _pad(lines: list[str], n: int) -> list[str]:
@@ -272,6 +344,88 @@ def _breadcrumb(current: str, width: int, color: bool) -> str:
         else:
             cells.append((name, _C.GREY))
     return _fit(cells, width, color)
+
+
+def _gate_mode(summary: dict) -> tuple[str, str]:
+    """``(mode, k_se)`` as strings, read from the gate's OWN recorded reasons.
+
+    Never guessed: a run whose log carries no gate decision yields ``("—", "—")`` rather
+    than the default configuration, which may not be the one that ran.
+    """
+    mode, k = "—", "—"
+    for d in (summary.get("gate_decisions") or []):
+        if not isinstance(d, dict):
+            continue
+        reason = str(d.get("reason") or "")
+        if "STRICT" in reason:
+            mode = "strict (SE=0 fallback)"
+        elif reason.startswith("paired") or "paired" in reason:
+            mode = "paired"
+        if d.get("k_se") is not None:
+            k = _fmt_val(d.get("k_se"), 2)
+    return mode, k
+
+
+def _trials(summary: dict) -> str:
+    """Trials per task, as RECORDED by the evaluations (``—`` when nothing recorded)."""
+    ns = [int(e.get("trials") or 0) for e in (summary.get("evaluations") or [])
+          if isinstance(e, dict) and e.get("trials")]
+    return str(max(ns)) if ns else "—"
+
+
+def run_meta(summary: dict, *, elapsed: float | None = None) -> list[tuple[str, str]]:
+    """The run's identity as ``(label, value)`` pairs — the masthead's content.
+
+    Everything here answers "is this the run I think I launched?": the resolved spec
+    path, the algorithm and orchestration mode, the split it froze, the trials and gate
+    bar behind every number, and the target model. A run started against the wrong
+    project's ``capevolve.yaml`` is visible here in seconds instead of after the spend.
+
+    Pure, sanitized, and honest: a value the run never recorded is ``—``, never a
+    plausible default.
+    """
+    cfg = summary.get("run_config") or {}
+    sp = summary.get("splits") or {}
+    S = lambda v: eventstream.sanitize(str(v))  # noqa: E731
+    algo = S(summary.get("algorithm") or cfg.get("algorithm") or "—")
+    mode = S(cfg.get("orchestration_mode") or "—")
+    gate, k = _gate_mode(summary)
+    n = lambda v: (str(v) if isinstance(v, int) else "—")  # noqa: E731
+    split = (f"train {n(sp.get('train'))} · val {n(sp.get('val'))} · "
+             f"test {n(sp.get('test'))}" + (f"   seed {sp.get('seed')}"
+                                            if sp.get("seed") is not None else "")
+             if sp else "—")
+    if elapsed is None:
+        elapsed = summary.get("wall_clock_seconds")
+    # Exactly LOGO_ROWS - 3 pairs: the block is sized to end level with the capybara,
+    # so the masthead reads as one unit instead of a logo with a ragged list beside it.
+    return [
+        ("run", S(summary.get("run_id") or "?") + f"   {_fmt_dur(elapsed)}"
+                if elapsed else S(summary.get("run_id") or "?")),
+        ("algorithm", f"{algo}" + (f" · {mode}" if mode != "—" else "")),
+        ("spec", S(cfg.get("spec") or "—")),
+        ("split", split),
+        ("gate", f"{gate}   k_se {k}   trials {_trials(summary)}"),
+        ("target", S((summary.get("target_profile") or {}).get("model") or "—")),
+    ]
+
+
+def _provenance(summary: dict, width: int, *, color: bool) -> str:
+    """One compact line naming the spec + algorithm that produced this run.
+
+    Duplicated from the masthead on purpose: the masthead only exists on a truecolor
+    terminal tall enough for the logo, and provenance must never be the thing that got
+    dropped — reading the wrong project's spec is the failure this line exists to catch.
+    """
+    cfg = summary.get("run_config") or {}
+    algo = eventstream.sanitize(str(summary.get("algorithm")
+                                    or cfg.get("algorithm") or "—"))
+    mode = eventstream.sanitize(str(cfg.get("orchestration_mode") or ""))
+    spec = eventstream.sanitize(str(cfg.get("spec") or "not recorded"))
+    right = f"   {algo}" + (f" · {mode}" if mode else "")
+    return _fit([("spec ", _C.GREY),
+                 (_ell(spec, max(8, width - len(right) - 5)), None),
+                 (right, _C.GREY)], width, color)
 
 
 def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
@@ -318,8 +472,10 @@ def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
         (f"${float(usd or 0.0):.4f} · {_fmt_tokens(tok)} tok", _C.GREY),
     ]
 
-    lines = [_fit(title, width, color), _breadcrumb(_phase(summary), width, color),
-             _fit(kpi, width, color)]
+    lines = [_fit(title, width, color)]
+    if summary.get("run_config") or summary.get("algorithm"):
+        lines.append(_provenance(summary, width, color=color))
+    lines += [_breadcrumb(_phase(summary), width, color), _fit(kpi, width, color)]
     # Spend split (runner vs optimizer vs intake). Only ever the numbers the run
     # actually recorded: a role with no recorded spend is omitted, not shown as $0.
     cost = summary.get("cost") or {}
@@ -344,7 +500,8 @@ def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
     warns = summary.get("gate_warnings") or []
     if warns:
         txt = eventstream.sanitize(str((warns[-1] or {}).get("reason") or ""))
-        lines.append(_fit([(f"⚠ {len(warns)} gate warning(s): {txt}", _C.YELLOW)], width, color))
+        lines.append(_fit([(_ell(f"⚠ {len(warns)} gate warning(s): {txt}", width),
+                            _C.YELLOW)], width, color))
     lines.append(_c("─" * width, _C.GREY, color))
     return lines
 
@@ -381,16 +538,24 @@ def _chart(graph: dict, width: int, height: int, *, color: bool) -> list[str]:
     # Stretch a short run across the panel so 7 iterations don't render as a 7-column
     # smudge in a 100-column terminal (downsampling above still caps long runs).
     rep = max(1, grid_w // max(1, len(cols)))
-    cols = [c for c in cols for _ in range(rep)][:grid_w]
-    grid = [[" "] * len(cols) for _ in range(grid_h)]
-    for x, (_, b, v, st) in enumerate(cols):
+    width_used = min(grid_w, rep * len(cols))
+    grid = [[" "] * width_used for _ in range(grid_h)]
+    for i, (_, b, v, st) in enumerate(cols):
+        x0 = i * rep
+        if x0 >= width_used:
+            break
         top = grid_h - 1 - int(round((b - lo) / span * (grid_h - 1)))
-        # Filled stair, not a one-pixel line: the area under the cumulative best is
-        # what makes a 4-iteration run readable instead of three dots in a big box.
-        for y in range(top + 1, grid_h):
-            grid[y][x] = "▒"
-        grid[top][x] = "█"
+        for x in range(x0, min(width_used, x0 + rep)):
+            # Filled stair, not a one-pixel line: the area under the cumulative best is
+            # what makes a 4-iteration run readable instead of three dots in a big box.
+            for y in range(top + 1, grid_h):
+                grid[y][x] = "▒"
+            grid[top][x] = "█"
         if v is not None:
+            # ONE marker per iteration, at the middle of its stretched band. Painting it
+            # across the whole band drew a dotted horizontal *line* that read as a
+            # second data series instead of a single measured point.
+            x = min(width_used - 1, x0 + rep // 2)
             y = grid_h - 1 - int(round((v - lo) / span * (grid_h - 1)))
             if grid[y][x] in (" ", "▒"):
                 grid[y][x] = {"rejected": "·", "failed": "x"}.get(st, "○")
@@ -401,8 +566,10 @@ def _chart(graph: dict, width: int, height: int, *, color: bool) -> list[str]:
         axis = f"{hi:.2f}" if r == 0 else (f"{lo:.2f}" if r == grid_h - 1 else "")
         out.append(_c(axis.rjust(5), _C.GREY, color) + " "
                    + "".join(_c(ch, paint.get(ch), color) for ch in row))
-    out.append(_fit([("      █ best  ○ accept  · reject  x fail", _C.GREY)],
-                    width, color))
+    # Every glyph on the grid is named here. The shaded area under the stair used to be
+    # unexplained, which left a viewer guessing whether it was data or decoration.
+    out.append(_fit([("      █ best so far  ▒ area under best  "
+                      "○ accept  · reject  x fail", _C.GREY)], width, color))
     return _pad(out, height)
 
 
@@ -445,6 +612,75 @@ def _tree_rows(graph: dict) -> list[tuple[str, dict]]:
     return rows
 
 
+#: Visible columns the lineage row's fixed part occupies before the reason, excluding
+#: the tree prefix: glyph+space, best mark, id, val, delta, seconds, gap.
+_TREE_FIXED = 2 + 1 + 14 + 14 + 9 + 9 + 2
+
+
+def _tree_cells(prefix: str, n: dict, best: str) -> tuple[list, str]:
+    """``(fixed cells, sanitized reason)`` for one lineage row."""
+    status = str(n.get("status") or "queued")
+    if status == "rejected" and "indecisive" in str(n.get("reason") or "").lower():
+        status = "indecisive"
+    glyph, style = GLYPHS.get(status, GLYPHS["queued"])
+    nid = eventstream.sanitize(str(n.get("id") or "?"))
+    stderr = n.get("stderr")
+    val = f"{_fmt_val(n.get('val'))}" + (f"±{_fmt_val(stderr, 3)}" if stderr else "")
+    pv = n.get("parent_val")
+    try:
+        delta = f"{float(n['val']) - float(pv):+.3f}"
+    except (TypeError, ValueError, KeyError):
+        delta = "     —"
+    secs = _fmt_dur(n.get("seconds"))
+    cells = [
+        (prefix, _C.GREY),
+        (f"{glyph} ", style),
+        (f"{GLYPHS['best'][0]}" if nid == best else " ", _C.BOLD),
+        (f"{nid:<14}", None),
+        (f"{val:>14}", _C.CYAN),
+        (f"{delta:>9}", _C.GREEN if delta.startswith("+") else _C.GREY),
+        (f"{secs:>9}", _C.GREY),
+        ("  ", None),
+    ]
+    return cells, eventstream.sanitize(str(n.get("reason") or ""))
+
+
+def _tree_reason_lines(prefix: str, reason: str, width: int) -> list[str]:
+    """The reason split across its row + continuation lines (plain text, no ANSI).
+
+    ``[]`` when it already fits, so the caller can render the simple single-line form.
+    The split is on word boundaries in BOTH directions: a hard slice for the first line
+    would leave the same mid-word stub the wrapping exists to remove.
+    """
+    room = width - len(prefix) - _TREE_FIXED
+    # Below ~24 columns a "wrap" is one word per line — a ragged column that looks more
+    # broken than the ellipsis it replaced. Narrower than that, crop and say so.
+    if room < 24 or len(reason) <= room:
+        return []
+    parts = _wrap(reason, room)
+    if len(parts) < 2:
+        return []
+    # At most one continuation line: two is a paragraph in a table, and the full text is
+    # a keystroke away in the activity log and `cap-evolve diff`.
+    if len(parts) > 2:
+        parts = [parts[0], _ell(" ".join(parts[1:]), room)]
+    return parts
+
+
+def _tree_height(graph: dict, width: int) -> int:
+    """Rows the lineage panel WANTS at ``width``, wrapped reasons included.
+
+    Fed to :func:`plan_section_sizes` as the panel's honest cap so the budget can give
+    the reasons their continuation lines instead of stopping at one row per candidate.
+    """
+    rows = _tree_rows(graph)
+    total = 1 + len(rows)
+    for prefix, n in rows:
+        reason = eventstream.sanitize(str(n.get("reason") or ""))
+        total += max(0, len(_tree_reason_lines(prefix, reason, width)) - 1)
+    return total
+
+
 def _tree(graph: dict, summary: dict, width: int, height: int, *, color: bool) -> list[str]:
     if height <= 1:
         return _pad([], height)
@@ -452,57 +688,92 @@ def _tree(graph: dict, summary: dict, width: int, height: int, *, color: bool) -
     if not rows:
         return _pad([_c("lineage", _C.BOLD, color),
                      _c("  (no candidates yet)", _C.GREY, color)], height)
-    body_h = height - 1
-    hidden = 0
-    if len(rows) > body_h:  # keep the TAIL — the newest candidates are the live ones
-        hidden = len(rows) - (body_h - 1)
-        rows = rows[-(body_h - 1):]
-    out = [_c("lineage", _C.BOLD, color)]
-    if hidden:
-        out.append(_c(f"  … {hidden} earlier hidden", _C.GREY, color))
     best = str(summary.get("best_id") or "")
-    for prefix, n in rows:
-        status = str(n.get("status") or "queued")
-        if status == "rejected" and "indecisive" in str(n.get("reason") or "").lower():
-            status = "indecisive"
-        glyph, style = GLYPHS.get(status, GLYPHS["queued"])
-        nid = eventstream.sanitize(str(n.get("id") or "?"))
-        stderr = n.get("stderr")
-        val = f"{_fmt_val(n.get('val'))}" + (f"±{_fmt_val(stderr, 3)}" if stderr else "")
-        pv = n.get("parent_val")
-        try:
-            delta = f"{float(n['val']) - float(pv):+.3f}"
-        except (TypeError, ValueError, KeyError):
-            delta = "     —"
-        reason = eventstream.sanitize(str(n.get("reason") or ""))
-        secs = _fmt_dur(n.get("seconds"))
-        cells = [
-            (prefix, _C.GREY),
-            (f"{glyph} ", style),
-            (f"{GLYPHS['best'][0]}" if nid == best else " ", _C.BOLD),
-            (f"{nid:<14}", None),
-            (f"{val:>14}", _C.CYAN),
-            (f"{delta:>9}", _C.GREEN if delta.startswith("+") else _C.GREY),
-            (f"{secs:>9}", _C.GREY),
-            ("  ", None),
-            (reason, _C.GREY),
-        ]
-        out.append(_fit(cells, width, color))
-    return _pad(out, height)
+    built = [(_tree_cells(prefix, n, best), prefix) for prefix, n in rows]
+    # Two renderings of every row: one line with an explicit ellipsis, or the reason
+    # wrapped onto continuation lines. Wrapping is the goal (the gate reason justifies
+    # the decision and is the most valuable string here) but it costs rows, so rows are
+    # upgraded NEWEST-FIRST with whatever the budget gave us. That degrades one candidate
+    # at a time instead of falling off a cliff into all-ellipsis with a blank half-panel.
+    wrapped: list[list[str]] = []
+    compact: list[list[str]] = []
+    for (cells, reason), prefix in built:
+        room = max(0, width - len(prefix) - _TREE_FIXED)
+        compact.append([_fit(cells + [(_ell(reason, room), _C.GREY)], width, color)])
+        parts = _tree_reason_lines(prefix, reason, width) or [reason[:room]]
+        indent = " " * min(width, len(prefix) + 5)
+        wrapped.append(
+            [_fit(cells + [(parts[0], _C.GREY)], width, color)]
+            + [_fit([(indent, None), (ln, _C.GREY)], width, color) for ln in parts[1:]])
+    body_h = height - 1
+    groups = list(compact)
+    spare = body_h - len(groups)
+    for i in reversed(range(len(groups))):
+        extra = len(wrapped[i]) - 1
+        if 0 < extra <= spare:
+            groups[i], spare = wrapped[i], spare - extra
+    lines = [ln for g in groups for ln in g]
+    out = [_c("lineage", _C.BOLD, color)]
+    if len(lines) > body_h:  # keep the TAIL — the newest candidates are the live ones
+        kept = body_h - 1
+        out.append(_fit([(f"  … {len(lines) - kept} earlier line(s) hidden", _C.GREY)],
+                        width, color))
+        lines = lines[-kept:]
+    return _pad(out + lines, height)
+
+
+def _activity_height(activity, running: str | None, width: int) -> int:
+    """Rows the activity panel WANTS: title + the in-flight line + each entry wrapped.
+
+    Its honest cap for :func:`plan_section_sizes` — without it the panel claimed rows it
+    could only fill with blanks, and those blanks were the empty band at the frame's
+    bottom instead of chart resolution.
+    """
+    total = 1 + (1 if running else 0)
+    for line in activity or ():
+        text = eventstream.sanitize(str(line))
+        total += len(_wrap(text, width - 3)) if len(text) > width else 1
+    return max(1, total)
 
 
 def _activity(activity, running: str | None, width: int, height: int,
               *, color: bool) -> list[str]:
-    if height <= 1:
-        return _pad([], height)
+    if height <= 0:
+        return []
+    if height == 1:
+        # One row: spend it on the newest line rather than on a title or a blank. A
+        # starved panel should still say something true.
+        newest = running or (eventstream.sanitize(str(list(activity)[-1]))
+                             if activity else "")
+        return [_fit([(_ell(newest, width), _C.CYAN if running else _C.GREY)],
+                     width, color)]
     out = [_c("activity", _C.BOLD, color)]
     body = height - 1
     # Running-first: an in-flight item must never scroll out behind finished ones.
     if running:
         out.append(_fit([(running, _C.CYAN)], width, color))
         body -= 1
-    for line in list(activity)[-max(0, body):]:
-        out.append(_fit([(eventstream.sanitize(str(line)), _C.GREY)], width, color))
+    body = max(0, body)
+    items = [eventstream.sanitize(str(line)) for line in activity]
+    # Newest-last, so budget the rows from the newest backwards: an event whose gate
+    # reason overflows gets a continuation line when the panel still has room, and an
+    # explicit ellipsis when it does not.
+    rendered: list[list[str]] = []
+    used = 0
+    for text in reversed(items):
+        if used >= body:
+            break
+        # width-3 so a continuation line still fits once its indent is added.
+        parts = _wrap(text, width - 3) if len(text) > width else [text]
+        if not parts:
+            continue
+        if len(parts) > body - used:  # no room to continue it — say it was cropped
+            parts = [_ell(text, width)]
+        rendered.append([_fit([("   " if i else "", None), (ln, _C.GREY)], width, color)
+                         for i, ln in enumerate(parts)])
+        used += len(parts)
+    for group in reversed(rendered):
+        out += group
     return _pad(out, height)
 
 
@@ -729,9 +1000,11 @@ def _crop_ansi(line: str, width: int) -> str:
 
 def _footer(root, width: int, height: int, *, color: bool,
             hint: str = "") -> list[str]:
+    text = hint or "Ctrl-C to detach (run continues)"
+    room = width - len(str(root)) - 3
     return _pad([_c("─" * width, _C.GREY, color),
                  _fit([(str(root), _C.GREY), ("   ", None),
-                       (hint or "Ctrl-C to detach (run continues)", _C.DIM)],
+                       (_ell(text, room), _C.DIM)],
                       width, color)],
                 height)
 
@@ -768,7 +1041,15 @@ def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: boo
             has_chart=bool([n for n in (graph.get("nodes") or [])
                             if n.get("best_so_far") is not None]),
             has_tree=True, has_activity=bool(activity or running),
-            tree_rows=len(_tree_rows(graph)) + 2,
+            # Content size first (one row per entry), then the wrapped size as stretch:
+            # every panel gets its rows before any panel gets its continuation lines.
+            # 6 entries is the activity panel's CONTENT size even when the backlog holds
+            # more: it restates facts the lineage and heatmap already show, so the rows
+            # beyond six are worth less than a wrapped gate reason above it.
+            activity_rows=1 + (1 if running else 0) + min(6, len(list(activity or ()))),
+            tree_rows=len(_tree_rows(graph)) + 1,
+            stretch={"tree": _tree_height(graph, width),
+                     "activity": _activity_height(activity, running, width)},
             has_algo=bool(algo_panel(algo_stats, summary)[0]),
             has_heatmap=has_per_task(graph),
             has_diff=bool(diff and diff.get("lines")),
@@ -843,10 +1124,40 @@ def _reduce(root) -> dict:
     """
     from .rundir import RunDir
     try:
-        return reduce_run(RunDir(Path(root)))
+        reduced = reduce_run(RunDir(Path(root)))
     except Exception:  # noqa: BLE001
         return {"graph": {"nodes": [], "root": "seed", "best_id": "seed"},
                 "summary": {"run_id": Path(root).name}}
+    try:
+        # `run_config` is provenance the reducer does not project (it is not part of the
+        # dashboard's schema, and dashboard.py is not ours to change). The live header
+        # needs it: it is the only artifact that says WHICH spec produced this run.
+        (reduced.setdefault("summary", {}) or {})["run_config"] = _run_config(root)
+    except Exception:  # noqa: BLE001 — provenance is decoration, never fatal
+        pass
+    return reduced
+
+
+def _run_config(root) -> dict:
+    """The last ``run_config`` event's fields, sanitized. ``{}`` when the run logged none."""
+    out: dict = {}
+    path = Path(root) / "events.jsonl"
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    for ln in text.splitlines():
+        if '"run_config"' not in ln:
+            continue
+        try:
+            ev = json.loads(ln)
+        except ValueError:
+            continue
+        if ev.get("kind") != "run_config":
+            continue
+        out = {k: eventstream.sanitize(str(v)) for k, v in ev.items()
+               if k not in ("kind", "t") and v is not None}
+    return out
 
 
 def _stream_lines(path: Path, stream, *, color: bool, offset: int = 0,
@@ -994,19 +1305,24 @@ def _drive(root, feed, *, stream, color: bool, poll: float = 0.4,
     return reason
 
 
-def headline(stream, *, color: bool) -> int:
+def headline(stream, *, color: bool, meta: dict | None = None) -> int:
     """Print the brand headline ONCE, above the repaint region.
 
     Deliberately not part of the frame: the capybara is 9 rows tall and the frame's
     height budget is for live data. Printed before the painter starts, it stays in
     scrollback (and in a screen recording) without costing a row every repaint.
+
+    ``meta`` is a reduced run; its :func:`run_meta` pairs fill the block beside the
+    logo, turning nine rows of empty space into the run's identity card.
     """
     if not color:
         return 0  # the mark only exists in truecolor; a pipe gets the line log anyway
     try:
         from . import branding
         cols, rows = terminal_size(stream)
-        art = branding.banner(cols, color=True)
+        pairs = tuple(run_meta((meta or {}).get("summary") or {})) if meta else ()
+        art = branding.banner(cols, color=True, lines=("",) if pairs else (),
+                              pairs=pairs)
         # Only when the frame can still breathe underneath it. The caller subtracts
         # these rows from the frame budget, so the headline stays pinned above the
         # repaint region instead of scrolling away on the first paint.
@@ -1038,7 +1354,7 @@ def watch(root, *, stream=None, color: bool | None = None, from_start: bool = Tr
     if not _is_tty(stream):
         return _stream_lines(events, stream, color=color, offset=offset,
                              idle_timeout=idle_timeout, should_stop=should_stop)
-    used = headline(stream, color=color)
+    used = headline(stream, color=color, meta=_reduce(root))
     return _drive(root, _live_feed(events, offset=offset, idle_timeout=idle_timeout,
                                    poll=poll, should_stop=should_stop),
                   stream=stream, color=color, poll=poll, show_diff=show_diff,
@@ -1050,6 +1366,32 @@ def _is_tty(stream) -> bool:
         return bool(stream.isatty())
     except Exception:  # noqa: BLE001
         return False
+
+
+def _copy_rollouts(src: Path, scratch: Path, ev: dict) -> None:
+    """Copy the rollouts an ``evaluate`` event just measured into the replay scratch dir.
+
+    Per-candidate per-task rewards are reconstructed by the reducer from
+    ``rollouts/<split>/<task>__<tag>__t<k>.json``, which the replay scratch dir did not
+    have — so the per-task heatmap showed only the seed row (its per-task data comes
+    from ``baseline.json``) while the lineage above it listed every candidate. Copying
+    them as their ``evaluate`` event arrives keeps replay honest: the panel never shows a
+    measurement the log has not reached yet.
+    """
+    if ev.get("kind") != "evaluate" or not ev.get("tag"):
+        return
+    split = str(ev.get("split") or "val")
+    from_dir = src / "rollouts" / split
+    if not from_dir.is_dir():
+        return
+    to_dir = scratch / "rollouts" / split
+    to_dir.mkdir(parents=True, exist_ok=True)
+    tag = str(ev["tag"]).replace("/", "_")
+    for f in sorted(from_dir.glob(f"*__{tag}__t*.json")):
+        try:
+            shutil.copy2(f, to_dir / f.name)
+        except OSError:  # noqa: PERF203 — one unreadable rollout must not stop the replay
+            continue
 
 
 def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
@@ -1073,7 +1415,14 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
     if banner:
         print(_c(banner, _C.YELLOW, color), file=stream, flush=True)
     tty = _is_tty(stream)
-    reserved = headline(stream, color=color) if tty else 0
+    # The masthead describes the recorded run, so it is built from the SOURCE dir (the
+    # scratch replay dir has no events yet at this point). ``+1`` for the banner row
+    # already printed above it: unbudgeted, it scrolled the top of the masthead away.
+    reserved = 0
+    if tty:
+        reserved = headline(stream, color=color, meta=_reduce(src))
+        if reserved and banner:
+            reserved += 1
 
     with tempfile.TemporaryDirectory(prefix="capevolve-replay-") as d:
         scratch = Path(d) / src.name  # keeps the header's run_id honest, not "tmpXXXX"
@@ -1093,6 +1442,7 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
                 for name, kind in (("baseline.json", "baseline"), ("final.json", "finalize")):
                     if ev.get("kind") == kind and (src / name).exists():
                         shutil.copy2(src / name, scratch / name)
+                _copy_rollouts(src, scratch, ev)
                 gap = 0.0
                 if prev_t is not None:
                     try:
@@ -1135,5 +1485,10 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
 if __name__ == "__main__":  # tiny self-check: the budget invariant holds everywhere
     for r in range(0, 200):
         assert sum(plan_section_sizes(r).values()) <= r, r
+        s = plan_section_sizes(r, stretch={"tree": 99, "activity": 99}, tree_rows=4,
+                               has_heatmap=True, heatmap_rows=3)
+        assert sum(s.values()) <= r, (r, s)
+        # ...and every row is spent once the frame is big enough to hold the sections
+        assert r < 14 or sum(s.values()) == r, (r, s)
     assert render_frame({"summary": None}, (10, 5))  # malformed → placeholder, no raise
     print("tui self-check ok")

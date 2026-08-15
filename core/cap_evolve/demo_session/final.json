@@ -4,18 +4,17 @@
   "reward": 0.8333333333333333,
   "stderr": 0.1667,
   "pass_k": {
-   "1": 0.8333333333333333,
-   "2": 0.8333333333333333
+   "1": 0.8333333333333334,
+   "2": 0.8333333333333334
   },
   "per_task": [
    {
     "task_id": "invoice-totals",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -23,11 +22,10 @@
    {
     "task_id": "pivot-refresh",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -35,11 +33,10 @@
    {
     "task_id": "merged-cells",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -47,11 +44,10 @@
    {
     "task_id": "date-coercion",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -59,11 +55,10 @@
    {
     "task_id": "formula-audit",
     "reward": 0.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Wrong total in the summary row; the merged header was skipped.",
     "trial_rewards": [
-     0.0,
      0.0,
      0.0
     ]
@@ -71,11 +66,10 @@
    {
     "task_id": "chart-range",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -92,18 +86,17 @@
   "reward": 0.5,
   "stderr": 0.2236,
   "pass_k": {
-   "1": 0.8333333333333333,
-   "2": 0.8333333333333333
+   "1": 0.5,
+   "2": 0.5
   },
   "per_task": [
    {
     "task_id": "invoice-totals",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -111,11 +104,10 @@
    {
     "task_id": "pivot-refresh",
     "reward": 0.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Wrong total in the summary row; the merged header was skipped.",
     "trial_rewards": [
-     0.0,
      0.0,
      0.0
     ]
@@ -123,11 +115,10 @@
    {
     "task_id": "merged-cells",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -135,11 +126,10 @@
    {
     "task_id": "date-coercion",
     "reward": 1.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
     "trial_rewards": [
-     1.0,
      1.0,
      1.0
     ]
@@ -147,11 +137,10 @@
    {
     "task_id": "formula-audit",
     "reward": 0.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Wrong total in the summary row; the merged header was skipped.",
     "trial_rewards": [
-     0.0,
      0.0,
      0.0
     ]
@@ -159,11 +148,10 @@
    {
     "task_id": "chart-range",
     "reward": 0.0,
-    "n": 3,
+    "n": 2,
     "stderr": 0.0,
     "feedback": "Wrong total in the summary row; the merged header was skipped.",
     "trial_rewards": [
-     0.0,
      0.0,
      0.0
     ]

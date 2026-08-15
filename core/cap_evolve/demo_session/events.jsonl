@@ -1,4 +1,5 @@
 {"kind": "log_note", "note": "ILLUSTRATIVE SAMPLE — synthetic cap-evolve run used to replay the terminal UI with no API key. Not a benchmark result; makes no benchmark claim. Regenerate with scripts/generate_demo_session.py"}
+{"t": 1772445600.0, "kind": "run_config", "spec": "~/projects/spreadsheet-agent/capevolve.yaml", "project": "~/projects/spreadsheet-agent", "algorithm": "hill-climb", "optimizer": "claude-code", "orchestration_mode": "deterministic"}
 {"t": 1772445600.0, "kind": "splits", "train": 8, "val": 6, "test": 6, "seed": 0}
 {"t": 1772445602.0, "kind": "target_profile", "model": "demo-runner-8b", "tier": "small", "resolution_note": "illustrative sample — no model was called"}
 {"t": 1772445720.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.3333333333333333, "stderr": 0.1925, "cost_usd": 0.018, "tokens": 14200, "seconds": 118.4}
@@ -11,8 +12,8 @@
 {"t": 1772446233.0, "kind": "step", "candidate": "cand_0003", "accept": true, "reason": "paired Δ̄=+0.1667 > 0.2·SE=0.0236 (SE=0.1178, n=6)", "val": 0.6667, "parent": "cand_0001", "parent_val": 0.5, "optimizer_seconds": 60.0, "runner_seconds": 128.0, "cost_usd": 0.0177, "tokens": 13760, "opt_cost_usd": 0.247, "opt_tokens": 23700}
 {"t": 1772446299.0, "kind": "optimizer_error", "candidate": "cand_0004", "error": "claude: transient 529 overloaded_error (retrying once)"}
 {"t": 1772446438.0, "kind": "evaluate", "split": "val", "tag": "cand_0004", "reward": 0.6667, "stderr": 0.1018, "cost_usd": 0.0181, "tokens": 13980, "seconds": 139.0}
-{"t": 1772446438.0, "kind": "step", "candidate": "cand_0004", "accept": false, "reason": "indecisive: paired Δ̄=+0.0000 within noise (SE=0.1054, n=6) — no evidence either way", "val": 0.6667, "parent": "cand_0003", "parent_val": 0.6667, "optimizer_seconds": 66.0, "runner_seconds": 139.0, "cost_usd": 0.0181, "tokens": 13980, "opt_cost_usd": 0.258, "opt_tokens": 24600}
-{"t": 1772446438.0, "kind": "step_indecisive", "candidate": "cand_0004", "reason": "indecisive: paired Δ̄=+0.0000 within noise (SE=0.1054, n=6) — no evidence either way", "val": 0.6667, "n_scored": 6, "n_tasks": 6}
+{"t": 1772446438.0, "kind": "step", "candidate": "cand_0004", "accept": false, "reason": "indecisive: Δ̄=0 within noise (SE=0.105, n=6) — not a reject", "val": 0.6667, "parent": "cand_0003", "parent_val": 0.6667, "optimizer_seconds": 66.0, "runner_seconds": 139.0, "cost_usd": 0.0181, "tokens": 13980, "opt_cost_usd": 0.258, "opt_tokens": 24600}
+{"t": 1772446438.0, "kind": "step_indecisive", "candidate": "cand_0004", "reason": "indecisive: Δ̄=0 within noise (SE=0.105, n=6) — not a reject", "val": 0.6667, "n_scored": 6, "n_tasks": 6}
 {"t": 1772446660.0, "kind": "evaluate", "split": "val", "tag": "cand_0005", "reward": 0.75, "stderr": 0.0978, "cost_usd": 0.018500000000000003, "tokens": 14200, "seconds": 150.0}
 {"t": 1772446660.0, "kind": "step", "candidate": "cand_0005", "accept": true, "reason": "paired Δ̄=+0.0833 > 0.2·SE=0.0192 (SE=0.0962, n=6)", "val": 0.75, "parent": "cand_0003", "parent_val": 0.6667, "optimizer_seconds": 72.0, "runner_seconds": 150.0, "cost_usd": 0.018500000000000003, "tokens": 14200, "opt_cost_usd": 0.269, "opt_tokens": 25500}
 {"t": 1772446660.0, "kind": "budget_warning", "pct": 80, "metric": "max_optimizer_usd", "spent": 1.62, "limit": 2.0}

@@ -145,16 +145,30 @@ def wordmark(depth: str, *, tagline: bool = True) -> list[str]:
     return out
 
 
+#: Label column of a masthead pair. Wide enough for the longest label we use.
+PAIR_LABEL_COLS = 10
+
+
 def banner(width: int = 100, *, color: bool = True, env: dict | None = None,
-           lines: tuple[str, ...] = ()) -> list[str]:
-    """The brand headline: capybara on the left, wordmark + ``lines`` on the right.
+           lines: tuple[str, ...] = (),
+           pairs: tuple[tuple[str, str], ...] = ()) -> list[str]:
+    """The brand headline: capybara on the left, wordmark + ``lines``/``pairs`` right.
+
+    ``pairs`` are ``(label, value)`` rows rendered as an aligned two-column block — a
+    masthead, which is what stops the 9 rows beside the logo from being empty space.
+    The label is grey and the value is plain, so the values are what the eye lands on.
 
     Falls back to the wordmark alone when the depth is not truecolor or the terminal is
     narrower than :data:`MIN_LOGO_COLS`. Never returns a line wider than ``width``
     visible columns (the art's escapes are not counted — they occupy no columns).
     """
     depth = color_depth(color, env)
-    text = wordmark(depth) + [_s(t, _Pal(depth).grey) for t in lines]
+    p = _Pal(depth)
+    room = max(8, width - (LOGO_COLS + 2) - PAIR_LABEL_COLS)
+    text = wordmark(depth) + [_s(t, p.grey) for t in lines]
+    text += [_s(str(label)[:PAIR_LABEL_COLS].ljust(PAIR_LABEL_COLS), p.grey)
+             + _s(str(value)[:room], p.bold if i == 0 else "")
+             for i, (label, value) in enumerate(pairs)]
     art = logo_lines(depth) if width >= MIN_LOGO_COLS else []
     if not art:
         return text
@@ -457,6 +471,8 @@ if __name__ == "__main__":  # self-check: every screen renders at every width, A
                    lambda: algorithms_screen(None, w, color=False)):
             for line in fn():
                 assert not _A.search(line), line
+        for line in banner(w, color=False, pairs=(("spec", "x" * 200),)):
+            assert not _A.search(line) and len(line) <= max(w, 18), (w, line)
     assert logo_lines("ansi") == [] and logo_lines("none") == []
     assert len(logo_lines("truecolor")) == LOGO_ROWS
     print("branding self-check ok")
