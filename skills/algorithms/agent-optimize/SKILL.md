@@ -1,6 +1,6 @@
 ---
 name: agent-optimize
-description: Fully-agentic, free-form optimization algorithm. Use in agent orchestration mode when you want the conversational agent to own the whole search — understand the benchmark/inputs first, run the baseline, then freely propose capability edits (serially, or several siblings in parallel working copies), triage on cheap task subsets, and accept only on a full-val paired significance gate plus no-regression, all bounded by a free-text stop_condition it re-reads with the run-dir spend. Agent-mode only (orchestration_mode: agent); for a deterministic loop use hill-climb | gepa | skillopt.
+description: Fully-agentic, free-form optimization algorithm. Use in agent orchestration mode when you want the conversational agent to own the whole search — understand the benchmark/inputs first, run the baseline, then freely propose capability edits (serially, or several siblings in parallel working copies), kill bad ones cheaply on a deterministic informative SUBSET of val (a promotion ladder that never accepts), accept only on a full-val paired significance gate plus no-regression, all bounded by a free-text stop_condition parsed into re-checkable predicates and re-read from the run dir every round, and finished with one honest train/val/sealed-test measurement. Agent-mode only (orchestration_mode: agent); for a deterministic loop use hill-climb | gepa | skillopt.
 component: algorithm
 argument-hint: "agent-mode only — set orchestration_mode: agent + algorithm_skill: agent-optimize"
 allowed-tools: Read, Write, Edit, Bash, Task
@@ -47,8 +47,13 @@ intake's ask-if-missing discipline) so the loop then runs unattended:
   `score()` rewards, and what the per-task **feedback** says (that is your learning signal).
 - Note the **val and test sizes**, `num_trials`, `gate_mode`/`gate_k_se`, and the capabilities
   under optimization (the allowed edit surface, e.g. `system-prompt`, `tools`).
-- Read the free-text **`stop_condition`** and restate it to yourself as concrete checks
-  (score goal on full val, cost ceilings, time). This is what tells you when to finish.
+- Read the free-text **`stop_condition`** — then let `spend.py` parse it for you rather than
+  restating it from memory. It prints `constraints.predicates`: each concrete check
+  (`target_val_score`, `max_usd`, `max_wallclock_seconds`, `max_iterations`, `max_stall`,
+  `max_metric_calls`, `protect_task`) with its measured actual, plus the prose verbatim.
+  **If `constraints.ambiguous` is non-empty, ASK THE USER before the loop starts** — a
+  vague clause ("don't spend too much", a bare number with no unit) is reported, never
+  guessed at, and this is the one moment where asking is cheap.
 
 ## Agent-mode loop
 
@@ -57,15 +62,28 @@ mean/stderr from `$R/baseline.json`, or from the readout in step 0 below.
 
 Each round:
 
-**0. Check you can afford the round.** Budget and stall live in the run dir; read them
-*before* spending, not after:
+**0. Check you can afford the round — for the number of candidates you actually intend
+to run.** Budget, stall, wallclock and the parsed constraints all live in / are derived
+from the run dir; read them *before* spending, not after. Pass `--n-siblings N` whenever
+you plan N candidates this round (N=1 for a serial round):
 
 ```bash
-python "$A/spend.py" --run-dir "$R" --project "$P"
+python "$A/spend.py" --run-dir "$R" --project "$P" --n-siblings 3
 ```
 
-Stop and seal if `stop` is `true` (its `stop_reason` is `budget_exhausted()`'s), or if the
-free-text `stop_condition` it echoes is already satisfied by `best_val`.
+Act on the single `recommendation`:
+
+| `recommendation` | what it means | what you do |
+| --- | --- | --- |
+| `stop` | a ceiling is breached (or `budget_exhausted()` is true), or the score goal is met on FULL val | go to **Stop & seal** |
+| `narrow_scope` | ≥80% of some ceiling consumed, goal unmet | ONE cheap candidate, screened at tier 1; no fan-out |
+| `continue` | room left, goal unmet | run the round you planned |
+
+`afford.affordable: false` (with `afford.blockers` naming the ceiling) means **do not
+fan out N** — drop to a smaller N, or to a subset-screened single candidate. The $ figure
+uses this run's own **measured** `usd_per_rollout` (`spent.usd / spent.metric_calls`), and
+is honestly `null` before the first rollout is paid for. Check this BEFORE dispatching
+proposers: N candidates can blow a budget that had room for one.
 
 **1. Read the signal.** This is free — no new evaluation. Cluster the current best's
 failing val rollouts:
@@ -77,9 +95,24 @@ python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$(python "$A/sp
 Read `clusters` for what to fix and **`kept_good`** for what you must not break — those
 are exactly the tasks the no-regression check in step 4 protects.
 
-**2. Propose ONE coherent edit per candidate.** Copy the current best into a fresh working
-copy, then edit it (consult the `system-prompt` / `tools` capability skills for guidance —
-but *you* make the edit):
+**2. Propose an edit per candidate — and address EVERY cluster the round can afford.**
+One round should not fix one thing. Take the ranked clusters from step 1 and cover as many
+as the budget allows, either as **sibling candidates** (one cluster each, gated
+independently — the safe default) or as **one bold multi-part edit** (several clusters in
+one candidate — higher variance, but it is the only way a fix that needs a prompt change
+*and* a tool change lands together).
+
+The failure mode to design against is **churn**, and it is measured, not hypothetical: in
+a real run two of three candidates had an *identical* mean to their parent while a
+different set of tasks passed — each fixed 2 tasks and broke 2. A mean-only gate calls
+that a tie; the **no-regression veto in step 5 is what rejects it**, and it is the reason
+a multi-part edit is safe to attempt at all. So when you bundle, keep the parts
+*independent* (different files or different rules) so that if the bundle is vetoed you can
+resubmit the surviving part alone next round — and read `regressed` out of the screen and
+the gate to know which part to drop.
+
+Copy the current best into a fresh working copy, then edit it (consult the `system-prompt`
+/ `tools` capability skills for guidance — but *you* make the edit):
 
 ```bash
 BEST="$(python "$A/spend.py" --run-dir "$R" | python -c 'import json,sys;print(json.load(sys.stdin)["best_id"])')"
@@ -92,9 +125,45 @@ cp -r "$R/candidates/$BEST" "$R/work/$TAG"
 
 Every edit must encode a **general rule** — never hardcode a task's id, gold value, or answer.
 
-**3. (Optional) Cheap triage.** To decide if an edit is even worth a full-val eval, you may
-informally sample a **subset** of tasks. Triage is *informational only* — it may **never**
-be the accept/reject decision (see honesty invariant 1).
+**3. Cheap SUBSET screen — the promotion ladder.** Do not pay full val to learn that an
+edit is bad. Screen it on a small, deterministically chosen, informative subset of val
+first:
+
+```bash
+python "$A/screen.py" --run-dir "$R" --project "$P" \
+       --candidate "$R/work/$TAG" --tier 1 --k-se 1.0
+```
+
+What it does, and why each part is there:
+
+- **The parent side is free.** The current best already has full-val rollouts on disk, so
+  the screen re-reads its per-task rewards. Only the candidate pays, and only for the
+  subset — that is the entire saving.
+- **The subset is deterministic and recorded.** Seeded from the frozen splits seed + tier,
+  and written verbatim (ids, seed, deltas, decision, measured rollout economics) to
+  `$R/screens/<tag>__tier<N>.json`, so any kill is reproducible and auditable later.
+- **The subset is informative, not random**: tasks a previous edit broke first (pass them
+  with `--broken t3,t7`), then the most informative remaining tasks (currently failing /
+  high per-task variance), plus a **random holdout** (`--holdout-frac`, default 0.34) drawn
+  from tasks the parent *passes* — that holdout is the only part of a screen that can see a
+  regression. Honest about the tension: selecting on currently-failing tasks makes the
+  screen much more informative per rollout **and biased toward the tasks the edit targeted**
+  — fine for triage, fatal for acceptance, which is exactly why acceptance stays on full val.
+- **Rungs are cumulative.** `--tier 2` (~50% of val) does not re-run tier 1's tasks; the
+  candidate's screen rollouts are merged across `<tag>__screen*` tags so each rung only
+  pays for the ids it adds. Screen rollouts use their own tag, so they never mix into the
+  full-val rollouts the gate reads.
+- **`decision` is `kill` or `promote`. Never `accept`.** It kills only on evidence of
+  significant *harm* (`Δ̄ + k·SE < 0`, or a unanimous negative where SE legitimately
+  collapses to 0); everything else — including a flat Δ̄ and "no signal at all" — promotes
+  with `inconclusive: true`. The bias is deliberate and asymmetric: a **false kill** throws
+  away a good edit and leaves no trace, while a **false promote** costs exactly one
+  full-val eval after which the honest gate reaches the right answer anyway.
+- **The saving is measured, not estimated.** `savings.net_rollouts` is `+ (full_val −
+  fired)` on a kill and `− fired` on a promote, so a run's ledger sums to the truth.
+
+Ladder: `tier 1` (~25% of val) → on `promote`, either `tier 2` (~50%) for a second cheap
+look, or straight to full val. On `kill`: `commit.py --decision reject` and move on.
 
 **4. Honest gate on FULL val.** Evaluate on the whole val split (this writes
 rollouts + results into the run dir under tag `$TAG`, because the evaluate phase tags by
@@ -168,18 +237,40 @@ bounded by five invariants — state them to yourself before every fan-out:
 4. **Never fan out across the test split.** The seal is single-use; only finalize touches
    test, once, serially.
 5. **Pay before you fan out.** Every sibling's full-val eval is a real charge. Run
-   `spend.py` and check `stop` / the remaining budget for **N** evals *before* dispatching
+   `spend.py --n-siblings N` and require `afford.affordable: true` **before** dispatching
    N, not after — N candidates can blow a budget that had room for one.
 
 Shape of a parallel round:
 
 ```
-spend.py                      → can I afford N evals?
+spend.py --n-siblings N       → afford.affordable? recommendation != stop?
 diagnose  ──fan out──►  M read-only diagnosers ──► merge clusters      (free)
 propose   ──fan out──►  N proposers, N distinct $R/work/<tag> dirs     (costs proposer time)
-evaluate  ──fan out──►  N full-val evals, one per unique tag           (costs rollouts)
+screen    ──fan out──►  N tier-1 subset screens, one per unique tag    (costs ~25% of an eval)
+evaluate  ──fan out──►  full-val evals for SURVIVORS only              (costs rollouts)
 gate+commit ─ SERIAL ─►  gate_check → commit; on accept, re-gate the rest
 ```
+
+Three independent sources of concurrency — use all three, they compose:
+
+1. **Inside one evaluation**, if the adapter has `run_batch`/`run_trials` it already runs
+   the whole task grid at its own concurrency (tau2's airline adapter does, via
+   `TAU2_MAX_CONCURRENCY`). Otherwise `screen.py --workers N` — or `CAPEVOLVE_WORKERS=N`
+   in the environment, which every phase script honours since none of them take a
+   `--workers` flag — pools rollout *generation* through `trials.run_trials_pool`.
+   Scoring and persistence stay serial and in task order, so pass^k, SE and the gate see
+   byte-identical numbers to a serial run. Opt in only when `run_target` is thread-safe
+   (no shared scratch dir, no single live container, no module-global client):
+
+   ```bash
+   CAPEVOLVE_WORKERS=4 python "$S/phases/evaluate/scripts/run.py" \
+          --run-dir "$R" --project "$P" --candidate "$R/work/$TAG" --split val --n-trials 1
+   ```
+2. **Across candidates**, one evaluate/screen process per sibling, each with its **own
+   unique tag**.
+3. **Across diagnosers**, freely — read-only, zero rollouts.
+
+The gate is the one thing that never parallelizes (invariant 3).
 
 If in doubt, run the serial loop. A correct serial round beats a fast wrong one — and a
 double-counted gain is invisible in the val number that produced it.
@@ -194,31 +285,58 @@ python "$A/spend.py" --run-dir "$R" --project "$P"
 ```
 
 It prints the current `best_id` + full-val mean, all recorded `spent` fields
-(`iterations`, `metric_calls`, `usd`, `optimizer_usd`, tokens, seconds), the `budget`,
-`budget_exhausted()` as `stop`/`stop_reason`, the free-text `stop_condition`, and
-`test_sealed`. Then decide: keep optimizing, or stop and seal. (The Stop hook also
-re-nudges you across turns so you keep driving until the run is finalized.)
+(`iterations`, `metric_calls`, `usd`, `optimizer_usd`, tokens, seconds), the measured
+`wallclock_seconds`, the `budget`, `budget_exhausted()` as `stop`/`stop_reason`, the
+free-text `stop_condition` **parsed into per-predicate satisfied/violated rows with their
+measured actuals**, the `remaining` headroom per ceiling, anything `ambiguous`, and
+`test_sealed`. Everything comes from the run dir on each call — never from a total you are
+carrying in your head. Then act on `recommendation`. (The Stop hook also re-nudges you
+across turns so you keep driving until the run is finalized.)
 
-## Stop & seal (exactly once)
+## Stop & seal, then MEASURE (exactly once)
 
-Stop when the `stop_condition` is met (e.g. full-val mean ≥ the score goal) or when
-`spend.py` reports `stop: true`. Then seal the held-out **test** split exactly once and
-write the report:
+Stop when `spend.py`'s `recommendation` is `stop`. Then produce the run's one honest
+result table — seed vs best on **val**, on **train** when the spec defines a train split
+worth reporting, and on the **sealed test** split scored exactly once:
+
+```bash
+python "$A/measure.py" --run-dir "$R" --project "$P" --train auto
+python "$S/phases/report/scripts/run.py" --run-dir "$R"
+```
+
+`measure.py` reads val straight off the rollouts the gate used (free), evaluates train
+only when it adds information (`--train auto` skips it when the train ids equal the val
+ids, because the numbers would be a copy), and seals test through the same
+`harness.finalize` the finalize phase calls — so it is interchangeable with:
 
 ```bash
 python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P" --n-trials <num_trials>
-python "$S/phases/report/scripts/run.py"   --run-dir "$R"
 ```
 
+For every split it prints mean, stderr, n (scored / in split), the paired per-task delta
+vector's mean + SE + n, the recomputed gate decision (val only — `gate.decide` refuses any
+other split), the per-task `fixed` / `broke` / `unchanged` movement, a `screen_ledger`
+totalling every recorded screen's MEASURED rollout economics (a negative `net_rollouts`
+honestly says screening was pure overhead because nothing was killed), and a `holdout`
+verdict. It refuses to flatter the run: an **empty** split says `empty` instead of
+reporting 0.0; a **no-holdout** spec (test overlapping train/val, e.g. tau2's default
+`split_ids.json` where all three are the same 50 ids) is labelled a **FIT metric, not
+generalisation**, with the overlap counted; and `best_id == "seed"` prints a `warning` that
+every delta is 0 by construction and must be reported as a **null result with a diagnosed
+cause**, not as a 0.000 improvement.
+
 (There is **no `cap-evolve finalize` subcommand** — the orchestrate/host prose uses that as
-shorthand; the real seal is the finalize *phase script* above, which scores the best on test
-once and burns the seal. A second finalize raises `TestSealError`.) A run with no finalize
-has no result.
+shorthand; the real seal is the finalize phase script / `measure.py`, which scores the best
+on test once and burns the seal. A second finalize raises `TestSealError`.) A run with no
+finalize has no result.
 
 ## Honesty invariants (non-negotiable; core enforces most of these)
 
-1. **Accept/reject and the score-goal check are ALWAYS on FULL val through the gate.** Cheap
-   subset triage is informational only and may never gate.
+1. **Accept/reject and the score-goal check are ALWAYS on FULL val through the gate.** A
+   subset screen may **kill** a candidate; it may **never accept** one. `screen.py` prints
+   only `kill`/`promote` and has no code path to `accept`; `spend.py` checks
+   `target_val_score` against the full-val mean only. A subset result's `coverage` looks
+   like 1.0 (its denominator *is* the subset), so never hand one to `gate_check.py`.
 2. **No-regression is part of acceptance, not a nicety.** A mean gain that strictly drops a
    val task the current best measured and passed is a **reject** — `gate_check.py` folds this
    into `verdict`, and diagnose's `kept_good` is the list it protects.
@@ -237,19 +355,30 @@ has no result.
    siblings claim the same gain.
 8. **Record what you spent.** `iterations` + stall via `commit.py` every round, and your own
    proposal cost via `--optimizer-*`; otherwise a cost-based `stop_condition` is unenforceable.
-9. **Always finish with finalize + report.**
+9. **Constraints are re-read, never remembered.** Every round's affordability decision comes
+   from `spend.py` reading the run dir (spend, wallclock, splits, rollouts). A budget carried
+   in an agent's context is how a $6.00 cap becomes $6.01. Where the prose is ambiguous, say
+   so (`constraints.ambiguous`) and ask — never invent a ceiling.
+10. **Always finish with `measure.py` (or finalize) + report** — the full train/val/sealed-test
+    table, with the `holdout` verdict stated. A val number alone is the training signal, not
+    a result.
 
 ## What good vs bad looks like
 
-- **Good:** Phase 0 done and blocking questions asked up front; each accepted candidate has
-  rollouts under its own tag plus a `set_best`/`accept` event; the score goal is confirmed on
-  full val with no regressions; parallel siblings gated one at a time with a re-gate after
-  each accept; the run ends with a single sealed-test number — even if the honest answer is
-  "no significant gain".
-- **Bad:** gating on a triage subset; accepting a mean gain that regresses a passing task;
-  two concurrent evals sharing a tag; committing two parallel siblings without re-gating the
-  second; fanning out N evals with budget for one; peeking at test mid-run; declaring success
-  on val without ever finalizing.
+- **Good:** Phase 0 done, `constraints.ambiguous` cleared with the user up front; every
+  round covers as many diagnosed clusters as it can afford; obviously-bad candidates killed
+  at tier 1 for a quarter of an eval with the subset + seed recorded in `$R/screens/`; each
+  accepted candidate has full-val rollouts under its own tag plus a `set_best`/`accept`
+  event; parallel siblings gated one at a time with a re-gate after each accept; the run
+  ends with `measure.py`'s train/val/sealed-test table and an explicit `holdout` verdict —
+  even when the honest answer is "no significant gain".
+- **Bad:** gating on a triage subset, or letting a screen `promote` stand in for an accept;
+  killing a candidate on 3 noisy tasks (the screen is built to refuse this — do not lower
+  `--k-se` to make it decisive); accepting a mean gain that regresses a passing task, or
+  accepting a churn bundle whose gains and losses cancel; two concurrent evals sharing a tag;
+  committing two parallel siblings without re-gating the second; fanning out N evals with
+  budget for one; re-deriving the budget from memory instead of `spend.py`; peeking at test
+  mid-run; quoting a val number as the result without ever measuring the sealed test.
 
 ## References
 - `references/algorithm.md` — why free-form + how honesty survives full agent autonomy, with sources.

@@ -14,8 +14,13 @@ set -euo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../.." && pwd)"
 TAU2_DIR="$(cd "$REPO/.." && pwd)/tau2-bench"
-VENV="$REPO/.venv"
+# tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
+# the venv (and/or the venv path) when the default `python3` is outside that range:
+#   PYTHON=/opt/homebrew/bin/python3.12 VENV=.venv-tau2 bash setup.sh
+VENV="${VENV:-$REPO/.venv}"
+case "$VENV" in /*) ;; *) VENV="$REPO/$VENV" ;; esac
 PY="$VENV/bin/python"
+PYTHON="${PYTHON:-python3}"
 PROJECT="$REPO/.capevolve/project"
 say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 die(){ printf '\n\033[1;31mITEST FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -25,7 +30,8 @@ export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-anthropic/claude-haiku-4-5}"
 export TAU2_USER_MODEL="${TAU2_USER_MODEL:-anthropic/claude-haiku-4-5}"
 
 say "1/4  Install cap-evolve core + tau2-bench"
-[ -x "$PY" ] || python3 -m venv "$VENV" || die "could not create venv (need python3.10+)"
+[ -x "$PY" ] || "$PYTHON" -m venv "$VENV" \
+  || die "could not create venv with '$PYTHON' — tau2-bench needs python >=3.12,<3.14; pass PYTHON=/path/to/python3.12"
 "$PY" -m pip install -q --upgrade pip || true   # best-effort; a mirror 401 must not abort
 "$PY" -m pip install -q -e "$REPO/core" || die "pip install ./core failed"
 "$VENV/bin/cap-evolve" version || die "cap-evolve CLI not available"

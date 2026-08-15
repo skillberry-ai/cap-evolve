@@ -17,7 +17,14 @@ Asserts, end to end on a temp run dir:
     accepts a genuine improvement;
   * no-regression vetoes a mean gain that breaks a passing task;
   * ``commit.py`` moves ``best_id`` + ``iterations`` + the stall counter;
-  * ``spend.py`` surfaces budget_exhausted + the free-text stop_condition;
+  * ``screen.py`` runs a real SUBSET eval, records the subset + seed on disk, reports
+    MEASURED savings, kills a clearly-worse candidate, promotes a churn candidate, and
+    NEVER emits ``accept``;
+  * ``spend.py`` surfaces budget_exhausted + the free-text stop_condition **parsed into
+    predicates with measured actuals** + a ``recommendation`` + a pre-fan-out
+    affordability answer for N siblings;
+  * ``measure.py`` prints the train/val/sealed-test table, labels a no-holdout split as a
+    FIT metric, and burns the test seal exactly once;
   * every script SKILL.md names exists and is named in SKILL.md (no drift);
   * SKILL.md carries none of the known-broken patterns;
   * the test seal is never consumed.
@@ -81,7 +88,15 @@ def _prose(c: Checker, skill: str) -> None:
                     "## Parallel round"):
         c.check(section in skill, f"SKILL.md missing section: {section!r}")
     for needle in ("FULL val", "stop_condition", "finalize", "budget_exhausted",
-                   "no-regression", "unique per sibling"):
+                   "no-regression", "unique per sibling",
+                   # A: the subset ladder and its non-negotiable limit
+                   "never accept", "holdout", "net_rollouts",
+                   # B: textual constraints re-read from the run dir
+                   "predicates", "ambiguous", "recommendation",
+                   # C: multi-opportunity rounds and the churn they must not admit
+                   "churn",
+                   # D: the final full-split measurement
+                   "sealed test"):
         c.check(needle in skill, f"SKILL.md missing honesty/loop marker: {needle!r}")
 
     # Known-broken patterns that previously shipped.
@@ -103,13 +118,193 @@ def _prose(c: Checker, skill: str) -> None:
             "SKILL.md must mark the capability file layout as example-only")
 
     # Every helper the loop names must exist, and every helper must be named.
-    helpers = ["gate_check.py", "commit.py", "spend.py"]
+    helpers = ["gate_check.py", "commit.py", "spend.py", "screen.py", "measure.py"]
     for h in helpers:
         c.check((HERE / h).is_file(), f"missing documented helper script: scripts/{h}")
         c.check(h in skill, f"scripts/{h} exists but SKILL.md never uses it")
     c.check("Task" in (skill.split("---")[1] if skill.count("---") >= 2 else ""),
             "frontmatter allowed-tools must include Task for the parallel round",
             note="allowed-tools declares Task (parallel fan-out is actionable)")
+
+
+def _project(tmp: Path, *, n: int) -> Path:
+    """A minimal project dir the SUBPROCESS scripts can load: adapter + spec.
+
+    ``screen.py`` / ``measure.py`` take ``--project`` and go through
+    ``check.load_adapter``, so the check needs a real ``adapters/adapter.py`` — not just
+    the in-process ``SyntheticAdapter``. It subclasses the same synthetic adapter with
+    the same ``n``, so the subprocess sees byte-identical tasks and the numbers line up
+    with what this check computed in-process. Still zero model calls.
+    """
+    project = tmp / "project"
+    (project / "adapters").mkdir(parents=True, exist_ok=True)
+    (project / "adapters" / "adapter.py").write_text(
+        "from cap_evolve.skillcheck import SyntheticAdapter\n\n\n"
+        "class Adapter(SyntheticAdapter):\n"
+        f"    def __init__(self):\n        super().__init__(n={n})\n",
+        encoding="utf-8")
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        'stop_condition: "reach val mean >= 0.9, or stop after $5 or 30 minutes"\n',
+        encoding="utf-8")
+    return project
+
+
+def _screen_round(c: Checker, tmp: Path) -> None:
+    """The subset promotion ladder, executed: a kill, a promote, and never an accept."""
+    from cap_evolve import RunDir, harness
+    from cap_evolve.skillcheck import SyntheticAdapter
+
+    adapter = SyntheticAdapter(n=20)
+    project = _project(tmp, n=20)
+    run_dir = RunDir.create(tmp / ".capevolve_screen", ts="chk")
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    R = str(run_dir.root)
+    val_ids = run_dir.read_splits().ids("val")
+
+    # A parent that PASSES every val task, written straight to disk — no rollouts paid.
+    # This is the point of the design: the screen re-reads the parent instead of re-running it.
+    for tid in val_ids:
+        write_val_rollout(run_dir, tid, tag="cur", reward=1.0, feedback="solved")
+    run_dir.set_best("cur")
+    run_dir.snapshot("cur", seed_capability_dir(tmp / "curcap", level=25))
+
+    work = Path(R) / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    worse = seed_capability_dir(work / "worse_src", level=0)   # solves nothing
+    shutil.copytree(worse, work / "worse")
+    sc = _run(c, "screen.py (kill)", [str(HERE / "screen.py"), "--run-dir", R,
+                                      "--project", str(project),
+                                      "--candidate", str(work / "worse"), "--tier", "1"])
+    if sc:
+        c.check(sc.get("decision") == "kill",
+                f"screen.py did not kill a candidate that regresses every task: "
+                f"{sc.get('decision')} / {sc.get('reason')}",
+                note=f"subset screen kills clear harm: {sc.get('reason')}")
+        c.check(0 < len(sc["subset"]["ids"]) < len(val_ids),
+                f"screen.py screened {len(sc['subset']['ids'])} of {len(val_ids)} val "
+                "tasks — a subset screen must be a strict subset to be cheap")
+        c.check(sc["subset"].get("seed") is not None and sc["subset"].get("holdout_frac"),
+                "screen.py did not record the subset seed / holdout fraction")
+        c.check(sc["savings"]["avoided"] > 0 and
+                sc["savings"]["net_rollouts"] == sc["savings"]["full_val_rollouts"]
+                - sc["savings"]["fired"],
+                f"screen.py savings are not the measured difference: {sc['savings']}",
+                note=f"kill saved {sc['savings']['avoided']} of "
+                     f"{sc['savings']['full_val_rollouts']} rollouts (measured)")
+        rec = run_dir.root / "screens" / f"{sc['screen_tag']}.json"
+        c.check(rec.is_file() and json.loads(rec.read_text())["subset"] == sc["subset"],
+                f"screen.py did not persist a reproducible record at {rec}",
+                note="every screen decision is recorded in $R/screens/ (auditable, seeded)")
+        c.check(sc.get("decision") != "accept" and "accept" not in str(sc.get("decision")),
+                "a subset screen emitted an accept — subsets may only kill or promote")
+
+    # A candidate that changes nothing measurable must PROMOTE, not be killed on noise.
+    shutil.copytree(seed_capability_dir(work / "same_src", level=25), work / "same")
+    sc2 = _run(c, "screen.py (promote on a flat subset)",
+               [str(HERE / "screen.py"), "--run-dir", R, "--project", str(project),
+                "--candidate", str(work / "same"), "--tier", "1"])
+    if sc2:
+        c.check(sc2.get("decision") == "promote" and sc2.get("inconclusive") is True,
+                f"screen.py must promote (not kill) a flat/inconclusive subset: {sc2}",
+                note="the screen is biased against false kills: a flat Δ̄ promotes")
+        c.check(sc2["savings"]["net_rollouts"] < 0,
+                f"a promote must be reported as a COST, not a saving: {sc2['savings']}",
+                note="promote costs are booked honestly as negative net_rollouts")
+
+    # Rungs are cumulative: tier 2 must not re-run tier 1's tasks.
+    sc3 = _run(c, "screen.py (tier 2 reuses tier 1)",
+               [str(HERE / "screen.py"), "--run-dir", R, "--project", str(project),
+                "--candidate", str(work / "same"), "--tier", "2"])
+    if sc3:
+        c.check(sc3.get("reused_from_earlier_tiers"),
+                f"tier 2 re-ran tasks tier 1 already screened: {sc3.get('fired_ids')}",
+                note="the promotion ladder is cumulative — each rung pays only for new ids")
+
+    c.check(not run_dir.read_splits().test_used,
+            "the subset screen consumed the sealed test split")
+
+
+def _measure(c: Checker, tmp: Path) -> None:
+    """The final table: a held-out verdict, a no-holdout warning, and one seal."""
+    from cap_evolve import RunDir, harness
+    from cap_evolve.skillcheck import SyntheticAdapter
+
+    adapter = SyntheticAdapter(n=20)
+    project = _project(tmp, n=20)
+    run_dir = RunDir.create(tmp / ".capevolve_measure", ts="chk")
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    harness.baseline(adapter, seed_capability_dir(tmp / "mseed", level=3),
+                     run_dir=run_dir)
+    R = str(run_dir.root)
+
+    # A genuinely better candidate, accepted through the documented path.
+    work = Path(R) / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(run_dir.candidate_dir("seed"), work / "cand_1")
+    (work / "cand_1" / "level.txt").write_text("25", encoding="utf-8")
+    harness.evaluate_candidate(adapter, work / "cand_1", run_dir=run_dir, split="val",
+                               n_trials=1, tag="cand_1")
+    run_dir.snapshot("cand_1", work / "cand_1")
+    run_dir.set_best("cand_1")
+
+    m = _run(c, "measure.py (final table + seal)",
+             [str(HERE / "measure.py"), "--run-dir", R, "--project", str(project),
+              "--train", "on"])
+    if m:
+        rows = {r.get("split"): r for r in m.get("splits") or []}
+        c.check(set(rows) == {"train", "val", "test"},
+                f"measure.py did not report every split: {sorted(rows)}")
+        c.check(m["holdout"]["test_is_held_out"] is True,
+                f"measure.py mislabelled a disjoint split: {m['holdout']}")
+        v = rows.get("val") or {}
+        c.check((v.get("gate") or {}).get("accept") is True and v["paired"]["n"] > 0,
+                f"measure.py did not recompute the val gate on the paired vector: {v}")
+        c.check((rows["test"].get("gate") or {}).get("note", "").startswith("no gate"),
+                f"measure.py must not gate on test: {rows['test'].get('gate')}")
+        c.check(rows["train"].get("best", {}).get("reward") is not None,
+                f"--train on did not measure the train split: {rows['train']}")
+        c.check(m["val_per_task_movement"]["fixed"],
+                f"measure.py reported no per-task movement: {m['val_per_task_movement']}",
+                note="measure.py prints per-task fixed/broke movement, not just means")
+        c.check(run_dir.read_splits().test_used,
+                "measure.py did not burn the test seal (test was never scored)",
+                note="measure.py seals test exactly once, via harness.finalize")
+        c.check((run_dir.root / "measure.json").is_file(),
+                "measure.py did not persist measure.json")
+        c.check("net_rollouts" in (m.get("screen_ledger") or {}),
+                f"measure.py did not sum the screen ledger: {m.get('screen_ledger')}",
+                note="measure.py totals the screens' MEASURED rollout economics")
+
+    # A second call must NOT re-score test; it reports the sealed final.json instead.
+    m2 = _run(c, "measure.py (second call, seal already burned)",
+              [str(HERE / "measure.py"), "--run-dir", R, "--project", str(project),
+               "--train", "off"])
+    if m2:
+        t = next(r for r in m2["splits"] if r["split"] == "test")
+        c.check("already sealed" in t.get("status", ""),
+                f"a second measure.py re-scored the sealed test split: {t.get('status')}",
+                note="the seal is single-use: a second measure reads final.json")
+
+    # A no-holdout spec must be labelled a FIT metric, not generalisation.
+    from cap_evolve.splits import Splits
+    nh = RunDir.create(tmp / ".capevolve_nh", ts="chk")
+    ids = [t.id for t in adapter.tasks("all")]
+    nh.write_splits(Splits(train=list(ids), val=list(ids), test=list(ids), seed=0))
+    harness.baseline(adapter, seed_capability_dir(tmp / "nhseed", level=3), run_dir=nh)
+    m3 = _run(c, "measure.py (no-holdout spec)",
+              [str(HERE / "measure.py"), "--run-dir", str(nh.root), "--project",
+               str(project), "--train", "auto", "--skip-test"])
+    if m3:
+        c.check(m3["holdout"]["test_is_held_out"] is False
+                and "FIT metric" in m3["holdout"]["verdict"],
+                f"measure.py presented a no-holdout fit as generalisation: {m3['holdout']}",
+                note="a no-holdout spec is labelled a FIT metric, with the overlap counted")
+        c.check(m3.get("warning") and "null result" in m3["warning"],
+                f"best==seed must be flagged as a null result: {m3.get('warning')}")
+        tr = next(r for r in m3["splits"] if r["split"] == "train")
+        c.check("identical to val" in tr.get("status", ""),
+                f"--train auto paid for a train eval identical to val: {tr}")
 
 
 def _live_round(c: Checker, tmp: Path) -> None:
@@ -126,22 +321,37 @@ def _live_round(c: Checker, tmp: Path) -> None:
     harness.baseline(adapter, seed, run_dir=run_dir)
     R = str(run_dir.root)
 
-    # A minimal project so spend.py can echo the free-text stop_condition.
-    project = tmp / "project"
-    project.mkdir(parents=True, exist_ok=True)
-    (project / "capevolve.yaml").write_text(
-        'stop_condition: "val mean >= 0.9 or $5 spent"\n', encoding="utf-8")
+    project = _project(tmp, n=20)
 
-    # step 0 — the affordability readout
+    # step 0 — the affordability readout + the parsed textual constraints
     sp = _run(c, "spend.py (pre-round)", [str(HERE / "spend.py"), "--run-dir", R,
-                                          "--project", str(project)])
+                                          "--project", str(project),
+                                          "--n-siblings", "3"])
     if sp:
         c.check(sp.get("best_id") == "seed" and sp.get("stop") is False,
                 f"spend.py did not report a fresh run: {sp}")
         c.check("val mean >= 0.9" in sp.get("stop_condition", ""),
                 "spend.py did not echo the project's free-text stop_condition")
-        c.check(sp.get("test_sealed") is True, "spend.py reported an unsealed test split",
-                note="spend.py: best_val + spent + budget_exhausted + stop_condition in one call")
+        c.check(sp.get("test_sealed") is True, "spend.py reported an unsealed test split")
+        c.check(isinstance(sp.get("wallclock_seconds"), (int, float)),
+                "spend.py did not measure wallclock from the run dir")
+        cons = sp.get("constraints") or {}
+        kinds = {p["kind"]: p for p in cons.get("predicates") or []}
+        c.check({"target_val_score", "max_usd", "max_wallclock_seconds"} <= set(kinds),
+                f"spend.py did not parse the prose into predicates: {sorted(kinds)}",
+                note="spend.py parses stop_condition prose into checkable predicates")
+        c.check(kinds.get("target_val_score", {}).get("actual")
+                == (sp.get("best_val") or {}).get("reward")
+                and kinds["target_val_score"]["satisfied"] is False,
+                f"target_val_score not checked against the FULL-val mean: "
+                f"{kinds.get('target_val_score')}")
+        c.check(sp.get("recommendation") == "continue",
+                f"spend.py should recommend continue on a fresh run: "
+                f"{sp.get('recommendation')} {sp.get('recommendation_reasons')}")
+        af = sp.get("afford") or {}
+        c.check(af.get("rollouts_needed") == 3 * af.get("val_n", 0),
+                f"spend.py --n-siblings did not price N full-val evals: {af}",
+                note="spend.py answers affordability for N siblings BEFORE a fan-out")
 
     # step 1 — the documented diagnose command
     dg = _run(c, "diagnose phase", [str(DIAGNOSE), "--run-dir", R, "--tag", "seed"])
@@ -228,6 +438,8 @@ def main() -> int:
     try:
         _live_round(c, tmp)
         _no_regression(c, tmp)
+        _screen_round(c, tmp)
+        _measure(c, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     c.note("agent-mode-only algorithm: every command SKILL.md documents is executed here")

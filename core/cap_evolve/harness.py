@@ -46,7 +46,22 @@ DEFAULT_WORKERS = 1
 
 
 def _resolve_workers(workers: int | None) -> int:
-    """Effective concurrency: explicit argument, else the process default, min 1."""
+    """Effective concurrency: explicit argument, else ``CAPEVOLVE_WORKERS``, else the
+    process default, min 1.
+
+    The env var exists for hosts that have no ``--workers`` flag to pass — notably the
+    phase scripts, which agent-optimize drives directly instead of going through an
+    algorithm wrapper. Unset (the normal case) keeps ``DEFAULT_WORKERS = 1``, so every
+    published number stays a serial measurement; a bad value is ignored rather than
+    crashing an evaluation mid-run.
+    """
+    if workers is None:
+        env = os.environ.get("CAPEVOLVE_WORKERS")
+        if env:
+            try:
+                return max(1, int(env))
+            except ValueError:
+                pass
     return max(1, int(DEFAULT_WORKERS if workers is None else workers))
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
@@ -188,6 +203,7 @@ def evaluate_candidate(
     tag: str = "cand",
     base_seed: int | None = None,
     workers: int | None = None,
+    ids: list | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
 
@@ -209,6 +225,16 @@ def evaluate_candidate(
     serial run produces. Defaults to ``DEFAULT_WORKERS`` (1). Only ``run_target`` runs
     on a worker thread: an adapter whose ``run_target`` is not thread-safe (shared
     scratch dir, one live container, a module-global client) must keep ``workers=1``.
+
+    ``ids`` (default ``None`` = the whole split) restricts the evaluation to a SUBSET
+    of the split's frozen ids — the cheap-screen path used by ``agent-optimize``'s
+    subset triage (``cap_evolve.subsample``). It changes nothing else: the same
+    ``<task>__<tag>__t<k>.json`` files, the same aggregation, the same spend
+    accounting over the tasks that actually ran. Two rules the CALLER owns:
+    a subset result is a TRIAGE signal and may never be fed to the acceptance gate
+    (its ``n_tasks`` is the subset, so its ``coverage`` looks like 1.0), and it must
+    use its own ``tag`` so a later full-split eval's rollouts are not mixed with it.
+    ``ids`` never widens a split: an id outside the frozen split is ignored.
     """
     workers = _resolve_workers(workers)
     if split == "test":
@@ -223,6 +249,9 @@ def evaluate_candidate(
             base_seed = 0
 
     tasks = _tasks_for(adapter, run_dir, split)
+    if ids is not None:
+        want = {str(i) for i in ids}
+        tasks = [t for t in tasks if t.id in want]
     out_dir = run_dir.rollouts / split
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -395,7 +424,11 @@ def evaluate_candidate(
                       stderr=result.stderr, cost_usd=run_cost, tokens=run_tokens,
                       seconds=round(elapsed, 2),
                       # only on a parallel run, so a serial run's event record is unchanged
-                      **({"workers": workers} if workers > 1 else {}))
+                      **({"workers": workers} if workers > 1 else {}),
+                      # only on a SUBSET eval, so a full-split event record is unchanged.
+                      # Present ⇒ this reward is a triage signal, not a gateable score.
+                      **({"subset_ids": [t.id for t in tasks], "subset": True}
+                         if ids is not None else {}))
     return result
 
 

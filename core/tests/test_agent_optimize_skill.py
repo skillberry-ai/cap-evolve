@@ -53,3 +53,55 @@ def test_skill_md_has_no_known_broken_patterns():
     for needle in ("unique per sibling", "gate stays serial", "re-gate"):
         assert needle in md, needle
     assert "Task" in md.split("---")[1], "frontmatter must allow the Task tool"
+
+
+# ---- the churn case: a mean gain whose gains and losses cancel -------------
+#
+# Motivating real failure: two of three candidates in a live run had an IDENTICAL mean
+# to their parent while a different set of tasks passed (each fixed 2, broke 2). A
+# mean-only gate calls that a tie; the no-regression veto is what rejects it. These
+# guard both halves of the ladder against it.
+
+def _load_gate_check():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "ao_gate_check", SKILL / "scripts" / "gate_check.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(SKILL / "scripts"))
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class _R:
+    def __init__(self, per_task):
+        self.per_task = per_task
+
+
+def _pt(tid, reward):
+    return {"task_id": tid, "reward": reward,
+            "raw": {"valid_trials": 1, "n_trials": 1}}
+
+
+def test_no_regression_vetoes_a_churn_candidate():
+    gc = _load_gate_check()
+    parent = _R([_pt("a", 1.0), _pt("b", 1.0), _pt("c", 0.0), _pt("d", 0.0)])
+    churn = _R([_pt("a", 0.0), _pt("b", 0.0), _pt("c", 1.0), _pt("d", 1.0)])
+    # Identical mean (0.5 -> 0.5): the significance test sees nothing to reject.
+    assert gc.regressions(parent, churn) == ["a", "b"]
+
+
+def test_no_regression_ignores_tasks_the_candidate_never_measured():
+    """An infra outage is missing data, not the largest regression a candidate can cause."""
+    gc = _load_gate_check()
+    parent = _R([_pt("a", 1.0), _pt("b", 1.0)])
+    cand = _R([_pt("a", 1.0),
+               {"task_id": "b", "reward": 0.0,
+                "raw": {"valid_trials": 0, "n_trials": 1, "errored": True}}])
+    assert gc.regressions(parent, cand) == []
+
+
+def test_a_real_improvement_has_no_regressions():
+    gc = _load_gate_check()
+    parent = _R([_pt("a", 1.0), _pt("b", 0.0)])
+    better = _R([_pt("a", 1.0), _pt("b", 1.0)])
+    assert gc.regressions(parent, better) == []

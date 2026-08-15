@@ -13,8 +13,13 @@ set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../.." && pwd)"
 TAU2_DIR="$(cd "$REPO/.." && pwd)/tau2-bench"
-VENV="$REPO/.venv"
+# tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
+# the venv (and/or the venv path) when the default `python3` is outside that range:
+#   PYTHON=/opt/homebrew/bin/python3.12 VENV=.venv-tau2 bash setup.sh
+VENV="${VENV:-$REPO/.venv}"
+case "$VENV" in /*) ;; *) VENV="$REPO/$VENV" ;; esac
 PY="$VENV/bin/python"
+PYTHON="${PYTHON:-python3}"
 PIP_INDEX="${PIP_INDEX:-https://pypi.org/simple}"   # public PyPI (override if you have a mirror)
 say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 die(){ printf '\n\033[1;31mSETUP FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -31,7 +36,8 @@ for arg in "$@"; do
 done
 
 say "1/3  Install cap-evolve (Python venv + core CLI)"
-[ -x "$PY" ] || python3 -m venv "$VENV" || die "could not create venv (need python3.10+)"
+[ -x "$PY" ] || "$PYTHON" -m venv "$VENV" \
+  || die "could not create venv with '$PYTHON' — tau2-bench needs python >=3.12,<3.14; pass PYTHON=/path/to/python3.12"
 "$PY" -m pip install -q --index-url "$PIP_INDEX" --upgrade pip
 "$PY" -m pip install -q --index-url "$PIP_INDEX" -e "$REPO/core" || die "pip install ./core failed"
 "$VENV/bin/cap-evolve" version || die "cap-evolve CLI not available"
