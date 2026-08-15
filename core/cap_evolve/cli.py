@@ -45,6 +45,7 @@ import json
 import os
 import signal
 import sys
+import textwrap
 from pathlib import Path
 
 from . import __version__
@@ -1319,13 +1320,27 @@ def _cmd_doctor(argv) -> int:
     width = _size()
     out = branding.banner(width, color=color, lines=("", "readiness check",))
     out.append("")
+    # Wrap to the terminal, with a hanging indent under the detail column. A doctor row
+    # carries absolute paths and full shell commands, so unwrapped it hard-wraps at column
+    # 0 mid-word and destroys the alignment that makes the table readable -- on the one
+    # surface whose whole job is to be followed literally.
+    def _rows(text: str, first: str, cont: str, code: str | None) -> list[str]:
+        avail = max(20, width - len(cont))
+        parts = textwrap.wrap(text, avail, break_long_words=False,
+                              break_on_hyphens=False) or [""]
+        wrapped = []
+        for i, part in enumerate(parts):
+            body = f"{code}{part}\033[0m" if (color and code) else part
+            wrapped.append((first if i == 0 else cont) + body)
+        return wrapped
+
     for r in rows:
         label, code = _MARK.get(r["status"], _MARK["skip"])
         mark = f"{code}{label}\033[0m" if color else label
-        out.append(f"  {mark}  {r['name'].ljust(12)}{r['detail']}")
+        head = f"  {mark}  {r['name'].ljust(12)}"
+        out += _rows(str(r["detail"]), head, " " * 20, None)
         if r["fix"]:
-            fix = f"\033[36m{r['fix']}\033[0m" if color else r["fix"]
-            out.append(f"        {'':12}→ {fix}")
+            out += _rows(str(r["fix"]), f"{'':20}→ ", " " * 22, "\033[36m")
     fails = [r for r in rows if r["status"] == "fail"]
     out.append("")
     if fails:
