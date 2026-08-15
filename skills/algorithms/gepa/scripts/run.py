@@ -36,6 +36,9 @@ def main(argv=None) -> int:
                    help="SECONDARY cap on propose->gate iterations")
     p.add_argument("--minibatch-size", type=int, default=4)
     p.add_argument("--n-trials", type=int, default=1)
+    p.add_argument("--workers", type=int, default=1,
+                   help="concurrent rollouts per evaluation/minibatch (1 = serial, the "
+                        "default). Only safe when the adapter's run_target is thread-safe.")
     p.add_argument("--component-selector", default="round_robin",
                    choices=("round_robin", "all"))
     p.add_argument("--selection-strategy", default="pareto_per_instance",
@@ -54,9 +57,15 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="reconstruct the pool/frontier from the run dir and continue the "
                         "search instead of restarting from the seed")
+    p.add_argument("--protected-paths", default="",
+                   help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
+                        "tests). 'default' expands to the built-in set. Empty = off. A "
+                        "candidate that edits one is INDECISIVE, not scored 0.0.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+    # Process-wide rollout concurrency for every evaluation + minibatch this loop runs.
+    harness.DEFAULT_WORKERS = max(1, args.workers)
 
     try:
         from capevolve_telemetry import load_observers_from_state
@@ -65,6 +74,8 @@ def main(argv=None) -> int:
     except Exception:  # noqa: BLE001
         pass
 
+    if harness.DEFAULT_WORKERS > 1:
+        run_dir.log_event("parallel", workers=harness.DEFAULT_WORKERS, algorithm=ALGO)
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -82,6 +93,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, seed=args.seed, store=store,
         resume=args.resume,
+        protected_patterns=harness.parse_protected_paths(args.protected_paths),
     )
     run_dir.close_observers()
 

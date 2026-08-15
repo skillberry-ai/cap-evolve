@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import integrity
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
@@ -58,11 +59,13 @@ from .harness import (
     _init_memory_store,
     _live,
     _paired_deltas,
+    _resolve_workers,
     evaluate_candidate,
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir
+from .trials import run_trials_pool
 from .types import Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
@@ -116,6 +119,7 @@ def _eval_minibatch(
     cache: EvalCache | None,
     tag: str,
     seed: int = 0,
+    workers: int | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a SPECIFIC set of train task ids (one trial).
 
@@ -134,6 +138,10 @@ def _eval_minibatch(
     honest gate). One trial per task — the minibatch is a cheap signal, not the
     significance test.
     """
+    # ``workers`` > 1 (default ``harness.DEFAULT_WORKERS``) pools the ROLLOUTS of the
+    # cache-missing tasks; scoring, rollout files and — critically — every
+    # ``cache.put`` (which rewrites the whole cache file) stay serial, in task order.
+    workers = _resolve_workers(workers)
     all_train = {t.id: t for t in adapter.tasks("all")}
     tasks = [all_train[tid] for tid in task_ids if tid in all_train]
     out_dir = run_dir.rollouts / "train"
@@ -145,6 +153,13 @@ def _eval_minibatch(
     t0 = time.time()
 
     with _live(adapter, candidate_dir) as ctx:
+        pooled = None
+        if workers > 1:
+            misses = [t for t in tasks
+                      if cache is None or cache.get(chash, t.id) is None]
+            grid = run_trials_pool(lambda t, s: adapter.run_target(t, ctx, seed=s),
+                                   misses, n_trials=1, base_seed=seed, max_workers=workers)
+            pooled = {tid: (rs[0] if rs else None) for tid, rs in grid.items()}
         for task in tasks:
             cached = cache.get(chash, task.id) if cache is not None else None
             if cached is not None:
@@ -154,7 +169,8 @@ def _eval_minibatch(
                                     n=1, stderr=0.0, trial_rewards=[reward],
                                     raw={"cached": True}))
                 continue
-            rollout = adapter.run_target(task, ctx, seed=seed)
+            rollout = (pooled.get(task.id) if pooled is not None
+                       else adapter.run_target(task, ctx, seed=seed))
             if rollout is None:
                 rollout = Rollout(task_id=task.id, error="no rollout")
             errored = bool(getattr(rollout, "error", None))
@@ -185,7 +201,8 @@ def _eval_minibatch(
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
     run_dir.log_event("minibatch", tag=tag, ids=list(task_ids),
                       reward=result.reward, fired=n_called,
-                      cached=len(task_ids) - n_called)
+                      cached=len(task_ids) - n_called,
+                      **({"workers": workers} if workers > 1 else {}))
     return result
 
 
@@ -460,6 +477,7 @@ def gepa_loop(
     seed: int = 0,
     store=None,
     resume: bool = False,
+    protected_patterns=None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -568,6 +586,13 @@ def gepa_loop(
         instructions = _instructions(refl_summary, focus_label, mb)
         instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
+        # Seal the eval surface for this child. GEPA runs the optimizer itself rather
+        # than via ``harness.run_step``, so it needs the same two calls. None = off.
+        manifest = (integrity.snapshot(workdir, protected_patterns)
+                    if protected_patterns else None)
+        if manifest is not None:
+            integrity.set_readonly(workdir, manifest)
+
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0
         _t0 = time.time()
@@ -581,6 +606,26 @@ def gepa_loop(
             run_dir.log_event("optimizer_error", candidate=cid, error=opt_error[:500])
         run_dir.update_spent(optimizer_seconds=time.time() - _t0, optimizer_usd=opt_cost_usd,
                              optimizer_tokens=opt_tokens)
+
+        # Verify BEFORE the child minibatch eval — the first rollout spend of this
+        # iteration. A tampered child is INDECISIVE: no reward is recorded (not even
+        # the minibatch one), it never enters the pool or the rejected memory, and
+        # ``accepted=None`` leaves the stall counter untouched.
+        if manifest is not None:
+            report = integrity.verify(manifest, workdir)
+            if not report.ok:
+                run_dir.log_event("tamper_detected", candidate=cid, parent=parent["id"],
+                                  report=report.to_dict(), reason=report.reason)
+                run_dir.update_spent(iterations=1, accepted=None)
+                run_dir.log_event("step_indecisive", candidate=cid,
+                                  reason="indecisive (integrity): " + report.reason)
+                steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
+                              "accepted": False, "candidate_val": None,
+                              "tamper": report.to_dict(), "optimizer_error": opt_error,
+                              "focus": focus_label, "workdir": str(workdir)})
+                run_dir.record_spend_warnings()
+                _save()
+                continue
 
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,

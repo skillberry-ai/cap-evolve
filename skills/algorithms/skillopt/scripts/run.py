@@ -53,6 +53,9 @@ def main(argv=None) -> int:
     p.add_argument("--lr-schedule", default="cosine", choices=SCHEDULES,
                    help="how the edit budget decays over the run")
     p.add_argument("--n-trials", type=int, default=1)
+    p.add_argument("--workers", type=int, default=1,
+                   help="concurrent rollouts per evaluation (1 = serial, the default). "
+                        "Only safe when the adapter's run_target is thread-safe.")
     p.add_argument("--gate-mode", default="auto",
                    help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
     p.add_argument("--k-se", type=float, default=1.0)
@@ -69,9 +72,15 @@ def main(argv=None) -> int:
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--resume", action="store_true",
                    help="continue from the run's current best instead of baseline")
+    p.add_argument("--protected-paths", default="",
+                   help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
+                        "tests). 'default' expands to the built-in set. Empty = off. A "
+                        "candidate that edits one is INDECISIVE, not scored 0.0.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
+    # Process-wide rollout concurrency for every evaluation this loop runs.
+    harness.DEFAULT_WORKERS = max(1, args.workers)
 
     try:
         from capevolve_telemetry import load_observers_from_state
@@ -80,6 +89,8 @@ def main(argv=None) -> int:
     except Exception:  # noqa: BLE001
         pass
 
+    if harness.DEFAULT_WORKERS > 1:
+        run_dir.log_event("parallel", workers=harness.DEFAULT_WORKERS, algorithm=ALGO)
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -98,6 +109,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, slow_update=args.slow_update,
         slow_update_sample=args.slow_update_sample, algorithm=ALGO, store=store,
+        protected_patterns=harness.parse_protected_paths(args.protected_paths),
     )
     run_dir.close_observers()
 

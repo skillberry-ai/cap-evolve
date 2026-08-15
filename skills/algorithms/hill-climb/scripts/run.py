@@ -44,6 +44,9 @@ def main(argv=None) -> int:
                    help="schedule: all | cyclic | hardest-first (old skill names accepted)")
     p.add_argument("--max-iterations", type=int, default=10)
     p.add_argument("--n-trials", type=int, default=1)
+    p.add_argument("--workers", type=int, default=1,
+                   help="concurrent rollouts per evaluation (1 = serial, the default). "
+                        "Only safe when the adapter's run_target is thread-safe.")
     p.add_argument("--gate-mode", default="auto",
                    help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
     p.add_argument("--k-se", type=float, default=1.0)
@@ -75,6 +78,13 @@ def main(argv=None) -> int:
                    help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
     p.add_argument("--target-profile-file", default=None,
                    help="optional project-local brief overriding the tier's built-in brief")
+    p.add_argument("--protected-paths", default="",
+                   help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
+                        "tests). 'default' expands to the built-in set. Empty = off. A "
+                        "candidate that edits one is INDECISIVE, not scored 0.0.")
+    p.add_argument("--convergence", action="store_true",
+                   help="graded plateau signal (warn -> paradigm shift -> stop) injected "
+                        "into the optimizer prompt; off by default")
     args = p.parse_args(argv)
 
     focus = _LEGACY_FOCUS.get(args.focus, args.focus)
@@ -83,6 +93,8 @@ def main(argv=None) -> int:
         return 2
 
     run_dir = RunDir.open(Path(args.run_dir))
+    # Process-wide rollout concurrency for every evaluation this algorithm runs.
+    harness.DEFAULT_WORKERS = max(1, args.workers)
 
     try:
         from capevolve_telemetry import load_observers_from_state
@@ -98,6 +110,8 @@ def main(argv=None) -> int:
         run_dir.log_event("target_profile", model=_prof.model, tier=_prof.tier,
                           suggested_num_trials=_prof.suggested_num_trials,
                           resolution_note=_prof.resolution_note)
+    if harness.DEFAULT_WORKERS > 1:
+        run_dir.log_event("parallel", workers=harness.DEFAULT_WORKERS, algorithm=ALGO)
     store = make_store({"store": args.store, "store_commit_cmd": args.store_commit_cmd}, run_dir.root)
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
@@ -120,6 +134,8 @@ def main(argv=None) -> int:
         project_dir=Path(args.project),
         target_model=args.target_model,
         target_profile_file=args.target_profile_file,
+        protected_patterns=harness.parse_protected_paths(args.protected_paths),
+        convergence=args.convergence,
     )
     run_dir.close_observers()
 

@@ -23,11 +23,31 @@ import time
 from pathlib import Path
 from typing import Callable
 
+from . import convergence as convergence_mod
 from . import gate as gate_mod
+from . import integrity
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
+from .trials import run_trials_pool
 from .types import Rollout, Score, Task
+
+# How many rollouts may be generated concurrently when a caller does not say.
+# 1 = fully serial, byte-identical to a single-threaded run; parallelism is strictly
+# opt-in (every published benchmark number was measured serially).
+#
+# ponytail: a module global instead of a `workers` parameter threaded through
+# hill_climb_loop / skillopt_loop / run_step / gepa_loop. It is set once at process
+# start from the algorithm wrapper's --workers flag and read by evaluate_candidate /
+# gepa._eval_minibatch, so the three algorithms get parallelism without four layers
+# of pass-through plumbing (skillopt.py isn't even ours to edit). Add the explicit
+# parameter if two evaluations in ONE process ever need different worker counts.
+DEFAULT_WORKERS = 1
+
+
+def _resolve_workers(workers: int | None) -> int:
+    """Effective concurrency: explicit argument, else the process default, min 1."""
+    return max(1, int(DEFAULT_WORKERS if workers is None else workers))
 
 # An optimizer mutates ``workdir`` in place. It MAY return a dict reporting its own
 # cost, e.g. ``{"cost_usd": 0.42, "tokens": 1234}`` (or ``None`` when unknown) so the
@@ -167,6 +187,7 @@ def evaluate_candidate(
     ks=(1, 2),
     tag: str = "cand",
     base_seed: int | None = None,
+    workers: int | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
 
@@ -181,7 +202,15 @@ def evaluate_candidate(
     (raising on reuse) but only *commits* (burns) it once the test SplitResult has
     been computed and written — a crash mid-scoring leaves the seal unused so a
     retry can still score test exactly once. That is ``finalize``'s job.
+
+    ``workers`` > 1 generates the split's rollouts through a thread pool
+    (``trials.run_trials_pool``) instead of one at a time; SCORING and persistence
+    stay serial and in task order, so pass^k, SE and the gate see the exact numbers a
+    serial run produces. Defaults to ``DEFAULT_WORKERS`` (1). Only ``run_target`` runs
+    on a worker thread: an adapter whose ``run_target`` is not thread-safe (shared
+    scratch dir, one live container, a module-global client) must keep ``workers=1``.
     """
+    workers = _resolve_workers(workers)
     if split == "test":
         run_dir.reserve_test()  # raises TestSealError on reuse; does NOT burn the seal yet
 
@@ -318,6 +347,20 @@ def evaluate_candidate(
                     rb = adapter.run_batch(tasks, ctx, seed=seed)
                     # accept either {task_id: Rollout} or a list parallel to `tasks`
                     rollouts = rb if isinstance(rb, dict) else {t.id: r for t, r in zip(tasks, rb)}
+                elif workers > 1:
+                    # Framework-level parallelism for the common case: an adapter that
+                    # implements only ``run_target`` (no run_trials/run_batch fast path)
+                    # still gets the embarrassingly-parallel task grid run concurrently.
+                    # Only GENERATION is pooled — the pool returns the whole trial's
+                    # rollouts and ``_persist_trial`` then scores + persists them serially
+                    # in task order, which is what keeps the numbers identical to serial
+                    # and keeps ``adapter.score`` (often not thread-safe) single-threaded.
+                    # A thread that raises comes back as an error Rollout for that task,
+                    # so the honest denominator sees missing data, never a 0.0.
+                    pooled = run_trials_pool(
+                        lambda t, s: adapter.run_target(t, ctx, seed=s),
+                        tasks, n_trials=1, base_seed=seed, max_workers=workers)
+                    rollouts = {tid: (rs[0] if rs else None) for tid, rs in pooled.items()}
                 else:
                     rollouts = {t.id: adapter.run_target(t, ctx, seed=seed) for t in tasks}
                 _persist_trial(k, rollouts)
@@ -349,7 +392,10 @@ def evaluate_candidate(
     result = aggregate_scores(split, scores, ks=ks)
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
     run_dir.log_event("evaluate", split=split, tag=tag, reward=result.reward,
-                      stderr=result.stderr, cost_usd=run_cost, tokens=run_tokens, seconds=round(elapsed, 2))
+                      stderr=result.stderr, cost_usd=run_cost, tokens=run_tokens,
+                      seconds=round(elapsed, 2),
+                      # only on a parallel run, so a serial run's event record is unchanged
+                      **({"workers": workers} if workers > 1 else {}))
     return result
 
 
@@ -1288,6 +1334,45 @@ def _write_instructions_pointer(path: Path, skills_dir: str) -> None:
     path.write_text(existing + sep + block, encoding="utf-8")
 
 
+def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
+                 report, current_val: SplitResult, optimizer_seconds: float,
+                 opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
+    """An INDECISIVE step for a candidate that edited a protected file.
+
+    Not a rejection at 0.0: the candidate was never validly measured, so recording a
+    reward would poison the split mean and the paired gate. ``accepted=None`` leaves
+    the stall counter alone, ``set_best`` is never called, and the workdir is
+    snapshotted for forensics so an operator can see exactly what was edited.
+    """
+    reason = "indecisive (integrity): " + report.reason
+    run_dir.log_event("tamper_detected", candidate=cid, parent=parent_id,
+                      report=report.to_dict(), reason=report.reason)
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
+    run_dir.update_spent(iterations=1, accepted=None)
+    run_dir.log_event("step", candidate=cid, accept=False, reason=reason, val=None,
+                      parent=parent_id, parent_val=current_val.reward,
+                      optimizer_seconds=round(optimizer_seconds, 2),
+                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
+    run_dir.record_spend_warnings()
+    return {
+        "candidate_id": cid,
+        "accepted": False,
+        # delta 0.0 keeps the GateDecision shape; there is no measurement to report.
+        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
+                     "indecisive": True},
+        "candidate_val": None,      # NO reward — a tampered run is missing data
+        "parent_val": current_val.to_dict(),
+        "tamper": report.to_dict(),
+        "regressions": [],
+        "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
+        "optimizer_error": optimizer_error,
+        "workdir": str(workdir),
+    }
+
+
 def run_step(
     adapter,
     *,
@@ -1309,6 +1394,7 @@ def run_step(
     optimizer_name: str | None = None,
     capability_sources=None,
     project_dir: Path | None = None,
+    protected_patterns=None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
 
@@ -1317,6 +1403,14 @@ def run_step(
 
     ``no_regression`` adds a SWE-bench-style dual gate: even if the mean improves,
     reject the candidate if it breaks any val task the parent already passed.
+
+    ``protected_patterns`` (None = off, today's behavior) seals the evaluation
+    surface: the protected files are content-hashed before the optimizer runs and
+    re-verified BEFORE any rollout is paid for. On tamper the step is *indecisive*
+    (``candidate_val`` is None, no reward is recorded, the stall counter is
+    untouched, best is unchanged) — the same discipline the coverage guard and the
+    infra-error path already use, because the score would measure a compromised
+    harness, not the edit.
     """
     gate_kwargs = dict(gate_kwargs or {})
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
@@ -1336,6 +1430,16 @@ def run_step(
                               capability_sources=capability_sources, project_dir=project_dir)
 
     instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+
+    # Seal the eval surface (hash manifest + best-effort read-only bits) AFTER the
+    # context injection wrote its scratch files, so nothing we add ourselves reads as
+    # tampering. Host-independent: works for every optimizer CLI, not just the ones
+    # with a PreToolUse hook.
+    manifest = None
+    if protected_patterns:
+        manifest = integrity.snapshot(workdir, protected_patterns)
+        integrity.write_manifest(run_dir.root / "work" / f"{cid}.integrity.json", manifest)
+        integrity.set_readonly(workdir, manifest)
 
     optimizer_error = None
     opt_report = None
@@ -1364,6 +1468,17 @@ def run_step(
     optimizer_seconds = time.time() - _opt_t0
     run_dir.update_spent(optimizer_seconds=optimizer_seconds, optimizer_usd=opt_cost_usd,
                          optimizer_tokens=opt_tokens)
+
+    # Verify BEFORE evaluate_candidate: still before the gate, and it refuses to pay
+    # for a rollout batch whose result is already void.
+    if manifest is not None:
+        report = integrity.verify(manifest, workdir)
+        if not report.ok:
+            return _tamper_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                report=report, current_val=current_val,
+                                optimizer_seconds=optimizer_seconds,
+                                opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                optimizer_error=optimizer_error)
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
@@ -1941,6 +2056,42 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     return "\n".join(p for p in parts if p is not None)
 
 
+def parse_protected_paths(value) -> tuple[str, ...] | None:
+    """Spec/CLI value → glob patterns, or ``None`` meaning the seal is OFF.
+
+    Accepts a comma-separated string or a list. The literal ``default`` expands to
+    ``integrity.DEFAULT_PATTERNS``, so a project can seal the usual eval surface
+    without restating it. Empty/absent ⇒ ``None`` ⇒ unchanged behavior.
+    """
+    if not value:
+        return None
+    items = [v.strip() for v in value.split(",")] if isinstance(value, str) else [str(v).strip() for v in value]
+    pats: list[str] = []
+    for v in items:
+        if not v:
+            continue
+        pats.extend(integrity.DEFAULT_PATTERNS if v == "default" else [v])
+    return tuple(pats) or None
+
+
+def _convergence_observations(steps) -> list:
+    """Steps → ``convergence.Observation``s, in order.
+
+    Steps with no ``candidate_val`` (a tampered/indecisive step) are SKIPPED, not
+    counted as non-improving: the candidate was never measured, so it is no evidence
+    about the trend either way.
+    """
+    out = []
+    for s in steps:
+        cv = s.get("candidate_val")
+        if not cv:
+            continue
+        out.append(convergence_mod.Observation(
+            id=s.get("candidate_id", ""), reward=float(cv.get("reward") or 0.0),
+            accepted=bool(s.get("accepted")), stderr=float(cv.get("stderr") or 0.0)))
+    return out
+
+
 def hill_climb_loop(
     adapter,
     *,
@@ -1962,6 +2113,8 @@ def hill_climb_loop(
     project_dir: Path | None = None,
     target_model: str = "",
     target_profile_file: str | None = None,
+    protected_patterns=None,
+    convergence: bool = False,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -1970,6 +2123,10 @@ def hill_climb_loop(
     reflection emphasizes — and (for hardest-first) the order. Parent is always
     the current best (global hill-climb). The ``gepa`` algorithm uses its own
     per-instance frontier and parent selection (see ``cap_evolve.gepa``).
+
+    ``protected_patterns`` seals the eval surface (see ``run_step``); ``convergence``
+    turns on the graded plateau signal (warn → paradigm_shift → stop). Both default
+    off, so a caller that passes neither runs exactly as before.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
@@ -1990,6 +2147,8 @@ def hill_climb_loop(
         order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
 
     steps = []
+    baseline_val = current_val.reward   # the bar every candidate must clear, at loop entry
+    convergence_stop = ""
     for i in range(max_iterations):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
@@ -2007,13 +2166,27 @@ def hill_climb_loop(
                                             instructions_file=instructions_file,
                                             bench_repo=bench_repo, optimizer_name=optimizer_name,
                                             seed_empty=seed_empty, target_reader=_target_reader)
+        if convergence:
+            # Pure: recomputed from the steps so far, so a resumed run rebuilding the
+            # same observation list gets the identical signal.
+            signal = convergence_mod.assess(_convergence_observations(steps),
+                                            baseline=baseline_val)
+            if signal.level != "ok":
+                run_dir.log_event("convergence", candidate_next=i + 1, **signal.to_dict())
+                if signal.level == "stop":
+                    convergence_stop = signal.advice
+                    break
+                # ``advice`` is written to be injected verbatim; appending to the
+                # instructions string reaches every optimizer CLI without touching
+                # the prompt template.
+                instructions = instructions.rstrip() + "\n\n" + signal.advice + "\n"
         step = run_step(
             adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
             rejected=rejected, history=history, store=store, capabilities=capabilities,
             optimizer_name=optimizer_name, capability_sources=capability_sources,
-            project_dir=project_dir,
+            project_dir=project_dir, protected_patterns=protected_patterns,
         )
         steps.append(step)
         if step["accepted"]:
@@ -2026,7 +2199,7 @@ def hill_climb_loop(
         "best_val": current_val.reward,
         "iterations": len(steps),
         "accepts": sum(1 for s in steps if s["accepted"]),
-        "stop_reason": why or "max_iterations",
+        "stop_reason": why or ("converged" if convergence_stop else "max_iterations"),
         "steps": steps,
     }
 
