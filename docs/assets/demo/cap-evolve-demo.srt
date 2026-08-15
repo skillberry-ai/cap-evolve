@@ -1,0 +1,47 @@
+1
+00:00:00,150 --> 00:00:02,560
+cap-evolve. Watch capability evolve.
+
+2
+00:00:04,150 --> 00:00:11,570
+A benchmark gives you one number. It won't tell you which policy rule was missing, or which tool let a bad call through. So you guess.
+
+3
+00:00:12,270 --> 00:00:18,910
+cap-evolve edits what your agent reads: prompts, tool code, MCP surfaces, skill packages.
+
+4
+00:00:19,610 --> 00:00:32,580
+Each iteration scores a candidate on validation, reads the failures, and proposes one edit. Accepted, rejected, or indecisive — always with the reason. This session is illustrative: its numbers are hand-authored.
+
+5
+00:00:33,280 --> 00:00:43,150
+One real iteration: a policy rule, and in the same edit, code inside the tool that rejects the illegal call. Task fourteen went from one pass in ten, to six.
+
+6
+00:00:43,850 --> 00:00:51,120
+The dashboard holds the whole run — every candidate, every dollar, and the gate's verdict. On this run the gate rejected all four.
+
+7
+00:00:51,850 --> 00:01:03,350
+Here's what most optimizers skip. Acceptance is a paired significance test, on validation only: clear k standard errors, or it's noise. The test split is scored once, then sealed.
+
+8
+00:01:04,050 --> 00:01:11,890
+On τ²-bench airline: fifty-three point six to seventy-one point two. Thirty to forty-seven point five, held out.
+
+9
+00:01:12,590 --> 00:01:16,480
+The tasks-by-trials grid is parallel. Measured live, right here.
+
+10
+00:01:17,590 --> 00:01:19,730
+Eight workers, identical result.
+
+11
+00:01:21,090 --> 00:01:23,740
+Start in two minutes, with no API key.
+
+12
+00:01:25,590 --> 00:01:27,990
+cap-evolve. Made at IBM and Red Hat.

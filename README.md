@@ -132,9 +132,12 @@ Nothing there is a fabricated number: a value the run didn't record renders as `
 un-evaluated task gets its own glyph rather than a zero, and **indecisive** is a first-class
 outcome — it means *the measurement could not decide*, which is not the same as losing.
 
-▶️ **[Watch the 60-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — the terminal
-footage is a real recording of `cap-evolve replay --demo`, so it is the renderer you get,
-not a mockup. Rebuild it with [`scripts/demo-video/`](scripts/demo-video/README.md).
+▶️ **[Watch the 90-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 2560×1440, 5.2 MB,
+captioned ([`.srt`](docs/assets/demo/cap-evolve-demo.srt)) and designed to be fully
+comprehensible **muted**. Nothing in it is a mockup: the terminal segments are a `vhs`
+recording of `cap-evolve replay --demo`, the dashboard segment is Chromium against a real
+committed run, and the parallel speedup is measured on camera. Rebuild the whole thing with
+[`scripts/demo-video/`](scripts/demo-video/README.md).
 
 > The bundled demo session's numbers are hand-authored and make **no benchmark claim** —
 > it exists to show the UI with no API key. Measured results are in

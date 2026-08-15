@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 import time
@@ -63,10 +64,11 @@ def run(workers: int, tmp: str):
 
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
-        results = {}
+        results, timing = {}, {}
         for w in (1, 4, 8):
             elapsed, res = run(w, tmp)
             results[w] = res
+            timing[w] = elapsed
             print(f"workers={w:<2} wallclock={elapsed:6.2f}s  "
                   f"reward={res.reward!r} stderr={res.stderr!r}")
 
@@ -75,6 +77,20 @@ def main() -> int:
                 and a.per_task == b.per_task and a.pass_k == b.pass_k
                 and a.n_scored == b.n_scored)
         print("identical SplitResult (workers=1 vs 8):", same)
+        # The demo video's speedup card is generated from this file, so the card
+        # can never quote a number the footage did not show. Best-effort: the
+        # script's own assertion is the point, not the video.
+        out = Path("/tmp/video/par_results.json")
+        try:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps({
+                "tasks": len(IDS), "trials": TRIALS, "identical": same,
+                "runs": {str(w): {"wallclock": round(timing[w], 2),
+                                  "reward": results[w].reward,
+                                  "stderr": results[w].stderr} for w in timing},
+            }, indent=1))
+        except OSError as exc:
+            print(f"(could not write {out}: {exc})")
         print(f"{len(IDS) * TRIALS} rollouts x {SLEEP}s = {len(IDS) * TRIALS * SLEEP:.1f}s "
               f"of sleep; per_task order:",
               [pt["task_id"] for pt in b.per_task] == IDS)
