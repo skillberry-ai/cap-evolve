@@ -13,8 +13,10 @@ venv/
 # local E2E scratch (venvs, benchmark clones, run artifacts, .env credentials)
 e2e/
 
-# cap-evolve run state (per-run, not source)
-.capevolve/
+# cap-evolve run state (per-run, not source). Globbed, because a run driven against an
+# alternate project dir lands in a sibling like .capevolve-agentopt/ — which is 12M of
+# rollouts and must not be committable by accident. Curated audit sets go under examples/.
+.capevolve*/
 
 # secrets — never commit credentials (RITS_API_KEY, WATSONX_*, ANTHROPIC_API_KEY, …)
 .env
