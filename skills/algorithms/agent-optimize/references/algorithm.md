@@ -24,7 +24,17 @@ agent does:
   burns the seal and a second finalize raises `TestSealError`. The agent cannot peek at test
   mid-run even if it tries.
 - **Acceptance is a code gate on val.** `gate.decide` applies Δ > k·SE; the agent's subset
-  triage is advisory and never substitutes for it.
+  triage is advisory and never substitutes for it. The agent reaches the *same* gate the
+  deterministic loops use — the **paired** test — through `scripts/gate_check.py`, which
+  rebuilds both sides' `SplitResult` from the persisted rollouts
+  (`harness.split_result_from_rollouts`), builds the aligned per-task delta vector
+  (`harness._paired_deltas`) and calls `gate.decide(mode="paired", …)`. The `phases/gate`
+  CLI takes only two scalar means, so it can express only the weaker *unpaired*
+  `significant` test; it stays the human-inspection front-end.
+- **No-regression is enforced, not advised.** `gate_check.py` also vetoes a mean gain that
+  strictly drops any val task the current best measured and passed — the same rule, and the
+  same "tasks with no valid trial are missing data" exclusion, that `hill_climb_loop`
+  applies. It is what diagnose's `kept_good` list exists to protect.
 - **Edits are audited.** Every candidate is snapshotted in the git-backed store and every
   round is appended to `events.jsonl`, so the search is fully reconstructable.
 
@@ -39,6 +49,33 @@ re-reads the project's free-text `stop_condition` and the already-tracked run-di
 rounds and interprets them: score goal on full val, benchmark-eval cost, optimization cost,
 and time all fit in one human-readable line the agent parses. This keeps the mechanism
 zero-code and lets a single `stop_condition` express compound goals a fixed budget knob can't.
+
+`scripts/spend.py` is that readout in one call (spend + budget + `budget_exhausted()`'s
+bool/reason + best full-val mean + the `stop_condition` text). The recording half matters
+just as much: the evaluate phase already books `metric_calls`/`usd`/`runner_seconds`, but in
+agent mode *the agent is the proposer*, so `scripts/commit.py` takes `--optimizer-usd` /
+`--optimizer-tokens` / `--optimizer-seconds` alongside `iterations` and the accepted flag
+(which drives the stall counter). Without those, a cost- or stall-based `stop_condition` is
+unenforceable no matter how carefully it is written.
+
+## Parallelism: fan out on the cheap steps, stay serial where state moves
+
+Arbor's discipline — dispatch independent workers into separate worktrees, evaluate each on
+a dev signal, merge only what clears a held-out margin — ports cleanly, with the boundaries
+cap-evolve's own state model dictates (see `docs/SUBAGENT_PATTERNS.md`):
+
+- **Diagnosis** is read-only and costs no rollouts, so it fans out without limit.
+- **Proposal** fans out across *different* parents/working copies only, never two proposers
+  on one candidate dir. Each sibling needs a **unique tag**, because rollouts are written as
+  `<task>__<tag>__t<k>.json` and the evaluate phase derives the tag from the candidate dir
+  name: two concurrent evals sharing a tag interleave into the same filenames and corrupt
+  both scores.
+- **The gate is serial.** `set_best` mutates run state and paired deltas are computed against
+  the *current* baseline, so admitting sibling A invalidates sibling B's deltas. B must be
+  re-gated against the new best before it is committed; skipping that double-counts one gain.
+- **Test is never parallel.** The seal is single-use.
+- **Budget is checked before the fan-out**, for N evals rather than one: N siblings can
+  exhaust a budget that had room for a single round.
 
 ## Caveats
 
