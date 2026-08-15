@@ -59,8 +59,13 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
 
 export function useRunStream(id: string | undefined, onActivity?: () => void): StreamState {
   const [state, dispatch] = useReducer(streamReducer, initialStreamState)
+  // Keep the latest callback in a ref WITHOUT writing during render (that is a real
+  // React violation: a render must be side-effect free). The EventSource effect below
+  // only ever reads activityRef.current, so a one-tick-late write is harmless.
   const activityRef = useRef(onActivity)
-  activityRef.current = onActivity
+  useEffect(() => {
+    activityRef.current = onActivity
+  }, [onActivity])
 
   useEffect(() => {
     // Static export has no backend / SSE: the run is finished, so report 'done'.

@@ -229,6 +229,280 @@ def _step_candidate(ev: dict):
     return ev.get("candidate") or ev.get("candidate_id")
 
 
+# ---------------------------------------------------------------------------
+# Algorithm identity, run status, phases — all DERIVED FROM EVIDENCE
+# ---------------------------------------------------------------------------
+
+# An event kind that only one algorithm ever emits identifies the algorithm. Ordered
+# most-specific first; the first hit wins. Nothing here guesses: a run with no
+# distinguishing event stays ``None`` (the UI says "not recorded", never invents one).
+_ALGO_MARKERS = (
+    ("gepa", ("gepa_start", "gepa_val_gate", "gepa_local_gate", "gepa_select",
+              "gepa_merge_local", "gepa_merge_skip", "gepa_stop", "gepa_resume")),
+    ("skillopt", ("skillopt_start", "skillopt_step", "skillopt_slow_update",
+                  "skillopt_slow_eval")),
+    ("evograph", ("evograph_round", "evograph_weakness", "evograph_solution")),
+    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step")),
+    ("hill-climb", ("convergence", "step")),
+)
+
+#: Every event kind that means "one candidate was proposed and judged". The
+#: deterministic loops log ``step``/``skillopt_step``/``gepa_val_gate``; the AGENT-mode
+#: loops (agent-optimize, evograph) log ``accept``/``reject`` via the algorithm's
+#: ``commit.py``. The reducer used to know only the first three, so every free-form
+#: agentic run rendered as a graph with nothing but a seed node.
+_STEP_KINDS = ("step", "skillopt_step", "gepa_val_gate", "accept", "reject")
+
+#: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
+_ACCEPT_KINDS = ("accept",)
+
+
+def _algorithm_from_spec(root: Path) -> str | None:
+    """``algorithm_skill`` from the sibling project spec, or None.
+
+    A run dir does not record which algorithm produced it, so a free-form agent run
+    (which emits no algorithm-specific event) has no marker in its log. The project
+    spec that launched it sits next to the run dir (``<base>/project/capevolve.yaml``)
+    and is real evidence — read, never guessed. Flat ``key: value`` only, matching the
+    zero-dependency reader the rest of the codebase uses.
+    """
+    for spec in (root.parent / "project" / "capevolve.yaml",
+                 root / "capevolve.yaml"):
+        if not spec.is_file():
+            continue
+        try:
+            for line in spec.read_text(encoding="utf-8").splitlines():
+                if line.startswith("algorithm_skill:"):
+                    val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+                    if val:
+                        return val
+        except OSError:
+            continue
+    return None
+
+#: How long the event log may be silent before a non-finalized run stops counting as
+#: running. A real iteration can take tens of minutes (see run_wide: 25-min optimizer
+#: calls), so the window is deliberately generous — better "running" for a while after
+#: a kill than "dead" during a legitimately slow step.
+STALE_AFTER_SECONDS = 45 * 60.0
+
+_PHASE_OF_KIND = {
+    "intake": "intake", "target_profile": "intake", "seed_dir_created": "intake",
+    "splits": "baseline", "splits_warning": "baseline", "baseline": "baseline",
+    "baseline_reused": "baseline",
+    "finalize": "finalize",
+}
+
+
+def _phase_for(ev: dict) -> str:
+    kind = str(ev.get("kind") or "")
+    if kind in _PHASE_OF_KIND:
+        return _PHASE_OF_KIND[kind]
+    if kind == "evaluate":
+        # The seed-on-val eval IS the baseline; the sealed test eval is finalize.
+        if ev.get("split") == "test":
+            return "finalize"
+        if ev.get("tag") == "seed":
+            return "baseline"
+    return "optimize"
+
+
+def _infer_algorithm(kinds: set) -> str | None:
+    for name, markers in _ALGO_MARKERS:
+        if kinds.intersection(markers):
+            return name
+    return None
+
+
+def _budget_exhausted(budget, spent) -> str | None:
+    """Which budget limit is spent out, or None. Mirrors RunDir.budget_exhausted."""
+    if budget is None or spent is None:
+        return None
+    checks = (
+        ("max_iterations", budget.max_iterations, spent.iterations),
+        ("max_metric_calls", budget.max_metric_calls, spent.metric_calls),
+        ("max_usd", budget.max_usd, spent.usd + spent.optimizer_usd + spent.intake_usd),
+        ("max_optimizer_usd", budget.max_optimizer_usd, spent.optimizer_usd),
+    )
+    for name, limit, used in checks:
+        if limit and used >= limit:
+            return f"{name} reached ({used:g} / {limit:g})"
+    if budget.stall and spent.stall >= budget.stall:
+        return f"stalled ({spent.stall} consecutive non-improving iterations)"
+    return None
+
+
+def _orchestration_mode(root: Path) -> str | None:
+    """``orchestration_mode`` from the sibling project spec (``agent`` / ``deterministic``)."""
+    for spec in (root.parent / "project" / "capevolve.yaml", root / "capevolve.yaml"):
+        if not spec.is_file():
+            continue
+        try:
+            for line in spec.read_text(encoding="utf-8").splitlines():
+                if line.startswith("orchestration_mode:"):
+                    val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+                    if val:
+                        return val
+        except OSError:
+            continue
+    return None
+
+
+def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
+                   has_candidates: bool, has_baseline: bool) -> tuple[str, str]:
+    """``(status, reason)`` for a run — the five outcomes an operator must tell apart.
+
+    ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
+    no finalize followed) · ``stalled`` (the algorithm declared convergence) ·
+    ``running`` (the log is still moving) · ``interrupted`` (no finalize, no recent
+    activity — died, was killed, or the shell went away) · ``failed`` (nothing ran).
+
+    The old logic collapsed everything that was not finalized into ``live``, so a run
+    that died weeks ago still reported as running. Here the last event's timestamp is
+    the evidence, and a truncated/killed run is never called live.
+    """
+    kinds = [str(e.get("kind") or "") for e in events]
+    if not events:
+        return "failed", "no events recorded — the run never started"
+    if "finalize" in kinds:
+        return "completed", "finalize sealed the test split"
+    if not has_baseline and not has_candidates:
+        return "failed", "no baseline and no candidate was ever evaluated"
+    if agent_mode and has_baseline and not has_candidates:
+        # ``cap-evolve run`` in agent mode deliberately stops after baseline and hands
+        # the loop to the coding agent. That is neither finished nor dead nor running —
+        # it is waiting for a human/agent to drive it, and saying "live" (or "failed")
+        # about it is the exact class of wrong status the old logic produced.
+        return "awaiting_agent", (
+            "baseline is done and `cap-evolve run` handed off — the agent has not "
+            "committed a candidate yet (agent-mode runs end with `cap-evolve finalize`)")
+
+    last_t = 0.0
+    for e in reversed(events):
+        try:
+            last_t = float(e.get("t") or 0.0)
+        except (TypeError, ValueError):
+            last_t = 0.0
+        if last_t:
+            break
+    silent = (now - last_t) if last_t else None
+
+    exhausted = _budget_exhausted(budget, spent)
+    stop_kinds = {"gepa_stop", "convergence"}
+    stopped = next((k for k in reversed(kinds) if k in stop_kinds), None)
+
+    fresh = silent is not None and silent < STALE_AFTER_SECONDS
+    if fresh and not exhausted and not stopped:
+        return "running", f"last event {silent:.0f}s ago"
+    if stopped:
+        return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
+    if exhausted:
+        return "budget_exhausted", f"{exhausted}; test split never sealed"
+    if silent is None:
+        return "interrupted", "events carry no timestamps — cannot tell if it is still alive"
+    return "interrupted", (
+        f"no finalize and no event for {silent / 60.0:.0f} min — the run died, was "
+        "killed, or is still being written by a process that is no longer logging")
+
+
+def _sanitize_text(value, limit: int = 4000) -> str:
+    """Model/subprocess-authored text, made safe to hand to a renderer.
+
+    Strips C0/C1 control characters (ANSI escapes, NULs, carriage returns) that could
+    otherwise smuggle terminal escapes into the ANSI report or break out of a JSON
+    island, and caps the length. Markup is NOT escaped here — that is the renderer's
+    job (``textContent`` in the HTML, JSX in the SPA) — but the value is guaranteed
+    to be a plain, bounded, control-free string.
+    """
+    s = value if isinstance(value, str) else json.dumps(value, default=str)
+    s = re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", " ", s)
+    if len(s) > limit:
+        s = s[:limit] + f" …[+{len(s) - limit} chars truncated]"
+    return s
+
+
+#: Event fields that are huge and already surfaced elsewhere — dropped from the log
+#: stream's detail blob so one event cannot balloon the payload.
+_LOG_DROP_FIELDS = {"t", "kind", "optimizer_report", "error_full", "per_task", "report"}
+
+
+def _now() -> float:
+    import time
+    return time.time()
+
+
+def _front_matter(text: str) -> dict:
+    """Parse the flat ``key: value`` YAML front matter evograph writes (stdlib only).
+
+    Only the shapes evograph's contract uses: scalars and inline ``[a, b]`` lists.
+    Anything else is kept as the raw string — a reader, not a YAML implementation.
+    """
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {}
+    out: dict = {}
+    for line in text[3:end].splitlines():
+        if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        k, v = k.strip(), v.strip()
+        if v.startswith("[") and v.endswith("]"):
+            out[k] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
+        else:
+            out[k] = v.strip("'\"")
+    return out
+
+
+def _read_evograph(root: Path) -> dict:
+    """evograph's wiki, read straight from the run dir (no separate server, no iframe).
+
+    evograph is agent-driven and records itself as files under the run dir:
+    ``wiki/results/round-<N>.json``, ``wiki/weaknesses/<slug>.md`` front matter, and
+    ``wiki/solutions/<slug>/<id>/solution.md``. Reading them here makes the weakness
+    graph a first-class panel of the one dashboard instead of an embedded foreign app.
+    Returns ``{}`` when the run is not an evograph run.
+    """
+    wiki = root / "wiki"
+    if not wiki.is_dir():
+        return {}
+    rounds = []
+    for f in sorted((wiki / "results").glob("*.json")) if (wiki / "results").is_dir() else []:
+        d = _read_json(f)
+        if not d:
+            continue
+        metrics = d.get("metrics") or {}
+        primary = next((k for k, v in metrics.items()
+                        if isinstance(v, dict) and v.get("primary")), None)
+        rounds.append({
+            "round": d.get("round"), "split": d.get("split"),
+            "started_at": d.get("started_at") or d.get("timestamp"),
+            "completed_at": d.get("completed_at"),
+            "num_tasks": d.get("num_tasks"),
+            "primary_metric": primary,
+            "metrics": {k: v.get("value") for k, v in metrics.items() if isinstance(v, dict)},
+            "cost_usd": d.get("cost_usd"),
+        })
+    weaknesses = []
+    wdir = wiki / "weaknesses"
+    if wdir.is_dir():
+        for f in sorted(wdir.glob("*.md")):
+            try:
+                fm = _front_matter(f.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+            fm.setdefault("slug", f.stem)
+            sol_dir = wiki / "solutions" / str(fm.get("slug"))
+            fm["num_solutions"] = (len([p for p in sol_dir.iterdir() if p.is_dir()])
+                                   if sol_dir.is_dir() else 0)
+            weaknesses.append({k: (_sanitize_text(v, 400) if isinstance(v, str) else v)
+                               for k, v in fm.items()})
+    if not rounds and not weaknesses:
+        return {}
+    return {"rounds": rounds, "weaknesses": weaknesses}
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -239,6 +513,25 @@ def reduce_run(run_dir) -> dict:
     base_val_obj = baseline.get("val") or {}
     baseline_val = base_val_obj.get("reward")
     tasks = [pt["task_id"] for pt in base_val_obj.get("per_task", [])]
+
+    kinds = {str(e.get("kind") or "") for e in events}
+    # An algorithm-specific event kind is the strongest evidence; the project spec that
+    # launched the run is the fallback (a free-form agent run emits no marker). Both are
+    # read from the run's own artifacts — never inferred from the run name.
+    algorithm = _infer_algorithm(kinds)
+    algorithm_source = "events" if algorithm else None
+    if algorithm is None or (root / "wiki").is_dir():
+        from_spec = _algorithm_from_spec(root)
+        if (root / "wiki").is_dir():
+            algorithm, algorithm_source = "evograph", "run-dir wiki/"
+        elif from_spec:
+            algorithm, algorithm_source = from_spec, "capevolve.yaml"
+    # Candidates the gate REFUSED TO JUDGE (low coverage, or an integrity tamper).
+    # These are neither accepted nor rejected: the edit was never validly measured.
+    indecisive_ids = {
+        _step_candidate(e) for e in events
+        if e.get("kind") in ("step_indecisive", "tamper_detected")
+    } - {None}
 
     # --- nodes: start with the seed -------------------------------------
     nodes: dict[str, dict] = {}
@@ -261,7 +554,19 @@ def reduce_run(run_dir) -> dict:
     diagnoses: list[dict] = []
     minibatch_evals: set[str] = set()  # tags only seen on a minibatch (gepa) — not full val
 
-    # First pass: which tags were evaluated on val (vs only minibatch).
+    # First pass: per-tag val stderr from the `evaluate` events. The `step` event
+    # carries the mean but not its uncertainty, so without this every candidate's mean
+    # rendered bare — the exact sloppiness the honesty rules forbid.
+    val_stderr: dict = {}
+    val_n_scored: dict = {}
+    for ev in events:
+        if ev.get("kind") == "evaluate" and ev.get("split") == "val":
+            if ev.get("stderr") is not None:
+                val_stderr[ev.get("tag")] = ev.get("stderr")
+            if ev.get("n_scored") is not None:
+                val_n_scored[ev.get("tag")] = ev.get("n_scored")
+
+    # Which tags were evaluated on val (vs only minibatch).
     for ev in events:
         if ev.get("kind") == "evaluate" and ev.get("split") == "val":
             minibatch_evals.discard(ev.get("tag"))
@@ -270,6 +575,7 @@ def reduce_run(run_dir) -> dict:
 
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
+    last_accepted = "seed"
     for ev in events:
         kind = ev.get("kind")
         if kind == "gate_warning":
@@ -283,28 +589,47 @@ def reduce_run(run_dir) -> dict:
                 "text": ev.get("error") or ev.get("summary") or ev.get("note") or "",
             })
             continue
-        if kind not in ("step", "skillopt_step", "gepa_val_gate"):
+        if kind not in _STEP_KINDS:
             continue
 
         cid = _step_candidate(ev)
         if not cid:
             continue
-        it += 1
-        accepted = bool(ev.get("accept"))
+        # One iteration per CANDIDATE, not per step-like event. skillopt logs both
+        # ``skillopt_step`` and a plain ``step`` for the same candidate, and gepa logs a
+        # local gate then a val gate — counting events made iteration numbers skip
+        # (1,2,4,5) and the per-iteration charts lie about how many steps ran.
+        if cid in nodes:
+            it = nodes[cid].get("iteration") or it
+        else:
+            it = max((n.get("iteration") or 0) for n in nodes.values()) + 1
+        accepted = bool(ev.get("accept")) or kind in _ACCEPT_KINDS
         parent = ev.get("parent_id") or ev.get("parent")
+        if parent is None and kind in ("accept", "reject"):
+            # Agent-mode commits carry no parent edge. The candidate WAS gated against
+            # the run's current best (``gate_check --current`` defaults to ``best_id``),
+            # so the last accepted candidate is the real comparison parent, not a guess.
+            parent = last_accepted
         # gepa val-gate / step events don't always carry the parent edge; fall back
         # to "seed" if we have nothing better so the lineage tree stays connected.
         val = ev.get("val")
         parent_val = ev.get("parent_val")
 
         per, fb = _per_task_from_rollouts(run_dir, cid, "val")
-        # A candidate that errored out / produced no rollouts and no val score is "failed".
-        if val is None and not per:
+        # Order matters. An INDECISIVE step (coverage collapse / integrity tamper) is
+        # not a rejection and not a failure: the gate declined to judge, so the edit's
+        # quality is unknown. Collapsing it into "rejected" (the old behaviour) told
+        # the reader a measured verdict existed when none did.
+        if cid in indecisive_ids:
+            status = "indecisive"
+        elif val is None and not per:
             status = "failed"
         else:
             status = "accepted" if accepted else "rejected"
 
-        if val is not None:
+        # An indecisive candidate's val describes the infrastructure, not the edit —
+        # it must never set the running-best record.
+        if val is not None and status != "indecisive":
             best = max(best, val)
 
         merge_of = ev.get("merge_of")
@@ -314,7 +639,8 @@ def reduce_run(run_dir) -> dict:
             "children": [],
             "status": status,
             "val": val,
-            "stderr": None,
+            "stderr": val_stderr.get(cid),
+            "n_scored": val_n_scored.get(cid),
             "per_task": per,
             "feedback": fb,
             "cost_usd": ev.get("cost_usd") or 0.0,
@@ -342,6 +668,8 @@ def reduce_run(run_dir) -> dict:
         else:
             node["parent"] = parent
             nodes[cid] = node
+        if accepted:
+            last_accepted = cid
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
@@ -372,7 +700,7 @@ def reduce_run(run_dir) -> dict:
             frontier += 1
 
     # --- counts ----------------------------------------------------------
-    counts = {"accepted": 0, "rejected": 0, "failed": 0, "seed": 0}
+    counts = {"accepted": 0, "rejected": 0, "failed": 0, "seed": 0, "indecisive": 0}
     for n in nodes.values():
         counts[n["status"]] = counts.get(n["status"], 0) + 1
     counts["total"] = len(nodes)
@@ -392,7 +720,7 @@ def reduce_run(run_dir) -> dict:
     # separately by headless backends as opt_cost_usd when present.
     opt_usd = 0.0
     for ev in events:
-        if ev.get("kind") in ("step", "skillopt_step", "gepa_val_gate"):
+        if ev.get("kind") in _STEP_KINDS:
             opt_usd += float(ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd") or 0.0)
     tokens = sum(int(n.get("tokens") or 0) for n in nodes.values())
     intake_usd = intake_tokens = intake_secs = 0.0
@@ -529,6 +857,211 @@ def reduce_run(run_dir) -> dict:
             "tokens": int(test_obj.get("tokens") or 0),
         })
 
+    # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
+    # The reason string the gate wrote is the audit record; Δ̄/SE/n are parsed back out
+    # of it so the UI can show the uncertainty next to the mean instead of a bare Δ.
+    # A number that isn't in the reason stays None — never a fabricated 0.
+    gate_decisions: list[dict] = []
+    for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
+                    key=lambda x: x.get("iteration") or 0):
+        reason = str(n.get("reason") or "")
+        verdict = ("accept" if n["status"] == "accepted"
+                   else "indecisive" if n["status"] == "indecisive"
+                   else "reject" if n["status"] == "rejected" else "no measurement")
+        m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
+        m_se = re.search(r"SE\s*=\s*(\d*\.?\d+)", reason)
+        m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
+        m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
+        gate_decisions.append({
+            "iteration": n.get("iteration"),
+            "candidate": n["id"],
+            "verdict": verdict,
+            "val": n.get("val"),
+            "parent": n.get("parent"),
+            "parent_val": n.get("parent_val"),
+            "delta": float(m_delta.group(1)) if m_delta else None,
+            "stderr": float(m_se.group(1)) if m_se else None,
+            "n": int(m_n.group(1)) if m_n else None,
+            "k_se": float(m_bar.group(1)) if m_bar else None,
+            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "reason": _sanitize_text(reason, 600),
+        })
+
+    # --- cost ledger: every dollar, attributed to the thing that spent it -----
+    # Rows are built from the events that actually recorded a spend (intake, each
+    # ``evaluate``, each optimizer call on a step) and reconciled against the run's
+    # authoritative Spent total. A row whose cost was never recorded carries
+    # ``usd: None`` (shown as "—"), and whatever the rows cannot account for is
+    # published as ``unattributed_usd`` rather than quietly dropped.
+    ledger: list[dict] = []
+    # Intake is ALWAYS a row. A run whose intake genuinely cost nothing shows $0.0000
+    # (a recorded measurement); a run with no spend accounting at all shows "—". The
+    # one thing it must never do is be absent, which is what made intake cost invisible.
+    ledger.append({
+        "phase": "intake", "kind": "intake", "label": "Intake + scaffold",
+        "candidate": None, "split": None,
+        "usd": (intake["usd"] if (sp is not None or intake_ev is not None) else None),
+        "seconds": intake["seconds"], "tokens": intake["tokens"],
+        "note": intake.get("output_summary") or "",
+    })
+    opt_error_ids = {_step_candidate(e) for e in events if e.get("kind") == "optimizer_error"}
+    for ev in events:
+        kind = ev.get("kind")
+        if kind == "evaluate":
+            tag, split = ev.get("tag") or "?", ev.get("split") or "?"
+            is_base = tag == "seed" and split == "val"
+            ledger.append({
+                "phase": _phase_for(ev), "split": split,
+                "kind": "baseline_eval" if is_base else ("test_eval" if split == "test"
+                                                         else "candidate_eval"),
+                "label": ("Baseline eval — seed on val" if is_base else
+                          f"Sealed test eval — {tag}" if split == "test" else
+                          f"Eval {tag} on {split}"),
+                "candidate": tag,
+                "usd": ev.get("cost_usd"), "seconds": ev.get("seconds") or 0.0,
+                "tokens": int(ev.get("tokens") or 0),
+                "note": (f"reward {ev['reward']:.3f}" if isinstance(ev.get("reward"), (int, float))
+                         else ""),
+            })
+        elif kind in _STEP_KINDS:
+            cid = _step_candidate(ev)
+            if not cid:
+                continue
+            usd = ev.get("opt_cost_usd")
+            if usd is None:
+                usd = ev.get("optimizer_cost_usd")
+            truncated = cid in opt_error_ids
+            ledger.append({
+                "phase": "optimize", "kind": "optimizer_call", "split": None,
+                "label": f"Optimizer call → {cid}" + (" (exited non-zero)" if truncated else ""),
+                "candidate": cid,
+                "usd": (float(usd) if usd is not None else None),
+                "seconds": ev.get("optimizer_seconds") or 0.0,
+                "tokens": int(ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0),
+                "note": ("the optimizer process exited non-zero (commonly its own budget "
+                         "cap) — the spend below is real and was still charged"
+                         if truncated else ""),
+            })
+    attributed = sum(r["usd"] for r in ledger if r["usd"] is not None)
+    total_usd = round(opt_usd + runner_usd + intake_usd, 6)
+    cost_ledger = {
+        "rows": ledger,
+        "attributed_usd": round(attributed, 6),
+        "total_usd": total_usd,
+        # Positive => the run's Spent total exceeds what the events attribute (spend
+        # recorded without a corresponding event). Negative is possible too and is
+        # equally worth seeing. Never hidden, never rounded to zero.
+        "unattributed_usd": round(total_usd - attributed, 4),
+        "rows_missing_cost": sum(1 for r in ledger if r["usd"] is None),
+    }
+
+    # --- splits: is there a real holdout at all? -------------------------
+    split_ev = next((e for e in events if e.get("kind") == "splits"), None)
+    splits_info = None
+    if split_ev is not None:
+        tr, va, te = (split_ev.get("train"), split_ev.get("val"), split_ev.get("test"))
+        n = lambda x: (len(x) if isinstance(x, (list, tuple)) else  # noqa: E731
+                       (int(x) if isinstance(x, int) else None))
+        n_tr, n_va, n_te = n(tr), n(va), n(te)
+        same = (isinstance(tr, list) and isinstance(va, list) and isinstance(te, list)
+                and set(map(str, tr)) == set(map(str, va)) == set(map(str, te)))
+        splits_info = {
+            "train": n_tr, "val": n_va, "test": n_te, "seed": split_ev.get("seed"),
+            # A run where train==val==test has NO holdout: its "test" number is not a
+            # generalization estimate and the UI must say so rather than presenting it
+            # as a sealed result.
+            "no_holdout": bool(same),
+            "warning": next((_sanitize_text(e.get("msg") or "", 300) for e in events
+                             if e.get("kind") == "splits_warning"), ""),
+        }
+
+    # --- activity log: every event, sanitized, phase-tagged --------------
+    # "we don't see any logs and what is happening (not just high level stage)".
+    log_rows: list[dict] = []
+    for i, ev in enumerate(events):
+        detail = {k: v for k, v in ev.items() if k not in _LOG_DROP_FIELDS}
+        full = ev.get("error_full") or ev.get("error")
+        log_rows.append({
+            "seq": i,
+            "t": (float(ev["t"]) if isinstance(ev.get("t"), (int, float)) else None),
+            "kind": str(ev.get("kind") or "event"),
+            "phase": _phase_for(ev),
+            "candidate": _step_candidate(ev) or ev.get("tag"),
+            "detail": {k: (_sanitize_text(v, 1200) if isinstance(v, str) else v)
+                       for k, v in detail.items()},
+            # stderr / diagnosis prose gets its own field so the UI can render it as a
+            # block rather than a key/value pair.
+            "text": (_sanitize_text(full, 6000) if full else
+                     (_sanitize_text(ev.get("reason"), 800) if ev.get("reason") else "")),
+        })
+
+    # --- per-algorithm extras (present only when the run emitted the signal) ---
+    algo_extra: dict = {}
+    mb = [e for e in events if e.get("kind") == "minibatch"]
+    if mb:
+        algo_extra["minibatch"] = [{
+            "candidate": _step_candidate(e) or e.get("tag"),
+            "reward": e.get("reward"), "n_tasks": e.get("n_tasks") or e.get("n"),
+            "tasks": [str(x) for x in (e.get("tasks") or [])][:64],
+            "t": e.get("t"),
+        } for e in mb]
+    gepa_ev = [e for e in events if str(e.get("kind") or "").startswith("gepa_")]
+    if gepa_ev:
+        algo_extra["gepa"] = [{"kind": e.get("kind"), "t": e.get("t"),
+                               "candidate": _step_candidate(e),
+                               "detail": {k: v for k, v in e.items()
+                                          if k not in _LOG_DROP_FIELDS}} for e in gepa_ev]
+    sk_ev = [e for e in events if str(e.get("kind") or "").startswith("skillopt_")]
+    if sk_ev:
+        algo_extra["skillopt"] = [{"kind": e.get("kind"), "t": e.get("t"),
+                                   "epoch": e.get("epoch"), "lr": e.get("lr"),
+                                   "candidate": _step_candidate(e),
+                                   "detail": {k: v for k, v in e.items()
+                                              if k not in _LOG_DROP_FIELDS}} for e in sk_ev]
+    epochs = sorted({e["epoch"] for e in events if isinstance(e.get("epoch"), int)})
+    if epochs:
+        algo_extra["epochs"] = epochs
+    focus_vals = [e.get("focus") for e in events if e.get("focus")]
+    if focus_vals:
+        algo_extra["focus"] = [str(x) for x in focus_vals]
+    evograph = _read_evograph(root)
+    if evograph:
+        algo_extra["evograph"] = evograph
+    par = [e for e in events if e.get("kind") == "parallel"]
+    if par:
+        algo_extra["parallel"] = [{k: v for k, v in e.items()
+                                   if k not in _LOG_DROP_FIELDS} for e in par]
+
+    # --- capabilities: which panels this run has real data for -----------
+    # The UI is algorithm-agnostic: it renders the generic panels always and asks this
+    # map before mounting an extra one. An absent signal means the panel is omitted —
+    # never rendered empty, never faked.
+    capabilities = {
+        "per_task": any(n.get("per_task") for n in nodes.values()),
+        "lineage": len(nodes) > 1,
+        "gate": bool(gate_decisions),
+        "cost": bool(ledger),
+        "log": bool(log_rows),
+        "trajectories": Path(run_dir.rollouts).exists(),
+        "diffs": Path(run_dir.candidates).exists(),
+        "minibatch": "minibatch" in algo_extra,
+        "gepa": "gepa" in algo_extra,
+        "skillopt": "skillopt" in algo_extra,
+        "epochs": "epochs" in algo_extra,
+        "focus": "focus" in algo_extra,
+        "evograph": "evograph" in algo_extra,
+        "parallel": "parallel" in algo_extra,
+        # A free-form (agent-driven) run has no deterministic step loop: candidates
+        # arrive from an agent's own decisions, so iteration numbers are not a schedule.
+        "freeform": algorithm in ("evograph", "agent-optimize"),
+    }
+
+    status, status_reason = _derive_status(
+        events=events, now=_now(), budget=(run_dir.budget if sp is not None else None),
+        spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
+        has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None)
+    ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
+
     delta_pct = None
     if baseline_val not in (None, 0) and best_val is not None:
         delta_pct = round((best_val - baseline_val) / abs(baseline_val) * 100.0, 1)
@@ -537,7 +1070,30 @@ def reduce_run(run_dir) -> dict:
 
     summary = {
         "run_id": root.name,
+        "algorithm": algorithm,
+        # Where the identity came from: a distinguishing event kind, the run dir's own
+        # evograph wiki, or the project spec. None ⇒ the UI shows "not recorded".
+        "algorithm_source": algorithm_source,
+        "capabilities": capabilities,
+        "status": status,
+        "status_reason": status_reason,
+        "started_t": (min(ts) if ts else None),
+        "last_event_t": (max(ts) if ts else None),
+        # Real elapsed wall time between first and last event — distinct from
+        # wall_clock_seconds, which is the SUM of measured optimizer+runner+intake time
+        # and therefore excludes idle/queueing gaps.
+        "elapsed_seconds": (round(max(ts) - min(ts), 1) if len(ts) > 1 else None),
+        "event_count": len(events),
+        "splits": splits_info,
+        "gate_decisions": gate_decisions,
+        "cost_ledger": cost_ledger,
+        "log": log_rows,
+        "algo_extra": algo_extra,
         "baseline_val": baseline_val,
+        # The seed's own measured uncertainty. It was already in baseline.json and in the
+        # evaluations table, but not on the summary, so the KPI card claimed "no stderr
+        # recorded" beside a table that showed one.
+        "baseline_stderr": base_val_obj.get("stderr"),
         "best_val": best_val,
         "best_id": best_id,
         "delta_abs": (round(best_val - baseline_val, 4)
@@ -809,12 +1365,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>cap-evolve · run dashboard</title>
 <style>
-:root{--bg:#07090d;--card:#0d1117;--card2:#141b24;--line:#1e2733;--text:#e6edf3;
---muted:#8b98a9;--accent:#3b82f6;--champion:#f59e0b;--ok:#22c55e;--bad:#ef4444;--warn:#d29922;--radius:12px}
+:root{--bg:#08090e;--card:#0e1017;--card2:#161923;--card3:#1e222e;--line:#232936;--text:#e9edf5;
+--muted:#949cad;--muted2:#b6bdcb;--accent:#7c5cff;--champion:#f0b429;--ok:#35c88a;--bad:#f2565a;
+--warn:#f0b429;--idk:#4aa8ff;--fail:#c05fd8;--radius:12px}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 .num{font-variant-numeric:tabular-nums}
-header{position:sticky;top:0;z-index:5;background:rgba(14,17,22,.88);backdrop-filter:blur(8px);
+header{position:sticky;top:0;z-index:5;background:rgba(14,16,23,.9);backdrop-filter:blur(8px);
 border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:baseline;gap:16px}
 header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.02em}
 header .meta{color:var(--muted);font-size:12px}
@@ -849,7 +1406,23 @@ th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;le
 td.r,th.r{text-align:right}
 .badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .b-accepted{background:#1f3a23;color:var(--ok)} .b-rejected{background:#3a2f12;color:var(--warn)}
-.b-failed{background:#3a1c1c;color:var(--bad)} .b-seed{background:#22303a;color:var(--accent)}
+.b-failed{background:#31173a;color:var(--fail)} .b-seed{background:#22262f;color:var(--muted2)}
+.b-indecisive{background:#152a3f;color:var(--idk)}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);
+border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+.banner{display:flex;gap:10px;border:1px solid var(--line);border-left:3px solid var(--warn);
+background:var(--card2);border-radius:0 10px 10px 0;padding:10px 14px;font-size:12.5px;line-height:1.6;color:var(--muted2)}
+.banner.info{border-left-color:var(--accent)} .banner.bad{border-left-color:var(--bad)}
+input[type=search],input[type=text]{background:var(--card2);color:var(--text);border:1px solid var(--line);
+border-radius:8px;padding:6px 10px;font:inherit}
+.logrow{display:grid;grid-template-columns:64px 74px 130px 1fr;gap:8px;align-items:baseline;
+padding:3px 6px;border-radius:6px;font-size:12px;cursor:pointer}
+.logrow:hover{background:var(--card2)} .logrow .k{font-family:ui-monospace,Menlo,monospace;font-weight:600}
+.logdet{background:var(--card2);border:1px solid var(--line);border-radius:8px;margin:2px 0 8px 70px;
+padding:8px 10px;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--muted2);white-space:pre-wrap;overflow:auto;max-height:320px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bar{height:5px;border-radius:5px;background:var(--card3);overflow:hidden;max-width:360px}
+.bar>i{display:block;height:100%;border-radius:5px}
 .hide{display:none!important}
 .row{display:flex;gap:18px;flex-wrap:wrap}
 .col{flex:1;min-width:280px}
@@ -867,13 +1440,13 @@ code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
 .muted{color:var(--muted)}
 </style></head><body>
 <header><svg class="logo" width="26" height="26" viewBox="0 0 48 48" aria-label="cap-evolve">
-<path d="M4 40 L16 34 L26 24 L36 14 L44 8" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="44" cy="8" r="2.6" fill="#f59e0b"/>
+<path d="M4 40 L16 34 L26 24 L36 14 L44 8" fill="none" stroke="#7c5cff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="44" cy="8" r="2.6" fill="#7c5cff"/>
 <g fill="#e6edf3"><ellipse cx="22" cy="33" rx="13" ry="8.5"/><ellipse cx="34" cy="28" rx="7.5" ry="6.5"/>
 <ellipse cx="40.5" cy="29.5" rx="3.2" ry="2.6"/><circle cx="31" cy="22" r="1.8"/><circle cx="36" cy="22" r="1.8"/>
 <rect x="14" y="38" width="2.8" height="6" rx="1.4"/><rect x="26" y="38" width="2.8" height="6" rx="1.4"/></g>
 <circle cx="34" cy="26.5" r="1" fill="#07090d"/></svg>
-<h1>cap<span style="color:#f59e0b">·</span>evolve</h1><span class="meta" id="hdr"></span>
+<h1>cap<span style="color:#7c5cff">·</span>evolve</h1><span class="meta" id="hdr"></span>
 <span class="tag">watch capability evolve</span></header>
 <main id="main"></main>
 <div class="tip" id="tip"></div>
@@ -886,14 +1459,25 @@ const $ = (t,a={},...k)=>{const e=document.createElement(t);for(const[p,v]of Obj
   for(const c of k)if(c!=null)e.append(c);return e;};
 const NS='http://www.w3.org/2000/svg';
 const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Object.entries(a))e.setAttribute(p,v);return e;};
+/* SVG text node WITH content. `el.append(node)` returns undefined, so the old
+   `el.append(svg('text',...)).textContent = x` threw a TypeError on the very first axis
+   label — which aborted the whole inline script and silently dropped every panel below
+   the fitness chart (heatmap, lineage, cost, evaluations, candidates). */
+const txt=(el,a,content)=>{const n=svg('text',a);n.textContent=content==null?'':String(content);el.append(n);return n;};
 const fmt=v=>v==null?'—':(+v).toFixed(3);
 const main=document.getElementById('main'), tip=document.getElementById('tip');
+const STATUS_META={running:['running','var(--accent)'],awaiting_agent:['awaiting agent','var(--idk)'],
+  completed:['completed','var(--ok)'],budget_exhausted:['budget exhausted','var(--warn)'],
+  stalled:['stalled','var(--warn)'],interrupted:['interrupted','var(--fail)'],failed:['failed','var(--bad)']};
 document.getElementById('hdr').textContent =
-  `${S.run_id} · ${S.counts.total} candidates · ${S.test_sealed?'test sealed':'no holdout yet'}`;
+  `${S.run_id} · ${S.algorithm||'algorithm not recorded'} · ${S.counts.total-1} candidates · ` +
+  `${S.test_sealed?'test sealed':'test not sealed'}`;
 function showTip(e,txt){tip.textContent=txt;tip.style.display='block';
   tip.style.left=Math.min(e.clientX+14,innerWidth-330)+'px';tip.style.top=(e.clientY+14)+'px';}
 function hideTip(){tip.style.display='none';}
 function sec(title){const s=$('section');s.append($('h2',{text:title}));main.append(s);return s;}
+function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
+  const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';}
 
 /* ---------- 1. KPI strip ---------- */
 (function(){
@@ -908,27 +1492,47 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     kp('baseline',fmt(S.baseline_val)),
     kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
     kp('held-out test',fmt(S.test_reward),'',S.test_sealed?'sealed once':'not finalized'),
-    kp('candidates',c.total,'',`${c.accepted}✓ ${c.rejected}✗ ${c.failed}⚠`),
-    kp('frontier',S.frontier),
+    kp('candidates',c.total-(c.seed||0),'',
+       `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive||0} indecisive · ${c.failed} no-measure`),
+    kp('frontier',S.frontier,'','gated leaves with no accepted child'),
     kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
     kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
-    kp('tokens',S.tokens.toLocaleString())
+    kp('tokens',S.tokens.toLocaleString()),
+    kp('unattributed $',
+       S.cost_ledger?`$${S.cost_ledger.unattributed_usd.toFixed(4)}`:'—',
+       (S.cost_ledger&&Math.abs(S.cost_ledger.unattributed_usd)>0.0005?'champ':''),
+       'recorded spend the events cannot explain'),
+    kp('events',S.event_count!=null?S.event_count:'—','','every line in events.jsonl')
   );
   s.append(g);
 })();
 
-/* ---------- 1b. Narrative summary ---------- */
+/* ---------- 1b. Run status + split honesty ---------- */
 (function(){
-  const c=S.counts, parts=[];
-  if(S.baseline_val!=null&&S.best_val!=null){
-    const d=((S.best_val-S.baseline_val)*100).toFixed(1);
-    parts.push(`Starting from a ${(S.baseline_val*100).toFixed(1)}% baseline, the search reached `+
-      `${(S.best_val*100).toFixed(1)}% (+${d} points)`);
+  const s=sec('Run status');
+  const meta=STATUS_META[S.status]||['unknown','var(--muted)'];
+  const head=$('div',{style:'display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px'});
+  const pill=$('span',{class:'pill',style:`color:${meta[1]};border-color:${meta[1]}66`});
+  pill.append($('span',{style:`width:8px;height:8px;border-radius:50%;background:${meta[1]}`}),
+              $('span',{text:meta[0]}));
+  head.append(pill);
+  if(S.algorithm)head.append($('span',{class:'pill',style:'color:var(--accent);border-color:#7c5cff66',
+    text:S.algorithm+(S.algorithm_source?' · from '+S.algorithm_source:'')}));
+  head.append($('span',{class:'pill',text:S.test_sealed?'test sealed':'test not sealed'}));
+  if(S.elapsed_seconds!=null)head.append($('span',{class:'muted num',text:dsecs(S.elapsed_seconds)+' elapsed'}));
+  s.append(head);
+  if(S.status_reason)s.append($('p',{class:'muted',style:'margin:0 0 10px',text:S.status_reason}));
+  const sp=S.splits;
+  if(sp&&sp.no_holdout){
+    s.append($('div',{class:'banner',html:'<b>No holdout.</b> train, val and test hold the same tasks, so the '+
+      '&ldquo;test&rdquo; number is NOT a generalization estimate &mdash; the optimizer saw those tasks. '+
+      'Read it as a sanity check only.'}));
   }
-  parts.push(`after ${c.accepted+c.rejected} iterations (${c.accepted} accepted, ${c.rejected} rejected)`);
-  if(S.test_reward!=null)parts.push(`The best candidate scored ${(S.test_reward*100).toFixed(1)}% on the sealed test set`);
-  if(!parts.length)return;
-  const s=sec('Narrative'); s.append($('p',{class:'muted',text:parts.join('. ')+'.'}));
+  if(sp&&sp.warning)s.append($('div',{class:'banner',text:sp.warning}));
+  if(sp)s.append($('p',{class:'muted num',style:'margin:10px 0 0',
+    text:`splits · train ${sp.train??'—'} · val ${sp.val??'—'} · test ${sp.test??'—'}`+
+         (sp.seed!=null?` · seed ${sp.seed}`:'')+
+         '   —   val decides selection; test is scored exactly once and never optimized against.'}));
 })();
 
 /* ---------- 1c. Phases timeline ---------- */
@@ -952,7 +1556,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   s.append(g);
 })();
 
-/* ---------- 1d. What not to try (deduped dead-ends) ---------- */
+/* ---------- 1d. Rejected edits, deduplicated by reason ---------- */
 (function(){
   const norm=r=>(r||'rejected').replace(/-?\d+\.\d+/g,'N').replace(/-?\d+/g,'N').trim();
   const map=new Map();
@@ -961,7 +1565,7 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     cur.count++; if(cur.ex.length<3)cur.ex.push(n.id); map.set(k,cur);}
   const ends=[...map.values()].sort((a,b)=>b.count-a.count);
   if(!ends.length)return;
-  const s=sec('What not to try — dead ends');
+  const s=sec('Rejected edits, grouped by the gate reason');
   for(const d of ends){const e=$('div',{class:'dead'});
     if(d.count>1)e.append($('span',{class:'x',text:'×'+d.count}));
     e.append($('div',{class:'muted',text:d.ex.join(', ')}),$('div',{text:d.reason}));
@@ -981,35 +1585,35 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const Y=v=>H-m.b-(v-vmin)/((vmax-vmin)||1)*(H-m.t-m.b);
   const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
   for(let g2=0;g2<=4;g2++){const v=vmin+(vmax-vmin)*g2/4;
-    el.append(svg('line',{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:'#2b333d','stroke-width':1}));
-    el.append(svg('text',{x:6,y:Y(v)+4,fill:'#8b949e','font-size':10,'text-content':''})).textContent=v.toFixed(2);}
+    el.append(svg('line',{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:'var(--line)','stroke-width':1}));
+    txt(el,{x:6,y:Y(v)+4,fill:'var(--muted)','font-size':10},v.toFixed(2));}
   // stair polyline of running best
   let d='';let prevY=null;
   pts.forEach((p,i)=>{const x=X(p.iteration),y=Y(p.best_so_far);
     if(i===0)d=`M${x},${y}`;else d+=` L${x},${prevY} L${x},${y}`;prevY=y;});
-  el.append(svg('path',{d,fill:'none',stroke:'#3fb950','stroke-width':2}));
+  el.append(svg('path',{d,fill:'none',stroke:'var(--ok)','stroke-width':2}));
   // record-holder rings + per-iter scatter
   let rec=-1;
   pts.forEach(p=>{
-    if(p.val!=null){const col=p.status==='accepted'?'#3fb950':p.status==='failed'?'#f85149':'#d29922';
-      const c=svg('circle',{cx:X(p.iteration),cy:Y(p.val),r:4,fill:col,'fill-opacity':.85,stroke:'#0e1116'});
+    if(p.val!=null){const col=p.status==='accepted'?'var(--ok)':p.status==='failed'?'var(--bad)':'var(--warn)';
+      const c=svg('circle',{cx:X(p.iteration),cy:Y(p.val),r:4,fill:col,'fill-opacity':.85,stroke:'var(--bg)'});
       const dpar=p.parent_val!=null?(p.val-p.parent_val).toFixed(3):'—';
       c.addEventListener('mousemove',e=>showTip(e,`${p.id}\n${p.status}  val=${fmt(p.val)}\nΔ parent=${dpar}\niter ${p.iteration}`));
       c.addEventListener('mouseleave',hideTip);el.append(c);}
     if(p.best_so_far>rec){rec=p.best_so_far;
-      el.append(svg('circle',{cx:X(p.iteration),cy:Y(p.best_so_far),r:7,fill:'none',stroke:'#4493f8','stroke-width':1.5}));}
+      el.append(svg('circle',{cx:X(p.iteration),cy:Y(p.best_so_far),r:7,fill:'none',stroke:'var(--accent)','stroke-width':1.5}));}
   });
   // champion star + label
   const champ=pts.reduce((a,b)=>(b.best_so_far>=a.best_so_far?b:a),pts[0]);
   const cx=X(champ.iteration),cy=Y(champ.best_so_far);
-  el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'#f0d040',stroke:'#0e1116'}));
-  el.append(svg('text',{x:cx+10,y:cy-8,fill:'#e6edf3','font-size':12})).textContent=fmt(champ.best_so_far);
+  el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'var(--champion)',stroke:'var(--bg)'}));
+  txt(el,{x:cx+10,y:cy-8,fill:'var(--text)','font-size':12},fmt(champ.best_so_far));
   s.append(el);
   s.append($('div',{class:'legend',html:
-    '<span><i style="background:#3fb950"></i>running best / accept</span>'+
-    '<span><i style="background:#d29922"></i>rejected</span>'+
-    '<span><i style="background:#f85149"></i>failed</span>'+
-    '<span><i style="background:#4493f8;border-radius:50%"></i>record-holder ring</span>'}));
+    '<span><i style="background:var(--ok)"></i>running best / accept</span>'+
+    '<span><i style="background:var(--warn)"></i>rejected</span>'+
+    '<span><i style="background:var(--bad)"></i>failed</span>'+
+    '<span><i style="background:var(--accent);border-radius:50%"></i>record-holder ring</span>'}));
   function starPath(cx,cy,R,r){let p='';for(let i=0;i<10;i++){const ang=Math.PI/5*i-Math.PI/2;
     const rad=i%2?r:R;p+=(i?'L':'M')+(cx+rad*Math.cos(ang))+','+(cy+rad*Math.sin(ang));}return p+'Z';}
 })();
@@ -1026,12 +1630,12 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   const cw=Math.max(10,Math.min(26,Math.floor(1000/iters.length))),ch=16,labW=120;
   const W=labW+iters.length*cw+10,H=rows.length*ch+24;
   const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,class:'heat'});
-  iters.forEach((it,j)=>{el.append(svg('text',{x:labW+j*cw+cw/2,y:12,'text-anchor':'middle'})).textContent=it.iteration;});
+  iters.forEach((it,j)=>txt(el,{x:labW+j*cw+cw/2,y:12,'text-anchor':'middle'},it.iteration));
   rows.forEach((t,i)=>{
-    el.append(svg('text',{x:labW-6,y:24+i*ch+11,'text-anchor':'end'})).textContent=t.length>16?t.slice(0,15)+'…':t;
+    txt(el,{x:labW-6,y:24+i*ch+11,'text-anchor':'end'},t.length>16?t.slice(0,15)+'…':t);
     iters.forEach((it,j)=>{
       const v=it.per_task[t];
-      const col=v==null?'#21262d':v>=0.999?'#2ea043':v<=0.001?'#7d2622':'#9e6a1a';
+      const col=v==null?'var(--card3)':v>=0.999?'var(--ok)':v<=0.001?'var(--bad)':'var(--warn)';
       const rect=svg('rect',{x:labW+j*cw,y:24+i*ch,width:cw-1.5,height:ch-1.5,rx:2,fill:col});
       const fb=(it.feedback&&it.feedback[t])||'';
       rect.addEventListener('mousemove',e=>showTip(e,`${t} @ iter ${it.iteration} (${it.id})\nreward=${v==null?'—':v.toFixed(3)}\n${fb.slice(0,180)}`));
@@ -1041,8 +1645,8 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   });
   s.append(el);
   s.append($('div',{class:'legend',html:
-    '<span><i style="background:#2ea043"></i>pass</span><span><i style="background:#7d2622"></i>fail</span>'+
-    '<span><i style="background:#9e6a1a"></i>partial</span><span><i style="background:#21262d"></i>not run</span>'+
+    '<span><i style="background:var(--ok)"></i>pass</span><span><i style="background:var(--bad)"></i>fail</span>'+
+    '<span><i style="background:var(--warn)"></i>partial</span><span><i style="background:var(--card3)"></i>not run</span>'+
     '<span class="muted">rows sorted worst-first · hover a cell for feedback</span>'}));
 })();
 
@@ -1100,113 +1704,19 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
     const parents=[n.parent,...(n.merge_of||[])].filter(x=>x&&pos[x]);
     parents.forEach(pp=>{const a=pos[pp];const onSpine=spine.has(n.id)&&spine.has(pp);
       el.append(svg('path',{d:`M${a.x+14},${a.y} C${(a.x+p.x)/2},${a.y} ${(a.x+p.x)/2},${p.y} ${p.x-14},${p.y}`,
-        fill:'none',stroke:onSpine?'#f0d040':'#3a434d','stroke-width':onSpine?2.5:1.2}));});
+        fill:'none',stroke:onSpine?'var(--champion)':'var(--line)','stroke-width':onSpine?2.5:1.2}));});
   });
   nodes.forEach(n=>{const p=pos[n.id];if(!p)return;
-    const col=n.status==='accepted'?'#3fb950':n.status==='rejected'?'#d29922':n.status==='failed'?'#f85149':'#4493f8';
+    const col=n.status==='accepted'?'var(--ok)':n.status==='rejected'?'var(--warn)':n.status==='failed'?'var(--bad)':'var(--accent)';
     const c=svg('circle',{cx:p.x,cy:p.y,r:n.id===S.best_id?9:6,fill:col,
-      stroke:spine.has(n.id)?'#f0d040':'#0e1116','stroke-width':spine.has(n.id)?2:1});
+      stroke:spine.has(n.id)?'var(--champion)':'var(--bg)','stroke-width':spine.has(n.id)?2:1});
     c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
     c.addEventListener('mouseleave',hideTip); el.append(c);
-    el.append(svg('text',{x:p.x+12,y:p.y+4,fill:'#8b949e','font-size':10})).textContent=n.id;
+    txt(el,{x:p.x+12,y:p.y+4,fill:'var(--muted)','font-size':10},n.id);
   });
   s.append(el);
-  s.append($('div',{class:'legend',html:'<span><i style="background:#f0d040"></i>best lineage spine</span>'+
+  s.append($('div',{class:'legend',html:'<span><i style="background:var(--champion)"></i>best lineage spine</span>'+
     '<span class="muted">merges shown as multi-parent edges</span>'}));
-})();
-
-/* ---------- 6. Cost / tokens / latency ---------- */
-(function(){
-  const pts=G.nodes.filter(n=>n.iteration).sort((a,b)=>a.iteration-b.iteration);
-  if(!pts.length)return;
-  const s=sec('Cost · tokens · latency (optimizer vs runner)');
-  const W=1080,H=240,m={l:46,r:16,t:14,b:28},n=pts.length;
-  const bw=Math.max(6,Math.min(40,(W-m.l-m.r)/n-6));
-  const maxSec=Math.max(...pts.map(p=>(p.optimizer_seconds||0)+(p.runner_seconds||0)),0.001);
-  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
-  // stacked bars: optimizer (blue) + runner (green) seconds; cumulative cost line
-  let cum=0; const costMax=Math.max(S.cost.total_usd,0.0001);
-  pts.forEach((p,i)=>{const x=m.l+i*((W-m.l-m.r)/n)+3;
-    const os=(p.optimizer_seconds||0)/maxSec*(H-m.t-m.b);
-    const rs=(p.runner_seconds||0)/maxSec*(H-m.t-m.b);
-    el.append(svg('rect',{x,y:H-m.b-rs,width:bw,height:rs,fill:'#3fb950'})).addEventListener('mousemove',()=>{});
-    el.append(svg('rect',{x,y:H-m.b-rs-os,width:bw,height:os,fill:'#4493f8'}));
-    const bar=svg('rect',{x,y:m.t,width:bw,height:H-m.t-m.b,fill:'transparent'});
-    bar.addEventListener('mousemove',e=>showTip(e,`${p.id} · iter ${p.iteration}\nopt ${(p.optimizer_seconds||0).toFixed(2)}s · run ${(p.runner_seconds||0).toFixed(2)}s\n$${(p.cost_usd||0).toFixed(4)} · ${p.tokens||0} tok`));
-    bar.addEventListener('mouseleave',hideTip); el.append(bar);
-  });
-  // cumulative cost line (right axis, normalized)
-  let d='';pts.forEach((p,i)=>{cum+=(p.cost_usd||0);const x=m.l+i*((W-m.l-m.r)/n)+3+bw/2;
-    const y=H-m.b-(cum/costMax)*(H-m.t-m.b);d+=(i?' L':'M')+x+','+y;});
-  if(S.cost.total_usd>0)el.append(svg('path',{d,fill:'none',stroke:'#f0d040','stroke-width':1.8,'stroke-dasharray':'4 3'}));
-  s.append(el);
-  s.append($('div',{class:'legend',html:'<span><i style="background:#4493f8"></i>optimizer s</span>'+
-    '<span><i style="background:#3fb950"></i>runner s</span>'+
-    (S.cost.total_usd>0?'<span><i style="background:#f0d040"></i>cumulative $</span>':'')}));
-})();
-
-/* ---------- 6b. cumulative cost vs best score ---------- */
-(function(){
-  if(S.cost.total_usd<=0)return;
-  const pts=G.nodes.filter(n=>n.iteration&&n.best_so_far!=null).sort((a,b)=>a.iteration-b.iteration);
-  if(pts.length<2)return;
-  const s=sec('Cost vs best score'); const W=1080,H=220,m={l:46,r:16,t:14,b:28};
-  let cum=0;const xy=pts.map(p=>{cum+=(p.cost_usd||0);return [cum,p.best_so_far];});
-  const xmax=Math.max(...xy.map(p=>p[0]))||1,ymin=Math.min(...xy.map(p=>p[1]),0),ymax=Math.max(...xy.map(p=>p[1]),1);
-  const X=v=>m.l+v/xmax*(W-m.l-m.r),Y=v=>H-m.b-(v-ymin)/((ymax-ymin)||1)*(H-m.t-m.b);
-  const el=svg('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H});
-  let d='';xy.forEach((p,i)=>d+=(i?' L':'M')+X(p[0])+','+Y(p[1]));
-  el.append(svg('path',{d,fill:'none',stroke:'#4493f8','stroke-width':2}));
-  el.append(svg('text',{x:W-m.r,y:H-8,fill:'#8b949e','font-size':10,'text-anchor':'end'})).textContent=`$${xmax.toFixed(4)} total`;
-  s.append(el);
-})();
-
-/* ---------- 6c. Cost & time per iteration (optimizer vs runner) + intake ---------- */
-(function(){
-  const rows=S.per_iteration||[];
-  const intake=S.intake||{usd:0,seconds:0,tokens:0};
-  const s=sec('Cost & time per iteration');
-  // intake row — always shown, even at $0, so it's clear intake spent nothing.
-  const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
-    const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
-  const intakeRow=$('div',{class:'phase',style:'margin-bottom:12px'});
-  const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  let intakeHtml='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;'+
-    'background:var(--accent);margin-right:6px;vertical-align:-1px"></span>'+
-    '<b>Intake</b> &nbsp; cost <b>$'+(intake.usd||0).toFixed(4)+'</b>'+
-    (intake.usd===0?' <span class="muted">(spent $0)</span>':'')+
-    ' &nbsp; time <b>'+dsec(intake.seconds)+'</b> &nbsp; <span class="muted">'+
-    (intake.tokens||0).toLocaleString()+' tok</span>';
-  if(intake.output_summary)intakeHtml+='<div class="muted" style="margin-top:6px">'+esc(intake.output_summary)+'</div>';
-  if((intake.implemented||[]).length)intakeHtml+='<div style="margin-top:6px"><span class="muted">implemented:</span> '+
-    intake.implemented.map(x=>'<code>'+esc(x)+'</code>').join(' ')+'</div>';
-  intakeRow.innerHTML=intakeHtml;
-  s.append(intakeRow);
-  if(!rows.length){s.append($('p',{class:'muted',text:'No iterations recorded yet.'}));return;}
-  const optMax=Math.max(1e-6,...rows.map(r=>r.optimizer_seconds||0));
-  const runMax=Math.max(1e-6,...rows.map(r=>r.runner_seconds||0));
-  const t=$('table');
-  t.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),
-    $('th',{class:'r',text:'opt $'}),$('th',{html:'<span style="color:var(--accent)">opt time</span>'}),
-    $('th',{class:'r',text:'run $'}),$('th',{html:'<span style="color:var(--ok)">run time</span>'})));
-  const bar=(secv,max,col)=>{const frac=max>0?Math.min(1,secv/max):0;
-    const wrap=$('div',{style:'display:flex;align-items:center;gap:8px'});
-    const track=$('div',{style:'height:6px;width:64px;border-radius:6px;overflow:hidden;background:var(--card2)'});
-    track.append($('div',{style:`height:100%;border-radius:6px;width:${frac*100}%;background:${col}`}));
-    wrap.append(track,$('span',{class:'muted num',text:dsec(secv)}));return wrap;};
-  rows.forEach(r=>{
-    t.append($('tr',{},
-      $('td',{class:'num muted',text:r.iteration}),
-      $('td',{},$('code',{text:r.candidate})),
-      $('td',{class:'r num',text:r.optimizer_usd!=null?'$'+(+r.optimizer_usd).toFixed(4):'—'}),
-      $('td',{},bar(r.optimizer_seconds||0,optMax,'#4493f8')),
-      $('td',{class:'r num',text:r.runner_usd!=null?'$'+(+r.runner_usd).toFixed(4):'—'}),
-      $('td',{},bar(r.runner_seconds||0,runMax,'#3fb950'))));
-  });
-  s.append(t);
-  s.append($('div',{class:'legend',html:'<span><i style="background:#4493f8"></i>optimizer time</span>'+
-    '<span><i style="background:#3fb950"></i>runner time</span>'+
-    '<span class="muted">$ shown when available (runner cost is often $0/null) · time always</span>'}));
 })();
 
 /* ---------- 6d. Evaluations (split-oriented, distinct from per-iteration) ---------- */
@@ -1239,15 +1749,191 @@ function sec(title){const s=$('section');s.append($('h2',{text:title}));main.app
   s.append(t);
 })();
 
-/* ---------- 7. Annotations / diagnoses stream ---------- */
+/* ---------- 6e. Cost ledger — every dollar, attributed ---------- */
 (function(){
-  const W=S.gate_warnings||[], D=S.diagnoses||[];
-  if(!W.length&&!D.length)return;
-  const s=sec('Annotations & diagnoses');
-  W.forEach(w=>{const a=$('div',{class:'ann'});a.append($('div',{class:'who',text:'gate · '+(w.mode||'')}),
-    $('div',{text:w.reason||''}));s.append(a);});
-  D.forEach(d=>{const a=$('div',{class:'ann diag'});a.append($('div',{class:'who',text:(d.kind||'diagnose')+(d.candidate?' · '+d.candidate:'')}),
-    $('div',{text:(d.text||'').slice(0,400)}));s.append(a);});
+  const L=S.cost_ledger; if(!L||!L.rows.length)return;
+  const s=sec('Cost ledger — where every dollar went');
+  const head=$('div',{style:'display:flex;flex-wrap:wrap;gap:22px;margin-bottom:12px'});
+  const stat=(l,v,cls='')=>{const d=$('div');d.append($('div',{class:'eyebrow',text:l}),
+    $('div',{class:'num '+cls,style:'font-weight:700;margin-top:2px',text:v}));return d;};
+  const off=Math.abs(L.unattributed_usd)>0.0005;
+  head.append(stat('total recorded','$'+L.total_usd.toFixed(4),''),
+              stat('attributed to events','$'+L.attributed_usd.toFixed(4)),
+              stat('unattributed','$'+L.unattributed_usd.toFixed(4),off?'':'muted'),
+              stat('rows with no cost recorded',String(L.rows_missing_cost)));
+  s.append(head);
+  if(off)s.append($('div',{class:'banner',text:
+    '$'+Math.abs(L.unattributed_usd).toFixed(4)+' of recorded spend is not accounted for by the rows '+
+    'below. That happens when a phase records into the run spend accounting without emitting a '+
+    'cost-bearing event (agent-mode commits are the common case). Shown rather than hidden.'}));
+  const KC={intake:'var(--muted2)',baseline_eval:'var(--accent)',candidate_eval:'var(--ok)',
+            optimizer_call:'var(--champion)',test_eval:'var(--idk)'};
+  const PH={intake:'Intake',baseline:'Baseline',optimize:'Optimize',finalize:'Finalize (sealed test)'};
+  const maxRow=Math.max(1e-9,...L.rows.map(r=>r.usd||0));
+  for(const ph of ['intake','baseline','optimize','finalize']){
+    const rows=L.rows.filter(r=>r.phase===ph); if(!rows.length)continue;
+    const sum=rows.reduce((a,r)=>a+(r.usd||0),0), miss=rows.filter(r=>r.usd==null).length;
+    s.append($('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)',
+      text:`${PH[ph]} — $${sum.toFixed(4)}`+(miss?`  (+${miss} unrecorded)`:'')}));
+    const t2=$('table');
+    rows.forEach(r=>{
+      const label=$('td');
+      const line=$('div',{style:'display:flex;align-items:center;gap:8px'});
+      line.append($('span',{style:`width:9px;height:9px;border-radius:2px;flex:none;background:${KC[r.kind]||'var(--muted)'}`}),
+                  $('span',{text:r.label}));
+      label.append(line);
+      if(r.note)label.append($('div',{class:'muted',style:'font-size:11px;margin-left:17px',text:r.note}));
+      const bar=$('div',{class:'bar',style:'margin:5px 0 0 17px'});
+      bar.append($('i',{style:`width:${((r.usd||0)/maxRow*100).toFixed(1)}%;background:${KC[r.kind]||'var(--muted)'}`}));
+      label.append(bar);
+      t2.append($('tr',{},label,
+        $('td',{class:'r num',text:r.usd==null?'—':'$'+(+r.usd).toFixed(4)}),
+        $('td',{class:'r num muted',text:dsecs(r.seconds)}),
+        $('td',{class:'r num muted',text:r.tokens?(+r.tokens).toLocaleString():'—'})));
+    });
+    s.append(t2);
+  }
+  s.append($('div',{class:'legend',html:'<span class="muted">a &ldquo;—&rdquo; is a cost that was never '+
+    'recorded; it is never rendered as $0</span>'}));
+})();
+
+/* ---------- 6f. Gate decisions — Δ̄ with its SE and n ---------- */
+(function(){
+  const D=S.gate_decisions||[]; if(!D.length)return;
+  const s=sec('Gate decisions');
+  const idk=D.filter(d=>d.verdict==='indecisive');
+  if(idk.length)s.append($('div',{class:'banner',html:'<b>'+idk.length+' step(s) indecisive.</b> The gate '+
+    'REFUSED to judge — too little of the split ran, or the candidate edited a protected file. That is '+
+    'missing data, not a bad edit: these are excluded from the running best and from the stall counter.'}));
+  const t2=$('table');
+  t2.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'verdict'}),
+    $('th',{class:'r',text:'val'}),$('th',{class:'r',text:'parent val'}),$('th',{class:'r',text:'Δ̄'}),
+    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'})));
+  const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive'};
+  const n4=v=>v==null?'—':(+v).toFixed(4);
+  D.forEach(d=>{
+    t2.append($('tr',{},
+      $('td',{class:'num muted',text:d.iteration??'—'}),
+      $('td',{},$('code',{text:d.candidate})),
+      $('td',{},$('span',{class:'badge '+(BADGE[d.verdict]||'b-failed'),text:d.verdict})),
+      $('td',{class:'r num',text:fmt(d.val)}),
+      $('td',{class:'r num muted',text:fmt(d.parent_val)}),
+      $('td',{class:'r num',style:d.delta==null?'':('color:'+(d.delta>0?'var(--ok)':d.delta<0?'var(--bad)':'var(--muted)')),
+              text:d.delta==null?'—':(d.delta>0?'+':'')+d.delta.toFixed(4)}),
+      $('td',{class:'r num muted',text:d.stderr==null?'—':'±'+d.stderr.toFixed(4)}),
+      $('td',{class:'r num muted',text:d.n??'—'}),
+      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')})));
+  });
+  s.append(t2);
+  D.forEach(d=>s.append($('div',{class:'ann',style:'margin:6px 0'},
+    $('div',{class:'who',text:d.candidate}),$('div',{text:d.reason}))));
+})();
+
+/* ---------- 9. Activity log — every event, filterable ---------- */
+(function(){
+  const LOG=S.log||[]; if(!LOG.length)return;
+  const s=sec('Activity log — every event this run recorded');
+  const bar=$('div',{class:'row',style:'margin-bottom:10px;align-items:center'});
+  const q=$('input',{type:'search',placeholder:'search kind, candidate, message…',style:'flex:1;min-width:180px'});
+  const phase=$('select'); ['all','intake','baseline','optimize','finalize'].forEach(p2=>
+    phase.append($('option',{value:p2,text:p2})));
+  const kind=$('select');
+  ['all',...[...new Set(LOG.map(r=>r.kind))].sort()].forEach(k=>kind.append($('option',{value:k,text:k})));
+  const count=$('span',{class:'muted num'});
+  bar.append(q,$('span',{class:'muted',text:'phase'}),phase,$('span',{class:'muted',text:'kind'}),kind,count);
+  s.append(bar);
+  const list=$('div'); s.append(list);
+  const TONE={optimizer_error:'var(--bad)',tamper_detected:'var(--bad)',step_indecisive:'var(--idk)',
+    accept:'var(--ok)',finalize:'var(--ok)',reject:'var(--bad)',evaluate:'var(--accent)',
+    minibatch:'var(--accent)',gate_warning:'var(--warn)',budget_warning:'var(--warn)',
+    splits_warning:'var(--warn)'};
+  const clock=t2=>t2==null?'--:--:--':new Date(t2*1000).toLocaleTimeString([], {hour12:false});
+  function gist(r){
+    const d=r.detail||{}, b=[];
+    if(d.split)b.push('split='+d.split);
+    if(typeof d.reward==='number')b.push('reward='+d.reward.toFixed(3));
+    if(typeof d.val==='number')b.push('val='+d.val.toFixed(3));
+    if(typeof d.cost_usd==='number')b.push('$'+d.cost_usd.toFixed(4));
+    if(typeof d.opt_cost_usd==='number')b.push('opt $'+d.opt_cost_usd.toFixed(4));
+    if(d.accept!==undefined)b.push(d.accept?'ACCEPT':'reject');
+    return b.length?b.join('  '):(r.text||Object.keys(d).join(', '));
+  }
+  const open=new Set();
+  function render(){
+    const needle=q.value.trim().toLowerCase();
+    const rows=LOG.filter(r=>{
+      if(phase.value!=='all'&&r.phase!==phase.value)return false;
+      if(kind.value!=='all'&&r.kind!==kind.value)return false;
+      if(!needle)return true;
+      return (r.kind+' '+(r.candidate||'')+' '+(r.text||'')+' '+JSON.stringify(r.detail||{}))
+        .toLowerCase().includes(needle);
+    });
+    count.textContent=rows.length+'/'+LOG.length;
+    list.innerHTML='';
+    if(!rows.length){list.append($('p',{class:'muted',text:'No event matches this filter.'}));return;}
+    rows.forEach(r=>{
+      const row=$('div',{class:'logrow'});
+      row.append($('span',{class:'muted num',text:clock(r.t)}),
+        $('span',{class:'muted',style:'font-size:10px;text-transform:uppercase;letter-spacing:.05em',text:r.phase}),
+        $('span',{class:'k',style:'color:'+(TONE[r.kind]||'var(--muted2)'),
+                  text:r.kind+(r.candidate?' '+r.candidate:'')}),
+        $('span',{class:'muted2',style:'color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
+                  text:gist(r)}));
+      list.append(row);
+      const det=$('div',{class:'logdet'});
+      // textContent only: this text is model/subprocess-authored and must never be parsed as markup.
+      det.textContent=(r.text?r.text+'\n\n':'')+
+        Object.entries(r.detail||{}).map(([k,v])=>k+' = '+(typeof v==='object'&&v!==null?JSON.stringify(v):String(v))).join('\n');
+      det.style.display=open.has(r.seq)?'block':'none';
+      list.append(det);
+      row.addEventListener('click',()=>{
+        if(open.has(r.seq)){open.delete(r.seq);det.style.display='none';}
+        else{open.add(r.seq);det.style.display='block';}
+      });
+    });
+  }
+  q.addEventListener('input',render);phase.addEventListener('change',render);
+  kind.addEventListener('change',render);render();
+})();
+
+/* ---------- 10. evograph weakness graph (replaces the embedded viewer) ---------- */
+(function(){
+  const EG=(S.algo_extra||{}).evograph; if(!EG)return;
+  const s=sec('Weakness graph — evograph');
+  const rounds=(EG.rounds||[]).filter(r=>r.split!=='test');
+  const final=(EG.rounds||[]).find(r=>r.split==='test');
+  const prim=r=>r.primary_metric?r.metrics[r.primary_metric]:null;
+  if(rounds.length){
+    const max=Math.max(1e-9,...rounds.map(r=>prim(r)||0),(final?prim(final):0)||0);
+    const wrap=$('div',{style:'display:flex;align-items:flex-end;gap:14px;margin-bottom:12px'});
+    const col=(label,v,color,note)=>{const d=$('div',{style:'display:flex;flex-direction:column;align-items:center;gap:5px;flex:1'});
+      d.append($('span',{class:'num',style:'font-weight:700;font-size:12px',text:v==null?'—':(v*100).toFixed(1)+'%'}),
+        $('div',{style:`width:100%;max-width:64px;height:${Math.max(4,(v||0)/max*110)}px;border-radius:4px 4px 0 0;background:${color}`}),
+        $('span',{class:'eyebrow',text:label}),$('span',{class:'muted num',style:'font-size:10px',text:note||''}));
+      return d;};
+    rounds.forEach(r=>wrap.append(col('round '+r.round,prim(r),'var(--accent)',
+      (r.num_tasks??'—')+' tasks'+(r.completed_at==null?' · running':''))));
+    if(final)wrap.append(col('sealed test',prim(final),'var(--ok)',
+      final.cost_usd!=null?'$'+(+final.cost_usd).toFixed(4):''));
+    s.append(wrap);
+    s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+      'The sealed test sits apart from the rounds on purpose — it is scored once, on data no round touched.'}));
+  }
+  (EG.weaknesses||[]).forEach(w=>{
+    const box=$('div',{class:'dead',style:'border-left-color:var(--accent)'});
+    const head=$('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center'});
+    head.append($('code',{text:w.slug}),$('span',{class:'badge b-seed',text:String(w.status||'unknown')}));
+    (w.tags||[]).forEach(tg=>head.append($('span',{class:'muted',style:'font-size:11px',text:tg})));
+    head.append($('span',{class:'muted num',style:'margin-left:auto;font-size:11px',
+      text:(w.num_solutions||0)+' solution(s)'}));
+    box.append(head);
+    const bits=['discovered round '+(w.discovered_in_round??'—')];
+    if(w.solved_in_round!=null)bits.push('solved round '+w.solved_in_round);
+    if((w.affected_tasks||[]).length)bits.push('affects '+w.affected_tasks.join(', '));
+    if((w.related||[]).length)bits.push('related → '+w.related.join(', '));
+    box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:bits.join('  ·  ')}));
+    s.append(box);
+  });
 })();
 
 /* ---------- 8. Candidate leaderboard + git log ---------- */

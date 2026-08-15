@@ -75,7 +75,7 @@ def test_reduce_run_builds_well_formed_graph():
                       "cost_usd", "tokens", "seconds", "optimizer_seconds",
                       "runner_seconds", "iteration", "reason", "best_so_far"):
                 assert k in n, f"node {n['id']} missing {k}"
-            assert n["status"] in ("seed", "accepted", "rejected", "failed")
+            assert n["status"] in ("seed", "accepted", "rejected", "indecisive", "failed")
 
         # parent → child edges are wired both ways
         assert nodes["seed"]["children"] == ["cand_0001"]
@@ -93,7 +93,8 @@ def test_reduce_run_builds_well_formed_graph():
         assert s["baseline_val"] == 0.25
         assert s["best_val"] == 0.75
         assert s["best_id"] == "cand_0001"
-        assert s["counts"] == {"accepted": 1, "rejected": 1, "failed": 0, "seed": 1, "total": 3}
+        assert s["counts"] == {"accepted": 1, "rejected": 1, "indecisive": 0, "failed": 0,
+                                   "seed": 1, "total": 3}
         assert s["test_reward"] == 0.8
         assert s["delta_pct"] == 200.0  # (0.75-0.25)/0.25*100
         assert s["frontier"] >= 1
@@ -174,9 +175,12 @@ def test_render_html_self_contained_and_parseable():
         # no external network resource (the only allowed http is the SVG XML namespace)
         for marker in ('src="http', 'href="http', "<link", "cdn.", "fetch("):
             assert marker not in text, f"dashboard pulls an external resource: {marker}"
-        # core panels present
-        for panel in ("Summary", "Score over iterations", "Per-task pass/fail",
-                      "Lineage", "Candidates", "Annotations"):
+        # The panel set the self-contained artifact must always carry. "Annotations &
+        # diagnoses" was folded into the Activity log, which shows the same optimizer
+        # stderr / diagnosis text with a timestamp, phase and candidate attached.
+        for panel in ("Summary", "Run status", "Score over iterations",
+                      "Per-task pass/fail", "Lineage", "Candidates",
+                      "Cost ledger", "Gate decisions", "Activity log"):
             assert panel in text, f"missing panel: {panel}"
 
 
@@ -274,7 +278,6 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
         REPO / "dashboard" / "frontend" / "src",
         REPO / "dashboard" / "frontend" / "index.html",
         REPO / "dashboard" / "frontend" / "dist",
-        REPO / "skills" / "algorithms" / "evograph" / "dashboard" / "frontend" / "dist",
         REPO / "examples" / "tau2_airline" / "run_full" / "ui",
     ]
     targets = sorted(set(bundles) | set(required))

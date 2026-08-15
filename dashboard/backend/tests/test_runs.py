@@ -24,7 +24,11 @@ def test_list_runs_projects_light_summary(tmp_base, make_run):
     assert row["baseline_val"] == 0.25
     assert row["best_val"] == 0.75
     assert row["iterations"] == 2
-    assert row["status"] in {"live", "done", "failed"}
+    # Status is the reducer's derived outcome, not a coarse live/done flag. The
+    # fixture's events carry no timestamps and no finalize, so it is "interrupted":
+    # the reducer will not call a run with no recent activity live.
+    assert row["status"] == "interrupted"
+    assert "cannot tell if it is still alive" in row["status_reason"]
 
 
 def test_load_run_returns_graph_and_summary(tmp_base, make_run):

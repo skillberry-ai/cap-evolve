@@ -7,6 +7,12 @@ import { STATIC_MODE, applyDataBaseOverride } from './lib/api'
 import { Hub } from './routes/Hub'
 import { RunDeepDive } from './routes/RunDeepDive'
 import { Compare } from './routes/Compare'
+import {
+  applyTheme,
+  initialTheme,
+  prefersLightTheme,
+  readStoredTheme,
+} from './lib/theme'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 2000, refetchOnWindowFocus: false } },
@@ -18,6 +24,10 @@ const queryClient = new QueryClient({
 const Router = STATIC_MODE ? HashRouter : BrowserRouter
 
 applyDataBaseOverride()
+
+// Apply the stored/OS theme BEFORE the first paint so a light-mode reader never sees a
+// flash of the dark palette while React mounts.
+applyTheme(initialTheme(readStoredTheme(), prefersLightTheme()))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

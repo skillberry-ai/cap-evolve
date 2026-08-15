@@ -15,6 +15,7 @@ const FILL: Record<GraphNode['status'], string> = {
   seed: 'var(--seed)',
   accepted: 'var(--accepted)',
   rejected: 'var(--rejected)',
+  indecisive: 'var(--indecisive)',
   failed: 'var(--muted)',
 }
 

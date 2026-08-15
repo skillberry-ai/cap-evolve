@@ -16,6 +16,29 @@ const ROLES = [
 /** Cost, tokens, and latency split across the three agent roles, plus budget meters
  * that turn amber as soft warnings fire. The optimizer column is real once the loop
  * captures the agent CLI's reported cost. */
+/**
+ * What the cost LEDGER does not already say: the budget caps this run is spending
+ * against, and the eval-centric table (reward ± stderr and tasks × trials per scoring).
+ *
+ * The old CostPanel also drew a by-role bar chart and a per-iteration table; both
+ * re-cut the same dollars the ledger accounts for row by row, which is precisely the
+ * "three cards restating one number" pattern this redesign removes.
+ */
+export function BudgetPanel({ summary }: { summary: RunSummaryDetail }) {
+  return (
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4">
+      <motion.div variants={fadeUpItem}>
+        <EvaluationsTable summary={summary} />
+      </motion.div>
+      <motion.div variants={fadeUpItem}>
+        <BudgetMeters summary={summary} />
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/** Full role/iteration breakdown. Retained for the Compare route and tests; the run
+ *  Cost tab uses CostLedger + BudgetPanel instead. */
 export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
   const cost = summary.cost
   const tok = summary.tokens_by_role

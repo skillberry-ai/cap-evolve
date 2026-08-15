@@ -6,7 +6,8 @@ description: >-
   "weakness graph", dispatches one solver agent per weakness in its own git worktree scoped to that
   weakness's frozen affected_tasks, merges verified improvements, reverts a whole round on regression,
   and repeats until the spec's stop_condition — then seals the test once via `cap-evolve finalize`.
-  Writes a wiki into the run dir + a custom_view.json so its weakness-graph tab shows in the dashboard.
+  Writes its wiki into the run dir; the cap-evolve dashboard reads those files directly and renders
+  the Weakness graph tab — no second server, no embedded view to launch.
   USE when algorithm_skill: evograph and orchestration_mode: agent.
 component: algorithm
 argument-hint: "(agent mode) driven by the coding agent per orchestration_mode: agent"
@@ -45,7 +46,8 @@ default dashboard tabs populated.
 
 ## Vocabulary (canon — used in the wiki and the dashboard)
 
-Unchanged from evo-graph — the dashboard tab depends on these exact terms/formats:
+Unchanged from evo-graph — the cap-evolve dashboard's Weakness graph tab reads these exact
+terms/formats out of the run dir:
 
 - **Weakness** — a recurring failure pattern hurting the primary metric (incl. inconsistency). One
   node per weakness: `<run_dir>/wiki/weaknesses/<slug>.md`.
@@ -74,15 +76,12 @@ Unchanged from evo-graph — the dashboard tab depends on these exact terms/form
 - Read `capevolve.yaml`: `metric_primary` + `metrics_display` (#38), `stop_condition`,
   `github_integration`, `capabilities`/`capability_path`, splits. cap-evolve intake already collected
   these — do not re-ask.
-- Scaffold the wiki under the run dir and start evograph's dashboard, then declare it to the
-  cap-evolve dashboard so its tab appears (the #39 custom-view contract):
+- Scaffold the wiki under the run dir. There is nothing to launch and nothing to register: the
+  cap-evolve dashboard reads these files itself and shows a **Weakness graph** tab whenever
+  `<run_dir>/wiki/` exists, in the live server and the static export alike.
   - create `<run_dir>/wiki/{weaknesses,solutions,results}` and `<run_dir>/runs/`.
-  - launch the bundled weakness-graph view and register it in one step:
-    `python skills/algorithms/evograph/scripts/view.py --run-dir <abs run_dir> --port <port> &`.
-    It writes `<run_dir>/custom_view.json` (`{"title":"Weakness graph","url":"http://127.0.0.1:<port>/"}`)
-    so the cap-evolve dashboard mounts a **Weakness graph** tab embedding it, and serves evo-graph's
-    read-only React UI (this skill's `dashboard/`) pointed at the run dir. Give the user both links.
-    (Deps once: `pip install -r skills/algorithms/evograph/dashboard/backend/requirements.txt`.)
+  - write the formats in [references/dashboard.md](references/dashboard.md) as each round completes;
+    the tab reflects them on the next load. Give the user the cap-evolve dashboard link.
 
 ## Step 2 — Round loop (you drive it, uninterrupted to stop_condition)
 

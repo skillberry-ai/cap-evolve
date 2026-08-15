@@ -17,7 +17,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:7878',
+        // Override with CAPEVOLVE_API=http://127.0.0.1:<port> to point `npm run dev`
+        // at a backend on a non-default port (e.g. two runs open side by side).
+        target: process.env.CAPEVOLVE_API || 'http://127.0.0.1:7878',
         changeOrigin: true,
       },
     },

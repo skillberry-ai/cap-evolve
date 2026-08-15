@@ -16,8 +16,12 @@ export function CountUp({
   const fromRef = useRef<number>(value ?? 0)
   const rafRef = useRef<number>(0)
 
+  // This effect DRIVES a requestAnimationFrame tween of an external clock into state.
+  // The early-return setState calls are the reduced-motion / missing-value shortcuts of
+  // that same tween, not derived state that could be computed during render.
   useEffect(() => {
     if (value == null || Number.isNaN(value)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplay(value ?? null)
       return
     }

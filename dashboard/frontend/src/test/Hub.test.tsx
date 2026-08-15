@@ -9,7 +9,7 @@ const RUN: RunSummary = {
   run_id: 'run_demo',
   path: '/x/run_demo',
   algorithm: 'hill-climb',
-  status: 'done',
+  status: 'completed',
   best_val: 1.0,
   baseline_val: 0.0,
   delta_pct: 100,

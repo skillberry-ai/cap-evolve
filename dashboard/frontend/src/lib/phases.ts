@@ -23,7 +23,6 @@ const pctStr = (v: number | null | undefined) =>
 export function derivePhases(detail: RunDetail): PhaseStep[] {
   const s = detail.summary
   const counts = s.counts
-  const total = counts?.total ?? detail.graph.nodes.length
   const evaluated = (counts?.accepted ?? 0) + (counts?.rejected ?? 0)
   const hasBaseline = s.baseline_val != null
   const finalized = s.test_reward != null || !!s.test_sealed
@@ -31,19 +30,36 @@ export function derivePhases(detail: RunDetail): PhaseStep[] {
 
   const done = (b: boolean): PhaseStatus => (b ? 'done' : 'pending')
 
+  // Intake is only "done" when the run dir actually RECORDS an intake: an intake event
+  // (which carries its own summary) or intake spend. Inferring it from "some candidate
+  // exists" claimed a phase ran on the strength of a later phase's output — a fabricated
+  // status, and the reducer now gives us the evidence to avoid it.
+  const intake = s.intake
+  const intakeRecorded = Boolean(
+    intake && (intake.usd || intake.seconds || intake.tokens || intake.output_summary),
+  )
+
   return [
     {
       key: 'intake',
       label: 'Intake',
-      status: done(total > 0 || hasBaseline),
-      detail: 'Interview + scaffold the project, adapter, and seed capability.',
-      metrics: [],
+      status: intakeRecorded ? 'done' : 'pending',
+      detail: intakeRecorded
+        ? intake?.output_summary || 'Interviewed + scaffolded the project, adapter, and seed.'
+        : 'No intake was recorded in this run dir — the project was scaffolded elsewhere.',
+      metrics: intakeRecorded
+        ? [{ label: 'intake cost', value: `$${(intake?.usd ?? 0).toFixed(4)}` }]
+        : [],
     },
     {
       key: 'check',
       label: 'Implement & check',
-      status: done(total > 0 || hasBaseline),
-      detail: 'Hard gate: the adapter must pass cap-evolve check before any budget is spent.',
+      // The hard gate leaves no event of its own; a scored baseline is proof it passed
+      // (nothing gets evaluated until it does), and that is the only claim made here.
+      status: done(hasBaseline),
+      detail: hasBaseline
+        ? 'Passed: nothing is evaluated until cap-evolve check succeeds.'
+        : 'Not yet evidenced — no baseline has been scored.',
       metrics: [],
     },
     {

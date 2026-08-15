@@ -1,28 +1,71 @@
-import { CheckCircle2, CircleDot, XCircle } from 'lucide-react'
-import type { RunStatus } from '../lib/types'
+import type { NodeStatus, RunStatus, Verdict } from '../lib/types'
+import { NODE_STATUS, RUN_STATUS, VERDICT } from '../lib/verdict'
 import { cn } from '../lib/cn'
 
-const MAP: Record<RunStatus, { label: string; tone: string; Icon: typeof CircleDot; live?: boolean }> = {
-  live: { label: 'live', tone: 'text-accent', Icon: CircleDot, live: true },
-  done: { label: 'done', tone: 'text-accepted', Icon: CheckCircle2 },
-  failed: { label: 'failed', tone: 'text-rejected', Icon: XCircle },
-}
-
-/** Status pill. Color is never the sole signal — icon + label always present. */
-export function StatusBadge({ status, className }: { status: RunStatus; className?: string }) {
-  const { label, tone, Icon, live } = MAP[status] ?? MAP.failed
+/** Run status pill. Colour is never the sole signal — icon + label always present,
+ *  and `reason` (the reducer's evidence) is the accessible title. */
+export function StatusBadge({
+  status,
+  reason,
+  className,
+}: {
+  status: RunStatus | undefined
+  reason?: string
+  className?: string
+}) {
+  const meta = (status && RUN_STATUS[status]) || RUN_STATUS.failed
+  const { label, tone, ring, Icon, blurb } = meta
   return (
-    <span className={cn('inline-flex items-center gap-1.5 text-xs font-medium', tone, className)}>
+    <span
+      title={reason ? `${blurb}\n${reason}` : blurb}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border bg-surface-2 px-2.5 py-1',
+        'text-xs font-medium',
+        tone,
+        ring,
+        className,
+      )}
+    >
       <span className="relative inline-flex">
-        {live && (
+        {status === 'running' && (
           <span
             aria-hidden
             className="absolute inset-0 rounded-full animate-pulse-ring"
-            style={{ background: 'var(--accent)' }}
+            style={{ background: 'var(--primary)' }}
           />
         )}
-        <Icon size={14} className="relative" aria-hidden />
+        <Icon size={13} className="relative" aria-hidden />
       </span>
+      {label}
+    </span>
+  )
+}
+
+/** Candidate verdict / node status chip — the accept · reject · indecisive · failed
+ *  distinction the honesty contract requires the UI to keep visible. */
+export function VerdictBadge({
+  verdict,
+  className,
+}: {
+  verdict: Verdict | NodeStatus
+  className?: string
+}) {
+  const meta =
+    (VERDICT as Record<string, typeof VERDICT.accept>)[verdict] ??
+    (NODE_STATUS as Record<string, typeof VERDICT.accept>)[verdict] ??
+    NODE_STATUS.failed
+  const { label, tone, ring, Icon, blurb } = meta
+  return (
+    <span
+      title={blurb}
+      className={cn(
+        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium',
+        tone,
+        ring,
+        className,
+      )}
+    >
+      <Icon size={11} aria-hidden />
       {label}
     </span>
   )

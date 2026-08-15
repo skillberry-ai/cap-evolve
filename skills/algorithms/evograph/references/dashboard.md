@@ -4,9 +4,10 @@ This is a **file-format contract**: agents only ever *write* the files described
 the run dir, in the formats given. **Agents never call any backend** — they write these files
 and the viewer reflects them within a couple of seconds.
 
-The read-only viewer that renders these files (a small FastAPI backend serving a prebuilt React
-app, pointed at the run dir) ships separately with the weakness-graph view. This skill on its own
-just produces the files; the view is optional and mounted via cap-evolve's custom-view tab.
+The renderer is the **cap-evolve dashboard itself**: its reducer reads `wiki/` straight out of the
+run dir and shows a **Weakness graph** tab. There is no separate server, no port to pick, and no
+registration step — the tab appears because the files exist, in the live dashboard and in the
+self-contained static export alike.
 
 So: *anything you want the user to see, write into one of these files in this format.*
 
@@ -74,20 +75,16 @@ line doesn't already start with a `HH:MM[:SS]` time, the dashboard prefixes it w
 of the machine running the dashboard** (i.e. your timezone), so timestamps stay consistent — the
 same clock as `scripts/now.py`.
 
-## API the backend exposes (for reference; agents don't call it)
+## What the dashboard renders from these files (for reference; agents only write files)
 
-- `GET /api/graph` → weakness nodes (`slug, status, tags, num_solutions, has_record, related, …`) +
-  **edges between related weaknesses** (from each weakness's `related` field). The UI lays this out as
-  a graph (dagre) and offers a status filter (solved / completed / in-progress / open / reverted). Solutions are not graph
-  nodes — they live in the weakness detail.
-- `GET /api/weakness/{slug}` → front-matter + rendered markdown + its solutions + per-task metric
-  history.
-- `GET /api/solution/{weakness}/{sol_id}` → rendered markdown + `changes.diff` + metric + record flag.
-- `GET /api/results` → the metric-over-rounds series from `wiki/results/*.json`.
-- `GET /api/run-config` → the run's `<run_dir>/run-config.json` (free-form; optional). If you drop a
-  `run-config.json` in the `<run_dir>/` dir, a **Run config** button appears in the header and opens a
-  pretty, generic view of whatever JSON is there — no schema required.
-- `GET /api/progress/{slug}/stream` → Server-Sent Events tailing the weakness's latest agent log.
+- **Weakness graph tab** — one row per `wiki/weaknesses/<slug>.md`, showing `status`, `tags`,
+  `discovered_in_round` / `solved_in_round`, `affected_tasks`, the `related` edges, and how many
+  solution dirs exist under `wiki/solutions/<slug>/`.
+- **Primary metric over rounds** — one bar per `wiki/results/round-<N>.json`, read from the metric
+  marked `"primary": true`. A round with no `completed_at` is labelled *running*.
+- **Final-test panel** — `wiki/results/final-test.json`, shown apart from the rounds so a number
+  scored once on sealed data is never mistaken for another round.
+- Everything else in these files is preserved and ignored, so extra keys are always safe.
 
 ## What this buys the agents
 

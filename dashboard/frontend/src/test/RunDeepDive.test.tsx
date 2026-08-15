@@ -30,7 +30,7 @@ describe('RunDeepDive error states', () => {
     const { api } = await import('../lib/api')
     vi.mocked(api.run).mockRejectedValue(new LivePendingError('404 Not Found for data/runs_run_suite.json'))
     renderRunDeepDive()
-    expect(await screen.findByText(/Hold on/)).toBeInTheDocument()
+    expect(await screen.findByText(/first snapshot has not been exported yet/)).toBeInTheDocument()
     expect(screen.queryByText(/Couldn.t load run/)).not.toBeInTheDocument()
   })
 
@@ -41,7 +41,7 @@ describe('RunDeepDive error states', () => {
       vi.mocked(api.run).mockRejectedValue(new Error('500 Internal Server Error for /api/runs/run_suite'))
       renderRunDeepDive()
       await waitFor(() => expect(screen.getByText(/Couldn.t load run/)).toBeInTheDocument(), { timeout: 10_000 })
-      expect(screen.queryByText(/Hold on/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/first snapshot has not been exported yet/)).not.toBeInTheDocument()
     },
     15_000,
   )

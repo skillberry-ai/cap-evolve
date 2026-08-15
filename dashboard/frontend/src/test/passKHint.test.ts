@@ -25,3 +25,14 @@ describe('passKHint', () => {
     expect(passKHint({})).toBeUndefined()
   })
 })
+
+it('renders nothing when handed a dict of non-finite values (the NaN% defect)', () => {
+  expect(passKHint({ '1': NaN as unknown as number })).toBeUndefined()
+  expect(passKHint({ '1': Infinity as unknown as number })).toBeUndefined()
+})
+
+it('never lets a junk value reach the output', () => {
+  const out = passKHint({ '1': 0.8, '2': NaN as unknown as number })
+  expect(out).toBe('pass^1 80.0%')
+  expect(out).not.toMatch(/NaN/)
+})

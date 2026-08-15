@@ -8,6 +8,12 @@ export interface CurvePoint {
   id: string
   status: GraphNode['status']
   isRecord: boolean // this point set a new running best
+  /** Measured stderr of this candidate's val, or null when none was recorded. */
+  stderr: number | null
+  /** Exactly one point is the champion: the FIRST to reach the final best. Marking
+   *  every point that merely ties it (three identical 0.750s in a real run) produced a
+   *  row of stars and no champion. */
+  isChampion: boolean
 }
 
 /**
@@ -23,7 +29,9 @@ export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
   let best = Number.NEGATIVE_INFINITY
   for (const n of ordered) {
     const v = n.val as number
-    const isRecord = v > best
+    // An indecisive candidate was never validly measured, so it can plot but must not
+    // move the running best.
+    const isRecord = v > best && n.status !== 'indecisive'
     if (isRecord) best = v
     out.push({
       iteration: n.iteration ?? out.length,
@@ -32,7 +40,12 @@ export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
       id: n.id,
       status: n.status,
       isRecord,
+      stderr: n.stderr ?? null,
+      isChampion: false,
     })
   }
+  const finalBest = out.length ? out[out.length - 1].best : null
+  const champ = out.find((p) => p.isRecord && p.best === finalBest)
+  if (champ) champ.isChampion = true
   return out
 }

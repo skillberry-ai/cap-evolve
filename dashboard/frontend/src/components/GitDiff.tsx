@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { GitCommit as GitCommitIcon } from 'lucide-react'
@@ -18,11 +18,12 @@ export function GitDiff({ runId }: { runId: string }) {
     queryFn: ({ signal }) => api.gitLog(runId, signal),
   })
 
-  // Default selection = newest commit (diffed against its parent).
-  const [sel, setSel] = useState<string | null>(null)
-  useEffect(() => {
-    if (log && log.length && sel === null) setSel(log[log.length - 1].hash)
-  }, [log, sel])
+  // Default selection = newest commit (diffed against its parent). Derived, not
+  // synchronised in an effect: `null` means "nothing picked yet", so the newest commit
+  // is chosen at render time and no extra render pass is needed when the log arrives.
+  const [picked, setPicked] = useState<string | null>(null)
+  const sel = picked ?? (log && log.length ? log[log.length - 1].hash : null)
+  const setSel = setPicked
 
   const idx = useMemo(() => (log ?? []).findIndex((c) => c.hash === sel), [log, sel])
   const hasParent = idx > 0

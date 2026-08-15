@@ -8,14 +8,20 @@ export default {
     extend: {
       colors: {
         background: 'var(--bg)',
-        surface: { DEFAULT: 'var(--surface)', 2: 'var(--surface-2)' },
-        border: 'var(--border)',
+        surface: { DEFAULT: 'var(--surface)', 2: 'var(--surface-2)', 3: 'var(--surface-3)' },
+        border: { DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
         foreground: 'var(--fg)',
-        muted: 'var(--muted)',
-        primary: { DEFAULT: 'var(--primary)', deep: 'var(--primary-deep)' },
+        muted: { DEFAULT: 'var(--muted)', strong: 'var(--muted-strong)' },
+        primary: {
+          DEFAULT: 'var(--primary)',
+          deep: 'var(--primary-deep)',
+          soft: 'var(--primary-soft)',
+        },
         accent: { DEFAULT: 'var(--accent)', strong: 'var(--accent-strong)' },
         accepted: 'var(--accepted)',
         rejected: 'var(--rejected)',
+        indecisive: 'var(--indecisive)',
+        failed: 'var(--failed)',
         seed: 'var(--seed)',
       },
       fontFamily: {

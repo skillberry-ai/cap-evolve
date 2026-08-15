@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GitCompareArrows, LayoutGrid } from 'lucide-react'
 import { BrandLogo } from './BrandLogo'
+import { ThemeToggle } from './ThemeToggle'
 import { cn } from '../lib/cn'
 
 const NAV = [
@@ -21,7 +22,7 @@ export function AppShell({ children, live = false }: { children: ReactNode; live
         <Link to="/" className="mb-4 flex items-center gap-2 px-2">
           <BrandLogo size={30} state={live ? 'live' : 'idle'} />
           <span className="text-lg font-semibold tracking-tight">
-            cap<span className="text-accent">·</span>evolve
+            cap<span className="text-primary">·</span>evolve
           </span>
         </Link>
         {NAV.map(({ to, label, Icon }) => (
@@ -40,16 +41,19 @@ export function AppShell({ children, live = false }: { children: ReactNode; live
             {label}
           </Link>
         ))}
-        <div className="mt-auto px-2 text-[11px] text-muted">watch capability evolve</div>
+        <div className="mt-auto flex items-center justify-between gap-2 px-2">
+          <span className="text-[11px] text-muted">watch capability evolve</span>
+          <ThemeToggle />
+        </div>
       </aside>
 
       {/* Top bar (mobile) */}
       <header className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-surface/90 px-4 py-3 backdrop-blur">
         <BrandLogo size={26} state={live ? 'live' : 'idle'} />
         <span className="font-semibold tracking-tight">
-          cap<span className="text-accent">·</span>evolve
+          cap<span className="text-primary">·</span>evolve
         </span>
-        <nav className="ml-auto flex gap-1">
+        <nav className="ml-auto flex items-center gap-1">
           {NAV.map(({ to, label, Icon }) => (
             <Link
               key={to}
@@ -65,6 +69,7 @@ export function AppShell({ children, live = false }: { children: ReactNode; live
             </Link>
           ))}
         </nav>
+        <ThemeToggle />
       </header>
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>

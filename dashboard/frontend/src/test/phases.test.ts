@@ -20,7 +20,7 @@ describe('derivePhases', () => {
         baseline_val: 0.2,
         best_val: 0.8,
         test_reward: 0.75,
-        counts: { accepted: 1, rejected: 1, failed: 0, seed: 1, total: 3 },
+        counts: { accepted: 1, rejected: 1, indecisive: 0, failed: 0, seed: 1, total: 3 },
       }),
     )
     expect(s.baseline).toBe('done')
@@ -34,7 +34,7 @@ describe('derivePhases', () => {
       detail({
         baseline_val: 0.2,
         best_val: 0.5,
-        counts: { accepted: 1, rejected: 0, failed: 0, seed: 1, total: 2 },
+        counts: { accepted: 1, rejected: 0, indecisive: 0, failed: 0, seed: 1, total: 2 },
       }),
     )
     expect(s.baseline).toBe('done')

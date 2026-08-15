@@ -40,17 +40,6 @@ def _reduce(path: Path) -> dict:
     return dashboard.reduce_run(rd)
 
 
-def _status(summary: dict) -> str:
-    # A run is "done" once finalize sealed the test; "failed" if there were no
-    # accepted/seed nodes and no candidates; otherwise "live".
-    if summary.get("test_reward") is not None or summary.get("test_sealed"):
-        return "done"
-    counts = summary.get("counts") or {}
-    if counts.get("total", 0) == 0:
-        return "failed"
-    return "live"
-
-
 def list_runs(base_dir: Path) -> list[dict]:
     rows = []
     for path in discover(base_dir):
@@ -64,12 +53,22 @@ def list_runs(base_dir: Path) -> list[dict]:
             "run_id": path.name,
             "path": str(path),
             "algorithm": s.get("algorithm"),
-            "status": _status(s),
+            # Status comes straight from the reducer, which derives it from the event
+            # log's own evidence (finalize / budget / silence). The old local helper
+            # called every unfinalized run "live", including ones that died weeks ago.
+            "status": s.get("status"),
+            "status_reason": s.get("status_reason"),
             "best_val": s.get("best_val"),
             "baseline_val": s.get("baseline_val"),
             "delta_pct": s.get("delta_pct"),
-            "iterations": counts.get("accepted", 0) + counts.get("rejected", 0),
+            # Absolute Δ too: the relative % is undefined off a zero baseline, which is
+            # the normal case for a run whose seed scores 0.
+            "delta_abs": s.get("delta_abs"),
+            "test_reward": s.get("test_reward"),
+            "iterations": (counts.get("accepted", 0) + counts.get("rejected", 0)
+                           + counts.get("indecisive", 0) + counts.get("failed", 0)),
             "total_usd": (s.get("cost") or {}).get("total_usd"),
+            "last_event_t": s.get("last_event_t"),
             "mtime": path.stat().st_mtime,
         })
     rows.sort(key=lambda r: r["mtime"], reverse=True)

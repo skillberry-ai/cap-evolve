@@ -8,20 +8,35 @@
 @tailwind utilities;
 
 :root {
-  /* Dark Mode (OLED) — the primary theme. Semantic tokens; never raw hex in components. */
-  --bg: #07090d;
-  --surface: #0d1117;
-  --surface-2: #141b24;
-  --border: #1e2733;
-  --fg: #e6edf3;
-  --muted: #8b98a9;
-  --primary: #3b82f6;
-  --primary-deep: #1e40af;
-  --accent: #f59e0b;        /* champion / best — amber */
-  --accent-strong: #d97706;
-  --accepted: #22c55e;      /* accepted / improved */
-  --rejected: #ef4444;      /* rejected / regressed */
-  --seed: #64748b;          /* seed / neutral */
+  /* Dark is the default theme (`.light` on <html> flips it — see the block below).
+     Semantic tokens only; never a raw hex in a component. */
+  --bg: #08090e;
+  --surface: #0e1017;
+  --surface-2: #161923;
+  --surface-3: #1e222e;
+  --border: #232936;
+  --border-strong: #323a4b;
+  --fg: #e9edf5;
+  --muted: #949cad;
+  --muted-strong: #b6bdcb;
+
+  /* Brand. cap-evolve purple carries interaction + identity. */
+  --primary: #7c5cff;
+  --primary-deep: #5b3fd6;
+  --primary-soft: #7c5cff26;
+
+  /* Champion / current best. Amber, distinct from every verdict colour. */
+  --accent: #f0b429;
+  --accent-strong: #d69412;
+
+  /* Verdict palette. Deliberately NOT red/green-only: each verdict is carried by an
+     icon and a label as well as hue, and the four hues stay distinguishable under
+     deuteranopia/protanopia (green ↔ blue-teal ↔ amber ↔ magenta-red). */
+  --accepted: #35c88a;      /* accept   — the gate cleared the bar */
+  --rejected: #f2565a;      /* reject   — measured, did not clear the bar */
+  --indecisive: #4aa8ff;    /* indecisive — the gate REFUSED to judge (missing data) */
+  --failed: #c05fd8;        /* failed   — no measurement at all */
+  --seed: #7f899b;          /* seed / neutral baseline */
 
   /* Single source of truth for both stacks — tailwind.config.js's font-sans /
      font-mono utilities reference these vars, so the utilities and the raw rules
@@ -32,6 +47,31 @@
     'Liberation Mono', monospace;
 
   color-scheme: dark;
+}
+
+/* Light theme. Not an inversion: surfaces are re-derived and the verdict hues are
+   darkened so each one still clears 4.5:1 against a white card. */
+:root.light {
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f8;
+  --surface-3: #e6e9f1;
+  --border: #dfe3ec;
+  --border-strong: #c3cad9;
+  --fg: #13161d;
+  --muted: #5d6675;
+  --muted-strong: #3d4453;
+  --primary: #6340e8;
+  --primary-deep: #4a2cc4;
+  --primary-soft: #6340e81f;
+  --accent: #a06a00;
+  --accent-strong: #7d5200;
+  --accepted: #12805a;
+  --rejected: #c62b30;
+  --indecisive: #1d63c4;
+  --failed: #8b2ca3;
+  --seed: #616b7d;
+  color-scheme: light;
 }
 
 html,
@@ -86,4 +126,21 @@ body {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Section label: the one small-caps style used for every panel heading, so the type
+   scale stays 11/13/14/18/24 and nothing invents a sixth size. */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Wide content (tables, heatmaps, diffs) scrolls inside its own box — the page body
+   must never scroll horizontally. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
