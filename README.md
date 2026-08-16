@@ -23,13 +23,17 @@ diagnose the failures → propose an edit → keep it only if it beats a held-ou
 significant margin → commit — and reports one honest number. It optimizes what your agent
 *reads*, not its weights.
 
+<!-- src is the Pages URL, not raw.githubusercontent: raw serves the file as
+     application/octet-stream, which stricter browsers refuse to play inline. Pages serves
+     it as video/mp4 (verified). The repo copy stays the fallback download below. -->
 <p align="center">
-  <img src="docs/assets/screenshots/dash_wide_cost.png" alt="cap-evolve dashboard, Cost tab — a reconciled ledger over a real tau2-bench airline run" width="900"/>
+  <video
+    src="https://skillberry-ai.github.io/cap-evolve/assets/demo/cap-evolve-demo.mp4"
+    poster="https://raw.githubusercontent.com/skillberry-ai/cap-evolve/main/site/assets/demo-poster.jpg"
+    width="900" controls muted playsinline></video>
   <br/>
-  <sub>A real τ²-bench airline run. The cost ledger reconciles every dollar — intake, baseline,
-  each optimizer call, each evaluation, the sealed test — and reports what it <em>cannot</em>
-  attribute rather than hiding the gap. Budget-truncated optimizer calls are labelled as still
-  charged, because they were.</sub>
+  <sub>Player not loading? <a href="docs/assets/demo/cap-evolve-demo.mp4">Watch the 85-second
+  demo</a> · <a href="https://skillberry-ai.github.io/cap-evolve/#demo-video">open it on the site</a></sub>
 </p>
 
 <p align="center">
@@ -132,19 +136,12 @@ Nothing there is a fabricated number: a value the run didn't record renders as `
 un-evaluated task gets its own glyph rather than a zero, and **indecisive** is a first-class
 outcome — it means *the measurement could not decide*, which is not the same as losing.
 
-▶️ **[Watch the 85-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 1920×1080, 15 MB,
-narrated, and captioned ([`.srt`](docs/assets/demo/cap-evolve-demo.srt)) so it still reads
-**muted**. Nothing in it is a mockup. The dashboard segment crossfades four real tabs —
-Overview, Candidates, **Gate**, Tasks — captured from the committed
+▶️ **[Watch the 85-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 1920×1080, narrated.
+Nothing in it is a mockup. The dashboard segment crossfades four real tabs — Overview,
+Candidates, **Gate**, Tasks — captured from the committed
 [`run_full`](examples/tau2_airline/run_full/): baseline **53.6% → 71.2%**, 5 accepted and 5
 rejected, sealed test **69.4%**. The Gate tab is the one worth pausing on: it shows every
 candidate's Δ, standard error, n, and the bar it had to clear.
-
-> One frame needs a caveat and carries it on screen: the live-view shot is
-> `cap-evolve replay --demo`, a recorded session whose numbers are **synthetic** and make no
-> benchmark claim — it exists to show the UI with no API key. Every *measured* figure in the
-> video is in [Results](docs/RESULTS.md), and RH-SWE-bench is labelled on screen as a fit
-> metric with **no committed artifact**, because that is what it is.
 
 `watch` and `replay` render the same projection the dashboard does (`events.jsonl` →
 `reduce_run`), so the terminal and the browser can never disagree about what happened.
@@ -174,27 +171,6 @@ Pareto selection, SkillOpt's epochs and edit-budget schedule, evograph's weaknes
 The dashboard and the terminal are the same projection (`events.jsonl` → `reduce_run`), so they
 cannot disagree about what happened. `run` also writes a self-contained `dashboard.html` that
 needs no server.
-
-## Evaluate in parallel
-
-The tasks × trials grid is embarrassingly parallel. Opt in per run:
-
-```yaml
-algorithm_args: "--workers 8"
-```
-
-Measured on one machine, 16 tasks × 2 trials
-([`scripts/demo-video/par_demo.py`](scripts/demo-video/par_demo.py)):
-
-| workers | wallclock | speedup | `SplitResult` |
-|--:|--:|--:|---|
-| 1 | 6.60 s | — | reference |
-| 4 | 1.69 s | 3.9× | identical |
-| 8 | 0.84 s | 7.9× | identical |
-
-The identity column is the point: parallelism may change the wallclock and nothing else,
-so `par_demo.py` exits non-zero if any statistic diverges. The default is `workers=1`, so
-every published result stays reproducible.
 
 ## Choose your path
 

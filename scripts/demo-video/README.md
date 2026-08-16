@@ -93,7 +93,7 @@ Then assemble, in one command:
 
 ```bash
 bash scripts/demo-video/build.sh
-cp /tmp/video/cap-evolve-demo.mp4 /tmp/video/cap-evolve-demo.srt docs/assets/demo/
+cp /tmp/video/cap-evolve-demo.mp4 docs/assets/demo/
 ```
 
 `build.sh` draws the cards, synthesizes the voiceover, measures each line so no shot clips

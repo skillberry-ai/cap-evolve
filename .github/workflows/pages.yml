@@ -62,7 +62,6 @@ jobs:
             echo "docs/assets/demo/cap-evolve-demo.mp4 is missing — site/index.html embeds it"; exit 1; }
           mkdir -p site/assets/demo
           cp docs/assets/demo/cap-evolve-demo.mp4 site/assets/demo/
-          cp docs/assets/demo/cap-evolve-demo.srt site/assets/demo/ 2>/dev/null || true
           ls -la site/assets/demo/
 
       - name: Set up Node.js 22

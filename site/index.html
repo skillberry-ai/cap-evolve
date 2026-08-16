@@ -125,7 +125,8 @@ bash examples/toy_calc/run.sh</code></pre>
   <!-- preload="metadata", never autoplay: this is a 15 MB file and the poster carries the
        frame that matters. cap-evolve-demo.mp4 lives in docs/assets/demo/ in the repo and is
        copied into site/assets/demo/ by .github/workflows/pages.yml, so it is committed once
-       rather than twice. Captions are WebVTT — browsers do not read the .srt. -->
+       rather than twice. No <track>: the narration carries the film and subtitles were
+       removed deliberately. -->
   <div class="hero-screenshot reveal" id="demo-video">
     <video
       controls
@@ -134,16 +135,9 @@ bash examples/toy_calc/run.sh</code></pre>
       poster="assets/demo-poster.jpg"
       style="width:100%;height:auto;display:block">
       <source src="assets/demo/cap-evolve-demo.mp4" type="video/mp4">
-      <track kind="captions" src="assets/demo-captions.vtt" srclang="en" label="English" default>
       Your browser can’t play embedded video —
       <a href="assets/demo/cap-evolve-demo.mp4">download the 85-second demo (15 MB)</a>.
     </video>
-    <div class="caption">
-      The 85-second demo — the CLI, four real dashboard tabs from
-      <span class="num">run_full</span>, and both benchmark results. Narrated, captioned, and
-      readable muted. The <em>Gate</em> tab is the one to pause on: every candidate’s Δ,
-      standard error, n, and the bar it had to clear.
-    </div>
   </div>
 
   <!-- ─────────────────────────── how it works ─────────────────────────── -->
@@ -206,12 +200,12 @@ bash examples/toy_calc/run.sh</code></pre>
     </p>
     <div class="shot-grid">
       <figure class="shot">
-        <img src="assets/dash-lineage.png" alt="Lineage tree: seed candidate, five accepted candidates on the best path, and the rejected branches, with the paired-gate math for the champion.">
-        <figcaption class="shot-cap">Lineage — accepted (green) vs rejected (red), and the paired-gate math behind the champion.</figcaption>
+        <img src="assets/dash-lineage.png" alt="Candidates tab: the lineage tree — seed, five accepted candidates on the best path, the rejected branches, and the paired-gate math for the champion.">
+        <figcaption class="shot-cap">Candidates — accepted (green) vs rejected (red), and the paired-gate math behind the champion.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="assets/dash-gitdiffs.png" alt="Git diffs view: one commit per iteration and the actual JOURNAL.md diff the optimizer wrote.">
-        <figcaption class="shot-cap">Git diffs — one commit per iteration; the optimizer's real edits and its institutional memory.</figcaption>
+        <img src="assets/dash-gitdiffs.png" alt="Diffs tab: one commit per iteration and the actual diff the optimizer wrote.">
+        <figcaption class="shot-cap">Diffs — one commit per iteration; the optimizer's real edits and its institutional memory.</figcaption>
       </figure>
     </div>
   </section>

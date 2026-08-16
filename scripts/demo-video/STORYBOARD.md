@@ -374,8 +374,8 @@ infrastructure sub-lines with the marks — that is supported entirely by `docs/
   Fixed: the `pass^k NaN%` the previous cut flagged is now correctly *omitted*.
 - The `parallel` footage shot and the `speedup` card are **removed from the cut** (they
   were 1:12.44 → 1:20.94), along with `build.sh`'s `par_results.json` freshness check and
-  `parallel.tape`. `par_demo.py` itself is kept — the README still documents it as a
-  standalone parallelism check — but nothing in the build reads it any more.
+  `parallel.tape`. `par_demo.py` itself is kept as a standalone parallelism check, but
+  nothing in the build reads it any more and the README no longer documents it.
 - **Music bed, generated not licensed.** `scripts/demo-video/music.py` synthesises a slow
   four-chord pad (Am–F–G/C–Em, one chord per 8 s, cross-faded, plus a ~0.12 Hz tremolo)
   with the stdlib `wave` module — no download, nothing to attribute, byte-identical on a

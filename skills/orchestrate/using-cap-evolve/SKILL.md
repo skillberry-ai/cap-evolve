@@ -1,6 +1,6 @@
 ---
 name: using-cap-evolve
-description: Entry-point router for cap-evolve. Use the moment a user asks to OPTIMIZE an agent capability against an eval — "optimize <X>", "make <X> score higher on <benchmark>", "improve this skill/tool/prompt". Decides whether a project already exists and routes accordingly: to intake (Phase 1) for a fresh request, or straight into the phase chain / `cap-evolve run` when `.capevolve/project/` is already scaffolded. Explains the two ways to run (standalone `/cap-evolve:<phase>` chain vs the fully-automatic `cap-evolve run`) and restates the non-negotiable honesty rules. Does no optimization itself.
+description: 'Entry-point router for cap-evolve. Use the moment a user asks to OPTIMIZE an agent capability against an eval — "optimize <X>", "make <X> score higher on <benchmark>", "improve this skill/tool/prompt". Decides whether a project already exists and routes accordingly: to intake (Phase 1) for a fresh request, or straight into the phase chain / `cap-evolve run` when `.capevolve/project/` is already scaffolded. Explains the two ways to run (standalone `/cap-evolve:<phase>` chain vs the fully-automatic `cap-evolve run`) and restates the non-negotiable honesty rules. Does no optimization itself.'
 component: orchestrate
 argument-hint: "[what to optimize] [--base .capevolve]"
 arguments: "$ARGUMENTS"
