@@ -23,17 +23,17 @@ diagnose the failures → propose an edit → keep it only if it beats a held-ou
 significant margin → commit — and reports one honest number. It optimizes what your agent
 *reads*, not its weights.
 
-<!-- src is the Pages URL, not raw.githubusercontent: raw serves the file as
-     application/octet-stream, which stricter browsers refuse to play inline. Pages serves
-     it as video/mp4 (verified). The repo copy stays the fallback download below. -->
+<!-- A linked poster, not a <video> tag: GitHub's README sanitizer only honors <video> for
+     its own attachment hosts, so an external src renders as an empty gap. The thumbnail
+     opens GitHub's own player. The site embeds the real <video> — Pages serves it as
+     video/mp4, which raw.githubusercontent does not. -->
 <p align="center">
-  <video
-    src="https://skillberry-ai.github.io/cap-evolve/assets/demo/cap-evolve-demo.mp4"
-    poster="https://raw.githubusercontent.com/skillberry-ai/cap-evolve/main/site/assets/demo-poster.jpg"
-    width="900" controls muted playsinline></video>
+  <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/assets/demo/cap-evolve-demo.mp4">
+    <img src="site/assets/demo-poster.jpg" alt="Play the 85-second cap-evolve demo — the CLI, four real dashboard tabs, and both benchmark results" width="900"/>
+  </a>
   <br/>
-  <sub>Player not loading? <a href="docs/assets/demo/cap-evolve-demo.mp4">Watch the 85-second
-  demo</a> · <a href="https://skillberry-ai.github.io/cap-evolve/#demo-video">open it on the site</a></sub>
+  <sub>▶︎ <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/assets/demo/cap-evolve-demo.mp4">Watch
+  the 85-second demo</a> · <a href="https://skillberry-ai.github.io/cap-evolve/#demo-video">plays inline on the site</a></sub>
 </p>
 
 <p align="center">
@@ -131,22 +131,6 @@ cap-evolve watch --diff            # …and show what each accepted candidate ch
   <em>not&nbsp;evaluated</em> distinctly from <em>failed</em>, and spend split into
   runner / optimizer / intake.</sub>
 </p>
-
-Nothing there is a fabricated number: a value the run didn't record renders as `—`, an
-un-evaluated task gets its own glyph rather than a zero, and **indecisive** is a first-class
-outcome — it means *the measurement could not decide*, which is not the same as losing.
-
-▶️ **[Watch the 85-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 1920×1080, narrated.
-Nothing in it is a mockup. The dashboard segment crossfades four real tabs — Overview,
-Candidates, **Gate**, Tasks — captured from the committed
-[`run_full`](examples/tau2_airline/run_full/): baseline **53.6% → 71.2%**, 5 accepted and 5
-rejected, sealed test **69.4%**. The Gate tab is the one worth pausing on: it shows every
-candidate's Δ, standard error, n, and the bar it had to clear.
-
-`watch` and `replay` render the same projection the dashboard does (`events.jsonl` →
-`reduce_run`), so the terminal and the browser can never disagree about what happened.
-Piped or non-TTY output falls back to a plain line log, and `run --tui` leaves stdout
-byte-identical so scripts can still parse it as JSON.
 
 ## The dashboard
 
