@@ -131,9 +131,35 @@ def redact(obj):
 # Reducer
 # ---------------------------------------------------------------------------
 
-def _read_jsonl(path: Path) -> list[dict]:
+def _safe_subpath(base, *parts) -> Path | None:
+    """``base`` joined with ``parts``, proven to stay *inside* ``base``, else ``None``.
+
+    Every filesystem path this module builds goes through here. The run dir arrives
+    from a caller — the dashboard backend resolves it from an HTTP path segment — and
+    several of the segments joined onto it come from the run's own artifacts (a
+    candidate id in the event log, a ``slug:`` in wiki front matter), so containment is
+    proven *here*, locally and visibly, instead of being trusted from a resolver two
+    modules away. ``realpath`` collapses ``..`` and resolves symlinks first, so a
+    ``rollouts`` symlink pointing out of the run dir is refused just like ``../../etc``.
+
+    ``None`` means "escapes the base"; every call site treats that as "not there".
+    """
+    base_dir = os.path.realpath(base) + os.sep
+    p = os.path.realpath(os.path.join(base_dir, *(str(x) for x in parts)))
+    if not p.startswith(base_dir):
+        return None
+    return Path(p)
+
+
+def _exists_in(base, *parts) -> bool:
+    """Does ``base/*parts`` exist *and* stay inside ``base``? (An escape is "no".)"""
+    p = _safe_subpath(base, *parts)
+    return p is not None and p.exists()
+
+
+def _read_jsonl(path: Path | None) -> list[dict]:
     out = []
-    if path.exists():
+    if path is not None and path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line:
@@ -144,8 +170,8 @@ def _read_jsonl(path: Path) -> list[dict]:
     return out
 
 
-def _read_json(path: Path) -> dict:
-    if path.exists():
+def _read_json(path: Path | None) -> dict:
+    if path is not None and path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
@@ -199,7 +225,7 @@ def _val_per_task_file(root: Path) -> dict:
                     fb[str(k)] = v["feedback"]
         return per, fb
 
-    raw = _read_json(root / "val_per_task.json")
+    raw = _read_json(_safe_subpath(root, "val_per_task.json"))
     out = {}
     for tag, rec in (raw.items() if isinstance(raw, dict) else ()):
         if not isinstance(rec, dict):
@@ -221,8 +247,8 @@ def _trials_for(run_dir, tag: str, split: str) -> int:
     ``harness.evaluate_candidate``); the trial count is ``max(k)+1`` over the files
     of a single task. Returns 0 when no rollouts were persisted (synthetic logs).
     """
-    vdir = Path(run_dir.rollouts) / split
-    if not vdir.exists():
+    vdir = _safe_subpath(run_dir.rollouts, split)
+    if vdir is None or not vdir.exists():
         return 0
     best = 0
     seen_task = None
@@ -250,7 +276,8 @@ def _trials_from_per_task(per_task: list) -> int:
 
 def _git_log(root: Path) -> list[dict]:
     """One row per iteration commit from the run dir's git store (empty if none)."""
-    if not (root / ".git").exists() or not shutil.which("git"):
+    gitdir = _safe_subpath(root, ".git")
+    if gitdir is None or not gitdir.exists() or not shutil.which("git"):
         return []
     try:
         r = subprocess.run(
@@ -316,9 +343,9 @@ def _algorithm_from_spec(root: Path) -> str | None:
     and is real evidence — read, never guessed. Flat ``key: value`` only, matching the
     zero-dependency reader the rest of the codebase uses.
     """
-    for spec in (root.parent / "project" / "capevolve.yaml",
-                 root / "capevolve.yaml"):
-        if not spec.is_file():
+    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
+                 _safe_subpath(root, "capevolve.yaml")):
+        if spec is None or not spec.is_file():
             continue
         try:
             for line in spec.read_text(encoding="utf-8").splitlines():
@@ -384,8 +411,9 @@ def _budget_exhausted(budget, spent) -> str | None:
 
 def _orchestration_mode(root: Path) -> str | None:
     """``orchestration_mode`` from the sibling project spec (``agent`` / ``deterministic``)."""
-    for spec in (root.parent / "project" / "capevolve.yaml", root / "capevolve.yaml"):
-        if not spec.is_file():
+    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
+                 _safe_subpath(root, "capevolve.yaml")):
+        if spec is None or not spec.is_file():
             continue
         try:
             for line in spec.read_text(encoding="utf-8").splitlines():
@@ -547,11 +575,12 @@ def _read_evograph(root: Path) -> dict:
     graph a first-class panel of the one dashboard instead of an embedded foreign app.
     Returns ``{}`` when the run is not an evograph run.
     """
-    wiki = root / "wiki"
-    if not wiki.is_dir():
+    wiki = _safe_subpath(root, "wiki")
+    if wiki is None or not wiki.is_dir():
         return {}
+    rdir = _safe_subpath(wiki, "results")
     rounds = []
-    for f in sorted((wiki / "results").glob("*.json")) if (wiki / "results").is_dir() else []:
+    for f in sorted(rdir.glob("*.json")) if rdir is not None and rdir.is_dir() else []:
         d = _read_json(f)
         if not d:
             continue
@@ -568,17 +597,19 @@ def _read_evograph(root: Path) -> dict:
             "cost_usd": d.get("cost_usd"),
         })
     weaknesses = []
-    wdir = wiki / "weaknesses"
-    if wdir.is_dir():
+    wdir = _safe_subpath(wiki, "weaknesses")
+    if wdir is not None and wdir.is_dir():
         for f in sorted(wdir.glob("*.md")):
             try:
                 fm = _front_matter(f.read_text(encoding="utf-8"))
             except OSError:
                 continue
             fm.setdefault("slug", f.stem)
-            sol_dir = wiki / "solutions" / str(fm.get("slug"))
+            # ``slug`` is front matter an agent wrote — a traversal vector, not a name
+            # we chose. _safe_subpath refuses anything that leaves wiki/solutions/.
+            sol_dir = _safe_subpath(wiki, "solutions", str(fm.get("slug")))
             fm["num_solutions"] = (len([p for p in sol_dir.iterdir() if p.is_dir()])
-                                   if sol_dir.is_dir() else 0)
+                                   if sol_dir is not None and sol_dir.is_dir() else 0)
             weaknesses.append({k: (_sanitize_text(v, 400) if isinstance(v, str) else v)
                                for k, v in fm.items()})
     if not rounds and not weaknesses:
@@ -589,9 +620,9 @@ def _read_evograph(root: Path) -> dict:
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
-    events = _read_jsonl(root / "events.jsonl")
-    baseline = _read_json(root / "baseline.json")
-    final = _read_json(root / "final.json")
+    events = _read_jsonl(_safe_subpath(root, "events.jsonl"))
+    baseline = _read_json(_safe_subpath(root, "baseline.json"))
+    final = _read_json(_safe_subpath(root, "final.json"))
 
     per_task_file = _val_per_task_file(root)
 
@@ -611,9 +642,11 @@ def reduce_run(run_dir) -> dict:
                      if e.get("kind") == "run_config" and e.get("algorithm")), None)
     algorithm = cfg_algo or _infer_algorithm(kinds)
     algorithm_source = "run_config" if cfg_algo else ("events" if algorithm else None)
-    if algorithm is None or (root / "wiki").is_dir():
+    wiki_dir = _safe_subpath(root, "wiki")
+    has_wiki = wiki_dir is not None and wiki_dir.is_dir()
+    if algorithm is None or has_wiki:
         from_spec = _algorithm_from_spec(root)
-        if (root / "wiki").is_dir():
+        if has_wiki:
             algorithm, algorithm_source = "evograph", "run-dir wiki/"
         elif from_spec:
             algorithm, algorithm_source = from_spec, "capevolve.yaml"
@@ -1184,8 +1217,8 @@ def reduce_run(run_dir) -> dict:
     # fixed/regressed, which is the whole reason to look at a screen at all. Both were
     # written to the run dir and neither was ever read.
     screen_files = {}
-    sdir = root / "screens"
-    if sdir.is_dir():
+    sdir = _safe_subpath(root, "screens")
+    if sdir is not None and sdir.is_dir():
         for f in sorted(sdir.glob("*.json")):
             d = _read_json(f)
             if d:
@@ -1235,8 +1268,8 @@ def reduce_run(run_dir) -> dict:
         "gate": bool(gate_decisions),
         "cost": bool(ledger),
         "log": bool(log_rows),
-        "trajectories": Path(run_dir.rollouts).exists(),
-        "diffs": Path(run_dir.candidates).exists(),
+        "trajectories": _exists_in(root, "rollouts"),
+        "diffs": _exists_in(root, "candidates"),
         "minibatch": "minibatch" in algo_extra,
         "gepa": "gepa" in algo_extra,
         "skillopt": "skillopt" in algo_extra,
@@ -1378,8 +1411,9 @@ def build_diffs(run_dir, graph: dict) -> dict:
         nid, parent = n["id"], n.get("parent")
         if not parent:
             continue
-        cdir, pdir = cand_root / nid, cand_root / parent
-        if not cdir.exists() or not pdir.exists():
+        # nid/parent are candidate ids read out of the event log, not names we chose.
+        cdir, pdir = _safe_subpath(cand_root, nid), _safe_subpath(cand_root, parent)
+        if cdir is None or pdir is None or not cdir.exists() or not pdir.exists():
             continue
         cf, pf = _read_dir_files(cdir), _read_dir_files(pdir)
         file_diffs = []
@@ -1423,9 +1457,13 @@ def write_dashboard(run_dir) -> Path:
     """Reduce + render + write ``dashboard.html`` next to the run state."""
     reduced = reduce_run(run_dir)
     html_text = render_html(reduced, run_dir)
-    out = Path(run_dir.root) / "dashboard.html"
+    out = _safe_subpath(run_dir.root, "dashboard.html")
+    if out is None:  # only reachable if dashboard.html is a symlink out of the run dir
+        raise ValueError(f"dashboard.html escapes the run dir: {run_dir.root}")
     out.write_text(html_text, encoding="utf-8")
-    return out
+    # Write through the proven path, but hand back the caller's own (possibly relative)
+    # spelling of it: `cap-evolve run` prints this in its JSON and compares runs by it.
+    return Path(run_dir.root) / "dashboard.html"
 
 
 # ---------------------------------------------------------------------------
