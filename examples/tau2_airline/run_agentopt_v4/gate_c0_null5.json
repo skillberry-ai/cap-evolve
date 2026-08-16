@@ -1,0 +1,29 @@
+{
+  "current": {
+    "tag": "seed",
+    "reward": 0.5666666666666667,
+    "stderr": 0.11795821893425407
+  },
+  "candidate": {
+    "tag": "c0_null5",
+    "reward": 0.4666666666666666,
+    "stderr": 0.12497474492347192,
+    "coverage": 1.0
+  },
+  "gate": {
+    "accept": false,
+    "reason": "paired \u0394\u0304=-0.1000 <= 0.2\u00b7SE=0.0126 (SE=0.0628, n=12)",
+    "delta": -0.09999999999999999,
+    "threshold": 0.012552918289216959,
+    "indecisive": false
+  },
+  "paired_n": 12,
+  "regressions": [
+    "12",
+    "20",
+    "40",
+    "8"
+  ],
+  "verdict": "reject",
+  "next": "scripts/commit.py --decision reject"
+}

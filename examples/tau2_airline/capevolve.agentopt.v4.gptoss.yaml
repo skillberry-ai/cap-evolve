@@ -1,0 +1,102 @@
+# AGENT-OPTIMIZE spec v4 — tau2-bench airline on gpt-oss-120b, num_trials: 5.
+# The FOURTH attempt on this benchmark. v1/v2/v3 were honest null results; v3 proved the
+# cause is measurement power, not the edits (docs/RESULTS.md). This spec differs from
+# capevolve.agentopt.gptoss.yaml in EXACTLY ONE substantive field: num_trials 1 -> 5.
+# Reproduce with:
+#
+#   cp examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml .capevolve/project/
+#   cp examples/tau2_airline/agentopt_split.json .capevolve/project/
+#   export TAU2_AGENT_MODEL=aws/gpt-oss-120b TAU2_USER_MODEL=aws/gpt-oss-120b
+#   export CAPEVOLVE_SKILLS_DIR="$PWD/skills" PYTHONPATH="$PWD/.capevolve/project/adapters"
+#   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.v4.gptoss.yaml \
+#          --project .capevolve/project --dashboard off
+#
+# TAU2_AGENT_MODEL / TAU2_USER_MODEL are REQUIRED: adapters/rits.py otherwise falls back to
+# the RITS default and demands RITS_API_KEY. (This was the reproducibility gap recorded for
+# the previous run; it is stated here rather than left to be rediscovered.)
+#
+# AGENT-OPTIMIZE spec — tau2-bench airline, driven by skills/algorithms/agent-optimize.
+#
+# Differences from capevolve.yaml (which is a deterministic hill-climb, no-holdout fit):
+#   * orchestration_mode: agent  → `cap-evolve run` does check + baseline, prints a
+#     handoff with the run_dir, and RETURNS. The conversational agent then drives the
+#     loop from SKILL.md (subset screen → full-val paired gate → commit → measure).
+#   * a REAL HOLDOUT split (agentopt_split.json): train/val/test are disjoint, so the
+#     sealed test number is generalisation and not a fit metric. Ids are assigned by
+#     index stride (val = 0,4,8…; test = 1,5,9…; train = the rest) so the three splits
+#     draw uniformly from the task list — the cheapest available defence against the
+#     split-difficulty mismatch a previous run hit (val 0.75, test 0.25 on 12+8 ids).
+#   * agent + user simulator run on aws/gpt-oss-120b through the IBM litellm PROXY
+#     (TAU2_AGENT_MODEL / TAU2_USER_MODEL, handled by adapters/rits.py). NOTE: the proxy
+#     does NOT meter cost, so max_usd is unenforceable on this path — max_iterations and
+#     stall are the real ceilings, and spend.py says so via runner_spend_metered: false.
+#
+# Do NOT repoint capevolve.yaml / capevolve.itest.yaml / capevolve.smoke.yaml at this —
+# CI asserts on their contents.
+
+capabilities: [system-prompt, tools]     # optimize the airline POLICY and the TOOLS jointly
+capability_path: seed_capability
+actions: [edit]
+capability_sources: [seed_capability/reference/data_model.py]
+
+# --- who drives ------------------------------------------------------------
+orchestration_mode: agent                # the conversational agent owns the search
+algorithm_skill: agent-optimize          # algorithms/agent-optimize (agent-mode only)
+
+# The optimizer in agent mode is the agent itself (and the subagents it fans out), so
+# these are informational: no per-iteration optimizer subprocess is spawned. They are
+# kept so `cap-evolve run --plan-only` and the estimator still describe the run.
+optimizer_skill: claude-code
+optimizer_model: aws/claude-opus-5
+optimizer_max_turns: 120
+optimizer_usd_per_iter: 6.0
+
+target_model: aws/gpt-oss-120b            # the agent+user-sim under optimization (normalized by adapters/rits.py)
+
+# --- data + splits ---------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.52
+split_val: 0.24
+split_test: 0.24
+split_ids_file: agentopt_split.json      # train 26 / val 12 / test 12, DISJOINT
+
+# --- scoring ---------------------------------------------------------------
+# 5 trials — THE ONE CHANGE vs capevolve.agentopt.gptoss.yaml, and the whole point of v4.
+# v3 measured a byte-identical copy of the seed through this exact gate and the gate
+# REJECTED it at Δ̄ = −0.0833 (docs/RESULTS.md, "third null result"). Four capabilities
+# functionally identical to the seed measured val 0.7500 / 0.6667 / 0.5833 / 0.4167 —
+# mean 0.6042, SD 0.1423, a spread of 4 of 12 tasks. One val task is worth 1/12 = 0.0833,
+# so run-to-run noise was 1.7x a single task flip and NO edit of any quality was
+# detectable. Averaging n trials shrinks that noise by sqrt(n):
+#     num_trials=1  noise 0.1423   1-task gain? no    2-task? no
+#     num_trials=5  noise 0.0636   no                 YES
+#     num_trials=10 noise 0.0450   marginal           YES
+# 5 is the cheapest setting that can detect a 2-task gain. gate_mode / gate_k_se are
+# UNCHANGED from v3 on purpose: the bar was never the problem, the measurement was.
+# pass^k is DEFINED here (trials > 1), unlike v3.
+num_trials: 5
+
+# --- acceptance gate -------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget ----------------------------------------------------------------
+max_iterations: 8
+stall: 5   # v3: raised from 3 — the v2 run spent only 3 of 8 iterations because stall fired first
+max_metric_calls: 600   # v4: rollouts are the real budget unit (proxy is UNMETERED); 5 trials x 12 val = 60 per candidate
+max_usd: 55.0
+max_optimizer_usd: 40.0
+
+# --- the free-text stop condition the agent re-reads every round -----------
+# scripts/spend.py parses this into checkable predicates (target_val_score, max_usd,
+# max_wallclock_seconds, max_stall) and re-checks them against the run dir's persisted
+# spend; the prose is kept verbatim alongside.
+# The RUN GOAL for the gpt-oss-120b run is TRAIN mean >= 0.90 (a fit target, tracked by
+# hand via `measure.py --train on --skip-test`). It is deliberately NOT in the prose:
+# spend.py only ever checks a score goal against FULL VAL, so writing "train mean >= 0.9"
+# here would be silently enforced as a val check. constraints.parse_constraints now
+# flags a train/test-qualified score goal as ambiguous rather than coercing it.
+stop_condition: "reach val mean >= 0.95, or stop after 600 rollouts or 300 minutes or 5 rejects in a row; don't regress task 0"
+
+store: copy

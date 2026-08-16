@@ -34,17 +34,35 @@ EPS = 1e-9
 
 
 def regressions(current, candidate) -> list[str]:
-    """Val tasks whose reward strictly DROPPED, over tasks both sides measured.
+    """Val tasks the current best measured-and-PASSED that got worse.
 
-    Mirrors the harness's no-regression rule exactly: tasks with no valid trial on
-    either side are missing data, not evidence, so an infra outage can't veto a
-    genuinely better candidate.
+    Mirrors ``harness._movement`` exactly -- the parent must have scored a full 1.0
+    (``par >= 1.0 - EPS``), which is what SKILL.md means by "measured-and-passed".
+    Tasks with no valid trial on either side are missing data, not evidence, so an
+    infra outage can't veto a genuinely better candidate.
+
+    This USED to veto on any strict drop from any parent level, which silently made
+    agent-optimize's gate stricter than every other algorithm's -- and uniquely
+    broken at num_trials > 1. At 1 trial rewards are 0/1 so the two rules coincide.
+    Above that, a per-task reward is a fraction and the parent's is frozen from one
+    draw, so a task whose true rate is 0.45 but which drew 4/5 vetoes almost any
+    re-measurement of the SAME capability. Measured on the v4 val rates,
+    P(veto fires on a byte-identical seed copy):
+
+        trials   any-drop (old)   parent-passed (this rule, == harness)
+             1            0.889                                  0.889
+             5            0.983                                  0.428
+            10            0.990                                  0.129
+
+    The old rule got WORSE as trials rose, so no trial count could fix it; the
+    harness rule converges, which is the behaviour a variance-aware gate must have.
     """
     cur = {pt["task_id"]: pt.get("reward", 0.0) for pt in (current.per_task or [])
            if has_valid_trials(pt)}
     cand = {pt["task_id"]: pt.get("reward", 0.0) for pt in (candidate.per_task or [])
             if has_valid_trials(pt)}
-    return sorted(t for t, pr in cur.items() if t in cand and cand[t] < pr - EPS)
+    return sorted(t for t, pr in cur.items()
+                  if t in cand and pr >= 1.0 - EPS and cand[t] < pr - EPS)
 
 
 def main(argv=None) -> int:

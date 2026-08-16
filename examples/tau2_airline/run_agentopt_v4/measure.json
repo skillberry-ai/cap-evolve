@@ -1,0 +1,185 @@
+{
+  "run_dir": ".capevolve/run_agentoptv4",
+  "seed_id": "seed",
+  "best_id": "seed",
+  "no_accepted_change": true,
+  "n_trials": 5,
+  "gate": {
+    "mode": "paired",
+    "k_se": 0.2
+  },
+  "holdout": {
+    "n_train": 26,
+    "n_val": 12,
+    "n_test": 12,
+    "test_overlaps_train": 0,
+    "test_overlaps_val": 0,
+    "val_overlaps_train": 0,
+    "test_is_held_out": true,
+    "verdict": "TEST IS HELD OUT: the test column measures generalisation."
+  },
+  "splits": [
+    {
+      "split": "val",
+      "seed": {
+        "reward": 0.566667,
+        "stderr": 0.117958,
+        "n_scored": 12,
+        "n_tasks": 12,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5666666666666667,
+          "2": 0.4166666666666667
+        }
+      },
+      "best": {
+        "reward": 0.566667,
+        "stderr": 0.117958,
+        "n_scored": 12,
+        "n_tasks": 12,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5666666666666667,
+          "2": 0.4166666666666667
+        }
+      },
+      "mean_delta_unpaired": 0.0,
+      "paired": {
+        "n": 12,
+        "mean_delta": 0.0,
+        "se": 0.0,
+        "improved": 0,
+        "regressed": 0
+      },
+      "gate": {
+        "accept": false,
+        "reason": "paired \u0394\u0304=+0.0000 <= 0 (SE=0 \u2192 STRICT fallback, warned; n=12)",
+        "delta": 0.0,
+        "threshold": 0.0,
+        "indecisive": false
+      }
+    },
+    {
+      "split": "train",
+      "seed": {
+        "reward": 0.530769,
+        "stderr": 0.081792,
+        "n_scored": 26,
+        "n_tasks": 26,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5307692307692308,
+          "2": 0.3961538461538462
+        }
+      },
+      "best": {
+        "reward": 0.530769,
+        "stderr": 0.081792,
+        "n_scored": 26,
+        "n_tasks": 26,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5307692307692308,
+          "2": 0.3961538461538462
+        }
+      },
+      "mean_delta_unpaired": 0.0,
+      "paired": {
+        "n": 26,
+        "mean_delta": 0.0,
+        "se": 0.0,
+        "improved": 0,
+        "regressed": 0
+      },
+      "gate": {
+        "note": "no gate on train: acceptance is val-only (gate.decide refuses any other split)"
+      },
+      "rollouts_reused": {
+        "seed": false,
+        "best": false
+      }
+    },
+    {
+      "split": "test",
+      "seed": {
+        "reward": 0.5,
+        "stderr": 0.125378,
+        "n_scored": 12,
+        "n_tasks": 12,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5,
+          "2": 0.375
+        }
+      },
+      "best": {
+        "reward": 0.5,
+        "stderr": 0.125378,
+        "n_scored": 12,
+        "n_tasks": 12,
+        "coverage": 1.0,
+        "pass_k": {
+          "1": 0.5,
+          "2": 0.375
+        }
+      },
+      "mean_delta_unpaired": 0.0,
+      "paired": {
+        "n": 12,
+        "mean_delta": 0.0,
+        "se": 0.0,
+        "improved": 0,
+        "regressed": 0
+      },
+      "gate": {
+        "note": "no gate on test: acceptance is val-only (gate.decide refuses any other split)"
+      },
+      "test_delta": 0.0,
+      "status": "sealed now (once)"
+    }
+  ],
+  "val_per_task_movement": {
+    "fixed": [],
+    "broke": [],
+    "unchanged": [
+      "0",
+      "12",
+      "16",
+      "20",
+      "24",
+      "28",
+      "32",
+      "36",
+      "4",
+      "40",
+      "44",
+      "8"
+    ],
+    "unpaired": []
+  },
+  "spent": {
+    "iterations": 5,
+    "metric_calls": 550,
+    "usd": 0.0,
+    "stall": 5,
+    "runner_tokens": 0,
+    "runner_seconds": 10338.184892654419,
+    "optimizer_seconds": 1800.0,
+    "optimizer_usd": 0.0,
+    "optimizer_tokens": 0,
+    "intake_usd": 0.0,
+    "intake_tokens": 0,
+    "intake_seconds": 0.0
+  },
+  "screen_ledger": {
+    "screens": 0,
+    "kills": 0,
+    "promotes": 0,
+    "rollouts_fired_by_screens": 0,
+    "rollouts_avoided_by_kills": 0,
+    "net_rollouts": 0,
+    "screen_usd": 0,
+    "note": "net_rollouts > 0 means the ladder paid for itself; <= 0 means every candidate was promoted, so screening was pure overhead this run"
+  },
+  "warning": "best_id == 'seed': nothing cleared the val gate, so every delta below is 0 by construction. Report this as a null result with a diagnosed cause, not as a 0.000 improvement."
+}

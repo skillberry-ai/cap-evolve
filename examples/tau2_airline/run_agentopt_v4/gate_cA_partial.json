@@ -1,0 +1,26 @@
+{
+  "current": {
+    "tag": "seed",
+    "reward": 0.5666666666666667,
+    "stderr": 0.11795821893425407
+  },
+  "candidate": {
+    "tag": "cA_partial",
+    "reward": 0.5833333333333334,
+    "stderr": 0.12841300163884883,
+    "coverage": 1.0
+  },
+  "gate": {
+    "accept": true,
+    "reason": "paired \u0394\u0304=+0.0167 > 0.2\u00b7SE=0.0134 (SE=0.0672, n=12)",
+    "delta": 0.016666666666666663,
+    "threshold": 0.013446489534747752,
+    "indecisive": false
+  },
+  "paired_n": 12,
+  "regressions": [
+    "8"
+  ],
+  "verdict": "reject",
+  "next": "scripts/commit.py --decision reject"
+}

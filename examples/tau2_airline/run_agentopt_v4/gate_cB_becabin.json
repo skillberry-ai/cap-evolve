@@ -1,0 +1,28 @@
+{
+  "current": {
+    "tag": "seed",
+    "reward": 0.5666666666666667,
+    "stderr": 0.11795821893425407
+  },
+  "candidate": {
+    "tag": "cB_becabin",
+    "reward": 0.5833333333333334,
+    "stderr": 0.1337587908939601,
+    "coverage": 1.0
+  },
+  "gate": {
+    "accept": true,
+    "reason": "paired \u0394\u0304=+0.0167 > 0.2\u00b7SE=0.0159 (SE=0.0796, n=12)",
+    "delta": 0.01666666666666666,
+    "threshold": 0.015922793521720793,
+    "indecisive": false
+  },
+  "paired_n": 12,
+  "regressions": [
+    "32",
+    "40",
+    "8"
+  ],
+  "verdict": "reject",
+  "next": "scripts/commit.py --decision reject"
+}

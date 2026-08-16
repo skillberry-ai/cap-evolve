@@ -32,17 +32,31 @@ for split in ("train", "val", "test"):
     d = run / "rollouts" / split
     if not d.is_dir():
         continue
-    out: dict = {}
+    # trials > 1 writes one rollout file PER TRIAL (…__t0/__t1/…). Keying only by task
+    # would silently keep whichever trial sorted last and throw the rest away, so the
+    # exported `reward` would not be the number the gate saw. Collect every trial, then
+    # report `reward` as the mean over trials and keep the raw vector in `trials`.
+    acc: dict = {}
     for f in sorted(d.glob("*__*__t*.json")):
         parts = f.name[:-len(".json")].split("__")
-        task, tag = parts[0], "__".join(parts[1:-1])
+        task, tag, trial = parts[0], "__".join(parts[1:-1]), parts[-1]
         rec = json.loads(f.read_text(encoding="utf-8"))
         sc = rec.get("score") or {}
-        out.setdefault(tag, {})[task] = {
-            "reward": sc.get("reward"),
-            "errored": bool((rec.get("rollout") or {}).get("error")),
-            "feedback": (sc.get("feedback") or "")[:600],
-        }
+        acc.setdefault(tag, {}).setdefault(task, []).append(
+            (trial, sc.get("reward"), bool((rec.get("rollout") or {}).get("error")),
+             (sc.get("feedback") or "")[:600])
+        )
+    out: dict = {}
+    for tag, tasks in acc.items():
+        for task, rows in tasks.items():
+            rows.sort(key=lambda r: r[0])
+            vals = [r[1] for r in rows if isinstance(r[1], (int, float))]
+            out.setdefault(tag, {})[task] = {
+                "reward": (sum(vals) / len(vals)) if vals else None,
+                "trials": [r[1] for r in rows],
+                "errored": any(r[2] for r in rows),
+                "feedback": rows[0][3],
+            }
     if out:
         (dest / f"{split}_per_task.json").write_text(json.dumps(out, indent=2, sort_keys=True),
                                                      encoding="utf-8")

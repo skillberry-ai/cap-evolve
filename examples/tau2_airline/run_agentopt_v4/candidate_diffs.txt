@@ -1,0 +1,25 @@
+===== cA_partial :: policy/policy.md =====
+--- .capevolve/run_agentoptv4/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv4/candidates/cA_partial/policy/policy.md	2026-08-16 07:08:51
+@@ -14,6 +14,8 @@
+ 
+ You should transfer the user to a human agent if and only if the request cannot be handled within the scope of your actions. To transfer, first make a tool call to transfer_to_human_agents, and then send the message 'YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.' to the user.
+ 
++A user often asks for several things in one message. Before you transfer, check every part of the request separately: if this policy bars one part, say so plainly and refuse that part, then carry out the parts this policy does permit. Transfer only when no remaining part of the request can be carried out with your tools under this policy, or when the user asks for a human. Refusing a barred part is never a reason to stop working on the rest, and this paragraph never authorises an action this policy forbids.
++
+ ## Domain Basic
+ 
+ ### User
+
+===== cB_becabin :: policy/policy.md =====
+--- .capevolve/run_agentoptv4/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv4/candidates/cB_becabin/policy/policy.md	2026-08-16 07:09:10
+@@ -114,6 +114,7 @@
+ 
+ Change cabin: 
+ - Cabin cannot be changed if any flight in the reservation has already been flown.
++- Because a cabin change is allowed on a basic economy reservation while a flight change is not, a basic economy passenger who needs different flights can be helped in two steps: first change the cabin to economy or business (same flights), which makes the reservation no longer basic economy, and then change the flights on it. Before offering this, verify from the reservation that **no** flight in it has a date at or before the current time — if any segment has already been flown, neither step is permitted and the flights cannot be changed at all. Offer the two steps only when the user wants a flight change that basic economy blocks, list the price difference, and take each step only after the user confirms with yes.
+ - In other cases, all reservations, including basic economy, can change cabin without changing the flights.
+ - Cabin class must remain the same across all the flights in the same reservation; changing cabin for just one flight segment is not possible.
+ - If the price after cabin change is higher than the original price, the user is required to pay for the difference.
+

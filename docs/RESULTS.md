@@ -174,6 +174,202 @@ no-holdout run).
 
 ---
 
+## τ²-Bench airline — `agent-optimize` on `gpt-oss-120b`, disjoint 26/12/12, `num_trials: 5` — **fourth null result; trial-averaging fixed the significance test and the no-regression veto became the blocker**
+
+Fourth attempt on the same benchmark, split and models. v3 had established that at
+`num_trials: 1` a byte-identical copy of the seed measured paired **Δ̄ = −0.0833** and was
+rejected, so no edit of any quality could be detected. v4 changed **exactly one
+substantive spec field** — `num_trials: 1 → 5` — leaving `gate_mode: paired` and
+`gate_k_se: 0.2` untouched, because the bar was never the problem. **Nothing cleared the
+gate.** What v4 adds is the measurement that says *why*, and this time the cause is a
+different one from v3's.
+
+- **Spec:** [`examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml`](../examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml)
+  — a copy of `capevolve.agentopt.gptoss.yaml` with `num_trials: 5`, `max_metric_calls: 600`
+  and a rollout-denominated `stop_condition` (the proxy does not meter dollars).
+- **Agent + user simulator:** `aws/gpt-oss-120b` via the IBM litellm proxy. **Optimizer:**
+  `aws/claude-opus-5` (the conversational agent itself).
+- **Split:** disjoint **26 train / 12 val / 12 test** (`agentopt_split.json`), `paired`,
+  `k_se 0.2`, **`num_trials: 5`** — so `pass^k` is defined here, unlike v3.
+- **Cost:** **550 rollouts** (360 in the loop + 130 train + 60 sealing test), 5 gated
+  candidates, **158 min** wallclock / 172 min runner time. Dollars remain **UNMETERED**
+  (`usd: 0.0` is missing data; `spend.py` reports `runner_spend_metered: false`), so the
+  budget unit is rollout counts.
+- Artifacts, including `events.jsonl`, the five per-candidate gate verdicts, and the two
+  analysis scripts, in [`run_agentopt_v4/`](../examples/tau2_airline/run_agentopt_v4/).
+
+### The result table
+
+| split | n | trials | seed | best (`= seed`) | paired Δ̄ | pass^1 | pass^2 |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| train (never gated; diagnosis surface) | 26 | 5 | 0.5308 ± 0.0818 | 0.5308 ± 0.0818 | 0.0 | 0.5308 | 0.3962 |
+| val (the gate) | 12 | 5 | 0.5667 ± 0.1180 | 0.5667 ± 0.1180 | 0.0 | 0.5667 | 0.4167 |
+| **test** (sealed once) | 12 | 5 | **0.5000 ± 0.1254** | 0.5000 ± 0.1254 | 0.0 | 0.5000 | 0.3750 |
+
+Every `0.0` is **by construction** — `best_id == seed`, so `measure.py` scored one
+capability on both sides and emits that warning itself. **This is a null result with a
+diagnosed cause, not a 0.000 improvement.** The requested goal of train ≥ 0.90 was neither
+reached nor approached: train is 0.5308, and 0.90 on n=26 needs 24/26, i.e. fixing ~10 of
+the 12 failing train tasks while breaking none. That was never achievable in this run and
+is not claimed.
+
+### The headline: three null-edit controls at 5 trials
+
+v3 ran one null-edit control. v4 ran **three**, each a byte-identical copy of the seed
+(`diff -r` clean — and `candidate_diffs.txt` contains no entry for any of them, which is the
+artifact-level proof), each evaluated on full val at 5 trials and put through the same
+`gate_check.py`:
+
+| measurement of the SAME capability | val | paired Δ̄ vs the frozen seed | no-regression veto |
+|---|--:|--:|---|
+| `seed` (the gate's baseline) | 0.5667 | — | — |
+| `c0_null5` | 0.4667 | **−0.1000** | fired: 8, 12, 20, 40 |
+| `c0_null5b` | 0.5167 | **−0.0500** | fired: 8, 12, 32, 40 |
+| `c0_null5c` | 0.5667 | **−0.0000** | fired: 8, 40 |
+
+**Four measurements of one unchanged capability: mean 0.5292, SD 0.0479.** v3's four
+equivalent measurements at 1 trial were mean 0.6042, **SD 0.1423**. So trial-averaging
+worked: the per-eval spread fell **3.0×** (better than the √5 = 2.24 predicted, on 4 points
+each, so treat the ratio as approximate). Pooling all four evals gives the run's best
+estimate of the seed's val score, **0.5292 ± 0.1100 over 20 trials/task**.
+
+The significance half of the gate is now sound and its SE is *predictable*:
+[`noise_power.py`](../examples/tau2_airline/run_agentopt_v4/noise_power.py) derives, from
+the baseline's own measured per-task rates, that a null Δ̄ should have SD **0.0632** at 5
+trials — and the five gates measured SE 0.0628 / 0.0702 / 0.0696 / 0.0672 / 0.0796. The same
+formula gives 0.1414 at 1 trial, against v3's observed 0.1423. The model of the noise is
+right.
+
+But **`c0_null5c` is the finding.** It measured an *exactly equal* val mean to the seed —
+Δ̄ = −0.0000, the significance test cannot fault it — and the gate still **rejected** it,
+because two tasks' fractional rewards had dipped. That is the whole v4 result in one row.
+
+### Why nothing can be accepted: the veto reads the parent's upward noise as truth
+
+> **Correction, and it changes the conclusion.** The first version of this section said
+> `gate_check.py` and `harness` "both" define a regression as any strictly lower per-task
+> reward. They did **not**, and the difference is the whole bug:
+>
+> - `harness._candidate_task_impact` vetoes only `par[t] >= 1.0 - eps and cand[t] < par[t] - eps`
+>   — the parent must have measured-and-**passed**, which is what `SKILL.md:221` specifies.
+> - `gate_check.regressions` vetoed on **any** strict drop from **any** parent level, while
+>   its own docstring claimed to "mirror the harness's no-regression rule exactly".
+>
+> So the trap was specific to **agent-optimize's** gate, which was silently stricter than
+> every other algorithm's, and it did *not* apply to `hill-climb` / `gepa` / `skillopt`.
+> Simulated against this run's measured per-task val rates:
+>
+> | `num_trials` | any-drop (old `gate_check`) | parent-passed (`harness`, and now `gate_check`) |
+> |--:|--:|--:|
+> | 1 | 0.889 | 0.889 |
+> | 5 | **0.983** | 0.428 |
+> | 10 | **0.990** | 0.129 |
+>
+> The old rule got *worse* as trials rose, so no trial count could fix it. The harness rule
+> **converges**, which is the behaviour a variance-aware gate must have. `gate_check` has
+> been fixed to match, pinned by `core/tests/test_regression_gate.py`, which also asserts
+> the harness predicate's source text so the two cannot drift apart again.
+
+At `num_trials: 1` rewards are 0/1, so only real flips register. At 5 trials every reward is
+a fifth, so noise alone produces small drops — and the parent's reference vector is **frozen
+from a single 5-trial draw at baseline time**. Whichever tasks the baseline happened to
+over-measure become veto triggers for every later candidate.
+
+Val task 8 is the worked example: the baseline drew **4/5 = 0.80**; over the 15 later trials
+of the *same* capability (the three null controls) its rate is **5/15 = 0.33**, and its best
+estimate over all four unchanged evals is **9/20 = 0.45**. Task 8 therefore regressed in **all five** gates
+of this run — including all three byte-identical seed copies. (Honest limit: a Fisher exact
+test of the baseline window against the later windows gives p = 0.127 for task 8, so this is
+regression to the mean off a lucky draw, **not** a demonstrated drift over time. No val task
+showed a significant baseline-vs-later shift.)
+
+Simulating the veto against the measured per-task rates shows the trap closes as trials
+rise — the opposite direction from the significance test:
+
+| `num_trials` | SD of a null Δ̄ | P(no-regression veto fires on a NULL edit) |
+|--:|--:|--:|
+| 1 | 0.1414 | 0.80 |
+| 5 | 0.0632 | **0.95** |
+| 10 | 0.0447 | 0.97 |
+| 20 | 0.0316 | 0.98 |
+
+**Under the old any-drop rule no trial count could make this gate accept anything**: raising
+trials sharpened the significance test and simultaneously made the veto near-certain. With
+`gate_check` corrected to the harness rule, that specific trap is gone.
+
+#### But two bugs were cancelling, and the second one is now exposed
+
+Fixing the veto does **not** make this run's candidates acceptable — it reveals that the
+significance bar was never doing any work. At 5 trials:
+
+| quantity | value |
+|---|--:|
+| null-edit Δ̄ spread (SD of 4 measurements of the *same* capability) | **0.0479** |
+| the gate's bar at `gate_k_se: 0.2` | **0.0134** |
+| `cA_partial` / `cB_becabin` measured Δ̄ | +0.0167 |
+
+The bar sits **~3.6× below the noise floor**, so both real candidates "cleared significance"
+on a Δ̄ that is one sixth of the span the null controls span by chance. An over-strict veto
+was the only thing preventing false accepts, and it was rejecting byte-identical seeds to do
+it. Neither +0.0167 is evidence of improvement, and this run must not be read as one.
+
+What the numbers actually require, for anyone running a stochastic benchmark:
+
+- **`num_trials: 10`** — enough for a 2-task val gain (0.1667) to sit at >3 SD. A 1-task gain
+  needs `num_trials ≥ 26` (312 rollouts per candidate); a 3-task gain needs only 3.
+- **`gate_k_se` well above 0.2.** `gate_check`'s own default is 1.0; the tau2 agent-optimize
+  spec set 0.2, which on this benchmark is far inside the noise. It was deliberately **not**
+  changed here — loosening or tightening the bar to reach a desired verdict is precisely the
+  move this project exists to prevent, and the right value follows from a measured noise
+  floor, not from a target. The measurement now exists: k·SE should exceed ~0.05 at 5 trials,
+  i.e. k ≳ 1 on the paired SE this run observed.
+- **a no-regression tolerance** is still worth having for the harness rule at high trial
+  counts, though it is no longer the binding constraint (0.129 at 10 trials).
+
+### The two real candidates, and what they actually measured
+
+Both were narrow `policy.md` edits (diffs in `candidate_diffs.txt`), aimed at the two val
+tasks the pooled 20-trial estimate showed to be genuinely near-zero and therefore worth
+winning: task 24 (0.05) and task 32 (0.20).
+
+| candidate | val | paired Δ̄ | bar `0.2·SE` | veto | verdict |
+|---|--:|--:|--:|---|---|
+| `cA_partial` — a barred part of a multi-part request is not grounds for transfer: refuse that part, complete the rest | 0.5833 | +0.0167 | 0.0134 | fired: 8 | **reject** |
+| `cB_becabin` — a basic-economy flight change may go via a confirmed cabin change first, barred if any segment has flown | 0.5833 | +0.0167 | 0.0159 | fired: 8, 32, 40 | **reject** |
+
+Both cleared the significance bar and **neither is evidence of an improvement**: +0.0167 is
+one sixth of the spread the three null controls span (−0.1000 … −0.0000). Clearing a
+`0.2·SE` bar of 0.013 is not a meaningful test at this noise level. Per-task, the edits did
+essentially nothing to what they aimed at:
+
+- **`cA_partial` executed but missed.** `check_transfers.py` shows transfers on task 24 fell
+  2/5 → 1/5 and `book_reservation` was called on both sides, so the edit changed behaviour —
+  but task 24 stayed **0/5**. The v3 single-trial transcript this edit was designed from
+  ("agent transferred instead of booking") was **not representative**: at 5 trials task 24's
+  modal failure is a *wrong* `book_reservation` argument set, not abandonment. Diagnosing a
+  stochastic benchmark from one rollout produced a correct-looking edit aimed at the wrong
+  defect.
+- **`cB_becabin` moved its target the wrong way**, 0.20 → 0.00 on task 32, within the null
+  range (the controls gave 0.40 / 0.00 / 0.20 there). It did *not* break the paired case it
+  was scoped to protect: task 36, where refusing is correct because a segment has already
+  flown, held at 1.00 across all five trials.
+
+### Verified exclusions
+
+Both re-checked from rollouts rather than taken on trust: **val task 40** and **train task
+7** are user-simulator defects, not capability defects — the simulator answers the agent's
+confirmation request and appends `###STOP###` in the same turn, ending the episode before
+the agent can act (train task 7 also leaks a `<reasoning>` block into the user turn). Task
+40 is not, however, hopeless: at 5 trials it scores 0.20–0.40, so the defect is
+intermittent. Val tasks 24 (0.05) and 44 (0.00) are the genuinely stuck ones, and 44 is a
+five-reservation itinerary-arithmetic task that no one-paragraph rule will fix.
+
+No subset screen was run. At `val_n 12` the tier-1 floor of 6 tasks gives a breakeven kill
+rate of 0.5, and with two candidates a screen could not pay for itself; full val was paid
+directly for each.
+
+---
+
 ## τ²-Bench airline — `agent-optimize` on `gpt-oss-120b`, disjoint 26/12/12 — **third null result; the gate rejects a byte-identical copy of the seed**
 
 Third attempt on the same spec, split and models as the section below, built to convert
