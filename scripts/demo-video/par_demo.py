@@ -1,6 +1,7 @@
 """Measure framework eval parallelism: does it speed up, and does it stay honest?
 
-Recorded live by ``parallel.tape`` for the README demo video, and useful on its own as a
+A standalone parallelism check (it was once filmed for the demo video; that shot and
+its card are no longer in the cut). Useful on its own as a
 sanity check after touching ``harness.evaluate_candidate``.
 
 The adapter's reward is a pure function of (task, seed), so a parallel run MUST return a
@@ -77,9 +78,9 @@ def main() -> int:
                 and a.per_task == b.per_task and a.pass_k == b.pass_k
                 and a.n_scored == b.n_scored)
         print("identical SplitResult (workers=1 vs 8):", same)
-        # The demo video's speedup card is generated from this file, so the card
-        # can never quote a number the footage did not show. Best-effort: the
-        # script's own assertion is the point, not the video.
+        # Kept for anyone re-adding a parallelism shot; nothing in the demo video
+        # build reads this file any more. Best-effort: the script's own assertion
+        # is the point, not the json.
         out = Path("/tmp/video/par_results.json")
         try:
             out.parent.mkdir(parents=True, exist_ok=True)

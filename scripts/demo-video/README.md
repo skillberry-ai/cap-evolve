@@ -9,9 +9,10 @@ on screen, the exact copy, the exact voiceover, and the source of every number.
 truth — every duration, caption and narration line comes from there, so a card and its
 voiceover cannot drift apart.
 
-Output: **2560×1440, 89.5 s, 5.2 MB**, h264 + one mono AAC voiceover track, plus a `.srt`
-transcript. It is designed to be **fully comprehensible with the sound off**, because that
-is how GitHub autoplays it — the narration adds emphasis, never information.
+Output: **2560×1440, 84.8 s, 5.0 MB**, h264 + one mono AAC track (voiceover with a
+generated music bed mixed under it), plus a `.srt` transcript. It is designed to be **fully
+comprehensible with the sound off**, because that is how GitHub autoplays it — the narration
+and the music add emphasis, never information.
 
 ## Nothing here is mocked
 
@@ -21,13 +22,20 @@ is how GitHub autoplays it — the narration adds emphasis, never information.
 - The dashboard segment is Playwright driving real Chromium against the **running**
   dashboard, over the committed run dir `examples/tau2_airline/run_agentopt` — a real
   $12.98 τ²-bench run. That run is a **null result** (four candidates, none accepted), and
-  the shot says so in its lower-third and its voiceover. See STORYBOARD.md shot 6 for why
-  the older `run_full` static export is *not* filmed.
-- The parallel segment is `par_demo.py` measured live, on camera.
+  the shot says so in its own headline tiles (`BEST VAL … candidate seed`,
+  `Δ VAL VS BASELINE 0.000`, `VERDICTS 4 candidates · 0 accept · 4 reject`) and in its
+  voiceover. See STORYBOARD.md shot 6 for why the older `run_full` static export is *not*
+  filmed.
+
+**Footage carries no burned-in captions.** Both footage shots are shown clean; the old
+lower-third bands are removed. Nothing was lost, because each shot's own output states its
+caveat — and in the terminal shot's case the band used to sit *on top of* the renderer's own
+"makes no benchmark claim" banner. Under `ANIMATIC=1` a small red corner badge is still
+drawn on any stand-in segment.
 
 > The demo session's *numbers* are hand-authored and make **no benchmark claim** — the
-> lower-third says so, the renderer's own banner says so, and the voiceover says so. Real
-> measured results come from `docs/RESULTS.md`. The speedup is the one figure measured live.
+> renderer's own banner says so, on screen for the whole shot, and the voiceover says so.
+> Real measured results come from `docs/RESULTS.md`.
 
 ## Requirements
 
@@ -51,11 +59,10 @@ python3 -m venv /tmp/vidvenv
 
 ## Build
 
-Record the three footage segments (slow, so they are not part of `build.sh`):
+Record the two footage segments (slow, so they are not part of `build.sh`):
 
 ```bash
-PATH="$PWD/.venv/bin:$PATH" vhs scripts/demo-video/replay.tape     # -> /tmp/video/replay.mp4
-PATH="$PWD/.venv/bin:$PATH" vhs scripts/demo-video/parallel.tape   # -> parallel.mp4 (+ par_results.json)
+vhs scripts/demo-video/replay.tape                                 # -> /tmp/video/replay.mp4
 
 # the dashboard needs a server; the shipped cut films run_agentopt
 .venv/bin/cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open &
@@ -65,8 +72,13 @@ PATH="$PWD/.venv/bin:$PATH" vhs scripts/demo-video/parallel.tape   # -> parallel
 
 > **vhs framerate trap.** `Set Framerate 60` makes vhs stamp the mp4 60 fps while capturing
 > nearer 25, so the file comes out *half as long as the tape* and plays ~2× too fast to
-> read. Both tapes are 30 or default. If a re-recorded clip is suddenly too short for its
+> read. `replay.tape` sets 30. If a re-recorded clip is suddenly too short for its
 > `*_SEEK` window, check this first.
+
+> **`replay.tape` runs *this* checkout's CLI.** It defines `cap-evolve() { python -m
+> cap_evolve.cli "$@"; }` with `PYTHONPATH=core`, because a `cap-evolve` on `PATH` may well
+> belong to a different clone. It also exports `COLORTERM=truecolor`, which is what unlocks
+> the capybara mark in `core/cap_evolve/branding.py`.
 
 Then assemble, in one command:
 
@@ -77,13 +89,14 @@ cp /tmp/video/cap-evolve-demo.mp4 /tmp/video/cap-evolve-demo.srt docs/assets/dem
 
 `build.sh` draws the cards, synthesizes the voiceover, measures each line so no shot clips
 or ends in silence, renders one clip per shot, concatenates, mixes the audio onto the same
-timeline, and then **verifies** — video length vs planned, audio not overrunning video, and
-the 90 s budget. It **fails loudly** rather than quietly shipping a short video:
+timeline, and then **verifies** — video length vs planned, audio not overrunning video, no
+voiceover line clipped by its own shot or by the end of the cut, the music bed at least as
+long as the cut, and the 90 s budget. It **fails loudly** rather than quietly shipping a
+short video:
 
 - a missing footage segment is a fatal error naming the command that records it
-- `par_results.json` newer than `parallel.mp4` is a fatal error, because it would mean the
-  speedup card is quoting a different run than the footage shows
-- a `SplitResult` divergence reported by `par_demo.py` is a fatal error
+- a music bed shorter than the cut is a fatal error
+- a voiceover line that overruns its shot is a fatal error
 - a card whose shot id no longer exists cannot leave a stale PNG behind — cards are wiped
   and re-rendered every build
 
@@ -105,18 +118,20 @@ warns you.
 | Env var | Default | What it does |
 |---|---|---|
 | `ANIMATIC=1` | off | allows stand-in footage, and stamps every stand-in shot with a red `STAND-IN FOOTAGE — NOT FINAL` line naming what it is blocked on |
-| `TERM_SEEK` | 7.7 | where in `replay.mp4` the terminal shot starts — lands the window on the finished lineage |
+| `TERM_SEEK` | 0.6 | where in `replay.mp4` the terminal shot starts — the tape opens on the home screen, so it plays from the top |
 | `DASH_SEEK` | 1.6 | where in `dashboard.mp4` the dashboard shot starts |
-| `PAR_SEEK` | 13.5 | where in `parallel.mp4` `workers=8` lands and the identical-SplitResult line prints |
 | `OUTNAME` | `cap-evolve-demo.mp4` | output filename under `/tmp/video` |
 
 ## If you change the numbers
 
-Don't hand-edit a figure onto a card. The speedup card is *generated* from the measurement
-the camera filmed; every other number is quoted from `docs/RESULTS.md` and carries a
-`src_note` in `script.py` saying so. If a result changes, change `docs/RESULTS.md` and then
-the `src_note`-bearing entry in `script.py`. **A card that disagrees with its own footage is
-the one thing here worth failing a review over.**
+Don't hand-edit a figure onto a card. Every number is quoted from a named artifact and
+carries a `src_note` in `script.py` saying which one — `docs/RESULTS.md` for four of the five
+results rows, `site/assets/rh_swe_bench.png` for the RH-SWE-bench row. If a result changes,
+change the artifact and then the `src_note`-bearing entry in `script.py`. **A card that
+disagrees with its own source is the one thing here worth failing a review over.**
+
+Note the cards no longer print a grey provenance footer (removed from shot 3 onward by
+request), so `src_note` is now the *only* place the attribution lives. Keep it accurate.
 
 ## Why the cards look the way they do
 
@@ -124,7 +139,11 @@ the one thing here worth failing a review over.**
   as depth to the eye and as high-frequency noise to x264: the first cut of this video was
   16 MB, and 12 MB of that was a 3% zoom on still text. The animated opener and the live
   footage are where movement earns its bitrate.
-- **No music.** No royalty-free bed could be sourced without fetching third-party audio, and
-  a synthesized one sounded worse than silence. Shipped without; the voiceover carries the
-  audio track. If a cleanly-licensed bed turns up, mix it in `build.sh` step 5 at about
-  −26 dB.
+- **Music is generated, never downloaded.** [`music.py`](music.py) synthesises the bed with
+  the stdlib `wave` module: a slow four-chord pad (Am–F–G/C–Em, one chord per 8 s,
+  raised-cosine cross-fades, sine plus two quiet harmonics, a ~0.12 Hz tremolo, no
+  percussion). Nothing is fetched, so there is nothing to license or attribute, and the same
+  chord table always produces the same wav. `assets.py` renders it to the exact runtime and
+  caches on frame count; `build.sh` mixes it under the narration at `script.MUSIC_DB`
+  (**-20 dB**) with `MUSIC_FADE_IN` 2.5 s and `MUSIC_FADE_OUT` 3.5 s. Run
+  `music.py --check` for its self-check (length, no clipping, not silent, chords distinct).

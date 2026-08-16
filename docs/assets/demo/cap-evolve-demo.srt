@@ -3,45 +3,97 @@
 cap-evolve. Watch capability evolve.
 
 2
-00:00:04,150 --> 00:00:11,570
-A benchmark gives you one number. It won't tell you which policy rule was missing, or which tool let a bad call through. So you guess.
+00:00:04,150 --> 00:00:06,019
+A benchmark gives you one number.
 
 3
-00:00:12,270 --> 00:00:18,910
-cap-evolve edits what your agent reads: prompts, tool code, MCP surfaces, skill packages.
+00:00:06,019 --> 00:00:08,738
+It won't tell you which policy rule was missing,
 
 4
-00:00:19,610 --> 00:00:32,580
-Each iteration scores a candidate on validation, reads the failures, and proposes one edit. Accepted, rejected, or indecisive — always with the reason. This session is illustrative: its numbers are hand-authored.
+00:00:08,738 --> 00:00:10,834
+or which tool let a bad call through.
 
 5
-00:00:33,280 --> 00:00:43,150
-One real iteration: a policy rule, and in the same edit, code inside the tool that rejects the illegal call. Task fourteen went from one pass in ten, to six.
+00:00:10,834 --> 00:00:11,570
+So you guess.
 
 6
-00:00:43,850 --> 00:00:51,120
-The dashboard holds the whole run — every candidate, every dollar, and the gate's verdict. On this run the gate rejected all four.
+00:00:12,270 --> 00:00:17,778
+cap-evolve edits what your agent reads: prompts, tool code, MCP surfaces,
 
 7
-00:00:51,850 --> 00:01:03,350
-Here's what most optimizers skip. Acceptance is a paired significance test, on validation only: clear k standard errors, or it's noise. The test split is scored once, then sealed.
+00:00:17,778 --> 00:00:18,910
+skill packages.
 
 8
-00:01:04,050 --> 00:01:11,890
-On τ²-bench airline: fifty-three point six to seventy-one point two. Thirty to forty-seven point five, held out.
+00:00:19,610 --> 00:00:23,830
+Each iteration scores a candidate on validation, reads the failures,
 
 9
-00:01:12,590 --> 00:01:16,480
-The tasks-by-trials grid is parallel. Measured live, right here.
+00:00:23,830 --> 00:00:25,195
+and proposes one edit.
 
 10
-00:01:17,590 --> 00:01:19,730
-Eight workers, identical result.
+00:00:25,195 --> 00:00:28,857
+Accepted, rejected, or indecisive — always with the reason.
 
 11
-00:01:21,090 --> 00:01:23,740
-Start in two minutes, with no API key.
+00:00:28,857 --> 00:00:32,580
+This session is illustrative: its numbers are hand-authored.
 
 12
-00:01:25,590 --> 00:01:27,990
+00:00:35,610 --> 00:00:39,176
+One real iteration: a policy rule, and in the same edit,
+
+13
+00:00:39,176 --> 00:00:42,423
+code inside the tool that rejects the illegal call.
+
+14
+00:00:42,423 --> 00:00:45,480
+Task fourteen went from one pass in ten, to six.
+
+15
+00:00:46,180 --> 00:00:49,929
+The dashboard holds the whole run — every candidate, every dollar,
+
+16
+00:00:49,929 --> 00:00:51,235
+and the gate's verdict.
+
+17
+00:00:51,235 --> 00:00:53,450
+On this run the gate rejected all four.
+
+18
+00:00:54,180 --> 00:00:56,336
+Here's what most optimizers skip.
+
+19
+00:00:56,336 --> 00:01:00,322
+Acceptance is a paired significance test, on validation only:
+
+20
+00:01:00,322 --> 00:01:02,870
+clear k standard errors, or it's noise.
+
+21
+00:01:02,870 --> 00:01:05,680
+The test split is scored once, then sealed.
+
+22
+00:01:06,380 --> 00:01:11,183
+On τ²-bench airline: fifty-three point six to seventy-one point two.
+
+23
+00:01:11,183 --> 00:01:14,220
+Thirty to forty-seven point five, held out.
+
+24
+00:01:16,380 --> 00:01:19,030
+Start in two minutes, with no API key.
+
+25
+00:01:20,880 --> 00:01:23,280
 cap-evolve. Made at IBM and Red Hat.

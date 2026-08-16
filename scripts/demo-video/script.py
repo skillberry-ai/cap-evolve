@@ -51,17 +51,25 @@ FOOTAGE = {
     },
     "dashboard": {
         "path": "/tmp/video/dashboard.mp4",
+        # ONE-LINE SWAP when a better run lands: change --base (the dir of runs)
+        # and --run (the run id) below, re-record, rebuild. Nothing else in the
+        # build is coupled to which run is filmed — the shot has no burned-in
+        # caption naming it, and every figure on screen is the dashboard's own.
         "recipe": ("cap-evolve dashboard --base examples/tau2_airline "
                    "--port 8791 --no-open   +   "
                    "dash.py --live http://127.0.0.1:8791 --run run_agentopt"),
         "blocked_on": None,          # recorded against the rebuilt dashboard
     },
-    "parallel": {
-        "path": "/tmp/video/parallel.mp4",
-        "recipe": "vhs scripts/demo-video/parallel.tape",
-        "blocked_on": None,          # measured live; not blocked
-    },
 }
+
+# ── background music ──────────────────────────────────────────────────────
+# Generated, not licensed: `music.py` synthesises the bed from a chord table
+# with the stdlib `wave` module, so there is nothing to attribute and the build
+# stays reproducible. MUSIC_DB is how far UNDER the voiceover it sits.
+MUSIC_WAV = "/tmp/video/music.wav"
+MUSIC_DB = -20.0            # narration stays clearly on top
+MUSIC_FADE_IN = 2.5
+MUSIC_FADE_OUT = 3.5
 
 # ── the real committed diff we put on screen (shot: diff) ─────────────────
 # Source artifact, read directly:
@@ -142,15 +150,19 @@ SHOTS = [
         ),
     ),
     dict(
-        id="terminal", kind="footage", src="terminal", min_dur=13.0,
+        id="terminal", kind="footage", src="terminal", min_dur=16.0,
         vo="Each iteration scores a candidate on validation, reads the failures, "
            "and proposes one edit. Accepted, rejected, or indecisive — always "
            "with the reason. This session is illustrative: its numbers are "
            "hand-authored.",
-        caption="real recording of  cap-evolve replay --demo  ·  the renderer you get, not a mockup",
-        caption2="illustrative session — hand-authored numbers, NO benchmark claim  ·  measured results: docs/RESULTS.md",
+        # No burned-in lower-third: the footage carries its own labelling. The
+        # rebuilt CLI prints the demo banner ("illustrative sample … makes no
+        # benchmark claim") as the last line of every replay frame, and the old
+        # overlay used to COVER exactly that line. Removing the overlay makes the
+        # disclaimer more visible muted, not less.
         src_note="every number visible is from the bundled demo_session and is "
-                 "labelled on screen as making no benchmark claim",
+                 "labelled on screen, by the CLI itself, as making no benchmark "
+                 "claim",
     ),
     dict(
         id="diff", kind="card", draw="diff", min_dur=10.5,
@@ -166,19 +178,17 @@ SHOTS = [
             right=("tools/tools.py    +37  −0", DIFF_CODE),
             result="prose for the knowledge gap  +  code for the rule the agent already knew",
             evidence="task 14:  1/10 → 6/10 the iteration the guard landed",
-            foot=DIFF_ARTIFACT,
         ),
     ),
     dict(
         id="dashboard", kind="footage", src="dashboard", min_dur=8.0,
         vo="The dashboard holds the whole run — every candidate, every dollar, "
            "and the gate's verdict. On this run the gate rejected all four.",
-        caption="the live dashboard on a real τ²-bench run  ·  baseline / best / sealed test / spend, the candidate lineage, and a reconciled cost ledger",
-        # Said out loud AND on screen, because the footage is a null result and
-        # must not be able to read as a win: this run's gate rejected every
-        # candidate. The measured gains are the next-but-one card, from
-        # docs/RESULTS.md, and are a different run.
-        caption2="this run is a NULL RESULT — 4 candidates, 0 accepted, best = seed  ·  measured gains: docs/RESULTS.md",
+        # No burned-in lower-third. The null result is not lost with the caption
+        # gone: the dashboard's OWN headline tiles say it in the frame we film —
+        # "BEST VAL 83.3% candidate seed", "Δ VAL VS BASELINE 0.000 / 0%
+        # relative", "VERDICTS 4 candidates · 0 accept · 4 reject". Verified on
+        # the extracted frame, not assumed.
         src_note="live dashboard over examples/tau2_airline/run_agentopt, the "
                  "committed audit artifact of a real $12.98 τ²-bench run "
                  "(docs/RESULTS.md); every figure on screen is that run's own. "
@@ -208,19 +218,32 @@ SHOTS = [
                 ("regression veto", "optional — reject if a passing task breaks", "dual gate", YELLOW),
                 ("evidence too thin", "indecisive — NOT rejected", "says nothing about the edit", RED),
             ],
-            foot="the gate, the split and the seal live in the core — not in editable docs",
         ),
     ),
     dict(
-        id="results", kind="card", draw="results", min_dur=8.5,
+        id="results", kind="card", draw="results", min_dur=10.0,
         vo="On τ²-bench airline: fifty-three point six to seventy-one point "
            "two. Thirty to forty-seven point five, held out.",
-        src_note="all four rows verbatim from docs/RESULTS.md; the ~$32 / $400 "
-                 "figure is docs/RESULTS.md SkillsBench 87-task section",
+        src_note="τ²-bench, SkillsBench and toy_calc rows verbatim from "
+                 "docs/RESULTS.md. The RH-SWE-bench row is the CROSS-MODEL CHART "
+                 "measurement, site/assets/rh_swe_bench.png: its 'Sonnet 4.6 "
+                 "Claude Code' bar reads 55.7 and its 'Sonnet 4.6 Claude Code "
+                 "optimized with cap-evolve' bar reads 73.1 — same model, same "
+                 "harness. +17.4 pp, and 17.4/55.7 = +31.2% relative, computed "
+                 "the same way as every other row on the card. That chart also "
+                 "shows an unoptimized Opus 4.6 at 63.3, which is the sub-line's "
+                 "claim, scoped to this benchmark/harness. This pair is a "
+                 "DIFFERENT measurement from the 119-task fit-metric run "
+                 "(58.0 → 76.5) documented in docs/RESULTS.md; both are real and "
+                 "the repo already documents the distinction — nothing here "
+                 "restates or replaces it.",
         data=dict(
             eyebrow="MEASURED",
             head="Baseline → optimized",
             rows=[
+                ("RH-SWE-bench  ·  skill package + system prompt",
+                 "Sonnet 4.6, Claude Code + Harbor — beats an unoptimized Opus 4.6 (63.3)",
+                 "55.7", "73.1", "+31.2%", CYAN),
                 ("τ²-bench airline  ·  policy + tool code",
                  "val — fit metric, 50 tasks × 10 trials", "53.6", "71.2", "+32.8%", CYAN),
                 ("τ²-bench airline  ·  held-out 30/20",
@@ -230,28 +253,6 @@ SHOTS = [
                 ("toy_calc  ·  zero-API, deterministic",
                  "sealed test", "0.0", "100.0", "proof", PURPLE),
             ],
-            cost="optimizer spend, 87-task SkillsBench run:  ~$32  (cap $400)",
-            foot="docs/RESULTS.md — every number cross-checked against a committed run artifact",
-        ),
-    ),
-    dict(
-        id="parallel", kind="footage", src="parallel", min_dur=5.0,
-        vo="The tasks-by-trials grid is parallel. Measured live, right here.",
-        caption="measured live on this machine  ·  16 tasks × 2 trials  ·  scripts/demo-video/par_demo.py",
-        caption2=None,
-        src_note="measured on camera; the speedup card is generated FROM this "
-                 "run's json so the two cannot disagree",
-    ),
-    dict(
-        id="speedup", kind="card", draw="speedup", min_dur=3.5,
-        vo="Eight workers, identical result.",
-        src_note="rows injected at build time from /tmp/video/par_results.json, "
-                 "written by the same par_demo.py run the previous shot filmed",
-        data=dict(
-            eyebrow="MEASURED, SAME MACHINE",
-            head="Faster. Not different.",
-            foot="parallelism may change the wallclock and nothing else — "
-                 "par_demo.py exits non-zero if any statistic diverges",
         ),
     ),
     dict(
@@ -268,23 +269,19 @@ SHOTS = [
                 "bash examples/toy_calc/run.sh",
             ],
             out="baseline_val 0.0  →  test_reward 1.0   (gate-accepted, test sealed)",
-            foot="github.com/skillberry-ai/cap-evolve",
+            url="github.com/skillberry-ai/cap-evolve",
         ),
     ),
     dict(
         id="credits", kind="card", draw="credits", min_dur=4.0,
         vo="cap-evolve. Made at IBM and Red Hat.",
         src_note="'Made at' is the framing already used on the project site "
-                 "(site/index.html hero + footer); the two sub-lines are facts "
-                 "from docs/RESULTS.md",
+                 "(site/index.html hero + footer); the marks are the repo's own "
+                 "site/assets/{ibm,redhat}-logo.svg, rendered in their brand "
+                 "colours (#1f70c1 / #ee0000) taken from those same files",
         data=dict(
             wordmark="cap·evolve",
             affil="Made at",
-            notes=[
-                "runner models served via IBM RITS and an IBM litellm proxy",
-                "self-hosted evaluation on Red Hat OpenShift (vLLM)",
-            ],
-            license="Apache-2.0  ·  zero runtime dependencies  ·  beta (0.x)",
             url="github.com/skillberry-ai/cap-evolve",
         ),
     ),

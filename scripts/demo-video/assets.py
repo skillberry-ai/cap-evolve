@@ -20,9 +20,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -86,9 +88,10 @@ def head(d, text: str, y: int = 232, size: int = 108, fill=S.INK) -> int:
     return y + len(text.split("\n")) * int(size * 1.14)
 
 
-def footer(d, text: str, fill=S.MUTED) -> None:
-    d.line([MARGIN, H - 168, W - MARGIN, H - 168], fill=S.LINE, width=2)
-    d.text((MARGIN, H - 140), text, font=mono(30), fill=fill)
+# NOTE: there is deliberately no footer() helper any more. Every card from the
+# third shot on used to carry a dimmed grey provenance line pinned to the bottom
+# edge; it is gone by request. Attribution did not go with it — it lives in each
+# shot's `src_note` in script.py, which STORYBOARD.md mirrors.
 
 
 def panel(d, box, fill=S.PANEL, outline=S.LINE, r: int = 22) -> None:
@@ -117,8 +120,32 @@ def logo_disc(size: int) -> Image.Image:
     return disc
 
 
+#: Brand colours, read out of the repo's own SVGs (site/assets/*-logo.svg).
+LOGO_FILL = {"ibm": "#1f70c1", "redhat": "#ee0000"}
+
+
+def _viewbox(svg: str) -> tuple[float, float]:
+    """The SVG's intrinsic w/h from its viewBox, so the page can match its shape."""
+    import re
+    m = re.search(r'viewBox\s*=\s*["\']\s*[\d.eE+-]+[ ,]+[\d.eE+-]+[ ,]+'
+                  r'([\d.eE+-]+)[ ,]+([\d.eE+-]+)', svg)
+    if m:
+        return float(m.group(1)), float(m.group(2))
+    return 1.0, 1.0                     # square fallback; still never clips
+
+
 def rasterize_logos() -> None:
-    """IBM + Red Hat SVGs → PNG. Sources are already in the repo (site/assets)."""
+    """IBM + Red Hat SVGs → transparent PNGs, in their own brand colours.
+
+    Two things were wrong before and both are fixed here:
+
+    * the marks were force-filled ``#e6edf3``, i.e. monochrome white;
+    * the page was a fixed 1200x400 flex box while the ``<svg>`` was sized
+      ``width:900px;height:auto``. The Red Hat mark is a 24x24 viewBox, so it
+      laid out 900px tall inside a 400px viewport, overflowed centred, and the
+      element screenshot lost the top of the hat. Now the viewport is DERIVED
+      from the viewBox (plus a small pad), so the box always contains the art.
+    """
     want = {"ibm": "ibm-logo.svg", "redhat": "redhat-logo.svg"}
     if all((OUT / "logos" / f"{k}.png").exists() for k in want):
         return
@@ -131,20 +158,32 @@ def rasterize_logos() -> None:
         b = p.chromium.launch()
         for key, name in want.items():
             svg = (REPO / "site/assets" / name).read_text()
-            pg = b.new_page(viewport={"width": 1200, "height": 400},
+            vw, vh = _viewbox(svg)
+            box_w = 900
+            box_h = max(1, round(box_w * vh / vw))
+            pad = 12                     # headroom, so no stroke sits on the edge
+            col = LOGO_FILL[key]
+            pg = b.new_page(viewport={"width": box_w + 2 * pad,
+                                      "height": box_h + 2 * pad},
                             device_scale_factor=3)
-            # White fill: both marks are monochrome, and the card is dark.
             pg.set_content(
-                "<body style='margin:0;background:#0b0d17;display:flex;"
-                "align-items:center;justify-content:center;height:400px'>"
-                f"<div id=w style='width:900px;fill:#e6edf3;color:#e6edf3'>{svg}</div>"
-                "<style>#w svg{width:100%;height:auto}"
-                "#w svg *{fill:#e6edf3!important;stroke:none!important}</style></body>")
+                f"<body style='margin:0;padding:{pad}px;background:transparent'>"
+                f"<div id=w style='width:{box_w}px;height:{box_h}px'>{svg}</div>"
+                "<style>#w svg{display:block;width:100%;height:100%}"
+                f"#w svg *{{fill:{col}!important;stroke:none!important}}</style></body>")
             pg.locator("#w").screenshot(path=str(OUT / "logos" / f"{key}.png"),
-                                        omit_background=False)
+                                        omit_background=True)
             pg.close()
         b.close()
-    print("   rasterised IBM + Red Hat marks from site/assets/*.svg")
+    print("   rasterised IBM + Red Hat marks from site/assets/*.svg, in brand colour")
+
+
+def _trim_alpha(im: Image.Image) -> Image.Image:
+    """Crop to the mark's own ink. Both viewBoxes carry slack (the Red Hat 24x24
+    box is ~25% empty vertically); trimming first is what lets the two marks be
+    normalised on a real cap height instead of on their padding."""
+    box = im.getchannel("A").getbbox()
+    return im.crop(box) if box else im
 
 
 # ── card renderers ─────────────────────────────────────────────────────────
@@ -173,13 +212,15 @@ def draw_tiles(d, img, c) -> None:
     head(d, c["head"], 250, 108)
     gap, n = 34, len(c["tiles"])
     tw = (W - 2 * MARGIN - gap * (n - 1)) // n
+    # +40 on the tile block and +80 on the closing line: with the grey footer gone
+    # the freed ~170px at the bottom is redistributed instead of left as a hole.
     for i, (name, sub, col) in enumerate(c["tiles"]):
         x = MARGIN + i * (tw + gap)
-        panel(d, [x, 510, x + tw, 1010])
-        d.rectangle([x, 510, x + tw, 519], fill=col)
-        d.text((x + 42, 590), name, font=sans(54, "Bold"), fill=col)
+        panel(d, [x, 550, x + tw, 1050])
+        d.rectangle([x, 550, x + tw, 559], fill=col)
+        d.text((x + 42, 630), name, font=sans(54, "Bold"), fill=col)
         # wrap the sub-label to the tile
-        words, ln, yy = sub.split(), "", 700
+        words, ln, yy = sub.split(), "", 740
         for wd in words:
             t = (ln + " " + wd).strip()
             if d.textlength(t, font=sans(38)) > tw - 84:
@@ -188,8 +229,7 @@ def draw_tiles(d, img, c) -> None:
             else:
                 ln = t
         d.text((x + 42, yy), ln, font=sans(38), fill=S.DIM)
-    d.text((MARGIN, 1110), c["foot"], font=sans(56, "Medium"), fill=S.INK)
-    footer(d, "README — What can cap-evolve optimize?")
+    d.text((MARGIN, 1190), c["foot"], font=sans(56, "Medium"), fill=S.INK)
 
 
 DIFF_COL = {"add": S.GREEN, "del": S.RED, "hunk": S.MUTED, "ctx": S.DIM}
@@ -214,15 +254,16 @@ def draw_diff(d, img, c) -> None:
                 d.rectangle([x + 20, y - 4, x + wid - 20, y + 38], fill=(46, 20, 27))
             d.text((x + 34, y), ln[:78], font=f, fill=col)
             y += 44
-    d.text((MARGIN, 1168), c["result"], font=sans(42, "Medium"), fill=S.INK)
-    d.text((MARGIN, 1232), c["evidence"], font=mono(38, True), fill=S.GREEN)
-    footer(d, c["foot"])
+    d.text((MARGIN, 1180), c["result"], font=sans(42, "Medium"), fill=S.INK)
+    d.text((MARGIN, 1250), c["evidence"], font=mono(38, True), fill=S.GREEN)
 
 
 def draw_rows(d, img, c) -> None:
     eyebrow(d, c["eyebrow"], S.GREEN)
     head(d, c["head"], 232, 104)
-    y = 470
+    # 510/118 rather than 470/108: the six rows now use the room the grey footer
+    # used to occupy, so the block stays optically centred.
+    y = 524
     kw = max(d.textlength(k, font=sans(44)) for k, _, _, _ in c["rows"])
     for k, v, note, col in c["rows"]:
         d.rectangle([MARGIN, y + 16, MARGIN + 10, y + 52], fill=col)
@@ -230,8 +271,7 @@ def draw_rows(d, img, c) -> None:
         d.text((MARGIN + 36 + kw + 60, y), v, font=mono(46, True), fill=col)
         d.text((W - MARGIN - d.textlength(note, font=sans(34)), y + 10), note,
                font=sans(34), fill=S.MUTED)
-        y += 108
-    footer(d, c["foot"])
+        y += 124
 
 
 def draw_results(d, img, c) -> None:
@@ -240,7 +280,7 @@ def draw_results(d, img, c) -> None:
     x0, span = 1310, 540
     d.text((x0 + span - d.textlength("reward × 100", font=sans(30)), 424),
            "reward × 100", font=sans(30), fill=S.MUTED)
-    y = 496
+    y = 500
     for name, split, a, b, gain, col in c["rows"]:
         d.text((MARGIN, y), name, font=sans(48, "Medium"), fill=S.INK)
         d.text((MARGIN, y + 62), split, font=sans(33), fill=S.MUTED)
@@ -258,63 +298,44 @@ def draw_results(d, img, c) -> None:
         d.text((bx - d.textlength(b, font=mono(38, True)) / 2, y - 8), b,
                font=mono(38, True), fill=col)
         d.text((x0 + span + 96, y + 24), gain, font=mono(40, True), fill=col)
-        y += 152
-    d.text((MARGIN, y + 20), c["cost"], font=mono(36), fill=S.YELLOW)
-    footer(d, c["foot"])
-
-
-def draw_speedup(d, img, c) -> None:
-    eyebrow(d, c["eyebrow"], S.YELLOW)
-    head(d, c["head"], 232, 108)
-    y = 520
-    for k, v, col in c["rows"]:
-        d.text((MARGIN, y), k, font=sans(52), fill=S.DIM)
-        d.text((MARGIN + 470, y), v, font=mono(58, True), fill=col)
-        y += 118
-    d.text((MARGIN, y + 40), c["foot"], font=sans(36), fill=S.MUTED)
-    footer(d, "measured on camera in the previous shot — card generated from that run's json")
+        y += 155
 
 
 def draw_start(d, img, c) -> None:
     eyebrow(d, c["eyebrow"], S.PURPLE)
     head(d, c["head"], 236, 116)
-    panel(d, [MARGIN, 500, W - MARGIN, 950], fill=(9, 11, 19))
-    y = 546
+    panel(d, [MARGIN, 540, W - MARGIN, 990], fill=(9, 11, 19))
+    y = 586
     for cmd in c["cmds"]:
         d.text((MARGIN + 46, y), "$", font=mono(46, True), fill=S.PURPLE)
         d.text((MARGIN + 110, y), cmd, font=mono(46), fill=S.INK)
         y += 82
     d.text((MARGIN + 46, y + 24), c["out"], font=mono(40, True), fill=S.GREEN)
-    ctr(d, 1000, c["foot"], mono(48, True), S.CYAN)
-    footer(d, "docs/RESULTS.md — toy_calc: seed val 0.0 → sealed test 1.0, no model called")
+    ctr(d, 1090, c["url"], mono(48, True), S.CYAN)
 
 
 def draw_credits(d, img, c) -> None:
-    disc = logo_disc(200)
-    img.paste(disc, ((W - 200) // 2, 150), disc)
-    ctr(d, 386, c["wordmark"], sans(104, "Bold"), S.INK)
-    ctr(d, 552, c["affil"], sans(40, "Medium"), S.DIM)
+    disc = logo_disc(240)
+    img.paste(disc, ((W - 240) // 2, 250), disc)
+    ctr(d, 546, c["wordmark"], sans(104, "Bold"), S.INK)
+    ctr(d, 720, c["affil"], sans(40, "Medium"), S.DIM)
     marks = [OUT / "logos" / "ibm.png", OUT / "logos" / "redhat.png"]
     if all(m.exists() for m in marks):
-        # Normalise on HEIGHT, not width: the IBM mark is a wide wordmark and the
-        # Red Hat mark is a near-square glyph, so matching widths makes the hat
-        # tower over the wordmark.
-        cap, row_y = 104, 700
-        imgs = [Image.open(m).convert("RGB") for m in marks]
-        imgs = [im.resize((max(1, int(im.width * cap / im.height)), cap), Image.LANCZOS)
-                for im in imgs]
-        tot = sum(i.width for i in imgs) + 150
-        x = (W - tot) // 2
+        # Normalise on the marks' own INK height, not on the raster's height: the
+        # IBM mark is a wide 8-bar wordmark and the Red Hat mark is a near-square
+        # glyph inside a loose 24x24 viewBox, so matching raster heights makes the
+        # hat look small and matching widths makes it tower. Trim, then match ink.
+        cap, row_y = 132, 880
+        imgs = [_trim_alpha(Image.open(m).convert("RGBA")) for m in marks]
+        imgs = [im.resize((max(1, round(im.width * cap / im.height)), cap),
+                          Image.LANCZOS) for im in imgs]
+        gap = 170
+        x = (W - (sum(i.width for i in imgs) + gap)) // 2
         for im in imgs:
-            img.paste(im, (x, row_y - cap // 2))
-            x += im.width + 150
-    y = 830
-    for n in c["notes"]:
-        ctr(d, y, n, sans(36), S.MUTED)
-        y += 56
-    d.rectangle([(W - 360) / 2, y + 46, (W + 360) / 2, y + 51], fill=S.PURPLE)
-    ctr(d, y + 100, c["license"], sans(38), S.DIM)
-    ctr(d, y + 178, c["url"], mono(46, True), S.CYAN)
+            img.paste(im, (x, row_y - im.height // 2), im)
+            x += im.width + gap
+    d.rectangle([(W - 360) / 2, 1046, (W + 360) / 2, 1051], fill=S.PURPLE)
+    ctr(d, 1120, c["url"], mono(46, True), S.CYAN)
 
 
 DRAW = {k[5:]: v for k, v in list(globals().items()) if k.startswith("draw_")}
@@ -365,44 +386,27 @@ def render_logo_frames(dur: float) -> None:
     print(f"   logo: {n} frames")
 
 
-# ── lower-thirds for footage shots ────────────────────────────────────────
+# ── footage stand-in warning ──────────────────────────────────────────────
+# There are no burned-in lower-thirds any more: both footage shots are shown
+# clean, and each one's own on-screen output carries its labelling (the CLI's
+# "makes no benchmark claim" banner; the dashboard's own verdict tiles). The
+# ANIMATIC stand-in stamp survives as a small corner badge, because a
+# placeholder segment still must not be mistakable for the final cut.
 def render_lower(shot: dict) -> None:
-    """Transparent caption band, overlaid on footage with ffmpeg's overlay.
-
-    With ANIMATIC=1 the band also carries a loud stand-in warning for any
-    segment still blocked on another agent, so a placeholder cut can never be
-    mistaken for the final one.
-    """
     blocked = S.FOOTAGE[shot["src"]]["blocked_on"]
-    warn = bool(os.environ.get("ANIMATIC")) and blocked
-    two = shot.get("caption2")
-    # Height is exactly what the lines need, and build.sh anchors the band to the
-    # BOTTOM edge. The rebuilt TUI fills all 41 rows of the frame, so a fixed
-    # 210px band floating 70px up used to sit on top of the activity log and —
-    # worse — on the renderer's own "no benchmark claim" banner. Bottom-anchored
-    # and tight, it covers only the run path, that banner (whose claim the amber
-    # line below restates) and the shell prompt.
-    h = 100 + (50 if two else 0) + (56 if warn else 0)
-    img = Image.new("RGBA", (W, h), (0, 0, 0, 0))
+    dst = OUT / "lower" / f"{shot['id']}.png"
+    if not (bool(os.environ.get("ANIMATIC")) and blocked):
+        dst.unlink(missing_ok=True)
+        return
+    txt = f"STAND-IN FOOTAGE — NOT FINAL  ·  blocked on {blocked}"
+    f = mono(33, True)
+    img = Image.new("RGBA", (W, 96), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    # Full-width OPAQUE backing first, then the bordered plate on top. Inset
-    # alone let the footage's own bottom lines (the demo banner, a cost row) peek
-    # out either side of the plate, which read as a rendering fault.
-    d.rectangle([0, 20, W, h - 20], fill=(11, 13, 23, 255))
-    d.rounded_rectangle([MARGIN - 40, 20, W - MARGIN + 40, h - 20], radius=18,
-                        fill=(16, 19, 33, 255), outline=S.LINE + (255,), width=2)
-    d.rectangle([MARGIN - 40, 20, MARGIN - 30, h - 20],
-                fill=(S.RED if warn else S.PURPLE) + (255,))
-    y = 36
-    d.text((MARGIN, y), shot["caption"], font=sans(38, "Medium"), fill=S.INK + (255,))
-    if two:
-        y += 50
-        d.text((MARGIN, y), two, font=mono(31), fill=S.YELLOW + (255,))
-    if warn:
-        d.text((MARGIN, y + 50),
-               f"STAND-IN FOOTAGE — NOT FINAL  ·  blocked on {blocked}",
-               font=mono(33, True), fill=S.RED + (255,))
-    img.save(OUT / "lower" / f"{shot['id']}.png")
+    w = d.textlength(txt, font=f) + 80
+    d.rounded_rectangle([MARGIN - 40, 16, MARGIN - 40 + w, 80], radius=14,
+                        fill=(11, 13, 23, 235), outline=S.RED + (255,), width=3)
+    d.text((MARGIN, 30), txt, font=f, fill=S.RED + (255,))
+    img.save(dst)
 
 
 # ── voiceover ─────────────────────────────────────────────────────────────
@@ -432,34 +436,71 @@ def srt_ts(t: float) -> str:
     return f"{int(h):02d}:{int(m):02d}:{s:06.3f}".replace(".", ",")
 
 
+#: Max characters per cue — two lines of ~42, the usual subtitle ceiling. One cue
+#: per SHOT is far too coarse: the terminal shot's narration is 213 characters
+#: held for 13 s, which nobody can read. Cues are what a muted viewer relies on,
+#: so they get split even though the voiceover itself is one file per shot.
+SRT_MAX_CHARS = 84
+
+
+def _split_text(text: str, limit: int = SRT_MAX_CHARS) -> list[str]:
+    """Break narration into cue-sized chunks, preferring sentence boundaries.
+
+    Falls back to clause boundaries, then to words, so a chunk is only ever
+    over-long if a single word is.
+    """
+    def pack(units: list[str]) -> list[str]:
+        out: list[str] = []
+        for u in units:
+            if out and len(out[-1]) + 1 + len(u) <= limit:
+                out[-1] = f"{out[-1]} {u}"
+            else:
+                out.append(u)
+        return out
+
+    # sentences first (keep the terminator with its sentence)
+    sentences = re.findall(r"[^.!?]+[.!?]*\s*", text.strip()) or [text.strip()]
+    chunks = pack([s.strip() for s in sentences if s.strip()])
+
+    # any chunk still too long: re-split it on clause marks, then on words
+    out: list[str] = []
+    for c in chunks:
+        if len(c) <= limit:
+            out.append(c)
+            continue
+        clauses = re.findall(r"[^,:;—]+[,:;—]*\s*", c) or [c]
+        for piece in pack([x.strip() for x in clauses if x.strip()]):
+            if len(piece) <= limit:
+                out.append(piece)
+            else:
+                out.extend(textwrap.wrap(piece, limit, break_long_words=False,
+                                         break_on_hyphens=False) or [piece])
+    return out
+
+
+def cues(text: str, start: float, vo_dur: float) -> list[tuple[float, float, str]]:
+    """Time each chunk proportionally to its length — speech rate is ~constant.
+
+    Never emits a cue shorter than 0.9 s, and never runs past the narration.
+    """
+    parts = _split_text(text)
+    total = sum(len(p) for p in parts) or 1
+    span = max(1.2, vo_dur)
+    out, t = [], start
+    for i, p in enumerate(parts):
+        d = span * len(p) / total
+        end = start + span if i == len(parts) - 1 else t + d
+        out.append((t, max(t + 0.9, end) if len(parts) == 1 else end, p))
+        t = end
+    return out
+
+
 # ── main ──────────────────────────────────────────────────────────────────
 def main() -> int:
     if shutil.which("say") is None:
         print("!! `say` not found — voiceover cannot be built on this platform")
         return 1
     rasterize_logos()
-
-    # Live parallel measurement → the speedup card, so card and footage agree.
-    pr = OUT / "par_results.json"
-    sp = S.BY_ID["speedup"]["data"]
-    if pr.exists():
-        r = json.loads(pr.read_text())
-        base = r["runs"]["1"]["wallclock"]
-        sp["rows"] = [(f"workers = {w}",
-                       f"{r['runs'][w]['wallclock']:.2f} s"
-                       + ("" if w == "1" else f"   {base / r['runs'][w]['wallclock']:.1f}x"),
-                       S.INK if w == "1" else S.GREEN)
-                      for w in ("1", "4", "8")]
-        sp["rows"].append(("SplitResult",
-                           "identical" if r["identical"] else "DIVERGED",
-                           S.CYAN if r["identical"] else S.RED))
-    else:
-        print("!! /tmp/video/par_results.json missing — run par_demo.py first;\n"
-              "   the speedup card is being stamped UNMEASURED on purpose.")
-        sp["rows"] = [("workers = 1", "UNMEASURED", S.RED),
-                      ("workers = 4", "UNMEASURED", S.RED),
-                      ("workers = 8", "UNMEASURED", S.RED),
-                      ("SplitResult", "run par_demo.py", S.RED)]
 
     print("1/3  voiceover")
     shots, t = [], 0.0
@@ -491,13 +532,23 @@ def main() -> int:
     (OUT / "shots.json").write_text(json.dumps(
         dict(w=W, h=H, fps=S.FPS, total=round(t, 2), shots=shots,
              footage=S.FOOTAGE), indent=1))
-    srt = []
-    for i, s in enumerate(shots, 1):
+    srt, n = [], 0
+    for s in shots:
         if not s["text"]:
             continue
-        srt.append(f"{i}\n{srt_ts(s['start'] + 0.15)} --> "
-                   f"{srt_ts(s['start'] + max(1.2, s['vo_dur']) + 0.15)}\n{s['text']}\n")
+        for a, b, txt in cues(s["text"], s["start"] + 0.15, s["vo_dur"]):
+            n += 1
+            srt.append(f"{n}\n{srt_ts(a)} --> {srt_ts(b)}\n{txt}\n")
     (OUT / "captions.srt").write_text("\n".join(srt))
+    longest = max((len(c.splitlines()[2]) for c in srt), default=0)
+    print(f"   captions: {n} cues, longest {longest} chars")
+    assert longest <= SRT_MAX_CHARS + 20, f"cue of {longest} chars is unreadable"
+
+    # The music bed is generated to the exact runtime, so build.sh never has to
+    # loop or hard-trim it and the closing fade always lands on the last frame.
+    import music
+    music.render(Path(S.MUSIC_WAV), t)
+
     print(f"   total runtime {t:.2f}s over {len(shots)} shots")
     if t > 90:
         print(f"!! {t:.1f}s exceeds the 90s budget — tighten a vo line in script.py")
