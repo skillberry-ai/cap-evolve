@@ -1012,7 +1012,11 @@ def reduce_run(run_dir) -> dict:
                    else "indecisive" if n["status"] == "indecisive"
                    else "reject" if n["status"] == "rejected" else "no measurement")
         m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
-        m_se = re.search(r"SE\s*=\s*(\d*\.?\d+)", reason)
+        # The bar `0.2·SE=0.0062` comes FIRST in the reason and also matches `SE=`, so an
+        # unanchored search put the bar's value in the SE column — the gate then appeared
+        # to have compared Δ̄ against five times its own standard error. Skip the `k·SE`
+        # form and take the standalone `SE=` that follows it.
+        m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
         gate_decisions.append({

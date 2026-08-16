@@ -283,7 +283,8 @@ export interface RunSummaryDetail {
   counts?: {
     accepted: number
     rejected: number
-    indecisive: number
+    /** ABSENT in older/static exports — never interpolate it unguarded. */
+    indecisive?: number
     failed: number
     seed: number
     total: number

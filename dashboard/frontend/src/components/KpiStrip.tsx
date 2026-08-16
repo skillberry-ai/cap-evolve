@@ -23,6 +23,26 @@ export function passKHint(pk: RunSummaryDetail['test_pass_k']): string | undefin
   return ks.map((k) => `pass^${Number(k)} ${pct(pk[k])}`).join(' · ')
 }
 
+/**
+ * `4 accept · 5 reject · 0 no-measure` — one clause per verdict the payload actually
+ * counted. A category the payload never enumerated is DROPPED, not printed: the static
+ * `run_full` export carries `{accepted, rejected, failed, seed, total}` with no
+ * `indecisive` key, and interpolating it straight rendered `undefined indecisive` on
+ * screen — the same class of defect as `pass^k NaN%`, a missing measurement wearing a
+ * value's clothes. `counts.indecisive` is optional in the type for exactly this reason.
+ */
+export function verdictBreakdown(c: NonNullable<RunSummaryDetail['counts']>): string | undefined {
+  const parts = ([
+    [c.accepted, 'accept'],
+    [c.rejected, 'reject'],
+    [c.indecisive, 'indecisive'],
+    [c.failed, 'no-measure'],
+  ] as const)
+    .filter(([n]) => isMeasured(n))
+    .map(([n, word]) => `${n} ${word}`)
+  return parts.length ? parts.join(' · ') : undefined
+}
+
 /** ±SE suffix, or nothing when the run recorded no uncertainty. A mean with no SE and
  *  no n is exactly the sloppiness this project exists to avoid — so when SE is missing
  *  we say so rather than implying the number is exact. */
@@ -58,6 +78,15 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
   const unmetered = summary.cost?.metered === false
   const t = summary.tokens_by_role
 
+  // "no stderr recorded" must only be said when NOTHING recorded it. The baseline's SE
+  // also lives on its evaluation row, and an export predating the top-level
+  // `baseline_stderr` field made this tile claim no uncertainty was measured while the
+  // Cost tab printed "53.6% ± 5.6%" two rows below it.
+  const baselineSe =
+    summary.baseline_stderr ??
+    summary.evaluations?.find((e) => e.kind === 'baseline')?.stderr ??
+    null
+
   // The sealed test only means something against the SEED's score on the same split.
   const testDelta = summary.test_delta ?? null
   const testHint = isMeasured(summary.test_baseline_reward)
@@ -69,7 +98,7 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Kpi
           label="baseline val"
-          hint={seHint(summary.baseline_val, summary.baseline_stderr, nVal)}
+          hint={seHint(summary.baseline_val, baselineSe, nVal)}
           title="The unmodified seed's score on val — the number every candidate must beat."
         >
           <CountUp value={summary.baseline_val} format={pct} />
@@ -117,9 +146,7 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
       <motion.div variants={fadeUpItem}>
         <Card className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
           <Fact label="verdicts" value={`${cands} candidate${cands === 1 ? '' : 's'}`}>
-            {c
-              ? `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive} indecisive · ${c.failed} no-measure`
-              : 'no candidate recorded'}
+            {c ? (verdictBreakdown(c) ?? 'no verdict recorded') : 'no candidate recorded'}
           </Fact>
           <Fact
             label="spend"
@@ -149,8 +176,17 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
               ? `train ${summary.splits.train ?? '—'} · test ${summary.splits.test ?? '—'}`
               : 'splits not recorded'}
           </Fact>
-          <Fact label="events" value={String(summary.event_count ?? 0)}>
-            lines in events.jsonl
+          {/* An absent event_count is NOT zero events: the run dir may simply not ship
+              its stream any more. "0 lines in events.jsonl" asserted a file we never
+              read. */}
+          <Fact
+            label="events"
+            value={isMeasured(summary.event_count) ? String(summary.event_count) : 'not recorded'}
+            dim={!isMeasured(summary.event_count)}
+          >
+            {isMeasured(summary.event_count)
+              ? 'lines in events.jsonl'
+              : 'this run dir ships no events.jsonl'}
           </Fact>
         </Card>
       </motion.div>

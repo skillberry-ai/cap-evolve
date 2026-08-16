@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { passKHint } from '../components/KpiStrip'
+import { passKHint, verdictBreakdown } from '../components/KpiStrip'
 
 // Issue #112: never render a k that wasn't measured, never drop one that was.
 describe('passKHint', () => {
@@ -35,4 +35,32 @@ it('never lets a junk value reach the output', () => {
   const out = passKHint({ '1': 0.8, '2': NaN as unknown as number })
   expect(out).toBe('pass^1 80.0%')
   expect(out).not.toMatch(/NaN/)
+})
+
+// The static `run_full` export has no `indecisive` key: interpolating it rendered
+// `undefined indecisive` in the verdicts fact. Same defect class as `pass^k NaN%`.
+describe('verdictBreakdown', () => {
+  it('drops a category the payload never counted', () => {
+    const out = verdictBreakdown({ accepted: 5, rejected: 5, failed: 0, seed: 1, total: 11 })
+    expect(out).toBe('5 accept · 5 reject · 0 no-measure')
+    expect(out).not.toMatch(/undefined|NaN/)
+  })
+
+  it('keeps a measured indecisive count', () => {
+    expect(
+      verdictBreakdown({ accepted: 1, rejected: 0, indecisive: 2, failed: 0, seed: 1, total: 4 }),
+    ).toBe('1 accept · 0 reject · 2 indecisive · 0 no-measure')
+  })
+
+  it('is undefined when nothing was counted', () => {
+    expect(
+      verdictBreakdown({
+        accepted: NaN as unknown as number,
+        rejected: undefined as unknown as number,
+        failed: undefined as unknown as number,
+        seed: 0,
+        total: 0,
+      }),
+    ).toBeUndefined()
+  })
 })

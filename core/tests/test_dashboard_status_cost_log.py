@@ -221,6 +221,21 @@ def test_gate_decisions_carry_delta_se_and_n_parsed_from_the_gate_reason():
         assert g["threshold"] == 0.1
 
 
+def test_se_column_is_the_standard_error_not_the_k_se_bar():
+    """`0.2·SE=0.0062 (SE=0.0308, n=50)` — an unanchored `SE=` search matched the BAR
+    first, so the UI's SE column showed 0.0062 and the gate looked like it had compared
+    Δ̄ against five times its own standard error. Real tau2-airline reason string."""
+    from cap_evolve import dashboard
+    ev = _events(finalize=False)
+    ev[-1]["reason"] = "paired Δ̄=+0.0460 > 0.2·SE=0.0062 (SE=0.0308, n=50)"
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=ev, baseline=_BASELINE))["summary"]
+        g = s["gate_decisions"][0]
+        assert g["stderr"] == 0.0308, g
+        assert (g["k_se"], g["threshold"]) == (0.2, 0.0062)
+        assert g["n"] == 50 and g["delta"] == 0.046
+
+
 def test_gate_statistics_absent_from_the_reason_are_none_not_zero():
     from cap_evolve import dashboard
     ev = _events(finalize=False)

@@ -70,7 +70,16 @@ describe('GatePanel', () => {
 describe('KpiStrip', () => {
   it('says tokens are not recorded rather than showing a confident 0', () => {
     render(<KpiStrip summary={summary({ tokens: 0, tokens_by_role: { runner: 0, optimizer: 0, intake: 0 } })} />)
-    expect(screen.getByText('not recorded')).toBeInTheDocument()
+    // Scoped to the tokens fact: an unrecorded event_count says "not recorded" too.
+    expect(
+      screen.getByText('this runner does not report token counts').previousSibling,
+    ).toHaveTextContent('not recorded')
+  })
+
+  it('says events are not recorded rather than "0 lines in events.jsonl"', () => {
+    render(<KpiStrip summary={summary({ event_count: undefined })} />)
+    expect(screen.getByText('this run dir ships no events.jsonl')).toBeInTheDocument()
+    expect(screen.queryByText('lines in events.jsonl')).toBeNull()
   })
 
   it('reads the sealed test against the seed on the same split', () => {

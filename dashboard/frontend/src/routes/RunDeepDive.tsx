@@ -33,6 +33,24 @@ import { GitDiff } from '../components/GitDiff'
 import type { RunCapabilities, RunDetail } from '../lib/types'
 
 /**
+ * A run whose summary predates the `capabilities` map still has the DATA — infer from it.
+ *
+ * `capabilities` is the backend's answer to "which panels does this run have real data
+ * for". An export written before that field existed answers nothing, and the UI then hid
+ * the per-task heatmap and the diff tab on a run that carries per-task scores on every
+ * node and a full git log. Absent still means omitted; this only asks the payload the
+ * same question the backend would have. Trajectories are NOT inferred — rollouts live
+ * behind a separate endpoint the UI cannot probe from here.
+ */
+function inferCapabilities(detail: RunDetail | undefined): RunCapabilities {
+  const s = detail?.summary
+  return {
+    per_task: (detail?.graph.nodes ?? []).some((n) => n.per_task && Object.keys(n.per_task).length),
+    diffs: !!s?.git_log?.length,
+  } as RunCapabilities
+}
+
+/**
  * Tabs are built from what the run ACTUALLY RECORDED, not from which algorithm it is.
  *
  * The first block is true of every run — status, progress, candidates, gate decisions,
@@ -41,8 +59,8 @@ import type { RunCapabilities, RunDetail } from '../lib/types'
  * per-algorithm and appears only when the corresponding capability is present, so a
  * missing signal means a missing tab, never an empty or fabricated one.
  */
-export function buildTabs(caps: RunCapabilities | undefined): TabDef[] {
-  const c = caps ?? ({} as RunCapabilities)
+export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail): TabDef[] {
+  const c = caps ?? inferCapabilities(detail)
   const tabs: TabDef[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'candidates', label: 'Candidates' },
@@ -94,7 +112,7 @@ export function RunDeepDive() {
 
   const stream = useRunStream(id, onActivity)
   const summary = data?.summary
-  const tabs = buildTabs(summary?.capabilities)
+  const tabs = buildTabs(summary?.capabilities, data)
 
   return (
     <AppShell live={summary?.status === 'running'}>
@@ -165,7 +183,7 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
     case 'candidates':
       return <CandidatesPanel graph={data.graph} summary={s} />
     case 'gate':
-      return <GatePanel summary={s} />
+      return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
       return <TaskMatrix summary={s} nodes={data.graph.nodes} />
     case 'cost':

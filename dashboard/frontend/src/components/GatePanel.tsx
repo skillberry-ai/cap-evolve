@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
-import type { GateDecision, RunSummaryDetail } from '../lib/types'
+import type { GateDecision, GraphNode, RunSummaryDetail } from '../lib/types'
 import { VERDICT } from '../lib/verdict'
 import { VerdictBadge } from './StatusBadge'
 import { Card } from './ui/Card'
@@ -14,8 +14,69 @@ const num = (v: number | null | undefined, digits = 4, sign = false) =>
  * row shows Δ̄, SE, n and the bar (k·SE) it was compared against, plus the gate's own
  * verbatim reason. A statistic the gate did not record renders "—", never 0.
  */
-export function GatePanel({ summary }: { summary: RunSummaryDetail }) {
-  const rows: GateDecision[] = summary.gate_decisions ?? []
+/**
+ * The gate table, rebuilt from the candidate graph when the event-derived
+ * `gate_decisions` are missing.
+ *
+ * `gate_decisions` come from `events.jsonl`. A run dir that no longer ships its event
+ * stream (the committed `run_full` static export) therefore rendered "No gate decision
+ * recorded yet" over a finished run whose every verdict, val, parent val and verbatim
+ * gate reason sit right there on the graph nodes — the Candidates tab printed the
+ * arithmetic that this tab claimed did not exist. Δ̄, SE, n and the bar are read back out
+ * of the gate's own reason string with the SAME patterns the backend reducer uses
+ * (`dashboard.py`, "gate decisions"), because that string IS the audit record. A number
+ * that is not in the reason stays null — never a fabricated 0.
+ */
+const g1 = (re: RegExp, s: string) => {
+  const m = re.exec(s)
+  return m ? Number(m[1]) : null
+}
+
+export function gateRowsFromNodes(nodes: GraphNode[]): GateDecision[] {
+  const val = new Map(nodes.map((n) => [n.id, n.val]))
+  return nodes
+    .filter((n) => n.status !== 'seed' && (n.reason || n.val != null))
+    .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
+    .map((n) => {
+      const pv = n.parent_val ?? (n.parent ? (val.get(n.parent) ?? null) : null)
+      const reason = n.reason ?? ''
+      const bar = /([\d.]+)·SE\s*=\s*(\d*\.?\d+)/.exec(reason)
+      const delta = g1(/Δ̄?\s*=\s*([+-]?\d*\.?\d+)/, reason)
+      return {
+        iteration: n.iteration ?? null,
+        candidate: n.id,
+        verdict:
+          n.status === 'accepted'
+            ? 'accept'
+            : n.status === 'rejected'
+              ? 'reject'
+              : n.status === 'indecisive'
+                ? 'indecisive'
+                : 'no measurement',
+        val: n.val,
+        parent: n.parent,
+        parent_val: pv,
+        delta: delta ?? (n.val != null && pv != null ? n.val - pv : null),
+        // NOT the `k·SE=` bar that appears earlier in the same sentence.
+        stderr: g1(/(?<!·)\bSE\s*=\s*(\d*\.?\d+)/, reason),
+        n: g1(/\bn\s*=\s*(\d+)/, reason),
+        k_se: bar ? Number(bar[1]) : null,
+        threshold: bar ? Number(bar[2]) : null,
+        reason,
+      } satisfies GateDecision
+    })
+}
+
+export function GatePanel({
+  summary,
+  nodes = [],
+}: {
+  summary: RunSummaryDetail
+  nodes?: GraphNode[]
+}) {
+  const rows: GateDecision[] = summary.gate_decisions?.length
+    ? summary.gate_decisions
+    : gateRowsFromNodes(nodes)
   const warnings = (summary.gate_warnings ?? []) as {
     reason?: string
     mode?: string
@@ -65,8 +126,8 @@ export function GatePanel({ summary }: { summary: RunSummaryDetail }) {
       {rows.length === 0 ? (
         <Card>
           <div className="px-4 py-12 text-center text-sm text-muted">
-            No gate decision recorded yet. The gate runs once a candidate has a full val
-            score — always on val, never on train.
+            No gate decision recorded in this run dir. The gate runs once a candidate has
+            a full val score — always on val, never on train.
           </div>
         </Card>
       ) : (

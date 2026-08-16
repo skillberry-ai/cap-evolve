@@ -64,8 +64,10 @@ export function LogStream({ log }: { log: LogRow[] }) {
     return (
       <Card>
         <div className="px-4 py-12 text-center text-sm text-muted">
-          No events recorded. Every phase writes to <code>events.jsonl</code>; an empty
-          log means the run never started.
+          No events available for this run. Every phase writes to <code>events.jsonl</code>
+          while it runs, so a run dir without one was either never started or no longer
+          ships its stream — the log cannot tell you which, and the numbers above come
+          from the run's own snapshot either way.
         </div>
       </Card>
     )
