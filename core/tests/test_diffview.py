@@ -215,3 +215,73 @@ def test_best_id_falls_back_to_state_json(tmp_path):
     assert diffview.best_id(tmp_path) == "s1"
     (tmp_path / "final.json").write_text(json.dumps({"best_id": "f1"}), encoding="utf-8")
     assert diffview.best_id(tmp_path) == "f1"      # final.json wins
+
+
+# ---- side-by-side gutters belong to their own column ------------------------
+
+def test_side_by_side_gutter_marks_the_side_that_actually_changed():
+    """A right-only line must carry "+" in the RIGHT column, and a left-only line
+    "-" in the LEFT one. A "+" left of the old text reads as if the old side gained
+    the line — the exact opposite of what the diff says."""
+    from cap_evolve import diffview
+    a = {"f": "keep\n"}
+    b = {"f": "keep\nbrand new line\n"}
+    rows = [ln for ln in diffview.render(a, b, width=160, side_by_side=True)
+            if "brand new line" in ln]
+    assert rows, "the added line never rendered"
+    for ln in rows:
+        left, _, right = ln.partition("│")
+        assert "+" in right, f"added line has no + in its own column: {ln!r}"
+        assert "+" not in left, f"+ leaked into the left/old column: {ln!r}"
+
+    a2, b2 = {"f": "keep\ngone soon\n"}, {"f": "keep\n"}
+    rows = [ln for ln in diffview.render(a2, b2, width=160, side_by_side=True)
+            if "gone soon" in ln]
+    assert rows
+    for ln in rows:
+        left, _, right = ln.partition("│")
+        assert "-" in left and "-" not in right, ln
+
+
+def test_side_by_side_divider_is_column_aligned():
+    """Every row's divider sits in the same visible column as the label header's,
+    otherwise the two columns visibly stagger down the page."""
+    from cap_evolve import diffview
+    a = {"f": "one\ntwo\nthree\n"}
+    b = {"f": "one\nTWO changed\nthree\nfour added\n"}
+    for width in (120, 140, 161, 200):
+        lines = diffview.render(a, b, width=width, side_by_side=True,
+                                labels=("old", "new"))
+        cols = {_vis(ln.split("│")[0]) for ln in lines if "│" in ln}
+        assert len(cols) == 1, (width, cols)
+
+
+# ---- one list of non-capability files, not four ----------------------------
+
+def test_scaffolding_lists_cannot_drift_apart():
+    """cache (content hash), gepa (editable components) and diffview (what the user is
+    shown) must agree on what is NOT the capability. They were three hand-maintained
+    copies; diffview's lacked FOCUS.md/REFLECTION.md, so `cap-evolve diff` on a gepa run
+    buried the two real changed lines under 33 lines of gepa's own bookkeeping."""
+    from cap_evolve import cache, diffview, gepa, types
+    assert set(diffview.SKIP_FILES) == set(types.NON_CAPABILITY_FILES)
+    assert set(cache._IGNORE_NAMES) == set(types.NON_CAPABILITY_FILES)
+    assert set(gepa._NON_COMPONENT) == set(types.NON_CAPABILITY_FILES)
+    for d in types.NON_CAPABILITY_DIRS:
+        assert d in diffview.SKIP_DIRS
+
+
+def test_gepa_scaffolding_never_reaches_the_diff(tmp_path):
+    """The real edit must be the ONLY thing shown, whichever algorithm produced it."""
+    from cap_evolve import diffview
+    seed, cand = tmp_path / "seed", tmp_path / "cand"
+    seed.mkdir(); cand.mkdir()
+    (seed / "prompt.txt").write_text("be helpful\n", encoding="utf-8")
+    (cand / "prompt.txt").write_text("be helpful\n[CALC] compute exactly\n", encoding="utf-8")
+    for noise in ("FOCUS.md", "REFLECTION.md", "REJECTED.md", "LEDGER.md",
+                  "JOURNAL.md", "PROCESS.md", "RUNMAP.md", "INSTRUCTIONS.md",
+                  "MEMORY.md", "STATE.md"):
+        (cand / noise).write_text("# optimizer bookkeeping\n" * 20, encoding="utf-8")
+    a, b = diffview.read_tree(seed), diffview.read_tree(cand)
+    assert [p for p, _, _ in diffview.diffstat(a, b)] == ["prompt.txt"]
+    assert diffview.summary_line(a, b) == "1 file  +1 -0"

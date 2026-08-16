@@ -31,18 +31,17 @@ import json
 import re
 from pathlib import Path
 
-from . import eventstream
+from . import eventstream, types
 
 __all__ = ["read_tree", "diffstat", "render", "render_stat", "render_files",
            "parent_of", "resolve_pair", "SKIP_FILES", "SIDE_BY_SIDE_COLS"]
 
 #: Optimizer bookkeeping that lives beside the capability in a snapshot but is not a
 #: capability edit. Showing it buries the one line that actually changed.
-SKIP_FILES = frozenset({"INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md",
-                        "JOURNAL.md", "PROCESS.md", "RUNMAP.md"})
+SKIP_FILES = types.NON_CAPABILITY_FILES
 
 #: Read-context directories (never the edit surface).
-SKIP_DIRS = ("trajectories", "guidance", ".git")
+SKIP_DIRS = ("trajectories", "guidance", *sorted(types.NON_CAPABILITY_DIRS))
 
 #: Side-by-side needs two readable columns; below this we go unified.
 SIDE_BY_SIDE_COLS = 120
@@ -354,9 +353,9 @@ def render(a: dict[str, str], b: dict[str, str], *, width: int = 100, color: boo
             continue
         out.append(head)
         if side_by_side and labels:
-            col = (width - 7) // 2
+            col = _sbs_col(width)
             out.append("    " + p.s(_clip(_san(labels[0]), col).ljust(col), p.grey)
-                       + " " + p.s("│", p.grey) + " "
+                       + " " + p.s("│", p.grey) + "   "
                        + p.s(_clip(_san(labels[1]), col), p.grey))
         rows = list(_pairs(a.get(path, "").splitlines(), b.get(path, "").splitlines(), context))
         for kind, old, new in rows:
@@ -378,6 +377,16 @@ def _count_rows(old_text: str, new_text: str, context: int) -> int:
     return sum(1 for _ in _pairs(old_text.splitlines(), new_text.splitlines(), context))
 
 
+def _sbs_col(width: int) -> int:
+    """Visible width of ONE side-by-side column.
+
+    Layout is ``"  " + lg + " " + col + " │ " + rg + " " + col`` — two spaces of
+    margin, a gutter per column, and the divider: 9 fixed cells. Both the label
+    header and every row derive their column from here so they can never drift.
+    """
+    return max(4, (width - 9) // 2)
+
+
 def _row(kind: str, old, new, p: _Pal, width: int, side_by_side: bool) -> list[str]:
     """One diff row → one rendered line (unified) or one two-column line."""
     if kind == "hunk":
@@ -397,21 +406,23 @@ def _row(kind: str, old, new, p: _Pal, width: int, side_by_side: bool) -> list[s
         return ["  " + p.s(gutter, style) + " "
                 + p.s(_clip(_san(text), width - 4), style).rstrip()]
 
-    # side-by-side: | old | new |
-    col = (width - 7) // 2
+    # side-by-side: lg | old | new, with a gutter PER column. A "+" belongs to the
+    # right column only: marking a right-only line with "+" on the left reads as if
+    # the old side gained it, which is the opposite of what happened.
+    col = _sbs_col(width)
+    lg = p.s("-", p.rem) if kind in ("del", "mod") else " "
+    rg = p.s("+", p.add) if kind in ("add", "mod") else " "
     if kind == "mod" and len(old) + len(new) <= _MAX_WORD_DIFF:
         lr, rr = _word_spans(old, new)
         left = _paint_runs(_runs_san(lr), p.rem, p.rem_hi, p, col)
         right = _paint_runs(_runs_san(rr), p.add, p.add_hi, p, col)
-        return [f"  {p.s('-', p.rem)} {left} {p.s('│', p.grey)} {right}"]
+        return [f"  {lg} {left} {p.s('│', p.grey)} {rg} {right}".rstrip()]
     lo = "" if kind == "add" else _clip(_san(old), col)
     ne = "" if kind == "del" else _clip(_san(new), col)
-    lstyle = p.rem if kind in ("del", "mod") else ""
-    rstyle = p.add if kind in ("add", "mod") else ""
-    gutter = {"add": ("+", p.add), "del": ("-", p.rem), "mod": ("-", p.rem),
-              "ctx": (" ", "")}[kind]
-    return [f"  {p.s(gutter[0], gutter[1])} {p.s(lo.ljust(col), lstyle)} "
-            f"{p.s('│', p.grey)} {p.s(ne.ljust(col), rstyle)}".rstrip()]
+    lstyle = p.rem if kind == "del" else ""
+    rstyle = p.add if kind == "add" else ""
+    return [f"  {lg} {p.s(lo.ljust(col), lstyle)} "
+            f"{p.s('│', p.grey)} {rg} {p.s(ne.ljust(col), rstyle)}".rstrip()]
 
 
 def _runs_san(runs) -> list[tuple[str, bool]]:

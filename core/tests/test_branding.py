@@ -180,3 +180,113 @@ def test_every_algorithm_prints_the_exact_spec_lines_that_select_it():
                                                 env={"NO_COLOR": "1"}))
     for name in branding.ALGORITHMS:
         assert f"algorithm_skill: {name}" in text, name
+
+
+# ---- the home screen must FIT, not scroll ----------------------------------
+
+_TRUECOLOR = {"COLORTERM": "truecolor"}
+
+
+def _visible(lines):
+    import re
+    ansi = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
+    return [ansi.sub("", ln) for ln in lines]
+
+
+def test_home_fits_an_80x24_terminal():
+    """The regression that matters: at 80x24 the home screen was 36 rows and 88 columns,
+    so it scrolled and wrapped. The user saw the BOTTOM — the version line — with the
+    capybara, the wordmark, the tagline and the whole golden path already gone off the
+    top. The brand is exactly the part that got lost, on a user's first command."""
+    from cap_evolve import branding
+    for color, env in ((True, _TRUECOLOR), (True, {}), (False, {})):
+        lines = branding.home(80, color=color, env=env, version="0.1.0", rows=24)
+        vis = _visible(lines)
+        # one row belongs to the shell line the command was typed on
+        assert len(lines) <= 24 - branding.HOME_PROMPT_ROWS, (color, env, len(lines))
+        assert max(len(v) for v in vis) <= 80, (color, env, max(len(v) for v in vis))
+
+
+def test_home_fits_every_plausible_terminal():
+    from cap_evolve import branding
+    for w in (40, 64, 70, 80, 100, 120, 160, 204):
+        for h in (10, 14, 18, 20, 24, 30, 40, 50, 52, 200):
+            lines = branding.home(w, color=True, env=_TRUECOLOR, version="0.1.0", rows=h)
+            vis = _visible(lines)
+            assert len(lines) <= h - branding.HOME_PROMPT_ROWS or h <= 4, (w, h, len(lines))
+            assert max((len(v) for v in vis), default=0) <= w, (w, h)
+
+
+def test_home_never_loses_the_brand_or_the_golden_path_when_it_shrinks():
+    """Degrading may drop detail; it must not drop identity or the first thing to run."""
+    from cap_evolve import branding
+    for h in (18, 20, 24, 30):
+        text = "\n".join(_visible(branding.home(80, color=False, version="0.1.0", rows=h)))
+        assert "cap-evolve" in text
+        assert branding.TAGLINE in text
+        assert "Golden path" in text
+        assert "cap-evolve init" in text
+
+
+def test_home_still_names_every_command_in_the_compact_form():
+    """Condensing the table must not hide a command — the compact form lists the names."""
+    from cap_evolve import branding
+    text = "\n".join(_visible(branding.home(80, color=False, version="0.1.0", rows=24)))
+    for name in branding.COMMANDS:
+        assert name in text, name
+    for group in branding._GROUP_ORDER:
+        assert group in text, group
+
+
+def test_home_uses_the_full_table_when_there_is_room():
+    """A tall terminal should get the summaries, not the permanently-compact form."""
+    from cap_evolve import branding
+    tall = "\n".join(_visible(branding.home(120, color=False, version="0.1.0", rows=60)))
+    short = "\n".join(_visible(branding.home(120, color=False, version="0.1.0", rows=24)))
+    assert branding.COMMANDS["init"]["summary"] in tall
+    assert branding.COMMANDS["init"]["summary"] not in short
+    assert len(tall.splitlines()) > len(short.splitlines())
+
+
+def test_home_unlimited_rows_is_the_full_screen():
+    from cap_evolve import branding
+    assert branding.home(120, color=False, version="0.1.0", rows=None) == \
+        branding.home(120, color=False, version="0.1.0", rows=999)
+
+
+def test_home_drops_a_hint_explanation_rather_than_clipping_it_mid_word():
+    """A narrow terminal must not leave a half-word behind.
+
+    Width-clipping the trailing grey explanation produced "...a real session
+    through th", which reads as a broken renderer. The label and the command are
+    the payload, so the explanation is dropped instead — and comes back when
+    there is room for it.
+    """
+    from cap_evolve import branding
+    why = "replays a real session through the live view"
+
+    narrow = "\n".join(_visible(branding.home(80, color=False, version="0.1.0", rows=24)))
+    wide = "\n".join(_visible(branding.home(120, color=False, version="0.1.0", rows=24)))
+
+    # the command a user has to type survives at both widths
+    assert "cap-evolve replay --demo" in narrow
+    assert "cap-evolve replay --demo" in wide
+    # the explanation appears in full, or not at all — never as a fragment.
+    # Checked on the hint LINE itself: a substring scan over the whole screen
+    # false-positives on unrelated text ("  Golden path" ends in "th").
+    assert why in wide
+    assert why not in narrow
+    hint = next(ln for ln in narrow.splitlines() if "no API key?" in ln)
+    assert hint.rstrip().endswith("cap-evolve replay --demo"), hint
+    for n in range(6, len(why)):                    # no proper prefix of `why` survives
+        assert not hint.rstrip().endswith(why[:n]), f"clipped mid-explanation: {hint!r}"
+
+
+def test_home_never_exceeds_its_width():
+    """Every offered width, including ones that force the compact table."""
+    from cap_evolve import branding
+    for width in (60, 72, 80, 100, 120, 204):
+        for rows in (24, 40, None):
+            lines = _visible(branding.home(width, color=False, version="0.1.0", rows=rows))
+            worst = max((len(ln) for ln in lines), default=0)
+            assert worst <= width, f"width={width} rows={rows}: line of {worst} chars"

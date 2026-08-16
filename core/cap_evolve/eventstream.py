@@ -178,6 +178,37 @@ def follow_events(
 
 # ---- human-readable rendering ----------------------------------------------
 
+def crop_ansi(line: str, width: int) -> str:
+    """Crop to ``width`` VISIBLE columns, counting no ANSI escape as a column.
+
+    Pre-styled text cannot be sliced plainly: the slice can cut mid-escape and (worse)
+    leave a line wider than the terminal. One wrapped line breaks the live view's inline
+    repaint arithmetic, and on the home screen it wraps the command table.
+    """
+    out, used, i = [], 0, 0
+    try:
+        width = max(0, int(width))
+    except (TypeError, ValueError):
+        return line
+    while i < len(line) and used < width:
+        ch = line[i]
+        if ch == "\x1b":
+            j = i + 1
+            if j < len(line) and line[j] == "[":
+                j += 1
+                while j < len(line) and not line[j].isalpha():
+                    j += 1
+            out.append(line[i: j + 1])
+            i = j + 1
+            continue
+        out.append(ch)
+        used += 1
+        i += 1
+    if "\x1b" in line:
+        out.append("\x1b[0m")   # close any style the crop cut off from its reset
+    return "".join(out)
+
+
 def use_color(stream) -> bool:
     """True only on a real TTY without ``NO_COLOR``. Piped/CI output stays plain.
 

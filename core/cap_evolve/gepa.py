@@ -66,19 +66,14 @@ from .harness import (
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir
 from .trials import run_trials_pool
-from .types import Rollout, Score
+from .types import NON_CAPABILITY_DIRS, NON_CAPABILITY_FILES, Rollout, Score
 
 OptimizerFn = Callable[[Path, str], None]
 
 # Optimizer-scratch / non-capability files that must NOT count as editable
 # "components" (they perturb neither the capability nor the content hash).
-_NON_COMPONENT = {
-    "MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md",
-    "FOCUS.md", "REFLECTION.md",
-    # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-    "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
-}
-_NON_COMPONENT_DIRS = {".git", "__pycache__", "prior_iterations"}
+_NON_COMPONENT = NON_CAPABILITY_FILES
+_NON_COMPONENT_DIRS = NON_CAPABILITY_DIRS
 
 
 # ---- components (editable capability files) -------------------------------

@@ -699,3 +699,69 @@ def test_spend_split_omits_roles_with_no_recorded_spend():
     assert "optimizer $1.2500" in out
     assert "runner $" not in out          # never a fabricated $0.0000
     assert "intake $" not in out
+
+
+# ---- provenance appears exactly once ---------------------------------------
+
+_PROV = {"summary": {"run_id": "r1", "algorithm": "gepa",
+                     "run_config": {"spec": "/p/capevolve.yaml", "algorithm": "gepa"}},
+         "graph": {"nodes": []}}
+
+
+def test_provenance_is_in_frame_when_no_masthead_rendered():
+    """No masthead (not truecolor / terminal too short) => the frame MUST carry the
+    spec, or the run's provenance is invisible on that terminal."""
+    from cap_evolve import tui
+    frame = tui.render_frame(_PROV, (100, 30), masthead=False)
+    assert "/p/capevolve.yaml" in frame
+
+
+def test_provenance_is_not_repeated_when_the_masthead_rendered():
+    from cap_evolve import tui
+    frame = tui.render_frame(_PROV, (100, 30), masthead=True)
+    assert "/p/capevolve.yaml" not in frame
+    # and the masthead really does carry it, so nothing was lost
+    assert any(v == "/p/capevolve.yaml"
+               for _, v in tui.run_meta(_PROV["summary"]))
+
+
+def test_masthead_suppression_never_costs_more_rows_than_it_saves():
+    from cap_evolve import tui
+    for rows in (24, 40, 50):
+        with_m = tui.render_frame(_PROV, (120, rows), masthead=True).splitlines()
+        without = tui.render_frame(_PROV, (120, rows), masthead=False).splitlines()
+        assert len(with_m) <= rows and len(without) <= rows
+
+
+# ---- a one-point "chart" is not a chart ------------------------------------
+
+#: Only a baseline — exactly the state `cap-evolve run` leaves for the two agent-mode
+#: algorithms (evograph, agent-optimize), which stop after baseline and hand off.
+_BASELINE_ONLY = [
+    {"t": 1772445600.0, "kind": "run_config", "algorithm": "evograph",
+     "orchestration_mode": "agent", "spec": "/p/capevolve.yaml"},
+    {"t": 1772445600.5, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
+    {"t": 1772445601.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.25,
+     "stderr": 0.1},
+    {"t": 1772445602.0, "kind": "baseline", "val": 0.25, "stderr": 0.1},
+]
+
+
+def test_a_single_point_series_draws_no_chart(tmp_path):
+    """The chart is the surplus sink (_FILL), so a one-point chart turned every spare row
+    into blank space: 23 empty rows inside a labelled axis on a 40-row terminal, which
+    reads as a rendering failure. And it is the ONLY frame evograph and agent-optimize
+    ever show from `cap-evolve run`."""
+    from cap_evolve import tui
+    frame = tui.render_frame(_reduced(tmp_path, events=_BASELINE_ONLY), (120, 40),
+                             color=False)
+    assert "cumulative best" not in frame
+    assert "area under best" not in frame
+    assert "lineage" in frame and "seed" in frame      # the real state is still shown
+
+
+def test_two_points_still_draw_the_chart(tmp_path):
+    """The guard must not disable the chart for a real run."""
+    from cap_evolve import tui
+    frame = tui.render_frame(_reduced(tmp_path), (120, 40), color=False)
+    assert "cumulative best" in frame

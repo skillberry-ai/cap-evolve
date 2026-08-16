@@ -375,3 +375,41 @@ def test_diff_works_on_a_real_run(tmp_path):
     assert "prompt.txt" in out
     assert "+" in out
     assert not _ANSI.search(out)
+
+
+# ---- check accepts the same --project flag as every other subcommand --------
+
+def test_check_accepts_project_as_a_flag_not_just_positionally(tmp_path):
+    """``Path(argv[0])`` turned ``--project X`` into the literal path ``--project``, so
+    the hard gate reported "no adapter" for a project whose adapter was right there —
+    a false failure on the one command that is supposed to be trustworthy."""
+    proj = tmp_path / ".capevolve" / "project"
+    (proj / "adapters").mkdir(parents=True)
+    rc_flag, out_flag, _ = _run("check", "--project", str(proj))
+    rc_pos, out_pos, _ = _run("check", str(proj))
+    rc_eq, out_eq, _ = _run("check", f"--project={proj}")
+    assert rc_flag == rc_pos == rc_eq
+    assert out_flag == out_pos == out_eq
+    # and the reported problem is about the real project, never the literal flag
+    assert "--project" not in out_flag
+
+
+def test_check_rejects_an_unknown_option_instead_of_pathifying_it(tmp_path):
+    rc, out, err = _run("check", "--bogus")
+    assert rc == 2
+    assert "--bogus" in err and out == ""
+
+
+def test_check_flags_a_real_project_as_passing(tmp_path):
+    """The gate must actually pass on a valid adapter (the regression above made every
+    invocation look broken, which would have masked a real contract failure)."""
+    proj = _project(tmp_path, ".capevolve", "deterministic")
+    src = REPO / "examples" / "toy_calc" / "adapter.py"
+    (proj / "adapters").mkdir(parents=True, exist_ok=True)
+    (proj / "adapters" / "adapter.py").write_text(src.read_text(encoding="utf-8"),
+                                                  encoding="utf-8")
+    import os
+    os.environ["CAPEVOLVE_TOY_DATA"] = str(REPO / "examples" / "toy_calc")
+    rc, out, _ = _run("check", "--project", str(proj))
+    assert json.loads(out)["ok"] is True, out
+    assert rc == 0

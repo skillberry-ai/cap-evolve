@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import os
 
+from .eventstream import crop_ansi
+
 __all__ = ["banner", "home", "help_for", "wordmark", "color_depth", "COMMANDS",
            "ALGORITHMS", "TAGLINE", "LOGO_COLS", "LOGO_ROWS", "MIN_LOGO_COLS"]
 
@@ -213,11 +215,12 @@ COMMANDS: dict[str, dict] = {
     "check": {
         "group": "set up",
         "summary": "the hard gate: prove the adapter contract holds (deterministic scorer)",
-        "usage": "cap-evolve check [project_dir]",
+        "usage": "cap-evolve check [project_dir | --project DIR]",
         "long": ("Loads adapters/adapter.py and proves: no stub methods, tasks() is\n"
                  "non-empty and stable, the scorer is deterministic, materialize() is pure.\n"
                  "`cap-evolve run` refuses to spend budget until this passes."),
-        "examples": ["cap-evolve check", "cap-evolve check .capevolve/project"],
+        "examples": ["cap-evolve check", "cap-evolve check .capevolve/project",
+                     "cap-evolve check --project .capevolve/project"],
         "next": "cap-evolve run",
     },
     "algorithms": {
@@ -368,39 +371,75 @@ ALGORITHMS: dict[str, dict] = {
 }
 
 
+#: Rows an 80x24 terminal really has for the home screen: one goes to the shell line
+#: the command was typed on, and overshooting by one scrolls the capybara off the top —
+#: which loses the brand, the value prop and the golden path, and leaves the user
+#: looking at the version string. The screen degrades to fit instead.
+HOME_PROMPT_ROWS = 1
+
+
 def home(width: int = 100, *, color: bool = True, env: dict | None = None,
-         version: str = "") -> list[str]:
-    """The no-args home screen: brand, value prop, golden path, grouped commands."""
+         version: str = "", rows: int | None = None) -> list[str]:
+    """The no-args home screen: brand, value prop, golden path, grouped commands.
+
+    Adaptive in BOTH axes, the same way :func:`banner` already degrades by color depth:
+
+    * every line is clipped to ``width`` (the command summaries used to run to 88
+      columns and wrap on an 80-column terminal);
+    * when ``rows`` cannot hold the full three-group command table (20 rows of it), the
+      table condenses to one line per group listing just the command names — the user
+      still learns every command exists, in 3 rows instead of 20.
+
+    ``rows=None`` means "unlimited", for callers that are not a terminal.
+    """
     depth = color_depth(color, env)
     p = _Pal(depth)
-    out = banner(width, color=color, env=env, lines=(
+    clip = lambda ls: [crop_ansi(x, width) for x in ls]  # noqa: E731
+
+    head = banner(width, color=color, env=env, lines=(
         "",
         "Measure a capability, let a coding agent edit it, and accept only",
         "what beats the baseline on a held-out split — with the test split",
         "sealed until the very end.",
     ))
-    out.append("")
-    out.append(_s("  Golden path", p.bold))
+    path = ["", _s("  Golden path", p.bold)]
     for n, cmd, why in (("1", "cap-evolve init", "scaffold the project + write capevolve.yaml"),
                         ("2", "cap-evolve doctor", "prove it is ready before spending a cent"),
                         ("3", "cap-evolve run --tui", "optimize, with the live view")):
-        out.append(f"  {_s(n, p.grey)}  {_s(cmd.ljust(24), p.cyan)}  {_s(why, p.grey)}")
-    out.append("")
+        path.append(f"  {_s(n, p.grey)}  {_s(cmd.ljust(24), p.cyan)}  {_s(why, p.grey)}")
+
+    full: list[str] = [""]
     for group in _GROUP_ORDER:
-        out.append(_s(f"  {group}", p.bold))
-        for name, meta in COMMANDS.items():
-            if meta["group"] != group:
-                continue
-            out.append(f"    {_s(name.ljust(12), p.cyan)}{meta['summary']}")
-        out.append("")
-    out.append(f"  {_s('no API key?', p.bold)}  {_s('cap-evolve replay --demo', p.cyan)}"
-               f"  {_s('replays a bundled session through the real view', p.grey)}")
-    out.append(f"  {_s('one command?', p.bold)} {_s('cap-evolve help <command>', p.cyan)}"
-               f" {_s('full help + copy-paste examples', p.grey)}")
-    if version:
-        out.append("")
-        out.append(_s(f"  cap-evolve {version}", p.grey))
-    return out
+        full.append(_s(f"  {group}", p.bold))
+        full += [f"    {_s(name.ljust(12), p.cyan)}{meta['summary']}"
+                 for name, meta in COMMANDS.items() if meta["group"] == group]
+        full.append("")
+    compact: list[str] = [""]
+    for group in _GROUP_ORDER:
+        names = [n for n, m in COMMANDS.items() if m["group"] == group]
+        compact.append(f"  {_s(group.ljust(9), p.bold)} {_s('  '.join(names), p.cyan)}")
+
+    # Drop the grey explanation when it will not fit, rather than letting the
+    # width clip mid-word: "…a real session through th" reads as a broken
+    # renderer, while the label + command alone still tells the user what to type.
+    def _hint(label: str, cmd: str, why: str) -> str:
+        if len(f"  {label} {cmd} {why}") <= width:
+            return f"  {_s(label, p.bold)} {_s(cmd, p.cyan)} {_s(why, p.grey)}"
+        return f"  {_s(label, p.bold)} {_s(cmd, p.cyan)}"
+
+    tail = [_hint("no API key? ", "cap-evolve replay --demo",
+                  " replays a real session through the live view"),
+            _hint("one command?", "cap-evolve help <command>",
+                  "full help + copy-paste examples")]
+    ver = ["", _s(f"  cap-evolve {version}", p.grey)] if version else []
+
+    budget = None if rows is None else max(1, int(rows) - HOME_PROMPT_ROWS)
+    out = head + path + full + tail + ver
+    if budget is not None and len(out) > budget:
+        out = head + path + compact + tail + ver
+    # Still too short for even the compact form (a very short terminal): keep the top,
+    # which is where the brand and the golden path are.
+    return clip(out if budget is None else out[:budget])
 
 
 def help_for(name: str | None = None, width: int = 100, *, color: bool = True,

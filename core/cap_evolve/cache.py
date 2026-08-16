@@ -24,11 +24,8 @@ from pathlib import Path
 
 # Files that are NOT part of the capability (optimizer scratch, memory, vcs); they
 # must not perturb the content hash or every iteration would miss the cache.
-_IGNORE_NAMES = {"MEMORY.md", "STATE.md", "INSTRUCTIONS.md", "REJECTED.md", "FOCUS.md",
-                 "REFLECTION.md",
-                 # cross-iteration state files (clean-ownership redesign) — scratch, not capability
-                 "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
-_IGNORE_DIRS = {".git", "__pycache__", "prior_iterations"}
+from .types import NON_CAPABILITY_DIRS as _IGNORE_DIRS  # noqa: E402
+from .types import NON_CAPABILITY_FILES as _IGNORE_NAMES  # noqa: E402
 
 
 def hash_candidate_dir(candidate_dir: Path) -> str:

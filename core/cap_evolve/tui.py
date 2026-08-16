@@ -413,9 +413,11 @@ def run_meta(summary: dict, *, elapsed: float | None = None) -> list[tuple[str, 
 def _provenance(summary: dict, width: int, *, color: bool) -> str:
     """One compact line naming the spec + algorithm that produced this run.
 
-    Duplicated from the masthead on purpose: the masthead only exists on a truecolor
-    terminal tall enough for the logo, and provenance must never be the thing that got
-    dropped — reading the wrong project's spec is the failure this line exists to catch.
+    The masthead already carries spec + algorithm, but it only renders on a truecolor
+    terminal tall enough for the logo. So this line is the FALLBACK: the caller passes
+    ``masthead=True`` to suppress it once the masthead has actually been printed, and
+    provenance is still never the thing that got dropped — reading the wrong project's
+    spec is the failure this line exists to catch.
     """
     cfg = summary.get("run_config") or {}
     algo = eventstream.sanitize(str(summary.get("algorithm")
@@ -429,7 +431,8 @@ def _provenance(summary: dict, width: int, *, color: bool) -> str:
 
 
 def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
-                  totals: dict | None, elapsed: float | None) -> list[str]:
+                  totals: dict | None, elapsed: float | None,
+                  masthead: bool = False) -> list[str]:
     """The header's content, unpadded — the caller decides how many rows it gets.
 
     Returned unpadded so :func:`render_frame` can cap the header's row budget at the
@@ -473,7 +476,7 @@ def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
     ]
 
     lines = [_fit(title, width, color)]
-    if summary.get("run_config") or summary.get("algorithm"):
+    if not masthead and (summary.get("run_config") or summary.get("algorithm")):
         lines.append(_provenance(summary, width, color=color))
     lines += [_breadcrumb(_phase(summary), width, color), _fit(kpi, width, color)]
     # Spend split (runner vs optimizer vs intake). Only ever the numbers the run
@@ -971,31 +974,9 @@ def _diff(diff: dict | None, width: int, height: int, *, color: bool) -> list[st
 
 
 def _crop_ansi(line: str, width: int) -> str:
-    """Crop to ``width`` VISIBLE columns, counting no ANSI escape as a column.
-
-    The diff payload arrives pre-styled, so a plain slice could both cut mid-escape and
-    (worse) leave a line wider than the terminal — one wrapped line breaks the inline
-    repaint's row arithmetic and duplicates half a frame.
-    """
-    out, used, i = [], 0, 0
-    while i < len(line) and used < width:
-        ch = line[i]
-        if ch == "\x1b":
-            j = i + 1
-            if j < len(line) and line[j] == "[":
-                j += 1
-                while j < len(line) and not line[j].isalpha():
-                    j += 1
-            out.append(line[i: j + 1])
-            i = j + 1
-            continue
-        out.append(ch)
-        used += 1
-        i += 1
-    # Close any style the crop may have cut off from its reset.
-    if "\x1b" in line:
-        out.append(_C.RESET)
-    return "".join(out)
+    """Crop to ``width`` VISIBLE columns. Shared with the home screen — see
+    :func:`cap_evolve.eventstream.crop_ansi`."""
+    return eventstream.crop_ansi(line, width)
 
 
 def _footer(root, width: int, height: int, *, color: bool,
@@ -1015,7 +996,7 @@ def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: boo
                  root: str = "", activity=(), running: str | None = None,
                  totals: dict | None = None, elapsed: float | None = None,
                  algo_stats: dict | None = None, diff: dict | None = None,
-                 hint: str = "") -> str:
+                 hint: str = "", masthead: bool = False) -> str:
     """One frame for ``reduced`` (a :func:`dashboard.reduce_run` result).
 
     Pure: no terminal, no clock, no filesystem — everything time-dependent
@@ -1034,12 +1015,17 @@ def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: boo
         graph = reduced.get("graph") or {}
         summary = reduced.get("summary") or {}
         hdr = _header_lines(summary, graph, width, color=color, totals=totals,
-                            elapsed=elapsed)
+                            elapsed=elapsed, masthead=masthead)
         sizes = plan_section_sizes(
             rows,
             header_rows=len(hdr),
-            has_chart=bool([n for n in (graph.get("nodes") or [])
-                            if n.get("best_so_far") is not None]),
+            # TWO points minimum: "cumulative best" over a single point is not a series,
+            # and because the chart is the surplus sink (_FILL) a one-point chart turned
+            # every spare row into blank space — 23 empty rows on a 40-row terminal. That
+            # is the ONLY frame the two agent-mode algorithms ever show from
+            # `cap-evolve run`, which stops right after baseline.
+            has_chart=len([n for n in (graph.get("nodes") or [])
+                           if n.get("best_so_far") is not None]) >= 2,
             has_tree=True, has_activity=bool(activity or running),
             # Content size first (one row per entry), then the wrapped size as stretch:
             # every panel gets its rows before any panel gets its continuation lines.
@@ -1293,7 +1279,8 @@ def _drive(root, feed, *, stream, color: bool, poll: float = 0.4,
                 painter.paint(render_frame(reduced, size, color=color,
                                            root=root, activity=activity, running=running,
                                            totals=totals, algo_stats=algo_stats,
-                                           diff=diff, hint=hint))
+                                           diff=diff, hint=hint,
+                                           masthead=bool(reserved_rows)))
         except KeyboardInterrupt:
             return "interrupt"
         finally:
@@ -1469,7 +1456,7 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
                     painter.paint(render_frame(reduced, size, color=color,
                                                root=str(src), activity=activity,
                                                totals=totals, algo_stats=algo_stats,
-                                               diff=diff,
+                                               diff=diff, masthead=bool(reserved),
                                                hint="replay of a recorded run · "
                                                     "Ctrl-C to stop"))
             if not tty:

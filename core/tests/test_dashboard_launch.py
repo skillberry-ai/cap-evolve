@@ -1,6 +1,7 @@
 """The pipeline's dashboard auto-launch wiring: mode resolution, command shape,
 and the guarantee that launching never raises or blocks the run."""
 
+import socket
 import sys
 from pathlib import Path
 
@@ -43,8 +44,7 @@ def test_maybe_launch_skips_when_unavailable(monkeypatch):
     assert "not installed" in out["reason"]
 
 
-def test_maybe_launch_spawns_when_available(monkeypatch):
-    calls = {}
+def _fake_spawn(monkeypatch, calls):
     monkeypatch.setattr(dl, "is_available", lambda: True)
 
     def fake_popen(cmd, **kw):
@@ -52,9 +52,34 @@ def test_maybe_launch_spawns_when_available(monkeypatch):
         return object()
 
     monkeypatch.setattr(dl.subprocess, "Popen", fake_popen)
-    out = dl.maybe_launch("/runs", mode="auto", port=7878)
-    assert out["dashboard"] == "http://127.0.0.1:7878"
+
+
+def test_maybe_launch_spawns_when_available(monkeypatch):
+    calls = {}
+    _fake_spawn(monkeypatch, calls)
+    # Pick a port that is genuinely free right now instead of hard-coding one:
+    # a stray dashboard (or any unrelated server) on a fixed port must not fail us.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        free = s.getsockname()[1]
+    out = dl.maybe_launch("/runs", mode="auto", port=free)
+    assert out["dashboard"] == f"http://127.0.0.1:{free}"
     assert calls["cmd"][1:3] == ["-m", "capevolve_dashboard.server"]
+    assert str(free) in calls["cmd"]
+
+
+def test_maybe_launch_steps_past_an_occupied_port(monkeypatch):
+    """A server already squatting the requested port must not be reused: the
+    stale server would keep serving a DIFFERENT run's base directory."""
+    calls = {}
+    _fake_spawn(monkeypatch, calls)
+    with socket.socket() as squatter:
+        squatter.bind(("127.0.0.1", 0))
+        squatter.listen(1)
+        taken = squatter.getsockname()[1]
+        out = dl.maybe_launch("/runs", mode="auto", port=taken)
+    assert out["dashboard"] != f"http://127.0.0.1:{taken}"
+    assert str(taken) not in calls["cmd"]
 
 
 def test_maybe_launch_never_raises_on_spawn_error(monkeypatch):
@@ -66,3 +91,41 @@ def test_maybe_launch_never_raises_on_spawn_error(monkeypatch):
     monkeypatch.setattr(dl.subprocess, "Popen", boom)
     out = dl.maybe_launch("/runs", mode="auto")
     assert out["dashboard"] == "error"
+
+
+def test_report_records_a_given_url_instead_of_launching_a_second_server(tmp_path):
+    """``cap-evolve run`` starts the dashboard, then the report phase used to call
+    maybe_launch() again — and because _free_port() steps past an occupied port, that
+    second call spawned a SECOND server on a SECOND port and reported that one. Every
+    run leaked a process and printed two contradicting URLs.
+
+    ``--dashboard-url`` is the fix: record what the caller already started, launch nothing.
+    """
+    import json
+    import os
+    import socket
+    import subprocess
+
+    report = REPO / "skills" / "phases" / "report" / "scripts" / "run.py"
+    run_dir = tmp_path / "run_x"
+    run_dir.mkdir()
+    (run_dir / "events.jsonl").write_text("", encoding="utf-8")
+    (run_dir / "state.json").write_text(json.dumps({"best_id": "seed"}), encoding="utf-8")
+
+    with socket.socket() as s:          # a port nothing is on, and must stay that way
+        s.bind(("127.0.0.1", 0))
+        free = s.getsockname()[1]
+
+    env = dict(os.environ, PYTHONPATH=str(CORE), CAPEVOLVE_CORE=str(CORE))
+    proc = subprocess.run(
+        [sys.executable, str(report), "--run-dir", str(run_dir), "--no-dashboard",
+         "--dashboard-mode", "auto", "--dashboard-port", str(free),
+         "--dashboard-url", "http://127.0.0.1:9/already-up"],
+        capture_output=True, text=True, env=env, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert json.loads(proc.stdout)["dashboard_server"] == "http://127.0.0.1:9/already-up"
+
+    # nothing was spawned on the port we offered
+    with socket.socket() as probe:
+        probe.settimeout(0.5)
+        assert probe.connect_ex(("127.0.0.1", free)) != 0, "a second server was launched"

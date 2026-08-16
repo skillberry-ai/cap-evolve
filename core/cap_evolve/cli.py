@@ -21,7 +21,7 @@ Subcommands:
                        what a candidate actually changed, from its snapshot
     cap-evolve version
     cap-evolve splits  --ids ... [--seed N] [--ratios a,b,c]
-    cap-evolve check   [project_dir]
+    cap-evolve check   [project_dir | --project DIR]
     cap-evolve run     [--spec FILE]  (defaults to <project>/capevolve.yaml)
                        [--resume [--run-ts TS]]  resume an interrupted run in place
                        [--follow]  print live progress while the run works
@@ -81,8 +81,32 @@ def _cmd_splits(argv):
 
 
 def _cmd_check(argv):
-    project = Path(argv[0]) if argv else Path(".capevolve/project")
-    rep = run_check(project)
+    """The hard gate. Takes the project dir positionally OR as ``--project`` (the flag
+    every other subcommand uses), because the alternative was worse than a usage error:
+    ``Path(argv[0])`` turned ``--project X`` into the literal path ``--project`` and the
+    gate reported "no adapter" for a project whose adapter was right there.
+    """
+    argv = list(argv)
+    project = None
+    while argv:
+        a = argv.pop(0)
+        if a in ("--project", "-p"):
+            if not argv:
+                print("check: --project needs a path", file=sys.stderr)
+                return 2
+            project = Path(argv.pop(0))
+        elif a.startswith("--project="):
+            project = Path(a.split("=", 1)[1])
+        elif a.startswith("-"):
+            print(f"check: unknown option {a!r}  (usage: cap-evolve check [project_dir])",
+                  file=sys.stderr)
+            return 2
+        elif project is None:
+            project = Path(a)
+        else:
+            print(f"check: unexpected extra argument {a!r}", file=sys.stderr)
+            return 2
+    rep = run_check(project or Path(".capevolve/project"))
     print(json.dumps(rep.to_dict(), indent=2))
     return 0 if rep.ok else 1
 
@@ -349,6 +373,11 @@ _ALGO_FOCUS_ALIASES = {
     "hardest-first": ("hill-climb", "hardest-first"),
 }
 
+#: Algorithms whose ``run.py`` accepts ``--convergence`` (the graded stall signal in
+#: ``cap_evolve.convergence``). gepa stops on its own ``gepa_stop`` and skillopt on its
+#: epoch schedule, so the spec key is inert for them — and we say so rather than drop it.
+CONVERGENCE_ALGORITHMS = frozenset({"hill-climb"})
+
 
 def _resolve_algorithm(name: str) -> tuple[str, str | None]:
     """Map a spec ``algorithm_skill`` to (skill_name, focus).
@@ -607,10 +636,18 @@ def _cmd_run(argv):
     # break the JSON contract, and provenance is not worth corrupting the payload.
     if _stderr_is_usable():
         print(f"spec: {spec_path}", file=sys.stderr, flush=True)
+    dash_url = ""
     if dash_mode == "auto":
         status = dashboard_launch.maybe_launch(
             proj_abs.parent, mode=dash_mode, port=dash_port, open_browser=True)
-        print(json.dumps(status))
+        u = status.get("dashboard")
+        if isinstance(u, str) and u.startswith("http"):
+            dash_url = u
+        # stderr, not stdout: this is a URL for a human to click, and the machine-readable
+        # summary already carries it as ``dashboard_server``. On stdout it made a finished
+        # run print TWO json documents, so `cap-evolve run | jq` could not parse it.
+        if _stderr_is_usable():
+            print(json.dumps(status), file=sys.stderr, flush=True)
     cap_path = spec.get("capability_path", "seed_capability")
     ratios = f"{spec.get('split_train',0.5)},{spec.get('split_val',0.25)},{spec.get('split_test',0.25)}"
 
@@ -793,7 +830,7 @@ def _cmd_run(argv):
     # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
     if orchestration_mode == "agent":
         print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
-                          "spec_path": str(spec_path),
+                          "spec_path": str(spec_path), "dashboard": dash_url or "off",
                           "stop_condition": str(spec.get("stop_condition", "")),
                           "next": "drive via the orchestrate Agent-mode loop; "
                                   "seal with `cap-evolve finalize`"}))
@@ -869,8 +906,17 @@ def _cmd_run(argv):
             pp = [p.strip() for p in pp.split(",") if p.strip()]
         if pp:
             alg_cmd += ["--protected-paths", ",".join(str(p) for p in pp)]
-    if algorithm_name == "hill-climb" and spec.get("convergence"):
-        alg_cmd += ["--convergence"]
+    if spec.get("convergence"):
+        if algorithm_name in CONVERGENCE_ALGORITHMS:
+            alg_cmd += ["--convergence"]
+        else:
+            # Say so. Silently dropping the key reads as "convergence is on" for the
+            # whole run; gepa and skillopt stop on their own signals (gepa_stop, the
+            # epoch schedule) and have no --convergence to forward it to.
+            print(f"warn: spec sets convergence: true, but {algorithm_name} does not "
+                  f"support the graded convergence signal (only "
+                  f"{', '.join(sorted(CONVERGENCE_ALGORITHMS))}). Ignoring it; "
+                  f"{algorithm_name} uses its own stop condition.", file=sys.stderr)
     # gepa treats metric-calls as its PRIMARY budget; forward it explicitly (hill-climb
     # has no such flag and enforces the same cap via run_dir.budget_exhausted()).
     if algorithm_name == "gepa" and spec.get("max_metric_calls"):
@@ -892,6 +938,12 @@ def _cmd_run(argv):
     # 3) finalize  4) report
     last = proc.stdout
     report_extra = ["--dashboard-mode", dash_mode, "--dashboard-port", str(dash_port)]
+    # The server this run ALREADY started. Without this the report phase calls
+    # maybe_launch() again, _free_port() steps past the port our own server holds, and
+    # every run leaks a second dashboard process on a second port — then reports that
+    # second URL, contradicting the one printed at the top.
+    if dash_url:
+        report_extra += ["--dashboard-url", dash_url]
     # Resume seal guard: if a prior finalize already burned the test seal, re-running
     # finalize would raise TestSealError. Skip it and just regenerate the report so the
     # honest test number stays scored exactly once.
@@ -1118,6 +1170,16 @@ def _size(stream=None) -> int:
     return _term_width(100)
 
 
+def _rows(default: int = 24) -> int:
+    """Terminal height, for screens that must FIT rather than scroll. The home screen
+    overshooting by a row scrolls the capybara and the golden path off the top."""
+    import shutil
+    try:
+        return max(4, shutil.get_terminal_size((80, default)).lines)
+    except OSError:
+        return default
+
+
 def _wants_color(stream=None, argv=()) -> bool:
     """TTY + ``NO_COLOR`` decision, with an explicit ``--no-color`` override."""
     from . import eventstream
@@ -1128,7 +1190,8 @@ def _wants_color(stream=None, argv=()) -> bool:
 
 def _cmd_home(argv) -> int:
     from . import branding
-    _screen(branding.home(_size(), color=_wants_color(argv=argv), version=__version__))
+    _screen(branding.home(_size(), color=_wants_color(argv=argv), version=__version__,
+                          rows=_rows()))
     return 0
 
 
@@ -1211,6 +1274,13 @@ def _doctor_checks(project: Path) -> list[dict]:
             f"set orchestration_mode: agent in {spec_path}")
     else:
         add("algorithm", "ok", f"{algo} ({mode})")
+
+    # An inert spec key is worse than a missing one: the reader believes it is on.
+    if spec.get("convergence") and _resolve_algorithm(algo)[0] not in CONVERGENCE_ALGORITHMS:
+        add("convergence", "warn",
+            f"convergence: true is ignored by {algo} (its own stop condition applies)",
+            f"remove the key, or set algorithm_skill to one of "
+            f"{', '.join(sorted(CONVERGENCE_ALGORITHMS))}")
 
     adapter = project / "adapters" / "adapter.py"
     if not adapter.exists():
