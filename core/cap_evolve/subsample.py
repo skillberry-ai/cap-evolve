@@ -57,7 +57,8 @@ from __future__ import annotations
 import math
 import random
 
-__all__ = ["select_screen_subset", "screen_decision", "screen_savings", "paired_deltas_on"]
+__all__ = ["select_screen_subset", "screen_decision", "screen_savings",
+           "paired_deltas_on", "full_val_ceiling"]
 
 
 def _valid(pt: dict) -> bool:
@@ -261,4 +262,61 @@ def screen_savings(*, fired: int, val_n: int, n_trials: int, decision: str) -> d
         "avoided": (full - fired) if killed else 0,
         "net_rollouts": (full - fired) if killed else -fired,
         "decision": decision,
+        # The kill rate at which this screen width breaks even. A screen costs ``fired``
+        # on every candidate and saves ``full - fired`` on a kill, so screening only
+        # pays when kills / candidates > fired / full. Reported so a run can SEE that a
+        # narrow val makes the ladder uneconomic instead of discovering it in the ledger.
+        "breakeven_kill_rate": (round(fired / full, 4) if full else None),
+    }
+
+
+def full_val_ceiling(parent_per_task: list, cand_per_task: list, subset_ids: list,
+                     val_ids: list) -> dict:
+    """Could a FULL-val eval of this candidate still clear the gate? Arithmetic, not stats.
+
+    A screen measures the candidate on ``subset_ids``. Every val task OUTSIDE the subset
+    is unknown, but bounded: a reward can be at most 1.0. So the candidate's best
+    conceivable full-val total is ``sum(measured on subset) + |unscreened|``, and its
+    best conceivable paired Δ̄ against the parent follows.
+
+    The gate accepts only when ``Δ̄ > k_se·SE`` with ``k_se·SE >= 0``, so when the best
+    conceivable Δ̄ is ``<= 0`` an accept is **impossible** — no full-val eval can change
+    the answer, and paying for one buys nothing. That happens exactly when the subset
+    already covers every task the parent fails (the unscreened remainder is all tasks the
+    parent passes, which can only stay level or regress).
+
+    This is the one case where a screen may kill without a statistical argument, and it
+    does not violate "a screen may never accept": it can only ever conclude *reject*.
+    ``accept_possible: true`` means "unknown, go pay for full val" — never "accept".
+    """
+    par = {str(pt.get("task_id")): pt for pt in (parent_per_task or []) if _valid(pt)}
+    can = {str(pt.get("task_id")): pt for pt in (cand_per_task or []) if _valid(pt)}
+    ids = [str(i) for i in (val_ids or [])]
+    measured = [i for i in (str(s) for s in (subset_ids or [])) if i in can and i in par]
+    # Only tasks the PARENT measured can enter a paired comparison.
+    paired_pool = [i for i in ids if i in par]
+    if not paired_pool or not measured:
+        return {"status": "not computable — parent or candidate coverage too thin"}
+    unscreened = [i for i in paired_pool if i not in set(measured)]
+    cand_best = (sum(float(can[i].get("reward") or 0.0) for i in measured)
+                 + float(len(unscreened)))
+    parent_total = sum(float(par[i].get("reward") or 0.0) for i in paired_pool)
+    n = len(paired_pool)
+    best_delta = (cand_best - parent_total) / n
+    return {
+        "n_paired_val": n,
+        "n_screened": len(measured),
+        "n_unscreened_assumed_perfect": len(unscreened),
+        "candidate_best_case_mean": round(cand_best / n, 6),
+        "parent_mean": round(parent_total / n, 6),
+        "best_case_mean_delta": round(best_delta, 6),
+        "accept_possible": best_delta > 1e-9,
+        "reason": (
+            f"even if all {len(unscreened)} unscreened val task(s) score 1.0, the "
+            f"candidate's full-val mean is at most {cand_best / n:.4f} vs the parent's "
+            f"{parent_total / n:.4f} (best-case Δ̄ {best_delta:+.4f} <= 0), and the gate "
+            "needs Δ̄ > k_se·SE >= 0 — a full-val eval CANNOT accept this candidate"
+            if best_delta <= 1e-9 else
+            f"best-case Δ̄ {best_delta:+.4f} > 0, so a full-val eval could still clear the "
+            "gate — the outcome is unknown, which is not the same as acceptable"),
     }

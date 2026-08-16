@@ -1,0 +1,28 @@
+{
+  "current": {
+    "tag": "seed",
+    "reward": 0.6666666666666666,
+    "stderr": 0.1421338109037403
+  },
+  "candidate": {
+    "tag": "c2_toolguard_solo",
+    "reward": 0.4166666666666667,
+    "stderr": 0.1486470975026408,
+    "coverage": 1.0
+  },
+  "gate": {
+    "accept": false,
+    "reason": "paired \u0394\u0304=-0.2500 <= 0.2\u00b7SE=0.0261 (SE=0.1306, n=12)",
+    "delta": -0.25,
+    "threshold": 0.026111648393354676,
+    "indecisive": false
+  },
+  "paired_n": 12,
+  "regressions": [
+    "12",
+    "4",
+    "8"
+  ],
+  "verdict": "reject",
+  "next": "scripts/commit.py --decision reject"
+}

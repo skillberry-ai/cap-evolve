@@ -97,8 +97,13 @@ def main() -> int:
         c.check(nodes["seed"]["children"] == ["cand_0001"]
                 and nodes["cand_0001"]["parent"] == "seed",
                 "lineage edges not wired", note="parent↔child edges wired both ways")
-        c.check(s["counts"] == {"accepted": 1, "rejected": 1, "failed": 0,
-                                "seed": 1, "total": 4 - 1},
+        # Assert the buckets this synthetic log actually exercises, plus the total —
+        # not dict equality. `reduce_run` seeds every status bucket it knows about
+        # (`indecisive` among them), so an exact-dict assertion breaks whenever a new
+        # status is added even though nothing about the reducer regressed.
+        want = {"accepted": 1, "rejected": 1, "failed": 0, "seed": 1, "total": 3}
+        c.check({k: s["counts"].get(k) for k in want} == want
+                and sum(v for k, v in s["counts"].items() if k != "total") == s["counts"]["total"],
                 f"status counts wrong: {s['counts']}")
         c.check(s["best_val"] == 0.75 and s["best_id"] == "cand_0001",
                 f"best wrong: {s['best_val']} / {s['best_id']}")

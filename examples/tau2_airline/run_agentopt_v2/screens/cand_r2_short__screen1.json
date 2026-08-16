@@ -1,0 +1,87 @@
+{
+  "tag": "cand_r2_short",
+  "screen_tag": "cand_r2_short__screen1",
+  "tier": 1,
+  "current": "seed",
+  "subset": {
+    "ids": [
+      "0",
+      "12",
+      "16",
+      "24",
+      "40",
+      "44"
+    ],
+    "broken": [],
+    "holdout": [
+      "12",
+      "16"
+    ],
+    "informative": [
+      "0",
+      "24",
+      "40",
+      "44"
+    ],
+    "k": 6,
+    "requested_k": 6,
+    "seed": 1,
+    "holdout_frac": 0.34,
+    "pool_n": 12
+  },
+  "reused_from_earlier_tiers": [],
+  "fired_ids": [
+    "0",
+    "12",
+    "16",
+    "24",
+    "40",
+    "44"
+  ],
+  "paired": {
+    "deltas": [
+      0.0,
+      -1.0,
+      -1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ids": [
+      "0",
+      "12",
+      "16",
+      "24",
+      "40",
+      "44"
+    ],
+    "regressed": [
+      "12",
+      "16"
+    ],
+    "fixed": [],
+    "dropped": []
+  },
+  "decision": "kill",
+  "inconclusive": false,
+  "n": 6,
+  "mean_delta": -0.3333333333333333,
+  "se": 0.21081851067789198,
+  "threshold": -0.21081851067789198,
+  "regressed": [
+    "12",
+    "16"
+  ],
+  "reason": "subset \u0394\u0304=-0.3333, SE=0.2108, n=6: harm beyond noise (\u0394\u0304+1.0\u00b7SE=-0.1225 < 0) \u2192 kill",
+  "savings": {
+    "fired": 6,
+    "full_val_rollouts": 12,
+    "avoided": 6,
+    "net_rollouts": 6,
+    "decision": "kill",
+    "breakeven_kill_rate": 0.5,
+    "screen_cost_usd": 0.0
+  },
+  "promote_to": null,
+  "note": "A screen is TRIAGE. It may kill; it may never accept. Only gate_check.py on FULL val (\u0394\u0304 > k\u00b7SE and no regression) accepts."
+}

@@ -1,0 +1,160 @@
+{
+  "cand_r1_disc__screen1": {
+    "0": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "12": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): calculate: was never called (or not called correctly); update_reservation_baggages: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "16": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT110', 'origin': 'ATL', 'destination': 'LGA', 'date': '2024-05-24'}, {'flight_number': 'HAT172', 'origin': 'LGA', 'destination': 'PHL', 'date': '2024-05-24'}], payment_id='gift_card_8887175', reservation_id='M05KNL'.",
+      "reward": 1.0
+    },
+    "24": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "40": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_passengers: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "44": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='H8Q05L'; search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_fligh",
+      "reward": 0.0
+    }
+  },
+  "cand_r2_short__screen1": {
+    "0": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "12": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): calculate: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "16": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT110', 'origin': 'ATL', 'destination': 'LGA', 'date': '2024-05-24'}, {'flight_number': 'HAT172', 'origin': 'LGA', 'destination': 'PHL', 'date': '2024-05-24'}], payment_id='gift_card_8887175', reservation_id='M05KNL'.",
+      "reward": 0.0
+    },
+    "24": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: agent used cabin='basic_economy', destination='LAX', flight_type='round_trip', flights=[{'flight_number': 'HAT041', 'origin': 'EWR', 'destination': 'LAX', 'date': '2024-05-20'}, {'flight_number': 'HAT012', 'origin': 'LAX', 'destination': 'EWR', 'date': '2024-05-25'}], insurance='no', nonfree_baggages=0, origin='EWR', passeng",
+      "reward": 0.0
+    },
+    "40": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_passengers: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "44": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): search_direct_flight: agent used date='2024-05-25', destination='LAX', origin='EWR'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'origin': 'JFK', 'destination': 'ATL', 'date': '2024-05-24', 'price': 74}], payment_id='credit_card_4196779', reservation_id='H8Q05L'; update_reservation_flights: ag",
+      "reward": 0.0
+    }
+  },
+  "cand_r3_lookup__screen1": {
+    "0": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "12": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): calculate: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "16": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT110', 'origin': 'ATL', 'destination': 'LGA', 'date': '2024-05-24', 'price': 105}, {'flight_number': 'HAT172', 'origin': 'LGA', 'destination': 'PHL', 'date': '2024-05-24', 'price': 102}], payment_id='gift_card_8887175', reservation_id='M05KNL'.",
+      "reward": 1.0
+    },
+    "24": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "40": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): update_reservation_passengers: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "44": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): search_direct_flight: agent used date='2024-05-24', destination='EWR', origin='CLT'; search_direct_flight: agent used date='2024-05-24', destination='EWR', origin='CLT'; update_reservation_flights: agent used cabin='business', flights=[{'flight_number': 'HAT268', 'origin': 'JFK', 'destination': 'ATL', 'date': '2024-05-24', 'price': 237}], pay",
+      "reward": 0.0
+    }
+  },
+  "seed": {
+    "0": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "12": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): calculate: was never called (or not called correctly).",
+      "reward": 1.0
+    },
+    "16": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT110', 'origin': 'ATL', 'destination': 'LGA', 'date': '2024-05-24'}, {'flight_number': 'HAT172', 'origin': 'LGA', 'destination': 'PHL', 'date': '2024-05-24'}], payment_id='gift_card_8887175', reservation_id='M05KNL'.",
+      "reward": 1.0
+    },
+    "20": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): book_reservation: agent used cabin='economy', destination='SEA', flight_type='one_way', flights=[{'flight_number': 'HAT136', 'origin': 'JFK', 'destination': 'ATL', 'date': '2024-05-20', 'scheduled_departure_time_est': '19:00:00', 'scheduled_arrival_time_est': '21:30:00'}, {'flight_number': 'HAT039', 'origin': 'ATL', 'destination': 'SEA', 'date': '2024-05-20', 'scheduled_departure_time_est': '22:00:00', 'scheduled_arrival_time_est': '03:00:00+1'}], insurance='no', nonfree_baggages=0, origin='JFK', passengers=[{'first_name': 'Mia'",
+      "reward": 1.0
+    },
+    "24": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): book_reservation: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "28": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "32": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT041', 'origin': 'EWR', 'destination': 'LAX', 'date': '2024-05-21', 'price': 136}], payment_id='credit_card_9659780', reservation_id='OWZ4XL'; update_reservation_flights: agent used cabin='economy', flights=[{'flight_number': 'HAT041', 'origin': 'EWR', 'destination': 'LAX', 'date': '2024-05-21', 'price': 136}], payment_id='credit_card_9659780', reservation_id='OWZ4XL'.",
+      "reward": 1.0
+    },
+    "36": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. All checks passed.",
+      "reward": 1.0
+    },
+    "4": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='S61CZX'; get_reservation_details: agent used reservation_id='S61CZX'.",
+      "reward": 1.0
+    },
+    "40": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); update_reservation_passengers: was never called (or not called correctly).",
+      "reward": 0.0
+    },
+    "44": {
+      "errored": false,
+      "feedback": "Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-level defects (your own wrong values): get_reservation_details: agent used reservation_id='H8Q05L'; search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_flight: was never called (or not called correctly); search_direct_fligh",
+      "reward": 0.0
+    },
+    "8": {
+      "errored": false,
+      "feedback": "Task reward: 1.000. Action-level defects (your own wrong values): get_reservation_details: was never called (or not called correctly); book_reservation: agent used cabin='economy', destination='PHL', flight_type='one_way', flights=[{'date': '2024-05-26', 'destination': 'PHL', 'flight_number': 'HAT271', 'origin': 'ORD'}], insurance='no', nonfree_baggages=0, origin='ORD', passengers=[{'first_name': 'Sophia', 'last_name': 'Silva', 'dob': '1957-10-05'}, {'first_name': 'Kevin', 'last_name': 'Smith', 'dob': '2001-04-12'}], payment_methods=[{'payment_id': 'certificate_8045380', 'amount': 348.0}] (not",
+      "reward": 1.0
+    }
+  }
+}

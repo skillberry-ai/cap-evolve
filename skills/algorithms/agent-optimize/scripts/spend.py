@@ -37,19 +37,7 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir, harness
 from cap_evolve.constraints import check_constraints, parse_constraints
 from cap_evolve.loop import has_valid_trials
-from cap_evolve.specfile import read_yaml
-
-
-def _spec(project: Path | None) -> dict:
-    if not project:
-        return {}
-    f = project / "capevolve.yaml"
-    if not f.is_file():
-        return {}
-    try:
-        return read_yaml(f.read_text(encoding="utf-8")) or {}
-    except Exception:  # noqa: BLE001 — a malformed spec must not block the readout
-        return {}
+from cap_evolve.specfile import spec_for_run
 
 
 def _wallclock(run_dir: RunDir) -> float:
@@ -95,7 +83,14 @@ def _afford(run_dir: RunDir, spec: dict, n_siblings: int, n_trials: int) -> dict
     val_n = len(run_dir.read_splits().ids("val"))
     per_eval = val_n * max(1, n_trials)
     need = per_eval * max(0, n_siblings)
-    upr = (spent.usd / spent.metric_calls) if spent.metric_calls else None
+    # A measured rate of EXACTLY $0 after real rollouts is not "free" — it is
+    # UNMETERED. It happens whenever the serving path returns no cost (the IBM litellm
+    # proxy does exactly this: litellm logs "model isn't mapped yet" and reports 0.0).
+    # Treating it as 0.0 made `need_usd` 0.0, so the max_usd ceiling could never
+    # block anything and ANY fan-out came back affordable: true. Unknown, not zero.
+    metered = bool(spent.metric_calls) and spent.usd > 0.0
+    upr = (spent.usd / spent.metric_calls) if metered else None
+    unmetered = bool(spent.metric_calls) and not metered
     need_usd = (upr * need) if upr is not None else None
 
     blockers: list = []
@@ -118,11 +113,17 @@ def _afford(run_dir: RunDir, spec: dict, n_siblings: int, n_trials: int) -> dict
         "usd_needed_estimate": need_usd,
         "affordable": not blockers,
         "blockers": blockers,
+        "runner_spend_metered": (None if not spent.metric_calls else metered),
         "caveat": ("usd_per_rollout is this run's measured average and excludes the "
                    "proposer's own cost — record that with commit.py --optimizer-usd"
                    if upr is not None else
-                   "no rollout has been paid for yet, so only rollout-count ceilings "
-                   "could be checked — the $ answer is unknown, not 'yes'"),
+                   (f"{spent.metric_calls} rollouts are recorded but runner usd is still "
+                    "0.0, so this serving path does NOT meter cost. The $ ceiling cannot "
+                    "be enforced from measurements — bound the run with max_metric_calls "
+                    "/ max_iterations instead, and report rollout counts, not dollars."
+                    if unmetered else
+                    "no rollout has been paid for yet, so only rollout-count ceilings "
+                    "could be checked — the $ answer is unknown, not 'yes'")),
     }
 
 
@@ -141,7 +142,7 @@ def main(argv=None) -> int:
 
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project) if args.project else None
-    spec = _spec(project)
+    spec = spec_for_run(run_dir, project)
     stop, reason = run_dir.budget_exhausted()
     best_id = run_dir.best_id
     best = harness.split_result_from_rollouts(run_dir, best_id, "val") if best_id else None

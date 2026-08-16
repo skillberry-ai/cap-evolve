@@ -1,0 +1,361 @@
+===== c1_verify :: policy/policy.md =====
+--- .capevolve/run_agentoptv3/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv3/candidates/c1_verify/policy/policy.md	2026-08-16 04:44:14
+@@ -164,4 +164,25 @@
+ 
+ - If the user complains about delayed flights in a reservation and wants to change or cancel the reservation, the agent can offer a certificate as a gesture after confirming the facts and changing or cancelling the reservation, with the amount being $50 times the number of passengers.
+ 
+-Do not offer compensation for any other reason than the ones listed above.
+\ No newline at end of file
++Do not offer compensation for any other reason than the ones listed above.
++
++## Verification rules
++
++These rules add obligations to **check**. They never authorise an action this policy
++forbids: where a rule here and a restriction above disagree, the restriction wins and you
++refuse.
++
++1. What the user states is a claim, not a fact. Before any write whose legality depends on
++   it, read the real value with a tool. When the booking was created, the current cabin,
++   the passenger list, the baggage counts, whether there is insurance, the membership
++   level and the payment methods on file all come from `get_reservation_details` and
++   `get_user_details` — never from the user's word for it.
++2. Never tell the user an action has been performed unless you called the write tool in
++   this conversation and it returned a result. If you have not called it, it has not
++   happened.
++3. Copy every value you pass to a write verbatim from the tool result you read it from,
++   never from the user's paraphrase or from memory, and pass only the fields that tool's
++   schema lists.
++4. If a tool call returns an error, read it, correct the argument it names, and call it
++   once more. Never repeat an identical failing call, and never report success for a call
++   that errored.
+
+===== c2_toolguard :: tools/tools.py =====
+--- .capevolve/run_agentoptv3/candidates/seed/tools/tools.py	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv3/candidates/c2_toolguard/tools/tools.py	2026-08-16 04:49:04
+@@ -58,6 +58,32 @@
+     def __init__(self, db: FlightDB) -> None:
+         super().__init__(db)
+ 
++
++    # ------------------------------------------------------------------
++    # Policy invariants the tau2 API does NOT enforce.
++    #
++    # The airline policy states twice that "the API does not check these for the
++    # agent, so the agent must make sure the rules apply before calling the
++    # API". A weak agent cannot be relied on to remember an unenforced rule, so
++    # every rule that is checkable from the database is checked HERE, and the
++    # error names the rule and the actual values it was checked against. This
++    # turns a silent wrong write (which scores 0) into a readable refusal the
++    # agent can act on.
++    # ------------------------------------------------------------------
++
++    _NOW = "2024-05-15T15:00:00"
++
++    def _flown_dates(self, reservation) -> list:
++        """Reservation flight dates that are already in the past."""
++        today = self._NOW[:10]
++        return [f.date for f in reservation.flights if f.date < today]
++
++    def _within_24h(self, reservation) -> bool:
++        from datetime import datetime
++
++        created = datetime.fromisoformat(reservation.created_at)
++        return (datetime.fromisoformat(self._NOW) - created).total_seconds() <= 24 * 3600
++
+     @is_tool(ToolType.WRITE)
+     def book_reservation(
+         self,
+@@ -225,6 +251,39 @@
+             ValueError: If the reservation is not found.
+         """
+         reservation = self._get_reservation(reservation_id)
++
++        # POLICY: cannot help once any portion of the flight has been flown.
++        flown = self._flown_dates(reservation)
++        if flown:
++            raise ValueError(
++                f"Cannot cancel reservation {reservation_id}: "
++                f"segment(s) dated {flown} have already been flown "
++                f"(current date {self._NOW[:10]}). This reservation needs a human agent."
++            )
++
++        # POLICY: cancellable only if booked within the last 24h, or the flight was
++        # cancelled by the airline, or it is a business flight, or the user has travel
++        # insurance. Checked against the DATABASE, not against what the user says.
++        airline_cancelled = any(
++            getattr(self._get_flight_instance(f.flight_number, f.date), "status", None)
++            == "cancelled"
++            for f in reservation.flights
++        )
++        if not (
++            self._within_24h(reservation)
++            or airline_cancelled
++            or reservation.cabin == "business"
++            or reservation.insurance == "yes"
++        ):
++            raise ValueError(
++                f"Cannot cancel reservation {reservation_id}: none of the four "
++                f"cancellation conditions holds. Checked: created_at="
++                f"{reservation.created_at} (not within 24h of {self._NOW}), "
++                f"airline-cancelled flight=False, cabin={reservation.cabin!r} "
++                f"(not business), insurance={reservation.insurance!r}. Do not retry; "
++                f"tell the user the reservation is not eligible for cancellation."
++            )
++
+         logger.debug(reservation.model_dump_json(indent=4))
+         # reverse the payment
+         refunds = []
+@@ -317,7 +376,10 @@
+             date: The date of the flight in the format 'YYYY-MM-DD', such as '2024-01-01'.
+ 
+         Returns:
+-            The direct flights between the two cities on the specific date.
++            The direct flights between the two cities on the specific date. An EMPTY
++            list means there is no direct flight on that route and date - it is not an
++            error. Call ``search_onestop_flight`` before telling the user no option
++            exists, and never repeat this search with the same arguments.
+         """
+         return self._search_direct_flight(
+             date=date, origin=origin, destination=destination
+@@ -433,6 +495,19 @@
+         reservation = self._get_reservation(reservation_id)
+         user = self._get_user(reservation.user_id)
+ 
++        # POLICY: the user can ADD but not REMOVE checked bags.
++        if (
++            total_baggages < reservation.total_baggages
++            or nonfree_baggages < reservation.nonfree_baggages
++        ):
++            raise ValueError(
++                f"Cannot reduce checked bags on {reservation_id}: it currently has "
++                f"total_baggages={reservation.total_baggages}, "
++                f"nonfree_baggages={reservation.nonfree_baggages}, and you asked for "
++                f"total_baggages={total_baggages}, nonfree_baggages={nonfree_baggages}. "
++                f"Bags can only be added. Do not retry; tell the user bags cannot be removed."
++            )
++
+         # Calculate price
+         total_price = 50 * max(0, nonfree_baggages - reservation.nonfree_baggages)
+ 
+@@ -479,7 +554,39 @@
+             flights = [FlightInfo(**flight) for flight in flights]
+         reservation = self._get_reservation(reservation_id)
+         user = self._get_user(reservation.user_id)
++
++        requested = [(f.flight_number, f.date) for f in flights]
++        current = [(f.flight_number, f.date) for f in reservation.flights]
++
++        # POLICY: basic economy flights cannot be modified. Changing CABIN away from
++        # basic economy IS allowed, so only a change to the flight set is refused.
++        if reservation.cabin == "basic_economy" and requested != current:
++            raise ValueError(
++                f"Cannot change the flights of basic-economy reservation "
++                f"{reservation_id}: basic economy flights cannot be modified. Current "
++                f"segments are {current}; you asked for {requested}. A cabin change "
++                f"alone is allowed - to do that, pass the current segments unchanged. "
++                f"Otherwise tell the user basic-economy flights cannot be changed."
++            )
+ 
++        # POLICY: a modification must not change origin, destination or trip type.
++        derived = [self._get_flight(fn) for fn, _ in requested]
++        if derived:
++            new_origin = derived[0].origin
++            new_end = derived[-1].destination
++            expected_end = (
++                reservation.origin
++                if reservation.flight_type == "round_trip"
++                else reservation.destination
++            )
++            if new_origin != reservation.origin or new_end != expected_end:
++                raise ValueError(
++                    f"Cannot change the origin, destination or trip type of "
++                    f"{reservation_id}. It is a {reservation.flight_type} "
++                    f"{reservation.origin}->{reservation.destination}; the segments you "
++                    f"passed run {new_origin}->{new_end}. Keep the same route."
++                )
++
+         # update flights and calculate price
+         total_price = 0
+         reservation_flights = []
+
+===== c3_finish :: policy/policy.md =====
+--- .capevolve/run_agentoptv3/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv3/candidates/c3_finish/policy/policy.md	2026-08-16 04:44:14
+@@ -164,4 +164,25 @@
+ 
+ - If the user complains about delayed flights in a reservation and wants to change or cancel the reservation, the agent can offer a certificate as a gesture after confirming the facts and changing or cancelling the reservation, with the amount being $50 times the number of passengers.
+ 
+-Do not offer compensation for any other reason than the ones listed above.
+\ No newline at end of file
++Do not offer compensation for any other reason than the ones listed above.
++
++## Finishing the request
++
++A confirmation is permission to do the thing you listed. It is never permission to do
++something this policy forbids: if the user confirms a forbidden action, refuse it, and
++that refusal takes priority over every rule in this section.
++
++1. These are forbidden even when the user insists or confirms — removing checked bags,
++   changing the number of passengers, changing the flights of a basic-economy
++   reservation, changing a reservation's origin, destination or trip type, and changing
++   cabin on only part of a reservation. Say plainly that you cannot, and do not invent a
++   workaround.
++2. Once the user has confirmed the specific action you listed, your next step is that
++   tool call. Do not restate the summary and ask for confirmation a second time.
++3. A request with several parts is not done until every part is dealt with. Refusing one
++   part does not end the conversation while another part is outstanding: say which part
++   you cannot do, then carry on with the rest.
++4. Announcing or performing a transfer ends the conversation. So call
++   `transfer_to_human_agents` only when nothing that was asked of you can be done with
++   your tools — never while any part of the request is still outstanding, and never
++   because the answer would take several lookups.
+
+===== c5_guards_only :: tools/tools.py =====
+--- .capevolve/run_agentoptv3/candidates/seed/tools/tools.py	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv3/candidates/c5_guards_only/tools/tools.py	2026-08-16 05:08:51
+@@ -58,6 +58,32 @@
+     def __init__(self, db: FlightDB) -> None:
+         super().__init__(db)
+ 
++
++    # ------------------------------------------------------------------
++    # Policy invariants the tau2 API does NOT enforce.
++    #
++    # The airline policy states twice that "the API does not check these for the
++    # agent, so the agent must make sure the rules apply before calling the
++    # API". A weak agent cannot be relied on to remember an unenforced rule, so
++    # every rule that is checkable from the database is checked HERE, and the
++    # error names the rule and the actual values it was checked against. This
++    # turns a silent wrong write (which scores 0) into a readable refusal the
++    # agent can act on.
++    # ------------------------------------------------------------------
++
++    _NOW = "2024-05-15T15:00:00"
++
++    def _flown_dates(self, reservation) -> list:
++        """Reservation flight dates that are already in the past."""
++        today = self._NOW[:10]
++        return [f.date for f in reservation.flights if f.date < today]
++
++    def _within_24h(self, reservation) -> bool:
++        from datetime import datetime
++
++        created = datetime.fromisoformat(reservation.created_at)
++        return (datetime.fromisoformat(self._NOW) - created).total_seconds() <= 24 * 3600
++
+     @is_tool(ToolType.WRITE)
+     def book_reservation(
+         self,
+@@ -225,6 +251,39 @@
+             ValueError: If the reservation is not found.
+         """
+         reservation = self._get_reservation(reservation_id)
++
++        # POLICY: cannot help once any portion of the flight has been flown.
++        flown = self._flown_dates(reservation)
++        if flown:
++            raise ValueError(
++                f"Cannot cancel reservation {reservation_id}: "
++                f"segment(s) dated {flown} have already been flown "
++                f"(current date {self._NOW[:10]}). This reservation needs a human agent."
++            )
++
++        # POLICY: cancellable only if booked within the last 24h, or the flight was
++        # cancelled by the airline, or it is a business flight, or the user has travel
++        # insurance. Checked against the DATABASE, not against what the user says.
++        airline_cancelled = any(
++            getattr(self._get_flight_instance(f.flight_number, f.date), "status", None)
++            == "cancelled"
++            for f in reservation.flights
++        )
++        if not (
++            self._within_24h(reservation)
++            or airline_cancelled
++            or reservation.cabin == "business"
++            or reservation.insurance == "yes"
++        ):
++            raise ValueError(
++                f"Cannot cancel reservation {reservation_id}: none of the four "
++                f"cancellation conditions holds. Checked: created_at="
++                f"{reservation.created_at} (not within 24h of {self._NOW}), "
++                f"airline-cancelled flight=False, cabin={reservation.cabin!r} "
++                f"(not business), insurance={reservation.insurance!r}. Do not retry; "
++                f"tell the user the reservation is not eligible for cancellation."
++            )
++
+         logger.debug(reservation.model_dump_json(indent=4))
+         # reverse the payment
+         refunds = []
+@@ -433,6 +492,19 @@
+         reservation = self._get_reservation(reservation_id)
+         user = self._get_user(reservation.user_id)
+ 
++        # POLICY: the user can ADD but not REMOVE checked bags.
++        if (
++            total_baggages < reservation.total_baggages
++            or nonfree_baggages < reservation.nonfree_baggages
++        ):
++            raise ValueError(
++                f"Cannot reduce checked bags on {reservation_id}: it currently has "
++                f"total_baggages={reservation.total_baggages}, "
++                f"nonfree_baggages={reservation.nonfree_baggages}, and you asked for "
++                f"total_baggages={total_baggages}, nonfree_baggages={nonfree_baggages}. "
++                f"Bags can only be added. Do not retry; tell the user bags cannot be removed."
++            )
++
+         # Calculate price
+         total_price = 50 * max(0, nonfree_baggages - reservation.nonfree_baggages)
+ 
+@@ -480,6 +552,38 @@
+         reservation = self._get_reservation(reservation_id)
+         user = self._get_user(reservation.user_id)
+ 
++        requested = [(f.flight_number, f.date) for f in flights]
++        current = [(f.flight_number, f.date) for f in reservation.flights]
++
++        # POLICY: basic economy flights cannot be modified. Changing CABIN away from
++        # basic economy IS allowed, so only a change to the flight set is refused.
++        if reservation.cabin == "basic_economy" and requested != current:
++            raise ValueError(
++                f"Cannot change the flights of basic-economy reservation "
++                f"{reservation_id}: basic economy flights cannot be modified. Current "
++                f"segments are {current}; you asked for {requested}. A cabin change "
++                f"alone is allowed - to do that, pass the current segments unchanged. "
++                f"Otherwise tell the user basic-economy flights cannot be changed."
++            )
++
++        # POLICY: a modification must not change origin, destination or trip type.
++        derived = [self._get_flight(fn) for fn, _ in requested]
++        if derived:
++            new_origin = derived[0].origin
++            new_end = derived[-1].destination
++            expected_end = (
++                reservation.origin
++                if reservation.flight_type == "round_trip"
++                else reservation.destination
++            )
++            if new_origin != reservation.origin or new_end != expected_end:
++                raise ValueError(
++                    f"Cannot change the origin, destination or trip type of "
++                    f"{reservation_id}. It is a {reservation.flight_type} "
++                    f"{reservation.origin}->{reservation.destination}; the segments you "
++                    f"passed run {new_origin}->{new_end}. Keep the same route."
++                )
++
+         # update flights and calculate price
+         total_price = 0
+         reservation_flights = []
+
+===== c6_onerule :: policy/policy.md =====
+--- .capevolve/run_agentoptv3/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv3/candidates/c6_onerule/policy/policy.md	2026-08-16 05:13:05
+@@ -164,4 +164,5 @@
+ 
+ - If the user complains about delayed flights in a reservation and wants to change or cancel the reservation, the agent can offer a certificate as a gesture after confirming the facts and changing or cancelling the reservation, with the amount being $50 times the number of passengers.
+ 
+-Do not offer compensation for any other reason than the ones listed above.
+\ No newline at end of file
++Do not offer compensation for any other reason than the ones listed above.
++Never tell the user that a booking, modification or cancellation has been made unless you called the corresponding tool in this conversation and it returned a result. This adds an obligation to check; it never authorises an action this policy forbids.
+

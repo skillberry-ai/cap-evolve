@@ -41,7 +41,7 @@ from cap_evolve import RunDir, harness
 from cap_evolve.check import load_adapter
 from cap_evolve.gate import decide
 from cap_evolve.loop import SplitResult
-from cap_evolve.specfile import read_yaml
+from cap_evolve.specfile import spec_for_run
 
 
 def _num(sr: SplitResult | None) -> dict:
@@ -146,13 +146,7 @@ def main(argv=None) -> int:
 
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project)
-    spec: dict = {}
-    f = project / "capevolve.yaml"
-    if f.is_file():
-        try:
-            spec = read_yaml(f.read_text(encoding="utf-8")) or {}
-        except Exception:  # noqa: BLE001
-            spec = {}
+    spec = spec_for_run(run_dir, project)
     n_trials = args.n_trials or int(spec.get("num_trials") or 1)
     k_se = args.k_se if args.k_se is not None else float(spec.get("gate_k_se") or 1.0)
     mode = args.gate_mode or str(spec.get("gate_mode") or "paired")
@@ -199,17 +193,33 @@ def main(argv=None) -> int:
                                 "skipped by --train off")})
     else:
         adapter = load_adapter(project)
-        s = harness.evaluate_candidate(adapter, run_dir.candidate_dir("seed"),
-                                       run_dir=run_dir, split="train", n_trials=n_trials,
-                                       tag="MEASURE_seed", workers=args.workers)
+
+        def _train(cid: str, tag: str):
+            """Train result for candidate ``cid``, REUSING its rollouts when complete.
+
+            A candidate dir is an immutable snapshot, so rollouts already persisted under
+            its own tag are measurements of exactly this capability — re-running them buys
+            nothing and costs a full train split. (The agent-mode loop pays one
+            ``evaluate --split train`` for the seed to get a diagnosis signal, so this
+            reuse is the common case, not a corner case.)
+            """
+            have = harness.split_result_from_rollouts(run_dir, cid, "train")
+            if have.per_task and have.n_scored >= len(tr):
+                have.reused_rollouts = True  # type: ignore[attr-defined]
+                return have, True
+            return harness.evaluate_candidate(adapter, run_dir.candidate_dir(cid),
+                                              run_dir=run_dir, split="train",
+                                              n_trials=n_trials, tag=tag,
+                                              workers=args.workers), False
+
+        s, s_reused = _train("seed", "MEASURE_seed")
         if best_id == "seed":
-            b = s
+            b, b_reused = s, s_reused
         else:
-            b = harness.evaluate_candidate(adapter, run_dir.candidate_dir(best_id),
-                                           run_dir=run_dir, split="train",
-                                           n_trials=n_trials, tag="MEASURE_best",
-                                           workers=args.workers)
-        rows.append(_compare(s, b, split="train", k_se=k_se, mode=mode))
+            b, b_reused = _train(best_id, "MEASURE_best")
+        row = _compare(s, b, split="train", k_se=k_se, mode=mode)
+        row["rollouts_reused"] = {"seed": s_reused, "best": b_reused}
+        rows.append(row)
 
     # ---- test: the sealed split, exactly once -------------------------------
     final_path = run_dir.root / "final.json"

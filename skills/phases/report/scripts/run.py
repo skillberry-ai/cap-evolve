@@ -30,6 +30,9 @@ def main(argv=None) -> int:
     p.add_argument("--dashboard-mode", choices=("auto", "report-only", "off"), default="off",
                    help="ensure the live dashboard server is up (auto/report-only) at the final phase")
     p.add_argument("--dashboard-port", type=int, default=7878)
+    p.add_argument("--dashboard-url", default="",
+                   help="URL of a dashboard server the caller ALREADY started; recorded "
+                        "as-is instead of launching a second one")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -121,10 +124,18 @@ def main(argv=None) -> int:
         except Exception as e:  # noqa: BLE001 — never let the dashboard break the report
             summary["dashboard_error"] = str(e)
 
-    # Final phase: guarantee the live dashboard server is up (idempotent) and
-    # opened, so "the dashboard is created automatically in the last phase" holds
-    # even when early auto-start was disabled. Best-effort; never fails the report.
-    if args.dashboard_mode in ("auto", "report-only"):
+    # Final phase: guarantee the live dashboard server is up and opened, so "the
+    # dashboard is created automatically in the last phase" holds even when early
+    # auto-start was disabled. Best-effort; never fails the report.
+    #
+    # NOT idempotent, which is why --dashboard-url exists: maybe_launch() deliberately
+    # steps past an occupied port (a stale server there would serve the wrong run), so
+    # calling it again after `cap-evolve run` already launched one spawns a SECOND
+    # server on a SECOND port and leaks it. When the caller hands us the URL it got,
+    # record that and launch nothing.
+    if args.dashboard_url:
+        summary["dashboard_server"] = args.dashboard_url
+    elif args.dashboard_mode in ("auto", "report-only"):
         try:
             from cap_evolve import dashboard_launch
             base = run_dir.root.resolve().parent  # absolute: subprocess cwd may differ

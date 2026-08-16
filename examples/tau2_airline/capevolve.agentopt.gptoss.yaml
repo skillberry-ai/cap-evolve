@@ -1,0 +1,89 @@
+# AGENT-OPTIMIZE spec — tau2-bench airline on gpt-oss-120b (the run in docs/RESULTS.md,
+# section "agent-optimize on gpt-oss-120b, disjoint 26/12/12"). Reproduce with:
+#
+#   cp examples/tau2_airline/capevolve.agentopt.gptoss.yaml .capevolve/project/
+#   cp examples/tau2_airline/agentopt_split.json .capevolve/project/
+#   export TAU2_AGENT_MODEL=aws/gpt-oss-120b TAU2_USER_MODEL=aws/gpt-oss-120b
+#   export CAPEVOLVE_SKILLS_DIR="$PWD/skills" PYTHONPATH="$PWD/.capevolve/project/adapters"
+#   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.gptoss.yaml \
+#          --project .capevolve/project --dashboard off
+#
+# TAU2_AGENT_MODEL / TAU2_USER_MODEL are REQUIRED: adapters/rits.py otherwise falls back to
+# the RITS default and demands RITS_API_KEY. (This was the reproducibility gap recorded for
+# the previous run; it is stated here rather than left to be rediscovered.)
+#
+# AGENT-OPTIMIZE spec — tau2-bench airline, driven by skills/algorithms/agent-optimize.
+#
+# Differences from capevolve.yaml (which is a deterministic hill-climb, no-holdout fit):
+#   * orchestration_mode: agent  → `cap-evolve run` does check + baseline, prints a
+#     handoff with the run_dir, and RETURNS. The conversational agent then drives the
+#     loop from SKILL.md (subset screen → full-val paired gate → commit → measure).
+#   * a REAL HOLDOUT split (agentopt_split.json): train/val/test are disjoint, so the
+#     sealed test number is generalisation and not a fit metric. Ids are assigned by
+#     index stride (val = 0,4,8…; test = 1,5,9…; train = the rest) so the three splits
+#     draw uniformly from the task list — the cheapest available defence against the
+#     split-difficulty mismatch a previous run hit (val 0.75, test 0.25 on 12+8 ids).
+#   * agent + user simulator run on aws/gpt-oss-120b through the IBM litellm PROXY
+#     (TAU2_AGENT_MODEL / TAU2_USER_MODEL, handled by adapters/rits.py). NOTE: the proxy
+#     does NOT meter cost, so max_usd is unenforceable on this path — max_iterations and
+#     stall are the real ceilings, and spend.py says so via runner_spend_metered: false.
+#
+# Do NOT repoint capevolve.yaml / capevolve.itest.yaml / capevolve.smoke.yaml at this —
+# CI asserts on their contents.
+
+capabilities: [system-prompt, tools]     # optimize the airline POLICY and the TOOLS jointly
+capability_path: seed_capability
+actions: [edit]
+capability_sources: [seed_capability/reference/data_model.py]
+
+# --- who drives ------------------------------------------------------------
+orchestration_mode: agent                # the conversational agent owns the search
+algorithm_skill: agent-optimize          # algorithms/agent-optimize (agent-mode only)
+
+# The optimizer in agent mode is the agent itself (and the subagents it fans out), so
+# these are informational: no per-iteration optimizer subprocess is spawned. They are
+# kept so `cap-evolve run --plan-only` and the estimator still describe the run.
+optimizer_skill: claude-code
+optimizer_model: aws/claude-opus-5
+optimizer_max_turns: 120
+optimizer_usd_per_iter: 6.0
+
+target_model: aws/gpt-oss-120b            # the agent+user-sim under optimization (normalized by adapters/rits.py)
+
+# --- data + splits ---------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.52
+split_val: 0.24
+split_test: 0.24
+split_ids_file: agentopt_split.json      # train 26 / val 12 / test 12, DISJOINT
+
+# --- scoring ---------------------------------------------------------------
+# 1 trial: the PAIRED gate gets its SE from the cross-task variance of the per-task
+# deltas, which is real at n_trials=1 — so the significance test is honest without
+# paying 10x. pass^k is undefined here and the report says so.
+num_trials: 1
+
+# --- acceptance gate -------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget ----------------------------------------------------------------
+max_iterations: 8
+stall: 5   # v3: raised from 3 — the v2 run spent only 3 of 8 iterations because stall fired first
+max_metric_calls: 0
+max_usd: 55.0
+max_optimizer_usd: 40.0
+
+# --- the free-text stop condition the agent re-reads every round -----------
+# scripts/spend.py parses this into checkable predicates (target_val_score, max_usd,
+# max_wallclock_seconds, max_stall) and re-checks them against the run dir's persisted
+# spend; the prose is kept verbatim alongside.
+# The RUN GOAL for the gpt-oss-120b run is TRAIN mean >= 0.90 (a fit target, tracked by
+# hand via `measure.py --train on --skip-test`). It is deliberately NOT in the prose:
+# spend.py only ever checks a score goal against FULL VAL, so writing "train mean >= 0.9"
+# here would be silently enforced as a val check. constraints.parse_constraints now
+# flags a train/test-qualified score goal as ambiguous rather than coercing it.
+stop_condition: "reach val mean >= 0.95, or stop after $45 or 300 minutes or 5 rejects in a row; don't regress task 0"
+
+store: copy

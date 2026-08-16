@@ -29,7 +29,7 @@ def main() -> int:
         write_val_rollout(rd, "c", reward=1.0, feedback="ok",
                           task_input={"expr": "1+1"}, output="2")
 
-        records = run._load_val_records(rd, "seed")
+        records = run._load_records(rd, "seed")
         result = run.diagnose(records, run.normalized_feedback_signature)
 
         rd_set = result["reflective_dataset"]
@@ -48,6 +48,31 @@ def main() -> int:
                 and sorted(result["clusters"][0]["tasks"]) == ["a", "b"],
                 f"normalized-feedback clustering did not group same-cause failures: {result['clusters']}",
                 note="similar feedback clusters together (not split on first 6 words)")
+
+        # --split reads a DIFFERENT split's rollouts, and val stays the default. Four
+        # other algorithms call this phase without --split, so the default must not
+        # move; and diagnosing TRAIN must not silently return val's failures.
+        c.check(run._load_records(rd, "seed", "train") == [],
+                "diagnose read val rollouts when asked for train",
+                note="--split train reads rollouts/train, never rollouts/val")
+        train_dir = rd.rollouts / "train"
+        train_dir.mkdir(parents=True, exist_ok=True)
+        (train_dir / "z__seed__t0.json").write_text(
+            '{"input": {"expr": "8+8"}, "rollout": {"task_id": "z", "output": "3", '
+            '"error": null}, "score": {"task_id": "z", "reward": 0.0, '
+            '"feedback": "Expected 16 but got 3", "n": 1, "stderr": 0.0, '
+            '"trial_rewards": [0.0], "raw": {"errored": false}}}', encoding="utf-8")
+        tr = run.diagnose(run._load_records(rd, "seed", "train"),
+                          run.normalized_feedback_signature)
+        c.check([e["task_id"] for e in tr["reflective_dataset"]] == ["z"],
+                f"train diagnosis returned the wrong tasks: {tr['reflective_dataset']}",
+                note="train is diagnosable — the honest learning surface when the gate "
+                     "scores val")
+        c.check([e["task_id"] for e in run.diagnose(
+                    run._load_records(rd, "seed"), run.normalized_feedback_signature
+                 )["reflective_dataset"]] == ["a", "b"],
+                "the default split is no longer val — that would change every "
+                "algorithm that calls diagnose without --split")
 
     return c.emit()
 

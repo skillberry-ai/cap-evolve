@@ -1,0 +1,25 @@
+{
+  "best_id": "seed",
+  "budget": {
+    "max_iterations": 8,
+    "max_metric_calls": 0,
+    "max_usd": 55.0,
+    "stall": 5,
+    "max_optimizer_usd": 40.0
+  },
+  "spent": {
+    "iterations": 5,
+    "metric_calls": 134,
+    "usd": 0.0,
+    "stall": 5,
+    "runner_tokens": 0,
+    "runner_seconds": 6543.7809982299805,
+    "optimizer_seconds": 0.0,
+    "optimizer_usd": 0.0,
+    "optimizer_tokens": 0,
+    "intake_usd": 0.0,
+    "intake_tokens": 0,
+    "intake_seconds": 0.0
+  },
+  "warnings_fired": []
+}

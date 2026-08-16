@@ -29,9 +29,16 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir
 
 
-def _load_val_records(run_dir: RunDir, tag: str) -> list[dict]:
+def _load_records(run_dir: RunDir, tag: str, split: str = "val") -> list[dict]:
+    """Every persisted rollout for ``tag`` on ``split``.
+
+    ``split`` exists because TRAIN is the honest surface to diagnose from: val is what
+    the gate scores, so reading the learning signal off val and then gating on val
+    fits the split you are being judged on. Hardcoding "val" here made train-based
+    diagnosis unreachable for every caller.
+    """
     out = []
-    vdir = run_dir.rollouts / "val"
+    vdir = run_dir.rollouts / split
     if not vdir.exists():
         return out
     for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
@@ -94,12 +101,18 @@ def diagnose(records: list[dict], cluster_fn=normalized_feedback_signature) -> d
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="diagnose")
     p.add_argument("--run-dir", required=True)
-    p.add_argument("--tag", default="seed", help="candidate tag whose val rollouts to read")
+    p.add_argument("--tag", default="seed", help="candidate tag whose rollouts to read")
+    p.add_argument("--split", default="val", choices=["train", "val"],
+                   help="which split's rollouts to diagnose (train is the honest "
+                        "learning surface; val is what the gate scores)")
     p.add_argument("--cluster", default="normalized-feedback", choices=sorted(CLUSTER_FNS),
                    help="failure-clustering function")
     args = p.parse_args(argv)
     run_dir = RunDir.open(Path(args.run_dir))
-    result = diagnose(_load_val_records(run_dir, args.tag), CLUSTER_FNS[args.cluster])
+    result = diagnose(_load_records(run_dir, args.tag, args.split),
+                      CLUSTER_FNS[args.cluster])
+    result["split"] = args.split
+    result["tag"] = args.tag
     print(json.dumps(result, indent=2))
     return 0
 

@@ -174,7 +174,397 @@ no-holdout run).
 
 ---
 
+## τ²-Bench airline — `agent-optimize` on `gpt-oss-120b`, disjoint 26/12/12 — **third null result; the gate rejects a byte-identical copy of the seed**
+
+Third attempt on the same spec, split and models as the section below, built to convert
+that run's diagnosis into a measured gain. **Nothing cleared the gate again**, and this
+time the run establishes *why* with a control the two earlier runs never ran: a
+**null-edit candidate — a byte-identical copy of the seed capability — was evaluated on
+full val and put through the honest gate, and the gate REJECTED it.**
+
+- **Spec:** [`examples/tau2_airline/capevolve.agentopt.gptoss.yaml`](../examples/tau2_airline/capevolve.agentopt.gptoss.yaml),
+  `orchestration_mode: agent`, `algorithm_skill: agent-optimize`, capabilities
+  `[system-prompt, tools]`. Same file as the v2 run except `stall: 3 → 5` and the prose
+  `stop_condition`'s "3 rejects in a row" → "5" (the prose ceiling, not the spec field,
+  was what actually stopped v2 at 3 of 8 iterations). **`gate_mode`, `gate_k_se` and
+  `num_trials` were NOT touched.**
+- **Agent + user simulator:** `aws/gpt-oss-120b` via the IBM litellm proxy. **Optimizer:**
+  `aws/claude-opus-5` (the conversational agent itself).
+- **Split:** disjoint **26 train / 12 val / 12 test** (`agentopt_split.json`),
+  `num_trials: 1`, `paired`, `k_se 0.2`.
+- **Cost:** **134 rollouts** (122 in the loop + 12 sealing test; `metric_calls: 134`), 5 iterations, ~2 h of runner wall-clock. **Runner dollars remain UNMETERED** on this path
+  (`usd: 0.0` is missing data, not a free run — `spend.py` reports
+  `runner_spend_metered: false`), so the budget unit here is rollout counts.
+- Artifacts, including `events.jsonl`, in
+  [`run_agentopt_v3/`](../examples/tau2_airline/run_agentopt_v3/).
+
+### The result table
+
+| split | n | seed | best (`= seed`) | paired Δ̄ |
+|---|--:|--:|--:|--:|
+| train (never gated; diagnosis surface) | 26 | 0.5385 ± 0.0997 | 0.5385 ± 0.0997 | 0.0 |
+| val (the gate) | 12 | 0.6667 ± 0.1421 | 0.6667 ± 0.1421 | 0.0 |
+| **test** (sealed once) | 12 | **0.5000 ± 0.1508** | 0.5000 ± 0.1508 | 0.0 |
+
+Every `0.0` is **by construction** — `best_id == seed`, so `finalize` scored one
+capability on both sides. `measure.py` emits that warning itself.
+
+**The requested target — train mean ≥ 0.90 — was not reached and was not approached.**
+Train stayed at its baseline 0.5385 because no candidate was ever accepted, and train may
+never gate. Nothing here is progress toward 0.90. For the record, 0.90 on n=26 requires
+24/26, i.e. fixing 10 of 12 failing train tasks while breaking none; at least one of those
+12 (task 7) is unfixable by any capability edit, because the **user simulator** ends the
+episode on its second turn.
+
+### The null-edit control — the finding that supersedes both earlier diagnoses
+
+Five candidate measurements (four distinct edits, one of them measured twice) all came back
+at **exactly 0.4167** on full val while the seed measured 0.6667. Unrelated edits landing on
+the same mean was implausible enough to test the
+pipeline itself, so an unmodified copy of the seed (`c0_nulledit`, verified byte-identical
+with `diff -r`) was run through the same evaluate → `gate_check.py` path:
+
+```
+NULL-EDIT (byte-identical to seed) gate verdict: reject
+  paired Δ̄=-0.0833 <= 0.2·SE=0.0167 (SE=0.0833, n=12)
+  regressions ['8']  paired_n 12
+```
+
+A **known-zero-effect** candidate produced a negative Δ̄ *and* tripped the no-regression
+veto. The bar is not the problem — 0.0167 is negligible. The problem is that at
+`num_trials: 1` a single per-task reward vector is noisy enough that zero change registers
+as **minus one task**. Any real +1-task gain has to clear noise of the same magnitude, in
+the same direction, on the same measurement. That is a measurement-power limit, and it
+explains all three null results on this benchmark better than any of the behavioural
+diagnoses offered for v1 and v2.
+
+### A second, stronger control: `c5_guards_only` never fired a guard
+
+`c5_guards_only` changes only tool *bodies* — no policy text, no tool docstring, no schema.
+Auditing its 12 val rollouts for the guard error strings shows **not one guard fired on any
+val task**:
+
+| val task | guarded tool called | guard fired |
+|--:|---|---|
+| 12, 16 | `update_reservation_baggages`, `update_reservation_flights` | **no** |
+| all others | none | **no** |
+
+So on this split `c5_guards_only` is **functionally identical to the seed** — same prompt,
+same tool schemas, and no added code path ever executed. Its true Δ is 0 by construction.
+The gate measured **Δ̄ = −0.2500 with regressions on tasks 8, 16 and 20.**
+
+That gives **four** measurements of a capability that is functionally identical to the seed
+on val:
+
+| measurement | val |
+|---|--:|
+| v2 seed | 0.7500 |
+| v3 seed (the gate's baseline) | 0.6667 |
+| `c0_nulledit` (byte-identical copy) | 0.5833 |
+| `c5_guards_only` (no guard ever fired) | 0.4167 |
+
+**Mean 0.6042, SD 0.139, range 4 of 12 tasks.** The consequence is blunt: **0.4167 is
+inside the observed range of the seed itself**, so *none* of the five candidate results
+below can be called evidence of harm, and the −0.25 deltas the gate computed are not
+measurements of the edits. The gate behaved correctly given its input; the input cannot
+support the question.
+
+### The noise floor, measured four ways
+
+| replication | result |
+|---|---|
+| val, 4 functionally-identical-to-seed measurements | **0.7500 / 0.6667 / 0.5833 / 0.4167** — mean 0.6042, SD 0.139 |
+| val, tasks that flip across the 3 byte-identical draws | **2 of 12** (tasks 8 and 32) |
+| train, 2 draws of the identical seed capability (v2, v3) | mean identical at **0.5385** both times, but **6 of 26 per-task rewards flipped** (23%) — tasks 10, 11, 15, 30, 38, 49 |
+| val, one candidate (`c2_toolguard`) measured twice, once concurrently and once serially | **0.4167 both times**, 2 of 12 per-task flips — so process concurrency is *not* a confound |
+
+Three val tasks (**24, 40, 44**) fail in every one of 11 measurements and no candidate
+ever fixed any of them. So the gate's usable signal is 3 immovable failures against 2–6
+coin-flip tasks.
+
+### The six candidates, and the real gate numbers for each
+
+Every reject is a **genuine full-val paired gate decision** (`paired_n: 12`,
+`coverage: 1.0`), recorded with the new machine-readable `reject_basis: gate`. This closes
+the v2 run's weakest point, where `gate_check.py` never fired on real data.
+
+| candidate | lever | val | Δ̄ | bar (`k·SE`) | regressed | fixed |
+|---|---|--:|--:|--:|---|---|
+| `c1_verify` | prompt: verification obligations only | 0.4167 | −0.2500 | 0.0261 | `8 12 20` | — |
+| `c2_toolguard` | tools: DB-checked policy guards + a search docstring | 0.4167 | −0.2500 | 0.0261 | `8 12 20` | — |
+| `c3_finish` | prompt: act-on-confirmation + finish-every-part | 0.4167 | −0.2500 | 0.0261 | `8 12 20` | — |
+| `c5_guards_only` | tools: the guards **alone**, policy byte-identical | 0.4167 | −0.2500 | 0.0261 | `8 16 20` | — |
+| `c6_onerule` | prompt: **one sentence**, verification only | 0.5000 | −0.1667 | 0.0298 | `12 20` | — |
+| `c0_nulledit` *(control, not a proposal)* | **none — byte-identical to seed** | 0.5833 | −0.0833 | 0.0167 | `8` | — |
+
+**Not one candidate fixed a single val task** — that part is a real, repeated observation.
+The "regressed" column is **not**: every candidate, and both controls, "broke" task 8, a
+knife-edge pass the seed itself wins in only 2 of 8 measurements. Read the Δ̄ column as
+what the harness reported, not as an effect of the edit.
+
+`c6_onerule` was a deliberate dose-response probe: **one sentence** of verification-only
+policy text instead of a block. It scored 0.5000 — higher than every multi-rule candidate
+and the only candidate that kept task 8 — but still below the seed draw it was gated
+against, and still a reject. Suggestive of a text-volume effect on this weak reader, and
+nothing more: one measurement, inside the noise band established above.
+
+The two hypotheses this run was built to test both failed, and failed *distinguishably*:
+
+1. **Verification-only prompt rules** (`c1_verify`, and `c3_finish` with an explicit clause
+   that a confirmation never authorises a forbidden action) did not raise the val mean, and
+   the measurement cannot say whether they lowered it. What they *do* falsify is v2's
+   explanation for the task-12 regression: v2 blamed "compliance obligations", yet task 12
+   regressed here under `c1_verify`, a rule set carrying none. Across all 11 measurements in
+   this run and v2, task 12 passes only **4 of 11** times; it is a fragile task, not a
+   casualty of a compliance rule.
+2. **The tools lever was exercised for the first time in isolation.** `c5_guards_only`
+   moves four policy invariants that tau2's API deliberately does *not* enforce into the
+   tool bodies — cancellation eligibility (24h / airline-cancelled / business / insured,
+   checked against the DB rather than the user's claim), no reduction of checked bags,
+   basic-economy flights immutable, route and trip type immutable — each raising an error
+   that names the rule and the actual values checked. The guards were unit-checked to fire
+   on real DB cases the seed silently accepted (e.g. it cancelled reservation `3RK2T9`,
+   created 2024-05-02, basic economy, uninsured, on the user's unverified claim that it was
+   "booked ten hours ago") and to leave a legitimately cancellable reservation alone. They
+   are *correct*, they would have blocked exactly the wrong writes in three failing tasks
+   (train 48, train 49, val 44) — **and none of them fired anywhere on val**, which is what
+   makes `c5_guards_only` the strongest control in the run rather than a result about tools.
+   The tools lever is therefore still **untested for effect**: it was exercised, audited and
+   shown correct, but this split never gave it an opportunity to act.
+
+### The acceptance split cannot see the tools lever
+
+The guard error strings appear in **zero** val rollouts across all three tools candidates
+(`c2_toolguard`, `c2_toolguard_solo`, `c5_guards_only`). The cases the guards exist for do
+occur in the data — the seed illegally cancels reservation `3RK2T9` in train tasks 48 and
+49 and cancels an already-flown reservation in val task 44 — but on val the guarded paths
+are either never reached or reached only on legitimate calls. So half the capability
+surface under optimization (`capabilities: [system-prompt, tools]`) is **invisible to the
+split that decides acceptance**. Diagnosing on train and gating on val is the right
+discipline, and here it means a correct tools edit can never be accepted, however good it
+is. A tools-lever run on this benchmark needs a val split chosen to contain
+policy-invariant cases, or `capabilities` narrowed to what val can actually score.
+
+### v2's central mechanism claim was wrong
+
+The v2 section reports task 40 as "the agent replies *the name has been updated* without
+ever calling the tool — a hallucinated success". Re-reading the persisted rollout,
+**that text is in the `user` message, not the assistant's**: the user simulator (also
+`gpt-oss-120b`) emitted `Yes.<reasoning>Agent will likely confirm and process.</reasoning>
+Your request has been processed. The passenger name on reservation 3RK2T9 has been updated
+… ###STOP###`. It answered, then role-played the agent's reply, then terminated the
+episode. Task 40 is a **user-simulator defect**, not an agent defect, and no edit to the
+policy or tools can fix it. Same for train task 7, which the simulator ends on its second
+turn. That is 1 of 12 val tasks and 1 of 26 train tasks that are unwinnable by
+construction — and one of the three val tasks that fail in all 11 measurements.
+
+### What this run adds to the method
+
+1. **The null-edit control is now part of the protocol.** Evaluating a byte-identical copy
+   of the parent through the same evaluate → gate path costs one val eval and bounds the
+   harness's own false-reject rate. Both earlier null results on this benchmark are
+   reinterpretable in its light; neither ran it.
+2. **`commit.py --reject-basis`** records the *driver's* disposition
+   (`gate|screen_kill|ceiling|budget|infra`) machine-readably next to the screen's own
+   verdict. `screen.py`'s `decision` is authoritative only as the screen's statistical
+   verdict — by invariant 1 it can only say `kill` or `promote`, and "promote" never meant
+   "was then evaluated on full val". In v2 that ambiguity made two artifacts read as a
+   contradiction (`screen: promote` beside a commit note saying "not promoted to full
+   val"); both were true. Every reject in this run carries `reject_basis: gate`, so the log
+   asserts that a full-val paired gate actually ran.
+3. **The gate was exercised on real data six times** (`paired_n: 12`, `coverage: 1.0` each),
+   closing v2's weakest provenance point, where `gate_check.py` never fired on a real
+   full-val eval and two rejects rested on an arithmetic ceiling.
+4. **Skipping the screen ladder was the right call and is now measured, not argued.** At
+   `val_n 12` the tier-1 floor of 6 gives a breakeven kill rate of 0.5, and with 2 of 12
+   val tasks flipping on an identical capability a 6-task screen carries no signal. All six
+   candidates went straight to full val; `screen_ledger` is empty by design, not by neglect.
+
+### Honest reading
+
+The optimizer did not find an improvement, and this run shows the harness could not have
+recognised one — nor could it correctly reject a non-change. Two controls, one
+byte-identical and one functionally identical on the scored split, were both rejected by
+the honest gate. Concretely: the gate rejects a copy of the seed, half of
+val is coin-flips, and 3 of 12 val tasks are immovable (one of them because the user
+simulator breaks). The correct next step is **not** a looser gate — `k_se` was left at
+0.2 and the bar was never the obstacle. It is `num_trials > 1` so each per-task reward is
+a mean rather than a single Bernoulli draw, and a wider val, in that order. Until then any
+accept on this configuration would be a coin flip dressed as a result.
+
+## τ²-Bench airline — `agent-optimize` on `gpt-oss-120b`, disjoint 26/12/12 — **second null result, sharper diagnosis**
+
+> **Kept as history, superseded by the v3 section above.** Its central mechanism claim
+> about task 40 is **wrong** — the "hallucinated success" text is in the *user simulator's*
+> message, not the agent's; see "v2's central mechanism claim was wrong" above. Its
+> conclusion (no accept) stands and was reproduced.
+
+Re-run of the section below with the agent+user-simulator switched from `claude-haiku-4-5`
+to **`aws/gpt-oss-120b`** to restore headroom, and with the algorithm's own defects fixed
+first. **Nothing cleared the gate again**, but this time the mechanism was read directly
+out of the transcripts rather than inferred from means, and the run cost 68 rollouts
+instead of 110.
+
+- **Spec:** `.capevolve/project/capevolve.agentopt.yaml` (derived from
+  [`examples/tau2_airline/capevolve.agentopt.yaml`](../examples/tau2_airline/capevolve.agentopt.yaml)),
+  `orchestration_mode: agent`, `algorithm_skill: agent-optimize`, capabilities
+  `[system-prompt, tools]`.
+- **Agent + user simulator:** `aws/gpt-oss-120b` via the IBM litellm proxy. **Optimizer:**
+  `aws/claude-opus-5` (the conversational agent itself — no per-iteration subprocess).
+- **Split:** disjoint **26 train / 12 val / 12 test** (`agentopt_split.json`),
+  `num_trials: 1`, `paired`, `k_se 0.2`.
+- **Architecture change:** diagnosis on **train** (26), acceptance gated on **val** (12),
+  test sealed once. Previously `diagnose` was hardcoded to val, so train was unreachable
+  and the run was fitting the split it was judged on.
+- **Cost:** **68 rollouts**, 48 min of runner wall-clock, ~75 min end to end. **Runner
+  dollars are UNMETERED on this serving path** — the proxy returns no cost, litellm logs
+  `model isn't mapped yet`, and the ledger records `usd: 0.0`. That 0.0 is missing data,
+  not a free run; rollout counts are the honest unit here. Pre-run
+  `cap-evolve estimate` said $50.39 expected (runner $10.52 + optimizer $39.86) from prior
+  calibration — not comparable, and reported only for the record.
+- **Stopped on its own `stall` rule** (3 consecutive rejects), at iteration 3 of 8.
+
+| split | n | seed | best (`= seed`) | paired Δ̄ |
+|---|--:|--:|--:|--:|
+| train (never gated; diagnosis surface) | 26 | 0.5385 ± 0.0997 | 0.5385 ± 0.0997 | 0.0 |
+| val (the gate) | 12 | 0.7500 ± 0.1306 | 0.7500 ± 0.1306 | 0.0 |
+| **test** (sealed once) | 12 | **0.7500 ± 0.1306** | 0.7500 ± 0.1306 | 0.0 |
+
+Every `0.0` is **by construction** — `best_id == seed`, so `finalize` scored one
+capability on both sides. `measure.py` emits that warning itself. Artifacts, including
+`events.jsonl`, in [`run_agentopt_v2/`](../examples/tau2_airline/run_agentopt_v2/).
+
+**The requested target — train mean ≥ 0.90 — was not reached, and was never approached.**
+Train stayed at its baseline 0.5385 because no edit was ever accepted. Nothing here
+should be read as progress toward it.
+
+### Headroom was restored; the gate was still not the bottleneck
+
+Switching to `gpt-oss-120b` did what it was supposed to: baseline val fell from 0.8333
+(haiku, 10/12) to 0.7500 (9/12), and train sits at 0.5385 (14/26) — 12 failing train
+tasks to work with instead of 2 val tasks. And the gate bar was never the obstacle:
+
+> For exactly one val task flipping +1 out of `n` paired deltas, Δ̄ = 1/n and SE = 1/n
+> **exactly**, so Δ̄/SE = 1.0000 for *every* n. At `k_se 0.2`, n=12, a single clean flip
+> gives Δ̄ = 0.0833 against a bar of 0.0167 — it clears comfortably. Widening val would
+> not have helped; for two flips the ratio actually *falls* slightly with n (1.483 at
+> n=12 vs 1.439 at n=30). Both null results are failures to move the **mean**, not
+> failures of resolution.
+
+### The mechanism, read from transcripts
+
+Val's 3 failures (24, 40, 44) and 11 of train's 12 share one cluster signature
+(`database state does not match`), so train-driven edits *could* bank — the overlap was
+checked for free before any spending. Within it, two sub-modes: the required write was
+**never called** (7/12 train, 3/3 val), or it was called with **wrong arguments** (6/12
+train, `update_reservation_flights` four times). Task 40's transcript is the purest case:
+the agent asked for confirmation, the user said "Yes", and the agent replied *"the
+passenger name has been updated"* **without ever calling the tool**.
+
+Three candidates, each rejected, each for a reason visible in the rollouts:
+
+| candidate | edit | screen decision | fixed | regressed |
+|---|---|---|---|---|
+| `cand_r1_disc` | +70-line "Execution discipline" section (policy) | promote (inconclusive) | 0 of 3 | `12` |
+| `cand_r2_short` | +18-line policy section + once-and-only-once / last-resort contracts in 6 tool docstrings | **kill** (Δ̄ −0.333, SE 0.211) | 0 of 3 | `12`, `16` |
+| `cand_r3_lookup` | +13 lines, policy only, one scoped rule (look it up; don't transfer) + an explicit "this does not widen what is permitted" clause | promote (inconclusive) | 0 of 3 | `12` |
+
+**All three regressed task 12, and none fixed anything.** Task 12's transcripts say why,
+and it is not noise. Under the seed, the user asks to upgrade *one* passenger to business
+and add bags; the agent correctly **refuses** the partial upgrade (cabin must be uniform),
+the user falls back to bags only, and the agent makes one correct write → 1.0. Under
+`cand_r2_short`, the same "act on confirmation / answer every part" pressure made the
+agent **comply with the request it should have refused** — it upgraded both segments to
+business and added bags → wrong DB state → 0.0. `cand_r3_lookup` reproduced it even with
+an explicit precedence clause telling it not to.
+
+So on this model the edits traded **policy compliance for eagerness**. Pushing
+`gpt-oss-120b` to act more decisively makes it act *wrongly* on the tasks whose correct
+answer is a refusal — a genuine capability trade-off, correctly refused three times. A
+secondary effect is visible too: `cand_r2_short` drove task 44 from 20 to **54** turns of
+runaway `search_direct_flight` calls, and its screen took 10 minutes against the seed's 2.
+
+### What this run adds to the method
+
+1. **A screen can prove a reject arithmetically.** When the tier-1 subset already covers
+   every val task the parent fails, the unscreened remainder is all tasks the parent
+   passes, so it can only stay level or regress — and the candidate's best conceivable
+   full-val mean is *computable*. For `cand_r1_disc`: at most 8/12 = 0.667 against the
+   parent's 0.750, best-case Δ̄ = −0.0833. The gate needs Δ̄ > k·SE ≥ 0, so **no full-val
+   eval could have accepted it**. This is now `subsample.full_val_ceiling()`, reported in
+   every screen artifact, and it escalates a promote to a *provable* kill when the ceiling
+   is strictly below the parent. It cannot ever conclude "accept", so honesty invariant 1
+   is intact. Consequence for this run: **no candidate was ever taken to a full-val eval,
+   so `gate_check.py` never fired on real data.** All three rejects rest on screen
+   evidence, one statistical and two arithmetic — weaker provenance than a full-val gate
+   rejection, and stated as such.
+2. **A narrow val makes the ladder uneconomic, and the artifact now says so.**
+   `savings.breakeven_kill_rate` = `fired / full_val_rollouts` = **0.5** at val 12. With
+   1 kill in 3 screens the recorded ledger is `net_rollouts −6` — screening was still a
+   net cost under its own accounting, which assumes every promote gets paid for.
+3. **The subset floor moved from 3 to 6.** The 3-task tier-1 screen in the run below
+   reported `fixed: ["44"]` for a candidate full val showed never fixed 44. At 6 the
+   holdout caught the task-12 regression on all three candidates.
+4. **val predicted test here.** val 0.7500 and sealed test 0.7500 for the same seed, on
+   the same index-stride split that previously gave val 0.8333 / test 0.4167. Train
+   (0.5385) is materially harder than either — the stride split balances draw order, not
+   difficulty.
+
+### Defects fixed before this run (each was silently wrong, not merely inconvenient)
+
+- **`diagnose` was hardcoded to `rollouts/val`** — train was unreachable by every one of
+  the five algorithms, so "diagnose on train, gate on val" was undocumentable and
+  unrunnable. Now `--split train|val`, default unchanged.
+- **`spend.py` / `measure.py` read `project/capevolve.yaml` by filename**, but
+  `cap-evolve run --spec` supports any filename. Every agent-mode run of a variant spec
+  silently reported `predicates: []` — the whole re-read-your-constraints discipline
+  no-opping without a word. Now `specfile.spec_for_run()` reads the path `cli` already
+  logs into the run dir's `run_config` event.
+- **Unmetered runner spend read as $0/rollout**, so `usd_needed` was 0.0, a `max_usd`
+  ceiling could never block anything, and *any* fan-out came back `affordable: true`.
+  Now reported as `runner_spend_metered: false` with the rate `null`.
+- **A train/test-qualified score goal was parsed into `target_val_score`**, which is only
+  ever checked against the full-val mean — so `"reach train mean >= 0.9"` would have
+  enforced a **val** bar while reporting it as the train one. Now reported in
+  `ambiguous`.
+- **`commit.py` accepted a duplicate candidate id.** The tag collision documented below
+  was possible because nothing checked. It now refuses a tag that already carries an
+  accept/reject event, reading `events.jsonl` so the guard holds across processes.
+- **`measure.py --train on` re-ran the seed's whole train split** even with complete
+  rollouts already on disk. Candidate dirs are immutable snapshots, so those rollouts are
+  measurements of exactly that capability; reuse saved 26 rollouts here.
+
+### Rollout isolation, verified before spending
+
+The gate reads `*__<tag>__t*.json`, and screens write `<tag>__screenN`. Probed
+adversarially — a screen rollout claiming 1.0 and a full-val rollout claiming 0.0 for the
+same candidate — the full-val read returns **0.0**; and on the live run dir, a full-val
+read of `cand_r1_disc` (which has only screen rollouts) returns `n_scored: 0` rather than
+6. Both probes are permanent checks in
+`skills/algorithms/agent-optimize/scripts/check.py`.
+
+### Honest reading
+
+Two independent runs, two models, seven candidates, zero accepts. The consistent finding
+is not that the optimizer is weak but that **the airline policy is not the binding
+constraint for these models on these tasks** — the seed policy already states the rules
+the failures violate, and adding restatements of them makes a mid-tier model less
+compliant, not more. The next thing worth testing is not more prose but the lever that
+carried the no-holdout run: **tool-level change** (composite or guard-railed tools that
+make the correct write the easy one), and a runner strong enough that the compliance
+trade-off does not bite. Reporting a 0.90 train number here would have required either
+gating on train or loosening `k_se`; neither was done.
+
+---
+
 ## τ²-Bench airline — `agent-optimize` with subset screening, disjoint 26/12/12 — **null result**
+
+> **Kept as history, superseded by the `gpt-oss-120b` section above.** This is the earlier
+> `claude-haiku-4-5` run. It is retained in full because it is real evidence about the
+> method — and because the second run reproduced its central finding (no accept) with a
+> different model and a different diagnosis, which makes the pair more informative than
+> either alone. The defects it exposed (tag collision, screen width, the `--mode paired`
+> CLI, the `work/` dir) are fixed; see the section above for what changed.
 
 The run that exercised subset screening and prose-constraint parsing for the first time.
 **Nothing cleared the gate.** Recorded because a null result with a diagnosed cause is
@@ -239,9 +629,12 @@ jointly — is demonstrated. The statistical claim is not.
    screen read an improvement that does not exist. That vindicates the rule that a screen may
    never accept, and undercuts 3 as a sufficient triage width. The ladder behaved as designed;
    this run does not demonstrate the cost win it exists for.
-   *Recording gap found while auditing this:* `screens/*.json` persists `regressed` but leaves
-   `fixed: null`, so a screen's positive signal is not auditable from the artifact — the
-   false positive above had to be inferred from `mean_delta` and `regressed`.
+   *Correction (2026-08-16):* an earlier revision of this section claimed `screens/*.json`
+   leaves `fixed: null`. That was wrong. The artifacts do record it, under
+   `paired.fixed` — `cand_r3__screen1.json` says `paired.fixed: ["44"]` and
+   `paired.regressed: ["16"]`. The top-level `regressed` key (from `screen_decision`) has no
+   `fixed` sibling, which is what the earlier audit read. The false positive is therefore
+   directly auditable from the artifact, not inferred.
 4. **val does not predict test on this split.** val 0.8333 vs sealed test 0.4167 for the *same*
    seed capability, despite index-stride stratification. Second observation across runs.
 

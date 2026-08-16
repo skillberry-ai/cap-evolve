@@ -101,3 +101,46 @@ def read_frontmatter(md_path: Path) -> dict:
         return {}
     end = txt.find("\n---", 3)
     return read_yaml(txt[3:end]) if end != -1 else {}
+
+
+def spec_for_run(run_dir, project: Path | None = None) -> dict:
+    """The spec THIS run was started with, read from the run dir first.
+
+    Why this is not ``read_yaml(project / "capevolve.yaml")``: ``cap-evolve run --spec``
+    fully supports a non-default spec filename, and every agent-mode run of a variant
+    spec (``capevolve.agentopt.yaml``) hit the same silent failure — the readout scripts
+    guessed ``capevolve.yaml``, found a *different* spec (or none), and reported
+    ``predicates: []``. The entire re-read-your-constraints discipline then no-ops
+    without a word: an agent asks "may I spend?", is told there are no constraints, and
+    keeps going past a ceiling the spec did define.
+
+    ``cli._resolve_spec`` already logs the resolved path into the run dir as the
+    ``run_config`` event's ``spec`` field precisely so a finished run is self-describing.
+    Read that; fall back to ``project/capevolve.yaml`` only when it is absent (an older
+    run dir), and return ``{}`` rather than raising, so a malformed spec cannot block a
+    budget readout.
+    """
+    import json as _json
+
+    candidates: list[Path] = []
+    try:
+        with Path(run_dir.events_path).open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = _json.loads(line)
+                except Exception:  # noqa: BLE001
+                    continue
+                if ev.get("kind") == "run_config" and ev.get("spec"):
+                    candidates.append(Path(str(ev["spec"])))
+                    break
+    except Exception:  # noqa: BLE001
+        pass
+    if project:
+        candidates.append(Path(project) / "capevolve.yaml")
+    for p in candidates:
+        if p.is_file():
+            try:
+                return read_yaml(p.read_text(encoding="utf-8")) or {}
+            except Exception:  # noqa: BLE001
+                return {}
+    return {}

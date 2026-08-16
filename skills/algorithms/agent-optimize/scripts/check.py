@@ -42,6 +42,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
+from cap_evolve import harness
 from cap_evolve.skillcheck import (
     Checker, SyntheticAdapter, import_run, quiet, seed_capability_dir, temp_run_dir,
     write_val_rollout,
@@ -53,12 +54,17 @@ SKILL_MD = HERE.parent / "SKILL.md"
 DIAGNOSE = SKILLS / "phases" / "diagnose" / "scripts" / "run.py"
 
 
-def _run(c: Checker, label: str, argv: list[str]) -> dict | None:
-    """Execute a documented command; return its parsed JSON (None on failure)."""
+def _run(c: Checker, label: str, argv: list[str], *, expect_rc: int = 0) -> dict | None:
+    """Execute a documented command; return its parsed JSON (None on failure).
+
+    ``expect_rc`` lets a check assert a REFUSAL (a script that must fail loudly with a
+    JSON error) as well as a success — a guard that returns rc 0 is not a guard.
+    """
     env = dict(os.environ, CAPEVOLVE_CORE=str(SKILLS.parent / "core"))
     p = subprocess.run([sys.executable, *argv], capture_output=True, text=True, env=env)
-    if p.returncode != 0:
-        c.fail(f"documented command failed ({label}, rc={p.returncode}): "
+    if p.returncode != expect_rc:
+        c.fail(f"documented command returned rc={p.returncode}, expected {expect_rc} "
+               f"({label}): "
                f"{(p.stderr or p.stdout).strip()[:400]}")
         return None
     try:
@@ -155,8 +161,11 @@ def _screen_round(c: Checker, tmp: Path) -> None:
     from cap_evolve import RunDir, harness
     from cap_evolve.skillcheck import SyntheticAdapter
 
-    adapter = SyntheticAdapter(n=20)
-    project = _project(tmp, n=20)
+    # n=48 -> a 12-task val, so tier 1 (max(MIN_K, 25%) = 6) stays a STRICT subset.
+    # A 20-task project gives val=5, which MIN_K=6 would round up to the whole split —
+    # the screen would silently stop being a screen.
+    adapter = SyntheticAdapter(n=48)
+    project = _project(tmp, n=48)
     run_dir = RunDir.create(tmp / ".capevolve_screen", ts="chk")
     harness.ensure_splits(adapter, run_dir, seed=0)
     R = str(run_dir.root)
@@ -167,7 +176,7 @@ def _screen_round(c: Checker, tmp: Path) -> None:
     for tid in val_ids:
         write_val_rollout(run_dir, tid, tag="cur", reward=1.0, feedback="solved")
     run_dir.set_best("cur")
-    run_dir.snapshot("cur", seed_capability_dir(tmp / "curcap", level=25))
+    run_dir.snapshot("cur", seed_capability_dir(tmp / "curcap", level=48))
 
     work = Path(R) / "work"
     work.mkdir(parents=True, exist_ok=True)
@@ -200,7 +209,7 @@ def _screen_round(c: Checker, tmp: Path) -> None:
                 "a subset screen emitted an accept — subsets may only kill or promote")
 
     # A candidate that changes nothing measurable must PROMOTE, not be killed on noise.
-    shutil.copytree(seed_capability_dir(work / "same_src", level=25), work / "same")
+    shutil.copytree(seed_capability_dir(work / "same_src", level=48), work / "same")
     sc2 = _run(c, "screen.py (promote on a flat subset)",
                [str(HERE / "screen.py"), "--run-dir", R, "--project", str(project),
                 "--candidate", str(work / "same"), "--tier", "1"])
@@ -430,6 +439,69 @@ def _no_regression(c: Checker, tmp: Path) -> None:
                 f"expected the raw gate to accept the mean gain: {g['gate']}")
 
 
+def _tag_isolation(c: Checker, tmp: Path) -> None:
+    """The screen tag and the full-val tag must NEVER read each other's rollouts.
+
+    This is the one flaw that would silently corrupt every gate decision: the reader
+    globs ``*__<tag>__t*.json``, so ``<tag>__screenN`` files must be invisible to a
+    read of ``<tag>`` and vice versa. Probe it adversarially — screen says 1.0, full
+    val says 0.0, on the SAME candidate — and require the full-val read to return 0.0.
+    """
+    run_dir, _ = temp_run_dir(tmp / "iso", ids=("a", "b", "c", "d"))
+    for tid in ("a", "b", "c", "d"):
+        write_val_rollout(run_dir, tid, tag="cur", reward=1.0, feedback="ok")
+        # the LIE: the screen tag claims a perfect candidate …
+        write_val_rollout(run_dir, tid, tag="cand__screen1", reward=1.0, feedback="ok")
+        # … while the candidate's real full-val rollouts are all zeros.
+        write_val_rollout(run_dir, tid, tag="cand", reward=0.0, feedback="failed")
+    run_dir.set_best("cur")
+
+    full = harness.split_result_from_rollouts(run_dir, "cand", "val")
+    c.check(abs(full.reward) < 1e-9 and full.n_scored == 4,
+            f"full-val read of tag 'cand' leaked its screen rollouts: reward="
+            f"{full.reward} n_scored={full.n_scored} (expected 0.0 over 4)",
+            note="rollout isolation: a full-val read of <tag> cannot see <tag>__screenN")
+    scr = harness.split_result_from_rollouts(run_dir, "cand__screen1", "val")
+    c.check(abs(scr.reward - 1.0) < 1e-9,
+            f"screen-tag read leaked the full-val rollouts: reward={scr.reward}",
+            note="rollout isolation: a screen read of <tag>__screenN cannot see <tag>")
+    g = _run(c, "gate_check.py (tag isolation)",
+             [str(HERE / "gate_check.py"), "--run-dir", str(run_dir.root),
+              "--candidate", "cand", "--mode", "paired", "--k-se", "1.0"])
+    if g:
+        c.check(g["candidate"]["reward"] == 0.0 and g["verdict"] == "reject",
+                f"the gate read the screen's optimistic rollouts: {g['candidate']}",
+                note="the gate scores the full-val tag only, never the screen tag")
+
+
+def _tag_collision(c: Checker, tmp: Path) -> None:
+    """commit.py must REFUSE to reuse a candidate id that already has a decision.
+
+    A real run had two concurrent drivers tag a candidate ``cand_r2``: two reject
+    events, ONE set of rollouts — one edit judged on another's evidence, and the
+    second snapshot overwrote the first. The guard belongs in commit.py because that
+    is where every caller routes.
+    """
+    run_dir, project = temp_run_dir(tmp / "coll", ids=("a", "b"))
+    work = run_dir.root / "work" / "dup"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "policy.md").write_text("v1", encoding="utf-8")
+    argv = [str(HERE / "commit.py"), "--run-dir", str(run_dir.root),
+            "--candidate-id", "dup", "--from-dir", str(work),
+            "--decision", "reject", "--note", "first"]
+    first = _run(c, "commit.py (first use of a tag)", argv)
+    c.check(bool(first) and first.get("decision") == "reject",
+            f"the first commit of a fresh tag was refused: {first}")
+    second = _run(c, "commit.py (tag reuse)", argv, expect_rc=2)
+    c.check(bool(second) and "already" in json.dumps(second),
+            f"commit.py accepted a duplicate candidate id: {second}",
+            note="commit.py refuses a tag that already carries a decision (no "
+                 "two candidates can collapse onto one set of rollouts)")
+    forced = _run(c, "commit.py (--force overrides)", argv + ["--force"])
+    c.check(bool(forced) and forced.get("decision") == "reject",
+            f"--force did not override the collision guard: {forced}")
+
+
 def main() -> int:
     c = Checker("agent-optimize")
     _guard(c)
@@ -438,6 +510,8 @@ def main() -> int:
     try:
         _live_round(c, tmp)
         _no_regression(c, tmp)
+        _tag_isolation(c, tmp)
+        _tag_collision(c, tmp)
         _screen_round(c, tmp)
         _measure(c, tmp)
     finally:

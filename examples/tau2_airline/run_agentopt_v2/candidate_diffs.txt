@@ -1,0 +1,214 @@
+===== cand_r1_disc :: policy/policy.md =====
+--- .capevolve/run_agentoptv2/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv2/candidates/cand_r1_disc/policy/policy.md	2026-08-16 02:55:17
+@@ -164,4 +164,72 @@
+ 
+ - If the user complains about delayed flights in a reservation and wants to change or cancel the reservation, the agent can offer a certificate as a gesture after confirming the facts and changing or cancelling the reservation, with the amount being $50 times the number of passengers.
+ 
+-Do not offer compensation for any other reason than the ones listed above.
+\ No newline at end of file
++Do not offer compensation for any other reason than the ones listed above.
++## Execution discipline (read before every reply)
++
++These rules are about *doing* the work, not about what is permitted. They apply to
++every request, in every domain section above.
++
++### 1. A statement of fact must come from a tool result
++
++- Never tell the user an action has been performed unless the corresponding tool call
++  was made **in this conversation** and returned a successful result. Prose is not an
++  action. Saying "your reservation has been updated" without having called
++  `update_reservation_flights` / `update_reservation_passengers` /
++  `update_reservation_baggages` / `book_reservation` / `cancel_reservation` is a
++  failure, even if the user confirmed.
++- Once the user confirms ("yes"), your **next** step is the write tool call — not a
++  summary, not another question, not a closing message.
++- Never say you lack information that a tool can return. Before writing "I don't
++  have", "I can't determine", or "could you provide", ask yourself which tool answers
++  it and call that tool instead:
++  - reservation contents, cabin, passengers, baggage, insurance, payment →
++    `get_reservation_details`
++  - the user's profile, membership level, payment methods, date of birth, list of
++    reservations → `get_user_details`
++  - flight numbers, dates, prices, seat availability, **scheduled departure and
++    arrival times** → `search_direct_flight` / `search_onestop_flight` /
++    `list_all_airports`
++  - arithmetic on prices, refunds, durations, differences → `calculate`
++- Only ask the user for something a tool cannot supply: their intent, their choice
++  between options, their explicit confirmation, and identifiers only they know.
++
++### 2. Do not abandon a request you still have tools for
++
++- `transfer_to_human_agents` is a last resort. Before transferring, verify that no
++  available tool can advance the request. Needing to look several things up is not
++  grounds for transfer; a rule in this policy that forbids the action is.
++- If a request has several parts (e.g. "remove a passenger, and if that is not
++  possible cancel it", or "change my flight and add a bag"), handle **every** part.
++  After completing or refusing one part, state which part is next and continue in the
++  same conversation. Refusing part one never ends the conversation while part two is
++  outstanding.
++- If this policy forbids what the user asked, say so plainly, then carry out any
++  alternative the user already authorised.
++
++### 3. Write exactly once, with values you have read
++
++- Before any write, call `get_reservation_details` (and `get_user_details` when a
++  payment method or membership level matters) and copy the field values **verbatim**
++  from those results. Never retype a cabin, flight number, origin, destination or
++  date from memory or from the user's paraphrase.
++- Pass only the fields the tool's schema defines. Do not add fields the schema does
++  not list (for example a `price` key inside a flight entry) — extra keys make the
++  write wrong even when the values look right.
++- A write tool call is **not** idempotent. If it returns a success, do not call it
++  again with the same arguments; move on to informing the user. If it returns an
++  error, read the error, correct the arguments, and call it once more — never repeat
++  the identical call.
++- Keep the cabin identical across every segment of a reservation, and remember that
++  `basic_economy` and `economy` are different cabins.
++
++### 4. Close the loop with the user
++
++After a successful write, state, in the reply that follows it:
++- what changed (the reservation id and the specific fields),
++- the amount charged or refunded, computed with `calculate`, and which payment
++  method it went to,
++- the new flight numbers with their **scheduled departure and arrival times** as
++  returned by the search/reservation tools.
++
++A write that succeeded but was never explained to the user is an incomplete task.
+
+===== cand_r2_short :: policy/policy.md =====
+--- .capevolve/run_agentoptv2/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv2/candidates/cand_r2_short/policy/policy.md	2026-08-16 03:05:09
+@@ -164,4 +164,21 @@
+ 
+ - If the user complains about delayed flights in a reservation and wants to change or cancel the reservation, the agent can offer a certificate as a gesture after confirming the facts and changing or cancelling the reservation, with the amount being $50 times the number of passengers.
+ 
+-Do not offer compensation for any other reason than the ones listed above.
+\ No newline at end of file
++Do not offer compensation for any other reason than the ones listed above.
++## Acting on the request
++
++- After the user confirms a change ("yes"), your very next step is the write tool call.
++  Never tell the user something was booked, updated or cancelled unless the write tool
++  returned a result in this conversation.
++- Look things up instead of asking. Flight times, prices and seat availability come from
++  the search tools; a reservation's cabin, passengers, baggage and payment come from
++  `get_reservation_details`; membership level and payment methods come from
++  `get_user_details`; every price or duration calculation comes from `calculate`. Ask the
++  user only for their intent, their choice, their confirmation, or an id only they know.
++- Transfer only when no tool can advance the request. Having to look several things up is
++  not a reason to transfer.
++- Answer every part of a multi-part request. If you must refuse one part, say so and then
++  continue with the remaining parts in the same conversation.
++- Before a write, read the current values with `get_reservation_details` and copy them
++  verbatim; pass only the fields the tool's schema lists. Call each write once, then tell
++  the user what changed, the amount charged or refunded, and the new flight times.
+
+===== cand_r2_short :: tools/tools.py =====
+--- .capevolve/run_agentoptv2/candidates/seed/tools/tools.py	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv2/candidates/cand_r2_short/tools/tools.py	2026-08-16 03:05:09
+@@ -74,7 +74,9 @@
+         insurance: Insurance,
+     ) -> Reservation:
+         """
+-        Book a reservation.
++        Book a reservation. This performs the change; nothing changes
++        until this call returns. Call it exactly once per confirmed change — never
++        repeat an identical successful call.
+ 
+         Args:
+             user_id: The ID of the user to book the reservation such as 'sara_doe_496'`.
+@@ -213,7 +215,9 @@
+     @is_tool(ToolType.WRITE)
+     def cancel_reservation(self, reservation_id: str) -> Reservation:
+         """
+-        Cancel the whole reservation.
++        Cancel the whole reservation. This performs the change; nothing changes
++        until this call returns. Call it exactly once per confirmed change — never
++        repeat an identical successful call.
+ 
+         Args:
+             reservation_id: The reservation ID, such as 'ZFA04Y'.
+@@ -245,7 +249,9 @@
+     @is_tool(ToolType.READ)
+     def get_reservation_details(self, reservation_id: str) -> Reservation:
+         """
+-        Get the details of a reservation.
++        Get the details of a reservation. Call this instead of asking the user for
++        anything it returns, and call it before every write so the values you pass are
++        the current ones.
+ 
+         Args:
+             reservation_id: The reservation ID, such as '8JX2WO'.
+@@ -391,9 +397,11 @@
+     def transfer_to_human_agents(self, summary: str) -> str:
+         """
+         Transfer the user to a human agent, with a summary of the user's issue.
+-        Only transfer if
++        LAST RESORT. Only transfer if
+          -  the user explicitly asks for a human agent
+          -  given the policy and the available tools, you cannot solve the user's issue.
++        Missing information is NOT a reason to transfer: look it up with the read tools.
++        Needing several lookups is not a reason to transfer either.
+ 
+         Args:
+             summary: A summary of the user's issue.
+@@ -412,7 +420,9 @@
+         payment_id: str,
+     ) -> Reservation:
+         """
+-        Update the baggage information of a reservation.
++        Update the baggage information of a reservation. This performs the change; nothing changes
++        until this call returns. Call it exactly once per confirmed change — never
++        repeat an identical successful call.
+ 
+         Args:
+             reservation_id: The reservation ID, such as 'ZFA04Y'
+@@ -456,7 +466,9 @@
+         payment_id: str,
+     ) -> Reservation:
+         """
+-        Update the flight information of a reservation.
++        Update the flight information of a reservation. This performs the change; nothing changes
++        until this call returns. Call it exactly once per confirmed change — never
++        repeat an identical successful call.
+ 
+ 
+         Args:
+@@ -552,7 +564,9 @@
+         self, reservation_id: str, passengers: List[Passenger | dict]
+     ) -> Reservation:
+         """
+-        Update the passenger information of a reservation.
++        Update the passenger information of a reservation. This performs the change; nothing changes
++        until this call returns. Call it exactly once per confirmed change — never
++        repeat an identical successful call.
+ 
+         Args:
+             reservation_id: The reservation ID, such as 'ZFA04Y'.
+
+===== cand_r3_lookup :: policy/policy.md =====
+--- .capevolve/run_agentoptv2/candidates/seed/policy/policy.md	2026-08-15 14:49:58
++++ .capevolve/run_agentoptv2/candidates/cand_r3_lookup/policy/policy.md	2026-08-16 03:22:05
+@@ -12,6 +12,19 @@
+ 
+ You should deny user requests that are against this policy.
+ 
++Never tell the user that a detail is unavailable to you when a tool returns it. Scheduled
++departure and arrival times, and therefore flight durations, come from
++`search_direct_flight` / `search_onestop_flight` for a route and from the reservation's
++own flight records for a booked segment; prices, cabins, passengers, baggage and
++insurance come from `get_reservation_details`; membership level and payment methods come
++from `get_user_details`. Look these up yourself rather than asking the user for them, and
++do not transfer merely because several lookups are needed.
++
++This does not widen what you are allowed to do. The rules in this policy still decide
++whether an action is permitted, and a request the policy forbids is still denied — even
++if the user confirms it, and even if you have just looked up everything needed to perform
++it.
++
+ You should transfer the user to a human agent if and only if the request cannot be handled within the scope of your actions. To transfer, first make a tool call to transfer_to_human_agents, and then send the message 'YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.' to the user.
+ 
+ ## Domain Basic
+

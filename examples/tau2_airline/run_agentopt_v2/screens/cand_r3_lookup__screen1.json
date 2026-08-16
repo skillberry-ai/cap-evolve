@@ -1,0 +1,85 @@
+{
+  "tag": "cand_r3_lookup",
+  "screen_tag": "cand_r3_lookup__screen1",
+  "tier": 1,
+  "current": "seed",
+  "subset": {
+    "ids": [
+      "0",
+      "12",
+      "16",
+      "24",
+      "40",
+      "44"
+    ],
+    "broken": [],
+    "holdout": [
+      "12",
+      "16"
+    ],
+    "informative": [
+      "0",
+      "24",
+      "40",
+      "44"
+    ],
+    "k": 6,
+    "requested_k": 6,
+    "seed": 1,
+    "holdout_frac": 0.34,
+    "pool_n": 12
+  },
+  "reused_from_earlier_tiers": [],
+  "fired_ids": [
+    "0",
+    "12",
+    "16",
+    "24",
+    "40",
+    "44"
+  ],
+  "paired": {
+    "deltas": [
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ids": [
+      "0",
+      "12",
+      "16",
+      "24",
+      "40",
+      "44"
+    ],
+    "regressed": [
+      "12"
+    ],
+    "fixed": [],
+    "dropped": []
+  },
+  "decision": "promote",
+  "inconclusive": true,
+  "n": 6,
+  "mean_delta": -0.16666666666666666,
+  "se": 0.16666666666666669,
+  "threshold": -0.16666666666666669,
+  "regressed": [
+    "12"
+  ],
+  "reason": "subset \u0394\u0304=-0.1667, SE=0.1667, n=6: not significantly harmful \u2192 promote (inconclusive: promoted without positive evidence \u2014 the screen is biased against false kills)",
+  "savings": {
+    "fired": 6,
+    "full_val_rollouts": 12,
+    "avoided": 0,
+    "net_rollouts": -6,
+    "decision": "promote",
+    "breakeven_kill_rate": 0.5,
+    "screen_cost_usd": 0.0
+  },
+  "promote_to": "full-val evaluate + gate_check.py",
+  "note": "A screen is TRIAGE. It may kill; it may never accept. Only gate_check.py on FULL val (\u0394\u0304 > k\u00b7SE and no regression) accepts."
+}

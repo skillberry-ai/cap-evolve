@@ -85,15 +85,35 @@ uses this run's own **measured** `usd_per_rollout` (`spent.usd / spent.metric_ca
 is honestly `null` before the first rollout is paid for. Check this BEFORE dispatching
 proposers: N candidates can blow a budget that had room for one.
 
+**Read `afford.runner_spend_metered`.** Some serving paths return no cost at all (an
+OpenAI-compatible litellm proxy typically does: litellm logs "model isn't mapped yet" and
+reports `0.0`). A measured rate of exactly $0 after real rollouts is *unmetered*, not
+free — treating it as 0.0 would make `usd_needed` 0.0, so a `max_usd` ceiling could never
+block anything and every fan-out would come back `affordable: true`. When
+`runner_spend_metered` is `false`, bound the run with `max_metric_calls` /
+`max_iterations`, and report **rollout counts, not dollars**.
+
 **1. Read the signal.** This is free — no new evaluation. Cluster the current best's
-failing val rollouts:
+failing rollouts:
 
 ```bash
-python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$(python "$A/spend.py" --run-dir "$R" | python -c 'import json,sys;print(json.load(sys.stdin)["best_id"])')"
+BEST="$(python "$A/spend.py" --run-dir "$R" | python -c 'import json,sys;print(json.load(sys.stdin)["best_id"])')"
+python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split train
+python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val
 ```
 
 Read `clusters` for what to fix and **`kept_good`** for what you must not break — those
 are exactly the tasks the no-regression check in step 4 protects.
+
+**Diagnose TRAIN when the spec has a disjoint train split, and compare its clusters to
+val's.** Val is what the gate scores, so reading the learning signal off val and then
+gating on val fits the split you are judged on; train is the honest surface. It only
+works if the two share failure modes, and that is a **free** thing to check before you
+spend: if train's cluster signatures and val's are disjoint, no train-driven edit can
+ever move the val mean and every candidate will be correctly rejected for a reason that
+looks exactly like a null result. Say which it is, in the report, either way. (Train
+rollouts have to exist first — baseline only scores val, so pay one
+`evaluate --split train` for the seed if you want this signal.)
 
 **2. Propose an edit per candidate — and address EVERY cluster the round can afford.**
 One round should not fix one thing. Take the ranked clusters from step 1 and cover as many
@@ -162,8 +182,23 @@ What it does, and why each part is there:
 - **The saving is measured, not estimated.** `savings.net_rollouts` is `+ (full_val −
   fired)` on a kill and `− fired` on a promote, so a run's ledger sums to the truth.
 
-Ladder: `tier 1` (~25% of val) → on `promote`, either `tier 2` (~50%) for a second cheap
-look, or straight to full val. On `kill`: `commit.py --decision reject` and move on.
+Ladder: `tier 1` (~25% of val, but never fewer than **6** tasks) → on `promote`, either
+`tier 2` (~50%) for a second cheap look, or straight to full val. On `kill`:
+`commit.py --decision reject` and move on.
+
+**Check the screen's own economics before you rely on it.** `savings.breakeven_kill_rate`
+is `fired / full_val_rollouts` — the fraction of candidates the screen must kill just to
+pay for itself. On a small val that number is brutal: at `val_n 12` the tier-1 floor of 6
+gives a breakeven of **0.5**, so screening only pays if it kills half of everything you
+propose, and a measured run killed **0 of 4**. The floor is 6 rather than 3 because 3 was
+measured to be worse than useless — a 3-task tier-1 screen reported `fixed: ["44"]` for a
+candidate that full val showed never fixed task 44. So: on a small val, either skip the
+ladder and pay full val directly, or screen and then read the outcome as *direct
+evidence about the tasks the edit targeted* rather than as a statistical test. A tier-1
+subset that contains **every** failing val task and comes back 0-for-N on them is a
+sound reason to stop spending on that candidate — that is not "killing on noise", the
+edit simply missed everything it aimed at. Say in the commit note that the reject was a
+budget decision on screen evidence, not a gate decision.
 
 **4. Honest gate on FULL val.** Evaluate on the whole val split (this writes
 rollouts + results into the run dir under tag `$TAG`, because the evaluate phase tags by
@@ -210,7 +245,36 @@ python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$
 ```
 
 Use `--decision reject` to keep the old best. Either way it snapshots the candidate,
-logs the event, and advances `iterations` + the stall counter. Add
+logs the event, and advances `iterations` + the stall counter.
+
+**On a reject, pass `--reject-basis` — it says what the reject rests on.** The screen's
+`decision` and the driver's disposition are two different facts, and conflating them made
+one run's artifacts contradict themselves: `screen.py` recorded `promote` for two
+candidates while the commit notes said "rejected on the tier-1 screen, not promoted to
+full val". Both were true. `screen.py`'s `decision` is authoritative *only* as the
+**screen's own statistical verdict**, which by invariant 1 can only ever be `kill` or
+`promote` — "promote" means "could not prove harm", never "was then evaluated on full
+val". What actually happened next is `--reject-basis`:
+
+| basis | meaning |
+| --- | --- |
+| `gate` | a full-val paired gate ran and said reject — the only basis that asserts this |
+| `screen_kill` | the screen proved significant harm |
+| `ceiling` | arithmetic proved no accept was reachable, so full val was never paid |
+| `budget` | screen evidence plus a budget call; not a gate decision |
+| `infra` | missing data, not a judgement |
+
+So `screen: promote` + `reject_basis: ceiling` is one coherent story, and a reader never
+has to guess whether a promoted candidate reached the gate.
+
+`commit.py` **refuses a `--candidate-id` that already carries an accept/reject event** in
+`events.jsonl` (pass `--force` only to repair a record deliberately). That is invariant 7
+made mechanical rather than aspirational: a real run had two concurrent drivers both tag a
+candidate `cand_r2`, producing two reject events but ONE set of rollouts, so one edit was
+judged on the other's evidence and the second snapshot overwrote the first. The check
+reads the log, not memory, so it holds across processes.
+
+Add
 `--optimizer-usd/--optimizer-tokens/--optimizer-seconds` for **your own** proposal cost —
 the runner's `metric_calls`/`usd`/`seconds` are already recorded by the evaluate phase, but
 nothing else records the proposer's, so cost-based stop conditions under-count without it.

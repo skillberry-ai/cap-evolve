@@ -72,6 +72,13 @@ def _add(preds: list, kind: str, target: float, op: str, span: str) -> None:
     preds.append({"kind": kind, "op": op, "target": float(target), "source": span.strip()})
 
 
+def _split_qualified_msg(span: str, split: str) -> str:
+    """Why a score goal naming train/test is REPORTED instead of installed."""
+    return (f"{span.strip()!r} is qualified by {split!r}, but a score goal is only ever "
+            "checked against the FULL-VAL mean (acceptance is val-only). State the val "
+            f"bar here and track the {split} number separately, or say which you meant.")
+
+
 def parse_constraints(text: str | None) -> dict:
     """Normalize a free-text stop condition into predicates + an ambiguity list.
 
@@ -109,20 +116,42 @@ def parse_constraints(text: str | None) -> dict:
             r"|pass\s*rate|target|goal)")
     _CONN = (r"(?:of|is|at\s*least|reach(?:es|ed|ing)?|hits?|gets?\s*to|achieves?"
              r"|[:=]|>=|=>|>|≥)?")
+    # A score goal QUALIFIED BY ANOTHER SPLIT is not a val goal. ``target_val_score`` is
+    # only ever checked against the FULL-VAL mean (honesty invariant 1: acceptance and
+    # the score goal are val-only), so parsing "train mean >= 0.9" into it would enforce
+    # a val bar while telling the user their train bar was being watched — a confidently
+    # wrong number, which is the failure mode this module exists to avoid. Report it.
+    # The qualifier can sit on EITHER side of the number: "train mean >= 0.9" and
+    # "90% on the test split" are both non-val goals.
+    _SPLIT_BEFORE = re.compile(r"\b(train(?:ing)?|test|held[\s-]*out)\s*(?:set|split)?\s*$")
+    _SPLIT_AFTER = re.compile(r"^\s*(?:on|of|over|for)?\s*(?:the\s*)?"
+                              r"(train(?:ing)?|test|held[\s-]*out)\b")
     for m in re.finditer(_CUE + r"\s*" + _CONN + r"\s*" + _NUM + r"\s*(%?)", t):
         v = _f(m.group(1))
         if m.group(2) == "%" or v > 1.0:
             v = v / 100.0
-        if 0.0 < v <= 1.0:
-            _add(preds, "target_val_score", v, ">=", m.group(0))
+        if not (0.0 < v <= 1.0):
+            continue
+        qual = _SPLIT_BEFORE.search(t[:m.start()]) or _SPLIT_AFTER.match(t[m.end():])
+        if qual:
+            ambiguous.append(_split_qualified_msg(m.group(0), qual.group(1)))
+            continue
+        _add(preds, "target_val_score", v, ">=", m.group(0))
     if not any(p["kind"] == "target_val_score" for p in preds):
         for m in re.finditer(r"(?:reach(?:es|ed)?|hits?|gets?\s*to|achieves?|until)\s*"
                              + _NUM + r"\s*(%?)", t):
             v = _f(m.group(1))
             if m.group(2) == "%" or v > 1.0:
                 v = v / 100.0
-            if 0.0 < v <= 1.0:
-                _add(preds, "target_val_score", v, ">=", m.group(0))
+            if not (0.0 < v <= 1.0):
+                continue
+            # Same split-qualifier veto as the cued branch above — "reach 90% on the
+            # test split" must not install a VAL bar.
+            qual = _SPLIT_BEFORE.search(t[:m.start()]) or _SPLIT_AFTER.match(t[m.end():])
+            if qual:
+                ambiguous.append(_split_qualified_msg(m.group(0), qual.group(1)))
+                continue
+            _add(preds, "target_val_score", v, ">=", m.group(0))
 
     # --- money --------------------------------------------------------------
     # A money figure has a SCOPE, and prose routinely names both scopes in one breath

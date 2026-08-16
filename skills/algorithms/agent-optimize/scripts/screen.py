@@ -41,13 +41,22 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir, harness
 from cap_evolve.check import load_adapter
 from cap_evolve.subsample import (
-    paired_deltas_on, screen_decision, screen_savings, select_screen_subset,
+    full_val_ceiling, paired_deltas_on, screen_decision, screen_savings,
+    select_screen_subset,
 )
 
 #: Rung → fraction of val screened. Tier 3 is "almost full val" for the rare case
 #: where full val is very large; the real gate is still a separate full-val eval.
 TIER_FRAC = {1: 0.25, 2: 0.5, 3: 0.75}
-MIN_K = 3
+
+#: Absolute floor on subset width, independent of the fraction. Was 3, and 3 is
+#: MEASURED to be too narrow: on a 12-task val, tier 1 = round(0.25·12) = 3, and the
+#: run in docs/RESULTS.md produced a screen that reported ``fixed: ["44"]`` on a 3-task
+#: subset when full val showed task 44 was never fixed — a false positive on a third of
+#: the evidence. 6 is the smallest width where the paired SE over {-1,0,+1} deltas is
+#: not dominated by a single task. It only binds on small val splits; a 100-task val
+#: still screens at the 25% fraction.
+MIN_K = 6
 
 
 def _screen_tags(run_dir: RunDir, tag: str) -> list[str]:
@@ -150,6 +159,28 @@ def main(argv=None) -> int:
     pair = paired_deltas_on(parent.per_task, cand_per_task, sub["ids"])
     decision = screen_decision(pair["deltas"], k_se=args.k_se,
                                regressed=pair["regressed"])
+
+    # ARITHMETIC kill. When the screened ids already cover every val task the parent
+    # fails, the unscreened remainder is all tasks the parent passes, so it can only
+    # stay level or regress — and the candidate's best conceivable full-val mean is
+    # computable. If that ceiling cannot beat the parent, no full-val eval can ever
+    # accept, and paying for one buys strictly nothing. This still cannot accept
+    # anything: the only conclusion it can reach is "reject".
+    ceiling = full_val_ceiling(parent.per_task, cand_per_task, sub["ids"],
+                               [str(i) for i in val_ids])
+    # STRICTLY negative only. A best-case Δ̄ of exactly 0.0 also cannot accept (the bar
+    # is >= 0), but that is the degenerate "parent already perfect on the screened set"
+    # case, and escalating it would override the deliberate promote-on-a-flat-subset
+    # bias for no gain. Keep the bias; kill only when the ceiling is provably BELOW the
+    # parent.
+    if (ceiling.get("best_case_mean_delta") is not None
+            and ceiling["best_case_mean_delta"] < -1e-9
+            and decision["decision"] != "kill"):
+        decision = {**decision, "decision": "kill", "provable": True,
+                    "inconclusive": False,
+                    "reason": "PROVABLE kill (not a statistical one): "
+                              + ceiling["reason"]}
+
     savings = screen_savings(fired=fired, val_n=len(val_ids),
                              n_trials=max(1, args.n_trials),
                              decision=decision["decision"])
@@ -161,6 +192,7 @@ def main(argv=None) -> int:
         "reused_from_earlier_tiers": sorted(already & set(sub["ids"])),
         "fired_ids": new_ids,
         "paired": pair,
+        "full_val_ceiling": ceiling,
         **decision,
         "savings": {**savings, "screen_cost_usd": screen_cost_usd},
         "promote_to": ("full-val evaluate + gate_check.py"
