@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.530
+Your AI agents fail in production.
+How do you make them reliably better — and prove it?
+
+2
+00:00:05.880 --> 00:00:18.790
+Meet cap-evolve. It runs a continuous reflective loop:
+evaluating traces. clustering failures. proposing bold edits.
+gating every change on held-out splits. and committing the wins to git.
+
+3
+00:00:19.140 --> 00:00:32.330
+It runs from a single command: freeze the splits.
+measure an honest baseline. then propose one candidate at a time.
+Every candidate faces the same gate: accept. reject. or not enough evidence.
+
+4
+00:00:32.680 --> 00:00:42.110
+Every run is fully inspectable. Nine tabs — candidates. gate.
+tasks. diffs and cost — so you can see exactly how the capability evolved.
+
+5
+00:00:42.450 --> 00:00:55.360
+On τ²-bench airline. reward climbed from fifty-three point six
+to seventy-one point two percent — a thirty-two point eight percent
+relative gain. with five of ten iterations accepted by the gate.
+
+6
+00:00:55.710 --> 00:01:08.670
+On the Red Hat Software Engineering benchmark. an optimized
+Sonnet 4.6 rose from fifty-five point seven to seventy-three point one.
+Thirty-one percent better. and past an unoptimized Opus.
+
+7
+00:01:09.020 --> 00:01:18.220
+Agents optimizing agents. under strict cost constraints.
+Every iteration lives in git-committed markdown you can read. diff. and revert.
+
+8
+00:01:18.570 --> 00:01:22.700
+Optimize your own agent today.
+Get started with cap-evolve on GitHub.

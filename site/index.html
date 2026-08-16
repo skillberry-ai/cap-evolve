@@ -121,6 +121,31 @@ bash examples/toy_calc/run.sh</code></pre>
     </div>
   </div>
 
+  <!-- ─────────────────────────── demo video ─────────────────────────── -->
+  <!-- preload="metadata", never autoplay: this is a 15 MB file and the poster carries the
+       frame that matters. cap-evolve-demo.mp4 lives in docs/assets/demo/ in the repo and is
+       copied into site/assets/demo/ by .github/workflows/pages.yml, so it is committed once
+       rather than twice. Captions are WebVTT — browsers do not read the .srt. -->
+  <div class="hero-screenshot reveal" id="demo-video">
+    <video
+      controls
+      preload="metadata"
+      playsinline
+      poster="assets/demo-poster.jpg"
+      style="width:100%;height:auto;display:block">
+      <source src="assets/demo/cap-evolve-demo.mp4" type="video/mp4">
+      <track kind="captions" src="assets/demo-captions.vtt" srclang="en" label="English" default>
+      Your browser can’t play embedded video —
+      <a href="assets/demo/cap-evolve-demo.mp4">download the 85-second demo (15 MB)</a>.
+    </video>
+    <div class="caption">
+      The 85-second demo — the CLI, four real dashboard tabs from
+      <span class="num">run_full</span>, and both benchmark results. Narrated, captioned, and
+      readable muted. The <em>Gate</em> tab is the one to pause on: every candidate’s Δ,
+      standard error, n, and the bar it had to clear.
+    </div>
+  </div>
+
   <!-- ─────────────────────────── how it works ─────────────────────────── -->
   <section class="section reveal" id="how-it-works">
     <h2>How the loop works</h2>

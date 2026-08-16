@@ -132,17 +132,19 @@ Nothing there is a fabricated number: a value the run didn't record renders as `
 un-evaluated task gets its own glyph rather than a zero, and **indecisive** is a first-class
 outcome — it means *the measurement could not decide*, which is not the same as losing.
 
-▶️ **[Watch the 89-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 2560×1440, 5.4 MB,
-captioned ([`.srt`](docs/assets/demo/cap-evolve-demo.srt)) and designed to be fully
-comprehensible **muted**. Nothing in it is a mockup: the terminal segment is a `vhs`
-recording of `cap-evolve replay --demo`, and the dashboard segment is Chromium against a
-real committed run — one that is a **null result**, and says so on screen. Rebuild it with
-[`scripts/demo-video/`](scripts/demo-video/README.md).
+▶️ **[Watch the 85-second demo](docs/assets/demo/cap-evolve-demo.mp4)** — 1920×1080, 15 MB,
+narrated, and captioned ([`.srt`](docs/assets/demo/cap-evolve-demo.srt)) so it still reads
+**muted**. Nothing in it is a mockup. The dashboard segment crossfades four real tabs —
+Overview, Candidates, **Gate**, Tasks — captured from the committed
+[`run_full`](examples/tau2_airline/run_full/): baseline **53.6% → 71.2%**, 5 accepted and 5
+rejected, sealed test **69.4%**. The Gate tab is the one worth pausing on: it shows every
+candidate's Δ, standard error, n, and the bar it had to clear.
 
-> The bundled demo session's numbers are hand-authored and make **no benchmark claim** —
-> it exists to show the UI with no API key. Measured results are in
-> [Results](docs/RESULTS.md). The one number measured live on camera is the parallel
-> speedup below.
+> One frame needs a caveat and carries it on screen: the live-view shot is
+> `cap-evolve replay --demo`, a recorded session whose numbers are **synthetic** and make no
+> benchmark claim — it exists to show the UI with no API key. Every *measured* figure in the
+> video is in [Results](docs/RESULTS.md), and RH-SWE-bench is labelled on screen as a fit
+> metric with **no committed artifact**, because that is what it is.
 
 `watch` and `replay` render the same projection the dashboard does (`events.jsonl` →
 `reduce_run`), so the terminal and the browser can never disagree about what happened.

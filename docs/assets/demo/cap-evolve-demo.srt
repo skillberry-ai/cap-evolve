@@ -1,103 +1,43 @@
 1
-00:00:00,150 --> 00:00:02,560
-cap-evolve. Watch capability evolve.
+00:00:00,000 --> 00:00:05,530
+Your AI agents fail in production.
+How do you make them reliably better — and prove it?
 
 2
-00:00:04,150 --> 00:00:06,019
-A benchmark gives you one number.
+00:00:05,880 --> 00:00:18,790
+Meet cap-evolve. It runs a continuous reflective loop:
+evaluating traces, clustering failures, proposing bold edits,
+gating every change on held-out splits, and committing the wins to git.
 
 3
-00:00:06,019 --> 00:00:08,738
-It won't tell you which policy rule was missing,
+00:00:19,140 --> 00:00:32,330
+It runs from a single command: freeze the splits,
+measure an honest baseline, then propose one candidate at a time.
+Every candidate faces the same gate: accept, reject, or not enough evidence.
 
 4
-00:00:08,738 --> 00:00:10,834
-or which tool let a bad call through.
+00:00:32,680 --> 00:00:42,110
+Every run is fully inspectable. Nine tabs — candidates, gate,
+tasks, diffs and cost — so you can see exactly how the capability evolved.
 
 5
-00:00:10,834 --> 00:00:11,570
-So you guess.
+00:00:42,450 --> 00:00:55,360
+On τ²-bench airline, reward climbed from fifty-three point six
+to seventy-one point two percent — a thirty-two point eight percent
+relative gain, with five of ten iterations accepted by the gate.
 
 6
-00:00:12,270 --> 00:00:17,778
-cap-evolve edits what your agent reads: prompts, tool code, MCP surfaces,
+00:00:55,710 --> 00:01:08,670
+On the Red Hat Software Engineering benchmark, an optimized
+Sonnet 4.6 rose from fifty-five point seven to seventy-three point one.
+Thirty-one percent better, and past an unoptimized Opus.
 
 7
-00:00:17,778 --> 00:00:18,910
-skill packages.
+00:01:09,020 --> 00:01:18,220
+Agents optimizing agents, under strict cost constraints.
+Every iteration lives in git-committed markdown you can read, diff, and revert.
 
 8
-00:00:19,610 --> 00:00:23,830
-Each iteration scores a candidate on validation, reads the failures,
-
-9
-00:00:23,830 --> 00:00:25,195
-and proposes one edit.
-
-10
-00:00:25,195 --> 00:00:28,857
-Accepted, rejected, or indecisive — always with the reason.
-
-11
-00:00:28,857 --> 00:00:32,580
-This session is illustrative: its numbers are hand-authored.
-
-12
-00:00:35,610 --> 00:00:39,176
-One real iteration: a policy rule, and in the same edit,
-
-13
-00:00:39,176 --> 00:00:42,423
-code inside the tool that rejects the illegal call.
-
-14
-00:00:42,423 --> 00:00:45,480
-Task fourteen went from one pass in ten, to six.
-
-15
-00:00:46,180 --> 00:00:51,149
-The dashboard holds the whole run — every candidate, every trial, every verdict.
-
-16
-00:00:51,149 --> 00:00:53,820
-Five rejections, and nothing beat the seed.
-
-17
-00:00:54,520 --> 00:00:56,676
-Here's what most optimizers skip.
-
-18
-00:00:56,676 --> 00:01:00,662
-Acceptance is a paired significance test, on validation only:
-
-19
-00:01:00,662 --> 00:01:03,210
-clear k standard errors, or it's noise.
-
-20
-00:01:03,210 --> 00:01:06,020
-The test split is scored once, then sealed.
-
-21
-00:01:06,720 --> 00:01:11,102
-RH-SWE-bench: fifty-five point seven to seventy-three point one,
-
-22
-00:01:11,102 --> 00:01:12,814
-past an unoptimized Opus.
-
-23
-00:01:12,814 --> 00:01:17,265
-τ²-bench airline: fifty-three point six to seventy-one point two,
-
-24
-00:01:17,265 --> 00:01:19,730
-and forty-seven point five held out.
-
-25
-00:01:20,430 --> 00:01:23,080
-Start in two minutes, with no API key.
-
-26
-00:01:24,930 --> 00:01:27,330
-cap-evolve. Made at IBM and Red Hat.
+00:01:18,570 --> 00:01:22,700
+Optimize your own agent today.
+Get started with cap-evolve on GitHub.

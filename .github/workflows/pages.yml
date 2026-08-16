@@ -51,6 +51,20 @@ jobs:
           test -f site/index.html || { echo "no site/index.html"; exit 1; }
           ls -la site/
 
+      # The demo video is committed ONCE, at docs/assets/demo/, and folded into the Pages
+      # artifact here — the same trick this workflow already uses for benchmark-history.
+      # Committing a second 15 MB copy under site/ just to serve it would double the repo
+      # cost of every future re-render. Fail loudly rather than deploy a page whose <video>
+      # 404s: a missing hero video is not a cosmetic problem.
+      - name: Fold the demo video into site/
+        run: |
+          test -f docs/assets/demo/cap-evolve-demo.mp4 || {
+            echo "docs/assets/demo/cap-evolve-demo.mp4 is missing — site/index.html embeds it"; exit 1; }
+          mkdir -p site/assets/demo
+          cp docs/assets/demo/cap-evolve-demo.mp4 site/assets/demo/
+          cp docs/assets/demo/cap-evolve-demo.srt site/assets/demo/ 2>/dev/null || true
+          ls -la site/assets/demo/
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
