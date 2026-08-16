@@ -21,6 +21,28 @@ import string
 _RANGE_OK = set(string.ascii_letters + string.digits + "~^/_-.")
 
 
+#: Paths dropped from every per-commit diff, live server and static export alike.
+#:
+#: A run dir's git store commits the WHOLE dir each iteration, so a raw diff is mostly
+#: the harness's own append-only bookkeeping: one more line of ``events.jsonl``, a bumped
+#: counter in ``state.json``, a re-serialised ``final.json``. On a 3-iteration run that
+#: noise was the majority of the page and pushed the actual capability edit off-screen.
+#: The optimizer's scratch prompts (``INSTRUCTIONS.md``/``PROCESS.md``/…) are excluded for
+#: the same reason the candidate-snapshot diff skips them (``dashboard._DIFF_SKIP``): they
+#: are what the optimizer was told, not what it changed, and the Memory panel shows them
+#: verbatim already. What is kept is exactly what a reader is looking for: the capability
+#: files and the candidate snapshots.
+DIFF_EXCLUDE = [
+    "trajectories", "rollouts", "dashboard.html", "__pycache__", "*.pyc",
+    # harness bookkeeping — appended/rewritten every iteration by design
+    "events.jsonl", "state.json", "accepted.jsonl", "rejected.jsonl",
+    "splits.json", "baseline.json", "final.json", "val_per_task.json",
+    # optimizer scratch carried inside each candidate snapshot
+    "*/INSTRUCTIONS.md", "*/PROCESS.md", "*/MEMORY.md", "*/STATE.md",
+    "*/LEDGER.md", "*/JOURNAL.md", "*/RUNMAP.md",
+]
+
+
 def _has_git(root: Path) -> bool:
     return (Path(root) / ".git").exists() and shutil.which("git") is not None
 
@@ -56,11 +78,13 @@ def _valid_ref(ref: str) -> bool:
 def diff(run_path: Path, frm: str, to: str, exclude: list[str] | None = None) -> dict:
     """Unified diff ``frm..to`` parsed into per-file add/remove rows.
 
-    ``exclude`` is an optional list of top-level path globs to drop from the diff
-    (passed as ``:(exclude)<glob>`` pathspecs). The live backend never sets it; the
-    static exporter uses it to skip huge regenerated artifacts (trajectory results,
-    the embedded dashboard.html, append-only logs) so a diff stays small and readable.
+    ``exclude`` is a list of path globs to drop (``:(exclude)<glob>`` pathspecs) and
+    defaults to :data:`DIFF_EXCLUDE`. Pass ``[]`` for a genuinely raw diff. The live
+    server used to pass nothing and got the raw diff, so it rendered thousands of lines
+    of append-only bookkeeping while the static export of the same run was clean.
     """
+    if exclude is None:
+        exclude = DIFF_EXCLUDE
     root = Path(run_path)
     if not _has_git(root):
         return {"from": frm, "to": to, "files": [], "available": False}

@@ -169,6 +169,51 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     return per, fb
 
 
+def _val_per_task_file(root: Path) -> dict:
+    """``val_per_task.json`` — per-candidate per-task val rewards, when the run wrote it.
+
+    Rollouts are the primary source, but they are not always kept: an agent-driven run
+    commonly persists the re-derived per-candidate record as ``val_per_task.json`` and
+    prunes the raw rollout files. Without this the per-task matrix showed a lone seed
+    column and every candidate's "tasks scored" read 0 — for a run whose whole point was
+    which tasks each edit fixed and broke.
+
+    Three shapes exist across real runs and all three are read, because a reader who has
+    the data on disk should not be shown a blank column over a serialisation detail::
+
+        {tag: {"per_task": {tid: reward}, "stderr": .., "n_scored": .., "fixed": [..]}}
+        {tag: {tid: reward}}
+        {tag: {tid: {"reward": .., "feedback": ".."}}}
+
+    Returns ``{tag: {per_task, feedback, stderr, n_scored, fixed, broke}}``; anything
+    unrecognised is skipped rather than guessed at, so absent stays absent.
+    """
+    def _norm(inner: dict) -> tuple[dict, dict]:
+        per, fb = {}, {}
+        for k, v in inner.items():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                per[str(k)] = float(v)
+            elif isinstance(v, dict) and isinstance(v.get("reward"), (int, float)):
+                per[str(k)] = float(v["reward"])
+                if isinstance(v.get("feedback"), str):
+                    fb[str(k)] = v["feedback"]
+        return per, fb
+
+    raw = _read_json(root / "val_per_task.json")
+    out = {}
+    for tag, rec in (raw.items() if isinstance(raw, dict) else ()):
+        if not isinstance(rec, dict):
+            continue
+        inner = rec.get("per_task")
+        per, fb = _norm(inner if isinstance(inner, dict) else rec)
+        if per:
+            out[str(tag)] = {"per_task": per, "feedback": fb,
+                             "stderr": rec.get("stderr"), "n_scored": rec.get("n_scored"),
+                             "fixed": [str(x) for x in (rec.get("fixed") or [])],
+                             "broke": [str(x) for x in (rec.get("broke") or [])]}
+    return out
+
+
 def _trials_for(run_dir, tag: str, split: str) -> int:
     """How many trials a ``tag`` was evaluated with, read from its rollout files.
 
@@ -242,7 +287,12 @@ _ALGO_MARKERS = (
     ("skillopt", ("skillopt_start", "skillopt_step", "skillopt_slow_update",
                   "skillopt_slow_eval")),
     ("evograph", ("evograph_round", "evograph_weakness", "evograph_solution")),
-    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step")),
+    # ``screen`` is agent-optimize's tiered cheap-screen event (skills/algorithms/
+    # agent-optimize/scripts/screen.py) and no other algorithm emits it. Without it a
+    # real agent-optimize run that logs only screen/accept/reject — the shape every
+    # actual run has, since the agent drives the loop and emits no "agent_round" —
+    # matched nothing and rendered as "algorithm not recorded" with no agent panels.
+    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step", "screen")),
     ("hill-climb", ("convergence", "step")),
 )
 
@@ -346,6 +396,32 @@ def _orchestration_mode(root: Path) -> str | None:
         except OSError:
             continue
     return None
+
+
+def _paid_calls(spent, evaluations: list) -> int:
+    """How many runner calls this run actually made (0 if we cannot tell)."""
+    n = int(getattr(spent, "metric_calls", 0) or 0)
+    if n:
+        return n
+    # No Spent state (e.g. a curated export): fall back to the evaluations that
+    # actually scored something.
+    return sum(1 for e in evaluations if (e.get("n_scored") or e.get("n_tasks") or 0))
+
+
+def _spend_metered(total_usd: float, paid_calls: int) -> bool:
+    """False when a run made real calls yet reports exactly $0 — i.e. UNMETERED.
+
+    Some runners genuinely cost nothing to report: self-hosted vLLM, an internal
+    RITS endpoint, or an OpenAI-compatible proxy that returns no usage/cost. litellm
+    then prices the call at 0.0 and the ledger sums to $0.0000. Rendering that as
+    "$0.000" states a fact nobody measured — the same class of lie as `pass^k NaN%`
+    or a red `failed` badge for an absent status.
+
+    The inference is sound because the two cases are distinguishable: zero dollars
+    with zero calls is a genuine $0.00 (nothing ran), while zero dollars after N>0
+    real rollouts is missing data. Callers render the second as "not metered".
+    """
+    return not (paid_calls > 0 and total_usd == 0.0)
 
 
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
@@ -510,6 +586,8 @@ def reduce_run(run_dir) -> dict:
     baseline = _read_json(root / "baseline.json")
     final = _read_json(root / "final.json")
 
+    per_task_file = _val_per_task_file(root)
+
     base_val_obj = baseline.get("val") or {}
     baseline_val = base_val_obj.get("reward")
     tasks = [pt["task_id"] for pt in base_val_obj.get("per_task", [])]
@@ -545,6 +623,9 @@ def reduce_run(run_dir) -> dict:
     if not seed_per:  # no rollouts persisted (synthetic logs) → fall back to baseline.json
         seed_per = {pt["task_id"]: pt["reward"] for pt in base_val_obj.get("per_task", [])}
         seed_fb = {pt["task_id"]: pt.get("feedback", "") for pt in base_val_obj.get("per_task", [])}
+    if not seed_per and "seed" in per_task_file:
+        seed_per = per_task_file["seed"]["per_task"]
+        seed_fb = per_task_file["seed"]["feedback"] or seed_fb
     nodes["seed"] = {
         "id": "seed", "parent": None, "children": [], "status": "seed",
         "val": baseline_val, "stderr": base_val_obj.get("stderr"),
@@ -565,12 +646,22 @@ def reduce_run(run_dir) -> dict:
     # rendered bare — the exact sloppiness the honesty rules forbid.
     val_stderr: dict = {}
     val_n_scored: dict = {}
+    #: tag → its full-val ``evaluate`` event. An AGENT-mode commit (``accept``/``reject``)
+    #: records the verdict but no spend, while the eval that produced the number recorded
+    #: real cost/time/tokens one event earlier. Without this join every agent-driven
+    #: candidate's eval cost read "—" in the evaluations table while the cost ledger right
+    #: above it showed the same dollars — the tables contradicted each other.
+    val_eval: dict = {}
     for ev in events:
         if ev.get("kind") == "evaluate" and ev.get("split") == "val":
             if ev.get("stderr") is not None:
                 val_stderr[ev.get("tag")] = ev.get("stderr")
             if ev.get("n_scored") is not None:
                 val_n_scored[ev.get("tag")] = ev.get("n_scored")
+            val_eval[ev.get("tag")] = ev
+    for tag, rec in per_task_file.items():
+        val_stderr.setdefault(tag, rec.get("stderr"))
+        val_n_scored.setdefault(tag, rec.get("n_scored"))
 
     # Which tags were evaluated on val (vs only minibatch).
     for ev in events:
@@ -622,13 +713,32 @@ def reduce_run(run_dir) -> dict:
         parent_val = ev.get("parent_val")
 
         per, fb = _per_task_from_rollouts(run_dir, cid, "val")
+        if not per and cid in per_task_file:
+            per = per_task_file[cid]["per_task"]
+            fb = per_task_file[cid]["feedback"] or fb
+        if not per:
+            # A candidate killed on a cheap screen has per-task rewards only under its
+            # SCREEN tag (``<cid>__screenN``) and over a subset of val. Showing those is
+            # the difference between "we can see it regressed task 12" and a blank row:
+            # ``val`` stays None so nothing claims a val score, and the tasks the screen
+            # never ran render as "not run" (missing), not as zeros.
+            for tag, rec in per_task_file.items():
+                if tag.startswith(f"{cid}__"):
+                    per = {**(per or {}), **rec["per_task"]}
+                    fb = {**(fb or {}), **rec["feedback"]}
         # Order matters. An INDECISIVE step (coverage collapse / integrity tamper) is
         # not a rejection and not a failure: the gate declined to judge, so the edit's
         # quality is unknown. Collapsing it into "rejected" (the old behaviour) told
         # the reader a measured verdict existed when none did.
         if cid in indecisive_ids:
             status = "indecisive"
-        elif val is None and not per:
+        elif val is None and not per and kind not in ("accept", "reject"):
+            # ``failed`` means NO VERDICT AND NO MEASUREMENT — a step that produced
+            # nothing. An explicit ``accept``/``reject`` commit is a recorded verdict
+            # even when ``val`` is null, which is the normal shape for a candidate
+            # agent-optimize KILLED on a cheap screen before paying for full val.
+            # Calling that "failed / no measurement" put a red failure badge on the
+            # cheap-screen mechanism working exactly as designed.
             status = "failed"
         else:
             status = "accepted" if accepted else "rejected"
@@ -639,6 +749,9 @@ def reduce_run(run_dir) -> dict:
             best = max(best, val)
 
         merge_of = ev.get("merge_of")
+        # The eval that produced this candidate's val is the only record of what it cost.
+        vev = val_eval.get(cid) or {}
+        movement = per_task_file.get(cid) or {}
         node = {
             "id": cid,
             "parent": parent if parent in (None,) or True else parent,
@@ -649,17 +762,27 @@ def reduce_run(run_dir) -> dict:
             "n_scored": val_n_scored.get(cid),
             "per_task": per,
             "feedback": fb,
-            "cost_usd": ev.get("cost_usd") or 0.0,
-            "tokens": ev.get("tokens") or 0,
+            "cost_usd": ev.get("cost_usd") or vev.get("cost_usd") or 0.0,
+            "tokens": ev.get("tokens") or vev.get("tokens") or 0,
             # Per-iteration optimizer cost/tokens (RITS runner cost is often $0/null,
             # but the optimizer agent CLI reports opt_cost_usd / opt_tokens per step).
             "opt_cost_usd": ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd"),
             "opt_tokens": ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0,
-            "seconds": (ev.get("runner_seconds") or 0.0) + (ev.get("optimizer_seconds") or 0.0),
+            "seconds": (ev.get("runner_seconds") or vev.get("seconds") or 0.0)
+                       + (ev.get("optimizer_seconds") or 0.0),
             "optimizer_seconds": ev.get("optimizer_seconds") or 0.0,
-            "runner_seconds": ev.get("runner_seconds") or 0.0,
+            "runner_seconds": ev.get("runner_seconds") or vev.get("seconds") or 0.0,
             "iteration": it,
-            "reason": ev.get("reason") or "",
+            # Agent-mode commits (``accept``/``reject``, written by the algorithm's
+            # commit.py) put the gate rationale in ``note``; the deterministic loops use
+            # ``reason``. Reading only ``reason`` silently discarded every agent-authored
+            # justification — the single most informative field in an agent-driven run.
+            "reason": ev.get("reason") or ev.get("note") or "",
+            # Which tasks this edit fixed / broke versus its parent, when the run recorded
+            # the movement. Not derived here: a mean-preserving edit that swaps which
+            # tasks pass is churn, and only the recorded lists prove it.
+            "fixed": movement.get("fixed") or [],
+            "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
         }
@@ -828,7 +951,7 @@ def reduce_run(run_dir) -> dict:
         if n.get("val") is None:
             continue
         cid = n["id"]
-        n_tasks = len(n.get("per_task") or {})
+        n_tasks = len(n.get("per_task") or {}) or (val_n_scored.get(cid) or 0)
         trials = _trials_for(run_dir, cid, "val") or 1
         evaluations.append({
             "id": cid,
@@ -950,6 +1073,7 @@ def reduce_run(run_dir) -> dict:
             })
     attributed = sum(r["usd"] for r in ledger if r["usd"] is not None)
     total_usd = round(opt_usd + runner_usd + intake_usd, 6)
+    metered = _spend_metered(total_usd, _paid_calls(sp, evaluations))
     cost_ledger = {
         "rows": ledger,
         "attributed_usd": round(attributed, 6),
@@ -959,6 +1083,7 @@ def reduce_run(run_dir) -> dict:
         # equally worth seeing. Never hidden, never rounded to zero.
         "unattributed_usd": round(total_usd - attributed, 4),
         "rows_missing_cost": sum(1 for r in ledger if r["usd"] is None),
+        "metered": metered,
     }
 
     # --- splits: is there a real holdout at all? -------------------------
@@ -1005,10 +1130,15 @@ def reduce_run(run_dir) -> dict:
     algo_extra: dict = {}
     mb = [e for e in events if e.get("kind") == "minibatch"]
     if mb:
+        # gepa's minibatch event names the subset ``ids`` and the count ``fired`` — it
+        # never writes ``tasks``/``n_tasks``, so the panel printed "n tasks —" and an
+        # empty task list for every row while the event recorded both.
         algo_extra["minibatch"] = [{
             "candidate": _step_candidate(e) or e.get("tag"),
-            "reward": e.get("reward"), "n_tasks": e.get("n_tasks") or e.get("n"),
-            "tasks": [str(x) for x in (e.get("tasks") or [])][:64],
+            "reward": e.get("reward"),
+            "n_tasks": (e.get("n_tasks") or e.get("n") or e.get("fired")
+                        or len(e.get("ids") or []) or None),
+            "tasks": [str(x) for x in (e.get("tasks") or e.get("ids") or [])][:64],
             "t": e.get("t"),
         } for e in mb]
     gepa_ev = [e for e in events if str(e.get("kind") or "").startswith("gepa_")]
@@ -1030,6 +1160,45 @@ def reduce_run(run_dir) -> dict:
     focus_vals = [e.get("focus") for e in events if e.get("focus")]
     if focus_vals:
         algo_extra["focus"] = [str(x) for x in focus_vals]
+    # agent-optimize's tiered cheap screens: a paired subset eval that decides whether a
+    # candidate is worth a full val run. The event carries the decision; the matching
+    # ``screens/<tag>.json`` carries WHICH tasks were in the subset and which the edit
+    # fixed/regressed, which is the whole reason to look at a screen at all. Both were
+    # written to the run dir and neither was ever read.
+    screen_files = {}
+    sdir = root / "screens"
+    if sdir.is_dir():
+        for f in sorted(sdir.glob("*.json")):
+            d = _read_json(f)
+            if d:
+                screen_files[str(d.get("screen_tag") or f.stem)] = d
+    screens = []
+    for e in events:
+        if e.get("kind") != "screen":
+            continue
+        tag = str(e.get("tag") or "")
+        d = screen_files.get(tag) or next(
+            (v for k, v in screen_files.items() if str(v.get("tag")) == tag), {})
+        sub = d.get("subset") or {}
+        paired = d.get("paired") or {}
+        screens.append({
+            "candidate": tag, "screen_tag": d.get("screen_tag") or tag,
+            "tier": e.get("tier"), "decision": e.get("decision"),
+            "inconclusive": bool(e.get("inconclusive")),
+            "mean_delta": e.get("mean_delta"), "se": e.get("se"), "n": e.get("n"),
+            "threshold": d.get("threshold"),
+            "net_rollouts": e.get("net_rollouts"),
+            "ids": [str(x) for x in (e.get("ids") or sub.get("ids") or [])],
+            "holdout": [str(x) for x in (sub.get("holdout") or [])],
+            "informative": [str(x) for x in (sub.get("informative") or [])],
+            "fixed": [str(x) for x in (paired.get("fixed") or [])],
+            "regressed": [str(x) for x in (paired.get("regressed") or [])],
+            "pool_n": sub.get("pool_n"),
+            "t": e.get("t"),
+        })
+    if screens:
+        algo_extra["screens"] = screens
+
     evograph = _read_evograph(root)
     if evograph:
         algo_extra["evograph"] = evograph
@@ -1056,6 +1225,7 @@ def reduce_run(run_dir) -> dict:
         "epochs": "epochs" in algo_extra,
         "focus": "focus" in algo_extra,
         "evograph": "evograph" in algo_extra,
+        "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
@@ -1108,6 +1278,15 @@ def reduce_run(run_dir) -> dict:
         "test_reward": test_reward,
         "test_stderr": test.get("stderr"),
         "test_pass_k": test.get("pass_k"),
+        # The sealed test only means something NEXT TO the seed's test score: a run whose
+        # best candidate is the seed has test_delta 0 by construction, and a run that
+        # improved val but not test is the failure this project exists to catch. Both
+        # numbers were already in final.json and neither reached the UI, so the headline
+        # tile could not say whether the shipped edit was actually better.
+        "test_baseline_reward": final.get("test_baseline", {}).get("reward")
+                                if isinstance(final.get("test_baseline"), dict)
+                                else final.get("test_baseline_reward"),
+        "test_delta": final.get("test_delta"),
         "test_sealed": sealed,
         "counts": counts,
         "frontier": frontier,
@@ -1118,7 +1297,9 @@ def reduce_run(run_dir) -> dict:
         "intake_seconds": round(intake_secs, 1),
         "cost": {"optimizer_usd": round(opt_usd, 4), "runner_usd": round(runner_usd, 4),
                  "intake_usd": round(intake_usd, 4),
-                 "total_usd": round(opt_usd + runner_usd + intake_usd, 4)},
+                 "total_usd": round(opt_usd + runner_usd + intake_usd, 4),
+                 "metered": _spend_metered(opt_usd + runner_usd + intake_usd,
+                                           _paid_calls(sp, evaluations))},
         "tokens": tokens,
         "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
                            "optimizer": opt_tokens, "intake": int(intake_tokens)},

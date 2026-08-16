@@ -32,133 +32,128 @@ function seHint(value: number | null | undefined, se: number | null | undefined,
   return `± ${se.toFixed(3)}${n ? ` · n=${n}` : ''}`
 }
 
+const signed = (v: number | null | undefined, digits = 3) =>
+  !isMeasured(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)}`
+
 /**
- * Six numbers, each carrying its own uncertainty or breakdown. No card restates
- * another card's value, and every missing measurement renders "—".
+ * The four numbers a run is judged on, then one dense strip of accounting.
+ *
+ * This used to be twelve identical cards, six of which read `0` / `—` on most runs:
+ * `frontier`, `events` and `unattributed spend` are audit details that belong to the
+ * Candidates and Cost tabs, and giving them the same visual weight as the sealed test
+ * flattened the hierarchy into a wall of equal boxes. Hierarchy now comes from size and
+ * grouping (not colour): four large outcome tiles, then a single accounting row where an
+ * unrecorded measurement says "not recorded" instead of showing a confident zero.
  */
 export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
   const c = summary.counts
   const delta = summary.delta_abs ?? null
   const nVal = summary.splits?.val ?? summary.tasks?.length ?? null
+  const cands = c ? c.total - (c.seed ?? 0) : 0
+  const tokens = summary.tokens
+  // $0 after real calls is missing data, not a free run — say so, exactly as the
+  // tokens fact beside it already does for a runner that reports no token counts.
+  const unmetered = summary.cost?.metered === false
+  const t = summary.tokens_by_role
+
+  // The sealed test only means something against the SEED's score on the same split.
+  const testDelta = summary.test_delta ?? null
+  const testHint = isMeasured(summary.test_baseline_reward)
+    ? `seed ${pct(summary.test_baseline_reward)} · Δ ${signed(testDelta)}`
+    : (passKHint(summary.test_pass_k) ?? seHint(summary.test_reward, summary.test_stderr))
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6"
-    >
-      <Kpi
-        label="baseline val"
-        hint={seHint(summary.baseline_val, summary.baseline_stderr, nVal)}
-        title="The unmodified seed's score on val — the number every candidate must beat."
-      >
-        <CountUp value={summary.baseline_val} format={pct} />
-      </Kpi>
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Kpi
+          label="baseline val"
+          hint={seHint(summary.baseline_val, summary.baseline_stderr, nVal)}
+          title="The unmodified seed's score on val — the number every candidate must beat."
+        >
+          <CountUp value={summary.baseline_val} format={pct} />
+        </Kpi>
 
-      <Kpi
-        label="best val"
-        tone="text-accent"
-        hint={summary.best_id ? `candidate ${summary.best_id}` : undefined}
-        title="Best val score any accepted candidate reached. Selection metric, not the result."
-      >
-        <CountUp value={summary.best_val} format={pct} />
-      </Kpi>
+        <Kpi
+          label="best val"
+          tone="text-accent"
+          hint={summary.best_id ? `candidate ${summary.best_id}` : undefined}
+          title="Best val score any accepted candidate reached. Selection metric, not the result."
+        >
+          <CountUp value={summary.best_val} format={pct} />
+        </Kpi>
 
-      <Kpi
-        label="Δ val vs baseline"
-        tone={delta == null ? undefined : delta > 0 ? 'text-accepted' : delta < 0 ? 'text-rejected' : undefined}
-        hint={
-          summary.delta_pct != null
-            ? `${summary.delta_pct > 0 ? '+' : ''}${summary.delta_pct}% relative`
-            : 'relative % undefined off a zero baseline'
-        }
-        title="Absolute change in val. The relative % is undefined when the baseline is 0."
-      >
-        <CountUp
-          value={delta}
-          format={(v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(3)}`)}
-        />
-      </Kpi>
+        <Kpi
+          label="Δ val vs baseline"
+          tone={
+            delta == null ? undefined : delta > 0 ? 'text-accepted' : delta < 0 ? 'text-rejected' : undefined
+          }
+          hint={
+            summary.delta_pct != null
+              ? `${summary.delta_pct > 0 ? '+' : ''}${summary.delta_pct}% relative`
+              : 'relative % undefined off a zero baseline'
+          }
+          title="Absolute change in val. The relative % is undefined when the baseline is 0."
+        >
+          <CountUp value={delta} format={(v) => signed(v)} />
+        </Kpi>
 
-      <Kpi
-        label={summary.test_sealed ? 'sealed test' : 'test (unsealed)'}
-        tone="text-primary"
-        hint={passKHint(summary.test_pass_k) ?? seHint(summary.test_reward, summary.test_stderr)}
-        title="Scored exactly once on data the optimizer never saw. This is the honest headline."
-      >
-        <CountUp value={summary.test_reward} format={pct} />
-      </Kpi>
+        <Kpi
+          label={summary.test_sealed ? 'sealed test' : 'test — not sealed yet'}
+          tone={summary.test_reward == null ? 'text-muted' : 'text-primary'}
+          hint={
+            summary.test_reward == null
+              ? 'scored once by `cap-evolve finalize`, on data the optimizer never saw'
+              : testHint
+          }
+          title="Scored exactly once on data the optimizer never saw. This is the honest headline."
+        >
+          <CountUp value={summary.test_reward} format={pct} />
+        </Kpi>
+      </div>
 
-      <Kpi
-        label="verdicts"
-        hint={`${c?.accepted ?? 0} accept · ${c?.rejected ?? 0} reject · ${c?.indecisive ?? 0} indecisive · ${c?.failed ?? 0} no-measure`}
-        title="Candidate outcomes. Indecisive means the gate refused to judge — missing data, not a bad edit."
-      >
-        <span className="tnum">
-          {c ? c.total - (c.seed ?? 0) : 0}
-          <span className="ml-1 text-xs font-normal text-muted">candidates</span>
-        </span>
-      </Kpi>
-
-      <Kpi
-        label="spend"
-        hint={
-          summary.cost
-            ? `opt ${usd(summary.cost.optimizer_usd)} · eval ${usd(summary.cost.runner_usd)} · intake ${usd(summary.cost.intake_usd ?? 0)}`
-            : undefined
-        }
-        title="Total recorded cost across intake, optimizer calls and evaluations."
-      >
-        <CountUp value={summary.cost?.total_usd ?? null} format={usd} />
-      </Kpi>
-
-      <Kpi label="tokens" hint={tokenHint(summary)}>
-        <CountUp value={summary.tokens ?? null} format={compactNum} />
-      </Kpi>
-
-      <Kpi
-        label="measured time"
-        hint={`opt ${duration(summary.optimizer_seconds)} · eval ${duration(summary.runner_seconds)}`}
-        title="Sum of measured optimizer + evaluation + intake time (excludes idle gaps)."
-      >
-        {duration(summary.wall_clock_seconds)}
-      </Kpi>
-
-      <Kpi label="frontier" hint="gated leaves with no accepted child">
-        {summary.frontier ?? '—'}
-      </Kpi>
-
-      <Kpi label="events" hint="every line in events.jsonl">
-        {summary.event_count ?? '—'}
-      </Kpi>
-
-      <Kpi
-        label="val tasks × trials"
-        hint={summary.tasks?.length ? `${summary.tasks.length} task ids recorded` : undefined}
-      >
-        {nVal ?? '—'}
-      </Kpi>
-
-      <Kpi
-        label="unattributed spend"
-        tone={
-          Math.abs(summary.cost_ledger?.unattributed_usd ?? 0) > 0.0005
-            ? 'text-accent'
-            : undefined
-        }
-        hint="recorded spend the event rows cannot explain"
-      >
-        {summary.cost_ledger ? usd(summary.cost_ledger.unattributed_usd) : '—'}
-      </Kpi>
+      {/* Accounting: one row, six facts, no card per number. */}
+      <motion.div variants={fadeUpItem}>
+        <Card className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
+          <Fact label="verdicts" value={`${cands} candidate${cands === 1 ? '' : 's'}`}>
+            {c
+              ? `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive} indecisive · ${c.failed} no-measure`
+              : 'no candidate recorded'}
+          </Fact>
+          <Fact
+            label="spend"
+            value={unmetered ? 'not metered' : usd(summary.cost?.total_usd)}
+            dim={unmetered}
+          >
+            {unmetered
+              ? 'this runner reports no cost — the calls were real and are not priced here'
+              : summary.cost
+                ? `opt ${usd(summary.cost.optimizer_usd)} · eval ${usd(summary.cost.runner_usd)} · intake ${usd(summary.cost.intake_usd ?? 0)}`
+                : 'no spend accounting'}
+          </Fact>
+          <Fact label="measured time" value={duration(summary.wall_clock_seconds)}>
+            opt {duration(summary.optimizer_seconds)} · eval {duration(summary.runner_seconds)}
+          </Fact>
+          <Fact
+            label="tokens"
+            value={tokens ? compactNum(tokens) : 'not recorded'}
+            dim={!tokens}
+          >
+            {tokens && t
+              ? `runner ${compactNum(t.runner)} · opt ${compactNum(t.optimizer)}`
+              : 'this runner does not report token counts'}
+          </Fact>
+          <Fact label="val tasks" value={nVal == null ? '—' : String(nVal)}>
+            {summary.splits
+              ? `train ${summary.splits.train ?? '—'} · test ${summary.splits.test ?? '—'}`
+              : 'splits not recorded'}
+          </Fact>
+          <Fact label="events" value={String(summary.event_count ?? 0)}>
+            lines in events.jsonl
+          </Fact>
+        </Card>
+      </motion.div>
     </motion.div>
   )
-}
-
-function tokenHint(s: RunSummaryDetail): string | undefined {
-  const t = s.tokens_by_role
-  if (!t) return undefined
-  return `runner ${compactNum(t.runner)} · opt ${compactNum(t.optimizer)} · intake ${compactNum(t.intake)}`
 }
 
 function Kpi({
@@ -176,13 +171,35 @@ function Kpi({
 }) {
   return (
     <motion.div variants={fadeUpItem}>
-      <Card className="h-full px-3 py-2.5" title={title}>
+      <Card className="h-full px-4 py-3" title={title}>
         <div className="eyebrow">{label}</div>
-        <div className={cn('tnum mt-1 text-lg font-semibold', tone ?? 'text-foreground')}>
+        <div className={cn('tnum mt-1.5 text-2xl font-semibold', tone ?? 'text-foreground')}>
           {children}
         </div>
-        {hint && <div className="tnum mt-0.5 text-[10px] leading-snug text-muted">{hint}</div>}
+        {hint && <div className="tnum mt-1 text-[11px] leading-snug text-muted">{hint}</div>}
       </Card>
     </motion.div>
+  )
+}
+
+function Fact({
+  label,
+  value,
+  children,
+  dim,
+}: {
+  label: string
+  value: string
+  children: ReactNode
+  dim?: boolean
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="eyebrow">{label}</div>
+      <div className={cn('tnum text-sm font-semibold', dim ? 'text-muted' : 'text-foreground')}>
+        {value}
+      </div>
+      <div className="tnum text-[11px] leading-snug text-muted">{children}</div>
+    </div>
   )
 }

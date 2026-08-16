@@ -91,13 +91,23 @@ function CandidateFiles({ runId, cid }: { runId: string; cid: string }) {
   })
   if (isLoading) return <Skeleton className="h-40 w-full" />
   if (!data || data.length === 0) return <Empty>No snapshot files for {cid}.</Empty>
+  // One collapsible per file, first one open. Dumping every snapshot file inline made
+  // this panel a ~2000px wall of optimizer prompt text with the capability file — the
+  // one thing a reader came for — somewhere below the fold.
   return (
-    <div className="space-y-3">
-      {data.map((f) => (
-        <div key={f.name}>
-          <div className="mb-1 font-mono text-xs text-muted">{f.name}</div>
-          <pre className="max-h-60 overflow-auto rounded bg-background p-2 text-xs">{f.text}</pre>
-        </div>
+    <div className="divide-y divide-border">
+      {data.map((f, i) => (
+        <details key={f.name} open={i === 0} className="py-1.5">
+          <summary className="cursor-pointer font-mono text-xs text-muted hover:text-foreground">
+            {f.name}{' '}
+            <span className="tnum text-[10px]">
+              ({f.text.split('\n').length} lines)
+            </span>
+          </summary>
+          <pre className="mt-1 max-h-72 overflow-auto rounded bg-background p-2 text-xs">
+            {f.text}
+          </pre>
+        </details>
       ))}
     </div>
   )

@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { GitCompareArrows } from 'lucide-react'
+import { AlertTriangle, GitCompareArrows } from 'lucide-react'
 import { api } from '../lib/api'
 import type { CompareRow } from '../lib/types'
 import { pct, signedPct, usd, deltaTone } from '../lib/format'
@@ -54,6 +54,7 @@ export function Compare() {
 
         {data && data.runs.length > 0 && (
           <div className="space-y-5">
+            <SplitMismatch runs={data.runs} />
             <Card className="overflow-x-auto p-4">
               <table className="w-full text-left text-sm">
                 <thead className="text-muted">
@@ -77,7 +78,18 @@ export function Compare() {
             </Card>
 
             <Card className="p-4">
-              <h3 className="mb-2 text-sm font-medium">Best-so-far over iterations</h3>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-sm font-medium">Best-so-far over iterations</h3>
+                {data.runs.some((r) => r.series.length <= 1) && (
+                  <span className="text-xs text-muted">
+                    {data.runs
+                      .filter((r) => r.series.length <= 1)
+                      .map((r) => r.run_id)
+                      .join(', ')}{' '}
+                    scored no candidate yet — baseline point only, no curve
+                  </span>
+                )}
+              </div>
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <LineChart margin={{ top: 8, right: 16, bottom: 4, left: -8 }}>
@@ -114,6 +126,33 @@ export function Compare() {
         )}
       </div>
     </AppShell>
+  )
+}
+
+/**
+ * Two runs are only comparable when their numbers are means over the SAME tasks.
+ * Putting a 2-task toy run in one table and one chart with a 12-task benchmark run —
+ * which the Hub happily lets you select — makes a meaningless comparison look rigorous,
+ * so the mismatch is stated before the numbers, not buried in a tooltip.
+ */
+function SplitMismatch({ runs }: { runs: CompareRow[] }) {
+  const withTasks = runs.filter((r) => (r.tasks?.length ?? 0) > 0)
+  const key = (r: CompareRow) => [...(r.tasks ?? [])].sort().join('|')
+  const distinct = new Set(withTasks.map(key))
+  if (distinct.size < 2) return null
+  return (
+    <Card className="border-accent/40 bg-accent/[0.04]">
+      <div className="flex gap-2.5 p-3.5">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0 text-accent" aria-hidden />
+        <p className="text-[12px] leading-relaxed text-muted-strong">
+          <span className="font-medium text-accent">Different val splits.</span> These runs
+          were scored on different task sets (
+          {withTasks.map((r) => `${r.run_id}: ${r.tasks?.length ?? 0} tasks`).join(' · ')}
+          ), so their scores are means over different work. Compare the shape of each
+          run's progress, not the absolute numbers against each other.
+        </p>
+      </div>
+    </Card>
   )
 }
 

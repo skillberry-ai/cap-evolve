@@ -65,3 +65,35 @@ def test_git_log_and_diff(client, tmp_base):
 def test_git_diff_bad_ref(client):
     d = client.get("/api/runs/run_t/git/diff", params={"from": "x;rm", "to": "HEAD"}).json()
     assert d.get("error") == "bad ref" or d.get("available") is False
+
+
+def test_git_diff_hides_harness_bookkeeping_by_default(tmp_base, make_run):
+    """A per-commit diff must show the capability edit, not the append-only logs.
+
+    The store commits the whole run dir each iteration, so a raw diff is dominated by
+    one more ``events.jsonl`` line and a rewritten ``state.json``. The static exporter
+    already excluded some of that; the live server passed no exclude list at all, so the
+    same run rendered thousands of noise lines live and a clean diff when exported.
+    """
+    import shutil
+    from capevolve_dashboard import gitlog
+    if not shutil.which("git"):
+        pytest.skip("git unavailable")
+    make_run("run_git", events=BASE_EVENTS, baseline={"val": {"reward": 0.25}})
+    root = tmp_base / "run_git"
+    run = lambda *a: subprocess.run(["git", "-C", str(root), *a], capture_output=True)
+    run("init", "-q")
+    run("config", "user.email", "t@t"); run("config", "user.name", "t")
+    (root / "capability.md").write_text("v1\n")
+    run("add", "-A"); run("commit", "-qm", "seed")
+    (root / "capability.md").write_text("v2\n")
+    (root / "state.json").write_text('{"spent": 1}\n')
+    (root / "events.jsonl").write_text('{"kind":"step"}\n')
+    run("add", "-A"); run("commit", "-qm", "iter 1")
+
+    paths = {f["path"] for f in gitlog.diff(root, "HEAD~1", "HEAD")["files"]}
+    assert "capability.md" in paths
+    assert not paths & {"state.json", "events.jsonl"}
+    # …and an explicit empty list still yields the genuinely raw diff.
+    raw = {f["path"] for f in gitlog.diff(root, "HEAD~1", "HEAD", exclude=[])["files"]}
+    assert {"state.json", "events.jsonl"} <= raw

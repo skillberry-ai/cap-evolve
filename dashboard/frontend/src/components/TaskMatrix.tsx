@@ -81,7 +81,8 @@ export function TaskMatrix({
       )}
 
       <Card className="overflow-hidden">
-        <div className="scroll-x p-3.5">
+        <div className="flex flex-col gap-4 p-3.5 xl:flex-row xl:items-start">
+        <div className="scroll-x">
           <table className="border-separate border-spacing-[2px] text-[11px]">
             <thead>
               <tr>
@@ -124,7 +125,7 @@ export function TaskMatrix({
                           onBlur={() => setHover(null)}
                           aria-label={`${t} on ${n.id}: ${c.label}${v != null ? ` (${v.toFixed(3)})` : ''}`}
                           className={cn(
-                            'flex h-5 w-[22px] cursor-pointer items-center justify-center rounded-[3px]',
+                            'flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
                             'text-[9px] text-muted transition-transform duration-150 hover:scale-110',
                             c.cls,
                           )}
@@ -138,6 +139,8 @@ export function TaskMatrix({
               ))}
             </tbody>
           </table>
+        </div>
+        <ColumnSummary cols={cols} nTasks={rows.length} />
         </div>
 
         <div className="flex flex-wrap items-center gap-4 border-t border-border px-3.5 py-2 text-[11px] text-muted">
@@ -172,6 +175,54 @@ export function TaskMatrix({
           </div>
         )}
       </Card>
+    </div>
+  )
+}
+
+/**
+ * One line per column: its mean, its verdict, and the tasks it fixed and broke.
+ *
+ * The matrix answers "which cells changed"; this answers "so what" without making the
+ * reader hover 60 cells to find out. `fixed`/`broke` are the run's own recorded lists —
+ * absent when the run never recorded the movement, never inferred from the cells.
+ */
+function ColumnSummary({ cols, nTasks }: { cols: GraphNode[]; nTasks: number }) {
+  const cands = cols.filter((n) => n.id !== 'seed')
+  if (cands.length === 0) return null
+  const mean = (n: GraphNode) => {
+    const vs = Object.values(n.per_task ?? {})
+    return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null
+  }
+  return (
+    <div className="min-w-0 flex-1 xl:border-l xl:border-border xl:pl-4">
+      <div className="eyebrow mb-1.5">per candidate</div>
+      <ul className="space-y-1.5">
+        {cands.map((n) => {
+          const m = mean(n)
+          return (
+            <li key={n.id} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[11px]">
+              <span className="font-mono text-[12px]">{n.id}</span>
+              <VerdictBadge verdict={n.status} />
+              <span className="tnum text-muted">
+                {m == null
+                  ? '—'
+                  : `${(m * 100).toFixed(1)}% over ${Object.keys(n.per_task ?? {}).length} tasks`}
+              </span>
+              {/* A mean over a SUBSET is not a val score. Say so where the number is. */}
+              {m != null && Object.keys(n.per_task ?? {}).length < nTasks && (
+                <span
+                  className="tnum text-indecisive"
+                  title="Scored on a subset only (a cheap screen) — this mean is not a val score."
+                >
+                  subset of {nTasks}
+                </span>
+              )}
+              {!!n.fixed?.length && <span className="tnum text-accepted">fixed {n.fixed.join(' ')}</span>}
+              {!!n.broke?.length && <span className="tnum text-rejected">broke {n.broke.join(' ')}</span>}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

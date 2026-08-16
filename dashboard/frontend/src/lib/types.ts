@@ -53,6 +53,8 @@ export interface CostLedger {
   /** Recorded spend the event rows cannot account for. Shown, never hidden. */
   unattributed_usd: number
   rows_missing_cost: number
+  /** See RunSummary.cost.metered — $0 after real calls is missing data, not free. */
+  metered?: boolean
 }
 
 /** One event from the run's append-only log, phase-tagged and sanitized. */
@@ -84,6 +86,8 @@ export interface RunCapabilities {
   evograph: boolean
   parallel: boolean
   freeform: boolean
+  /** agent-optimize recorded tiered cheap screens (`screen` events + `screens/*.json`). */
+  screens: boolean
 }
 
 export interface SplitsInfo {
@@ -127,6 +131,30 @@ export interface AlgoExtra {
   focus?: string[]
   evograph?: { rounds: EvographRound[]; weaknesses: EvographWeakness[] }
   parallel?: Record<string, unknown>[]
+  screens?: ScreenRow[]
+}
+
+/** One agent-optimize cheap screen: a paired subset eval that decides whether a
+ *  candidate is worth a full val run. `mean_delta` is a SUBSET statistic — never a val
+ *  score — and `inconclusive` means the subset could not separate the two. */
+export interface ScreenRow {
+  candidate: string
+  screen_tag: string
+  tier: number | null
+  decision: string | null
+  inconclusive: boolean
+  mean_delta: number | null
+  se: number | null
+  n: number | null
+  threshold: number | null
+  net_rollouts: number | null
+  ids: string[]
+  holdout: string[]
+  informative: string[]
+  fixed: string[]
+  regressed: string[]
+  pool_n: number | null
+  t: number | null
 }
 
 /** One row from GET /api/runs (light hub summary). */
@@ -143,6 +171,8 @@ export interface RunSummary {
   test_reward?: number | null
   iterations: number
   total_usd: number | null
+  /** False => the runner reports no cost; total_usd is missing data, not $0. */
+  cost_metered?: boolean
   last_event_t?: number | null
   mtime: number
 }
@@ -191,6 +221,10 @@ export interface GraphNode {
   stderr?: number | null
   per_task?: Record<string, number>
   feedback?: Record<string, string>
+  /** Tasks this candidate fixed / broke vs its parent, when the run recorded the
+   *  movement. Empty (not absent-as-zero) when nothing was recorded. */
+  fixed?: string[]
+  broke?: string[]
   cost_usd?: number | null
   tokens?: number | null
   opt_cost_usd?: number | null
@@ -239,6 +273,11 @@ export interface RunSummaryDetail {
   test_reward: number | null
   test_stderr?: number | null
   test_sealed?: boolean
+  /** The SEED's score on the same sealed test split, and best − seed on test. A sealed
+   *  test number means nothing without it: `test_delta === 0` is the normal reading for
+   *  a run whose best candidate is the seed. */
+  test_baseline_reward?: number | null
+  test_delta?: number | null
   /** {k: pass^k}. A k is ABSENT when k > num_trials (undefined ⇒ show "N/A", never 0). */
   test_pass_k?: Record<string, number> | null
   counts?: {
@@ -260,6 +299,10 @@ export interface RunSummaryDetail {
     runner_usd: number | null
     intake_usd?: number | null
     total_usd: number | null
+    /** False when the run made real calls yet reports exactly $0 — the runner does
+     *  not report cost (self-hosted vLLM, an internal endpoint, a proxy that returns
+     *  no usage). Render "not metered", never "$0.000": nobody measured that. */
+    metered?: boolean
   }
   tokens?: number | null
   tokens_by_role?: { runner: number; optimizer: number; intake: number }
@@ -329,8 +372,14 @@ export interface CompareRow {
   delta_pct: number | null
   test_reward: number | null
   total_usd: number | null
+  cost_metered?: boolean
   tokens: number | null
   iterations: number
+  status?: RunStatus
+  splits?: SplitsInfo | null
+  /** The val task ids this run's means are over. Runs with different task sets are NOT
+   *  comparable — the view says so rather than putting them in one chart silently. */
+  tasks?: string[]
   series: { iteration: number; best_so_far: number }[]
 }
 

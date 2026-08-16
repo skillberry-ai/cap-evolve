@@ -25,18 +25,9 @@ from . import compare, files, gitlog, memory, runs
 from cap_evolve import RunDir, dashboard
 
 
-# Top-level paths excluded from the per-commit git diffs in the static export:
-# trajectory rollouts (out of scope, megabytes each), the regenerated embedded
-# dashboard, append-only logs, and compiled caches. The candidate snapshots and
-# capability files — the changes that actually matter — are kept.
-_GIT_DIFF_EXCLUDE = [
-    "trajectories",
-    "rollouts",
-    "dashboard.html",
-    "events.jsonl",
-    "*.pyc",
-    "__pycache__",
-]
+# One exclude list, shared with the live server (see gitlog.DIFF_EXCLUDE) — the export
+# and the live view of the same run must show the same diff.
+_GIT_DIFF_EXCLUDE = gitlog.DIFF_EXCLUDE
 
 
 def slug(url: str) -> str:

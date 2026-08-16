@@ -129,14 +129,21 @@ export function GatePanel({ summary }: { summary: RunSummaryDetail }) {
               </tbody>
             </table>
           </div>
-          <ul className="divide-y divide-border border-t border-border">
-            {rows.map((r) => (
-              <li key={r.candidate} className="flex gap-2 px-3 py-2 text-[11px]">
-                <span className="shrink-0 font-mono text-muted">{r.candidate}</span>
-                <span className="min-w-0 text-muted-strong">{r.reason}</span>
-              </li>
-            ))}
-          </ul>
+          {/* Only decisions that actually carry a rationale. Rendering a row per
+              decision produced one blank line per candidate on every run whose gate
+              wrote no reason string — a list of ids and nothing else. */}
+          {rows.some((r) => r.reason) && (
+            <ul className="divide-y divide-border border-t border-border">
+              {rows
+                .filter((r) => r.reason)
+                .map((r) => (
+                  <li key={r.candidate} className="flex gap-2.5 px-3 py-2 text-[11px]">
+                    <span className="shrink-0 font-mono text-muted">{r.candidate}</span>
+                    <span className="min-w-0 leading-relaxed text-muted-strong">{r.reason}</span>
+                  </li>
+                ))}
+            </ul>
+          )}
         </Card>
       )}
     </div>

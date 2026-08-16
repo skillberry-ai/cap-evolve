@@ -32,7 +32,19 @@ def compare_runs(base_dir: Path, run_ids: list[str]) -> dict:
             "baseline_val": s.get("baseline_val"), "best_val": s.get("best_val"),
             "delta_pct": s.get("delta_pct"), "test_reward": s.get("test_reward"),
             "total_usd": (s.get("cost") or {}).get("total_usd"), "tokens": s.get("tokens"),
-            "iterations": counts.get("accepted", 0) + counts.get("rejected", 0),
+            "cost_metered": (s.get("cost") or {}).get("metered", True),
+            # Every judged candidate, matching the hub's count. Summing only
+            # accepted+rejected made the same run report a different candidate count on
+            # the hub and in the comparison, and silently hid indecisive steps.
+            "iterations": (counts.get("accepted", 0) + counts.get("rejected", 0)
+                           + counts.get("indecisive", 0) + counts.get("failed", 0)),
+            "status": s.get("status"),
+            "splits": s.get("splits"),
+            # The val task ids this run's numbers are means OVER. Two runs scored on
+            # different splits are not comparable, and the comparison view used to put a
+            # 2-task toy run in the same table and chart as a 12-task benchmark run with
+            # nothing saying so. The UI compares these and warns.
+            "tasks": list(s.get("tasks") or []),
             "series": _series(g),
         })
         for t in s.get("tasks", []):

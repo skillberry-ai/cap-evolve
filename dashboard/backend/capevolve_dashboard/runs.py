@@ -68,6 +68,9 @@ def list_runs(base_dir: Path) -> list[dict]:
             "iterations": (counts.get("accepted", 0) + counts.get("rejected", 0)
                            + counts.get("indecisive", 0) + counts.get("failed", 0)),
             "total_usd": (s.get("cost") or {}).get("total_usd"),
+            # $0 after real calls is UNMETERED, not free. The hub must not print
+            # "$0.000" for a run whose runner reports no cost.
+            "cost_metered": (s.get("cost") or {}).get("metered", True),
             "last_event_t": s.get("last_event_t"),
             "mtime": path.stat().st_mtime,
         })

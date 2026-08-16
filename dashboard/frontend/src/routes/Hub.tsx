@@ -157,7 +157,14 @@ function RunRow({
         <Metric label="Δ val" value={deltaLabel} className={TONE_CLASS[tone]} />
         <Metric label="sealed test" value={pct(run.test_reward)} />
         <Metric label="cands" value={String(run.iterations)} hideOnSm />
-        <Metric label="cost" value={usd(run.total_usd)} hideOnSm />
+        <Metric
+          label="cost"
+          value={run.cost_metered === false ? 'n/a' : usd(run.total_usd)}
+          title={run.cost_metered === false
+            ? 'this runner reports no cost — the calls were real and are not priced here'
+            : undefined}
+          hideOnSm
+        />
         <ArrowUpRight size={16} className="shrink-0 text-muted" aria-hidden />
       </Link>
     </Card>
@@ -170,16 +177,20 @@ function Metric({
   accent,
   className,
   hideOnSm,
+  title,
 }: {
   label: string
   value: string
   accent?: boolean
   className?: string
   hideOnSm?: boolean
+  /** Hover explanation — used to say WHY a value reads "n/a" rather than a number. */
+  title?: string
 }) {
   return (
-    <div className={cn('w-16 text-right', hideOnSm && 'hidden sm:block')}>
-      <div className={cn('tnum text-sm', accent ? 'text-accent' : 'text-foreground', className)}>
+    <div className={cn('w-16 text-right', hideOnSm && 'hidden sm:block')} title={title}>
+      <div className={cn('tnum text-sm', title && !/^[$0-9]/.test(value)
+        ? 'text-muted' : accent ? 'text-accent' : 'text-foreground', className)}>
         {value}
       </div>
       <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>

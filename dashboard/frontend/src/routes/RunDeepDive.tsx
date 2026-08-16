@@ -25,6 +25,7 @@ import {
   EvographPanel,
   FreeformPanel,
   GepaPanel,
+  ScreensPanel,
   SkillOptPanel,
 } from '../components/AlgoPanels'
 import { FileTree } from '../components/FileTree'
@@ -53,6 +54,7 @@ export function buildTabs(caps: RunCapabilities | undefined): TabDef[] {
 
   // Per-algorithm additions, behind a capability check.
   if (c.freeform) tabs.push({ id: 'rounds', label: 'Agent rounds' })
+  if (c.screens) tabs.push({ id: 'screens', label: 'Screens' })
   if (c.gepa || c.minibatch) tabs.push({ id: 'gepa', label: 'GEPA' })
   if (c.skillopt || c.epochs) tabs.push({ id: 'skillopt', label: 'SkillOpt' })
   if (c.evograph) tabs.push({ id: 'evograph', label: 'Weakness graph' })
@@ -180,6 +182,8 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
       return <LogStream log={s.log ?? []} />
     case 'rounds':
       return <FreeformPanel summary={s} nodes={data.graph.nodes} />
+    case 'screens':
+      return <ScreensPanel screens={extra.screens ?? []} nodes={data.graph.nodes} />
     case 'gepa':
       return <GepaPanel extra={extra} nodes={data.graph.nodes} />
     case 'skillopt':

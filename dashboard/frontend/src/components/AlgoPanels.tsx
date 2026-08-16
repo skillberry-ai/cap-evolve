@@ -49,7 +49,9 @@ export function GepaPanel({
           <table className="w-full text-left text-[12px]">
             <thead className="eyebrow border-b border-border">
               <tr>
-                <th className="px-3 py-2">candidate</th>
+                {/* gepa probes the PARENT and the CHILD on the same minibatch, so a row
+                    is a probe tag (mb_p_* / mb_c_*), not always a gated candidate. */}
+                <th className="px-3 py-2">minibatch tag</th>
                 <th className="px-3 py-2 text-right">minibatch reward</th>
                 <th className="px-3 py-2 text-right">n tasks</th>
                 <th className="px-3 py-2 text-right">full val</th>
@@ -360,6 +362,16 @@ export function FreeformPanel({
           deterministic loops use.
         </p>
       </Card>
+      {rounds.length === 0 ? (
+        <Card>
+          <div className="px-4 py-10 text-center text-sm text-muted">
+            No candidate has been committed yet — the baseline is scored and the loop is
+            the agent's to drive. Rows appear as the agent commits edits with{' '}
+            <code className="text-foreground">cap-evolve gate-check</code>, and the run
+            ends with <code className="text-foreground">cap-evolve finalize</code>.
+          </div>
+        </Card>
+      ) : (
       <Panel title={`Round log — ${rounds.length} commit(s)`}>
         <table className="w-full text-left text-[12px]">
           <thead className="eyebrow border-b border-border">
@@ -402,14 +414,167 @@ export function FreeformPanel({
                   <td className="tnum px-3 py-1.5 text-right text-muted">
                     {duration(n.optimizer_seconds)}
                   </td>
-                  <td className="max-w-[280px] truncate px-3 py-1.5 text-muted">
+                  <td className="min-w-[240px] px-3 py-1.5 leading-relaxed text-muted">
                     {n.reason || '—'}
+                    <TaskMovement fixed={n.fixed} broke={n.broke} />
                   </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
+      </Panel>
+      )}
+    </div>
+  )
+}
+
+/** Which tasks an edit fixed and which it broke. A mean-preserving swap is churn, and
+ *  only these lists prove it — so they render next to the note, not behind a hover. */
+function TaskMovement({ fixed, broke }: { fixed?: string[]; broke?: string[] }) {
+  if (!fixed?.length && !broke?.length) return null
+  return (
+    <span className="tnum ml-1 whitespace-nowrap text-[11px]">
+      {!!fixed?.length && <span className="text-accepted">fixed {fixed.join(' ')}</span>}
+      {!!fixed?.length && !!broke?.length && <span className="text-muted"> · </span>}
+      {!!broke?.length && <span className="text-rejected">broke {broke.join(' ')}</span>}
+    </span>
+  )
+}
+
+/* --------------------------------------------------- agent-optimize screens ---- */
+
+/**
+ * agent-optimize's tiered cheap screens. A screen is a PAIRED eval on a small subset,
+ * run before paying for full val: it decides whether the candidate is worth the money.
+ *
+ * The point of showing it is the disagreement. A screen that promotes on a 3-task subset
+ * and then loses on full val is not a contradiction — it is the screen's variance being
+ * visible, and `inconclusive` says the subset could not separate the two at all. The
+ * subset ids, holdout, and fixed/regressed lists are read from the run's own
+ * `screens/*.json`; a number the screen did not record renders "—".
+ */
+export function ScreensPanel({
+  screens,
+  nodes,
+}: {
+  screens: NonNullable<AlgoExtra['screens']>
+  nodes: GraphNode[]
+}) {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  return (
+    <div className="space-y-4">
+      <Card className="p-3.5">
+        <p className="text-[12px] leading-relaxed text-muted-strong">
+          Before paying for a full val eval, agent-optimize runs a <strong>cheap screen</strong>
+          : a paired comparison on a small subset of val, split into an{' '}
+          <strong>informative</strong> part (tasks the parent already fails or that
+          discriminate) and a <strong>holdout</strong> part (tasks the parent passes, to
+          catch regressions). The subset mean is a <em>screening</em> statistic — it is
+          never the candidate's val score, and a screen that promotes can still lose on
+          full val.
+        </p>
+      </Card>
+
+      <Panel title={`Cheap screens — ${screens.length}`}>
+        <table className="w-full min-w-[860px] text-left text-[12px]">
+          <thead className="eyebrow border-b border-border">
+            <tr>
+              <th className="px-3 py-2">candidate</th>
+              <th className="px-3 py-2 text-right">tier</th>
+              <th className="px-3 py-2">decision</th>
+              <th className="px-3 py-2 text-right">subset Δ̄</th>
+              <th className="px-3 py-2 text-right">SE</th>
+              <th className="px-3 py-2 text-right">n / pool</th>
+              <th className="px-3 py-2">subset (holdout · informative)</th>
+              <th className="px-3 py-2 text-right">then full val</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {screens.map((s, i) => {
+              const node = byId.get(s.candidate)
+              const agreed =
+                node?.val == null || s.mean_delta == null
+                  ? null
+                  : (s.mean_delta > 0) === (node.status === 'accepted')
+              return (
+                <tr key={`${s.screen_tag}-${i}`} className="hover:bg-surface-2">
+                  <td className="px-3 py-1.5 font-mono">{s.candidate}</td>
+                  <td className="tnum px-3 py-1.5 text-right text-muted">{s.tier ?? '—'}</td>
+                  <td className="px-3 py-1.5">
+                    <span
+                      className={cn(
+                        'rounded border px-1.5 py-0.5 text-[11px] font-medium',
+                        s.inconclusive
+                          ? 'border-indecisive/50 text-indecisive'
+                          : s.decision === 'promote'
+                            ? 'border-accepted/50 text-accepted'
+                            : 'border-rejected/50 text-rejected',
+                      )}
+                      title={
+                        s.inconclusive
+                          ? 'The subset could not separate parent from child — promoted on insufficient evidence, not on a measured win.'
+                          : undefined
+                      }
+                    >
+                      {s.decision ?? '—'}
+                      {s.inconclusive && ' · inconclusive'}
+                    </span>
+                  </td>
+                  <td className="tnum px-3 py-1.5 text-right">
+                    {s.mean_delta == null
+                      ? '—'
+                      : `${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}`}
+                  </td>
+                  <td className="tnum px-3 py-1.5 text-right text-muted">
+                    {s.se == null ? '—' : `±${s.se.toFixed(4)}`}
+                  </td>
+                  <td className="tnum px-3 py-1.5 text-right text-muted">
+                    {s.n ?? '—'}
+                    {s.pool_n != null && <span> / {s.pool_n}</span>}
+                  </td>
+                  <td className="tnum px-3 py-1.5 text-[11px]">
+                    {s.holdout.length > 0 && (
+                      <span className="text-muted">holdout {s.holdout.join(' ')}</span>
+                    )}
+                    {s.holdout.length > 0 && s.informative.length > 0 && ' · '}
+                    {s.informative.length > 0 && (
+                      <span className="text-muted-strong">info {s.informative.join(' ')}</span>
+                    )}
+                    {s.holdout.length === 0 && s.informative.length === 0 && (
+                      <span className="text-muted">{s.ids.join(' ') || '—'}</span>
+                    )}
+                    <TaskMovement fixed={s.fixed} broke={s.regressed} />
+                  </td>
+                  <td className="tnum px-3 py-1.5 text-right">
+                    {node?.val == null ? (
+                      <span className="text-muted" title="No full val eval was recorded for this tag.">
+                        —
+                      </span>
+                    ) : (
+                      <>
+                        {pct(node.val)}{' '}
+                        {agreed === false && (
+                          <span
+                            className="text-accent"
+                            title="The screen and the full val eval disagreed — the subset did not reproduce."
+                          >
+                            ≠ screen
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <p className="border-t border-border px-3.5 py-2 text-[11px] text-muted">
+          A <span className="text-accent">≠ screen</span> row is the screen failing to
+          predict full val. Screens save rollouts; they do not decide acceptance — only
+          the val significance gate does.
+        </p>
       </Panel>
     </div>
   )
