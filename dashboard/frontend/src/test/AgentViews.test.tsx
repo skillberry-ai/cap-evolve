@@ -87,7 +87,7 @@ describe('KpiStrip', () => {
     expect(screen.getByText('test — not sealed yet')).toBeInTheDocument()
   })
 
-  it('says spend is not metered rather than showing a confident $0.000', () => {
+  it('says spend was not reported rather than showing a confident $0.000', () => {
     // The real tau2 run made 68 rollouts through a proxy that reports no cost, so the
     // ledger sums to exactly $0. "$0.000" would assert a fact nobody measured.
     render(
@@ -97,7 +97,7 @@ describe('KpiStrip', () => {
         })}
       />,
     )
-    expect(screen.getByText('not metered')).toBeInTheDocument()
+    expect(screen.getByText('not reported')).toBeInTheDocument()
     expect(screen.queryByText('$0.000')).not.toBeInTheDocument()
   })
 
@@ -110,7 +110,7 @@ describe('KpiStrip', () => {
       />,
     )
     expect(screen.getByText('$12.98')).toBeInTheDocument()
-    expect(screen.queryByText('not metered')).not.toBeInTheDocument()
+    expect(screen.queryByText('not reported')).not.toBeInTheDocument()
   })
 })
 

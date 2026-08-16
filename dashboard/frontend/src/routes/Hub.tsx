@@ -161,7 +161,7 @@ function RunRow({
           label="cost"
           value={run.cost_metered === false ? 'n/a' : usd(run.total_usd)}
           title={run.cost_metered === false
-            ? 'this runner reports no cost — the calls were real and are not priced here'
+            ? 'this runner reports no per-call cost — $0 would be a guess, not a measurement'
             : undefined}
           hideOnSm
         />

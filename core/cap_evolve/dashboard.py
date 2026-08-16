@@ -409,17 +409,24 @@ def _paid_calls(spent, evaluations: list) -> int:
 
 
 def _spend_metered(total_usd: float, paid_calls: int) -> bool:
-    """False when a run made real calls yet reports exactly $0 — i.e. UNMETERED.
+    """False when a run made calls yet recorded exactly $0 — no cost was REPORTED.
 
-    Some runners genuinely cost nothing to report: self-hosted vLLM, an internal
-    RITS endpoint, or an OpenAI-compatible proxy that returns no usage/cost. litellm
-    then prices the call at 0.0 and the ledger sums to $0.0000. Rendering that as
-    "$0.000" states a fact nobody measured — the same class of lie as `pass^k NaN%`
-    or a red `failed` badge for an absent status.
+    Rendering that as "$0.000" states a fact nobody measured — the same class of lie
+    as `pass^k NaN%` or a red `failed` badge for an absent status. Two very different
+    runs land here:
 
-    The inference is sound because the two cases are distinguishable: zero dollars
-    with zero calls is a genuine $0.00 (nothing ran), while zero dollars after N>0
-    real rollouts is missing data. Callers render the second as "not metered".
+      * a zero-API adapter (toy_calc, a mock optimizer) — genuinely free;
+      * a real model behind a self-hosted vLLM, an internal RITS endpoint, or an
+        OpenAI-compatible proxy that returns no usage, so litellm prices every call
+        at 0.0 and the ledger sums to $0.0000 — real spend, unpriced.
+
+    **The run dir cannot distinguish them.** Neither records tokens or cost, and the
+    spec's target model is not reliably present. So this returns only what is
+    certain — no per-call cost was reported — and callers must word it that way
+    ("not reported"), never as a claim that money was or was not spent.
+
+    What IS certain: zero dollars with zero calls is a real $0.00 (nothing ran), so
+    that stays `True` and renders as a number.
     """
     return not (paid_calls > 0 and total_usd == 0.0)
 

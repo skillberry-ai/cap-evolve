@@ -51,8 +51,10 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
   const nVal = summary.splits?.val ?? summary.tasks?.length ?? null
   const cands = c ? c.total - (c.seed ?? 0) : 0
   const tokens = summary.tokens
-  // $0 after real calls is missing data, not a free run — say so, exactly as the
-  // tokens fact beside it already does for a runner that reports no token counts.
+  // $0 recorded after real calls means the runner reported no cost. That covers BOTH a
+  // zero-API adapter (genuinely free) and a proxy that returns no usage (real spend,
+  // unpriced) — the run dir cannot tell them apart, so the wording asserts only what is
+  // certain: no per-call cost was reported. Same treatment as the tokens fact beside it.
   const unmetered = summary.cost?.metered === false
   const t = summary.tokens_by_role
 
@@ -121,11 +123,11 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
           </Fact>
           <Fact
             label="spend"
-            value={unmetered ? 'not metered' : usd(summary.cost?.total_usd)}
+            value={unmetered ? 'not reported' : usd(summary.cost?.total_usd)}
             dim={unmetered}
           >
             {unmetered
-              ? 'this runner reports no cost — the calls were real and are not priced here'
+              ? 'this runner reports no per-call cost — $0 here would be a guess, not a measurement'
               : summary.cost
                 ? `opt ${usd(summary.cost.optimizer_usd)} · eval ${usd(summary.cost.runner_usd)} · intake ${usd(summary.cost.intake_usd ?? 0)}`
                 : 'no spend accounting'}

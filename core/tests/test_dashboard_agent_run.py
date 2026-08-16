@@ -263,17 +263,18 @@ def test_screen_tag_per_task_and_feedback_attach_to_the_candidate():
 
 # --- unmetered spend: $0 after real calls is missing data, not a free run -----
 
-def test_spend_metered_distinguishes_free_from_unmetered():
+def test_spend_metered_flags_a_zero_that_nobody_measured():
     """The whole inference, in one table.
 
-    Some runners genuinely report no cost (self-hosted vLLM, an internal endpoint, an
-    OpenAI-compatible proxy that returns no usage). litellm then prices every call at
-    0.0 and the ledger sums to exactly $0.0000. Printing "$0.000" asserts a fact
-    nobody measured -- the same class of lie as `pass^k NaN%`.
+    A $0 total after real calls means no per-call cost was REPORTED. That covers a
+    zero-API adapter (genuinely free) AND a real model behind a proxy that returns no
+    usage (real spend, unpriced) -- the run dir cannot tell those apart, which is why
+    the UI wording is "not reported" rather than any claim about money. Printing
+    "$0.000" would assert a fact nobody measured, the same class of lie as `pass^k NaN%`.
     """
     from cap_evolve.dashboard import _spend_metered
     assert _spend_metered(0.0, 0) is True, "nothing ran: $0.00 is a real, correct zero"
-    assert _spend_metered(0.0, 68) is False, "68 rollouts for exactly $0 is UNMETERED"
+    assert _spend_metered(0.0, 68) is False, "68 rollouts for exactly $0: no cost was reported"
     assert _spend_metered(12.98, 68) is True
     assert _spend_metered(0.0001, 5) is True, "a tiny real cost is still metered"
 
