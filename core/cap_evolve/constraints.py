@@ -59,8 +59,6 @@ _NUM = r"((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
 #: Qualifiers that make a money figure a PER-ITERATION cap, not a total.
 _PER_ITER = re.compile(r"^\s*(?:/|per|each|a|an)\s*(?:iteration|iter|round|step|candidate)\b"
                        r"|^\s*/\s*(?:iter|round)\b", re.I)
-#: Qualifiers that explicitly mark a money figure as the TOTAL.
-_TOTAL = re.compile(r"^\s*(?:total|overall|in\s*total|all\s*in|altogether|cumulative)\b", re.I)
 
 
 def _f(num: str) -> float:

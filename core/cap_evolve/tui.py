@@ -61,6 +61,10 @@ DEMO_DIR = Path(__file__).resolve().parent / "demo_session"
 #: The honesty banner for ``replay --demo``. The demo numbers are hand-authored, so
 #: this text is a product requirement, not decoration: it must accompany every
 #: replay of the sample so a viewer can never read it as a benchmark claim.
+#:
+#: Read cross-module as ``tui.DEMO_BANNER`` (``cli.py`` replay path, ``test_replay.py``,
+#: ``scripts/generate_demo_session.py``), so static analysis flags it as an unused
+#: global. It is not — deleting it removes a truthfulness guard and breaks those tests.
 DEMO_BANNER = ("illustrative sample — replays the cap-evolve UI with no API key. "
                "The numbers are synthetic and make no benchmark claim.")
 
@@ -1010,6 +1014,10 @@ def render_frame(reduced: dict, size: tuple[int, int] = (100, 30), *, color: boo
     try:
         width, rows = max(20, int(size[0])), max(1, int(size[1]))
     except (TypeError, ValueError, IndexError):
+        # A caller handed us a malformed size (short tuple, None, non-numeric — e.g. a
+        # `terminal_size` probe that failed on a pipe). 80x24 is the right answer: a
+        # renderer that raises would take the whole watch loop down over a cosmetic
+        # unknown, and the frame is clamped to `rows` either way.
         pass
     try:
         graph = reduced.get("graph") or {}
@@ -1288,6 +1296,10 @@ def _drive(root, feed, *, stream, color: bool, poll: float = 0.4,
                 try:
                     signal.signal(signal.SIGTERM, prev)
                 except (ValueError, OSError):
+                    # Restoring the previous SIGTERM handler is best-effort cleanup:
+                    # `signal.signal` raises ValueError off the main thread and OSError
+                    # on platforms that refuse the signal. We are already unwinding, so
+                    # raising here would mask the real exit reason with a teardown error.
                     pass
     return reason
 

@@ -24,7 +24,10 @@ import json
 import sys
 from pathlib import Path
 
-import _bootstrap  # noqa: F401
+# Imported for its side effect ONLY: seeds sys.path so `cap_evolve` resolves when
+# this script is run standalone (`python <this-file>`). Must precede the
+# cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
+import _bootstrap  # noqa: F401  # side-effect import, see above
 
 from cap_evolve import RunDir, harness
 from cap_evolve.gate import decide
