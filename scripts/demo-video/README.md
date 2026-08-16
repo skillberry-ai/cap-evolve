@@ -9,7 +9,7 @@ on screen, the exact copy, the exact voiceover, and the source of every number.
 truth — every duration, caption and narration line comes from there, so a card and its
 voiceover cannot drift apart.
 
-Output: **2560×1440, 84.8 s, 5.0 MB**, h264 + one mono AAC track (voiceover with a
+Output: **2560×1440, 88.8 s, 5.4 MB**, h264 + one mono AAC track (voiceover with a
 generated music bed mixed under it), plus a `.srt` transcript. It is designed to be **fully
 comprehensible with the sound off**, because that is how GitHub autoplays it — the narration
 and the music add emphasis, never information.
@@ -18,14 +18,21 @@ and the music add emphasis, never information.
 
 - The terminal segment is [`vhs`](https://github.com/charmbracelet/vhs) scripting a real
   terminal through `cap-evolve replay --demo`, which replays the committed
-  `core/cap_evolve/demo_session/events.jsonl` through the **real** TUI renderer.
+  `core/cap_evolve/demo_session/events.jsonl` through the **real** TUI renderer. The tape
+  records a **112-column** terminal (`Set Width 2010`), not 144 — at 144 the home screen's
+  ~87 columns of content sat hard left with 39 % of the frame dead on the right. See
+  STORYBOARD.md shot 4 for the before/after measurements and why the text cannot be bigger.
 - The dashboard segment is Playwright driving real Chromium against the **running**
-  dashboard, over the committed run dir `examples/tau2_airline/run_agentopt` — a real
-  $12.98 τ²-bench run. That run is a **null result** (four candidates, none accepted), and
-  the shot says so in its own headline tiles (`BEST VAL … candidate seed`,
-  `Δ VAL VS BASELINE 0.000`, `VERDICTS 4 candidates · 0 accept · 4 reject`) and in its
-  voiceover. See STORYBOARD.md shot 6 for why the older `run_full` static export is *not*
-  filmed.
+  dashboard, over the committed run dir `examples/tau2_airline/run_agentopt_v4` — the most
+  rigorous τ²-bench run here (`num_trials: 5`, 26/12/12 split, five candidates, five
+  committed gate JSONs) and the one that ships with its own `events.jsonl`, so the shot is
+  reproducible from a clean checkout. That run is a **null result**: `best_id = seed`, val
+  0.5667 unchanged, sealed test 0.5000, every Δ = 0. The shot says so in the dashboard's own
+  headline tiles (`BEST VAL 56.7% candidate seed`, `Δ VAL VS BASELINE 0.000`, `SEALED TEST
+  50.0% · Δ 0.000`, `VERDICTS 5 candidates · 0 accept · 5 reject`) and in its voiceover.
+  It claims **no spend**: that runner reports no per-call cost, so the dashboard prints
+  `SPEND not reported` rather than a made-up `$0`. See STORYBOARD.md shot 6 for why the
+  older `run_full` static export is *not* filmed.
 
 **Footage carries no burned-in captions.** Both footage shots are shown clean; the old
 lower-third bands are removed. Nothing was lost, because each shot's own output states its
@@ -64,10 +71,12 @@ Record the two footage segments (slow, so they are not part of `build.sh`):
 ```bash
 vhs scripts/demo-video/replay.tape                                 # -> /tmp/video/replay.mp4
 
-# the dashboard needs a server; the shipped cut films run_agentopt
+# the dashboard needs a server; the shipped cut films run_agentopt_v4.
+# Kill strays first — a leftover on the fixed port has caused false failures.
+pkill -f "cap-evolve dashboard"
 .venv/bin/cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open &
 /tmp/vidvenv/bin/python scripts/demo-video/dash.py \
-    --live http://127.0.0.1:8791 --run run_agentopt          # -> /tmp/video/dashboard.mp4
+    --live http://127.0.0.1:8791 --run run_agentopt_v4       # -> /tmp/video/dashboard.mp4
 ```
 
 > **vhs framerate trap.** `Set Framerate 60` makes vhs stamp the mp4 60 fps while capturing
@@ -102,10 +111,16 @@ short video:
 
 ### Which tabs the dashboard shot visits
 
-`dash.py`'s `TABS` list is the tour: **Candidates** (lineage graph) → **Gate** (per-verdict
-table) → **Cost** (reconciled ledger). The tab set is now generic across algorithms —
-Overview, Candidates, Gate, Tasks, Cost, Logs, Diffs, Trajectories, Memory, Files — so the
-old `Lineage` / `Git diffs` labels are gone.
+`dash.py`'s `TABS` list is the tour: **Candidates** (lineage graph, 2.6 s) → **Gate**
+(per-verdict table, 3.4 s) → **Tasks** (per-task val, 2.4 s). The tab set is generic across
+algorithms — Overview, Candidates, Gate, Tasks, Cost, Logs, Agent rounds, Memory, Files —
+so the old `Lineage` / `Git diffs` labels are gone.
+
+**Cost is deliberately not filmed.** `run_agentopt_v4`'s runner reports no per-call cost, so
+`cost.metered` is `false` and every ledger row is `$0.00`; the tab is honest but empty, and
+3.4 s of zeros on camera says nothing. Its dwell went to Gate instead. If a metered run is
+ever filmed, put `("Cost", 3600)` back — the reconciled attributed/unattributed ledger is
+the best tab in the dashboard when there is spend to reconcile.
 
 Tabs are clicked by `role=tab` **first**, exact name, then by visible text as a fallback.
 Text-only matching silently clicked the *"4 candidates"* summary tile instead of the

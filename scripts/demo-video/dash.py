@@ -10,7 +10,7 @@ Two targets:
   --live URL  (what the shipped cut uses) the running dashboard:
              cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open
              /tmp/vidvenv/bin/python dash.py --live http://127.0.0.1:8791 \
-                 --run run_agentopt
+                 --run run_agentopt_v4
 
   --static   (default) the committed static export under
              examples/tau2_airline/run_full/ui, served on a throwaway port.
@@ -41,11 +41,15 @@ STATIC = REPO / "examples/tau2_airline/run_full/ui"
 OUT = Path("/tmp/video")
 W, H, SECONDS = 2560, 1440, 14
 ZOOM = 1.9          # page zoom, so a 1440p viewport is not a wall of tiny UI
-RUN_LABEL = "run_full"   # the run row to open; override with --run
-# (tab label, dwell ms). Cost is the reconciled ledger — attributed vs
-# unattributed spend — and is the most credibility-bearing tab, so it dwells
-# longest. Missing tabs are skipped, not fatal.
-TABS = (("Candidates", 2300), ("Gate", 2100), ("Cost", 3600))
+RUN_LABEL = "run_agentopt_v4"   # the run row to open; override with --run
+# (tab label, dwell ms). Gate dwells longest: on run_agentopt_v4 it is the
+# credibility-bearing tab — five reject verdicts with their paired arithmetic,
+# two of which cleared the significance bar and were still vetoed by the
+# regression check. Cost is NOT filmed any more: that run's ledger reports
+# cost.metered = false (a local runner, $0.00 across every row), so the tab is
+# honest but empty, and 3.6s of zeros on camera says nothing. Tasks (per-task
+# val, 12 tasks x 5 trials) carries more. Missing tabs are skipped, not fatal.
+TABS = (("Candidates", 2600), ("Gate", 3400), ("Tasks", 2400))
 
 
 def serve(root: Path) -> tuple[int, socketserver.TCPServer]:

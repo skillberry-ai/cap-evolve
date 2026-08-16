@@ -1,6 +1,6 @@
 # cap-evolve demo video — storyboard
 
-**Format:** 2560×1440, 25 fps, 89.5 s, h264 + one mono AAC voiceover track, 5.2 MB.
+**Format:** 2560×1440, 25 fps, 88.8 s, h264 + one mono AAC voiceover track, 5.4 MB.
 **Comprehensible muted.** Every claim is on screen as text; the voiceover adds emphasis,
 never information. A `.srt` transcript ships alongside.
 
@@ -47,7 +47,8 @@ code for the rule the agent already knew and skipped.
 
 Durations are `max(min_dur, voiceover + 0.7 s)`, computed at build time from the actual
 synthesized audio — so no line is ever clipped and no shot ends in dead air. The numbers
-below are the built values. **10 shots, 84.73 s total** (was 12 shots / 89.44 s).
+below are the built values. **10 shots, 88.78 s total** (was 10 shots / 84.73 s — the
+`dashboard` and `results` voiceovers grew, see shots 6 and 8).
 
 ### 1 · `logo` — 4.0 s — card (animated frame sequence)
 - **On screen:** the capybara mark scales and fades up, then `cap·evolve` rises,
@@ -81,10 +82,39 @@ below are the built values. **10 shots, 84.73 s total** (was 12 shots / 89.44 s)
 ### 4 · `terminal` — 16.0 s — footage · **reshot, Arbor-style opening**
 - **Recipe:** `vhs scripts/demo-video/replay.tape`, window from `TERM_SEEK=0.6` s — the tape
   is built to be played from the top, in two beats.
-- **Geometry:** 2560×1440, **FontSize 28** (was 24), Padding 40 → ~145 cols × 40 rows. 28 is
-  the largest size at which the whole 37-row home screen still fits without scrolling; at
-  34 the top of the frame — capybara and wordmark — scrolled off, which is exactly the
-  "unclear" the previous cut was called out for.
+- **Geometry:** the tape records **2010×1440**, **FontSize 28**, Padding 40 →
+  **112 cols × 40 rows** (measured with `tput cols` / `tput lines` inside the tape, not
+  computed). `build.sh`'s `NORM` then pillarboxes that 1.40-aspect recording symmetrically
+  inside 2560×1440. It was 2560 wide (144 cols) until this cut, and that was the single
+  worst framing defect in the video: the home screen's content is only ~87 columns, so it
+  sat hard left with **1005 px (39 %) of the frame dead on the right** and read as a broken
+  render. Measured on the published 0:21 frame, before → after:
+
+  | | content | dead left | dead right |
+  |---|---|---|---|
+  | 144 cols (old) | 1515 px | 40 px | **1005 px** |
+  | 112 cols (this cut) | 1477 px | 314 px | 769 px |
+
+  The replay beat, which fills whatever width it is given, goes from `40 / 178` to a
+  symmetric `314 / 318`.
+  - **Why 40 rows is the ceiling, and why the text is not bigger.** Text height in the
+    finished frame is `FontSize × (1440 / tape Height)`, so it is set by the row count, not
+    by `FontSize`: 40 rows at Height 1440 is 34 px per row ⇒ FontSize 28. Raise it to 34
+    and only 33 rows fit, `home()` scrolls the capybara off the top, and the *effective*
+    glyph size is unchanged. Nothing is gained by trading rows for a bigger font.
+  - **Why 112 and not the 105–110 that pure symmetry wants.** `tui.DEMO_BANNER` (the
+    demo disclaimer) is 119 characters and the terminal hard-wraps it **mid-word** at every
+    width from 104 to 111 — at 107 it reads *"…make no benc / hmark claim."* 112 is the
+    narrowest width ≥ 105 that breaks it on a space. Splitting a compliance line mid-word
+    costs more than 40 px of asymmetry.
+  - **The residual 769 px is a geometry ceiling, not a bug.** The home screen's content
+    box is 1477 × 1331 ≈ **1.11 aspect**; 16:9 is 1.78. With the 40 rows `home()` needs,
+    the width *cannot* be filled without cropping rows. Nothing is stretched or distorted:
+    the recording keeps its aspect and is centred.
+  - The home screen is adaptive — `home()` condenses its command table to 3 rows below
+    ~23 rows. **The full table is what is filmed**, because 40 rows is also what makes the
+    text as large as it can be, and the condensed form would show less of the CLI for no
+    legibility gain.
 - **Beat 1 (~0.6 → 5.4 s) — opening the CLI.** The user types `cap-evolve` and the branded
   home screen appears: the truecolor **capybara mark**, `cap-evolve / watch capability
   evolve`, the one-paragraph what-it-is, the **Golden path** (`init` → `doctor` →
@@ -131,43 +161,63 @@ below are the built values. **10 shots, 84.73 s total** (was 12 shots / 89.44 s)
 - **Source:** diff rows from `runs_run_full_diff_cand_0006.json`; the 1/10 → 6/10 figure
   from `docs/OPTIMIZATION_EXAMPLES.md` §1.
 
-### 6 · `dashboard` — 8.0 s — footage · **recorded against the rebuilt dashboard**
+### 6 · `dashboard` — 8.3 s — footage · **re-filmed against `run_agentopt_v4`**
+- **Recipe:** `cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open`,
+  then `dash.py --live http://127.0.0.1:8791 --run run_agentopt_v4`, window from
+  `DASH_SEEK=1.6` s. Kill stray dashboards first (`pkill -f "cap-evolve dashboard"`) —
+  leftovers on the fixed port have caused false failures.
 - **On screen:** Chromium driving the *running* dashboard over
-  `examples/tau2_airline/run_agentopt`. Opens the run — split-discipline line
-  (`splits · train 26 · val 12 · test 12 · seed 0 | val decides selection; test is scored
-  exactly once and never optimized against.`), then the tile grid
-  (`BASELINE VAL 83.3%` · `BEST VAL 83.3%` · `Δ 0.000` · `SEALED TEST 41.7% pass^1` ·
-  `VERDICTS 4 candidates, 0 accept · 4 reject` · `SPEND $12.98` ·
-  `UNATTRIBUTED SPEND $2.40`) — then **Candidates** (the accept/reject/seed lineage graph
-  with the best path lit), **Gate** (four rows, each `reject`, with val and the k·SE bar),
-  and **Cost** (the reconciled ledger: total, attributed, unattributed, and the warning
-  that the $2.40 gap "is real" rather than hidden).
-- **No lower-third.** The null result is not lost with the band gone: the dashboard's own
-  headline tiles say it in the filmed frame — `BEST VAL 83.3% candidate seed`,
-  `Δ VAL VS BASELINE 0.000 / 0% relative`, `VERDICTS 4 candidates · 0 accept · 4 reject` —
-  and the **Gate** tab shows four `reject` rows. Verified on an extracted frame at 0:50,
-  not assumed.
-- **VO:** "The dashboard holds the whole run — every candidate, every dollar, and the
-  gate's verdict. On this run the gate rejected all four."
+  `examples/tau2_airline/run_agentopt_v4`. Opens the run — `run_agentopt_v4 · ⊘ completed ·
+  agent-optimize · 🔒 test sealed`, the split-discipline line (`splits · train 26 · val 12 ·
+  test 12 · seed 0 | val decides selection; test is scored exactly once and never optimized
+  against.`), then the tile grid — `BASELINE VAL 56.7% ±0.118 n=12` · `BEST VAL 56.7%
+  candidate seed` · `Δ VAL VS BASELINE 0.000 / 0% relative` · `SEALED TEST 50.0% · seed
+  50.0% · Δ 0.000` · `VERDICTS 5 candidates, 0 accept · 5 reject · 0 indecisive` ·
+  `SPEND not reported` · `TOKENS not recorded` · `VAL TASKS 12` · `EVENTS 17` — then
+  **Candidates**, **Gate** (five rows, every one `reject`, each with its paired arithmetic
+  note underneath) and **Tasks** (per-task val, 12 tasks × 5 trials).
+- **Still a null result, and it cannot read as a win.** `best_id = seed`, train 0.5308,
+  val 0.5667, sealed test 0.5000, **every Δ = 0 by construction**
+  (`measure.json` `no_accepted_change: true`).
+- **No lower-third.** The null result is not lost with the band gone — the four headline
+  tiles above are the dashboard's own, and the Gate tab's five `reject` rows are too.
+  Verified on extracted frames at **0:48** and **0:52**, not assumed.
+- **VO:** "The dashboard holds the whole run — every candidate, every trial, every verdict.
+  Five rejections, and nothing beat the seed."
 - **In / out:** fade · fade.
-- **Numbers:** every figure is that run's own, and every one is in `docs/RESULTS.md`
-  §"τ²-Bench airline — `agent-optimize` with subset screening" — `$12.98` ($10.58 runner
-  + $2.40 optimizer), val `0.8333 ± 0.1124`, sealed test `0.4167 ± 0.1486`, `best_id ==
-  seed`, four candidates all rejected.
+- **Numbers:** every figure is that run's own, read back from the run dir and the
+  dashboard's `/api/runs/run_agentopt_v4`. Five candidates, all rejected: `c0_null5`,
+  `c0_null5b` and `c0_null5c` are **byte-identical copies of the seed**, entered as
+  controls to measure the harness rather than an edit, and rejected by the significance
+  gate. `cA_partial` and `cB_becabin` are real policy edits that **cleared** the bar
+  (`paired Δ̄=+0.0167 > 0.2·SE`) and were then **VETOED by the regression check**
+  (`gate_cA_partial.json`, `gate_cB_becabin.json`). Which is why the VO says *"five
+  rejections"* and not *"the gate rejected all five"* — the second is false for two of them.
+  This is also the `regression veto` row of shot 7 firing for real.
+- **Spend is not claimed.** This run's runner reports no per-call cost, so
+  `cost.metered` is `false` and the dashboard prints **`SPEND not reported — this runner
+  reports no per-call cost — $0 here would be a guess, not a measurement`**. The VO
+  therefore says "every trial", not "every dollar", and `dash.py` no longer films the
+  **Cost** tab: it is honest but empty, and 3.4 s of zeros says nothing. Its dwell went to
+  **Gate** (3.4 s) and **Tasks** (2.4 s).
 
-**Why this run and not `run_full`.** The obvious choice was the documented 50-task
-`run_full` win, whose committed static export lives at `examples/tau2_airline/run_full/ui`.
-The rebuilt dashboard renders that export with a red **`⊗ failed`** badge and
-`algorithm not recorded` beside the run name, because the export's `summary` object carries
-no `status` and no `algorithm` field, and its **Cost tab reads "No spend recorded"** because
-the export ships no `events.jsonl` for the ledger to reconcile. There is no Diffs tab
-either. A false "failed" badge over a run that finished is a worse integrity problem than a
-true null result, and the export cannot be regenerated (its source run dir is gone — the
-path in `runs.json` is a `/tmp` dir). So the shot films the live dashboard over the one
-τ²-bench run whose full event stream *is* committed, and says out loud and on screen that
-it is a null result. **Flagged for the lead:** the badge and the empty ledger on that
-export are `ws-dash` bugs; if they are fixed, `--run run_full` against a regenerated export
-is the nicer shot and only the caption/VO in `script.py` need changing.
+**Why this run.** `run_agentopt_v4` is the most rigorous τ²-bench run in the repo —
+`num_trials: 5`, a 26/12/12 split, five candidates with five committed gate JSONs, `pass^k`
+defined — and it ships **with its `events.jsonl`**, so the shot is reproducible from a
+clean checkout. It replaces the older `run_agentopt` (also a null result, but 1 trial and
+four candidates). It is *not* `run_full`: that 50-task win only exists as a static export
+at `examples/tau2_airline/run_full/ui`, whose `summary` carries no `status` and no
+`algorithm`, so the rebuilt dashboard stamps a red **`⊗ failed`** badge and
+`algorithm not recorded` on a run that finished, and its Cost tab reads "No spend recorded"
+because the export ships no `events.jsonl`. A false "failed" badge is a worse integrity
+problem than a true null result, and the export cannot be regenerated (its source run dir
+was a `/tmp` path). **Flagged for the lead:** that badge and empty ledger are `ws-dash`
+bugs; if they are fixed, `--run run_full` against a regenerated export is the nicer shot
+and only `--run` plus the VO in `script.py` need changing.
+- **Correction to the earlier note:** `run_agentopt_v4` has **no Screens tab** —
+  its `capabilities.screens` is `false` (as are `trajectories` and `diffs`). The tabs it
+  actually exposes are Overview, Candidates, Gate, Tasks, Cost, Logs, Agent rounds, Memory,
+  Files.
 
 ### 7 · `honest` — 12.2 s — card — **the payoff**
 - **On screen:** eyebrow `WHY YOU CAN BELIEVE THE NUMBER`; head **"Honest by construction."**;
@@ -196,7 +246,7 @@ is the nicer shot and only the caption/VO in `script.py` need changing.
   would overrun, and shot 4's footage already shows a live `indecisive` verdict. The card
   holds long enough to read it.
 
-### 8 · `results` — 10.0 s — card
+### 8 · `results` — 13.7 s — card
 - **On screen:** eyebrow `MEASURED`; head **"Baseline → optimized"**; **five** rows, each
   with its split discipline spelled out under the name and a dot-to-dot bar on a shared
   `reward × 100` axis:
@@ -211,8 +261,16 @@ is the nicer shot and only the caption/VO in `script.py` need changing.
 
   **No amber cost line** (the `~$32 (cap $400)` spend line is removed) and **no footer**.
   Row pitch is 155 px from y=500, so five rows fill the card without the removed lines.
-- **VO:** "On τ²-bench airline: fifty-three point six to seventy-one point two. Thirty to
-  forty-seven point five, held out." (The RH-SWE-bench row is on screen only.)
+- **VO:** "RH-SWE-bench: fifty-five point seven to seventy-three point one, past an
+  unoptimized Opus. τ²-bench airline: fifty-three point six to seventy-one point two, and
+  forty-seven point five held out."
+  - The narration used to open on row 2 and **skip its own top row** — the single most
+    persuasive fact on the card. It now leads with RH-SWE-bench, scoped exactly as the
+    card's sub-line and `src_note` scope it: this benchmark, this harness, one unoptimized
+    Opus 4.6 bar at 63.3. No "beats Opus" in the abstract.
+  - The held-out clause reads only the `47.5` endpoint; `30.0 → 47.5` stays on screen.
+    On-screen text is still the primary channel — the video is fully comprehensible muted —
+    and the shot grew 10.0 s → 13.7 s to fit the line without clipping it.
 - **In / out:** fade · fade.
 - **Source:** the τ²-bench, SkillsBench and toy_calc rows are verbatim from
   `docs/RESULTS.md`. The **RH-SWE-bench** row is the cross-model chart measurement,
@@ -291,7 +349,12 @@ infrastructure sub-lines with the marks — that is supported entirely by `docs/
    very line), and the voiceover says it aloud.
 3. **No card restates a figure its footage contradicts.** The dashboard shot's null result
    is legible from the dashboard's own verdict tiles, and the measured gains on the results
-   card are labelled with their own splits and are a different run.
+   card are labelled with their own splits and are a different run. The VO says *"nothing
+   beat the seed"* over footage whose tiles read `Δ 0.000` — the two agree, and neither
+   claims a win.
+8. **Framing is never faked to fill the frame.** The terminal recording is pillarboxed at
+   its true aspect and centred; it is never stretched, and rows are never cropped to widen
+   it. The dead space that remains is the home screen's own 1.11 aspect against 16:9.
 4. **No mockups.** The terminal shot is `vhs` driving the real renderer; the dashboard shot
    is Chromium loading a real committed run artifact. Neither is a drawing.
 5. **Split discipline is on screen**, per row, on the results card — `fit metric` vs
@@ -321,5 +384,10 @@ infrastructure sub-lines with the marks — that is supported entirely by `docs/
   cut. Measured on the built file: **-40.5 dB** mean in a narration gap vs **-17.0 dB**
   mean under narration.
 - **Not verifiable here:** the voiceover is macOS `say` and cannot be auditioned in this
-  environment. Only its *duration* was checked (audio 89.51 s vs video 89.52 s, and every
-  shot is `max(min_dur, vo + 0.7 s)` so no line clips).
+  environment — nobody has *listened* to this cut, and no claim is made about how the mix
+  sounds. Only durations were checked (video 88.84 s, audio 88.83 s, music bed 88.78 s, and
+  every shot is `max(min_dur, vo + 0.7 s)`, so no line clips its shot or the end of the
+  cut). The music measurement quoted above (-40.5 dB in a gap vs -17.0 dB under narration)
+  is from the previous cut; the mix parameters are unchanged, but it has not been re-taken.
+- **Captions:** 26 cues, longest 80 chars, under the `SRT_MAX_CHARS = 84` cap that
+  `assets.py` asserts. Cues split on sentence → clause → word boundaries.

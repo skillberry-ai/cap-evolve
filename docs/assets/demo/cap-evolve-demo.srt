@@ -55,45 +55,49 @@ code inside the tool that rejects the illegal call.
 Task fourteen went from one pass in ten, to six.
 
 15
-00:00:46,180 --> 00:00:49,929
-The dashboard holds the whole run — every candidate, every dollar,
+00:00:46,180 --> 00:00:51,149
+The dashboard holds the whole run — every candidate, every trial, every verdict.
 
 16
-00:00:49,929 --> 00:00:51,235
-and the gate's verdict.
+00:00:51,149 --> 00:00:53,820
+Five rejections, and nothing beat the seed.
 
 17
-00:00:51,235 --> 00:00:53,450
-On this run the gate rejected all four.
-
-18
-00:00:54,180 --> 00:00:56,336
+00:00:54,520 --> 00:00:56,676
 Here's what most optimizers skip.
 
-19
-00:00:56,336 --> 00:01:00,322
+18
+00:00:56,676 --> 00:01:00,662
 Acceptance is a paired significance test, on validation only:
 
-20
-00:01:00,322 --> 00:01:02,870
+19
+00:01:00,662 --> 00:01:03,210
 clear k standard errors, or it's noise.
 
-21
-00:01:02,870 --> 00:01:05,680
+20
+00:01:03,210 --> 00:01:06,020
 The test split is scored once, then sealed.
 
+21
+00:01:06,720 --> 00:01:11,102
+RH-SWE-bench: fifty-five point seven to seventy-three point one,
+
 22
-00:01:06,380 --> 00:01:11,183
-On τ²-bench airline: fifty-three point six to seventy-one point two.
+00:01:11,102 --> 00:01:12,814
+past an unoptimized Opus.
 
 23
-00:01:11,183 --> 00:01:14,220
-Thirty to forty-seven point five, held out.
+00:01:12,814 --> 00:01:17,265
+τ²-bench airline: fifty-three point six to seventy-one point two,
 
 24
-00:01:16,380 --> 00:01:19,030
-Start in two minutes, with no API key.
+00:01:17,265 --> 00:01:19,730
+and forty-seven point five held out.
 
 25
-00:01:20,880 --> 00:01:23,280
+00:01:20,430 --> 00:01:23,080
+Start in two minutes, with no API key.
+
+26
+00:01:24,930 --> 00:01:27,330
 cap-evolve. Made at IBM and Red Hat.

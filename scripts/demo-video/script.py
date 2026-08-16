@@ -57,7 +57,7 @@ FOOTAGE = {
         # caption naming it, and every figure on screen is the dashboard's own.
         "recipe": ("cap-evolve dashboard --base examples/tau2_airline "
                    "--port 8791 --no-open   +   "
-                   "dash.py --live http://127.0.0.1:8791 --run run_agentopt"),
+                   "dash.py --live http://127.0.0.1:8791 --run run_agentopt_v4"),
         "blocked_on": None,          # recorded against the rebuilt dashboard
     },
 }
@@ -182,20 +182,35 @@ SHOTS = [
     ),
     dict(
         id="dashboard", kind="footage", src="dashboard", min_dur=8.0,
-        vo="The dashboard holds the whole run — every candidate, every dollar, "
-           "and the gate's verdict. On this run the gate rejected all four.",
+        vo="The dashboard holds the whole run — every candidate, every trial, "
+           "every verdict. Five rejections, and nothing beat the seed.",
         # No burned-in lower-third. The null result is not lost with the caption
-        # gone: the dashboard's OWN headline tiles say it in the frame we film —
-        # "BEST VAL 83.3% candidate seed", "Δ VAL VS BASELINE 0.000 / 0%
-        # relative", "VERDICTS 4 candidates · 0 accept · 4 reject". Verified on
-        # the extracted frame, not assumed.
-        src_note="live dashboard over examples/tau2_airline/run_agentopt, the "
-                 "committed audit artifact of a real $12.98 τ²-bench run "
-                 "(docs/RESULTS.md); every figure on screen is that run's own. "
-                 "The older examples/tau2_airline/run_full/ui static export is "
-                 "NOT filmed: the rebuilt dashboard renders a red 'failed' "
-                 "badge over it because the export's summary has no status "
-                 "field, and a false badge is worse than a true null result.",
+        # gone: the dashboard's OWN tiles say it in the frame we film —
+        # "BASELINE VAL 56.7%", "BEST VAL 56.7% candidate seed", "Δ VAL VS
+        # BASELINE 0.000 / 0% relative", "SEALED TEST 50.0% · seed 50.0% ·
+        # Δ 0.000", "VERDICTS 5 candidates · 0 accept · 5 reject · 0
+        # indecisive", and the Gate tab's five reject rows with their paired
+        # arithmetic. Verified on the extracted frames, not assumed.
+        src_note="live dashboard over examples/tau2_airline/run_agentopt_v4, "
+                 "committed WITH its events.jsonl so the shot is reproducible "
+                 "from the repo. It is the most rigorous τ²-bench run here — "
+                 "num_trials 5, 26/12/12 split, five candidates, five gate "
+                 "JSONs — and it is a NULL RESULT: best_id = seed, val 0.5667 "
+                 "unchanged, train 0.5308, sealed test 0.5000 with every Δ = 0 "
+                 "by construction (measure.json no_accepted_change = true). "
+                 "Three of the five candidates were byte-identical seed copies "
+                 "rejected as controls; the other two cleared the significance "
+                 "bar (paired Δ̄=+0.0167 > 0.2·SE) and were still VETOED by the "
+                 "regression check (gate_cA_partial.json, gate_cB_becabin.json) "
+                 "— which is why the VO says 'five rejections', not 'the gate "
+                 "rejected all five'. Spend is NOT claimed: this runner reports "
+                 "no per-call cost, so cost.metered is false and the dashboard "
+                 "prints 'SPEND not reported — $0 here would be a guess, not a "
+                 "measurement'. That is also why dash.py no longer films the "
+                 "Cost tab. The older run_full/ui static export is still NOT "
+                 "filmed: its summary has no status field, so the rebuilt "
+                 "dashboard stamps a red 'failed' badge on a run that finished, "
+                 "and a false badge is worse than a true null result.",
     ),
     dict(
         id="honest", kind="card", draw="rows", min_dur=12.0,
@@ -222,8 +237,16 @@ SHOTS = [
     ),
     dict(
         id="results", kind="card", draw="results", min_dur=10.0,
-        vo="On τ²-bench airline: fifty-three point six to seventy-one point "
-           "two. Thirty to forty-seven point five, held out.",
+        # The card's TOP row is RH-SWE-bench, so the voice leads with it: the
+        # narration used to describe rows 2 and 3 and skip the most persuasive
+        # fact on screen. Scoped deliberately — "past an unoptimized Opus" is
+        # this benchmark and this harness only, which is what the card's
+        # sub-line and src_note below already say. The held-out clause reads
+        # only the 47.5 endpoint; "30.0 → 47.5" stays on screen, and on-screen
+        # text remains the primary channel.
+        vo="RH-SWE-bench: fifty-five point seven to seventy-three point one, "
+           "past an unoptimized Opus. τ²-bench airline: fifty-three point six "
+           "to seventy-one point two, and forty-seven point five held out.",
         src_note="τ²-bench, SkillsBench and toy_calc rows verbatim from "
                  "docs/RESULTS.md. The RH-SWE-bench row is the CROSS-MODEL CHART "
                  "measurement, site/assets/rh_swe_bench.png: its 'Sonnet 4.6 "
