@@ -301,3 +301,51 @@ def test_the_unmetered_tau2_run_is_not_reported_as_free(tmp_path):
 
     assert metered["cost"]["total_usd"] > 0
     assert metered["cost"]["metered"] is True
+
+
+# --- the cumulative-best stair must only count what the gate ACCEPTED ---------
+
+def test_a_rejected_candidate_does_not_raise_the_running_best():
+    """`best_so_far` feeds the TUI chart AND the self-contained dashboard.html chart.
+
+    It used to advance on any non-indecisive candidate, so a REJECTED one raised the
+    stair. On the real v4 tau2 run two candidates scored a raw 0.5833, were vetoed on
+    no-regression, and every cumulative-best chart read 58.3% while the KPI tile beside
+    it read 56.7% -- the chart contradicted the tile, and the chart was wrong.
+    """
+    from pathlib import Path
+    from cap_evolve import RunDir, dashboard
+    base = Path(__file__).resolve().parents[2] / "examples" / "tau2_airline" / "run_agentopt_v4"
+    if not (base / "events.jsonl").exists():
+        import pytest
+        pytest.skip("curated v4 artifacts not present")
+
+    red = dashboard.reduce_run(RunDir.open(base))
+    nodes = red["graph"]["nodes"]
+    best_val = red["summary"]["best_val"]
+
+    # every candidate here was rejected, and two scored ABOVE the seed
+    assert red["summary"]["best_id"] == "seed"
+    raw = [n["val"] for n in nodes if n["status"] == "rejected" and n.get("val")]
+    assert max(raw) > best_val, "fixture no longer exercises the bug"
+
+    # the stair never exceeds the accepted best
+    assert max(n.get("best_so_far") or 0 for n in nodes) == best_val
+    # but the rejected measurements are still PLOTTED -- hiding them would be its own lie
+    assert all(n.get("val") is not None for n in nodes if n["status"] == "rejected")
+
+
+def test_an_accepted_candidate_still_raises_the_running_best():
+    """The other direction: the fix must not freeze the stair on real progress."""
+    from pathlib import Path
+    from cap_evolve import RunDir, dashboard
+    for run in ("run_hillclimb", "run_gepa", "run_skillopt"):
+        base = Path("/tmp/dash-all") / run
+        if not (base / "events.jsonl").exists():
+            import pytest
+            pytest.skip("deterministic e2e run dirs not present")
+        red = dashboard.reduce_run(RunDir.open(base))
+        nodes = red["graph"]["nodes"]
+        assert any(n["status"] == "accepted" for n in nodes), run
+        assert max(n.get("best_so_far") or 0 for n in nodes) == red["summary"]["best_val"]
+        assert red["summary"]["best_val"] == 1.0, run

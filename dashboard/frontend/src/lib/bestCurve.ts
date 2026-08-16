@@ -29,9 +29,13 @@ export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
   let best = Number.NEGATIVE_INFINITY
   for (const n of ordered) {
     const v = n.val as number
-    // An indecisive candidate was never validly measured, so it can plot but must not
-    // move the running best.
-    const isRecord = v > best && n.status !== 'indecisive'
+    // ONLY a candidate the gate accepted (or the seed) may move the running best. This
+    // used to exclude `indecisive` alone, which let a REJECTED candidate raise the
+    // stair: on a real run two candidates scored a raw 0.5833, were rejected on the
+    // no-regression veto, and the chart then read "best 58.3%" while the run's actual
+    // best was the seed at 56.7% — the KPI tile and the chart contradicted each other.
+    // A rejected capability is one you cannot ship, so it is not a best of anything.
+    const isRecord = v > best && (n.status === 'accepted' || n.status === 'seed')
     if (isRecord) best = v
     out.push({
       iteration: n.iteration ?? out.length,

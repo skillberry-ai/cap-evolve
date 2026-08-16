@@ -750,9 +750,16 @@ def reduce_run(run_dir) -> dict:
         else:
             status = "accepted" if accepted else "rejected"
 
-        # An indecisive candidate's val describes the infrastructure, not the edit —
-        # it must never set the running-best record.
-        if val is not None and status != "indecisive":
+        # ONLY a candidate the gate ACCEPTED may set the running-best record. This used
+        # to exclude `indecisive` alone, which let a REJECTED candidate raise the stair:
+        # on the real v4 tau2 run two candidates scored a raw 0.5833, were vetoed on
+        # no-regression, and every cumulative-best chart then read 58.3% while the run's
+        # actual best was the seed at 0.5667 — the chart contradicted the KPI tile beside
+        # it, and the chart was wrong. A rejected capability is one you cannot ship, so it
+        # is not the best of anything. (`best` is seeded from baseline_val above, so the
+        # seed's own score is already in.) The rejected candidate is still PLOTTED via
+        # `val`; hiding a measurement would be its own dishonesty.
+        if val is not None and status == "accepted":
             best = max(best, val)
 
         merge_of = ev.get("merge_of")
