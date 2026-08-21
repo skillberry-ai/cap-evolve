@@ -25,6 +25,8 @@ Asserts, end to end on a temp run dir:
     affordability answer for N siblings;
   * ``measure.py`` prints the train/val/sealed-test table, labels a no-holdout split as a
     FIT metric, and burns the test seal exactly once;
+  * ``taskeval.py`` per-task evals exist as documented and ``merge_taskopt.py`` combines
+    disjoint per-task edits while REPORTING (never auto-resolving) overlapping ones;
   * every script SKILL.md names exists and is named in SKILL.md (no drift);
   * SKILL.md carries none of the known-broken patterns;
   * the test seal is never consumed.
@@ -34,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -124,7 +127,9 @@ def _prose(c: Checker, skill: str) -> None:
             "SKILL.md must mark the capability file layout as example-only")
 
     # Every helper the loop names must exist, and every helper must be named.
-    helpers = ["gate_check.py", "commit.py", "spend.py", "screen.py", "measure.py"]
+    helpers = ["gate_check.py", "commit.py", "spend.py", "screen.py", "measure.py",
+               "funcmerge.py", "multirep.py",
+               "round.py", "taskeval.py", "merge_taskopt.py", "mechanisms.py"]
     for h in helpers:
         c.check((HERE / h).is_file(), f"missing documented helper script: scripts/{h}")
         c.check(h in skill, f"scripts/{h} exists but SKILL.md never uses it")
@@ -418,7 +423,13 @@ def _live_round(c: Checker, tmp: Path) -> None:
 
 
 def _no_regression(c: Checker, tmp: Path) -> None:
-    """A mean gain that breaks a passing task must be vetoed."""
+    """Regressions are REPORTED by default and only VETO under --veto-regressions.
+
+    Both halves are asserted against the same fixture, because the default flip is the
+    fix for four consecutive null results (see gate_check.regressions): a per-task drop
+    at n trials is an estimate, not evidence of harm, and the veto fired on a
+    byte-identical copy of the seed 43% of the time at 5 trials.
+    """
     run_dir, _ = temp_run_dir(tmp / "regr", ids=("a", "b", "c", "d"))
     # current: a passes, b/c/d fail  → mean 0.25
     for tid, r in (("a", 1.0), ("b", 0.0), ("c", 0.0), ("d", 0.0)):
@@ -428,15 +439,24 @@ def _no_regression(c: Checker, tmp: Path) -> None:
         write_val_rollout(run_dir, tid, tag="regr", reward=r, feedback="fb")
     run_dir.set_best("cur")
 
-    g = _run(c, "gate_check.py (no-regression)",
+    g = _run(c, "gate_check.py (regressions reported, not vetoed)",
              [str(HERE / "gate_check.py"), "--run-dir", str(run_dir.root),
               "--candidate", "regr", "--mode", "strict"])
     if g:
-        c.check(g.get("regressions") == ["a"] and g.get("verdict") == "reject",
-                f"no-regression did not veto a mean gain that broke task 'a': {g}",
-                note="no-regression veto is enforced by a real command, not prose")
+        c.check(g.get("regressions") == ["a"] and g.get("verdict") == "accept",
+                f"default must REPORT the task-'a' regression and still accept the "
+                f"gate-passing mean gain: {g}",
+                note="the veto is opt-in; the paired/strict gate is the decision rule")
         c.check(g["gate"]["accept"] is True,
                 f"expected the raw gate to accept the mean gain: {g['gate']}")
+
+    v = _run(c, "gate_check.py (--veto-regressions)",
+             [str(HERE / "gate_check.py"), "--run-dir", str(run_dir.root),
+              "--candidate", "regr", "--mode", "strict", "--veto-regressions"])
+    if v:
+        c.check(v.get("regressions") == ["a"] and v.get("verdict") == "reject",
+                f"--veto-regressions must still veto a mean gain that broke task 'a': {v}",
+                note="the old behaviour stays reachable for anyone who wants it")
 
 
 def _tag_isolation(c: Checker, tmp: Path) -> None:
@@ -502,10 +522,548 @@ def _tag_collision(c: Checker, tmp: Path) -> None:
             f"--force did not override the collision guard: {forced}")
 
 
+def _round_control(c: Checker, tmp: Path) -> None:
+    """round.py builds the null control itself and reports the round's own noise floor.
+
+    The control is not optional and not the driver's job to remember: three of the four
+    null runs on tau2-bench airline compared a candidate against a parent mean measured in
+    an *earlier* round, so re-measurement noise read as signal in both directions. This
+    asserts the control is materialised from the current best and shows up in the table.
+    """
+    from cap_evolve import RunDir, harness
+    from cap_evolve.skillcheck import SyntheticAdapter
+
+    adapter = SyntheticAdapter(n=24)
+    project = _project(tmp, n=24)
+    run_dir = RunDir.create(tmp / ".capevolve_round", ts="chk")
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    R = str(run_dir.root)
+
+    # A parent that solves half of val, snapshotted so round.py has something to copy.
+    for i, tid in enumerate(run_dir.read_splits().ids("val")):
+        write_val_rollout(run_dir, tid, tag="cur", reward=float(i % 2), feedback="fb")
+    run_dir.set_best("cur")
+    run_dir.snapshot("cur", seed_capability_dir(tmp / "roundcap", level=12))
+
+    work = Path(R) / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(seed_capability_dir(work / "_src", level=24), work / "cand_x")
+
+    r = _run(c, "round.py (null control + parallel eval + serial gate)",
+             [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
+              "--candidates", "cand_x", "--n-trials", "1", "--k-se", "1.0"])
+    if r:
+        ctl_tag = r.get("control", {}).get("tag") or ""
+        c.check(ctl_tag.startswith("ctl_null_i") and (work / ctl_tag).is_dir(),
+                f"round.py must materialise a ROUND-SCOPED $R/work/ctl_null_i<n> from the "
+                f"current best (got {ctl_tag!r})",
+                note="the control is built by the script and tagged per round, so it can "
+                     "neither be skipped nor overwrite a previous round's noise floor")
+        c.check(r.get("noise_floor_from_control") is not None,
+                "round.py did not report the round's measured noise floor",
+                note="every round reports what ZERO change measures, from its own control")
+        c.check([x["tag"] for x in r.get("candidates") or []] == ["cand_x"],
+                f"round.py candidate rows wrong: {r.get('candidates')}")
+        c.check("commit" in (r.get("next") or ""),
+                "round.py must hand the accept/reject decision back to the driver",
+                note="round.py never commits: which part of a bundle to keep is a judgement")
+
+    # A round whose --n-trials differs from the parent's must be able to pair against the
+    # control instead, or every delta silently carries a precision mismatch.
+    shutil.rmtree(work / "cand_y", ignore_errors=True)
+    shutil.copytree(seed_capability_dir(work / "_src2", level=24), work / "cand_y")
+    r2 = _run(c, "round.py --gate-against control",
+              [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
+               "--candidates", "cand_y", "--n-trials", "1", "--k-se", "1.0",
+               "--gate-against", "control"])
+    if r2:
+        ref = (r2.get("gated_against") or {})
+        c.check(str(ref.get("tag", "")).startswith("ctl_null_i")
+                and ref.get("mode") == "control",
+                f"--gate-against control did not pair against the control: {ref}",
+                note="a round can pair candidates against its OWN control, removing the "
+                     "precision mismatch when its n-trials differs from the parent's")
+    r3 = _run(c, "round.py --gate-against control --no-control (refused)",
+              [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
+               "--candidates", "cand_y", "--n-trials", "1", "--gate-against", "control",
+               "--no-control"], expect_rc=2)
+    c.check(bool(r3) and "control" in json.dumps(r3),
+            f"gating against a control that was skipped must be refused, got {r3}",
+            note="asking to gate against a control while disabling it is refused, not ignored")
+
+
+def _control_replicates(c: Checker, tmp: Path) -> None:
+    """A round must evaluate MORE THAN ONE control, and must report the gap between them.
+
+    One control does not bound the noise. Measured on tau2-bench airline: two byte-identical
+    controls, same seeds, temperature 0, read 0.6467 and 0.7267 — a paired delta of +0.0800 that
+    PASSES a k_se=1.0 bar on zero change. The same candidate then read +0.0867 against one of
+    those controls and +0.0067 against the other, so a single-control gate hands out a coin flip.
+    Asserted here: the default is at least two replicates, and the round names the gap between
+    them rather than leaving the caller to compute it.
+    """
+    src = (HERE / "round.py").read_text(encoding="utf-8")
+    c.check("--control-replicates" in src,
+            "round.py must offer control replicates",
+            note="one control cannot separate a small gain from re-measurement")
+    c.check('"--control-replicates", type=int, default=2' in src.replace("\n", " ")
+            or 'default=2' in src.split("--control-replicates")[1][:200],
+            "control replicates must DEFAULT to at least 2, not be opt-in",
+            note="the failure mode is trusting a single null reading, so the safe value is the "
+                 "default")
+    c.check("null_delta_between_control_replicates" in src,
+            "the round must report the gap between identical control replicates",
+            note="identical bytes on identical seeds: that gap IS the bar")
+
+
+def _multirep(c: Checker, tmp: Path) -> None:
+    """A verdict must take its error ACROSS runs, because within-run SE cannot see run noise.
+
+    Measured on tau2-bench airline: one paired run reported SE 0.0548 over tasks and "accept" at
+    +0.0867; a second paired run of the same candidate on a different seed block gave +0.0200, and
+    a byte-identical control re-run moved +0.0800 on its own. So the across-task SE understates the
+    real uncertainty and the tool must refuse to call a single run a demonstration.
+    """
+    d = tmp / "mr"
+    d.mkdir(parents=True, exist_ok=True)
+
+    def arm(name, rates):
+        (d / name).write_text(json.dumps(
+            {"per_task": {t: {"rate": r} for t, r in rates.items()}}))
+
+    # two runs, same candidate: one looks like a win, the other does not
+    arm("c1.json", {"a": 1.0, "b": 0.8, "c": 0.6})
+    arm("k1.json", {"a": 0.8, "b": 0.6, "c": 0.4})
+    arm("c2.json", {"a": 0.8, "b": 0.6, "c": 0.6})
+    arm("k2.json", {"a": 0.8, "b": 0.6, "c": 0.6})
+    r = _run(c, "multirep.py (across-run error, inconsistent runs)",
+             [str(HERE / "multirep.py"), f"{d/'c1.json'}:{d/'k1.json'}",
+              f"{d/'c2.json'}:{d/'k2.json'}"])
+    c.check(bool(r) and r.get("n_runs") == 2 and r.get("se_across_runs") is not None
+            and "NOT DEMONSTRATED" in str(r.get("verdict")),
+            "two runs that disagree must NOT be reported as a demonstrated gain",
+            note="a single run's across-task SE cannot see run-to-run nondeterminism")
+    r2 = _run(c, "multirep.py (single run refuses to conclude)",
+              [str(HERE / "multirep.py"), f"{d/'c1.json'}:{d/'k1.json'}"])
+    c.check(bool(r2) and r2.get("se_across_runs") is None
+            and "need >= 2" in str(r2.get("verdict")),
+            "one paired run must not yield a verdict at all",
+            note="the retracted accept in this project came from exactly one paired run")
+
+
+def _merge_taskopt(c: Checker, tmp: Path) -> None:
+    """Per-task fan-out only pays if the merge is trustworthy.
+
+    K optimisers edit the same files from the same base, so combining them is where a good
+    round quietly becomes a bad one. Two properties are asserted: disjoint edits from
+    different optimisers BOTH survive (a merge that silently drops one turns K measured gains
+    into one), and an overlapping edit is reported as `conflicted` rather than auto-resolved
+    (two optimisers guarding the same moment is a judgement call, not a textual one).
+    """
+    root, rel = tmp / "taskopt", "policy.md"
+    base = tmp / "mergebase"
+    base.mkdir(parents=True, exist_ok=True)
+    # A multi-line base: with a ONE-line file every edit touches the same line, so even
+    # genuinely independent optimisers would "conflict" and the check would prove nothing.
+    (base / rel).write_text("\n".join(f"rule {i}" for i in range(1, 21)) + "\n")
+
+    def copy(name: str, transform) -> None:
+        d = root / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / rel).write_text(transform((base / rel).read_text()))
+
+    copy("optA", lambda t: "RULE_FROM_A\n" + t)
+    copy("optB", lambda t: t + "\nRULE_FROM_B\n")
+    copy("optC", lambda t: "RULE_FROM_C\n" + t)   # same first line as optA -> conflict
+
+    argv = [str(HERE / "merge_taskopt.py"), "--root", str(root), "--base", str(base),
+            "--files", rel, "--subdirs", "", "--repo", str(tmp / "mergerepo")]
+    r = _run(c, "merge_taskopt.py (disjoint edits)",
+             argv + ["--out", str(tmp / "merged_ok"), "--include", "optA", "optB"])
+    if r:
+        merged = (tmp / "merged_ok" / rel).read_text()
+        c.check("RULE_FROM_A" in merged and "RULE_FROM_B" in merged,
+                "merge dropped an optimiser's edit: both disjoint per-task edits must survive",
+                note="a merge that loses one optimiser turns K measured gains into one")
+        c.check(not r.get("conflicted"),
+                f"disjoint edits reported as conflicting: {r.get('conflicted')}")
+
+    r2 = _run(c, "merge_taskopt.py (overlapping edits)",
+              argv + ["--out", str(tmp / "merged_conflict"), "--include", "optA", "optC"],
+              expect_rc=1)
+    c.check(bool(r2) and bool(r2.get("conflicted")),
+            f"an overlapping per-task edit was not reported as conflicted: {r2}",
+            note="conflicts are reported, never silently resolved: a semantic conflict means "
+                 "dropping a bundle, not shipping a hybrid neither optimiser measured")
+
+    # Opt-in union resolution, for a TEXTUAL collision of two distinct additions. Dropping a
+    # verified gain over a whitespace accident is the failure this prevents; the guard against
+    # abusing it is that the affected files are named and the result must still be rendered.
+    r3 = _run(c, "merge_taskopt.py (--union-on-conflict keeps both sides)",
+              argv + ["--out", str(tmp / "merged_union"), "--include", "optA", "optC",
+                      "--union-on-conflict"])
+    if r3:
+        got = (tmp / "merged_union" / rel).read_text()
+        c.check("RULE_FROM_A" in got and "RULE_FROM_C" in got,
+                "union resolution must keep BOTH colliding additions",
+                note="a textual collision of distinct additions is resolved by union, since the "
+                     "union is what both optimisers actually measured")
+        c.check(r3.get("union_resolution_enabled") is True and r3.get("union_candidates"),
+                f"union resolution must name what it resolved: {r3}",
+                note="union-resolved files are named so the distinct-additions claim is checkable")
+        c.check("RENDER" in (r3.get("next") or "").upper(),
+                "union resolution must demand the live toolset be rendered afterwards",
+                note="keeping both sides can duplicate a definition or break syntax, which an "
+                     "import check does not catch")
+
+
+def _mechanisms(c: Checker, tmp: Path) -> None:
+    """The fan-out ledger must survive concurrent writers and must gate reimplementation.
+
+    Its entire job is to stop K optimisers rediscovering one cause and writing K colliding
+    fixes for it, so two properties matter: concurrent appends do not lose or tear rows, and
+    a listing names what is already owned so a second implementation is refused by policy
+    rather than discovered at merge time.
+    """
+    import concurrent.futures as cf
+
+    run = tmp / "mechrun"
+    run.mkdir(parents=True, exist_ok=True)
+    argv = [sys.executable, str(HERE / "mechanisms.py"), "add", "--run-dir", str(run)]
+    env = dict(os.environ, CAPEVOLVE_CORE=str(SKILLS.parent / "core"))
+
+    def one(i: int) -> int:
+        return subprocess.run(
+            argv + ["--owner", f"t{i}", "--status", "proposed",
+                    "--mechanism", f"cause {i}", "--evidence", f"trace {i}",
+                    "--touches", f"tool_{i}"],
+            capture_output=True, text=True, env=env).returncode
+
+    with cf.ThreadPoolExecutor(max_workers=9) as ex:
+        rcs = list(ex.map(one, range(9)))
+    c.check(all(r == 0 for r in rcs), f"concurrent ledger appends failed: {rcs}")
+
+    r = _run(c, "mechanisms.py list", [str(HERE / "mechanisms.py"), "list",
+                                       "--run-dir", str(run)])
+    if r:
+        c.check(r.get("count") == 9,
+                f"ledger lost rows under 9 concurrent writers: count={r.get('count')}",
+                note="the mechanism ledger is append-atomic across parallel optimisers")
+        c.check(sorted(r.get("already_owned_do_not_reimplement") or [])
+                == [f"tool_{i}" for i in range(9)],
+                f"ledger did not report owned surfaces: {r.get('already_owned_do_not_reimplement')}",
+                note="listing names what is already owned, so a duplicate fix is refused "
+                     "by policy instead of discovered at merge time")
+
+    _run(c, "mechanisms.py add (rejected)",
+         [str(HERE / "mechanisms.py"), "add", "--run-dir", str(run), "--owner", "t0",
+          "--status", "rejected", "--mechanism", "m", "--evidence", "e"])
+    r2 = _run(c, "mechanisms.py list (after reject)",
+              [str(HERE / "mechanisms.py"), "list", "--run-dir", str(run)])
+    c.check(bool(r2) and len(r2.get("rejected") or []) == 1,
+            "a rejected mechanism must be listed so a retry can be made structurally different",
+            note="rejected attempts are remembered, not silently retried")
+
+    # Relevance filtering: a real fan-out ledger reached 99 findings, and pasting all of them
+    # into each of K subagents spends their context on other optimisers' tasks. Filtering must
+    # narrow to the task WITHOUT hiding the task-independent rows, which are the cross-cutting
+    # measurement facts (canary bands, variance warnings) that apply to everyone.
+    _run(c, "mechanisms.py add (task-scoped row)",
+         [str(HERE / "mechanisms.py"), "add", "--run-dir", str(run), "--owner", "tA",
+          "--status", "verified", "--mechanism", "task-nine-only finding",
+          "--evidence", "e", "--task", "9", "--touches", "f_nine"])
+    _run(c, "mechanisms.py add (other-task row)",
+         [str(HERE / "mechanisms.py"), "add", "--run-dir", str(run), "--owner", "tB",
+          "--status", "verified", "--mechanism", "task-fortytwo-only finding",
+          "--evidence", "e", "--task", "42", "--touches", "f_ft"])
+    r3 = _run(c, "mechanisms.py list --task",
+              [str(HERE / "mechanisms.py"), "list", "--run-dir", str(run), "--task", "9"])
+    blob = json.dumps(r3 or {})
+    c.check(bool(r3) and "task-nine-only" in blob and "task-fortytwo-only" not in blob,
+            "--task must keep this task's rows and drop other tasks' rows",
+            note="K subagents should not each read K-1 other task histories")
+    c.check(bool(r3) and "rejected" in blob and any(
+        not (row.get("tasks") or [])
+        for grp in ("verified", "proposed", "rejected") for row in (r3.get(grp) or [])),
+            "--task must still show task-INDEPENDENT rows",
+            note="cross-cutting measurement facts apply to every optimiser; hiding them is "
+                 "how a fan-out repeats a defect someone already paid for")
+    # A finding that turns out to be WRONG must stop appearing as verified. Three separate
+    # `verified` rows were disproved on the real run, and without this a reader saw both the
+    # claim and its refutation with no way to tell which won.
+    r_old = _run(c, "mechanisms.py add (a claim that will later be disproved)",
+                 [str(HERE / "mechanisms.py"), "add", "--run-dir", str(run), "--owner", "tX",
+                  "--status", "verified", "--mechanism", "CLAIM_TO_BE_RETIRED",
+                  "--evidence", "single reading", "--touches", "f_x"])
+    seq = str((r_old or {}).get("added", {}).get("seq"))
+    _run(c, "mechanisms.py add (superseding row)",
+         [str(HERE / "mechanisms.py"), "add", "--run-dir", str(run), "--owner", "tX",
+          "--status", "rejected", "--supersedes", seq,
+          "--mechanism", "RETIREMENT", "--evidence", "remeasured", "--touches", "f_x"])
+    r_after = _run(c, "mechanisms.py list (superseded row retired)",
+                   [str(HERE / "mechanisms.py"), "list", "--run-dir", str(run)])
+    blob2 = json.dumps((r_after or {}).get("verified") or [])
+    sup = (r_after or {}).get("superseded_do_not_act_on") or []
+    c.check(bool(r_after) and "CLAIM_TO_BE_RETIRED" not in blob2
+            and any("CLAIM_TO_BE_RETIRED" in (x.get("mechanism") or "") for x in sup),
+            "a superseded finding must drop out of verified and be listed as retired",
+            note="a disproved claim left in `verified` is worse than no ledger")
+
+
+
+def _funcmerge(c: Checker, tmp: Path) -> None:
+    """Whole-file merge conflicts on additions that do not disagree; per-function must not.
+
+    This is the exact shape that cost a real round 6 of 10 verified branches: every optimiser
+    appends one independent line to the SAME function, so their edits land on adjacent lines
+    and diff3 conflicts even though nobody disagrees. Asserted here: independent insertions
+    into one shared function all survive, the result PARSES, no `def` is duplicated, and a
+    genuine rewrite of the same line still conflicts rather than being silently unioned.
+    """
+    d = tmp / "fm"
+    d.mkdir(parents=True, exist_ok=True)
+    base = d / "base.py"
+    base.write_text(
+        "class T:\n"
+        "    def __init__(self):\n"
+        "        self.a = 1\n"
+        "\n"
+        "    def go(self, x):\n"
+        "        self.check(x)\n"
+        "        return x\n"
+    )
+    # three branches, each adding one state field AND one guard call to the same two functions
+    for tag, field, guard in [("bA", "self.b = 2", "self.gb(x)"),
+                              ("bB", "self.c = 3", "self.gc(x)"),
+                              ("bC", "self.d = 4", "self.gd(x)")]:
+        (d / f"{tag}.py").write_text(
+            base.read_text()
+            .replace("        self.a = 1\n", f"        self.a = 1\n        {field}\n")
+            .replace("        self.check(x)\n", f"        self.check(x)\n        {guard}\n")
+        )
+    out = d / "out.py"
+    r = _run(c, "funcmerge.py (independent insertions in one shared function)",
+             [str(HERE / "funcmerge.py"), "--base", str(base), "--out", str(out),
+              "--union-pure-insertions", "--inputs",
+              str(d / "bA.py"), str(d / "bB.py"), str(d / "bC.py")])
+    text = out.read_text() if out.exists() else ""
+    c.check(bool(r) and r.get("written") and all(
+        f in text for f in ("self.b = 2", "self.c = 3", "self.d = 4",
+                            "self.gb(x)", "self.gc(x)", "self.gd(x)")),
+            "every branch's independent insertion into a shared function must survive",
+            note="whole-file 3-way merge conflicts here and keeps one; that is the bug this fixes")
+    ok_parse = False
+    dups: list[str] = []
+    if text:
+        import ast as _ast
+        try:
+            t = _ast.parse(text)
+            names = [n.name for n in _ast.walk(t)
+                     if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef))]
+            dups = sorted({n for n in names if names.count(n) > 1})
+            ok_parse = True
+        except SyntaxError:
+            ok_parse = False
+    c.check(ok_parse and not dups,
+            "the merged file must parse and define no function twice",
+            note="the union-on-conflict path this replaces produced an unparseable file "
+                 "with five duplicated defs")
+
+    # a genuine rewrite of the same base line must NOT be unioned away
+    (d / "rA.py").write_text(base.read_text().replace("        return x\n",
+                                                      "        return x + 1\n"))
+    (d / "rB.py").write_text(base.read_text().replace("        return x\n",
+                                                      "        return x * 2\n"))
+    out2 = d / "out2.py"
+    r2 = _run(c, "funcmerge.py (rival rewrites of one line)",
+              [str(HERE / "funcmerge.py"), "--base", str(base), "--out", str(out2),
+               "--union-pure-insertions", "--inputs", str(d / "rA.py"), str(d / "rB.py")],
+              expect_rc=1)
+    c.check(bool(r2) and not r2.get("written") and r2.get("conflicts"),
+            "two branches rewriting the same line must conflict, not be auto-unioned",
+            note="that is a disagreement about the right answer and belongs to a human")
+
+    # A forced-trunk resolution can re-apply a subtraction the losing branch already measured
+    # and reverted. That is invisible in the conflict report, so the merge must SAY what it
+    # failed to carry.
+    (d / "fA.py").write_text(base.read_text().replace(
+        "    def go(self, x):\n", "    def go(self, x):\n        # KEEPME_A rationale line\n"))
+    (d / "fB.py").write_text(base.read_text().replace(
+        "        return x\n", "        return x  # rewritten by B\n"))
+    out3 = d / "out3.py"
+    r4 = _run(c, "funcmerge.py (forced trunk reports dropped additions)",
+              [str(HERE / "funcmerge.py"), "--base", str(base), "--out", str(out3),
+               "--union-pure-insertions", "--force-priority", "--priority", "fB", "fA",
+               "--inputs", str(d / "fA.py"), str(d / "fB.py")])
+    got = json.dumps((r4 or {}).get("dropped_additions") or {})
+    c.check(bool(r4) and (("KEEPME_A" in got) or ("KEEPME_A" in out3.read_text())),
+            "a branch addition the merge did not carry must be REPORTED, not silently lost",
+            note="a dropped rewrite can re-apply a subtraction its owner measured as harmful")
+
+    # A merged function may reference a class CONSTANT the merge did not carry. That is a
+    # runtime crash, not a style problem: the tool layer turns AttributeError into an error
+    # string, the agent abandons the write, and the reward records a MISSING WRITE. It
+    # contaminated four measurements on a real run before a live tool return exposed it, so it
+    # must be a hard failure. The second half of this check matters just as much: the fields it
+    # inspects are routinely declared WITH annotations (`self.x: set[str] = set()`), and a
+    # collector that only walks ast.Assign reports those as undefined and rejects a good merge.
+    (d / "cA.py").write_text(
+        "class T:\n    db: int\n    LADDER = (1, 2, 3)\n\n"
+        "    def go(self, x):\n        return x\n\n"
+        "    def need(self):\n        return self.LADDER[0]\n")
+    (d / "cB.py").write_text(
+        "class T:\n    db: int\n\n    def go(self, x):\n        return x + 1\n")
+    r5 = _run(c, "funcmerge.py (class constant is CARRIED, not left behind)",
+              [str(HERE / "funcmerge.py"), "--base", str(base), "--out", str(d / "out4.py"),
+               "--union-pure-insertions", "--force-priority", "--priority", "cB", "cA",
+               "--inputs", str(d / "cA.py"), str(d / "cB.py")])
+    got5 = (d / "out4.py").read_text() if (d / "out4.py").exists() else ""
+    import re as _re
+    c.check(bool(r5) and r5.get("written")
+            and _re.search(r"^    LADDER = \(1, 2, 3\)", got5, _re.M) is not None,
+            "a class CONSTANT a merged function needs must be carried into the class body",
+            note="merging only functions left it behind; the reference then crashed at runtime "
+                 "and presented as a missing write")
+
+    # Backstop: a constant that exists in NO input cannot be carried, and must still refuse.
+    (d / "gA.py").write_text(
+        "class T:\n    db: int\n\n    def go(self, x):\n        return x\n\n"
+        "    def need(self):\n        return self.NOWHERE[0]\n")
+    r5b = _run(c, "funcmerge.py (truly undefined constant still refuses)",
+               [str(HERE / "funcmerge.py"), "--base", str(base), "--out", str(d / "out4b.py"),
+                "--union-pure-insertions", "--inputs", str(d / "gA.py")],
+               expect_rc=1)
+    c.check(bool(r5b) and not r5b.get("written") and "NOWHERE" in str(r5b.get("error")),
+            "an attribute defined in no input must refuse to write, not ship a crash",
+            note="the crash is invisible in the reward, so it cannot be left to the gate")
+
+    # A branch's inserted lines may legitimately REPEAT. De-duplicating by line text deleted the
+    # second copy and truncated a multi-line statement into a syntax error whose only symptom was
+    # "'{' was never closed" — a corrupted artifact, not a refusal.
+    (d / "rA.py").write_text(
+        "class T:\n    def __init__(self):\n        self.a = 1\n\n"
+        "    def go(self, x):\n        return x\n")
+    (d / "rB.py").write_text(
+        "class T:\n    def __init__(self):\n        self.a = 1\n"
+        "        self.p = {\n            k: 1\n            for k in self.src\n        }\n"
+        "        self.q = {\n            k\n            for k in self.src\n        }\n\n"
+        "    def go(self, x):\n        return x\n")
+    out6 = d / "out6.py"
+    r7 = _run(c, "funcmerge.py (repeated lines inside one insertion survive)",
+              [str(HERE / "funcmerge.py"), "--base", str(d / "rA.py"), "--out", str(out6),
+               "--union-pure-insertions", "--inputs", str(d / "rB.py")])
+    got7 = out6.read_text() if out6.exists() else ""
+    c.check(bool(r7) and r7.get("written") and got7.count("for k in self.src") == 2,
+            "a line that legitimately repeats within one insertion must not be de-duplicated",
+            note="dedupe is only for the SAME hunk from two branches at the same anchor")
+
+    (d / "nA.py").write_text(
+        "class T:\n    db: int\n\n    def __init__(self):\n"
+        "        self.seen: set[str] = set()\n\n"
+        "    def go(self, x):\n        return x in self.seen\n")
+    r6 = _run(c, "funcmerge.py (annotated instance attribute is not 'undefined')",
+              [str(HERE / "funcmerge.py"), "--base", str(d / "nA.py"),
+               "--out", str(d / "out5.py"), "--union-pure-insertions",
+               "--inputs", str(d / "nA.py")])
+    c.check(bool(r6) and r6.get("written"),
+            "an attribute declared with an annotation must not be reported undefined",
+            note="ast.AnnAssign, not ast.Assign — a hard check with false positives is worse "
+                 "than no check")
+
+
+
+def _gate_concurrency(c: Checker, tmp: Path) -> None:
+    """The gate must default to LOW concurrency, and must SAY SO when it is run high.
+
+    Measured on this benchmark with byte-identical code at identical seeds: mean per-task
+    movement 0.250 at concurrency 25 versus 0.100 at concurrency 8; tasks moving 10/12 versus
+    5/12; arm-level |delta| 0.1167 versus 0.0333. Four consecutive gate rounds in this repo were
+    decided at a concurrency where a byte-identical control moved +0.0800 — larger than every
+    effect being chased. So the default has to be low, and a driver who overrides it has to be
+    told what the override costs, in the JSON, next to the verdict.
+    """
+    src = (HERE / "round.py").read_text(encoding="utf-8")
+    m = re.search(r'"--concurrency",\s*type=int,\s*default=(\w+)', src)
+    c.check(bool(m) and m.group(1).isdigit() and int(m.group(1)) <= 12,
+            f"round.py --concurrency default is {m.group(1) if m else 'missing'}: a gate above "
+            "~12 cannot resolve an effect smaller than the 0.08 a null control moves there",
+            note="the gate's measurement concurrency defaults to a LOW value")
+    c.check("concurrency_warning" in src and "measurement_concurrency" in src,
+            "round.py must report measurement_concurrency and a concurrency_warning, so a "
+            "verdict that cannot resolve the effect is not read as a clean one",
+            note="a high-concurrency gate warns IN the result, not just in prose")
+
+
+def _integrate_is_mandated(c: Checker, skill: str) -> None:
+    """SKILL.md must tell the driver to ASSEMBLE with integrate.py, not merely that it exists.
+
+    Measured, and the reason this check is here: on the round integrate.py was written, its own
+    author merged six branches in one step instead of using it. The resulting artifact gated at
+    -0.0146 with seven replicated per-task losses against two replicated gains, while the same
+    round's single-mechanism artifact gated at +0.0115. A tool that is documented as available but
+    not as REQUIRED gets skipped under time pressure, which is exactly when it is needed.
+    """
+    # SKILL.md is hard-wrapped, so any multi-word phrase can straddle a newline. Match on
+    # whitespace-normalised text: a check that fails on line wrapping is a false positive, and a
+    # contract with false positives trains its reader to ignore it.
+    flat = " ".join(skill.split())
+    c.check("integrate.py" in flat and "never by one merge" in flat,
+            "SKILL.md must state that a multi-branch artifact is assembled with integrate.py and "
+            "NOT by a single merge; documenting the script's existence is not enough",
+            note="sequential assembly is mandated, not merely available")
+    c.check("Clean merge is a syntactic property" in flat,
+            "SKILL.md must warn that funcmerge merging cleanly is not evidence the branches "
+            "compose - every branch retained cleanly in the artifact that then failed its gate",
+            note="a clean merge is explicitly distinguished from composition")
+
+
+def _integrate(c: Checker, tmp: Path) -> None:
+    """Verified per-task branches must be folded in ONE AT A TIME, each step measured.
+
+    Measured: a one-shot merge of independently-verified branches scored -0.0617 against
+    seed-matched arms, and the task whose own fix was merged fell 0.40 -> 0.20. Verified gains do
+    not compose, and one number for N simultaneous changes cannot say which change broke it.
+    Asserted here: canaries sit INSIDE the objective, a step at or below the noise floor is
+    recorded as provisional rather than as a gain, and the subset objective is self-labelled as
+    selection-biased so it is never quoted as a val estimate.
+    """
+    src = (HERE / "integrate.py").read_text(encoding="utf-8")
+    c.check("for bdir in args.branches" in src and "_measure(" in src,
+            "integrate.py must measure after EACH branch, or a regression is unattributable",
+            note="integration is sequential and measured per step")
+    c.check("tasks + canary" in src,
+            "scoring only target tasks is how a branch that breaks a passing task gets kept",
+            note="canaries are part of the integration objective, not a side check")
+    c.check("kept_provisionally" in src and "--floor" in src,
+            "integrate.py must take a measured floor and mark sub-floor steps provisional",
+            note="a step inside the noise floor is provisional, never a gain")
+    c.check("upward-biased by selection" in src,
+            "a mean over tasks chosen BECAUSE they were failing is not a val estimate; "
+            "integrate.py must say so in its own output",
+            note="the subset objective is labelled upward-biased by selection")
+    c.check('"--conc", type=int, default=8' in src,
+            "integration decisions are gate decisions and must run at the low concurrency",
+            note="integration defaults to the low gate concurrency")
+    # Measured: a hand-picked canary set drawn from tasks near the mechanisms let four high scorers
+    # be damaged unguarded (two at 1.00, one at 0.90, one at 0.80), and the artifact's gate failed on
+    # exactly that collateral. Selection must be mechanical and suite-wide, and it must prefer the
+    # FRAGILE high scorers rather than the safest ones.
+    c.check("--canary-auto" in src and "canary_floor" in src.replace("-", "_"),
+            "integrate.py must offer suite-wide canary selection from a baseline, or a canary set "
+            "picked near the mechanisms will miss the collateral damage that actually fails gates",
+            note="canaries can be selected mechanically from the WHOLE suite")
+    c.check("pool.sort()" in src and "lowest rate first" in src,
+            "auto-selected canaries must be taken lowest-rate-first: the most fragile high scorers "
+            "are the ones that catch collateral damage",
+            note="auto-canary selection keeps the most fragile high scorers")
+
+
 def main() -> int:
     c = Checker("agent-optimize")
     _guard(c)
-    _prose(c, SKILL_MD.read_text(encoding="utf-8"))
+    _skill_text = SKILL_MD.read_text(encoding="utf-8")
+    _prose(c, _skill_text)
+    _integrate_is_mandated(c, _skill_text)
     tmp = Path(tempfile.mkdtemp(prefix="agent_optimize_chk_"))
     try:
         _live_round(c, tmp)
@@ -513,6 +1071,14 @@ def main() -> int:
         _tag_isolation(c, tmp)
         _tag_collision(c, tmp)
         _screen_round(c, tmp)
+        _round_control(c, tmp)
+        _control_replicates(c, tmp)
+        _multirep(c, tmp)
+        _merge_taskopt(c, tmp)
+        _funcmerge(c, tmp)
+        _gate_concurrency(c, tmp)
+        _integrate(c, tmp)
+        _mechanisms(c, tmp)
         _measure(c, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

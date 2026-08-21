@@ -10,8 +10,9 @@ cap-evolve uses.
 This script closes that: it reconstructs both sides' ``SplitResult`` from the persisted
 val rollouts (``harness.split_result_from_rollouts``), builds the paired delta vector
 with the SAME helper the loops use (``harness._paired_deltas``), and calls the SAME
-``gate.decide``. It also applies **no-regression** — reject a mean gain that strictly
-drops any val task the parent measured and passed — which was previously prose only.
+``gate.decide``. It also REPORTS **regressions** — val tasks the parent measured and passed
+that dropped — as diagnosis for the next round. They do not veto an accept unless you pass
+``--veto-regressions``; see ``regressions()`` for the measured reason that default flipped.
 
 Tags are candidate dir names: the evaluate phase writes rollouts as
 ``<task>__<tag>__t<k>.json`` with ``tag = candidate_dir.name``.
@@ -37,7 +38,28 @@ EPS = 1e-9
 
 
 def regressions(current, candidate) -> list[str]:
-    """Val tasks the current best measured-and-PASSED that got worse.
+    """Val tasks the current best measured-and-PASSED that got worse. REPORTED, not a veto.
+
+    As of the airline90 run this list is DIAGNOSIS ONLY — it no longer blocks an accept
+    unless you pass ``--veto-regressions``. The veto was measured to be the dominant cause
+    of four consecutive null results on tau2-bench airline:
+
+      * it fires on a byte-identical copy of the seed 42.8% of the time at 5 trials
+        (12.9% at 10) — see the table below, which is why no trial count rescues it at the
+        val sizes this benchmark allows;
+      * in run_agentoptv4 it vetoed BOTH candidates that passed the significance test
+        (``cA_partial`` Delta-bar +0.0167 > bar 0.0134, vetoed on task 8; ``cB_becabin``
+        +0.0167, vetoed on 8/32/40). Those were the run's only two positive signals.
+
+    A per-task reward at n trials is an estimate with its own error bar, so "this one task
+    dropped" is not evidence of harm at the sizes involved; the PAIRED test on the mean
+    already accounts for per-task movement in both directions and is the statistically
+    correct decision rule. Churn (fix 2 / break 2 at an identical mean) is correctly a
+    non-accept under the paired test — it just fails for the right reason (no significant
+    gain) instead of being vetoed after passing.
+
+    The list stays in the output because it is the most actionable thing the next round
+    reads: it names which part of a bundled edit to drop.
 
     Mirrors ``harness._movement`` exactly -- the parent must have scored a full 1.0
     (``par >= 1.0 - EPS``), which is what SKILL.md means by "measured-and-passed".
@@ -79,8 +101,11 @@ def main(argv=None) -> int:
                             "simplicity_tiebreak"])
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--threshold", type=float, default=0.0)
+    p.add_argument("--veto-regressions", action="store_true",
+                   help="ALSO reject a gate-passing candidate that drops any val task the parent "
+                        "measured-and-passed. OFF by default — see regressions() for why.")
     p.add_argument("--allow-regression", action="store_true",
-                   help="skip the no-regression veto (NOT recommended; audit only)")
+                   help="deprecated no-op: regressions no longer veto unless --veto-regressions")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -103,8 +128,8 @@ def main(argv=None) -> int:
                threshold=args.threshold, paired_deltas=deltas,
                coverage=cand.coverage, run_dir=run_dir)
 
-    regs = [] if args.allow_regression else regressions(cur, cand)
-    accept = bool(d.accept) and not regs
+    regs = regressions(cur, cand)
+    accept = bool(d.accept) and not (regs and args.veto_regressions)
     verdict = "indecisive" if d.indecisive else ("accept" if accept else "reject")
     print(json.dumps({
         "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr},
