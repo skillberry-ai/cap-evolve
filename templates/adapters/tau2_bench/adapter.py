@@ -51,6 +51,24 @@ DOMAIN = "airline"
 # ---------------------------------------------------------------------------
 
 
+def _max_concurrency(default: int = 100) -> int:
+    """Rollout concurrency, honouring the runner's own knob first and the canonical one second.
+
+    ``TAU2_MAX_CONCURRENCY`` is tau2's name and stays authoritative here, so an existing setup keeps
+    working unchanged. ``CAPEVOLVE_MAX_CONCURRENCY`` is the benchmark-neutral name the optimization
+    skills set, so they can control load without knowing which runner is underneath -- an algorithm
+    that hardcodes one benchmark's variable is not an algorithm, it is a tau2 script.
+    """
+    for name in ("TAU2_MAX_CONCURRENCY", "CAPEVOLVE_MAX_CONCURRENCY"):
+        raw = os.environ.get(name)
+        if raw:
+            try:
+                return int(raw)
+            except ValueError:
+                pass
+    return default
+
+
 def _load_candidate_tools_class(tools_path: Path):
     """Import a candidate tools/tools.py and return its AirlineTools class."""
     if not tools_path.exists():
@@ -239,20 +257,26 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks:
             return results
 
-        llm_kwargs = model_config.llm_kwargs()
-        max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
+        max_concurrency = _max_concurrency()
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
             llm_agent=model_config.MODEL,
-            llm_args_agent=dict(llm_kwargs),
+            llm_args_agent=model_config.llm_kwargs_for("agent"),
             user="user_simulator",
             llm_user=model_config.MODEL,
-            llm_args_user=dict(llm_kwargs),
+            llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=1,
             max_steps=100,
             max_errors=10,
+            # Per-simulation wallclock cap, so ONE wedged rollout cannot block a whole
+            # batch (measured: a stuck airline sim ran 40+ min while litellm retried a
+            # dropped connection, and rollouts are only persisted once the batch returns).
+            # Pair it with a max_concurrency the endpoint can actually sustain: if the
+            # provider queues rather than serves, this cap turns starvation into a batch
+            # of TIMEOUTs, which _sim_to_rollout now reports as infra rather than as 0.0.
+            timeout=float(os.environ.get("TAU2_SIM_TIMEOUT", "1800")),
             max_concurrency=max_concurrency,
             seed=int(seed),
         )
@@ -288,9 +312,22 @@ class Adapter(CapabilityAdapter):
         """
         from tau2.data_model.simulation import TerminationReason
 
+        # TIMEOUT belongs here, and leaving it out silently poisons whole evaluations.
+        # Measured: at max_concurrency=300 this litellm proxy queues requests instead of
+        # serving them, per-call latency went 20s -> 200s, and 292 of 300 rollouts hit
+        # TIMEOUT with a median trace of SIX messages. Because a timed-out sim comes back
+        # as an ordinary rollout with reward 0.0, val measured 0.0067 and was reported as
+        # the model's capability. A wallclock timeout is a property of the SERVING PATH,
+        # not of the policy — the same candidate on a fast endpoint finishes — and tau2
+        # already has max_steps for a genuinely looping agent, which ends the sim and
+        # scores it normally. So route TIMEOUT into the infra path: score() then calls it
+        # "uncontrollable noise, do not optimize against it", the harness stops counting
+        # it as a valid trial, coverage drops, and gate.decide REFUSES to judge below
+        # min_coverage instead of handing back a confident zero.
         infra_reasons = {
             TerminationReason.INFRASTRUCTURE_ERROR,
             TerminationReason.UNEXPECTED_ERROR,
+            TerminationReason.TIMEOUT,
         }
 
         task_id = str(sim.task_id)
@@ -368,20 +405,26 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks:
             return results
 
-        llm_kwargs = model_config.llm_kwargs()
-        max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
+        max_concurrency = _max_concurrency()
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
             llm_agent=model_config.MODEL,
-            llm_args_agent=dict(llm_kwargs),
+            llm_args_agent=model_config.llm_kwargs_for("agent"),
             user="user_simulator",
             llm_user=model_config.MODEL,
-            llm_args_user=dict(llm_kwargs),
+            llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=n_trials,
             max_steps=100,
             max_errors=10,
+            # Per-simulation wallclock cap, so ONE wedged rollout cannot block a whole
+            # batch (measured: a stuck airline sim ran 40+ min while litellm retried a
+            # dropped connection, and rollouts are only persisted once the batch returns).
+            # Pair it with a max_concurrency the endpoint can actually sustain: if the
+            # provider queues rather than serves, this cap turns starvation into a batch
+            # of TIMEOUTs, which _sim_to_rollout now reports as infra rather than as 0.0.
+            timeout=float(os.environ.get("TAU2_SIM_TIMEOUT", "1800")),
             max_concurrency=max_concurrency,
             seed=int(base_seed),
         )
@@ -441,12 +484,30 @@ class Adapter(CapabilityAdapter):
 
         reward = float(meta.get("tau2_reward", 0.0) or 0.0)
         reward_info = meta.get("tau2_reward_info") or {}
-        feedback = self._build_feedback(reward, reward_info)
+        # The localizers read the agent's OWN tool calls out of meta["trace"], but this
+        # adapter keeps the trace on Rollout.trace — so pass an enriched view. Without it
+        # every _localize_* call raised and the feedback silently degraded to the
+        # tool-name-only fallback ("right tool, right arguments"), which is exactly the
+        # signal an optimizer cannot act on.
+        signal_meta = {**meta, "trace": rollout.trace or [],
+                       "tool_calls": getattr(rollout, "tool_calls", None) or []}
+        feedback = self._build_feedback(reward, reward_info, signal_meta)
         return Score(task_id=task.id, reward=reward, feedback=feedback)
 
-    @staticmethod
-    def _build_feedback(reward: float, reward_info: dict) -> str:
-        """Build gold-SAFE learning signal from tau2's reward breakdown."""
+    @classmethod
+    def _build_feedback(cls, reward: float, reward_info: dict, meta: dict) -> str:
+        """Argument-level, gold-SAFE learning signal.
+
+        For each failing check we localize the defect: name the wrong ARGUMENT key +
+        the AGENT'S OWN wrong value (never the gold value), the wrong target id, and
+        — for communicate misses — the un-stated computed value when derivable from
+        the agent's own state. A tool-name-only signal is too coarse for the optimizer
+        to localize a fix. Falls back to the tool-name message when a piece cannot be
+        safely derived. Deterministic on a fixed rollout.
+        """
+        basis = [str(b).upper() for b in (reward_info.get("reward_basis") or [])]
+        if not basis:
+            basis = [k.upper() for k in (reward_info.get("reward_breakdown") or {})]
         if not reward_info:
             if reward >= 1.0:
                 return "Task fully solved (reward 1.0)."
@@ -455,42 +516,146 @@ class Adapter(CapabilityAdapter):
                 "for this rollout."
             )
 
+        facts = cls._user_profile_facts(meta)
         lines: list[str] = [f"Task reward: {reward:.3f}."]
 
-        db_check = reward_info.get("db_check")
-        if db_check is not None and not db_check.get("db_match", True):
+        # A premature termination leaves EVERY check null, so without this the feedback is the
+        # bare "Task reward: 0.000." and nothing else - a zero with no stated cause, which is the
+        # least actionable signal this adapter can emit. tau2 records the reason in
+        # reward_info["info"]["note"]; surface it and say plainly that the rollout is not evidence
+        # about the policy or the tools. Measured: 1 of 170 failures, cause "max_steps".
+        note = ((reward_info.get("info") or {}) or {}).get("note")
+        if note and not reward_info.get("db_check") and not reward_info.get("reward_basis"):
             lines.append(
-                "Database state does NOT match the expected final state — a "
-                "required write (book/update/cancel) was missing, wrong, or extra."
+                f"The rollout did not complete: {note} Every graded check is therefore null, so "
+                "this zero says nothing about the policy or the tools - do not optimise against "
+                "it. If it recurs on one task, that task needs more steps or a shorter path, not "
+                "a different edit."
             )
+            return " ".join(lines)
 
+        # DB check (final environment state matches expectation). The sentence is emitted
+        # LATER, once we know whether per-action detail actually follows it: it used to promise
+        # "See the per-action detail below" unconditionally, and on a DB-only divergence no
+        # detail follows at all. Task 10 failed 11 times with that exact feedback and nothing
+        # after it, which tells an optimiser to go looking for a wrong argument that does not
+        # exist. A pointer to absent evidence is worse than no pointer.
+        db_check = reward_info.get("db_check")
+        db_mismatch = db_check is not None and not db_check.get("db_match", True)
+
+
+        # Action checks: localize each failed action at the ARGUMENT level.
         action_checks = reward_info.get("action_checks") or []
-        failed_actions = [ac for ac in action_checks if not ac.get("action_match", True)]
-        if failed_actions:
-            names = []
-            for ac in failed_actions:
-                action = ac.get("action") or {}
-                name = action.get("name") or action.get("func_name") or "an action"
-                names.append(str(name))
-            lines.append(f"Failed action(s): {', '.join(names)}.")
+        details: list[str] = []
+        for ac in action_checks:
+            if ac.get("action_match", True):
+                continue
+            action = ac.get("action") or {}
+            name = action.get("name") or action.get("func_name") or "an action"
+            # KEYS that matter (names only — gold-safe). Prefer compare_args; else the
+            # gold arg keys (keys, not values). Values are never read.
+            gold_keys = action.get("compare_args")
+            if not gold_keys:
+                gold_args = action.get("arguments")
+                gold_keys = sorted(gold_args.keys()) if isinstance(gold_args, dict) else []
+            try:
+                details.append(cls._localize_action(str(name), list(gold_keys or []), meta, facts))
+            except Exception:
+                details.append(f"{name}: not performed correctly (right tool, right arguments)")
+        details = cls._collapse_action_details(details, meta)
 
+        if db_mismatch:
+            if details:
+                lines.append(
+                    "Database state does NOT match the expected final state — a required write "
+                    "(book/update/cancel) was missing, wrong, or extra. See the per-action "
+                    "detail below for the specific wrong argument."
+                )
+            else:
+                # No gold action mismatched, yet the DB differs. So the divergence is not a
+                # wrong VALUE: it is an extra or duplicated write, or a side effect of a write
+                # (notably `payment_history`, which every successful update appends to and which
+                # no retry removes). Naming the agent's OWN writes is gold-safe and is the only
+                # actionable evidence available here.
+                writes = [
+                    f"{n}({', '.join(f'{k}={v!r}' for k, v in sorted(a.items()) if k in ('reservation_id', 'cabin', 'total_baggages', 'nonfree_baggages', 'insurance'))})"
+                    for n, a in cls._iter_agent_tool_calls(meta)
+                    if n in ("book_reservation", "cancel_reservation", "send_certificate",
+                             "update_reservation_flights", "update_reservation_baggages",
+                             "update_reservation_passengers")
+                ]
+                msg = (
+                    "Database state does NOT match the expected final state, but NO gold action "
+                    "mismatched — so this is not a wrong argument value. The divergence is an "
+                    "EXTRA or DUPLICATED write, or a write side effect: every successful update "
+                    "appends a charge to `payment_history`, and re-issuing a corrected write "
+                    "does not undo the first one. "
+                )
+                if writes:
+                    msg += (f"The {len(writes)} write(s) you performed, in order: "
+                            + "; ".join(writes) + ". Check whether one of them should not have "
+                            "happened at all, or happened twice.")
+                else:
+                    msg += ("You performed NO writes at all, so a required write is simply "
+                            "missing.")
+                lines.append(msg)
+
+        if details:
+            # Only SOME components gate a task's reward. tau2 publishes that as
+            # `reward_basis`, and on this benchmark it is routinely ["DB", "COMMUNICATE"] with
+            # ACTION absent - meaning action checks cannot change the score at all. The
+            # feedback used to lead with "Action-level defects" regardless, which points an
+            # optimiser at read calls that provably do not matter: task 12 reports
+            # "calculate: was never called" on every rollout, `calculate` was invoked in 0 of
+            # 300 rollouts, and the task still scores 0.8. Say which components actually gate,
+            # and label non-gating detail as diagnostic so nobody spends a round on it.
+            if "ACTION" in basis:
+                lines.append("Action-level defects (your own wrong values): "
+                             + "; ".join(details) + ".")
+            else:
+                lines.append("Action-trace detail (DIAGNOSTIC ONLY - this task is scored on "
+                             + "/".join(basis or ["DB"]) + ", so action checks do NOT affect "
+                             "your reward; use these only as a clue to the wrong write): "
+                             + "; ".join(details) + ".")
+
+        # Communicate checks: name the un-stated derivable value when possible.
         communicate_checks = reward_info.get("communicate_checks") or []
         missed_comm = [c for c in communicate_checks if not c.get("met", True)]
         if missed_comm:
-            lines.append(
-                f"{len(missed_comm)} required piece(s) of information were not clearly "
-                "communicated to the user."
-            )
+            comm_details: list[str] = []
+            for c in missed_comm:
+                try:
+                    d = cls._localize_communicate(c, meta, facts)
+                except Exception:
+                    d = None
+                if d:
+                    comm_details.append(d)
+            if comm_details:
+                lines.append("Communication misses: " + "; ".join(comm_details) + ".")
+            else:
+                lines.append(
+                    f"{len(missed_comm)} required piece(s) of information were not clearly "
+                    "communicated to the user. State the confirmations/details (e.g. the "
+                    "computed total, the new flight times) the policy requires you to convey."
+                )
 
+        # NL assertions.
         nl_assertions = reward_info.get("nl_assertions") or []
         missed_nl = [n for n in nl_assertions if not n.get("met", True)]
         if missed_nl:
-            lines.append(f"{len(missed_nl)} behavioral expectation(s) were not met.")
+            lines.append(
+                f"{len(missed_nl)} behavioral expectation(s) were not met. Re-check the "
+                "policy steps for this scenario."
+            )
 
+        # Env assertions.
         env_assertions = reward_info.get("env_assertions") or []
         missed_env = [e for e in env_assertions if not e.get("met", True)]
         if missed_env:
-            lines.append(f"{len(missed_env)} environment assertion(s) failed.")
+            lines.append(
+                f"{len(missed_env)} environment assertion(s) failed (the resulting "
+                "system state was not as required)."
+            )
 
         if reward >= 1.0 and len(lines) == 1:
             lines.append("All checks passed.")
@@ -498,6 +663,252 @@ class Adapter(CapabilityAdapter):
         return " ".join(lines)
 
     # ---- making a candidate live ----------------------------------------
+
+    @staticmethod
+    def _iter_agent_tool_calls(meta: dict):
+        """Yield (tool_name, arguments) for every ASSISTANT tool call in the trace.
+
+        Pure read of the agent's own messages. Deterministic order (trace order).
+        """
+        for msg in meta.get("trace") or []:
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("role") != "assistant":
+                continue
+            for tc in msg.get("tool_calls") or []:
+                if not isinstance(tc, dict):
+                    continue
+                name = tc.get("name")
+                args = tc.get("arguments") or {}
+                if name:
+                    yield str(name), (args if isinstance(args, dict) else {})
+
+    @staticmethod
+    def _user_profile_facts(meta: dict) -> dict:
+        """Derive what the AGENT observed about the user's own profile/state.
+
+        Reads only ``get_user_details``/``get_reservation_details`` TOOL RESULTS in
+        the trace (the agent's own observations — gold-safe). Returns:
+          {"payment_methods": [...ids...], "reservation_ids": [...ids...]}
+        Best-effort and deterministic; returns empty lists when nothing is parseable.
+        """
+        import json
+        import re
+
+        payment_ids: list[str] = []
+        reservation_ids: list[str] = []
+        seen_p: set[str] = set()
+        seen_r: set[str] = set()
+
+        for msg in meta.get("trace") or []:
+            if not isinstance(msg, dict) or msg.get("role") != "tool":
+                continue
+            content = msg.get("content")
+            if not isinstance(content, str) or not content:
+                continue
+            obj = None
+            try:
+                obj = json.loads(content)
+            except Exception:
+                obj = None
+
+            if isinstance(obj, dict):
+                pm = obj.get("payment_methods")
+                if isinstance(pm, dict):
+                    for pid in pm.keys():
+                        if pid not in seen_p:
+                            seen_p.add(pid)
+                            payment_ids.append(str(pid))
+                elif isinstance(pm, list):
+                    for entry in pm:
+                        pid = entry.get("id") if isinstance(entry, dict) else None
+                        if pid and pid not in seen_p:
+                            seen_p.add(pid)
+                            payment_ids.append(str(pid))
+                # Only STRING elements are ids. A candidate is free to enrich this tool's
+                # return with reservation summary objects, and str()-ing those produced a
+                # held=[{...}, {...}] blob that read like "your id is not among the user's
+                # reservations" for calls whose id was perfectly valid — which sent one
+                # optimiser chasing a scoring bug that did not exist (reward comes from
+                # tau2's own checks and never reads this field; only THIS feedback string
+                # does). Ids also get collected from dict/objects under any key below.
+                res = obj.get("reservations")
+                if isinstance(res, list):
+                    for entry in res:
+                        rid = entry if isinstance(entry, str) else (
+                            entry.get("reservation_id") or entry.get("id")
+                            if isinstance(entry, dict) else None
+                        )
+                        if rid and str(rid) not in seen_r:
+                            seen_r.add(str(rid))
+                            reservation_ids.append(str(rid))
+                rid = obj.get("reservation_id")
+                if rid and str(rid) not in seen_r:
+                    seen_r.add(str(rid))
+                    reservation_ids.append(str(rid))
+            else:
+                # Fall back to regex over the raw text for known id shapes.
+                for pid in re.findall(r"\b(?:credit_card|gift_card|certificate)_\d+\b", content):
+                    if pid not in seen_p:
+                        seen_p.add(pid)
+                        payment_ids.append(pid)
+
+        return {"payment_methods": payment_ids, "reservation_ids": reservation_ids}
+
+    @classmethod
+    def _collapse_action_details(cls, details: list[str], meta: dict) -> list[str]:
+        """Collapse repeated per-gold-action lines into one COUNTED line per tool.
+
+        ``_localize_action`` runs once per failed gold action and always reports the agent's
+        last call of that tool, so N failed gold actions of the same tool produced N IDENTICAL
+        strings. On task 42 the feedback read
+        ``get_reservation_details: agent used reservation_id='FDZ0T5'`` seven times and
+        ``cancel_reservation: agent used reservation_id='HSR97W'`` twice, which tells an
+        optimiser nothing and reads like a stutter in the harness.
+
+        What those repeats actually encode is a COUNT — gold performed that tool 7 and 2 times —
+        and the useful comparison is against how many times the agent called it, plus the
+        distinct arguments it used. That is gold-safe: it reveals how many calls were expected,
+        never which ones were right. On task 42 it turns an unreadable line into
+        ``cancel_reservation: gold performs this 2x, you called it 4x (SE9KEL, FDZ0T5, PUNERT,
+        HSR97W) - you are cancelling too many``, which names the defect directly.
+        """
+        from collections import Counter, OrderedDict
+
+        counts = Counter(details)
+        agent_counts: Counter = Counter()
+        agent_args: dict[str, list[str]] = {}
+        for n, args in cls._iter_agent_tool_calls(meta):
+            agent_counts[n] += 1
+            if isinstance(args, dict):
+                for k, v in args.items():
+                    kl = k.lower()
+                    # user_id ends in _id but names the CALLER, not the target the agent chose;
+                    # including it put the customer's own id in every "wrong subset" list.
+                    if kl in ("user_id", "userid"):
+                        continue
+                    if "reservation" in kl or kl.endswith("_id"):
+                        agent_args.setdefault(n, [])
+                        if str(v) not in agent_args[n]:
+                            agent_args[n].append(str(v))
+        out: "OrderedDict[str, str]" = OrderedDict()
+        for line, n_gold in counts.items():
+            tool = line.split(":", 1)[0].strip()
+            if n_gold == 1:
+                out[line] = line
+                continue
+            n_agent = agent_counts.get(tool, 0)
+            seen = agent_args.get(tool) or []
+            shown = ", ".join(seen[:8]) + ("..." if len(seen) > 8 else "")
+            msg = (f"{tool}: gold performs this {n_gold}x, you called it {n_agent}x"
+                   + (f" ({shown})" if shown else ""))
+            if n_agent > n_gold:
+                msg += " - you are calling it too many times, on the wrong subset"
+            elif n_agent < n_gold:
+                msg += " - you stopped before making all the required calls"
+            out[msg] = msg
+        return list(out)
+
+    @classmethod
+    def _localize_action(cls, gold_name: str, gold_keys: list[str], meta: dict, facts: dict) -> str:
+        """Argument-level, gold-SAFE detail for one failed action check.
+
+        ``gold_keys`` are the argument KEYS that matter (names only — gold-safe).
+        We report the AGENT'S OWN value for those keys from its own call(s) of
+        ``gold_name``; we never read or print the gold values. For id-shaped keys
+        we surface what was AVAILABLE on the user's own profile/state.
+        """
+        agent_calls = [args for (n, args) in cls._iter_agent_tool_calls(meta) if n == gold_name]
+        if not agent_calls:
+            return f"{gold_name}: was never called (or not called correctly)"
+
+        keys = gold_keys or sorted({k for c in agent_calls for k in c.keys()})
+        # Use the LAST call of the tool (the state the agent settled on); deterministic.
+        used = agent_calls[-1]
+        parts: list[str] = []
+        for k in keys:
+            v = used.get(k, "<missing>")
+            detail = f"{k}={v!r}"
+            kl = k.lower()
+            if "payment" in kl and facts.get("payment_methods"):
+                avail = facts["payment_methods"]
+                if v not in avail:
+                    detail += f" (not on the user's profile; available={avail})"
+            elif ("reservation" in kl or kl in {"reservation_id", "target", "res_id"}) and facts.get(
+                "reservation_ids"
+            ):
+                avail = facts["reservation_ids"]
+                if v not in avail:
+                    detail += f" (not among the user's reservations; held={avail})"
+            parts.append(detail)
+        return f"{gold_name}: agent used " + ", ".join(parts)
+
+    @classmethod
+    def _localize_communicate(cls, check: dict, meta: dict, facts: dict) -> str | None:
+        """Name a derivable un-stated value for a missed communicate check (gold-safe).
+
+        We only surface a concrete value the agent could have computed from its OWN
+        observed state (e.g. a total cost summed from the user's observed payment/
+        reservation data). The check's ``info`` text may embed the gold answer, so we
+        DO NOT echo it verbatim — we classify the topic and, when a total is derivable,
+        name the computed value. Returns None when nothing is safely derivable.
+        """
+        raw_info = str(check.get("info") or "")
+        info = raw_info.lower()
+        stated = cls._numbers_the_agent_stated(meta)
+
+        # A communicate check's `info` is frequently the REQUIRED VALUE ITSELF (tau2 airline
+        # stores e.g. "1628"), so it must never be echoed. But its SHAPE is safe to use, and
+        # it is the difference between an actionable message and the useless generic one:
+        # "you never said a figure" and "you said a figure and it was wrong" need different
+        # edits. Reporting the agent's OWN numbers back is gold-safe; the required value is
+        # never printed, and the only thing revealed is what the agent already knows it said.
+        required_is_a_number = bool(re.fullmatch(r"[0-9][0-9,]*(?:\.[0-9]{1,2})?", raw_info.strip()))
+        if required_is_a_number:
+            try:
+                want = float(raw_info.strip().replace(",", ""))
+            except ValueError:
+                want = None
+            # Truncating this list is not cosmetic: an optimiser that has already stated the
+            # right figure reads a 5-item excerpt as "it is not in there" and goes on guessing.
+            # Show them all, and say how many, so absence is absence.
+            shown = ", ".join(f"{v:,.2f}" for v in stated[:40])
+            if len(stated) > 40:
+                shown += f" (+{len(stated) - 40} more)"
+            shown = f"{len(stated)} distinct figures: {shown}"
+            if want is not None and any(abs(v - want) < 0.005 for v in stated):
+                return ("stated the required figure but the check still did not match it — a "
+                        "FORMATTING problem, not an arithmetic one. State the number plainly "
+                        "in its own sentence (digits, standard thousands separator, no ranges "
+                        "or approximations around it) rather than embedded in a table or list.")
+            if stated:
+                return ("a specific required figure was never stated. You DID state "
+                        f"{shown} — so the miss is in the ARITHMETIC or in WHICH ITEMS you "
+                        "included, not in whether you spoke. Re-check the scope: which "
+                        "reservations/segments belong in this figure, and justify every "
+                        "exclusion against what the user asked for.")
+            return ("a specific required figure was never stated. Compute it from the amounts "
+                    "you already observed and state it plainly in its own sentence.")
+
+        if "total" in info and ("cost" in info or "price" in info or "$" in info):
+            # NOTE: this used to call a `_derive_total_cost` helper that does not exist on
+            # this class. The AttributeError was swallowed by the caller's bare `except`, so
+            # EVERY failed total-cost check degraded to the generic "1 required piece(s) of
+            # information were not clearly communicated" — the least actionable string in the
+            # signal. Never let a feedback helper fail silently.
+            derive = getattr(cls, "_derive_total_cost", None)
+            total = derive(meta) if callable(derive) else None
+            if stated:
+                shown = ", ".join(f"${v:,.2f}" for v in stated[:40])
+                return ("stated a total that did not match the required value. You DID state "
+                        f"a computed figure ({shown}) — the miss is in the ARITHMETIC or in "
+                        "which items you included, not in whether you spoke.")
+            if total is not None:
+                return ("did not state the computed total cost (derivable from your own "
+                        f"observed amounts: ${total:.2f})")
+            return ("did not state the computed total cost (sum the amounts you already "
+                    "observed and state it)")
+        return None
 
     def apply(self, candidate_dir, edits=None) -> None:
         """Make candidate_dir the live airline capability (policy + tools)."""

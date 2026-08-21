@@ -155,4 +155,64 @@ def llm_kwargs() -> dict[str, Any]:
     max_tokens = os.environ.get("MAX_TOKENS")
     if max_tokens:
         kwargs["max_tokens"] = int(max_tokens)
+    effort = os.environ.get("REASONING_EFFORT", "").strip().lower()
+    if effort and effort not in ("default", "model", "none"):
+        _set_effort(kwargs, effort)
     return kwargs
+
+
+def _set_effort(kwargs: dict[str, Any], effort: str) -> None:
+    """Set reasoning_effort so it actually REACHES the provider.
+
+    litellm validates parameters against its own per-model registry, and an OpenAI-compatible
+    gateway serving a model it does not know (here ``openai/aws/gpt-oss-120b``) fails the
+    check client-side with ``UnsupportedParamsError`` — the request never leaves the process.
+    That is why a run can "set reasoning_effort" and change nothing: passing the kwarg alone
+    raises, and dropping it via ``litellm.drop_params`` silently discards it.
+
+    ``allowed_openai_params`` is the documented escape hatch and is MEASURED to work on this
+    gateway: reasoning tokens 3 / 91 / 327 for low / provider-default / high on an identical
+    prompt. The provider default is NOT "medium" — omitting the parameter gives 91 reasoning
+    tokens, between low and high, so "default" is its own distinct setting and the comparison
+    to make is always against omission, never against ``medium``.
+
+    Note the gpt-oss "harmony" convention of declaring ``Reasoning: high`` in a system message
+    does NOT work through this gateway (91 -> 107 reasoning tokens, i.e. noise); only the
+    request parameter does.
+    """
+    kwargs["reasoning_effort"] = effort
+    allowed = list(kwargs.get("allowed_openai_params") or [])
+    if "reasoning_effort" not in allowed:
+        allowed.append("reasoning_effort")
+    kwargs["allowed_openai_params"] = allowed
+
+
+def llm_kwargs_for(role: str) -> dict[str, Any]:
+    """``llm_kwargs()`` with a per-ROLE reasoning_effort override.
+
+    tau2-bench drives two LLMs per rollout: the AGENT under test, and the USER SIMULATOR
+    that plays the customer. They are scored asymmetrically — only the agent's actions and
+    messages are graded — but a run that hands both the same kwargs cannot tell you which
+    one the setting helped. Worse, the simulator's own competence is part of the
+    ENVIRONMENT: when it terminates a conversation early or invents a detail, the agent
+    loses reward for a fault that is not the agent's.
+
+    So the two are configurable independently:
+
+        AGENT_REASONING_EFFORT=high  USER_REASONING_EFFORT=default
+
+    Each falls back to ``REASONING_EFFORT``, then to the provider default (no override
+    sent at all). Any change here is a disclosed configuration change and must be
+    reported next to the number it produced — an agent read at high effort is NOT
+    comparable to one read at the provider default.
+    """
+    kwargs = llm_kwargs()
+    key = {"agent": "AGENT_REASONING_EFFORT", "user": "USER_REASONING_EFFORT"}[role]
+    raw = os.environ.get(key, "").strip().lower()
+    if raw:
+        if raw in ("default", "model", "none"):
+            kwargs.pop("reasoning_effort", None)
+        else:
+            _set_effort(kwargs, raw)
+    return kwargs
+
