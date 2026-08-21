@@ -2255,7 +2255,13 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
     Seal-on-success: we compute + persist the test result(s) FIRST and only then
     ``commit_test`` to burn the seal, so a crash mid-scoring leaves the seal unused
     and a retry can still score test once.
+
+    That retry allowance has one blind spot, which ``begin_test_attempt`` closes: it cannot tell a
+    crash BEFORE test was scored from a crash AFTER. Once test rollouts exist the held-out set has
+    been observed, so a retry would make the headline a second look — refused here, before anything
+    is spent, unless deliberately overridden.
     """
+    run_dir.begin_test_attempt()
     result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
                                 n_trials=n_trials, ks=ks, tag="FINAL")
     payload = {"test": result.to_dict(), "best_id": run_dir.best_id}

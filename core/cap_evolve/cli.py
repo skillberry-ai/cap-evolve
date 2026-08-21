@@ -1318,8 +1318,18 @@ def _doctor_checks(project: Path) -> list[dict]:
 
     opt = str(spec.get("optimizer_skill") or "")
     row = _optimizer_row(opt, skills_dir)
+    # Distinguish "the registry has no such name" from "there is no registry" — they have
+    # OPPOSITE fixes, and conflating them tells the user to edit a spec that is already correct.
+    reg_path = (Path(skills_dir) / "optimizers" / "registry.yaml") if skills_dir else None
+    reg_missing = reg_path is None or not reg_path.exists()
     if opt == "mock":
         add("optimizer", "ok", "mock (deterministic, zero-API)")
+    elif reg_missing:
+        where = str(reg_path) if reg_path else "(no skills dir)"
+        add("optimizer", "warn",
+            f"cannot verify {opt or '(unset)'}: no optimizer registry at {where}",
+            "bash install.sh   # or set CAPEVOLVE_SKILLS_DIR to a tree that has "
+            "optimizers/registry.yaml")
     elif not row:
         add("optimizer", "warn", f"{opt or '(unset)'} is not in optimizers/registry.yaml",
             "cap-evolve algorithms   # then pick a registered optimizer_skill")
@@ -1333,6 +1343,13 @@ def _doctor_checks(project: Path) -> list[dict]:
         else:
             add("optimizer", "ok", f"{opt} ({binary or 'in-process'})")
         keys = [k.strip() for k in str(row.get("env_keys") or "").split(",") if k.strip()]
+        # In agent mode the coding agent IS the optimizer and no optimizer process is spawned, so
+        # its credentials are irrelevant. Warning about them there sends the user to configure a
+        # key that will never be read, and a readiness check that cries wolf gets skimmed.
+        if str(spec.get("orchestration_mode") or "").strip() == "agent":
+            add("credentials", "ok",
+                "not required: orchestration_mode agent (the driving agent is the optimizer)")
+            keys = []
         if keys:
             present = [k for k in keys if os.environ.get(k)]
             if present:

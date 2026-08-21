@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .splits import Splits
+from .splits import Splits, TestSealError
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -154,6 +154,17 @@ class Spent:
                    float(d.get("optimizer_usd") or 0.0), int(d.get("optimizer_tokens") or 0),
                    float(d.get("intake_usd") or 0.0), int(d.get("intake_tokens") or 0),
                    float(d.get("intake_seconds") or 0.0))
+
+
+def _allow_test_rescore() -> bool:
+    """Deliberate, disclosed override for the re-score guard in ``reserve_test``.
+
+    Deliberately an env var and not a quiet default: the guard exists to stop a retry loop from
+    turning the held-out split into a selection surface, and anyone bypassing it should have to say
+    so somewhere a reader of the run can see.
+    """
+    return str(os.environ.get("CAPEVOLVE_ALLOW_TEST_RESCORE", "")).strip().lower() in {
+        "1", "true", "yes", "on"}
 
 
 class RunDir:
@@ -356,6 +367,36 @@ class RunDir:
         splits = self.read_splits()
         splits.check_test_unused()  # raises TestSealError if already used
         return splits
+
+    def begin_test_attempt(self) -> None:
+        """Refuse a SECOND finalize attempt once test rollouts already exist.
+
+        Seal-on-success (``reserve_test`` + ``commit_test``) deliberately lets a finalize that
+        crashes mid-scoring be retried, so a transient failure does not destroy the run's headline
+        number. It cannot, however, tell "crashed BEFORE scoring test" from "crashed AFTER scoring
+        test but before commit" -- and in the second case the held-out set has already been
+        observed. Observed in a real run: a finalize killed by a foreground timeout had already
+        scored test, the retry scored it again, and the reported number was the second look.
+
+        Called ONCE per finalize attempt, not per evaluation: one honest finalize scores test twice
+        by design (the best as ``FINAL`` and the baseline as ``FINAL_seed``), so putting this check
+        in ``reserve_test`` would reject the normal flow.
+        """
+        splits = self.read_splits()
+        splits.check_test_unused()
+        spent = sorted((self.rollouts / "test").glob("*.json")) if self.rollouts.exists() else []
+        if spent and not _allow_test_rescore():
+            raise TestSealError(
+                f"TEST split was already SCORED by an earlier finalize attempt in this run "
+                f"({len(spent)} test rollout(s) under {self.rollouts / 'test'}) even though the "
+                "seal was never committed - a finalize that dies after scoring but before writing "
+                "leaves exactly this state. The held-out set has been observed, so re-scoring it "
+                "would make the headline number a SECOND look at test.\n"
+                "  * To report what the earlier attempt computed, read those rollouts instead of "
+                "re-running.\n"
+                "  * To override deliberately, set CAPEVOLVE_ALLOW_TEST_RESCORE=1 - it is recorded "
+                "in the run so the disclosure survives into the report."
+            )
 
     def commit_test(self) -> Splits:
         """Burn the seal (flip + persist). Call ONLY after test is scored+written."""

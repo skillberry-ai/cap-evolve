@@ -11,7 +11,7 @@ dist/
 venv/
 
 # local E2E scratch (venvs, benchmark clones, run artifacts, .env credentials)
-e2e/
+/e2e/
 
 # cap-evolve run state (per-run, not source). Globbed, because a run driven against an
 # alternate project dir lands in a sibling like .capevolve-agentopt/ — which is 12M of
