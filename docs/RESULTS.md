@@ -1984,7 +1984,7 @@ it is unmeasurable under tau2's replay.
 One conflict during assembly was **my own doing**: the literal-cleanup regex had edited a
 `payment_id` docstring line in two branches, producing a false conflict between collateral edits.
 `funcmerge` refused to write rather than union it — the behaviour that was missing when an earlier
-round shipped an unparseable file — and reverting `c_searchdate` to its minimal one-line change
+round shipped an unparsable file — and reverting `c_searchdate` to its minimal one-line change
 cleared it.
 
 ### Integrity: three audit false-positive classes fixed
