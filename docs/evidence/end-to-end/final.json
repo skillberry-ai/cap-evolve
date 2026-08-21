@@ -1,0 +1,41 @@
+{
+ "test": {
+  "split": "test",
+  "reward": 1.0,
+  "stderr": 0.0,
+  "pass_k": {
+   "1": 1.0,
+   "2": 1.0
+  },
+  "pass_at_k": {
+   "1": 1.0,
+   "2": 1.0
+  },
+  "cost_usd": 0.0019346999999999997,
+  "tokens": 8998,
+  "seconds": 30.612318992614746,
+  "n_tasks": 12,
+  "n_scored": 12
+ },
+ "best_id": "cand_contract",
+ "test_baseline": {
+  "split": "test",
+  "reward": 0.0,
+  "stderr": 0.0,
+  "pass_k": {
+   "1": 0.0,
+   "2": 0.0
+  },
+  "pass_at_k": {
+   "1": 0.0,
+   "2": 0.0
+  },
+  "cost_usd": 0.0030206999999999994,
+  "tokens": 8081,
+  "seconds": 60.4970281124115,
+  "n_tasks": 12,
+  "n_scored": 12
+ },
+ "baseline_id": "seed",
+ "test_delta": 1.0
+}
