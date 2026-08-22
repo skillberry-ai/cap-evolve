@@ -32,8 +32,10 @@ stays in the loop and can steer or halt at any round. A Stop hook re-nudges the 
 driving across turns until the run is finalized.
 
 Every algorithm has an Agent-mode loop, so `hill-climb` / `gepa` / `skillopt` can all be driven
-by the agent. Two algorithms are built for this mode and run *only* here: **`agent-optimize`**
-(free-form, below) and **`evograph`** (collaborative weakness-graph search).
+by the agent. One algorithm is built for this mode and runs *only* here: **`agent-optimize`**
+(free-form, below). A second, `evograph`, is **deprecated** — it fanned the same per-cluster work
+out but accepted merges on a self-reported train delta instead of the val significance gate, so
+`agent-optimize` supersedes it.
 
 ### `agent-optimize` — the fully-agentic, free-form algorithm
 

@@ -107,7 +107,7 @@ above is checkable rather than remembered.
 | orchestrate | `orchestrate` · `using-cap-evolve` |
 | phases | `intake` · `implement-and-check` · `baseline` · `evaluate` · `diagnose` · `gate` · `finalize` · `report` |
 | capabilities | `system-prompt` · `skill-package` · `tools` · `mcp-tool` |
-| algorithms | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` · `agent-optimize` (agent mode only) · `evograph` (agent mode only) |
+| algorithms | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` · `agent-optimize` (agent mode only) · ~~`evograph`~~ (deprecated — use `agent-optimize`) |
 | optimizers | `run-optimizer` + `optimizers/registry.yaml` (14 backends incl. `mock`) |
 
 **Claude Code plugin:** `claude --plugin-dir ./plugins/cap-evolve` exposes every skill as

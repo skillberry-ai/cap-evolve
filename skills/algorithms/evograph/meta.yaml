@@ -1,6 +1,6 @@
 component: algorithm
 name: evograph
-summary: evo-graph as a cap-evolve algorithm (AGENT MODE ONLY) — a collaborative weakness-graph optimizer that clusters train failures into a shared markdown wiki, dispatches one solver per weakness in its own worktree scoped to that weakness's frozen affected_tasks, merges verified improvements, reverts a whole round on regression, and seals the test once via finalize. Writes a run-dir wiki + custom_view.json so its weakness-graph dashboard tab renders.
+summary: DEPRECATED (agent mode only) — the evo-graph weakness-graph algorithm. Do not select it for new runs: its one-solver-per-weakness fan-out is agent-optimize's sibling fan-out done behind the val significance gate evograph never applied, and its clustering, rejected-edit memory and stop-condition handling live in agent-optimize + phases/diagnose. Kept so an existing evograph run dir stays readable and the run-dir wiki/ format the dashboard's Weakness-graph tab reads still has an owner. Use agent-optimize (agent mode) or hill-climb | gepa | skillopt (deterministic).
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

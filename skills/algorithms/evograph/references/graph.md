@@ -9,8 +9,8 @@ EvoGraph keeps two mutually-linked graphs under `<run_dir>/wiki/`:
   weakness's RSM.
 
 Every solution `[[wikilink]]`s back to its weakness; every weakness lists its solutions. The
-dashboard graph shows **weaknesses only** (connected by their `related` links — see
-[clustering.md](clustering.md)); solutions appear inside a weakness's detail panel.
+dashboard graph shows **weaknesses only** (connected by their `related` links, declared in the
+weakness node's front matter); solutions appear inside a weakness's detail panel.
 
 ## Absolute wiki path (most important rule)
 
@@ -41,8 +41,7 @@ this weakness, made in round 2.
   `git diff <weakness-branch-base>..<solution-HEAD>`. Snapshotting here keeps the UI's diff stable
   even after later commits land on the weakness branch.
 
-Example `solution.md` (front-matter + body) — this is a **solution** file, not the weakness node
-(the weakness `<slug>.md` schema lives in [clustering.md](clustering.md)):
+Example `solution.md` (front-matter + body) — this is a **solution** file, not the weakness node:
 
 ```markdown
 ---
@@ -93,7 +92,7 @@ finalize `outcome` + metrics + `new_record` after the verified re-eval.
 
 The graph's **edges live on the weakness node, not on the solution.** Each
 `wiki/weaknesses/<slug>.md` lists `related:` neighbors (`slug` + `why`) — those are exactly the
-edges the dashboard draws (schema in [clustering.md](clustering.md)). A solution file only links
+edges the dashboard draws. A solution file only links
 *up* to its own weakness via `weakness: [[…]]`.
 
 A weakness's `related` neighbors are the fix's **blast radius — stay aware of them, don't re-run

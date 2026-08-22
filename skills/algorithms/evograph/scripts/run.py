@@ -1,14 +1,17 @@
-"""evograph — AGENT MODE ONLY entry.
+"""evograph — DEPRECATED, and never had a deterministic engine.
 
-evograph has no deterministic engine: its weakness-graph loop is driven by the
-coding agent (see SKILL.md). Under ``orchestration_mode: agent`` cap-evolve runs
-intake → check → baseline and then HANDS OFF to the agent (see cli.py), so this
-run.py is never invoked for a real evograph run.
+evograph is deprecated (see SKILL.md): use ``agent-optimize`` for agent-mode search,
+or ``hill-climb`` / ``gepa`` / ``skillopt`` for a deterministic loop.
+
+It also never had a deterministic engine — its weakness-graph loop was agent-driven,
+so under ``orchestration_mode: agent`` cap-evolve ran intake → check → baseline and
+then HANDED OFF to the agent (see cli.py); this run.py was never invoked for a real
+evograph run.
 
 If it IS invoked — i.e. someone selected ``algorithm_skill: evograph`` with
 ``orchestration_mode: deterministic`` — fail loudly with a clear directive rather
 than pretending to run a deterministic loop. This keeps the honesty contract
-explicit: there is no fake deterministic evograph.
+explicit: there is no fake deterministic evograph, and now no reason to want one.
 """
 
 from __future__ import annotations
@@ -38,12 +41,13 @@ def main(argv=None) -> int:
 
     print(json.dumps({
         "algorithm": ALGO,
-        "error": "evograph is agent-mode only",
+        "error": "evograph is agent-mode only, and is DEPRECATED",
         "detail": (
-            "evograph has no deterministic engine. Set `orchestration_mode: agent` in "
-            "capevolve.yaml and run it agent-driven: cap-evolve does intake/check/baseline "
-            "then hands the loop to the coding agent, which follows this skill's "
-            "'Step 2 — Round loop' and seals with `cap-evolve finalize`."
+            "evograph has no deterministic engine and is deprecated. Set "
+            "`algorithm_skill: agent-optimize` (with `orchestration_mode: agent`) for the "
+            "same per-cluster fan-out behind the val significance gate, or "
+            "`hill-climb` | `gepa` | `skillopt` for a deterministic loop. See "
+            "skills/algorithms/evograph/SKILL.md for why."
         ),
     }))
     return 2

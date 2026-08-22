@@ -60,12 +60,15 @@ is rendered in its **own Final-test panel**, not plotted on the rounds line — 
 
 Front-matter drives the graph: `slug, status (open|in-progress|completed|solved|reverted), tags,
 discovered_in_round, attacked_in_rounds, solved_in_round, reverted_in_rounds, branch,
-affected_tasks, solutions`. Schema + example: [clustering.md](clustering.md).
+affected_tasks, solutions, related`. Each `related` entry is a `slug` + a one-line `why` — those
+are the graph's edges. `status` is one of `open | in-progress | completed | solved | reverted`, and
+`affected_tasks` is frozen after the weakness's discovery round.
 
 ### Solutions → `wiki/solutions/<weakness-slug>/<sol-id>/{solution.md,changes.diff}`
 
 Front-matter drives the solution cards (`outcome, primary_metric, secondary_metrics, new_record,
-timestamp, …`) and `changes.diff` drives the diff tabs. Schema: [graph.md](graph.md).
+timestamp, weakness, round, attempt_index, branch, tags`) and `changes.diff` drives the diff tabs.
+The `sol-id` is `r<N>-h<M>`: round N, hypothesis M for that weakness.
 
 ### Live progress → `runs/round-<N>/agents/<weakness-slug>.log`
 
@@ -89,5 +92,5 @@ same clock as `scripts/now.py`.
 ## What this buys the agents
 
 No registration, no build step, no API client. Write a markdown file or append a log line and the
-user sees it. The wiki stays the single source of truth (see
-[the SKILL.md honesty rules](../SKILL.md)).
+user sees it. The wiki stays the single source of truth for what an
+evograph run recorded — but see SKILL.md: its per-weakness numbers were never val-gated.
