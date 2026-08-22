@@ -44,9 +44,6 @@
   the skill executes; code is repeatable where prose is only likely.
 - **Not stating execute-vs-read intent.** → The agent doesn't know whether to run
   the script (output-only token cost) or read it as reference. Say which.
-
-## Process
-- **Selecting an edit on the iteration examples.** → That is overfitting. Keep an
-  edit only if it raises the objective on a held-out split and clears the gate.
-- **Multiple edits at once.** → You can't attribute the score change. Make ONE
-  targeted edit per iteration, then re-measure.
+- **A stub script** (docstring / `...` / `pass` only) or one with no `--self-check`.
+  → Nothing proves it runs, so the "deterministic" step silently isn't. Write real
+  code with a self-check `validate()` can execute.

@@ -29,16 +29,30 @@ applies to the current task. It must:
   for ALL-CAPS — `CRITICAL`/`ALWAYS`/`MUST` *increase* over-triggering on current
   models.
 
-## Selecting a description honestly (don't overfit)
-1. Assemble a held-out set: **should-trigger** prompts and **should-NOT-trigger**
-   prompts, the latter including **near-miss negatives** (prompts that look close
-   but must not fire).
-2. Propose candidate descriptions.
-3. Measure trigger-rate on the held-out set (and downstream task success on the
-   objective).
-4. **Keep the candidate that scores best on the held-out set**, not on the
-   iteration examples. (skill-creator splits its eval queries and selects by the
-   held-out/test score — the same train/val/test discipline cap-evolve enforces.)
+## Selecting a description honestly — run the loop, don't eyeball it
+A trigger decision is stochastic, so one sample per query is noise and hand-judging
+drifts between candidates. `scripts/trigger_eval.py` makes it deterministic:
+
+```bash
+python scripts/trigger_eval.py --eval-set trigger_eval.json --skill <skill_dir> \
+    --judge-cmd '<a shell command that answers YES/NO on stdout>' \
+    --description "<candidate description>" --trials 3
+# -> {"train_score": .., "heldout_score": .., "per_query": [..], "select_on": "heldout_score"}
+```
+
+1. Write ~20 realistic queries — 8-10 **should-trigger** (varied phrasing, including
+   cases where the user never names the skill) and 8-10 **should-NOT-trigger**, whose
+   value is in the **near-misses**: same keywords, different actual need. An obviously
+   irrelevant negative tests nothing. Save as
+   `[{"query": "...", "should_trigger": true}, ...]`.
+2. The script splits 60/40 by seed and runs each query `--trials 3` times, so the
+   score is a rate rather than a coin flip.
+3. Propose candidate descriptions and re-score each one with `--description`.
+4. **Keep the candidate with the best `heldout_score`** — never the train score. Same
+   discipline as cap-evolve's val/test seal, for the same reason.
+
+Queries must be substantive: a trivial one-step request ("read file X") won't trigger
+any skill regardless of description quality, so it measures nothing.
 
 Caveat: **trivial single-step tasks may not trigger any skill** regardless of
 wording — don't chase those as triggering failures.

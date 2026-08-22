@@ -1,0 +1,25 @@
+# toy_skill run spec — capability = a skill package, optimizer = mock (zero-API).
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [edit]
+
+optimizer_skill: mock
+optimizer_model: ""
+
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+
+dataset_source: adapter
+split_seed: 0
+split_train: 0.4
+split_val: 0.3
+split_test: 0.3
+
+num_trials: 1
+gate_mode: paired
+gate_k_se: 1.0
+
+max_iterations: 2
+stall: 2
+store: git
