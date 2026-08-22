@@ -299,3 +299,68 @@ def test_accepted_candidate_snapshot_is_capability_only(tmp_path):
         names = {p.name for p in cand.iterdir()}
         assert not names & set(harness._SNAPSHOT_IGNORE), f"{cand.name} dirty: {sorted(names)}"
         assert "PROCESS.md" in names, f"{cand.name} lost its explainability record"
+
+
+def test_cache_hit_carries_output_trace_for_reflection(tmp_path):
+    """issue #111 — a cache HIT must yield the same reflective material as a MISS.
+
+    Populates the eval cache with a first (all-miss) minibatch, then re-runs the
+    identical candidate so every task is served from cache, and asserts the replayed
+    ``raw`` still carries output/trace — and that ``REFLECTION.md`` built from it is
+    not hollow. Also pins the second symptom: a cached infra-errored failure must stay
+    in the "Ignore — infra errors" bucket, not become an actionable capability defect.
+    """
+    from cap_evolve import Budget, CapabilityAdapter, EvalCache, Rollout, RunDir, Score, Task
+    from cap_evolve import gepa, harness
+
+    class _A(CapabilityAdapter):
+        def tasks(self, split):  # noqa: ARG002
+            return [Task(id=f"t{i}", input=f"in{i}", target="ok") for i in range(3)] + [
+                Task(id="boom", input="in3", target="ok")]
+
+        def run_target(self, task, ctx, *, seed=0):  # noqa: ARG002
+            if task.id == "boom":
+                return Rollout(task_id=task.id, error="runner exploded")
+            return Rollout(task_id=task.id, output=f"WRONG-{task.id}",
+                           trace=f"step1 read {task.input}; step2 guessed")
+
+        def score(self, task, rollout):
+            return Score(task_id=task.id, reward=0.0, feedback=f"expected ok for {task.id}",
+                         trial_rewards=[0.0])
+
+        def materialize(self, candidate_dir, edits=None):  # noqa: ARG002
+            return None
+
+    adapter = _A()
+    cand = tmp_path / "cand"
+    cand.mkdir()
+    (cand / "prompt.txt").write_text("v1", encoding="utf-8")
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="c1", budget=Budget(max_iterations=2))
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    cache = EvalCache(run_dir.root / "eval_cache.json")
+    ids = [t.id for t in adapter.tasks("all")]
+
+    gepa._eval_minibatch(adapter, cand, ids, run_dir=run_dir, cache=cache,
+                         tag="mb_miss", seed=0, workers=1)
+    assert len(cache) == len(ids)
+
+    hit = gepa._eval_minibatch(adapter, cand, ids, run_dir=run_dir, cache=cache,
+                               tag="mb_hit", seed=0, workers=1)
+    hit_raw = {pt["task_id"]: (pt.get("raw") or {}) for pt in hit.per_task}
+    assert all(r.get("cached") for r in hit_raw.values()), "expected an all-hit minibatch"
+    for tid in ("t0", "t1", "t2"):
+        assert hit_raw[tid].get("output"), f"cache hit for {tid} lost the agent output"
+        assert hit_raw[tid].get("trace"), f"cache hit for {tid} lost the trace"
+        assert hit_raw[tid]["output"] == f"WRONG-{tid}"
+    # infra failures stay classified as infra failures across a hit
+    assert hit_raw["boom"].get("errored") is True
+
+    workdir = tmp_path / "wd"
+    workdir.mkdir()
+    gepa._write_reflection(workdir, hit)
+    md = (workdir / "REFLECTION.md").read_text(encoding="utf-8")
+    assert "- Agent output: WRONG-t0" in md, "reflective dataset is hollow on a cache hit"
+    assert "- Trajectory: step1 read in0" in md
+    assert "3 actionable failing task(s)" in md          # boom excluded
+    assert "failed with run/infra errors" in md and "boom" in md
+    assert "- Agent output: \n" not in md               # no empty output lines

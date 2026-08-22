@@ -162,9 +162,15 @@ def _eval_minibatch(
             if cached is not None:
                 reward = float(cached.get("reward", 0.0))
                 fb = str(cached.get("feedback", ""))
+                # Replay the reflective payload: without it a hit feeds
+                # _write_reflection an empty output/trace and misclassifies a cached
+                # infra failure as an actionable capability defect.
                 scores.append(Score(task_id=task.id, reward=reward, feedback=fb,
                                     n=1, stderr=0.0, trial_rewards=[reward],
-                                    raw={"cached": True}))
+                                    raw={"cached": True,
+                                         "errored": bool(cached.get("errored")),
+                                         "output": str(cached.get("output", "")),
+                                         "trace": str(cached.get("trace", ""))}))
                 continue
             rollout = (pooled.get(task.id) if pooled is not None
                        else adapter.run_target(task, ctx, seed=seed))
@@ -175,12 +181,12 @@ def _eval_minibatch(
             run_tokens += int(getattr(rollout, "tokens", 0) or 0)
             sc = adapter.score(task, rollout)
             n_called += 1
+            out_s = _short(getattr(rollout, "output", None))
+            trace_s = _short(getattr(rollout, "trace", None))
             scores.append(Score(
                 task_id=task.id, reward=sc.reward, feedback=sc.feedback or "",
                 n=1, stderr=0.0, trial_rewards=[sc.reward],
-                raw={"errored": errored,
-                     "output": _short(getattr(rollout, "output", None)),
-                     "trace": _short(getattr(rollout, "trace", None))},
+                raw={"errored": errored, "output": out_s, "trace": trace_s},
             ))
             (out_dir / f"{task.id}__{tag}__t0.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
@@ -188,7 +194,8 @@ def _eval_minibatch(
                 encoding="utf-8",
             )
             if cache is not None:
-                cache.put(chash, task.id, sc.reward, sc.feedback or "")
+                cache.put(chash, task.id, sc.reward, sc.feedback or "",
+                          output=out_s, trace=trace_s, errored=errored)
 
     elapsed = time.time() - t0
     # Count ONLY rollouts actually fired (cache hits cost nothing) toward budget.

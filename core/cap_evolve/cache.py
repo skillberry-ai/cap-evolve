@@ -1,12 +1,15 @@
 """Eval cache — skip a rollout when the same candidate was already scored on a task.
 
-Keyed by ``(hash of the candidate's editable files, task_id) -> {reward, feedback}``
+Keyed by ``(hash of the candidate's editable files, task_id) ->
+{reward, feedback, output, trace, errored}``
 and persisted in the run dir, so re-evaluating an identical candidate (e.g. a parent
 re-sampled in GEPA, or a resumed run) costs nothing. The hash is over file CONTENTS,
 so two byte-identical candidates share cache entries even under different ids.
 
 Honesty notes:
-  * The cache stores only the SCORE (reward + feedback), never gold answers.
+  * The cache stores the SCORE (reward + feedback) plus a bounded slice of the
+    agent's OWN output/trace (truncated by the caller, ~1.5KB each) so a hit yields
+    the same reflective material as a miss. Never gold answers.
   * It is keyed on candidate-file content, so an edit (even whitespace) busts the
     key — a stale score can never be served for changed files.
   * It is an optimization, not a source of truth: ``events.jsonl`` still records
@@ -63,8 +66,8 @@ def hash_candidate_dir(candidate_dir: Path) -> str:
 class EvalCache:
     """A tiny JSON-file eval cache living in the run dir.
 
-    ``get(candidate_hash, task_id)`` -> ``{"reward", "feedback"}`` or ``None``;
-    ``put(candidate_hash, task_id, reward, feedback)`` persists. Persistence is a
+    ``get(candidate_hash, task_id)`` -> the stored entry or ``None``;
+    ``put(...)`` persists. Persistence is a
     single JSON object ``{ "<hash>::<task_id>": {...} }`` rewritten on each put — fine
     for the run sizes here (a few thousand entries) and trivially portable.
     """
@@ -85,9 +88,15 @@ class EvalCache:
     def get(self, candidate_hash: str, task_id: str) -> dict | None:
         return self._data.get(self._key(candidate_hash, task_id))
 
-    def put(self, candidate_hash: str, task_id: str, reward: float, feedback: str = "") -> None:
+    def put(self, candidate_hash: str, task_id: str, reward: float, feedback: str = "",
+            output: str = "", trace: str = "", errored: bool = False) -> None:
+        # ponytail: callers pass output/trace ALREADY truncated (gepa._short, 1500 chars),
+        # so an entry stays ~3KB; _flush rewrites the whole file per put, which is fine at
+        # these run sizes. Add eviction only if a run's cache file ever gets unwieldy.
         self._data[self._key(candidate_hash, task_id)] = {
-            "reward": float(reward), "feedback": str(feedback or "")}
+            "reward": float(reward), "feedback": str(feedback or ""),
+            "output": str(output or ""), "trace": str(trace or ""),
+            "errored": bool(errored)}
         self._flush()
 
     def _flush(self) -> None:
