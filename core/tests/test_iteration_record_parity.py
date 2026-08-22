@@ -8,9 +8,14 @@ writing NO ``step`` event and NEVER reconciling the run-level ``JOURNAL.md`` —
 while the optimizer prompt told it to read them, and every handover entry its
 optimizer wrote was silently discarded by the next iteration's ``_seed_journal``.
 
-The fix is a shared seam, ``harness.record_iteration``, so this test is parametrized
-over EVERY algorithm: a sixth algorithm that ends its iteration without routing
-through the seam fails here rather than silently producing a partial record.
+The fix is a shared seam, ``harness.record_iteration``. This file checks it two ways:
+
+  * the parametrized tests run each algorithm that HAS a runnable loop today and assert
+    the record + journal it produces. They enumerate — a sixth algorithm is invisible to
+    them until someone adds it here, which is the same forgetting this PR exists to stop;
+  * ``test_exactly_one_place_charges_an_iteration`` closes that gap by asserting on the
+    SOURCE that only ``record_iteration`` charges an iteration at all. That one holds for
+    an algorithm nobody has written yet.
 
 Offline, deterministic, zero API — the mock optimizer skill over toy_calc.
 """
@@ -192,3 +197,54 @@ def test_no_consumer_is_left_empty(algorithm, tmp_path):
     assert "(no prior iterations yet)" not in runmap, f"{algorithm}: RUNMAP shows none"
     for s in steps:
         assert s["candidate"] in ledger, f"{algorithm}: {s['candidate']} missing from LEDGER"
+
+
+# --- the invariant itself, asserted on the SOURCE ---------------------------
+
+def _iteration_charge_sites():
+    """Every ``update_spent(iterations=...)`` call in the tree, as (file, line, enclosing
+    function). Parsed with ``ast`` — no import side effects, and it sees algorithms this
+    test file has never heard of, which a parametrized list of known algorithms cannot."""
+    import ast
+    roots = [REPO / "core" / "cap_evolve", REPO / "skills"]
+    sites = []
+    for root in roots:
+        for py in sorted(root.rglob("*.py")):
+            if "build/lib" in py.as_posix():  # stale build artifact
+                continue
+            tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(py))
+            # enclosing function for every node, resolved by walking down from each def
+            for fn in [n for n in ast.walk(tree)
+                       if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+                for node in ast.walk(fn):
+                    if (isinstance(node, ast.Call)
+                            and isinstance(node.func, ast.Attribute)
+                            and node.func.attr == "update_spent"
+                            and any(kw.arg == "iterations" for kw in node.keywords)):
+                        sites.append((py.relative_to(REPO).as_posix(), node.lineno, fn.name))
+    return sites
+
+
+def test_exactly_one_place_charges_an_iteration():
+    """The invariant behind this whole PR, enforced instead of asserted in prose.
+
+    An algorithm becomes visible to LEDGER/RUNMAP/JOURNAL/the dashboard only by routing
+    through ``harness.record_iteration``. The only way to make that unforgettable is to
+    make charging an iteration and recording it the SAME call — so there must be exactly
+    one ``update_spent(iterations=...)`` call site in the tree, inside
+    ``record_iteration``.
+
+    Unlike the parametrized tests above (which can only cover algorithms someone
+    remembered to list), this holds for an algorithm that does not exist yet: add a sixth
+    loop that charges its own iterations and this fails, naming the file and line.
+    """
+    sites = _iteration_charge_sites()
+    assert len(sites) == 1, (
+        "an iteration must be charged in exactly ONE place — "
+        "harness.record_iteration, which also writes the `step` record and reconciles "
+        f"JOURNAL.md. Found {len(sites)}: {sites}. If one of these is a new algorithm's "
+        "loop, call harness.record_iteration instead of update_spent(iterations=...)."
+    )
+    path, _line, func = sites[0]
+    assert path == "core/cap_evolve/harness.py", f"unexpected charge site: {path}"
+    assert func == "record_iteration", f"charge site moved out of the seam into {func}()"
