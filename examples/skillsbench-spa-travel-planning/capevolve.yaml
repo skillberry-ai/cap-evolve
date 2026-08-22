@@ -1,0 +1,44 @@
+# cap-evolve run spec — optimize travel-planning skills via SPA.
+# Single-task setup: OpenHands → SPA → Skillberry Store + real LLM.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]            # the 6 travel-planning skills
+capability_path: seed_capability         # dir holding the 6 skill sub-packages
+actions: [edit]
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 100
+optimizer_usd_per_iter: 20.0
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 1.0
+split_val: 1.0
+split_test: 1.0
+split_ids_file: split_ids.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 5
+stall: 0
+max_metric_calls: 0
+max_usd: 200.0
+max_optimizer_usd: 100.0
+
+# --- iteration store --------------------------------------------------------
+store: git
