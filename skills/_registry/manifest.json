@@ -82,7 +82,7 @@
     "hill-climb": {
       "component": "algorithm",
       "path": "algorithms/hill-climb",
-      "summary": "Global hill-climb on the val gate with a selectable focus schedule (--focus all|cyclic|hardest-first); parent is always the current best.",
+      "summary": "Global hill-climb on the val gate with a selectable focus schedule (--focus all|cyclic|hardest-first) over the val tasks; parent is always the current best.",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",

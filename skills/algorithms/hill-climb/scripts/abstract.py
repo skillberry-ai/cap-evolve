@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 # A focus schedule is the only "policy" this algorithm carries; the default is
-# "all" (propose against the whole train set each iteration).
+# "all" (propose against every failing val task each iteration).
 DEFAULT_POLICY = {"focus": "all"}
 
 
