@@ -5,5 +5,7 @@ authors:
   - name: "cap-evolve contributors"
 version: 0.1.0
 license: Apache-2.0
-date-released: 2026-06-14
+# Convention: date-released is the GitHub release's publishedAt (same date as the
+# `## [x.y.z]` heading in CHANGELOG.md), not the tag-commit date.
+date-released: 2026-07-27
 repository-code: "https://github.com/skillberry-ai/cap-evolve"

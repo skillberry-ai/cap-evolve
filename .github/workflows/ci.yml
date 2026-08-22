@@ -4,8 +4,9 @@
 #
 # PURPOSE:
 # Runs parallel jobs on every push to main and every pull request:
-#   1. test-python     — installs cap-evolve-core[dev] and runs pytest on core/tests/
-#   2. build-dashboard — installs dashboard/frontend dependencies and runs npm build
+#   1. test-python     — installs cap-evolve-core[dev] and capevolve-dashboard[dev], then
+#                        runs pytest on core/tests/ and dashboard/backend/tests/
+#   2. build-dashboard — installs dashboard/frontend dependencies, runs npm build + vitest
 #   3. toy-example     — runs the zero-API toy_calc example and asserts test_reward 1.0
 #   4. docs-links      — checks relative links/images in Markdown resolve (offline)
 #   5. spellcheck      — codespell over README + docs
@@ -23,7 +24,7 @@ on:
 
 jobs:
   test-python:
-    name: Test Python (core)
+    name: Test Python (core + dashboard backend)
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +41,12 @@ jobs:
 
       - name: Run pytest
         run: python -m pytest core/tests -q
+
+      - name: Install dashboard backend with dev extras
+        run: pip install -e "./dashboard/backend[dev]"
+
+      - name: Run pytest (dashboard backend)
+        run: python -m pytest dashboard/backend/tests -q
 
   build-dashboard:
     name: Build Dashboard (frontend)
