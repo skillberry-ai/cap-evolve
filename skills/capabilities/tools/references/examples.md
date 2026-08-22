@@ -4,22 +4,6 @@ Each example is an edit you would emit to `apply()`. Edit shape:
 `{"tool": <name>, "kind": <action>, "value": <...>}`. For `add`/`compose` the
 value is a full tool def; for `remove` the value is ignored.
 
-**Ordered by leverage.** The DEFAULT, most common edit is §0 — editing the BODY of
-an EXISTING tool to convert a violated prose rule into an in-body check. The other
-PRIMARY edits are the code-bearing tools in §3b (workflow/loop) and §3c
-(validation/rule-enforcement) — a deterministic body beats a prompt sentence. Reach
-for the description/schema edits (§1, §2) *after* asking "can this rule be code in
-the existing body instead?" A passthrough / reasoning-only tool (§7) is the
-SECONDARY, last-resort form — prose in a tool's costume.
-
-**First-class failure→fix patterns** (diagnose for these first): a wrong ARGUMENT the
-tool could validate → resolve/validate against state, return `available=[...]`
-(§3c-ter); a required eligible action abandoned via bail-out / transfer-to-human →
-encapsulate the batch as a COMPOSITE WRITE (§3c-quater, §3e); a recoverable error that
-strands the agent → an enriched RETURN that names what's wrong + the valid options +
-the next action (§3f). Always VERIFY the fix fires on the exact failing-trace
-arguments before shipping it.
-
 ## Contents
 - [0. Turning N prose rules into N in-body checks (the DEFAULT edit)](#0-turning-n-prose-rules-into-n-in-body-checks-the-default-edit)
 - [1. Selection fix — sharpen a vague description](#1-selection-fix--sharpen-a-vague-description)
@@ -38,6 +22,22 @@ arguments before shipping it.
 - [5. Behavior bug — code edit](#5-behavior-bug--code-edit)
 - [6. A policy refusal (what tightening looks like)](#6-a-policy-refusal-what-tightening-looks-like)
 - [7. SECONDARY (last resort) — a passthrough / reasoning-only tool](#7-secondary-last-resort--a-passthrough--reasoning-only-tool)
+
+**Ordered by leverage.** The DEFAULT, most common edit is §0 — editing the BODY of
+an EXISTING tool to convert a violated prose rule into an in-body check. The other
+PRIMARY edits are the code-bearing tools in §3b (workflow/loop) and §3c
+(validation/rule-enforcement) — a deterministic body beats a prompt sentence. Reach
+for the description/schema edits (§1, §2) *after* asking "can this rule be code in
+the existing body instead?" A passthrough / reasoning-only tool (§7) is the
+SECONDARY, last-resort form — prose in a tool's costume.
+
+**First-class failure→fix patterns** (diagnose for these first): a wrong ARGUMENT the
+tool could validate → resolve/validate against state, return `available=[...]`
+(§3c-ter); a required eligible action abandoned via bail-out / transfer-to-human →
+encapsulate the batch as a COMPOSITE WRITE (§3c-quater, §3e); a recoverable error that
+strands the agent → an enriched RETURN that names what's wrong + the valid options +
+the next action (§3f). Always VERIFY the fix fires on the exact failing-trace
+arguments before shipping it.
 
 ## 0. Turning N prose rules into N in-body checks (the DEFAULT edit)
 

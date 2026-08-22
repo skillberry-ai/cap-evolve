@@ -58,26 +58,21 @@ code in the existing body instead?"
    SEVERAL existing tools per iteration — one per violated rule. A deterministic guard
    beats a sentence in a prompt: prose makes the model *more likely* to comply, code
    makes the right behavior the only thing that can happen.
-2. **Add a composite atomic-WRITE tool — the fix for a behavioral STALL.** When the
-   agent analyzes, explains, even confirms the action, then never issues the write call
-   and stops, *more prose does not fix it* — you cannot instruct a model out of a
-   behavior it already agreed to and skipped. Encapsulate the ENTIRE multi-step action
-   in one tool whose body performs all the steps in order via the existing primitives,
-   then **`remove` the raw primitives** so the action is un-skippable. *Ex:*
-   `apply_change_plan(record_id, steps)` validates → applies each → returns final state
-   as one call. This is the *correct* fix even though a write primitive already exists,
-   because the primitive is exactly what the agent declines to call.
-3. **DECISION / PERMISSION cluster → a discriminating-predicate guard.** When a cluster
-   is about ACT-vs-REFUSE, the WRONG fix is loosening a global decision rule in the
-   prompt — unbounded blast radius, regresses every task where the original behavior was
-   gold. The RIGHT fix is an in-body guard on the tool that owns the action, expressing
-   the EXACT policy predicate, refusing only when the qualifying condition is (or is
-   not) met. Bounded blast radius makes this the safest edit available.
-4. **HARD-ZERO / capability-gap cluster → a real targeted tool, never prose.** A task
-   scoring 0.00 that needs a compute / composite / predicate tool stays 0.00 after any
-   docstring or prompt reword. Ship a tool the agent will CALL that changes the graded
-   state — *Ex:* a `find_duplicate_records` it has no way to compute today, or a
-   `search_logs` that returns the relevant lines instead of a raw dump.
+2. **Add a composite atomic-WRITE tool** — for a stalled or abandoned multi-step action,
+   encapsulate the ENTIRE action in one tool whose body performs all the steps in order
+   via the existing primitives, then **`remove` the raw primitives** so the action is
+   un-skippable. *Ex:* `apply_change_plan(record_id, steps)` validates → applies each →
+   returns final state as one call. Reach for this even though a write primitive already
+   exists: the primitive is exactly what the agent declines to call.
+3. **Add a discriminating-predicate guard** for an ACT-vs-REFUSE cluster — an in-body
+   guard on the tool that owns the action, expressing the EXACT policy predicate, that
+   refuses only when the qualifying condition is (or is not) met. It is the narrowest
+   edit available here and the tool-side alternative to changing a global rule.
+4. **Add a real targeted tool for a capability gap** — a task that needs a compute /
+   composite / predicate tool it does not have stays failing after any docstring reword.
+   Ship a tool the agent will CALL that changes the graded state — *Ex:* a
+   `find_duplicate_records` it has no way to compute today, or a `search_logs` that
+   returns the relevant lines instead of a raw dump.
 5. **Add a loop tool** — replace N repeated single-item calls with one list call. *Ex:*
    `get_records(ids: [...])` replaces N× `get_record(id)`.
 6. **Replace / wrap a tool** — superset an existing tool and route the old behavior
@@ -142,20 +137,19 @@ task is dead code, not a fix).
 | Trace symptom | Fix |
 |---------------|-----|
 | **Wrong ARGUMENT the tool could validate** — a write whose id / reference / count / unit is not consistent with the agent-visible state. Right tool, bad argument; partial credit or a corrupted write. | **Normalize-then-call wrapper**: wrap the write in a body that RESOLVES / VALIDATES the argument against current state, and on mismatch returns `available=[...]` or raises an actionable error naming what is wrong and what to pass instead. Never let a write proceed on an unvalidated reference. |
-| **Execution stalls at the action boundary** — the agent analyzes, explains, even confirms, then never calls the write tool and stops (task left half-done). | **Composite WRITE tool** (lever 2): one tool whose body performs the whole analyze→confirm→act sequence, then `remove` the raw primitives so the action is un-skippable. Not a "be sure to act" prose rule. |
-| **Escalate / bail-out abandoning a REQUIRED, eligible action** — the agent hands off or gives up where it could and should have completed the action. A behavioral STALL, not a missing capability. | **Composite WRITE tool**: encapsulate the eligible-action batch in ONE tool whose body executes the steps in code (skipping any ineligible item with a recorded reason), then `remove` the raw primitives so completing the batch is the only path. |
+| **The action never happens** — the agent analyzes, explains, even confirms, then never calls the write tool and stops; or it hands off / gives up on an action it could have completed. Task left half-done. | **Composite WRITE tool** (lever 2): one tool whose body performs the whole sequence — or the whole eligible-action batch, skipping any ineligible item with a recorded reason — then `remove` the raw primitives so completing it is the only path. Not a "be sure to act" prose rule. |
 | **Recoverable error that strands the agent** — a tool raises an opaque traceback / bare code; the agent retries the same bad call or gives up. | **Enriched RETURN that aids recovery**: on a recoverable error return what is wrong + the valid options + the recommended next action (`{"error": "id not found", "available": [...], "next": "call search_x to resolve the id"}`) so the model self-corrects next turn. |
 | **The same primitive called N times in a row** — looping over a list in the agent's own context, burning turns and dropping or mis-threading results. | **Loop tool** (lever 5): one tool that takes the list and loops inside a single call. |
 | **A rule stated in the prompt but repeatedly violated** — a required order ("read before write"), a precondition the API does not enforce, a normalization the model forgets. | **In-body guard / validation wrapper** (lever 1): enforce the rule in the body of the tool that owns it; `remove` the unguarded primitive if the safe path must be the only one. |
-| **A DECISION / PERMISSION the model gets wrong (ACT vs REFUSE)** — it acts where policy says refuse/escalate, or refuses where it should act. | **Discriminating-predicate guard** (lever 3) on the tool that owns the action. Do NOT loosen the global rule in the prompt. |
+| **A wrong ACT-vs-REFUSE call** — the agent acts where policy says refuse/escalate, or refuses where it should act. | **Discriminating-predicate guard** (lever 3) on the tool that owns the action. |
 | **Mis-selection** — the agent calls the wrong tool, calls none when one applied, or invents a tool that does not exist. | **Name + description fix**: selection is driven almost entirely by the name and description — sharpen what/when/when-not and the boundary against the nearest sibling (`references/doc-contract.md`). |
 | **Bad argument-filling** — right tool, wrong arguments: a missing required field, the wrong enum value, free text where a structured object was expected. | **Schema + per-parameter docs**: close the value set with an `enum`, pin units/format/default per parameter, add an in-description example. |
 | **A bloated or overlapping toolset** — too many tools, or several that do nearly the same thing, distracting the agent. | **Consolidate then `remove`** the originals (lever 9). Remove for *overlap/confusion*, not for low call-count. |
-| **A real behavioral bug in a handler** — the tool returns the wrong thing. | **`code` edit**: because you own the code, fix it directly. |
+| **A bug in a handler** — the tool returns the wrong thing. | **`code` edit**: because you own the code, fix it directly. |
 
-The throughline: a failure the agent *knows better than* but still commits is
-behavioral, and behavioral failures are fixed by removing the choice — putting the
-behavior in code and `remove`-ing the path that let it go wrong.
+The throughline: a failure the agent *knows better than* but still commits is fixed by
+removing the choice — putting the behavior in code and `remove`-ing the path that let it
+go wrong.
 
 If the problem is *what the agent is told to do* rather than *what it can do*, it
 belongs to whatever capability edits the agent's instructions, not here.
