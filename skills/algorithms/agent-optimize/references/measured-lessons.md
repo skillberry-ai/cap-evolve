@@ -1,15 +1,29 @@
 # Measured lessons — what a number on this loop can and cannot resolve
 
-Every rule here was paid for by a measurement on a real run, and each states the number that
-bought it. They live outside SKILL.md because the loop has to stay readable: the body carries the
-contract, this file carries the evidence behind it.
+## Contents
 
-Read this before your first gate decision on a new benchmark, and again whenever a result surprises
-you. The specific figures come from a multi-turn tool-use benchmark with a mid-tier agent model; the
-*shape* of each finding is what transfers, and where a number is likely benchmark-specific the rule
-says so.
+- [Measurement discipline — what a number here can and cannot resolve](#measurement-discipline--what-a-number-here-can-and-cannot-resolve)
+  — per-task gradient noise, re-running the null, what the gate can resolve, the ceiling, the three
+  phases of a fan-out, merge granularity and what a merge silently drops, and the four things that
+  keep the phase honest.
+- [The binomial floor, and what an aggregate mean can resolve](#the-binomial-floor-and-what-an-aggregate-mean-can-resolve)
+  — the SE formula against a measured null, why temperature 0 does not make it "sampling error", and
+  why narrowing to the hard tasks makes an artifact measurement worse.
+- [Load is the other half of the noise](#load-is-the-other-half-of-the-noise) — the concurrency
+  tables, the oversubscription incidents, and why total in-flight requests is the knob.
+- [Gate the sum, not each addend](#gate-the-sum-not-each-addend) — the six-branch merge that gated
+  negative, and the cost of certifying each mechanism by rate.
+- [Take the error ACROSS whole runs](#take-the-error-across-whole-runs) — the two-seed-block table
+  and the accept that had to be retracted.
 
-### Measurement discipline — what a number here can and cannot resolve
+Every rule here was paid for by a measurement on a real run, and each states the number that bought
+it. They live outside SKILL.md because the loop has to stay readable: the body carries the contract,
+this file carries the evidence behind it. Read it before your first gate decision on a new benchmark,
+and again whenever a result surprises you. The figures come from a multi-turn tool-use benchmark with
+a mid-tier agent model; the *shape* of each finding is what transfers, and where a number is likely
+benchmark-specific the rule says so.
+
+## Measurement discipline — what a number here can and cannot resolve
 
 Everything below is about the instrument, not the edits. It is placed inside the fan-out section
 because that is where it was learned, but it applies to every round: on this benchmark the
@@ -247,12 +261,12 @@ available loss, say so in the report before the first rollout, not after the las
 **Each optimiser's loop** — target task at full `n_trials`, plus a canary of tasks measured
 **1.0** at baseline, in the same call:
 
+The inner step is one optimiser's own task at full trials plus the canary, in a single call; after
+the fan-out, combine and gate the merge like any other candidate:
+
 ```bash
-# one optimiser's inner step: its own task at full trials, plus the canary, one call
 python "$A/taskeval.py" "$R/work/$TAG" 7,17 --project "$P" --n <num_trials> \
        --canary 0,3,12 --canary-n 3 --traces /tmp/tr_$TAG.json
-
-# after the fan-out: combine, then gate the merge like any other candidate
 python "$A/merge_taskopt.py" --root "$R/work" --base "$R/work/<parent>" \
        --out "$R/work/cand_merged" --include t7 t17 u33
 python "$A/round.py" --run-dir "$R" --project "$P" --candidates cand_merged \
@@ -539,4 +553,191 @@ bytes, not the last one), and treat any single-reading per-task comparison as a 
 per-task rate was always a training number; this is the second reason not to quote it as a result.
 The full-val gate against its own control is the arbiter precisely because it averages 30 tasks
 instead of trusting one.
+
+## The binomial floor, and what an aggregate mean can resolve
+
+**First compute the BINOMIAL floor. Most of what looks like mysterious nondeterminism is n.** Each
+rollout is pass/fail, so a task's rate is a binomial proportion and an arm mean over `m` tasks at `n`
+trials has
+
+    SE(arm difference) = sqrt( sum_over_tasks 2·p(1-p)/n ) / m
+
+Do that arithmetic BEFORE blaming the provider, the seeds, or the load. Measured on 10 tasks at n=10
+with p≈0.35: predicted SE **0.0615**, observed gap between two byte-identical arms **0.0778** — a
+ratio of **1.27**, i.e. plain sampling. Mean per-task movement was 0.0978 against a binomial
+prediction of 0.1445, so the observed movement was *smaller* than chance requires. There was nothing
+left to explain.
+
+One precision about what this is and is not. At temperature 0 with identical seeds a fully
+deterministic system would return *identical* arms, so this is not sampling error in the textbook
+sense — there is no sample being drawn. What the arithmetic shows is that the observed variation is
+**statistically indistinguishable in magnitude from independent per-rollout coin flips**. That
+matters because no further mechanism needs to be posited to explain it, and — whatever its physical
+cause — the remedy is the same one that works for binomial noise: more trials. Do not report it as
+"sampling noise" without that caveat, and do not go hunting for a cause you have no evidence for.
+
+That reframes the concurrency result rather than cancelling it: at conc 25 per-task movement was
+0.250, genuinely **above** the 0.1445 floor, and dropping to conc 8 removed that excess and exposed
+the floor underneath. Lowering concurrency fixes what it can; the rest is n.
+
+The consequence is uncomfortable and worth stating plainly: **an aggregate mean over a dozen HARD
+tasks at n=10 cannot resolve any realistic edit.** Reaching 2 SE on a +0.05 effect on that subset
+needs ~60 trials per task.
+
+But be careful about the obvious inference, which is wrong. Narrowing to the hard tasks makes the
+measurement *worse*, not better, for judging an artifact — because a task sitting at 1.00 contributes
+signal to the mean with almost no variance, so dropping it removes a free denominator. Computed from
+that benchmark's own per-task rates:
+
+| arm | rollouts/arm | SE of paired difference |
+|---|--:|--:|
+| 12 hard tasks, n=10 | 120 | **0.0496** |
+| full val 30 tasks, n=10 | 300 | **0.0262** |
+| full val 30 tasks, n=20 | 600 | 0.0185 |
+
+Full val at n=10 is nearly twice as precise as the hard subset, and the four prior gate rounds there
+were run at full val n=5 (SE 0.0371) — so their problem was never the task set. It was that they ran
+at a concurrency carrying excess noise on top of that, and chased effects smaller than the sum.
+
+So the two questions need opposite designs, and conflating them is the actual error:
+
+| you want to know | measure | why |
+|---|---|---|
+| does this mechanism work | ONLY the tasks where it fires, at high n, per-task test | a mechanism firing on 2 tasks is diluted to nothing in a 30-task mean |
+| does it break anything | canaries, cheap precisely because they sit at 1.00 | zero variance means a single drop is real |
+| what is the artifact worth | FULL val, both arms in one batch | the 1.00 tasks are free precision for the mean |
+
+A mechanism that fires on two tasks and lifts them 0.15 → 0.45 is resolvable at n=40 on those two
+tasks (≈3 SE) and invisible in a 12-task mean at n=10 (≈0.5 SE). Same edit, same rollout budget: one
+design answers the question and the other cannot.
+
+**A screening band is not a baseline.** Per-task rates from a small trial count tell you where to
+*look*; they do not tell you where you *are*. In one run, ten tasks whose 3-trial bands summed to
+2.33 measured **4.04** at n=10 — the screen understated the artifact by 1.71 task-equivalents (0.057
+of val), and one task went the other way (0.33 → 0.10). Every "0.0 DEFECT" label was suspect: three
+of them measured 0.30, 0.444 and 0.60. So screen at low `n`, but re-measure at the gate's `n` before
+you quote a number, compute headroom, or tell an optimiser what its starting point is — and never let
+a low-`n` band be the thing a delta is computed against.
+
+## Load is the other half of the noise
+
+**Run the GATE at low concurrency — most of the re-measurement noise is load-induced.** This is the
+one lever that makes everything else measurable, and it is cheap to verify: measure the same bytes on
+the same seeds twice at your search concurrency, then twice again at a low one.
+
+| identical bytes and seeds, 12 tasks | conc 25 | conc 8 |
+|---|--:|--:|
+| arm-level \|delta\| between the two runs | **0.1167** | **0.0333** |
+| mean \|per-task\| movement | **0.250** | **0.100** |
+| tasks that moved at all | 10 / 12 | 5 / 12 |
+
+Five of the twelve tasks became perfectly repeatable at conc 8 having each moved 0.20-0.40 at conc
+25. So the practical split is: **search fast, gate slow.** Per-task exploration can run high, because
+its output is a mechanism you verify from a trace, not a rate; the accept decision must run at a
+concurrency where the null actually reproduces, which costs roughly 3x wall clock for the one
+evaluation that matters.
+
+Two caveats to state whenever you quote this, both real: the low-concurrency runs were sequential, so
+load and elapsed-time drift are confounded; and 12 tasks x 2 runs makes the variance comparison thin.
+The direction was consistent across all three metrics, which is why it is worth acting on, but it is
+not settled.
+
+**Concurrency composes only up to the endpoint's sustainable rate, and past it the failure is
+silent.** The sources multiply: K optimisers x C concurrency each is K*C in flight, and the serving
+endpoint does not know about your fan-out. Measured: nine per-task optimisers at concurrency 8 put
+~72 requests in flight against a proxy whose sustainable band is 24-90, and a single per-task eval
+went from ~4 minutes to ~50. Nothing errored — latency just grew, so it read as "the model got
+slower" rather than "I oversubscribed". An earlier incident on the same proxy is the extreme version:
+concurrency 300 pushed 292 of 300 rollouts into wallclock timeouts and the evaluation reported
+**0.0067** as capability. So measure the sustainable band once, divide it by the number of concurrent
+optimisers, and treat a sudden wall-clock blowout as an oversubscription symptom first.
+
+**The knob is TOTAL IN-FLIGHT REQUESTS, not the runner's per-process concurrency flag.** That flag is
+per-process, so it does not bound load when several evaluations run at once — and running them at once
+is the normal case. A gate launched at `--conc 8` alongside four exploring optimisers at `--conc 12`
+puts about 56 requests in flight, so it is a HIGH-load measurement wearing a low-load flag, and it
+will reproduce the wide null rather than the narrow one. Serialise the gate: let the fan-out finish,
+or pause it, and run the gate arms alone. Both arms still belong in the same batch as each other —
+pairing is what removes drift — but that batch must be the only thing running. If you cannot quiet
+the machine, say so next to the verdict instead of quoting a per-process number as though it were the
+load.
+
+## Gate the sum, not each addend
+
+**A multi-branch artifact is assembled with `integrate.py`, never by one merge.** Stated as a rule
+because the author of that script skipped it on the very round it was written: six branches were
+merged in one step, and the resulting artifact gated at **−0.0146** with seven replicated per-task
+losses against two replicated gains — while the same round's *single*-mechanism artifact gated at
+**+0.0115**. Fewer mechanisms beat more mechanisms, and a one-shot merge cannot tell you that,
+because it yields one number for N simultaneous changes.
+
+`funcmerge` merging cleanly is **not** evidence the branches compose — every branch retained cleanly
+in that failed artifact, with zero conflicts and no undefined attributes. Clean merge is a syntactic
+property; composition is an empirical one.
+
+**Gate the SUM, not each addend.** Measured: one tool-level mechanism is worth roughly 0.04–0.13 on
+the one or two tasks it touches, and resolving an effect that size at 2 SE needs about **n=100 trials
+on that task**. Certifying seven mechanisms that way is ~1400 rollouts to establish by rate what a
+deterministic replay establishes for free. So the economical order is:
+
+1. **Prove it engages** — replay a real failing payload against the edited tool and show the guard
+   fires; replay the passing payload and show it does not. Costs zero rollouts, and it is a stronger
+   statement about the mechanism than any rate.
+2. **Establish incidence from rollouts you already have** — how often does the condition occur, and
+   is it skewed toward failures? Also free. One guard fired on 8 of 76 matching calls, 8 in failures
+   and 0 in passes.
+3. **Confirm the sign at modest n, with canaries** — you are checking for a regression and a
+   direction, not measuring a size.
+4. **Gate the accumulated artifact ONCE on full val**, where SE was 0.0262 at n=10 and several
+   mechanisms can clear it together even though none clears it alone.
+
+Expect the measured per-task effect to land well below the upper bound incidence implies — there
+~40% of it — because the guard fires correctly and the agent then still fails for an unrelated
+reason. That gap is not evidence the mechanism failed; check the task's other reward components
+before concluding anything.
+
+## Take the error ACROSS whole runs
+
+**Take the error across whole runs, not across tasks within one run.** A single paired run's SE is
+computed over tasks, so it cannot see run-to-run nondeterminism at all — and on that benchmark it was
+the dominant term. Repeat the entire paired comparison on distinct seed blocks and use the spread of
+the per-run deltas:
+
+| seed block | candidate | control | paired Δ |
+|---|--:|--:|--:|
+| 0-4 | 0.7333 | 0.6467 | +0.0867 |
+| 100-104 | 0.6867 | 0.6667 | +0.0200 |
+| **combined** | | | **+0.0533, SE 0.0333 across runs (t ~ 1.6) — NOT demonstrated** |
+
+```bash
+# one paired run per seed block, both arms in the SAME batch, then combine ACROSS runs
+python "$A/taskeval.py" "$R/work/cand" <val ids> --n 5 --base-seed 0   --json /tmp/c0.json
+python "$A/taskeval.py" "$R/work/ctl"  <val ids> --n 5 --base-seed 0   --json /tmp/k0.json
+python "$A/taskeval.py" "$R/work/cand" <val ids> --n 5 --base-seed 100 --json /tmp/c1.json
+python "$A/taskeval.py" "$R/work/ctl"  <val ids> --n 5 --base-seed 100 --json /tmp/k1.json
+python "$A/multirep.py" /tmp/c0.json:/tmp/k0.json /tmp/c1.json:/tmp/k1.json
+```
+
+`multirep.py` refuses to return a verdict from a single paired run at all, because that is exactly
+where the retracted accept came from. `--base-seed` matters: raising `--n` only extends the same seed
+block, so a rerun at the same seeds is a determinism check.
+
+The first run alone reported SE 0.0548 across tasks and an "accept". Two runs show the same candidate
+at +0.0867 and +0.0200, and a byte-identical control re-run moved +0.0800 by itself. The across-run
+estimator needs no assumption about where the noise comes from, which matters because on that run its
+source was never identified: LLM sampling, seed assignment, concurrent batching, timeouts, infra
+accounting and set-iteration order were each ruled out by direct measurement, and the leading
+remaining hypothesis (transient errors below the `max_errors` threshold being fed back into the
+conversation) stayed unverified.
+
+Budget for it up front: a credible verdict on a sub-0.10 effect there is **several full paired runs**,
+not one. If that is unaffordable, the honest output of the round is "not resolvable at this budget" —
+which is a result, and is what the earlier single-run accept should have been.
+
+**The false-veto rate that made `--veto-regressions` opt-in.** In one gate the byte-identical control
+reported **four** regressed tasks and the candidate reported **four** — identical counts, disjoint
+sets, one of the two artifacts provably unchanged. The old veto fired on a byte-identical copy of the
+seed **42.8%** of the time at 5 trials, and in one run it vetoed *both* candidates that had passed the
+significance test. Read `regressions` as a pointer to look at, never as a verdict, and always next to
+the control's own list.
 

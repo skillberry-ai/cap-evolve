@@ -138,6 +138,46 @@ def _prose(c: Checker, skill: str) -> None:
             note="allowed-tools declares Task (parallel fan-out is actionable)")
 
 
+def _progressive_disclosure(c: Checker, skill: str) -> None:
+    """The body stays inside the 500-line budget, and every reference is pointed AT.
+
+    skill-creator: the SKILL.md body is re-read on every trigger, so it is capped at ~500 lines,
+    and each bundled reference must be linked from the body with what it contains AND when to
+    load it. References are ONE level deep: a reference that links to another reference cannot
+    be read on its own, which is the whole point of the hierarchy.
+    """
+    body = skill.splitlines()
+    c.check(len(body) < 500,
+            f"SKILL.md body is {len(body)} lines; the recurring per-trigger budget is 500 — "
+            "move depth into references/ with an explicit pointer",
+            note=f"SKILL.md body is {len(body)} lines, inside the 500-line budget")
+
+    refs = sorted(p for p in (HERE.parent / "references").glob("*.md"))
+    c.check(bool(refs), "no references/ — the split is the point of the hierarchy")
+    for ref in refs:
+        rel = f"references/{ref.name}"
+        c.check(rel in skill, f"{rel} exists but SKILL.md never links it")
+        # The pointer must say WHEN to load it, not merely that it exists.
+        c.check(f"({rel})" in skill and "**Load**" in skill,
+                f"{rel} needs a pointer in SKILL.md's `## References` stating what it contains "
+                "and when to load it")
+        text = ref.read_text(encoding="utf-8")
+        c.check("](references/" not in text,
+                f"{rel} links to another reference — references are one level deep, because a "
+                "reader may only partially read either one")
+        if len(text.splitlines()) > 300:
+            c.check("## Contents" in text,
+                    f"{rel} is over 300 lines and needs a table of contents")
+    c.note(f"{len(refs)} references, each linked with a when-to-load pointer, one level deep")
+
+    # Retrospective narrative belongs in a reference or the run log, never in the body: it is
+    # re-read on every trigger and an agent driving a round acts no differently for having it.
+    for anecdote in ("in one run", "Measured here", "A real run", "four consecutive null runs"):
+        c.check(anecdote not in skill,
+                f"SKILL.md carries retrospective narrative ({anecdote!r}) — keep the rule and the "
+                "command in the body, move the number that bought it into references/")
+
+
 def _project(tmp: Path, *, n: int) -> Path:
     """A minimal project dir the SUBPROCESS scripts can load: adapter + spec.
 
@@ -1103,6 +1143,7 @@ def main() -> int:
     _guard(c)
     _skill_text = SKILL_MD.read_text(encoding="utf-8")
     _prose(c, _skill_text)
+    _progressive_disclosure(c, _skill_text)
     _integrate_is_mandated(c, _skill_text)
     tmp = Path(tempfile.mkdtemp(prefix="agent_optimize_chk_"))
     try:

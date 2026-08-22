@@ -77,7 +77,9 @@ holdout** drawn from tasks the parent *passes*. The holdout is the only part of 
 can see a regression, and it is why the classic churn candidate (fixes 2, breaks 2, identical
 mean) at least surfaces its `regressed` list at tier 1 instead of looking like a tie. It is a
 partial correction, not a complete one: with small k, a regression outside the holdout screens
-clean and is caught later by the full-val no-regression veto. Selection is deterministic given
+clean and only shows up in the full-val gate's `regressions` list (which is diagnosis — it names
+which part of a bundle to drop — and blocks an accept only under `--veto-regressions`). Selection
+is deterministic given
 the seed, and the whole record (ids, seed, holdout fraction, deltas, decision, measured
 rollout economics) is written to `$R/screens/<tag>__tier<N>.json`, so a kill is auditable
 after the fact rather than a decision that happened once inside an agent's context.
@@ -86,6 +88,40 @@ Rungs are cumulative — tier 2 merges tier 1's rollouts across `<tag>__screen*`
 only for the ids it adds — and savings are reported as measured integers
 (`+ (full_val − fired)` on a kill, `− fired` on a promote) so a run's ledger sums to the truth
 instead of to a flattering estimate.
+
+### The break-even, and when the ladder cannot pay for itself
+
+Screening is an economic bet, not a free improvement, and the arithmetic is one division:
+`savings.breakeven_kill_rate = fired / full_val_rollouts` — the fraction of candidates the screen
+must **kill** just to recover what its own rollouts cost. Screen only when that number sits below
+the kill rate you have actually observed on this project.
+
+The floor is what makes it unreachable on a small val. `screen.py` never fires a rung below an
+absolute minimum number of tasks (currently 6), because a rung decided on two or three tasks is a
+coin flip dressed as evidence. So on a 12-task val the tier-1 subset is half the split and the
+break-even is **0.5** — every second candidate must be provably harmful. Measured across four real
+runs on that project: the screen killed **0 of 8** promoted candidates while producing one
+documented false positive (a 3-task tier-1 reported `fixed: ["44"]` for a candidate that full val
+showed never fixed 44 — which is why the floor is 6, not 3). A ladder that cannot pay for itself and
+mis-reports is worse than no ladder: pay full val directly.
+
+Where the screen *is* worth paying for (large val, cheap tier), read it as **direct evidence about
+the tasks the edit targeted**, not as a statistical test: a tier-1 subset containing every failing
+val task that comes back 0-for-N on them is a sound reason to stop spending on that candidate. Book
+that as a budget decision on screen evidence (`--reject-basis budget`), never as a gate decision.
+
+### `phases/gate` is an inspection front-end, not the round's gate
+
+`phases/gate/scripts/run.py --mode paired` reaches the *same* paired gate off the *same* persisted
+rollouts, so it is a faithful way to re-derive the significance half of a decision by hand — but
+only in **rollout mode** (`--run-dir` plus `--current-tag`/`--candidate-tag`). Passing scalar
+`--current`/`--candidate` means cannot do a paired test at all, since two means carry no per-task
+delta vector, so that combination is refused rather than quietly downgraded to an unpaired test
+whose number would look the same and mean something else.
+
+It is still not the round's gate, for two reasons that matter to the audit trail: it does not read
+`regressions`, so it cannot tell you which part of a bundled edit to drop, and it does not book the
+decision into the run dir. Decide with `gate_check.py`; use this to inspect.
 
 ## The constraint surface: free-text stop_condition, parsed and re-read
 
