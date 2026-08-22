@@ -611,6 +611,15 @@ A mechanism that fires on two tasks and lifts them 0.15 → 0.45 is resolvable a
 tasks (≈3 SE) and invisible in a 12-task mean at n=10 (≈0.5 SE). Same edit, same rollout budget: one
 design answers the question and the other cannot.
 
+**When an effect sits below the floor, pre-register directional predictions and use a SIGN TEST.**
+The floor bounds what a *mean* can resolve; it does not bound what a *pattern of directions* can.
+Write down, before its arm runs, which way each prediction should go, then count. Measured: **9 of 10
+predictions positive gave p = 0.0107** on a set where no individual z reached 2 — the effect was real
+and every per-arm reading was individually inconclusive. Two conditions make it a test rather than a
+story: the predictions are recorded *before* the arms run (a direction chosen after the fact is not
+evidence of anything), and they are directions, not magnitudes. A post-hoc count of which way things
+happened to go is worthless, so if you did not write them down, you did not run the test.
+
 **A screening band is not a baseline.** Per-task rates from a small trial count tell you where to
 *look*; they do not tell you where you *are*. In one run, ten tasks whose 3-trial bands summed to
 2.33 measured **4.04** at n=10 — the screen understated the artifact by 1.71 task-equivalents (0.057

@@ -20,9 +20,8 @@ assumes which.
 optimizer call, the val evaluation, the significance gate, accept/reject,
 snapshot/best, the memory and handover files: all of that is
 `harness.run_step`, documented once in `algorithms/hill-climb/SKILL.md`
-§ "One iteration, end to end" and `algorithms/hill-climb/references/run-step.md`
-(both land with PR #370; until then read `harness.run_step` itself). This file
-states only what SkillOpt does differently.
+§ "One iteration, end to end" and `algorithms/hill-climb/references/run-step.md`.
+This file states only what SkillOpt does differently.
 
 Know the bound before reaching for this algorithm: **`run_step` lets a caller
 vary exactly two things — `parent_dir` and `instructions`.** SkillOpt pins
@@ -39,7 +38,7 @@ epoch. It is prompt shaping and step scheduling, not a different search.
    never mechanically enforced. See the next section before you tune it.
 2. **A per-epoch rejected-edit list.** Each reject appends its candidate id and
    val Δ, and the next step's prompt asks the optimizer to avoid them
-   (`skillopt.py:120-125`, `:322-327`). It carries no description of *what* the
+   (`skillopt.py:120-125`, `:330-335`). It carries no description of *what* the
    rejected edit changed, so treat it as a weak signal — the run-global
    `LEDGER.md` that `run_step` already injects names the tasks each prior edit
    broke and fixed, which is strictly more useful.
@@ -48,7 +47,7 @@ epoch. It is prompt shaping and step scheduling, not a different search.
    regressed / persistent-failure / stable-success, and asks for a consolidating
    edit that fixes regressions without breaking the stable passes. It goes
    through the same `run_step` and the same val gate — it is never
-   force-accepted (`skillopt.py:479-485`). Disable with `--no-slow-update`.
+   force-accepted (`skillopt.py:493-499`). Disable with `--no-slow-update`.
    A fourth bucket, `improved`, is computed and logged but is *not* exclusive
    with the others and never reaches the prompt (`skillopt.py:184-191`, `:139-166`).
 
@@ -82,32 +81,44 @@ is a heuristic that has not been isolated; do not present it as a proven one.
 ## Known gaps
 
 These are shipped-behavior defects in `core/cap_evolve/skillopt.py`. The skill
-describes what the code does today, not what it intends to do.
+describes what the code does today, not what it intends to do. Line numbers are
+against current `main` — check them; if one no longer says what it is cited for,
+the gap has moved and this section is what needs re-deriving.
 
 - **The mini-batch never reaches the optimizer** (issue #371). Mini-batch ids come
-  from **train** (`skillopt.py:230`) but filter the parent's **val** rows
-  (`skillopt.py:291` → `harness.py:2011-2012`; also `:315`, `:319`), and splits are
-  disjoint slices (`splits.py:117-119`). Every step renders `0 solid / 0 flaky /
-  0 failing of 0 tasks` with no task ids, and `## Failure patterns still unsolved`
-  never appears — while the `(mini-batch of N train tasks, L=…)` label still
-  prints, which is why it looked healthy. Until #371 lands the per-step signal is
-  the label plus the `L` sentence, so the epoch/mini-batch structure is
-  bookkeeping rather than focus. PR #370 fixed the same defect in hill-climb's
-  `cyclic`/`hardest-first` modes.
+  from **train** (`skillopt.py:237`, sliced at `:291`) but are handed to
+  `ctx.instructions` (`:300`) to filter the parent's **val** rows
+  (`harness.py:2004-2006`; the same train-vs-val mismatch at `:323`, `:327`), and
+  splits are disjoint slices (`splits.py:117-119`). So the focus summary always
+  renders `0 solid / 0 flaky / 0 failing of 0 tasks`, the failure index is empty,
+  and `## Failure patterns still unsolved` never appears — while the
+  `(mini-batch of N train tasks, L=…)` label still prints, which is why it looked
+  healthy. (The whole-val protect-these-ids block *is* populated, from
+  `harness.py:2013` — that is the only per-task content a step gets.) Until #371
+  lands the per-step signal is the label plus the `L` sentence, so the
+  epoch/mini-batch structure is bookkeeping rather than focus. PR #370 fixed the
+  same defect in hill-climb's `cyclic`/`hardest-first` modes.
 - **The epoch-boundary re-evaluation scores the whole train split, not a sample.**
-  `skillopt.py:458-463` calls `evaluate_candidate(..., split="train")` twice with
+  `skillopt.py:467-472` calls `evaluate_candidate(..., split="train")` twice with
   no `ids=`, then discards everything outside the ~20 sampled ids
-  (`:464-466`). Budget it as `2 × len(train) × n_trials` rollouts per boundary.
+  (`:473-475`). Budget it as `2 × len(train) × n_trials` rollouts per boundary.
 - **When an epoch accepted nothing, the comparison is vacuous.** The re-eval is
-  guarded by `prev_epoch_best_id != run_dir.best_id` (`skillopt.py:455`); if
+  guarded by `prev_epoch_best_id != run_dir.best_id` (`skillopt.py:464`); if
   nothing moved, both sides stay `current_val` — the same list — so 0 regressed
   and 0 improved are reported over **val** tasks while the log line claims a
-  train sample size (`:469-470`). The consolidation step still runs.
-- **`requested_edits` vs `applied_changes` surfaces nothing.**
-  `_changed_components` (`skillopt.py:398-427`) counts files whose bytes differ,
-  not edits, and `applied_changes` is written at `:338`/`:345` and read nowhere —
-  no dashboard column, no check, no warning. A run at `L=4` logged
-  `applied_changes: 6` with no consequence.
+  train sample size (`:478-482`). The consolidation step still runs.
+- **`requested_edits` vs `applied_changes` surfaces nothing, and the number is wrong.**
+  `_changed_components` (`skillopt.py:406-435`) counts files whose bytes differ, not
+  edits, and `applied_changes` is written at `:346`/`:353` and read nowhere — no
+  dashboard column, no check, no warning. It also over-counts, because its ignore
+  list (`:420`) matches seven `.md` **basenames** while `run_step` injects a whole
+  read-context — `guidance/`, `trajectories/`, `prior_iterations/*/diff.patch` — that
+  `_SNAPSHOT_IGNORE` keeps *out* of the parent snapshot, so every injected file reads
+  as an applied edit. Measured zero-API on `examples/toy_calc` at `L=4`: a step whose
+  optimizer edited exactly one file logged `applied_changes: 10` (9 injected + 1
+  real), and the next step logged `10` again with the capability file **byte-identical
+  to its parent**. The metric has no zero, so it cannot detect the one thing it exists
+  to detect: an optimizer that made no edit at all.
 - **"skill" leaks into the live prompt.** `skillopt.py:147` tells the optimizer to
   compare "the skill" regardless of which capability is under optimization. An
   algorithm must be capability-agnostic; this text is not.

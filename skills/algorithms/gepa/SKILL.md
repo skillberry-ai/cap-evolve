@@ -12,10 +12,11 @@ sources: [gepa]
 # gepa — sample-efficient reflective Pareto search
 
 `algorithms/hill-climb` owns the mechanics every algorithm shares: parent →
-proposal → val gate → commit. Read it first. This page states only what GEPA
-(Agrawal et al., 2025) does **differently**, and why those differences are the
-paper's actual contribution rather than decoration. A thin wrapper over
-`cap_evolve.gepa.gepa_loop`.
+proposal → val gate → commit, specified once in
+`algorithms/hill-climb/references/run-step.md`. Read that first. This page states
+only what GEPA (Agrawal et al., 2025) does **differently**, and why those
+differences are the paper's actual contribution rather than decoration. A thin
+wrapper over `cap_evolve.gepa.gepa_loop`.
 
 ## The two mechanisms, and why removing either turns GEPA back into hill-climb
 
@@ -88,8 +89,11 @@ For a single-file capability the two coincide and the merge skips gracefully
 
 - `--max-metric-calls` (default 0 = unlimited): PRIMARY budget, checked
   **between** iterations. An in-flight iteration runs to completion, so actual
-  spend can exceed it by up to `2·minibatch-size + |val|·n-trials` (one more
-  minibatch on a merge iteration). Set it below your hard ceiling.
+  spend can exceed it by up to `2·minibatch-size + |val|·n-trials` — and a merge
+  fires *inside* an accepting iteration, adding `3·minibatch-size` (the merge and
+  BOTH parents, on a freshly sampled minibatch) plus a second `|val|·n-trials`,
+  for a worst case of `5·minibatch-size + 2·|val|·n-trials`. Set it below your
+  hard ceiling.
 - `--max-iterations` (default 50): secondary cap on propose→gate iterations.
 - `--minibatch-size` (default 4): train ids per cheap local gate.
 - `--n-trials` (default 1): rollouts/task on the full-val eval (raise under noise
@@ -119,16 +123,13 @@ For a single-file capability the two coincide and the merge skips gracefully
   question. And on an eval-cache hit only `{reward, feedback}` were stored, so
   `Agent output:` comes out empty; re-sampled parents hit the cache routinely
   (#111, PR #210).
-- Candidate snapshots keep the loop's own scratch (`REFLECTION.md`/`FOCUS.md`/…)
-  because the snapshot call omits the ignore list every other algorithm passes
-  (#110, PR #350). Those are excluded from the component list, but the
-  optimizer-agent dotfiles (`.claude/`, `CLAUDE.md`, `AGENTS.md`) are **not**, so
-  round-robin can burn an iteration on one.
 - Iterations are charged against budget while no `step` event is emitted, so
   consumers counting iterations from `step` records see zero (#216/#224, PR #356).
-- Optimizer context reaching GEPA has been narrower than hill-climb's (#109,
-  PR #355). `JOURNAL.md` is injected as the cross-run handover but never
-  accumulates here, which is why step 3 above leaves it out of the list.
+- `JOURNAL.md` is injected as the cross-run handover but never accumulates here:
+  `_reconcile_journal` folds the optimizer's new entry back into the run-level file
+  from `harness.run_step` only, and GEPA runs the optimizer itself. Every iteration
+  therefore reads the same journal the first one did — which is why step 3 above
+  leaves it out of the list.
 - If `splits.train` is empty the minibatch silently falls back to **val** ids,
   putting the gate split in front of the proposer, with no warning. Do not run
   GEPA with a zero-size train split.

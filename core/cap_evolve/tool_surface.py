@@ -12,8 +12,10 @@ Action kinds: ``description`` | ``params`` | ``examples`` | ``schema`` | ``code`
 | ``add`` | ``remove`` | ``compose`` (add a tool that calls existing tools).
 A capability whose server is external (mcp-tool) allows only the documentation +
 add/remove subset; a capability that owns its tool code (tools) allows the full
-set. The effective policy is ``inputs/policy.json`` if present, else the
-capability's ``DEFAULT_POLICY``.
+set. The effective policy is ``<capability_dir>/policy.json`` if present, else the
+capability's ``DEFAULT_POLICY`` — see ``load_policy``. It is NOT
+``inputs/policy.json``: seven doc surfaces claimed that path, so a policy written as
+documented was read by nothing (#352).
 """
 
 from __future__ import annotations
@@ -32,7 +34,11 @@ def _save(capability_dir: Path, data: dict) -> None:
 
 
 def load_policy(capability_dir: Path, default_policy: dict) -> dict:
-    """``inputs/policy.json`` if present (it overrides), else the capability default."""
+    """``<capability_dir>/policy.json`` if present (it overrides), else the default.
+
+    The file sits in the capability dir itself, NOT in an ``inputs/`` subdirectory —
+    a policy written to ``inputs/policy.json`` is silently ignored (#352).
+    """
     f = Path(capability_dir) / "policy.json"
     return json.loads(f.read_text(encoding="utf-8")) if f.exists() else dict(default_policy)
 

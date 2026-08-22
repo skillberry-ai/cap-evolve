@@ -98,11 +98,12 @@ feeding both the loop and the dashboard.
 ## Round-robin component focus
 
 A candidate's **components** are its editable capability files (`NON_CAPABILITY_FILES`
-scratch/memory files and vcs dirs excluded — the same exclusion the eval cache uses).
-Note the exclusion list does *not* cover the optimizer-agent dotfiles that
-`harness._SNAPSHOT_IGNORE` drops (`.claude/`, `CLAUDE.md`, `AGENTS.md`, `guidance/`,
-`trajectories/`), so if those are present in the candidate dir round-robin can spend
-a whole iteration focused on one of them. With
+scratch/memory files and `NON_CAPABILITY_DIRS` vcs/read-context dirs excluded — the same
+exclusion the eval cache uses). That list covers the whole injected read-context — the
+optimizer-agent dotfiles (`.claude/`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`) as well as
+`guidance/`, `trajectories/` and `prior_iterations/` — so round-robin cannot spend an
+iteration focused on one of them, and an un-ignored read-context dir cannot bust the eval
+cache every iteration. With
 `--component-selector round_robin` the loop focuses **one component per iteration**
 (cycled), writing the choice to `FOCUS.md`, so each proposal is a small, attributable
 change — which is exactly the unit the system-aware merge later recombines. `all`
