@@ -1,6 +1,6 @@
 component: algorithm
 name: gepa
-summary: Real GEPA — sample-efficient reflective Pareto optimization with a cheap minibatch local gate in front of the honest full-val gate, trace-based reflective dataset, per-instance frontier parent sampling, round-robin component focus, and system-aware merge.
+summary: GEPA — sample-efficient reflective Pareto optimization: a cheap train-minibatch local gate in front of the honest full-val gate, a trace-based reflective dataset, per-instance frequency-weighted parent sampling, round-robin component focus, and system-aware merge.
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py

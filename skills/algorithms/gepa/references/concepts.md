@@ -9,8 +9,8 @@ patterns, not the code.
 
 - [Why GEPA is sample-efficient](#why-gepa-is-sample-efficient)
 - [The two-stage economy: minibatch local gate → full-val gate](#the-two-stage-economy)
-- [Reflective dataset (actionable side information)](#reflective-dataset)
-- [Per-instance Pareto frontier + frequency-weighted sampling](#per-instance-pareto-frontier)
+- [Reflective dataset: source, limits, and what the writer omits](#reflective-dataset)
+- [Per-instance winners vs. the strict Pareto frontier](#per-instance-pareto-frontier)
 - [Round-robin component focus](#round-robin-component-focus)
 - [System-aware merge](#system-aware-merge)
 - [Budget in metric-calls, the eval cache, and honesty](#budget-cache-honesty)
@@ -43,28 +43,49 @@ before any full-val evaluation is paid for.
    val-only) — the identical gate hill-climb uses. This is where acceptance is
    *decided*; the minibatch never decides acceptance, only whether to pay.
 
-The minibatch is drawn from **train**, full-val from **val**, and **test is never
-touched** by the loop. That ordering is the honesty guarantee: the optimizer only
-ever sees train (via the reflective dataset) and is judged on held-out val.
+The minibatch is drawn from **train** and full-val from **val**. That ordering is
+what keeps the proposer away from the split its own gate is computed on. Caveat:
+if `splits.train` is empty the loop falls back to val ids (`gepa.py:518`) with no
+warning, which breaks exactly that separation — do not run with a zero train split.
 
 ## Reflective dataset
 
-For the parent's **failing minibatch tasks**, the loop writes `REFLECTION.md` into
-the optimizer's workdir containing, per task: the task **input**, the agent's
-**output / compacted trajectory**, and the scorer's **feedback**. This is GEPA's
-"actionable side information." It is written as a *file* (not inlined into a giant
-prompt) because agents read files far better than long prompts, and the prompt just
-points at it. Tasks that failed with an infra/run error (`Rollout.error`, surfaced
-as `raw.errored`) are listed separately and explicitly excluded from "fix this" —
-they are environment noise no edit can repair.
+For the parent's **failing minibatch tasks** (`reward < 1.0`), the loop writes
+`REFLECTION.md` into the optimizer's workdir. `phases/diagnose` owns what a
+reflective dataset is and what shape it takes; what matters here is the source and
+the limits. It is written as a *file* rather than inlined into a giant prompt
+because agents read files far better than long prompts, and the prompt just points
+at it. Tasks that failed with an infra/run error (`Rollout.error`, surfaced as
+`raw.errored`) are listed separately and explicitly excluded from "fix this" — they
+are environment noise no edit can repair.
+
+What the shipped writer actually emits, per task, is the agent's output, its
+compacted trajectory, and the scorer's feedback — each truncated (~1500 chars at
+capture, ~800 in the file), for at most 12 failing tasks. The task **input** is
+not written, although `gepa.py`'s own docstring claims it is; and on an eval-cache
+hit the cached record holds only `{reward, feedback}`, so the output line comes out
+empty (#111). Both are core bugs, not intended design: GEPA §3's "actionable side
+information" is the (input, output, feedback) triple, and dropping the input leaves
+the optimizer diagnosing a bad answer to an unknown question.
 
 ## Per-instance Pareto frontier
 
 Instead of always extending the single global best (hill-climb) the parent is
-**sampled from the per-instance Pareto frontier** (`selection.pareto_per_instance`).
-For each val task, the candidate(s) achieving the best reward on it are that task's
-winners; a candidate's sampling weight is **how many tasks it wins**
-(frequency-weighted). This keeps:
+**sampled over per-instance winners** (`selection.pareto_per_instance`). For each
+val task, the candidate(s) achieving the best reward on it are that task's winners;
+a candidate's sampling weight is **how many tasks it (co-)wins**
+(frequency-weighted), and a candidate that wins nothing is never sampled.
+
+The sampling pool is *not* the strict Pareto frontier: `_pick_pareto_per_instance`
+never calls `pareto_frontier`, so a candidate that merely ties for a win stays in
+the pool even when another candidate dominates it on every task. The strict
+frontier (`selection.pareto_frontier`) is a subset, and is what the system-aware
+merge searches and what the run's reported `frontier_size` counts. Keeping the
+looser pool is defensible — a tie-winner is still evidence that one task is
+solvable from that text — but it is a different set, so do not read "frontier" as
+one thing.
+
+Either way this keeps:
 
 - **specialists** — a candidate that uniquely tops one hard task survives even when
   its *mean* is below the incumbent's;
@@ -76,8 +97,12 @@ feeding both the loop and the dashboard.
 
 ## Round-robin component focus
 
-A candidate's **components** are its editable capability files (scratch/memory files
-and vcs dirs excluded — the same exclusion the eval cache uses). With
+A candidate's **components** are its editable capability files (`NON_CAPABILITY_FILES`
+scratch/memory files and vcs dirs excluded — the same exclusion the eval cache uses).
+Note the exclusion list does *not* cover the optimizer-agent dotfiles that
+`harness._SNAPSHOT_IGNORE` drops (`.claude/`, `CLAUDE.md`, `AGENTS.md`, `guidance/`,
+`trajectories/`), so if those are present in the candidate dir round-robin can spend
+a whole iteration focused on one of them. With
 `--component-selector round_robin` the loop focuses **one component per iteration**
 (cycled), writing the choice to `FOCUS.md`, so each proposal is a small, attributable
 change — which is exactly the unit the system-aware merge later recombines. `all`
@@ -86,12 +111,16 @@ lists every component for cross-cutting edits or monolithic capabilities.
 ## System-aware merge
 
 GEPA's **system-aware merge** is crossover across two complementary lineages. After
-an accept (gated by `--merge-cadence` and bounded by `--max-merges`) the loop looks
-for two frontier dominators that share a **common ancestor both improved on**, and
-builds a merged candidate **component-by-component**: start from the ancestor, then
-for each component take whichever descendant *changed* it (deterministic tie to the
-better-val side). The merge is then **minibatch-gated** (`>= max(parents)` on the
-minibatch) before the standard full-val gate, so a bad recombination costs little.
+an accept (gated by `--merge-cadence` and bounded by `--max-merges` **attempts** —
+a merge rejected at either gate consumes one; a skip for want of an eligible pair is
+free) the loop looks for two strict-frontier dominators that share a **common
+ancestor both improved on**, and builds a merged candidate **component-by-component**:
+start from the ancestor, then for each component take whichever descendant *changed*
+it. If both changed it the tie goes to `a`, which is simply the first of the pair in
+frontier iteration order — `_build_merge` never sees a val score. (Val order only
+decides which parent the *gate* compares against.) The merge is then
+**minibatch-gated** (`>= max(parents)` on the minibatch) before the standard
+full-val gate, so a bad recombination costs little.
 
 For a **monolithic single-component** capability there is nothing independent to
 recombine, so the merge **skips gracefully** (logged `gepa_merge_skip`) rather than
@@ -103,15 +132,19 @@ possible future refinement.)
 - **Budget is in metric-calls** (`--max-metric-calls`, primary) — every rollout, on
   the minibatch *and* on full val, is counted via `run_dir.update_spent(metric_calls=
   …)`. `--max-iterations` is a secondary cap. This makes the rollout economy the
-  thing the budget actually constrains, matching the paper's accounting.
+  thing the budget actually constrains, matching the paper's accounting. It is a
+  **stop, not a cap**: `_budget_left()` runs once per iteration, at the top, so an
+  iteration that starts one rollout under budget still spends its two (or three)
+  minibatches plus a full-val eval. Budget your ceiling with that slack.
 - **Eval cache** keys `(hash(candidate editable files), task_id) → reward/feedback`,
-  so a re-sampled parent or a byte-identical candidate pays nothing for a rollout it
-  already ran. Cache hits do **not** count toward the metric-call budget (they fired
-  no rollout); the event log still records every evaluation.
-- **Honesty is the engine's, untouched.** Acceptance is gated on val only; the gate,
-  the paired significance test, the SE-collapse warning, and the test seal are all
-  the same core code the rest of the family uses. The loop adds control flow, not new
-  scoring or gating.
+  so a re-sampled parent or a byte-identical candidate pays nothing for a **minibatch**
+  rollout it already ran. The full-val path (`harness.evaluate_candidate`) never
+  consults the cache and charges unconditionally. Cache hits do not count toward the
+  metric-call budget (they fired no rollout); the event log still records every
+  evaluation. The cache is also why reflection can come out hollow — see above.
+- **The loop adds control flow, not scoring or gating.** Acceptance, the paired
+  significance test, the SE-collapse warning and the seal are all the same core code
+  the rest of the family uses.
 
 ## Relation to the family
 
