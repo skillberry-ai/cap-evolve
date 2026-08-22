@@ -332,8 +332,15 @@ exactly what #386 did to #369, twice.
 
 ## PRs/issues I opened
 
-- PR (this branch, `postmerge-algos-fixes`): everything marked **Fixed** above, plus
+- **PR #394** (`postmerge-algos-fixes`): everything marked **Fixed** above, plus
   `core/tests/test_skill_code_claims.py` (7 tests, 3 failing-first).
-- Recorded in the PR body rather than filed, being other agents' ownership: the 3 wrong policy paths
-  in `skills/capabilities/tools/references/` (child of #352), and the graded-reward guidance that
-  `phases/gate` should adopt from #380's deleted small-val pitfall.
+  <https://github.com/skillberry-ai/cap-evolve/pull/394>
+- **Issue #395** — `skillopt.applied_changes` has no zero: it counts the injected read-context, so it
+  cannot detect an optimizer that made no edit. Real but a code fix outside this PR's scope; the fix
+  is to drop the duplicate seven-basename ignore list in favour of `types.NON_CAPABILITY_FILES` /
+  `NON_CAPABILITY_DIRS`, which #386 extended for exactly this class of problem. Sibling of #371.
+  <https://github.com/skillberry-ai/cap-evolve/issues/395>
+- Recorded in PR #394's body rather than filed, being other owners' skills: the 3 wrong policy paths
+  in `skills/capabilities/tools/references/` (last surfaces of #352, now that the core docstrings are
+  fixed), and the graded-reward guidance `phases/gate` should adopt from #380's deleted small-val
+  pitfall.
