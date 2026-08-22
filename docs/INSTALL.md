@@ -67,6 +67,10 @@ pip install ./core           # or: export CAPEVOLVE_CORE="$PWD/core"
 Destination precedence: `$CAPEVOLVE_SKILLS_DIR` > `--host` mapping > `./.claude/skills` >
 `~/.claude/skills` > `~/.capevolve/skills`.
 
+`install.sh` verifies the installed tree before it reports success, and **exits non-zero**
+naming what is missing if anything did not land — so `./install.sh && pip install ./core`
+stops instead of leaving you with an install that cannot run an optimizer.
+
 ### C. Manual adapter + CLI (any language/agent)
 
 ```bash

@@ -109,6 +109,66 @@ jobs:
             && echo "$out" | grep -q '"test_reward": 1.0' \
             || { echo "::error::toy_calc did not reach baseline_val 0.0 -> test_reward 1.0"; exit 1; }
 
+  install-smoke:
+    name: Install smoke (./install.sh, then run from the install)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install cap-evolve-core
+        run: pip install ./core
+
+      - name: Install via ./install.sh through the --host mapping
+        env:
+          # A clean HOME so `--host claude` lands somewhere this job owns.
+          HOME: ${{ runner.temp }}/fakehome
+        run: |
+          set -euo pipefail
+          # Unset, or detect_dest short-circuits to the checkout and the --host
+          # mapping plus the copy loop are never exercised (what toy-example does).
+          unset CAPEVOLVE_SKILLS_DIR
+          mkdir -p "$HOME"
+          ./install.sh --host claude
+          # The installed tree must carry the optimizer registry, not just skill dirs.
+          test -f "$HOME/.claude/skills/optimizers/registry.yaml"
+
+      - name: cap-evolve entry point is importable and runnable
+        run: |
+          set -euo pipefail
+          python -c 'import cap_evolve, cap_evolve.cli'
+          cap-evolve --version
+
+      - name: Run toy_calc FROM THE INSTALL, outside the repo tree
+        env:
+          HOME: ${{ runner.temp }}/fakehome
+        run: |
+          set -euo pipefail
+          R="$PWD"; D="$(mktemp -d)"
+          mkdir -p "$D/.capevolve/project/adapters"
+          cp    "$R/examples/toy_calc/adapter.py"     "$D/.capevolve/project/adapters/"
+          cp -R "$R/examples/toy_calc/capability"     "$D/seed_capability"
+          cp    "$R/templates/project/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
+          # OUTSIDE the repo: run.py's parent-walk would otherwise find the checkout's
+          # optimizers/registry.yaml and this assertion would prove nothing.
+          cd "$D"
+          export CAPEVOLVE_SKILLS_DIR="$HOME/.claude/skills"
+          export CAPEVOLVE_TOY_DATA="$R/examples/toy_calc"
+          export CAPEVOLVE_MOCK_SCRIPT="$R/examples/toy_calc/mock_script.json"
+          out="$(cap-evolve run --spec "$D/.capevolve/project/capevolve.yaml" \
+                                --project "$D/.capevolve/project" --run-ts ci)"
+          echo "$out"
+          # Assert the OUTCOME, not the exit code: an install that cannot run an
+          # optimizer keeps the seed and reports test_reward 0.0 while exiting 0.
+          echo "$out" | grep -q '"test_reward": 1.0' \
+            || { echo "::error::the installed tree ran but optimized nothing"; exit 1; }
+
   docs-links:
     name: Docs link check
     runs-on: ubuntu-latest
