@@ -71,12 +71,13 @@ FOLLOW_END = "_follow_end"
 BOOKKEEPING_KINDS = ("minibatch", "optimizer_context_warning", "target_profile",
                      "seed_dir_created", "splits_warning", "gepa_resume",
                      "gepa_merge_skip", "gepa_merge_local", "skillopt_slow_eval",
-                     "skillopt_slow_update")
+                     "skillopt_slow_update", "skillopt_step")
 
 # The one-iteration-finished event, carrying the optimizer's own spend. Exactly ONE
 # kind: every algorithm writes it via ``harness.record_iteration`` (#216/#224).
-# ``gepa_val_gate`` is gone and ``skillopt_step`` is auxiliary epoch detail — listing
-# either here rendered two rows and summed ``opt_cost_usd`` twice for one iteration.
+# ``gepa_val_gate`` is no longer emitted at all, and ``skillopt_step`` is auxiliary
+# epoch detail that duplicated the same candidate's row — it is skipped in the terminal
+# via BOOKKEEPING_KINDS above (the dashboard still shows it).
 _STEP_KINDS = ("step",)
 
 
