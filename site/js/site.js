@@ -48,6 +48,29 @@
     pre.appendChild(btn);
   });
 
+  /* ── mobile nav disclosure ── */
+  var navToggle = document.querySelector(".nav-toggle");
+  var navLinks = document.getElementById("nav-links");
+  if (navToggle && navLinks) {
+    var setNav = function (open) {
+      navLinks.classList.toggle("open", open);
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    var navOpen = function () { return navToggle.getAttribute("aria-expanded") === "true"; };
+    navToggle.addEventListener("click", function () { setNav(!navOpen()); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && navOpen()) { setNav(false); navToggle.focus(); }
+    });
+    document.addEventListener("click", function (e) {
+      if (navOpen() && !navToggle.contains(e.target) && !navLinks.contains(e.target)) setNav(false);
+    });
+    /* matchMedia, not resize: iOS fires resize when it collapses its URL bar mid-scroll,
+       with no real width change, which would slam the menu shut under the user's thumb. */
+    window.matchMedia("(min-width: 861px)").addEventListener("change", function (e) {
+      if (e.matches) setNav(false);
+    });
+  }
+
   /* ── TOC scrollspy ── */
   var tocLinks = Array.prototype.slice.call(document.querySelectorAll(".toc a[href^='#']"));
   if (tocLinks.length && "IntersectionObserver" in window) {
