@@ -60,6 +60,7 @@ from .harness import (
     _live,
     _paired_deltas,
     _resolve_workers,
+    _SNAPSHOT_IGNORE,
     evaluate_candidate,
     split_result_from_rollouts,
 )
@@ -665,7 +666,7 @@ def gepa_loop(
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
         if accepted:
-            run_dir.snapshot(cid, workdir)
+            run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
             child_dir = run_dir.candidate_dir(cid)
             pool.append(_entry(cid, child_dir, cand_val, parent=parent["id"]))
             lineage[cid] = parent["id"]
@@ -829,7 +830,7 @@ def _try_merge(
     run_dir.update_spent(iterations=1, accepted=accepted)
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
-        run_dir.snapshot(mid, workdir)
+        run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)
         pool.append(_entry(mid, run_dir.candidate_dir(mid), cand_val, parent=base_parent["id"]))
         lineage[mid] = base_parent["id"]
         history.add(mid, summary, cand_val.reward)

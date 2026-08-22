@@ -1839,9 +1839,17 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # snapshot and surface via RUNMAP/prior_iterations. LEDGER/JOURNAL/RUNMAP + prior_iterations/
 # are framework-injected read-context (LEDGER/RUNMAP regenerated, JOURNAL is run-level),
 # so they must not bloat candidates/ or pollute diffs.
+# FOCUS.md/REFLECTION.md are GEPA's own per-iteration scratch (gepa.py writes them into the
+# workdir it snapshots); hill-climb never writes them, so listing them is a no-op there.
+# The vendor dirs/files below mirror every skills_dir/instructions_file in
+# skills/optimizers/registry.yaml, so a new row must be added here too —
+# test_native_skills.test_snapshot_ignores_every_vendor_dir_the_registry_declares enforces that.
+# (Kept literal rather than read from the registry: an installed core has no skills/ tree
+# beside it, so the literal list has to be complete anyway.)
 _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
                     "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
-                    ".claude", ".agents", ".gemini", ".opencode", ".bob",
+                    "FOCUS.md", "REFLECTION.md",
+                    ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")
 
 

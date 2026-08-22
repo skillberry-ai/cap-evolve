@@ -106,3 +106,29 @@ def test_mock_optimizer_has_no_native_placement(tmp_path):
     assert (workdir / "guidance" / "system-prompt" / "SKILL.md").exists()
     assert not (workdir / ".claude").exists()
     assert not (workdir / "CLAUDE.md").exists()
+
+
+def test_snapshot_ignores_every_vendor_dir_the_registry_declares():
+    """Everything the registry injects must be excluded from candidate snapshots.
+
+    ``_SNAPSHOT_IGNORE`` hand-lists the per-agent vendor dirs/files that
+    ``_inject_native_skills`` drops into the workdir. This test is what keeps that
+    list from drifting behind ``optimizers/registry.yaml``: add a row with a new
+    ``skills_dir``/``instructions_file`` and forget the ignore entry, and candidate
+    snapshots silently gain injected read-context (the #110 failure mode).
+    """
+    from cap_evolve.harness import _SNAPSHOT_IGNORE
+    from cap_evolve.specfile import read_yaml
+
+    reg = REPO / "skills" / "optimizers" / "registry.yaml"
+    rows = read_yaml(reg.read_text(encoding="utf-8")) or {}
+    missing = set()
+    for name, row in rows.items():
+        if not isinstance(row, dict):
+            continue
+        sd = str(row.get("skills_dir") or "").strip()
+        inst = str(row.get("instructions_file") or "").strip()
+        for want in ((sd.split("/")[0] if sd else ""), inst):
+            if want and want not in _SNAPSHOT_IGNORE:
+                missing.add(f"{name}: {want}")
+    assert not missing, f"registry declares injected paths absent from _SNAPSHOT_IGNORE: {sorted(missing)}"
