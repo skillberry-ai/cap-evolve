@@ -1,61 +1,60 @@
 ---
 name: baseline
-description: Establish the starting point. Use after implement-and-check and before any algorithm. Creates the run directory, freezes the seeded train/val/test split (written once), scores the unmodified seed capability on val, and records it as the candidate every algorithm must beat. Confirms there is headroom to optimize.
+description: Establish the starting point. Use after implement-and-check and before any algorithm. Creates the run directory, freezes the seeded train/val/test split (written once), scores the unmodified seed capability on val, and records it as the candidate every algorithm must beat. Reports the remaining headroom so a saturated seed stops the run before it spends budget.
 component: phase
-argument-hint: "--base .capevolve --project DIR --capability DIR"
+argument-hint: "--base .capevolve --project DIR --capability DIR [--seed N] [--ratios a,b,c] [--n-trials N] [--split-ids FILE] [--resume] [--reuse-baseline DIR]"
 allowed-tools: Read, Write, Bash
-provides: [splits, baseline, candidate]
+provides: [splits, baseline, candidate, scores, traces]
 needs: [project, tasks]
 sources: []
 ---
 
 # baseline — freeze splits, score the seed
 
-baseline is the first phase that touches data, so it owns the most
-consequential one-time decision in the whole run: **the split**. It writes
-`splits.json` once (seeded, reproducible), scores the *unmodified* seed
-capability on val, and records that score as the candidate every algorithm must
-beat. Get the split right here and every downstream number is honest; get it
-wrong and nothing later can fix it.
+baseline is the first phase that touches data, so it owns the run's one
+irreversible decision: **the split**. It writes `splits.json` once (seeded), scores
+the *unmodified* seed capability on val, and records that score as the bar every
+algorithm must beat.
 
-## Inputs / outputs (manifest tokens)
-- **needs:** `project` (the implemented adapter) and `tasks` (the dataset).
-- **provides:** `splits` (the frozen train/val/test partition), `baseline` (the
-  seed's val score), and `candidate` (the seed, registered as the first best).
+Run `implement-and-check` first. baseline re-runs that check itself and exits
+non-zero before creating a run dir if it is red — a split frozen against a broken
+adapter poisons every number measured afterwards.
 
 ## Why it matters
 - **Fair comparison point.** Every algorithm hill-climbs *against* the baseline
   val score; a candidate that does not beat it is not progress.
-- **Headroom check.** If the seed already scores ~1.0 on val, there is little to
-  optimize — stop and save budget rather than chase noise. A near-floor baseline,
-  conversely, may signal a broken adapter rather than a hard task.
-- **Split sealing.** baseline writes the split *once*; from here on no skill
-  re-splits, and **test is untouched until finalize**. Freezing it once (seeded)
-  guarantees train/val/test stay disjoint and reproducible across reruns — the
-  precondition for the honest test number at the end.
+- **Headroom.** The printed JSON carries `headroom` (`1 - val`) and
+  `headroom_verdict`: `saturated` means the seed is already at the ceiling and
+  further iterations buy noise — stop; `floor` (val at 0) usually means a
+  mis-wired adapter rather than a hard task — re-check before spending budget;
+  `ok` means proceed. The same verdict is logged as a `headroom` event so the
+  orchestrator can stop on it with no human reading the number.
 
 ## Splitting choices
 - **Seeded ratio split** (default `0.5 / 0.25 / 0.25`): deterministic given
   `--seed`. Reproducible runs partition identically.
 - **Pinned split** (`--split-ids`): a JSON `{train,val,test}` of ids — use a
   benchmark's official split, or set all three equal to fit the whole set with
-  **no holdout** (the report will then flag the test number as a *fit* metric, not
-  a held-out result).
-- Tasks must be plentiful enough to split three ways and still leave val/test big
-  enough that their standard errors are not dominated by sample size.
+  **no holdout** (the test number is then a *fit* metric, not a held-out result;
+  the run dir records a `splits_warning` saying so).
+- A ratio split that leaves val or test empty is **refused** — the gate would
+  have nothing to decide on and the sealed test number would cover no tasks.
+  Below 5 val tasks baseline warns: the gate's bar is optimistic at that `n`, and
+  a candidate that improves exactly one val task cannot reliably clear it at all
+  (issue #351), so size val with the decisions it has to make in mind.
 
 ## Reusing a prior baseline (`--reuse-baseline PRIOR_RUN_DIR`)
-Re-scoring the seed on val every run is wasteful when the split + seed are
-unchanged. Pass `--reuse-baseline <prior run_* dir>` (spec key `reuse_baseline`,
-or `cap-evolve run --reuse-baseline ...`) and baseline copies the prior run's
-`splits.json`, `baseline.json`, the seed candidate snapshot, and the seed val
-rollouts into the fresh run dir, then **skips** the baseline eval — the algorithm
-starts at iteration 1 on the reused baseline. The **test seal stays intact**: the
-copied split's `test_used` flag is reset so this run can still finalize on test
-exactly once. Backward compatible — absent, baseline behaves exactly as before.
+Re-scoring the seed is wasteful when the split + seed are unchanged.
+`--reuse-baseline <prior run_* dir>` (spec key `reuse_baseline`) copies that run's
+`splits.json`, `baseline.json`, seed snapshot and seed val rollouts into the fresh
+run dir and skips the baseline eval; the copied `test_used` flag is reset so this
+run can still finalize on test exactly once. `--resume` is the same-run variant:
+reopen an existing run dir, skip the eval when `baseline.json` is already there.
+Budget flags (`--max-iterations`, `--stall`, `--max-usd`, …) are accepted here
+because the run dir owns the budget and later phases read it from there.
 
-## Dual-mode
-This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:baseline` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+Runs standalone (`/cap-evolve:baseline`) or headlessly via `cap-evolve run`; same
+`scripts/run.py` either way.
 
 ## How to run
 ```
@@ -63,17 +62,14 @@ python scripts/run.py --base .capevolve --project .capevolve/project \
     --capability seed_capability --seed 0 --ratios 0.5,0.25,0.25 \
     --max-iterations 10 --stall 2
 ```
-Prints the run-dir path (used by the algorithm + finalize) and the baseline val.
-Use `--n-trials ≥ 3` for stochastic agents so the baseline carries an honest
-`stderr` for the gate to compare against.
+Prints the run-dir path (used by the algorithm + finalize), the split sizes, the
+baseline val and the headroom verdict. Use `--n-trials ≥ 3` for stochastic
+targets so the baseline carries a real `stderr` rather than 0.
 
-## What good vs bad looks like
-- **Good:** a seeded or official split written once; baseline scored with enough
-  trials to have real variance; visible headroom between baseline and 1.0.
-- **Bad:** re-splitting later in the run (leaks test); a baseline at ~1.0 chased
-  anyway (no headroom — wasted budget); a single-trial baseline `stderr=0` that
-  makes every later significance comparison meaningless.
+The one failure mode nothing later can repair is re-splitting after this phase: a
+task migrating out of test leaks the held-out set, and every later number —
+including the sealed test score — becomes unfalsifiable.
 
 ## References
-- `references/concepts.md` — why splits are frozen once and seeded, the headroom
-  check, no-holdout fit metrics, and the train/val/test contract, with sources.
+- `references/concepts.md` — why the split is frozen once and seeded, how to read
+  the headroom verdict, and why no-holdout runs are fit metrics, with sources.

@@ -23,17 +23,21 @@ purposes:
    identically, so results are comparable and bugs are reproducible. The seed is
    recorded in the run dir.
 
-## The headroom check
+## The headroom verdict
 
-baseline scores the *unmodified* seed on val before any optimization. The val
-number is a budget decision:
+baseline scores the *unmodified* seed on val before any optimization, then turns
+that number into a budget decision it emits (`headroom`, `headroom_verdict` in the
+printed JSON and a `headroom` event in the run dir):
 
-- **Seed ≈ 1.0:** the ceiling is already reached. Optimizing further chases noise
-  for marginal gain — stop and save budget.
-- **Seed ≈ floor (near 0):** suspicious. Often a broken adapter (wrong runner,
-  mis-wired scorer) rather than a genuinely impossible task. Re-check the
-  contract before spending budget.
-- **Seed in the middle:** real headroom — proceed.
+- **`saturated`** (val + stderr ≥ 1.0): the ceiling is already reached. Further
+  iterations chase noise for marginal gain — stop and save budget.
+- **`floor`** (val ≤ 0): suspicious. Usually a broken adapter (wrong runner,
+  mis-wired scorer) rather than a genuinely impossible task. Re-check the contract
+  before spending budget.
+- **`ok`**: real headroom — proceed.
+
+It is deliberately non-fatal. The verdict is a fact about the run, recorded where
+both a human and the orchestrator can read it; deciding to stop is theirs.
 
 Recording the baseline also gives every algorithm a fixed bar: a candidate must
 beat the baseline val (by the gate's significance margin) to count as progress.
@@ -51,11 +55,9 @@ performance. The distinction is the difference between "fits the data we have" a
 
 ## Variance starts here
 
-If the agent is stochastic, score the baseline with multiple trials. A
-single-trial baseline reports `stderr = 0`, and since the gate compares each
-candidate against the baseline using a combined standard error, a zero baseline SE
-quietly weakens every later significance test. Honest variance at the baseline is
-what lets the gate reject noise for the rest of the run.
+If the target is stochastic, score the baseline with `--n-trials >= 3`. A
+single-trial baseline reports `stderr = 0`, which the gate then inherits for the
+rest of the run — see `phases/gate` for what that does to `Δ > k·SE`.
 
 ## Sources
 - Hastie, Tibshirani, Friedman, *The Elements of Statistical Learning* — the
