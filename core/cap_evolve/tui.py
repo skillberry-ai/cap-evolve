@@ -917,8 +917,9 @@ def algo_panel(stats: dict | None, summary: dict) -> tuple[str, list[str]]:
         if (stats or {}).get("mb_pass") or (stats or {}).get("mb_fail"):
             bits.append(f"minibatch gate {stats.get('mb_pass', 0)}✓ "
                         f"{stats.get('mb_fail', 0)}✗")
-        if kinds.get("gepa_val_gate"):
-            bits.append(f"full-val gates {kinds['gepa_val_gate']}")
+        # "full-val gates N" used to count ``gepa_val_gate``; gepa now writes the shared
+        # ``step`` record instead (#216/#224), which also covers minibatch-local rejects,
+        # so it is no longer a full-val count. ``minibatch gate N✓`` above is that number.
         if summary.get("frontier") is not None:
             bits.append(f"pareto frontier {summary['frontier']}")
         if (stats or {}).get("minibatch_size"):
