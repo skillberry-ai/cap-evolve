@@ -3,7 +3,7 @@
 > The whole pipeline exists to produce *one* number you can defend: how good is
 > the optimized capability on data nothing was tuned against. finalize produces
 > it, once, and the run dir enforces that "once". Implementation:
-> `harness.finalize` + the `test_used` seal in `cap_evolve/rundir.py`.
+> `harness.finalize` + the reserve/commit `test_used` seal in `cap_evolve/rundir.py`.
 
 ## Why val is not the answer
 
@@ -30,9 +30,20 @@ applied to the one split that was supposed to be clean. The result is no longer
 an unbiased estimate; it has quietly become a fit metric, and nothing in the
 output says so.
 
-cap-evolve refuses to let this happen by accident: `RunDir` flips `test_used` on
-the first test scoring, and any second attempt raises `TestSealError`. The
-honesty is enforced by the harness, not left to the operator's discipline.
+cap-evolve refuses to let this happen by accident, in three parts
+(`rundir.py:358-407`). `reserve_test` *checks* the seal on every `split="test"`
+evaluation without burning it; `commit_test` burns it only once `final.json` is
+written, so a finalize that crashes *before* scoring is honestly retryable rather
+than a destroyed headline number; and `begin_test_attempt` refuses a retry once
+test rollouts exist on disk, since a crash after scoring means the held-out set
+was already observed. Any second attempt raises `TestSealError`. The honesty is
+enforced by the harness, not left to the operator's discipline — the one bypass,
+`CAPEVOLVE_ALLOW_TEST_RESCORE=1`, is deliberately an explicit env override.
+
+The seal counts *attempts*, not evaluations, because one honest finalize scores
+test twice by design: the best candidate (`FINAL`) and the unmodified seed
+(`FINAL_seed`), so the headline is a held-out improvement rather than a bare
+number. Neither is a selection event.
 
 ## Selection happens before finalize
 
