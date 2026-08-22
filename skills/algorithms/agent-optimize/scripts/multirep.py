@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 def rates(p):
-    d = json.load(open(p))
+    d = json.loads(Path(p).read_text(encoding="utf-8"))
     return {t: r["rate"] for t, r in (d.get("per_task") or {}).items() if "rate" in r}
 
 

@@ -35,7 +35,6 @@ import ast
 import difflib
 import json
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
