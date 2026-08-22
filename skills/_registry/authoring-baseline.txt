@@ -1,0 +1,14 @@
+algorithms/agent-optimize: SKILL.md body is 915 lines (>500); split detail into references/ (progressive disclosure)
+algorithms/agent-optimize: SKILL.md body is ~14678 tokens (>5000); it is a recurring per-session cost — move detail into references/
+algorithms/agent-optimize: references/measured-lessons.md is 543 lines without an early table of contents (needs >=3 '[section](#anchor)' links up front)
+algorithms/evograph: references/clustering.md links to another reference 'graph.md'; references must be one level deep — link it from SKILL.md instead
+algorithms/evograph: references/dashboard.md links to another reference 'clustering.md'; references must be one level deep — link it from SKILL.md instead
+algorithms/evograph: references/dashboard.md links to another reference 'graph.md'; references must be one level deep — link it from SKILL.md instead
+algorithms/evograph: references/graph.md links to another reference 'clustering.md'; references must be one level deep — link it from SKILL.md instead
+capabilities/skill-package: references/concepts.md links to another reference 'anti-patterns.md'; references must be one level deep — link it from SKILL.md instead
+capabilities/skill-package: references/concepts.md links to another reference 'description-optimization.md'; references must be one level deep — link it from SKILL.md instead
+capabilities/tools: SKILL.md body is 741 lines (>500); split detail into references/ (progressive disclosure)
+capabilities/tools: SKILL.md body is ~12222 tokens (>5000); it is a recurring per-session cost — move detail into references/
+capabilities/tools: references/examples.md is 378 lines without an early table of contents (needs >=3 '[section](#anchor)' links up front)
+capabilities/tools: references/optimizer-playbook.md links to another reference 'examples.md'; references must be one level deep — link it from SKILL.md instead
+orchestrate/using-cap-evolve: description must not contain XML tags
