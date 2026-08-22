@@ -271,18 +271,14 @@
     "using-cap-evolve": {
       "component": "orchestrate",
       "path": "orchestrate/using-cap-evolve",
-      "summary": "Session-start router \u2014 turns \"optimize <X>\" into the cap-evolve pipeline; routes to intake and documents the standalone phase chain and the automatic `cap-evolve run` path.",
+      "summary": "Session-start router \u2014 turns an \"optimize this\" request into the cap-evolve pipeline; resolves the on-disk state and names the next command (intake, the check gate, a resumed run, or a new run reusing a sealed baseline).",
       "entry": "scripts/run.py",
       "abstract": "scripts/abstract.py",
       "check": "scripts/check.py",
       "prompt": null,
       "inputs": null,
-      "needs": [
-        "project"
-      ],
-      "provides": [
-        "report"
-      ],
+      "needs": [],
+      "provides": [],
       "compatible_with": {
         "capabilities": [
           "*"
