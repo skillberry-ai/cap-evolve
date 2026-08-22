@@ -10,8 +10,10 @@ Honesty notes:
   * It is keyed on candidate-file content, so an edit (even whitespace) busts the
     key — a stale score can never be served for changed files.
   * It is an optimization, not a source of truth: ``events.jsonl`` still records
-    every evaluation. Wiring into ``evaluate_candidate`` is OFF by default and gated
-    behind a flag (see ``maybe_cached_score``) so it cannot silently change behavior.
+    every evaluation.
+  * Scope: GEPA only. ``gepa`` constructs one cache and consults it inside its
+    minibatch eval; ``harness.evaluate_candidate`` never touches it, so a plain
+    hill-climb / skillopt run is unaffected.
 
 Pure stdlib (hashlib + json).
 """

@@ -56,7 +56,7 @@ def test_per_task_impact_lists_broken_task():
     # broken/fixed task ids are surfaced in cand_0001's row.
     import tempfile as _tf
     workdir = Path(_tf.mkdtemp())
-    harness._build_ledger(workdir, rd, rejected, None)
+    harness._build_ledger(workdir, rd)
     ledger = (workdir / "LEDGER.md").read_text(encoding="utf-8")
     assert "cand_0001" in ledger
     # Row format: | iter | candidate | parent | outcome | val | Δ | broke {..} | fixed {..} |

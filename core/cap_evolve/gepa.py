@@ -579,7 +579,7 @@ def gepa_loop(
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
         instructions = _instructions(refl_summary, focus_label, mb)
-        instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
+        instructions = _augment_instructions(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather
         # than via ``harness.run_step``, so it needs the same two calls. None = off.

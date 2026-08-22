@@ -130,14 +130,16 @@ def test_combined_stderr_zero_for_single_certain_task():
 
 # ---- rejected memory ------------------------------------------------------
 
-def test_rejected_memory_roundtrip_and_render(tmp_path):
-    rm = RejectedMemory(tmp_path / "rejected.jsonl")
+def test_rejected_memory_writes_the_jsonl_the_dashboard_reads(tmp_path):
+    """RejectedMemory is a write-only audit record: one json object per line with the
+    fields the dashboard's memory panel renders. Nothing in core re-reads it."""
+    import json as _json
+    path = tmp_path / "rejected.jsonl"
+    rm = RejectedMemory(path)
     rm.add("c1", "added verbose preamble", "Δ<=0 on val", val=0.41)
     rm.add("c2", "removed the schema hint", "regressed val", val=0.30)
-    assert len(rm.entries()) == 2
-    rendered = rm.render()
-    assert "added verbose preamble" in rendered
-    # The block is reframed as STEERING (regressed-as-implemented), not a hard ban:
-    # it must still steer the optimizer away from re-submitting the rejected edit.
-    low = rendered.lower()
-    assert "regressed" in low and "re-submit" in low
+    recs = [_json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(recs) == 2
+    assert recs[0] == {"candidate_id": "c1", "summary": "added verbose preamble",
+                       "reason": "Δ<=0 on val", "val": 0.41}
+    assert recs[1]["candidate_id"] == "c2"
