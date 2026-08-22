@@ -1,12 +1,11 @@
 """hill-climb — global hill-climb on the val gate, with a selectable focus schedule.
 
-One skill replacing the three byte-identical clones (all-at-once / cyclic /
-hardest-first); they differed ONLY in which train tasks each iteration's
-reflection emphasizes. ``--focus`` selects that schedule:
+``--focus`` selects which of the parent's failing VAL tasks each iteration's
+reflection emphasizes (val is the only per-task data the loop holds):
 
-    all            propose against the whole train set each iteration (default)
-    cyclic         focus one train task at a time, cycling through them
-    hardest-first  rank train tasks by baseline score ascending, attack hardest first
+    all            every failing val task each iteration (default)
+    cyclic         one val task at a time, cycling through them
+    hardest-first  val tasks ordered by the parent's per-task reward ascending
 
 The parent is always the current best (global hill-climb); honesty (val-only
 gate, sealed test) lives in core. This is a thin wrapper over

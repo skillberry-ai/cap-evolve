@@ -106,6 +106,45 @@ def test_cyclic_variant_also_improves(tmp_path):
     assert summary["best_val"] == 1.0
 
 
+@pytest.mark.parametrize("focus", ["cyclic", "hardest-first"])
+def test_narrow_focus_renders_the_focused_tasks_failures(tmp_path, focus):
+    """A narrow focus must focus a task the loop actually HAS per-task data for.
+
+    ``_focus_instructions`` filters the parent's VAL rows, so a focus set built from
+    TRAIN ids intersected them in nothing and every non-``all`` schedule shipped a
+    prompt with "0 failing of 0 tasks" and no failure index at all. Assert on the
+    rendered prompt, not on a tuple of schedule names — the mock optimizer applies a
+    fixed edit script and never reads the prompt, so only this can see the regression.
+    """
+    from cap_evolve import Budget, RunDir, harness
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("toy_calc_adapter", EXAMPLE / "adapter.py")
+    toy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(toy)
+    adapter = toy.Adapter()
+    seed = tmp_path / "seed"
+    shutil.copytree(EXAMPLE / "capability", seed)
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="f", budget=Budget(max_iterations=1))
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    base = harness.baseline(adapter, seed, run_dir=run_dir)
+
+    seen = []
+
+    def capturing(workdir, instructions):  # noqa: ARG001 — a no-op proposer
+        seen.append(instructions)
+        return None
+
+    harness.hill_climb_loop(adapter, run_dir=run_dir, optimizer=capturing, current_val=base,
+                            focus=focus, max_iterations=1)
+    assert len(seen) == 1
+    prompt = seen[0]
+    val_ids = run_dir.read_splits().val
+    assert any(f"Focus: task {t}." in prompt for t in val_ids), \
+        "the focused task must be a VAL id — that is the only per-task data the loop holds"
+    assert "## (a)" in prompt, "the focused task's failures must reach the optimizer"
+    assert "0 failing of 0 tasks" not in prompt
+
+
 def test_baseline_better_than_nothing_is_gated(tmp_path):
     """A no-op edit (no change) must be rejected by the significance gate."""
     from cap_evolve import RunDir, harness

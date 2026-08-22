@@ -2008,11 +2008,16 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     the per-iteration data (the focus summary, the failure index, the capability/algorithm
     briefs, the benchmark-repo pointer) is computed here and substituted.
     """
-    per = current_val.per_task
-    if focus_ids is not None:
-        per = [pt for pt in per if pt.get("task_id") in set(focus_ids)]
+    per_all = current_val.per_task
+    per = ([pt for pt in per_all if pt.get("task_id") in set(focus_ids)]
+           if focus_ids is not None else per_all)
     errored, always_fail, flaky, solid = _classify(per)
     n = len(per)
+    # Non-regression is a constraint over the WHOLE val split, not just the focus set:
+    # an edit aimed at one focused task must still not break a passing task outside it.
+    # Classifying the focused subset alone made ``_passing_block`` empty for every
+    # narrow focus, silently dropping the only explicit protect-these-ids instruction.
+    protect = solid if focus_ids is None else _classify(per_all)[3]
 
     focus_summary = (
         f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
@@ -2020,7 +2025,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
     )
     failures = _failures_block(always_fail, flaky, errored)
-    passing = _passing_block(solid)
+    passing = _passing_block(protect)
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
     bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "
@@ -2169,14 +2174,16 @@ def hill_climb_loop(
     _profile = _tp.resolve(target_model, target_profile_file, project_dir=project_dir)
     _target_reader = _tp.reader_block(_profile)
 
-    # establish a focus order over the train tasks when needed
-    train_ids = run_dir.read_splits().train
-    order = list(train_ids)
+    # Establish the focus order when a narrow focus is requested. It must be over VAL
+    # ids: ``_focus_instructions`` filters the parent's val per-task rows, and the
+    # splits are disjoint slices of one shuffled id list (``splits.py:117-119``), so a
+    # focus set of TRAIN ids intersects those rows in nothing at all and the optimizer
+    # prompt renders zero failures. ``current_val`` already holds every focused task's
+    # reward, so hardest-first orders straight off it — no extra evaluation to buy.
+    order = list(run_dir.read_splits().val)
     if focus == "hardest-first":
-        seed_dir = run_dir.candidate_dir("seed")
-        train_res = evaluate_candidate(adapter, seed_dir, run_dir=run_dir, split="train",
-                                       n_trials=n_trials, tag="seed_train")
-        score_by = {pt["task_id"]: pt["reward"] for pt in train_res.per_task}
+        score_by = {pt.get("task_id"): float(pt.get("reward", 0.0) or 0.0)
+                    for pt in current_val.per_task}
         order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
 
     steps = []
@@ -2187,10 +2194,10 @@ def hill_climb_loop(
         if exhausted:
             break
         if focus == "all":
-            focus_ids, label = None, "whole train set"
+            focus_ids, label = None, "every failing task on the val split"
         elif focus in ("cyclic", "hardest-first"):
             focus_ids = [order[i % len(order)]] if order else None
-            label = f"task {focus_ids[0]}" if focus_ids else "train"
+            label = f"task {focus_ids[0]}" if focus_ids else "the whole val split"
         else:
             focus_ids, label = None, focus
         seed_empty = _capability_is_empty(capabilities, run_dir.candidate_dir(run_dir.best_id))
