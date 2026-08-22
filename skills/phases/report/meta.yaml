@@ -4,6 +4,11 @@ summary: Summarize baseline to best-val to sealed-test and name the winner.
 entry: scripts/run.py
 abstract: scripts/abstract.py
 check: scripts/check.py
+# The real dependency is finalize's sealed test number: without final.json this phase
+# can only emit a val-only, NOT-FINALIZED report. That ordering is deliberately NOT
+# expressed as a token today because finalize also `provides: [report]`, so there is no
+# distinct token to need. Expressing it means finalize `provides: [sealed_test]` and
+# report `needs: [sealed_test]` — a two-file change owned by finalize, tracked in #336.
 needs: []
 provides: [report]
 compatible_with:

@@ -2,7 +2,7 @@
 name: report
 description: Summarize a run for a human — baseline val → best val → sealed test, the winning candidate, iterations spent, and pass^k. Use after finalize. Writes report.md and prints a compact JSON summary; the source of truth for "did this optimization actually work, and by how much".
 component: phase
-argument-hint: "--run-dir DIR"
+argument-hint: "--run-dir DIR [--terminal] [--no-dashboard]"
 allowed-tools: Read, Write, Bash
 provides: [report]
 needs: []
@@ -11,96 +11,89 @@ sources: [evo]
 
 # report — did it work, and by how much?
 
-The result of an optimization run is not "we made edits" — it is a defensible
-answer to *did this actually work, and by how much.* report reads the run dir's
-`baseline.json` and `final.json` and lays them side by side: where the seed
-started (val), where the best candidate landed (val), and the single **held-out
-test** number that actually counts. It is the source of truth a human reads to
-decide whether to ship the optimized capability.
+The result of a run is not "we made edits" — it is a defensible answer to *did this
+actually work, and by how much.* report lays three numbers side by side: where the
+seed started (val), where the best candidate landed (val), and the single **held-out
+test** number that counts. It is what a human reads to decide whether to ship.
 
-## Inputs / outputs (manifest tokens)
-- **needs:** *(reads the run dir directly — baseline.json / final.json / events /
-  per-task rollouts / git store)*.
-- **provides:** `report` — `report.md`, a compact JSON summary, a self-contained
-  `dashboard.html`, and an on-demand ANSI terminal report.
+Runs standalone as `/cap-evolve:report`, or headlessly as the last step of
+`cap-evolve run` — same `scripts/run.py` either way. There is no `cap-evolve report`
+subcommand; invoke the script.
 
 ## How to read the three numbers
 The honest reading is always **test vs baseline**, with val as a sanity check in
-between:
+between. `scripts/run.py` produces the numbers; this is the judgment you add on top:
 
-- **test ≈ baseline** → no real gain. The val improvement was overfitting or
-  noise the gate let through. Do not ship; tighten `gate_k_se` or add trials.
+- **test ≈ baseline** → no real gain. The val improvement was overfitting or noise
+  the gate let through. Do not ship; tighten `gate_k_se` or add trials.
 - **test ≫ baseline** → genuine improvement on data the optimizer never saw. Ship.
-- **val ≫ test** → the classic overfit signature: the optimizer learned the val
-  set, not the capability. The gap *is* the overfitting, quantified.
-- **wide pass^k drop vs pass^1** → the gain is *fragile* across trials — the agent
+- **val ≫ test** → the classic overfit signature: the optimizer learned the val set,
+  not the capability. The reported val→test gap *is* the overfitting, quantified.
+- **pass^k far below pass^1** → the gain is *fragile* across trials; the agent
   sometimes succeeds but not reliably. A high mean with low pass^k is not a
   dependable win (τ-bench's point).
 
-Always report the **test stderr / CI**, not just the point: "0.71" and
-"0.71 ± 0.08" support very different decisions.
+Every number is rendered with its stderr when one was measured, because "0.71" and
+"0.71 ± 0.08" support very different decisions. A gain smaller than the noise floor
+is not a result — say so plainly rather than quoting the point estimate alone.
 
-When the run declared a **consuming LLM** (the `target_profile` in the run summary —
-the runtime model the capabilities were optimized FOR, distinct from the optimizer
-model that proposed the edits), print it alongside the optimizer model so the two LLM
-roles stay visibly distinct: e.g. "optimized for gpt-oss-120b (tier mid); edits proposed
-by claude-opus". Omit the line for profile-agnostic runs (no `target_profile`).
+## Output contract
+`scripts/run.py` owns both artifacts and writes them deterministically from the run
+dir — do not hand-write or paraphrase them, or two runs stop being comparable.
 
-## Dual-mode
-This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:report` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+`report.md` is exactly this skeleton (bracketed lines appear only when they apply):
+
+```
+# cap-evolve run report — <run_id>
+
+[> **NOT FINALIZED** — no held-out test number. Run the finalize phase first; …]
+[> **No holdout** (train == val == test). The test number below is a *fit* metric, …]
+
+- Best candidate: `<best_id>`
+- Baseline val: <r> ± <se>
+- Best val: <r> ± <se>
+- **Held-out test (optimized skills): <r> ± <se>**  (pass^1=…, pass^k=…)
+[- Held-out test (baseline `<baseline_id>` skills): <r> ± <se>]
+[- **Test improvement (optimized − baseline): <+Δ>**]
+[- Val→test gap: <+Δ> — selection optimism on val; this gap IS the overfitting]
+- Iterations: <n>
+[- Optimized for: <consuming model> (tier <t>)]
+
+[<sealed note — omitted entirely when the run was never finalized>]
+```
+
+stdout is **exactly one** JSON object — `cap-evolve run` echoes it as its own result, so
+it is the machine contract for everything downstream. Keys (null for whatever the run
+dir does not carry; an unfinalized run is `finalized: false` with null test numbers):
+`run_dir`, `best_id`, `finalized` bool, `no_holdout` bool, `baseline_val`,
+`baseline_val_stderr`, `best_val`, `test_reward`, `test_stderr`,
+`test_baseline_reward`, `test_baseline_stderr`, `test_delta`, `test_pass_k` (k→float),
+`val_test_gap`, `iterations`, `target_profile` (`{model,tier,resolution_note}`), plus
+`dashboard` / `dashboard_server` / `*_error` on the paths that produce them.
 
 ## How to run
 ```
-python scripts/run.py --run-dir .capevolve/run_XXXX            # JSON summary + report.md + dashboard.html
-python scripts/run.py --run-dir .capevolve/run_XXXX --terminal # colored in-chat ANSI report (no browser)
+python scripts/run.py --run-dir .capevolve/run_XXXX            # JSON + report.md + dashboard.html
+python scripts/run.py --run-dir .capevolve/run_XXXX --terminal # colored in-chat ANSI report
 python scripts/run.py --run-dir .capevolve/run_XXXX --no-dashboard
 ```
+`--dashboard-mode` / `--dashboard-port` / `--dashboard-url` are orchestrator-supplied.
+Re-reporting by hand after `cap-evolve run` needs `--dashboard-url <the URL run printed>`
+or `--no-dashboard` — launching is deliberately not idempotent, so a bare re-run spawns
+a second server on a second port and reports that one instead.
 
-### The dashboard (`dashboard.html`)
-A **fully self-contained** static file — inline CSS + vanilla JS + inline SVG, **no
-CDN, no server, no network**. It is the single shareable artifact; open it by
-double-clicking (works from `file://`). The builder first **reduces** the event log
-(plus baseline/final, per-task rollouts, and the git store) into a candidate **graph
-+ run-summary**, then renders eight panels:
-
-1. **KPI strip** — best / baseline / %Δ-vs-baseline (abs Δ off a zero baseline),
-   counts by status (accepted/rejected/failed/seed), frontier, sealed test, wall
-   clock, cost split **optimizer vs runner**, tokens.
-2. **Cumulative-best stair** over a per-iteration scatter — running-best step
-   polyline, champion star, record-holder rings, hover tooltip (id/status/val/Δ).
-3. **tasks×iterations pass/fail heatmap** — rows sorted worst-first; reveals
-   regressions, persistent failures, and per-task specialists the mean hides; click
-   a cell for that task's feedback.
-4. **Diff vs parent** — prompt/skill/tools diff of a candidate against its parent
-   (split/unified toggle), computed from the candidate dirs.
-5. **Lineage tree** — parent→child DAG (merges = multi-parent), best-lineage spine
-   highlighted.
-6. **Cost / tokens / latency** — per-iteration + cumulative, split optimizer vs
-   runner, plus a cumulative-cost-vs-best-score plot.
-7. **Annotations & diagnoses** — gate reasons + diagnose/optimizer-error output.
-8. **Candidate leaderboard** + the git iteration-store log.
-
-All values pass through a recursive **secret redactor** first, so a shared dashboard
-never leaks `RITS_API_KEY` / `BOBSHELL_API_KEY` / `WATSONX_*` etc. Optional panels
-**degrade silently** when per-task data, diffs, or finalize are missing.
-
-### The terminal report (`--terminal` / `--ansi`)
-A colored cumulative-best chart + one-line KPI strip + top-N candidate table for
-in-chat progress without opening the browser. Sized to the terminal width and
-**CLAUDECODE-margin-aware** (subtracts ~6 cols when `CLAUDECODE=1` so it doesn't wrap
-inside the tool-output frame). `--no-color` / `NO_COLOR=1` for plain text;
-`--top-n N` sets the table size.
-
-## What good vs bad looks like
-- **Good:** test reported with its uncertainty and pass^k; the baseline→val→test
-  story told honestly, including a no-gain or overfit result when that is what
-  happened; a no-holdout run clearly labelled as a fit metric.
-- **Bad:** reporting val as if it were the result; a bare point estimate with no
-  variance; spinning a `val ≫ test` overfit as success.
+## The dashboard (`dashboard.html`)
+One self-contained static file (inline CSS/JS/SVG, no CDN, no server, no network — opens
+from `file://`); the single shareable artifact. Eight panels reduced from the event log
+plus baseline/final, rollouts and the git store; every value passes a recursive secret
+redactor so a shared dashboard leaks no API keys; optional panels degrade silently when
+per-task data, diffs, or finalize are missing. `--terminal` renders the same reduction
+as an ANSI chart for in-chat progress.
 
 ## References
-- `references/concepts.md` — reading baseline/val/test honestly, the val-test gap
-  as overfitting, pass^k fragility, and reporting uncertainty, with sources.
-- `references/dashboard.md` — the reduced graph + summary schema, what each of the
-  eight panels reads from, the `--terminal`/`--ansi` mode, secret redaction, and the
-  graceful-degradation rules.
+- `references/concepts.md` — why the val→test gap measures overfitting, pass^k
+  fragility, reporting uncertainty, with sources. Load when writing the human
+  interpretation and you want the reasoning or a citation.
+- `references/dashboard.md` — the reduced graph + summary schema, per-panel field
+  sources, `--terminal`, redaction, degradation matrix. Load when changing or
+  debugging the dashboard; not needed to run the phase.
