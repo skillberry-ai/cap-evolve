@@ -34,10 +34,6 @@ import os
 import time
 from pathlib import Path
 
-import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve.
-# Imported for its side effect and never referenced, which static analysis reports as an
-# unused import. It must stay: without it `from cap_evolve import ...` below fails when the
-# script is run directly, which is how every skill script is invoked.
 
 
 def ledger(run_dir: Path) -> Path:
