@@ -40,7 +40,7 @@ def main(argv=None) -> int:
     # sequencer passes --max-iterations to every algorithm, but skillopt is
     # epoch-driven — set --epochs to control the step count.
     p.add_argument("--max-iterations", type=int, default=0,
-                   help=argparse.SUPPRESS)
+                   help="IGNORED — this loop is epoch-driven; use --epochs/--batch-size")
     p.add_argument("--batch-size", type=int, default=None,
                    help="train tasks per mini-batch (default min(8, len(train)))")
     p.add_argument("--accumulation", type=int, default=1,
