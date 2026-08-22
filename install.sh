@@ -67,7 +67,8 @@ echo "  from: $SRC"
 echo "  to:   $DEST"
 
 shopt -s nullglob
-for comp in orchestrate phases capabilities algorithms optimizers; do
+COMPONENTS=(orchestrate phases capabilities algorithms optimizers)
+for comp in "${COMPONENTS[@]}"; do
   for skill in "$SRC/$comp"/*/; do
     [[ -d "$skill" ]] || continue
     name="$(basename "$skill")"
@@ -80,13 +81,57 @@ for comp in orchestrate phases capabilities algorithms optimizers; do
     fi
     echo "  + $comp/$name"
   done
+  # Component-level plain files, not just skill dirs. `optimizers/registry.yaml` is
+  # one, and without it every install is unable to run an optimizer at all — the
+  # directory-only glob above silently dropped it. Copy the whole class, keeping the
+  # component dir so run-optimizer's parent-walk finds `optimizers/registry.yaml`.
+  for f in "$SRC/$comp"/*; do
+    [[ -f "$f" ]] || continue
+    mkdir -p "$DEST/$comp"
+    if [[ "$LINK" -eq 1 ]]; then
+      ln -sfn "$f" "$DEST/$comp/$(basename "$f")"
+    else
+      cp "$f" "$DEST/$comp/"
+    fi
+    echo "  + $comp/$(basename "$f")"
+  done
 done
 
 # (Re)build the manifest for both the repo (component layout) and the installed
 # tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether
 # it points at the repo skills or the installed dir.
-python3 "$SRC/_registry/build_manifest.py" "$SRC" || true
-python3 "$SRC/_registry/build_manifest.py" "$DEST" || true
+python3 "$SRC/_registry/build_manifest.py" "$SRC"
+python3 "$SRC/_registry/build_manifest.py" "$DEST"
+
+# Verify the install before claiming success. An installer that exits 0 on a broken
+# install is worse than one that fails: CI and users both believe it, and the damage
+# only surfaces later as an optimizer that quietly keeps the seed and reports 0.0.
+missing=()
+for comp in "${COMPONENTS[@]}"; do
+  for skill in "$SRC/$comp"/*/; do
+    [[ -f "$DEST/$(basename "$skill")/SKILL.md" ]] || missing+=("$(basename "$skill")/SKILL.md")
+  done
+  for f in "$SRC/$comp"/*; do
+    [[ -f "$f" ]] || continue
+    [[ -e "$DEST/$comp/$(basename "$f")" ]] || missing+=("$comp/$(basename "$f")")
+  done
+done
+[[ -f "$DEST/_registry/manifest.json" ]] || missing+=("_registry/manifest.json")
+
+if ((${#missing[@]})); then
+  {
+    echo
+    echo "cap-evolve: INSTALL FAILED — $DEST is not usable."
+    echo "Missing from the installed tree:"
+    printf '  - %s\n' "${missing[@]}"
+    echo
+    echo "Fix it by reinstalling from a complete checkout:"
+    echo "  cd $REPO_DIR && git status --short && ./install.sh --dest $DEST"
+    echo "If it still fails, install in dev mode instead:"
+    echo "  cd $REPO_DIR && ./install.sh --link --dest $DEST"
+  } >&2
+  exit 1
+fi
 
 cat <<EOF
 
