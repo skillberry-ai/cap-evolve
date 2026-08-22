@@ -34,8 +34,7 @@ solutions have already been scored against that exact task set, and changing it 
 those comparisons and the "new record" signal. In later rounds you may only change `status`:
 `open`/`completed`/`reverted` → `in-progress` when re-attacked → `completed` (shipped an
 improvement, stopped) or `solved` (tasks now all ~perfect); a recurring `solved` weakness can go back
-to `in-progress`; a whole-round revert flips every weakness attacked that round to `reverted` (see
-[graph.md](graph.md)). Add each attack round to `attacked_in_rounds`.
+to `in-progress`; a whole-round revert flips every weakness attacked that round to `reverted`. Add each attack round to `attacked_in_rounds`.
 
 ## Related weaknesses
 
@@ -65,7 +64,7 @@ solved_in_round: null
 reverted_in_rounds: []         # rounds whose merged fix was rolled back by a whole-round revert
 branch: evograph/w/tool-call-arg-mismatch   # the weakness's worktree branch (set when first attacked)
 affected_tasks: [task_007, task_011, task_023]   # FROZEN after discovery round
-related:                                     # optional — graph edges; also the fix's blast-radius watchlist (see graph.md)
+related:                                     # optional — graph edges; also the fix's blast-radius watchlist
   - slug: schema-drift-after-retry
     why: both corrupt the tool-call payload; candidates to merge
 solutions:

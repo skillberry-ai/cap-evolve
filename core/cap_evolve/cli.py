@@ -16,7 +16,7 @@ Subcommands:
     cap-evolve help    [command]      full help + runnable examples for one command
     cap-evolve init    [--algorithm N --optimizer N]  scaffold a project + spec
     cap-evolve doctor                 readiness check: what's missing + the fix
-    cap-evolve algorithms [name]      the five algorithms and how to select each
+    cap-evolve algorithms [name]      the optimization algorithms and how to select each
     cap-evolve diff    <cand> [--vs X|--best] [--stat|--files] [--unified N]
                        what a candidate actually changed, from its snapshot
     cap-evolve version
@@ -1272,6 +1272,10 @@ def _doctor_checks(project: Path) -> list[dict]:
         add("algorithm", "fail",
             f"{algo} is agent-driven but orchestration_mode is {mode!r}",
             f"set orchestration_mode: agent in {spec_path}")
+    elif meta.get("deprecated"):
+        add("algorithm", "warn",
+            f"{algo} ({mode}) is DEPRECATED — {meta['deprecated']}",
+            f"set algorithm_skill in {spec_path}")
     else:
         add("algorithm", "ok", f"{algo} ({mode})")
 
@@ -1496,7 +1500,8 @@ def _cmd_init(argv) -> int:
             return default
         return got or default
 
-    algorithm = args.algorithm or ask("algorithm", "hill-climb", tuple(branding.ALGORITHMS))
+    offered = tuple(n for n, m in branding.ALGORITHMS.items() if not m.get("deprecated"))
+    algorithm = args.algorithm or ask("algorithm", "hill-climb", offered)
     optimizer = args.optimizer or ask("optimizer (mock = zero-API)", "mock")
     cap_path = args.capability_path or ask("capability dir (the artifact to optimize)",
                                            "seed_capability")

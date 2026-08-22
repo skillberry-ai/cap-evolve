@@ -1,14 +1,14 @@
-"""Behavioral contract for evograph (AGENT MODE ONLY).
+"""Behavioral contract for evograph (DEPRECATED, agent mode only).
 
-evograph has no deterministic loop, so — unlike gepa/skillopt — there is nothing to
-run offline. Instead this check pins the contract that makes evograph safe and
-discoverable:
+evograph never had a deterministic loop, and it is now deprecated, so there is still
+nothing to run offline. This check pins what must stay true of the deprecated skill:
 
   1. its ``run.py`` REFUSES a deterministic invocation (exit 2 + an "agent-mode only"
      directive) rather than faking a deterministic loop;
-  2. the SKILL.md declares the agent-mode round loop AND the honesty rules
-     (sealed test via finalize, primary-metric gating);
-  3. every referenced doc exists (the wiki-format contract the dashboard reads).
+  2. the SKILL.md marks itself DEPRECATED and names the replacement (``agent-optimize``),
+     so nobody starts a new run on it by accident;
+  3. every referenced doc exists — above all the wiki-format contract the dashboard's
+     Weakness-graph tab reads, which is the reason this directory still exists.
 """
 
 from __future__ import annotations
@@ -45,13 +45,13 @@ def main() -> int:
             "run.py did not emit the agent-mode-only error",
             note="clear agent-mode directive emitted")
 
-    # 2: SKILL.md declares the loop + honesty contract.
+    # 2: SKILL.md is honestly marked deprecated and points somewhere better.
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     for needle, label in [
-        ("Round loop", "agent-mode round loop"),
-        ("finalize", "seal via cap-evolve finalize"),
-        ("primary metric", "primary-metric gating"),
-        ("orchestration_mode: agent", "agent-mode gating"),
+        ("DEPRECATED", "itself deprecated"),
+        ("agent-optimize", "the agent-mode replacement"),
+        ("hill-climb", "the deterministic replacements"),
+        ("no deterministic engine", "that it has no deterministic engine"),
     ]:
         c.check(needle in skill, f"SKILL.md missing: {label!r} ({needle!r})", note=f"SKILL.md declares {label}")
 

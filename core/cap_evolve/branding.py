@@ -225,7 +225,7 @@ COMMANDS: dict[str, dict] = {
     },
     "algorithms": {
         "group": "set up",
-        "summary": "the five optimization algorithms and how to select each",
+        "summary": "the optimization algorithms and how to select each",
         "usage": "cap-evolve algorithms [NAME] [--json]",
         "long": "What each algorithm is for, when to prefer it, and the exact spec lines.",
         "examples": ["cap-evolve algorithms", "cap-evolve algorithms gepa"],
@@ -326,7 +326,9 @@ COMMANDS: dict[str, dict] = {
 
 _GROUP_ORDER = ("set up", "optimize", "inspect")
 
-#: The five algorithms: what each is for, and the EXACT spec lines that select it.
+#: Every algorithm: what each is for, and the EXACT spec lines that select it. An entry
+#: carrying ``deprecated`` is listed last and rendered as deprecated -- it stays here so an
+#: existing spec still resolves, not because anyone should pick it.
 ALGORITHMS: dict[str, dict] = {
     "hill-climb": {
         "for": "the default. Parent is always the current best; one edit per iteration.",
@@ -355,10 +357,14 @@ ALGORITHMS: dict[str, dict] = {
     },
     "evograph": {
         "for": "collaborative weakness-graph search; one solver agent per weakness.",
-        "prefer": "failures cluster into distinct, separately fixable weaknesses.",
+        "prefer": "nothing new — use agent-optimize, which fans the same work out behind the val gate.",
         "mode": "agent",
         "spec": ["algorithm_skill: evograph", "orchestration_mode: agent"],
-        "extras": "weakness graph / round revert (custom dashboard view)",
+        "extras": "weakness-graph tab (read from the run dir), whole-round revert",
+        # Deprecated: kept so an existing spec still resolves and an old run dir still
+        # reads, but never offered as a choice. It accepted merges on a self-reported
+        # raw train delta -- no val split, no significance gate.
+        "deprecated": "use agent-optimize (agent mode), or hill-climb | gepa | skillopt",
     },
     "agent-optimize": {
         "for": "free-form: the conversational agent owns the whole search.",
@@ -481,15 +487,21 @@ def algorithms_screen(name: str | None = None, width: int = 100, *, color: bool 
     """The algorithm chooser: what each is for + the exact spec lines to select it."""
     depth = color_depth(color, env)
     p = _Pal(depth)
-    items = ([(name, ALGORITHMS[name])] if name in ALGORITHMS else list(ALGORITHMS.items()))
+    items = ([(name, ALGORITHMS[name])] if name in ALGORITHMS else
+             sorted(ALGORITHMS.items(), key=lambda kv: bool(kv[1].get("deprecated"))))
+    live = sum(1 for m in ALGORITHMS.values() if not m.get("deprecated"))
     out = [_s("cap-evolve algorithms", p.brand),
-           _s("  five ways to search; the honesty gate is the same for all of them", p.grey), ""]
+           _s(f"  {live} ways to search; the honesty gate is the same for all of them", p.grey), ""]
     if name and name not in ALGORITHMS:
         out.append(_s(f"  unknown algorithm: {name} — showing all", p.warn))
         out.append("")
     for n, m in items:
         tag = "agent-driven" if m["mode"] == "agent" else "deterministic loop"
-        out.append(f"  {_s(n.ljust(15), p.bold + p.cyan)}{_s(tag, p.grey)}")
+        if m.get("deprecated"):
+            tag = f"DEPRECATED — {m['deprecated']}"
+            out.append(f"  {_s(n.ljust(15), p.bold + p.grey)}{_s(tag, p.warn)}")
+        else:
+            out.append(f"  {_s(n.ljust(15), p.bold + p.cyan)}{_s(tag, p.grey)}")
         out.append(f"    what   {m['for']}")
         out.append(f"    prefer {m['prefer']}")
         out.append(f"    extras {_s(m['extras'], p.grey)}")

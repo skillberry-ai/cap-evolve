@@ -8,7 +8,40 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Deprecated
+- **`evograph`, the fifth algorithm.** It advertised one distinctive capability — a
+  collaborative weakness graph with one solver agent per weakness — and neither half survived
+  comparison with its siblings. The fan-out is `agent-optimize`'s: N sibling candidates from one
+  parent, one diagnosed failure cluster each, every sibling in its own working copy (a git
+  worktree when the capability is in git), gated one at a time with a re-gate after each accept,
+  so several fixes accumulate into one lineage *honestly*. evograph instead kept a merge on a raw
+  delta over a frozen ~3-task subset of **train**, self-reported by the solver subagent that made
+  the edit — no val split, no standard error, no `Δ > k·SE`. Between `baseline` and `finalize` an
+  evograph run took **no held-out measurement at all**, so the sealed test number was the first
+  honest signal anyone saw; whole-round revert existed only as a one-round-late substitute for the
+  gate it lacked. What is genuinely unique is the run-dir `wiki/`, but the dashboard renders the
+  Weakness-graph tab from `wiki/` presence alone for any algorithm that writes the format — an
+  output contract, not a search strategy, and not a reason to make agent-mode users choose between
+  two algorithms whose difference is a file format.
+
+  The skill and its code stay in place (deprecation is reversible; removal is not). `cap-evolve
+  algorithms` lists it last and labelled `DEPRECATED`, `cap-evolve init` no longer offers it, and
+  `cap-evolve doctor` now *warns* instead of reporting `ok` for an existing evograph spec — but
+  `algorithm_skill: evograph` still resolves so an old spec and an old run dir keep working.
+  Follow-up for the maintainer: move the wiki format contract into `agent-optimize` as an optional
+  output, stop `dashboard.py` inferring `algorithm = "evograph"` from `wiki/` presence, then delete
+  the directory.
+
 ### Fixed
+- **Four of the repo's ref→ref authoring violations**, all in `evograph`: `clustering.md`,
+  `graph.md` and `dashboard.md` cross-linked each other, so an agent that loaded one file got half
+  a rule (the `affected_tasks` freeze rule was split across two files in opposite directions). The
+  schemas each file needs are now inline; references are one level deep.
+- **A root `conftest.py` excluding a path that no longer exists.** It skipped
+  `skills/algorithms/evograph/dashboard/backend/tests/test_app_security.py`, deleted with the
+  evograph dashboard in `bac04ebd` (#317). Also drops `custom_view.json` from `evograph`'s
+  `meta.yaml` summary and `"custom dashboard view"` from `branding.py` — both named the extension
+  point removed in that same commit.
 - **`agent-optimize`'s gate rejected byte-identical copies of the seed.**
   `gate_check.regressions()` vetoed on *any* strictly lower per-task reward from *any* parent
   level, while its docstring claimed to "mirror the harness's no-regression rule exactly".

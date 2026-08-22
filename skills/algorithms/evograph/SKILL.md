@@ -1,148 +1,82 @@
 ---
 name: evograph
 description: >-
-  evo-graph as a cap-evolve algorithm (AGENT MODE ONLY): a collaborative weakness-graph optimizer.
-  Each round re-evaluates the train split, clusters failures into a shared Obsidian-style markdown
-  "weakness graph", dispatches one solver agent per weakness in its own git worktree scoped to that
-  weakness's frozen affected_tasks, merges verified improvements, reverts a whole round on regression,
-  and repeats until the spec's stop_condition — then seals the test once via `cap-evolve finalize`.
-  Writes its wiki into the run dir; the cap-evolve dashboard reads those files directly and renders
-  the Weakness graph tab — no second server, no embedded view to launch.
-  USE when algorithm_skill: evograph and orchestration_mode: agent.
+  Deprecated agent-mode algorithm (evo-graph port): a weakness-graph search that dispatched one
+  solver agent per failure cluster and reverted a whole round on regression. Do not start new runs
+  with it — its per-weakness fan-out is already `agent-optimize`'s sibling fan-out, done behind the
+  honest val significance gate that evograph never applied, and everything else it did (failure
+  clustering, rejected-edit memory, budget-aware fan-out, free-text stop condition) lives in
+  `agent-optimize` + `phases/diagnose`. Use when reading or repairing an existing evograph run dir,
+  or when writing the run-dir `wiki/` format the dashboard's Weakness-graph tab reads — and to see
+  what to select instead: `agent-optimize` for agent-mode search, `hill-climb`, `gepa`, or
+  `skillopt` for a deterministic loop.
 component: algorithm
-argument-hint: "(agent mode) driven by the coding agent per orchestration_mode: agent"
+argument-hint: "deprecated — use agent-optimize (agent mode) or hill-climb | gepa | skillopt"
 allowed-tools: Read, Write, Edit, Bash, Task
 needs: [scores, traces, candidate]
 provides: [candidate]
 sources: [evo-graph]
 ---
 
-# evograph — collaborative weakness-graph optimizer (agent mode)
+# evograph — DEPRECATED
 
-evograph is **agent-mode only** (`orchestration_mode: agent`). There is no deterministic engine — a
-weakness-graph loop is agent-driven by nature. When a run selects `algorithm_skill: evograph`,
-cap-evolve runs intake → check → baseline and then hands **you, the coding agent in the conversation,**
-the loop (per the orchestrate skill's *Agent-mode loop*). You drive it yourself; you do not delegate
-the search to a separate optimizer agent, though you DO dispatch solver subagents for parallel work.
+**Do not select `algorithm_skill: evograph` for a new run.** Use `agent-optimize` (agent mode) or
+`hill-climb` / `gepa` / `skillopt` (deterministic). This file stays so an existing evograph run dir
+is still readable and so the wiki file-format contract has an owner until it moves.
 
-## How this differs from stock evo-graph (it fits cap-evolve)
+## Why it is deprecated
 
-evograph keeps evo-graph's *distinctive* machinery — the weakness graph, per-weakness solver
-worktrees, whole-round revert, and the wiki file formats the dashboard reads — but everything else is
-cap-evolve's:
+evograph advertised one distinctive capability — a collaborative weakness graph with one solver
+agent per weakness, merged into a shared candidate each round. Measured against its four siblings,
+that capability is not distinctive and the part that *was* distinctive was a defect:
 
-| stock evo-graph | evograph in cap-evolve |
-|---|---|
-| its own setup Q&A (`questions.md`) | **cap-evolve `intake`** — read the spec (`capevolve.yaml`); ask nothing of your own |
-| "discover & run the bench yourself" | **cap-evolve adapter + harness** — evaluate through `cap-evolve` (writes run-dir rollouts/results) |
-| its own train/test split | **cap-evolve seeded splits** (`splits.json`); train each round, **test sealed** |
-| its own final-test.json + cost prompt | **`cap-evolve finalize`** produces the sealed number; mirror it into the wiki for the view |
-| wiki under `.evograph/` | wiki under the **cap-evolve run dir** (`<run_dir>/wiki/…`) so the dashboard tab reads it |
-| primary/secondary from its own config | the spec's `metric_primary` / `metrics_display` (**#38**) — gate on the primary only |
+- **The fan-out already exists, gated properly.** `agent-optimize` fans out N sibling candidates
+  from the same parent, one diagnosed failure cluster each, every sibling in its own working copy
+  (a git worktree when the capability is in git), gated **one at a time with a re-gate after each
+  accept** so several fixes accumulate into one lineage honestly. That is evograph's round, minus
+  the flaws below. The clustering itself is `phases/diagnose`'s job in both cases.
+- **Acceptance was never held out.** evograph kept a merge on a raw delta over a frozen 3-task
+  subset of *train*, self-reported by the solver subagent that made the edit — no val split, no
+  standard error, no `Δ > k·SE`. Between `baseline` and `finalize` an evograph run took no
+  held-out measurement at all, so the sealed test number was the first honest signal anyone saw.
+  Whole-round revert existed only as a one-round-late substitute for the gate it lacked; wire the
+  real gate and there is nothing left for it to catch.
+- **What remains unique is an output format, not a search strategy.** The run-dir `wiki/` is
+  genuinely useful, but the dashboard renders the Weakness-graph tab from `wiki/` presence alone,
+  for any algorithm that writes the format (`core/cap_evolve/dashboard.py`). An output contract
+  does not earn a second agent-mode algorithm that users must choose between.
 
-Do **not** re-ask setup questions, invent a split, or run a raw bench command. Read the spec and use
-cap-evolve's primitives. This is what keeps the run honest (sealed test, val/train-gated) and the
-default dashboard tabs populated.
+## There is no deterministic engine
 
-## Vocabulary (canon — used in the wiki and the dashboard)
+There never was one, and `scripts/run.py` is a tombstone, not a stub: invoked deterministically it
+exits 2 with an `agent-mode only` payload rather than faking a loop. So evograph is also the one
+algorithm that could not be routed through the shared per-iteration record — see
+the `hill-climb` skill's `references/run-step.md`, which owns the shared iteration mechanics
+(parent selection, val gate, commit, iteration record) every other algorithm routes through. Read
+it if you are reconstructing what an evograph round *should* have done.
 
-Unchanged from evo-graph — the cap-evolve dashboard's Weakness graph tab reads these exact
-terms/formats out of the run dir:
+## Reading an existing evograph run
 
-- **Weakness** — a recurring failure pattern hurting the primary metric (incl. inconsistency). One
-  node per weakness: `<run_dir>/wiki/weaknesses/<slug>.md`.
-- **Solution** — one kept improvement, under `<run_dir>/wiki/solutions/<slug>/<sol-id>/`.
-- **Status** — `open | in-progress | completed | solved | reverted`.
-- **RSM (Rejected Store Memory)** — the dead-end log inside each weakness md; read before proposing.
+The run dir is authoritative. `<run_dir>/wiki/` holds the weakness nodes, solution cards and
+per-round results; `<run_dir>/runs/round-<N>/agents/<slug>.log` holds solver progress. The formats
+are in [references/dashboard.md](references/dashboard.md) — load it if you need to write or parse
+that wiki. Treat any per-weakness "kept / new record" number in it as a train-subset self-report,
+not a gated result; only `finalize`'s sealed test number and any `gate` decision recorded in
+`events.jsonl` are honest.
 
-## Hard rules (honesty — never violate)
+`scripts/now.py` is the one-clock timestamp stamper those formats require; it is correct and still
+used by anything writing the wiki.
 
-1. **The sealed test split is untouchable until the end.** Evaluate only on train (rounds) / the
-   affected_tasks; never score test until the final `cap-evolve finalize` (which owns the seal —
-   `RunDir.reserve_test`/`commit_test`). One test scoring, ever.
-2. **Acceptance is gated on the primary metric.** A merge/solution is kept only if it improves the
-   primary metric over its baseline on the relevant tasks; a whole round reverts if the round-start
-   train primary metric regressed. Secondary metrics (`metrics_display`) are shown, never gate.
-3. **Drive through cap-evolve primitives.** Every eval goes through the cap-evolve adapter/harness so
-   per-rollout JSON + results land in the run dir; log round boundaries via the run dir event log;
-   snapshot accepted candidates via the store. This keeps the default dashboard tabs live in addition
-   to evograph's own tab.
-4. **Isolate edits in git worktrees.** The capability under optimization is edited only inside
-   per-weakness worktrees on their own branches — never the user's checkout. (Same discipline as
-   evo-graph's Step 0; here the "capability" is cap-evolve's `capability_path` artifact.)
+## Removal is a separate decision
 
-## Step 1 — Read the spec + launch the view (no eval yet)
-
-- Read `capevolve.yaml`: `metric_primary` + `metrics_display` (#38), `stop_condition`,
-  `github_integration`, `capabilities`/`capability_path`, splits. cap-evolve intake already collected
-  these — do not re-ask.
-- Scaffold the wiki under the run dir. There is nothing to launch and nothing to register: the
-  cap-evolve dashboard reads these files itself and shows a **Weakness graph** tab whenever
-  `<run_dir>/wiki/` exists, in the live server and the static export alike.
-  - create `<run_dir>/wiki/{weaknesses,solutions,results}` and `<run_dir>/runs/`.
-  - write the formats in [references/dashboard.md](references/dashboard.md) as each round completes;
-    the tab reflects them on the next load. Give the user the cap-evolve dashboard link.
-
-## Step 2 — Round loop (you drive it, uninterrupted to stop_condition)
-
-Re-read `stop_condition` at the end of every round (free text; no built-in default).
-
-### 2.1 Eval all train tasks (via cap-evolve)
-Evaluate the current candidate on **all train tasks** through cap-evolve's eval (round 1 = the
-baseline you were handed). Tag the candidate's git state so a later round can roll back. Write
-`<run_dir>/wiki/results/round-<N>.json` (format: [references/dashboard.md](references/dashboard.md)),
-stamping `started_at` from `scripts/now.py`. Stamp all-perfect weaknesses `solved`.
-
-### 2.2 Regression check + whole-round revert (round ≥ 2)
-Compare this round's **primary metric** to `round-<N-1>.json`. If it dropped, round N−1's merges
-regressed the suite → reset the candidate to the pre-round-(N−1) tag, re-eval, overwrite the results,
-mark those weaknesses `reverted` (eligible again), demote their solutions into RSM.
-[references/graph.md](references/graph.md).
-
-### 2.3 Build / extend the weakness graph
-Dispatch builder subagents to read the round's **failed** (and contrasting **successful**)
-trajectories and write `<run_dir>/wiki/weaknesses/<slug>.md` directly — match+extend or create.
-Aim for **breadth (≥ 4 distinct weaknesses)** when the failures support it. `affected_tasks` is
-**frozen** at discovery. Do a light dedup pass. Schema + freeze rule:
-[references/clustering.md](references/clustering.md).
-
-### 2.4 Solve — one solver per weakness
-For each `open | completed | reverted` weakness, mark it `in-progress` and dispatch one solver in its
-own worktree (weakness branch → solution branch; names in [references/graph.md](references/graph.md)).
-Each solver: baseline the primary metric on its frozen `affected_tasks` (reuse round-start scores) →
-edit the capability → re-eval **only affected_tasks** via cap-evolve → keep if improved, else revert
-and try another angle → aim for ~2–3 improving iterations. Append progress to
-`<run_dir>/runs/round-<N>/agents/<slug>.log` (streamed live in the tab). Ship a real improvement →
-write `wiki/solutions/<slug>/<sol-id>/{solution.md,changes.diff}` with real before/after numbers,
-request merge, set `completed`/`solved`. Dead end → RSM, no merge.
-
-### 2.5 Merge (you)
-Trust the solver's reported result and merge into the working candidate; the round-start eval (2.1→2.2)
-is the objective backstop. If `github_integration: true`, mirror the weakness as a GitHub issue and
-ship the merge as a PR (`Closes #n`) — GitHub is **mirror-only**, the run dir stays authoritative
-(this is evograph's realization of #38's `github_integration`).
-
-### 2.6 Stop check + dashboard verify
-Stamp `completed_at`, log the round to the run dir event log, snapshot the accepted candidate via the
-store. **Verify the run dir has what both dashboards need** (round results written, weakness nodes +
-solution cards + logs present, standard events/rollouts emitted). Re-read `stop_condition`; continue
-(2.1) or halt.
-
-## Step 3 — Final test (once, after halt)
-Call `cap-evolve finalize` — it scores the best candidate on the sealed test split exactly once and
-burns the seal (unfakeable headline number). Mirror that number into `<run_dir>/wiki/results/final-test.json`
-(`"split":"test"`, `"round":"final"`) so evograph's tab shows it in its Final-test panel. Then
-`cap-evolve report`.
-
-## Cost — use cap-evolve's cost system (not a separate one)
-Do **not** run a bespoke end-of-run cost prompt. Cost is cap-evolve's job: every eval you drive
-through cap-evolve records spend in the run dir (`RunDir.update_spent`), the default dashboard **Cost**
-tab renders it, and the spec's `max_usd` / `max_optimizer_usd` caps bound it (preview with
-`cap-evolve estimate`). If you want the evograph tab's Final-test panel to show a cost number, read it
-from cap-evolve's recorded run-dir spend and mirror it into `final-test.json` as `cost_usd` — never ask
-the user to hand-total it.
+Deprecation is reversible; removal is not. Still to decide (maintainer): move the wiki format
+contract into `agent-optimize` as an optional output, stop `dashboard.py` inferring
+`algorithm = "evograph"` from `wiki/` presence, then delete this directory.
 
 ## References
-- [references/clustering.md](references/clustering.md) — weakness schema, direct-write build, freeze rule.
-- [references/graph.md](references/graph.md) — branch/PR model, solution layout, `related` edges.
-- [references/dashboard.md](references/dashboard.md) — the wiki file formats the tab reads (the contract).
+- [references/dashboard.md](references/dashboard.md) — the wiki file formats the dashboard tab
+  reads. Load it to write or parse `<run_dir>/wiki/`.
+- [references/clustering.md](references/clustering.md) — weakness-node schema and the
+  `affected_tasks` freeze rule, kept for reading historical run dirs.
+- [references/graph.md](references/graph.md) — solution-card schema, branch layout, whole-round
+  revert, kept for the same reason.

@@ -141,7 +141,7 @@ cap-evolve dashboard                        # live, over a base dir of runs
 Every run gets the same tabs whatever algorithm produced it — Overview, Candidates, Gate,
 Tasks, Cost, Logs, Diffs, Trajectories, Memory, Files — and an algorithm that has extra signal
 gets an extra tab rather than a different dashboard. GEPA's minibatch-vs-full-val gates and
-Pareto selection, SkillOpt's epochs and edit-budget schedule, evograph's weakness graph, and
+Pareto selection, SkillOpt's epochs and edit-budget schedule, and
 `agent-optimize`'s free-form rounds are all read from events the engine already emitted.
 
 <p align="center">
