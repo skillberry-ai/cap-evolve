@@ -274,3 +274,28 @@ def test_merge_skips_gracefully_monolith(tmp_path):
         if "merge_of" in s:
             assert "accepted" in s and "local_gate" in s
     assert res["best_val"] == 1.0
+
+
+def test_accepted_candidate_snapshot_is_capability_only(tmp_path):
+    """Regression (#110): GEPA candidate snapshots must be capability-only.
+
+    GEPA writes its own scratch (REFLECTION.md, FOCUS.md) plus the harness-injected
+    LEDGER/JOURNAL/RUNMAP into the workdir it snapshots, so a candidate diff showed
+    framework churn on top of the one real edited line. PROCESS.md is the deliberate
+    exception — it is the per-candidate explainability record.
+    """
+    from cap_evolve import gepa, harness
+    adapter, run_dir, base = _setup(tmp_path, "g_clean", max_iterations=8, max_metric_calls=500)
+    optimizer = harness.optimizer_from_command(
+        ["python3", str(MOCK_RUN), "--name", "mock", "--workdir", "{workdir}", "--prompt", "{prompt}"])
+    res = gepa.gepa_loop(adapter, run_dir=run_dir, optimizer=optimizer, seed_val=base,
+                         max_metric_calls=400, max_iterations=6, minibatch_size=3,
+                         max_merges=0, seed=0,
+                         gate_kwargs={"mode": "significant", "k_se": 1.0})
+    assert res["accepts"] >= 1
+    cands = [d for d in sorted(run_dir.candidates.iterdir()) if d.is_dir() and d.name != "seed"]
+    assert cands, "no accepted candidate snapshot to inspect"
+    for cand in cands:
+        names = {p.name for p in cand.iterdir()}
+        assert not names & set(harness._SNAPSHOT_IGNORE), f"{cand.name} dirty: {sorted(names)}"
+        assert "PROCESS.md" in names, f"{cand.name} lost its explainability record"
