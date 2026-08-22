@@ -4,24 +4,16 @@
 > is trusted. A green check is the only honest entry into the optimization loop.
 > Implementation: `cap_evolve.check.run_check` + each skill's `scripts/check.py`.
 
-## The adapter is the contract
+## What a stub actually costs
 
-cap-evolve measures everything through **3 required methods** the user implements
-(plus defaulted hooks). The check verifies each required one is real:
+The method list itself is in SKILL.md step 1 and `docs/ADAPTER_CONTRACT.md`. What matters
+here is what each one being fake does to the number:
 
-| method                             | contract                                            | failure if stubbed                |
-|------------------------------------|-----------------------------------------------------|-----------------------------------|
-| `tasks(split)`                     | non-empty, stable across calls                      | mean over nothing; unstable split |
-| `run_target(task, ctx, *, seed=0)` | runs the agent, captures output + trace into Rollout| no behavior to score              |
-| `score(task, rollout)`             | reward ∈ [0,1] + general feedback, deterministic    | every candidate scores the same   |
-
-Beyond those three, `materialize(candidate_dir, edits=None)`, `live(candidate_dir)`,
-`apply(candidate_dir, edits=None)`, `trajectories(split, ctx=None)` and `runner_model()`
-are **defaulted hooks** — they are defined on the base class with working defaults (the
-last two `return None`) and are called unconditionally, so override them only when the
-default does not fit. Separately, `run_batch` / `run_trials` / `score_batch` are **not** on
-the base class at all; the harness feature-detects them with `hasattr` and uses them only
-when an adapter defines them.
+| method                             | failure if stubbed or fake                          |
+|------------------------------------|-----------------------------------------------------|
+| `tasks(split)`                     | mean over nothing; unstable or non-disjoint split   |
+| `run_target(task, ctx, *, seed=0)` | no behavior to score — every rollout is empty       |
+| `score(task, rollout)`             | every candidate scores the same; the gate is blind  |
 
 If any required method is a stub, the optimization still *runs* — it just produces a number
 that measures nothing. The whole point of a pre-budget gate is to make that
