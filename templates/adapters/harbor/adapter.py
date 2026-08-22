@@ -53,6 +53,15 @@ HARBOR_TIMEOUT = int(os.environ.get("HARBOR_TIMEOUT", "1800"))
 HARBOR_EXTRA_FLAGS = shlex.split(os.environ.get("HARBOR_EXTRA_FLAGS", ""))
 HARBOR_JOBS_DIR = os.environ.get("HARBOR_JOBS_DIR", "")
 
+# ``HARBOR_LOCAL_ASIS=1`` — when set, a local dataset dir is passed to ``harbor
+# run`` VERBATIM (no ``package_dataset`` repacking). Use this when the local
+# dataset already ships everything Harbor needs per task — task.toml, tests/
+# with a real verifier + expected.json, and any pre-built Dockerfile — and the
+# default repackaging (which overwrites those with generic templates) would
+# destroy semantic content. Downstream benchmarks that want to hand-author
+# rich task dirs (Parsec, etc.) set this in their overrides.env.
+HARBOR_LOCAL_ASIS = os.environ.get("HARBOR_LOCAL_ASIS", "").strip() in ("1", "true", "yes")
+
 # Task IDs to include (comma-separated, without dataset prefix).
 # e.g. "astropy__astropy-12907,django__django-11099"
 HARBOR_TASK_IDS = [
@@ -248,6 +257,13 @@ class Adapter(CapabilityAdapter):
             ]
             dataset_path = None
             dataset_name = HARBOR_DATASET
+        elif HARBOR_LOCAL_ASIS:
+            # Point harbor at the pre-built local dataset directly — no repacking.
+            # Each task dir must already contain task.toml + tests/ + environment/
+            # (Harbor's TaskModel.is_valid_dir requirement). Filter to the requested IDs.
+            harbor_task_names = [t.id for t in tasks]
+            dataset_path = Path(HARBOR_DATASET)
+            dataset_name = None
         else:
             harbor_task_names = None
             packaged_dir = Path(tempfile.mkdtemp(prefix="harbor_dataset_"))

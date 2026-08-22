@@ -18,6 +18,9 @@ venv/
 # rollouts and must not be committable by accident. Curated audit sets go under examples/.
 .capevolve*/
 
+# parsec-intake reviewer deliverables (local, per-run)
+parsec-results/
+
 # secrets — never commit credentials (RITS_API_KEY, WATSONX_*, ANTHROPIC_API_KEY, …)
 .env
 .env.*
