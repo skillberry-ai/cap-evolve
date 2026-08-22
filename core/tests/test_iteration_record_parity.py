@@ -189,7 +189,7 @@ def test_no_consumer_is_left_empty(algorithm, tmp_path):
 
     wd = tmp_path / f"ledger_{algorithm}"
     wd.mkdir()
-    harness._build_ledger(wd, run_dir, None, None)
+    harness._build_ledger(wd, run_dir)
     harness._build_runmap(wd, run_dir)
     ledger = (wd / "LEDGER.md").read_text(encoding="utf-8")
     runmap = (wd / "RUNMAP.md").read_text(encoding="utf-8")
