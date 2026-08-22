@@ -13,14 +13,19 @@ that build the optimizer's working dir, using the real harness renderer, and
 reports precisely which artifact is missing so the intake agent can iterate.
 
 It asserts:
-  1. the optimizer-prompt template is scaffolded at ``optimizer/INSTRUCTIONS.md``
-     and still carries its ``{{...}}`` placeholders (intake must NOT delete them);
-  2. ``capevolve.yaml::optimizer_instructions_file`` points at a file that EXISTS;
+  1. ``capevolve.yaml`` exists (intake must scaffold the spec);
+  2. the optimizer-prompt template named by ``optimizer_instructions_file`` EXISTS and
+     still carries its ``{{...}}`` placeholders (intake must NOT delete them);
   3. rendering that template through the REAL harness renderer leaves NO ``{{``
      placeholder behind (the harness fills them per iteration);
   4. the adapter EITHER defines ``trajectories()`` (returns the native traj dir) OR
      intentionally inherits the base default (cap-evolve falls back to its own
      per-rollout JSON) — both are valid; we just report which.
+
+Assertions 2-3 are SKIPPED WITH A NOTE for an algorithm that never reads the template
+(see ``_TEMPLATE_CONSUMERS``): this phase declares ``algorithms: ["*"]``, so failing a
+gepa/evograph run on an artifact it will never open would be an algorithm-specific
+false negative. Assertions 1 and 4 always run.
 
 Exit 0 = wiring green; non-zero = a named artifact is missing/broken.
 """
@@ -39,6 +44,12 @@ from cap_evolve.adapter import CapabilityAdapter
 from cap_evolve.check import load_adapter
 from cap_evolve.harness import _focus_instructions
 from cap_evolve.loop import SplitResult
+
+# Algorithms whose runner actually reads ``optimizer_instructions_file``. ``cli.py`` passes
+# ``--instructions-file`` only when the algorithm is hill-climb, and that flag exists in
+# exactly one algorithm's argparse (``skills/algorithms/hill-climb/scripts/run.py``). Add a
+# name here when another algorithm's run.py grows the flag.
+_TEMPLATE_CONSUMERS = frozenset({"hill-climb"})
 
 
 def _synthetic_val() -> SplitResult:
@@ -70,40 +81,49 @@ def selftest(project: Path) -> dict:
     if not spec_path.exists():
         problems.append(f"missing spec: {spec_path} (intake must scaffold capevolve.yaml)")
 
-    instr_rel = str(spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md")
-    instr_path = project / instr_rel
-    if not instr_path.exists():
-        problems.append(
-            f"optimizer_instructions_file points at a missing file: {instr_rel} "
-            f"(expected an existing template under {project}/)")
-        template = ""
+    # The template checks only apply to an algorithm that actually READS the template.
+    # ``cli.py`` passes ``--instructions-file`` for hill-climb only, and that flag exists
+    # in exactly one algorithm's argparse — so gating a gepa/evograph/agent-optimize run on
+    # an artifact it will never open is a benchmark/algorithm-specific false failure.
+    algo = str(spec.get("algorithm_skill") or "hill-climb")
+    if algo not in _TEMPLATE_CONSUMERS:
+        notes.append(f"algorithm '{algo}' does not consume optimizer_instructions_file "
+                     "— optimizer-template checks skipped")
     else:
-        template = instr_path.read_text(encoding="utf-8")
-        if "{{" not in template:
+        instr_rel = str(spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md")
+        instr_path = project / instr_rel
+        if not instr_path.exists():
             problems.append(
-                f"template {instr_rel} has NO {{{{...}}}} placeholders — intake must "
-                "KEEP them (the harness fills FOCUS_SUMMARY/FAILURES/CAP_BRIEF/"
-                "ALGO_BRIEF/BENCH_REPO per iteration); did you over-customize it?")
+                f"optimizer_instructions_file points at a missing file: {instr_rel} "
+                f"(expected an existing template under {project}/)")
+            template = ""
         else:
-            notes.append(f"optimizer template OK with intact placeholders: {instr_rel}")
+            template = instr_path.read_text(encoding="utf-8")
+            if "{{" not in template:
+                problems.append(
+                    f"template {instr_rel} has NO {{{{...}}}} placeholders — intake must "
+                    "KEEP them (the harness fills FOCUS_SUMMARY/FAILURES/CAP_BRIEF/"
+                    "ALGO_BRIEF/BENCH_REPO per iteration); did you over-customize it?")
+            else:
+                notes.append(f"optimizer template OK with intact placeholders: {instr_rel}")
 
-    # 3) render through the REAL harness renderer; no {{ may survive
-    if template and "{{" in template:
-        caps = [c for c in (spec.get("capabilities") or []) if c]
-        rendered = _focus_instructions(
-            _synthetic_val(), None, "pipeline self-test",
-            capabilities=caps, algorithm=str(spec.get("algorithm_skill") or "hill-climb"),
-            instructions_file=instr_path,
-            bench_repo=(str(spec.get("runner_repo_path")) or None),
-        )
-        if "{{" in rendered:
-            leftovers = sorted({tok.split("}}")[0] for tok in rendered.split("{{")[1:]})
-            problems.append(
-                "rendered INSTRUCTIONS.md still has leftover placeholder(s): "
-                + ", ".join("{{" + x + "}}" for x in leftovers)
-                + " — the harness did not substitute them (a placeholder typo?)")
-        else:
-            notes.append("rendered INSTRUCTIONS.md has no leftover {{ placeholders")
+        # 3) render through the REAL harness renderer; no {{ may survive
+        if template and "{{" in template:
+            caps = [c for c in (spec.get("capabilities") or []) if c]
+            rendered = _focus_instructions(
+                _synthetic_val(), None, "pipeline self-test",
+                capabilities=caps, algorithm=algo,
+                instructions_file=instr_path,
+                bench_repo=(str(spec.get("runner_repo_path")) or None),
+            )
+            if "{{" in rendered:
+                leftovers = sorted({tok.split("}}")[0] for tok in rendered.split("{{")[1:]})
+                problems.append(
+                    "rendered INSTRUCTIONS.md still has leftover placeholder(s): "
+                    + ", ".join("{{" + x + "}}" for x in leftovers)
+                    + " — the harness did not substitute them (a placeholder typo?)")
+            else:
+                notes.append("rendered INSTRUCTIONS.md has no leftover {{ placeholders")
 
     # 4) trajectories(): defined OR intentionally inherited (both valid)
     try:
