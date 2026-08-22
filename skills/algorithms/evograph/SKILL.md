@@ -124,7 +124,14 @@ ship the merge as a PR (`Closes #n`) — GitHub is **mirror-only**, the run dir 
 
 ### 2.6 Stop check + dashboard verify
 Stamp `completed_at`, log the round to the run dir event log, snapshot the accepted candidate via the
-store. **Verify the run dir has what both dashboards need** (round results written, weakness nodes +
+store. **Record the round as an iteration through the one shared step** —
+`cap_evolve.harness.record_iteration(run_dir, <candidate_dir>, <cand_id>, parent_id=…, accepted=…,
+reason=…, val=…)`, or equivalently `agent-optimize/scripts/commit.py`, which calls it. That single
+call charges the iteration, writes the canonical `step` record every consumer enumerates
+(`LEDGER.md`, `RUNMAP.md`, `prior_iterations/`, both dashboards), and reconciles the run-level
+`JOURNAL.md`. Do **not** hand-roll `update_spent` + `log_event` instead: an algorithm that skips this
+step charges budget while leaving every one of those surfaces empty (#216, #224).
+**Verify the run dir has what both dashboards need** (round results written, weakness nodes +
 solution cards + logs present, standard events/rollouts emitted). Re-read `stop_condition`; continue
 (2.1) or halt.
 
