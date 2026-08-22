@@ -31,10 +31,10 @@ in-body guard there, not a new tool. State plainly: *a docstring-only iteration 
 one that only adds a single new tool + rewords docstrings, leaving rules as prose)
 is under-used.*
 
-The edit classes this mandate ranges over — and the before/after diffs that show an
-in-body guard replacing a prose rule — are in
-[`../SKILL.md`](../SKILL.md) ("What you can change here", "The highest-leverage
-edit") and [`examples.md`](examples.md).
+The edit classes this mandate ranges over are in
+[`../SKILL.md`](../SKILL.md) ("What you can change here", "Pick the lever by failure
+type"), which also points at the worked before/after diffs showing an in-body guard
+replacing a prose rule.
 
 ## The explicit TWO-PHASE subagent pattern
 
