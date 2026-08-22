@@ -1,4 +1,4 @@
-"""intake — Phase 0: mine existing artifacts, then scaffold the cap-evolve project.
+"""intake — Phase 1: mine existing artifacts, then scaffold the cap-evolve project.
 
 What the SCRIPT does (this file):
   1. **capture-intent / mine first** — scan the working dir for artifacts a run can
