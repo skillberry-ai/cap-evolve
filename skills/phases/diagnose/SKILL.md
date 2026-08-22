@@ -1,8 +1,8 @@
 ---
 name: diagnose
-description: Extract the learning signal from execution traces — the textual analogue of a gradient. Use between evaluation and proposing edits. Reads a candidate's val rollouts, separates good signals to keep from bad signals to fix, builds a reflective dataset (per failing task — Inputs, Generated Outputs, Feedback) and groups failures into clusters by shared signature, so the optimizer knows what to change and why.
+description: Extract the learning signal from execution traces — the textual analogue of a gradient. Use between evaluation and proposing edits. Reads a candidate's rollouts and traces, separates good signals to keep from bad signals to fix, builds a reflective dataset (per failing task — Inputs, Generated Outputs, Feedback) and clusters the failures by a (failure-site, violated-expectation) signature, ranked by the score each cluster can recover, so the optimizer knows what to change and why.
 component: phase
-argument-hint: "--run-dir DIR --tag CANDIDATE_ID"
+argument-hint: "--run-dir DIR --tag CANDIDATE_ID [--project DIR] [--split train|val] [--cluster root-cause|first-words]"
 allowed-tools: Read, Bash
 provides: [reflective_dataset]
 needs: [scores, traces]
@@ -11,169 +11,159 @@ sources: [gepa, skillgrad, trace2skill, evo]
 
 # diagnose — failures into actionable side information
 
-A scalar reward says *how much* a candidate failed; it does not say *why*, and
-"why" is the only thing an editor can act on. diagnose converts raw traces into
-the signal the optimizer edits against — the **textual analogue of a gradient**.
-In reinforcement learning a scalar reward back-propagates into weight updates;
-here, natural-language feedback back-propagates into prompt/tool/skill edits. The
-richer that feedback, the larger the update you can extract from a handful of
-rollouts.
-
-## Inputs / outputs (manifest tokens)
-- **needs:** `scores`, `traces` — the per-task rewards and rollouts from
-  `evaluate` (with the scorer's textual feedback).
-- **provides:** `reflective_dataset` — the structured "what to change and why"
-  that the algorithm injects into the optimizer's proposal prompt.
+A scalar reward says *how much* a candidate failed; it does not say *why*, and "why"
+is the only thing an editor can act on. Where RL back-propagates a scalar into
+weights, natural-language feedback back-propagates into prompt/tool/skill edits —
+and the richer it is, the larger the update extractable from a handful of rollouts.
 
 ## What it produces
-- **reflective_dataset:** for each *failing* task, `{Inputs, Generated Outputs,
-  Feedback}` — GEPA's reflective-dataset shape. This triple lets the optimizer see
-  the task, what the agent actually did, and the diagnosis, instead of a bare
-  score.
-- **clusters:** ALL failing trajectories grouped by shared root cause, so the
-  optimizer can fix a whole *class* of failure with one principled edit rather
-  than patching tasks one at a time (and overfitting to each). "Failing" here is
-  not only zero-score tasks — explicitly include **partial-credit** failures (a
-  task that scored e.g. 0.5 because a write got the wrong arguments) and
-  **communication / omission** failures (the agent did the action but failed to
-  report or confirm the required information). These are real lost score and are
-  routinely missed when only total failures are clustered. Each cluster is
-  **ranked by cost** — how many tasks (and how much aggregate score) it accounts
-  for — so the biggest lever is addressed first. Cost-rank, but DON'T let a small
-  cluster that needs a STRUCTURAL fix (a new composite tool) get buried under
-  task-count: a 2-task stall cluster cracked by one new tool can outweigh a
-  many-task cluster of cosmetic misses. Each cluster is tagged with ONE of three,
-  so the optimizer knows *where* the fix belongs:
-  - **KNOWLEDGE** — the agent doesn't know a format/rule/criterion → fix in the prompt.
-  - **BEHAVIORAL** — the agent KNOWS the rule but violates it on a tool that exists
-    → fix in that EXISTING tool's body (an in-code guard).
-  - **DECISION / PERMISSION (ACT vs REFUSE)** — a cluster about *whether the agent should
-    ACT or REFUSE/escalate* on a policy-governed class (it acted where it should have
-    refused, or refused where it should have acted). Tag it SEPARATELY so it is NOT
-    "fixed" by loosening a global decision/permission/refusal rule in the prompt — a
-    global change flips behavior for the ENTIRE class and regresses every
-    currently-passing task where the original behavior was gold (UNBOUNDED blast radius;
-    this exact mistake sank a prior run). Fix = the EXACT discriminating CONDITION:
-    ideally an in-body guard (tools) that refuses/raises only on the qualifying
-    predicate; or prose-only, a NARROWING rule. Its blast radius is EVERY passing task in
-    the decision class — name them and confirm the fix won't flip their action.
-  - **CAPABILITY-GAP** — the agent has NO reliable way to do the thing, or it
-    narrates/confirms a multi-step action then STALLS and never executes it → fix with
-    the strongest STRUCTURAL lever the SELECTED capability offers (per its
-    `./guidance/<cap>/SKILL.md`): for a tools capability, a NEW code-bearing tool (a
-    composite atomic-WRITE / loop / validation tool); for a prompt/skill capability, an
-    explicit step-by-step procedure or worked example that makes the step unavoidable.
-    This is its own tag precisely so a stall/gap cluster is NOT mis-filed as BEHAVIORAL
-    and "fixed" with a weak nudge that never works.
-- **kept_good:** tasks already passing — the set the gate's no-regression check
-  must protect, so a fix for one cluster does not silently break a passing task.
 
-## The signal the optimizer iterates on (analyze → ideate → edit)
-The reflective dataset feeds a fixed three-step shape the algorithm encodes into
-the per-iteration optimizer INSTRUCTIONS — the optimizer must **analyze before it
-edits**, never patch blindly:
-1. **Analyze the trajectories DEEPLY first.** Read the traces closely (not a
-   skim) alongside the current capability, and name (a) the MAIN RECURRING root-cause
-   *clusters* — the rules and workflows the agent botches, the steps it skips, the
-   tools it mis-uses or repeats N times. Cluster **ALL** failing trajectories by
-   shared root cause, not only the zero-score ones: include **partial-credit**
-   failures (wrong arguments to a write, a missed required action) and
-   **communication / omission** failures (the action was done but the required
-   info was never reported/confirmed) — these lose real score and are easy to
-   overlook. **Rank the clusters by how much they cost** (tasks affected ×
-   score lost), biggest first, with evidence. For each cluster, tag it **KNOWLEDGE**
-   (lacks a format/rule/criterion → prompt), **BEHAVIORAL** (knows the rule but
-   violates it on an existing tool → in-code guard in that tool's body),
-   **DECISION / PERMISSION** (wrong ACT-vs-REFUSE call on a policy-governed class →
-   discriminating-condition guard, NEVER a global prompt rule change: a global change
-   regresses the whole class; the blast radius is EVERY passing task in that decision
-   class, so name them and confirm the fix doesn't flip their action), or
-   **CAPABILITY-GAP** (no reliable way to do it, or stalls at the action boundary
-   and never executes → the strongest STRUCTURAL lever the SELECTED capability offers
-   per its guidance: a NEW composite/loop/validation tool for a tools capability, or an
-   explicit procedure/worked example for a prompt/skill capability): more prose alone
-   will not fix a behavioral OR capability-gap cluster — the first needs the rule in
-   code/structure, the second a new mechanism that makes the action un-skippable.
-   Also surface a **NEAR-MISS** cluster: tasks scoring high-partial (≈0.7–0.9) that
-   need only one small correct change to flip to a pass — these are the cheapest
-   marginal gain per edit and are easy to miss when you focus on zero-score tasks.
-   For a multi-cause task, note its **secondary** cause too (a residual second-pass),
-   so one candidate can fix both the primary and the residual cause in the same edit.
-   For EACH cluster, also note its **blast radius** — the currently-PASSING tasks whose
-   behavior the fix would change. For a tool-body guard that is the tasks exercising the
-   same tool/rule/path; for a DECISION / PERMISSION cluster it is EVERY passing task in
-   the same decision class (a global rule change would flip all of them). Scope the fix
-   to fire only on the failing condition and confirm it does not change the action on any
-   passing task in that radius; and cross-check the run history (LEDGER / prior
-   iterations) to SKIP any cluster whose fix was already tried and rejected (don't
-   re-diagnose a refuted approach). A cluster's value is the score it can recover MINUS
-   the regression risk to its blast radius. List concrete passing task ids per cluster
-   (not just "the same tool") whenever you can, so the edit can be scoped to fire only on
-   the failing condition and checked against those passing tasks.
-   Then name (b) the GOOD behaviors that occur only *sometimes* (tasks whose mean
-   reward is between 0 and 1 pass on some trials and fail on others); identify what
-   the good runs do so it can be made CONSISTENT. (Always-failing tasks, mean ≈ 0,
-   are a root-cause fix; flaky tasks are a consistency/reinforcement fix — a
-   different edit. The per-task `Feedback` line is from the *last* trial and can
-   disagree with a graded mean; the reward is the honest signal.) If your coding agent
-   supports parallel sub-agents, fan them out — one per failure cluster or per
-   candidate-edit hypothesis — to analyze concurrently, then synthesize; it makes
-   each costly iteration deeper and faster.
-   **Use ground-truth / eval signals when the traces provide them.** Some benchmarks
-   copy ground-truth / expected actions / a reward breakdown into the trajectories;
-   when PRESENT, use them to pinpoint exactly what went wrong — which action,
-   argument, or value was expected vs what the agent did. You will NOT always have
-   this: if you do, use it; if not, infer from the traces + feedback. CRITICAL:
-   ground truth is for UNDERSTANDING the failure class only — the resulting EDIT must
-   still be a GENERAL rule, never a copied gold value (see the no-leak rule).
-2. **Then ideate a DRASTIC, generalizing edit.** Each iteration is costly
-   (optimize + full eval is long), so aim for a big root-cause improvement, not a
-   tiny tweak: propose the single best targeted edit (or tight set) that addresses
-   the biggest cluster from (a) and reinforces (b) — concrete, generalizing across
-   the class, never a one-off patch to one task. When the capability is the agent's
-   own tools, PREFER writing a new code-bearing tool over a docstring tweak — a
-   deterministic tool can't be forgotten the way a prompt rule can: wrap a primitive
-   to enforce a general rule (then remove the raw primitive), or collapse a recurring
-   multi-step workflow into one looped tool. Write a real body, not `...`.
-3. **Then edit and stop.** Apply it; the harness re-scores. Be economical — no
-   narration, no exploring unrelated files, do exactly what's needed and finish.
+```json
+{
+  "split": "val", "tag": "cand_003",
+  "reflective_dataset": [
+    {"task_id": "t12", "Inputs": "<what the task asked>",
+     "Generated Outputs": "<what the agent produced>",
+     "Feedback": "<the scorer's diagnosis>",
+     "Trajectory": "<path to this task's full trace>"}
+  ],
+  "clusters": [
+    {"signature": "confirm write", "tasks": ["t12", "t19"], "score_lost": 1.6,
+     "tag": "BEHAVIORAL", "blast_radius": ["t3", "t7"]}
+  ],
+  "kept_good": ["t1", "t4"]
+}
+```
 
-## Turning traces into an actionable signal (the real work)
-A good diagnosis is **specific, causal, and general**:
-- **Specific:** name the concrete failure (the wrong tool call, the missing step,
-  the misread field), not "the answer was wrong".
-- **Causal:** point at the decision that caused it, so the edit has a target.
-- **General:** describe the *pattern*, not the instance. Feedback that quotes the
-  gold answer turns the optimizer into a memorizer of the eval set and corrupts
-  the held-out number — keep it at the level of "what class of mistake", never
-  "here is the solution".
+`scripts/run.py` emits everything except `tag` (one of KNOWLEDGE, BEHAVIORAL,
+DECISION / PERMISSION, CAPABILITY-GAP) and `blast_radius`, which it leaves `null`
+because they need judgement — filling them in is the work below. `kept_good` is the
+set the gate's no-regression check protects.
 
-Clustering is what makes the signal *actionable* at scale: ten tasks failing for
-one reason should drive one edit, not ten. A flat list of failures invites
-one-off patches that raise val by overfitting; a clustered list invites a single
-generalizing change. This mirrors the lineage of "diagnose-then-edit" optimizers
-(GEPA's actionable side information; trace-analysis approaches that run parallel
-analysts; issue-clustering in evolutionary loops).
+## What counts as a failure
 
-## Dual-mode
-This phase runs two ways from the **same** SKILL.md: standalone as the slash command `/cap-evolve:diagnose` (the `argument-hint` shows its run.py args), and orchestrator-callable — `cap-evolve run` / the `orchestrate` skill invokes the same `scripts/run.py` headlessly and threads the run dir between phases.
+Not only zero-score tasks. Three kinds are real lost score and routinely missed:
+**partial credit** (scored e.g. 0.5 because one part of the action was wrong),
+**communication / omission** (the action happened but the required information was
+never reported or confirmed), and **near-miss** (≈0.7–0.9, one small correct change
+from a pass — the cheapest marginal gain per edit, easiest to overlook while staring
+at the zeros).
+
+Separate *always-failing* (mean ≈ 0 — a root-cause fix) from *flaky* (0 < mean < 1 —
+a consistency fix; find what the passing trials do and make it reliable). The reward
+is the honest signal: a per-task `Feedback` line comes from the **last** trial and
+can disagree with the graded mean.
+
+## Where the trace comes from
+
+The rollout record supplies the score and the feedback; the **trajectory** supplies
+the failure site, and the site is half of the cluster key. The runner owns the trace
+format, so never assume one — the location is asked for, not guessed:
+
+- standalone: `adapter.trajectories(split)` returns the directory (any structure,
+  any format). `run.py --project DIR` resolves it and attaches the path to each
+  entry as `Trajectory`; it never parses it. With no native store the pointer falls
+  back to the rollout record's own file, which core wrote.
+- inside an optimizer workdir: that directory has already been copied verbatim to
+  `./trajectories/`. Read it there. `scripts/` is not copied into
+  `./guidance/diagnose/`, so cluster by hand using the procedure below — it is the
+  same procedure the script runs.
+
+## Clustering: deriving the signature
+
+A cluster is ONE root cause, identified by a **(failure-site, violated-expectation)**
+pair: *where* the trajectory went wrong (the tool, field, or step the trace names)
+and *which* expectation was missed. Two failures belong to the same cluster when
+both halves agree — however differently the scorer phrased it, and whatever
+task-specific values it quoted. Derive the key like this:
+
+1. **Strip the scorer's boilerplate.** Drop the leading token run that *every*
+   failure's feedback shares. A scorer that opens each message with "Grading failed
+   because the expected outcome was not met" otherwise makes all failures look
+   identical.
+2. **Reduce to content words.** Drop quoted literals and numbers (task-specific, not
+   causal), drop stopwords, and drop outcome-generic words — `failed`, `wrong`,
+   `missing`, `expected`, `invalid` name *that* it failed, never *why*. Collapse
+   inflections (`confirm` / `confirmed` / `confirmation` are one token).
+3. **Read the survivors as the pair.** Identifiers the trace names are the site;
+   the remaining verbs are the expectation.
+4. **Same cluster iff the keys OVERLAP** — half or more of the smaller key's tokens
+   are shared — merged transitively. Overlap rather than equality is what keeps "did
+   not confirm the change", "omitted required confirmation step" and "missing
+   confirmation before the write" as one cluster instead of three.
+
+Two sanity checks on the result: one cluster per failing task means the signature is
+too fine and no generalizing edit is possible; one cluster spanning visibly
+different causes means it is too coarse — usually an unstripped preamble (step 1).
+
+## Tag each cluster
+
+The tag says *where the fix belongs*. The lever itself is the selected capability's
+business (`./guidance/<cap>/SKILL.md`); the tag tells it which kind of lever to reach
+for, and its **blast radius** is the set of currently-passing tasks the fix would
+change.
+
+- **KNOWLEDGE** — the agent cannot derive a format, rule, or criterion. Stating it
+  in prose is the right lever here. Blast radius: tasks reading the same instruction.
+- **BEHAVIORAL** — the agent knows the rule and violates it anyway. Restating it in
+  prose will not fix this; the rule has to move somewhere it cannot be skipped — the
+  strongest deterministic lever the capability offers. Blast radius: every task
+  exercising the same rule or path.
+- **DECISION / PERMISSION** — the wrong act-vs-refuse/escalate call on a
+  policy-governed class. Fix the exact discriminating **condition**, never the
+  class-wide rule: a class-wide change flips behavior for the whole class and
+  regresses every task where the original behavior was already correct. Blast radius
+  is therefore *every* passing task in that decision class — name them and confirm
+  the fix does not flip their action.
+- **CAPABILITY-GAP** — no reliable mechanism exists, or the agent narrates a
+  multi-step action and then stalls without executing it. Needs the strongest
+  STRUCTURAL lever available. Tagged separately so a stall is not mis-filed as
+  BEHAVIORAL and "fixed" with a nudge that never works.
+
+## Rank the clusters
+
+A cluster's value is **the score it can recover minus the regression risk to its
+blast radius** — which is why the radius is named per cluster and scoped to tasks
+concretely (ids, not "the same tool"), so the edit can be made to fire only on the
+failing condition. Then:
+
+- rank by cost (`score_lost`), biggest first — but do not let a small cluster whose
+  fix is STRUCTURAL sink under task count: a 2-task stall cracked by one new
+  mechanism can outweigh a many-task cluster of cosmetic misses;
+- note a multi-cause task's **secondary** cause too, so one edit can take the
+  primary and the residual together;
+- cross-check the run history (LEDGER / prior iterations) and skip any cluster whose
+  fix was already tried and rejected — do not re-diagnose a refuted approach.
+
+## Feedback quality
+
+Write each diagnosis **specific** (the wrong call, the skipped step, the misread
+field — not "the answer was wrong"), **causal** (the decision that produced it, so
+the edit has a target), and **general** (the pattern, not the instance).
+
+Some benchmarks copy ground truth or expected actions into the traces; when present
+use them to pinpoint which action, argument, or value was expected — for
+*understanding* only. Feedback that quotes the gold answer keeps the level at *what
+the right answer is* instead of *what class of mistake was made*, and the optimizer
+then memorizes the eval set (`references/concepts.md` has the full consequence).
 
 ## How to run
-```
-python scripts/run.py --run-dir .capevolve/run_XXXX --tag seed
-```
-Run it on the current best's val rollouts each round; feed `reflective_dataset` +
-`clusters` into the algorithm's proposal prompt, and hand `kept_good` to the gate.
 
-## What good vs bad looks like
-- **Good:** failures grouped into a few clear clusters; feedback names the cause
-  and the pattern; the biggest cluster is addressed first; gold answers never
-  appear in feedback.
-- **Bad:** one cluster per task (no generalization); feedback that just restates
-  the reward; the gold answer leaked into feedback (the optimizer memorizes the
-  eval); `kept_good` ignored so fixes regress passing tasks.
+```
+python scripts/run.py --run-dir .capevolve/run_XXXX --tag seed \
+    --project .capevolve/project --split val
+```
+
+Run it on the current best candidate's rollouts each round, then tag, rank, and hand
+the clusters to the algorithm's proposal prompt. `--split train` diagnoses train —
+the honest learning surface when the gate scores val. `--cluster first-words` is the
+old lexical key, kept for comparison only. The same script runs headlessly under
+`cap-evolve run` / the `orchestrate` skill, which threads the run dir between phases.
 
 ## References
-- `references/concepts.md` — the reflective dataset, feedback as a textual
-  gradient, why clustering beats per-task patching, the no-leak rule, and the
-  optimizer lineage, with sources.
+
+- `references/concepts.md` (~90 lines) — why a scalar reward is not enough, the
+  reflective dataset's provenance in GEPA, why clustering beats per-task patching,
+  the full consequence of a leaked gold answer, and the optimizer lineage with
+  sources. Load it for the *why* behind this procedure or a citation for it; the
+  procedure itself is complete above.
