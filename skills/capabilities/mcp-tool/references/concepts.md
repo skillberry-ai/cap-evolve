@@ -126,7 +126,7 @@ re-contract.
 4. **Never document capabilities the server lacks** — overpromising causes
    confident wrong calls.
 5. If you need a real schema constraint or new behavior, that's a server change or an
-   agent-owned wrapper (a different capability) — out of scope for an `mcp-tool` edit.
+   agent-owned wrapper optimized with the `tools` capability — out of scope here.
 
 ## Sources
 
