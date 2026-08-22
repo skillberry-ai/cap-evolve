@@ -15,7 +15,34 @@ from pathlib import Path
 import _bootstrap  # noqa: F401
 
 from cap_evolve import Budget, RunDir, harness
-from cap_evolve.check import load_adapter
+from cap_evolve.check import load_adapter, run_check
+
+
+def _refuse_degenerate_split(splits, run_dir) -> bool:
+    """Refuse a ratio split with no val or no test; warn on a tiny val (#113).
+
+    A val-gated run with zero val tasks has nothing to decide on, and a sealed-test
+    run with zero test tasks produces its headline number over nothing — both fail
+    silently today because ``make_splits`` clamps sizes without a floor
+    (``splits.py:113-119``). Failing here costs nothing; failing at finalize costs the
+    whole run. A pinned ``--split-ids`` may be deliberately degenerate (the no-holdout
+    case), so only the ratio path is guarded.
+    """
+    if not splits.val or not splits.test:
+        msg = (f"degenerate ratio split: train={len(splits.train)} val={len(splits.val)} "
+               f"test={len(splits.test)} — the val gate and the sealed test number both "
+               "need at least one task. Add tasks, change --ratios, or pin --split-ids "
+               "deliberately.")
+        run_dir.log_event("splits_warning", msg=msg)
+        print(json.dumps({"step": "baseline", "error": msg}, indent=2), file=sys.stderr)
+        return True
+    if len(splits.val) < 5:
+        run_dir.log_event(
+            "splits_warning",
+            msg=(f"val has only {len(splits.val)} task(s) — the gate's Δ > k·SE bar is "
+                 "optimistic at this n, and a one-task improvement cannot reliably clear "
+                 "it at all (#351). Prefer >= 5 val tasks."))
+    return False
 
 
 def main(argv=None) -> int:
@@ -45,6 +72,18 @@ def main(argv=None) -> int:
     p.add_argument("--spec", default=None,
                    help="path to capevolve.yaml spec (for observer config)")
     args = p.parse_args(argv)
+
+    # The hard gate, on THIS path too. `cap-evolve run` checks the adapter before it
+    # calls us (cli.py:721-726), but /cap-evolve:baseline is reachable directly and the
+    # needs/provides DAG validates declared order, not runtime state — so without this
+    # the standalone chain would freeze a split against a knowingly-broken adapter and
+    # every number in the run would be measured against it (#358). Gate before the run
+    # dir exists so a red check leaves nothing behind.
+    rep = run_check(Path(args.project))
+    if not rep.ok:
+        print(json.dumps({"step": "baseline", "error": "check failed",
+                          "report": rep.to_dict()}, indent=2), file=sys.stderr)
+        return 1
 
     Path(args.base).mkdir(parents=True, exist_ok=True)
     budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
@@ -141,6 +180,8 @@ def main(argv=None) -> int:
             split_ids = json.loads(sp.read_text(encoding="utf-8"))
         splits = harness.ensure_splits(adapter, run_dir, seed=args.seed, ratios=ratios,
                                        split_ids=split_ids)
+        if split_ids is None and _refuse_degenerate_split(splits, run_dir):
+            return 1
         # Resolve the seed capability dir robustly: as given (absolute/cwd-relative),
         # else relative to the project dir. `cap-evolve run` invokes baseline with
         # cwd=workdir, so a project-relative `capability_path: seed_capability` in
@@ -152,10 +193,21 @@ def main(argv=None) -> int:
                 cap_path = cand
         result = harness.baseline(adapter, cap_path, run_dir=run_dir, n_trials=args.n_trials)
 
+        # Headroom: the budget decision this phase exists to make. Saturated => every
+        # later Δ chases noise; floor => usually a broken adapter, not a hard task.
+        # Emitted, not just advised, so `cap-evolve run` / orchestrate can stop on it
+        # without a human reading the number. Non-fatal: recording it is the job.
+        headroom = round(max(0.0, 1.0 - result.reward), 4)
+        verdict = ("saturated" if result.reward + max(result.stderr, 0.0) >= 1.0
+                   else "floor" if result.reward <= 0.0 else "ok")
+        run_dir.log_event("headroom", headroom=headroom, verdict=verdict, val=result.reward)
+
         print(json.dumps({
             "run_dir": str(run_dir.root),
             "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},
             "baseline_val": result.to_dict(),
+            "headroom": headroom,
+            "headroom_verdict": verdict,
         }, indent=2))
         return 0
     finally:
