@@ -192,6 +192,28 @@ body::before {
 :root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="light"] .theme-toggle .icon-moon { display: none; }
 
+/* hamburger — hidden at desktop, revealed under 860px by the responsive block below */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.nav-toggle:hover { color: var(--ink); border-color: var(--accent); }
+.nav-toggle svg { width: 18px; height: 18px; display: block; }
+
+/* keyboard focus has to stay visible on every nav control */
+.nav-links a:focus-visible,
+.theme-toggle:focus-visible,
+.nav-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ─────────────────────── page containers ─────────────────────── */
 
 .page { max-width: var(--maxw); margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
@@ -622,7 +644,21 @@ table.detail { width: 100%; font-size: 0.85rem; }
 
 @media (max-width: 860px) {
   .nav-inner { flex-wrap: wrap; gap: 0.75rem 1rem; padding: 0.7rem 1rem; }
-  .nav-links { gap: 0.9rem; font-size: 0.84rem; margin-left: auto; overflow-x: auto; }
+  /* stacked menu instead of the old horizontal scroll strip, which had no affordance */
+  .nav-links {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    margin-left: 0;
+    gap: 0.9rem;
+    padding: 0.6rem 0 0.3rem;
+    border-top: 1px solid var(--border);
+  }
+  /* gated on html.js: with JS off the links stay visible and the toggle never appears,
+     so there is no dead control. With JS on the list becomes a disclosure. */
+  html.js .nav-toggle { display: inline-flex; }
+  html.js .nav-links { display: none; }
+  html.js .nav-links.open { display: flex; }
 }
 @media (max-width: 640px) {
   .page, .page-narrow { padding: 2.2rem 1.1rem 3.5rem; }
