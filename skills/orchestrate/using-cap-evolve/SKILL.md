@@ -15,8 +15,10 @@ The front door: it works out *where the user is* and hands off, running no phase
 editing nothing. Boundary: this router picks the door, `orchestrate` drives the run.
 
 ## Routing decision
+Run from the user's project dir; `S` is the absolute path of the directory you loaded this
+SKILL.md from — the one location always known here (no env var is set for a plugin install):
 ```bash
-python "${CAPEVOLVE_SKILLS_DIR:?point at the cap-evolve skills dir}"/orchestrate/using-cap-evolve/scripts/run.py --base .capevolve
+S=<this skill's own directory>; python "$S/scripts/run.py" --base .capevolve
 ```
 Follow `next`; pass `reason` on to the user. Two things the JSON cannot say for itself:
 - On a fresh request go through `intake`, and if an input it needs is missing, ask the
