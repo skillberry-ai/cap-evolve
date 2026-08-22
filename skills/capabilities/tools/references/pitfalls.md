@@ -126,3 +126,23 @@ the name is read first and weighs heavily.
 - **Detect:** `apply()` returns `changed: []` and a non-empty `refused`.
 - **Fix:** widen `inputs/policy.json` deliberately, or re-express the change as an
   allowed edit kind.
+
+## The positive mirror — what actually moves accuracy and cuts calls
+
+Every pitfall above has a shape that works. When an accepted candidate barely moved the
+metric, check it against this list:
+
+- **A loop/composite tool** that collapses the repeated-primitive pattern from the traces
+  (fetching records one id at a time, sweeping a search across many parameter
+  combinations) into a single list call.
+- **A rule-enforcing tool** that reads-before-writes or validates a precondition the
+  underlying API does not, turning a silent bad write into a clear refusal.
+- **Precise descriptions** that add genuinely new, always-true content: explicit
+  when/when-not triggers, per-argument units/allowed-values/defaults, retained failure
+  modes, and one always-valid example call.
+- **Replace, don't accumulate** — add the clearer tool and `remove` the error-prone
+  original so the surface stays small and sharp.
+
+The test: *would this edit help on a task the optimizer has never seen?* A loop tool, a
+precondition check, and a unit-pinned argument description pass. A comma and a deleted
+`Raises:` line do not.

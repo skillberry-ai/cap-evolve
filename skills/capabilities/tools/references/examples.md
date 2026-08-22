@@ -4,6 +4,25 @@ Each example is an edit you would emit to `apply()`. Edit shape:
 `{"tool": <name>, "kind": <action>, "value": <...>}`. For `add`/`compose` the
 value is a full tool def; for `remove` the value is ignored.
 
+## Contents
+- [0. Turning N prose rules into N in-body checks (the DEFAULT edit)](#0-turning-n-prose-rules-into-n-in-body-checks-the-default-edit)
+- [1. Selection fix — sharpen a vague description](#1-selection-fix--sharpen-a-vague-description)
+- [2. Argument-filling fix — close the value set with an enum](#2-argument-filling-fix--close-the-value-set-with-an-enum)
+- [3. Collapse a fumbled chain — compose](#3-collapse-a-fumbled-chain--compose)
+- [3b. Collapse repeated primitive calls — a loop-in-one-call tool](#3b-collapse-repeated-primitive-calls--a-loop-in-one-call-tool)
+- [3c. Validation / rule-enforcement tool — wrap, then delegate](#3c-validation--rule-enforcement-tool--wrap-then-delegate-then-remove-the-primitive)
+- [3c-bis. Validate-and-normalize inputs before a primitive](#3c-bis-validate-and-normalize-inputs-before-a-primitive)
+- [3c-ter. Wrong ARGUMENT the tool could validate](#3c-ter-wrong-argument-the-tool-could-validate--resolvevalidate-against-state-return-available)
+- [3c-quater. A required, eligible action abandoned via bail-out](#3c-quater-a-required-eligible-action-abandoned-via-bail-out--escalation--encapsulate-the-batch-as-a-composite-write)
+- [3d. Keep failure modes — improve, do not delete, `Raises:`](#3d-keep-failure-modes--improve-do-not-delete-raises)
+- [3e. Make a STALLED action un-skippable — a composite WRITE tool](#3e-make-a-stalled-action-un-skippable--a-composite-write-tool-then-remove-the-primitives)
+- [3f. Shape the result — high-signal fields, readable ids, actionable errors](#3f-shape-the-result--high-signal-fields-readable-ids-actionable-errors)
+- [3g. A comprehensively documented tool (the doc contract)](#3g-a-comprehensively-documented-tool-the-doc-contract)
+- [4. Shrink an overlapping toolset — remove + consolidate](#4-shrink-an-overlapping-toolset--remove--consolidate)
+- [5. Behavior bug — code edit](#5-behavior-bug--code-edit)
+- [6. A policy refusal (what tightening looks like)](#6-a-policy-refusal-what-tightening-looks-like)
+- [7. SECONDARY (last resort) — a passthrough / reasoning-only tool](#7-secondary-last-resort--a-passthrough--reasoning-only-tool)
+
 **Ordered by leverage.** The DEFAULT, most common edit is §0 — editing the BODY of
 an EXISTING tool to convert a violated prose rule into an in-body check. The other
 PRIMARY edits are the code-bearing tools in §3b (workflow/loop) and §3c
@@ -232,6 +251,21 @@ the agent can no longer hand off a task it was equipped to finish; ineligible it
 are skipped with a reason rather than blocking the batch. (Verify: run the body on the
 record from the bail-out trace and confirm it processes the eligible items.)
 
+## 3d. Keep failure modes — improve, do not delete, `Raises:`
+
+Anti-symptom: an optimizer "cleaned up" a description by deleting its `Raises:`
+section. Do the opposite — keep the error conditions and pair each with the
+recovery action.
+
+```json
+{ "tool": "charge_payment", "kind": "description",
+  "value": "Charge `amount` (whole US cents) to the payment method `payment_id` from the user's profile. Use after the user confirms the total. Fails if the payment method is not on file (pick another from get_user_details) or if a gift-card balance is below `amount` (split across methods or choose a card). Example: charge_payment(payment_id='gift_card_42', amount=1299)." }
+```
+
+Why it works: the model now knows the units (cents), the precondition (method on
+file), and exactly what to do on each failure — instead of retrying the same bad
+call.
+
 ## 3e. Make a STALLED action un-skippable — a composite WRITE tool (then remove the primitives)
 
 Trace symptom (the most common behavioral failure): the agent analyzes a
@@ -266,21 +300,6 @@ Why it works: the analyze→apply sequence lives entirely in the tool body, so a
 single call performs all of it — the agent can no longer narrate a plan and then
 fail to execute it. Removing the raw `update_record` makes the composite the only
 reachable write path, so the stall cannot recur by routing around it.
-
-## 3d. Keep failure modes — improve, do not delete, `Raises:`
-
-Anti-symptom: an optimizer "cleaned up" a description by deleting its `Raises:`
-section. Do the opposite — keep the error conditions and pair each with the
-recovery action.
-
-```json
-{ "tool": "charge_payment", "kind": "description",
-  "value": "Charge `amount` (whole US cents) to the payment method `payment_id` from the user's profile. Use after the user confirms the total. Fails if the payment method is not on file (pick another from get_user_details) or if a gift-card balance is below `amount` (split across methods or choose a card). Example: charge_payment(payment_id='gift_card_42', amount=1299)." }
-```
-
-Why it works: the model now knows the units (cents), the precondition (method on
-file), and exactly what to do on each failure — instead of retrying the same bad
-call.
 
 ## 3f. Shape the result — high-signal fields, readable ids, actionable errors
 

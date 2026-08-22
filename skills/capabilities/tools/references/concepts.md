@@ -109,6 +109,31 @@ finds documentation, not examples, is what carries usage. Deleting error
 conditions to shorten a description removes guidance and is a common
 *non-improving* edit.
 
+## 5. The action policy is the safety boundary
+
+`inputs/policy.json` lists the allowed edit kinds. It exists because the same
+artifact is edited in different trust settings. Rewording a description is low
+risk; rewriting a handler's `code` or changing a `schema` other systems depend on
+is high risk. The policy lets you grant exactly the blast radius you intend:
+
+- Frozen API / shared schema → allow `["description","params","examples"]` only.
+- You own everything → allow the full set (the default in this capability).
+
+This mirrors the *mutation-lock* idea from agent-optimization tooling: let an
+automatic optimizer change the safe surface, forbid the rest. `apply()` reports
+every refusal, so an over-tight policy is visible, not silent.
+
+## 6. Automatic optimization of tool text
+
+The same loop a human runs here — propose a description/schema edit, score it on a
+held-out task set, keep what helps — is what automatic prompt/instruction
+optimizers do. **GEPA** evolves prompt/instruction text by reflecting in natural
+language over sampled trajectories and reports beating RL (GRPO) and DSPy's
+MIPROv2 on several tasks; **DSPy** optimizers (MIPROv2, GEPA) tune instructions
+and demonstrations against a metric. Tool descriptions and examples are
+exactly this kind of optimizable text, which is why this capability `materialize`s
+them as named components an optimizer can rewrite.
+
 ## 7. Output / response shaping
 
 Selection and filling decide the *call*; the **response** decides the next turn.
@@ -149,31 +174,6 @@ needed it. Both are regressions. The safe sequence to replace/consolidate a tool
 Never bare-remove without a replacement that calls the original. Add-verify-swap
 makes the safe path the only path with no coverage gap (and keeps the count lean —
 one tool subsuming a primitive beats two overlapping ones).
-
-## 5. The action policy is the safety boundary
-
-`inputs/policy.json` lists the allowed edit kinds. It exists because the same
-artifact is edited in different trust settings. Rewording a description is low
-risk; rewriting a handler's `code` or changing a `schema` other systems depend on
-is high risk. The policy lets you grant exactly the blast radius you intend:
-
-- Frozen API / shared schema → allow `["description","params","examples"]` only.
-- You own everything → allow the full set (the default in this capability).
-
-This mirrors the *mutation-lock* idea from agent-optimization tooling: let an
-automatic optimizer change the safe surface, forbid the rest. `apply()` reports
-every refusal, so an over-tight policy is visible, not silent.
-
-## 6. Automatic optimization of tool text
-
-The same loop a human runs here — propose a description/schema edit, score it on a
-held-out task set, keep what helps — is what automatic prompt/instruction
-optimizers do. **GEPA** evolves prompt/instruction text by reflecting in natural
-language over sampled trajectories and reports beating RL (GRPO) and DSPy's
-MIPROv2 on several tasks; **DSPy** optimizers (MIPROv2, GEPA) tune instructions
-and demonstrations against a metric. Tool descriptions and examples are
-exactly this kind of optimizable text, which is why this capability `materialize`s
-them as named components an optimizer can rewrite.
 
 ## Sources
 
