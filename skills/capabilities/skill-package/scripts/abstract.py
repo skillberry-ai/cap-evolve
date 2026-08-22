@@ -49,6 +49,13 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.S)
 XML_TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")  # an actual tag, not a stray "<"
+REL_LINK_RE = re.compile(r"\]\(([^)\s]+)\)")  # any Markdown link target
+# A description states WHEN either conditionally ("Use when the user asks") or
+# POSITIONALLY ("Use after intake", "Use as the last evaluation step") — both are real
+# triggering signals, so demanding the literal "use when" bigram flags good prose.
+SAYS_WHEN_RE = re.compile(
+    r"\bwhen\b|\buse (after|before|as|at|to|between|right|during|only|this|the moment)\b",
+    re.I)
 MAX_BODY_LINES = 500              # skill-creator's Level-2 budget (hard here)
 MAX_BODY_TOKENS = 5000            # cap-evolve heuristic (~chars/4), advisory only
 CHARS_PER_TOKEN = 4
@@ -96,7 +103,11 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     for line in m.group(1).splitlines():
         stripped = line.strip()
         indented = line[:1] in (" ", "\t")
-        if key and (indented or (fold and stripped)):
+        # A block scalar continues while lines are INDENTED; a blank line inside it
+        # is not a terminator. An unindented `next-key:` ends it — treating that as
+        # continuation swallowed every key after a `>`/`|` description (6 of them on
+        # algorithms/evograph) and inflated the measured description past its cap.
+        if key and (indented or (fold and not stripped)):
             if not stripped:
                 continue
             sep = "\n" if fold == "|" else " "
@@ -115,6 +126,25 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
         else:
             key, fold = None, ""
     return fm, text[m.end():]
+
+
+def _relative_links(text: str) -> list[str]:
+    """Local relative link targets in Markdown, anchors stripped.
+
+    A Markdown link may carry an anchor (``references/x.md#a-heading``); the anchor is
+    not part of the path, so existence-checking the raw target reads every deep link as
+    broken. Absolute URLs, bare in-document anchors and mailto:/rooted paths are skipped
+    — only targets that must resolve to a file next to the linking document come back,
+    de-duplicated (the same file linked five times is one problem, not five findings).
+    """
+    out = []
+    for raw in REL_LINK_RE.findall(text):
+        if raw.startswith(("#", "/", "mailto:")) or "://" in raw:
+            continue
+        target = raw.split("#", 1)[0].strip()
+        if target:
+            out.append(target)
+    return list(dict.fromkeys(out))
 
 
 def _subpackages(capability_dir: Path) -> list[Path]:
@@ -326,7 +356,7 @@ def _validate_frontmatter(fm: dict, problems: list, warnings: list) -> str:
         problems.append(f"description is {len(desc)} chars (>{LONG_DESC_CHARS})")
     if XML_TAG_RE.search(desc):
         problems.append("description must not contain XML tags")
-    if not re.search(r"\b(use when|when )\b", desc, re.I):
+    if not SAYS_WHEN_RE.search(desc):
         warnings.append("description should say WHEN to use the skill "
                         "('Use when …') — it is the primary triggering signal")
     # point-of-view drift: descriptions must be third person.
@@ -346,15 +376,20 @@ def _validate_frontmatter(fm: dict, problems: list, warnings: list) -> str:
 
 
 def _validate_references(pkg: Path, body: str, problems: list, warnings: list) -> None:
-    # broken links the body points at
-    for rel in re.findall(r"\(((?:references|scripts|assets)/[^)\s]+)\)", body):
-        if not (pkg / rel).exists():
+    # Relative links the body points at must resolve. Anchors are stripped first
+    # (_relative_links), or every deep link like "references/x.md#heading" reads as broken.
+    for rel in _relative_links(body):
+        if rel.split("/", 1)[0] in ("references", "scripts", "assets") \
+                and not (pkg / rel).exists():
             problems.append(f"SKILL.md links '{rel}' which does not exist")
 
     refs = pkg / "references"
     if not refs.is_dir():
         return
-    for sub in refs.iterdir():
+    # sorted(): filesystem iteration order differs between machines, and callers (the
+    # repo's own blocking authoring lint, and the optimizer's warning list) need the
+    # findings to come out in the same order everywhere.
+    for sub in sorted(refs.iterdir()):
         if sub.is_dir():
             warnings.append(f"references/{sub.name}/ is nested >1 level deep; "
                             "keep references one level deep")
@@ -372,15 +407,23 @@ def _validate_references(pkg: Path, body: str, problems: list, warnings: list) -
                             f"contents in its first {TOC_SCAN_CHARS} chars: put "
                             f"{MIN_TOC_LINKS}+ anchor links ('- [Section](#section)') "
                             "at the very TOP, above any orientation prose")
-        # One level deep is about POINTERS, not directories: a reference that points
-        # at another reference can be missed when the agent reads only part of it.
-        for link in re.findall(r"\]\(([^)\s]+)\)", text):
-            if re.match(r"(\./)?(\.\./)?references/", link) or (
-                    link.endswith(".md") and (refs / link).exists() and link != f.name):
+        # One level deep is about POINTERS, not directories: a reference that points at
+        # another reference can be missed when the agent reads only part of it. Judged
+        # on the RESOLVED target — a substring/`refs / link` test reads a legitimate
+        # "../SKILL.md" back-link as a sibling reference (it resolves through refs/).
+        for target in _relative_links(text):
+            # A reference written as if it were SKILL.md ("references/b.md") still MEANS
+            # the sibling, so resolve that form against references/ — otherwise the
+            # commonest ref->ref shape reads as a mere broken link.
+            rel = re.sub(r"^(\./)?references/", "", target)
+            hop = ((refs if rel != target else f.parent) / rel).resolve()
+            if hop.suffix == ".md" and hop.parent == refs.resolve() and hop != f.resolve():
                 warnings.append(f"references/{f.name} points at another reference "
-                                f"('{link}') — keep references one level deep, linked "
+                                f"('{target}') — keep references one level deep, linked "
                                 "directly from SKILL.md")
-                break
+            elif not hop.exists():
+                warnings.append(f"references/{f.name} links '{target}' "
+                                "which does not exist")
         if f.name not in body and f"references/{f.name}" not in body:
             warnings.append(f"references/{f.name} is an orphan — SKILL.md never points "
                             "at it, so the agent will not know to load it")

@@ -201,6 +201,30 @@ jobs:
       - name: Check documented cap-evolve subcommands exist
         run: python3 ci/check_cli_subcommands.py
 
+  lint-skills:
+    name: Skill authoring lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Points the shipped skill-package validator at the repo's OWN skills, so the
+      # framework is held to the authoring bar it advertises in CONTRIBUTING.md.
+      #
+      # BLOCKING, with no violation baseline. It was designed report-only against a
+      # 14-violation baseline while the skills were rewritten under #322-#339; that
+      # sweep cleared all 14, so the tree is clean and the next violation is a
+      # regression to fix rather than debt to record. Advisory findings (description
+      # style, bundled-script self-check) print but never fail the step.
+      - name: Lint bundled skills against the authoring rules
+        run: python skills/_registry/lint_skills.py skills
+
   spellcheck:
     name: Spellcheck (docs)
     runs-on: ubuntu-latest
