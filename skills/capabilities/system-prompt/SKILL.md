@@ -1,6 +1,6 @@
 ---
 name: system-prompt
-description: Optimize an agent's system prompt or policy text — the instructions that shape its behavior. Use when the thing you want to improve is a prompt/policy file (not tools or a skill package). Covers what is safely editable, how prompt wording changes agent behavior, common failure modes (over-long preambles, conflicting instructions, missing output contracts), and what to measure. Provides concrete materialize/apply/validate handlers for prompt artifacts.
+description: Optimize an agent's system prompt, developer message, or policy text — the instructions that shape its behavior. Use when the artifact to improve is a prompt or policy file rather than tools or a skill package: the agent lacks a rule, misses the required output format, or applies the wrong decision criterion. Covers the safe edit classes (rewrite, consolidate, add a sourced rule, reorder, tighten the output contract, soften over-strong wording), how to keep an edit general instead of overfitting one task, and the rule that a needed constraint is never deleted. A failure where the agent already knows the rule and skips the action belongs to the capability that edits tool code, not here.
 component: capability
 argument-hint: "--path DIR"
 allowed-tools: Read, Write, Edit, Bash
@@ -11,188 +11,126 @@ sources: [tau2bench]
 
 # Capability: system prompt
 
-The system prompt is the cheapest, highest-leverage parameter of most agents: a
-few words can flip success on a whole class of tasks. This capability treats one
-or more prompt/policy text files (`prompt.txt`, `policy.md`, `SYSTEM.md`) as the
-optimizable artifact.
+This capability treats one or more prompt/policy text files (`prompt.txt`,
+`policy.md`, `SYSTEM.md`) as the optimizable artifact — whatever text the runtime
+prepends to the agent's context as its instructions, output contract, and decision
+policy.
 
-## What you can change here
+Prose is the right lever when the agent lacks something it could be *told*: a
+format, a rule, a decision criterion. It is the wrong lever when the agent already
+has the rule and does not act on it — that needs the behavior enforced in code, so
+it belongs to whatever capability edits the agent's tools, not here. Classify the
+failure clusters first (`./guidance/diagnose/SKILL.md`, when present) and spend
+prose only on the clusters this capability can actually move.
 
-The prompt is **HIGH-VALUE to edit, not a last resort.** When the traces show the
-agent doesn't know a rule, a format, or a decision criterion, a sharper prompt is
-the fastest fix. Each lever below is a safe, bounded edit class — pick the one
-that fixes the biggest failure cluster. (1-line generic examples; depth in
-[`references/concepts.md`](references/concepts.md).)
+## Pick the lever
 
-1. **Rewrite a rule for clarity / positive framing** — say what TO do, specifically.
+Each item is a bounded edit class. Fix the biggest cluster with the narrowest lever
+that reaches it; ship every class the traces call for in one candidate. Examples are
+1-line and generic; depth is in [`references/concepts.md`](references/concepts.md).
+
+1. **Rewrite a rule for clarity, positively framed** — say what TO do, specifically.
+   A prohibition fences off one wrong path; a positive instruction names the target.
    *Ex:* "Don't be vague" → "State the record ID in every reply."
-2. **Add the WHY to a bare rule** — append the reason so the model generalizes.
-   *Ex:* "Never use ellipses" → "Never use ellipses — output is read by a TTS
-   engine that can't pronounce them."
+2. **Add the reason to a bare rule** — a rule paired with its rationale extends to
+   cases the rule's author never wrote down; a bare imperative does not.
+   *Ex:* "Never use ellipses" → "Never use ellipses — the output is read by a TTS
+   engine that cannot pronounce them."
 3. **Consolidate redundant rules** — merge duplicates into one, keeping every
    distinct constraint. *Ex:* three "confirm before deleting" lines → one "Confirm
    before any destructive action (delete, overwrite, send)."
-4. **Add a missing rule grounded in the source/policy** — add a rule the source
-   requires but the prompt omits (must trace to a real source, never invented). The
-   added rule must be ADDITIVE (a constraint/predicate the prompt lacked) or NARROWING
-   (a stricter condition) — NEVER one that LOOSENS or broadens an existing
-   permission/decision, which regresses the whole class.
-   *Ex:* source says refunds need a manager code → "Require a manager code before
-   any refund." (A *narrowing* add. Adding "anyone may refund without a code" would be
-   a loosening — forbidden.)
-5. **Add an example** — 1, up to 3–5, `<example>`-tagged exemplars to pin format.
-   *Ex:* add one `<example>` showing the exact JSON envelope expected.
-6. **Reorder** — long context/data to the top, query + instructions last; group
-   mixed content under headers / XML tags. *Ex:* move a long reference block above
-   the task instruction.
-7. **Add a role / goal line** — one sentence on who the agent is and its objective.
-   *Ex:* "You are a careful support agent; resolve the request in one turn."
+4. **Add a rule the source requires but the prompt omits** — it must trace to a real
+   source (the policy doc, the runner, the task spec), never be invented. The added
+   rule may introduce a constraint the prompt lacked, or state a stricter condition on
+   an existing one. It may not broaden an existing permission or flip a decision the
+   agent currently gets right: that changes behavior for every task in the class,
+   including the passing ones whose gold answer was the stricter behavior. When a
+   cluster needs different behavior, name the exact condition that separates the
+   qualifying cases instead. *Ex:* the source says refunds need a manager code →
+   "Require a manager code before any refund."
+5. **Add an example** — one or a few `<example>`-tagged exemplars to pin a format
+   that is hard to describe in prose. *Ex:* one `<example>` showing the exact JSON
+   envelope expected. Examples are re-read every turn, so add the smallest set that
+   pins the shape and treat a larger set as a hypothesis to gate, not a free win.
+6. **Restructure** — separate instructions, context, examples, and input into their
+   own sections or tags so the model does not conflate them, and put long reference
+   data before the instruction that acts on it.
+7. **Add a role / goal line** — one sentence on who the agent is and what "done"
+   means, when the prompt has none. *Ex:* "You are a careful support agent; resolve
+   the request in one turn."
 8. **Tighten the output contract** — make the required shape explicit and exact.
-   *Ex:* "Reply with only a JSON object `{status, reason}` — no prose."
-   **If the eval scores COMMUNICATION of computed values** (totals, refunds, savings,
-   counts, balances), the contract must require the agent to STATE each computed figure
-   explicitly in its final message. The agent often performs the DB action correctly
-   but never reports the number, and the eval marks the omission as a miss. This is a
-   KNOWLEDGE / output-contract gap — prose-fixable here — and is DISTINCT from a missing
-   DB action/write (a behavioral execution failure, which prose cannot fix and is out of
-   scope for this capability). *Ex:* "After computing a total/refund/savings, state the exact figure in
-   your final message (e.g. 'Your refund is $42.00')."
-9. **Soften over-strong language** — downgrade `CRITICAL/MUST/ALWAYS` to "Use …
-   when …" when a cluster shows over-eagerness/over-triggering on current models.
-   *Ex:* "CRITICAL: you MUST call the tool" → "Use the tool when you need live data."
+   *Ex:* "Reply with only a JSON object `{status, reason}` — no prose." If the scorer
+   reads the agent's final message, the contract must require the agent to state every
+   value the scorer checks: agents routinely perform the action correctly and never
+   report the result, and the scorer sees only the omission. (A missing action, as
+   opposed to a missing report of it, is not fixable here — see the scope note above.)
+9. **Soften over-strong wording** — when a cluster shows the agent over-doing rather
+   than under-doing (excess tool calls, over-engineering, triggering a behavior where
+   it did not apply), downgrade `CRITICAL/MUST/ALWAYS` to "Use … when …". The edit
+   that fixes an over-eagerness cluster is a cut, not an addition.
 
-> **NEVER drop a needed rule — change, consolidate, or add; don't delete.** When an
-> edit removes text, every distinct constraint that text carried must survive
-> somewhere (rewritten, merged, or relocated). Deletion is legitimate only when the
-> information is genuinely redundant or contradicted by the source — and even then,
-> prefer rewriting the conflicting rule. Consolidation cuts *words*, never *rules*.
+## Never drop a needed rule — change, consolidate, or add
 
-The good practices, failure modes, and the full never-drop rule are in
-[`references/concepts.md`](references/concepts.md) — read it before a non-trivial edit.
+When an edit removes text, every distinct constraint that text carried must survive
+somewhere: rewritten, merged into a combined rule, or relocated. Deletion is
+legitimate when the information is genuinely redundant, contradicted by the source,
+or now enforced deterministically elsewhere — and in the first two cases prefer
+rewriting the conflicting rule. Consolidation cuts *words*, never *rules*.
 
-## What can be optimized
-- **Role line** — a single sentence stating who the agent is. A known cheap win:
-  one role sentence focuses behavior and tone.
-- **Task framing** — what "done" means.
-- **Output contract** — exact format the downstream/eval expects (a frequent
-  silent failure: the agent is *capable* but formats wrong). **Diagnose
-  output-shape failures first** — right content / wrong shape scores zero, and is
-  the cheapest class to fix.
-- **Decision rules** — when to call which tool, when to ask vs. act, refusal
-  rules (many agents are scored on adherence to such decision rules).
-  **DANGER — a global decision/permission/refusal rule has UNBOUNDED blast radius.**
-  Loosening or broadening one to fix a failing cluster (e.g. relaxing "restricted
-  records may not be modified", or "any role may approve the request") flips behavior
-  for the WHOLE class and
-  regresses every currently-passing task where the original, stricter behavior was the
-  gold answer. NEVER loosen a global decision rule to fix a cluster. If a cluster needs
-  different behavior, state the EXACT discriminating CONDITION that NARROWS the rule to
-  the qualifying cases only. A prompt edit to a decision rule is safe ONLY when it ADDS
-  a predicate the agent lacked or NARROWS the rule — never when it broadens a permission
-  or flips a decision the
-  agent currently gets right.
-- **Few-shot exemplars / reasoning scaffolds** — 3–5 diverse, relevant examples
-  wrapped in `<example>` tags steer format (caveat: long example dumps can hurt
-  reasoning models — keep it to a handful).
+An optimizer that deletes a needed rule can make one iteration's metric go up and
+leave the class permanently broken, so the check is mechanical as well as stated:
+`apply()` counts constraint-bearing lines before and after every edit and reports a
+net loss in `report["warnings"]`. A warning is not a failure — a legitimate
+consolidation triggers it too — it is a prompt to state, in `PROCESS.md`, where each
+dropped constraint went. `op: "set"` on a whole file is the edit most likely to lose
+one silently.
 
-## How to write the edit (authoring rules)
-These are *how* to phrase a prompt edit so it actually changes behavior:
+## Keep the edit general
 
-- **State instructions positively — say what TO do, not just what not to do.**
-  "Respond in flowing prose paragraphs" beats "don't use markdown." Positive
-  phrasing gives the model a target; prohibitions only fence off one wrong path.
-- **Explain the WHY, not bare MUSTs.** A rule with its reason generalizes; a bare
-  `MUST`/`CRITICAL` does not. "Never use ellipses" works far better as "your output
-  is read by a TTS engine that can't pronounce ellipses." Teach the optimizer to
-  write the reason, not the command.
-- **Model-sensitivity caveat — sometimes the fix is to REMOVE or soften an
-  instruction.** Newer models over-comply: stale anti-laziness phrasing
-  (`CRITICAL`/`MUST`/`ALWAYS`) now causes over-eagerness and over-engineering.
-  Prefer plain "Use … when …". If a cluster shows over-doing rather than
-  under-doing, the edit is to *cut or soften* an instruction, not add one.
-- **Ordering / structure.** Put long context first and the query / output contract
-  last (end-placement can lift quality on long inputs); separate
-  instructions / context / examples with lightweight `<xml>` tags so the model
-  doesn't conflate them.
-- **Generalize, never hardcode.** A prompt rule must state the GENERAL policy that
-  holds across the whole class of inputs, never a specific task's case or answer.
-  *Good:* "Reverse the charge to the original payment method on file." *Bad:* "If the
-  record id is `<TASK_SPECIFIC_ID>`, apply the exact amount that one task expects."
-  Baking one task's id/value/date/answer into
-  the prompt overfits, fails the held-out gate, and can mislead other tasks. Use a
-  failing task's specifics only to understand the class, then write the general rule.
-- **Ground new rules in a source; don't fabricate.** You MAY add a rule the source
-  or policy requires but the prompt omits (menu item 4) — that is a high-value edit.
-  What you must not do is invent a normative rule, exception, or workaround that no
-  source supports and that conflicts with the existing instructions. Trace every
-  added rule to a real source (the policy doc, the runner, the benchmark spec). If
-  two existing rules conflict, rewrite toward the more restrictive one rather than
-  dropping either.
-
-## Prose fixes KNOWLEDGE gaps — behavioral failures are OUT OF SCOPE here
-The system prompt is the right lever when a failure is a *knowledge* gap — the
-agent doesn't know the required output format, a decision criterion, or a rule.
-Telling it teaches it, and behavior changes. The prompt is the WRONG lever when a
-failure is *behavioral* — the agent already "knows" what to do (it analyzes,
-explains, even confirms) but then skips the action (e.g. stalls before issuing a
-write and stops). More prose does not fix a behavior the model already agreed to
-and declined: that class of failure is OUT OF SCOPE for the prompt — only enforcing
-the action deterministically (outside this capability) fixes it. So before reaching
-for a prompt edit, classify each cluster as KNOWLEDGE (fix here) vs behavioral
-(not a prompt fix), and spend prose only on the knowledge gaps.
-
-**If a rule is a VIOLATION the agent commits despite knowing it (not a knowledge
-gap), do NOT add prose.** Adding another sentence to a rule the agent already read
-and broke just grows the prompt without changing behavior — a known-but-broken rule
-needs deterministic enforcement the prompt cannot provide, so it is out of scope here.
-
-**A DECISION / PERMISSION cluster is NOT a knowledge gap — never loosen a global rule
-to fix it.** When a cluster shows the agent making the wrong ACT-vs-REFUSE call, the
-agent usually already "knows" the rule; the real condition is just more specific than
-the prose. Relaxing the global rule makes the agent act on the WHOLE class and regresses
-every task where refusing/escalating was the gold answer (unbounded blast radius). The
-only safe prompt fix is a NARROWING rule that states the EXACT discriminating predicate
-that separates the qualifying cases — a prompt edit may only ADD knowledge or NARROW,
-never broaden a permission or flip a decision the agent currently gets right. If the
-condition cannot be expressed as a narrowing rule, it is out of scope for the prompt.
-
-**Each prompt iteration should also CONSOLIDATE.** When a rule is now enforced
-deterministically elsewhere (no longer dependent on the prompt), REMOVE its
-now-redundant prose so the prompt stays sharp — the deterministic enforcement is
-authoritative and the duplicate sentence only dilutes attention. This prevents prose
-pile-up: the prompt should get shorter as constraints become enforced, not longer.
-(This is consolidation under the never-drop rule — the constraint still lives,
-enforced elsewhere, so removing its prose drops no rule.)
-
-## How agents use it
-The prompt is prepended to context every turn. Agents read it literally and are
-sensitive to ordering, contradictions, and verbosity. Long preambles dilute
-attention; conflicting instructions resolve unpredictably.
-
-## Common problems (see references/pitfalls.md)
-- Over-long, redundant instructions → worse, not better.
-- Missing/loose output contract → correct content, wrong shape, zero reward.
-- Instructions that fight the model's defaults → inconsistent behavior.
+- **Never hardcode a task's specifics.** A rule must state the general policy that
+  holds across the class, not one task's case or answer. *Good:* "Reverse the charge
+  to the original payment method on file." *Bad:* "If the record id is
+  `<TASK_SPECIFIC_ID>`, apply the amount that task expects." Baking an id, value,
+  date, or answer into the prompt overfits, gets rejected by the held-out gate, and
+  can mislead other tasks. Use a failing task's specifics to identify the class, then
+  write the general rule. The test for any edit: *would this help on a task the
+  optimizer has never seen?*
+- **Resolve conflicts, don't stack rules.** Before editing, list the rules that
+  govern the same action and check that no two give a different verdict on the same
+  input; rewrite toward the stricter one rather than dropping either. A contradiction
+  is the one failure mode detectable by reading the artifact alone, so it is worth
+  the pass.
+- **Consolidate as constraints move out of the prompt.** When a rule is now enforced
+  deterministically elsewhere, remove its now-redundant prose: the enforcement is
+  authoritative and the duplicate sentence only competes for attention. The prompt
+  should get shorter as constraints become enforced, not longer. (This drops no rule
+  — the constraint still lives, enforced elsewhere.)
+- **Watch length, but measure it.** `validate()` reports each file's line, token, and
+  constraint-line counts. There is no universal length threshold worth quoting;
+  compare a candidate against the accepted candidates of your own run and treat a
+  prompt that grows every iteration without moving val as the signal to prune.
 
 ## Handlers (scripts/abstract.py)
-`materialize(dir) -> {file: text}` · `apply(dir, edits) -> report` ·
-`validate(dir) -> {ok, files, problems}`. Edit ops: `set`, `append`,
-`ensure_contains`. A project adapter's `apply` can call these directly.
 
-## Optimizing it each iteration (analyze → ideate → edit)
-The optimizer should **analyze before editing**: from the traces + the current
-prompt, identify (a) the recurring failures clustered by root cause (the rule the
-agent keeps breaking) and (b) the good behavior seen only on some trials that
-should be made consistent; then make prompt edits for EVERY knowledge-gap cluster,
-paired with the tool-code fixes for the behavioral clusters in the SAME candidate,
-and reinforce (b) — sharpen or correct the offending rules rather than appending
-more preamble.
+`materialize(dir) -> {file: text}` · `apply(dir, edits) -> {changed, warnings}` ·
+`validate(dir, baseline=None) -> {ok, files, stats, problems, warnings}` ·
+`is_empty(dir) -> bool`. Edit ops: `set`, `append`, `ensure_contains`. Pass
+`baseline` (a directory or a `{file: text}` dict, e.g. the parent candidate) to have
+`validate` report a constraint-line drop against it. A project adapter's `apply` can
+call these directly.
 
 ## How to run
+
 ```
 python scripts/check.py
-python scripts/run.py --path <capability_dir>     # prints the candidate + validity
+python scripts/run.py --path <capability_dir>                        # candidate + validity
+python scripts/run.py --path <candidate_dir> --baseline <parent_dir>  # + rule-loss check
 ```
 
 ## References
-- `references/concepts.md` — why prompts are high-leverage; what to optimize; pitfalls.
+
+- [`references/concepts.md`](references/concepts.md) — what the prompt controls, the
+  six authoring practices and five failure modes in full, how to adapt a prompt to
+  the runtime reader's capability tier, pitfalls, and cited sources. **Read once
+  before your first non-trivial edit**, and again when a candidate is accepted but
+  barely moves the metric.

@@ -17,9 +17,11 @@ import abstract
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="system-prompt")
     p.add_argument("--path", required=True, help="capability dir holding the prompt file(s)")
+    p.add_argument("--baseline", help="the dir this candidate was derived from (e.g. the parent "
+                                     "candidate); warns when a prompt file lost rule-bearing lines")
     args = p.parse_args(argv)
     parts = abstract.materialize(Path(args.path))
-    v = abstract.validate(Path(args.path))
+    v = abstract.validate(Path(args.path), baseline=Path(args.baseline) if args.baseline else None)
     cand = Candidate(id="seed", component="system-prompt", text_parts=parts, dir=str(args.path))
     print(json.dumps({"candidate": cand.to_dict(), "valid": v}, indent=2))
     return 0 if v["ok"] else 1
