@@ -214,6 +214,7 @@ def skillopt_loop(
     algorithm: str = "skillopt",
     store=None,
     protected_patterns=None,
+    ctx: harness.OptimizerContext | None = None,
 ) -> dict:
     """Run the SkillOpt epochs × mini-batches climb.
 
@@ -223,8 +224,14 @@ def skillopt_loop(
 
     Returns a result dict shaped like ``hill_climb_loop``'s, plus ``epochs`` /
     ``edit_budget_schedule`` / ``slow_updates`` / per-epoch ``epoch_stats``.
+
+    ``ctx`` is the shared ``harness.OptimizerContext`` — the capability skills, the
+    diagnose method, the sources, the optimizer features reference and the prompt
+    template. It is the SAME object hill-climb and gepa get; skillopt owns only the
+    schedule/buffer/slow-update blocks it appends.
     """
     gate_kwargs = dict(gate_kwargs or {})
+    ctx = ctx or harness.OptimizerContext()
     rejected, history, store = harness._init_memory_store(run_dir, store)
 
     train_ids = list(run_dir.read_splits().train)
@@ -288,17 +295,18 @@ def skillopt_loop(
 
             label = f"epoch {epoch}/{epochs} step {s + 1}/{steps_per_epoch} "
             label += f"(mini-batch of {len(minibatch_ids)} train tasks, L={L})"
-            instructions = harness._focus_instructions(current_val, minibatch_ids, label)
-            instructions += "\n" + _buffer_block(L, step_buffer, rejected_this_epoch)
-
             cid = f"so_e{epoch:02d}s{s + 1:02d}"
             parent_dir = run_dir.candidate_dir(run_dir.best_id)  # single lineage: always best
+            instructions = ctx.instructions(current_val, minibatch_ids, label,
+                                            algorithm=algorithm, parent_dir=parent_dir,
+                                            extra=_buffer_block(L, step_buffer,
+                                                                rejected_this_epoch))
             step = harness.run_step(
                 adapter, run_dir=run_dir, parent_dir=parent_dir,
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
-                protected_patterns=protected_patterns,
+                ctx=ctx, protected_patterns=protected_patterns,
             )
             if step.get("candidate_val") is None:
                 # Indecisive (protected-path tamper): no measurement exists, so it must
@@ -359,7 +367,7 @@ def skillopt_loop(
                 epoch=epoch, sample=slow_update_sample, edit_budget=schedule[-1] if schedule else edit_budget,
                 n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
                 rejected=rejected, history=history, store=store,
-                protected_patterns=protected_patterns,
+                protected_patterns=protected_patterns, ctx=ctx,
             )
             if slow_rec is not None:
                 slow_updates.append(slow_rec)
@@ -434,6 +442,7 @@ def _run_slow_update(
     prev_epoch_skill: SplitResult, prev_epoch_best_id, epoch: int, sample: int,
     edit_budget: int, n_trials: int, gate_kwargs: dict, no_regression: bool,
     rejected, history, store, protected_patterns=None,
+    ctx: harness.OptimizerContext | None = None,
 ) -> dict | None:
     """Re-evaluate the epoch-start skill vs current best on a small TRAIN subset,
     categorize, and run ONE extra gated step. Counted in budget; sample is small
@@ -472,16 +481,21 @@ def _run_slow_update(
                       stable_success=len(categories["stable_success"]),
                       improved=len(categories["improved"]))
 
-    instructions = _slow_update_instructions(epoch, categories)
-    instructions += "\n" + _buffer_block(edit_budget, [], [])  # carry the consolidating L budget
-
+    ctx = ctx or harness.OptimizerContext()
     cid = f"so_e{epoch:02d}_slow"
+    parent_dir = run_dir.candidate_dir(run_dir.best_id)
+    # Same shared read-context as a normal step; the longitudinal block is this step's
+    # own addition (+ the consolidating L budget).
+    extra = (_slow_update_instructions(epoch, categories) + "\n"
+             + _buffer_block(edit_budget, [], []))
+    instructions = ctx.instructions(current_val, sample_ids, f"epoch {epoch} slow/meta update",
+                                   algorithm="skillopt", parent_dir=parent_dir, extra=extra)
     step = harness.run_step(
-        adapter, run_dir=run_dir, parent_dir=run_dir.candidate_dir(run_dir.best_id),
+        adapter, run_dir=run_dir, parent_dir=parent_dir,
         optimizer=optimizer, instructions=instructions, current_val=current_val,
         n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
         no_regression=no_regression, rejected=rejected, history=history, store=store,
-        protected_patterns=protected_patterns,
+        ctx=ctx, protected_patterns=protected_patterns,
     )
     step["epoch"] = epoch
     step["step_in_epoch"] = "slow"

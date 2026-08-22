@@ -36,7 +36,7 @@ algorithm_skill: hill-climb              # algorithms/<skill>: hill-climb | gepa
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
 orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with `cap-evolve finalize`)
 
-# --- what context the optimizer gets (hill-climb) ---------------------------
+# --- what context the optimizer gets (hill-climb | gepa | skillopt) ---------
 # The per-iteration optimizer prompt is RENDERED from this template (intake authors it,
 # customized per benchmark). Defaults to the scaffolded optimizer/INSTRUCTIONS.md.
 optimizer_instructions_file: optimizer/INSTRUCTIONS.md

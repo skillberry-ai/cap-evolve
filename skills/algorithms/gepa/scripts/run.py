@@ -57,6 +57,9 @@ def main(argv=None) -> int:
     p.add_argument("--resume", action="store_true",
                    help="reconstruct the pool/frontier from the run dir and continue the "
                         "search instead of restarting from the seed")
+    # The shared optimizer read-context flags — identical set to hill-climb/skillopt, so
+    # `cap-evolve run` hands gepa the same context instead of a thinner prompt.
+    harness.OptimizerContext.add_arguments(p)
     p.add_argument("--protected-paths", default="",
                    help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
                         "tests). 'default' expands to the built-in set. Empty = off. A "
@@ -92,7 +95,7 @@ def main(argv=None) -> int:
         gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, seed=args.seed, store=store,
-        resume=args.resume,
+        resume=args.resume, ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
         protected_patterns=harness.parse_protected_paths(args.protected_paths),
     )
     run_dir.close_observers()
