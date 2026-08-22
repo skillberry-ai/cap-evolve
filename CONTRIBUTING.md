@@ -29,6 +29,10 @@ See [docs/EXTENDING.md](docs/EXTENDING.md) for the token vocabulary and wiring.
   into a skill. Gate on val, seal test, report variance.
 - **Skills stay host-agnostic.** `scripts/run.py` must print a single JSON object
   to stdout (the contract), and must not depend on a specific agent host.
+- **Subprocess streams: stdout is captured and parsed, stderr is RELAYED** — on the
+  zero-exit path too. A step that exits 0 after explaining a problem must not look
+  like a step that had nothing to say. (Optimizer stderr is additionally persisted to
+  `work/<cand>.optimizer.stderr` and logged as an `optimizer_stderr` event.)
 - **Zero runtime deps in core.** Optional features go behind extras.
 - Add a test for any core change (`core/tests/`). Run `python -m compileall core skills`.
 

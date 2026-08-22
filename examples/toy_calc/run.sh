@@ -15,6 +15,9 @@ mkdir -p "$D/.capevolve/project/adapters"
 cp "$REPO/examples/toy_calc/adapter.py"   "$D/.capevolve/project/adapters/"
 cp -R "$REPO/examples/toy_calc/capability" "$D/seed_capability"
 cp "$REPO/templates/project/capevolve.yaml"   "$D/.capevolve/project/capevolve.yaml"
+# The spec names optimizer/INSTRUCTIONS.md; ship it, or the run warns and hands the
+# optimizer cap-evolve's generic template instead of the project's own.
+cp -R "$REPO/templates/project/optimizer" "$D/.capevolve/project/optimizer"
 
 echo "Working directory: $D"
 python3 -m cap_evolve.cli run \

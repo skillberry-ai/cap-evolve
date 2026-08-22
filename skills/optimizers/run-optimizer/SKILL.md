@@ -26,6 +26,12 @@ new skill directory.
 3. It runs that command with `cwd = workdir`, so the agent edits the candidate
    files directly. Output is summarized as JSON (`returncode`, `auth_present`,
    `stdout_tail`).
+4. Streams: **stdout is exactly one JSON object**; the agent CLI's **stderr is
+   relayed** to the runner's stderr on success as well as failure, so a CLI that
+   prints a diagnostic and exits 0 is not silently successful.
+5. `--prompt` must name an **existing** file — the caller resolves the path. A
+   missing one is an error (exit 2), never an empty prompt: the `{prompt_text}` rows
+   would otherwise bill a real agent CLI to run with no instructions at all.
 
 ### Template placeholders
 | placeholder | expands to |

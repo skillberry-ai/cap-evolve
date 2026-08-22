@@ -103,6 +103,23 @@ def read_frontmatter(md_path: Path) -> dict:
     return read_yaml(txt[3:end]) if end != -1 else {}
 
 
+def resolve_project_path(project, value) -> Path:
+    """Resolve a spec path key against the PROJECT dir — the one rule, for every reader.
+
+    A relative path in ``capevolve.yaml`` means "relative to the project dir that
+    contains the spec". Absolute paths are returned unchanged.
+
+    This exists because it used to be resolved twice, differently: ``cap-evolve check``
+    (``pipeline_selftest``) resolved project-relative and reported a missing file, while
+    ``cap-evolve run`` probed the caller's *cwd* first. The same key therefore named a
+    different file depending on where ``run`` was invoked from, and on a miss ``run``
+    dropped the flag without a word — so the optimizer silently received cap-evolve's
+    generic template instead of the capability-scoped instructions intake authored (#252).
+    """
+    v = Path(str(value))
+    return v if v.is_absolute() else Path(project) / v
+
+
 def spec_for_run(run_dir, project: Path | None = None) -> dict:
     """The spec THIS run was started with, read from the run dir first.
 
