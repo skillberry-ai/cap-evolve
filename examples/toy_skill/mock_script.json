@@ -1,0 +1,14 @@
+{
+  "edits": [
+    {
+      "file": "scripts/normalize.py",
+      "op": "set",
+      "text": "\"\"\"Normalize a messy arithmetic expression to plain digits/operators, then compute it.\n\nBundled because the SKILL.md body asking for normalization \"before computing\" is a\nstep the agent skips: number words and thousands separators need the same handful of\nsubstitutions every time, which is code, not judgment.\n\n    python scripts/normalize.py '2,000 minus 1,000'   ->  1000\n    python scripts/normalize.py --self-check          ->  ok\n\"\"\"\n\nimport re\nimport sys\n\nWORDS = {\"plus\": \"+\", \"and\": \"+\", \"minus\": \"-\", \"less\": \"-\",\n         \"times\": \"*\", \"multiplied by\": \"*\"}\nSAFE = set(\"0123456789 +-*\")\n\n\ndef normalize(expr):\n    s = str(expr).lower()\n    s = re.sub(r\"(\\d),(\\d\\d\\d)\", r\"\\1\\2\", s)          # 1,200 -> 1200\n    for word, op in WORDS.items():\n        s = re.sub(rf\"\\b{re.escape(word)}\\b\", op, s)\n    return re.sub(r\"\\s+\", \" \", s).strip()\n\n\ndef compute(expr):\n    s = normalize(expr)\n    if not set(s) <= SAFE:\n        raise ValueError(f\"cannot normalize {expr!r} -> {s!r}\")\n    return str(int(eval(s, {\"__builtins__\": {}}, {})))\n\n\ndef _self_check():\n    for raw, want in ((\"2 + 3\", \"5\"), (\"3 plus 4\", \"7\"), (\"8 times 3\", \"24\"),\n                      (\"1,200 + 5\", \"1205\"), (\"2,000 minus 1,000\", \"1000\")):\n        got = compute(raw)\n        assert got == want, f\"{raw!r}: expected {want}, got {got}\"\n    print(\"ok\")\n\n\nif __name__ == \"__main__\":\n    if \"--self-check\" in sys.argv:\n        _self_check()\n    else:\n        print(compute(sys.argv[1]))\n"
+    },
+    {
+      "file": "SKILL.md",
+      "op": "ensure_contains",
+      "text": "\nDo the normalization by running the bundled helper instead of by hand \u2014 it is the\nsame substitution table every time, and skipping it is what produces wrong answers:\n\n```\npython scripts/normalize.py '<the expression>'    # prints the answer alone\n```\n"
+    }
+  ]
+}

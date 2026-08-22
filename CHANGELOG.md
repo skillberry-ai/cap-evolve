@@ -114,6 +114,27 @@ All notable changes to cap-evolve are documented here. The format follows
   `2,000 USD` into `$0.00`.
 
 ### Added
+- **`skill-package` optimizes the WHOLE package, and its rules are now enforced by the loop.**
+  `materialize()` exposed only `SKILL.md` + `references/*.md`, so `scripts/` and `assets/` were
+  not components of the artifact the capability claimed to own, and `validate()` — the entire
+  "edits stay valid skills" story — was never called from `harness`/`gepa`/`skillopt`. Now:
+  every file in the package is a component (binary assets as inventory stubs); `apply()` can
+  create or rewrite any of them (a NEW bundled script included), refuses writes escaping the
+  package, and honors an action policy (`policy.json`:
+  `frontmatter|body|reference|script|asset|add|remove`) so a run can allow prose but forbid new
+  code; `validate()` `ast.parse()`s every bundled script, rejects a stub body, and RUNS a
+  declared `--self-check` with a timeout and a stripped env. `harness.run_step` calls each
+  capability's own `validate()` after the optimizer returns and **before any rollout is paid
+  for** (generic per-capability hook, no capability special-cased): hard problems make the step
+  **indecisive** — no reward, stall counter untouched, best unchanged — with the reason filed in
+  the rejected memory and the LEDGER's new "Not scored" section, and warnings carried into the
+  optimizer's feedback. Problems the parent already had are excluded, so a pre-existing
+  violation cannot wedge a run. Also: block-scalar (`description: >`) frontmatter is parsed
+  instead of silently bypassing every description lint; body >500 lines is a hard problem;
+  nested/orphan references and fake TOCs warn; `scripts/trigger_eval.py` makes held-out
+  trigger-rate selection a deterministic script instead of prose; `examples/toy_skill/` is a
+  zero-API run whose capability IS a skill package and whose score can only rise by adding
+  bundled code. `skill-package/SKILL.md` shrank 122 → 100 lines while gaining the script lever.
 - **Four real τ²-bench airline runs** on `aws/gpt-oss-120b` (agent + user simulator) with
   `aws/claude-opus-5` proposing edits, committed with `events.jsonl` at
   `examples/tau2_airline/run_agentopt_v{2,3,4}/`. **All four are null results** — `best_id =

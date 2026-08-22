@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -896,10 +897,17 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
 
     table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) | fixed |",
              "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    void: list[str] = []
     for i, rec in enumerate(rows, 1):
         cid = str(rec.get("candidate"))
         par = str(rec.get("parent") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
+        # A step with no val was never measured (an invalid candidate, or an edit to a
+        # sealed file). Calling that "reject" teaches the wrong lesson — the edit's IDEA
+        # was never tested, only its execution was broken — so name it and say why.
+        if rec.get("val") is None and str(rec.get("reason", "")).startswith("indecisive"):
+            outcome = "not scored"
+            void.append(f"- **{cid}**: {str(rec.get('reason'))[:600]}")
         val = rec.get("val")
         pval = rec.get("parent_val")
         d = (f"{val - pval:+.3f}" if isinstance(val, (int, float))
@@ -921,7 +929,11 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         "this to never re-introduce a change that broke a task, and to see which approaches "
         "the gate accepted vs rejected.\n\n"
         "## Iterations\n" + "\n".join(table) + "\n\n"
-        f"## Current best: {best}\n"
+        + ("## Not scored — fix the execution, keep the idea\n"
+           "These candidates were never measured, so their reward says nothing. Correct the "
+           "stated fault and retry the same idea; do not abandon it, and do not resubmit it "
+           "unchanged.\n" + "\n".join(void) + "\n\n" if void else "")
+        + f"## Current best: {best}\n"
     )
     (workdir / "LEDGER.md").write_text(text, encoding="utf-8")
 
@@ -1191,7 +1203,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
     if caps:
-        skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+        skills_root = _capabilities_root()
         for c in caps:
             src = skills_root / c
             if not src.is_dir():
@@ -1289,7 +1301,7 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
         skills_dir = str(row.get("skills_dir") or "").strip()
         instructions_file = str(row.get("instructions_file") or "").strip()
 
-        cap_root = repo_root / "skills" / "capabilities"
+        cap_root = _capabilities_root()
         diag_src = repo_root / "skills" / "phases" / "diagnose"
         ignore = shutil.ignore_patterns("__pycache__", "scripts", "*.pyc")
 
@@ -1367,17 +1379,27 @@ def _write_instructions_pointer(path: Path, skills_dir: str) -> None:
 
 def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
                  report, current_val: SplitResult, optimizer_seconds: float,
-                 opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
-    """An INDECISIVE step for a candidate that edited a protected file.
+                 opt_cost_usd: float, opt_tokens: int, optimizer_error,
+                 kind: str = "integrity", event: str = "tamper_detected",
+                 detail_key: str = "tamper", rejected=None) -> dict:
+    """An INDECISIVE step for a candidate that was never validly measurable.
 
-    Not a rejection at 0.0: the candidate was never validly measured, so recording a
-    reward would poison the split mean and the paired gate. ``accepted=None`` leaves
-    the stall counter alone, ``set_best`` is never called, and the workdir is
-    snapshotted for forensics so an operator can see exactly what was edited.
+    Two causes share this path: the candidate edited a protected file (integrity),
+    or it is invalid by its own capability's rules (validation). Neither is a
+    rejection at 0.0: the candidate was never validly measured, so recording a
+    reward would poison the split mean and the paired gate. ``accepted=None``
+    leaves the stall counter alone, ``set_best`` is never called, and the workdir
+    is snapshotted for forensics so an operator can see exactly what was edited.
+
+    Unlike an infrastructure outage, an invalid edit IS the optimizer's doing — so
+    when ``rejected`` memory is supplied the reason is filed there, and the next
+    iteration is told what it broke instead of repeating it.
     """
-    reason = "indecisive (integrity): " + report.reason
-    run_dir.log_event("tamper_detected", candidate=cid, parent=parent_id,
+    reason = f"indecisive ({kind}): " + report.reason
+    run_dir.log_event(event, candidate=cid, parent=parent_id,
                       report=report.to_dict(), reason=report.reason)
+    if rejected is not None:
+        rejected.add(cid, f"candidate {cid} (not scored: invalid)", reason, None)
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
     run_dir.update_spent(iterations=1, accepted=None)
     run_dir.log_event("step", candidate=cid, accept=False, reason=reason, val=None,
@@ -1392,9 +1414,9 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
         # delta 0.0 keeps the GateDecision shape; there is no measurement to report.
         "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
                      "indecisive": True},
-        "candidate_val": None,      # NO reward — a tampered run is missing data
+        "candidate_val": None,      # NO reward — an unmeasurable run is missing data
         "parent_val": current_val.to_dict(),
-        "tamper": report.to_dict(),
+        detail_key: report.to_dict(),
         "regressions": [],
         "optimizer_seconds": optimizer_seconds,
         "optimizer_usd": opt_cost_usd,
@@ -1455,7 +1477,8 @@ def run_step(
     # Give the optimizer the full trajectories + capability guidance, in its own dir.
     # ``ctx`` is the SHARED assembler every algorithm passes; an absent one (a bare
     # unit-test call) injects the unconditional pieces only.
-    (ctx or OptimizerContext()).inject(adapter, run_dir, workdir, split=eval_split)
+    ctx = ctx or OptimizerContext()
+    ctx.inject(adapter, run_dir, workdir, split=eval_split)
 
     instructions = _augment_instructions(instructions, workdir, run_dir)
 
@@ -1507,6 +1530,25 @@ def run_step(
                                 optimizer_seconds=optimizer_seconds,
                                 opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
                                 optimizer_error=optimizer_error)
+
+    # The capability's OWN validity rules, checked here (still before the gate, and
+    # before any rollout is paid for) rather than left to prose the optimizer may skip.
+    # An invalid artifact's score measures a broken candidate, not the edit, so the
+    # step is INDECISIVE — same discipline as the tamper path.
+    validation = _capability_validate(ctx.capabilities, workdir, parent_dir=parent_dir,
+                                      run_dir=run_dir)
+    if validation is not None:
+        if validation.warnings:
+            run_dir.log_event("capability_validation_warnings", candidate=cid,
+                              warnings=validation.warnings)
+        if validation.problems:
+            return _tamper_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                report=validation, current_val=current_val,
+                                optimizer_seconds=optimizer_seconds,
+                                opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                optimizer_error=optimizer_error, kind="validation",
+                                event="capability_invalid", detail_key="validation",
+                                rejected=rejected)
 
     cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
                                   n_trials=n_trials, tag=cid)
@@ -1590,7 +1632,12 @@ def run_step(
                           n_tasks=cand_val.n_tasks)
     else:
         if rejected is not None:
-            rejected.add(cid, summary, decision.reason, cand_val.reward)
+            reason = decision.reason
+            if validation is not None and validation.warnings:
+                # Authoring smells the candidate carries are part of why it is worth
+                # revisiting — the next iteration should see them, not rediscover them.
+                reason += " | validation warnings: " + "; ".join(validation.warnings[:5])
+            rejected.add(cid, summary, reason, cand_val.reward)
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",
@@ -1699,9 +1746,24 @@ _CAP_EDIT_SPACE = {
     "system-prompt": "Edit the prompt/policy text: instructions, decision policy, and the "
                      "output contract. Prefer sharpening rules the traces show the agent "
                      "breaking; do not just append more preamble.",
-    "skill-package": "Edit the SKILL.md (frontmatter + body), its references, and bundled "
-                     "scripts, staying within skill-creator rules (valid frontmatter, "
-                     "progressive disclosure, one-level references, concise body).",
+    "skill-package": "Edit ANY part of the package: the SKILL.md frontmatter (the "
+                     "`description` decides whether the skill fires at all — the "
+                     "highest-leverage text), the body, `references/*.md`, and the "
+                     "bundled `scripts/`. HIGHEST-LEVERAGE EDIT: TURN A SKIPPED PROSE "
+                     "STEP INTO A BUNDLED SCRIPT the body invokes by command line — a "
+                     "step the agent runs can't be 'forgotten' the way a body rule can, "
+                     "and a script's source never enters the agent's context (only its "
+                     "output), so it is cheaper than the prose it replaces. Two patterns "
+                     "to prefer: (1) the traces show the agent re-deriving the same "
+                     "helper or doing a deterministic transform by hand — write it once "
+                     "into scripts/ and say EXECUTE it, don't read it; (2) a check the "
+                     "agent keeps skipping — make it a script that exits non-zero. The "
+                     "script must be real working code (never '...' or docstring-only) "
+                     "with a `--self-check` entry point, because validation RUNS it "
+                     "before any rollout is paid for. Keep the body lean (<=500 lines) "
+                     "and push depth into one-level references with explicit pointers; "
+                     "the frontmatter/body/reference/script split is validated, so an "
+                     "invalid package is not scored at all.",
     "mcp-tool": "ONLY safe edits: tool/parameter documentation, in-description examples, and "
                 "adding/removing tools from the exposed set. The wire schema and tool code "
                 "are owned by the external server and are NOT editable here.",
@@ -1720,7 +1782,7 @@ def _capability_brief(capabilities) -> str:
     caps = [c for c in (capabilities or []) if c]
     if not caps:
         return ""
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _capabilities_root()
     lines = ["## What you are editing (the allowed edit space)",
              "The capability under optimization is composed of these editable artifact(s). "
              "Use the FULL edit space below — do not limit yourself to trivial wording tweaks."]
@@ -1908,6 +1970,131 @@ def _parallel_note(parallel: bool, optimizer_name: str | None) -> str:
             "real, safe fix, not just the biggest one.")
 
 
+def _capabilities_root() -> Path:
+    """Where the capability skills live: ``CAPEVOLVE_SKILLS_DIR`` if set, else the
+    repo's own ``skills/`` (running from source). An installed tree does not sit next
+    to this module, so resolving only relative to ``__file__`` silently finds nothing —
+    and a capability we cannot find is a capability whose rules go unenforced."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    if env and (Path(env) / "capabilities").is_dir():
+        return Path(env) / "capabilities"
+    return Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+
+
+def _load_capability_abstract(name: str, tag: str) -> tuple:
+    """Import ``skills/capabilities/<name>/scripts/abstract.py``.
+
+    Returns ``(module, None)`` or ``(None, why)``. The ``why`` exists because the
+    failure mode here is SILENT-OFF: a moved skills tree or an import regression would
+    otherwise disable enforcement with no trace, and the loop would go back to scoring
+    invalid candidates while every test still passed. The caller logs it.
+    """
+    import importlib.util
+
+    abstract_path = _capabilities_root() / name / "scripts" / "abstract.py"
+    if not abstract_path.exists():
+        return None, f"no abstract.py at {abstract_path}"
+    try:
+        spec = importlib.util.spec_from_file_location(f"capevolve_cap_{name}_{tag}",
+                                                     abstract_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except Exception as e:  # noqa: BLE001 — never abort the loop over an import
+        return None, f"import failed: {type(e).__name__}: {e}"[:300]
+    return mod, None
+
+
+class _ValidationReport:
+    """The {problems, warnings} a capability's ``validate()`` reported for a candidate."""
+
+    def __init__(self, problems, warnings, by_capability):
+        self.problems = list(problems)
+        self.warnings = list(warnings)
+        self.by_capability = dict(by_capability)
+
+    @property
+    def reason(self) -> str:
+        shown = "; ".join(self.problems[:5])
+        more = f" (+{len(self.problems) - 5} more)" if len(self.problems) > 5 else ""
+        return f"candidate is not a valid {'/'.join(self.by_capability)}: {shown}{more}"
+
+    def to_dict(self) -> dict:
+        return {"problems": self.problems, "warnings": self.warnings,
+                "by_capability": self.by_capability}
+
+
+def _capability_validate(capabilities, cand_dir: Path,
+                         parent_dir: Path | None = None,
+                         run_dir: RunDir | None = None) -> _ValidationReport | None:
+    """Validate a candidate against each capability's OWN rules (generic, per-capability).
+
+    Calls ``validate(cand_dir)`` on every ``skills/capabilities/<name>/scripts/abstract.py``
+    that defines it. Returns None when no capability offered a usable signal, so
+    callers behave exactly as before for capabilities without the handler.
+
+    Problems the PARENT already had are dropped: a pre-existing violation (a seed
+    skill whose body is already over budget, say) is not something one edit can be
+    blamed for, and voiding every step over it would wedge the run. What is
+    reported is what this edit INTRODUCED. Numbers are normalized when comparing so
+    "612 lines" → "615 lines" still counts as pre-existing.
+    """
+    caps = [c for c in (capabilities or []) if c]
+    if not caps:
+        return None
+
+    def unavailable(name, why):
+        # Enforcement that turns itself off quietly is the defect this hook exists to
+        # remove, so say so in the run record rather than leaving it to be inferred.
+        if run_dir is not None:
+            run_dir.log_event("capability_validate_unavailable", capability=name, reason=why)
+
+    def _run(name, mod, d):
+        try:
+            v = mod.validate(Path(d))
+        except Exception as e:  # noqa: BLE001 — never let a handler abort the loop
+            unavailable(name, f"validate() raised: {type(e).__name__}: {e}"[:300])
+            return None
+        if not isinstance(v, dict):
+            unavailable(name, f"validate() returned {type(v).__name__}, expected dict")
+            return None
+        return v
+
+    problems: list[str] = []
+    warnings: list[str] = []
+    by_cap: dict[str, dict] = {}
+    got_signal = False
+    for name in caps:
+        mod, why = _load_capability_abstract(name, "validate")
+        if mod is None:
+            unavailable(name, why)
+            continue
+        if not hasattr(mod, "validate"):
+            unavailable(name, "abstract.py defines no validate()")
+            continue
+        v = _run(name, mod, cand_dir)
+        if v is None:
+            continue
+        got_signal = True
+        pre = set()
+        if parent_dir is not None:
+            pv = _run(name, mod, parent_dir)
+            if pv:
+                pre = {_norm_problem(p) for p in pv.get("problems", [])}
+        new = [p for p in v.get("problems", []) if _norm_problem(p) not in pre]
+        problems += [f"{name}: {p}" for p in new]
+        warnings += [f"{name}: {w}" for w in v.get("warnings", [])]
+        by_cap[name] = {"ok": bool(v.get("ok")), "problems": new,
+                        "warnings": v.get("warnings", []),
+                        "pre_existing": sorted(pre)}
+    if not got_signal:
+        return None
+    return _ValidationReport(problems, warnings, by_cap)
+
+
+def _norm_problem(text: str) -> str:
+    return re.sub(r"\d+", "N", str(text))
+
+
 def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
     """Whether the candidate is an EMPTY seed, from the capabilities' own ``is_empty()``.
 
@@ -1922,7 +2109,7 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
         return None
     import importlib.util
 
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _capabilities_root()
     complete = True  # did we get a usable is_empty() from EVERY requested capability?
     for name in caps:
         abstract_path = skills_root / name / "scripts" / "abstract.py"
@@ -1930,10 +2117,10 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
             complete = False
             continue
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"capevolve_cap_{name}_isempty", abstract_path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            mod, _why = _load_capability_abstract(name, "isempty")
+            if mod is None:
+                complete = False
+                continue
             is_empty = getattr(mod, "is_empty", None)
             if is_empty is None:
                 complete = False
