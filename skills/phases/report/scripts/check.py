@@ -37,23 +37,58 @@ def _synthetic_events():
     ]
 
 
+#: The stdout contract (CONTRIBUTING.md: "scripts/run.py must print a single JSON object").
+#: `dashboard` / `dashboard_server` are added only on the paths that produce them.
+_SUMMARY_KEYS = {
+    "run_dir", "best_id", "finalized", "no_holdout", "baseline_val", "baseline_val_stderr",
+    "best_val", "test_reward", "test_stderr", "test_baseline_reward", "test_baseline_stderr",
+    "test_delta", "test_pass_k", "val_test_gap", "iterations", "target_profile",
+}
+
+
+def _parse_one_json(c, text: str, label: str):
+    """Assert stdout is exactly one JSON object carrying the documented key set."""
+    try:
+        obj = json.loads(text)
+    except Exception as e:  # noqa: BLE001
+        c.check(False, f"[{label}] stdout is not a single JSON object ({e}): {text!r}")
+        return None
+    c.check(isinstance(obj, dict), f"[{label}] stdout JSON is not an object: {obj!r}",
+            note="stdout is exactly one JSON object")
+    if isinstance(obj, dict):
+        missing = _SUMMARY_KEYS - set(obj)
+        c.check(not missing, f"[{label}] summary missing documented keys: {sorted(missing)}",
+                note="summary carries the documented key set")
+    return obj if isinstance(obj, dict) else None
+
+
 def main() -> int:
     c = Checker("report")
     run = import_run()
     c.require_main(run)
 
-    # --- 1. report.md: baseline → sealed test ----------------------------
+    # --- 1. report.md + stdout contract: baseline → best val → sealed test ----
     with tempfile.TemporaryDirectory() as d:
         rd, _ = temp_run_dir(Path(d))
+        rd.events_path.write_text(
+            "\n".join(json.dumps(e) for e in _synthetic_events()) + "\n", encoding="utf-8")
         (rd.root / "baseline.json").write_text(
-            json.dumps({"val": {"reward": 0.4}, "best_id": "seed"}), encoding="utf-8")
-        (rd.root / "final.json").write_text(
-            json.dumps({"test": {"reward": 0.8, "pass_k": 0.7}, "best_id": "cand_0001"}),
+            json.dumps({"val": {"reward": 0.4, "stderr": 0.05}, "best_id": "seed"}),
+            encoding="utf-8")
+        (rd.root / "final.json").write_text(json.dumps({
+            "test": {"reward": 0.8, "stderr": 0.06, "pass_k": 0.7},
+            "test_baseline": {"reward": 0.5, "stderr": 0.07},
+            "baseline_id": "seed", "test_delta": 0.3, "best_id": "cand_0001"}),
             encoding="utf-8")
 
-        with quiet():
+        with quiet() as out:
             rc = run.main(["--run-dir", str(rd.root), "--no-dashboard"])
         c.check(rc == 0, "report returned nonzero")
+
+        # stdout IS the machine contract: `cap-evolve run` prints report's stdout as its
+        # own result (cli.py `print(last)`), so exactly one parseable JSON object with the
+        # documented keys is the thing every automation downstream depends on.
+        summary = _parse_one_json(c, out.getvalue(), "--no-dashboard")
 
         md_path = rd.root / "report.md"
         c.check(md_path.exists(), "report.md was not written", note="writes report.md")
@@ -63,6 +98,56 @@ def main() -> int:
                 note="report carries baseline → sealed test")
         c.check("sealed" in md.lower(),
                 "report does not state the test was scored once on the sealed split")
+        # Uncertainty is the phase's own headline rule ("0.71" and "0.71 ± 0.08" justify
+        # different decisions), so a bare point estimate beside a known stderr is a bug.
+        c.check("0.8 ± 0.06" in md and "0.4 ± 0.05" in md,
+                f"report.md renders a bare point estimate despite a known stderr:\n{md}",
+                note="renders reward ± stderr when stderr is known")
+        if summary is not None:
+            c.check(summary.get("test_stderr") == 0.06
+                    and summary.get("test_baseline_stderr") == 0.07,
+                    f"summary drops the stderr finalize measured: {summary}",
+                    note="JSON summary carries test/baseline stderr")
+            c.check(summary.get("best_val") == 0.75
+                    and summary.get("val_test_gap") == round(0.75 - 0.8, 6),
+                    f"summary missing best_val / val→test gap: {summary}",
+                    note="JSON summary carries best_val + val→test gap")
+            c.check(summary.get("finalized") is True, f"finalized not True: {summary}")
+        c.check("Best val: 0.75" in md and "Val→test gap:" in md,
+                f"report.md missing best val / val→test gap:\n{md}",
+                note="report.md carries best val + the val→test gap")
+
+    # --- 1b. an unfinalized run must NOT claim a seal that never happened ----
+    with tempfile.TemporaryDirectory() as d:
+        rd, _ = temp_run_dir(Path(d))
+        (rd.root / "baseline.json").write_text(
+            json.dumps({"val": {"reward": 0.4}, "best_id": "seed"}), encoding="utf-8")
+        with quiet() as out:
+            rc = run.main(["--run-dir", str(rd.root), "--no-dashboard"])
+        c.check(rc == 0, "report on an unfinalized run returned nonzero")
+        md = (rd.root / "report.md").read_text()
+        c.check("sealed" not in md.lower(),
+                f"report claims the test split was sealed+scored on a run that never "
+                f"finalized:\n{md}", note="no false seal claim before finalize")
+        c.check("NOT FINALIZED" in md, f"unfinalized report is not labelled:\n{md}")
+        s = _parse_one_json(c, out.getvalue(), "unfinalized")
+        if s is not None:
+            c.check(s.get("finalized") is False, f"finalized not False: {s}")
+
+    # --- 1c. a no-holdout run's report.md must say the number is a fit metric --
+    with tempfile.TemporaryDirectory() as d:
+        rd, _ = temp_run_dir(Path(d))
+        rd.events_path.write_text(json.dumps(
+            {"kind": "splits", "train": ["t1"], "val": ["t1"], "test": ["t1"], "seed": 0}
+        ) + "\n", encoding="utf-8")
+        (rd.root / "final.json").write_text(
+            json.dumps({"test": {"reward": 0.8}, "best_id": "seed"}), encoding="utf-8")
+        with quiet():
+            run.main(["--run-dir", str(rd.root), "--no-dashboard"])
+        md = (rd.root / "report.md").read_text()
+        c.check("No holdout" in md,
+                f"no-holdout run's report.md presents a fit metric as held-out:\n{md}",
+                note="labels a no-holdout run as a fit metric")
 
     # --- 2. reducer → well-formed graph from a synthetic event log -------
     from cap_evolve import dashboard
@@ -132,6 +217,14 @@ def main() -> int:
             rc2 = run.main(["--run-dir", str(rd.root), "--terminal", "--no-color"])
         c.check(rc2 == 0, "report --terminal returned nonzero",
                 note="ANSI terminal report mode")
+
+        # --- 5. the dashboard-on path keeps the one-JSON-object contract ---
+        # This branch is where a stray print() would creep in (it launches/records a
+        # server), and it is the path `cap-evolve run` actually takes.
+        with quiet() as out:
+            rc3 = run.main(["--run-dir", str(rd.root)])
+        c.check(rc3 == 0, "report with the dashboard on returned nonzero")
+        _parse_one_json(c, out.getvalue(), "dashboard-on")
 
     return c.emit()
 

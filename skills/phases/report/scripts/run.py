@@ -18,6 +18,17 @@ import _bootstrap  # noqa: F401
 from cap_evolve import RunDir
 
 
+def _pm(reward, stderr) -> str:
+    """``0.71 ± 0.08`` when the stderr is known, else the bare point estimate.
+
+    A point estimate with no noise floor invites over-reading: "0.71" and "0.71 ± 0.08"
+    justify different ship decisions.
+    """
+    if reward is None:
+        return "None"
+    return f"{reward} ± {stderr}" if isinstance(stderr, (int, float)) else f"{reward}"
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="report")
     p.add_argument("--run-dir", required=True)
@@ -45,9 +56,12 @@ def main(argv=None) -> int:
         return 0
 
     baseline = json.loads((run_dir.root / "baseline.json").read_text()) if (run_dir.root / "baseline.json").exists() else {}
-    final = json.loads((run_dir.root / "final.json").read_text()) if (run_dir.root / "final.json").exists() else {}
+    final_path = run_dir.root / "final.json"
+    final = json.loads(final_path.read_text()) if final_path.exists() else {}
+    finalized = bool(final.get("test"))
 
-    base_val = (baseline.get("val") or {}).get("reward")
+    base_val_obj = baseline.get("val") or {}
+    base_val = base_val_obj.get("reward")
     test = final.get("test") or {}
     test_reward = test.get("reward")
     # Baseline scored on the SAME sealed test split — the honest held-out improvement.
@@ -56,15 +70,49 @@ def main(argv=None) -> int:
     test_delta = final.get("test_delta")
     baseline_id = final.get("baseline_id")  # "seed" normally; == best_id if best IS the seed
 
+    # best val, the no-holdout verdict and the consuming-LLM profile are already computed by
+    # the engine's reducer (``cap_evolve.dashboard.reduce_run``). Read them; never recompute
+    # them here and never ask the agent to re-derive them in prose — that is how the report
+    # stopped being comparable between runs.
+    # ponytail: reduces a second time when the dashboard is also written (write_dashboard
+    # reduces again). Thread the reduced dict through write_dashboard if that ever profiles hot.
+    best_val = best_stderr = no_holdout = target_profile = None
+    try:
+        import dashboard
+        reduced = dashboard.reduce_run(run_dir)
+        s = reduced["summary"]
+        best_val = s.get("best_val")
+        best_stderr = next((n.get("stderr") for n in reduced["graph"]["nodes"]
+                            if n.get("id") == s.get("best_id")), None)
+        no_holdout = bool((s.get("splits") or {}).get("no_holdout"))
+        target_profile = s.get("target_profile")
+    except Exception:  # noqa: BLE001 — a broken reducer must never break the report
+        pass
+
+    # Search picks the candidate that scores best on val, so best_val is biased upward by
+    # exactly the selection performed. test has no such bias, so the difference measures how
+    # much the run overfit val.
+    gap = (round(best_val - test_reward, 6)
+           if isinstance(best_val, (int, float)) and isinstance(test_reward, (int, float))
+           else None)
+
     summary = {
         "run_dir": str(run_dir.root),
         "best_id": run_dir.best_id,
+        "finalized": finalized,
+        "no_holdout": no_holdout,
         "baseline_val": base_val,
+        "baseline_val_stderr": base_val_obj.get("stderr"),
+        "best_val": best_val,
         "test_reward": test_reward,
+        "test_stderr": test.get("stderr"),
         "test_baseline_reward": test_baseline_reward,
+        "test_baseline_stderr": test_baseline.get("stderr"),
         "test_delta": test_delta,
         "test_pass_k": test.get("pass_k"),
+        "val_test_gap": gap,
         "iterations": run_dir.spent.iterations,
+        "target_profile": target_profile,
     }
 
     # pass^k for k > n_trials is UNDEFINED, so aggregate_scores omits it (see
@@ -78,21 +126,30 @@ def main(argv=None) -> int:
     if not isinstance(pk, dict):  # legacy run dirs stored a bare scalar
         pk = {"1": pk}
     pk_str = ", ".join(f"pass^{k}={float(pk[k]):.3f}" for k in sorted(pk, key=int))
-    test_line = f"- **Held-out test (optimized skills): {test_reward}**" + (
-        f"  ({pk_str})" if pk else "")
-    md = [
-        f"# cap-evolve run report — {run_dir.root.name}",
-        "",
+
+    md = [f"# cap-evolve run report — {run_dir.root.name}", ""]
+    if not finalized:
+        # The sealed note below is the exact claim a reader relies on. Emitting it for a run
+        # that never scored test is the worst failure mode this phase has — say the opposite.
+        md += ["> **NOT FINALIZED** — no held-out test number. Run the finalize phase first; "
+               "everything below is val-only.", ""]
+    elif no_holdout:
+        md += ["> **No holdout** (train == val == test). The test number below is a *fit* "
+               "metric, not an estimate of generalization.", ""]
+    md += [
         f"- Best candidate: `{run_dir.best_id}`",
-        f"- Baseline val: {base_val}",
-        test_line,
+        f"- Baseline val: {_pm(base_val, base_val_obj.get('stderr'))}",
+        f"- Best val: {_pm(best_val, best_stderr)}",
+        f"- **Held-out test (optimized skills): {_pm(test_reward, test.get('stderr'))}**"
+        + (f"  ({pk_str})" if pk else ""),
     ]
     # When the best candidate IS the seed (no accepted gain), baseline_id == best_id and
     # baseline == optimized — label accordingly rather than implying a separate comparison.
     best_is_seed = baseline_id is not None and baseline_id == run_dir.best_id
     if test_baseline_reward is not None and not best_is_seed:
         baseline_label = f"baseline `{baseline_id}` skills" if baseline_id else "baseline skills"
-        md.append(f"- Held-out test ({baseline_label}): {test_baseline_reward}")
+        md.append(f"- Held-out test ({baseline_label}): "
+                  f"{_pm(test_baseline_reward, test_baseline.get('stderr'))}")
         md.append(
             f"- **Test improvement (optimized − baseline): {test_delta:+}**"
             if isinstance(test_delta, (int, float)) else f"- Test improvement: {test_delta}"
@@ -109,11 +166,16 @@ def main(argv=None) -> int:
             if best_is_seed else
             "Test was scored exactly once on the sealed split."
         )
-    md += [
-        f"- Iterations: {run_dir.spent.iterations}",
-        "",
-        sealed_note,
-    ]
+    if gap is not None:
+        md.append(f"- Val→test gap: {gap:+} — selection optimism on val; this gap IS the overfitting")
+    md.append(f"- Iterations: {run_dir.spent.iterations}")
+    if target_profile and target_profile.get("model"):
+        # The consuming LLM the capabilities were optimized FOR — a different LLM role from
+        # the optimizer model that proposed the edits.
+        md.append(f"- Optimized for: {target_profile['model']}"
+                  + (f" (tier {target_profile['tier']})" if target_profile.get("tier") else ""))
+    if finalized:
+        md += ["", sealed_note]
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
     if not args.no_dashboard:
