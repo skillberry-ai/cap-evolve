@@ -611,10 +611,40 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
             err.cost = _parse_optimizer_cost(proc.stdout)  # type: ignore[attr-defined]
             raise err
         # Capture optimizer spend (cost_usd/tokens) from run-optimizer's JSON payload
-        # so it counts against the budget and shows in the dashboard. Returns None
+        # so it counts against the budget and shows in the dashboard. Cost is None
         # when the agent CLI emitted no structured cost (spend stays unmeasured).
-        return _parse_optimizer_cost(proc.stdout)
+        report = _parse_optimizer_cost(proc.stdout) or {}
+        # Optimizer stderr on the SUCCESS path: keep it. A CLI that explains itself and
+        # then exits 0 (rate limit, model fallback, auth warning, "no script found") is
+        # the case where discarding stderr turns a step that never got what it needed
+        # into a step that merely proposed nothing. The caller persists it into the run
+        # dir and logs it; it is deliberately not dumped to the terminal on success.
+        if proc.stderr and proc.stderr.strip():
+            report["stderr"] = proc.stderr
+        return report or None
     return _run
+
+
+def _record_optimizer_stderr(run_dir, cid: str, text) -> None:
+    """Persist a SUCCESSFUL optimizer step's stderr and announce it in the event log.
+
+    Always captured, always written to ``work/<cid>.optimizer.stderr`` (durable and
+    reviewable next to the candidate that produced it), and surfaced as an
+    ``optimizer_stderr`` event with a tail — rather than dumped to the terminal,
+    which on a long run would bury the progress output the user is watching.
+    """
+    if not text or not str(text).strip():
+        return
+    text = str(text)
+    rel = f"work/{cid}.optimizer.stderr"
+    try:
+        dst = run_dir.root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(text, encoding="utf-8")
+    except OSError as e:
+        rel = f"<unwritable: {e}>"
+    run_dir.log_event("optimizer_stderr", candidate=cid, path=rel,
+                      chars=len(text), tail=text[-2000:])
 
 
 def _optimizer_failure_detail(proc: "subprocess.CompletedProcess") -> str:
@@ -1501,6 +1531,7 @@ def run_step(
         if isinstance(opt_report, dict):
             opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)
             opt_tokens = int(opt_report.get("tokens") or 0)
+            _record_optimizer_stderr(run_dir, cid, opt_report.get("stderr"))
     except Exception as e:  # noqa: BLE001
         # A failed proposal (e.g. a transient optimizer/API error) must not abort a
         # long run — leave the workdir as the parent copy so the candidate == parent
@@ -2231,16 +2262,27 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     }
 
     tmpl_path = Path(instructions_file) if instructions_file else _DEFAULT_INSTRUCTIONS_TEMPLATE
-    tmpl = None
+    tmpl = why = None
     try:
         if tmpl_path.exists():
             tmpl = tmpl_path.read_text(encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        tmpl = None
+        else:
+            why = "does not exist"
+    except OSError as e:
+        why = f"could not be read ({e})"
     if tmpl and "{{FOCUS_SUMMARY}}" in tmpl:
         for k, v in repl.items():
             tmpl = tmpl.replace(k, v)
         return tmpl
+    if tmpl:
+        why = "has no {{FOCUS_SUMMARY}} placeholder, so it cannot be rendered"
+    # Falling back is a fact worth stating: the optimizer is about to read cap-evolve's
+    # GENERIC template instead of the capability-scoped one the spec named, and a step
+    # that did not get what it needed must not look like a step that had nothing to
+    # propose (#252). Named file => always a diagnostic; unnamed => nothing to say.
+    if instructions_file:
+        print(f"warning: optimizer instructions template {tmpl_path} {why} — "
+              f"falling back to cap-evolve's generic template", file=sys.stderr, flush=True)
 
     # Fallback (template unreadable): assemble a minimal but complete prompt so a run
     # never breaks just because the template file is missing.

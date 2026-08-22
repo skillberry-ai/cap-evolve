@@ -695,7 +695,15 @@ def _cmd_run(argv):
     py = sys.executable
 
     def run(cmd):
-        return subprocess.run(cmd, capture_output=True, text=True, cwd=str(workdir))
+        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(workdir))
+        # Relay a SUCCESSFUL step's stderr too. Only the failure paths below read
+        # proc.stderr, so a step that printed a real diagnostic and exited 0 (the
+        # optimizer's relayed warnings among them) was silently discarded here.
+        # Guarded by _stderr_is_usable(): under `2>&-` this would land in stdout and
+        # break the one-JSON-document contract.
+        if proc.returncode == 0 and proc.stderr and proc.stderr.strip() and _stderr_is_usable():
+            print(_clip(proc.stderr, head=0, tail=8000), file=sys.stderr, flush=True)
+        return proc
 
     # The run sequence is built from the manifest + spec (orchestrate validates the
     # needs/provides DAG); it now includes intake + the check gate before baseline.
@@ -876,18 +884,29 @@ def _cmd_run(argv):
     # as read-only optimizer context. Both are resolved project-relative if not absolute.
     # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.
     if algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS:
+        from .specfile import resolve_project_path
         instr = spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md"
-        instr_p = Path(instr)
-        if not instr_p.is_absolute() and not instr_p.exists():
-            instr_p = Path(project) / instr
+        # ONE resolution rule, shared with implement-and-check's pipeline_selftest:
+        # a relative spec path is PROJECT-relative. It used to be probed against the
+        # caller's cwd first, so the same key resolved to a different file depending on
+        # where `cap-evolve run` was invoked from — and on a miss the flag was silently
+        # dropped and the optimizer got the generic template instead of the
+        # capability-scoped one intake authored (#252).
+        # proj_abs, not the relative `project`: resolving against a relative project
+        # dir is still cwd-dependent, which is the bug (#252). An absolute path is also
+        # safer for the subprocess, which runs with cwd=workdir.
+        instr_p = resolve_project_path(proj_abs, instr)
         if instr_p.exists():
             alg_cmd += ["--instructions-file", str(instr_p)]
+        elif _stderr_is_usable():
+            print(f"warning: optimizer_instructions_file {instr!r} does not exist "
+                  f"(resolved project-relative to {instr_p}) — the optimizer will get "
+                  f"cap-evolve's GENERIC template, not your capability-scoped one; "
+                  f"`cap-evolve check` and the implement-and-check self-test catch this",
+                  file=sys.stderr, flush=True)
         repo = spec.get("runner_repo_path")
         if repo:
-            repo_p = Path(str(repo))
-            if not repo_p.is_absolute() and not repo_p.exists():
-                repo_p = Path(project) / str(repo)
-            alg_cmd += ["--bench-repo", str(repo_p)]
+            alg_cmd += ["--bench-repo", str(resolve_project_path(proj_abs, str(repo)))]
         # Supporting source files (data models / types the tools import) copied verbatim
         # into the optimizer's ./guidance/sources/ so it can write correct code. Resolved
         # project-relative by the harness; we pass them through as given.

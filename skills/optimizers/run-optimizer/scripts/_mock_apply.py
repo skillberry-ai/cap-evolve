@@ -65,8 +65,12 @@ def main(argv=None) -> int:
     workdir = Path(args.workdir)
     script = _find_script(workdir)
     if script is None:
-        print(json.dumps({"optimizer": "mock", "applied": [],
-                          "note": "no mock_script.json found; no edits made"}))
+        # The note goes to STDERR: stdout is the machine-readable payload, and a
+        # diagnostic buried in it is dropped by every layer that only parses cost.
+        note = "no mock_script.json found; no edits made"
+        print(f"mock optimizer: {note} (looked under {workdir} and $CAPEVOLVE_MOCK_SCRIPT)",
+              file=sys.stderr, flush=True)
+        print(json.dumps({"optimizer": "mock", "applied": [], "note": note}))
         return 0
     edits = json.loads(script.read_text(encoding="utf-8")).get("edits", [])
     applied = apply_edits(workdir, edits)

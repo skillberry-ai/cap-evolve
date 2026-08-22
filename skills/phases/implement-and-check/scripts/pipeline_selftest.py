@@ -91,7 +91,9 @@ def selftest(project: Path) -> dict:
                      "— optimizer-template checks skipped")
     else:
         instr_rel = str(spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md")
-        instr_path = project / instr_rel
+        # Same resolver `cap-evolve run` uses, so a spec this gate passes cannot have a
+        # path run resolves differently (#252).
+        instr_path = specfile.resolve_project_path(project, instr_rel)
         if not instr_path.exists():
             problems.append(
                 f"optimizer_instructions_file points at a missing file: {instr_rel} "
