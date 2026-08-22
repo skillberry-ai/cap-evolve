@@ -130,38 +130,25 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
     leave `[]` when there is no such source.
 
 - **optimizer_instructions_file** (default `optimizer/INSTRUCTIONS.md`): the
-  per-iteration optimizer-prompt TEMPLATE. The scaffold already copies a generic
-  default to `project/optimizer/INSTRUCTIONS.md`; the agent CUSTOMIZES it for this
-  benchmark (keeping the `{{...}}` placeholders the harness fills) rather than
-  authoring one from scratch. Point this key at the customized file. Keep the
-  authored guidance short on meta-narration but explicit and DEMANDING on iteration
-  depth, with an explicit GOAL (maximize the eval score). The authored instructions
-  must impose a DEPTH MANDATE — each iteration is a substantial multi-cluster,
-  multi-edit-class sweep (tool code + validation + enriched returns + new tools +
-  many docs + prompt), non-regression scoped per fix; a single small edit is an
-  under-used iteration. Produce this target snippet: "Each iteration is a
-  substantial, multi-root-cause pass. Diagnose ALL clusters and fix as many as
-  possible in ONE candidate — improve multiple tools' code, validation, and return
-  values/errors; add new tools; sharpen many tool docs; and fix the prompt —
-  together. Scope each fix to protect passing tasks; do NOT trade breadth for
-  caution. A single small edit is an under-used iteration." And **scope it to the
-  SELECTED capabilities only** — include guidance / skill-references / editable
-  artifacts for just the caps in `capevolve.yaml: capabilities`. If only `tools` is
-  selected, do NOT include prompt-editing guidance, do NOT reference the
-  `system-prompt` skill, and do NOT present the prompt file as editable (and vice
-  versa). The authored instructions must also direct the optimizer to: READ and USE
-  the selected capability skills (`./guidance/<cap>/SKILL.md`), the diagnose skill
-  (`./guidance/diagnose/SKILL.md`), its own features reference
-  (`./guidance/optimizer/<name>.md`), and any `./guidance/sources/` files; READ the
-  cross-iteration files FIRST — `./LEDGER.md` (facts), the whole `./JOURNAL.md`
-  (append-only handover), and `./RUNMAP.md` + `./prior_iterations/` (every prior
-  iteration's PROCESS.md + diff) — and never re-propose a rejected-as-implemented
-  approach (not a permanent ban); each iteration fill `./PROCESS.md` (required
-  explainability) and APPEND to `./JOURNAL.md`; ship MULTIPLE edit classes and ADD a
-  new code-bearing tool whenever a CAPABILITY-GAP/stall cluster is present; and
-  address ALL failure clusters each iteration (parallel subagents → merge into one
-  candidate where supported). See intake SKILL.md step 5.
-
+  per-iteration optimizer-prompt TEMPLATE. The scaffold already copies a generic default
+  to `project/optimizer/INSTRUCTIONS.md` — the agent CUSTOMIZES that file rather than
+  authoring one from scratch, and points this key at it. Three jobs, no re-authoring of
+  what the template already says (depth mandate, non-overfitting guardrail, STEP-0
+  reading mandate, cross-iteration file protocol):
+  - keep every `{{...}}` placeholder intact — the harness fills them per iteration, and
+    `implement-and-check`'s pipeline self-test fails if one is deleted;
+  - **scope it to the SELECTED capabilities** — include guidance, skill references and
+    editable artifacts only for the caps in `capevolve.yaml: capabilities`, so no run
+    presents as editable an artifact it does not own. Each capability's own edit space
+    lives in its `./guidance/<cap>/SKILL.md`; the failure taxonomy lives in
+    `./guidance/diagnose/SKILL.md`; load `./guidance/<cap>/references/optimizer-playbook.md`
+    for any selected capability that ships one;
+  - add the benchmark facts the template cannot know: where the runner writes traces,
+    what the scoring source is, which data-model files the capability's code imports.
+  - **caution (issue #252):** a *relative* value here resolves project-relative under
+    `cap-evolve check` but cwd-relative under `cap-evolve run`, which then silently falls
+    back to the generic template. Write it absolute, or verify `run` picks up the
+    customized file.
 - **gate**: `gate_mode` (**paired** recommended — per-task paired SE on the same tasks
   both sides, ~2-3x smaller than combined-SE `significant`, so real 1-task gains bank;
   also: significant|strict|threshold|simplicity_tiebreak), `gate_k_se` (default 1.0; the
