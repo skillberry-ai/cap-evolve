@@ -1,6 +1,6 @@
 ---
 name: gepa
-description: Runs the real GEPA optimization loop (arXiv:2507.19457) — sample-efficient reflective Pareto search. Use when rollouts are expensive and the scorer gives informative per-task feedback, and you want the most quality per evaluation. Each iteration samples a parent from a per-instance Pareto frontier, evaluates it on a cheap minibatch of train tasks with full traces, builds a reflective dataset over the failures, asks the optimizer for one targeted component edit, re-checks the child on the same minibatch (a cheap local gate), and only on pass pays for a full-val eval behind the honest significance gate. Adds round-robin component focus and a system-aware merge across complementary lineages. Prefer over hill-climb when feedback is rich and budget is tight; use hill-climb for the first baseline run or feedback-poor binary tasks.
+description: Runs the GEPA optimization loop (arXiv:2507.19457) — sample-efficient reflective Pareto search. A cheap train-minibatch pre-gate decides whether a proposal is worth an expensive val evaluation, and parents are sampled from a per-instance frontier so specialists survive instead of being averaged away. Use when rollouts are expensive and the scorer returns informative per-task feedback, and you want the most quality per evaluation. Use hill-climb instead for a first baseline run or for feedback-poor binary pass/fail tasks.
 component: algorithm
 argument-hint: "--run-dir DIR --project DIR --optimizer 'CMD {workdir} {prompt}' [--max-metric-calls N --minibatch-size 4 --component-selector round_robin|all --max-merges 2 --resume]"
 allowed-tools: Read, Write, Bash
@@ -9,85 +9,129 @@ needs: [scores, traces, reflective_dataset, candidate]
 sources: [gepa]
 ---
 
-# gepa — the real sample-efficient reflective Pareto loop
+# gepa — sample-efficient reflective Pareto search
 
-GEPA (Agrawal et al., 2025, arXiv:2507.19457) is the highest-ceiling member of the
-family. Its power comes from a **two-stage economy** that spends cheap rollouts to
-decide whether a candidate is worth an expensive honest evaluation, plus reflection
-on **traces** (not scalars) and a **per-instance Pareto frontier** that keeps
-specialists alive. This skill is a thin wrapper over `cap_evolve.gepa.gepa_loop`;
-all honesty-critical machinery (splits, gate, seal, stats, cache) is the engine's.
+`algorithms/hill-climb` owns the mechanics every algorithm shares: parent →
+proposal → val gate → commit. Read it first. This page states only what GEPA
+(Agrawal et al., 2025) does **differently**, and why those differences are the
+paper's actual contribution rather than decoration. A thin wrapper over
+`cap_evolve.gepa.gepa_loop`.
 
-## The loop
+## The two mechanisms, and why removing either turns GEPA back into hill-climb
 
-1. **Select a parent** by sampling the per-instance Pareto frontier *frequency-
-   weighted* — each non-dominated candidate's weight is how many val instances it is
-   best at, so a specialist that uniquely tops one task is kept (seeded RNG, logged).
-2. **Sample a minibatch** of `--minibatch-size` (default 4) **train** ids.
-3. **Eval the parent on the minibatch with traces** (cheap; eval-cached).
-4. **Build a reflective dataset** over the parent's FAILING minibatch tasks — input
-   + the agent's output/trajectory + feedback — written as `REFLECTION.md` in the
-   optimizer workdir, plus a round-robin **component focus** as `FOCUS.md`. Invoke
-   the optimizer.
-5. **Eval the child on the SAME minibatch**; **local gate** `sum(child) >
-   sum(parent)`. This is the economy: a proposal that doesn't even help the
-   minibatch is rejected here, before any full-val cost.
-6. **On local-gate pass only**, pay for a **full-val** eval and apply the honest
-   significance gate (paired, val-only — the same gate hill-climb uses). On accept,
-   the child joins the pool and the per-instance frontier.
-7. **System-aware merge** (every `--merge-cadence` accepts, up to `--max-merges`):
-   find two frontier dominators sharing a common ancestor both beat, recombine
+**1. The parent is sampled from per-instance winners, not from the global best.**
+A mean is a lossy summary. A candidate that fixes one genuinely hard task while
+regressing three easy ones has a *worse* mean than the incumbent, so a
+best-parent rule discards it — and with it the only text in the pool that has
+ever solved that task. GEPA instead scores per val instance and samples
+frequency-weighted over candidates that (co-)win at least one, so specialists and
+stepping-stones stay reachable as parents while their mean is still behind. That
+is the quality-diversity argument (MAP-Elites): keep the *set* that covers the
+task distribution, not the single champion. Sampling is stochastic and seeded, so
+the exploration is reproducible.
+
+**2. A cheap train minibatch pre-gates the expensive val evaluation.** Rollouts
+dominate cost and a full-val eval costs `|val| · n_trials` of them. Most
+proposals are bad; paying full price to find that out is what makes naive
+reflective search unaffordable, and GEPA's headline "~35× fewer rollouts" comes
+almost entirely from *not* paying it. So parent and child are evaluated on the
+**same** small train minibatch (`2 · minibatch-size` rollouts, eval-cached) and
+the child is dropped unless `sum(child) > sum(parent)`. The minibatch never
+*decides* acceptance — it decides whether acceptance is worth measuring.
+
+A side benefit of (2): reflection reads **train** traces, so the proposer never
+sees the split its gate is computed on.
+
+## What differs from hill-climb, step by step
+
+1. **Parent** — frequency-weighted sample over per-instance (co-)winners
+   (`--selection-strategy`, default `pareto_per_instance`), not the current best.
+2. **Signal** — a minibatch of `--minibatch-size` (default 4) **train** ids,
+   evaluated with traces, instead of the whole train focus set.
+3. **Reflective dataset** — `REFLECTION.md` in the optimizer workdir, over the
+   parent's failing minibatch tasks (`phases/diagnose` owns what one is and what
+   shape it takes). "Failing" is the hard threshold `reward < 1.0`, so with a
+   graded scorer that never reaches 1.0 every sampled task is listed and the
+   header always reads `0/N pass` — read it as "sampled tasks, worst first". Each
+   entry is truncated to ~800 chars and at most 12 tasks are written: a summary,
+   not an archive; untruncated rollouts stay in `rollouts/train/`. The prompt also
+   carries the run's cross-iteration files (`LEDGER.md`, `PROCESS.md`, `RUNMAP.md`
+   + `prior_iterations/`) so a proposal builds on prior work.
+4. **Local gate** — child on the same minibatch, `sum(child) > sum(parent)`, else
+   dropped with no val spend. This is the extra stage; everything after it is
+   hill-climb's.
+5. **Merge** — every `--merge-cadence` accepts, find two strict-frontier
+   dominators sharing a common ancestor both beat and recombine them
    component-by-component (each component from whichever descendant changed it),
-   minibatch-gate, then full-val + standard gate.
+   then minibatch-gate and val-gate the result like any other child.
 
-**Budget is in rollouts/metric-calls** (`--max-metric-calls`, primary) — both
-minibatch and full-val evals count — with `--max-iterations` as a secondary cap.
-The **test split is never touched**; minibatch/merge evals draw from train/val only.
+Note the word "frontier" covers two different sets here: the *sampling pool* in
+step 1 is every candidate with ≥1 instance win, which can include dominated
+candidates; the strict per-task Pareto frontier (`selection.pareto_frontier`) is
+a subset of it and is what the merge and the reported `frontier_size` use.
 
-## When to use vs. hill-climb / skillopt
+## Component selection
 
-| Situation | Use |
-|---|---|
-| Rich per-task feedback + expensive rollouts; want max quality/eval | **gepa** |
-| First run / need a yardstick baseline | hill-climb (`--focus all`) |
-| Binary pass/fail, no diagnosis in feedback | hill-climb (reflection has little to chew on) |
-| Tiny task set (frontier collapses to 1–2 points) | hill-climb |
-| Want a fixed edit-budget schedule + epoch slow-update | skillopt |
-| Single global-best lineage is fine and merges add no value | hill-climb / skillopt |
+A **component** is one editable file of the candidate. (Unrelated to
+hill-climb's `--focus`, which selects *tasks*; this selects *files*.)
 
-GEPA's economy (minibatch gate + frontier) pays off precisely when evaluations are
-costly and feedback is informative; otherwise the bookkeeping doesn't earn its keep.
+- **`--component-selector round_robin`** (default): one component per iteration,
+  cycled, written to `FOCUS.md`. Small attributable changes are exactly the unit
+  the merge can later recombine — a sprawling multi-file rewrite cannot be.
+- **`--component-selector all`**: list every component; the optimizer may edit
+  anywhere. Use for monolithic capabilities or genuinely cross-cutting changes.
 
-## Focus modes
-
-- **`--component-selector round_robin`** (default): each iteration focuses ONE
-  component (cycled across the parent's editable files), so every proposal is a
-  small, attributable change — the unit the merge later recombines.
-- **`--component-selector all`**: list every component in `FOCUS.md`; the optimizer
-  may edit anywhere. Use for monolithic capabilities or when changes must span files.
-
-For a single-file / monolithic capability there is only one component; round-robin
-and `all` coincide, and the system-aware merge skips gracefully (nothing independent
-to recombine) rather than producing a degenerate child.
+For a single-file capability the two coincide and the merge skips gracefully
+(`gepa_merge_skip`) rather than emitting a degenerate child.
 
 ## Key hyperparameters
 
-- `--max-metric-calls` (default 0 = unlimited): PRIMARY budget — total rollouts.
+- `--max-metric-calls` (default 0 = unlimited): PRIMARY budget, checked
+  **between** iterations. An in-flight iteration runs to completion, so actual
+  spend can exceed it by up to `2·minibatch-size + |val|·n-trials` (one more
+  minibatch on a merge iteration). Set it below your hard ceiling.
 - `--max-iterations` (default 50): secondary cap on propose→gate iterations.
 - `--minibatch-size` (default 4): train ids per cheap local gate.
-- `--n-trials` (default 1): rollouts/task on the full-val eval (raise under noise so
-  the significance gate is trustworthy).
-- `--component-selector` (`round_robin` | `all`), `--selection-strategy`
-  (default `pareto_per_instance`), `--max-merges` (default 2), `--merge-cadence`
-  (default 3).
-- `--gate-mode` / `--k-se`: the val acceptance bar (paired significance by default).
-- `--no-regression`: reject a child that breaks any previously-passing val task.
-- `--seed`: seeds the parent-sampling + minibatch RNG (logged for reproducibility).
-- `--resume`: reconstruct the pool/lineage/frontier from the run dir (a
-  `gepa_state.json` checkpoint + each accepted candidate's rollouts) and continue the
-  Pareto search where it stopped, instead of restarting from the seed. Preserved spend
-  keeps the budget honest; the parent-sampling RNG stream restarts (selection is
-  stochastic by design, so the resumed run is not byte-identical).
+- `--n-trials` (default 1): rollouts/task on the full-val eval (raise under noise
+  so the significance gate is trustworthy). Minibatch evals are always 1 trial.
+- `--max-merges` (default 2): cap on merge **attempts that built a candidate** —
+  a merge rejected at either gate consumes one. A skip (no eligible pair) is free.
+- `--merge-cadence` (default 3): accepts between merge attempts.
+- `--protected-paths` (empty = off; `default` = the built-in globs): seals the
+  eval surface (scorer/gold/tasks/tests).
+  A child that edits one is **INDECISIVE** — no reward recorded, not remembered
+  as rejected, stall counter untouched — because scoring a gold-hacking edit at
+  all would teach the optimizer that it worked.
+- `--workers` (default 1): pools the minibatch rollouts. Only safe when the
+  adapter's `run_target` is thread-safe.
+- `--store` / `--store-commit-cmd` (default `git`): where accepted candidates are
+  committed.
+- `--gate-mode` / `--k-se`, `--no-regression`, `--seed`: as hill-climb.
+- `--resume`: rebuild pool/lineage/frontier from `gepa_state.json` + each
+  accepted candidate's rollouts and continue the search. Preserved spend keeps
+  the budget honest; the parent-sampling RNG stream restarts, so a resumed run is
+  not byte-identical.
+
+## Known gaps (present tense — the shipped loop, not the paper)
+
+- The reflective dataset does **not** carry the task input, though `gepa.py`'s
+  docstring claims it does — the optimizer sees a bad answer to an unknown
+  question. And on an eval-cache hit only `{reward, feedback}` were stored, so
+  `Agent output:` comes out empty; re-sampled parents hit the cache routinely
+  (#111, PR #210).
+- Candidate snapshots keep the loop's own scratch (`REFLECTION.md`/`FOCUS.md`/…)
+  because the snapshot call omits the ignore list every other algorithm passes
+  (#110, PR #350). Those are excluded from the component list, but the
+  optimizer-agent dotfiles (`.claude/`, `CLAUDE.md`, `AGENTS.md`) are **not**, so
+  round-robin can burn an iteration on one.
+- Iterations are charged against budget while no `step` event is emitted, so
+  consumers counting iterations from `step` records see zero (#216/#224, PR #356).
+- Optimizer context reaching GEPA has been narrower than hill-climb's (#109,
+  PR #355). `JOURNAL.md` is injected as the cross-run handover but never
+  accumulates here, which is why step 3 above leaves it out of the list.
+- If `splits.train` is empty the minibatch silently falls back to **val** ids,
+  putting the gate split in front of the proposer, with no warning. Do not run
+  GEPA with a zero-size train split.
 
 ## How to run
 
@@ -99,15 +143,22 @@ python scripts/run.py --run-dir .capevolve/run_X --project .capevolve/project \
 ```
 
 Requires `baseline` first (reads the seed's full-val result from `baseline.json`).
-Reports the frontier/pool, best candidate, accepts, merges, and metric-calls spent;
-test stays sealed for `finalize`.
+Reports the pool, `frontier_size`, best candidate, accepts, merges, and
+metric-calls spent.
 
 ## Agent-mode loop
-When `orchestration_mode: agent`, drive gepa yourself: maintain the candidate pool/Pareto frontier; each round pick a parent (per gepa's selection), reflect on its val feedback to propose an edit, evaluate on **val** via cap-evolve, gate Δ>k·SE, accept→snapshot & add to the frontier / reject→drop. Metric-calls is the primary budget. Log rounds to the run dir; between rounds verify rollouts+results landed so the dashboard reflects the frontier. Re-read `stop_condition`; stop on it/budget. Seal once with `cap-evolve finalize`, then `report`.
+
+When `orchestration_mode: agent`, follow `orchestrate/orchestrate` §Agent-mode
+loop for the shared rules, and make each round GEPA-shaped: pick the parent by
+per-instance win count; sample `minibatch-size` **train** ids; evaluate parent
+then child on that same minibatch and drop the child unless `sum(child) >
+sum(parent)`; only then pay for a full **val** eval and its gate. Reflect on the
+train minibatch, never on val — val is the judge, not the teacher.
 
 ## References
 
-- `references/concepts.md` — the GEPA economy, reflective dataset / actionable side
-  information, per-instance frequency-weighted frontier, system-aware merge, the
-  metric-call budget, and the relation to the hill-climb / skillopt siblings.
-  Cites arXiv:2507.19457.
+- `references/concepts.md` — the paper's thesis (language as a richer learning
+  medium than a scalar), the frequency-weighted per-instance frontier, the
+  system-aware merge and its tie-breaking, the metric-call/eval-cache accounting,
+  and how the pieces relate to the hill-climb / skillopt siblings. Load when you
+  need the reasoning behind a knob rather than its value. Cites arXiv:2507.19457.
