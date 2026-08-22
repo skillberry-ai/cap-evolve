@@ -1,7 +1,7 @@
 """Merge N per-task-optimised copies of one Python file by running 3-way merge PER FUNCTION.
 
 Why this exists. `merge_taskopt.py` runs git's 3-way merge on whole files, and on a real
-fan-out that reports conflicts it should not. Measured on the tau2-bench airline round: ten
+fan-out that reports conflicts it should not. Measured on the one multi-turn tool-use benchmark: ten
 independently-verified optimiser branches, and a whole-file merge kept only four of them. The
 "conflicts" were not disagreements. Every optimiser had added
 
@@ -122,7 +122,7 @@ def union_insertions(base: str, variants: list[tuple[str, str]]) -> str | None:
     at: dict[int, list[str]] = {}
     # Dedupe WHOLE HUNKS across branches, never individual lines. A branch's own inserted lines
     # are already correct and may legitimately repeat: two dict comprehensions in one `__init__`
-    # both contain `for rid, res in self.db.reservations.items()`, and de-duplicating by line
+    # both contain one shared iteration expression, and de-duplicating by line
     # deleted the second one, truncating the statement into a syntax error that only surfaced as
     # `'{' was never closed`. The only thing worth collapsing is two branches contributing the
     # SAME insertion at the SAME anchor, which is exactly (anchor, hunk).
@@ -151,7 +151,7 @@ def priority_union(base: str, variants: list[tuple[str, str]], order: list[str],
     the SAME tool docstring (a real rewrite, so union is not allowed) while ALSO each adding one
     independent guard call to the body (pure insertions, which union is exactly right for).
     Dropping the whole function to a single branch would throw away the other branches' guards —
-    on the airline round that meant losing the task-39 and task-42 fixes to keep task 7's
+    on that benchmark that meant losing two branches' fixes to keep a third's
     docstring, which is not a trade anyone would choose deliberately.
 
     So split the decision. The highest-priority branch (caller-supplied `order`, normally by how
@@ -203,9 +203,9 @@ def _trunk_key(base: str, tv: tuple[str, str], order: list[str]) -> tuple[int, i
 
     Trunk = the branch that CHANGED THIS FUNCTION MOST, measured in lines differing from base;
     the caller's `order` is only a tiebreak. Ordering by the branch's task headroom instead is
-    a trap that cost a whole resolution on the airline round: the branch with the most headroom
+    a trap that cost a whole resolution on that benchmark: the branch with the most headroom
     (task 7, a full task-equivalent) turned out to have added exactly ONE line to the contested
-    `cancel_reservation` — its real fix was in another function — so making it the trunk
+    the contested function — its real fix was elsewhere — so making it the trunk
     discarded the branch that had actually rewritten the return value, and kept nothing. What a
     function is worth is not what its author's task is worth.
     """
@@ -459,7 +459,7 @@ def main() -> int:
                 and n.value.id == "self" and isinstance(n.ctx, ast.Load)}
         undefined = sorted(read - assigned - class_attrs - methods - set(dir(object)))
         # Only CONSTANT-shaped names hard-fail. The class under merge normally has a base class
-        # (`AirlineTools(ToolKitBase)`), and an inherited method called through `self` is not
+        # (so `self.x` may resolve on a base class), and an inherited method called through `self` is not
         # resolvable from this file — hard-failing on those would reject valid merges, which is
         # worse than not checking. Upper-case class constants are the case actually observed
         # crashing (`self.CABIN_LADDER`), and they are not inherited in practice. Everything

@@ -8,7 +8,7 @@ and all three are round-level bookkeeping the driver was doing by hand:
      directions. Three runs discovered this reactively, after the fact. Here the byte-identical
      copy ``ctl_null`` is a first-class member of every round, so the round reports its OWN
      noise floor and a candidate inside that band is visibly not evidence.
-  2. **Serial evals wasted the wall clock.** A tau2 rollout is tail-dominated (measured: 6 to
+  2. **Serial evals wasted the wall clock.** A multi-turn agent rollout is tail-dominated (measured: 6 to
      40 minutes at ``max_steps=100``), so one candidate's full-val eval costs about as long as
      its slowest single rollout. Evaluating candidates one after another multiplies that tail by
      the number of candidates for no statistical benefit. Each eval is an independent process

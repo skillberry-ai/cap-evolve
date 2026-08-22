@@ -40,9 +40,9 @@ EPS = 1e-9
 def regressions(current, candidate) -> list[str]:
     """Val tasks the current best measured-and-PASSED that got worse. REPORTED, not a veto.
 
-    As of the airline90 run this list is DIAGNOSIS ONLY — it no longer blocks an accept
+    As of one long run this list is DIAGNOSIS ONLY — it no longer blocks an accept
     unless you pass ``--veto-regressions``. The veto was measured to be the dominant cause
-    of four consecutive null results on tau2-bench airline:
+    of four consecutive null results on a multi-turn tool-use benchmark:
 
       * it fires on a byte-identical copy of the seed 42.8% of the time at 5 trials
         (12.9% at 10) — see the table below, which is why no trial count rescues it at the

@@ -526,7 +526,7 @@ def _round_control(c: Checker, tmp: Path) -> None:
     """round.py builds the null control itself and reports the round's own noise floor.
 
     The control is not optional and not the driver's job to remember: three of the four
-    null runs on tau2-bench airline compared a candidate against a parent mean measured in
+    null runs on a multi-turn tool-use benchmark compared a candidate against a parent mean measured in
     an *earlier* round, so re-measurement noise read as signal in both directions. This
     asserts the control is materialised from the current best and shows up in the table.
     """
@@ -595,7 +595,7 @@ def _round_control(c: Checker, tmp: Path) -> None:
 def _control_replicates(c: Checker, tmp: Path) -> None:
     """A round must evaluate MORE THAN ONE control, and must report the gap between them.
 
-    One control does not bound the noise. Measured on tau2-bench airline: two byte-identical
+    One control does not bound the noise. Measured on a multi-turn tool-use benchmark: two byte-identical
     controls, same seeds, temperature 0, read 0.6467 and 0.7267 — a paired delta of +0.0800 that
     PASSES a k_se=1.0 bar on zero change. The same candidate then read +0.0867 against one of
     those controls and +0.0067 against the other, so a single-control gate hands out a coin flip.
@@ -619,7 +619,7 @@ def _control_replicates(c: Checker, tmp: Path) -> None:
 def _multirep(c: Checker, tmp: Path) -> None:
     """A verdict must take its error ACROSS runs, because within-run SE cannot see run noise.
 
-    Measured on tau2-bench airline: one paired run reported SE 0.0548 over tasks and "accept" at
+    Measured on a multi-turn tool-use benchmark: one paired run reported SE 0.0548 over tasks and "accept" at
     +0.0867; a second paired run of the same candidate on a different seed block gave +0.0200, and
     a byte-identical control re-run moved +0.0800 on its own. So the across-task SE understates the
     real uncertainty and the tool must refuse to call a single run a demonstration.
@@ -1058,6 +1058,46 @@ def _integrate(c: Checker, tmp: Path) -> None:
             note="auto-canary selection keeps the most fragile high scorers")
 
 
+def _benchmark_agnostic(c: Checker) -> None:
+    """The skill must not name a specific benchmark, its tasks, or its domain vocabulary.
+
+    An algorithm skill is supposed to work the same on any benchmark. Guidance earned on one of
+    them is worth keeping -- with its numbers -- but the moment it carries that benchmark's NAME,
+    its task ids or its domain nouns, the skill reads as one benchmark's notebook and a reader on a
+    different benchmark cannot tell which parts apply to them. This check exists because exactly
+    that drift happened once and had to be undone by hand across eleven files.
+
+    Attribution is the one exception: naming the source benchmark in the frontmatter `sources:`
+    field is correct, because that is where "here is where this evidence came from" belongs.
+    """
+    tokens = re.compile(
+        r"\b(tau2\w*|airline|AirlineTools|swebench|swe_bench|gpt-oss|"  # noqa-selfscan
+        r"cancel_reservation|get_user_details|update_reservation\w*)\b", re.I)  # noqa-selfscan
+    roots = [SKILL_MD, HERE.parent / "references"]
+    offenders: list[str] = []
+    for root in roots:
+        files = sorted(root.rglob("*")) if root.is_dir() else [root]
+        for f in files:
+            if not f.is_file() or f.suffix not in (".md", ".py"):
+                continue
+            for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+                if line.strip().startswith("sources:"):
+                    continue                      # attribution, not coupling
+                if tokens.search(line):
+                    offenders.append(f"{f.name}:{i}")
+    for f in sorted(HERE.glob("*.py")):
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if "noqa-selfscan" in line:
+                continue                          # this checker's own token list
+            if tokens.search(line):
+                offenders.append(f"{f.name}:{i}")
+    c.check(not offenders,
+            "the skill names a specific benchmark, its tasks or its domain vocabulary at "
+            f"{offenders[:6]} — state the lesson and keep the NUMBER, drop the benchmark's "
+            "identity, and put benchmark attribution in the frontmatter `sources:` field",
+            note="no benchmark, optimizer or agent identity leaks into the skill's own text")
+
+
 def main() -> int:
     c = Checker("agent-optimize")
     _guard(c)
@@ -1082,6 +1122,7 @@ def main() -> int:
         _measure(c, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    _benchmark_agnostic(c)
     c.note("agent-mode-only algorithm: every command SKILL.md documents is executed here")
     return c.emit()
 

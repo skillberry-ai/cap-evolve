@@ -5,7 +5,7 @@ bought it. They live outside SKILL.md because the loop has to stay readable: the
 contract, this file carries the evidence behind it.
 
 Read this before your first gate decision on a new benchmark, and again whenever a result surprises
-you. The specific figures come from a tau2-bench airline run with a mid-tier agent model; the
+you. The specific figures come from a multi-turn tool-use benchmark with a mid-tier agent model; the
 *shape* of each finding is what transfers, and where a number is likely benchmark-specific the rule
 says so.
 
@@ -80,7 +80,7 @@ than the null's re-run delta is not a gate.
 **Know what your gate can RESOLVE, not just what it costs.** Two numbers decide whether a round
 can even see its own result. Measure the per-task noise (`sd` of a task's rate across repeat runs
 of identical bytes — ~0.16 at `n=10` near p=0.5), then the paired mean's SE is
-`sd*sqrt(2)/sqrt(val_n)`. On the airline run that is **0.041**, so at `k_se = 1.0` the gate can
+`sd*sqrt(2)/sqrt(val_n)`. In one run that is **0.041**, so at `k_se = 1.0` the gate can
 resolve a gain above ~0.041 of val — about **1.24 task-equivalents**. That single number tells you
 three things up front: a +0.057 gain is 1.4 SE and detectable; anything worth less than ~1.2
 task-equivalents cannot be distinguished no matter how confident the per-task readings look; and
@@ -90,7 +90,7 @@ it before the round, alongside the headroom, and say both out loud.
 **State the ceiling before you spend.** From the baseline's per-task rates, the recoverable
 loss is `Σ(1 − rate)` over failing tasks, in task-equivalents; reaching a target `T` from a
 current mean `M` needs `(T − M) × val_n` of it. Say out loud what fraction that is and which
-tasks hold it. On the airline run: 9.66 equivalents available, 6.67 needed for 0.90 — **69% of
+tasks hold it. In one run: 9.66 equivalents available, 6.67 needed for 0.90 — **69% of
 all remaining loss**, with 6.0 of it sitting in six tasks that score exactly 0.0. That makes
 the target's shape explicit (every hard task must be fixed, not most of them) and it is the
 difference between a plan and a hope. If the arithmetic says the target needs ~100% of the
@@ -110,7 +110,7 @@ available loss, say so in the report before the first rollout, not after the las
    - **Semantic conflict** — two optimisers arbitrate the *same decision* differently (rival
      guards on one write, contradictory guidance at one moment). **Drop one bundle**; a union here
      ships contradictory instructions nobody measured. The tie-break is which side has a
-     measurement, not which text reads better: the one such conflict on the airline run came from
+     measurement, not which text reads better: the one such conflict observed came from
      a bundle measuring 0.50 against its own 0.60 baseline, whose author recommended against
      merging it, so the round shipped the verified copies and excluded it.
    - **Textual collision of distinct additions** — two new functions, or two new dict keys, that
@@ -120,11 +120,11 @@ available loss, say so in the report before the first rollout, not after the las
 
    Union resolution has one hard follow-up: **render the live toolset**. Keeping both sides can
    duplicate a definition or break syntax, and an import check does not catch what registration
-   does. On the airline run the union of five branches gave 596 added lines, 14 tools registering
+   does. In one run the union of five branches gave 596 added lines, 14 tools registering
    and no duplicated methods — checked, not assumed. The union is still a shape nobody measured in
    isolation, so the gate decides it: union to avoid losing gains, gate to find out whether you did.
    **The conflict may be an artifact of merging whole files.** Before treating a conflict as a
-   real disagreement, check the granularity. Ten independently-verified branches on the airline
+   real disagreement, check the granularity. Ten independently-verified branches in one
    round produced a whole-file merge that kept **four** of them; the "conflicts" were not
    disagreements at all. Every optimiser had added one state field to the *same* `__init__` and
    one independent guard call to the *same* tool method right after the same existing check, so
@@ -144,7 +144,7 @@ available loss, say so in the report before the first rollout, not after the las
      trunk and the rest contribute only their insertions, re-anchored by the CONTENT of the base
      line they followed. Pick the trunk by **which branch changed that function most**, not by
      whose task holds the most headroom — the branch owning a full task-equivalent turned out to
-     have added exactly ONE line to the contested `cancel_reservation` (its real fix was in
+     have added exactly ONE line to the contested function (its real fix was in
      another function), so ranking by headroom discarded the branch that had actually rewritten
      the return value and kept nothing. *What a function is worth is not what its author's task
      is worth.*
@@ -161,7 +161,7 @@ available loss, say so in the report before the first rollout, not after the las
    that removing it was harmful; the merge dropped that branch's rewrite of the function and
    re-performed exactly that subtraction. Nothing conflicted, so nothing was reported, and a
    gate would have measured the regression without ever naming its cause. Trace evidence bore
-   it out: of the stored rollouts on that task which made every write on the correct reservation
+   it out: of the stored rollouts on that task which made every write on the correct record
    and still scored 0, four of seven charged a credit card when the customer had asked to pay by
    gift card — precisely the defect the deleted sentence addressed.
 
@@ -170,7 +170,7 @@ available loss, say so in the report before the first rollout, not after the las
    expensive single defect this run produced. `_check_bags_before_cabin_change` read
    `self.CABIN_LADDER` at four sites; the merge carried the helper *and* its call site and left
    the class attribute behind. The live tool return was
-   `Error: 'AirlineTools' object has no attribute 'CABIN_LADDER'` — the tool layer turns the
+   `Error: '<ToolsClass>' object has no attribute 'SOME_CONSTANT'` — the tool layer turns the
    `AttributeError` into a string, the agent reads it, abandons the write, and the reward records
    a **missing write**, indistinguishable from the agent choosing not to act. It silently
    contaminated four measurements across two candidates and two ablations, and it was found by a
@@ -193,7 +193,7 @@ available loss, say so in the report before the first rollout, not after the las
 
    Two things this exposed that no rate would have. A guard **helper** can survive a merge while
    its **call site** does not, leaving dead code that costs context and buys nothing — so verify
-   the call, not the definition: `grep -c '_check_foo(reservation)'`, never `grep -c 'def _check_foo'`.
+   the call, not the definition: `grep -c '_check_foo(record)'`, never `grep -c 'def _check_foo'`.
    And a ledger `touches` field named a function (`_remaining_upcoming`) that **no branch ever
    defined**, which is why the merged artifact must be checked against the code rather than
    against the ledger's own description of itself.
@@ -218,7 +218,7 @@ available loss, say so in the report before the first rollout, not after the las
    confirmed wins becomes a candidate that loses.
 
    **Select the merge on a headroom panel before you gate it.** A full-val gate answers one bit
-   for 300 rollouts, and it answers it about a *sum*. On the airline round the merged artifact
+   for 300 rollouts, and it answers it about a *sum*. In one round the merged artifact
    scored +0.0126 and was rejected — correctly — while containing, per task, both real gains
    (task 40 `0.10 -> 1.00`, task 21 `0.20 -> 0.80`, +2.1 task-equivalents gross) and real losses
    (task 10 `0.80 -> 0.10`, task 9 `0.80 -> 0.40`, -1.6). The gate could not see either. Keeping
@@ -230,13 +230,13 @@ available loss, say so in the report before the first rollout, not after the las
    below-1.0 tasks is both cheaper and strictly more informative per rollout than full val for
    *selection* (it is not a substitute for the gate, which is what protects the tasks at 1.0).
    And **compute the headroom before choosing a target**: sum `1 - rate` over val at the real
-   trial count. That arithmetic is what says whether the goal is reachable at all — on airline
+   trial count. That arithmetic is what says whether the goal is reachable at all — in one run
    it read 8.70 task-equivalents over 30 tasks, so 0.90 needed 5.7 of them, i.e. 65% of
    everything left, with 5.4 of it sitting in six tasks. A target nobody has costed against
    measured headroom is a wish.
 
    **Regression attribution is free once rollouts are on disk.** Before spending anything to
-   explain a drop, diff the stored failure feedback of the two arms per task. On airline that
+   explain a drop, diff the stored failure feedback of the two arms per task. In one run that
    showed the regressed tasks had *identical* feedback strings in both arms at different
    frequencies — the edit shifted a tendency rather than introducing a bug, which is a different
    thing to fix and would have been invisible from the means. The same pass costs nothing and
@@ -273,15 +273,15 @@ a rule (see *Match the Form to the Failure*).
 - **A per-task rate is a training number by construction.** The optimiser tuned on it. Quote
   it as a search signal, never as a result. Only the full-val gate and the sealed test are
   evidence.
-- **No task-specific literals — and ENFORCE it with a script, not a promise.** No reservation
-  id, confirmation code, flight number, passenger name, date, user id, payment id or city pair
+- **No task-specific literals — and ENFORCE it with a script, not a promise.** No record
+  id, confirmation code, item number, person name, date, user id, payment id or location pair
   from the trace may appear in a line the edit ADDS. Write a ~40-line auditor that diffs each
   candidate against the base and greps the ADDED lines for your domain's id shapes; make a
   `clean` verdict a merge precondition, independent of what the rate says. Two details decide
   whether it works: diff the **added lines only** (the pristine seed's own airport tables and
   example ids would flood a whole-file grep), and **skip any literal the base already
   contains** — a reindented pristine docstring shows up as an addition and made three clean
-  candidates look guilty until that filter went in. On the airline run it caught exactly one
+  candidates look guilty until that filter went in. It caught exactly one
   real case: a docstring enumerating *"New York is JFK, LGA or EWR; Chicago is ORD or MDW"* —
   its task's own cities, dressed as a general rule. The underlying idea (match a route by city,
   not airport code) was fine; the enumeration is what made it memorisation.
@@ -291,7 +291,7 @@ a rule (see *Match the Form to the Failure*).
   coordinator has one narrow extra permission, and it is a measurement-integrity permission, not
   an optimisation one: **read the spec to answer "is this task winnable, and is the optimiser
   chasing the right criterion?"** — then relay only what the agent itself can already observe.
-  This unblocked two dead tasks on the airline run. On one, an optimiser had concluded the
+  This unblocked two dead tasks in one run. On one, an optimiser had concluded the
   communicate check was unsatisfiable; the audit showed it required a single figure the agent was
   computing wrongly, so the relay was *"you speak, your arithmetic or scope is wrong"* — no value
   echoed. On the other, an optimiser had built a same-date-duplicate detector, plateaued, and
@@ -316,32 +316,32 @@ a rule (see *Match the Form to the Failure*).
 - **Measure the canary at the SAME `n` as the target before you use it, and never set the bar
   at 1.0.** A task that reads 1.0 off a 3-trial baseline has a CI wide enough to hold 0.4, so
   a canary chosen that way manufactures phantom collateral damage and every optimiser burns
-  iterations chasing it. Measured cost of getting this wrong twice on the airline run: one
+  iterations chasing it. Measured cost of getting this wrong twice: one
   canary task read 1.0 at 3 trials and 0.67 at 10; a second read 1.0 at 3 trials and then
   0.667 / 0.333 / 0.0 / 0.333 / 0.333 across five independent 10-trial runs — so
   `canary_mean == 1.0` was unreachable for reasons no candidate caused. The bar is **no canary
   task below its own measured band**, and the band comes from the same `n` you judge at.
   The same warning applies to the target: one "0.0 DEFECT" task measured 0.444 at n=10.
 
-**Decompose the reward before you fan out.** If the metric is composite — tau2 scores a
+**Decompose the reward before you fan out.** If the metric is composite — one benchmark scores a
 database check, action checks and communicate checks and then returns a *binary* task reward —
 a task that wrote the database correctly and only failed to state a required confirmation
 scores 0.0, identical to one that did nothing. `taskeval.py` reports the per-component means
 (`component_rates`) for exactly this reason: it turns one useless number into one number per
 failure mode, and the two need different edit forms. Do this first; it is free and it
-re-aims the whole round. On the airline run it showed all 14 failing tasks missing the DB
+re-aims the whole round. In one run it showed all 14 failing tasks missing the database-state
 component and only 4 also missing COMMUNICATE — which killed a plausible-sounding
 communicate-first plan before any rollouts were spent on it.
 
-Then tell each optimiser **which components its own task even has**: 25 of the 30 airline val
+Then tell each optimiser **which components its own task even has**: 25 of the 30 val
 tasks have no communicate check at all, so on those, nothing the agent *says* can change the
 score and any edit aimed at phrasing is guaranteed dead. `component_rates` lists only the
 components a task actually carries, so this is free to read and it deletes whole categories of
 wasted iteration.
 
 **Check which reward components actually GATE before you read the feedback as a to-do list.**
-A grader that reports several component scores does not necessarily use all of them. tau2
-publishes `reward_basis`, and on airline it is `["DB", "COMMUNICATE"]` — **`ACTION` is absent**,
+A grader that reports several component scores does not necessarily use all of them. One
+benchmark publishes `reward_basis`, and there it is `["DB", "COMMUNICATE"]` — **`ACTION` is absent**,
 so action checks cannot change the score. The feedback nonetheless led with "Action-level
 defects", which sends an optimiser after calls that provably do not matter: task 12's feedback
 names `calculate: was never called` on every failing rollout, `calculate` was invoked in **0 of
@@ -353,10 +353,10 @@ check cannot be moved by anything the agent *says*, and a task scored only on `D
 moved by fixing which reads it performed.
 
 **Measure what the model actually RECEIVES before you write another word of it.** A tool
-docstring is not delivered whole. tau2 builds each tool's schema `description` from the docstring
+docstring is not delivered whole. One harness builds each tool's schema `description` from the docstring
 **summary plus the prose before `Args:`** and drops the `Returns:` section entirely. Measured over
-the 14-tool airline set: **5469 of 12929 docstring characters (42%) never reach the model**, and on
-`get_user_details` it was 115 of 1906 delivered — **94% dropped**. Rounds of behavioural guidance
+a 14-tool set: **5469 of 12929 docstring characters (42%) never reach the model**, and on
+one tool it was 115 of 1906 delivered — **94% dropped**. Rounds of behavioural guidance
 had been written into that void. One "verified" mechanism (*read these cards and pick the ONE that
 matches the description*) turns out to work only because the **return VALUE** changed shape, which
 the model does see at call time — not because anything documented it.
@@ -373,12 +373,12 @@ nothing:
 
 Verify it, per candidate, rather than trusting the file: render the toolset and sum the delivered
 characters. Two hazards when moving text into the delivered region — a lifted line must not begin
-a recognised section (`Example:`, `Returns:`), because tau2 parses those and a stray header raises
+a recognised section (`Example:`, `Returns:`), because some harnesses parse those and a stray header raises
 at REGISTRATION time and kills every rollout as `INFRASTRUCTURE_ERROR`; and it must be inserted
 *before* `Args:`, or it lands back in the dropped region.
 
 **Findings go in the ledger, not in the coordinator's head.** Independent optimisers on
-different tasks keep rediscovering *one* cause. On the airline run four of nine independently
+different tasks keep rediscovering *one* cause. In one run four of nine independently
 found writes being lost to turn starvation, and two independently implemented the same tool
 enrichment — which collided at merge, where only one of the two had actually been measured.
 So every optimiser **lists before it diagnoses and appends when it finds**:
@@ -414,7 +414,7 @@ Cross-pollination is the main reason K parallel optimisers beat K sequential rou
 ledger is what makes it survive the coordinator forgetting to send a broadcast.
 
 **Ablate a read+enforce pair TOGETHER, or you will throw away the half that carries it.** The
-strongest single per-task result of the airline round was a two-part edit: a tool return printing
+strongest single per-task result of one round was a two-part edit: a tool return printing
 the concrete candidate values, plus a write-side refusal ordering the agent to re-read them.
 Measured alone the read block moved 0.400 -> 0.500, inside noise, and looked worthless; the
 refusal looked like the whole gain. Removing the read while keeping the refusal collapsed the task
@@ -477,7 +477,7 @@ that enumerates alternatives, ask whether the retry leads to one determined acti
 menu turns a mistake into a sanctioned choice.
 
 **In a turn-budgeted rollout, a fix that costs a turn can cost more than the bug.** This is the
-constraint that decided more edits on the airline run than any other, and it is easy to miss
+constraint that decided more edits in one run than any other, and it is easy to miss
 because the edit reads as obviously correct. Telling the agent to *ask* for a missing piece of
 information measured 0.5 -> 0.3 — even when scoped to exactly one call site, which is normally the
 fix for that kind of regression. The mechanism: the user simulator ends the conversation a few
@@ -508,7 +508,7 @@ is a function, not an experiment.
 
 **Find a task's own ceiling, then stop.** Not every task can reach your target, and grinding one
 that cannot is the most expensive mistake in this phase. Two optimisers spent 13 rounds between
-them on one airline task without moving it off 0.0. Its ceiling was structural: the user simulator
+them on one task without moving it off 0.0. Its ceiling was structural: the user simulator
 terminates the conversation a few messages in, and 3-4 of 10 rollouts died right after a
 *mandatory* question the customer's opening message had not answered — so with a binary reward
 needing both components, the achievable rate was ~0.6 whatever the edit. Say the ceiling out loud
@@ -517,7 +517,7 @@ bounded task is a finding, not a failure — and "we never reached 0.9 on task X
 worth more than a third optimiser.
 
 **A regression LIST at `n=10` is noise, and the control proves it in the same round.** In the
-airline gate the byte-identical control reported **four** regressed tasks and the candidate
+one gate the byte-identical control reported **four** regressed tasks and the candidate
 reported **four** — identical counts, disjoint sets, and one of the two artifacts provably
 unchanged. That is the whole case for `--veto-regressions` being off by default: with the veto on,
 a copy of the parent would have been rejected for the same reason as the candidate. Read
@@ -525,7 +525,7 @@ a copy of the parent would have been rejected for the same reason as the candida
 
 **One per-task reading cannot attribute a per-task change — and that trap caught this skill's
 own author.** At `n = 10` the standard error on a task near 0.5 is about 0.16, so a difference
-below roughly 0.3 is indistinguishable from re-measurement. Measured on the airline run: one task
+below roughly 0.3 is indistinguishable from re-measurement. Measured: one task
 read **0.6 / 0.9 / 0.5** across three independent runs of *byte-identical* files, another
 **0.5 / 0.4 / 0.4 / 0.4** against a single solo reading of 0.70. A "74% of the gain was retained
 by the merge" figure was computed from single readings, reported, and then withdrawn when an

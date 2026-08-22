@@ -1,7 +1,7 @@
 """integrate — fold N verified branches into ONE artifact by SEQUENTIAL, VERIFIED accumulation.
 
 Why this exists. The obvious way to combine per-task optimiser branches is to merge them all at
-once and evaluate the result. That was measured on the tau2-bench airline round and it does not
+once and evaluate the result. That was measured on the one multi-turn tool-use benchmark and it does not
 work: every branch had been independently verified to help its own task, `funcmerge.py` retained
 all of them cleanly, and the merged artifact then measured **-0.0617** against seed-matched arms
 — with the very task whose fix was merged falling from 0.40 to 0.20. Verified per-task gains DO

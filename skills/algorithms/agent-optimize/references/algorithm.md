@@ -147,8 +147,8 @@ cap-evolve's own state model dictates (see `docs/SUBAGENT_PATTERNS.md`):
   between them, so the expensive stage runs only for survivors.
 
 Inside a single evaluation there are two further, composable sources of concurrency: an
-adapter's own `run_batch`/`run_trials` fast path (tau2's airline adapter runs its whole task
-grid at `TAU2_MAX_CONCURRENCY`), and framework-level pooling via `trials.run_trials_pool`
+adapter's own `run_batch`/`run_trials` fast path (some adapters run their whole task
+grid at their own concurrency setting), and framework-level pooling via `trials.run_trials_pool`
 (`screen.py --workers N`). The pool only parallelizes rollout *generation* — scoring and
 persistence stay serial and in task order — so pass^k, SE and the gate see exactly the numbers
 a serial run produces. It is opt-in because `adapter.run_target` is not required to be
@@ -165,8 +165,8 @@ gate decision (val only; `gate.decide` raises `TrainGateError` for anything else
 per-task fixed/broke/unchanged movement.
 
 Three refusals are the point of it: an **empty** split reports `empty` rather than a 0.0 that
-reads like a measured failure; a **no-holdout** spec (test overlapping train/val — tau2's
-default `split_ids.json` makes all three the same 50 ids) is labelled a **FIT metric, not
+reads like a measured failure; a **no-holdout** spec (test overlapping train/val — some benchmarks ship a
+default split file that makes all three the same ids) is labelled a **FIT metric, not
 generalisation**, with the overlap counted; and `best_id == "seed"` emits a warning that every
 delta is 0 *by construction* and must be reported as a null result with a diagnosed cause.
 `--train auto` also declines to pay for a train evaluation whose ids equal val's, because the

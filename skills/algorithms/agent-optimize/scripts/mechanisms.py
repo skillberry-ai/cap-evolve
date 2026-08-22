@@ -1,8 +1,8 @@
 """Shared mechanism ledger for a per-task fan-out: what was found, who owns it, what it did.
 
-K parallel optimisers on K different tasks keep rediscovering ONE cause. On the tau2-bench
-airline round, four of nine independently found writes being lost to turn starvation, and two
-independently implemented the same tool-return enrichment — which then collided at merge, and
+K parallel optimisers on K different tasks keep rediscovering ONE cause. Measured on one
+multi-turn tool-use benchmark: four of nine independently found the same root cause, and two
+independently implemented the same fix — which then collided at merge, and
 only one of the two had actually been measured. Both problems are the same problem: findings
 lived in the coordinator's head instead of on disk.
 
@@ -14,9 +14,9 @@ remember to send.
 
     python mechanisms.py list --run-dir R [--file tools/tools.py]
     python mechanisms.py add  --run-dir R --owner t17 --status proposed \\
-        --mechanism "get_user_details returns bare ids; users name reservations by route" \\
+        --mechanism "<the cause, one sentence>" \\
         --evidence "3/5 failing trials commit to the first id probed" \\
-        --touches get_user_details --touches _reservation_summary
+        --touches <function-the-fix-edits>
     python mechanisms.py add  --run-dir R --owner t17 --status rejected \\
         --mechanism "invite the agent to ask which listed trip they meant" \\
         --evidence "user simulator invents a non-existent trip; 2/4 failures that round"

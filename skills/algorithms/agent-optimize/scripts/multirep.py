@@ -10,7 +10,7 @@ the per-run deltas as the error. That estimator sees both sources of variance, n
 about where the noise comes from, and is the only thing that would have caught the retracted accept
 before it was reported.
 
-    .venv-tau2/bin/python multirep.py cand1.json:ctl1.json cand2.json:ctl2.json ...
+    python multirep.py cand1.json:ctl1.json cand2.json:ctl2.json ...
 """
 import json
 import math

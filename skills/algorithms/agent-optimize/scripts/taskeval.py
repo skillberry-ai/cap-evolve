@@ -97,7 +97,7 @@ def main() -> int:
                          "by --conc-env, for runners whose knob predates that convention.")
     ap.add_argument("--conc-env", default="",
                     help="comma-separated EXTRA env var names to set to --conc, e.g. "
-                         "TAU2_MAX_CONCURRENCY. The canonical CAPEVOLVE_MAX_CONCURRENCY is always "
+                         "the runner's own knob. The canonical CAPEVOLVE_MAX_CONCURRENCY is always "
                          "set, so this is only needed for an adapter that does not read it yet.")
     ap.add_argument("--traces", default="", help="write per-trial agent tool calls here")
     ap.add_argument("--json", dest="json_out", default="")

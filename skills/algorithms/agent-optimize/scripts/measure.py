@@ -12,8 +12,8 @@ per-task delta vector's mean + SE + n, and the gate decision recomputed on that 
 
 What it refuses to pretend:
 
-  * **No-holdout specs.** If ``test`` overlaps ``train``/``val`` (e.g. tau2's default
-    ``split_ids.json``, where all three are the same 50 ids), the test column is a FIT
+  * **No-holdout specs.** If ``test`` overlaps ``train``/``val`` (as some benchmarks ship by
+    default, where all three are the same ids), the test column is a FIT
     metric, not generalisation, and the payload says so in ``holdout`` — with the
     overlap counted, not hand-waved.
   * **Empty splits.** A split with no ids gets ``"status": "empty"`` and no numbers,

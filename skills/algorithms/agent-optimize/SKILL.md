@@ -117,7 +117,7 @@ rollouts have to exist first — baseline only scores val, so pay one
 
 **Read the per-task pass rate, not the per-task pass/fail.** At `num_trials: n` a task's
 reward is `k/n`, and that fraction *is* the learning signal — it separates the defects from
-the noise, which is the distinction four consecutive null runs on tau2-bench airline failed
+the noise, which is the distinction four consecutive null runs on one benchmark failed
 to make:
 
 | per-task rate | what it is | what to do |
@@ -137,7 +137,7 @@ first minutes of round 1 on this, because it is free and because every optimizer
 it optimized against its own instrumentation:
 
 - **Does the feedback name the actual defect, or only the tool?** If it says "Failed action(s):
-  update_reservation_flights" when the real defect is a wrong *argument value*, no edit can be
+  a write tool" when the real defect is a wrong *argument value*, no edit can be
   localized. (Measured on this benchmark: argument-value errors are the majority of failed
   gold actions. A predecessor read the wrong field name for the action check, reported "0
   actions missed" for every task, and stayed blind to the dominant failure mode for an entire
@@ -155,7 +155,7 @@ it optimized against its own instrumentation:
   defects needing opposite edits (add a REQUIRED slot vs. fix arithmetic/scope), and a message
   that conflates them sends the round in the wrong direction. Report the value the AGENT
   stated, never the expected one — a check's `info` field often *is* the expected value
-  (tau2 airline stores a bare `"1628"`), so use its SHAPE and never echo it.
+  (one benchmark stores a bare `"1628"`), so use its SHAPE and never echo it.
 - **Did the rollout run, or did the infrastructure fail?** A wallclock timeout, a starved
   endpoint or a dropped connection is missing data, not a zero. If it lands in the mean as
   0.0, a whole evaluation can read as a catastrophic capability with no error anywhere.
@@ -414,8 +414,8 @@ pay — at `val_n <= 30` it cannot; see step 3.)
 Three independent sources of concurrency — use all three, they compose:
 
 1. **Inside one evaluation**, if the adapter has `run_batch`/`run_trials` it already runs
-   the whole task grid at its own concurrency (tau2's airline adapter does, via
-   `TAU2_MAX_CONCURRENCY`). Otherwise `screen.py --workers N` — or `CAPEVOLVE_WORKERS=N`
+   the whole task grid at its own concurrency (some adapters do, via their own
+   concurrency env var). Otherwise `screen.py --workers N` — or `CAPEVOLVE_WORKERS=N`
    in the environment, which every phase script honours since none of them take a
    `--workers` flag — pools rollout *generation* through `trials.run_trials_pool`.
    Scoring and persistence stay serial and in task order, so pass^k, SE and the gate see
@@ -450,19 +450,19 @@ double-counted gain is invisible in the val number that produced it.
 
 Use this when the baseline's `k/n` bands show the loss is **concentrated in a few named
 tasks** rather than spread thin. It is the highest-leverage shape in this skill, and the one
-the first five rounds of the airline run failed to use.
+the first five rounds of one long run failed to use.
 
 **Why.** A full-val gate round costs `val_n × n_trials` rollouts and returns *one bit per
 candidate*: accept or reject. A single task at `n_trials` costs `n_trials` rollouts and
 returns the same bit — about the failure that actually exists. At `val_n = 30, n_trials = 10`
 that is 300 rollouts per learning step versus 10: **a 30× cheaper gradient**, on the unit the
-defect lives in. Measured on the airline run: five classic rounds spent ~1500 rollouts to
+defect lives in. Measured on one long run: five classic rounds spent ~1500 rollouts to
 produce **10 learning steps and 1 accept**. The same budget under this shape buys **nine
 optimisers × six iterations = ~54 steps**, each aimed at one measured defect, and the
 per-task evals run concurrently so the wall-clock cost is one round's.
 
 **A screening band is not a baseline.** Per-task rates from a small trial count tell you where
-to *look*; they do not tell you where you *are*. On the airline run, ten tasks whose 3-trial
+to *look*; they do not tell you where you *are*. In one run, ten tasks whose 3-trial
 bands summed to 2.33 measured **4.04** at n=10 — the screen understated the artifact by 1.71
 task-equivalents (0.057 of val), and one task went the other way (0.33 → 0.10). Every "0.0
 DEFECT" label was suspect: three of them measured 0.30, 0.444 and 0.60. So: screen at low `n`,
@@ -549,7 +549,7 @@ acting on, but it is not settled.
 
 **A guard that forbids the harmless option can force the harmful one. Ask what the agent does
 INSTEAD.** Measured: a guard refusing an itinerary change that changes nothing ("this call would
-reprice nothing, so do not quote a saving") is locally correct — an unchanged reservation genuinely
+change nothing, so do not quote a price") is locally correct — an unchanged record genuinely
 cannot produce a refund. On the task where the right answer was *make no change at all*, it cost
 0.288. Removing that one guard, policy byte-identical, halved the damage (−0.288 → −0.147, no longer
 resolvable) while the paired task kept its +0.498.
@@ -569,7 +569,7 @@ repairing the slip inside the tool looks like a free win. Measured counter-examp
 payment id used an unrecognised alias and omitted the amount was rejected by the parent and repaired
 by the candidate — but that booking was itself premature, made with a defaulted payment method the
 customer had never been asked about, and the customer then asked for a different one, forcing a
-cancel-and-rebook that left an extra cancelled reservation in the database. The rejection had been
+undo-and-redo that left an extra stale row in the database. The rejection had been
 holding back a wrong write.
 
 So before shipping a repair, ask what the rejected call would have DONE had it succeeded. If it
@@ -676,7 +676,7 @@ is: **the fan-out finds falsifiable mechanisms and proves them structurally; the
 mechanisms into numbers.** A subagent that reports "indistinguishable from noise" while showing its
 guard firing correctly has done its job completely.
 
-**The knob is TOTAL IN-FLIGHT REQUESTS, not `TAU2_MAX_CONCURRENCY`.** That variable is per-process,
+**The knob is TOTAL IN-FLIGHT REQUESTS, not the runner's per-process concurrency flag.** That is per-process,
 so it does not bound load when several evaluations run at once — and running them at once is the
 normal case, because a fan-out of K optimisers each evaluating is K processes. A gate launched at
 `--conc 8` alongside four exploring optimisers at `--conc 12` puts about 56 requests in flight, so
@@ -857,7 +857,7 @@ other split), the per-task `fixed` / `broke` / `unchanged` movement, a `screen_l
 totalling every recorded screen's MEASURED rollout economics (a negative `net_rollouts`
 honestly says screening was pure overhead because nothing was killed), and a `holdout`
 verdict. It refuses to flatter the run: an **empty** split says `empty` instead of
-reporting 0.0; a **no-holdout** spec (test overlapping train/val, e.g. tau2's default
+reporting 0.0; a **no-holdout** spec (test overlapping train/val, as some benchmarks default to
 `split_ids.json` where all three are the same 50 ids) is labelled a **FIT metric, not
 generalisation**, with the overlap counted; and `best_id == "seed"` prints a `warning` that
 every delta is 0 by construction and must be reported as a **null result with a diagnosed
