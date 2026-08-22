@@ -34,7 +34,7 @@ target_profile_file: ""
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb              # algorithms/<skill>: hill-climb | gepa | skillopt | agent-optimize (REQUIRES orchestration_mode: agent). evograph is deprecated -- use agent-optimize.
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
-orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with `cap-evolve finalize`)
+orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with the finalize phase script)
 
 # --- what context the optimizer gets (hill-climb | gepa | skillopt) ---------
 # The per-iteration optimizer prompt is RENDERED from this template (intake authors it,

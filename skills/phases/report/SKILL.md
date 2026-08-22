@@ -17,8 +17,8 @@ seed started (val), where the best candidate landed (val), and the single **held
 test** number that counts. It is what a human reads to decide whether to ship.
 
 Runs standalone as `/cap-evolve:report`, or headlessly as the last step of
-`cap-evolve run` — same `scripts/run.py` either way. There is no `cap-evolve report`
-subcommand; invoke the script.
+`cap-evolve run` — same `scripts/run.py` either way. report is a phase SCRIPT, not a
+`cap-evolve` subcommand; invoke the script.
 
 ## How to read the three numbers
 The honest reading is always **test vs baseline**, with val as a sanity check in

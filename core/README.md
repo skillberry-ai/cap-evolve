@@ -25,8 +25,8 @@ cap-evolve run   --spec .capevolve/project/capevolve.yaml \
             --project .capevolve/project
 cap-evolve run   --spec .capevolve/project/capevolve.yaml \
             --project .capevolve/project --run-ts full --resume  # continue an interrupted run
-cap-evolve check --spec .capevolve/project/capevolve.yaml   # validate adapter
-cap-evolve report                                        # regenerate dashboard
+cap-evolve check --project .capevolve/project             # validate adapter
+cap-evolve dashboard --base .capevolve                   # serve the live dashboard
 ```
 
 See the [cap-evolve repository](https://github.com/skillberry-ai/cap-evolve) for full

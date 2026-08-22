@@ -132,8 +132,9 @@ class of tasks, which is what the loop is asking for anyway.
 
 When `orchestration_mode: agent`, drive the loop yourself with the same mechanism as
 above: parent = current best, one edit per iteration, evaluate on **val**, gate,
-accept → snapshot / reject → revert, seal once with `cap-evolve finalize`, then
-`report`. `orchestrate` owns the agent-mode rules; the hill-climb-specific obligation
+accept → snapshot / reject → revert, seal once with the finalize phase script
+(`skills/phases/finalize/scripts/run.py`), then report. `orchestrate` owns the
+agent-mode rules; the hill-climb-specific obligation
 is that you must reproduce the handover surface `run_step` normally builds —
 `LEDGER.md`, `JOURNAL.md`, `PROCESS.md`, `RUNMAP.md` + `prior_iterations/` — and carry
 rejected edits into the next iteration's prompt. Skip it and the dashboard goes dark

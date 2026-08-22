@@ -8,7 +8,8 @@
 #                        runs pytest on core/tests/ and dashboard/backend/tests/
 #   2. build-dashboard — installs dashboard/frontend dependencies, runs npm build + vitest
 #   3. toy-example     — runs the zero-API toy_calc example and asserts test_reward 1.0
-#   4. docs-links      — checks relative links/images in Markdown resolve (offline)
+#   4. docs-links      — checks relative links/images in Markdown resolve (offline), and
+#                        that every documented `cap-evolve <sub>` exists in the CLI (#203)
 #   5. spellcheck      — codespell over README + docs
 #
 # No shared-workflow delegation needed: this is repo-specific CI.
@@ -193,6 +194,12 @@ jobs:
             --exclude-path examples/skillsbench/run_full
             "README.md" "docs/**/*.md" "examples/**/*.md" "*.md"
           fail: true
+
+      # Docs/skills/code must not instruct agents to run a `cap-evolve <sub>` that does
+      # not exist (issue #203). The valid set is parsed out of core/cap_evolve/cli.py, so
+      # no install is needed and the check cannot drift from the CLI.
+      - name: Check documented cap-evolve subcommands exist
+        run: python3 ci/check_cli_subcommands.py
 
   spellcheck:
     name: Spellcheck (docs)

@@ -486,7 +486,8 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
         # about it is the exact class of wrong status the old logic produced.
         return "awaiting_agent", (
             "baseline is done and `cap-evolve run` handed off — the agent has not "
-            "committed a candidate yet (agent-mode runs end with `cap-evolve finalize`)")
+            "committed a candidate yet (agent-mode runs end by running the finalize "
+            "phase script)")
 
     last_t = 0.0
     for e in reversed(events):

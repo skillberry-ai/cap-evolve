@@ -98,10 +98,10 @@ python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P" --n-tri
 python "$S/phases/report/scripts/run.py"   --run-dir "$R"
 ```
 
-> **Note — there is no `cap-evolve finalize` subcommand.** The orchestrate/host prose uses
-> `cap-evolve finalize` as shorthand; sealing is done by the finalize *phase script* above
-> (`skills/phases/finalize/scripts/run.py`), which scores the best candidate on test once and
-> burns the seal. A second finalize raises `TestSealError`.
+> **Note — finalize is not a `cap-evolve` subcommand.** Where prose says "finalize", it means
+> the finalize *phase script* above (`skills/phases/finalize/scripts/run.py`), which scores the
+> best candidate on test once and burns the seal. A second finalize raises `TestSealError`.
+> `cap-evolve --help` lists the real subcommands.
 
 ## Honesty invariants (both modes)
 

@@ -703,7 +703,7 @@ def _cmd_run(argv):
     # coding agent, so the plan reflects only what this process actually runs.
     if orchestration_mode == "agent":
         sequence = ["intake", "implement-and-check", "baseline",
-                    "<handoff: agent drives the loop, then `cap-evolve finalize`>"]
+                    "<handoff: agent drives the loop, then runs the finalize phase script>"]
     else:
         sequence = ["intake", "implement-and-check", "baseline", algorithm_name, "finalize", "report"]
 
@@ -834,14 +834,14 @@ def _cmd_run(argv):
 
     # Agent mode: the coding agent drives the optimization loop itself (reading the
     # algorithm's "Agent-mode loop"), writing run-dir artifacts via cap-evolve
-    # primitives, and sealing with `cap-evolve finalize`. cap-evolve run does
+    # primitives, and sealing by running the finalize phase script. cap-evolve run does
     # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
     if orchestration_mode == "agent":
         print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
                           "spec_path": str(spec_path), "dashboard": dash_url or "off",
                           "stop_condition": str(spec.get("stop_condition", "")),
-                          "next": "drive via the orchestrate Agent-mode loop; "
-                                  "seal with `cap-evolve finalize`"}))
+                          "next": "drive via the orchestrate Agent-mode loop; seal by "
+                                  "running skills/phases/finalize/scripts/run.py"}))
         return done(0)
 
     # 2) algorithm (hill-climb variants select their schedule via --focus)

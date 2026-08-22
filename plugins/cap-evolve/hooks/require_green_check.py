@@ -163,7 +163,8 @@ def decide(payload: dict) -> int:
             "cap-evolve (agent mode): the run is not finalized. Re-read your "
             "stop_condition — if it isn't met and budget remains, keep driving the "
             "algorithm's Agent-mode loop (evaluate->gate->accept/revert), verifying each "
-            "round wrote its run-dir artifacts. When done, seal with `cap-evolve finalize`."
+            "round wrote its run-dir artifacts. When done, seal by running the finalize "
+            "phase script (skills/phases/finalize/scripts/run.py)."
         )
     return 0
 

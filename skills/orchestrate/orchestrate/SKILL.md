@@ -52,7 +52,7 @@ Rules:
 2. **Honesty is self-policed:** never touch the sealed test split until the end; revert on regression; acceptance is val-only.
 3. **Between rounds, verify the run dir has what the dashboard needs** before continuing: the round's events are logged, results/rollouts are written, and each accepted candidate is snapshotted. If a round produced no run-dir artifacts, the dashboard will be blank — fix that before proceeding.
 4. **Re-read `stop_condition` each round.** Stop when it is met, or budget/stall hits.
-5. **Seal once, at the end:** call `cap-evolve finalize` (scores the best candidate on the sealed test split exactly once) then `cap-evolve report`. A run with no finalize has no result.
+5. **Seal once, at the end:** run the finalize phase script `skills/phases/finalize/scripts/run.py` (scores the best candidate on the sealed test split exactly once), then the report phase script `skills/phases/report/scripts/run.py` — see `docs/AGENT_ORCHESTRATION.md` for the exact invocations. Neither is a `cap-evolve` subcommand; both are scripts. A run with no finalize has no result.
 
 ## How to run
 ```

@@ -41,7 +41,7 @@ _CONTEXT = (
     "capevolve.yaml`, which presumes intake already happened and enforces the check "
     "gate before spending budget; or, with `orchestration_mode: agent` in the spec, "
     "`cap-evolve run` stops after baseline and hands the loop back to the agent, with "
-    "no sealed-test number until `cap-evolve finalize` is called. Honesty discipline "
+    "no sealed-test number until the finalize phase script seals it. Honesty discipline "
     "(sealed test, val-only gate) is enforced by core and by this plugin's hooks — do "
     "not edit the test split, test rollouts, or gold files, and do not finish an "
     "iteration while `cap-evolve check` is red."

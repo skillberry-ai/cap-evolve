@@ -289,7 +289,7 @@ that bought it.
 
 ## Stop & seal, then MEASURE (exactly once)
 
-There is no `cap-evolve status` command: **every 2–3 rounds** (and always before a fan-out) run
+Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run
 `spend.py`. Everything it reports is re-read from the run dir, never from a total you carry in your head
 — which is what keeps a `$6.00` cap from becoming `$6.01`. (The Stop hook re-nudges you across turns
 until the run is finalized.) Stop when `recommendation` is `stop`, then produce the run's one honest
@@ -306,8 +306,9 @@ information, and seals test through the same `harness.finalize` the finalize pha
 interchangeable with `phases/finalize/scripts/run.py`. It refuses to flatter the run: an **empty** split
 says `empty`, not 0.0; a **no-holdout** spec is a **FIT metric, not generalisation**, with the overlap
 counted; a negative `screen_ledger.net_rollouts` says screening was pure overhead; and
-`best_id == "seed"` is a **null result with a diagnosed cause**, never a 0.000 gain. (There is **no
-`cap-evolve finalize` subcommand** — a second finalize raises `TestSealError`.) No finalize, no result.
+`best_id == "seed"` is a **null result with a diagnosed cause**, never a 0.000 gain. (Sealing is that
+phase script, **not a CLI subcommand** — and a second finalize raises `TestSealError`.) No finalize,
+no result.
 
 ## Honesty invariants specific to driving this by hand
 
