@@ -324,12 +324,19 @@ _ALGO_MARKERS = (
 )
 
 #: Every event kind that means "one candidate was proposed and judged". Every algorithm
-#: now writes ``step`` via ``harness.record_iteration`` (#216/#224) — including gepa,
-#: which used to write only ``gepa_val_gate``, and agent-mode ``commit.py``, whose
-#: ``accept``/``reject`` are kept here so run dirs recorded BEFORE that fix still render.
-#: ``skillopt_step`` / ``gepa_val_gate`` are deliberately absent: they duplicated the
-#: same candidate's iteration (see the per-candidate dedup below).
-_STEP_KINDS = ("step", "accept", "reject")
+#: now writes ``step`` via ``harness.record_iteration`` (#216/#224).
+#:
+#: The legacy kinds STAY here — ``gepa_val_gate`` and agent-mode ``commit.py``'s
+#: ``accept``/``reject`` — because run dirs recorded BEFORE that fix have no ``step``
+#: events at all (that was the bug), and this reducer is what renders them. Dropping
+#: ``gepa_val_gate`` took a historic gepa run's graph from 2 nodes to 1, retroactively.
+#: They cost nothing on a new run: the loop below keys one iteration per CANDIDATE, so
+#: the extra kind lands on the node ``step`` already created.
+#:
+#: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
+#: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
+#: candidate on the same (current) runs, so it never carried a graph anyone needs.
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
