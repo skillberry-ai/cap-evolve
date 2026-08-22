@@ -246,7 +246,15 @@ def main(argv=None) -> int:
     # it absolute keeps file edits landing in the candidate dir, not a subdir of it.
     workdir = str(Path(args.workdir).resolve())
     prompt_path = Path(args.prompt).resolve()
-    prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+    # A named-but-missing prompt is a HARD error, never an empty prompt. For the rows
+    # whose command_template inlines {prompt_text}, substituting "" would bill a real
+    # agent CLI to run with NO instructions and still exit 0 — a step that never got
+    # its prompt would then be indistinguishable from a step that proposed nothing.
+    if not prompt_path.exists():
+        print(json.dumps({"optimizer": name, "error":
+              f"--prompt file does not exist: {prompt_path}"}))
+        return 2
+    prompt_text = prompt_path.read_text(encoding="utf-8")
 
     cmd = build_command(str(row.get("command_template", "")), workdir=workdir,
                         prompt=str(prompt_path), prompt_text=prompt_text,
@@ -296,9 +304,15 @@ def main(argv=None) -> int:
     env.update(auth["env"])
 
     proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, env=env)
+    # Relay the agent CLI's stderr to OUR stderr, on success as well as failure: a CLI
+    # that prints a real diagnostic (rate limit, model fallback, auth warning) and then
+    # exits 0 must not look silently successful. stdout stays exactly one JSON object
+    # (CONTRIBUTING.md's stdout contract), so the relay cannot corrupt the payload.
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr, end="", flush=True)
     result = {"optimizer": name, "cli_present": True, "returncode": proc.returncode,
               "auth_present": auth["present"],
-              "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-500:]}
+              "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-800:]}
     # Best-effort cost capture: only when --json requested AND the row had a json_flag.
     # The prose-fed path (no --json, or empty json_flag) never reaches here, so the
     # offline/mock and generic flows are unchanged.
