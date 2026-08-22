@@ -286,6 +286,32 @@ def test_infra_classified_by_rollout_error(tmp_path):
     assert "good" in instr
 
 
+def test_narrow_focus_summary_scopes_its_counts():
+    """A narrow focus must not report a focus-scoped count as if it were val-wide.
+
+    ``_passing_block`` is classified over the WHOLE val split (so narrowing attention
+    never narrows the non-regression constraint), while the summary line counts only
+    the focus set. Unscoped, a one-task focus rendered "0 solid ... of 1 tasks" one
+    line above "Currently PASSING (1 task(s))" — the prompt contradicting itself about
+    whether a passing task exists.
+    """
+    from cap_evolve import harness
+    from cap_evolve.loop import SplitResult
+    per = [{"task_id": "v1", "reward": 1.0, "feedback": "passed", "raw": {}},
+           {"task_id": "v2", "reward": 0.0, "feedback": "wrong result", "raw": {}}]
+    val = SplitResult(split="val", reward=0.5, stderr=0.5, per_task=per,
+                      n_tasks=2, n_scored=2)
+
+    narrow = harness._focus_instructions(val, ["v2"], "task v2")
+    assert "0 solid / 0 flaky / 1 failing of 1 focused task(s) of 2 on val." in narrow
+    assert "## Currently PASSING (1 task(s))" in narrow, \
+        "the whole-val protect block is what the scoped count must not contradict"
+
+    # 'all' is unchanged: the focus set IS the val split, so "tasks" needs no scoping.
+    assert "1 solid / 0 flaky / 1 failing of 2 tasks." in \
+        harness._focus_instructions(val, None, "all")
+
+
 # ---- atomic state write ---------------------------------------------------
 
 def test_state_write_is_atomic_no_partial(tmp_path, monkeypatch):

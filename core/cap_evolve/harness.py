@@ -2012,10 +2012,14 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     # narrow focus, silently dropping the only explicit protect-these-ids instruction.
     protect = solid if focus_ids is None else _classify(per_all)[3]
 
+    # The counts are over the FOCUS SET; ``_passing_block`` below counts the whole val
+    # split. Say which, or a narrow focus renders "0 solid" one line above
+    # "Currently PASSING (1 task(s))" and the prompt contradicts itself.
+    scope = "tasks" if focus_ids is None else f"focused task(s) of {len(per_all)} on val"
     focus_summary = (
         f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
-        + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} tasks."
+        + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
     failures = _failures_block(always_fail, flaky, errored)
     passing = _passing_block(protect)
