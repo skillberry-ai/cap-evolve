@@ -39,7 +39,7 @@ split_ids_file: split_ids.json
 num_trials: 10              # gpt-oss is stochastic; 10 trials → mean+stderr + pass^k
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # paired (recommended) | significant | strict | threshold | simplicity_tiebreak
+gate_mode: paired                        # paired (recommended) | significant | strict | threshold
 #   paired tests mean(per-task Δ) on the SAME tasks both sides → SE ~2-3x smaller than
 #   the combined-SE `significant` test, so a real 1-task gain actually banks instead of
 #   being lost in between-task variance. Falls back to significant when no per-task data.

@@ -91,6 +91,10 @@ The gate reads only the **primary** metric (the scalar `reward`). Any shown-only
 secondaries a `score()` returns are carried through for display but can never move an
 accept/reject decision or the sealed number.
 
+The acceptance gate itself (`gate_mode`, default `paired`, and why the bar is
+`Δ > k·SE` rather than `Δ > 0`) is documented once in
+[HONEST_EVAL.md](HONEST_EVAL.md#the-four-guarantees).
+
 ## Everything else is provided
 
 Splits, trials, gating, pass^k, rejected-memory, run-dir state, parent selection, the

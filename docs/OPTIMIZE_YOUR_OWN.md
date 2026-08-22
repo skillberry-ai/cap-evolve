@@ -100,9 +100,11 @@ you want intake to ask):
 - max_optimizer_usd:    <cumulative optimizer-only $ cap; 0 = unlimited>
 - optimizer_usd_per_iter: <PER-ITERATION $ cap enforced by the optimizer CLI itself, e.g. claude `--max-budget-usd N`>
 - optimizer_max_turns:  <per-iteration WORK cap passed to the agent CLI, e.g. claude `--max-turns N`>
-- gate:                 <significant (k_se) | strict | threshold>
-                        # significant: accept only if Δ > k_se · SE — k_se is how many standard errors
-                        # the val gain must clear (e.g. 0.2 = lenient, 1.0 = strict) so noise isn't mistaken for progress
+- gate_mode:            <paired (default) | significant | threshold | strict>
+- gate_k_se:            <how many standard errors the val gain must clear (0.2 = lenient, 1.0 = strict)>
+                        # paired: accept only if mean(per-task Δ) > gate_k_se · SE(Δ) over the SAME val
+                        # tasks. The bar is Δ > k·SE and not Δ > 0 because search amplifies noise — with
+                        # enough candidates the best-looking one is best by luck. See docs/HONEST_EVAL.md.
 - stall:                <stop after N consecutive rejects; 0 = run all max_iterations>
 - store:                git          # versions every iteration as a commit for an inspectable process
 ```

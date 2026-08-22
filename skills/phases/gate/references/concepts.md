@@ -71,12 +71,15 @@ mean can quietly trade away reliability.
 
 ## Modes, briefly
 
-| mode                  | rule                              | when                                  |
-|-----------------------|-----------------------------------|---------------------------------------|
-| `significant`         | Δ > k·SE                          | default; any stochastic scorer        |
-| `strict`              | Δ > 0                             | only near-zero-variance scorers       |
-| `threshold`           | Δ > T                             | you have a domain "minimum worth it"  |
-| `simplicity_tiebreak` | Δ > 0, else prefer smaller on tie | bias against edits that bloat for free |
+| mode          | rule                              | when                                        |
+|---------------|-----------------------------------|---------------------------------------------|
+| `paired`      | mean(per-task Δ) > k·SE(Δ)        | **default**; both sides scored on the same val tasks, so difficulty cancels |
+| `significant` | Δ > k·√(SE_c² + SE_p²)            | unpaired fallback; the two sides are independent samples |
+| `strict`      | Δ > 0                             | only near-zero-variance scorers             |
+| `threshold`   | Δ > T                             | you have a domain "minimum worth it"        |
+
+Any other value raises. The bar is `Δ > k·SE` rather than `Δ > 0` because the max
+over many noisy candidates is biased upward — `Δ > 0` promotes the luckiest draw.
 
 ## Sources
 - Koehn, "Statistical Significance Tests for Machine Translation Evaluation"

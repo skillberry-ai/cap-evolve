@@ -1,9 +1,20 @@
 """Acceptance gate — the rule that decides whether a candidate edit is kept.
 
-The default is the *significance* gate (prior agent-optimization work's ``val_improvement_significant``):
-accept only when the val improvement exceeds k standard errors, so noise does
-not get mistaken for progress. All gates compare on VAL and never on TRAIN —
-``decide`` takes an explicit ``split`` and refuses anything but ``val``.
+**The default for every real run is the ``paired`` gate.** The optimization loop
+builds the aligned per-task delta vector and selects ``paired`` unless the caller
+pinned a mode (``harness.py:1524-1526``, ``gepa.py:741-743``), and the shipped
+config says so (``templates/project/capevolve.yaml``: ``gate_mode: paired``).
+``decide``'s own ``mode=`` parameter defaults to ``significant`` only as the
+fallback for a bare caller that has no per-task data.
+
+The bar is ``Δ > k·SE``, not ``Δ > 0``, because search is a noise amplifier:
+screen enough candidates and the best-looking one is best by luck, so a ``Δ > 0``
+rule banks noise as progress and the val curve climbs while nothing improved.
+Requiring the gain to clear ``k`` standard errors of its own measurement error is
+what makes an accept mean something.
+
+All gates compare on VAL and never on TRAIN — ``decide`` takes an explicit
+``split`` and refuses anything but ``val``.
 """
 
 from __future__ import annotations
@@ -91,8 +102,6 @@ def decide(
     candidate_stderr: float = 0.0,
     current_stderr: float = 0.0,
     threshold: float = 0.0,
-    candidate_size: int | None = None,
-    current_size: int | None = None,
     paired_deltas: list | None = None,
     coverage: float | None = None,
     min_coverage: float = 0.6,
@@ -111,9 +120,8 @@ def decide(
         as INDEPENDENT samples — correct only when they were not scored on the
         same tasks; less powerful than ``paired``).
       - ``threshold``:   accept iff delta > ``threshold`` (a flat margin).
-      - ``strict``:      accept iff delta > 0 (any improvement).
-      - ``simplicity_tiebreak``: like strict, but on a (near-)tie prefer the
-        smaller candidate (``candidate_size`` < ``current_size``).
+      - ``strict``:      accept iff delta > 0 (any improvement). Only safe with a
+        near-zero-variance scorer: with a noisy one it banks noise as progress.
 
     ``coverage`` is the fraction of val tasks that produced a real measurement
     (``SplitResult.coverage``). Below ``min_coverage`` the gate REFUSES TO JUDGE and
@@ -213,19 +221,5 @@ def decide(
     if mode == "strict":
         ok = delta > 0
         return GateDecision(ok, f"Δ={delta:+.4f} {'>' if ok else '<='} 0", delta, 0.0)
-
-    if mode == "simplicity_tiebreak":
-        if delta > 0:
-            return GateDecision(True, f"Δ={delta:+.4f} > 0", delta, 0.0)
-        tie = abs(delta) <= 1e-9
-        if tie and candidate_size is not None and current_size is not None and candidate_size < current_size:
-            return GateDecision(
-                True,
-                f"tie (Δ={delta:+.4f}); accepted smaller candidate "
-                f"({candidate_size} < {current_size})",
-                delta,
-                0.0,
-            )
-        return GateDecision(False, f"Δ={delta:+.4f} <= 0 (no simpler tie)", delta, 0.0)
 
     raise ValueError(f"unknown gate mode: {mode!r}")

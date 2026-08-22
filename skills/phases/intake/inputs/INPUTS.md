@@ -164,7 +164,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
 
 - **gate**: `gate_mode` (**paired** recommended — per-task paired SE on the same tasks
   both sides, ~2-3x smaller than combined-SE `significant`, so real 1-task gains bank;
-  also: significant|strict|threshold|simplicity_tiebreak), `gate_k_se` (default 1.0; the
+  also: significant|strict|threshold), `gate_k_se` (default 1.0; the
   examples use 0.2). Add `--no-regression` to forbid breaking passing tasks.
 
 - **metrics (display)**: which numbers to surface and which one GATES.
