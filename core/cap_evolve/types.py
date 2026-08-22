@@ -28,10 +28,19 @@ NON_CAPABILITY_FILES = frozenset({
     "FOCUS.md", "REFLECTION.md",
     # cross-iteration state files — scratch, not capability
     "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+    # per-agent always-on instructions files: injection appends a pointer block to them
+    "CLAUDE.md", "AGENTS.md", "GEMINI.md",
 })
 
-#: Read-context / vcs dirs that are never the edit surface.
-NON_CAPABILITY_DIRS = frozenset({".git", "__pycache__", "prior_iterations"})
+#: Read-context / vcs dirs that are never the edit surface. This covers everything
+#: ``harness.OptimizerContext.inject()`` writes into an iteration workdir (trajectories,
+#: guidance, and the per-agent NATIVE skills dirs): now that EVERY algorithm injects that
+#: context, an un-ignored read-context dir would bust gepa's eval cache every iteration
+#: and show up to gepa as an editable "component" to optimize.
+NON_CAPABILITY_DIRS = frozenset({
+    ".git", "__pycache__", "prior_iterations", "trajectories", "guidance",
+    ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
+})
 
 
 def _clamp01(x: float) -> float:
