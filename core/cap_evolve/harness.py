@@ -2124,10 +2124,6 @@ class OptimizerContext:
 
     # ---- construction from an algorithm run.py --------------------------------
 
-    #: The context flags every algorithm's ``run.py`` declares via ``add_arguments``.
-    ARG_DESTS = ("capabilities", "instructions_file", "bench_repo", "optimizer_name",
-                 "capability_sources", "target_model", "target_profile_file")
-
     @staticmethod
     def add_arguments(p) -> None:
         """Declare the optimizer-context flags on an algorithm's argument parser.
@@ -2290,6 +2286,11 @@ def hill_climb_loop(
     ``protected_patterns`` seals the eval surface (see ``run_step``); ``convergence``
     turns on the graded plateau signal (warn → paradigm_shift → stop). Both default
     off, so a caller that passes neither runs exactly as before.
+
+    ``ctx`` is the shared optimizer read-context. When it is given it WINS: the legacy
+    per-piece kwargs below it (``capabilities`` … ``target_profile_file``) are then unused,
+    kept only for the callers/tests that predate ``OptimizerContext``. Pass one or the
+    other, not both.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)

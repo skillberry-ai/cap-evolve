@@ -6,11 +6,18 @@ algorithm that got the full context: gepa never injected any of it and skillopt 
 the prompt renderer bare (no capability brief, no template, no bench repo — and a
 PARALLEL_NOTE that actively told a parallel-capable optimizer it was sequential).
 
-So the assertions below are parametrized over ALL algorithms, driving one real iteration
-of each with the mock (zero-API) optimizer on toy_calc and checking the assembled
-optimizer working dir + rendered prompt piece by piece. A newly added algorithm that
-forgets to thread ``harness.OptimizerContext`` fails here loudly instead of silently
-running blind.
+So the assertions below are parametrized over each of the three algorithms that thread the
+context (``hill-climb``, ``gepa``, ``skillopt``), driving one real iteration of each with
+the mock (zero-API) optimizer on toy_calc and checking the assembled optimizer working dir
++ rendered prompt piece by piece. Each failure names the algorithm and the missing piece.
+
+SCOPE, stated plainly because the list is enumerated and not discovered: ``ALGORITHMS``
+below is a literal, so an algorithm absent from it is NOT covered — it can still run blind
+while this file stays green. ``agent-optimize`` and ``evograph`` ship today, declare none of
+the context flags and drive their own loops; they are out of scope for issue #109. Making
+this test discover algorithms instead of enumerating them is tracked separately, and until
+that lands a new algorithm must be added to ``ALGORITHMS`` (and to
+``cli.OPTIMIZER_CONTEXT_ALGORITHMS``) by hand.
 """
 
 import shutil
@@ -26,6 +33,8 @@ MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.p
 sys.path.insert(0, str(CORE))
 sys.path.insert(0, str(EXAMPLE))
 
+#: The algorithms that take a ``harness.OptimizerContext``. A LITERAL, so it is also the
+#: exact scope of this guard — see the module docstring.
 ALGORITHMS = ("hill-climb", "gepa", "skillopt")
 # A parallel-capable optimizer row: exercises the features reference, the native skills
 # dir and the {{PARALLEL_NOTE}} that skillopt used to get wrong.
@@ -50,8 +59,11 @@ def _toy_adapter():
     return m.Adapter()
 
 
-def _run_one_iteration(algorithm: str, tmp_path: Path) -> Path:
-    """Run ONE iteration of ``algorithm`` with the shared context; return its workdir."""
+def _run_one_iteration(algorithm: str, tmp_path: Path):
+    """Run ONE iteration of ``algorithm`` with the shared context.
+
+    Returns ``(run_dir, workdir)`` — the run and that iteration's optimizer working dir.
+    """
     from cap_evolve import Budget, RunDir, gepa, harness, skillopt
 
     adapter = _toy_adapter()
@@ -84,14 +96,14 @@ def _run_one_iteration(algorithm: str, tmp_path: Path) -> Path:
 
     workdirs = sorted(p for p in (run_dir.root / "work").iterdir() if p.is_dir())
     assert workdirs, f"{algorithm} produced no iteration workdir"
-    return workdirs[0]
+    return run_dir, workdirs[0]
 
 
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
 def test_every_algorithm_gets_the_same_optimizer_context(algorithm, tmp_path):
     if shutil.which("git") is None:
         pytest.skip("git not available")
-    workdir = _run_one_iteration(algorithm, tmp_path)
+    _run_dir, workdir = _run_one_iteration(algorithm, tmp_path)
 
     # 1) the parent step's verbatim trajectories
     assert (workdir / "trajectories").is_dir(), f"{algorithm}: no ./trajectories/"
@@ -129,11 +141,36 @@ def test_every_algorithm_gets_the_same_optimizer_context(algorithm, tmp_path):
         f"{algorithm}: parallel-capable optimizer not told it can fan out"
 
 
-def test_injected_context_is_not_part_of_the_candidate():
-    """The injected read-context must never be hashed, diffed or optimized as capability
-    content — otherwise gepa's eval cache misses every iteration and its component
-    selector 'edits' the guidance we just handed it."""
-    from cap_evolve.types import NON_CAPABILITY_DIRS
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_injected_context_never_lands_in_a_candidate(algorithm, tmp_path):
+    """Snapshotted candidates carry the capability, never the read-context we injected.
 
-    for d in ("trajectories", "guidance", ".claude", "prior_iterations"):
-        assert d in NON_CAPABILITY_DIRS
+    What actually secures this is the ``ignore=`` on each algorithm's ``snapshot()`` call
+    (``harness._SNAPSHOT_IGNORE``); the ignore-lists in ``types`` are defence-in-depth for
+    the hash/component/diff paths. Asserted per algorithm because gepa snapshots from its
+    own loop rather than through ``run_step``, so it needs the exclusion separately.
+    """
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    run_dir, _workdir = _run_one_iteration(algorithm, tmp_path)
+
+    cand_root = run_dir.root / "candidates"
+    cands = [p for p in cand_root.iterdir() if p.is_dir()] if cand_root.is_dir() else []
+    assert cands, f"{algorithm}: no candidate was snapshotted"
+    for cand in cands:
+        for injected in ("trajectories", "guidance", ".claude"):
+            assert not (cand / injected).exists(), \
+                f"{algorithm}: injected {injected}/ leaked into candidate {cand.name}"
+
+
+def test_ignore_lists_cover_everything_injection_writes():
+    """Every path ``OptimizerContext.inject()`` creates is declared non-capability, so it
+    perturbs neither the eval-cache hash, the component list, nor a capability diff."""
+    from cap_evolve.types import NON_CAPABILITY_DIRS, NON_CAPABILITY_FILES
+
+    for d in ("trajectories", "guidance", "prior_iterations",
+              ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor"):
+        assert d in NON_CAPABILITY_DIRS, d
+    for f in ("LEDGER.md", "JOURNAL.md", "RUNMAP.md", "INSTRUCTIONS.md",
+              "CLAUDE.md", "AGENTS.md", "GEMINI.md"):
+        assert f in NON_CAPABILITY_FILES, f

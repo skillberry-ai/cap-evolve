@@ -56,12 +56,12 @@ from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
     OptimizerContext,
-    _SNAPSHOT_IGNORE,
     _augment_instructions,
     _init_memory_store,
     _live,
     _paired_deltas,
     _resolve_workers,
+    _SNAPSHOT_IGNORE,
     evaluate_candidate,
     split_result_from_rollouts,
 )
