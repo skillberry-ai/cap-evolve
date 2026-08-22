@@ -1205,7 +1205,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # 2) capability skills as local guidance
     caps = [c for c in (capabilities or []) if c]
     if caps:
-        skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+        skills_root = _capabilities_root()
         for c in caps:
             src = skills_root / c
             if not src.is_dir():
@@ -1539,7 +1539,8 @@ def run_step(
     # before any rollout is paid for) rather than left to prose the optimizer may skip.
     # An invalid artifact's score measures a broken candidate, not the edit, so the
     # step is INDECISIVE — same discipline as the tamper path.
-    validation = _capability_validate(capabilities, workdir, parent_dir=parent_dir)
+    validation = _capability_validate(capabilities, workdir, parent_dir=parent_dir,
+                                      run_dir=run_dir)
     if validation is not None:
         if validation.warnings:
             run_dir.log_event("capability_validation_warnings", candidate=cid,
@@ -1795,7 +1796,7 @@ def _capability_brief(capabilities) -> str:
     caps = [c for c in (capabilities or []) if c]
     if not caps:
         return ""
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _capabilities_root()
     lines = ["## What you are editing (the allowed edit space)",
              "The capability under optimization is composed of these editable artifact(s). "
              "Use the FULL edit space below — do not limit yourself to trivial wording tweaks."]
@@ -1975,22 +1976,38 @@ def _parallel_note(parallel: bool, optimizer_name: str | None) -> str:
             "real, safe fix, not just the biggest one.")
 
 
-def _load_capability_abstract(name: str, tag: str):
-    """Import ``skills/capabilities/<name>/scripts/abstract.py``, or None."""
+def _capabilities_root() -> Path:
+    """Where the capability skills live: ``CAPEVOLVE_SKILLS_DIR`` if set, else the
+    repo's own ``skills/`` (running from source). An installed tree does not sit next
+    to this module, so resolving only relative to ``__file__`` silently finds nothing —
+    and a capability we cannot find is a capability whose rules go unenforced."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    if env and (Path(env) / "capabilities").is_dir():
+        return Path(env) / "capabilities"
+    return Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+
+
+def _load_capability_abstract(name: str, tag: str) -> tuple:
+    """Import ``skills/capabilities/<name>/scripts/abstract.py``.
+
+    Returns ``(module, None)`` or ``(None, why)``. The ``why`` exists because the
+    failure mode here is SILENT-OFF: a moved skills tree or an import regression would
+    otherwise disable enforcement with no trace, and the loop would go back to scoring
+    invalid candidates while every test still passed. The caller logs it.
+    """
     import importlib.util
 
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
-    abstract_path = skills_root / name / "scripts" / "abstract.py"
+    abstract_path = _capabilities_root() / name / "scripts" / "abstract.py"
     if not abstract_path.exists():
-        return None
+        return None, f"no abstract.py at {abstract_path}"
     try:
         spec = importlib.util.spec_from_file_location(f"capevolve_cap_{name}_{tag}",
                                                      abstract_path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
-        return mod
-    except Exception:  # noqa: BLE001 — a capability we can't import contributes nothing
-        return None
+    except Exception as e:  # noqa: BLE001 — never abort the loop over an import
+        return None, f"import failed: {type(e).__name__}: {e}"[:300]
+    return mod, None
 
 
 class _ValidationReport:
@@ -2013,7 +2030,8 @@ class _ValidationReport:
 
 
 def _capability_validate(capabilities, cand_dir: Path,
-                         parent_dir: Path | None = None) -> _ValidationReport | None:
+                         parent_dir: Path | None = None,
+                         run_dir: RunDir | None = None) -> _ValidationReport | None:
     """Validate a candidate against each capability's OWN rules (generic, per-capability).
 
     Calls ``validate(cand_dir)`` on every ``skills/capabilities/<name>/scripts/abstract.py``
@@ -2030,20 +2048,34 @@ def _capability_validate(capabilities, cand_dir: Path,
     if not caps:
         return None
 
+    def unavailable(name, why):
+        # Enforcement that turns itself off quietly is the defect this hook exists to
+        # remove, so say so in the run record rather than leaving it to be inferred.
+        if run_dir is not None:
+            run_dir.log_event("capability_validate_unavailable", capability=name, reason=why)
+
     def _run(name, mod, d):
         try:
             v = mod.validate(Path(d))
-        except Exception:  # noqa: BLE001 — never let a handler abort the loop
+        except Exception as e:  # noqa: BLE001 — never let a handler abort the loop
+            unavailable(name, f"validate() raised: {type(e).__name__}: {e}"[:300])
             return None
-        return v if isinstance(v, dict) else None
+        if not isinstance(v, dict):
+            unavailable(name, f"validate() returned {type(v).__name__}, expected dict")
+            return None
+        return v
 
     problems: list[str] = []
     warnings: list[str] = []
     by_cap: dict[str, dict] = {}
     got_signal = False
     for name in caps:
-        mod = _load_capability_abstract(name, "validate")
-        if mod is None or not hasattr(mod, "validate"):
+        mod, why = _load_capability_abstract(name, "validate")
+        if mod is None:
+            unavailable(name, why)
+            continue
+        if not hasattr(mod, "validate"):
+            unavailable(name, "abstract.py defines no validate()")
             continue
         v = _run(name, mod, cand_dir)
         if v is None:
@@ -2083,7 +2115,7 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
         return None
     import importlib.util
 
-    skills_root = Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    skills_root = _capabilities_root()
     complete = True  # did we get a usable is_empty() from EVERY requested capability?
     for name in caps:
         abstract_path = skills_root / name / "scripts" / "abstract.py"
@@ -2091,10 +2123,10 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
             complete = False
             continue
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"capevolve_cap_{name}_isempty", abstract_path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            mod, _why = _load_capability_abstract(name, "isempty")
+            if mod is None:
+                complete = False
+                continue
             is_empty = getattr(mod, "is_empty", None)
             if is_empty is None:
                 complete = False
