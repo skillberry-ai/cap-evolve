@@ -49,7 +49,7 @@ def main() -> int:
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     for needle, label in [
         ("Round loop", "agent-mode round loop"),
-        ("finalize", "seal via cap-evolve finalize"),
+        ("finalize", "seal via the finalize phase"),
         ("primary metric", "primary-metric gating"),
         ("orchestration_mode: agent", "agent-mode gating"),
     ]:

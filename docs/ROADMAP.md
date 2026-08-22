@@ -26,7 +26,7 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
   obra/superpowers) — verified headless commands; adding one is a single YAML row.
 - Honest-eval upgrades: paired significance gate (default), seal-on-success test,
   structured `Rollout.error` infra signal, per-trial seed for real pass^k variance.
-- Rich **self-contained** `dashboard.html` + `cap-evolve report --terminal` ANSI report.
+- Rich **self-contained** `dashboard.html` + ANSI terminal report (`/cap-evolve:report --terminal`).
 - Host-agnostic installer + Claude Code plugin (honesty hooks in core-owned scripts,
   diagnoser/proposer subagents, router) — `claude --plugin-dir ./plugins/cap-evolve`.
 - Real proof: tau2-bench airline (gpt-oss-120b agent + user simulator) optimized

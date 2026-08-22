@@ -103,7 +103,7 @@ Reports the frontier/pool, best candidate, accepts, merges, and metric-calls spe
 test stays sealed for `finalize`.
 
 ## Agent-mode loop
-When `orchestration_mode: agent`, drive gepa yourself: maintain the candidate pool/Pareto frontier; each round pick a parent (per gepa's selection), reflect on its val feedback to propose an edit, evaluate on **val** via cap-evolve, gate Δ>k·SE, accept→snapshot & add to the frontier / reject→drop. Metric-calls is the primary budget. Log rounds to the run dir; between rounds verify rollouts+results landed so the dashboard reflects the frontier. Re-read `stop_condition`; stop on it/budget. Seal once with `cap-evolve finalize`, then `report`.
+When `orchestration_mode: agent`, drive gepa yourself: maintain the candidate pool/Pareto frontier; each round pick a parent (per gepa's selection), reflect on its val feedback to propose an edit, evaluate on **val** via cap-evolve, gate Δ>k·SE, accept→snapshot & add to the frontier / reject→drop. Metric-calls is the primary budget. Log rounds to the run dir; between rounds verify rollouts+results landed so the dashboard reflects the frontier. Re-read `stop_condition`; stop on it/budget. Seal once with `/cap-evolve:finalize`, then `/cap-evolve:report`.
 
 ## References
 

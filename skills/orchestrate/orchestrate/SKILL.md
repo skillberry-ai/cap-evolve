@@ -52,7 +52,7 @@ Rules:
 2. **Honesty is self-policed:** never touch the sealed test split until the end; revert on regression; acceptance is val-only.
 3. **Between rounds, verify the run dir has what the dashboard needs** before continuing: the round's events are logged, results/rollouts are written, and each accepted candidate is snapshotted. If a round produced no run-dir artifacts, the dashboard will be blank — fix that before proceeding.
 4. **Re-read `stop_condition` each round.** Stop when it is met, or budget/stall hits.
-5. **Seal once, at the end:** call `cap-evolve finalize` (scores the best candidate on the sealed test split exactly once) then `cap-evolve report`. A run with no finalize has no result.
+5. **Seal once, at the end:** run the **finalize** phase — `/cap-evolve:finalize`, i.e. `python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P"` (scores the best candidate on the sealed test split exactly once) — then the **report** phase, `/cap-evolve:report`. There is no `cap-evolve` CLI subcommand for either; both are phase scripts. A run with no finalize has no result.
 
 ## How to run
 ```

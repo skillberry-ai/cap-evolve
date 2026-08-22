@@ -5,7 +5,7 @@ description: >-
   Each round re-evaluates the train split, clusters failures into a shared Obsidian-style markdown
   "weakness graph", dispatches one solver agent per weakness in its own git worktree scoped to that
   weakness's frozen affected_tasks, merges verified improvements, reverts a whole round on regression,
-  and repeats until the spec's stop_condition — then seals the test once via `cap-evolve finalize`.
+  and repeats until the spec's stop_condition — then seals the test once via the finalize phase.
   Writes its wiki into the run dir; the cap-evolve dashboard reads those files directly and renders
   the Weakness graph tab — no second server, no embedded view to launch.
   USE when algorithm_skill: evograph and orchestration_mode: agent.
@@ -36,7 +36,7 @@ cap-evolve's:
 | its own setup Q&A (`questions.md`) | **cap-evolve `intake`** — read the spec (`capevolve.yaml`); ask nothing of your own |
 | "discover & run the bench yourself" | **cap-evolve adapter + harness** — evaluate through `cap-evolve` (writes run-dir rollouts/results) |
 | its own train/test split | **cap-evolve seeded splits** (`splits.json`); train each round, **test sealed** |
-| its own final-test.json + cost prompt | **`cap-evolve finalize`** produces the sealed number; mirror it into the wiki for the view |
+| its own final-test.json + cost prompt | the **finalize phase** (`/cap-evolve:finalize`) produces the sealed number; mirror it into the wiki for the view |
 | wiki under `.evograph/` | wiki under the **cap-evolve run dir** (`<run_dir>/wiki/…`) so the dashboard tab reads it |
 | primary/secondary from its own config | the spec's `metric_primary` / `metrics_display` (**#38**) — gate on the primary only |
 
@@ -58,7 +58,7 @@ terms/formats out of the run dir:
 ## Hard rules (honesty — never violate)
 
 1. **The sealed test split is untouchable until the end.** Evaluate only on train (rounds) / the
-   affected_tasks; never score test until the final `cap-evolve finalize` (which owns the seal —
+   affected_tasks; never score test until the final finalize phase (which owns the seal —
    `RunDir.reserve_test`/`commit_test`). One test scoring, ever.
 2. **Acceptance is gated on the primary metric.** A merge/solution is kept only if it improves the
    primary metric over its baseline on the relevant tasks; a whole round reverts if the round-start
@@ -129,10 +129,12 @@ solution cards + logs present, standard events/rollouts emitted). Re-read `stop_
 (2.1) or halt.
 
 ## Step 3 — Final test (once, after halt)
-Call `cap-evolve finalize` — it scores the best candidate on the sealed test split exactly once and
+Run the finalize phase — `/cap-evolve:finalize`, i.e.
+`python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P"` (there is no `cap-evolve`
+subcommand for it) — it scores the best candidate on the sealed test split exactly once and
 burns the seal (unfakeable headline number). Mirror that number into `<run_dir>/wiki/results/final-test.json`
 (`"split":"test"`, `"round":"final"`) so evograph's tab shows it in its Final-test panel. Then
-`cap-evolve report`.
+run the report phase, `/cap-evolve:report`.
 
 ## Cost — use cap-evolve's cost system (not a separate one)
 Do **not** run a bespoke end-of-run cost prompt. Cost is cap-evolve's job: every eval you drive

@@ -2,7 +2,7 @@
 
 The hook blocks a Stop (exit 2) once per chain when an agent-mode run is not yet
 finalized, so the coding agent keeps driving its loop until it seals with
-`cap-evolve finalize`. Deterministic runs, finalized runs, and a relenting chain
+the finalize phase. Deterministic runs, finalized runs, and a relenting chain
 (`stop_hook_active`) are all unaffected.
 
 We unit-test `decide()` directly. The green-check itself (`_check_failed_reason`)
