@@ -72,10 +72,10 @@ python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split 
 python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val
 ```
 
-Read `clusters` for what to fix and `kept_good` for what you must not break. **With a disjoint train split,
+Read `clusters` for what to fix and `kept_good` for what not to break. **With a disjoint train split,
 diagnose it too and compare its cluster signatures to val's** — free, and it decides whether the round can
 work at all: if the signatures are disjoint, no train-driven edit can move the val mean, and every candidate
-is rejected for a reason that looks exactly like a null result. Say which it is in the report. (Baseline
+is rejected for a reason that looks exactly like a null result. Say which, in the report. (Baseline
 scores val only, so pay one `evaluate --split train` first.)
 
 **Read the per-task pass rate, not the per-task pass/fail.** At `num_trials: n` a task's reward is
@@ -146,7 +146,7 @@ python "$A/screen.py" --run-dir "$R" --project "$P" \
 ```
 
 Only the candidate pays, and only for the subset. `decision` is `kill` or `promote` — **never accept** — and
-it kills only on proven harm. **Check the arithmetic before relying on a screen:**
+it kills only on proven harm. **Check the arithmetic before trusting a screen:**
 `savings.breakeven_kill_rate` (`fired / full_val_rollouts`) is the fraction it must kill to pay for itself;
 `savings.net_rollouts` books what it cost. Screen only when that break-even sits below your observed kill
 rate — on a small val the tier-1 floor makes it unreachable, so pay full val directly — and read a screen as
@@ -265,11 +265,11 @@ mechanism-vs-artifact designs, gating the sum not each addend, the sign test bel
 ## Stop & seal, then MEASURE (once)
 
 Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run `spend.py`.
-Everything it reports is re-read from the run dir, never from a total in your head — which is what
-keeps a `$6.00` cap from becoming `$6.01`. (The Stop hook re-nudges you across turns until the run is
-finalized.) Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs
-best on **val**, on **train** when the spec defines one worth reporting, and on the **sealed test**
-split scored once:
+Everything it reports is re-read from the run dir, never a total in your head — which keeps a `$6.00`
+cap from becoming `$6.01`. (The Stop hook re-nudges you across turns until the run is finalized.)
+Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs best on
+**val**, on **train** when the spec defines one worth reporting, and on the **sealed test** split
+scored once:
 
 ```bash
 python "$A/measure.py" --run-dir "$R" --project "$P" --train auto
@@ -278,10 +278,9 @@ python "$S/phases/report/scripts/run.py" --run-dir "$R"
 
 `measure.py` reads val off the rollouts the gate already used (free), evaluates train only when it adds
 information, and seals test through the same `harness.finalize` the finalize phase calls — so it is
-interchangeable with `phases/finalize/scripts/run.py`. Report its four refusals as it states them, never
-paraphrased softer: an **empty** split is `empty`, not 0.0; a **no-holdout** spec is a **FIT metric, not
+interchangeable with `phases/finalize/scripts/run.py`. Report its four refusals unsoftened: an **empty** split is `empty`, not 0.0; a **no-holdout** spec is a **FIT metric, not
 generalisation**, with the overlap counted; a negative `screen_ledger.net_rollouts` says screening was
-pure overhead; `best_id == "seed"` is a **null result with a diagnosed cause**, never a 0.000 gain.
+pure overhead; `best_id == "seed"` is a **null result with a diagnosed cause**, not a 0.000 gain.
 (Sealing is that phase script, **not a CLI subcommand**; a second finalize raises `TestSealError`.)
 No finalize, no result.
 

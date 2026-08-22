@@ -1,6 +1,53 @@
 # Post-merge review — four merged skill PRs (#368 agent-optimize · #369 gepa · #380 skillopt · #373 mcp-tool)
 
-Reviewed against `main` at `af7cf9d6`. None of the four was independently reviewed before merge.
+Reviewed against `main` at `af7cf9d6`.
+
+> **Rebase addendum (`main` at `c8bc2292`).** Re-derived a second time after #387, #388,
+> #391, #393 and #396 landed. **Three of my own conclusions changed, and one of my own
+> tests caught me** — recorded here rather than silently corrected, because the whole
+> finding of this review is that a hand-derived skill-vs-code table decays:
+>
+> - **gepa's Known gaps went from 5 bullets to 2.** #387 fixed the hollow eval-cache
+>   reflection (`cache.py:91-99` now persists `output`/`trace`/`errored`, and
+>   `gepa.py:162-175` replays them), and #396 fixed BOTH the missing `step` record and the
+>   non-accumulating `JOURNAL.md` — `harness.record_iteration` (`harness.py:1037-1077`) is
+>   now the one place any algorithm ends an iteration, and gepa calls it at four sites. So
+>   the section I had cut from 5 to 4 bullets needed cutting again, to 2: the missing task
+>   input (`gepa.py:230` vs `:263-267`) and the empty-train→val fallback (`:530`).
+> - **Two `harness.py` citations rotted again.** #393 + #396 grew the file ~266 lines, so
+>   `harness.py:2004-2006`/`:2013` became `:2270-2272`/`:2279`. Re-derived mechanically
+>   (`/tmp/capreview-pma-rederive2.py`) rather than by hand: **23/23 skillopt + 3/3 gepa
+>   citations now resolve.** All 19 `skillopt.py` citations held — only the cross-file ones
+>   moved, which is the predictable failure mode and an argument for citing symbols over
+>   lines.
+> - **My own tripwire fired, for the right reason and the wrong cause.**
+>   `test_skillopt_minibatch_focus_is_still_empty_by_construction` went red — not because
+>   #371 was fixed, but because #391 reworded the summary from `of 0 tasks` to
+>   `of 0 focused task(s) of N on val`. The gap is exactly as real. Two consequences: the
+>   test now asserts the **property** (`0 solid / 0 flaky / 0 failing`, and no val feedback
+>   leaking into a train-focused prompt) instead of a sentence, and skillopt's SKILL.md no
+>   longer quotes the pre-#391 string. A tripwire that fires on rewording is a false alarm,
+>   which is worse than none — my own mistake, caught by my own test.
+> - **Preserved unchanged:** the gepa budget-ceiling correction, re-verified against current
+>   `gepa.py` (`_try_merge` samples a FRESH minibatch at `:831` and evaluates the merge plus
+>   BOTH parents at `:832`/`:834`/`:836`, then pays a second full val) — `5·mb +
+>   2·|val|·n_trials` stands exactly. #396's AST guard in
+>   `core/tests/test_iteration_record_parity.py` is untouched (`git diff` empty, 9 passed).
+> - **Added from #396's semantics:** an INDECISIVE gepa child **charges `spent.iterations`**
+>   while leaving the stall counter alone (`record_iteration(..., indecisive=True)`,
+>   `harness.py:1072`). The spend meter counts it because the rollouts were really spent;
+>   only the evidence meter does not. A reader budgeting a run needs that distinction and
+>   the skill did not have it.
+> - **#388's fix preserved through the conflict:** both merge conflicts were #388's removal
+>   of the phantom `cap-evolve status` / `cap-evolve finalize` subcommands colliding with my
+>   trims. #388's substance won; the phantom commands were not reintroduced (verified by the
+>   14 subcommand-guard tests).
+>
+> Final counts: **836 passed, 12 skipped** (main's 829 + 7 new), all four `check.py` clean,
+> `bash examples/toy_calc/run.sh` → `best_id cand_0001`, `test_reward 1.0`, `finalized true`,
+> and the three failing-first assertions re-verified RED against `origin/main`
+> (`/tmp/capreview-pma-failingfirst2.py`).
+ None of the four was independently reviewed before merge.
 `main` baseline confirmed green at **805 passed, 12 skipped**
 (`PYTHONPATH="$PWD/core:$PWD/dashboard/backend" python -m pytest core/tests -q`).
 

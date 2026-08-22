@@ -110,12 +110,16 @@ def test_optimizer_read_context_is_never_an_editable_component():
 # ---- #380: the gap skillopt's SKILL.md documents (#371) ------------------
 
 def test_skillopt_minibatch_focus_is_still_empty_by_construction():
-    """`skillopt/SKILL.md` § Known gaps: "Mini-batch ids come from **train** but filter
-    the parent's **val** rows ... Every step renders `0 solid / 0 flaky / 0 failing of
-    0 tasks`" (#371).
+    """`skillopt/SKILL.md` § Known gaps: train mini-batch ids filter the parent's **val**
+    rows, so the focus summary classifies ZERO tasks and the failure index is empty (#371).
 
     This test FAILS the day #371 is fixed — on purpose. The gap is documented in the
     skill, so the fix must delete that paragraph in the same change.
+
+    Asserts the PROPERTY (nothing classified, no failure index), not the sentence: an
+    earlier version pinned the literal "of 0 tasks" and #391 reworded the summary to
+    "of 0 focused task(s) of N on val" while the gap stayed exactly as real. A tripwire
+    that fires on rewording is a false alarm, which is worse than none.
     """
     from cap_evolve import harness
     from cap_evolve.loop import SplitResult
@@ -124,11 +128,16 @@ def test_skillopt_minibatch_focus_is_still_empty_by_construction():
         "split": "val", "reward": 0.5, "stderr": 0.0,
         "per_task": [{"task_id": "v1", "reward": 0.0, "feedback": "boom"},
                      {"task_id": "v2", "reward": 1.0, "feedback": ""}]})
+    # train ids, against a val result — exactly what skillopt hands ctx.instructions().
     rendered = harness._focus_instructions(val, ["t1", "t2"], "mini-batch of 2 train tasks, L=4",
                                            algorithm="skillopt")
-    assert "of 0 tasks" in rendered, (
-        "the mini-batch focus block is no longer empty — #371 looks fixed, so remove "
-        "the 'mini-batch never reaches the optimizer' gap from skillopt/SKILL.md")
+    summary = next(ln for ln in rendered.splitlines() if ln.startswith("Focus:"))
+    assert "0 solid / 0 flaky / 0 failing" in summary, (
+        "the mini-batch focus block classifies tasks now — #371 looks fixed, so remove the "
+        f"'mini-batch never reaches the optimizer' gap from skillopt/SKILL.md. Got: {summary}")
+    assert "boom" not in rendered, (
+        "a val task's feedback reached a train-focused prompt — #371 looks fixed; update "
+        "skillopt/SKILL.md")
 
 
 # ---- #368: the reference pointer must not promise a missing rule ---------

@@ -56,8 +56,11 @@ sees the split its gate is computed on.
    header always reads `0/N pass` — read it as "sampled tasks, worst first". Each
    entry is truncated to ~800 chars and at most 12 tasks are written: a summary,
    not an archive; untruncated rollouts stay in `rollouts/train/`. The prompt also
-   carries the run's cross-iteration files (`LEDGER.md`, `PROCESS.md`, `RUNMAP.md`
-   + `prior_iterations/`) so a proposal builds on prior work.
+   carries the run's cross-iteration files (`LEDGER.md`, `JOURNAL.md`, `PROCESS.md`,
+   `RUNMAP.md` + `prior_iterations/`) so a proposal builds on prior work. All five are
+   real here since #396: `harness.record_iteration` writes the `step` event those
+   files are built from and folds the optimizer's appended `JOURNAL.md` entry back
+   into the run-level handover, so the history accumulates across iterations.
 4. **Local gate** — child on the same minibatch, `sum(child) > sum(parent)`, else
    dropped with no val spend. This is the extra stage; everything after it is
    hill-climb's.
@@ -105,7 +108,10 @@ For a single-file capability the two coincide and the merge skips gracefully
   eval surface (scorer/gold/tasks/tests).
   A child that edits one is **INDECISIVE** — no reward recorded, not remembered
   as rejected, stall counter untouched — because scoring a gold-hacking edit at
-  all would teach the optimizer that it worked.
+  all would teach the optimizer that it worked. It still **charges
+  `spent.iterations`** (`record_iteration(..., indecisive=True)`): the rollouts and
+  the optimizer call were really spent, so the spend meter counts it and only the
+  evidence meter does not.
 - `--workers` (default 1): pools the minibatch rollouts. Only safe when the
   adapter's `run_target` is thread-safe.
 - `--store` / `--store-commit-cmd` (default `git`): where accepted candidates are
@@ -118,21 +124,22 @@ For a single-file capability the two coincide and the merge skips gracefully
 
 ## Known gaps (present tense — the shipped loop, not the paper)
 
-- The reflective dataset does **not** carry the task input, though `gepa.py`'s
-  docstring claims it does — the optimizer sees a bad answer to an unknown
-  question. And on an eval-cache hit only `{reward, feedback}` were stored, so
-  `Agent output:` comes out empty; re-sampled parents hit the cache routinely
-  (#111, PR #210).
-- Iterations are charged against budget while no `step` event is emitted, so
-  consumers counting iterations from `step` records see zero (#216/#224, PR #356).
-- `JOURNAL.md` is injected as the cross-run handover but never accumulates here:
-  `_reconcile_journal` folds the optimizer's new entry back into the run-level file
-  from `harness.run_step` only, and GEPA runs the optimizer itself. Every iteration
-  therefore reads the same journal the first one did — which is why step 3 above
-  leaves it out of the list.
-- If `splits.train` is empty the minibatch silently falls back to **val** ids,
-  putting the gate split in front of the proposer, with no warning. Do not run
-  GEPA with a zero-size train split.
+Two. Re-derived against current `main`, because most of what this section used to
+list has since been fixed in core: the hollow eval-cache reflection by #387, the
+missing `step` record and the non-accumulating `JOURNAL.md` by #396
+(`harness.record_iteration` is now the one place every algorithm ends an iteration,
+and GEPA calls it), and the dirty snapshots plus the un-excluded optimizer-agent
+dotfiles by #350 and #386. Check the two below before trusting them.
+
+- The reflective dataset does **not** carry the task input, though
+  `_write_reflection`'s own docstring says each failing task "contributes its
+  input" (`gepa.py:230`). It writes `Agent output` / `Trajectory` / `Feedback` and
+  no input field (`:263-267`), so the optimizer sees a bad answer to a question it
+  cannot read. Since #387 the output and trace survive an eval-cache hit, so the
+  entry is no longer *hollow* — just anonymous.
+- If `splits.train` is empty the minibatch silently falls back to **val** ids
+  (`gepa.py:530`), putting the gate split in front of the proposer, with no
+  warning. Do not run GEPA with a zero-size train split.
 
 ## How to run
 

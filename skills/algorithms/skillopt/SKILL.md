@@ -88,15 +88,16 @@ the gap has moved and this section is what needs re-deriving.
 - **The mini-batch never reaches the optimizer** (issue #371). Mini-batch ids come
   from **train** (`skillopt.py:237`, sliced at `:291`) but are handed to
   `ctx.instructions` (`:300`) to filter the parent's **val** rows
-  (`harness.py:2004-2006`; the same train-vs-val mismatch at `:323`, `:327`), and
+  (`harness.py:2270-2272`; the same train-vs-val mismatch at `:323`, `:327`), and
   splits are disjoint slices (`splits.py:117-119`). So the focus summary always
-  renders `0 solid / 0 flaky / 0 failing of 0 tasks`, the failure index is empty,
-  and `## Failure patterns still unsolved` never appears — while the
-  `(mini-batch of N train tasks, L=…)` label still prints, which is why it looked
-  healthy. (The whole-val protect-these-ids block *is* populated, from
-  `harness.py:2013` — that is the only per-task content a step gets.) Until #371
-  lands the per-step signal is the label plus the `L` sentence, so the
-  epoch/mini-batch structure is bookkeeping rather than focus. PR #370 fixed the
+  renders `0 solid / 0 flaky / 0 failing of 0 focused task(s) of N on val`, the
+  failure index is empty, and `## Failure patterns still unsolved` never appears —
+  while the `(mini-batch of N train tasks, L=…)` label still prints, which is why it
+  looked healthy. (The whole-val protect-these-ids block *is* populated, from
+  `harness.py:2279` — that is the only per-task content a step gets, and #391 added
+  the `of N on val` scope precisely so those two numbers stop contradicting each
+  other.) Until #371 lands the per-step signal is the label plus the `L` sentence, so
+  the epoch/mini-batch structure is bookkeeping rather than focus. PR #370 fixed the
   same defect in hill-climb's `cyclic`/`hardest-first` modes.
 - **The epoch-boundary re-evaluation scores the whole train split, not a sample.**
   `skillopt.py:467-472` calls `evaluate_candidate(..., split="train")` twice with
