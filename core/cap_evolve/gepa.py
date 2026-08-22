@@ -55,6 +55,8 @@ from . import integrity
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
+    OptimizerContext,
+    _SNAPSHOT_IGNORE,
     _augment_instructions,
     _init_memory_store,
     _live,
@@ -473,6 +475,7 @@ def gepa_loop(
     store=None,
     resume: bool = False,
     protected_patterns=None,
+    ctx: OptimizerContext | None = None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -495,6 +498,7 @@ def gepa_loop(
     highest-val pool member; the test split is never touched.
     """
     gate_kwargs = dict(gate_kwargs or {})
+    ctx = ctx or OptimizerContext()   # the SAME read-context assembly as its siblings
     rejected, history, store = _init_memory_store(run_dir, store)
     cache = EvalCache(run_dir.root / "eval_cache.json")
     rng = random.Random(seed)
@@ -576,9 +580,19 @@ def gepa_loop(
             comp_cursor += 1
         else:
             focus = None  # 'all'
+        # The shared optimizer read-context (capability skill(s) natively + under
+        # ./guidance/, the diagnose method, sources, the optimizer features ref). The
+        # trajectories are tagged with THIS parent's minibatch eval — gepa's parent is a
+        # frontier member, not the run's best, so the untruncated traces behind
+        # REFLECTION.md are the ones to hand over.
+        ctx.inject(adapter, run_dir, workdir, split="train", tag=f"mb_p_{n:04d}")
         refl_summary = _write_reflection(workdir, parent_mb)
         focus_label = _write_focus(workdir, comps, focus)
-        instructions = _instructions(refl_summary, focus_label, mb)
+        instructions = ctx.instructions(
+            parent_mb, mb, f"GEPA minibatch of {len(mb)} train tasks, component focus "
+                           f"{focus_label}",
+            algorithm="gepa", parent_dir=parent_dir,
+            extra=_instructions(refl_summary, focus_label, mb))
         instructions = _augment_instructions(instructions, workdir, run_dir, rejected, history)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather
@@ -665,7 +679,9 @@ def gepa_loop(
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
         if accepted:
-            run_dir.snapshot(cid, workdir)
+            # ignore=: the injected read-context (trajectories/guidance/native skills) is
+            # NOT part of the candidate — same exclusion hill-climb's run_step applies.
+            run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
             child_dir = run_dir.candidate_dir(cid)
             pool.append(_entry(cid, child_dir, cand_val, parent=parent["id"]))
             lineage[cid] = parent["id"]
@@ -829,7 +845,7 @@ def _try_merge(
     run_dir.update_spent(iterations=1, accepted=accepted)
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
-        run_dir.snapshot(mid, workdir)
+        run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)
         pool.append(_entry(mid, run_dir.candidate_dir(mid), cand_val, parent=base_parent["id"]))
         lineage[mid] = base_parent["id"]
         history.add(mid, summary, cand_val.reward)

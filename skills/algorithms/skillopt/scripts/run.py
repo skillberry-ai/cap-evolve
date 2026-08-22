@@ -72,6 +72,8 @@ def main(argv=None) -> int:
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--resume", action="store_true",
                    help="continue from the run's current best instead of baseline")
+    # The shared optimizer read-context flags — identical set to hill-climb/gepa.
+    harness.OptimizerContext.add_arguments(p)
     p.add_argument("--protected-paths", default="",
                    help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
                         "tests). 'default' expands to the built-in set. Empty = off. A "
@@ -109,6 +111,7 @@ def main(argv=None) -> int:
                      else {"mode": args.gate_mode, "k_se": args.k_se}),
         no_regression=args.no_regression, slow_update=args.slow_update,
         slow_update_sample=args.slow_update_sample, algorithm=ALGO, store=store,
+        ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
         protected_patterns=harness.parse_protected_paths(args.protected_paths),
     )
     run_dir.close_observers()

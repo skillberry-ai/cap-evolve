@@ -378,6 +378,14 @@ _ALGO_FOCUS_ALIASES = {
 #: epoch schedule, so the spec key is inert for them — and we say so rather than drop it.
 CONVERGENCE_ALGORITHMS = frozenset({"hill-climb"})
 
+#: Algorithms whose ``run.py`` declares the optimizer-context flags (via
+#: ``harness.OptimizerContext.add_arguments``) and can therefore be handed the full
+#: read-context: capability skills, the instructions template, the benchmark repo, the
+#: optimizer name, the capability sources, and the target-reader profile. These flags used
+#: to be gated to hill-climb alone, which silently handed gepa and skillopt a strictly
+#: thinner prompt and made any cross-algorithm comparison meaningless.
+OPTIMIZER_CONTEXT_ALGORITHMS = frozenset({"hill-climb", "gepa", "skillopt"})
+
 
 def _resolve_algorithm(name: str) -> tuple[str, str | None]:
     """Map a spec ``algorithm_skill`` to (skill_name, focus).
@@ -851,23 +859,23 @@ def _cmd_run(argv):
     if algorithm_focus is not None:
         alg_cmd += ["--focus", algorithm_focus]
     # Surface the selected capability skills to the optimizer prompt so it knows the
-    # allowed edit space (e.g. tools → may add composite tools). hill-climb consumes
-    # --capabilities; algorithms without the flag ignore the extra arg via argparse error,
-    # so only pass it to those that accept it.
+    # allowed edit space (e.g. tools → may add composite tools). Passed to every
+    # algorithm that declares the optimizer-context flags, so each one prompts from the
+    # same read-context.
     caps = spec.get("capabilities") or []
     if isinstance(caps, str):
         caps = [c.strip() for c in caps.split(",") if c.strip()]
-    if caps and algorithm_name == "hill-climb":
+    if caps and algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS:
         alg_cmd += ["--capabilities", ",".join(str(c) for c in caps)]
     # Thread the resolved optimizer NAME so the harness can copy that optimizer's
     # features reference (parallel-subagent capabilities etc.) into each iteration's
-    # workdir. Only hill-climb accepts the flag; other algorithms ignore it.
-    if algorithm_name == "hill-climb":
+    # workdir and place the skills where that agent natively finds them.
+    if algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS:
         alg_cmd += ["--optimizer-name", str(optimizer_name)]
     # Optimizer-instructions template (intake-authored, per benchmark) + benchmark repo
     # as read-only optimizer context. Both are resolved project-relative if not absolute.
     # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.
-    if algorithm_name == "hill-climb":
+    if algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS:
         instr = spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md"
         instr_p = Path(instr)
         if not instr_p.is_absolute() and not instr_p.exists():
