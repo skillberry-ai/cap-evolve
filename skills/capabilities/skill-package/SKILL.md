@@ -1,122 +1,98 @@
 ---
 name: skill-package
-description: Optimize an Agent Skill package itself — its SKILL.md (frontmatter + body), references, and bundled scripts. Use when the capability under optimization IS a skill, you want the downstream agent to trigger it correctly and follow it without wasted steps. Enforces the skill-creator authoring rules (progressive disclosure, valid frontmatter, body budget, one-level references) so edits stay valid skills.
+description: Optimize an Agent Skill package itself — its SKILL.md (frontmatter + body), its references, and its bundled scripts. Use when the capability under optimization IS a skill, you want the downstream agent to trigger it correctly and follow it without wasted steps, or you want a step the agent keeps skipping turned into deterministic bundled code. Checks every edit against the skill-creator authoring rules (valid frontmatter, progressive disclosure, one-level references, body budget, scripts that compile and self-check) so a candidate stays a valid, runnable skill.
 component: capability
 argument-hint: "--path DIR"
 allowed-tools: Read, Write, Edit, Bash
 provides: [candidate]
 needs: []
-sources: [agentskills, skillgrad, trace2skill, skillopt]
+sources: [agentskills, skillgrad, trace2skill]
 ---
 
 # Capability: skill package
 
-The thing being optimized is a skill directory (a `SKILL.md` plus `references/`,
-`scripts/`, `assets/`). This capability treats that whole package as the editable
-artifact and bakes in the **skill-creator** authoring rules (sourced to first-party
-Anthropic docs — see [`references/concepts.md`](references/concepts.md)) so the
-optimizer improves the skill without breaking it.
+The artifact is a whole skill directory — `SKILL.md` plus `references/`, `scripts/`
+and `assets/` — and **all of it is editable**: `materialize()` exposes every file as
+a component, `apply()` can rewrite or CREATE one (a new bundled script included), and
+`validate()` checks the result against the **skill-creator** authoring rules
+(first-party sources in [`references/concepts.md`](references/concepts.md)).
 
 ## What you can change (highest leverage first)
 
-Each lever is an edit class; pick the one that fixes the biggest failure cluster.
-One-line examples here; depth in the referenced files.
+Pick the lever that fixes the biggest failure cluster; depth is in the references.
 
-1. **The `description` / trigger** — the decision boundary that makes the skill
-   fire, and the single highest-leverage edit. Write it **third person**, state
-   **what** it does AND **when** to use it, and use the **keywords a user would
-   actually say**. Lean slightly pushy for under-trigger; tighten the boundary and
-   name near-miss cases for over-trigger. **Front-load the key use case** — the
-   listing truncates `description + when_to_use` at 1,536 chars. *Ex:* "Formats
-   data" → "Exports records to CSV. Use when the user asks to export or download a
-   table." Full playbook: [`references/description-optimization.md`](references/description-optimization.md).
-2. **The body** — improve clarity / altitude, remove dead weight, fix the step the
-   agent keeps skipping. The body is loaded on every trigger and **stays in context
-   all session — a recurring token cost**, so keep it **<500 lines AND ~5k tokens**
-   and **state what to do, don't narrate why at length**. Imperative voice; explain
-   the *why* of a rule briefly instead of piling on ALL-CAPS MUSTs.
-3. **References** — factor mutually-exclusive or rarely-co-used detail into
-   `references/*.md` as the body grows. Keep them **one level deep**, link each
-   **directly from SKILL.md with an explicit pointer saying what it contains and
-   when to load it**, and give long refs (>300 lines) a table of contents. Don't
-   nest (a ref pointing to another ref) — the agent may only partially read it.
-4. **Scripts** — when traces show the agent re-implementing the same helper, or a
-   step is deterministic/repeatable, **bundle it in `scripts/`** and **state
-   execute-vs-read intent**. A script runs via bash without its code entering
-   context (output-only token cost); prose is only *likely* and costs context.
-   Reserve prose for steps that need judgment.
+1. **The `description` / trigger** — the only text loaded before the skill fires, so
+   the single highest-leverage edit. Third person; state **what** it does AND **when**
+   to use it; use the **keywords a user would actually say**. Lean slightly pushy for
+   under-trigger, tighten the boundary and name near-miss cases for over-trigger, and
+   **front-load the key use case** (hosts truncate the listing — 1,536 chars on Claude
+   Code by default). *Ex:* "Formats data" → "Exports records to CSV. Use when the user
+   asks to export or download a table." Playbook + the measurable loop:
+   [`references/description-optimization.md`](references/description-optimization.md).
+2. **A skipped step → a bundled script** (the determinism lever). Prose is only
+   *likely* to be followed; code that runs is repeatable. When the traces show the
+   agent skipping a step, re-deriving the same helper, or doing a deterministic
+   transform by hand, **write it into `scripts/` and make the body invoke it** by
+   command line. Write real, working code — never `...` or a docstring-only stub —
+   give it a `--self-check` entry point (`validate()` runs it, so a broken script is
+   caught before any rollout is paid for), and say **execute, don't read**: a script's
+   source never enters the agent's context, only its output.
+3. **The body** — improve clarity and altitude, delete dead weight, fix the
+   instruction the agent misreads. The body loads on every trigger and stays in
+   context all session — a recurring cost — so keep it **≤500 lines** (enforced),
+   imperative, and explain a rule's *why* briefly instead of piling on ALL-CAPS MUSTs.
+4. **References** — move mutually-exclusive or rarely-co-used detail into
+   `references/*.md`. Keep them **one level deep** (a ref must not point at another
+   ref — the agent may read only part of it), link each **directly from SKILL.md with
+   a pointer saying what it holds and when to load it**, and give a long ref (>300
+   lines) a table of contents **at the very top, above any orientation prose** — the
+   check is positional because a TOC the head-reader never reaches is not a TOC.
+   Multiple variants/domains → one ref per variant (`references/aws.md`, `gcp.md`, …)
+   plus a selection body, so only one is read.
+5. **Assets** — `assets/` holds files the skill *emits* (templates, icons, fonts),
+   not context the agent reads. Edit one only when the skill's output depends on it.
 
-> **Keep edits valid skills:** valid frontmatter (`name` ≤64/[a-z0-9-]/no XML;
-> `description` non-empty ≤1024/no XML, with a "use when" clause), body within
-> budget, references one level deep, no broken links. Don't introduce
-> unaudited/exfiltrating content — a skill body is executable context.
-
-## How agents use a skill (progressive disclosure)
-Three loading levels — optimize for the cheapest that still works:
-1. **Metadata** (`name` + `description`) — always in context (~100 tokens). The
-   description is the *only* thing that decides whether the skill fires.
-2. **SKILL.md body** — loaded when the skill triggers (recurring session cost).
-3. **References / scripts** — loaded or executed only as needed.
-
-So a vague description → the skill never triggers; a bloated body → wasted context
-and worse behavior; detail that belongs in a reference → paid for on every trigger.
+> **Every edit must leave a valid skill.** `validate()` fails a candidate on: no
+> `SKILL.md`; `name` missing/>64 chars/not `[a-z0-9-]`/containing an XML tag;
+> `description` empty/>1024 chars/containing an XML tag; a body over 500 lines; a
+> broken `references|scripts|assets/…` link; a bundled script that does not compile or
+> whose `--self-check` fails. It *warns* on the softer authoring smells (POV drift,
+> ALL-CAPS in the description, orphan or nested references, a missing TOC, a stub
+> script, a script with no self-check, network/subprocess use in new code). A skill is
+> executable context: keep bundled code auditable and free of surprises.
 
 ## Adapting to the reader's capability tier
-Scale the SKILL.md body density to WHO follows it at runtime (see the `THE READER` block
-in your instructions, if present). A **mid/weak** reader needs more worked steps, explicit
-ordering, and examples in the body — it infers less, so a compact principle-first body
-leaves it guessing. A **frontier** reader follows a compact, principle-first body and is
-slowed by over-specification. Keep the progressive-disclosure structure and body budget
-either way (push detail into `references/`); the tier changes how *explicit* the retained
-body is, not how *long* it may be.
+Scale body density to WHO follows it at runtime (see the `THE READER` block in your
+instructions, if present). A **mid/weak** reader needs more worked steps, explicit
+ordering, and examples in the body — and benefits most from lever 2, since code it
+executes cannot be skipped the way a rule can. A **frontier** reader follows a
+compact, principle-first body and is slowed by over-specification. The tier changes
+how *explicit* the retained body is, not how *long* it may be.
 
-## The description is the trigger — optimize it as a separable step
-Most triggering failures are fixed by editing the *description*, not the body.
-
-- **Under-trigger** → enumerate the phrasings and contexts that should fire it,
-  including when the user doesn't name the skill.
-- **Over-trigger** → tighten the boundary and state the near-miss cases it does NOT
-  cover. `CRITICAL`/`ALWAYS`/`MUST` in a description over-triggers current models —
-  prefer plain "Use when …"; reserve pushy phrasing for genuine under-triggering.
-- **Trivial single-step tasks** may not trigger any skill regardless of wording.
-
-## Measure every edit against the objective
-A skill edit is only an improvement if it raises the number we are optimizing.
-
-- **The acceptance signal is the intake benchmark score** on the held-out **val**
-  split, via cap-evolve `evaluate` → `gate`. Keep only gated wins; reject edits
-  that don't clear the significance bar. **Never overfit the handful of iteration
-  examples** — a skill is used many times; fiddly task-specific rules hurt.
-- **For triggering**, also track trigger-rate on a held-out set of should-trigger /
-  should-NOT-trigger prompts (with **near-miss negatives**), and pick the
-  description that scores best on the held-out set — the skill-creator loop's own
-  select-by-held-out discipline, which is exactly cap-evolve's train/val/test split.
-
-## Handlers (scripts/abstract.py)
-`materialize(dir)` → {SKILL.md, references/*} · `apply(dir, edits)` ·
-`validate(dir)` → frontmatter (`name` ≤64/[a-z0-9-]/no XML; `description` ≤1024/no
-XML with a "use when" clause; POV + all-caps + 1,536-listing lints), body ≤500
-lines / ~5k tokens, references one level deep + TOC for long ones, links exist.
-
-## Optimizing it each iteration (analyze → ideate → edit)
-**Analyze before editing** (treat the skill like an evolving playbook you curate):
-from the traces + the current skill, identify (a) recurring failures clustered by
-root cause (the step the agent skips, the wrong trigger, the misread instruction)
-and (b) good behavior seen only on some trials that should be made consistent. Then
-make **ONE** targeted edit that fixes the biggest cluster and reinforces (b),
-staying within the skill-creator rules. Be economical: one good edit, then stop.
+## Trigger rate is a second objective
+Task reward is the gate signal, and cap-evolve owns that machinery — do not add a
+private eval loop here. But triggering is invisible to task reward when the skill never
+fires, so measure it separately with `scripts/trigger_eval.py` on a held-out set of
+should-trigger / should-NOT-trigger prompts (with near-miss negatives) and keep the
+description that wins on the **held-out** half.
 
 ## How to run
 ```
-python scripts/check.py                                  # self-test (must pass)
-python scripts/run.py --path <skill_dir>                 # candidate + validity report
-python scripts/token_report.py --path <skill_dir>        # progressive-disclosure budget
+python scripts/check.py                            # self-test (must pass)
+python scripts/run.py --path <skill_dir>           # candidate + validity report
+python scripts/token_report.py --path <skill_dir>  # budget + script inventory
+python scripts/trigger_eval.py --eval-set <json> --skill <dir> --judge-cmd '<cmd>'
 ```
+Handlers in `scripts/abstract.py`: `materialize(dir)` → every file as a component ·
+`apply(dir, edits)` → `{changed, refused}`, contained to the package and gated by the
+action policy (`policy.json`: `frontmatter|body|reference|script|asset|add|remove`,
+so a run can allow prose but forbid new code) · `validate(dir)` → `{ok, problems,
+warnings, scripts}`.
 
 ## References
 - [`references/concepts.md`](references/concepts.md) — the authoring model and the
   validity rules, with first-party sources. Load for grounding.
 - [`references/description-optimization.md`](references/description-optimization.md)
   — the trigger-tuning playbook. Load when fixing under/over-trigger.
-- [`references/anti-patterns.md`](references/anti-patterns.md) — common bad smells
-  and the why. Load when a draft "feels off" or to review an edit.
+- [`references/anti-patterns.md`](references/anti-patterns.md) — skill smells and the
+  why. Load when a draft "feels off" or to review an edit.

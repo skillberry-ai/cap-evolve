@@ -167,8 +167,11 @@ general fix. A fiddly task-specific rule hurts the held-out tasks.
   blast-radius line in PROCESS.md. Drop any that doesn't.
 - You shipped several such edits across the top-ranked clusters you could fix SAFELY, and
   did NOT pad with speculative/cosmetic edits or re-add anything already rejected.
-- Every edit keeps its skill a VALID package (frontmatter, body budget, one-level
-  references, no broken links) — re-validate each touched skill.
+- Every edit keeps its skill a VALID package. The framework re-validates it for you
+  BEFORE any rollout is paid for (frontmatter, body budget, one-level references, no
+  broken links, and every bundled script compiles + its `--self-check` passes); a
+  candidate that fails is NOT SCORED AT ALL, so a broken script wastes the whole
+  iteration. Run `python <skill>/scripts/<file> --self-check` yourself before you stop.
 - No edit hardcodes a task-specific filename/value/marker/answer — every edit GENERALIZES.
 - PLACEMENT: every skill file you created/edited lives INSIDE a skill dir (docx/pptx/xlsx/pdf,
   e.g. `pdf/scripts/x.py`). You did NOT create any new skill file at the candidate ROOT — only
