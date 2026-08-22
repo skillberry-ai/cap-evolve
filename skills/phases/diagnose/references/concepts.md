@@ -21,9 +21,13 @@ fewer rollouts. diagnose is where that signal is manufactured.
 For each failing task, diagnose emits the triple GEPA calls a reflective dataset:
 
 - **Inputs** — what the task asked.
-- **Generated Outputs** — what the agent actually produced (and, where available,
-  the trajectory: reasoning, tool calls).
+- **Generated Outputs** — what the agent actually produced.
 - **Feedback** — the scorer's diagnosis of the failure.
+- **Trajectory** — a *path* to the full trace (reasoning, tool calls). A path and
+  not parsed content, because the trace format belongs to the runner: the location
+  comes from `Adapter.trajectories(split)`, which is documented to return "*any*
+  structure, files in *any* format". Anything that parsed it here would bind this
+  phase to one runner, which a phase skill may never do.
 
 Giving the optimizer this triple instead of a bare score is the difference
 between "you got 0.4" and "on these inputs you called the wrong tool because you
@@ -64,6 +68,26 @@ diagnose-then-edit optimizer family:
 
 A good round produces a *few* clusters; "one cluster per task" means the signature
 is too fine and no generalization is happening.
+
+### Why the signature is an overlap test, not a string match
+
+SKILL.md gives the procedure; this is why it has the shape it does. A signature
+built by hashing the leading words of the scorer's feedback fails in both
+directions, and both failures are silent:
+
+- **Fragmentation.** One root cause reaches the scorer in many phrasings — "did not
+  confirm the change", "omitted required confirmation step", "missing confirmation
+  before the write". Under string equality that is three clusters, so the optimizer
+  writes three narrow patches for one defect and overfits val three times over.
+  Requiring only *overlap* between the content-word keys keeps them together.
+- **Collapse.** A scorer whose every message opens with a fixed preamble ("Grading
+  failed for this trajectory because the expected outcome was not met: …") makes
+  every failure share its first dozen tokens. Under a prefix key the entire signal
+  becomes one cluster. Stripping the prefix that *all* failures share removes the
+  boilerplate without anyone having to configure a per-benchmark pattern.
+
+Both directions are regression-tested in `scripts/check.py`; the mechanism is
+`scripts/cluster.py`.
 
 ## Hand-off to the gate
 
