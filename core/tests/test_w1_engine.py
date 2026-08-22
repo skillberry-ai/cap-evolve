@@ -468,7 +468,8 @@ def test_cache_get_put_roundtrip(tmp_path):
     c = EvalCache(tmp_path / "cache.json")
     assert c.get("h", "t0") is None
     c.put("h", "t0", reward=0.7, feedback="ok")
-    assert c.get("h", "t0") == {"reward": 0.7, "feedback": "ok"}
+    assert c.get("h", "t0") == {"reward": 0.7, "feedback": "ok", "output": "",
+                                "trace": "", "errored": False}
     # persisted: a fresh instance reads it back
     c2 = EvalCache(tmp_path / "cache.json")
     assert c2.get("h", "t0")["reward"] == 0.7
