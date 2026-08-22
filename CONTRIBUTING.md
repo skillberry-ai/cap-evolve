@@ -42,6 +42,10 @@ them off as clean CI runs.
 
 ## Quality bar for skills
 - SKILL.md body under ~500 lines (it is the primary doc); references one level deep with a TOC if long, and only when filled.
+- Check it yourself with `python skills/_registry/lint_skills.py skills` — the same
+  validator the `skill-package` capability applies to user skills, pointed at ours. CI
+  runs it report-only against `skills/_registry/authoring-baseline.txt` while the
+  bundled skills are being rewritten; do not add lines to that baseline.
 - A real `check.py` smoke test (not just an import) that fails on stubs and on
   non-determinism.
 - Ground claims in cited papers/repos/docs.

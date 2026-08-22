@@ -13,8 +13,11 @@ Anthropic docs — see references/concepts.md):
     says WHAT + WHEN ("use when").
   - SKILL.md body stays under ~500 lines AND ~5k tokens (progressive disclosure
     budget; the body is a recurring per-session token cost).
-  - references are one level deep and any long reference (>300 lines) has a TOC.
-  - referenced files that the body points at actually exist.
+  - references are one level deep — no nested ``references/<dir>/`` AND no
+    reference that links to another reference (the agent may read a reference only
+    partially, so a second hop can be missed) — and any long reference (>300 lines)
+    has a real table of contents (a list of anchor links, not just a heading).
+  - every relative link, from the body or from a reference, resolves to a real file.
 
 Soft authoring lints (warnings, not failures): a first-person description
 (point-of-view drift hurts discovery), all-caps CRITICAL/ALWAYS/MUST/NEVER in the
@@ -32,10 +35,21 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.S)
 XML_TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")  # an actual tag, not a stray "<"
+BLOCK_SCALAR_RE = re.compile(r"^([>|])[+-]?\d*$")  # "description: >-" and friends
+# WHEN can be stated conditionally ("Use when …") or positionally/imperatively
+# ("Use after intake", "Use as the last evaluation step") — both are real triggering
+# signals, so demanding the literal "use when" bigram flags good descriptions.
+SAYS_WHEN_RE = re.compile(
+    r"\bwhen\b|\buse (after|before|as|at|to|between|right|during|only|this|the moment)\b",
+    re.I)
 MAX_BODY_LINES = 500
 MAX_BODY_TOKENS = 5000            # ~chars/4; Level-2 body budget
 CHARS_PER_TOKEN = 4
 LONG_REF_LINES = 300
+TOC_LINK_RE = re.compile(r"\]\(#[^)\s]+\)")   # an in-document anchor link
+REL_LINK_RE = re.compile(r"\]\(([^)\s]+)\)")  # any Markdown link target
+TOC_SCAN_CHARS = 1500                         # "early" = within the first ~1.5k chars
+MIN_TOC_LINKS = 3                             # a list of links, not one stray cross-ref
 LISTING_CAP_CHARS = 1536          # description + when_to_use truncation in the listing
 LONG_DESC_CHARS = 1024            # hard cap; also the front-load advisory threshold
 
@@ -45,12 +59,50 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     if not m:
         return {}, text
     fm = {}
-    for line in m.group(1).splitlines():
-        if ":" in line and not line.startswith(" "):
-            k, _, v = line.partition(":")
+    lines = m.group(1).splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if ":" not in line or line.startswith((" ", "\t")):
+            continue
+        k, _, v = line.partition(":")
+        blk = BLOCK_SCALAR_RE.match(v.strip())
+        if blk:
+            # A YAML block scalar ("description: >-") holds its value on the FOLLOWING
+            # indented lines. Without this the value parses as the literal ">-" and
+            # every description check below passes vacuously on it.
+            # ponytail: folds with spaces / keeps newlines for "|", and always strips.
+            # The +/-/digit chomping and indentation indicators only affect trailing
+            # whitespace, which no check here looks at.
+            chunk = []
+            while i < len(lines) and (not lines[i].strip()
+                                      or lines[i].startswith((" ", "\t"))):
+                chunk.append(lines[i].strip())
+                i += 1
+            joiner = " " if blk.group(1) == ">" else "\n"
+            fm[k.strip()] = joiner.join(c for c in chunk if c).strip()
+        else:
             fm[k.strip()] = v.strip().strip('"').strip("'")
     body = text[m.end():]
     return fm, body
+
+
+def _relative_links(text: str) -> list[str]:
+    """Local relative link targets in Markdown, anchors stripped.
+
+    Skips absolute URLs, bare in-document anchors and mailto:/absolute paths — only
+    targets that must resolve to a file NEXT TO the linking document come back."""
+    out = []
+    for raw in REL_LINK_RE.findall(text):
+        if raw.startswith(("#", "/", "mailto:")) or "://" in raw:
+            continue
+        target = raw.split("#", 1)[0].strip()
+        if target:
+            out.append(target)
+    # One violation per distinct target: the same file linked five times is one
+    # problem to fix, not five findings to wade through.
+    return list(dict.fromkeys(out))
 
 
 def _subpackages(capability_dir: Path) -> list[Path]:
@@ -194,7 +246,7 @@ def _validate_one(capability_dir: Path) -> dict:
             problems.append(f"description is {len(desc)} chars (>{LONG_DESC_CHARS})")
         if XML_TAG_RE.search(desc):
             problems.append("description must not contain XML tags")
-        if not re.search(r"\b(use when|when )\b", desc, re.I):
+        if not SAYS_WHEN_RE.search(desc):
             warnings.append("description should say WHEN to use the skill "
                             "('Use when …') — it is the primary triggering signal")
         # point-of-view drift: descriptions must be third person.
@@ -227,13 +279,33 @@ def _validate_one(capability_dir: Path) -> dict:
                 warnings.append(f"references/{sub.name}/ is nested >1 level deep; "
                                 "keep references one level deep")
         for f in refs.glob("*.md"):
-            ln = f.read_text(encoding="utf-8").count("\n") + 1
-            if ln > LONG_REF_LINES and "## " not in f.read_text(encoding="utf-8")[:1500]:
+            ref_text = f.read_text(encoding="utf-8")
+            ln = ref_text.count("\n") + 1
+            # A TOC is a LIST OF ANCHOR LINKS, not merely "some '## ' appears in the
+            # first 1500 chars" — that older condition was satisfied by ordinary prose,
+            # so the check was near-tautological.
+            if ln > LONG_REF_LINES and len(
+                    TOC_LINK_RE.findall(ref_text[:TOC_SCAN_CHARS])) < MIN_TOC_LINKS:
                 warnings.append(f"references/{f.name} is {ln} lines without an early "
-                                "table of contents")
+                                f"table of contents (needs >={MIN_TOC_LINKS} "
+                                "'[section](#anchor)' links up front)")
+            # One level deep: SKILL.md -> reference, never reference -> reference. The
+            # agent may read a reference only partially, so a second hop can be missed
+            # entirely; the depth has to be flat, not merely the directory layout.
+            for target in _relative_links(ref_text):
+                hop = (f.parent / target).resolve()
+                if hop.suffix == ".md" and hop.parent == refs.resolve() and hop != f.resolve():
+                    warnings.append(f"references/{f.name} links to another reference "
+                                    f"'{target}'; references must be one level deep — "
+                                    "link it from SKILL.md instead")
+                if not hop.exists():
+                    warnings.append(f"references/{f.name} links to '{target}' "
+                                    "which does not exist")
 
-    # broken reference links the body points at
-    for rel in re.findall(r"\(((?:references|scripts|assets)/[^)\s]+)\)", body):
+    # Every relative link the body points at must resolve. A Markdown link may carry
+    # an anchor ("references/x.md#a-heading"); the anchor is not part of the path, so
+    # it is stripped before the existence check or every deep link reads as broken.
+    for rel in _relative_links(body):
         if not (capability_dir / rel).exists():
             warnings.append(f"SKILL.md references '{rel}' which does not exist")
 

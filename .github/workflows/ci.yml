@@ -127,6 +127,34 @@ jobs:
             "README.md" "docs/**/*.md" "examples/**/*.md" "*.md"
           fail: true
 
+  lint-skills:
+    name: Skill authoring lint (report-only)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Points the shipped skill-package validator at the repo's OWN skills, so the
+      # framework is held to the authoring bar it advertises in CONTRIBUTING.md.
+      #
+      # REPORT-ONLY on purpose, for exactly as long as it takes to rewrite the
+      # skills (issues #322-#339): `skills/_registry/authoring-baseline.txt` records
+      # every violation on the tree today, so a NEW violation still fails the step
+      # while the known ones only print. `continue-on-error` keeps the whole build
+      # green in the meantime.
+      #
+      # TO FLIP IT BLOCKING once the baseline is empty: delete
+      # authoring-baseline.txt, drop `--baseline` and drop `continue-on-error`.
+      - name: Lint bundled skills against the authoring rules
+        continue-on-error: true
+        run: python skills/_registry/lint_skills.py skills --baseline
+
   spellcheck:
     name: Spellcheck (docs)
     runs-on: ubuntu-latest
