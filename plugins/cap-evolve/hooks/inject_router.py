@@ -31,16 +31,20 @@ import _hooklib as H  # noqa: E402
 
 
 _CONTEXT = (
-    "cap-evolve is installed. When the user asks to OPTIMIZE an agent capability "
-    "(a skill, a tool/MCP surface, a system/agent prompt) against an eval — phrases "
-    "like \"optimize <X>\", \"make <X> score higher\", \"improve <X> on <benchmark>\" — "
-    "load the `/cap-evolve:using-cap-evolve` router skill FIRST. It routes to "
-    "`/cap-evolve:intake` and explains the two ways to run: the standalone phase chain "
-    "(`/cap-evolve:intake` -> implement-and-check -> baseline -> <algorithm> -> finalize "
-    "-> report) or the fully-automatic `cap-evolve run --spec .capevolve/project/"
-    "capevolve.yaml`. Honesty discipline (sealed test, val-only gate) is enforced by "
-    "core and by this plugin's hooks — do not edit the test split, test rollouts, or "
-    "gold files, and do not finish an iteration while `cap-evolve check` is red."
+    "cap-evolve is installed. When the user wants an agent capability (a skill, a "
+    "tool/MCP surface, a system/agent prompt) to score higher on an eval — \"optimize "
+    "my skill\", \"raise the pass rate on these tasks\", \"my agent keeps failing these "
+    "cases\" — load the `/cap-evolve:using-cap-evolve` router skill first. It resolves "
+    "the on-disk state and names the next command. There are three ways to run: the "
+    "standalone phase chain (`/cap-evolve:intake` -> implement-and-check -> baseline -> "
+    "the algorithm -> finalize -> report); `cap-evolve run --spec .capevolve/project/"
+    "capevolve.yaml`, which presumes intake already happened and enforces the check "
+    "gate before spending budget; or, with `orchestration_mode: agent` in the spec, "
+    "`cap-evolve run` stops after baseline and hands the loop back to the agent, with "
+    "no sealed-test number until `cap-evolve finalize` is called. Honesty discipline "
+    "(sealed test, val-only gate) is enforced by core and by this plugin's hooks — do "
+    "not edit the test split, test rollouts, or gold files, and do not finish an "
+    "iteration while `cap-evolve check` is red."
 )
 
 

@@ -1,9 +1,15 @@
 """Behavioral check for using-cap-evolve.
 
-Asserts the router actually routes: a fresh (empty) base resolves to `fresh` /
-intake, and a scaffolded base (capevolve.yaml present, no run) resolves to a
-non-fresh state pointing at implement-and-check or later — i.e. the state machine
-is wired, not a stub.
+Asserts the router actually routes, and that the three misroutes issue #339
+reproduced stay fixed:
+
+  * fresh (empty base) -> `fresh` / intake; a scaffolded base is not `fresh`.
+  * a run dir with no `state.json` is NOT reported as `scaffolded` (it would send
+    the agent to implement an adapter that already exists).
+  * a newer live run is never masked by an older sealed one (which would claim a
+    sealed headline number while an optimization is mid-flight).
+  * `running` routes to `--resume` and `finalized` to `--reuse-baseline` — report
+    continues nothing.
 """
 
 from __future__ import annotations
@@ -41,6 +47,39 @@ def main() -> int:
                     rep["problems"].append("base with capevolve.yaml should not be 'fresh'")
                 rep["notes"].append(f"fresh -> {fresh.get('next')}; "
                                     f"scaffolded -> {scaffolded.get('next')}")
+
+                # case A: a run dir mid-create (no state.json) must not read as scaffolded.
+                (base / "run_20260101_000000").mkdir()
+                started = run.resolve_state(base)
+                if started.get("state") == "scaffolded":
+                    rep["problems"].append("a run dir with no state.json must not resolve to "
+                                           "'scaffolded' (sends the agent to re-implement)")
+                if "--resume" not in (started.get("next") or ""):
+                    rep["problems"].append("a half-created run must route to `run --resume`")
+
+                # case C: newer live run must not be masked by an older sealed one.
+                sealed = base / "run_20260101_000000"
+                (sealed / "state.json").write_text("{}", encoding="utf-8")
+                (sealed / "splits.json").write_text('{"test_used": true}', encoding="utf-8")
+                fin = run.resolve_state(base)
+                if fin.get("state") != "finalized":
+                    rep["problems"].append(f"sealed run should be 'finalized', got {fin.get('state')!r}")
+                if "--reuse-baseline" not in (fin.get("next") or ""):
+                    rep["problems"].append("'finalized' must offer a new run with --reuse-baseline, "
+                                           "not just a report")
+
+                live = base / "run_20260202_000000"
+                live.mkdir()
+                (live / "state.json").write_text("{}", encoding="utf-8")
+                (live / "splits.json").write_text('{"test_used": false}', encoding="utf-8")
+                mid = run.resolve_state(base)
+                if mid.get("state") != "running":
+                    rep["problems"].append(f"a newer unsealed run must win over an older sealed "
+                                           f"one; got {mid.get('state')!r}")
+                if "--resume" not in (mid.get("next") or ""):
+                    rep["problems"].append("'running' must route to `cap-evolve run --resume`")
+                rep["notes"].append(f"run_started -> {started.get('next')}; "
+                                    f"finalized -> {fin.get('state')}; running -> {mid.get('next')}")
     except Exception as e:  # noqa: BLE001
         rep["problems"].append(f"import/exec failed: {e}")
     rep["ok"] = not rep["problems"]
