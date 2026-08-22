@@ -168,6 +168,16 @@ def test_the_repo_is_clean_against_its_recorded_baseline():
     assert "no violations outside the baseline" in out.stdout, out.stdout
 
 
+def test_the_violation_list_is_ordered_deterministically():
+    """The baseline is compared line-for-line, so a wobble in the order findings come
+    out fails the build on a machine whose filesystem enumerates references differently
+    (this is what turned CI red the first time). Sorted output pins it everywhere."""
+    mod = _lint_module()
+    errors, _, _ = mod.lint(SKILLS)
+    lines = mod._flatten(errors)
+    assert lines == sorted(lines), lines
+
+
 def test_the_baseline_matches_the_tree_exactly():
     """A baseline that drifts stale is worse than none: it would mask a real regression
     or nag about violations already fixed."""

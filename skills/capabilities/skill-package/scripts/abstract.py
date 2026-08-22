@@ -274,11 +274,14 @@ def _validate_one(capability_dir: Path) -> dict:
 
     refs = capability_dir / "references"
     if refs.is_dir():
-        for sub in refs.iterdir():
+        # sorted(): filesystem iteration order differs between machines, and callers
+        # (the repo's own lint diffs its output against a committed baseline) need the
+        # findings to come out in the same order everywhere.
+        for sub in sorted(refs.iterdir()):
             if sub.is_dir():
                 warnings.append(f"references/{sub.name}/ is nested >1 level deep; "
                                 "keep references one level deep")
-        for f in refs.glob("*.md"):
+        for f in sorted(refs.glob("*.md")):
             ref_text = f.read_text(encoding="utf-8")
             ln = ref_text.count("\n") + 1
             # A TOC is a LIST OF ANCHOR LINKS, not merely "some '## ' appears in the

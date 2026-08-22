@@ -102,8 +102,13 @@ def lint(skills_root: Path) -> tuple[dict[str, list[str]], dict[str, list[str]],
 
 
 def _flatten(errors: dict[str, list[str]]) -> list[str]:
-    """One stable `<skill>: <message>` line per violation — the baseline's format."""
-    return [f"{key}: {e}" for key in sorted(errors) for e in errors[key]]
+    """One stable `<skill>: <message>` line per violation — the baseline's format.
+
+    Fully sorted, not just by skill: the baseline is compared line-for-line against a
+    committed file, so any wobble in the order findings are produced would fail the
+    build on a different machine. (`abstract.py` also sorts its reference iteration —
+    this is the second belt, because a baseline that depends on ordering rots.)"""
+    return sorted(f"{key}: {e}" for key in errors for e in errors[key])
 
 
 def _parse_argv(argv: list[str]) -> tuple[Path, dict[str, str]]:
