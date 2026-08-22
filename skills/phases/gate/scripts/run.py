@@ -31,7 +31,7 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve.gate import decide
 
-_MODES = ["significant", "strict", "threshold", "simplicity_tiebreak", "paired"]
+_MODES = ["paired", "significant", "strict", "threshold"]
 
 
 def main(argv=None) -> int:

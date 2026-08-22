@@ -78,10 +78,12 @@ def test_strict_gate_accepts_any_improvement():
     assert decide(0.5, 0.5, split="val", mode="strict").accept is False
 
 
-def test_simplicity_tiebreak_prefers_smaller_on_tie():
-    d = decide(0.5, 0.5, split="val", mode="simplicity_tiebreak",
-               candidate_size=10, current_size=20)
-    assert d.accept is True
+def test_removed_modes_are_rejected_not_silently_accepted():
+    # simplicity_tiebreak was unreachable dead code (nothing ever populated the
+    # sizes) so it silently behaved as `strict`. Removed — an unknown mode must
+    # raise, never quietly become a weaker gate.
+    with pytest.raises(ValueError):
+        decide(0.5, 0.5, split="val", mode="simplicity_tiebreak")
 
 
 # ---- stats ----------------------------------------------------------------

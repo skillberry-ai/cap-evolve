@@ -97,8 +97,7 @@ def main(argv=None) -> int:
     p.add_argument("--current", default=None,
                    help="tag to compare against; default = the run's current best_id")
     p.add_argument("--mode", default="paired",
-                   choices=["paired", "significant", "strict", "threshold",
-                            "simplicity_tiebreak"])
+                   choices=["paired", "significant", "strict", "threshold"])
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--threshold", type=float, default=0.0)
     p.add_argument("--veto-regressions", action="store_true",

@@ -16,10 +16,27 @@ construction*, and the rules below are enforced in code, not just documented.
    produced exactly once, at `finalize`. (See `splits.py`, `rundir.py`.)
 
 3. **Acceptance is gated on val, with significance.** `gate.decide(...)` refuses
-   any split but `val` (`TrainGateError`) and, by default, accepts a candidate
-   only when the improvement exceeds `k · SE` — so noise is not mistaken for
-   progress (`mode="significant"`). Other modes (`strict`, `threshold`,
-   `simplicity_tiebreak`) exist but never relax the val-only rule. The gate reads
+   any split but `val` (`TrainGateError`) and accepts a candidate only when the
+   improvement exceeds `k · SE`. The bar is `Δ > k·SE` and not `Δ > 0` because
+   search is a noise amplifier: screen enough candidates and the best-looking one
+   is best by *luck*, so a `Δ > 0` rule banks noise and the val curve climbs while
+   nothing actually improved. Clearing `k` standard errors of the measurement's own
+   error is what makes an accept mean something — which is why turning the gate
+   down to `strict` on a stochastic scorer quietly invalidates the whole run.
+
+   **Gate modes** (`gate_mode` in `capevolve.yaml`, `gate_k_se` sets `k`):
+
+   | mode | rule | when |
+   |---|---|---|
+   | `paired` | mean(per-task Δ) > `k`·SE(Δ) over the **same** val tasks | **the default** — every run takes it when per-task data exists; cross-task difficulty cancels, so it is strictly more powerful |
+   | `significant` | Δ > `k`·√(SE_cand² + SE_curr²) | unpaired fallback — only correct when the two sides were *not* scored on the same tasks |
+   | `threshold` | Δ > `T` | you have a domain minimum worth banking |
+   | `strict` | Δ > 0 | only a near-zero-variance (deterministic) scorer |
+
+   Any other value raises. `decide()`'s own `mode=` parameter defaults to
+   `significant` purely as the bare-caller fallback; the loop overrides it to
+   `paired` (`harness.py:1524-1526`, `gepa.py:741-743`) and the shipped template
+   sets `gate_mode: paired`. No mode relaxes the val-only rule. The gate reads
    only the **primary** metric (the scalar `reward`); any shown-only secondary
    metrics a scorer emits (`Score.metrics`) are for display and cannot move the
    decision.

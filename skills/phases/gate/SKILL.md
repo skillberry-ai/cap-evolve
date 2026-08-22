@@ -25,30 +25,42 @@ reward beats the current best by **more than `k` standard errors**.
 - **provides:** `decision` — `{accept, reason, delta, threshold}`, the audit
   record of why a candidate was kept or rejected.
 
-## The significance rule (default)
+## The significance rule
 ```
-SE = sqrt(candidate_stderr^2 + current_stderr^2)     # SE of the difference
-accept  ⟺  Δ = candidate_val − current_val  >  k · SE
+paired (the default):   accept ⟺ mean(Δ[t]) > k · SE(Δ)     over the SAME val tasks
+significant (fallback): accept ⟺ Δ = cand − curr > k · sqrt(cand_se² + curr_se²)
 ```
-This is the standard test for "is the difference real?": the SE of a difference
-of two independent means is the root-sum-of-squares of their SEs, and `Δ > k·SE`
-asks whether the gap clears `k` standard errors of that difference. `k=1` is
+The bar is `Δ > k·SE` and **not `Δ > 0`** because search is a noise amplifier:
+screen enough candidates and the best-looking one is best by *luck*, so `Δ > 0`
+banks noise as progress and the val curve climbs while nothing improved. Clearing
+`k` standard errors of the measurement's own error is what makes an accept mean
+something — turn this down and the run's numbers stop being evidence. `k=1` is
 lenient (~1σ); raise it to be stricter. It is the textual-optimization analogue of
-Koehn's bootstrap significance test for metric differences — accept only when the
-gap is unlikely to be noise.
+Koehn's bootstrap significance test for metric differences.
+
+`paired` is stronger because both sides were scored on the *same* val tasks, so
+per-task difficulty cancels and only the paired variance counts; `significant`
+treats the two means as independent samples and is only correct when they are.
 
 **Single-trial scores report `stderr=0`, collapsing `k·SE` to 0** — then
 `significant` silently degrades to `strict` and accepts any positive blip. If you
 run the significance gate, score with multiple trials (see `evaluate`).
 
 ## Modes
-- `significant` (default): `Δ > k·SE` — variance-aware, the honest choice.
-- `strict`: `Δ > 0` — any improvement. Only safe with a near-zero-variance scorer
-  (deterministic, single correct answer).
+- `paired` (**the default**): `mean(per-task Δ) > k·SE(Δ)`. The loop selects it
+  whenever per-task val data exists (`harness.py:1524-1526`, `gepa.py:741-743`)
+  and `capevolve.yaml` ships `gate_mode: paired`.
+- `significant`: `Δ > k·SE_combined` — the **unpaired fallback**, used when the two
+  sides aren't aligned per task. `decide()`'s own `mode=` parameter defaults here
+  for bare callers with no per-task data; that is not the default of a real run.
 - `threshold`: `Δ > T` — a flat margin (use when you have a domain minimum
   worthwhile gain, e.g. "don't bother unless +2pp").
-- `simplicity_tiebreak`: like strict, but on a (near-)tie prefer the smaller
-  candidate — an Occam bias against bloated edits that don't earn their size.
+- `strict`: `Δ > 0` — any improvement. Only safe with a near-zero-variance scorer
+  (deterministic, single correct answer).
+
+Anything else raises. There is no simplicity/size mode: it was unreachable dead
+code (nothing ever supplied a size) so it silently behaved as `strict`, and it has
+been removed rather than documented.
 
 ## No-regression (the second gate)
 A mean can rise while previously-passing tasks silently break. Pair the
@@ -71,7 +83,7 @@ Algorithms call the gate internally every iteration via the harness; this skill
 exists so a human or agent can reproduce and *understand* a single decision.
 
 ## What good vs bad looks like
-- **Good:** `significant` mode with real multi-trial SEs; a no-regression check on
+- **Good:** `paired` mode (the default) with real multi-trial SEs; a no-regression check on
   top; every accept/reject logged with its `reason`.
 - **Bad:** gating on `train` (the tool refuses this — it overfits the optimizer to
   the data it edits against); `strict` mode on a noisy agent (accepts noise);

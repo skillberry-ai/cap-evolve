@@ -77,7 +77,7 @@ github_integration: false    # mirror-only: mirror the algorithm's work items as
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant | strict | threshold | simplicity_tiebreak
+gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold
 gate_k_se: 1.0
 
 # --- budget -----------------------------------------------------------------
