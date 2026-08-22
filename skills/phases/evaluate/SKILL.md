@@ -103,7 +103,8 @@ Two axes, and the trials axis is the one people get wrong.
   different seeds and warns if they are byte-identical
   (`core/cap_evolve/check.py:169-190`). It is opt-in because the probe costs real
   rollouts — run it once per adapter, and treat the warning as "every variance number
-  here is fiction".
+  here is fiction". Trials cost budget linearly, so spend them where variance actually
+  threatens a decision — the val split the gate reads — not on every exploratory probe.
 - **Tasks.** `stats.stderr` returns 0.0 below 2 tasks and `combined_stderr`'s
   between-task term is 0 below 2 (`stats.py:28-30, 47-50`), so a 1-task val gives
   `stderr = 0`, a bar of 0, and the gate degenerates to strict ("any Δ>0 wins") with

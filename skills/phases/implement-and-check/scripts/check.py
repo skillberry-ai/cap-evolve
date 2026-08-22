@@ -82,6 +82,21 @@ def main() -> int:
                 f"RNG scorer passed the determinism probe (problems={rep.problems})",
                 note="detects a non-deterministic score()")
 
+    # 4. SKILL.md's account of WHERE the gate is enforced must match the code. PR #374
+    #    added run_check() to baseline/scripts/run.py after this SKILL.md was written,
+    #    so the "the standalone chain is ungated" paragraph went stale and told the
+    #    reader a closed hole was still open.
+    skill = (Path(__file__).resolve().parents[1] / "SKILL.md").read_text(encoding="utf-8")
+    gated = "run_check(" in (Path(__file__).resolve().parents[2] / "baseline"
+                             / "scripts" / "run.py").read_text(encoding="utf-8")
+    claims_ungated = ("contains no check" in skill
+                      or "has no gate of its own" in skill)
+    c.check(gated != claims_ungated,
+            "SKILL.md and baseline/scripts/run.py disagree about whether the standalone "
+            f"chain is gated (baseline calls run_check={gated}, "
+            f"SKILL.md says ungated={claims_ungated})",
+            note="SKILL.md's standalone-gate claim matches baseline/scripts/run.py")
+
     return c.emit()
 
 

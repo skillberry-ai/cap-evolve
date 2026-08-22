@@ -106,10 +106,12 @@ than that. Measured on this checkout (issue #358):
 - `materialize()` is a **probe, not an assertion**: a raise is a note and does not fail
   the check (`check.py:166-167`), because a real adapter may need its full environment.
   Green means "callable or explained", not "edit path verified".
-- `cap-evolve run` fails closed: `cli.py:721-726` returns 1 before creating a run dir, so
-  no split and no spend. The **standalone** `/cap-evolve:*` chain does not —
-  `baseline/scripts/run.py` contains no check, and `provides: checked` is a static
-  ordering token, not a runtime precondition.
+- Both entry paths fail closed, so a red check never freezes a split: `cap-evolve run`
+  returns 1 before creating a run dir (`cli.py:721-726`), and the **standalone**
+  `/cap-evolve:baseline` re-runs the core check itself and exits non-zero before the run
+  dir exists (`baseline/scripts/run.py`). What is *not* a runtime precondition is the
+  `provides: checked` token — it declares ordering only, so a phase that skips baseline
+  gets no gate from the DAG.
 
 If your scorer calls a judge, say so in `PROJECT.md` along with how its decoding is
 pinned — the gate cannot see it. The one failure mode nothing here can catch: feedback
@@ -121,8 +123,8 @@ Standalone as `/cap-evolve:implement-and-check`; orchestrator-callable — but u
 this phase, `cap-evolve run` does **not** invoke `scripts/run.py`. It calls the core check
 inline and shells straight to `baseline`, so `--skill-check` and the pipeline self-test run
 in standalone mode only. Run this phase yourself before either `cap-evolve run` or
-`/cap-evolve:baseline` if you want them — and, per the previous section, the standalone
-chain has no gate of its own.
+`/cap-evolve:baseline` if you want them: both of those re-run the *core* check, but
+neither runs `--skill-check` or the pipeline self-test.
 
 ## References
 - `references/concepts.md` — why each check exists, the
