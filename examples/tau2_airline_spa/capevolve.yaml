@@ -1,0 +1,52 @@
+# cap-evolve run spec — optimize tau2 airline via SPA + Skillberry Store.
+#
+# tau2 native runner (airline_skillberry domain). LLM calls routed through
+# Skillberry Proxy-Agent (SPA) → Skillberry Store + upstream LLM.
+#
+# The 14 primitive tools are FROZEN standalone tools in the store (imported from
+# seed_capability/primitive_tools/functions.py, tagged `primitive-tool`). There is
+# exactly ONE skill — `airline_skill` — which the optimizer modifies in place:
+# its SKILL.md becomes SPA prompt enrichment and its scripts/ become the tool set.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]            # the single airline_skill (tools + prompt enrichment via SPA)
+capability_path: seed_capability         # holds airline_skill/ (editable) + primitive_tools/ (frozen)
+actions: [modify]                        # optimizer MODIFIES the single airline_skill in place
+skill_name: airline_skill                # the one skill in the store; never renamed
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 100
+optimizer_usd_per_iter: 40.0
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md   # project-relative — see setup.sh
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 1.0
+split_val: 1.0
+split_test: 1.0
+split_ids_file: split_ids.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 10
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.0
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 5
+stall: 3
+max_metric_calls: 0
+max_usd: 200.0
+max_optimizer_usd: 100.0
+
+# --- iteration store --------------------------------------------------------
+store: git

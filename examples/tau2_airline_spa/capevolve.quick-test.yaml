@@ -1,0 +1,46 @@
+# QUICK-TEST spec — single task, single trial, single iteration.
+# Purpose: verify the full eval+optimize pipeline end-to-end in ~5-10 min.
+# Not a quality signal — purely an infrastructure/wiring check.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [modify]                        # optimizer MODIFIES the single airline_skill in place
+skill_name: airline_skill                # the one skill in the store; never renamed
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 40
+optimizer_usd_per_iter: 3.0
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md   # project-relative — see setup.sh
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 1.0
+split_val: 1.0
+split_test: 1.0
+split_ids_file: split_ids.quick-test.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.0
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 1
+stall: 0
+max_metric_calls: 0
+max_usd: 10.0
+max_optimizer_usd: 5.0
+
+# --- iteration store --------------------------------------------------------
+store: git
