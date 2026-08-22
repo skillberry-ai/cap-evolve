@@ -43,7 +43,8 @@ def main(argv=None) -> int:
             "evograph has no deterministic engine. Set `orchestration_mode: agent` in "
             "capevolve.yaml and run it agent-driven: cap-evolve does intake/check/baseline "
             "then hands the loop to the coding agent, which follows this skill's "
-            "'Step 2 — Round loop' and seals with `cap-evolve finalize`."
+            "'Step 2 — Round loop' and seals with the finalize phase script "
+            "(skills/phases/finalize/scripts/run.py)."
         ),
     }))
     return 2

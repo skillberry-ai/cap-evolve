@@ -96,10 +96,10 @@ python "$S/phases/finalize/scripts/run.py" --run-dir "$R" --project "$P" --n-tri
 python "$S/phases/report/scripts/run.py"   --run-dir "$R"
 ```
 
-> **Note — there is no `cap-evolve finalize` subcommand.** The orchestrate/host prose uses
-> `cap-evolve finalize` as shorthand; sealing is done by the finalize *phase script* above
-> (`skills/phases/finalize/scripts/run.py`), which scores the best candidate on test once and
-> burns the seal. A second finalize raises `TestSealError`.
+> **Note — finalize and report are phase scripts, not CLI subcommands.** Sealing is done by
+> the finalize *phase script* above (`skills/phases/finalize/scripts/run.py`), which scores the
+> best candidate on test once and burns the seal. A second finalize raises `TestSealError`.
+> `ci/check_cli_subcommands.py` fails the build if any doc or skill invents a subcommand.
 
 ## Honesty invariants (both modes)
 

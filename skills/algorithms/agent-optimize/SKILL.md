@@ -815,7 +815,7 @@ produced nulls that nobody could interpret:
 
 ## See your constraints every few steps
 
-There is no `cap-evolve status` command. **Every 2–3 rounds** (and always before a fan-out)
+There is no cap-evolve status subcommand. **Every 2–3 rounds** (and always before a fan-out)
 run the readout and compare it to the goal:
 
 ```bash
@@ -863,8 +863,8 @@ generalisation**, with the overlap counted; and `best_id == "seed"` prints a `wa
 every delta is 0 by construction and must be reported as a **null result with a diagnosed
 cause**, not as a 0.000 improvement.
 
-(There is **no `cap-evolve finalize` subcommand** — the orchestrate/host prose uses that as
-shorthand; the real seal is the finalize phase script / `measure.py`, which scores the best
+(Sealing has **no `cap-evolve` subcommand** — it is the finalize phase script
+(`skills/phases/finalize/scripts/run.py`) / `measure.py`, which scores the best
 on test once and burns the seal. A second finalize raises `TestSealError`.) A run with no
 finalize has no result.
 
