@@ -323,12 +323,13 @@ _ALGO_MARKERS = (
     ("hill-climb", ("convergence", "step")),
 )
 
-#: Every event kind that means "one candidate was proposed and judged". The
-#: deterministic loops log ``step``/``skillopt_step``/``gepa_val_gate``; the AGENT-mode
-#: loops (agent-optimize, evograph) log ``accept``/``reject`` via the algorithm's
-#: ``commit.py``. The reducer used to know only the first three, so every free-form
-#: agentic run rendered as a graph with nothing but a seed node.
-_STEP_KINDS = ("step", "skillopt_step", "gepa_val_gate", "accept", "reject")
+#: Every event kind that means "one candidate was proposed and judged". Every algorithm
+#: now writes ``step`` via ``harness.record_iteration`` (#216/#224) — including gepa,
+#: which used to write only ``gepa_val_gate``, and agent-mode ``commit.py``, whose
+#: ``accept``/``reject`` are kept here so run dirs recorded BEFORE that fix still render.
+#: ``skillopt_step`` / ``gepa_val_gate`` are deliberately absent: they duplicated the
+#: same candidate's iteration (see the per-candidate dedup below).
+_STEP_KINDS = ("step", "accept", "reject")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)

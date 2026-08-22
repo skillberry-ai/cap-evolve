@@ -8,9 +8,12 @@ Does exactly what the deterministic loops do at the end of a step:
   * ``snapshot`` the working copy as a candidate (always — the audit trail should
     show rejects too),
   * ``set_best`` on accept only,
-  * ``log_event`` the accept/reject, and
-  * ``update_spent`` with ``iterations=1`` **and** ``accepted=`` so the stall
-    counter that ``budget_exhausted()`` reads actually moves.
+  * ``log_event`` the accept/reject (agent-mode detail the other scripts read), and
+  * ``harness.record_iteration`` — the ONE shared iteration step every algorithm
+    routes through (#216/#224): charges ``iterations=1`` **and** ``accepted=`` so the
+    stall counter that ``budget_exhausted()`` reads actually moves, writes the
+    canonical ``step`` record every consumer enumerates, and reconciles the
+    run-level ``JOURNAL.md``. Do NOT open-code those three here again.
 
 Runner-side spend (metric_calls / usd / tokens / seconds) is already recorded by the
 evaluate phase; ``--optimizer-*`` is for the *proposer's* own cost, which in agent
@@ -29,7 +32,7 @@ from pathlib import Path
 # cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
-from cap_evolve import RunDir
+from cap_evolve import RunDir, harness
 
 
 def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
@@ -114,6 +117,9 @@ def main(argv=None) -> int:
         print(json.dumps({"error": "--reject-basis is meaningless on an accept",
                           "fix": "drop it, or pass --decision reject"}, indent=2))
         return 2
+    # The parent this candidate was gated against — ``gate_check --current`` defaults to
+    # ``best_id``, so read it BEFORE ``set_best`` moves it.
+    parent_id = run_dir.best_id or "seed"
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
         run_dir.set_best(args.candidate_id)
@@ -128,10 +134,19 @@ def main(argv=None) -> int:
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None)
-    spent = run_dir.update_spent(iterations=1, accepted=accepted,
-                                 optimizer_usd=args.optimizer_usd,
-                                 optimizer_tokens=args.optimizer_tokens,
-                                 optimizer_seconds=args.optimizer_seconds)
+    run_dir.update_spent(optimizer_usd=args.optimizer_usd,
+                         optimizer_tokens=args.optimizer_tokens,
+                         optimizer_seconds=args.optimizer_seconds)
+    # The shared iteration step: charges iterations/stall, writes the canonical ``step``
+    # record, reconciles the run-level JOURNAL.md. ``parent_val`` is unknown in agent mode
+    # (the agent gates via gate_check, which prints but does not persist the parent mean),
+    # so it stays None rather than being guessed.
+    harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
+                             accepted=accepted, reason=args.note or args.decision,
+                             val=args.val,
+                             opt_cost_usd=args.optimizer_usd or None,
+                             opt_tokens=args.optimizer_tokens or None)
+    spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()
     print(json.dumps({"decision": args.decision, "candidate": args.candidate_id,

@@ -63,6 +63,7 @@ from .harness import (
     _resolve_workers,
     _SNAPSHOT_IGNORE,
     evaluate_candidate,
+    record_iteration,
     split_result_from_rollouts,
 )
 from .loop import SplitResult, aggregate_scores, has_valid_trials
@@ -632,9 +633,10 @@ def gepa_loop(
             if not report.ok:
                 run_dir.log_event("tamper_detected", candidate=cid, parent=parent["id"],
                                   report=report.to_dict(), reason=report.reason)
-                run_dir.update_spent(iterations=1, accepted=None)
-                run_dir.log_event("step_indecisive", candidate=cid,
-                                  reason="indecisive (integrity): " + report.reason)
+                _reason = "indecisive (integrity): " + report.reason
+                record_iteration(run_dir, workdir, cid, parent_id=parent["id"],
+                                 accepted=False, reason=_reason, indecisive=True)
+                run_dir.log_event("step_indecisive", candidate=cid, reason=_reason)
                 steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
                               "accepted": False, "candidate_val": None,
                               "tamper": report.to_dict(), "optimizer_error": opt_error,
@@ -659,8 +661,12 @@ def gepa_loop(
         }
 
         if not local_pass:
-            # Cheap rejection — no full-val spend. Record it for memory + audit.
-            run_dir.update_spent(iterations=1, accepted=False)
+            # Cheap rejection — no full-val spend, so ``val`` stays None: the minibatch
+            # reward is NOT a val number and must never be written into that field.
+            record_iteration(run_dir, workdir, cid, parent_id=parent["id"], accepted=False,
+                             reason="local minibatch gate: sum(child) <= sum(parent)",
+                             parent_val=parent["result"].reward, focus=focus_label,
+                             mb_child=child_mb.reward, mb_parent=parent_mb.reward)
             rejected.add(cid, f"candidate {cid} (mb {child_mb.reward:.3f} vs parent "
                               f"{parent_mb.reward:.3f})",
                          "local minibatch gate: sum(child) <= sum(parent)", child_mb.reward)
@@ -681,7 +687,7 @@ def gepa_loop(
         step["decision"] = decision_dict
         step["candidate_val"] = cand_val.to_dict()
         step["accepted"] = accepted
-        run_dir.update_spent(iterations=1, accepted=accepted)
+        # NB: the iteration was charged inside ``_full_val_gate`` (record_iteration).
 
         summary = (f"candidate {cid} (val {cand_val.reward:.3f}, "
                    f"Δ {cand_val.reward - parent_result.reward:+.3f})")
@@ -781,9 +787,14 @@ def _full_val_gate(
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
-    run_dir.log_event("gepa_val_gate", candidate=cid, accept=accepted,
-                      reason=decision.reason, val=cand_val.reward,
-                      parent=parent_id, parent_val=parent_result.reward)
+    # The iteration record + journal reconcile, through the ONE shared step (#216/#224).
+    # Both callers (the main loop and ``_try_merge``) end their iteration here, so
+    # neither charges the budget itself.
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
+                     reason=decision.reason, val=cand_val.reward,
+                     parent_val=parent_result.reward,
+                     runner_seconds=round(cand_val.seconds, 2),
+                     cost_usd=cand_val.cost_usd, tokens=cand_val.tokens)
     return decision.to_dict(), accepted, cand_val
 
 
@@ -847,7 +858,7 @@ def _try_merge(
     step["decision"] = decision_dict
     step["candidate_val"] = cand_val.to_dict()
     step["accepted"] = accepted
-    run_dir.update_spent(iterations=1, accepted=accepted)
+    # NB: the iteration was charged inside ``_full_val_gate`` (record_iteration).
     summary = f"merge {mid} of {a['id']}+{b['id']} (val {cand_val.reward:.3f})"
     if accepted:
         run_dir.snapshot(mid, workdir, ignore=_SNAPSHOT_IGNORE)

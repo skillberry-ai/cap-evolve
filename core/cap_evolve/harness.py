@@ -992,10 +992,14 @@ def _seed_journal(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
-                       accepted: bool, val: float, delta: float) -> None:
+                       accepted: bool, val: float | None, delta: float | None) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
     stamped with the framework's objective outcome. Append-only at the run level so the
-    handover truly accumulates across accepted AND rejected iterations."""
+    handover truly accumulates across accepted AND rejected iterations.
+
+    ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
+    minibatch-local reject) or whose measurement is void (an indecisive tamper step):
+    the entry is still folded in, with "—" where the number would be."""
     tail = _journal_tail(workdir)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
@@ -1011,10 +1015,12 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     guidance = ("" if accepted else
                 " — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
                 "break a task above, dropping/redesigning the ones that did.")
-    stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={val:.3f} "
-             f"Δ={delta:+.3f} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
+    vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
+    ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
+    stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "
+             f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
              f"<!-- {cid}: {'ACCEPTED' if accepted else 'rejected'} "
-             f"val={val:.3f} Δ={delta:+.3f} -->")
+             f"val={vs} Δ={ds} -->")
     tail = tail.strip()
     # Dedup guard: if the optimizer dropped the marker without appending (so the tail
     # fallback returned an entry already recorded in the run-level journal), do NOT
@@ -1026,6 +1032,49 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
         run_journal.write_text(new, encoding="utf-8")
     except Exception as e:  # noqa: BLE001
         run_dir.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(e)[:300])
+
+
+def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
+                     parent_id: str | None, accepted: bool, reason: str,
+                     val: float | None = None, parent_val: float | None = None,
+                     indecisive: bool = False, **extra) -> None:
+    """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
+
+    Three things must happen exactly once per iteration, and they used to be
+    open-coded per algorithm — so gepa, which bypasses ``run_step`` by design
+    (``gepa._full_val_gate``), silently did none of them (#216, #224):
+
+      1. charge the iteration against the budget (``update_spent``);
+      2. write the canonical ``step`` event — the ONLY iteration record. Every
+         consumer reads it: ``_parent_map`` / ``_build_ledger`` / ``_build_runmap``
+         (so ``LEDGER.md`` / ``RUNMAP.md`` / ``prior_iterations/`` are populated for
+         the optimizer, which the prompt tells it to read), the dashboard graph, the
+         event stream, and the TUI;
+      3. reconcile the run-level append-only ``JOURNAL.md`` with the handover entry
+         the optimizer appended in ``workdir`` — otherwise ``_seed_journal`` discards
+         it on the next iteration and the run has no handover history at all.
+
+    Algorithm-specific detail (``focus``, ``epoch``, minibatch sums, …) stays on the
+    algorithm's own events; pass anything that belongs on the iteration record itself
+    through ``**extra``. ``val``/``parent_val`` are None when no full-val number was
+    bought — never substitute a minibatch or screen reward, that field is the gated
+    val reward the ledger and the dashboard's val curve read.
+
+    ``indecisive=True`` leaves the stall counter untouched (the candidate was never
+    validly judged, so it is not evidence the optimizer ran out of ideas); the caller
+    still logs its own ``step_indecisive`` with whatever detail it has.
+
+    NOTE deliberately NOT here: ``snapshot``/``set_best``. Their correct arguments are
+    algorithm-specific (run_step snapshots every candidate with ``_SNAPSHOT_IGNORE``,
+    gepa only accepted ones) and they are not silently-droppable the way the three
+    above were.
+    """
+    run_dir.update_spent(iterations=1, accepted=None if indecisive else accepted)
+    run_dir.log_event("step", candidate=cid, accept=accepted, reason=reason,
+                      val=val, parent=parent_id, parent_val=parent_val, **extra)
+    delta = (val - parent_val if isinstance(val, (int, float))
+             and isinstance(parent_val, (int, float)) else None)
+    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta)
 
 
 def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
@@ -1431,11 +1480,11 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
     if rejected is not None:
         rejected.add(cid, f"candidate {cid} (not scored: invalid)", reason, None)
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
-    run_dir.update_spent(iterations=1, accepted=None)
-    run_dir.log_event("step", candidate=cid, accept=False, reason=reason, val=None,
-                      parent=parent_id, parent_val=current_val.reward,
-                      optimizer_seconds=round(optimizer_seconds, 2),
-                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
+                     reason=reason, val=None, parent_val=current_val.reward,
+                     indecisive=True,
+                     optimizer_seconds=round(optimizer_seconds, 2),
+                     opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
     run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
     run_dir.record_spend_warnings()
     return {
@@ -1628,28 +1677,27 @@ def run_step(
     # ``accepted=None`` leaves the stall counter untouched. An indecisive step is not
     # evidence that the optimizer has run out of ideas — the candidate was never
     # judged — so it must not push the run toward an early "stalled" stop.
-    run_dir.update_spent(iterations=1,
-                         accepted=None if decision.indecisive else accepted)
     _step_extra = {}
     if isinstance(opt_report, dict):
         _step_extra["optimizer_report"] = opt_report
-    run_dir.log_event("step", candidate=cid, accept=accepted, reason=decision.reason,
-                      val=cand_val.reward, parent=parent_id, parent_val=current_val.reward,
-                      optimizer_seconds=round(optimizer_seconds, 2),
-                      runner_seconds=round(cand_val.seconds, 2),
-                      cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
-                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
-                      **_step_extra)
+    # Charge the budget, write the iteration record, fold the JOURNAL — the shared step
+    # every algorithm routes through (see ``record_iteration``).
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
+                     reason=decision.reason, val=cand_val.reward,
+                     parent_val=current_val.reward, indecisive=decision.indecisive,
+                     optimizer_seconds=round(optimizer_seconds, 2),
+                     runner_seconds=round(cand_val.seconds, 2),
+                     cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
+                     opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
+                     **_step_extra)
     run_dir.record_spend_warnings()
 
     # update optimizer memory + commit the iteration to the version store so the
     # whole process stays inspectable (git log / LEDGER / JOURNAL).
     delta = cand_val.reward - current_val.reward
     summary = f"candidate {cid} (val {cand_val.reward:.3f}, Δ {delta:+.3f})"
-    # Fold the optimizer's appended JOURNAL entry into the run-level append-only journal
-    # (so handover accumulates across accepted AND rejected iterations).
-    _reconcile_journal(workdir, run_dir, cid, accepted=accepted,
-                       val=cand_val.reward, delta=delta)
+    # ``record_iteration`` above already folded the optimizer's appended JOURNAL entry
+    # into the run-level append-only journal.
     if accepted:
         if history is not None:
             history.add(cid, summary, cand_val.reward)

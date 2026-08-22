@@ -73,8 +73,11 @@ BOOKKEEPING_KINDS = ("minibatch", "optimizer_context_warning", "target_profile",
                      "gepa_merge_skip", "gepa_merge_local", "skillopt_slow_eval",
                      "skillopt_slow_update")
 
-# The one-iteration-finished events, each carrying the optimizer's own spend.
-_STEP_KINDS = ("step", "gepa_val_gate", "skillopt_step")
+# The one-iteration-finished event, carrying the optimizer's own spend. Exactly ONE
+# kind: every algorithm writes it via ``harness.record_iteration`` (#216/#224).
+# ``gepa_val_gate`` is gone and ``skillopt_step`` is auxiliary epoch detail — listing
+# either here rendered two rows and summed ``opt_cost_usd`` twice for one iteration.
+_STEP_KINDS = ("step",)
 
 
 def read_new_events(path: Path, offset: int) -> tuple[list[dict], int]:
@@ -356,10 +359,7 @@ def format_event(ev: dict, totals: dict | None = None, *,
     elif kind in _STEP_KINDS:
         ok = bool(ev.get("accept"))
         verdict = "ACCEPT" if ok else "reject"
-        where = ""
-        if kind == "skillopt_step":
-            where = f" e{ev.get('epoch')}s{ev.get('step_in_epoch')}"
-        body = (f"{verdict}{where}  {ev.get('candidate')}  val={_num(ev.get('val'))}"
+        body = (f"{verdict}  {ev.get('candidate')}  val={_num(ev.get('val'))}"
                 f" (parent {_num(ev.get('parent_val'))})")
         if ev.get("reason"):
             body += f"  — {ev['reason']}"
