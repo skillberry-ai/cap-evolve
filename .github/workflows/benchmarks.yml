@@ -115,11 +115,11 @@ on:
         description: "Acceptance-gate strictness: accept a candidate iff improvement > k_se·SE (default 1.0; lower = more lenient, higher = stricter)"
         type: string
         default: "1.0"
-      algorithm_focus:
-        description: "Hill-climb focus schedule: all (whole train set each iteration) | cyclic (one task at a time) | hardest-first (lowest-scoring task first)"
+      algorithm:
+        description: "Optimization algorithm. hill-climb-* is the deterministic loop and its focus schedule: all (whole train set each iteration) | cyclic (one task at a time) | hardest-first (lowest-scoring task first). agent-optimize is the fully-agentic loop — run_suite.sh switches the run to orchestration_mode: agent and a headless agent drives the rounds itself, bounded by a stop_condition derived from `iterations`/`optimizer_*` rather than a fixed schedule."
         type: choice
-        default: all
-        options: [all, cyclic, hardest-first]
+        default: hill-climb-all
+        options: [hill-climb-all, hill-climb-cyclic, hill-climb-hardest-first, agent-optimize]
       # NB: workflow_dispatch allows at most 10 inputs and this list is full. SPLIT_SEED is
       # therefore driven by the repo variable `vars.BENCH_SPLIT_SEED` (see the job env) rather
       # than an 11th input, which would make this workflow invalid.
@@ -302,7 +302,11 @@ jobs:
       OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || (matrix.tier == 'smoke' && '50' || '0') }}
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
       GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
-      ALGORITHM_FOCUS: ${{ github.event.inputs.algorithm_focus || 'all' }}
+      # Names the algorithm and (for hill-climb) its focus schedule in one token, because
+      # the 10-input cap above leaves no room for two. run_suite.sh splits it, and maps
+      # agent-optimize to orchestration_mode: agent + a derived stop_condition. A PR-label
+      # dispatch has no inputs at all, so the default keeps every existing leg unchanged.
+      ALGORITHM: ${{ github.event.inputs.algorithm || 'hill-climb-all' }}
       # Run seed. With a tier that ships a committed split_ids.json the partition is FIXED, so
       # this varies only the per-trial rollout seeding — which is what makes the independent
       # seeds a paper comparison needs (">=3 seeds") possible on one split. Set the repo
@@ -427,6 +431,7 @@ jobs:
             "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
             "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
             "gate_k_se": ${GATE_K_SE:-1.0},
+            "algorithm": "${ALGORITHM:-hill-climb-all}",
             "warm_seed": $warm_json,
             "conclusion": "${{ job.status }}"
           }

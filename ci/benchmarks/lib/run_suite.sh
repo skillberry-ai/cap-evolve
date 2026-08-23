@@ -30,7 +30,89 @@ AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
 OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"
 GATE_K_SE="${GATE_K_SE:-1.0}"
-ALGORITHM_FOCUS="${ALGORITHM_FOCUS:-all}"
+
+# ---- algorithm selection ----------------------------------------------------
+# ALGORITHM is the workflow's `algorithm` input. It names the algorithm AND, for
+# hill-climb, its focus schedule in one token — because workflow_dispatch allows at most 10
+# inputs and that list is full, so a separate `algorithm` input is not available (see the
+# note in benchmarks.yml).
+#
+# agent-optimize is not just another value: it has NO deterministic loop and refuses a
+# deterministic invocation outright (skills/algorithms/agent-optimize/scripts/run.py), so
+# it must come with `orchestration_mode: agent` and a free-text `stop_condition` — the
+# stopping rule that replaces max_iterations there. Both are emitted below and consumed by
+# the capevolve.yaml heredoc further down.
+#
+# Back-compat: ALGORITHM_FOCUS was the old input name and may still be exported by hand or
+# by a committed overrides.env. It is honoured when ALGORITHM is unset, so an existing
+# invocation keeps producing the same run; ALGORITHM wins when both are set, so a stale
+# alias can never override a deliberate dispatch choice.
+ALGORITHM="${ALGORITHM:-}"
+if [ -z "$ALGORITHM" ]; then
+  case "${ALGORITHM_FOCUS:-all}" in
+    all|cyclic|hardest-first) ALGORITHM="hill-climb-${ALGORITHM_FOCUS:-all}" ;;
+    *) echo "::error:: unknown ALGORITHM_FOCUS='${ALGORITHM_FOCUS}'" >&2; exit 2 ;;
+  esac
+fi
+ALGO_FOCUS=""
+ORCH_MODE="deterministic"
+STOP_CONDITION=""
+case "$ALGORITHM" in
+  hill-climb-all|hill-climb-cyclic|hill-climb-hardest-first)
+    ALGO_SKILL="hill-climb"
+    ALGO_FOCUS="${ALGORITHM#hill-climb-}"
+    ;;
+  agent-optimize)
+    ALGO_SKILL="agent-optimize"
+    ORCH_MODE="agent"
+    # Derived from the SAME dispatch inputs that bound a deterministic run, so the two
+    # algorithms are comparable at a given dispatch. The whole loop is ONE agent process
+    # (unlike the deterministic path's one optimizer call per iteration), so a
+    # per-iteration cap becomes a whole-loop cap by multiplying it by the iteration count.
+    # OPTIMIZER_USD_PER_ITER=0 means unlimited everywhere else in this workflow; keep that
+    # meaning by omitting the dollar clause entirely rather than writing a $0 ceiling.
+    # Self-contained: fall back to the raw dispatch env so this block can be lifted and
+    # executed on its own (core/tests/test_benchmarks_agent_optimize.py does exactly that).
+    _rounds="${ITER:-${ITERATIONS:-3}}"
+    _trials="${NUM_TRIALS:-10}"
+    _k_se="${GATE_K_SE:-1.0}"
+    _stop_usd=""
+    if awk "BEGIN{exit !(${OPTIMIZER_USD_PER_ITER:-0} > 0)}" 2>/dev/null; then
+      _stop_usd="$(awk "BEGIN{printf \"%.2f\", ${OPTIMIZER_USD_PER_ITER:-0} * $_rounds}")"
+      _stop_usd=" Stop if your own (optimization) spend reaches \$${_stop_usd}."
+    fi
+    STOP_CONDITION="Spend at most ${_rounds} rounds, where a round is one candidate taken to a\
+ full-val gate decision (accepted or rejected) and booked with commit.py. Stop early when\
+ spend.py's recommendation is 'stop', or after ${_rounds} rounds, or when two consecutive\
+ rounds are rejected with no new failure cluster left to attack.${_stop_usd} Gate every\
+ candidate on FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on\
+ a screen subset. Always finish by sealing test exactly once with measure.py and writing\
+ the report — a run with no finalize has no result."
+    ;;
+  *)
+    echo "::error:: unknown ALGORITHM='$ALGORITHM' (expected hill-climb-all |" \
+         "hill-climb-cyclic | hill-climb-hardest-first | agent-optimize)" >&2
+    exit 2
+    ;;
+esac
+# ---- end algorithm selection ------------------------------------------------
+
+# The algorithm block above chose the skill, the orchestration mode and (agent mode only)
+# the free-text stop_condition. Render the mode-specific lines here rather than emitting
+# empty keys: `algorithm_focus` is a hill-climb concept, and a `stop_condition` on a
+# deterministic run would be inert text that misleads whoever reads the spec back.
+ALGO_YAML="algorithm_skill:    $ALGO_SKILL"
+[ -n "$ALGO_FOCUS" ] && ALGO_YAML="$ALGO_YAML
+algorithm_focus:    $ALGO_FOCUS"
+if [ "$ORCH_MODE" = "agent" ]; then
+  # json.dumps, not bare interpolation: the derived stop_condition is a paragraph of prose
+  # containing ':', '$' and quotes, any of which makes an unquoted YAML scalar invalid or
+  # (worse) silently truncated at the colon.
+  ALGO_YAML="$ALGO_YAML
+orchestration_mode: agent
+$(STOP_CONDITION="$STOP_CONDITION" "$PY" -c 'import json,os;print("stop_condition:     " + json.dumps(os.environ["STOP_CONDITION"]))')"
+fi
+
 BASE="$REPO/ci/benchmarks/$BENCH/$TIER"
 OUT="${2:-$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}}"
 mkdir -p "$OUT/optimized"
@@ -391,8 +473,7 @@ optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
 # resolves against different cwds in check vs run and can silently fall back to the generic
 # template (issue #252), which would erase an arm's instructions with no error.
 optimizer_instructions_file: "${OPT_INSTRUCTIONS:-}"
-algorithm_skill:    hill-climb
-algorithm_focus:    $ALGORITHM_FOCUS
+$ALGO_YAML
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
 # With an explicit split_ids_file the partition is fixed, so split_seed only varies the
@@ -419,6 +500,31 @@ cd "$WORK"
       --project .capevolve/project --run-ts suite --max-iterations "$ITER" </dev/null || \
   echo "::error::suite run exited non-zero for $BENCH — see the algorithm step's returncode/stderr above"
 RUN_DIR="$WORK/.capevolve/run_suite"
+
+# ---- agent mode: drive the handed-off loop ----------------------------------
+# In agent mode `cap-evolve run` does check + baseline, prints a handoff and RETURNS — no
+# algorithm subprocess and no auto-finalize, because the loop belongs to a conversational
+# agent. CI has none, so the algorithm's own headless host drives it: it renders the driver
+# briefing from the spec + handoff and delegates the CLI invocation to the existing
+# optimizers/run-optimizer runner (registry row, model + budget flags, cost capture,
+# CLI-present hard fail). It also guarantees a seal, so a host that runs out of budget
+# mid-loop still leaves an honest final.json instead of a run dir that reads as crashed.
+#
+# Budget: the whole loop is ONE agent process, so the per-iteration caps become whole-loop
+# caps (x the round count). 0 stays unlimited, as everywhere else in this workflow.
+if [ "$ORCH_MODE" = "agent" ]; then
+  HOST_TURNS="$(( ${OPTIMIZER_MAX_TURNS:-80} * ITER ))"
+  HOST_USD_ARGS=()
+  if awk "BEGIN{exit !(${OPTIMIZER_USD_PER_ITER:-0} > 0)}"; then
+    HOST_USD_ARGS=(--usd-budget "$(awk "BEGIN{printf \"%.2f\", ${OPTIMIZER_USD_PER_ITER:-0} * $ITER}")")
+  fi
+  echo ">>> agent mode — handing the loop to the headless host (turns=$HOST_TURNS)" >&2
+  "$PY" "$REPO/skills/algorithms/agent-optimize/scripts/host.py" \
+        --run-dir "$RUN_DIR" --project "$PROJ" \
+        --agent claude-code --model "$OPTIMIZER_MODEL" \
+        --budget "$HOST_TURNS" "${HOST_USD_ARGS[@]}" </dev/null || \
+    echo "::error::agent-optimize host exited non-zero for $BENCH — see its JSON above"
+fi
 
 # ---- metrics + report (per-task base→opt from the ONE run) -----------------
 "$PY" "$LIB_DIR/metrics.py" suite "$RUN_DIR" --bench "$BENCH" --tier "$TIER" \

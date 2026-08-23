@@ -112,10 +112,44 @@ has a **Type** column + filter.
   | `optimizer_usd_per_iter` | `0` (unlimited) | per-iteration $ cap on the optimizer — `0` disables Claude Code's native `--max-budget-usd` cap entirely; set e.g. `4.0` to bound it |
   | `optimizer_max_turns` | `80` | per-iteration turn cap on the optimizer |
   | `gate_k_se` | `1.0` | acceptance-gate strictness (accept iff Δ > k_se·SE) |
-  | `algorithm_focus` | `all` | hill-climb schedule: `all` \| `cyclic` \| `hardest-first` |
+  | `algorithm` | `hill-climb-all` | which optimization algorithm — see below |
 
   Overriding `agent_model` takes precedence over any per-task `agent` a curated `tasks.json`
   entry pins — `run_suite.sh` warns (doesn't fail) on a mismatch so you know it happened.
+
+#### The `algorithm` input
+
+One token names the algorithm and, for hill-climb, its focus schedule — because
+`workflow_dispatch` caps a workflow at 10 inputs and that list is full.
+
+  | value | what runs |
+  |---|---|
+  | `hill-climb-all` (default) | deterministic loop, whole train set each iteration |
+  | `hill-climb-cyclic` | deterministic loop, one task at a time |
+  | `hill-climb-hardest-first` | deterministic loop, lowest-scoring task first |
+  | `agent-optimize` | the fully-agentic loop (see below) |
+
+`agent-optimize` is not just a fourth schedule. It has no deterministic loop at all: the run
+switches to `orchestration_mode: agent`, where `cap-evolve run` does check + baseline, prints a
+handoff and returns. There being no conversational agent in CI, `run_suite.sh` then hands the
+loop to the algorithm's own headless host
+(`skills/algorithms/agent-optimize/scripts/host.py` — see
+[`docs/AGENT_ORCHESTRATION.md`](../../docs/AGENT_ORCHESTRATION.md)), which briefs a Claude Code
+process to run the rounds itself and guarantees the run ends sealed even if that process stops
+early.
+
+Two consequences worth knowing before you compare numbers:
+
+- **Its budget is a `stop_condition`, not a schedule.** `run_suite.sh` derives free-text prose
+  from the same dispatch inputs (`iterations` → max rounds, `optimizer_usd_per_iter` × rounds →
+  a whole-loop $ ceiling, `gate_k_se`/`trials` → the gate), so a given dispatch bounds both
+  algorithms comparably. The agent may still stop earlier on its own `spend.py` reading.
+- **`optimizer_max_turns` becomes a whole-loop cap.** The entire search is one agent process
+  rather than one call per iteration, so the host multiplies the per-iteration turn cap by the
+  round count.
+
+`runmeta.json` records the `algorithm`, so the history page never compares a hill-climb number
+against an agent-optimize one as though they were the same run type.
 - **On a PR — labels:**
   - **`benchmark-smoke`** / **`benchmark-full`** → run all four benchmarks of that tier.
   - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` ·

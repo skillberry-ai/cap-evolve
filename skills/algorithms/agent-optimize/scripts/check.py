@@ -1138,6 +1138,74 @@ def _benchmark_agnostic(c: Checker) -> None:
             note="no benchmark, optimizer or agent identity leaks into the skill's own text")
 
 
+def _host(c: Checker, tmp: Path) -> None:
+    """The headless host: a briefing that carries the loop, and a guaranteed seal.
+
+    This is the seam that makes the algorithm usable with no human in the loop, so both of
+    its own guarantees are executed here — offline, no agent CLI involved:
+
+      * ``--prompt-only`` renders the briefing (the run's audit trail of what the host
+        actually asked for) and spends nothing;
+      * ``--seal-only`` seals a run the agent left open, and is idempotent — a host that
+        raised ``TestSealError`` on an already-sealed run would fail runs that are complete.
+    """
+    from cap_evolve import Budget, RunDir, harness
+    from cap_evolve.skillcheck import SyntheticAdapter
+
+    host = HERE / "host.py"
+    if not c.check(host.is_file(), "missing scripts/host.py (the headless host)"):
+        return
+
+    adapter = SyntheticAdapter(n=20)
+    seed = seed_capability_dir(tmp / "host", level=3)
+    project = _project(tmp / "host", n=20)
+    run_dir = RunDir.create(tmp / "host" / ".capevolve", ts="host",
+                            budget=Budget(max_iterations=3))
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    harness.baseline(adapter, seed, run_dir=run_dir)
+    R, P = str(run_dir.root), str(project)
+
+    rendered = _run(c, "host.py --prompt-only",
+                    [str(host), "--run-dir", R, "--project", P, "--prompt-only"])
+    if rendered:
+        body = Path(rendered["prompt_path"]).read_text(encoding="utf-8")
+        for needle in ("spend.py", "gate_check.py", "commit.py", "measure.py"):
+            c.check(needle in body, f"the host briefing never names {needle}")
+        c.check(R in body and P in body,
+                "the host briefing does not carry the handoff paths")
+        c.check("do not ask" in body.lower(),
+                "the host briefing must tell the agent not to ask questions — an "
+                "unattended run that waits for a reply stalls until it is killed")
+        env = rendered.get("agent_env") or {}
+        c.check(int(env.get("BASH_MAX_TIMEOUT_MS", 0)) >= 3_600_000
+                and int(env.get("BASH_DEFAULT_TIMEOUT_MS", 0)) >= 3_600_000,
+                f"the host left the Bash-tool timeout at its 10-minute default: {env} — "
+                "every full-val eval would be killed mid-flight and read as a broken runner",
+                note="the host raises the Bash-tool ceiling past a full-val eval")
+
+    c.check(not (run_dir.root / "final.json").exists(),
+            "--prompt-only must not seal anything")
+    sealed = _run(c, "host.py --seal-only",
+                  [str(host), "--run-dir", R, "--project", P, "--seal-only"])
+    if sealed:
+        c.check(sealed.get("sealed") is True and sealed.get("seal") == "host",
+                f"--seal-only did not seal, or did not label the seal as the host's: {sealed}")
+    again = _run(c, "host.py --seal-only (idempotent)",
+                 [str(host), "--run-dir", R, "--project", P, "--seal-only"])
+    if again:
+        c.check(again.get("seal") == "agent",
+                f"a second seal must report the run as already sealed, not re-seal: {again}",
+                note="the host's seal is idempotent — a complete run is never failed for it")
+
+    unknown = _run(c, "host.py --agent <unknown>",
+                   [str(host), "--run-dir", R, "--project", P,
+                    "--agent", "definitely-not-a-registry-row"], expect_rc=2)
+    if unknown:
+        c.check("registry" in json.dumps(unknown).lower(),
+                f"an unknown host agent must be refused with a pointer at the registry, "
+                f"before any spend: {unknown}")
+
+
 def main() -> int:
     c = Checker("agent-optimize")
     _guard(c)
@@ -1161,6 +1229,7 @@ def main() -> int:
         _integrate(c, tmp)
         _mechanisms(c, tmp)
         _measure(c, tmp)
+        _host(c, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     _benchmark_agnostic(c)

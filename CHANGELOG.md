@@ -8,6 +8,55 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **The benchmarks suite can run `agent-optimize`.** Until now `run_suite.sh` hardcoded
+  `algorithm_skill: hill-climb`, so the fully-agentic algorithm was unreachable from CI — and
+  selecting it by hand would have failed anyway, because it refuses a deterministic invocation and
+  nothing in CI could pick up the agent-mode handoff. Three pieces close that:
+
+  - **`scripts/host.py` in the `agent-optimize` skill** — the headless host for agent mode. It
+    renders a driver briefing from the spec + handoff (absolute paths, `num_trials`, `gate_k_se`,
+    the free-text `stop_condition`, the four primitives every round must go through, and an
+    instruction not to ask questions) and delegates the CLI invocation to the existing
+    `optimizers/run-optimizer` runner, so registry rows, `{model}` substitution, budget-flag
+    mapping, cost capture and the CLI-present hard fail are the ones the deterministic path
+    already uses rather than a second copy. `--agent` takes any registry row; `--prompt-only`
+    renders the briefing free; `--seal-only` seals a run a previous host left open.
+
+    Two failure modes it exists to prevent. It raises `BASH_DEFAULT_TIMEOUT_MS` and
+    `BASH_MAX_TIMEOUT_MS` to 4h: at Claude Code's 10-minute default ceiling every full-val eval on
+    a real benchmark is killed mid-flight, and a perfectly healthy run reads as a broken runner.
+    And it **guarantees the seal** — an agent that exhausts its turns leaves no `final.json`, which
+    is both unreportable and indistinguishable from a crash, so the host runs `measure.py` itself
+    and labels the result `seal: host` so it is never mistaken for the agent's own judgement that
+    it was finished. An already-sealed run reports `seal: agent` instead of raising
+    `TestSealError`.
+
+  - **An `algorithm` dispatch input**, replacing `algorithm_focus`:
+    `hill-climb-all` (default, unchanged behaviour) | `hill-climb-cyclic` |
+    `hill-climb-hardest-first` | `agent-optimize`. One token carries both algorithm and focus
+    because `workflow_dispatch` caps a workflow at 10 inputs and that list is full. `ALGORITHM_FOCUS`
+    is still honoured when `ALGORITHM` is unset, so committed `overrides.env` files and hand-run
+    invocations keep producing the same run; `ALGORITHM` wins when both are set, so a stale alias
+    can never override a deliberate dispatch choice. `runmeta.json` now records the algorithm — a
+    hill-climb number and an agent-optimize number are not a like-for-like comparison, and the
+    history page should not present them as one.
+
+  - **A `stop_condition` derived from the same dispatch inputs**, since agent mode is bounded by
+    free-text prose rather than a round schedule: `iterations` → max rounds,
+    `optimizer_usd_per_iter` × rounds → a whole-loop $ ceiling (0 stays unlimited, as everywhere
+    else in the workflow), `gate_k_se`/`trials` → the gate. `optimizer_max_turns` becomes a
+    whole-loop turn cap the same way, because the entire search is one agent process instead of one
+    call per iteration. It is emitted through `json.dumps`: interpolated raw, a paragraph
+    containing `:` and `$` yields a spec that silently truncates at the first colon and hands the
+    agent a stopping rule nobody wrote.
+
+  `host.py` is deliberately **not** documented in `SKILL.md`. That file is the hosted agent's
+  recurring per-trigger context with ~150 characters of headroom under the 5000-token budget, and
+  the agent never invokes the host — the host invokes the agent. It is documented in
+  `docs/AGENT_ORCHESTRATION.md` and `ci/benchmarks/README.md` instead, following the same
+  convention as the skill's other non-loop scripts (`linkcheck.py`, `abstract.py`).
+
 ### Deprecated
 - **`evograph`, the fifth algorithm.** It advertised one distinctive capability — a
   collaborative weakness graph with one solver agent per weakness — and neither half survived

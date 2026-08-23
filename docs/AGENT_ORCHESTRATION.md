@@ -103,6 +103,48 @@ python "$S/phases/report/scripts/run.py"   --run-dir "$R"
 > best candidate on test once and burns the seal. A second finalize raises `TestSealError`.
 > `cap-evolve --help` lists the real subcommands.
 
+## Unattended agent mode — the headless host
+
+Agent mode assumes a conversational agent is present to pick up the handoff. Where none is —
+CI, cron, a script — the handoff would simply go unread: `cap-evolve run` prints it, returns 0,
+and nothing drives the loop. `skills/algorithms/agent-optimize/scripts/host.py` is the host for
+that case:
+
+```bash
+S="$CAPEVOLVE_SKILLS_DIR"
+python "$S/algorithms/agent-optimize/scripts/host.py" \
+       --run-dir "$R" --project "$P" \
+       --agent claude-code --model claude-opus-4-8 \
+       --budget 240 --usd-budget 30
+```
+
+It renders a driver briefing from the spec + handoff (paths, `num_trials`, `gate_k_se`, the
+`stop_condition`, and an instruction not to ask questions), then hands it to the named agent CLI
+through the existing **`optimizers/run-optimizer`** runner — so the registry row, `{model}`
+substitution, budget-flag mapping, cost capture and CLI-present hard-fail are the same ones the
+deterministic path uses, not a second copy. `--agent` accepts any row in
+`skills/optimizers/registry.yaml`.
+
+Three things are the host's own:
+
+- **Whole-loop budgets.** Agent mode runs the entire search in ONE agent process, so `--budget`
+  (turns) and `--usd-budget` bound the whole loop, not one round. CI derives them by multiplying
+  the per-iteration caps by the round count.
+- **A raised Bash-tool ceiling.** Claude Code caps one Bash call at `BASH_MAX_TIMEOUT_MS`
+  (default 10 min). A full-val eval on a real benchmark runs far longer, so the host raises both
+  `BASH_DEFAULT_TIMEOUT_MS` and `BASH_MAX_TIMEOUT_MS` — the effective ceiling is the larger of
+  the two. Left at the default, every eval is killed mid-flight and a healthy run reads as a
+  broken runner.
+- **A guaranteed seal.** An agent that exhausts its turns leaves no `final.json`, and there is
+  then no honest number and no way to tell "stopped early" from "crashed". If the agent did not
+  seal, the host does — through the same `measure.py` — and reports `seal: host` so it is never
+  mistaken for the agent's own judgement that it was finished. Already-sealed runs report
+  `seal: agent` rather than raising `TestSealError`.
+
+`--prompt-only` renders the briefing and spends nothing (it lands at `$R/host/driver_prompt.md`,
+so a finished run carries a record of exactly what the host asked for). `--seal-only` seals a run
+a previous host left open.
+
 ## Honesty invariants (both modes)
 
 - Acceptance and the score-goal check are always on **full val** through the gate; cheap subset
