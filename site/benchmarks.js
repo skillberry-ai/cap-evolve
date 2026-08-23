@@ -237,8 +237,14 @@ function render() {
     const badge = `<span class="badge ${esc(r.conclusion)}">${esc(r.conclusion)}</span>`;
     const date = esc(fmtLocal(r.date));
     const tier = esc(r.tier || "smoke");
+    // Which algorithm produced the number. Records written before the `algorithm` field
+    // existed render "—" rather than a guessed "hill-climb-all": the focus schedule was
+    // already dispatchable then, so the algorithm of an old run is genuinely unknown, and
+    // labelling it would fabricate the very provenance this column exists to establish.
+    const algo = esc(r.algorithm || "—");
     tr.innerHTML = `<td><a href="${esc(r.run_url)}">${date}</a></td>
-      <td>${src}</td><td>${esc(r.bench)}</td><td>${tier}</td><td>${r.iterations ?? "—"}</td>
+      <td>${src}</td><td>${esc(r.bench)}</td><td>${tier}</td><td><code>${algo}</code></td>
+      <td>${r.iterations ?? "—"}</td>
       <td>${r.trials ?? "—"}</td>
       <td>${reward}</td><td>${evalUsd}</td><td>${optUsd}</td><td>${latency}</td>
       <td><code>${esc(r.agent_model || "—")}</code></td><td><code>${esc(r.optimizer_model || "—")}</code></td>
@@ -248,7 +254,7 @@ function render() {
     const detail = document.createElement("tr");
     detail.className = "detail-row";
     detail.hidden = true;
-    detail.innerHTML = `<td colspan="14">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
+    detail.innerHTML = `<td colspan="15">${taskTable(r.tasks || [])}${stepsTable(r.steps || [])}</td>`;
     tb.appendChild(detail);
 
     tr.addEventListener("click", (e) => {
