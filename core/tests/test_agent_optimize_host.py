@@ -153,6 +153,71 @@ def test_prompt_only_renders_the_briefing_without_shelling_an_agent(tmp_path):
     assert "do not ask" in body.lower()
 
 
+def test_the_briefing_enumerates_every_editable_file_not_just_the_capability_names(tmp_path):
+    """Naming capabilities is not enough — name the FILES, or only the prompt gets edited.
+
+    Measured on tau2 smoke run 32649063850: the spec declared
+    `capabilities: [system-prompt, tools]`, and both candidates the agent produced touched
+    only `policy/policy.md`. `tools/tools.py` and `reference/data_model.py` were in the
+    candidate dir, writable, and never opened. `capabilities` gates which capability
+    `validate()` runs, not what may be written, so nothing was blocking the agent; it simply
+    had no reason to know the other files were fair game.
+
+    This repo already paid for that lesson once — see the "NAME THE ARTIFACTS" note in
+    run_suite.sh's spreadsheetbench arm, where an optimizer handed two editable files
+    reported "all in prompt.md" and left the second surface inert. The briefing must
+    therefore list the real files, so the fix is generic rather than per-benchmark.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    # A multi-file capability, like tau2's: a prompt AND code, plus a nested reference.
+    seed = run_dir.root / "candidates" / "seed"
+    (seed / "tools").mkdir(parents=True, exist_ok=True)
+    (seed / "tools" / "tools.py").write_text("def get_details():\n    ...\n", encoding="utf-8")
+    (seed / "reference").mkdir(parents=True, exist_ok=True)
+    (seed / "reference" / "data_model.py").write_text("SCHEMA = {}\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "tools/tools.py" in body, (
+        "the briefing does not name the editable tool code, so an agent reasonably edits "
+        "only the obvious prompt file")
+    assert "reference/data_model.py" in body, (
+        "nested files under the capability are editable too and must be listed")
+
+    # And it must say so, not merely list paths: a bare file list reads as inventory.
+    low = body.lower()
+    assert "only the prompt" in low or "only the obvious" in low, (
+        "the briefing lists the files but never says that touching only the prompt leaves "
+        f"the rest of the surface unexercised: {body}")
+
+
+def test_the_briefing_does_not_invent_files_for_a_prompt_only_capability(tmp_path):
+    """A single-file capability must not be described as if it had more surface.
+
+    Overcorrecting is its own failure: telling an agent to "also edit the tool code" when
+    there is none sends it hunting for code to change, which is exactly how a prompt-only
+    run once ended up editing adapter.py (see run_suite.sh's spreadsheetbench note).
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    seed = run_dir.root / "candidates" / "seed"
+    for extra in seed.rglob("*"):
+        if extra.is_file() and extra.name != "prompt.md":
+            extra.unlink()
+    (seed / "prompt.md").write_text("You are a helpful agent.\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "prompt.md" in body
+    assert "tools.py" not in body, (
+        "the briefing named tool code for a capability that has none — that sends the agent "
+        "looking for code outside its capability to edit")
+
+
 def test_unknown_host_agent_is_refused_before_any_spend(tmp_path):
     project = _project(tmp_path)
     run_dir = _run_dir(tmp_path)

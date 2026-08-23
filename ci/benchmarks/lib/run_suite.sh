@@ -161,6 +161,23 @@ case "$BENCH" in
   tau2)
     cp "$TPL/tau2_bench/adapter.py" "$PROJ/adapters/"
     cp -R "$REPO/examples/tau2_airline/seed_capability" "$PROJ/seed_capability"
+    # tau2's FULL editable surface, for every tier (smoke/full/integration all reach here):
+    # policy/policy.md (the agent's system prompt) AND tools/tools.py + reference/data_model.py
+    # (the tool code it calls). Both capability skills are declared so both sets of rules
+    # validate the candidate and both guidance docs reach the optimizer.
+    #
+    # This is the maximum that applies, not a subset. The other two capability skills are
+    # deliberately absent: `mcp-tool` is for a toolset served by an EXTERNAL MCP server and
+    # forbids editing tool code (its own SKILL.md says to use `tools` when the agent owns its
+    # tools, which here it does), and `skill-package` optimizes a SKILL.md package, which this
+    # seed is not. Adding either would narrow or invalidate the surface, not widen it.
+    #
+    # NB `capabilities` selects which capability `validate()` runs and which guidance is
+    # surfaced — it does NOT gate writes. Declaring `tools` therefore does not by itself make
+    # an optimizer USE it: on smoke run 32649063850 both candidates edited only policy.md
+    # while tools.py sat writable and unopened. What closes that gap is naming the actual
+    # files to the optimizer — the deterministic path's INSTRUCTIONS.md does, and agent mode's
+    # briefing does it in host.py's `_surface_section`.
     CAPS="[system-prompt, tools]"
     cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL

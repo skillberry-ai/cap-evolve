@@ -76,6 +76,61 @@ def _known_agents() -> list[str]:
         return []
 
 
+def _editable_files(run_dir: Path, project: Path, spec: dict) -> list[str]:
+    """The capability's real files, relative — the surface the agent may actually edit.
+
+    ``capabilities`` names which capability skills' ``validate()`` runs; it does NOT restrict
+    what may be written. Handing the agent only those names is what leaves most of the
+    surface untouched: in one measured run a spec declaring both a prompt capability and a
+    tool-code capability produced 2 of 2 candidates that edited only the prompt file, while
+    the tool code sat writable and unopened in the same candidate dir.
+
+    Read from the materialized seed candidate (what the agent copies and edits) rather than
+    from the project's capability_path, so this is the same file set it will really see.
+    """
+    root = run_dir / "candidates" / "seed"
+    if not root.is_dir():
+        cap = str(spec.get("capability_path") or "seed_capability")
+        root = (project / cap).resolve()
+    if not root.is_dir():
+        return []
+    skip_dirs = {"__pycache__", ".git"}
+    files = [
+        p.relative_to(root).as_posix()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+        and not any(part in skip_dirs for part in p.parts)
+        and p.suffix not in {".pyc", ".pyo"}
+    ]
+    return files
+
+
+def _surface_section(files: list[str]) -> str:
+    """Render the editable-file list, and say what a prompt-only edit leaves undone.
+
+    Scaled to what is actually there: naming tool code for a capability that has none sends
+    the agent hunting outside its capability for code to change.
+    """
+    if not files:
+        return ""
+    listing = "\n".join(f"- `{f}`" for f in files)
+    if len(files) == 1:
+        return (f"## Your editable surface — one file\n\n{listing}\n\n"
+                "That file is the whole capability. There is no tool code and no second "
+                "surface, so do not go looking for one outside it.\n")
+    return (
+        f"## Your editable surface — ALL {len(files)} of these files\n\n{listing}\n\n"
+        "Every one of them is in your candidate copy and every one is fair game — prose, "
+        "code, data, nested files alike. A round that changes **only the obvious prompt "
+        "file** leaves the rest of the agent's instruction and behaviour surface exactly as "
+        "it was, and that is the most common way a run produces nothing: the fix that was "
+        "needed lived in a file nobody opened.\n\n"
+        "So before you write an edit, decide *which file* is the right place for it — a rule "
+        "the agent already has and violates usually belongs in code as a guard, while a "
+        "missing decision criterion belongs in prose. Say which file you chose, and why that "
+        "one, when you commit the round.\n")
+
+
 def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
               rounds: int) -> str:
     """The driver briefing: the handoff facts, then a pointer to the loop itself.
@@ -90,6 +145,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     gate_mode = spec.get("gate_mode", "paired")
     caps = spec.get("capabilities") or []
     cap_path = spec.get("capability_path") or "seed_capability"
+    surface = _surface_section(_editable_files(run_dir, project, spec))
     skill_md = SKILL_DIR / "SKILL.md"
     helpers = HERE
 
@@ -131,11 +187,13 @@ directory is not necessarily either of theirs.
 | `num_trials` | {n_trials} |
 | `gate_k_se` | {k_se} |
 | `gate_mode` | {gate_mode} |
-| `capabilities` (your editable surface) | {caps} |
+| `capabilities` (which capability rules validate your edits) | {caps} |
 | `capability_path` | {cap_path} |
 
 Pass these explicitly — `--n-trials {n_trials}` on every evaluate, `--k-se {k_se}` on every
 gate — rather than relying on a default that may not match this spec.
+
+{surface}
 
 ## The primitives every round must go through
 
