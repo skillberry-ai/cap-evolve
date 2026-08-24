@@ -125,7 +125,18 @@ substitution, budget-flag mapping, cost capture and CLI-present hard-fail are th
 deterministic path uses, not a second copy. `--agent` accepts any row in
 `skills/optimizers/registry.yaml`.
 
-Three things are the host's own:
+It also stages the **same optimizer read-context every deterministic algorithm receives**, via
+`harness.OptimizerContext.inject()`: each declared capability's skill as `./guidance/<cap>/` *and*
+placed where the agent natively discovers skills, plus the diagnose method, `capability_sources`,
+and the agent's own features reference. That class exists so "an algorithm cannot silently run on
+a thinner prompt than its siblings", and agent mode used to bypass it — which is not cosmetic. In
+two measured CI runs, 4 of 4 candidates edited only the prompt file of a `[system-prompt, tools]`
+capability, because the agent had guidance for prose and none at all for the tool code beside it.
+`capabilities` gates which capability `validate()` runs, never what may be written, so nothing was
+blocking those edits; the guidance for that surface simply was not there. The briefing also
+enumerates the capability's real files, since naming capabilities is not the same as naming files.
+
+Four things are the host's own:
 
 - **Whole-loop budgets.** Agent mode runs the entire search in ONE agent process, so `--budget`
   (turns) and `--usd-budget` bound the whole loop, not one round. CI derives them by multiplying
@@ -135,6 +146,11 @@ Three things are the host's own:
   `BASH_DEFAULT_TIMEOUT_MS` and `BASH_MAX_TIMEOUT_MS` — the effective ceiling is the larger of
   the two. Left at the default, every eval is killed mid-flight and a healthy run reads as a
   broken runner.
+- **A truthful `INSTRUCTIONS.md`.** The staged always-on `CLAUDE.md` opens with "read
+  `./INSTRUCTIONS.md` FIRST" — written for the deterministic optimizer, which has one. The host
+  writes the briefing there too (same bytes as the run-dir copy), so that pointer resolves, and
+  the briefing states that `LEDGER.md` / `RUNMAP.md` / `prior_iterations/` belong to the
+  deterministic loop and are legitimately absent here.
 - **A guaranteed seal.** An agent that exhausts its turns leaves no `final.json`, and there is
   then no honest number and no way to tell "stopped early" from "crashed". If the agent did not
   seal, the host does — through the same `measure.py` — and reports `seal: host` so it is never

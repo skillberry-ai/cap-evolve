@@ -218,6 +218,89 @@ def test_the_briefing_does_not_invent_files_for_a_prompt_only_capability(tmp_pat
         "looking for code outside its capability to edit")
 
 
+def test_the_hosted_agent_gets_the_same_optimizer_context_as_every_other_algorithm(tmp_path):
+    """The structural reason a hosted run edited only prose — and the fix.
+
+    `harness.OptimizerContext` exists so "an algorithm cannot silently run on a thinner
+    prompt than its siblings": it stages the declared capability skills as `./guidance/<cap>/`
+    AND natively where the agent auto-discovers them, plus the diagnose method, the
+    capability_sources, and the agent's own features reference. Every deterministic algorithm
+    calls `inject()`.
+
+    The host did not, and `test_optimizer_context_parity.py` says so in its own docstring:
+    agent-optimize "declares none of the context flags and drives its own loop… an algorithm
+    absent from [ALGORITHMS] is NOT covered — it can still run blind while this file stays
+    green." It ran blind. Two consecutive CI runs edited only the prompt file across 4 of 4
+    candidates, having been handed no guidance whatsoever on how to edit tool code — naming
+    the files in prose did not change that, because the missing thing was never the file list.
+    """
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        "capabilities: [system-prompt, tools]\ncapability_path: seed_capability\n"
+        'stop_condition: "at most 2 rounds; seal with measure.py"\n',
+        encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+
+    workdir = Path(out["workdir"])
+    assert out["context"]["staged"] is True, (
+        f"the optimizer context was not staged for the hosted agent: {out['context']}")
+
+    # Both declared capabilities, as readable guidance AND natively discoverable.
+    for cap in ("system-prompt", "tools"):
+        assert (workdir / "guidance" / cap / "SKILL.md").is_file(), (
+            f"no ./guidance/{cap}/ — the agent has no guidance on editing this surface")
+        assert (workdir / ".claude" / "skills" / cap / "SKILL.md").is_file(), (
+            f"{cap} not placed where claude-code natively discovers skills")
+
+    # The failure-clustering method the loop's step 1 depends on.
+    assert (workdir / "guidance" / "diagnose" / "SKILL.md").is_file(), (
+        "no ./guidance/diagnose/ — the agent is told to read clusters with no method for it")
+
+    # And the briefing must point at what was staged, or it goes unread.
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+    assert "guidance/" in body, "the briefing never points at the staged guidance"
+
+    # Staging writes an always-on CLAUDE.md whose first instruction is "read
+    # ./INSTRUCTIONS.md FIRST" — written for the deterministic optimizer, which has one.
+    # Agent mode passes its briefing as the prompt, so without this the agent's always-on
+    # context opens by pointing at a file that does not exist.
+    instructions = workdir / "INSTRUCTIONS.md"
+    assert instructions.is_file(), (
+        "the staged CLAUDE.md points at ./INSTRUCTIONS.md and nothing wrote one")
+    assert instructions.read_text(encoding="utf-8") == body, (
+        "INSTRUCTIONS.md and the run-dir briefing differ — two versions of the brief means "
+        "no way to tell which one the agent followed")
+
+    # That same pointer names deterministic-loop artifacts this loop never builds.
+    assert "LEDGER.md" in body and "will not exist here" in body, (
+        "the briefing does not tell the agent that LEDGER.md/RUNMAP.md belong to the other "
+        "loop, so it will hunt for files that are legitimately absent")
+
+
+def test_a_context_staging_failure_is_loud_not_silently_off(tmp_path):
+    """Silent-off is the failure mode this repo warns about everywhere.
+
+    A run whose guidance never got staged looks exactly like one where it did — the agent
+    just quietly optimizes less surface, which is the defect that produced this fix. So a
+    staging failure must be reported in the host's own output rather than swallowed.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    # Break adapter import: inject() needs the adapter for the trajectories copy.
+    (project / "adapters" / "adapter.py").write_text("raise RuntimeError('boom')\n",
+                                                     encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+
+    assert out["context"]["staged"] is False
+    assert out["context"].get("error"), (
+        f"a staging failure must say why, not just that it happened: {out['context']}")
+    assert "boom" in json.dumps(out["context"]) or "RuntimeError" in json.dumps(out["context"])
+
+
 def test_unknown_host_agent_is_refused_before_any_spend(tmp_path):
     project = _project(tmp_path)
     run_dir = _run_dir(tmp_path)
