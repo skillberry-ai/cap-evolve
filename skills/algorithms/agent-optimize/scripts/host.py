@@ -131,8 +131,27 @@ def _surface_section(files: list[str]) -> str:
         "one, when you commit the round.\n")
 
 
+def _guidance_section(workdir: Path, context: dict) -> str:
+    """Point at the staged capability guidance — unread guidance is not guidance."""
+    if not context.get("staged"):
+        return ("## Capability guidance\n\nNot available for this run (staging failed). Work "
+                "from the capability files themselves and be conservative.\n")
+    caps = context.get("capabilities") or []
+    lines = "\n".join(f"- `{workdir}/guidance/{c}/SKILL.md` — how to edit the **{c}** surface"
+                      for c in caps)
+    return (
+        "## How to edit each surface — READ THESE BEFORE YOUR FIRST EDIT\n\n"
+        f"{lines}\n"
+        f"- `{workdir}/guidance/diagnose/SKILL.md` — the failure-clustering method step 1 uses\n\n"
+        "One guidance doc per declared capability, and there is one for every surface you may "
+        "edit — not just the prose one. Each states what is safely editable there, the edit "
+        "forms that work, and the failure modes. **Read the guidance for the surface you are "
+        "about to change**: an edit made without it is a guess, and the surface you have no "
+        "guidance for is the one you will avoid by default.\n")
+
+
 def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
-              rounds: int) -> str:
+              rounds: int, workdir: Path, context: dict) -> str:
     """The driver briefing: the handoff facts, then a pointer to the loop itself.
 
     Deliberately NOT a restatement of the algorithm. SKILL.md is the implementation and the
@@ -146,6 +165,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     caps = spec.get("capabilities") or []
     cap_path = spec.get("capability_path") or "seed_capability"
     surface = _surface_section(_editable_files(run_dir, project, spec))
+    guidance = _guidance_section(workdir, context)
     skill_md = SKILL_DIR / "SKILL.md"
     helpers = HERE
 
@@ -194,6 +214,7 @@ Pass these explicitly — `--n-trials {n_trials}` on every evaluate, `--k-se {k_
 gate — rather than relying on a default that may not match this spec.
 
 {surface}
+{guidance}
 
 ## The primitives every round must go through
 
@@ -217,6 +238,14 @@ accelerators; the four above are not.
 
 `spend.py` parses that text into checkable predicates; run it before each round and act on
 its single `recommendation` (`stop` | `narrow_scope` | `continue`), as SKILL.md describes.
+
+## Files in your working directory that belong to the OTHER loop
+
+Your always-on instructions mention `LEDGER.md`, `RUNMAP.md` and `prior_iterations/`. Those are
+built by the *deterministic* loop, which calls one optimizer per iteration; you are driving the
+whole search yourself, so they will not exist here and their absence is not a problem — do not
+go looking for them or try to recreate them. `JOURNAL.md` is different: `commit.py` reconciles
+it as you book rounds, so it accrues your own history and is worth reading from round 2 on.
 
 ## Unattended — this is the one real difference from an interactive run
 
@@ -263,6 +292,54 @@ def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) ->
         return {"sealed": True, "seal": "host", "measure_rc": p.returncode}
     return {"sealed": False, "seal": "failed", "measure_rc": p.returncode,
             "measure_error": (p.stderr or p.stdout)[-1200:]}
+
+
+def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
+                   agent: str) -> dict:
+    """Stage the SAME optimizer read-context every deterministic algorithm receives.
+
+    ``harness.OptimizerContext`` exists so "an algorithm cannot silently run on a thinner
+    prompt than its siblings": it places the declared capability skills as
+    ``./guidance/<cap>/`` *and* where the agent natively discovers skills, plus the diagnose
+    method, any ``capability_sources``, and the agent's own features reference.
+
+    Agent mode never called it. ``test_optimizer_context_parity.py`` names that gap in its own
+    docstring — this algorithm "declares none of the context flags and drives its own loop", so
+    it "can still run blind while this file stays green". It did: measured across two runs, 4
+    of 4 candidates edited only the prompt file, because the agent had guidance for prose and
+    none at all for the tool code sitting beside it. Naming the files in the briefing did not
+    move it, since the file list was never the missing piece.
+
+    Reported rather than swallowed: a run that silently skipped staging is indistinguishable
+    from one that staged fine, and simply optimizes less surface.
+    """
+    caps = tuple(c for c in (spec.get("capabilities") or []) if c)
+    try:
+        from cap_evolve import RunDir, harness
+        from cap_evolve.check import load_adapter
+
+        rd = RunDir.open(run_dir)
+        adapter = load_adapter(project)
+        ctx = harness.OptimizerContext(
+            capabilities=caps,
+            optimizer_name=agent,
+            capability_sources=tuple(spec.get("capability_sources") or []),
+            project_dir=project,
+        )
+        # split="val" + the current best's tag: the parent step the agent builds on, which is
+        # the same choice the deterministic loop makes.
+        ctx.inject(adapter, rd, workdir, split="val", tag=rd.best_id or "seed")
+        staged = {"staged": True, "capabilities": list(caps),
+                  "guidance": sorted(p.name for p in (workdir / "guidance").iterdir())
+                  if (workdir / "guidance").is_dir() else []}
+        try:
+            rd.log_event("host_context", capabilities=list(caps), agent=agent, staged=True)
+        except Exception:  # noqa: BLE001 — the event is a nicety, the staging is the point
+            pass
+        return staged
+    except Exception as exc:  # noqa: BLE001
+        return {"staged": False, "capabilities": list(caps),
+                "error": f"{type(exc).__name__}: {exc}"[:400]}
 
 
 def _child_env() -> dict:
@@ -339,12 +416,28 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
+    # The agent needs write access to BOTH the run dir and the project; their common parent
+    # is the natural workdir, and it is where the staged guidance + native skills land.
+    workdir = _common_parent(run_dir, project)
+    context = _stage_context(run_dir=run_dir, project=project, workdir=workdir,
+                             spec=spec, agent=args.agent)
+
     prompt_dir = run_dir / "host"
     prompt_dir.mkdir(parents=True, exist_ok=True)
     prompt_path = prompt_dir / "driver_prompt.md"
-    prompt_path.write_text(
-        _briefing(run_dir=run_dir, project=project, spec=spec, skills=SKILLS, rounds=rounds),
-        encoding="utf-8")
+    briefing = _briefing(run_dir=run_dir, project=project, spec=spec, skills=SKILLS,
+                         rounds=rounds, workdir=workdir, context=context)
+    prompt_path.write_text(briefing, encoding="utf-8")
+    # Also as <workdir>/INSTRUCTIONS.md. Staging writes an always-on CLAUDE.md pointer whose
+    # first instruction is "read ./INSTRUCTIONS.md FIRST" — written for the deterministic
+    # per-iteration optimizer, which has one. Agent mode passes its briefing as the prompt, so
+    # without this the agent's always-on context opens by pointing at a file that is not there.
+    # Same bytes, so the two can never disagree; the run-dir copy stays the audit record.
+    if context.get("staged"):
+        try:
+            (workdir / "INSTRUCTIONS.md").write_text(briefing, encoding="utf-8")
+        except OSError as exc:
+            context.setdefault("warnings", []).append(f"INSTRUCTIONS.md: {exc}")
 
     agent_env = _agent_env(args.model)
     if args.prompt_only:
@@ -352,16 +445,21 @@ def main(argv=None) -> int:
                           "model": args.model, "prompt_only": True,
                           "prompt_path": str(prompt_path), "returncode": None,
                           "agent_env": agent_env, "budget": args.budget,
-                          "usd_budget": args.usd_budget}, indent=2))
+                          "usd_budget": args.usd_budget,
+                          "workdir": str(workdir), "context": context}, indent=2))
         return 0
+    if not context["staged"]:
+        print(f"::warning::optimizer context not staged for the hosted agent "
+              f"({context.get('error')}) — it will optimize with no capability guidance",
+              file=sys.stderr)
 
     # Delegate the invocation. --json switches on run-optimizer's cost capture, which is how
     # the host's own spend reaches the run dir at all: the evaluate phase records the
     # runner's cost, and nothing records the proposer's.
     cmd = [sys.executable, str(RUN_OPTIMIZER), "--name", args.agent, "--json",
-           # The agent needs write access to BOTH the run dir and the project; their common
-           # parent is the natural workdir. Every path in the briefing is absolute anyway.
-           "--workdir", str(_common_parent(run_dir, project)),
+           # Same workdir the guidance was staged into, so the agent's cwd is where its
+           # native skills dir and ./guidance/ live.
+           "--workdir", str(workdir),
            "--prompt", str(prompt_path)]
     if args.model:
         cmd += ["--model", args.model]

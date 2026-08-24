@@ -8,6 +8,31 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **The hosted agent now gets the same optimizer read-context as every other algorithm.** Two
+  agent-optimize CI runs on a `[system-prompt, tools]` capability edited **only the prompt file**
+  across 4 of 4 candidates; the tool code sat writable and unopened in the same candidate dir. The
+  cause was not the spec and not the file list. `harness.OptimizerContext` exists so "an algorithm
+  cannot silently run on a thinner prompt than its siblings" — it stages each declared
+  capability's skill as `./guidance/<cap>/` *and* where the agent natively discovers skills, plus
+  the diagnose method, `capability_sources`, and the agent's features reference. The host never
+  called it, so the agent had guidance for prose and **none at all** for the tool code beside it,
+  and did what it had guidance for.
+
+  `test_optimizer_context_parity.py` had already named this hole in its own docstring:
+  agent-optimize "declares none of the context flags and drives its own loop… an algorithm absent
+  from [ALGORITHMS] is NOT covered — it can still run blind while this file stays green." It ran
+  blind. `host.py` now calls `inject()` with the agent as the optimizer row, and reports whether
+  staging succeeded — silently-off is indistinguishable from working while quietly optimizing less
+  surface, which is exactly how this went unnoticed.
+
+  Two consequences of reusing that path, both handled: the briefing points at the staged guidance
+  (unread guidance is not guidance), and the always-on `CLAUDE.md` it writes opens with "read
+  `./INSTRUCTIONS.md` FIRST" — true for the deterministic optimizer, which has one, so the host
+  writes the briefing there too (same bytes as the run-dir audit copy) and states that
+  `LEDGER.md` / `RUNMAP.md` / `prior_iterations/` belong to the other loop and are legitimately
+  absent.
+
 ### Added
 - **The benchmarks suite can run `agent-optimize`.** Until now `run_suite.sh` hardcoded
   `algorithm_skill: hill-climb`, so the fully-agentic algorithm was unreachable from CI — and
