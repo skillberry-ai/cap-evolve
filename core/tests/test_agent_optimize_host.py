@@ -313,6 +313,47 @@ def test_the_hosted_agent_gets_the_same_optimizer_context_as_every_other_algorit
         "loop, so it will hunt for files that are legitimately absent")
 
 
+def test_the_briefing_carries_the_same_measured_blocks_the_deterministic_prompt_does(tmp_path):
+    """Prompt-content parity, from the shared seam rather than re-authored here.
+
+    The host used to hand-roll thinner equivalents of two blocks the deterministic path has
+    always had, and the measured consequence was an optimizer that only ever edited prose:
+
+      * `harness._CAP_EDIT_SPACE["tools"]` — "HIGHEST-LEVERAGE EDIT: WRITE A NEW CODE-BEARING
+        TOOL … a deterministic tool can't be 'forgotten' the way a prompt rule can".
+      * the target-reader block — "when the reader is weaker than you, prefer explicit rules,
+        worked examples, and code enforcement over terse prose".
+
+    Both now come from `OptimizerContext`, so the two paths cannot drift. Asserted against
+    harness's own strings, not against a copy pasted into this test.
+    """
+    from cap_evolve import harness
+
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        "capabilities: [system-prompt, tools]\ncapability_path: seed_capability\n"
+        "target_model: aws/gpt-oss-120b\n"
+        'stop_condition: "at most 2 rounds; seal with measure.py"\n', encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    # The capability brief, verbatim from the shared source.
+    expected = harness.OptimizerContext(capabilities=("system-prompt", "tools")).capability_brief()
+    assert expected.strip() and expected.strip() in body, (
+        "the briefing does not carry harness's capability brief — the block that names tool "
+        "code as the highest-leverage surface")
+    assert "CODE-BEARING TOOL" in body, (
+        "the measured 'write a code-bearing tool' guidance did not reach the agent")
+
+    # The reader block, for a weak target model.
+    assert "THE READER" in body and "aws/gpt-oss-120b" in body, (
+        "the briefing never tells the agent who consumes the capability at runtime, so it "
+        "cannot know the reader is weaker than itself")
+
+
 def test_a_context_staging_failure_is_loud_not_silently_off(tmp_path):
     """Silent-off is the failure mode this repo warns about everywhere.
 
@@ -465,7 +506,10 @@ def test_a_large_capability_is_summarised_without_pretending_to_be_complete(tmp_
     body = Path(out["prompt_path"]).read_text(encoding="utf-8")
 
     total = sum(1 for p in seed.rglob("*") if p.is_file())
-    surface = body[body.index("editable surface"):body.index("## How to edit each surface")]
+    # Just the editable-surface section: from its heading to whatever heading follows it.
+    start = body.index("## Your editable surface")
+    nxt = body.find("\n## ", start + 1)
+    surface = body[start:nxt if nxt != -1 else len(body)]
 
     assert str(total) in surface, (
         f"the briefing does not state the real file count ({total}): {surface}")

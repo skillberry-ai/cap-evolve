@@ -884,26 +884,21 @@ def _cmd_run(argv):
     # as read-only optimizer context. Both are resolved project-relative if not absolute.
     # The instructions file defaults to the scaffolded project/optimizer/INSTRUCTIONS.md.
     if algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS:
-        from .specfile import resolve_project_path
-        instr = spec.get("optimizer_instructions_file") or "optimizer/INSTRUCTIONS.md"
-        # ONE resolution rule, shared with implement-and-check's pipeline_selftest:
-        # a relative spec path is PROJECT-relative. It used to be probed against the
-        # caller's cwd first, so the same key resolved to a different file depending on
-        # where `cap-evolve run` was invoked from — and on a miss the flag was silently
-        # dropped and the optimizer got the generic template instead of the
+        from .specfile import resolve_instructions_file, resolve_project_path
+        # ONE resolution rule, shared with implement-and-check's pipeline_selftest AND the
+        # agent-mode host: a relative spec path is PROJECT-relative. It used to be probed
+        # against the caller's cwd first, so the same key resolved to a different file
+        # depending on where `cap-evolve run` was invoked from — and on a miss the flag was
+        # silently dropped and the optimizer got the generic template instead of the
         # capability-scoped one intake authored (#252).
-        # proj_abs, not the relative `project`: resolving against a relative project
-        # dir is still cwd-dependent, which is the bug (#252). An absolute path is also
-        # safer for the subprocess, which runs with cwd=workdir.
-        instr_p = resolve_project_path(proj_abs, instr)
-        if instr_p.exists():
+        # proj_abs, not the relative `project`: resolving against a relative project dir is
+        # still cwd-dependent, which is the bug (#252). An absolute path is also safer for
+        # the subprocess, which runs with cwd=workdir.
+        instr_p, instr_exists, instr_warning = resolve_instructions_file(spec, proj_abs)
+        if instr_exists:
             alg_cmd += ["--instructions-file", str(instr_p)]
-        elif _stderr_is_usable():
-            print(f"warning: optimizer_instructions_file {instr!r} does not exist "
-                  f"(resolved project-relative to {instr_p}) — the optimizer will get "
-                  f"cap-evolve's GENERIC template, not your capability-scoped one; "
-                  f"`cap-evolve check` and the implement-and-check self-test catch this",
-                  file=sys.stderr, flush=True)
+        elif instr_warning and _stderr_is_usable():
+            print(f"warning: {instr_warning}", file=sys.stderr, flush=True)
         repo = spec.get("runner_repo_path")
         if repo:
             alg_cmd += ["--bench-repo", str(resolve_project_path(proj_abs, str(repo)))]

@@ -6,15 +6,32 @@ returns: no algorithm subprocess, no auto-finalize. That is exactly right with a
 the loop and leaves the algorithm *unavailable* anywhere without one — a CI job gets the
 handoff and then nothing happens.
 
-This script is the missing host, and deliberately owns as little as possible:
+This script is the missing host, and deliberately owns as little as possible. Everything it
+borrows, and from where:
 
   * the **loop** stays in ``SKILL.md`` + this dir's helpers. The briefing points at them; it
     does not restate the algorithm, because a second copy of the loop would drift from the
     first and there would be no way to tell which one ran.
-  * the **CLI invocation** is delegated to ``optimizers/run-optimizer``, which already
-    resolves a registry row, substitutes ``{model}``, maps ``--budget``/``--usd-budget`` to
-    that CLI's own flags, captures cost from its JSON output, and hard-fails when the CLI
-    is absent. Re-implementing any of that here would be a second, worse copy.
+  * the **CLI invocation** goes through ``optimizers/run-optimizer``, which already resolves a
+    registry row, substitutes ``{model}``, maps ``--budget``/``--usd-budget`` to that CLI's own
+    flags, captures cost from its JSON output, and hard-fails when the CLI is absent — and
+    whose ``load_registry`` also answers "is this a known agent?".
+  * the **read-context** is ``harness.OptimizerContext``: ``inject()`` stages the capability
+    skills, the diagnose method, the sources and the trajectories exactly as every
+    deterministic algorithm gets them, and ``capability_brief()`` / ``reader_brief()`` /
+    ``empty_seed_brief()`` supply the measured prompt blocks. This script previously
+    hand-rolled thinner equivalents, and the consequence was measurable: with
+    ``_CAP_EDIT_SPACE``'s "the highest-leverage edit is a new code-bearing tool" and the
+    target-reader block both absent, the hosted optimizer only ever edited prose.
+  * the **spec resolution** for ``optimizer_instructions_file`` is
+    ``specfile.resolve_instructions_file``, shared with ``cli.py``. Two copies of a path
+    resolution rule is how #252 happened.
+  * the **seal** is ``measure.py``, the same script the skill documents.
+
+What it does NOT borrow: ``OptimizerContext.instructions()``. That renders the per-iteration
+contract — "fix many root causes in this ONE candidate and STOP; the harness re-scores you" —
+which is false here, where the agent owns the search, the evaluation and the gate. The blocks
+are composed instead, and an arm's own instructions template is included with its scope stated.
 
 What is genuinely this script's own:
 
@@ -39,7 +56,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -69,10 +85,12 @@ def _spec(project: Path, spec_path: Path | None) -> dict:
 
 
 def _known_agents() -> list[str]:
-    from cap_evolve.specfile import read_yaml
-
+    """Registry rows, read by run-optimizer's own loader rather than a second parser."""
     try:
-        return sorted((read_yaml(REGISTRY.read_text(encoding="utf-8")) or {}).keys())
+        sys.path.insert(0, str(RUN_OPTIMIZER.parent))
+        import run as _run_optimizer  # run-optimizer/scripts/run.py
+
+        return sorted((_run_optimizer.load_registry() or {}).keys())
     except Exception:  # noqa: BLE001 — a missing registry is reported by the caller below
         return []
 
@@ -165,12 +183,11 @@ def _surface_section(files: list[str]) -> str:
         "file** leaves the rest of the agent's instruction and behaviour surface exactly as "
         "it was, and that is the most common way a run produces nothing: the fix that was "
         "needed lived in a file nobody opened.\n\n"
-        "So before you write an edit, decide *which file* is the right place for it")
-    if has_code:
-        body += (" — a rule the agent already has and violates usually belongs in code as a "
-                 "guard, while a missing decision criterion belongs in prose")
-    body += (". Name the file you chose in the `commit.py --note` for the round, so the run "
-             "records which surface each decision was made on.\n\n"
+        "So before you write an edit, decide *which file* is the right place for it — the "
+        "allowed edit space per capability, and which form has the most leverage on each, is "
+        "in the capability brief below rather than restated here. Name the file you chose in "
+        "the `commit.py --note` for the round, so the run records which surface each decision "
+        "was made on.\n\n"
              "### Precondition on round 3 and later\n\n"
              "**If your last two rounds were both rejected, the next round may not reuse the "
              "surface *and* form those two used.** Read the rejected candidate's trace first "
@@ -187,76 +204,23 @@ def _surface_section(files: list[str]) -> str:
     return head + body
 
 
-def _arm_instructions(project: Path, spec: dict) -> tuple[str, str, str]:
-    """The project's own ``optimizer_instructions_file``, which agent mode used to drop.
-
-    ``cli.py`` applies that key only for ``algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS``
-    (hill-climb / gepa / skillopt). agent-optimize is not in that set, so a project shipping
-    capability-scoped instructions had them ignored in agent mode.
-
-    That is dangerous, not merely lossy. One benchmark arm in this repo uses that file to say
-    that the ``{placeholders}`` in its second editable file are LOAD-BEARING and that breaking
-    one makes EVERY task score 0 — the agent is never told where to write its answer. An agent
-    that never sees the warning can wipe out the run's whole signal with an edit that looks
-    harmless.
-
-    Returns ``(text, resolved_path, warning)``. The default path being absent is normal and
-    silent; a path the spec NAMED being absent is reported, which is the #252 failure mode
-    (a bad path silently downgrading to generic guidance).
-    """
-    from cap_evolve.specfile import resolve_project_path
-
-    named = str(spec.get("optimizer_instructions_file") or "").strip()
-    rel = named or "optimizer/INSTRUCTIONS.md"
-    path = resolve_project_path(project, rel)
-    if path.is_file():
-        try:
-            return path.read_text(encoding="utf-8"), str(path), ""
-        except OSError as exc:
-            return "", str(path), f"could not read {path}: {exc}"
-    if named:
-        return "", "", (f"optimizer_instructions_file {named!r} does not exist (resolved "
-                        f"project-relative to {path}) — the agent gets no capability-scoped "
-                        f"instructions for this benchmark")
-    return "", "", ""
-
-
-def _strip_template_slots(text: str) -> tuple[str, int]:
-    """Drop unrendered ``{{SLOT}}`` markers from an instructions template.
-
-    That file is a TEMPLATE: the deterministic path renders ``{{TARGET_READER}}`` /
-    ``{{FOCUS_SUMMARY}}`` / ``{{EMPTY_SEED}}`` per iteration from state the host does not have.
-    Passed through raw they reach the agent as literal braces — which the parity test already
-    treats as a defect for the deterministic path ("unrendered placeholder in the prompt").
-    """
-    slot = re.compile(r"\{\{[A-Z0-9_]+\}\}")
-    n = len(slot.findall(text))
-    kept = [ln for ln in text.splitlines() if not slot.fullmatch(ln.strip())]
-    return slot.sub("", "\n".join(kept)), n
-
-
 def _arm_section(text: str) -> str:
     """Include the arm's own instructions — with their scope stated, not silently merged.
 
-    Two things make a verbatim paste wrong, and both are generic rather than per-benchmark:
-
-    * It is a template (see ``_strip_template_slots``).
-    * It was authored for the DETERMINISTIC per-iteration optimizer, so its process half
-      actively contradicts this loop — it says to stop after editing and not to evaluate,
-      because there the harness re-scores the candidate. Here the agent owns the evaluation
-      and the gate, and an agent that obeyed that line would never gate anything.
+    That file was authored for the DETERMINISTIC per-iteration optimizer, so its process half
+    actively contradicts this loop: it says to stop after editing and not to evaluate, because
+    there the harness re-scores the candidate. Here the agent owns the evaluation and the gate,
+    and an agent obeying that line would never gate anything.
 
     What is uniquely valuable in it is the benchmark's own constraints — which files are
-    editable, which tokens are load-bearing, what silently zeroes a score. So the precedence
-    is stated explicitly instead of leaving the agent to guess which half to follow.
+    editable, which tokens are load-bearing, what silently zeroes a score. So the precedence is
+    stated explicitly instead of leaving the agent to guess which half to follow.
     """
-    body, stripped = _strip_template_slots(text)
-    if not body.strip():
+    if not text.strip():
         return ""
-    note = (f" ({stripped} unrendered template slot(s) removed)" if stripped else "")
     return (
         "## Benchmark-specific instructions for THIS capability\n\n"
-        f"Authored for this project{note}. Read them for the **benchmark's own facts and "
+        "Authored for this project. Read them for the **benchmark's own facts and "
         "constraints** — which files are editable, which tokens are load-bearing, what "
         "silently zeroes a score. Those are measured on this benchmark, are repeated nowhere "
         "else in this briefing, and are binding.\n\n"
@@ -265,35 +229,46 @@ def _arm_section(text: str) -> str:
         "whole search, so anything in them about stopping after an edit, not evaluating, or "
         "iteration budget does NOT apply — the loop in SKILL.md and this briefing wins there. "
         "On benchmark facts, they win.\n\n"
-        "<arm_instructions>\n" + body.strip() + "\n</arm_instructions>\n")
+        "<arm_instructions>\n" + text.strip() + "\n</arm_instructions>\n")
 
 
-def _guidance_section(workdir: Path, context: dict) -> str:
-    """Point at the staged capability guidance — unread guidance is not guidance."""
-    if not context.get("staged"):
-        return ("## Capability guidance\n\nNot available for this run (staging failed). Work "
-                "from the capability files themselves and be conservative.\n")
-    caps = context.get("capabilities") or []
-    lines = "\n".join(f"- `{workdir}/guidance/{c}/SKILL.md` — how to edit the **{c}** surface"
-                      for c in caps)
-    return (
-        "## How to edit each surface — READ THESE BEFORE YOUR FIRST EDIT\n\n"
-        f"{lines}\n"
-        f"- `{workdir}/guidance/diagnose/SKILL.md` — the failure-clustering method step 1 uses\n\n"
-        "One guidance doc per declared capability, and there is one for every surface you may "
-        "edit — not just the prose one. Each states what is safely editable there, the edit "
-        "forms that work, and the failure modes. **Read the guidance for the surface you are "
-        "about to change**: an edit made without it is a guess, and the surface you have no "
-        "guidance for is the one you will avoid by default.\n")
+def _shared_blocks(ctx, run_dir: Path, context: dict) -> str:
+    """The prompt blocks the DETERMINISTIC path has always had, from the same source.
+
+    Not re-authored here. Every deterministic algorithm gets these through
+    ``OptimizerContext``; agent mode used to hand-roll thinner equivalents, and the measured
+    consequence was an optimizer that only ever edited prose — because the block naming tool
+    code as the highest-leverage surface (``harness._CAP_EDIT_SPACE``) and the block saying a
+    weak reader needs code enforcement over terse prose (the target-reader profile) were both
+    absent. Reusing them is the fix; writing better prose here would not have been.
+    """
+    parts = []
+    brief = ctx.capability_brief()
+    if brief:
+        parts.append(brief)
+        if context.get("staged"):
+            parts.append("Each `./guidance/<cap>/SKILL.md` above is staged in your working "
+                         "directory and also under the native skills dir. **Read the one for "
+                         "the surface you are about to edit** — an edit made without it is a "
+                         "guess, and the surface you have no guidance for is the one you will "
+                         "avoid by default.")
+    reader = ctx.reader_brief()
+    if reader:
+        parts.append(reader)
+    empty = ctx.empty_seed_brief(run_dir / "candidates" / "seed")
+    if empty:
+        parts.append(empty)
+    return "\n\n".join(p.strip() for p in parts if p and p.strip())
 
 
 def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
-              rounds: int, workdir: Path, context: dict, arm: str = "") -> str:
+              rounds: int, workdir: Path, context: dict, arm: str = "",
+              ctx=None) -> str:
     """The driver briefing: the handoff facts, then a pointer to the loop itself.
 
     Deliberately NOT a restatement of the algorithm. SKILL.md is the implementation and the
-    agent reads it; what it cannot know are the paths, the spec values and the fact that
-    nobody is available to answer a question.
+    agent reads it; what it cannot know are the paths, the spec values, the shared prompt
+    blocks, and the fact that nobody is available to answer a question.
     """
     stop = str(spec.get("stop_condition") or "").strip()
     n_trials = spec.get("num_trials", 1)
@@ -302,7 +277,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     caps = spec.get("capabilities") or []
     cap_path = spec.get("capability_path") or "seed_capability"
     surface = _surface_section(_editable_files(run_dir, project, spec))
-    guidance = _guidance_section(workdir, context)
+    guidance = _shared_blocks(ctx, run_dir, context) if ctx is not None else ""
     arm_block = _arm_section(arm)
     skill_md = SKILL_DIR / "SKILL.md"
     helpers = HERE
@@ -434,7 +409,7 @@ def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) ->
 
 
 def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
-                   agent: str) -> dict:
+                   agent: str) -> tuple:
     """Stage the SAME optimizer read-context every deterministic algorithm receives.
 
     ``harness.OptimizerContext`` exists so "an algorithm cannot silently run on a thinner
@@ -453,32 +428,31 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
     from one that staged fine, and simply optimizes less surface.
     """
     caps = tuple(c for c in (spec.get("capabilities") or []) if c)
+    from cap_evolve import harness
+
+    # from_spec, not the field-by-field constructor: it also resolves the target profile, so
+    # reader_brief() is populated exactly the way the deterministic path's from_args does it.
+    ctx = harness.OptimizerContext.from_spec(spec, project_dir=project, optimizer_name=agent)
     try:
-        from cap_evolve import RunDir, harness
+        from cap_evolve import RunDir
         from cap_evolve.check import load_adapter
 
         rd = RunDir.open(run_dir)
         adapter = load_adapter(project)
-        ctx = harness.OptimizerContext(
-            capabilities=caps,
-            optimizer_name=agent,
-            capability_sources=tuple(spec.get("capability_sources") or []),
-            project_dir=project,
-        )
         # split="val" + the current best's tag: the parent step the agent builds on, which is
         # the same choice the deterministic loop makes.
         ctx.inject(adapter, rd, workdir, split="val", tag=rd.best_id or "seed")
         staged = {"staged": True, "capabilities": list(caps),
-                  "guidance": sorted(p.name for p in (workdir / "guidance").iterdir())
+                  "guidance": sorted(g.name for g in (workdir / "guidance").iterdir())
                   if (workdir / "guidance").is_dir() else []}
         try:
             rd.log_event("host_context", capabilities=list(caps), agent=agent, staged=True)
         except Exception:  # noqa: BLE001 — the event is a nicety, the staging is the point
             pass
-        return staged
+        return ctx, staged
     except Exception as exc:  # noqa: BLE001
-        return {"staged": False, "capabilities": list(caps),
-                "error": f"{type(exc).__name__}: {exc}"[:400]}
+        return ctx, {"staged": False, "capabilities": list(caps),
+                     "error": f"{type(exc).__name__}: {exc}"[:400]}
 
 
 def _child_env() -> dict:
@@ -558,15 +532,32 @@ def main(argv=None) -> int:
     # The agent needs write access to BOTH the run dir and the project; their common parent
     # is the natural workdir, and it is where the staged guidance + native skills land.
     workdir = _common_parent(run_dir, project)
-    context = _stage_context(run_dir=run_dir, project=project, workdir=workdir,
-                             spec=spec, agent=args.agent)
+    ctx, context = _stage_context(run_dir=run_dir, project=project, workdir=workdir,
+                                  spec=spec, agent=args.agent)
 
     prompt_dir = run_dir / "host"
     prompt_dir.mkdir(parents=True, exist_ok=True)
     prompt_path = prompt_dir / "driver_prompt.md"
-    arm_text, arm_path, arm_warning = _arm_instructions(project, spec)
+    # ONE resolution rule, shared with cli.py's deterministic path (specfile). Two copies of
+    # it is how #252 happened: a relative key resolved against different cwds, and a miss
+    # silently downgraded the optimizer to the generic template.
+    from cap_evolve.specfile import resolve_instructions_file
+
+    arm_p, arm_exists, arm_warning = resolve_instructions_file(spec, project)
+    arm_path = str(arm_p) if arm_exists else ""
+    arm_text = ""
+    if arm_exists:
+        try:
+            # Rendered through the shared renderer, not stripped by hand: the arm's template
+            # arrives with its blocks filled from the same functions the deterministic path
+            # uses, instead of as literal {{SLOT}} braces.
+            arm_text = ctx.render_template(arm_p.read_text(encoding="utf-8"),
+                                           parent_dir=run_dir / "candidates" / "seed")
+        except OSError as exc:
+            arm_warning = f"could not read {arm_p}: {exc}"
     briefing = _briefing(run_dir=run_dir, project=project, spec=spec, skills=SKILLS,
-                         rounds=rounds, workdir=workdir, context=context, arm=arm_text)
+                         rounds=rounds, workdir=workdir, context=context, arm=arm_text,
+                         ctx=ctx)
     prompt_path.write_text(briefing, encoding="utf-8")
     # Also as <workdir>/INSTRUCTIONS.md. Staging writes an always-on CLAUDE.md pointer whose
     # first instruction is "read ./INSTRUCTIONS.md FIRST" — written for the deterministic

@@ -8,6 +8,38 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Changed
+- **`OptimizerContext` gained a public seam, and the agent-mode host now reuses it instead of
+  hand-rolling equivalents.** The class docstring already said it exists so "an algorithm cannot
+  silently run on a thinner prompt than its siblings"; the host was the one caller that
+  re-authored the blocks, and the measured consequence was an optimizer that only ever edited
+  prose. Two of those blocks turn out to be exactly the guidance it was missing:
+  `harness._CAP_EDIT_SPACE["tools"]` ("HIGHEST-LEVERAGE EDIT: WRITE A NEW CODE-BEARING TOOL …
+  a deterministic tool can't be 'forgotten' the way a prompt rule can") and the target-reader
+  block ("when the reader is weaker than you, prefer explicit rules, worked examples, and code
+  enforcement over terse prose") — the CI agent under test being `aws/gpt-oss-120b`, precisely
+  that weak reader.
+
+  New public surface, all additive: `OptimizerContext.from_spec()` (construct from a
+  `capevolve.yaml` dict rather than argparse args, resolving the target profile the same way),
+  `capability_brief()`, `reader_brief()`, `empty_seed_brief()`, and `render_template()` (fills a
+  template's slots for a caller that is not a per-iteration one, blanking only the four
+  genuinely per-iteration slots). Plus `specfile.resolve_instructions_file()`, now the single
+  resolver for `optimizer_instructions_file` — `cli.py` calls it too, so the rule and its #252
+  warning exist once.
+
+  What the host deliberately does **not** reuse is `instructions()`: it renders the
+  per-iteration contract ("fix many root causes in this ONE candidate and STOP; the harness
+  re-scores you"), which is false where the agent owns the search, the evaluation and the gate.
+  The blocks are composed instead. Recorded on the class so the next reader does not "fix" it.
+
+  Net: three hand-rolled duplicates deleted from `host.py` (`_guidance_section`,
+  `_arm_instructions`, `_strip_template_slots`), its registry lookup delegated to
+  run-optimizer's own `load_registry`, and its code-vs-prose advice removed in favour of the
+  shared block that states it better. `empty_seed_brief` also closes a real gap: a no-skill
+  control arm (one that blanks the seed to measure "author from nothing") previously got no
+  author-from-scratch guidance in agent mode at all.
+
 ### Fixed
 - **Three ways the agent-mode host was accidentally shaped around one benchmark.** Found by
   auditing it against the repo's other workloads rather than by a failing run:

@@ -2384,6 +2384,16 @@ class OptimizerContext:
     genuinely per-algorithm inputs are parameters — ``algorithm`` (selects the algorithm
     brief) and ``extra`` (the caller's own block, e.g. gepa's reflective-dataset
     pointer).
+
+    **Agent mode composes the blocks instead of the whole prompt.** ``instructions()``
+    renders the per-iteration contract — "fix many root causes in this ONE candidate and
+    STOP; the harness re-scores you" — which is false for an agent that owns the whole
+    search, evaluates, and gates. So an agent-mode host must NOT call ``instructions()``;
+    it calls ``inject()`` plus the ``*_brief()`` accessors below and frames its own loop.
+    Those accessors exist because a host that hand-wrote equivalents ran without the
+    measured guidance the deterministic path has always had — ``_CAP_EDIT_SPACE``'s
+    "write a code-bearing tool" block and the target-reader block — and its optimizer
+    correspondingly only ever edited prose.
     """
 
     capabilities: tuple = ()
@@ -2456,6 +2466,106 @@ class OptimizerContext:
             bench_repo=getattr(args, "bench_repo", None),
             target_reader=_tp.reader_block(profile),
         )
+
+    @classmethod
+    def from_spec(cls, spec: dict, *, project_dir: Path | None = None,
+                  optimizer_name: str | None = None) -> OptimizerContext:
+        """Build a context from a ``capevolve.yaml`` dict rather than argparse args.
+
+        The sibling of ``from_args`` for callers that hold a spec — an agent-mode host has
+        one and no argparse namespace. Same fields, same target-profile resolution, so the
+        two construction paths cannot drift into handing out different context.
+        """
+        from . import target_profile as _tp
+
+        profile = _tp.resolve(str(spec.get("target_model") or ""), None,
+                             project_dir=project_dir)
+        return cls(
+            capabilities=tuple(c for c in (spec.get("capabilities") or []) if c),
+            optimizer_name=optimizer_name,
+            capability_sources=tuple(s for s in (spec.get("capability_sources") or []) if s),
+            project_dir=Path(project_dir) if project_dir else None,
+            instructions_file=(str(spec.get("optimizer_instructions_file") or "") or None),
+            bench_repo=(str(spec.get("bench_repo") or "") or None),
+            target_reader=_tp.reader_block(profile),
+        )
+
+    # ---- reusable prompt blocks ----------------------------------------------
+    # Public because agent mode needs the same measured guidance without the
+    # per-iteration contract that instructions() wraps around it. Each returns "" when it
+    # has nothing to say, so a caller can concatenate unconditionally.
+
+    def capability_brief(self) -> str:
+        """What the capability is and the FULL allowed edit space, per declared capability.
+
+        Carries ``_CAP_EDIT_SPACE`` — including the measured "highest-leverage edit is a new
+        code-bearing tool, because a deterministic tool can't be forgotten the way a prompt
+        rule can" guidance. A prompt that omits this is how an optimizer with tool code in
+        scope spends every round rewording prose.
+        """
+        return _capability_brief(list(self.capabilities))
+
+    def reader_brief(self) -> str:
+        """Who consumes the capability at runtime, and what that implies for the edit.
+
+        Resolved from ``target_model``: when the reader is weaker than the optimizer, prefer
+        explicit rules, worked examples and code enforcement over terse prose. Empty for an
+        agnostic profile.
+        """
+        return self.target_reader or ""
+
+    def empty_seed_brief(self, parent_dir: Path | None,
+                         current_val: SplitResult | None = None) -> str:
+        """Guidance for a capability that starts EMPTY (author it, don't refine it).
+
+        Uses the capability's own ``is_empty()`` when available and falls back to the reward
+        heuristic only without it — the same precedence ``instructions()`` applies. Needed by
+        any no-skill control (an arm that blanks the seed to measure "author from nothing").
+        """
+        seed_empty = (_capability_is_empty(list(self.capabilities), parent_dir)
+                      if parent_dir is not None else None)
+        if current_val is None:
+            if seed_empty is not True:
+                return ""
+            return _empty_seed_note(SplitResult(split="val", reward=0.0, stderr=0.0,
+                                                per_task=[]), seed_empty=True)
+        return _empty_seed_note(current_val, seed_empty=seed_empty)
+
+    def render_template(self, text: str, *, parent_dir: Path | None = None,
+                        current_val: SplitResult | None = None) -> str:
+        """Fill an instructions template's slots with what a NON-per-iteration caller knows.
+
+        The per-iteration slots (``FOCUS_SUMMARY`` / ``FAILURES`` / ``PASSING`` /
+        ``ALGO_BRIEF``) describe one scored step and one gate the caller does not own, so they
+        render empty here — an agent-mode driver diagnoses and gates for itself and would be
+        reading a stale snapshot of someone else's iteration. Everything else is filled from
+        the same functions ``_focus_instructions`` uses.
+
+        The alternative — passing the template through raw — reaches the agent as literal
+        ``{{TARGET_READER}}`` braces, which the parity test already treats as a defect on the
+        deterministic side.
+        """
+        repl = {
+            "{{TARGET_READER}}": self.reader_brief(),
+            "{{CAP_BRIEF}}": self.capability_brief(),
+            "{{EMPTY_SEED}}": self.empty_seed_brief(parent_dir, current_val),
+            "{{BENCH_REPO}}": (
+                f"- The benchmark / runner source is at `{self.bench_repo}` — read-only "
+                "context you may consult to understand tools, scoring, or task structure."
+                if self.bench_repo else ""),
+            "{{PARALLEL_NOTE}}": _parallel_note(_optimizer_parallel(self.optimizer_name),
+                                                self.optimizer_name),
+            # Per-iteration, deliberately blank — see the docstring.
+            "{{FOCUS_SUMMARY}}": "",
+            "{{FAILURES}}": "",
+            "{{PASSING}}": "",
+            "{{ALGO_BRIEF}}": "",
+        }
+        for k, v in repl.items():
+            text = text.replace(k, v)
+        # Any slot the template carries that this method does not know about would otherwise
+        # reach the reader as literal braces. Drop them rather than ship a broken document.
+        return re.sub(r"\{\{[A-Z0-9_]+\}\}", "", text)
 
     # ---- the two things every algorithm needs --------------------------------
 

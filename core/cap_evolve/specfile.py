@@ -120,6 +120,37 @@ def resolve_project_path(project, value) -> Path:
     return v if v.is_absolute() else Path(project) / v
 
 
+#: Where a project's optimizer-instructions template lives when the spec does not name one.
+DEFAULT_INSTRUCTIONS_REL = "optimizer/INSTRUCTIONS.md"
+
+
+def resolve_instructions_file(spec: dict, project) -> tuple[Path, bool, str]:
+    """Resolve ``optimizer_instructions_file`` — ONE rule, for every consumer.
+
+    Returns ``(path, exists, warning)``. ``warning`` is non-empty only when the spec
+    NAMED a file that is not there: falling back then means the optimizer reads
+    cap-evolve's generic template instead of the capability-scoped one, and a step that
+    did not get what it needed must not look like a step that had nothing to propose
+    (#252). An absent default path is normal and silent.
+
+    Shared because it was resolved in two places — ``cli.py`` for the deterministic
+    algorithms, and an agent-mode host — and the second copy also had to re-derive the
+    default and the warning text. Two copies of a resolution rule is exactly how #252
+    happened the first time.
+    """
+    named = str(spec.get("optimizer_instructions_file") or "").strip()
+    path = resolve_project_path(project, named or DEFAULT_INSTRUCTIONS_REL)
+    if path.exists():
+        return path, True, ""
+    warning = ""
+    if named:
+        warning = (f"optimizer_instructions_file {named!r} does not exist (resolved "
+                   f"project-relative to {path}) — the optimizer will get cap-evolve's "
+                   f"GENERIC template, not your capability-scoped one; `cap-evolve check` "
+                   f"and the implement-and-check self-test catch this")
+    return path, False, warning
+
+
 def spec_for_run(run_dir, project: Path | None = None) -> dict:
     """The spec THIS run was started with, read from the run dir first.
 
