@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -105,30 +106,152 @@ def _editable_files(run_dir: Path, project: Path, spec: dict) -> list[str]:
     return files
 
 
+#: Suffixes that make a capability file CODE rather than prose. Drives whether the briefing
+#: offers code-vs-prose advice at all — see _surface_section.
+_CODE_SUFFIXES = {".py", ".js", ".mjs", ".ts", ".tsx", ".sh", ".bash", ".rb", ".go", ".rs",
+                  ".java", ".pl", ".lua", ".sql"}
+#: Above this, the listing is grouped instead of enumerated. A skill-package capability can
+#: be dozens of files, and a wall of paths crowds out the rest of the briefing.
+_MAX_LISTED = 20
+
+
 def _surface_section(files: list[str]) -> str:
     """Render the editable-file list, and say what a prompt-only edit leaves undone.
 
-    Scaled to what is actually there: naming tool code for a capability that has none sends
-    the agent hunting outside its capability for code to change.
+    Scaled to what is actually there, in two ways that matter for genericity:
+
+    * **Code advice only when there is code.** A capability of two prose files (a system
+      prompt plus a task template) told to "prefer an in-code guard" goes looking for code it
+      does not own — the failure that once had a prompt-only optimizer editing ``adapter.py``.
+    * **Grouped, never silently truncated, when large.** A skill-package capability can run to
+      dozens of files. Bounding the list is fine; bounding it without saying so is not, since
+      the reader then takes it as the complete surface.
     """
     if not files:
         return ""
-    listing = "\n".join(f"- `{f}`" for f in files)
     if len(files) == 1:
-        return (f"## Your editable surface — one file\n\n{listing}\n\n"
-                "That file is the whole capability. There is no tool code and no second "
-                "surface, so do not go looking for one outside it.\n")
-    return (
-        f"## Your editable surface — ALL {len(files)} of these files\n\n{listing}\n\n"
-        "Every one of them is in your candidate copy and every one is fair game — prose, "
+        return (f"## Your editable surface — one file\n\n- `{files[0]}`\n\n"
+                "That file is the whole capability. There is no second surface, so do not go "
+                "looking for one outside it.\n")
+
+    has_code = any(Path(f).suffix in _CODE_SUFFIXES for f in files)
+
+    if len(files) <= _MAX_LISTED:
+        listing = "\n".join(f"- `{f}`" for f in files)
+        head = f"## Your editable surface — ALL {len(files)} of these files\n\n{listing}\n"
+    else:
+        groups: dict[str, list[str]] = {}
+        for f in files:
+            parts = f.split("/")
+            groups.setdefault(parts[0] if len(parts) > 1 else ".", []).append(f)
+        rows = []
+        shown = 0
+        for g, gf in sorted(groups.items()):
+            examples = ", ".join(f"`{x}`" for x in gf[:3])
+            more = f", +{len(gf) - 3} more" if len(gf) > 3 else ""
+            shown += min(len(gf), 3)
+            label = f"`{g}/`" if g != "." else "top level"
+            rows.append(f"- {label} — {len(gf)} file(s): {examples}{more}")
+        head = (
+            f"## Your editable surface — {len(files)} files\n\n" + "\n".join(rows) + "\n\n"
+            f"Grouped because there are {len(files)}; {len(files) - shown} are not listed "
+            f"individually above. **Enumerate the full set yourself** (`find` the candidate "
+            f"dir) before deciding a file is out of scope — everything under it is editable, "
+            f"not only the files named here.\n")
+
+    body = (
+        "\nEvery one of them is in your candidate copy and every one is fair game — prose, "
         "code, data, nested files alike. A round that changes **only the obvious prompt "
         "file** leaves the rest of the agent's instruction and behaviour surface exactly as "
         "it was, and that is the most common way a run produces nothing: the fix that was "
         "needed lived in a file nobody opened.\n\n"
-        "So before you write an edit, decide *which file* is the right place for it — a rule "
-        "the agent already has and violates usually belongs in code as a guard, while a "
-        "missing decision criterion belongs in prose. Say which file you chose, and why that "
-        "one, when you commit the round.\n")
+        "So before you write an edit, decide *which file* is the right place for it")
+    if has_code:
+        body += (" — a rule the agent already has and violates usually belongs in code as a "
+                 "guard, while a missing decision criterion belongs in prose")
+    body += (". Say which file you chose, and why that one, when you commit the round.\n")
+    return head + body
+
+
+def _arm_instructions(project: Path, spec: dict) -> tuple[str, str, str]:
+    """The project's own ``optimizer_instructions_file``, which agent mode used to drop.
+
+    ``cli.py`` applies that key only for ``algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS``
+    (hill-climb / gepa / skillopt). agent-optimize is not in that set, so a project shipping
+    capability-scoped instructions had them ignored in agent mode.
+
+    That is dangerous, not merely lossy. One benchmark arm in this repo uses that file to say
+    that the ``{placeholders}`` in its second editable file are LOAD-BEARING and that breaking
+    one makes EVERY task score 0 — the agent is never told where to write its answer. An agent
+    that never sees the warning can wipe out the run's whole signal with an edit that looks
+    harmless.
+
+    Returns ``(text, resolved_path, warning)``. The default path being absent is normal and
+    silent; a path the spec NAMED being absent is reported, which is the #252 failure mode
+    (a bad path silently downgrading to generic guidance).
+    """
+    from cap_evolve.specfile import resolve_project_path
+
+    named = str(spec.get("optimizer_instructions_file") or "").strip()
+    rel = named or "optimizer/INSTRUCTIONS.md"
+    path = resolve_project_path(project, rel)
+    if path.is_file():
+        try:
+            return path.read_text(encoding="utf-8"), str(path), ""
+        except OSError as exc:
+            return "", str(path), f"could not read {path}: {exc}"
+    if named:
+        return "", "", (f"optimizer_instructions_file {named!r} does not exist (resolved "
+                        f"project-relative to {path}) — the agent gets no capability-scoped "
+                        f"instructions for this benchmark")
+    return "", "", ""
+
+
+def _strip_template_slots(text: str) -> tuple[str, int]:
+    """Drop unrendered ``{{SLOT}}`` markers from an instructions template.
+
+    That file is a TEMPLATE: the deterministic path renders ``{{TARGET_READER}}`` /
+    ``{{FOCUS_SUMMARY}}`` / ``{{EMPTY_SEED}}`` per iteration from state the host does not have.
+    Passed through raw they reach the agent as literal braces — which the parity test already
+    treats as a defect for the deterministic path ("unrendered placeholder in the prompt").
+    """
+    slot = re.compile(r"\{\{[A-Z0-9_]+\}\}")
+    n = len(slot.findall(text))
+    kept = [ln for ln in text.splitlines() if not slot.fullmatch(ln.strip())]
+    return slot.sub("", "\n".join(kept)), n
+
+
+def _arm_section(text: str) -> str:
+    """Include the arm's own instructions — with their scope stated, not silently merged.
+
+    Two things make a verbatim paste wrong, and both are generic rather than per-benchmark:
+
+    * It is a template (see ``_strip_template_slots``).
+    * It was authored for the DETERMINISTIC per-iteration optimizer, so its process half
+      actively contradicts this loop — it says to stop after editing and not to evaluate,
+      because there the harness re-scores the candidate. Here the agent owns the evaluation
+      and the gate, and an agent that obeyed that line would never gate anything.
+
+    What is uniquely valuable in it is the benchmark's own constraints — which files are
+    editable, which tokens are load-bearing, what silently zeroes a score. So the precedence
+    is stated explicitly instead of leaving the agent to guess which half to follow.
+    """
+    body, stripped = _strip_template_slots(text)
+    if not body.strip():
+        return ""
+    note = (f" ({stripped} unrendered template slot(s) removed)" if stripped else "")
+    return (
+        "## Benchmark-specific instructions for THIS capability\n\n"
+        f"Authored for this project{note}. Read them for the **benchmark's own facts and "
+        "constraints** — which files are editable, which tokens are load-bearing, what "
+        "silently zeroes a score. Those are measured on this benchmark, are repeated nowhere "
+        "else in this briefing, and are binding.\n\n"
+        "**Scope, because they were written for the other loop:** they address a per-iteration "
+        "optimizer that proposes one edit and stops while the harness scores it. You own the "
+        "whole search, so anything in them about stopping after an edit, not evaluating, or "
+        "iteration budget does NOT apply — the loop in SKILL.md and this briefing wins there. "
+        "On benchmark facts, they win.\n\n"
+        "<arm_instructions>\n" + body.strip() + "\n</arm_instructions>\n")
 
 
 def _guidance_section(workdir: Path, context: dict) -> str:
@@ -151,7 +274,7 @@ def _guidance_section(workdir: Path, context: dict) -> str:
 
 
 def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
-              rounds: int, workdir: Path, context: dict) -> str:
+              rounds: int, workdir: Path, context: dict, arm: str = "") -> str:
     """The driver briefing: the handoff facts, then a pointer to the loop itself.
 
     Deliberately NOT a restatement of the algorithm. SKILL.md is the implementation and the
@@ -166,6 +289,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     cap_path = spec.get("capability_path") or "seed_capability"
     surface = _surface_section(_editable_files(run_dir, project, spec))
     guidance = _guidance_section(workdir, context)
+    arm_block = _arm_section(arm)
     skill_md = SKILL_DIR / "SKILL.md"
     helpers = HERE
 
@@ -215,6 +339,7 @@ gate — rather than relying on a default that may not match this spec.
 
 {surface}
 {guidance}
+{arm_block}
 
 ## The primitives every round must go through
 
@@ -425,8 +550,9 @@ def main(argv=None) -> int:
     prompt_dir = run_dir / "host"
     prompt_dir.mkdir(parents=True, exist_ok=True)
     prompt_path = prompt_dir / "driver_prompt.md"
+    arm_text, arm_path, arm_warning = _arm_instructions(project, spec)
     briefing = _briefing(run_dir=run_dir, project=project, spec=spec, skills=SKILLS,
-                         rounds=rounds, workdir=workdir, context=context)
+                         rounds=rounds, workdir=workdir, context=context, arm=arm_text)
     prompt_path.write_text(briefing, encoding="utf-8")
     # Also as <workdir>/INSTRUCTIONS.md. Staging writes an always-on CLAUDE.md pointer whose
     # first instruction is "read ./INSTRUCTIONS.md FIRST" — written for the deterministic
@@ -446,7 +572,9 @@ def main(argv=None) -> int:
                           "prompt_path": str(prompt_path), "returncode": None,
                           "agent_env": agent_env, "budget": args.budget,
                           "usd_budget": args.usd_budget,
-                          "workdir": str(workdir), "context": context}, indent=2))
+                          "workdir": str(workdir), "context": context,
+                          "instructions_file": arm_path,
+                          "instructions_warning": arm_warning}, indent=2))
         return 0
     if not context["staged"]:
         print(f"::warning::optimizer context not staged for the hosted agent "
@@ -515,6 +643,9 @@ def main(argv=None) -> int:
         "seconds": round(seconds, 3),
         "usd": usd,
         "agent_env": agent_env,
+        "instructions_file": arm_path,
+        "instructions_warning": arm_warning,
+        "context": context,
         "optimizer": payload,
         **seal,
     }

@@ -9,6 +9,36 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Three ways the agent-mode host was accidentally shaped around one benchmark.** Found by
+  auditing it against the repo's other workloads rather than by a failing run:
+
+  - **A project's `optimizer_instructions_file` was silently dropped.** `cli.py` applies that key
+    only for `algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS` (hill-climb / gepa / skillopt), so
+    agent mode ignored it. That is dangerous, not merely lossy: one arm uses that file to state
+    that the `{placeholders}` in its second editable file are load-bearing and that breaking one
+    makes EVERY task score 0 (the agent is never told where to write its answer). An agent that
+    never saw the warning could wipe the run's whole signal with an edit that looks harmless. The
+    host now reads and includes it — and reports a spec-named path that does not exist instead of
+    silently downgrading to generic guidance (the #252 failure mode).
+
+    Included with its **scope stated**, not pasted in: that file is written for the deterministic
+    per-iteration optimizer and tells the agent to stop after editing and not to evaluate, because
+    there the harness re-scores the candidate. In agent mode the agent owns the evaluation and the
+    gate, so an agent obeying that line would never gate anything. Benchmark facts bind; the
+    process half is explicitly superseded. Its unrendered `{{SLOT}}` template markers are stripped
+    too — the parity test already treats those as a defect on the deterministic side.
+
+  - **Code-vs-prose advice was offered to capabilities with no code.** The briefing told every
+    multi-file capability that "a rule the agent violates usually belongs in code as a guard".
+    For a two-prose-file capability (a system prompt plus a task template) that sends the agent
+    looking for code it does not own — how a prompt-only run once ended up editing `adapter.py`.
+    Now conditional on the surface actually containing code.
+
+  - **A large capability would have had every file listed.** A skill-package capability runs to
+    dozens of files; enumerating them crowded out the rest of the briefing. Now grouped by
+    directory above 20 files, stating the true total and how many are not listed individually,
+    and telling the agent to enumerate the rest itself — a bounded listing that never reads as
+    the complete surface.
 - **The hosted agent now gets the same optimizer read-context as every other algorithm.** Two
   agent-optimize CI runs on a `[system-prompt, tools]` capability edited **only the prompt file**
   across 4 of 4 candidates; the tool code sat writable and unopened in the same candidate dir. The

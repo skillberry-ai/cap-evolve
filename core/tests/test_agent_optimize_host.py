@@ -301,6 +301,151 @@ def test_a_context_staging_failure_is_loud_not_silently_off(tmp_path):
     assert "boom" in json.dumps(out["context"]) or "RuntimeError" in json.dumps(out["context"])
 
 
+def test_benchmark_specific_optimizer_instructions_reach_the_agent(tmp_path):
+    """`optimizer_instructions_file` must not be silently dropped in agent mode.
+
+    cli.py applies that key only for `algorithm_name in OPTIMIZER_CONTEXT_ALGORITHMS`
+    (hill-climb / gepa / skillopt) — agent-optimize is not in that set, so a spec naming
+    arm-specific instructions had them ignored entirely.
+
+    That is not cosmetic for every benchmark. The spreadsheetbench arm writes instructions
+    whose appended note states that the `{placeholders}` in its second editable file are
+    LOAD-BEARING and that breaking one makes EVERY task score 0 — the agent is never told
+    where to write its answer. Dropping that text in agent mode means the agent can destroy
+    the run's entire signal with an edit it had no way to know was fatal.
+    """
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        "capabilities: [system-prompt]\ncapability_path: seed_capability\n"
+        'optimizer_instructions_file: "optimizer/INSTRUCTIONS.md"\n'
+        'stop_condition: "at most 2 rounds; seal with measure.py"\n',
+        encoding="utf-8")
+    (project / "optimizer").mkdir(exist_ok=True)
+    (project / "optimizer" / "INSTRUCTIONS.md").write_text(
+        "# Arm-specific rules\n\nKeep every {placeholder} in task_template.md — break one "
+        "and EVERY task scores 0.\n", encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "{placeholder}" in body and "EVERY task scores 0" in body, (
+        "the arm's own optimizer instructions never reached the briefing")
+    assert out["instructions_file"], "the host did not report which instructions it used"
+
+
+def test_arm_instructions_are_scoped_and_their_template_slots_stripped(tmp_path):
+    """Pasting the arm's file verbatim injects a CONTRADICTING contract, and raw templating.
+
+    That file is written for the deterministic per-iteration optimizer: it says to stop after
+    editing and not to evaluate, because there the harness re-scores the candidate. In agent
+    mode the agent owns the evaluation and the gate — an agent that obeyed that line would
+    never gate anything. And it is a template, whose `{{SLOT}}` markers the deterministic path
+    renders from per-iteration state the host does not have.
+
+    So: slots stripped, and the precedence between the two contracts stated rather than left
+    for the agent to guess.
+    """
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ncapabilities: [system-prompt]\ncapability_path: seed_capability\n"
+        'optimizer_instructions_file: "optimizer/INSTRUCTIONS.md"\n'
+        'stop_condition: "at most 2 rounds"\n', encoding="utf-8")
+    (project / "optimizer").mkdir(exist_ok=True)
+    (project / "optimizer" / "INSTRUCTIONS.md").write_text(
+        "# Fix the prompt\n\n{{TARGET_READER}}\n\n{{FOCUS_SUMMARY}}\n\n"
+        "Then STOP — the harness re-scores you, don't run evaluation yourself.\n"
+        "Keep every {placeholder}: breaking one zeroes every task.\n", encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "{{" not in body, (
+        f"unrendered template slot reached the agent: "
+        f"{[l for l in body.splitlines() if '{{' in l]}")
+    # The benchmark fact survives.
+    assert "zeroes every task" in body
+    # And the conflicting process half is explicitly scoped out.
+    assert "does NOT apply" in body, (
+        "the briefing includes instructions telling the agent not to evaluate, without saying "
+        "they do not apply here — the agent would never gate a candidate")
+
+
+def test_a_named_instructions_file_that_is_missing_is_reported_not_ignored(tmp_path):
+    """Issue #252's failure mode: a bad path silently yields the generic guidance."""
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ncapabilities: [system-prompt]\ncapability_path: seed_capability\n"
+        'optimizer_instructions_file: "optimizer/NOPE.md"\n'
+        'stop_condition: "at most 2 rounds"\n', encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    assert out["instructions_warning"], (
+        f"a named-but-missing instructions file must be reported: {out}")
+    assert "NOPE.md" in out["instructions_warning"]
+
+
+def test_code_vs_prose_advice_only_appears_when_the_surface_HAS_code(tmp_path):
+    """A two-prose-file capability must not be told to write a code guard.
+
+    spreadsheetbench's capability is `prompt.md` + `task_template.md` — both prose, no tool
+    code. Advice to "prefer an in-code guard" there sends the agent looking for code it does
+    not own, which is how a prompt-only run once went and edited `adapter.py`.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    seed = run_dir.root / "candidates" / "seed"
+    for f in list(seed.rglob("*")):
+        if f.is_file():
+            f.unlink()
+    (seed / "prompt.md").write_text("You are an expert.\n", encoding="utf-8")
+    (seed / "task_template.md").write_text("Do {instruction}.\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "task_template.md" in body, "the second prose file must still be named"
+    assert "in code as a guard" not in body and "code-level" not in body, (
+        f"code advice offered to a capability with no code: {body}")
+
+
+def test_a_large_capability_is_summarised_without_pretending_to_be_complete(tmp_path):
+    """A skill-package capability can be dozens of files; a full list would swamp the brief.
+
+    Bounding it is fine. Bounding it silently is not — this repo's own rule is that a
+    coverage cap must say what it dropped, or the reader takes the list as exhaustive.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    seed = run_dir.root / "candidates" / "seed"
+    for pack in ("docx", "pptx", "xlsx"):
+        d = seed / pack
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "SKILL.md").write_text("# skill\n", encoding="utf-8")
+        for i in range(12):
+            (d / f"ref_{i}.md").write_text("x\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    total = sum(1 for p in seed.rglob("*") if p.is_file())
+    surface = body[body.index("editable surface"):body.index("## How to edit each surface")]
+
+    assert str(total) in surface, (
+        f"the briefing does not state the real file count ({total}): {surface}")
+    bullets = [ln for ln in surface.splitlines() if ln.startswith("- ")]
+    assert len(bullets) < total, (
+        f"{total} files were listed one per line; the briefing should summarise instead")
+    assert "not listed" in surface or "more" in surface, (
+        "a truncated listing must say files were left out, or it reads as the whole set")
+    # The top-level groups must survive truncation — that is what makes it navigable.
+    for pack in ("docx", "pptx", "xlsx"):
+        assert pack in surface, f"group {pack} vanished from the summarised listing"
+
+
 def test_unknown_host_agent_is_refused_before_any_spend(tmp_path):
     project = _project(tmp_path)
     run_dir = _run_dir(tmp_path)
