@@ -105,6 +105,33 @@ def test_agent_optimize_stop_condition_is_derived_from_the_dispatch_inputs():
         f"the stop_condition must require a seal — no finalize, no result: {stop}")
 
 
+def test_rejections_are_not_a_stopping_condition():
+    """The clause that ended a run exactly where the algorithm prescribes escalation.
+
+    The derived stop_condition used to say "stop when two consecutive rounds are rejected".
+    SKILL.md says the opposite: "after two rejected rounds, read the candidate's TRACE before
+    writing a third" — a reject usually means the edit FORM was wrong, not that the search is
+    done. On smoke run 32701056043 the agent rejected two prose candidates and stopped, never
+    reaching the round where it would have tried a code-level guard, which its own reject note
+    ("require calculate tool for all money") had already identified as the right form.
+
+    Rounds and spend bound a run. Rejections bound nothing.
+    """
+    got = _select(ALGORITHM="agent-optimize", ITERATIONS="5")
+    stop = got["stop"].lower()
+
+    assert "two consecutive" not in stop, (
+        f"rejections are still a stopping condition: {got['stop']}")
+    assert "do not stop early merely because rounds were rejected" in stop, (
+        f"the stop_condition does not say that a rejection is not a reason to stop: "
+        f"{got['stop']}")
+    assert "change the edit form" in stop or "change the edit" in stop, (
+        f"the stop_condition does not point at escalation as the response to a reject: "
+        f"{got['stop']}")
+    # The real ceilings must survive.
+    assert "5" in stop and "spend.py" in stop
+
+
 def test_unlimited_optimizer_budget_yields_no_dollar_ceiling():
     """0 means unlimited everywhere else in this workflow; keep that meaning."""
     got = _select(ALGORITHM="agent-optimize", ITERATIONS="10", OPTIMIZER_USD_PER_ITER="0")

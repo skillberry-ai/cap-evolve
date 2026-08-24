@@ -194,6 +194,39 @@ def test_the_briefing_enumerates_every_editable_file_not_just_the_capability_nam
         f"the rest of the surface unexercised: {body}")
 
 
+def test_two_rejections_escalate_the_form_rather_than_ending_the_run(tmp_path):
+    """Measured: the agent chose prose twice, was rejected twice, and stopped.
+
+    Its own reject notes named the surface each time ("System-prompt surface") and round 1's
+    note — "require calculate tool for all money" — is precisely the case where SKILL.md says
+    code beats prose: the agent HAS the criterion and violates it. The prescribed third round
+    was a guard in the tool code. It never happened.
+
+    So the briefing states this as a precondition on the round, not as encouragement: after two
+    rejects, the same surface-and-form is off the table.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    seed = run_dir.root / "candidates" / "seed"
+    (seed / "policy").mkdir(parents=True, exist_ok=True)
+    (seed / "policy" / "policy.md").write_text("Be helpful.\n", encoding="utf-8")
+    (seed / "tools").mkdir(parents=True, exist_ok=True)
+    (seed / "tools" / "tools.py").write_text("def calculate():\n    ...\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+    low = body.lower()
+
+    assert "may not reuse the surface" in low, (
+        "the briefing does not forbid a third round on the same surface and form")
+    assert "not a reason to stop" in low, (
+        "the briefing does not say that two rejections are not a reason to stop")
+    # With code in the surface, the escalation must name the code form specifically —
+    # a generic "try something else" is what produced three prose candidates.
+    assert "guard in the code" in low, (
+        f"the escalation never names the code form for a capability that owns tool code: {body}")
+
+
 def test_the_briefing_does_not_invent_files_for_a_prompt_only_capability(tmp_path):
     """A single-file capability must not be described as if it had more surface.
 

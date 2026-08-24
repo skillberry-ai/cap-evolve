@@ -81,13 +81,23 @@ case "$ALGORITHM" in
       _stop_usd="$(awk "BEGIN{printf \"%.2f\", ${OPTIMIZER_USD_PER_ITER:-0} * $_rounds}")"
       _stop_usd=" Stop if your own (optimization) spend reaches \$${_stop_usd}."
     fi
+    # NB the stopping rule deliberately does NOT stop on consecutive rejections. It used to
+    # ("stop when two consecutive rounds are rejected"), and that clause fired exactly where
+    # the algorithm prescribes ESCALATION instead: SKILL.md says "after two rejected rounds,
+    # read the candidate's TRACE before writing a third", because a reject usually means the
+    # edit FORM was wrong, not that the search is done. On smoke run 32701056043 the agent
+    # rejected two prose candidates and stopped — never reaching the round where it would have
+    # tried a code-level guard, which its own reject note ("require calculate tool for all
+    # money") had already identified as the right form. Rejections bound nothing; rounds and
+    # spend do.
     STOP_CONDITION="Spend at most ${_rounds} rounds, where a round is one candidate taken to a\
- full-val gate decision (accepted or rejected) and booked with commit.py. Stop early when\
- spend.py's recommendation is 'stop', or after ${_rounds} rounds, or when two consecutive\
- rounds are rejected with no new failure cluster left to attack.${_stop_usd} Gate every\
- candidate on FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on\
- a screen subset. Always finish by sealing test exactly once with measure.py and writing\
- the report — a run with no finalize has no result."
+ full-val gate decision (accepted or rejected) and booked with commit.py. Stop when spend.py's\
+ recommendation is 'stop', or after ${_rounds} rounds.${_stop_usd} Do NOT stop early merely\
+ because rounds were rejected: a rejection is the signal to change the edit FORM or the SURFACE\
+ on the next round, not to finish. Use every round the budget allows. Gate every candidate on\
+ FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Always\
+ finish by sealing test exactly once with measure.py and writing the report — a run with no\
+ finalize has no result."
     ;;
   *)
     echo "::error:: unknown ALGORITHM='$ALGORITHM' (expected hill-climb-all |" \

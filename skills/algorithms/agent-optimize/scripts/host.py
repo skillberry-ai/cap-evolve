@@ -169,7 +169,21 @@ def _surface_section(files: list[str]) -> str:
     if has_code:
         body += (" — a rule the agent already has and violates usually belongs in code as a "
                  "guard, while a missing decision criterion belongs in prose")
-    body += (". Say which file you chose, and why that one, when you commit the round.\n")
+    body += (". Name the file you chose in the `commit.py --note` for the round, so the run "
+             "records which surface each decision was made on.\n\n"
+             "### Precondition on round 3 and later\n\n"
+             "**If your last two rounds were both rejected, the next round may not reuse the "
+             "surface *and* form those two used.** Read the rejected candidate's trace first "
+             "and ask whether the agent ever exercised your rule at all: never exercised means "
+             "the FORM was wrong, so a third variation of the same wording will be rejected "
+             "too. Change the form, or change the surface")
+    if has_code:
+        body += (" — and where the failing behaviour is one the agent has a criterion for and "
+                 "violates anyway (it *should* call a tool and does not, it *should* validate "
+                 "and does not), the form that works is a guard in the code, not a third "
+                 "restatement in prose")
+    body += (".\n\nTwo rejections are not a reason to stop — they are the signal to escalate. "
+             "Spend every round the budget allows.\n")
     return head + body
 
 
