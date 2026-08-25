@@ -716,3 +716,220 @@ def test_required_handoff_arguments(tmp_path, missing):
     p = subprocess.run([sys.executable, str(HOST), *argv],
                        capture_output=True, text=True, env=_env())
     assert p.returncode != 0, f"{missing} must be required"
+
+
+# --- the end_turn defect: run 32814848187 ------------------------------------
+# The turn budget raised to 600 in this branch worked: that run used 78 of 600 and stopped
+# on subtype=success / stop_reason=end_turn, rc=0. It had backgrounded round 2's full-val
+# gate and ended its turn to await a notification, which a `claude -p` process can never
+# receive — end_turn IS process exit. The gate finished 14 minutes after the agent was gone,
+# with a real verdict (r2_comm_search 0.44 vs parent 0.58 -> reject) that nobody read, so
+# rounds_booked stayed 1 of 3 and round 3 never started. Three holes, one per test below.
+
+
+def test_the_briefing_forbids_ending_a_turn_on_outstanding_work_without_banning_delegation(
+        tmp_path):
+    """The rule has to be about WHERE the main loop lives, not about avoiding concurrency.
+
+    The briefing's "Unattended" section covered only asking questions ("Do not ask any; do
+    not wait for input"). Backgrounding a job and ending the turn to await a notification
+    breaks neither clause, and that is exactly what happened. But the fix must not read as
+    "never delegate": fanning out subagents or several evals at once is the intended way to
+    use this host, and `round.py` exists to do precisely that. What is fatal is the *main
+    loop* leaving the foreground — delegation is fine as long as the driving turn stays
+    blocked on the result and reads it itself.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    brief = Path(out["prompt_path"]).read_text(encoding="utf-8").lower()
+
+    assert "foreground" in brief, (
+        "the briefing never tells the agent its main loop must stay in the foreground, so "
+        "backgrounding the gate and ending the turn breaks no stated rule")
+    assert "orphan" in brief or "exits" in brief, (
+        "the briefing must state the CONSEQUENCE — ending a turn with no pending tool call "
+        "ends the process and orphans its children — or the rule reads as mere style")
+
+    # Generic, not a ban on concurrency: subagents and parallel work must stay permitted,
+    # since round.py's whole point is evaluating a round's candidates at once.
+    assert ("subagent" in brief or "delegat" in brief or "parallel" in brief), (
+        "the rule must say delegation stays allowed; a blanket 'do everything yourself, "
+        "serially' would forbid round.py's parallel evals and the subagent fan-out the "
+        "claude-code registry row advertises")
+
+    # And it must not name one tool or one mechanism — any later-reporting mechanism is
+    # equally fatal, so the rule is phrased on the outcome.
+    assert "notif" in brief or "wake" in brief or "report back" in brief, (
+        "the rule should generalise to anything that reports back after the turn ends, "
+        "not just to the one mechanism this run happened to use")
+
+
+def test_an_agent_that_ENDED_ITS_TURN_is_not_told_to_raise_the_turn_budget(tmp_path):
+    """Two different stop causes had one message, and it fit only the older one.
+
+    Run 32733635494 really did die on error_max_turns, and "raise optimizer_max_turns or
+    lower the round count" was the right advice. Run 32814848187 stopped at 78 of 600 turns
+    on end_turn; the same sentence sent the operator to a knob that was already 7x larger
+    than what the agent used. The host has the stop reason in hand and must split on it.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 78,\n"
+        "                           'is_error': False, 'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out.get("incomplete"), f"stopping with rounds left must not read as done: {out}"
+    msg = str(out["incomplete"]).lower()
+    assert "optimizer_max_turns" not in msg, (
+        "an agent that used 78 of its turns and ended its turn voluntarily is not "
+        f"turn-starved; pointing the operator at the turn budget misdiagnoses it: {msg}")
+    assert "turn" in msg and ("outstanding" in msg or "background" in msg
+                              or "chose" in msg or "voluntar" in msg), (
+        f"the end_turn case needs its own diagnosis, not a generic one: {msg}")
+    # The inner stop_reason is the discriminator and must survive into the payload; reading
+    # only `subtype` sees "success" and cannot tell this from a clean finish.
+    assert "end_turn" in json.dumps(out), (
+        f"the agent's stop_reason never reaches the host's output: {out}")
+
+
+def test_a_turn_starved_agent_still_gets_the_turn_budget_advice(tmp_path):
+    """The split must not lose the advice that was right for the original defect."""
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'error_max_turns', 'num_turns': 240}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert "optimizer_max_turns" in str(out.get("incomplete", "")), (
+        f"the turn-exhausted case lost its own advice in the split: {out}")
+
+
+def test_a_round_that_was_gated_but_never_booked_is_reported(tmp_path):
+    """The work was done and the verdict was on disk; only commit.py was missing.
+
+    round2.log held `r2_comm_search reward 0.44, verdict reject` against parent r1_ops_bag.
+    Nothing read it. The host's own accounting could not see it either — `spent.iterations`
+    counts commit.py calls, so an un-booked round is indistinguishable from a round that was
+    never attempted, and the operator is left to diff candidate dirs by hand.
+
+    The host reports it rather than booking it: which decision a round's verdict deserves is
+    the driver's judgement, and a host that booked accepts would silently move `best_id`
+    after `measure.py` had already sealed against the old one.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    work = run_dir.root / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "round2.log").write_text(json.dumps({
+        "parent": {"tag": "r1_ops_bag", "reward": 0.58},
+        "candidates": [{"tag": "r2_comm_search", "reward": 0.44,
+                        "delta_vs_parent": -0.14, "verdict": "reject", "eval_rc": 0}],
+        "control": {"tag": "ctl_null_i1", "reward": 0.5, "verdict": "reject"},
+    }), encoding="utf-8")
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 78,\n"
+        "                           'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    unbooked = out.get("unbooked_rounds")
+    assert unbooked, (
+        "a fully-gated round with no commit.py decision is invisible in the host's "
+        f"output, so the run reads as if that round never happened: {out}")
+    blob = json.dumps(unbooked)
+    assert "r2_comm_search" in blob, f"the candidate is not named: {blob}"
+    assert "reject" in blob, f"the verdict that was computed is not carried: {blob}"
+    assert "round2.log" in blob, f"the log to look in is not named: {blob}"
+    assert "r2_comm_search" in str(out.get("incomplete", "")), (
+        "the un-booked candidate must surface in the operator-facing warning too, not "
+        f"only in a nested key nobody greps: {out.get('incomplete')}")
+    # The control is round.py's noise floor, never committed by design — reporting it as
+    # un-booked would cry wolf on every single round.
+    assert "ctl_null" not in blob, (
+        f"the null control is not a bookable candidate and must not be flagged: {blob}")
+
+
+def test_a_booked_round_is_not_reported_as_unbooked(tmp_path):
+    """The backstop must be silent on the healthy path, or it is noise.
+
+    Asserted on the full host path, not ``--seal-only``: a negative assertion is only worth
+    anything on the code path that also produces the positive, and the key would otherwise be
+    trivially absent.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    work = run_dir.root / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "round1.log").write_text(json.dumps({
+        "parent": {"tag": "seed", "reward": 0.24},
+        "candidates": [{"tag": "r1_ops_bag", "reward": 0.58, "verdict": "accept"}],
+    }), encoding="utf-8")
+    # What commit.py leaves behind for that candidate.
+    run_dir.log_event("accept", candidate="r1_ops_bag", val=0.58)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 78,\n"
+        "                           'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out["unbooked_rounds"] == [], (
+        f"a candidate with an accept event on record was flagged as un-booked: {out}")
+    assert "r1_ops_bag" not in str(out.get("incomplete", "")), (
+        f"a booked candidate leaked into the warning: {out.get('incomplete')}")
+
+
+def test_seal_only_also_reports_an_abandoned_round(tmp_path):
+    """--seal-only is what an operator runs on a run that died; it must say what was left.
+
+    Reporting the abandoned round only on the full host path hides it from the one reader who
+    went looking for why the run is short.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    work = run_dir.root / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "round2.log").write_text(json.dumps({
+        "parent": {"tag": "r1_ops_bag", "reward": 0.58},
+        "candidates": [{"tag": "r2_comm_search", "reward": 0.44, "verdict": "reject"}],
+    }), encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--seal-only")
+
+    assert "r2_comm_search" in json.dumps(out.get("unbooked_rounds")), (
+        f"--seal-only sealed the run and said nothing about the abandoned round: {out}")

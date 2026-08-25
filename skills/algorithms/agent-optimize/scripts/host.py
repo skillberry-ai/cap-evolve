@@ -49,6 +49,20 @@ agent's own judgement that it was finished.
 
 The seal is idempotent: an already-sealed run reports ``seal: agent`` rather than raising
 ``TestSealError`` out of the host and failing a run that is actually complete.
+
+**A foreground contract, and a backstop for when it is broken.** The turn budget is not the
+only way an unattended loop stops short. On run 32814848187 the agent used 78 of 600 turns and
+stopped on ``subtype: success`` / ``stop_reason: end_turn``: it had backgrounded round 2's gate
+and ended its turn to await a notification, which ends the process here — there is no
+conversation to resume it. So the briefing states the invariant (the turn that launches work is
+the turn that collects it; delegate the work, never the waiting — subagents and parallel evals
+stay encouraged), and ``unbooked_rounds`` reports candidates a round gated to a verdict that no
+``commit.py`` booked, since ``spent.iterations`` cannot tell that from a round never attempted.
+It reports rather than books: booking an accept after ``measure.py`` sealed against the old
+``best_id`` would convert a visible gap into a wrong headline number.
+
+That check runs AFTER the seal on purpose — the abandoned round's evals outlived the agent by
+14 minutes, so a pre-seal check would have found an empty ``work/``.
 """
 
 from __future__ import annotations
@@ -281,6 +295,10 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     arm_block = _arm_section(arm)
     skill_md = SKILL_DIR / "SKILL.md"
     helpers = HERE
+    # Quoted from the constant that actually sets BASH_*_TIMEOUT_MS below, so the briefing
+    # cannot promise a ceiling the env does not grant.
+    hours = round(BASH_TIMEOUT_MS / 3_600_000, 1)
+    hours = int(hours) if hours == int(hours) else hours
 
     if not stop:
         stop = (f"Spend at most {rounds} rounds, gate every candidate on FULL val, and "
@@ -369,7 +387,7 @@ SKILL.md's Phase 0 says to ask the user about a blocking ambiguity (including
 the assumption in one line in your final summary, and proceed. A round spent on a
 conservative assumption is worth far more than a run that stalls waiting for a reply.
 
-Two consequences worth being explicit about:
+Three consequences worth being explicit about:
 
 1. **Never leave the run unsealed.** Finish with `measure.py` (which seals test exactly
    once) and the report phase, as SKILL.md's "Stop & seal" section shows. A run with no
@@ -378,6 +396,28 @@ Two consequences worth being explicit about:
 2. **A null result is a valid outcome, honestly reported.** If nothing beat the baseline
    through the gate, say so and seal anyway. Do not lower the gate, gate on a screen
    subset, or present a screen `promote` as an accept to manufacture a gain.
+3. **Drive the loop from the foreground, and never end a turn with work outstanding.**
+   There is no conversation to come back to. When you end a turn with no tool call pending,
+   this process exits and everything it started is orphaned — so anything that would report
+   back *later* never reports at all: a job left running in the background, a watcher on a
+   file, a completion notice, a wake-up you scheduled. There is nobody to wake.
+
+   This is not a rule against doing several things at once. Fan out as widely as the work
+   deserves — subagents, parallel diagnosers, a whole round's candidates evaluated
+   concurrently (that is exactly what `round.py` is for). The one invariant is that **the
+   turn that launched the work is still the turn that collects it**: stay blocked until the
+   result is in your hands, read it, and act on it before that turn ends. Delegate the work,
+   never the waiting.
+
+   Waiting is safe: one Bash call may run for {hours} hours, a ceiling raised for precisely
+   this reason, so a long eval does not need backgrounding to survive. If something really
+   would outlast that, make it smaller — fewer trials, fewer candidates per round — rather
+   than detaching it.
+
+   Measured on run 32814848187: the driver backgrounded round 2's full-val gate and ended
+   its turn to await a notification. The process exited; the gate finished 14 minutes later
+   and wrote a real verdict that nobody was left to read. Two of three rounds went unspent,
+   and the orphaned evals were still hitting the runner while the seal was being measured.
 
 ## When you are done
 
@@ -385,6 +425,78 @@ Finish your final message with the run's honest table: seed vs best on val, on t
 adds information, and on the sealed test split — plus the accepted candidate id, the number
 of rounds, and any assumption you had to make on your own.
 """
+
+
+def _decided_candidates(run_dir: Path) -> set[str]:
+    """Candidate tags that already carry an accept/reject decision in ``events.jsonl``.
+
+    Same source and same event names ``commit.py`` writes and re-reads for its own
+    double-booking guard — the audit log rather than in-process memory, because the driver
+    that booked the decision is a different process that has already exited.
+    """
+    decided: set[str] = set()
+    try:
+        with (run_dir / "events.jsonl").open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001 — a torn line is not a decision
+                    continue
+                if ev.get("kind") in ("accept", "reject") and ev.get("candidate"):
+                    decided.add(str(ev["candidate"]))
+    except OSError:
+        return decided
+    return decided
+
+
+def _unbooked_rounds(run_dir: Path) -> list[dict]:
+    """Candidates a round GATED but nobody booked with ``commit.py``.
+
+    ``spent.iterations`` counts ``commit.py`` calls, so a round whose full-val gate ran to a
+    verdict and was then abandoned is indistinguishable from a round never attempted — the
+    operator is left diffing candidate dirs by hand to find out which. Measured on run
+    32814848187: ``r2_comm_search`` was gated to ``reject`` at val 0.44 against parent 0.58,
+    the table was on disk, and the run reported 1 of 3 rounds with no hint the second existed.
+
+    Recognised by SHAPE, not by filename: ``round.py`` prints its table to stdout and the
+    driver chooses where to redirect it, so matching ``round*.log`` would only ever catch the
+    one name that happened to be used. Any file under ``work/`` that parses as a round table
+    counts.
+
+    Deliberately reports rather than books. Which decision a verdict deserves is the driver's
+    judgement — ``round.py``'s own docstring says so — and a host that booked accepts on its
+    behalf would move ``best_id`` after ``measure.py`` had already sealed against the old one,
+    turning a visible gap into a wrong headline number.
+    """
+    work = run_dir / "work"
+    if not work.is_dir():
+        return []
+    decided = _decided_candidates(run_dir)
+    seen: set[str] = set()
+    found: list[dict] = []
+    for log in sorted(work.iterdir()):
+        if not log.is_file() or log.suffix not in (".log", ".json", ".txt"):
+            continue
+        try:
+            payload = json.loads(log.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — not a round table; nothing to say about it
+            continue
+        if not isinstance(payload, dict) or not isinstance(payload.get("candidates"), list):
+            continue
+        for cand in payload["candidates"]:
+            if not isinstance(cand, dict):
+                continue
+            tag = str(cand.get("tag") or "")
+            # A row with no verdict never reached a decision anyone could have skipped
+            # (a crashed eval, or a table written before the gate ran).
+            if not tag or tag in decided or tag in seen or not cand.get("verdict"):
+                continue
+            seen.add(tag)
+            found.append({"candidate": tag, "verdict": cand.get("verdict"),
+                          "reward": cand.get("reward"),
+                          "parent": (payload.get("parent") or {}).get("tag"),
+                          "log": log.name})
+    return found
 
 
 def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) -> dict:
@@ -517,6 +629,10 @@ def main(argv=None) -> int:
 
     if args.seal_only:
         out = _seal(run_dir, project, spec, timeout=args.timeout)
+        # This is the rescue path an operator reaches for on a run that died mid-loop, so it
+        # is the path most likely to be sitting on an abandoned round. Reporting it only on
+        # the full host path would hide it from exactly the reader who came looking.
+        out["unbooked_rounds"] = _unbooked_rounds(run_dir)
         print(json.dumps({"run_dir": str(run_dir), "seal_only": True, **out}, indent=2))
         return 0 if out["sealed"] else 1
 
@@ -636,6 +752,11 @@ def main(argv=None) -> int:
     # candidate evaluated but never committed) mattered more than anything else in the payload.
     stop = payload.get("stop") or {}
     stop_reason = str(stop.get("subtype") or "") or None
+    # Two different fields, and the discriminator is the SECOND one. Claude Code reports the
+    # harness-level outcome in `subtype` and the model's own reason in `stop_reason`; on run
+    # 32814848187 those were "success" and "end_turn". Reading only `subtype` sees a clean
+    # finish and cannot tell a voluntary stop from a completed run.
+    agent_stop = str(stop.get("stop_reason") or "") or None
     num_turns = stop.get("num_turns")
 
     # Book the host's own spend. The agent books per-round costs it knows about through
@@ -660,17 +781,54 @@ def main(argv=None) -> int:
 
     seal = _seal(run_dir, project, spec, timeout=args.timeout)
 
+    # AFTER the seal on purpose. The abandoned round's evals were still running when the agent
+    # exited — on run 32814848187 its table landed 14 minutes later, during measure.py — so a
+    # check made before sealing would have found an empty work/ and reported nothing.
+    unbooked = _unbooked_rounds(run_dir)
+
     # An agent that stopped with rounds left is a DEFECT, not a finished run — and it must not
     # read as completion. Measured: one run booked 1 of 3 rounds with a higher-scoring
     # candidate already evaluated but never committed, and reported success. The host cannot
     # un-spend that, but it can refuse to let it look finished.
+    #
+    # The advice has to be per-cause. One message served both stop causes and fit only the
+    # first: run 32733635494 died on error_max_turns, where "raise optimizer_max_turns" was
+    # exactly right, and run 32814848187 stopped at 78 of 600 turns on end_turn, where the same
+    # sentence pointed at a knob already 7x larger than what the agent used — and sent the next
+    # operator to raise it again.
     incomplete = ""
     if 0 <= rounds_done < rounds_budget:
+        reasons = f"{stop_reason or ''} {agent_stop or ''}"
+        turn_limited = "max_turns" in reasons
+        # Ran to a clean stop of its own accord, with rounds and turns still to spend.
+        voluntary = not turn_limited and ("end_turn" in reasons or "success" in reasons)
+
+        if turn_limited:
+            fix = ("raise the turn budget (optimizer_max_turns) or lower the round count")
+        elif voluntary:
+            fix = ("it stopped of its own accord with rounds still to spend, which is what a "
+                   "turn ending on outstanding work looks like from here: a backgrounded job, "
+                   "a file watcher, or anything else that reports back later cannot resume a "
+                   "non-interactive run, because ending a turn ends the process. The loop must "
+                   "be driven from the foreground — see the briefing's Unattended section. "
+                   "Delegation is fine; detaching the wait is not")
+        else:
+            fix = ("the agent did not finish and did not run out of turns — read agent_error "
+                   "and the optimizer payload for what killed it")
+
+        evidence = ""
+        if unbooked:
+            evidence = "; gated but never booked with commit.py: " + ", ".join(
+                f"{u['candidate']} (verdict {u['verdict']}, val {u['reward']}, in "
+                f"work/{u['log']})" for u in unbooked)
+        else:
+            evidence = ("; a candidate it evaluated may never have been committed")
+
         incomplete = (f"the agent booked {rounds_done} of {rounds_budget} rounds"
                       + (f" and stopped on {stop_reason}" if stop_reason else "")
+                      + (f"/{agent_stop}" if agent_stop and agent_stop != stop_reason else "")
                       + (f" after {num_turns} turns" if num_turns else "")
-                      + " — a candidate it evaluated may never have been committed; raise the "
-                        "turn budget (optimizer_max_turns) or lower the round count")
+                      + evidence + " — " + fix)
 
     out = {
         "run_dir": str(run_dir),
@@ -680,9 +838,11 @@ def main(argv=None) -> int:
         "returncode": None if proc is None else proc.returncode,
         "timed_out": timed_out,
         "stop_reason": stop_reason,
+        "agent_stop_reason": agent_stop,
         "num_turns": num_turns,
         "rounds_booked": rounds_done,
         "rounds_budget": rounds_budget,
+        "unbooked_rounds": unbooked,
         "incomplete": incomplete,
         "seconds": round(seconds, 3),
         "usd": usd,

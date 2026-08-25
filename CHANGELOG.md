@@ -9,6 +9,36 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The hosted agent ended its turn to wait for a notification, and the process exited under
+  it.** With the turn budget raised to 600, run 32814848187 no longer ran out of turns — it
+  used 78 and stopped anyway, on `subtype: success` / `stop_reason: end_turn`, rc 0. It had
+  launched round 2's full-val gate in the background and ended its turn to await word back.
+  In a non-interactive run there is nothing to come back to: ending a turn ends the process
+  and orphans its children. The gate finished **14 minutes after the agent was gone**, wrote a
+  real verdict (`r2_comm_search` val 0.44 vs parent 0.58 → reject) that nobody read, and left
+  2 of 3 rounds unspent — while the orphaned evals were still hitting the runner as
+  `measure.py` measured the seal. Three changes, none of which restricts concurrency: the
+  briefing now states that the *main loop* runs in the foreground and that the turn which
+  launched work is the turn that collects it — fanning out subagents or a whole round's evals
+  stays encouraged, since delegating the work is not the same as detaching the wait; `round.py`
+  persists its gate table under `$R/work/` instead of leaving stdout the only copy, so an
+  abandoned round's verdict is evidence rather than a redirect the driver may have skipped; and
+  the host reports `unbooked_rounds` — candidates a round gated to a verdict that no
+  `commit.py` ever booked — which `spent.iterations` cannot distinguish from a round never
+  attempted. It reports rather than books: which decision a verdict deserves is the driver's
+  judgement, and booking an accept after `measure.py` had sealed against the old `best_id`
+  would turn a visible gap into a wrong headline number.
+
+- **`incomplete` gave turn-budget advice to an agent that was not turn-starved.** One message
+  served both stop causes and fit only the first. Run 32733635494 died on `error_max_turns`,
+  where "raise `optimizer_max_turns` or lower the round count" was exactly right; run
+  32814848187 stopped at 78 of 600 turns, and the same sentence pointed the operator at a knob
+  already 7× larger than what the agent used. The diagnosis now splits on the stop cause, and
+  reads the agent's own `stop_reason` alongside the harness's `subtype` — the discriminator is
+  the former (`end_turn`), while the latter says only `success`, which is why a voluntary stop
+  was indistinguishable from a clean finish. `--seal-only`, the path an operator reaches for on
+  a run that died mid-loop, reports abandoned rounds too.
+
 - **Agent-mode optimizer cost was reported as $0.00 on every run.** `run-optimizer` nests the
   figure under `cost.total_cost_usd`; the host read a flat `cost_usd`/`usd` and booked `0.0`.
   Smoke run 32733635494 spent **$8.37** (68,432 tokens) and recorded nothing — and because that

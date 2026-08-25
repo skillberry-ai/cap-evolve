@@ -607,6 +607,17 @@ def _round_control(c: Checker, tmp: Path) -> None:
         c.check("commit" in (r.get("next") or ""),
                 "round.py must hand the accept/reject decision back to the driver",
                 note="round.py never commits: which part of a bundle to keep is a judgement")
+        # The table must survive on disk, not only on stdout. A driver that forgot to redirect
+        # left the round's gate verdict nowhere: on run 32814848187 the abandoned round was
+        # reconstructible only because the driver happened to have redirected it somewhere
+        # someone guessed. host.py's un-booked-round backstop reads these files.
+        table = r.get("table_path") or ""
+        c.check(bool(table) and Path(table).is_file()
+                and Path(table).parent == work
+                and json.loads(Path(table).read_text(encoding="utf-8")).get("candidates"),
+                f"round.py did not persist its gate table under $R/work/ (got {table!r})",
+                note="the round's verdict is the run's evidence; it must not depend on the "
+                     "driver remembering to redirect stdout")
 
     # A round whose --n-trials differs from the parent's must be able to pair against the
     # control instead, or every delta silently carries a precision mismatch.

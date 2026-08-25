@@ -260,6 +260,29 @@ def main(argv=None) -> int:
         "control_replicates": ctl_rows,
         "next": "read regressions, then commit.py --decision accept|reject per candidate",
     }
+    # Persist the table as well as printing it. Until now the ONLY copy lived on stdout, so
+    # whether a round's verdict survived depended on the driver remembering to redirect —
+    # and on run 32814848187 the round that was abandoned was only reconstructible because
+    # the driver happened to have redirected it to a name someone guessed. A round's gate
+    # result is the run's evidence; it should not be optional.
+    #
+    # Per-iteration name for the same reason `control_tag` is per-iteration: a fixed name
+    # would let each round destroy the previous round's table. A same-iteration re-run gets a
+    # suffix rather than overwriting, since a re-gate is usually being COMPARED with the
+    # first one.
+    try:
+        work.mkdir(parents=True, exist_ok=True)
+        stem = f"round_i{int(run_dir.spent.iterations)}"
+        table = work / f"{stem}.json"
+        n = 1
+        while table.exists():
+            table = work / f"{stem}.r{n}.json"
+            n += 1
+        table.write_text(json.dumps(out, indent=2), encoding="utf-8")
+        out["table_path"] = str(table)
+    except OSError as exc:  # noqa: BLE001 — the printed table is still the primary output
+        out["table_write_error"] = str(exc)
+
     print(json.dumps(out, indent=2))
     return 0
 
