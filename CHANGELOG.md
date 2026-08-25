@@ -9,6 +9,20 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The end_turn diagnosis accused a complete run of abandoning work.** Run 32871360361 booked 4
+  of 10 rounds, investigated a round-5 lever, judged the residual failure unfixable by the
+  surfaces it owned, **sealed test itself**, wrote its report and stopped at 121 of 1650 turns.
+  The host told the operator it had "stopped of its own accord … which is what a turn ending on
+  outstanding work looks like … a backgrounded job … cannot resume a non-interactive run" —
+  the exact defect the warning was written for, on a run that was complete and honest. Two facts
+  already in the payload disprove it: `seal == "agent"` (a loop that dies mid-turn leaves the
+  host to seal, as run 32814848187 did) and an empty `unbooked_rounds`. The diagnosis now
+  branches on both and reports unspent rounds as **under-use** — "it stopped when it ran out of
+  edits it trusted, not when it ran out of rounds" — while the foreground explanation is kept for
+  the case that actually produced it. The "a candidate may never have been committed" hedge no
+  longer fires when the backstop came back clean, since it sent readers hunting for a candidate
+  that provably did not exist.
+
 - **A parent-gated round discarded the drift-free comparison it had already paid to measure.**
   Run 32871360361 round 4 gated in `parent` mode: `cand4` at 0.53 against the seed's *stored* 0.38
   = +0.15, bar 0.11 (drift), so 1.4x — marginal. The same round's two concurrent controls both

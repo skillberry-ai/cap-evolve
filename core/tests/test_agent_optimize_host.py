@@ -988,3 +988,75 @@ def test_the_briefing_states_the_measurement_concurrency_the_gate_can_resolve(tm
     assert "concurrency" in body.lower(), (
         "the briefing hands over trials and k_se but not the measurement concurrency, the one "
         "knob whose misuse silently widens the noise floor past the gate")
+
+
+def test_an_agent_that_SEALED_the_run_itself_is_not_accused_of_abandoning_work(tmp_path):
+    """My own end_turn diagnosis fired falsely on run 32871360361.
+
+    That agent booked 4 of 10 rounds, then investigated a round-5 lever, judged the residual
+    failure unfixable by the surfaces it owned, sealed test itself, wrote its report and stopped
+    at 121 of 1650 turns. The host told the operator it had "stopped of its own accord with
+    rounds still to spend, which is what a turn ending on outstanding work looks like … a
+    backgrounded job … cannot resume a non-interactive run" — accusing it of the exact defect
+    4016ed0a was written for, when the run was complete and honest.
+
+    Two facts already in the payload disprove it: `seal == "agent"` (it finalized itself; an
+    agent that died mid-turn leaves the host to seal, which is what run 32814848187 did) and
+    `unbooked_rounds == []` (the backstop found no gated-but-unbooked candidate). Unspent budget
+    is worth reporting, but as under-use — not as a lost loop.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    # Seal it first, so the host sees an already-sealed run: seal == "agent".
+    _host("--run-dir", str(run_dir.root), "--project", str(project), "--seal-only")
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 121,\n"
+        "                           'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out["seal"] == "agent", f"fixture did not produce an agent-sealed run: {out}"
+    assert out["unbooked_rounds"] == [], out
+    msg = str(out.get("incomplete") or "")
+    assert msg, "unspent rounds should still be reported, as under-use"
+    assert "background" not in msg and "file watcher" not in msg, (
+        f"the foreground-defect diagnosis fired on a run the agent sealed itself: {msg}")
+    assert "may never have been committed" not in msg, (
+        "unbooked_rounds is empty and the agent sealed, so nothing was lost — saying otherwise "
+        f"sends the operator hunting for a candidate that does not exist: {msg}")
+    assert "budget" in msg.lower() or "unspent" in msg.lower() or "under-use" in msg.lower(), (
+        f"the real finding — rounds left unspent — is not stated: {msg}")
+
+
+def test_an_agent_that_died_without_sealing_still_gets_the_foreground_diagnosis(tmp_path):
+    """The discriminator must not disarm the diagnosis it was built for.
+
+    Run 32814848187 ended its turn with round 2's gate still running and left the host to seal
+    (`seal: "host"`). That case must keep the foreground explanation.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 78,\n"
+        "                           'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out["seal"] == "host", f"fixture should leave the seal to the host: {out}"
+    msg = str(out.get("incomplete") or "")
+    assert "foreground" in msg or "background" in msg, (
+        f"the foreground diagnosis was lost for the case it exists for: {msg}")

@@ -842,8 +842,23 @@ def main(argv=None) -> int:
         # Ran to a clean stop of its own accord, with rounds and turns still to spend.
         voluntary = not turn_limited and ("end_turn" in reasons or "success" in reasons)
 
+        # An agent that SEALED THE RUN ITSELF did not lose its loop — it finished it early. Both
+        # facts needed to tell the two apart are already here: `seal == "agent"` (run 32814848187,
+        # which really did end its turn on a running gate, left the host to seal) and an empty
+        # `unbooked_rounds`. Without this branch the diagnosis fired on run 32871360361 — 4 of 10
+        # rounds, test sealed, report written, 121 of 1650 turns — and told the operator it had
+        # abandoned a backgrounded job. Accusing a complete run of the defect this warning exists
+        # for is how a warning stops being read.
+        finished_itself = (seal.get("seal") == "agent" and not unbooked)
+
         if turn_limited:
             fix = ("raise the turn budget (optimizer_max_turns) or lower the round count")
+        elif finished_itself:
+            fix = ("it sealed the run itself and left nothing unbooked, so this is UNSPENT "
+                   "BUDGET, not a loop that died: it stopped when it ran out of edits it "
+                   "trusted, not when it ran out of rounds. Read its final message for the "
+                   "reason — if the honest answer is 'no further lever found', the lever is the "
+                   "stop condition or the briefing, not the host")
         elif voluntary:
             fix = ("it stopped of its own accord with rounds still to spend, which is what a "
                    "turn ending on outstanding work looks like from here: a backgrounded job, "
@@ -860,6 +875,11 @@ def main(argv=None) -> int:
             evidence = "; gated but never booked with commit.py: " + ", ".join(
                 f"{u['candidate']} (verdict {u['verdict']}, val {u['reward']}, in "
                 f"work/{u['log']})" for u in unbooked)
+        elif finished_itself:
+            # Both checks came back clean, so say so. Hedging here sent a reader hunting for a
+            # candidate that provably does not exist.
+            evidence = ("; every round it ran was booked and it sealed the run itself, so no "
+                        "measured candidate was lost")
         else:
             evidence = ("; a candidate it evaluated may never have been committed")
 
