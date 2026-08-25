@@ -843,7 +843,7 @@ def test_a_round_that_was_gated_but_never_booked_is_reported(tmp_path):
     (work / "round2.log").write_text(json.dumps({
         "parent": {"tag": "r1_ops_bag", "reward": 0.58},
         "candidates": [{"tag": "r2_comm_search", "reward": 0.44,
-                        "delta_vs_parent": -0.14, "verdict": "reject", "eval_rc": 0}],
+                        "delta_vs_gate_ref": -0.14, "verdict": "reject", "eval_rc": 0}],
         "control": {"tag": "ctl_null_i1", "reward": 0.5, "verdict": "reject"},
     }), encoding="utf-8")
 

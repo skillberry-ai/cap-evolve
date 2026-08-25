@@ -211,7 +211,20 @@ def main(argv=None) -> int:
                                        "--no-control"}, indent=2))
             return 2
         gate_ref = CTL
-    parent = harness.split_result_from_rollouts(run_dir, gate_ref, args.split)
+    # TWO distinct objects, kept distinct. `gate_res` is what deltas and thresholds are measured
+    # against (the concurrent control under --gate-against control); `parent_res` is the
+    # candidate this round is climbing from. Under --gate-against parent they coincide.
+    #
+    # Conflating them reported the CONTROL's reward under the PARENT's tag: on run 32871360361
+    # the table said `parent: {tag: 'seed', reward: 0.34}` while baseline.json said the seed
+    # scored 0.38, which no reader could reconcile. Worse, the gap between the two IS this
+    # round's temporal drift — measured at 0.24/0.44/0.38 on identical seed bytes across three
+    # runs, i.e. several times the gate bar — so collapsing them erased the one number that says
+    # whether any delta in the table means anything.
+    gate_res = harness.split_result_from_rollouts(run_dir, gate_ref, args.split)
+    parent_res = (gate_res if gate_ref == best
+                  else harness.split_result_from_rollouts(run_dir, best, args.split))
+    parent = gate_res  # deltas/thresholds are always against the gate reference
     rows = []
     for ev in evals:
         tag = ev["tag"]
@@ -223,8 +236,9 @@ def main(argv=None) -> int:
         rows.append({
             "tag": tag,
             "reward": (g.get("candidate") or {}).get("reward"),
-            "delta_vs_parent": (None if (g.get("candidate") or {}).get("reward") is None
-                                else round((g["candidate"]["reward"] or 0.0) - parent.reward, 4)),
+            "delta_vs_gate_ref": (None if (g.get("candidate") or {}).get("reward") is None
+                                  else round((g["candidate"]["reward"] or 0.0)
+                                             - gate_res.reward, 4)),
             "gate_delta": (g.get("gate") or {}).get("delta"),
             "gate_threshold": (g.get("gate") or {}).get("threshold"),
             "verdict": g.get("verdict"),
@@ -242,8 +256,8 @@ def main(argv=None) -> int:
     if ctl is not None:
         if args.gate_against == "control":
             floor = abs(ctl["gate_delta"]) if ctl.get("gate_delta") is not None else None
-        elif ctl["delta_vs_parent"] is not None:
-            floor = abs(ctl["delta_vs_parent"])
+        elif ctl["delta_vs_gate_ref"] is not None:
+            floor = abs(ctl["delta_vs_gate_ref"])
     # The gap BETWEEN identical control replicates is the round's empirical bar. It is a
     # stronger statement than any single control's delta, because both replicates are the same
     # bytes on the same seeds: whatever separates them is pure re-measurement. Two such
@@ -263,8 +277,23 @@ def main(argv=None) -> int:
             "smaller than roughly 0.08. Re-run the gate at --concurrency 8 before believing an "
             "accept.")
     out = {
-        "parent": {"tag": best, "reward": parent.reward, "stderr": parent.stderr,
-                   "n_tasks": len(parent.per_task or [])},
+        "parent": {"tag": best, "reward": parent_res.reward, "stderr": parent_res.stderr,
+                   "n_tasks": len(parent_res.per_task or [])},
+        # What the deltas and thresholds in `candidates` are actually measured against.
+        "gate_reference": {"tag": gate_ref, "mode": args.gate_against,
+                           "reward": gate_res.reward, "stderr": gate_res.stderr},
+        # The round's OWN drift: identical-or-parent bytes measured now versus what the parent
+        # measured when it was scored. Non-null only when they are different measurements.
+        "parent_vs_gate_ref_drift": (None if gate_ref == best else
+                                     round((gate_res.reward or 0.0)
+                                           - (parent_res.reward or 0.0), 4)),
+        "drift_reading": (
+            "the parent's stored reward and a byte-identical control measured in THIS round "
+            "differ by this much. It is re-measurement drift, not progress, and any candidate "
+            "delta of comparable size is not evidence — whatever its verdict says."
+            if gate_ref != best else
+            "gated against the parent's stored reward, so this round cannot see how far that "
+            "reward has drifted since it was measured; --gate-against control measures it."),
         "measurement_concurrency": args.concurrency,
         "concurrency_warning": conc_warning,
         "null_delta_between_control_replicates": null_delta,

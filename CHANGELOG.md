@@ -9,6 +9,21 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **`round.py` reported the control's reward under the parent's tag, hiding the round's own
+  drift.** Line 214 loaded `parent` from `gate_ref` — which under `--gate-against control` is
+  the concurrently-measured control — while the output block emitted it with `"tag": best`. On
+  run 32871360361 that printed `parent: {tag: "seed", reward: 0.34}` while `baseline.json`
+  recorded the seed at 0.38, a discrepancy no reader could reconcile. Not cosmetic: the gap
+  between the parent's stored reward and a byte-identical control measured *now* IS the round's
+  temporal drift, and on this benchmark the same seed bytes scored 0.24 / 0.44 / 0.38 across
+  three runs the same day (sd 0.103, ~3.7x the acceptance bar) — so collapsing the two erased
+  the one number that says whether any delta in the table means anything. The table now carries
+  `parent` (the candidate being climbed from, read from `best`), `gate_reference` (what deltas
+  and thresholds are actually measured against), and `parent_vs_gate_ref_drift` with a reading
+  that names it as re-measurement, not progress. `delta_vs_parent` is renamed
+  `delta_vs_gate_ref`, because under control-mode gating it never was a delta against the
+  parent.
+
 - **Every candidate eval in agent mode could die `ModuleNotFoundError`, and did.** An arm's
   adapter deps are installed into exactly one venv, and `run_suite.sh` runs `cap-evolve run`
   with that interpreter — so on run 32861747778 the baseline scored 0.44 while *every* round-1

@@ -395,3 +395,34 @@ def test_the_default_concurrency_is_not_refused():
     blob = json.dumps(out).lower()
     assert not (rc == 2 and "concurrency" in blob), (
         f"the documented default was refused by its own guard: rc={rc} {out}")
+
+
+def test_the_round_table_does_not_report_the_controls_reward_under_the_parents_tag():
+    """Measured on run 32871360361: `parent: {tag: 'seed', reward: 0.34}` while
+    `baseline.json` said the seed scored 0.38 — because line 214 loads `parent` from
+    `gate_ref` (the CONTROL under --gate-against control) and line 266 emits it with
+    `"tag": best`. Two different objects in one block, irreconcilable for anyone reading it.
+
+    This is not cosmetic. The true parent vs the concurrently-measured control IS the round's
+    temporal drift — the quantity that decides whether any delta means anything, measured at
+    0.24/0.44/0.38 on identical seed bytes across three runs — and conflating them erases it.
+    So the table must carry both, and the delta key must name what it is really measured
+    against.
+    """
+    import pathlib  # noqa: PLC0415
+    src = (pathlib.Path(__file__).resolve().parents[2]
+           / "skills/algorithms/agent-optimize/scripts/round.py").read_text(encoding="utf-8")
+
+    assert '"delta_vs_parent"' not in src, (
+        "delta_vs_parent is computed against gate_ref, which under --gate-against control is "
+        "the control, not the parent — the key name lies")
+    assert '"delta_vs_gate_ref"' in src, "the delta key must name its actual reference"
+    assert '"gate_reference"' in src, (
+        "the table must report the object deltas were computed against, separately from the "
+        "parent it is climbing from")
+    assert '"parent_vs_gate_ref_drift"' in src, (
+        "the parent-vs-control gap is the round's own drift measurement and must be reported, "
+        "not left for a reader to reconstruct from baseline.json")
+    # The true parent must be read from `best`, never from gate_ref.
+    assert "split_result_from_rollouts(run_dir, best," in src, (
+        "the parent block still sources its reward from gate_ref rather than from `best`")
