@@ -933,3 +933,58 @@ def test_seal_only_also_reports_an_abandoned_round(tmp_path):
 
     assert "r2_comm_search" in json.dumps(out.get("unbooked_rounds")), (
         f"--seal-only sealed the run and said nothing about the abandoned round: {out}")
+
+
+# --- run 32861747778: round 1 died on the interpreter, then on concurrency ----
+
+
+def test_the_agent_inherits_the_interpreter_that_can_actually_import_the_adapter(tmp_path):
+    """Round 1's every eval died `ModuleNotFoundError: No module named 'tau2'`.
+
+    The benchmark's deps live in ONE interpreter: ci_setup.sh does
+    `uv pip install -p "$CAPEVOLVE_PY" -e tau2-bench`, and run_suite.sh runs `cap-evolve run`
+    with it — which is why the baseline scored 0.44 while every candidate eval crashed. But
+    ci_setup exports `PATH="$HOME/.local/bin:$PATH"` and never puts that venv's bin on PATH,
+    while SKILL.md tells the agent to run `python "$A/round.py"`. Bare `python` therefore CANNOT
+    resolve to the interpreter that works, and the run before this one only survived by luck —
+    with no transcript kept, not even the luck is inspectable.
+
+    Prose is the wrong fix here (SKILL.md's commands would all have to change and be obeyed).
+    The interpreter that launched the host is by construction the right one, so put its bin dir
+    first on the agent's PATH and every existing `python ...` command becomes correct.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+
+    path = out["agent_env"].get("PATH", "")
+    assert path, f"the agent is handed no PATH at all, so it inherits whatever CI had: {out['agent_env']}"
+    want = str(Path(sys.executable).parent)
+    assert path.split(os.pathsep)[0] == want, (
+        f"the host's own interpreter dir is not FIRST on the agent's PATH, so bare `python` "
+        f"still resolves elsewhere: want {want}, got {path.split(os.pathsep)[:3]}")
+
+    # And named explicitly in the handoff, so the agent can be unambiguous when it wants to be.
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+    assert sys.executable in body, (
+        "the briefing never names the interpreter, so an agent that shells a different one has "
+        "no way to know which is right")
+
+
+def test_the_briefing_states_the_measurement_concurrency_the_gate_can_resolve(tmp_path):
+    """The agent gated at --concurrency 100, which round.py itself calls unresolvable.
+
+    SKILL.md already says "do not raise it to buy wall clock" and the agent raised it to 100
+    anyway — the run's own table then carried "a verdict from this round can therefore not
+    resolve an effect smaller than roughly 0.08". A number the briefing never states is a
+    number the agent picks, so state it.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    body = Path(out["prompt_path"]).read_text(encoding="utf-8")
+
+    assert "concurrency" in body.lower(), (
+        "the briefing hands over trials and k_se but not the measurement concurrency, the one "
+        "knob whose misuse silently widens the noise floor past the gate")

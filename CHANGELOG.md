@@ -8,6 +8,33 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **Every candidate eval in agent mode could die `ModuleNotFoundError`, and did.** An arm's
+  adapter deps are installed into exactly one venv, and `run_suite.sh` runs `cap-evolve run`
+  with that interpreter — so on run 32861747778 the baseline scored 0.44 while *every* round-1
+  eval (candidate and control alike) crashed importing the adapter, scoring `null` rather than
+  zero. CI's `PATH` never contains that venv's bin, and SKILL.md tells the agent to run
+  `python "$A/round.py"`, so bare `python` could never resolve to the interpreter that works;
+  the run before it had survived on luck, and with no transcript kept not even the luck was
+  inspectable. Fixed as a guard rather than as prose — the interpreter that launched the host
+  *is* the correct one (`run_suite.sh` invokes `"$PY" host.py`), so its bin dir now goes first
+  on the agent's `PATH` and every existing `python …` command in the skill becomes correct by
+  construction. The briefing also names it as `$PY` and says not to substitute another
+  interpreter, `uv run`, or a fresh venv.
+
+- **A gate too coarse to resolve its own verdict is now refused, not warned about.** The same
+  run gated at `--concurrency 100` *after* SKILL.md had told it "do not raise it to buy wall
+  clock", and `round.py`'s own table then carried "a verdict from this round can therefore not
+  resolve an effect smaller than roughly 0.08" while the run continued and booked decisions
+  regardless. This skill's own edit-form rule applies to the skill itself: where the agent has
+  the criterion and violates it anyway, the form that works is a guard in code, not a further
+  restatement in prose. `round.py` now exits 2 above concurrency 25 — where the measured
+  degradation is established — naming the value to use instead, with
+  `--allow-high-concurrency` to record the trade deliberately. Refusal, not a silent clamp, is
+  already this script's idiom for an incoherent request. The briefing states the concurrency
+  alongside `num_trials` and `gate_k_se`, because a number it never states is a number the
+  agent picks.
+
 ### Added
 - **The run now keeps the agent's own transcript.** Four hours of run 32814848187 were
   unaccounted for *and unaccountable*: its 900 metric calls account for every evaluation in

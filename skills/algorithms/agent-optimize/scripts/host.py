@@ -87,6 +87,9 @@ REGISTRY = SKILLS / "optimizers" / "registry.yaml"
 # (spreadsheetbench full: one Docker container per task x trials), while still bounding a
 # genuinely hung command instead of waiting forever.
 BASH_TIMEOUT_MS = 4 * 60 * 60 * 1000
+#: Measurement concurrency handed to the agent when the spec names none. Matches ``round.py``'s
+#: own default and its refusal bound; see the concurrency note in the briefing.
+GATE_CONCURRENCY = 8
 
 
 def _spec(project: Path, spec_path: Path | None) -> dict:
@@ -299,6 +302,9 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     # cannot promise a ceiling the env does not grant.
     hours = round(BASH_TIMEOUT_MS / 3_600_000, 1)
     hours = int(hours) if hours == int(hours) else hours
+    # The interpreter that launched us — see _agent_env for why this is the authority.
+    interpreter = sys.executable
+    gate_conc = int(spec.get("measure_concurrency") or GATE_CONCURRENCY)
 
     if not stop:
         stop = (f"Spend at most {rounds} rounds, gate every candidate on FULL val, and "
@@ -325,11 +331,18 @@ R="{run_dir}"      # the run dir: splits, baseline, candidates, rollouts, events
 P="{project}"      # the project: capevolve.yaml, adapters/, {cap_path}
 S="{skills}"       # the skills dir (CAPEVOLVE_SKILLS_DIR is already set to it)
 A="$S/algorithms/agent-optimize/scripts"
+PY="{interpreter}"      # the ONLY interpreter that can import this benchmark's adapter deps
 mkdir -p "$R/work"
 ```
 
 Paths are absolute; use them as given rather than relative paths, because your working
 directory is not necessarily either of theirs.
+
+`$PY` is already first on your `PATH`, so plain `python` resolves to it and SKILL.md's commands
+work as written. Use `"$PY"` explicitly anywhere you build a command yourself. Do **not**
+substitute another interpreter, `uv run`, or a fresh venv: the adapter's packages are
+installed into this one only, and an eval run under any other dies with `ModuleNotFoundError`
+on the adapter's imports — which scores the candidate `null`, not zero, and wastes the round.
 
 ## The spec values your gate needs
 
@@ -340,9 +353,16 @@ directory is not necessarily either of theirs.
 | `gate_mode` | {gate_mode} |
 | `capabilities` (which capability rules validate your edits) | {caps} |
 | `capability_path` | {cap_path} |
+| `--concurrency` for every gate | {gate_conc} |
 
 Pass these explicitly — `--n-trials {n_trials}` on every evaluate, `--k-se {k_se}` on every
 gate — rather than relying on a default that may not match this spec.
+
+**The concurrency is a measurement parameter, not a speed dial.** Measured on this benchmark,
+byte-identical code at identical seeds moves ~0.03 at concurrency 8 and ~0.08 above 25 — so a
+gate run hot cannot resolve the effect you are looking for, and `round.py` now refuses a value
+that coarse rather than warning about it. Buy wall clock with fewer candidates per round, never
+with concurrency.
 
 {surface}
 {guidance}
@@ -581,6 +601,19 @@ def _agent_env(model: str | None) -> dict:
         # the other as the real limit.
         "BASH_DEFAULT_TIMEOUT_MS": str(BASH_TIMEOUT_MS),
         "BASH_MAX_TIMEOUT_MS": str(BASH_TIMEOUT_MS),
+        # THE interpreter, first. An arm's adapter deps are installed into exactly one venv, and
+        # `cap-evolve run` uses it — which is why on run 32861747778 the baseline scored 0.44
+        # while every candidate eval died `ModuleNotFoundError` on the adapter's own imports:
+        # CI's PATH never contains that venv's bin, and SKILL.md tells the agent to run
+        # `python "$A/round.py"`. Bare `python` could therefore never resolve to the one that
+        # works, and the run before it had survived on luck.
+        #
+        # Fixed here rather than by rewriting SKILL.md's commands: the interpreter that launched
+        # this host IS the correct one (run_suite.sh invokes `"$PY" host.py`), so putting its bin
+        # dir first makes every existing `python ...` line correct by construction. Prose the
+        # agent must remember is the form that already failed.
+        "PATH": os.pathsep.join([str(Path(sys.executable).parent),
+                                 os.environ.get("PATH", "")]).rstrip(os.pathsep),
     }
     if model:
         env["CAPEVOLVE_OPTIMIZER_MODEL"] = model

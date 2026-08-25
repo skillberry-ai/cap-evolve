@@ -38,6 +38,12 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 
 from cap_evolve import RunDir, harness
 
+#: Gate measurement concurrency. The default is deliberately low; the ceiling is where the
+#: measured degradation is established (~0.08 at the arm level above 25, ~0.03 at 8), so above
+#: it a verdict cannot resolve the effect the round is looking for and the round is refused.
+DEFAULT_CONCURRENCY = 8
+MAX_RESOLVING_CONCURRENCY = 25
+
 HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 
@@ -102,7 +108,7 @@ def main(argv=None) -> int:
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--mode", default="paired")
     p.add_argument("--split", default="val")
-    p.add_argument("--concurrency", type=int, default=8,
+    p.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
                    help="rollout concurrency per eval process (total = this x n_tags). Default "
                         "8, deliberately LOW, because the noise this script exists to expose is "
                         "largely load-induced and therefore fixable. Measured on byte-identical "
@@ -126,9 +132,35 @@ def main(argv=None) -> int:
                         "controls on identical seeds differed by 0.0800 paired on this "
                         "benchmark, enough to pass the gate on their own. The gap between the "
                         "replicates is the round's real bar.")
+    p.add_argument("--allow-high-concurrency", action="store_true",
+                   help="run the gate above MAX_RESOLVING_CONCURRENCY anyway. An explicit, "
+                        "recorded choice: the verdicts cannot resolve a small effect")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
     args = p.parse_args(argv)
+
+    # A gate too coarse to resolve its own verdict is refused, not warned about. Measured on
+    # run 32861747778: the driver gated at --concurrency 100 after SKILL.md had told it "do not
+    # raise it to buy wall clock", and this script's own table then carried "a verdict from this
+    # round can therefore not resolve an effect smaller than roughly 0.08" while the run
+    # continued and booked decisions anyway. The skill's own edit-form rule applies to the
+    # skill: where the agent has the criterion and violates it regardless, the form that works
+    # is a guard in the code, not a third restatement in prose. Refusal (not a silent clamp) is
+    # already this script's idiom for an incoherent request — see --gate-against control
+    # --no-control below.
+    if args.concurrency and args.concurrency > MAX_RESOLVING_CONCURRENCY \
+            and not args.allow_high_concurrency:
+        print(json.dumps({
+            "error": f"--concurrency {args.concurrency} exceeds {MAX_RESOLVING_CONCURRENCY}: "
+                     "byte-identical code at identical seeds moves ~0.08 at this load versus "
+                     "~0.03 at 8, so no verdict from the round could resolve an effect smaller "
+                     "than the noise the concurrency itself adds",
+            "fix": f"re-run with --concurrency {DEFAULT_CONCURRENCY} (buy wall clock with "
+                   "fewer candidates per round, not with load), or pass "
+                   "--allow-high-concurrency to record the trade deliberately",
+        }, indent=2))
+        return 2
+
 
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project)

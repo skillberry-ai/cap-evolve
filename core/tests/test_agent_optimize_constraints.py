@@ -342,3 +342,56 @@ def test_full_val_ceiling_is_not_computable_without_coverage():
 
     assert "status" in full_val_ceiling([], [], [], [])
     assert "accept_possible" not in full_val_ceiling([_pt("a", 1.0)], [], ["a"], ["a"])
+
+
+# --- run 32861747778: a gate at concurrency 100 -------------------------------
+
+def _round_rc(*extra, run_dir="/nonexistent", concurrency="100"):
+    """Invoke round.py's guard. Dummy paths: the refusal must precede any run-dir access."""
+    import json as _json
+    import subprocess as _sp
+    import sys as _sys
+    from pathlib import Path as _P
+    here = _P(__file__).resolve().parents[2] / "skills/algorithms/agent-optimize/scripts"
+    p = _sp.run([_sys.executable, str(here / "round.py"), "--run-dir", run_dir,
+                 "--project", run_dir, "--candidates", "c1", "--n-trials", "1",
+                 "--concurrency", concurrency, *extra],
+                capture_output=True, text=True)
+    try:
+        return p.returncode, _json.loads(p.stdout or "{}")
+    except Exception:
+        return p.returncode, {"stdout": p.stdout, "stderr": p.stderr}
+
+
+def test_a_gate_too_coarse_to_resolve_its_own_verdict_is_refused_not_warned():
+    """Measured: the agent set --concurrency 100 after SKILL.md told it not to.
+
+    round.py already warned in its own output ("cannot resolve an effect smaller than roughly
+    0.08") and the run continued regardless, producing verdicts nobody should believe. This
+    skill's own edit-form rule applies to the skill: where the agent has the criterion and
+    violates it anyway, the form that works is a guard in the code, not another restatement in
+    prose. `--gate-against control --no-control` is already refused this way, so refusal — not
+    a silent clamp — is the established idiom here.
+    """
+    rc, out = _round_rc()
+    assert rc == 2, f"concurrency 100 was accepted: rc={rc} {out}"
+    blob = json.dumps(out).lower()
+    assert "concurrency" in blob, f"the refusal does not name the offending knob: {out}"
+    assert "8" in json.dumps(out), f"the refusal should name the value to use instead: {out}"
+
+
+def test_the_high_concurrency_refusal_has_a_deliberate_escape_hatch():
+    """A hard wall would break any tier that legitimately needs throughput; the point is that
+    raising it must be an explicit, recorded choice rather than a default someone drifts into.
+    """
+    rc, out = _round_rc("--allow-high-concurrency")
+    assert rc != 2 or "concurrency" not in json.dumps(out).lower(), (
+        f"the escape hatch does not bypass the concurrency guard: rc={rc} {out}")
+
+
+def test_the_default_concurrency_is_not_refused():
+    """The guard must be silent on the value the skill actually documents."""
+    rc, out = _round_rc(concurrency="8")
+    blob = json.dumps(out).lower()
+    assert not (rc == 2 and "concurrency" in blob), (
+        f"the documented default was refused by its own guard: rc={rc} {out}")
