@@ -426,3 +426,38 @@ def test_the_round_table_does_not_report_the_controls_reward_under_the_parents_t
     # The true parent must be read from `best`, never from gate_ref.
     assert "split_result_from_rollouts(run_dir, best," in src, (
         "the parent block still sources its reward from gate_ref rather than from `best`")
+
+
+def test_the_round_states_ONE_evidence_bar_matched_to_how_it_gated():
+    """Measured on run 32871360361 round 2: the table handed the driver two incompatible bars
+    and it took the wrong one.
+
+    `cand2` was gated against a CONCURRENT control (0.24, replicate 0.25 — agreeing to 0.01) and
+    beat it by +0.19, three times the k_se threshold. But the table also reported
+    `noise_floor_from_control = 0.14`, which is the control-vs-STORED-parent gap, i.e. temporal
+    drift — and its `reading` said "treat any candidate whose |delta| is at or below that as no
+    evidence". Comparing a control-relative delta against a drift-derived floor is apples to
+    oranges, and the driver resolved the ambiguity conservatively: it re-derived +0.05 against
+    the stored best and booked a REJECT on a candidate that had cleared its concurrent control
+    nineteen times over.
+
+    Drift is exactly what control-mode gating removes, so under that mode the bar is the
+    replicate null delta. Under parent-mode gating the delta IS against a stored reward, so
+    drift belongs in the bar. One number, named, matched to the mode.
+    """
+    import pathlib  # noqa: PLC0415
+    src = (pathlib.Path(__file__).resolve().parents[2]
+           / "skills/algorithms/agent-optimize/scripts/round.py").read_text(encoding="utf-8")
+
+    assert '"evidence_bar"' in src, (
+        "the round must state ONE bar the candidate delta is judged against, or the driver "
+        "picks between the several numbers reported and may pick the wrong one")
+    # It must be mode-aware: the replicate gap under control gating, drift-inclusive otherwise.
+    bar = src[src.index('"evidence_bar"'):]
+    bar = bar[:bar.index("\n\n")] if "\n\n" in bar[:1500] else bar[:1500]
+    assert "gate_against" in bar or "control" in bar, (
+        f"evidence_bar is not matched to the gate mode: {bar[:400]}")
+    # And the drift must be described as affecting the absolute number, not as a bar to clear.
+    assert "absolute" in src.lower(), (
+        "nothing tells the reader that drift bounds the trustworthiness of the ABSOLUTE reward "
+        "rather than the candidate-vs-control comparison")

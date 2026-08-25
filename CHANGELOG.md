@@ -9,6 +9,23 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The round table gave the driver two incompatible noise bars, and it rejected the run's best
+  candidate on the wrong one.** On run 32871360361 round 2, `cand2` was gated against a control
+  measured in that same round (0.24, its replicate 0.25 — agreeing to 0.01) and beat it by
+  **+0.19**, three times the `k_se=1.0` threshold. The table also reported
+  `noise_floor_from_control = 0.14`, which is the control-vs-**stored**-parent gap — temporal
+  drift — and its `reading` said to treat any candidate at or below the floor as no evidence.
+  Those are different baselines, so the driver resolved the contradiction conservatively:
+  re-derived `+0.05` against the stored best and booked a **reject**, with the note *"round noise
+  floor 0.14 > margin"*. A real improvement was discarded because the instrument asked it to
+  compare a control-relative delta against a drift-derived floor. The table now reports a single
+  `evidence_bar` matched to how the round actually gated — the replicate gap under
+  `--gate-against control`, where drift is already cancelled; the larger of the replicate gap and
+  the drift under `--gate-against parent`, where every delta carries it — and the `reading` says
+  that drift bounds how far the **absolute** rewards can be trusted rather than being a bar a
+  concurrently-gated candidate must clear, and explicitly tells the driver not to re-derive a
+  delta against the stored parent and reject on that.
+
 - **`round.py` reported the control's reward under the parent's tag, hiding the round's own
   drift.** Line 214 loaded `parent` from `gate_ref` — which under `--gate-against control` is
   the concurrently-measured control — while the output block emitted it with `"tag": best`. On

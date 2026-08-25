@@ -308,11 +308,47 @@ def main(argv=None) -> int:
         "noise_floor_basis": ("control vs the STORED parent rollouts (differing trial counts are "
                               "part of this floor, which is the point)" if args.gate_against ==
                               "control" else "control vs the parent it was copied from"),
+        # ONE bar, matched to how this round actually gated. Reporting several numbers and
+        # leaving the driver to choose is not neutral: on run 32871360361 round 2 the table
+        # showed cand2 beating its CONCURRENT control by +0.19 (three times the k_se threshold,
+        # nineteen times the 0.01 gap between the control's own replicates) alongside a
+        # `noise_floor_from_control` of 0.14 — which is the control-vs-STORED-parent gap, i.e.
+        # temporal drift. The reading told the driver to treat any delta at or below the floor as
+        # no evidence, so it compared a control-relative delta against a drift-derived floor,
+        # resolved the contradiction conservatively, and booked a REJECT on the best candidate of
+        # the run.
+        #
+        # Which bar is right depends entirely on what the delta was measured against:
+        #   * control mode — the delta is against a control measured in THIS round, so drift is
+        #     already cancelled and the bar is the gap between identical replicates.
+        #   * parent mode  — the delta is against a reward measured in an earlier round, so drift
+        #     is inside it and the bar has to include the control's drift as well.
+        "evidence_bar": {
+            "value": (null_delta if args.gate_against == "control"
+                      else (None if (null_delta is None and floor is None)
+                            else max(null_delta or 0.0, floor or 0.0))),
+            "basis": ("gap between byte-identical control replicates measured in THIS round — "
+                      "drift is cancelled by gating against a concurrent control"
+                      if args.gate_against == "control" else
+                      "the larger of the replicate gap and the control's drift against the "
+                      "stored parent, because this round's deltas ARE against that stored "
+                      "reward and carry its drift"),
+        },
         "reading": (
+            "Judge every candidate's delta against `evidence_bar`, not against any other number "
+            "here. `noise_floor_from_control` is the gap between a byte-identical control "
+            "measured now and the parent's STORED reward: that is re-measurement DRIFT, and it "
+            "bounds how far the ABSOLUTE rewards in this table can be trusted — it is not a bar "
+            "a candidate gated against a concurrent control has to clear, because that "
+            "comparison never contained the drift. Do not re-derive a delta against the stored "
+            "parent and reject on it; that puts the drift back in."
+            if args.gate_against == "control" else
             "ctl_null is a byte-identical copy of the parent, so its delta is what ZERO change "
-            "measures today. Treat any candidate whose |delta| is at or below that as no evidence, "
-            "even if its verdict is accept."
-            if floor is not None else
+            "measures today. This round gated against the parent's STORED reward, so that drift "
+            "is inside every candidate delta here: treat any candidate at or below "
+            "`evidence_bar` as no evidence, even if its verdict is accept. Gating against the "
+            "control instead removes the drift from the comparison."
+            if floor is not None or null_delta is not None else
             "no null control in this round — you cannot separate a small gain from re-measurement."
         ),
         "candidates": sorted((r for r in rows if r["tag"] not in ctl_tags),
