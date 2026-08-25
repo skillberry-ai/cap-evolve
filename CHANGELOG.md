@@ -9,6 +9,19 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A parent-gated round discarded the drift-free comparison it had already paid to measure.**
+  Run 32871360361 round 4 gated in `parent` mode: `cand4` at 0.53 against the seed's *stored* 0.38
+  = +0.15, bar 0.11 (drift), so 1.4x — marginal. The same round's two concurrent controls both
+  read **exactly 0.27**, so the drift-free answer from the identical rollouts is **+0.26 against a
+  bar of 0.00**. The 0.11 belongs to *when* the seed was measured, not to `cand4`; parent-mode
+  gating understated the effect and inflated the bar simultaneously. Each candidate now also
+  carries `control_relative` — the same gate re-run against the concurrently-measured control,
+  costing no rollouts since the controls are already evaluated — so where the two comparisons
+  disagree, the difference is visibly drift rather than the edit. Reported rather than made the
+  default: changing the default gate mode on one benchmark's drift would be a guess about every
+  other workload, while an extra comparison is strictly more information and agrees with the
+  primary one wherever there is no drift.
+
 - **A reject that overrode the gate was recorded as the gate's own verdict.** `--reject-basis
   gate` is documented as "full-val paired gate ran", and run 32871360361 booked it for `cand2` —
   which `round_i1.json` recorded as `verdict: accept` at +0.19 against a concurrent control. So

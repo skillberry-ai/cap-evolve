@@ -247,6 +247,34 @@ def main(argv=None) -> int:
             "eval_error": ev.get("error"),
         })
 
+    # A parent-gated round has ALREADY measured the drift-free comparison — it just was not
+    # reporting it. On run 32871360361 round 4 the table showed cand4 at +0.15 against the seed's
+    # stored 0.38 with a bar of 0.11 (drift), i.e. marginal; the same round's two concurrent
+    # controls both read exactly 0.27, so the drift-free answer from the identical rollouts is
+    # +0.26 against a bar of 0.00. The 0.11 belongs to WHEN the seed was measured, not to cand4,
+    # so parent-mode gating understated the effect and inflated the bar at the same time.
+    #
+    # Reported rather than made the default: changing the default gate mode on one benchmark's
+    # drift would be a guess about every other workload, while an extra comparison is strictly
+    # more information and simply agrees with the primary one where there is no drift. Costs no
+    # rollouts — the controls are already evaluated and gate_check reads stored data.
+    if args.gate_against != "control" and ctl_tags:
+        for r in rows:
+            if r["tag"] in ctl_tags or r.get("reward") is None:
+                continue
+            g = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
+                      args.veto_regressions, current=CTL)
+            r["control_relative"] = {
+                "reference": CTL,
+                "gate_delta": (g.get("gate") or {}).get("delta"),
+                "gate_threshold": (g.get("gate") or {}).get("threshold"),
+                "verdict": g.get("verdict"),
+                "reading": ("the same comparison with the DRIFT removed: this candidate against a "
+                            "byte-identical control measured in this round rather than against a "
+                            "reward measured earlier. Where the two disagree, the difference is "
+                            "drift, not the edit."),
+            }
+
     # Would the verdict have survived a different control replicate? On run 32871360361 round 3
     # two byte-identical replicates read 0.32 and 0.20 two minutes apart, and the reference was
     # simply whichever carried the round-scoped tag (0.20) — so cand3 scored +0.17 and accepted

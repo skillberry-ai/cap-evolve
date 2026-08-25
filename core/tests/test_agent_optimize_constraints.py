@@ -516,3 +516,26 @@ def test_rejecting_a_candidate_the_gate_ACCEPTED_cannot_claim_the_gate_as_its_ba
         "gate said and what was booked is visible in events.jsonl rather than lost")
     assert "overrode_gate" in src, (
         "an override must be marked as one in the audit record")
+
+
+def test_a_parent_gated_round_still_reports_the_drift_free_comparison_it_measured():
+    """Run 32871360361 round 4 held both answers in one table and printed only the weaker one.
+
+    It gated in `parent` mode: `cand4` 0.53 against the seed's STORED 0.38 = +0.15, bar 0.11
+    (drift), so 1.4x — marginal. But the round also measured two concurrent controls that read
+    **exactly 0.27 both times**, so the drift-free comparison from the very same rollouts is +0.26
+    against a bar of 0.00. The 0.11 is a property of *when* the seed was measured, not of `cand4`;
+    parent-mode gating both understated the effect and inflated the bar.
+
+    Rather than change the default gate mode on one benchmark's evidence, report both: the
+    control-relative comparison costs no rollouts (the controls are already evaluated and
+    `gate_check.py` reads stored data), and on a benchmark without drift the two simply agree.
+    """
+    import pathlib  # noqa: PLC0415
+    src = (pathlib.Path(__file__).resolve().parents[2]
+           / "skills/algorithms/agent-optimize/scripts/round.py").read_text(encoding="utf-8")
+
+    assert '"control_relative"' in src, (
+        "a parent-gated round throws away the drift-free comparison it already paid to measure, "
+        "so a real improvement can read as marginal with no way to see why")
+    assert "drift" in src.lower(), "the report must name what separates the two comparisons"
