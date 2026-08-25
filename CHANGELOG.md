@@ -23,7 +23,11 @@ All notable changes to cap-evolve are documented here. The format follows
   the `driver_prompt.md` it already writes, so the run dir holds both what was asked for and
   what was done. Secret values are scrubbed before the file is written: a transcript records
   tool results verbatim and the run dir is a published artifact, so one `env` the agent
-  happened to run would otherwise leak the gateway token. `terminal_reason` and
+  happened to run would otherwise leak the gateway token. It is published into the uploaded
+  dir directly (gzipped), *not* through the UI export: the artifact path is `$OUT/**` while the
+  run dir sits elsewhere, and `export_static` caps every file at 256 KiB keeping the FIRST
+  chunk — one turn of stream-json is already 17 KB, so the cap would have discarded exactly the
+  end-of-run evidence the transcript exists to provide. `terminal_reason` and
   `permission_denials` join the captured stop fields — the latter distinguishes "blocked by the
   tool allowlist" from "chose to stop", which were previously the same observation.
 

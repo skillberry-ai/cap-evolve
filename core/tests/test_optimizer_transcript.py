@@ -168,3 +168,63 @@ def test_the_claude_code_row_declares_a_transcript_flag():
     assert "stream-json" in flag, f"claude-code cannot produce a real transcript: {row}"
     assert "--verbose" in flag, (
         f"headless stream-json requires --verbose or the CLI refuses the combination: {flag}")
+
+
+# --- the transcript has to survive INTO the artifact -------------------------
+
+RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
+
+
+def _host_publish_block() -> str:
+    """The host-record copy block, lifted verbatim out of run_suite.sh."""
+    src = RUN_SUITE.read_text(encoding="utf-8")
+    start = src.index("# The agent's own record, into the dir that actually gets uploaded")
+    return src[start:src.index('cat "$OUT/report.md"', start)]
+
+
+def test_the_transcript_reaches_the_uploaded_artifact_not_just_the_run_dir(tmp_path):
+    """Writing it to the run dir is not enough, and the gap is silent.
+
+    The artifact path is `$OUT/**`; the run dir lives under `suite_<tier>_<bench>_proj/`. Run-dir
+    files reach the artifact only through the UI export, which caps EVERY file at 256 KiB and
+    keeps `raw[:_MAX_FILE_BYTES]` — the FIRST chunk. Measured: one turn of stream-json with no
+    tool results is already 17 KB, so a multi-round transcript is megabytes and the cap would
+    keep only its opening — while the part that shows where a run stalled is the END. That is
+    the precise evidence the transcript was added to capture, so it must bypass the export.
+
+    Executed as real bash, like the algorithm-selection block: what breaks here is shell
+    behaviour, not text.
+    """
+    run_dir = tmp_path / "run"; (run_dir / "host").mkdir(parents=True)
+    out = tmp_path / "out"; out.mkdir()
+    # Bigger than the export's 256 KiB cap, so a truncating path is visibly wrong.
+    big = "\n".join(json.dumps({"type": "assistant", "i": i, "pad": "x" * 400})
+                    for i in range(2000))
+    (run_dir / "host" / "transcript.jsonl").write_text(big, encoding="utf-8")
+    (run_dir / "host" / "driver_prompt.md").write_text("# briefing", encoding="utf-8")
+
+    script = f'RUN_DIR={run_dir}\nOUT={out}\n' + _host_publish_block()
+    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    assert p.returncode == 0, f"{p.stdout}\n{p.stderr}"
+
+    gz = out / "host" / "transcript.jsonl.gz"
+    assert gz.is_file(), f"the transcript never reached $OUT: {list((out).rglob('*'))}"
+    assert (out / "host" / "driver_prompt.md").is_file(), "the briefing stopped being published"
+
+    import gzip  # noqa: PLC0415
+    body = gzip.decompress(gz.read_bytes()).decode("utf-8")
+    assert body == big, "the published transcript is not byte-identical to the run's"
+    assert len(body) > 256 * 1024, "the fixture no longer exceeds the cap it exists to defeat"
+    # And the whole point of gzipping: full fidelity for a fraction of the artifact.
+    assert gz.stat().st_size < len(big) / 4, (
+        f"gzip bought nothing: {gz.stat().st_size} vs {len(big)} raw")
+
+
+def test_publishing_the_host_record_is_skipped_cleanly_when_there_is_none(tmp_path):
+    """Every deterministic-path run has no host/ dir; the block must not fail the suite."""
+    run_dir = tmp_path / "run"; run_dir.mkdir()
+    out = tmp_path / "out"; out.mkdir()
+    script = f'RUN_DIR={run_dir}\nOUT={out}\n' + _host_publish_block()
+    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    assert p.returncode == 0, f"a run with no host/ dir broke the publish step: {p.stderr}"
+    assert not (out / "host").exists(), f"an empty host/ dir was published: {out}"

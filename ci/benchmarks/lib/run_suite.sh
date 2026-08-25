@@ -589,5 +589,24 @@ else
   [ -d "$opt_dir" ] && cp -R "$opt_dir"/. "$dst/optimized_capability/" 2>/dev/null || true
 fi
 
+# The agent's own record, into the dir that actually gets uploaded. The artifact path is
+# $OUT/**, while the run dir lives under suite_<tier>_<bench>_proj/ — run-dir files reach the
+# artifact ONLY through the UI export, which caps every file at 256 KiB and keeps the FIRST
+# chunk (dashboard/backend/capevolve_dashboard/files.py). A stream-json transcript runs to
+# megabytes and the part that shows where a run stalled is the END, so the cap would discard
+# exactly the evidence this was added to capture. Gzipped: ~10x on JSON, so full fidelity
+# costs the artifact very little.
+if [ -d "$RUN_DIR/host" ]; then
+  mkdir -p "$OUT/host"
+  for f in "$RUN_DIR/host"/*; do
+    [ -f "$f" ] || continue
+    case "$f" in
+      *.jsonl|*.jsonl.stderr) gzip -c "$f" > "$OUT/host/$(basename "$f").gz" 2>/dev/null || true ;;
+      *) cp "$f" "$OUT/host/" 2>/dev/null || true ;;
+    esac
+  done
+  echo ">>> host record -> $OUT/host ($(du -sh "$OUT/host" 2>/dev/null | cut -f1))" >&2
+fi
+
 cat "$OUT/report.md"
 echo "RUN_DIR=$RUN_DIR"
