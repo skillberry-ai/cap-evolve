@@ -59,6 +59,34 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
+    """The verdict ``round.py`` recorded for this candidate, from its persisted table.
+
+    Readable only because ``round.py`` now writes its table to ``work/`` instead of leaving
+    stdout the sole copy — before that, ``commit.py`` had no way to know what the gate had said
+    and could not tell an agreeing reject from an override.
+
+    Newest table wins: a same-iteration re-gate is written alongside the first (``.r1.json``),
+    and the later measurement is the one being booked against.
+    """
+    work = run_dir.root / "work"
+    if not work.is_dir():
+        return None
+    for log in sorted(work.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if not log.is_file() or log.suffix != ".json":
+            continue
+        try:
+            payload = json.loads(log.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — not a round table
+            continue
+        if not isinstance(payload, dict):
+            continue
+        for row in payload.get("candidates") or []:
+            if isinstance(row, dict) and str(row.get("tag")) == str(candidate_id):
+                return row.get("verdict")
+    return None
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="commit")
     p.add_argument("--run-dir", required=True)
@@ -76,11 +104,14 @@ def main(argv=None) -> int:
     # with it, "promote" + basis=ceiling is one coherent story. `gate` is the only basis
     # that asserts a full-val paired gate actually ran.
     p.add_argument("--reject-basis", default=None,
-                   choices=["gate", "screen_kill", "ceiling", "budget", "infra"],
-                   help="what evidence the reject rests on: gate=full-val paired gate ran; "
-                        "screen_kill=screen proved harm; ceiling=arithmetic proof no accept "
-                        "was reachable, so full val was never paid; budget=screen evidence "
-                        "plus a budget call; infra=missing data, not a judgement")
+                   choices=["gate", "screen_kill", "ceiling", "budget", "infra",
+                            "driver_judgement"],
+                   help="what evidence the reject rests on: gate=full-val paired gate ran AND "
+                        "rejected; screen_kill=screen proved harm; ceiling=arithmetic proof no "
+                        "accept was reachable, so full val was never paid; budget=screen "
+                        "evidence plus a budget call; infra=missing data, not a judgement; "
+                        "driver_judgement=the gate ACCEPTED and you are overriding it (say why "
+                        "in --note)")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -117,6 +148,24 @@ def main(argv=None) -> int:
         print(json.dumps({"error": "--reject-basis is meaningless on an accept",
                           "fix": "drop it, or pass --decision reject"}, indent=2))
         return 2
+    # `--reject-basis gate` asserts the gate rejected this candidate. On run 32871360361 it was
+    # booked for cand2, which round_i1.json recorded as `verdict: accept` at +0.19 against a
+    # concurrent control — so events.jsonl, the run's audit record, said the gate had rejected the
+    # best candidate of the run when in fact the driver had overridden it. Overriding is
+    # legitimate (round.py leaves the decision to the driver on purpose); misattributing it is
+    # not, and it is the one thing this log exists to get right.
+    gate_verdict = _gate_verdict(run_dir, args.candidate_id)
+    overrode_gate = bool(not accepted and gate_verdict == "accept")
+    if overrode_gate and args.reject_basis == "gate":
+        print(json.dumps({
+            "error": f"--reject-basis gate, but the gate ACCEPTED {args.candidate_id} "
+                     "(see its row in work/round_*.json)",
+            "fix": "pass --reject-basis driver_judgement and say in --note why you are "
+                   "overriding the gate — e.g. the verdict was unstable across control "
+                   "replicates, or a task you care about regressed",
+        }, indent=2))
+        return 2
+
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
@@ -129,6 +178,7 @@ def main(argv=None) -> int:
     # 100% of its optimizer spend as unattributed. opt_cost_usd/opt_tokens are the field
     # names the ledger already reads from headless optimizer backends.
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
+                      gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       opt_cost_usd=args.optimizer_usd or None,
@@ -151,6 +201,8 @@ def main(argv=None) -> int:
     stop, reason = run_dir.budget_exhausted()
     print(json.dumps({"decision": args.decision, "candidate": args.candidate_id,
                       "reject_basis": args.reject_basis,
+                      "gate_verdict": gate_verdict,
+                      "overrode_gate": overrode_gate,
                       "best_id": run_dir.best_id, "spent": spent.to_dict(),
                       "stop": stop, "stop_reason": reason}, indent=2))
     return 0

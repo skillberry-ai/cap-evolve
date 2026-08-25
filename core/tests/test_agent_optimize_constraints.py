@@ -488,3 +488,31 @@ def test_a_verdict_that_flips_with_the_choice_of_control_replicate_is_marked_uns
         "close the call was")
     assert "unstable" in src.lower(), (
         "the reading must tell the driver an unstable verdict is not evidence")
+
+
+def test_rejecting_a_candidate_the_gate_ACCEPTED_cannot_claim_the_gate_as_its_basis():
+    """Run 32871360361's audit log says cand2 was rejected on basis `gate`. The gate accepted it.
+
+    `--reject-basis gate` is documented as "full-val paired gate ran", so anyone reading
+    events.jsonl concludes the gate rejected the candidate. In fact round_i1.json recorded
+    `verdict: accept` at +0.19 against a concurrent control, and the driver overrode it on its own
+    reading of the drift. Overriding is legitimate — round.py explicitly leaves the decision to
+    the driver — but recording it as the gate's own verdict makes the run's history wrong about
+    the one thing it exists to preserve.
+
+    commit.py already refuses an incoherent basis ("--reject-basis is meaningless on an accept"),
+    so the idiom exists; it just could not see the gate's verdict until round.py started
+    persisting its table.
+    """
+    import pathlib  # noqa: PLC0415
+    src = (pathlib.Path(__file__).resolve().parents[2]
+           / "skills/algorithms/agent-optimize/scripts/commit.py").read_text(encoding="utf-8")
+
+    assert "driver_judgement" in src, (
+        "there is no truthful basis for an override, so a driver that disagrees with the gate has "
+        "no honest option but to misattribute the reject to the gate")
+    assert "gate_verdict" in src, (
+        "the booked event must carry the gate's own verdict, so a divergence between what the "
+        "gate said and what was booked is visible in events.jsonl rather than lost")
+    assert "overrode_gate" in src, (
+        "an override must be marked as one in the audit record")

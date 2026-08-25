@@ -9,6 +9,18 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A reject that overrode the gate was recorded as the gate's own verdict.** `--reject-basis
+  gate` is documented as "full-val paired gate ran", and run 32871360361 booked it for `cand2` —
+  which `round_i1.json` recorded as `verdict: accept` at +0.19 against a concurrent control. So
+  `events.jsonl`, the run's audit record, said the gate had rejected the best candidate of the
+  run when the driver had in fact overridden it. Overriding is legitimate — `round.py` leaves the
+  decision to the driver deliberately — but misattributing it is not, and provenance is the one
+  thing that log exists to get right. `commit.py` now reads the candidate's verdict from the
+  persisted round table (possible only because `round.py` stopped leaving stdout the sole copy),
+  refuses `--reject-basis gate` when the gate accepted, and offers `driver_judgement` as the
+  truthful basis for an override. Every booked decision now carries `gate_verdict` and
+  `overrode_gate`, so a divergence is visible rather than lost.
+
 - **A round's verdict could be decided by which control replicate happened to be the
   reference.** On run 32871360361 round 3, two byte-identical control replicates measured two
   minutes apart read **0.32 and 0.20** — a 0.12 gap. The gate reference was whichever carried the
