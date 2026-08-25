@@ -461,3 +461,30 @@ def test_the_round_states_ONE_evidence_bar_matched_to_how_it_gated():
     assert "absolute" in src.lower(), (
         "nothing tells the reader that drift bounds the trustworthiness of the ABSOLUTE reward "
         "rather than the candidate-vs-control comparison")
+
+
+def test_a_verdict_that_flips_with_the_choice_of_control_replicate_is_marked_unstable():
+    """Measured on run 32871360361 round 3: the verdict was decided by a coin flip.
+
+    Two byte-identical control replicates, measured two minutes apart, read 0.32 and 0.20 — a
+    0.12 gap. The gate reference was whichever one carried the round-scoped tag (0.20), so
+    `cand3` at 0.37 scored +0.17 and ACCEPTED. Against the other replicate it is +0.05 and
+    rejects. Nothing in the table said the verdict rested on that choice.
+
+    Re-gating against each replicate costs no new rollouts — they are already stored — so the
+    round can simply report whether its verdict survives every reference it could have used. One
+    that does not is not evidence, however large the delta looks against the replicate that
+    happened to be picked.
+    """
+    import pathlib  # noqa: PLC0415
+    src = (pathlib.Path(__file__).resolve().parents[2]
+           / "skills/algorithms/agent-optimize/scripts/round.py").read_text(encoding="utf-8")
+
+    assert '"verdict_stable"' in src, (
+        "the table does not say whether the verdict survives the choice of control replicate, "
+        "so a coin-flip accept is indistinguishable from a real one")
+    assert '"verdict_by_reference"' in src, (
+        "the per-replicate verdicts must be shown, not just a boolean, or nobody can see how "
+        "close the call was")
+    assert "unstable" in src.lower(), (
+        "the reading must tell the driver an unstable verdict is not evidence")

@@ -247,6 +247,27 @@ def main(argv=None) -> int:
             "eval_error": ev.get("error"),
         })
 
+    # Would the verdict have survived a different control replicate? On run 32871360361 round 3
+    # two byte-identical replicates read 0.32 and 0.20 two minutes apart, and the reference was
+    # simply whichever carried the round-scoped tag (0.20) — so cand3 scored +0.17 and accepted
+    # where against the other replicate it is +0.05 and rejects. The table said nothing about the
+    # verdict resting on that choice. Re-gating costs no rollouts, so there is no reason not to
+    # check; a verdict that flips is not evidence, whatever the picked replicate showed.
+    if args.gate_against == "control" and len(ctl_tags) > 1:
+        for r in rows:
+            if r["tag"] in ctl_tags or r.get("reward") is None:
+                continue
+            by_ref = {}
+            for ref in ctl_tags:
+                g = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
+                          args.veto_regressions, current=ref)
+                by_ref[ref] = g.get("verdict")
+            r["verdict_by_reference"] = by_ref
+            verdicts = {v for v in by_ref.values() if v is not None}
+            r["verdict_stable"] = (len(verdicts) <= 1)
+            if not r["verdict_stable"]:
+                r["verdict"] = "inconclusive"
+
     ctl = next((r for r in rows if r["tag"] == CTL), None)
     # The floor must be the control's delta against the STORED parent, never against whatever
     # this round gated on. With --gate-against control the control IS the reference, so
@@ -335,6 +356,11 @@ def main(argv=None) -> int:
                       "reward and carry its drift"),
         },
         "reading": (
+            "A candidate marked `verdict_stable: false` has an UNSTABLE verdict and is "
+            "INCONCLUSIVE, never accepted: its "
+            "verdict changed depending on which byte-identical control replicate happened to be "
+            "the reference, so the round cannot tell its edit from re-measurement. Re-run it "
+            "with more trials before believing either answer. "
             "Judge every candidate's delta against `evidence_bar`, not against any other number "
             "here. `noise_floor_from_control` is the gap between a byte-identical control "
             "measured now and the parent's STORED reward: that is re-measurement DRIFT, and it "

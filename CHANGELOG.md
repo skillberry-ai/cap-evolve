@@ -9,6 +9,22 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A round's verdict could be decided by which control replicate happened to be the
+  reference.** On run 32871360361 round 3, two byte-identical control replicates measured two
+  minutes apart read **0.32 and 0.20** — a 0.12 gap. The gate reference was whichever carried the
+  round-scoped tag (0.20), so `cand3` at 0.37 scored +0.17 and **accepted**; against the other
+  replicate it is +0.05 and rejects. Nothing in the table said the verdict rested on that coin
+  flip. Each candidate is now re-gated against *every* control replicate — which costs no new
+  rollouts, since `gate_check.py` reads what is already stored — and the table reports
+  `verdict_by_reference` plus `verdict_stable`. A verdict that flips is downgraded to
+  `inconclusive`, because a round that cannot tell an edit from re-measurement has not measured
+  anything, whatever the delta looked like against the replicate that happened to be picked.
+
+  For context on why this matters at this scale, the same run's replicate gaps were 0.00, 0.01
+  and 0.12 across three rounds: with two replicates the gap is itself a poor estimate of the
+  noise, so the stability check — a direct observation rather than an estimate — is the more
+  reliable signal.
+
 - **The round table gave the driver two incompatible noise bars, and it rejected the run's best
   candidate on the wrong one.** On run 32871360361 round 2, `cand2` was gated against a control
   measured in that same round (0.24, its replicate 0.25 — agreeing to 0.01) and beat it by
