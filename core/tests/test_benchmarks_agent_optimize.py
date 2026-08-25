@@ -363,3 +363,53 @@ def test_runmeta_records_which_algorithm_produced_the_number():
     assert '"algorithm"' in src, (
         "runmeta.json must record the algorithm — benchmark-history compares numbers "
         "across runs, and hill-climb vs agent-optimize is not a like-for-like comparison")
+
+
+# --- the iterations input was unreachable on smoke ---------------------------
+
+
+def _env_expr(key: str) -> str:
+    """The workflow's `env:` expression for one key, verbatim."""
+    src = WORKFLOW.read_text(encoding="utf-8")
+    for ln in src.splitlines():
+        if ln.strip().startswith(f"{key}:") and "${{" in ln:
+            return ln.split(":", 1)[1].strip()
+    raise AssertionError(f"no env expression for {key} in {WORKFLOW}")
+
+
+def test_an_explicit_iterations_dispatch_reaches_smoke():
+    """`matrix.tier == 'smoke' && '3'` came FIRST, so it short-circuited the input.
+
+    GitHub's `||` yields the first truthy operand, so with the tier pin leading, a dispatch of
+    `iterations: 10` on smoke silently produced 3 — discoverable only by reading ITERATIONS in
+    the job log, after the run had already spent its budget on the wrong round count. Smoke is
+    the tier the algorithm itself gets iterated on, so it is the worst one to make unreachable.
+
+    NUM_TRIALS already had this right, including the reason its input default is `""` (with a
+    non-empty default, "asked for 10" and "asked for nothing" are indistinguishable). The two
+    knobs must therefore have the SAME shape: input first, tier default second.
+    """
+    iters, trials = _env_expr("ITERATIONS"), _env_expr("NUM_TRIALS")
+
+    assert iters.index("inputs.iterations") < iters.index("matrix.tier"), (
+        "the tier pin still precedes the dispatch input, so an explicit `iterations` on smoke "
+        f"is short-circuited away: {iters}")
+    # Parity with the knob that already solved this, so the next edit to either notices.
+    shape = lambda e: (e.index("inputs.") < e.index("matrix.tier"),  # noqa: E731
+                       "'3'" in e, "'10'" in e)
+    assert shape(iters) == shape(trials), (
+        f"ITERATIONS and NUM_TRIALS disagree on precedence/defaults:\n  {iters}\n  {trials}")
+    # Smoke's default must survive a blank dispatch: 3, not 10.
+    assert "'3'" in iters and "smoke" in iters, (
+        f"smoke's 3-iteration default was dropped rather than made overridable: {iters}")
+
+
+def test_the_iterations_input_defaults_to_blank_so_the_tier_default_can_win():
+    """A non-empty input default re-breaks the fix, silently, for every tier."""
+    src = WORKFLOW.read_text(encoding="utf-8")
+    block = src[src.index("      iterations:"):src.index("      trials:")]
+    assert 'default: ""' in block, (
+        "the `iterations` input must default to blank so a tier default is distinguishable "
+        f"from a deliberate choice — otherwise smoke silently gets the input's number: {block}")
+    assert "BLANK" in block or "blank" in block, (
+        f"the input description must tell the operator blank means the tier default: {block}")

@@ -36,9 +36,9 @@ on:
         default: smoke
         options: [all, smoke, pilot, full]
       iterations:
-        description: "Optimizer iterations per task for the FULL tier (default 10; raise to give the optimizer more budget). Smoke always runs 3, regardless of this input."
+        description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step."
         type: string
-        default: "10"
+        default: ""
       trials:
         description: "Trials per task per eval. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value only to override deliberately — on a 5-task binary tier, 1 trial cannot separate signal from noise, which is why blank does not mean 1."
         type: string
@@ -275,10 +275,14 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-      # Smoke always runs a fixed 3 iterations (cheap, fast regression) — decoupled
-      # from the `iterations` input, which only controls the (expensive) full tier
-      # (default 10 there — see the `iterations` input above).
-      ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || github.event.inputs.iterations || '10' }}
+      # Smoke DEFAULTS to 3 iterations (cheap, fast regression) but an explicit dispatch value
+      # now wins, exactly as it does for NUM_TRIALS below and for the same reason: the input's
+      # own default is "" so "user asked for 10" is distinguishable from "user asked for
+      # nothing". Before this, `matrix.tier == 'smoke' && '3'` came FIRST and short-circuited,
+      # so a dispatch of iterations=5 on smoke was silently ignored and the operator learned it
+      # only by reading ITERATIONS in the job log. Smoke is the tier you iterate the algorithm
+      # on, so pinning it was the wrong knob to make unreachable.
+      ITERATIONS: ${{ github.event.inputs.iterations || (matrix.tier == 'smoke' && '3') || '10' }}
       # Smoke pins 3 trials, same as it pins iterations, and for a measurable reason.
       # Run 31183768756 was dispatched with trials=1 and re-scored the SAME seed capability at
       # 0.400 (baseline) then 0.200 (finalize) — pytest-dev__pytest-7432 flipped 1.000 -> 0.000

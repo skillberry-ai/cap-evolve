@@ -15,6 +15,11 @@
 #   install_url      : where to get the CLI (printed when it is not on PATH).
 #   auth_notes       : one-line auth hint.
 #   json_flag        : extra flag(s) to request machine-readable output, or "".
+#   transcript_flag  : OPTIONAL. flag(s) requesting a TURN-BY-TURN stream (every message and
+#                      tool call), used INSTEAD of json_flag when the caller passes
+#                      --transcript. Its last line must still be the result object json_flag
+#                      would have produced, so cost/stop parsing is unchanged. Omit for a CLI
+#                      with no streaming mode — --transcript then records whatever it printed.
 #   budget_flag      : flag(s) with a {budget} placeholder to cap one optimization
 #                      iteration's work (e.g. claude --max-turns N), or "" if the CLI
 #                      has no such knob. Appended only when run-optimizer gets --budget.
@@ -80,6 +85,14 @@ claude-code:
   install_url: "https://docs.claude.com/claude-code"
   auth_notes: "Logged-in Claude Code session or ANTHROPIC_API_KEY."
   json_flag: "--output-format json"
+  # `--output-format json` returns ONE result object: the final text, num_turns, cost. It does
+  # NOT contain the turns, so a run that stalls mid-loop leaves nothing to diagnose with — on
+  # run 32814848187 four hours of wall clock had to be inferred from event timestamps because
+  # the only record kept was an 800-char stdout tail. stream-json emits every message and tool
+  # call, and its LAST line is the same result object, so cost + stop parsing are unaffected.
+  # Separate key, not a change to json_flag: only a caller that asks for a transcript pays the
+  # extra output, so the deterministic per-iteration path is untouched.
+  transcript_flag: "--output-format stream-json --verbose"
   budget_flag: "--max-turns {budget}"
   usd_budget_flag: "--max-budget-usd {usd}"   # native per-iteration $ cap (works with -p/--print)
   offline: "false"

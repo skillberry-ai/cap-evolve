@@ -176,7 +176,12 @@ def parse_cost(stdout: str) -> dict:
 #: Keys a headless agent CLI uses to say how a run ended. Vendor-neutral, like parse_cost:
 #: Claude Code's `--output-format json` result carries ``subtype`` (e.g. ``success`` /
 #: ``error_max_turns``), ``num_turns`` and ``is_error``; other CLIs use a subset or none.
-_STOP_KEYS = ("subtype", "num_turns", "is_error", "duration_ms", "stop_reason")
+_STOP_KEYS = ("subtype", "num_turns", "is_error", "duration_ms", "stop_reason",
+              # Verified present on Claude Code 2.1.241's result event. `terminal_reason` names
+              # the terminating condition outright, and `permission_denials` catches the case
+              # where the agent was blocked by the tool allowlist rather than by its own
+              # judgement — indistinguishable from a voluntary stop without it.
+              "terminal_reason", "permission_denials")
 
 
 def _stop_info(raw) -> dict:
@@ -189,6 +194,51 @@ def _stop_info(raw) -> dict:
     if not isinstance(raw, dict):
         return {}
     return {k: raw[k] for k in _STOP_KEYS if raw.get(k) is not None}
+
+
+#: Env vars whose VALUES must never reach a persisted transcript. A transcript records tool
+#: results verbatim, so one `env` or `printenv` the agent happened to run would otherwise put a
+#: gateway token into a CI artifact. Redacting the values (not the names) mirrors what the CI
+#: log scrubber does, and costs one pass over the text.
+_SECRET_ENV = ("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL",
+               "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GH_TOKEN",
+               "GITHUB_TOKEN")
+
+
+def _redact(text: str, extra_keys=()) -> str:
+    """Replace the VALUES of sensitive env vars with ``***``.
+
+    Only values of length 8 or more are substituted: a short or empty value would match
+    everywhere and turn the transcript into noise.
+    """
+    for key in (*_SECRET_ENV, *extra_keys):
+        val = os.environ.get(key) or ""
+        if len(val) >= 8:
+            text = text.replace(val, f"***{key}***")
+    return text
+
+
+def write_transcript(path: str, stdout: str, stderr: str, *, extra_keys=()) -> dict:
+    """Persist the agent CLI's full output next to the run it belongs to.
+
+    Returns ``{path, bytes, lines}`` — or ``{error}``; never raises, because losing the
+    transcript must not lose the run. ``stdout_tail`` in the result stays as it was, so a
+    caller that only reads the JSON payload is unaffected.
+    """
+    try:
+        dest = Path(path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        body = _redact(stdout, extra_keys)
+        dest.write_text(body, encoding="utf-8")
+        info = {"path": str(dest), "bytes": len(body.encode("utf-8")),
+                "lines": body.count("\n")}
+        if stderr.strip():
+            err = dest.with_suffix(dest.suffix + ".stderr")
+            err.write_text(_redact(stderr, extra_keys), encoding="utf-8")
+            info["stderr_path"] = str(err)
+        return info
+    except OSError as exc:
+        return {"error": f"could not write transcript to {path}: {exc}"}
 
 
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
@@ -241,6 +291,11 @@ def main(argv=None) -> int:
                    help="per-iteration USD cap rendered into the row's usd_budget_flag "
                         "(e.g. claude-code → --max-budget-usd N), enforced by the optimizer "
                         "CLI itself; ignored if the row has none (e.g. ibm-bob)")
+    p.add_argument("--transcript", default=os.environ.get("CAPEVOLVE_OPTIMIZER_TRANSCRIPT"),
+                   help="write the agent CLI's FULL output here (secret values redacted). "
+                        "When the registry row has a transcript_flag it is used instead of "
+                        "json_flag, so the record contains every turn and tool call rather "
+                        "than only the final result object")
     p.add_argument("--list", action="store_true", help="list known optimizers and exit")
     args = p.parse_args(argv)
 
@@ -284,6 +339,13 @@ def main(argv=None) -> int:
     # silently stays prose-fed even with --json.
     want_json = bool(args.json)
     json_flag = str(row.get("json_flag", "")).strip()
+    # A transcript needs the turn-by-turn stream, whose last line is the same result object
+    # json_flag yields — so it SUPERSEDES json_flag rather than adding to it (passing two
+    # --output-format flags is an error). A row without a transcript_flag keeps json_flag and
+    # --transcript simply records whatever that printed.
+    if args.transcript and str(row.get("transcript_flag", "")).strip():
+        json_flag = str(row["transcript_flag"]).strip()
+        want_json = True
     if want_json and json_flag and str(row.get("offline", "")).lower() != "true":
         cmd += shlex.split(os.path.expandvars(json_flag))
         # Claude Code: pair --output-format json with --json-schema for .structured_output.
@@ -334,6 +396,10 @@ def main(argv=None) -> int:
     # Best-effort cost capture: only when --json requested AND the row had a json_flag.
     # The prose-fed path (no --json, or empty json_flag) never reaches here, so the
     # offline/mock and generic flows are unchanged.
+    if args.transcript:
+        result["transcript"] = write_transcript(
+            args.transcript, proc.stdout, proc.stderr,
+            extra_keys=tuple(str(row.get("env_keys", "")).replace(",", " ").split()))
     if want_json and json_flag:
         cost = parse_cost(proc.stdout)
         result["cost"] = {"total_cost_usd": cost["usd"], "tokens": cost["tokens"]}

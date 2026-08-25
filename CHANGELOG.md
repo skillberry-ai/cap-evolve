@@ -8,7 +8,36 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **The run now keeps the agent's own transcript.** Four hours of run 32814848187 were
+  unaccounted for *and unaccountable*: its 900 metric calls account for every evaluation in
+  `events.jsonl` and none fall in the gap, so nothing was being measured — but the only record
+  of what the agent itself did was an 800-char `stdout_tail`, which narrows the cause to
+  "something hit the 4-hour Bash ceiling" and no further. `--output-format json` cannot close
+  that: it returns one result object with the final text and the totals, never the turns. So
+  `run-optimizer` takes `--transcript <path>`, and the registry carries a separate
+  `transcript_flag` (`--output-format stream-json --verbose`, verified against Claude Code
+  2.1.241) used *instead of* `json_flag` only when a transcript is requested — its last line is
+  the same result object, so cost and stop parsing are unchanged and the deterministic
+  per-iteration path is untouched. `host.py` points it at `$R/host/transcript.jsonl`, beside
+  the `driver_prompt.md` it already writes, so the run dir holds both what was asked for and
+  what was done. Secret values are scrubbed before the file is written: a transcript records
+  tool results verbatim and the run dir is a published artifact, so one `env` the agent
+  happened to run would otherwise leak the gateway token. `terminal_reason` and
+  `permission_denials` join the captured stop fields — the latter distinguishes "blocked by the
+  tool allowlist" from "chose to stop", which were previously the same observation.
+
 ### Fixed
+- **An explicit `iterations` dispatch was silently ignored on the smoke tier.**
+  `ITERATIONS: ${{ matrix.tier == 'smoke' && '3' || inputs.iterations || '10' }}` put the tier
+  pin first, and GitHub's `||` yields the first truthy operand — so dispatching smoke with
+  `iterations: 10` ran 3, discoverable only by reading `ITERATIONS` in the job log after the
+  budget had been spent on the wrong round count. Smoke is the tier the algorithm itself gets
+  iterated on, which makes it the worst one to pin unreachably. `NUM_TRIALS` already had this
+  right, including why its input default is `""` (with a non-empty default there is no way to
+  tell "asked for 10" from "asked for nothing"); `iterations` now has the same shape, and a
+  test asserts the two agree so the next edit to either notices.
+
 - **The hosted agent ended its turn to wait for a notification, and the process exited under
   it.** With the turn budget raised to 600, run 32814848187 no longer ran out of turns — it
   used 78 and stopped anyway, on `subtype: success` / `stop_reason: end_turn`, rc 0. It had

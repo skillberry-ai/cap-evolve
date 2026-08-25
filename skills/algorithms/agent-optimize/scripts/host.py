@@ -713,7 +713,13 @@ def main(argv=None) -> int:
            # Same workdir the guidance was staged into, so the agent's cwd is where its
            # native skills dir and ./guidance/ live.
            "--workdir", str(workdir),
-           "--prompt", str(prompt_path)]
+           "--prompt", str(prompt_path),
+           # The loop's own record. Four hours of run 32814848187 were unaccounted for and
+           # unaccountable: the only trace kept was an 800-char stdout tail, so what the agent
+           # was blocked on could be narrowed to "something that hit the Bash ceiling" and no
+           # further. This lands beside driver_prompt.md, so the run dir holds both what the
+           # host asked for and what the agent actually did.
+           "--transcript", str(prompt_path.parent / "transcript.jsonl")]
     if args.model:
         cmd += ["--model", args.model]
     if args.budget:
@@ -848,6 +854,7 @@ def main(argv=None) -> int:
         "usd": usd,
         "tokens": tokens,
         "agent_env": agent_env,
+        "transcript": (payload.get("transcript") or {}).get("path", ""),
         "instructions_file": arm_path,
         "instructions_warning": arm_warning,
         "context": context,
