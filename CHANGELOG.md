@@ -8,6 +8,35 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **Agent-mode optimizer cost was reported as $0.00 on every run.** `run-optimizer` nests the
+  figure under `cost.total_cost_usd`; the host read a flat `cost_usd`/`usd` and booked `0.0`.
+  Smoke run 32733635494 spent **$8.37** (68,432 tokens) and recorded nothing — and because that
+  is indistinguishable from the genuinely-unmetered gateway the skill warns about, the wrong
+  conclusion was drawn from it twice. A dollar ceiling cannot bind what it cannot see: with 0.0
+  booked, `max_usd` and `spend.py`'s dollar predicates were inert for the whole run.
+
+- **The host now says WHY the agent stopped, and refuses to let an unfinished run look
+  finished.** `run-optimizer` passes through the agent CLI's termination fields (`subtype`,
+  `num_turns`, `is_error`, …) — vendor-neutral, like its cost parsing, and useful to the
+  deterministic path too, where an exit code of 0 also covers both "finished" and "hit
+  `--max-turns` with work outstanding". The host reports `stop_reason` / `num_turns` /
+  `rounds_booked` / `rounds_budget`, and emits an `incomplete` field plus a `::warning::` when
+  rounds were left unspent. On the run that prompted this, that state had to be reconstructed
+  from a truncated stdout tail.
+
+- **Agent mode was starved of turns.** `optimizer_max_turns` (default 80) is a
+  *deterministic-path* unit: there one optimizer invocation means "propose one edit and stop",
+  and the harness owns diagnosis, evaluation and gating. In agent mode the same allowance must
+  also cover Phase 0, diagnose, the null-control replicates, `round.py` orchestration,
+  `gate_check` and `commit.py` — per round. At 240 turns (80 × 3) run 32733635494 bought **1.9
+  rounds**: the agent stopped on `error_max_turns` having just evaluated a candidate at val
+  **0.530**, the best of the run, and never reached the `commit.py` that would have booked it.
+  So it reported 1 of 3 rounds and discarded its best result. The host budget is now
+  `max(optimizer_max_turns, 150) × (rounds + 1)` — a floor of 150/round against the ~126
+  measured, with the `+1` paying for the work that is not a round (Phase 0 and the seal). A
+  raised `optimizer_max_turns` still wins, so the floor is not a clamp.
+
 ### Changed
 - **`OptimizerContext` gained a public seam, and the agent-mode host now reuses it instead of
   hand-rolling equivalents.** The class docstring already said it exists so "an algorithm cannot

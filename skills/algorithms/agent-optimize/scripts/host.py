@@ -496,6 +496,9 @@ def main(argv=None) -> int:
                    help="render the briefing and exit without invoking the agent")
     p.add_argument("--seal-only", action="store_true",
                    help="skip the agent; only ensure the run has a sealed test number")
+    p.add_argument("--run-optimizer", default=None,
+                   help="path to the run-optimizer script (test seam; defaults to the "
+                        "sibling optimizers/run-optimizer)")
     args = p.parse_args(argv)
 
     run_dir = Path(args.run_dir).resolve()
@@ -589,7 +592,8 @@ def main(argv=None) -> int:
     # Delegate the invocation. --json switches on run-optimizer's cost capture, which is how
     # the host's own spend reaches the run dir at all: the evaluate phase records the
     # runner's cost, and nothing records the proposer's.
-    cmd = [sys.executable, str(RUN_OPTIMIZER), "--name", args.agent, "--json",
+    runner = Path(args.run_optimizer).resolve() if args.run_optimizer else RUN_OPTIMIZER
+    cmd = [sys.executable, str(runner), "--name", args.agent, "--json",
            # Same workdir the guidance was staged into, so the agent's cwd is where its
            # native skills dir and ./guidance/ live.
            "--workdir", str(workdir),
@@ -618,8 +622,21 @@ def main(argv=None) -> int:
         except Exception:  # noqa: BLE001 — a non-JSON tail is reported, not fatal
             payload = {"stdout_tail": (proc.stdout or "")[-1200:]}
 
-    usd = float(payload.get("cost_usd") or payload.get("usd") or 0.0)
-    tokens = int(payload.get("tokens") or 0)
+    # run-optimizer nests the figure under `cost.total_cost_usd` (see its `result["cost"]`).
+    # Reading a flat `cost_usd`/`usd` booked 0.0 for every run: on run 32733635494 the payload
+    # carried 8.370 USD / 68,432 tokens and the run recorded $0.00, which is indistinguishable
+    # from the genuinely-unmetered case the skill warns about — so the wrong conclusion was
+    # drawn twice. The flat keys stay as fallbacks for any optimizer row that reports that way.
+    cost = payload.get("cost") or {}
+    usd = float(cost.get("total_cost_usd") or payload.get("cost_usd")
+                or payload.get("usd") or 0.0)
+    tokens = int(cost.get("tokens") or payload.get("tokens") or 0)
+    # Why the agent stopped. Reconstructing this from a truncated stdout tail is what the
+    # previous version forced, and the answer (turns exhausted mid-round, with a better
+    # candidate evaluated but never committed) mattered more than anything else in the payload.
+    stop = payload.get("stop") or {}
+    stop_reason = str(stop.get("subtype") or "") or None
+    num_turns = stop.get("num_turns")
 
     # Book the host's own spend. The agent books per-round costs it knows about through
     # commit.py --optimizer-usd; it cannot know its own process cost, and the host can.
@@ -630,13 +647,30 @@ def main(argv=None) -> int:
         rd.log_event("host", agent=args.agent, model=args.model or "",
                      usd=usd, tokens=tokens, seconds=round(seconds, 3),
                      returncode=(None if proc is None else proc.returncode),
-                     timed_out=timed_out)
+                     timed_out=timed_out, stop_reason=stop_reason, num_turns=num_turns)
         if usd or tokens:
             rd.update_spent(optimizer_usd=usd, optimizer_tokens=tokens)
+        # The run dir's budget, not the spec's: baseline freezes it there, `--resume` can
+        # extend it, and it is what `budget_exhausted()` actually judges against.
+        rounds_done = int(rd.spent.iterations or 0)
+        rounds_budget = int(rd.budget.max_iterations or 0)
     except Exception as exc:  # noqa: BLE001 — spend accounting must not lose the run
         payload.setdefault("warnings", []).append(f"could not book host spend: {exc}")
+        rounds_done, rounds_budget = -1, 0
 
     seal = _seal(run_dir, project, spec, timeout=args.timeout)
+
+    # An agent that stopped with rounds left is a DEFECT, not a finished run — and it must not
+    # read as completion. Measured: one run booked 1 of 3 rounds with a higher-scoring
+    # candidate already evaluated but never committed, and reported success. The host cannot
+    # un-spend that, but it can refuse to let it look finished.
+    incomplete = ""
+    if 0 <= rounds_done < rounds_budget:
+        incomplete = (f"the agent booked {rounds_done} of {rounds_budget} rounds"
+                      + (f" and stopped on {stop_reason}" if stop_reason else "")
+                      + (f" after {num_turns} turns" if num_turns else "")
+                      + " — a candidate it evaluated may never have been committed; raise the "
+                        "turn budget (optimizer_max_turns) or lower the round count")
 
     out = {
         "run_dir": str(run_dir),
@@ -645,8 +679,14 @@ def main(argv=None) -> int:
         "prompt_path": str(prompt_path),
         "returncode": None if proc is None else proc.returncode,
         "timed_out": timed_out,
+        "stop_reason": stop_reason,
+        "num_turns": num_turns,
+        "rounds_booked": rounds_done,
+        "rounds_budget": rounds_budget,
+        "incomplete": incomplete,
         "seconds": round(seconds, 3),
         "usd": usd,
+        "tokens": tokens,
         "agent_env": agent_env,
         "instructions_file": arm_path,
         "instructions_warning": arm_warning,
@@ -657,6 +697,8 @@ def main(argv=None) -> int:
     if proc is not None and proc.returncode != 0:
         out["agent_error"] = (proc.stderr or "")[-1200:]
     print(json.dumps(out, indent=2))
+    if incomplete:
+        print(f"::warning::agent-optimize: {incomplete}", file=sys.stderr)
     # The run's worth is its sealed number, so that — not the agent's exit code — decides
     # ours. An agent that ran out of turns after three honest rounds produced a result; one
     # that exited 0 without sealing did not.

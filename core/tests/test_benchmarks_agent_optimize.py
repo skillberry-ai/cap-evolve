@@ -132,6 +132,71 @@ def test_rejections_are_not_a_stopping_condition():
     assert "5" in stop and "spend.py" in stop
 
 
+MARK_HOST_START = "# ---- agent mode: drive the handed-off loop"
+MARK_HOST_END = "# ---- metrics + report"
+
+
+def _host_budget(**env: str) -> dict:
+    """Run the agent-mode host-invocation block and report the budget it computes."""
+    src = RUN_SUITE.read_text(encoding="utf-8")
+    block = src[src.index(MARK_HOST_START):src.index(MARK_HOST_END)]
+    # Stub the host call itself: this test is about the arithmetic, not the subprocess.
+    block = block.replace('"$PY" "$REPO/skills/algorithms/agent-optimize/scripts/host.py" \\',
+                          'echo HOSTCALL \\')
+    script = ('ORCH_MODE=agent\nITER="${ITERATIONS:-3}"\nPY=python3\nREPO=.\nBENCH=tau2\n'
+              'RUN_DIR=/tmp/x\nPROJ=/tmp/y\nOPTIMIZER_MODEL=m\n' + block +
+              '\nprintf "TURNS=%s\\nUSD=%s\\n" "$HOST_TURNS" "${HOST_USD_ARGS[*]-}"\n')
+    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                       env={"PATH": "/usr/bin:/bin", **env})
+    assert p.returncode == 0, f"block failed: {p.stderr}"
+    out = {}
+    for ln in p.stdout.splitlines():
+        if "=" in ln and ln.split("=", 1)[0] in ("TURNS", "USD"):
+            k, v = ln.split("=", 1)
+            out[k] = v.strip()
+    return out
+
+
+def test_agent_mode_gets_its_own_turn_allowance_not_the_per_iteration_one():
+    """80 turns/iteration is a DETERMINISTIC-path unit and starves the agent loop.
+
+    There, one optimizer invocation means "propose one edit and stop" — the harness does the
+    diagnosis, evaluation and gating. In agent mode the same allowance must also cover Phase 0
+    reading, diagnose, null-control replicates, round.py orchestration, gate_check and
+    commit.py, per round.
+
+    Measured on run 32733635494: 240 turns (80 x 3) bought 1.9 rounds. The agent stopped on
+    error_max_turns having evaluated a candidate at val 0.530 — the best of the run — and never
+    reached the commit.py that would have booked it. So the run reported 1 of 3 rounds and
+    discarded its best result.
+    """
+    got = _host_budget(ITERATIONS="3", OPTIMIZER_MAX_TURNS="80")
+    turns = int(got["TURNS"])
+
+    assert turns > 240, (
+        f"agent mode still gets the per-iteration allowance ({turns}) — the budget that was "
+        "measured to buy 1.9 of 3 rounds")
+    # Per round it must clear the ~126 turns/round that run actually consumed, with the
+    # non-round work (Phase 0, the seal) paid for on top.
+    assert turns / 3 >= 150, (
+        f"{turns} turns over 3 rounds is {turns / 3:.0f}/round; the measured requirement is "
+        "~126/round before Phase 0 and finalize")
+
+
+def test_a_raised_optimizer_max_turns_is_still_honoured():
+    """The dispatch input must remain the operator's lever, not be clamped by the floor."""
+    low = int(_host_budget(ITERATIONS="3", OPTIMIZER_MAX_TURNS="80")["TURNS"])
+    high = int(_host_budget(ITERATIONS="3", OPTIMIZER_MAX_TURNS="400")["TURNS"])
+    assert high > low, (
+        f"raising optimizer_max_turns 80 -> 400 did not raise the host budget ({low} -> {high})")
+
+
+def test_more_rounds_buy_more_turns():
+    three = int(_host_budget(ITERATIONS="3", OPTIMIZER_MAX_TURNS="80")["TURNS"])
+    ten = int(_host_budget(ITERATIONS="10", OPTIMIZER_MAX_TURNS="80")["TURNS"])
+    assert ten > three, f"the turn budget does not scale with the round count ({three}, {ten})"
+
+
 def test_unlimited_optimizer_budget_yields_no_dollar_ceiling():
     """0 means unlimited everywhere else in this workflow; keep that meaning."""
     got = _select(ALGORITHM="agent-optimize", ITERATIONS="10", OPTIMIZER_USD_PER_ITER="0")

@@ -523,6 +523,105 @@ def test_a_large_capability_is_summarised_without_pretending_to_be_complete(tmp_
         assert pack in surface, f"group {pack} vanished from the summarised listing"
 
 
+def test_the_agents_real_cost_is_booked_not_silently_zeroed(tmp_path):
+    """run-optimizer nests cost under ``cost.total_cost_usd``; the host read the wrong key.
+
+    Measured on run 32733635494: the payload carried ``cost.total_cost_usd: 8.370`` and
+    68,432 tokens, and the host booked ``usd: 0.0``. Every agent-mode run therefore reported
+    $0.00 optimizer spend while really spending money — and it looked exactly like the
+    "unmetered gateway" case the skill warns about, so the wrong conclusion was drawn twice.
+
+    A cost ceiling cannot bind what it cannot see: with 0.0 booked, ``max_usd`` and spend.py's
+    dollar predicates are inert.
+    """
+    from cap_evolve import RunDir
+
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    # A stub agent that emits exactly run-optimizer's real result shape.
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json, sys\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'cost': {'total_cost_usd': 8.37, 'tokens': 68432}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out["usd"] == pytest.approx(8.37), (
+        f"the host did not read cost.total_cost_usd from the payload: {out}")
+
+    rd = RunDir.open(run_dir.root)
+    assert rd.spent.optimizer_usd == pytest.approx(8.37), (
+        "the cost never reached the run's spend ledger, so no dollar ceiling can bind it")
+    events = (run_dir.root / "events.jsonl").read_text(encoding="utf-8")
+    host_ev = [json.loads(ln) for ln in events.splitlines()
+               if ln.strip() and json.loads(ln).get("kind") == "host"]
+    assert host_ev and host_ev[-1]["usd"] == pytest.approx(8.37), (
+        f"the host event under-reports the round's cost: {host_ev}")
+
+
+def test_the_host_reports_why_the_agent_stopped(tmp_path):
+    """The diagnosis that had to be reconstructed by hand.
+
+    Run 32733635494's agent stopped mid-round-2 with its highest-scoring candidate
+    (val 0.530) evaluated but never committed, and the host's output said only
+    ``returncode: 0, timed_out: false``. Whether it ran out of turns, hit an error, or chose
+    to stop was invisible; the stop reason was inferred from a truncated stdout tail.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'cost': {'total_cost_usd': 1.0, 'tokens': 10},\n"
+        "                  'stop': {'subtype': 'error_max_turns', 'num_turns': 240,\n"
+        "                           'is_error': False}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out.get("stop_reason") == "error_max_turns", (
+        f"the host does not surface the agent's stop reason: {out}")
+    assert out.get("num_turns") == 240, f"turns used not reported: {out}"
+    assert "turn" in json.dumps(out).lower()
+
+
+def test_an_agent_that_stopped_with_rounds_left_is_called_out(tmp_path):
+    """Stopping early with budget remaining is a defect, and must not read as completion.
+
+    The run that prompted this booked 1 of 3 rounds, had a better candidate sitting
+    un-committed, and still reported success. The host cannot un-spend that, but it can refuse
+    to let it look finished.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'error_max_turns', 'num_turns': 240}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    # Zero rounds were committed against a budget of 5 (see _run_dir).
+    assert out.get("incomplete"), (
+        f"an agent that booked 0 of its rounds is reported as if it finished: {out}")
+    assert "0" in str(out["incomplete"]) or "round" in str(out["incomplete"]).lower()
+    assert out["seal"] == "host", "the seal fallback should have been what produced a result"
+
+
 def test_unknown_host_agent_is_refused_before_any_spend(tmp_path):
     project = _project(tmp_path)
     run_dir = _run_dir(tmp_path)

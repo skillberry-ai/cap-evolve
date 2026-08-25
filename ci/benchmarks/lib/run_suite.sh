@@ -540,7 +540,23 @@ RUN_DIR="$WORK/.capevolve/run_suite"
 # Budget: the whole loop is ONE agent process, so the per-iteration caps become whole-loop
 # caps (x the round count). 0 stays unlimited, as everywhere else in this workflow.
 if [ "$ORCH_MODE" = "agent" ]; then
-  HOST_TURNS="$(( ${OPTIMIZER_MAX_TURNS:-80} * ITER ))"
+  # TURN BUDGET. `optimizer_max_turns` (default 80) is a DETERMINISTIC-path unit: there one
+  # optimizer invocation means "propose one edit and stop", and the harness does the diagnosis,
+  # the evaluation and the gate. In agent mode that same allowance must additionally cover
+  # Phase 0 reading, diagnose, the null-control replicates, round.py orchestration, gate_check
+  # and commit.py — every round.
+  #
+  # Measured on smoke run 32733635494 (trials=10): 240 turns (80 x 3) bought 1.9 rounds. The
+  # agent stopped on error_max_turns having just evaluated a candidate at val 0.530 — the best
+  # of the run — and never reached the commit.py that would have booked it. So the run reported
+  # 1 of 3 rounds and discarded its best result.
+  #
+  # ~126 turns/round were actually consumed there, so the floor is 150/round, and the round
+  # count is +1 to pay for the work that is not a round: Phase 0 and the final seal. An
+  # operator who raises optimizer_max_turns above the floor still wins — the max() keeps this a
+  # floor, not a clamp.
+  HOST_TURNS_PER_ROUND=$(( ${OPTIMIZER_MAX_TURNS:-80} > 150 ? ${OPTIMIZER_MAX_TURNS:-80} : 150 ))
+  HOST_TURNS="$(( HOST_TURNS_PER_ROUND * (ITER + 1) ))"
   HOST_USD_ARGS=()
   if awk "BEGIN{exit !(${OPTIMIZER_USD_PER_ITER:-0} > 0)}"; then
     HOST_USD_ARGS=(--usd-budget "$(awk "BEGIN{printf \"%.2f\", ${OPTIMIZER_USD_PER_ITER:-0} * $ITER}")")

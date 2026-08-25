@@ -173,6 +173,24 @@ def parse_cost(stdout: str) -> dict:
     return out
 
 
+#: Keys a headless agent CLI uses to say how a run ended. Vendor-neutral, like parse_cost:
+#: Claude Code's `--output-format json` result carries ``subtype`` (e.g. ``success`` /
+#: ``error_max_turns``), ``num_turns`` and ``is_error``; other CLIs use a subset or none.
+_STOP_KEYS = ("subtype", "num_turns", "is_error", "duration_ms", "stop_reason")
+
+
+def _stop_info(raw) -> dict:
+    """Lift the stop/termination fields out of a parsed agent result, if present.
+
+    Returns ``{}`` when the output carried none, so the key is simply absent rather than
+    present-and-empty — a caller can then tell "this CLI does not report it" from "it reported
+    a clean finish".
+    """
+    if not isinstance(raw, dict):
+        return {}
+    return {k: raw[k] for k in _STOP_KEYS if raw.get(k) is not None}
+
+
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
                   model: str | None, self_dir: str) -> list[str]:
     """Expand the template into argv.
@@ -323,6 +341,14 @@ def main(argv=None) -> int:
             # Headless output wasn't parseable — say so; the loop falls back to no-cost.
             result["cost"]["note"] = ("no total_cost_usd in optimizer output; "
                                       "loop continues without a cost figure")
+        # WHY the agent stopped, from the same parsed object. An exit code of 0 covers both
+        # "finished the work" and "hit --max-turns with work outstanding", and those demand
+        # opposite responses from the caller. Reconstructing the difference from an 800-char
+        # stdout tail is what a caller had to do before this, on a run where the agent stopped
+        # mid-round with its best candidate evaluated and never committed.
+        stop = _stop_info(cost.get("raw"))
+        if stop:
+            result["stop"] = stop
     print(json.dumps(result))
     return proc.returncode
 
