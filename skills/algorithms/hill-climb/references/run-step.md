@@ -29,7 +29,7 @@ and `workdir` (`harness.py:1614-1626`).
 
 ## Cross-iteration files, and who owns each
 
-Written into the workdir before the optimizer runs, with a prompt pointer to all four
+Written into the workdir before the optimizer runs, with a prompt pointer to all of them
 (`harness.py:1062-1094`):
 
 | file | owner | lifetime |
@@ -38,10 +38,14 @@ Written into the workdir before the optimizer runs, with a prompt pointer to all
 | `JOURNAL.md` | the optimizer, append-only | run-level handover; earlier entries must not be edited |
 | `PROCESS.md` | the optimizer, required | fresh each iteration; **snapshotted with the candidate** and surfaced per-iteration by the dashboard |
 | `RUNMAP.md` + `prior_iterations/<id>/` | framework | manifest plus every prior iteration's `PROCESS.md` and capability diff |
+| `INSIGHTS.md` / `META_INSIGHTS.md` / `FRAMEWORK_IMPROVEMENTS.md` | the optimizer, append-only, optional most iterations | run-level, distilled: verified findings / process meta-learning / cross-run framework feedback — a summary layer above `JOURNAL.md` |
 
 `_reconcile_journal` folds the optimizer's appended entry into the run-level journal
 for accepted *and* rejected iterations, and reuses it as the candidate's lineage note
-(`harness.py:1586-1588`).
+(`harness.py:1586-1588`). A genuinely empty handover is escalated (logged, and stamped
+into the journal itself), not silently dropped. `_fold_accumulator` does the same for
+the three summary files, minus the escalation — those are legitimately empty most
+iterations.
 
 ## Memory across iterations
 

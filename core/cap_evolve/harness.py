@@ -703,7 +703,7 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 
 
 
-# The optimizer's working dir carries FOUR cross-iteration files, with clean ownership
+# The optimizer's working dir carries cross-iteration files, with clean ownership
 # so there is never confusion about who writes what (the recurring user complaint about
 # the old MEMORY.md/STATE.md pair):
 #   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the objective record:
@@ -715,6 +715,11 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 #                 subagents/features used, what to preserve).
 #   RUNMAP.md   — FRAMEWORK-owned manifest of every prior iteration's working dir, with
 #                 each prior PROCESS.md + capability diff copied into ./prior_iterations/.
+#   INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — OPTIMIZER-owned,
+#                 append-only across the WHOLE run like JOURNAL.md, but a SUMMARY layer
+#                 above it (verified findings / process meta-learning / cross-run
+#                 framework feedback) so a future iteration need not re-read the whole
+#                 journal. See the comment near ``_INSIGHTS_MARK``.
 # Rule: FACTS are deterministic + framework-owned; JUDGMENT and PROCESS are agent-owned.
 
 _JOURNAL_MARK = "<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit anything above it -->"
@@ -748,6 +753,103 @@ _JOURNAL_SEED = (
     "    - Focus next iteration:\n"
 )
 
+#   INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — OPTIMIZER-owned,
+#   append-only across the WHOLE run like JOURNAL.md, but each is a SUMMARY layer
+#   above it: JOURNAL.md is the per-iteration narrative (verbose, one entry per
+#   candidate); these three are the compressed, verified takeaways a future
+#   iteration (or a human) should read INSTEAD of re-reading the whole journal.
+#   Same accumulate-across-the-run mechanic as JOURNAL.md, no framework RESULT
+#   stamp (that is journal-specific) — see ``_seed_accumulator``/``_fold_accumulator``.
+
+_INSIGHTS_MARK = "<!-- cap-evolve:insights-append-below -->"
+_INSIGHTS_SEED = (
+    "# INSIGHTS — summarized, verified findings (accumulate across the whole run)\n\n"
+    "The JOURNAL is your per-iteration diary; THIS file is the distilled, VERIFIED "
+    "takeaway a future iteration should read instead of re-reading the whole journal "
+    "or old sessions/traces. Update it whenever you have a genuinely NEW, confirmed "
+    "finding (an accepted/rejected RESULT counts as confirmation; a guess does not) — "
+    "not every iteration needs a new entry. Structure each addition as:\n\n"
+    "    ## <task or mechanism name>\n"
+    "    - What worked (confirmed by a RESULT, cite the candidate id):\n"
+    "    - What didn't (confirmed by a RESULT, cite the candidate id):\n"
+    "    - Promising but not yet tried:\n"
+)
+
+_META_INSIGHTS_MARK = "<!-- cap-evolve:meta-insights-append-below -->"
+_META_INSIGHTS_SEED = (
+    "# META-INSIGHTS — about the optimization PROCESS itself (this run)\n\n"
+    "Not about the capability — about HOW this run is searching for it: which "
+    "strategies/edit classes/algorithms are helping vs stalling, and what to try "
+    "next iteration. Update at the end of the run at minimum; sooner if a plateau "
+    "or a clear strategy shift is worth recording now. Structure each addition as:\n\n"
+    "    ## Iteration <id> (or 'run so far')\n"
+    "    - Strategy tried, and whether it moved val (cite LEDGER rows):\n"
+    "    - Plateau/stall signal, if any, and the lever switched to:\n"
+    "    - What to try next iteration:\n"
+)
+
+_FRAMEWORK_IMPROVEMENTS_MARK = "<!-- cap-evolve:framework-improvements-append-below -->"
+_FRAMEWORK_IMPROVEMENTS_SEED = (
+    "# FRAMEWORK-IMPROVEMENTS — suggestions for cap-evolve itself (cross-run)\n\n"
+    "NOT about this capability or this run's result — about what cap-evolve the "
+    "FRAMEWORK should change so FUTURE runs (any capability, any project) go better: "
+    "a confusing prompt section, a missing tool, a file you wished existed, a gate "
+    "that felt wrong. Optional most iterations; add an entry whenever something "
+    "about the framework itself (not the task) got in your way or surprised you.\n"
+)
+
+
+def _seed_accumulator(workdir: Path, run_dir: RunDir, *, filename: str, seed: str,
+                      mark: str) -> None:
+    """Generic ``_seed_journal``: copy a run-level, whole-run accumulator file into
+    the workdir with its marker re-appended, ready for the optimizer to append below."""
+    run_file = run_dir.root / filename
+    try:
+        text = run_file.read_text(encoding="utf-8") if run_file.exists() else seed
+    except Exception:  # noqa: BLE001
+        text = seed
+    text = text.replace(mark, "").rstrip() + "\n\n" + mark + "\n"
+    (workdir / filename).write_text(text, encoding="utf-8")
+
+
+def _fold_accumulator(workdir: Path, run_dir: RunDir, *, filename: str, seed: str,
+                      mark: str) -> None:
+    """Generic ``_reconcile_journal`` minus the framework RESULT stamp: fold whatever
+    the optimizer appended below the marker back into the run-level accumulator file.
+
+    Unlike JOURNAL.md, an empty tail here is NOT escalated — a summarized-insights
+    file legitimately has nothing new to add most iterations (see the seed text)."""
+    path = workdir / filename
+    if not path.exists():
+        return
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        return
+    tail = (text.split(mark, 1)[1] if mark in text else "").replace(mark, "").strip()
+    if not tail:
+        return
+    run_file = run_dir.root / filename
+    try:
+        base = run_file.read_text(encoding="utf-8") if run_file.exists() else seed
+    except Exception:  # noqa: BLE001
+        base = seed
+    base = base.replace(mark, "").rstrip()
+    if tail in base:  # already recorded — do not duplicate
+        return
+    try:
+        run_file.write_text(base + "\n\n" + tail + "\n", encoding="utf-8")
+    except Exception as e:  # noqa: BLE001
+        run_dir.log_event("optimizer_context_warning", what=filename, error=str(e)[:300])
+
+
+_ACCUMULATORS = (
+    ("INSIGHTS.md", _INSIGHTS_SEED, _INSIGHTS_MARK),
+    ("META_INSIGHTS.md", _META_INSIGHTS_SEED, _META_INSIGHTS_MARK),
+    ("FRAMEWORK_IMPROVEMENTS.md", _FRAMEWORK_IMPROVEMENTS_SEED, _FRAMEWORK_IMPROVEMENTS_MARK),
+)
+
+
 _PROCESS_SEED = (
     "# PROCESS — what I did this iteration (explainability; REQUIRED)\n\n"
     "Fill this in as you work. It is the human-readable record of HOW this iteration was "
@@ -774,7 +876,8 @@ _PROCESS_SEED = (
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
 _CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+                  "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md"}
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -1096,6 +1199,8 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     delta = (val - parent_val if isinstance(val, (int, float))
              and isinstance(parent_val, (int, float)) else None)
     _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta)
+    for filename, seed, mark in _ACCUMULATORS:
+        _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
 
 
 def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
@@ -1162,7 +1267,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
-    """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+    """Give the optimizer its cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -1170,15 +1275,19 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+      - INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — optimizer-authored,
+        append-only summary layer above JOURNAL.md (see the comment near ``_INSIGHTS_MARK``).
     """
     _build_ledger(workdir, run_dir)
     _seed_journal(workdir, run_dir)
+    for filename, seed, mark in _ACCUMULATORS:
+        _seed_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
     if not (workdir / "PROCESS.md").exists():
         (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
     _build_runmap(workdir, run_dir)
 
     pointer = (
-        "## Cross-iteration files in THIS working dir (clean ownership — read all four)\n"
+        "## Cross-iteration files in THIS working dir (clean ownership — read all)\n"
         "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the exact "
         "tasks it broke/fixed. Never re-introduce a change that broke a task.\n"
         "- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole "
@@ -1191,6 +1300,16 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
         "- `RUNMAP.md` + `./prior_iterations/<id>/` — every prior iteration's PROCESS.md + "
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
+        "- `INSIGHTS.md` — SUMMARIZED, VERIFIED findings (yours, append-only, optional most "
+        "iterations): a distilled 'what worked / what didn't / what's promising' a future "
+        "iteration reads INSTEAD of the whole journal. Add an entry whenever you have a new "
+        "CONFIRMED finding (cite the RESULT that confirmed it).\n"
+        "- `META_INSIGHTS.md` — about the SEARCH PROCESS itself (yours, append-only): which "
+        "strategies helped or stalled, what to try next. Update AT LEAST once, at the end of "
+        "the run.\n"
+        "- `FRAMEWORK_IMPROVEMENTS.md` — cross-run suggestions for cap-evolve ITSELF, not this "
+        "task (yours, append-only, optional): what confused you or was missing about the "
+        "framework. Update AT LEAST once, at the end of the run.\n"
     )
     return f"{instructions}\n\n{pointer}\n"
 
@@ -1995,6 +2114,7 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # beside it, so the literal list has to be complete anyway.)
 _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
                     "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
+                    "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md",
                     "FOCUS.md", "REFLECTION.md",
                     ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")
