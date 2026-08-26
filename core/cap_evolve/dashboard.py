@@ -626,6 +626,51 @@ def _read_evograph(root: Path) -> dict:
     return {"rounds": rounds, "weaknesses": weaknesses}
 
 
+#: run-level narrative files, in reading order — see harness.py's cross-iteration
+#: file-header comment (JOURNAL/INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS).
+_NARRATIVE_FILES = (
+    ("JOURNAL.md", "Journal — per-iteration handover"),
+    ("INSIGHTS.md", "Insights — verified findings"),
+    ("META_INSIGHTS.md", "Meta-insights — the optimization process"),
+    ("FRAMEWORK_IMPROVEMENTS.md", "Framework improvements — for cap-evolve itself"),
+)
+
+
+def _read_narrative(root: Path, best_id: str | None) -> dict:
+    """The optimizer-authored process narrative for this run, read straight off disk.
+
+    Every run gets this by default (#400): the run-level accumulator files the
+    optimizer wrote across iterations, plus the best candidate's final ``PROCESS.md``
+    (why THAT iteration was done the way it was). Returns ``{}`` when none of these
+    exist yet (e.g. a synthetic log with no real optimizer session).
+    """
+    files = []
+    for name, title in _NARRATIVE_FILES:
+        p = _safe_subpath(root, name)
+        if p is None or not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if text:
+            files.append({"title": title, "text": _sanitize_text(text, 20000)})
+    process_text = None
+    if best_id:
+        p = _safe_subpath(root, "candidates", best_id, "PROCESS.md")
+        if p is not None and p.is_file():
+            try:
+                process_text = p.read_text(encoding="utf-8").strip() or None
+            except OSError:
+                process_text = None
+    if process_text:
+        files.append({"title": f"Process — best candidate ({best_id})",
+                      "text": _sanitize_text(process_text, 20000)})
+    if not files:
+        return {}
+    return {"files": files}
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -1262,6 +1307,7 @@ def reduce_run(run_dir) -> dict:
     evograph = _read_evograph(root)
     if evograph:
         algo_extra["evograph"] = evograph
+    narrative = _read_narrative(root, best_id)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
@@ -1287,6 +1333,7 @@ def reduce_run(run_dir) -> dict:
         "evograph": "evograph" in algo_extra,
         "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
+        "narrative": bool(narrative),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
@@ -1373,6 +1420,7 @@ def reduce_run(run_dir) -> dict:
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
+        "narrative": narrative,
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
@@ -1687,6 +1735,14 @@ border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
 .diff .file{color:var(--text);font-weight:700;margin:8px 0 2px}
 .ann{border-left:3px solid var(--warn);padding:6px 12px;margin:8px 0;background:var(--card2);border-radius:0 8px 8px 0}
 .ann.diag{border-left-color:var(--accent)}
+.narrative-box{background:var(--card2);border:1px solid var(--line);border-radius:8px;
+padding:12px 14px;overflow:auto;max-height:480px}
+.md h2,.md h3,.md h4{margin:14px 0 6px;color:var(--text)}
+.md h2:first-child,.md h3:first-child,.md h4:first-child{margin-top:0}
+.md p{margin:6px 0}
+.md ul{margin:6px 0;padding-left:20px}
+.md blockquote{margin:8px 0;padding:4px 10px;border-left:3px solid var(--accent);
+background:var(--card);color:var(--muted)}
 .ann .who{color:var(--muted);font-size:11px}
 .heat rect{cursor:pointer} .heat text{fill:var(--muted);font-size:10px}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
@@ -2185,6 +2241,47 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     if((w.affected_tasks||[]).length)bits.push('affects '+w.affected_tasks.join(', '));
     if((w.related||[]).length)bits.push('related → '+w.related.join(', '));
     box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:bits.join('  ·  ')}));
+    s.append(box);
+  });
+})();
+
+/* ---------- 10b. process narrative — optimizer-authored, self-contained ---------- */
+(function(){
+  const NAR=S.narrative; if(!NAR||!(NAR.files||[]).length)return;
+  const s=sec('Process narrative');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Written by the optimizer as it worked (JOURNAL / INSIGHTS / META_INSIGHTS / '+
+    'FRAMEWORK_IMPROVEMENTS, plus the best candidate’s PROCESS.md) — rendered here '+
+    'as-is, for a human reader.'}));
+  function escN(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  // A tiny, deliberately non-general markdown renderer: headings, bullet lines,
+  // blockquotes, bold, everything else is a paragraph. Good enough for the
+  // structured templates these files are seeded from (_JOURNAL_SEED etc.) — not a
+  // general markdown engine, so it never needs a dependency.
+  function mdToHtml(text){
+    const lines=escN(text).split('\n');
+    let html='',inList=false;
+    const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+    lines.forEach(line=>{
+      const bold=line.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+      let m;
+      if((m=bold.match(/^(#{1,4})\s+(.*)$/))){closeList();
+        html+=`<h${Math.min(4,m[1].length)+1}>${m[2]}</h${Math.min(4,m[1].length)+1}>`;}
+      else if(/^\s*[-*]\s+/.test(bold)){if(!inList){html+='<ul>';inList=true;}
+        html+='<li>'+bold.replace(/^\s*[-*]\s+/,'')+'</li>';}
+      else if(/^>\s?/.test(bold)){closeList();
+        html+='<blockquote>'+bold.replace(/^>\s?/,'')+'</blockquote>';}
+      else if(/^<!--/.test(bold.trim())){/* skip HTML-comment markers */}
+      else if(!bold.trim()){closeList();}
+      else{closeList();html+='<p>'+bold+'</p>';}
+    });
+    closeList();
+    return html;
+  }
+  (NAR.files||[]).forEach(f=>{
+    const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
+    box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
+    box.append($('div',{class:'md',html:mdToHtml(f.text)}));
     s.append(box);
   });
 })();
