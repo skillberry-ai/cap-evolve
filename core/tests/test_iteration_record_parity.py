@@ -120,7 +120,7 @@ def _run_agent_optimize(tmp_path):
     for cid, decision, val in (("cand_r1", "accept", "1.0"), ("cand_r2", "reject", "0.5")):
         # Agent mode does not seed a marker in the workdir's JOURNAL.md (host.py: only
         # the deterministic loop's LEDGER/RUNMAP/JOURNAL seeding applies); the agent
-        # writes a free-form entry itself. harness.record_iteration now hard-fails an
+        # writes a free-form entry itself. harness.record_iteration now escalates an
         # empty handover, so give it one here the way a real agent-optimize round would.
         (work / "JOURNAL.md").write_text(
             f"# JOURNAL\n\n## Iteration {cid} — {decision} candidate\n"

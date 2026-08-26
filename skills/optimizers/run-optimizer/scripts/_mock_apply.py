@@ -34,10 +34,10 @@ def _find_script(workdir: Path) -> Path | None:
 def _append_mock_journal(workdir: Path) -> None:
     """Append a minimal handover entry to JOURNAL.md, if the harness seeded one.
 
-    The harness now hard-fails an iteration whose optimizer wrote an empty JOURNAL.md
-    handover (see ``harness.EmptyHandoverError``). The mock optimizer stands in for a
-    real one in tests, so it writes a (trivial but non-empty) handover too instead of
-    tripping that check.
+    The harness now escalates (logs + visibly flags) an iteration whose optimizer wrote
+    an empty JOURNAL.md handover (see ``harness._reconcile_journal``). The mock optimizer
+    stands in for a real one in tests, so it writes a (trivial but non-empty) handover too
+    instead of tripping that escalation.
     """
     journal = workdir / "JOURNAL.md"
     if not journal.exists():
