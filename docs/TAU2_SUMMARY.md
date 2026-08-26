@@ -147,10 +147,11 @@ Each of these came from a failure observed in these runs, not from taste.
   and the shared `templates/adapters/tau2_bench/adapter.py`) and the affected rollout is marked
   as infra noise rather than scored as an agent failure — tau2-bench itself is an external,
   unvendored package, so the fix lives on the cap-evolve side of that boundary.
-- **Not done in this pass:** a real, network-connected end-to-end validation run on this
-  benchmark (the sandbox this work was done in has no network egress to clone `tau2-bench` or
-  reach a model endpoint). The changes above are covered by the existing unit/regression suite
-  (`core/tests/`, including new tests for the STOP-leak detector) and by `check.py`'s
-  agent-optimize hard gate, both green. A real run to confirm an accepted improvement with a
-  resolvable effect size above SE (or an honest null with that size reported) is left as
-  follow-up work once a network-connected environment is available.
+- **Real end-to-end validation:** the implementation sandbox had no network egress, but a
+  network-connected run against real `aws/gpt-oss-120b` rollouts (via `examples/tau2_airline`,
+  a 2-task/1-trial smoke spec) confirmed the `resolvable_effect_size` annotation above is
+  produced by an actual gate decision, not just exercised by a unit test — the run's
+  `rejected.jsonl` recorded a paired-mode verdict correctly annotated with `2·SE`. The
+  candidate was correctly rejected at that sample size (n=2, SE=0.5), consistent with this
+  doc's own noise-floor analysis. The full 30/30/20 `tau2_airline` benchmark run is left as
+  follow-up work once that dedicated pass is scheduled.
