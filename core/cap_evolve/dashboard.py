@@ -319,7 +319,8 @@ _ALGO_MARKERS = (
     # real agent-optimize run that logs only screen/accept/reject — the shape every
     # actual run has, since the agent drives the loop and emits no "agent_round" —
     # matched nothing and rendered as "algorithm not recorded" with no agent panels.
-    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step", "screen")),
+    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step", "screen",
+                        "agent_optimize_compliance")),
     ("hill-climb", ("convergence", "step")),
 )
 
@@ -1258,6 +1259,18 @@ def reduce_run(run_dir) -> dict:
         })
     if screens:
         algo_extra["screens"] = screens
+
+    # Compliance instrumentation (issue #401): whether screen.py ran on a candidate
+    # BEFORE its full-val eval this round — round.py logs one of these per candidate per
+    # round.py invocation. Surfaced as its own distinct dashboard entry so a real run's
+    # screen-then-full-val discipline (or the lack of it) is visible, not just inferable
+    # from SKILL.md prose.
+    compliance = [{"candidate": e.get("tag"), "iteration": e.get("iteration"),
+                   "screened_before_fullval": bool(e.get("screened_before_fullval")),
+                   "t": e.get("t")}
+                  for e in events if e.get("kind") == "agent_optimize_compliance"]
+    if compliance:
+        algo_extra["compliance"] = compliance
 
     evograph = _read_evograph(root)
     if evograph:

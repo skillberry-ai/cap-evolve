@@ -33,6 +33,13 @@ class GateDecision:
     #: caller must not treat this as a content rejection: it should not count
     #: toward the stall counter and it says nothing about the candidate's quality.
     indecisive: bool = False
+    #: The smallest true effect this verdict could have resolved, i.e. ``2 * SE`` of the
+    #: measurement that produced ``delta``. ``None`` when no SE was computable (threshold/
+    #: strict modes, or too few paired samples). Reported so the driver reads "this round can
+    #: resolve ±X" BEFORE reading the delta — four runs of null results on tau2_airline were
+    #: read as "the edits were bad" when the gate simply could not resolve anything that small
+    #: (see docs/TAU2_SUMMARY.md).
+    resolvable_effect_size: float | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -41,6 +48,7 @@ class GateDecision:
             "delta": self.delta,
             "threshold": self.threshold,
             "indecisive": self.indecisive,
+            "resolvable_effect_size": self.resolvable_effect_size,
         }
 
 
@@ -185,8 +193,9 @@ def decide(
             return GateDecision(
                 accept=ok,
                 reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
-                        f"(SE={se:.4f}, n={n})"),
+                        f"(SE={se:.4f}, n={n}, resolvable effect size 2·SE={2 * se:.4f})"),
                 delta=mean_d, threshold=bar,
+                resolvable_effect_size=round(2 * se, 6),
             )
 
     if mode == "significant":
@@ -208,10 +217,11 @@ def decide(
             accept=ok,
             reason=(
                 f"Δ={delta:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
-                f"(SE={se:.4f})"
+                f"(SE={se:.4f}, resolvable effect size 2·SE={2 * se:.4f})"
             ),
             delta=delta,
             threshold=bar,
+            resolvable_effect_size=round(2 * se, 6),
         )
 
     if mode == "threshold":

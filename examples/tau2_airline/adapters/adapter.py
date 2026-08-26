@@ -22,6 +22,7 @@ network-free, and RITS endpoint resolution is lazy (only on a real ``run_batch``
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
 DOMAIN = "airline"
+
+# docs/TAU2_SUMMARY.md row 7: the tau2-bench user simulator sometimes emits ``###STOP###``
+# in the SAME message as reasoning that explicitly plans to continue ("we must wait for
+# agent's third message. Continue."), in 15/27 observed task-7 failures — ~4.2% of all
+# rollouts lost to a simulator artifact that measures nothing about agent skill. tau2-bench
+# is an external package (cloned at setup time, not vendored here), so the fix lives on our
+# side of the boundary: detect the leak from the message trace and mark the rollout as
+# infra noise, matching the existing ``rollout.error`` path below rather than scoring the
+# agent down for a bug that is not the agent's.
+_STOP_LEAK_RE = re.compile(
+    r"###\s*stop\s*###.{0,400}\b(?:continue|continuing|wait\s+for|must\s+wait|"
+    r"keep\s+(?:going|talking)|not\s+(?:done|finished)\s+yet)\b"
+    r"|\b(?:continue|continuing|wait\s+for|must\s+wait|"
+    r"keep\s+(?:going|talking)|not\s+(?:done|finished)\s+yet)\b.{0,400}###\s*stop\s*###",
+    re.I | re.S,
+)
+
+
+def _leaked_stop_continuation(messages) -> bool:
+    """True iff a user-simulator turn emits ``###STOP###`` alongside leaked reasoning that
+    explicitly plans to continue the conversation. Only ``user``-role turns are checked —
+    that is the simulator's own voice, not the agent's."""
+    for m in messages or []:
+        if not isinstance(m, dict) or m.get("role") != "user":
+            continue
+        content = m.get("content")
+        if isinstance(content, str) and _STOP_LEAK_RE.search(content):
+            return True
+    return False
 
 
 def _shown_metrics(reward: float, reward_info: dict, rollout) -> list:
@@ -273,6 +303,14 @@ class Adapter(CapabilityAdapter):
             messages = [m.model_dump() for m in sim.get_messages()]
         except Exception:
             messages = None
+
+        if error is None and reward < 1.0 and _leaked_stop_continuation(messages):
+            error = (
+                "tau2 user-simulator emitted ###STOP### alongside leaked reasoning that "
+                "explicitly planned to continue the conversation (documented artifact, "
+                "docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an "
+                "agent policy/tool failure."
+            )
 
         reward_info_dump = (
             reward_info.model_dump(mode="json") if reward_info is not None else None

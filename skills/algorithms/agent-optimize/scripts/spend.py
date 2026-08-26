@@ -141,6 +141,11 @@ def main(argv=None) -> int:
                    help="trials per full-val eval; default = the spec's num_trials")
     p.add_argument("--warn-frac", type=float, default=0.8,
                    help="ceiling consumption at which to recommend narrow_scope")
+    p.add_argument("--ceiling-file", default=None,
+                   help="JSON file mapping task_id -> highest rate that task can structurally "
+                        "reach (e.g. from a diagnose-phase ceiling analysis). When given, a "
+                        "target_val_score predicate is COSTED against it before being treated "
+                        "as reachable — see cap_evolve.constraints.cost_target.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -152,6 +157,13 @@ def main(argv=None) -> int:
     spent = run_dir.spent
     wall = _wallclock(run_dir)
 
+    per_task_ceiling = None
+    if args.ceiling_file:
+        per_task_ceiling = {
+            str(k): float(v)
+            for k, v in json.loads(Path(args.ceiling_file).read_text(encoding="utf-8")).items()
+        }
+
     parsed = parse_constraints(str(spec.get("stop_condition") or ""))
     checked = check_constraints(
         parsed,
@@ -161,6 +173,7 @@ def main(argv=None) -> int:
         metric_calls=spent.metric_calls,
         regressed_tasks=_regressed_vs_seed(run_dir, best_id),
         warn_frac=args.warn_frac,
+        per_task_ceiling=per_task_ceiling,
     )
 
     # The run dir's own hard stop always wins: a prose condition cannot buy more budget.

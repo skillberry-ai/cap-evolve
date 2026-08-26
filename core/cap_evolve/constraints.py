@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import re
 
-__all__ = ["parse_constraints", "check_constraints"]
+__all__ = ["parse_constraints", "check_constraints", "cost_target"]
 
 #: Recognized kinds. ``max_*`` are ceilings (violated when actual >= target);
 #: ``target_val_score`` is a goal (satisfied when actual >= target).
@@ -254,6 +254,41 @@ def parse_constraints(text: str | None) -> dict:
     return {"text": raw, "predicates": out, "ambiguous": ambiguous}
 
 
+def cost_target(target: float, per_task_ceiling: dict) -> dict:
+    """Cost a ``target_val_score`` against measured per-task headroom before accepting it.
+
+    ``per_task_ceiling`` maps ``task_id -> highest rate that task can structurally reach``
+    (e.g. ``min(0.95, measured_component_cap)`` — a task whose COMMUNICATE component rate
+    measures 0.667 cannot reach 1.0 no matter what a capability edit does). The costed
+    ceiling is the mean of those caps, i.e. ``1 - sum(1 - ceiling_t) / n``: the score no
+    capability edit can exceed. A target above it is not a capability problem and should be
+    renegotiated with the user rather than chased with more iterations.
+
+    Motivating case: docs/TAU2_SUMMARY.md's own ceiling analysis found a ≈0.92 ceiling set by
+    three tasks capped by things no edit could touch (a leaking user simulator, two
+    COMMUNICATE-component rates) — two points of slack a 90%-target run had no way to close.
+    """
+    if not per_task_ceiling:
+        return {"target": float(target), "feasible": None,
+                "reason": "no per-task ceiling data — cannot cost this target"}
+    ceiling = sum(per_task_ceiling.values()) / len(per_task_ceiling)
+    feasible = float(target) <= ceiling + 1e-9
+    return {
+        "target": float(target),
+        "costed_ceiling": round(ceiling, 4),
+        "headroom": round(ceiling - float(target), 4),
+        "feasible": feasible,
+        "reason": (
+            f"target {float(target):.4f} is "
+            f"{'within' if feasible else 'ABOVE'} the costed ceiling {ceiling:.4f} "
+            f"(mean of {len(per_task_ceiling)} per-task caps) — "
+            + ("reachable by a capability edit" if feasible else
+               "NOT reachable by any capability edit; renegotiate the target or the caps "
+               "before spending more budget chasing it")
+        ),
+    }
+
+
 def check_constraints(
     parsed: dict,
     *,
@@ -265,6 +300,7 @@ def check_constraints(
     metric_calls: int = 0,
     regressed_tasks: list | None = None,
     warn_frac: float = 0.8,
+    per_task_ceiling: dict | None = None,
 ) -> dict:
     """Check every parsed predicate against MEASURED actuals from the run dir.
 
@@ -315,9 +351,17 @@ def check_constraints(
         elif kind == "target_val_score":
             actual = None if best_val is None else float(best_val)
             met = actual is not None and actual >= float(p["target"]) - 1e-9
-            rows.append({**p, "actual": actual, "satisfied": met, "violated": False,
-                         "note": "checked on the FULL-val mean only; a subset screen "
-                                 "can never satisfy this"})
+            row = {**p, "actual": actual, "satisfied": met, "violated": False,
+                   "note": "checked on the FULL-val mean only; a subset screen "
+                           "can never satisfy this"}
+            if per_task_ceiling:
+                cost = cost_target(float(p["target"]), per_task_ceiling)
+                row["cost"] = cost
+                if cost.get("feasible") is False:
+                    warn_reasons.append(
+                        f"target_val_score {p['target']:.4f} is above the costed ceiling "
+                        f"{cost['costed_ceiling']:.4f} — not reachable by any capability edit")
+            rows.append(row)
             if met:
                 stop_reasons.append(f"score goal met on full val "
                                     f"({actual:.4f} >= {p['target']:.4f})")

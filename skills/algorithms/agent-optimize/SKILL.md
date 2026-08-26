@@ -266,7 +266,9 @@ mechanism-vs-artifact designs, gating the sum not each addend, the sign test bel
 
 Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run `spend.py`.
 Everything it reports is re-read from the run dir, never a total in your head — which keeps a `$6.00`
-cap from becoming `$6.01`. (The Stop hook re-nudges you across turns until the run is finalized.)
+cap from becoming `$6.01`. (The Stop hook re-nudges you across turns until finalized; a `PostToolUse`
+hook also re-injects the same predicates on a fixed cadence even if you skip `spend.py` — see
+`goal_reminder.py`.)
 Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs best on
 **val**, on **train** when the spec defines one worth reporting, and on the **sealed test** split
 scored once:

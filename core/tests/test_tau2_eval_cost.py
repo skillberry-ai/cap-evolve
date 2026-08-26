@@ -164,3 +164,91 @@ def test_the_all_or_nothing_upstream_behavior_is_documented():
     src = ADAPTER.read_text(encoding="utf-8")
     assert "ALL-OR-NOTHING" in src
     assert "get_cost" in src
+
+
+# ---------------------------------------------------------------------------
+# Issue #401: the user-simulator ###STOP### + leaked-continuation-reasoning bug
+# (docs/TAU2_SUMMARY.md row 7) must be detected from the message trace and
+# treated as infra noise, never scored as an agent failure.
+# ---------------------------------------------------------------------------
+
+class _TermReason:
+    INFRASTRUCTURE_ERROR = "infrastructure_error"
+    UNEXPECTED_ERROR = "unexpected_error"
+    TIMEOUT = "timeout"
+    USER_STOP = "user_stop"  # not an infra reason — the normal end-of-episode case
+
+
+class _RewardInfo:
+    def __init__(self, reward):
+        self.reward = reward
+
+    def model_dump(self, mode="json"):
+        return {"reward": self.reward}
+
+
+class _RollMsg:
+    """Carries both the cost/usage fields _cost_and_tokens reads and model_dump()."""
+
+    def __init__(self, role, content, cost=None, usage=None):
+        self.role = role
+        self.content = content
+        self.cost = cost
+        self.usage = usage
+
+    def model_dump(self):
+        return {"role": self.role, "content": self.content}
+
+
+class _RollSim:
+    def __init__(self, messages, reward=0.0, term=_TermReason.USER_STOP):
+        self.task_id = "7"
+        self.reward_info = _RewardInfo(reward)
+        self.agent_cost = 0.0
+        self.user_cost = 0.0
+        self.termination_reason = term
+        self._messages = messages
+
+    def get_messages(self):
+        return self._messages
+
+
+def _load_adapter_module_with_termination_reason():
+    """`_load_adapter_module` plus a stub for `tau2.data_model.simulation.TerminationReason`,
+    which `_sim_to_rollout` needs and the cost-only tests above never exercised."""
+    import types as _types
+    sim_mod = _types.ModuleType("tau2.data_model.simulation")
+    sim_mod.TerminationReason = _TermReason
+    sys.modules["tau2.data_model.simulation"] = sim_mod
+    return _load_adapter_module()
+
+
+def test_a_leaked_stop_continuation_is_treated_as_infra_noise_not_a_failure():
+    mod = _load_adapter_module_with_termination_reason()
+    messages = [
+        _RollMsg("user", "###STOP### we must wait for agent's third message. Continue."),
+    ]
+    sim = _RollSim(messages, reward=0.0)
+    rollout = mod.Adapter._sim_to_rollout(sim)
+    assert rollout.error is not None, (
+        "a leaked ###STOP###+continue message must mark the rollout as infra noise, "
+        "not a scored agent failure"
+    )
+    assert "STOP" in rollout.error and "user-simulator" in rollout.error
+
+
+def test_a_clean_stop_with_no_leaked_reasoning_is_not_flagged():
+    mod = _load_adapter_module_with_termination_reason()
+    messages = [_RollMsg("user", "###STOP### Thanks, that resolves my issue.")]
+    sim = _RollSim(messages, reward=0.0)
+    rollout = mod.Adapter._sim_to_rollout(sim)
+    assert rollout.error is None, "an ordinary stop must not be treated as a simulator bug"
+
+
+def test_a_leaked_stop_on_a_fully_solved_task_is_not_flagged():
+    """reward >= 1.0 already means the episode succeeded; nothing to excuse."""
+    mod = _load_adapter_module_with_termination_reason()
+    messages = [_RollMsg("user", "###STOP### we must wait for the third message. Continue.")]
+    sim = _RollSim(messages, reward=1.0)
+    rollout = mod.Adapter._sim_to_rollout(sim)
+    assert rollout.error is None

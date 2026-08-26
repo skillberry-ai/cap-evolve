@@ -177,6 +177,18 @@ def main(argv=None) -> int:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))
         return 2
 
+    # Compliance instrumentation (issue #401): log, per candidate, whether screen.py was
+    # invoked for it BEFORE this full-val eval — a distinct, auditable event rather than
+    # something only inferable (or not) from SKILL.md prose. `screen.py` writes
+    # `<run_dir>/screens/<tag>__screenN.json`; its absence means this candidate skipped
+    # straight to full-val, which the dashboard can now show as its own event kind.
+    screens_dir = run_dir.root / "screens"
+    for t in tags:
+        screened = screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
+        run_dir.log_event("agent_optimize_compliance", tag=t,
+                          screened_before_fullval=screened,
+                          iteration=int(run_dir.spent.iterations))
+
     # The null control is built here, not by the driver, so it cannot silently be skipped
     # or accidentally differ from the parent.
     CTL = control_tag(run_dir)
@@ -280,7 +292,14 @@ def main(argv=None) -> int:
     # where against the other replicate it is +0.05 and rejects. The table said nothing about the
     # verdict resting on that choice. Re-gating costs no rollouts, so there is no reason not to
     # check; a verdict that flips is not evidence, whatever the picked replicate showed.
-    if args.gate_against == "control" and len(ctl_tags) > 1:
+    #
+    # MANDATORY two-seed-block sign agreement: this used to run only under
+    # --gate-against control, so a parent-gated round (the default) never checked whether its
+    # accept survived the choice of control replicate — measured on a real run to have called a
+    # null result positive exactly that way, unchecked because the round gated against the stored
+    # parent. With --control-replicates 2 the default, this check now always runs whenever there
+    # is more than one control block, in EITHER gate mode.
+    if len(ctl_tags) > 1:
         for r in rows:
             if r["tag"] in ctl_tags or r.get("reward") is None:
                 continue
