@@ -999,7 +999,14 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
 
     ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
     minibatch-local reject) or whose measurement is void (an indecisive tamper step):
-    the entry is still folded in, with "—" where the number would be."""
+    the entry is still folded in, with "—" where the number would be.
+
+    A genuinely empty handover (the confirmed bug this fixes) is no longer silently
+    accepted: it is ESCALATED — logged as an ``optimizer_context_warning`` event and
+    stamped into the journal itself with a visible ``EMPTY HANDOVER`` marker — so an
+    operator or the dashboard can see it happened, instead of the old placeholder text
+    reading like an unremarkable, silently-accepted note.
+    """
     tail = _journal_tail(workdir)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
@@ -1022,11 +1029,25 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
              f"<!-- {cid}: {'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
     tail = tail.strip()
-    # Dedup guard: if the optimizer dropped the marker without appending (so the tail
-    # fallback returned an entry already recorded in the run-level journal), do NOT
-    # re-append it — that would duplicate a prior iteration's entry under this cid.
-    if not tail or (tail and tail in base):
-        tail = f"## Iteration {cid} — (no handover written by the optimizer)"
+    if not tail:
+        # Confirmed data-loss bug (#400): the optimizer wrote no handover at all, and
+        # this used to be accepted with no trace anywhere. Escalate — log it AND make
+        # the journal entry itself unmissable — instead of a placeholder that reads
+        # like ordinary content.
+        run_dir.log_event("optimizer_context_warning", what="JOURNAL.md",
+                          error="empty handover: optimizer wrote no ## Iteration entry",
+                          candidate=cid)
+        tail = (f"## Iteration {cid} — ⚠ EMPTY HANDOVER (framework escalation)\n"
+                "The optimizer wrote NO journal entry this iteration. This is a bug "
+                "in the optimizer/session, not a normal outcome — see the "
+                "`optimizer_context_warning` event in events.jsonl. The next "
+                "iteration has no narrative context for this candidate beyond the "
+                "RESULT line below.")
+    elif tail in base:
+        # Dedup guard: the optimizer dropped the marker without appending (so the tail
+        # fallback returned an entry already recorded in the run-level journal). Do NOT
+        # re-append it — that would duplicate a prior iteration's entry under this cid.
+        tail = f"## Iteration {cid} — (duplicate handover; optimizer re-appended a prior entry unchanged)"
     new = base + "\n\n" + tail + stamp + "\n"
     try:
         run_journal.write_text(new, encoding="utf-8")
