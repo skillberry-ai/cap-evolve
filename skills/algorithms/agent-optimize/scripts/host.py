@@ -143,8 +143,33 @@ def _editable_files(run_dir: Path, project: Path, spec: dict) -> list[str]:
 
 #: Suffixes that make a capability file CODE rather than prose. Drives whether the briefing
 #: offers code-vs-prose advice at all — see _surface_section.
-_CODE_SUFFIXES = {".py", ".js", ".mjs", ".ts", ".tsx", ".sh", ".bash", ".rb", ".go", ".rs",
-                  ".java", ".pl", ".lua", ".sql"}
+#:
+#: KNOWN-GOOD, NOT EXHAUSTIVE. A missing suffix means the code-guard advice silently does not
+#: fire, which is the same silent-miss this host was fixed for on ``.py``/``.js`` — just
+#: relocated to whichever language nobody listed. It started at 14 entries and therefore
+#: treated C, C++, C#, PHP, Swift, Kotlin and Objective-C surfaces as prose. So: ADD to this
+#: set freely when a workload brings a new language; absence here is a gap, never a decision
+#: that the language is prose.
+#:
+#: A suffix list is deliberately kept as the test rather than the capability's declared kind.
+#: Kind is only a proxy — a ``tools`` capability can be schema-only and a ``system-prompt`` one
+#: can ship a helper script — whereas the question the briefing actually asks is "does the
+#: surface I am handing you contain code you could put a guard in".
+_CODE_SUFFIXES = {
+    # scripting / dynamic
+    ".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".rb", ".pl", ".lua", ".php",
+    ".r", ".jl", ".dart", ".groovy", ".tcl",
+    # shell
+    ".sh", ".bash", ".zsh", ".fish", ".ps1",
+    # compiled / systems
+    ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".cs", ".go", ".rs", ".java", ".kt",
+    ".kts", ".swift", ".m", ".mm", ".scala", ".zig", ".nim", ".d", ".f90", ".vb",
+    # functional
+    ".ex", ".exs", ".erl", ".hs", ".ml", ".mli", ".clj", ".cljs", ".fs", ".fsx", ".rkt",
+    ".scm", ".lisp", ".el",
+    # query / template languages that carry real logic
+    ".sql", ".vim",
+}
 #: Above this, the listing is grouped instead of enumerated. A skill-package capability can
 #: be dozens of files, and a wall of paths crowds out the rest of the briefing.
 _MAX_LISTED = 20
@@ -574,9 +599,17 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
         # split="val" + the current best's tag: the parent step the agent builds on, which is
         # the same choice the deterministic loop makes.
         ctx.inject(adapter, rd, workdir, split="val", tag=rd.best_id or "seed")
-        staged = {"staged": True, "capabilities": list(caps),
-                  "guidance": sorted(g.name for g in (workdir / "guidance").iterdir())
-                  if (workdir / "guidance").is_dir() else []}
+        guidance = (sorted(g.name for g in (workdir / "guidance").iterdir())
+                    if (workdir / "guidance").is_dir() else [])
+        # A DECLARED capability that got no guidance dir. `harness._stage_context` skips a
+        # capability with no matching skill package (`if not src.is_dir(): continue`) and still
+        # reports staged, so "some capabilities missing" was indistinguishable from "everything
+        # staged" — while the all-missing case has always been loud. Silently optimizing a
+        # surface with no guidance is the exact defect this host was fixed for; leaving half of
+        # it quiet just moves the blind spot. The staged list was already reported; what was
+        # missing is the comparison against what the spec asked for.
+        staged = {"staged": True, "capabilities": list(caps), "guidance": guidance,
+                  "guidance_missing": [c for c in caps if c not in guidance]}
         try:
             rd.log_event("host_context", capabilities=list(caps), agent=agent, staged=True)
         except Exception:  # noqa: BLE001 — the event is a nicety, the staging is the point
@@ -736,6 +769,15 @@ def main(argv=None) -> int:
     if not context["staged"]:
         print(f"::warning::optimizer context not staged for the hosted agent "
               f"({context.get('error')}) — it will optimize with no capability guidance",
+              file=sys.stderr)
+    elif context.get("guidance_missing"):
+        # Warned, not merely recorded: a field nobody greps is not a report, and this is the
+        # partial case of the failure the branch above already shouts about.
+        missing = ", ".join(context["guidance_missing"])
+        print(f"::warning::agent-optimize: no guidance staged for declared capability/ies "
+              f"[{missing}] — no skill package of that name exists under the capabilities "
+              f"root, so the agent will edit that surface with no allowed-edit-space brief. "
+              f"Check the spelling in capevolve.yaml `capabilities`, or add the skill.",
               file=sys.stderr)
 
     # Delegate the invocation. --json switches on run-optimizer's cost capture, which is how

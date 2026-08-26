@@ -9,6 +9,21 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Review follow-ups (PR #399).** Three findings from code review, all in the agent-optimize
+  host: (1) `_CODE_SUFFIXES` was a 14-entry allowlist, so a capability whose code is C, C++, C#,
+  PHP, Swift, Kotlin or Objective-C was treated as prose and never got the "the form that works
+  is a guard in the code" advice — the same silent miss this host was fixed for on `.py`/`.js`,
+  relocated to whichever language nobody listed. The set is broadened across scripting, shell,
+  compiled, functional and query languages and is now documented as **known-good, not
+  exhaustive**, so absence reads as a gap to fill rather than a decision that the language is
+  prose. (2) A *declared* capability with no matching skill package was skipped by
+  `harness._stage_context` while the payload still said `staged: True`, making
+  some-capabilities-missing indistinguishable from everything-staged — while the all-missing case
+  had always been loud. The context now carries `guidance_missing` and emits a `::warning::`
+  naming the capability, since silently optimizing a surface with no allowed-edit-space brief is
+  the exact defect this host was opened to fix. (3) A stray blank line after the concurrency
+  guard's `return 2`.
+
 - **The end_turn diagnosis accused a complete run of abandoning work.** Run 32871360361 booked 4
   of 10 rounds, investigated a round-5 lever, judged the residual failure unfixable by the
   surfaces it owned, **sealed test itself**, wrote its report and stopped at 121 of 1650 turns.

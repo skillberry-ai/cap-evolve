@@ -1060,3 +1060,115 @@ def test_an_agent_that_died_without_sealing_still_gets_the_foreground_diagnosis(
     msg = str(out.get("incomplete") or "")
     assert "foreground" in msg or "background" in msg, (
         f"the foreground diagnosis was lost for the case it exists for: {msg}")
+
+
+# --- review follow-ups (PR #399 review by OsherElhadad) -----------------------
+
+
+def test_code_advice_fires_for_languages_beyond_the_first_handful(tmp_path):
+    """`_CODE_SUFFIXES` was a 14-entry allowlist, so C/C++/C#/PHP/Swift/Kotlin got prose advice.
+
+    The briefing offers "the form that works is a guard in the code" only when the editable
+    surface actually contains code — correct, because a two-prose-file capability told to prefer
+    an in-code guard goes hunting for code it does not own. But gating that on a short suffix
+    list reintroduced the same silent-miss for every language not named, which is the failure
+    class this PR exists to remove rather than relocate.
+
+    Asserted on the module's set rather than through a rendered briefing, because the point is
+    coverage of the vocabulary, not one file's rendering.
+    """
+    # Parsed statically rather than imported: host.py's `import _bootstrap` needs its own
+    # scripts dir on sys.path, and this assertion is about the vocabulary, not the runtime.
+    import ast  # noqa: PLC0415
+
+    tree = ast.parse(HOST.read_text(encoding="utf-8"))
+    suffixes = next(
+        ast.literal_eval(n.value) for n in ast.walk(tree)
+        if isinstance(n, ast.Assign)
+        and any(getattr(t, "id", "") == "_CODE_SUFFIXES" for t in n.targets))
+
+    class _M:  # tiny shim so the assertions below read the same either way
+        _CODE_SUFFIXES = suffixes
+    mod = _M
+
+    for suffix in (".c", ".h", ".cc", ".cpp", ".hpp", ".cs", ".php", ".swift", ".kt", ".m",
+                   ".scala", ".ex", ".erl", ".hs", ".ml", ".r", ".jl", ".dart", ".zig"):
+        assert suffix in mod._CODE_SUFFIXES, (
+            f"{suffix} is not recognised as code, so a capability whose only code is {suffix} "
+            "silently gets prose-only advice — the bug this PR fixed for .py, relocated")
+    # Prose must stay prose, or the original defect comes back from the other side.
+    for suffix in (".md", ".txt", ".rst"):
+        assert suffix not in mod._CODE_SUFFIXES, f"{suffix} must not count as code"
+    # And the list must be documented as non-exhaustive, so the next reader broadens it rather
+    # than assuming absence means "deliberately prose".
+    src = HOST.read_text(encoding="utf-8")
+    head = src[:src.index("_CODE_SUFFIXES")]
+    assert "not exhaustive" in head.lower() or "non-exhaustive" in head.lower(), (
+        "the set must say it is known-good rather than complete, or its gaps read as decisions")
+
+
+def test_a_capability_with_no_guidance_skill_is_reported_not_silently_skipped(tmp_path):
+    """`harness._stage_context` skips a capability with no matching skill dir and still says
+    `staged: True`, so some-capabilities-missing was indistinguishable from all-staged.
+
+    The whole-staging failure was already loud (`staged: False` + a `::warning::`). The
+    per-capability miss was not — and "quietly optimizing less surface" is the exact defect
+    this PR was opened to fix, so leaving one half of it silent is inconsistent.
+
+    The staged guidance list was already in the payload; what was missing was comparing it
+    against what the spec asked for and saying so.
+    """
+    project = _project(tmp_path)
+    # A capability that has no skill package anywhere under skills/.
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        "capabilities: [system-prompt, no-such-capability]\n"
+        "capability_path: seed_capability\nstop_condition: \"stop after 1 round\"\n",
+        encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+    ctx = out["context"]
+
+    assert "no-such-capability" in ctx.get("capabilities", []), ctx
+    assert "no-such-capability" not in ctx.get("guidance", []), (
+        "fixture is wrong: the capability must genuinely have no guidance dir")
+    assert ctx.get("guidance_missing") == ["no-such-capability"], (
+        "a declared capability that got NO guidance is not reported, so the agent optimizes "
+        f"that surface blind and the JSON looks fully staged: {ctx}")
+
+
+def test_the_guidance_gap_is_warned_about_not_only_recorded(tmp_path):
+    """A field nobody greps is not a report. The all-missing case already warns; match it."""
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_text(
+        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
+        "capabilities: [system-prompt, no-such-capability]\n"
+        "capability_path: seed_capability\nstop_condition: \"stop after 1 round\"\n",
+        encoding="utf-8")
+    run_dir = _run_dir(tmp_path)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': []}))\n",
+        encoding="utf-8")
+    p = subprocess.run(
+        [sys.executable, str(HOST), "--run-dir", str(run_dir.root), "--project", str(project),
+         "--agent", "claude-code", "--run-optimizer", str(stub)],
+        capture_output=True, text=True, env=_env())
+
+    assert "::warning::" in p.stderr and "no-such-capability" in p.stderr, (
+        f"the guidance gap was recorded but never surfaced as a warning: {p.stderr[-600:]}")
+
+
+def test_a_fully_staged_run_reports_no_guidance_gap(tmp_path):
+    """The gap report must be silent on the healthy path, or it is noise."""
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--prompt-only")
+
+    assert out["context"].get("guidance_missing") == [], (
+        f"a fully-staged run reports a phantom gap: {out['context']}")

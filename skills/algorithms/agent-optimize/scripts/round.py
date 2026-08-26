@@ -161,7 +161,6 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
-
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project)
     work = Path(args.run_dir) / "work"
