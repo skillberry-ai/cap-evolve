@@ -1058,10 +1058,28 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
                     "redesign it on this round's numbers, and do not re-derive it as a new idea.")
     elif accepted:
         verdict, guidance = "ACCEPTED (new champion)", ""
-    else:
+    elif impact.get("broke"):
         verdict = "REJECTED (champion unchanged)"
         guidance = (" — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
                     "break a task above, dropping/redesigning the ones that did.")
+    elif impact:
+        # Rejected with NOTHING regressed: the batch was not harmful, it just did not clear the
+        # bar. The regression guidance is not merely unhelpful here, it is misdirection — it
+        # says "drop nothing, redesign nothing" while inviting a rewrite of edits that were
+        # just measured HELPING. Observed on a round stamped `Δ=+0.043 · fixed={2 tasks} ·
+        # broke={—}`, rejected against a 0.048 threshold.
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — no task that was passing under the parent regressed: this batch did not "
+                    "clear the gate's threshold, it did not do damage. So the lever is POWER or "
+                    "SIZE, not a redesign — re-measure with more trials in ONE evaluation, or "
+                    "make the effect bigger. Keep the edits that produced the `fixed` tasks "
+                    "above as your starting point; do not rewrite them on this round's numbers.")
+    else:
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted. No per-task comparison was available this "
+                    "round (one side had no rollouts on disk), so `fixed`/`broke` above are "
+                    "UNKNOWN rather than empty and this line cannot tell you which edit cost "
+                    "you: attribute per-task before redesigning anything.")
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
     stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "

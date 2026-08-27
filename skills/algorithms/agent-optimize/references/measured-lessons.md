@@ -800,3 +800,15 @@ comes from the same attempt index rather than a second independent probe, and `p
 the earlier attempts' replicates into `null_delta_between_control_replicates` (`max − min` needed no change
 to accept four samples instead of two). Re-gating is now accumulative: it reports the null over every
 replicate the round has paid for.
+
+**A reject is usually not caused by a regression, and the RESULT line used to assume it was.** The
+guidance stamped under every reject read *"re-introduce only the edits that did NOT break a task
+above, dropping/redesigning the ones that did"* — unconditionally. Stamped on a real round it
+produced `REJECTED · val=0.553 Δ=+0.043 · fixed={47484, 53161} · broke={—}`: the batch fixed two
+tasks, broke none, and lost to a 0.048 threshold on a +0.047 effect. The one sentence meant to say
+what to do next told the next iteration to drop nothing and redesign nothing — while inviting a
+rewrite of the edits that had just been measured helping. The stamp now branches: a reject WITH
+regressions keeps that guidance; a reject with none says the lever is power or size (more trials in
+one evaluation, or a bigger effect) and to keep the `fixed` edits as the starting point; and a
+reject where no per-task comparison was possible at all says `fixed`/`broke` are UNKNOWN rather
+than empty, instead of implying nothing regressed.
