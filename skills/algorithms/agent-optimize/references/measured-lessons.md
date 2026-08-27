@@ -812,3 +812,20 @@ regressions keeps that guidance; a reject with none says the lever is power or s
 one evaluation, or a bigger effect) and to keep the `fixed` edits as the starting point; and a
 reject where no per-task comparison was possible at all says `fixed`/`broke` are UNKNOWN rather
 than empty, instead of implying nothing regressed.
+
+**A run published a quarter of what it spent, and the two causes pulled in opposite directions.**
+The benchmark record's cost is a sum over per-phase rows (baseline, each committed round, finalize),
+so metered spend that no phase owned was not merely unattributed — it was published as if it had
+never happened. Run 33046360451 went out as `optimizer_usd: 0` / `eval_usd: 5.25` while its own
+state held `optimizer_usd 9.11` / `usd 12.55`: a $21.66 run reported as $5.25, in the one figure a
+full tier's budget gets projected from. Two independent holes fed it — agent mode meters the
+optimizer once for the whole loop, so no round can own a share of it; and control replicates,
+re-gates and abandoned rounds are real rollouts that no committed step references. Both are fixed by
+giving the residual a row of its own rather than inventing a per-round split the run never measured.
+The opposite error was live at the same time and worse: the host booked its metered process total
+*on top of* any `commit.py --optimizer-usd` the agent had already booked for the same money, so an
+agent that followed the skill's own instruction made the run report up to twice its optimizer spend
+— and a cost-based `stop_condition` would have ended a run that still had budget. The host now books
+only the residual, bracketed to its own invocation so a `--resume` run does not mistake an earlier
+host's spend for this agent's attribution, and it books the loop's wall time, which nothing recorded
+at all (`optimizer_seconds: 0.0` for a run that took hours).

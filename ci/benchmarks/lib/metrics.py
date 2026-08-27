@@ -74,6 +74,20 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
     their optimizer_usd/optimizer_seconds are 0.0. ``best_id`` labels the ``finalize``
     row's candidate (the "evaluate" event itself only carries a fixed tag, not the
     actual candidate id — the caller already knows it from state.json).
+
+    A final ``unattributed`` row carries whatever the run METERED but no phase above claims,
+    because every consumer of these rows (``record.rollup``, ``results_md``, the Totals line
+    below, the Pages per-run table) reports cost by SUMMING them — so spend that belonged to no
+    step was not merely unattributed, it was published as if it had never happened. Measured on
+    smoke spreadsheetbench run 33046360451: ``suite.optimizer_usd: 0`` and ``eval_usd: 5.25``
+    for a run whose own state held ``optimizer_usd 9.11`` / ``usd 12.55`` — a $21.66 run
+    published as $5.25, a 4x understatement in the one figure a full tier's budget gets
+    projected from. Two independent holes fed it: agent mode meters the optimizer ONCE for the
+    whole loop (no round can own a share of it), and control replicates, re-gates and abandoned
+    rounds are real evaluations that no ``step`` event references. The residual is the honest
+    name for both, and it is visible as its own row rather than smuggled into a round that did
+    not spend it. Being a residual and not a sum, a run that DOES attribute everything per round
+    emits no row at all, and an unmetered run (``usd == 0``) cannot produce a negative one.
     """
     events_path = Path(run_dir) / "events.jsonl"
     rows: list[dict] = []
@@ -136,7 +150,53 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
                 "optimizer_usd": 0.0, "optimizer_seconds": 0.0,
                 "eval_usd": ev.get("cost_usd"), "eval_seconds": ev.get("seconds"),
             })
+    residual = _unattributed_row(Path(run_dir), rows)
+    if residual:
+        rows.append(residual)
     return rows
+
+
+# Below a cent in either role, the residual is rounding between the meter and the events, and a
+# row saying "$0.00 went somewhere" costs a reader more than it tells them.
+_RESIDUAL_FLOOR_USD = 0.01
+
+
+def _unattributed_row(run_dir: Path, rows: list[dict]) -> dict | None:
+    """Metered spend that no row in ``rows`` accounts for, as one row — or None if it all is.
+
+    The run's own ``state.json`` is the meter of record: ``spent.usd`` is every rollout the run
+    paid for and ``spent.optimizer_usd`` every proposal, both accumulated by ``update_spent`` at
+    each booking, so each is an upper bound on what the per-phase events can attribute. Intake
+    spend rides in the optimizer column: it is non-runner cost with no step to call its own, and
+    the alternative is to keep dropping it.
+    """
+    state = _load(run_dir / "state.json")
+    spent = state.get("spent") or {}
+    if not spent:
+        return None
+    opt_metered = (spent.get("optimizer_usd") or 0.0) + (spent.get("intake_usd") or 0.0)
+    eval_metered = spent.get("usd") or 0.0
+    opt_secs_metered = ((spent.get("optimizer_seconds") or 0.0)
+                        + (spent.get("intake_seconds") or 0.0))
+    eval_secs_metered = spent.get("runner_seconds") or 0.0
+    opt_usd = round(max(0.0, opt_metered - sum(r.get("optimizer_usd") or 0.0 for r in rows)), 6)
+    eval_usd = round(max(0.0, eval_metered - sum(r.get("eval_usd") or 0.0 for r in rows)), 6)
+    if opt_usd < _RESIDUAL_FLOOR_USD and eval_usd < _RESIDUAL_FLOOR_USD:
+        return None
+    # Seconds only where the same role has unattributed money, so a row cannot claim time for a
+    # role whose spend was fully accounted for.
+    opt_secs = (round(max(0.0, opt_secs_metered
+                          - sum(r.get("optimizer_seconds") or 0.0 for r in rows)), 2)
+                if opt_usd >= _RESIDUAL_FLOOR_USD else 0.0)
+    eval_secs = (round(max(0.0, eval_secs_metered
+                           - sum(r.get("eval_seconds") or 0.0 for r in rows)), 2)
+                 if eval_usd >= _RESIDUAL_FLOOR_USD else None)
+    return {
+        "phase": "unattributed", "iter": None, "candidate": "(whole run)", "accepted": None,
+        "reward": None,
+        "optimizer_usd": opt_usd, "optimizer_seconds": opt_secs,
+        "eval_usd": eval_usd, "eval_seconds": eval_secs,
+    }
 
 
 def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_path: str = "",
@@ -301,21 +361,32 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
             eval_usd_t += s["eval_usd"] or 0
             eval_s_t += s["eval_seconds"] or 0
         out.append("")
+        # These sum the rows, INCLUDING the `unattributed` one, so they now reconcile with the
+        # run's own meters instead of reporting only the share some phase happened to claim.
         # Agent mode runs ONE optimizer process for the whole loop, so no per-round optimizer
-        # cost exists to sum — and summing the absent figures printed "optimizer $0.0000 over
-        # 0s" directly underneath a headline reading "optimizer $7.95" (run 32971129203). Fall
-        # back to the run-level spend the headline already uses, and say that it is whole-loop
-        # rather than silently implying it was attributed per round.
-        run_opt_usd = spent.get("optimizer_usd") or 0.0
-        run_opt_s = spent.get("optimizer_seconds") or 0.0
-        if not (opt_usd_t or opt_s_t) and (run_opt_usd or run_opt_s):
-            out.append(f"**Totals:** optimizer ${run_opt_usd:.4f} over "
-                       f"{_fmt_duration(run_opt_s)} (whole-loop — one optimizer process drove "
-                       f"every round, so there is no per-round figure to attribute) · "
-                       f"eval ${eval_usd_t:.4f} over {_fmt_duration(eval_s_t)}")
-        else:
-            out.append(f"**Totals:** optimizer ${opt_usd_t:.4f} over {_fmt_duration(opt_s_t)} · "
-                       f"eval ${eval_usd_t:.4f} over {_fmt_duration(eval_s_t)}")
+        # cost exists to sum — and summing the absent figures printed "optimizer $0.0000 over 0s"
+        # directly underneath a headline reading "optimizer $7.95" (run 32971129203). The note
+        # below names whichever role the residual came from rather than letting the total imply
+        # it was attributed per round.
+        out.append(f"**Totals:** optimizer ${opt_usd_t:.4f} over {_fmt_duration(opt_s_t)} · "
+                   f"eval ${eval_usd_t:.4f} over {_fmt_duration(eval_s_t)}")
+        resid = next((s for s in steps if s["phase"] == "unattributed"), None)
+        if resid:
+            parts = []
+            if (resid["optimizer_usd"] or 0) > 0:
+                parts.append(f"optimizer ${resid['optimizer_usd']:.4f} — agent mode runs ONE "
+                             "optimizer process, metered whole-loop, so no round owns a share "
+                             "of it")
+            if (resid["eval_usd"] or 0) > 0:
+                parts.append(f"eval ${resid['eval_usd']:.4f} — control replicates, re-gates and "
+                             "abandoned rounds are real evaluations that no committed step "
+                             "references")
+            out.append("")
+            out.append("> The `unattributed` row is metered spend no phase above owns ("
+                       + "; ".join(parts) + "). It is shown rather than dropped so these totals "
+                       f"match what the run actually paid: `spent` reads "
+                       f"${spent.get('usd', 0) or 0:.2f} runner + "
+                       f"${spent.get('optimizer_usd', 0) or 0:.2f} optimizer.")
     return "\n".join(out)
 
 

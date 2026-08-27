@@ -664,6 +664,29 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
                      "error": f"{type(exc).__name__}: {exc}"[:400]}
 
 
+def optimizer_spend_to_book(metered: dict, before: dict, now: dict) -> dict:
+    """The share of THIS agent process's metered spend that is not already in the run's state.
+
+    The host meters the whole agent process; the agent books its own proposal cost per round
+    through ``commit.py --optimizer-usd/--optimizer-tokens/--optimizer-seconds``, which the skill
+    asks it to do. Those are the SAME money — a round's proposal happens inside this process — so
+    booking the metered total on top of them reports up to twice the optimizer spend actually
+    used, and a run's `max_usd`/cost-based stop condition then fires against a number no one
+    spent. Book the residual instead.
+
+    ``before``/``now`` bracket THIS invocation: a ``--resume`` run carries an earlier host's
+    optimizer spend in the same counter, and that is not this agent's attribution to net out.
+    Each role is netted independently, and never below zero — an agent that over-attributes
+    (guessing its own cost high) must not subtract from another role or from the run total.
+    """
+    out = {}
+    for key in ("usd", "tokens", "seconds"):
+        booked_by_agent = max(0, (now.get(key) or 0) - (before.get(key) or 0))
+        out[key] = max(0, (metered.get(key) or 0) - booked_by_agent)
+    return {"usd": float(out["usd"]), "tokens": int(out["tokens"]),
+            "seconds": float(out["seconds"])}
+
+
 def _child_env() -> dict:
     env = dict(os.environ)
     env.setdefault("CAPEVOLVE_SKILLS_DIR", str(SKILLS))
@@ -846,6 +869,24 @@ def main(argv=None) -> int:
     if args.usd_budget:
         cmd += ["--usd-budget", str(float(args.usd_budget))]
 
+    # What the run had already booked as optimizer spend BEFORE this agent started. The agent
+    # books its own proposal cost per round through commit.py --optimizer-usd (the skill asks it
+    # to), and that is the SAME money this subprocess meters — so the host must book the
+    # RESIDUAL, not the total, or a compliant agent makes the run report roughly twice the
+    # optimizer spend it actually used. Snapshotted rather than read at the end because a
+    # `--resume` run carries a PREVIOUS host invocation's spend in the same counter, and that is
+    # not this agent's attribution to net out.
+    booked_before = {"usd": 0.0, "tokens": 0, "seconds": 0.0}
+    try:
+        from cap_evolve import RunDir as _RunDir
+
+        _sp = _RunDir.open(run_dir).spent
+        booked_before = {"usd": float(_sp.optimizer_usd or 0.0),
+                         "tokens": int(_sp.optimizer_tokens or 0),
+                         "seconds": float(_sp.optimizer_seconds or 0.0)}
+    except Exception:  # noqa: BLE001 — a missing snapshot must not stop the run
+        pass
+
     started = time.time()
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout,
@@ -894,8 +935,19 @@ def main(argv=None) -> int:
                      usd=usd, tokens=tokens, seconds=round(seconds, 3),
                      returncode=(None if proc is None else proc.returncode),
                      timed_out=timed_out, stop_reason=stop_reason, num_turns=num_turns)
-        if usd or tokens:
-            rd.update_spent(optimizer_usd=usd, optimizer_tokens=tokens)
+        # Book only what the agent did not already attribute to a round during THIS invocation.
+        # `seconds` is booked too: without it the run recorded `optimizer_seconds: 0.0` for a
+        # loop that ran for hours, so metrics.py's whole-loop total rendered a dash and every
+        # per-hour cost figure was undefined.
+        now = rd.spent
+        book = optimizer_spend_to_book(
+            {"usd": usd, "tokens": tokens, "seconds": seconds},
+            booked_before,
+            {"usd": float(now.optimizer_usd or 0.0), "tokens": int(now.optimizer_tokens or 0),
+             "seconds": float(now.optimizer_seconds or 0.0)})
+        if book["usd"] or book["tokens"] or book["seconds"]:
+            rd.update_spent(optimizer_usd=book["usd"], optimizer_tokens=book["tokens"],
+                            optimizer_seconds=book["seconds"])
         # The run dir's budget, not the spec's: baseline freezes it there, `--resume` can
         # extend it, and it is what `budget_exhausted()` actually judges against.
         rounds_done = int(rd.spent.iterations or 0)
