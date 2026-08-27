@@ -35,6 +35,69 @@ import _bootstrap  # noqa: F401  # side-effect import, see above
 from cap_evolve import RunDir, harness
 
 
+def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
+    """The gate's NUMBERS for ``candidate_id``, read back from ``round.py``'s own table.
+
+    ``dashboard.reduce_run`` builds the published ``gate_decisions[]`` (read by the dashboard,
+    the TUI and CI's live snapshot) by regex-parsing the deterministic gate's reason string
+    (``Δ̄ = …, SE=…, n=…, k·SE=…``). An agent writes free prose, so nothing matched and every
+    numeric column came back null — on run 32971129203 the deltas and thresholds existed only
+    inside sentences like "delta +0.033 within control noise 0.044". This function is why that
+    is now avoidable: ``round.py`` persists the whole gate table to ``$R/work/round_i<N>.json``,
+    so the numbers are on disk, structured, already.
+
+    ``N`` is ``spent.iterations`` at gate time, and ``record_iteration`` has not charged this
+    round yet — so the current count still names this round's table. A same-iteration re-gate
+    gets a ``.r<k>`` suffix rather than overwriting; the highest suffix is the operative one,
+    because a re-gate is run to supersede the first.
+
+    Returns {} when there is no table (``gate_check``-only rounds never write one, and
+    ``round.py``'s write is best-effort) — a missing measurement must stay missing, never
+    become a fabricated 0.
+    """
+    work = run_dir.root / "work"
+    stem = f"round_i{int(run_dir.spent.iterations)}"
+    # Numeric, not lexical: a plain string sort ranks `.r10` below `.r2`, so the tenth re-gate
+    # would lose to the second. Re-gates are rare but a wrong one here is silently wrong.
+    def _suffix(p: Path) -> int:
+        tail = p.name[len(stem):].removesuffix(".json")
+        return int(tail[2:]) if tail.startswith(".r") and tail[2:].isdigit() else 0
+    tables = sorted(work.glob(f"{stem}.json")) + sorted(work.glob(f"{stem}.r*.json"),
+                                                        key=_suffix)
+    if not tables:
+        return {}
+    try:
+        table = json.loads(tables[-1].read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entry = next((c for c in (table.get("candidates") or [])
+                  if c.get("tag") == candidate_id), None)
+    if entry is None:
+        return {}
+    parent = table.get("parent") or {}
+    out = {
+        "parent_val": parent.get("reward"),
+        "gate_stderr": parent.get("stderr"),
+        "gate_n": parent.get("n_tasks"),
+        "gate_delta": entry.get("gate_delta"),
+        "gate_threshold": entry.get("gate_threshold"),
+        "gate_mode": (table.get("gated_against") or {}).get("mode"),
+        "gate_table": tables[-1].name,
+    }
+    # The drift-free second opinion, when the round measured one. On run 32971129203 this is
+    # the whole finding: cand_1 was rejected against the parent's STORED reward (Δ 0.0333 vs
+    # threshold 0.0440) while the control-relative comparison ACCEPTED it (Δ 0.0556 vs 0.0341).
+    # Recording only the booked verdict hides that the decision was reference-dependent.
+    ctl = entry.get("control_relative") or {}
+    if ctl:
+        out["control_relative_verdict"] = ctl.get("verdict")
+        out["control_relative_delta"] = ctl.get("gate_delta")
+    bar = (table.get("evidence_bar") or {}).get("value")
+    if bar is not None:
+        out["evidence_bar"] = bar
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     """The first accept/reject event already recorded for ``candidate_id``, if any.
 
@@ -188,14 +251,18 @@ def main(argv=None) -> int:
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
     # The shared iteration step: charges iterations/stall, writes the canonical ``step``
-    # record, reconciles the run-level JOURNAL.md. ``parent_val`` is unknown in agent mode
-    # (the agent gates via gate_check, which prints but does not persist the parent mean),
-    # so it stays None rather than being guessed.
+    # record, reconciles the run-level JOURNAL.md. The gate's numbers ride along so the
+    # dashboard's ``gate_decisions[]`` does not have to regex them back out of an agent's
+    # prose — read from round.py's persisted table, and simply absent when it wrote none.
+    gate = _round_gate_numbers(run_dir, args.candidate_id)
     harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
                              accepted=accepted, reason=args.note or args.decision,
                              val=args.val,
+                             parent_val=gate.pop("parent_val", None),
                              opt_cost_usd=args.optimizer_usd or None,
-                             opt_tokens=args.optimizer_tokens or None)
+                             opt_tokens=args.optimizer_tokens or None,
+                             optimizer_seconds=args.optimizer_seconds or None,
+                             **gate)
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()

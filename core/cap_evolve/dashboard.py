@@ -842,6 +842,15 @@ def reduce_run(run_dir) -> dict:
             "parent_val": parent_val,
             "best_so_far": best,
         }
+        # Structured gate numbers, when the algorithm recorded them instead of leaving them
+        # to be regexed out of a reason string (agent-optimize's commit.py reads them back
+        # from round.py's persisted table). Copied verbatim and only when present, so a
+        # deterministic step is byte-identical to before.
+        for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
+                    "gate_mode", "gate_table", "control_relative_verdict",
+                    "control_relative_delta", "evidence_bar"):
+            if ev.get(_gk) is not None:
+                node[_gk] = ev.get(_gk)
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
@@ -1061,7 +1070,11 @@ def reduce_run(run_dir) -> dict:
         m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
-        gate_decisions.append({
+        # A number the algorithm RECORDED beats the same number scraped out of prose. Agent
+        # mode writes free text, so every regex above missed and the whole numeric half of
+        # this record came back null (run 32971129203); the deterministic loops record no
+        # structured fields, so they still take the regex path exactly as before.
+        row = {
             "iteration": n.get("iteration"),
             "candidate": n["id"],
             "verdict": verdict,
@@ -1074,7 +1087,20 @@ def reduce_run(run_dir) -> dict:
             "k_se": float(m_bar.group(1)) if m_bar else None,
             "threshold": float(m_bar.group(2)) if m_bar else None,
             "reason": _sanitize_text(reason, 600),
-        })
+        }
+        for _field, _key in (("delta", "gate_delta"), ("stderr", "gate_stderr"),
+                             ("n", "gate_n"), ("k_se", "gate_k_se"),
+                             ("threshold", "gate_threshold")):
+            if n.get(_key) is not None:
+                row[_field] = n.get(_key)
+        # Which reference the gate actually used, and the drift-free second opinion when the
+        # round measured one. Without these a reader cannot tell that a rejection was
+        # reference-dependent — the finding run 32971129203 turned on.
+        for _key in ("gate_mode", "control_relative_verdict", "control_relative_delta",
+                     "evidence_bar"):
+            if n.get(_key) is not None:
+                row[_key] = n.get(_key)
+        gate_decisions.append(row)
 
     # --- cost ledger: every dollar, attributed to the thing that spent it -----
     # Rows are built from the events that actually recorded a spend (intake, each
