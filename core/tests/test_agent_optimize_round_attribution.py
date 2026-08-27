@@ -79,8 +79,53 @@ def test_commit_reads_only_fields_round_actually_writes():
                 "gate_delta", "gate_threshold", "control_relative",
                 "null_delta_between_control_replicates", "evidence_bar"):
         assert key in src, f"round.py no longer writes {key}; this fixture is stale"
-    assert 'stem = f"round_i{int(run_dir.spent.iterations)}"' in src, (
-        "round.py's table filename changed; commit.py's lookup must follow")
+    assert "round_i{int(run_dir.spent.iterations)}" in src, (
+        "round.py's table filename no longer keys off spent.iterations; commit.py's lookup must "
+        "follow")
+
+
+def test_commit_finds_the_table_wherever_round_decided_to_name_it(tmp_path):
+    """The naming coupling itself, checked by behaviour rather than by matching source text.
+
+    The two files used to be kept in step by a filename literal duplicated in both. That is a
+    guard against editing one copy, not against the schemes diverging — and the scheme now has
+    two halves (iteration, and the ``.r<k>`` attempt suffix a re-gate gets). So write a table at
+    the name ``round.py`` itself would choose and assert ``commit.py`` reads its numbers back.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_ao_round_naming", SCRIPTS / "round.py")
+    rnd = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(SCRIPTS))
+    spec.loader.exec_module(rnd)
+
+    run_dir, work = _run_dir_with_round_table(tmp_path, table=None)
+    (run_dir.root / "work").mkdir(parents=True, exist_ok=True)
+    stem = rnd.table_stem(run_dir)
+    (run_dir.root / "work" / f"{stem}.json").write_text(json.dumps(ROUND_TABLE),
+                                                        encoding="utf-8")
+    _commit(run_dir, work)
+    d = _gate_decision(run_dir)
+    # These can only have come from the table, since the prose note carries no numbers.
+    assert d.get("threshold") == ROUND_TABLE["candidates"][0]["gate_threshold"], (
+        f"commit.py did not read the table round.py would have written ({stem}.json): {d}")
+    assert d.get("evidence_bar") == ROUND_TABLE["evidence_bar"]["value"]
+
+    # And on a re-gate, the LATER attempt's table is the operative one. Checked on the lookup
+    # itself rather than by booking twice, since booking one candidate id twice is a different
+    # rule (and one commit.py deliberately refuses).
+    spec_c = importlib.util.spec_from_file_location("_ao_commit_naming", SCRIPTS / "commit.py")
+    cmt = importlib.util.module_from_spec(spec_c)
+    spec_c.loader.exec_module(cmt)
+
+    stem2 = rnd.table_stem(run_dir)
+    assert stem2 != stem, "a second table did not advance the attempt index"
+    later = {**ROUND_TABLE, "candidates": [{**ROUND_TABLE["candidates"][0],
+                                            "gate_delta": 0.12345}]}
+    (run_dir.root / "work" / f"{stem2}.json").write_text(json.dumps(later), encoding="utf-8")
+    nums = cmt._round_gate_numbers(run_dir, "cand_1")
+    assert nums.get("gate_table") == f"{stem2}.json" and nums.get("gate_delta") == 0.12345, (
+        f"the re-gate's table did not supersede the first attempt's: {nums}")
 
 
 def _run_dir_with_round_table(tmp_path, *, table: dict | None = ROUND_TABLE):

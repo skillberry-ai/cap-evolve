@@ -402,12 +402,34 @@ skipped one leaves artifacts that cannot be audited afterwards:
 | --- | --- | --- |
 | `$A/spend.py` | before | affordability + your stop condition as checkable predicates |
 | `$A/gate_check.py` | after the full-val eval | the paired significance gate — the accept decision |
-| `$A/commit.py` | always, accept or reject | books the decision: snapshot, best_id, iteration, event |
+| `$A/commit.py` | always, whatever the outcome | books the decision: snapshot, best_id, iteration, event |
 | `$A/measure.py` | once, at the end | seals test exactly once and prints the honest table |
 
 `commit.py` is the one most easily skipped on a reject, and skipping it is what makes a run
 report zero iterations having done real work. `screen.py` and `round.py` are optional
 accelerators; the four above are not.
+
+`--decision` has THREE values, and the third is not a formality. `accept` = new champion.
+`reject` = the edit was judged and refuted. `inconclusive` = the measurement could not resolve it
+— which is exactly what `round.py` reports as `verdict: inconclusive` (`verdict_stable: false`,
+the verdict flipping depending on which byte-identical control replicate was the reference). Book
+that as `inconclusive`, not as a reject:
+
+- a reject increments the STALL counter, and stall is the signal that means *the optimizer has run
+  out of ideas* — the one thing an ambiguous measurement is no evidence of. Two ambiguous rounds
+  booked as rejects can end your run early for a reason that never happened.
+- a reject files the edit in `rejected.jsonl`, which later rounds read as *this was tried and it
+  did not work*. An edit nothing could judge has not been tried in that sense; filing it there
+  teaches you to avoid your own untested idea.
+- `inconclusive` still charges the iteration (the budget really was spent) and still snapshots the
+  candidate, so nothing is hidden. To resolve it, re-measure under a **fresh tag** — re-running the
+  same tag REPLACES its rollouts rather than adding to them. The control side needs no care: a
+  re-gate of the same iteration measures its own `ctl_null_i<N>a<k>` replicates and pools the
+  earlier attempt's, so `null_delta_between_control_replicates` covers every replicate the round
+  has paid for and the earlier attempt's table stays on disk beside the new one.
+
+`--reject-basis gate` asserts the gate ran AND rejected; `commit.py` refuses it when the gate
+accepted or returned inconclusive, because that field is the run's record of what the evidence was.
 
 ## Your stop condition
 
@@ -421,8 +443,26 @@ its single `recommendation` (`stop` | `narrow_scope` | `continue`), as SKILL.md 
 Your always-on instructions mention `LEDGER.md`, `RUNMAP.md` and `prior_iterations/`. Those are
 built by the *deterministic* loop, which calls one optimizer per iteration; you are driving the
 whole search yourself, so they will not exist here and their absence is not a problem — do not
-go looking for them or try to recreate them. `JOURNAL.md` is different: `commit.py` reconciles
-it as you book rounds, so it accrues your own history and is worth reading from round 2 on.
+go looking for them or try to recreate them.
+
+`JOURNAL.md` is different, and it has TWO halves — one of them is yours to write.
+
+- The FRAMEWORK half: `commit.py` stamps an objective `RESULT` line under each entry (outcome,
+  Δ, and the exact task ids that round broke and fixed). You get that for free.
+- YOUR half, the handover: **before each `commit.py`, append your entry for the round to
+  `<your working dir>/JOURNAL.md`** — the same `--from-dir` you are about to commit — as a
+  block starting `## Iteration <candidate id> — <one-line headline>`, covering: the changes you
+  made (file + cluster each targets), the effect you expected and why it was safe, which prior
+  RESULT lines you built on, hypotheses a prior RESULT has already REFUTED (never re-test one),
+  and your focus next round. Read the accumulated `$R/JOURNAL.md` before writing, so you build
+  on every prior round rather than the last one.
+
+Skipping your half is silent and cheap in the moment and expensive by round 3: the run-level
+journal records "(no handover written by the optimizer)", and your later rounds can then see
+WHICH tasks each edit broke but not WHAT WAS TRIED — so refuted ideas get re-tested with the
+budget that should have gone to new ones. Measured: three-round runs where every entry read that
+way. `commit.py` returns `handover_recorded` and warns when it books an empty one; if you see
+that warning, write the entry before the next round rather than at the end of the run.
 
 ## Unattended — this is the one real difference from an interactive run
 
@@ -487,7 +527,11 @@ def _decided_candidates(run_dir: Path) -> set[str]:
                     ev = json.loads(line)
                 except Exception:  # noqa: BLE001 — a torn line is not a decision
                     continue
-                if ev.get("kind") in ("accept", "reject") and ev.get("candidate"):
+                # ``inconclusive`` is a booking too. Leaving it out would report a round booked
+                # with the honest decision as gated-but-never-booked, i.e. diagnose the run as
+                # defective precisely for not misfiling an unresolvable verdict as a reject.
+                if ev.get("kind") in ("accept", "reject", "inconclusive") and \
+                        ev.get("candidate"):
                     decided.add(str(ev["candidate"]))
     except OSError:
         return decided

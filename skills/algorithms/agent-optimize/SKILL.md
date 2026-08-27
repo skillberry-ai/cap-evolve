@@ -177,6 +177,9 @@ python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$
        --decision accept --val <cand_mean> --note "<one line: the general rule you added>"
 ```
 
+An unresolved round (`verdict_stable: false`) is `--decision inconclusive`, not a reject — that
+advances **stall**. See `references/measured-lessons.md`.
+
 **On a reject, pass `--reject-basis`** — `screen.py`'s "promote" means "could not prove harm", never "was
 evaluated on full val", so conflating its verdict with your disposition makes the run's artifacts
 contradict themselves. `gate` (a full-val paired gate ran and said reject — the only basis asserting
@@ -184,7 +187,7 @@ this), `screen_kill` (the screen proved harm), `ceiling` (arithmetic proved no a
 full val was never paid), `budget` (screen evidence plus a budget call, not a gate decision), `infra`
 (missing data, not a judgement). So `screen: promote` + `reject_basis: ceiling` is one coherent story.
 
-`commit.py` **refuses a `--candidate-id` that already carries an accept/reject event** (`--force` only to
+`commit.py` **refuses a `--candidate-id` that already carries a decision event** (`--force` only to
 repair a record deliberately): two drivers tagging a candidate alike otherwise produce two decision
 events over ONE set of rollouts. Pass `--optimizer-usd/--optimizer-tokens/--optimizer-seconds` for
 **your own** proposal cost — the evaluate phase records the runner's, nothing records the proposer's.

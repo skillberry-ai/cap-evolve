@@ -750,3 +750,53 @@ seed **42.8%** of the time at 5 trials, and in one run it vetoed *both* candidat
 significance test. Read `regressions` as a pointer to look at, never as a verdict, and always next to
 the control's own list.
 
+
+**"Not resolvable" is a decision you can book, and booking it as a reject costs the run.**
+`round.py` marks a candidate `verdict: inconclusive` when `verdict_stable: false` — its verdict changed
+depending on which byte-identical control replicate happened to be the reference, so the round cannot tell
+its edit from re-measurement. Measured on a smoke run: cand_2 at Δ +0.0433 against a threshold of 0.0492,
+`verdict_by_reference: {ctl_null_i1: reject, ctl_null_i1r1: accept}`.
+
+Book it as `commit.py --decision inconclusive`. Two things follow from booking it as a `reject` instead, and
+neither is cosmetic:
+
+- **A reject advances the stall counter, and stall ends the run.** `update_spent(accepted=False)` increments
+  it, and `budget_exhausted()` stops on the cap (3 in the smoke tier). Stall means *the optimizer has run out
+  of ideas* — the one thing an ambiguous measurement is no evidence of. On a benchmark whose replicate noise
+  makes ambiguity common, two unresolved rounds can end a run for a reason that never happened.
+  `inconclusive` charges `iterations` (the budget really was spent) and leaves stall alone.
+- **A reject files the edit in `rejected.jsonl`**, which later rounds read as *tried, did not work*. An edit
+  nothing could judge has not been tried in that sense, so filing it there teaches you to avoid your own
+  untested idea. `inconclusive` skips that file and logs `step_indecisive` instead — which is also the event
+  the dashboard reads to render the step as `indecisive` rather than red.
+
+The `JOURNAL.md` RESULT line follows the same rule: an unresolved round is stamped `UNRESOLVED (not judged)`,
+not `REJECTED … its WHOLE batch was reverted`, because the correct next move for an unresolved edit is to
+**re-measure** it, not to redesign it.
+
+**To re-measure, use a FRESH tag.** Rollouts are written `<task>__<tag>__t{k}.json` for
+`k in range(n_trials)`, so re-running a tag **replaces** `t0..t9` rather than adding `t10..t19` — it swaps a
+reading for another reading and buys no evidence. Either pick a new tag (`cand_2b`) or ask for the higher
+`--trials` in ONE evaluation. This is not hypothetical: told to "re-run with more trials", one run
+re-measured its own control under the same tag, spent 100 metric calls, replaced a 0.4967 replicate with a
+0.5067 one, and *widened* the round's replicate spread. `harness` now logs a `rollout_overwrite_warning`
+naming the reading that was destroyed, because once the files are gone it exists nowhere else.
+
+**`evidence_bar` is necessary, not sufficient.** It is the noise floor to compare a delta against, but
+`gate_threshold` (k·SE on the paired per-task differences) is what each `verdict` is actually computed from,
+and it is usually stricter. A delta above `evidence_bar` and below `gate_threshold` is not an accept — cand_2
+above cleared 0.0167 and missed 0.0492.
+
+**A re-gate must not eat the evidence it was run to add.** `round.py` gave its *table* a `.r<k>` suffix on a
+same-iteration re-run — "since a re-gate is usually being COMPARED with the first one" — but gave the control
+*rollouts* the same `ctl_null_i<N>` tags as the first attempt. So the one operation the script explicitly
+supports preserved the summary and deleted the measurements it summarises. Measured: the second attempt at
+iteration 1 replaced `ctl_null_i1` (0.4967 → 0.5067) and `ctl_null_i1r1` (0.4800 → 0.4367), spending 200 of
+the run's 900 metric calls to swap two readings for two others; the replicate spread went 0.0167 → 0.0700, so
+the bar grew 4.2×, and `round_i1.json` was left quoting an `evidence_bar` derived from two numbers that no
+longer existed anywhere on disk. The round's identity is (iteration, attempt) and **both** halves have to
+reach the names on disk: control tags are now `ctl_null_i<N>a<k>` from the second attempt on, the table name
+comes from the same attempt index rather than a second independent probe, and `prior_attempt_controls` pools
+the earlier attempts' replicates into `null_delta_between_control_replicates` (`max − min` needed no change
+to accept four samples instead of two). Re-gating is now accumulative: it reports the null over every
+replicate the round has paid for.

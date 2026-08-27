@@ -257,6 +257,32 @@ def evaluate_candidate(
     out_dir = run_dir.rollouts / split
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Trials are written as ``<task>__<tag>__t{k}.json`` for ``k in range(n_trials)``, so
+    # re-evaluating a tag that already has rollouts REPLACES ``t0..t9`` — it does not append
+    # ``t10..t19``. Re-evaluation is legitimate (``--resume`` reads its champion's val score
+    # back off disk), so this warns rather than refuses. What it must not be is silent: on run
+    # 33046360451 the agent, told by ``round.py`` to "re-run with more trials" after an
+    # inconclusive verdict, re-measured control ``ctl_null_i1`` under its own tag and replaced a
+    # 0.4967 replicate with 0.5067 — spending 100 metric calls to swap a data point rather than
+    # add one, and WIDENING the round's replicate spread. In the event stream that is
+    # indistinguishable from progress. ``prior_reward`` is recorded because once the files are
+    # overwritten the destroyed reading exists nowhere else.
+    prior = sorted(out_dir.glob(f"*__{tag}__t*.json"))
+    if prior:
+        prior_reward = None
+        try:
+            prior_reward = split_result_from_rollouts(run_dir, tag, split).reward
+        except Exception:  # noqa: BLE001 — a torn/partial rollout must not block the eval
+            pass
+        run_dir.log_event(
+            "rollout_overwrite_warning", split=split, tag=tag,
+            prior_trials=len({p.name.rsplit("__t", 1)[-1] for p in prior}),
+            prior_rollouts=len(prior), prior_reward=prior_reward,
+            why=("this tag already has rollouts and they are being REPLACED, not added to — "
+                 "trials are always written t0..t{n_trials-1}. To accumulate evidence instead, "
+                 "use a fresh tag, or ask for the higher trial count in ONE evaluation."),
+        )
+
     from .stats import mean, stderr
     has_batch = hasattr(adapter, "run_batch")
     has_run_trials = hasattr(adapter, "run_trials")
@@ -900,8 +926,12 @@ def _journal_tail(workdir: Path) -> str:
         tail = text.split(_JOURNAL_MARK, 1)[1].strip()
     else:
         # Optimizer rewrote the file (no marker) — fall back to its last ## Iteration block.
-        idx = text.rfind("\n## ")
-        tail = text[idx:].strip() if idx != -1 else ""
+        # Anchored per-line rather than on "\n## ": an agent-mode optimizer is not handed a
+        # seeded journal to append to, so it writes a FRESH file that STARTS with its heading,
+        # and a "\n## " search misses a heading at offset 0 — silently booking "(no handover
+        # written by the optimizer)" for a handover that was in fact written.
+        heads = list(re.finditer(r"(?m)^## ", text))
+        tail = text[heads[-1].start():].strip() if heads else ""
     # Strip any marker the optimizer copied into its entry text.
     return tail.replace(_JOURNAL_MARK, "").strip()
 
@@ -992,14 +1022,22 @@ def _seed_journal(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
-                       accepted: bool, val: float | None, delta: float | None) -> None:
+                       accepted: bool, val: float | None, delta: float | None,
+                       indecisive: bool = False) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
     stamped with the framework's objective outcome. Append-only at the run level so the
     handover truly accumulates across accepted AND rejected iterations.
 
     ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
     minibatch-local reject) or whose measurement is void (an indecisive tamper step):
-    the entry is still folded in, with "—" where the number would be."""
+    the entry is still folded in, with "—" where the number would be.
+
+    ``indecisive=True`` gets its own verdict, because the RESULT line is the one artifact
+    written to stop the next iteration repeating a refuted idea — and a void measurement
+    refutes nothing. Stamped as a rejection it read "REJECTED (champion unchanged) … its
+    WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above",
+    telling the next iteration to redesign an edit that had never actually been judged. The
+    correct next move for an unresolved edit is to RE-MEASURE it."""
     tail = _journal_tail(workdir)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
@@ -1011,15 +1049,25 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     impact = _candidate_task_impact(run_dir, cid, "val") or {}
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
-    verdict = "ACCEPTED (new champion)" if accepted else "REJECTED (champion unchanged)"
-    guidance = ("" if accepted else
-                " — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
-                "break a task above, dropping/redesigning the ones that did.")
+    if indecisive:
+        verdict = "UNRESOLVED (not judged; champion unchanged)"
+        guidance = (" — the measurement could not separate this edit from re-measurement noise, "
+                    "so it is NOT evidence against the edit. Its batch was still reverted. To "
+                    "resolve it, re-measure it under a FRESH tag (re-running the same tag "
+                    "REPLACES its rollouts) or with more trials in ONE evaluation; do not "
+                    "redesign it on this round's numbers, and do not re-derive it as a new idea.")
+    elif accepted:
+        verdict, guidance = "ACCEPTED (new champion)", ""
+    else:
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
+                    "break a task above, dropping/redesigning the ones that did.")
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
     stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "
              f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
-             f"<!-- {cid}: {'ACCEPTED' if accepted else 'rejected'} "
+             f"<!-- {cid}: "
+             f"{'unresolved' if indecisive else 'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
     tail = tail.strip()
     # Dedup guard: if the optimizer dropped the marker without appending (so the tail
@@ -1074,7 +1122,8 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                       val=val, parent=parent_id, parent_val=parent_val, **extra)
     delta = (val - parent_val if isinstance(val, (int, float))
              and isinstance(parent_val, (int, float)) else None)
-    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta)
+    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
+                       indecisive=indecisive)
 
 
 def _build_runmap(workdir: Path, run_dir: RunDir) -> None:

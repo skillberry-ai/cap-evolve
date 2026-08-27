@@ -8,7 +8,7 @@ Does exactly what the deterministic loops do at the end of a step:
   * ``snapshot`` the working copy as a candidate (always — the audit trail should
     show rejects too),
   * ``set_best`` on accept only,
-  * ``log_event`` the accept/reject (agent-mode detail the other scripts read), and
+  * ``log_event`` the decision (agent-mode detail the other scripts read), and
   * ``harness.record_iteration`` — the ONE shared iteration step every algorithm
     routes through (#216/#224): charges ``iterations=1`` **and** ``accepted=`` so the
     stall counter that ``budget_exhausted()`` reads actually moves, writes the
@@ -98,8 +98,50 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     return {k: v for k, v in out.items() if v is not None}
 
 
+def _record_memory(run_dir: RunDir, candidate_id: str, *, accepted: bool, reason: str,
+                   val: float | None, parent_val: float | None) -> None:
+    """File this round in the optimizer memory every OTHER algorithm already writes.
+
+    ``rejected.jsonl`` / ``history.jsonl`` are what ``memory.py`` calls the readers of its two
+    audit records: the dashboard's Memory panel (``GET /api/runs/{id}/memory`` and the static
+    export) and any optimizer prompt that greps ``rejected.jsonl`` for approaches already
+    refuted. The deterministic loops write them inline — ``harness``'s hill-climb, ``gepa``
+    (including its merge paths) and ``skillopt`` all call ``.add`` themselves. Agent mode never
+    did, so run 33046360451 published ``{"history": [], "rejected": []}``: a whole run of
+    rejected approaches that the run itself could not enumerate.
+
+    NOT hoisted into ``harness.record_iteration`` alongside the other three per-iteration
+    records, though that is where it belongs by the argument in that docstring: gepa's
+    local-gate merge reject (``_try_merge``) files a rejection WITHOUT routing through
+    record_iteration, so centralising there would silently drop it, and the deterministic
+    callers pass richer, algorithm-specific summaries than record_iteration's arguments can
+    reconstruct. Both are fixable; neither is fixable safely in the same change as this.
+    """
+    from cap_evolve.memory import History, RejectedMemory
+
+    delta = (val - parent_val if isinstance(val, (int, float))
+             and isinstance(parent_val, (int, float)) else None)
+    bits = [f"candidate {candidate_id}"]
+    if isinstance(val, (int, float)):
+        bits.append(f"(val {val:.3f}" + (f", Δ {delta:+.3f})" if delta is not None else ")"))
+    summary = " ".join(bits)
+    try:
+        if accepted:
+            History(run_dir.history_path).add(candidate_id, summary, float(val or 0.0))
+        else:
+            RejectedMemory(run_dir.rejected_path).add(candidate_id, summary, reason, val)
+    except OSError as e:
+        # Memory is an audit record, not the decision. Never lose a booked round over it.
+        run_dir.log_event("optimizer_context_warning", what="memory", error=str(e)[:300])
+
+
 def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
-    """The first accept/reject event already recorded for ``candidate_id``, if any.
+    """The first decision event already recorded for ``candidate_id``, if any.
+
+    ``inconclusive`` counts: an unresolved round is a booked round, and resolving it needs a
+    FRESH tag anyway (re-running a tag REPLACES its rollouts — see ``harness``'s
+    ``rollout_overwrite_warning``), so silently re-booking the old one is the same collision
+    this guard exists for.
 
     Reads ``events.jsonl`` (the audit log, not memory) so the guard holds across
     processes — which is the only way it can catch two concurrent drivers, the exact
@@ -113,7 +155,7 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
                 except Exception:  # noqa: BLE001 — a torn line is not a decision
                     continue
                 # NB: log_event writes the event name under "kind", not "event".
-                if ev.get("kind") in ("accept", "reject") and \
+                if ev.get("kind") in ("accept", "reject", "inconclusive") and \
                         str(ev.get("candidate")) == str(candidate_id):
                     return {"kind": ev.get("kind"), "t": ev.get("t"),
                             "note": ev.get("note"), "val": ev.get("val")}
@@ -156,7 +198,16 @@ def main(argv=None) -> int:
     p.add_argument("--candidate-id", required=True,
                    help="candidate id == the tag its rollouts were written under")
     p.add_argument("--from-dir", required=True, help="the working copy to snapshot")
-    p.add_argument("--decision", required=True, choices=["accept", "reject"])
+    # ``inconclusive`` is the third outcome ``round.py`` can actually return (``verdict_stable:
+    # false`` — the verdict flips depending on which byte-identical control replicate is the
+    # reference, so the round cannot separate the edit from re-measurement). Without it an
+    # unresolvable round had to be booked as one of two things it was not, and booking it as a
+    # reject moves the STALL counter — the signal that means "the optimizer has run out of
+    # ideas", which is the one thing an ambiguous measurement is no evidence of.
+    p.add_argument("--decision", required=True, choices=["accept", "reject", "inconclusive"],
+                   help="accept=new champion; reject=the edit was judged and refuted; "
+                        "inconclusive=the measurement could not resolve it (charges the "
+                        "iteration, not the stall; re-measure under a FRESH tag)")
     p.add_argument("--val", type=float, default=None, help="candidate's full-val mean")
     p.add_argument("--note", default="", help="one line: why this edit, in general terms")
     # The DRIVER's disposition, recorded machine-readably alongside the screen's own
@@ -207,9 +258,13 @@ def main(argv=None) -> int:
             return 2
 
     accepted = args.decision == "accept"
-    if accepted and args.reject_basis:
-        print(json.dumps({"error": "--reject-basis is meaningless on an accept",
-                          "fix": "drop it, or pass --decision reject"}, indent=2))
+    indecisive = args.decision == "inconclusive"
+    if args.decision != "reject" and args.reject_basis:
+        print(json.dumps({
+            "error": f"--reject-basis is meaningless on an {args.decision}",
+            "why": "it records what evidence a REJECT rests on. An unresolved round rests on "
+                   "no evidence about the edit at all — that is what makes it unresolved.",
+            "fix": "drop it, or pass --decision reject"}, indent=2))
         return 2
     # `--reject-basis gate` asserts the gate rejected this candidate. On run 32871360361 it was
     # booked for cand2, which round_i1.json recorded as `verdict: accept` at +0.19 against a
@@ -217,15 +272,26 @@ def main(argv=None) -> int:
     # best candidate of the run when in fact the driver had overridden it. Overriding is
     # legitimate (round.py leaves the decision to the driver on purpose); misattributing it is
     # not, and it is the one thing this log exists to get right.
+    # An ``inconclusive`` gate verdict is the same misattribution one step further: the gate did
+    # not refute the edit, it failed to resolve it. Observed live on run 33046360451 i1, where
+    # cand_2's verdict was `{ctl_null_i1: reject, ctl_null_i1r1: accept}` — booking that as
+    # "the gate rejected it" makes events.jsonl assert a judgement no measurement supports.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
-    overrode_gate = bool(not accepted and gate_verdict == "accept")
-    if overrode_gate and args.reject_basis == "gate":
+    overrode_gate = bool(args.decision == "reject" and gate_verdict == "accept")
+    if args.reject_basis == "gate" and gate_verdict in ("accept", "inconclusive"):
+        verb = ("ACCEPTED" if gate_verdict == "accept"
+                else "could not resolve (verdict: inconclusive)")
+        fix = ("pass --reject-basis driver_judgement and say in --note why you are overriding "
+               "the gate — e.g. a task you care about regressed"
+               if gate_verdict == "accept" else
+               "book it as --decision inconclusive (charges the iteration, not the stall) and "
+               "re-measure under a FRESH tag; or, if you are choosing to drop the edit anyway, "
+               "pass --reject-basis driver_judgement and say so in --note")
         print(json.dumps({
-            "error": f"--reject-basis gate, but the gate ACCEPTED {args.candidate_id} "
+            "error": f"--reject-basis gate, but the gate {verb} {args.candidate_id} "
                      "(see its row in work/round_*.json)",
-            "fix": "pass --reject-basis driver_judgement and say in --note why you are "
-                   "overriding the gate — e.g. the verdict was unstable across control "
-                   "replicates, or a task you care about regressed",
+            "gate_verdict": gate_verdict,
+            "fix": fix,
         }, indent=2))
         return 2
 
@@ -255,14 +321,48 @@ def main(argv=None) -> int:
     # dashboard's ``gate_decisions[]`` does not have to regex them back out of an agent's
     # prose — read from round.py's persisted table, and simply absent when it wrote none.
     gate = _round_gate_numbers(run_dir, args.candidate_id)
+    parent_val = gate.pop("parent_val", None)
+    # Did the agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
+    # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and silently
+    # substitutes "(no handover written by the optimizer)" when there is none — which is what
+    # every round of runs 32971129203 and 33046360451 recorded, because nothing asked the agent
+    # for one. Read it BEFORE booking, and report the answer so a forgotten handover is
+    # correctable while rounds remain rather than discovered when the run is over.
+    handover = bool(harness._journal_tail(src).strip())
+    reason = args.note or args.decision
+    if indecisive:
+        reason = f"indecisive (gate): {reason}"
     harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
-                             accepted=accepted, reason=args.note or args.decision,
+                             accepted=accepted, reason=reason,
                              val=args.val,
-                             parent_val=gate.pop("parent_val", None),
+                             parent_val=parent_val,
+                             indecisive=indecisive,
                              opt_cost_usd=args.optimizer_usd or None,
                              opt_tokens=args.optimizer_tokens or None,
                              optimizer_seconds=args.optimizer_seconds or None,
                              **gate)
+    if indecisive:
+        # The event the dashboard/TUI already read to render a step as `indecisive` rather than
+        # rejected (``dashboard`` keys its status, badge and banner off this exact kind), and the
+        # only thing that distinguishes an unresolved round from a refuted one downstream.
+        run_dir.log_event("step_indecisive", candidate=args.candidate_id, reason=reason,
+                          val=args.val, gate_verdict=gate_verdict)
+    else:
+        # Deliberately NOT for an unresolved round: ``rejected.jsonl`` is fed back as "these
+        # edits did not work", and an edit the measurement could not judge says nothing of the
+        # kind — filing it there teaches the next round to avoid a change never evaluated. Same
+        # reasoning as the deterministic hill-climb's own indecisive branch.
+        _record_memory(run_dir, args.candidate_id, accepted=accepted,
+                       reason=reason, val=args.val, parent_val=parent_val)
+    warnings: list[str] = []
+    if not handover:
+        warnings.append(
+            "no handover recorded for this round: the run-level JOURNAL.md now reads "
+            "'(no handover written by the optimizer)' for "
+            f"{args.candidate_id}, so the next round can see WHICH tasks moved but not what you "
+            "tried or why. Before the next commit.py, write your entry to "
+            "<from-dir>/JOURNAL.md as a '## Iteration <candidate> — <headline>' block (changes "
+            "made, expected effect, hypotheses prior RESULT lines already refuted, focus next).")
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()
@@ -270,6 +370,8 @@ def main(argv=None) -> int:
                       "reject_basis": args.reject_basis,
                       "gate_verdict": gate_verdict,
                       "overrode_gate": overrode_gate,
+                      "handover_recorded": handover,
+                      "warnings": warnings,
                       "best_id": run_dir.best_id, "spent": spent.to_dict(),
                       "stop": stop, "stop_reason": reason}, indent=2))
     return 0
