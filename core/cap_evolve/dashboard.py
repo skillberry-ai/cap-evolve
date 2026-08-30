@@ -650,6 +650,135 @@ _NARRATIVE_FILES = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Config tab: the full run configuration (spec + PROJECT.md + project dir)
+# ---------------------------------------------------------------------------
+
+#: A small, generic classification of the ``capevolve.yaml`` keys documented in
+#: ``skills/phases/intake/inputs/INPUTS.md``. Anything NOT listed here (an older key,
+#: or a new input a future intake adds) falls into "Other" rather than disappearing —
+#: this is a display grouping only, never a schema/validation of the spec.
+_CONFIG_KEY_GROUPS = {
+    "capabilities": "Capability", "capability_path": "Capability",
+    "capability_sources": "Capability", "actions": "Capability",
+    "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
+    "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
+    "optimizer_usd_per_iter": "Algorithm & optimizer",
+    "optimizer_instructions_file": "Algorithm & optimizer",
+    "orchestration_mode": "Algorithm & optimizer", "stop_condition": "Algorithm & optimizer",
+    "target_model": "Algorithm & optimizer", "target_profile_file": "Algorithm & optimizer",
+    "runner_repo_path": "Algorithm & optimizer",
+    "dataset_source": "Data & splits", "split_seed": "Data & splits",
+    "split_train": "Data & splits", "split_val": "Data & splits", "split_test": "Data & splits",
+    "split_ids_file": "Data & splits", "num_trials": "Data & splits",
+    "max_iterations": "Budget & gate", "stall": "Budget & gate",
+    "max_metric_calls": "Budget & gate", "max_usd": "Budget & gate",
+    "max_optimizer_usd": "Budget & gate", "gate_mode": "Budget & gate",
+    "gate_k_se": "Budget & gate", "no_regression": "Budget & gate",
+    "memory_skill": "Memory",
+    "metric_primary": "Metrics & display", "metrics_display": "Metrics & display",
+    "metric_directions": "Metrics & display",
+    "github_integration": "GitHub",
+}
+_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+                        "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
+
+#: A file this big gets size + path only in the Config tab's file tree — never an
+#: attempt to read and render megabytes of adapter/trajectory content.
+_PROJECT_PREVIEW_MAX_BYTES = 200_000
+
+
+def _find_project_dir(root: Path) -> Path | None:
+    """The ``project/`` dir that scaffolded this run, or ``None``.
+
+    Same two candidate locations ``_algorithm_from_spec`` already reads (a sibling
+    ``project/`` next to the run dir is the normal shape; some fixtures write
+    ``capevolve.yaml`` directly under the run dir).
+    """
+    for cand in (_safe_subpath(root.parent, "project"), root):
+        if cand is not None and cand.is_dir() and (cand / "capevolve.yaml").is_file():
+            return cand
+    return None
+
+
+def _read_project_files(project_dir: Path, skip: set) -> list[dict]:
+    """Every file under ``project_dir`` except ``skip`` (top-level names already
+    shown elsewhere — ``capevolve.yaml``, ``PROJECT.md``), walked generically so a
+    NEW artifact (a future intake output, a split file, an intake transcript) shows
+    up automatically instead of needing a new reader.
+
+    Returns ``[{"path", "size", "preview", "truncated", "binary"}]`` sorted by path.
+    ``preview`` is ``None`` for a binary file or one over ``_PROJECT_PREVIEW_MAX_BYTES``
+    — those degrade to size + path only, never a megabyte dump.
+    """
+    out = []
+    for f in sorted(project_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        rel = f.relative_to(project_dir)
+        if str(rel) in skip or "__pycache__" in rel.parts or ".git" in rel.parts:
+            continue
+        try:
+            size = f.stat().st_size
+        except OSError:
+            continue
+        rec = {"path": str(rel), "size": size, "preview": None,
+               "truncated": False, "binary": False}
+        if size == 0:
+            rec["preview"] = ""
+        elif size <= _PROJECT_PREVIEW_MAX_BYTES:
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                rec["binary"] = True
+            else:
+                rec["preview"] = _sanitize_text(text, 4000)
+                rec["truncated"] = len(text) > 4000
+        out.append(rec)
+    return out
+
+
+def _read_config(root: Path) -> dict:
+    """The full run configuration, generically — every intake artifact on disk.
+
+    Reads the sibling ``project/`` dir's ``capevolve.yaml`` (the parsed spec, grouped
+    for display — see ``_CONFIG_KEY_GROUPS``), ``PROJECT.md`` (the intake-authored
+    narrative of what was resolved/defaulted), and every other file under the project
+    dir (adapters/, seed_capability/, split files, ...) as a generic listing/preview.
+    Returns ``{}`` when no project dir is found — the panel hides itself.
+    """
+    project_dir = _find_project_dir(root)
+    if project_dir is None:
+        return {}
+    from .specfile import read_yaml
+    try:
+        spec = read_yaml((project_dir / "capevolve.yaml").read_text(encoding="utf-8")) or {}
+    except OSError:
+        spec = {}
+    groups: dict[str, list] = {}
+    for k, v in spec.items():
+        groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
+    spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
+
+    project_md = None
+    pmd = project_dir / "PROJECT.md"
+    if pmd.is_file():
+        try:
+            project_md = _sanitize_text(pmd.read_text(encoding="utf-8"), 20000)
+        except OSError:
+            project_md = None
+
+    files = _read_project_files(project_dir, {"capevolve.yaml", "PROJECT.md"})
+    if not spec_groups and not project_md and not files:
+        return {}
+    return {
+        "project_dir": str(project_dir),
+        "spec_groups": spec_groups,
+        "project_md": project_md,
+        "files": files,
+    }
+
+
 def _read_narrative(root: Path, best_id: str | None) -> dict:
     """The optimizer-authored process narrative for this run, read straight off disk.
 
@@ -1396,6 +1525,7 @@ def reduce_run(run_dir) -> dict:
     if evograph:
         algo_extra["evograph"] = evograph
     narrative = _read_narrative(root, best_id)
+    config = _read_config(root)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
@@ -1422,6 +1552,7 @@ def reduce_run(run_dir) -> dict:
         "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
         "narrative": bool(narrative),
+        "config": bool(config),
         "controls": bool(controls),
         "screened": any(n.get("screened") is not None for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
@@ -1512,6 +1643,7 @@ def reduce_run(run_dir) -> dict:
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
         "narrative": narrative,
+        "config": config,
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
@@ -1865,6 +1997,32 @@ const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Obj
    the fitness chart (heatmap, lineage, cost, evaluations, candidates). */
 const txt=(el,a,content)=>{const n=svg('text',a);n.textContent=content==null?'':String(content);el.append(n);return n;};
 const fmt=v=>v==null?'—':(+v).toFixed(3);
+function escN(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+// A tiny, deliberately non-general markdown renderer: headings, bullet lines,
+// blockquotes, bold, everything else is a paragraph. Good enough for the structured
+// templates the narrative files are seeded from (_JOURNAL_SEED etc.) and for a
+// PROJECT.md — not a general markdown engine, so it never needs a dependency. Shared
+// by the Process narrative and Config tabs so there is exactly one renderer.
+function mdToHtml(text){
+  const lines=escN(text).split('\n');
+  let html='',inList=false;
+  const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+  lines.forEach(line=>{
+    const bold=line.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    let m;
+    if((m=bold.match(/^(#{1,4})\s+(.*)$/))){closeList();
+      html+=`<h${Math.min(4,m[1].length)+1}>${m[2]}</h${Math.min(4,m[1].length)+1}>`;}
+    else if(/^\s*[-*]\s+/.test(bold)){if(!inList){html+='<ul>';inList=true;}
+      html+='<li>'+bold.replace(/^\s*[-*]\s+/,'')+'</li>';}
+    else if(/^>\s?/.test(bold)){closeList();
+      html+='<blockquote>'+bold.replace(/^>\s?/,'')+'</blockquote>';}
+    else if(/^<!--/.test(bold.trim())){/* skip HTML-comment markers */}
+    else if(!bold.trim()){closeList();}
+    else{closeList();html+='<p>'+bold+'</p>';}
+  });
+  closeList();
+  return html;
+}
 const main=document.getElementById('main'), tip=document.getElementById('tip');
 const STATUS_META={running:['running','var(--accent)'],awaiting_agent:['awaiting agent','var(--idk)'],
   completed:['completed','var(--ok)'],budget_exhausted:['budget exhausted','var(--warn)'],
@@ -2367,31 +2525,6 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     'Written by the optimizer as it worked (JOURNAL / INSIGHTS / META_INSIGHTS / '+
     'FRAMEWORK_IMPROVEMENTS, plus the best candidate’s PROCESS.md) — rendered here '+
     'as-is, for a human reader.'}));
-  function escN(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
-  // A tiny, deliberately non-general markdown renderer: headings, bullet lines,
-  // blockquotes, bold, everything else is a paragraph. Good enough for the
-  // structured templates these files are seeded from (_JOURNAL_SEED etc.) — not a
-  // general markdown engine, so it never needs a dependency.
-  function mdToHtml(text){
-    const lines=escN(text).split('\n');
-    let html='',inList=false;
-    const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
-    lines.forEach(line=>{
-      const bold=line.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-      let m;
-      if((m=bold.match(/^(#{1,4})\s+(.*)$/))){closeList();
-        html+=`<h${Math.min(4,m[1].length)+1}>${m[2]}</h${Math.min(4,m[1].length)+1}>`;}
-      else if(/^\s*[-*]\s+/.test(bold)){if(!inList){html+='<ul>';inList=true;}
-        html+='<li>'+bold.replace(/^\s*[-*]\s+/,'')+'</li>';}
-      else if(/^>\s?/.test(bold)){closeList();
-        html+='<blockquote>'+bold.replace(/^>\s?/,'')+'</blockquote>';}
-      else if(/^<!--/.test(bold.trim())){/* skip HTML-comment markers */}
-      else if(!bold.trim()){closeList();}
-      else{closeList();html+='<p>'+bold+'</p>';}
-    });
-    closeList();
-    return html;
-  }
   (NAR.files||[]).forEach(f=>{
     const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
     box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
@@ -2402,6 +2535,67 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     box.append($('div',{class:'md',html:mdToHtml(f.text)}));
     s.append(box);
   });
+})();
+
+/* ---------- 10c. Config — the full run configuration ---------- */
+(function(){
+  const CFG=S.config; if(!CFG)return;
+  const s=sec('Config — run configuration');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Every input the intake phase produced or the user set, read straight off '+
+    CFG.project_dir+' — the parsed capevolve.yaml spec, PROJECT.md, and every other '+
+    'project artifact (adapters/, seed_capability/, split files, ...).'}));
+  const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;'+
+    'font-size:13px;color:var(--text)',text:t});
+  (CFG.spec_groups||[]).forEach(g=>{
+    s.append(h3(g.group));
+    const t=$('table');
+    g.items.forEach(it=>{
+      const v=it.value;
+      const vt=v==null?'—':(typeof v==='object'?JSON.stringify(v):String(v));
+      t.append($('tr',{},$('td',{},$('code',{text:it.key})),
+        $('td',{class:'muted',style:'white-space:pre-wrap',text:vt})));
+    });
+    s.append(t);
+  });
+  if(CFG.project_md){
+    s.append(h3('PROJECT.md'));
+    s.append($('div',{class:'narrative-box md',html:mdToHtml(CFG.project_md)}));
+  }
+  const files=CFG.files||[];
+  if(files.length){
+    s.append(h3('Other project files ('+files.length+')'));
+    const bySize=v=>v<1024?v+' B':v<1048576?(v/1024).toFixed(1)+' KB':(v/1048576).toFixed(1)+' MB';
+    const groups=new Map();
+    files.forEach(f=>{
+      const top=f.path.includes('/')?f.path.split('/')[0]:'.';
+      if(!groups.has(top))groups.set(top,[]);
+      groups.get(top).push(f);
+    });
+    [...groups.keys()].sort().forEach(top=>{
+      const det=$('details',{style:'margin:4px 0'});
+      det.append($('summary',{style:'cursor:pointer;font-weight:600',
+        text:top+' ('+groups.get(top).length+')'}));
+      groups.get(top).forEach(f=>{
+        const fdet=$('details',{style:'margin:2px 0 2px 16px'});
+        fdet.append($('summary',{style:'cursor:pointer;color:var(--muted2);font-size:12px',
+          text:f.path+'  ·  '+bySize(f.size)+
+               (f.binary?' · binary':f.truncated?' · truncated preview':'')}));
+        if(f.binary){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'binary file — not previewed'}));
+        }else if(f.preview==null){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',
+            text:'too large to preview — '+bySize(f.size)}));
+        }else if(f.preview===''){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'empty file'}));
+        }else{
+          fdet.append($('div',{class:'diff',style:'max-height:260px',text:f.preview}));
+        }
+        det.append(fdet);
+      });
+      s.append(det);
+    });
+  }
 })();
 
 /* ---------- 8. Candidate leaderboard + git log ---------- */
