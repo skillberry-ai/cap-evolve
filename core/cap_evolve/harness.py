@@ -1288,8 +1288,11 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
             if not src.is_dir():
                 continue
             try:
+                dst = workdir / "guidance" / c
+                if dst.exists():
+                    shutil.rmtree(dst)
                 shutil.copytree(
-                    src, workdir / "guidance" / c,
+                    src, dst,
                     ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
                 )
             except Exception as e:  # noqa: BLE001
