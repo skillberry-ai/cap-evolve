@@ -1,5 +1,19 @@
 # agent-optimize — rationale, and how honesty survives full autonomy
 
+## Contents
+
+- [Why a free-form agentic algorithm](#why-a-free-form-agentic-algorithm)
+- [How honesty survives handing the agent the wheel](#how-honesty-survives-handing-the-agent-the-wheel)
+- [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
+- [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
+- [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
+- [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
+- [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
+- [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
+- [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
+- [Caveats](#caveats)
+- [Sources](#sources)
+
 ## Why a free-form agentic algorithm
 
 The deterministic algorithms (hill-climb, gepa, skillopt) fix the *schedule* of the
@@ -251,6 +265,41 @@ generalisation**, with the overlap counted; and `best_id == "seed"` emits a warn
 delta is 0 *by construction* and must be reported as a null result with a diagnosed cause.
 `--train auto` also declines to pay for a train evaluation whose ids equal val's, because the
 numbers would be a copy.
+
+## Gate as evidence, not a verdict
+
+`gate_check.py` computes the honest statistics — `delta`, `stderr`, `resolvable_effect_size`, whether both
+null-control replicates agree in sign — and prints them as its `"verdict"` field. It does not decide for
+you. Nothing in `commit.py` or `round.py` checks that field against the `--decision` you pass: `set_best()`
+is an unconditional setter, and `--reject-basis driver_judgement` exists precisely so you can log a
+considered disagreement. Treat the printed numbers the way a careful researcher reads a stats printout,
+not the way code reads a boolean:
+
+- Read `resolvable_effect_size` first. It is the smallest true effect this round could have detected at
+  all — a `delta` at or below it is not evidence either way, whatever the printed verdict says.
+- Does `delta` clear the noise floor measured for THIS round (`noise_floor_from_control`), not just the a
+  priori `k_se` threshold baked into the printed verdict?
+- Do both null-control replicates agree in sign with the candidate's direction? A round where they
+  disagree is telling you the noise floor itself is unstable this round, not just that one candidate is
+  borderline.
+- Before any accept, or any decision that disagrees with the printed verdict, write one sentence in
+  `commit.py`'s `--note` citing the actual numbers (delta vs resolvable effect size vs noise floor). This
+  is not optional ceremony — it is the audit trail a human reviewer uses afterward to check your judgment,
+  the same way a rigorous post-mortem checks the numbers behind every claim.
+
+**Why this doesn't regress to the coin-flip-accept failure a significance bar this loose already produced
+on a real benchmark**: the arithmetic that caused that failure — banking `delta > 0` as progress when the
+significance bar sat below the measured noise floor — is untouched. `gate_check.py` still computes the same
+rigorous statistics and prints them prominently; what changes is only that you must engage with those
+numbers in your own reasoning rather than pattern-matching a boolean field. The historical failure mode was
+"the bar sat below the noise floor and nobody could see it" — with `resolvable_effect_size` and
+`noise_floor_from_control` printed first, that is now structurally hard to miss.
+
+**The new risk this introduces, honestly stated**: a strong optimizer can rationalize accepting something
+the numbers don't support, dressing noise-chasing in confident-sounding prose — the failure mode moves from
+bad math to motivated reasoning, which is harder to catch mechanically than a wrong formula was. The only
+mitigation available is the audit trail above: every override gets a human-readable justification citing
+real numbers, reviewable after the fact, the same way this repo's own run post-mortems already work.
 
 ## Caveats
 

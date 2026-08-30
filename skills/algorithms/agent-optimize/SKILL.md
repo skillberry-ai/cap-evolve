@@ -161,12 +161,12 @@ python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" \
 python "$A/gate_check.py" --run-dir "$R" --candidate "$TAG" --k-se <gate_k_se>
 ```
 
-Accept **only** on `"verdict": "accept"`; `"indecisive"` is not a rejection but a signal that too little of
-val ran, so fix the runner before spending more. **`regressions` is diagnosis, not a veto** — it names which
-part of a bundled edit to drop next round, but a per-task drop at `n` trials is an estimate, not proof of
-harm, and the old no-regression veto rejected byte-identical seed copies often enough to dominate the false
-rejects. `--veto-regressions` restores it, at that rate. `phases/gate/scripts/run.py` reaches the
-same paired gate in rollout mode but books no decision: use it to inspect, never to decide.
+`"verdict"` is evidence, not a command — decide accept/reject yourself, citing the numbers in
+`commit.py --note` (`references/algorithm.md`, "Gate as evidence"). `"indecisive"` means too little of val
+ran, not a rejection. **`regressions` is diagnosis, not a veto** — a per-task drop at `n` trials is an
+estimate, not proof, and the old no-regression veto rejected byte-identical seed copies often enough to dominate false
+rejects (`--veto-regressions` restores it, at that rate). `phases/gate/scripts/run.py` inspects the same
+gate but books no decision.
 
 **5. Commit the decision through the run dir**, so `best_id`, the stall counter, the dashboard and the
 audit log stay real. `--decision reject` keeps the old best; either way it snapshots the candidate, logs
