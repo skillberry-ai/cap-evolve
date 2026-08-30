@@ -25,9 +25,17 @@ The candidate **graph** schema (``reduced["graph"]``)::
         {"id", "parent", "children": [...], "status": seed|accepted|rejected|failed,
          "val", "stderr", "per_task": {task_id: reward}, "feedback": {task_id: str},
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
-         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far"}
+         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
+         "gate_fields": {delta?, stderr?, n?, k_se?, threshold?, resolvable_effect_size?},
+         "screened": bool | None}
      ],
      "root": "seed", "best_id": "..."}
+
+``gate_fields`` holds whichever of those keys the commit event carried DIRECTLY (any
+algorithm's commit step may attach them to its accept/reject event); absent keys mean the
+gate-decisions table falls back to parsing the prose ``reason`` string instead. ``screened``
+is ``None`` when no event recorded compliance for this candidate's tag, else the
+``screened_before_fullval`` value read generically off any event that carries it.
 
 The **summary** schema (``reduced["summary"]``)::
 
@@ -36,7 +44,13 @@ The **summary** schema (``reduced["summary"]``)::
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
-     "gate_warnings": [...], "diagnoses": [...], "git_log": [...]}
+     "gate_warnings": [...], "diagnoses": [...], "git_log": [...],
+     "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...]}
+
+``controls`` lists null-control replicate evaluations — evaluate-only measurements with no
+candidate-graph node — read generically off any ``evaluate`` event carrying ``role:
+"control"`` or a truthy ``is_control`` field. Empty until an algorithm's evaluate step
+attaches either.
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
@@ -643,7 +657,24 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
     optimizer wrote across iterations, plus the best candidate's final ``PROCESS.md``
     (why THAT iteration was done the way it was). Returns ``{}`` when none of these
     exist yet (e.g. a synthetic log with no real optimizer session).
+
+    Each file is compared against its own known seed-template text (harness.py's
+    ``_seed_journal``/``_seed_accumulator``/``_PROCESS_SEED``): a file whose content is
+    STILL exactly that template — no real entry ever appended — carries
+    ``"template_only": True`` so the renderer can flag it instead of presenting an
+    unedited instructional template as real optimizer narrative.
     """
+    try:
+        from . import harness
+        seed_by_name = {
+            "JOURNAL.md": harness._JOURNAL_SEED,
+            "INSIGHTS.md": harness._INSIGHTS_SEED,
+            "META_INSIGHTS.md": harness._META_INSIGHTS_SEED,
+            "FRAMEWORK_IMPROVEMENTS.md": harness._FRAMEWORK_IMPROVEMENTS_SEED,
+        }
+        process_seed = harness._PROCESS_SEED.strip()
+    except Exception:  # noqa: BLE001 — template detection is a nicety, not load-bearing
+        seed_by_name, process_seed = {}, None
     files = []
     for name, title in _NARRATIVE_FILES:
         p = _safe_subpath(root, name)
@@ -654,7 +685,9 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
         except OSError:
             continue
         if text:
-            files.append({"title": title, "text": _sanitize_text(text, 20000)})
+            seed_text = seed_by_name.get(name)
+            files.append({"title": title, "text": _sanitize_text(text, 20000),
+                          "template_only": bool(seed_text) and text == seed_text.strip()})
     process_text = None
     if best_id:
         p = _safe_subpath(root, "candidates", best_id, "PROCESS.md")
@@ -665,7 +698,8 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
                 process_text = None
     if process_text:
         files.append({"title": f"Process — best candidate ({best_id})",
-                      "text": _sanitize_text(process_text, 20000)})
+                      "text": _sanitize_text(process_text, 20000),
+                      "template_only": bool(process_seed) and process_text == process_seed})
     if not files:
         return {}
     return {"files": files}
@@ -763,6 +797,18 @@ def reduce_run(run_dir) -> dict:
             minibatch_evals.discard(ev.get("tag"))
         if ev.get("kind") == "minibatch":
             minibatch_evals.add(ev.get("tag"))
+
+    # Cheap-screen compliance, keyed by candidate tag: whether a candidate paid for a
+    # cheap screen before its full-val eval. Read generically off ANY event that carries a
+    # ``screened_before_fullval`` field (agent-optimize's ``agent_optimize_compliance`` is
+    # the first emitter, but nothing here assumes that kind name — a future algorithm
+    # emitting the same field under a different event kind is picked up identically).
+    screened_by_tag: dict = {}
+    for ev in events:
+        if "screened_before_fullval" in ev:
+            tag = ev.get("tag") or ev.get("candidate")
+            if tag:
+                screened_by_tag[str(tag)] = bool(ev.get("screened_before_fullval"))
 
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
@@ -886,6 +932,18 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
+            # Structured gate fields, WHEN a commit event carries them directly (any
+            # algorithm's commit step may attach these to its accept/reject event instead
+            # of leaving them only in prose) — read generically by key, never assumed to be
+            # agent-optimize-specific. Absent on older runs / algorithms that never
+            # populate them; the gate-decisions table below falls back to parsing ``reason``.
+            "gate_fields": {k: ev.get(k) for k in
+                            ("delta", "stderr", "n", "k_se", "threshold",
+                             "resolvable_effect_size") if ev.get(k) is not None},
+            # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
+            # looked up generically by tag below (see ``screened_by_tag``), not tied to the
+            # agent-optimize algorithm that happens to be the first emitter.
+            "screened": screened_by_tag.get(cid),
         }
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
@@ -1088,13 +1146,17 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
-    # The reason string the gate wrote is the audit record; Δ̄/SE/n are parsed back out
-    # of it so the UI can show the uncertainty next to the mean instead of a bare Δ.
-    # A number that isn't in the reason stays None — never a fabricated 0.
+    # Preferred source: structured fields a commit event attaches directly (``gate_fields``,
+    # captured generically above — any algorithm's commit step may populate ``delta``/
+    # ``stderr``/``n``/``k_se``/``threshold``/``resolvable_effect_size`` on its accept/reject
+    # event). Fallback: the reason string is the audit record when those fields are absent
+    # (older runs, or an algorithm that never populates them), so Δ̄/SE/n are parsed back out
+    # of it. A number that isn't available from either source stays None — never fabricated.
     gate_decisions: list[dict] = []
     for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
                     key=lambda x: x.get("iteration") or 0):
         reason = str(n.get("reason") or "")
+        gf = n.get("gate_fields") or {}
         verdict = ("accept" if n["status"] == "accepted"
                    else "indecisive" if n["status"] == "indecisive"
                    else "reject" if n["status"] == "rejected" else "no measurement")
@@ -1106,6 +1168,7 @@ def reduce_run(run_dir) -> dict:
         m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
+        m_res = re.search(r"resolvable effect size 2·SE\s*=\s*([\d.]+)", reason)
         gate_decisions.append({
             "iteration": n.get("iteration"),
             "candidate": n["id"],
@@ -1113,11 +1176,13 @@ def reduce_run(run_dir) -> dict:
             "val": n.get("val"),
             "parent": n.get("parent"),
             "parent_val": n.get("parent_val"),
-            "delta": float(m_delta.group(1)) if m_delta else None,
-            "stderr": float(m_se.group(1)) if m_se else None,
-            "n": int(m_n.group(1)) if m_n else None,
-            "k_se": float(m_bar.group(1)) if m_bar else None,
-            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "delta": gf["delta"] if "delta" in gf else (float(m_delta.group(1)) if m_delta else None),
+            "stderr": gf["stderr"] if "stderr" in gf else (float(m_se.group(1)) if m_se else None),
+            "n": gf["n"] if "n" in gf else (int(m_n.group(1)) if m_n else None),
+            "k_se": gf["k_se"] if "k_se" in gf else (float(m_bar.group(1)) if m_bar else None),
+            "threshold": gf["threshold"] if "threshold" in gf else (float(m_bar.group(2)) if m_bar else None),
+            "resolvable_effect_size": gf["resolvable_effect_size"] if "resolvable_effect_size" in gf
+                                      else (float(m_res.group(1)) if m_res else None),
             "reason": _sanitize_text(reason, 600),
         })
 
@@ -1304,6 +1369,29 @@ def reduce_run(run_dir) -> dict:
     if screens:
         algo_extra["screens"] = screens
 
+    # --- null-control replicates: the noise-floor check, kept OUT of the candidate graph ---
+    # A control replicate (a byte-identical re-measurement, run to bound run-to-run noise)
+    # is evaluate-only: it never gets an accept/reject commit, so it has no graph node — and
+    # with no way to see it happened, a real run's noise-floor check was invisible in the
+    # dashboard. Detecting it by TAG naming (e.g. agent-optimize's ``ctl_null_i<N>``) would
+    # bake one algorithm's convention into a generic reducer, so this reads a generic marker
+    # instead: any ``evaluate`` event carrying ``role: "control"`` or a truthy ``is_control``
+    # field. Neither field is emitted yet as of this writing (checked agent-optimize's
+    # round.py/commit.py, which still identify their own controls only by tag) — this stays
+    # ready to surface them the moment an algorithm's evaluate step attaches either.
+    controls = [{
+        "tag": e.get("tag"),
+        "reward": e.get("reward"),
+        "stderr": e.get("stderr"),
+        "n": e.get("n_scored"),
+        "iteration": e.get("iteration"),
+        "t": e.get("t"),
+    } for e in events if e.get("kind") == "evaluate"
+       and (e.get("role") == "control" or e.get("is_control"))]
+    # Kept as its own top-level summary list (not nested under algo_extra): a null-control
+    # replicate is a generic evaluation-methodology signal any algorithm could emit, not a
+    # per-algorithm extra like screens/gepa/skillopt below.
+
     evograph = _read_evograph(root)
     if evograph:
         algo_extra["evograph"] = evograph
@@ -1334,6 +1422,8 @@ def reduce_run(run_dir) -> dict:
         "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
         "narrative": bool(narrative),
+        "controls": bool(controls),
+        "screened": any(n.get("screened") is not None for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
@@ -1369,6 +1459,7 @@ def reduce_run(run_dir) -> dict:
         "event_count": len(events),
         "splits": splits_info,
         "gate_decisions": gate_decisions,
+        "controls": controls,
         "cost_ledger": cost_ledger,
         "log": log_rows,
         "algo_extra": algo_extra,
@@ -2117,7 +2208,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   const t2=$('table');
   t2.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'verdict'}),
     $('th',{class:'r',text:'val'}),$('th',{class:'r',text:'parent val'}),$('th',{class:'r',text:'Δ̄'}),
-    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'})));
+    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'}),
+    $('th',{class:'r',text:'resolvable ±'})));
   const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive'};
   const n4=v=>v==null?'—':(+v).toFixed(4);
   D.forEach(d=>{
@@ -2131,11 +2223,33 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
               text:d.delta==null?'—':(d.delta>0?'+':'')+d.delta.toFixed(4)}),
       $('td',{class:'r num muted',text:d.stderr==null?'—':'±'+d.stderr.toFixed(4)}),
       $('td',{class:'r num muted',text:d.n??'—'}),
-      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')})));
+      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')}),
+      $('td',{class:'r num muted',text:d.resolvable_effect_size==null?'—':'±'+(+d.resolvable_effect_size).toFixed(4)})));
   });
   s.append(t2);
   D.forEach(d=>s.append($('div',{class:'ann',style:'margin:6px 0'},
     $('div',{class:'who',text:d.candidate}),$('div',{text:d.reason}))));
+})();
+
+/* ---------- 6g. Noise-floor check — null-control replicates ---------- */
+(function(){
+  const C=S.controls||[]; if(!C.length)return;
+  const s=sec('Noise-floor check (null-control replicates)');
+  const rewards=C.map(c=>c.reward).filter(x=>x!=null);
+  const spread=rewards.length>1?(Math.max(...rewards)-Math.min(...rewards)):null;
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    C.length+' control replicate(s) evaluated this run — byte-identical re-measurements '+
+    'run to bound run-to-run noise, never gated/committed as candidates.'+
+    (spread!=null?' Spread between replicates: '+spread.toFixed(4)+' — the empirical noise floor.':'')}));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'tag'}),$('th',{class:'r',text:'reward ± stderr'}),
+    $('th',{class:'r',text:'n'}),$('th',{class:'r',text:'iter'})));
+  C.forEach(c=>t.append($('tr',{},
+    $('td',{},$('code',{text:c.tag||'—'})),
+    $('td',{class:'r num',text:c.reward==null?'—':fmt(c.reward)+(c.stderr!=null?' ± '+(+c.stderr).toFixed(4):'')}),
+    $('td',{class:'r num muted',text:c.n??'—'}),
+    $('td',{class:'r num muted',text:c.iteration??'—'}))));
+  s.append(t);
 })();
 
 /* ---------- 9. Activity log — every event, filterable ---------- */
@@ -2281,6 +2395,10 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   (NAR.files||[]).forEach(f=>{
     const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
     box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
+    // The file is still byte-for-byte the seed instructional template — no real entry
+    // was ever appended. Flagged rather than rendered as if it were populated narrative.
+    if(f.template_only)box.append($('div',{class:'banner',style:'margin-bottom:10px',
+      text:'⚠ template only — no real entries yet'}));
     box.append($('div',{class:'md',html:mdToHtml(f.text)}));
     s.append(box);
   });
@@ -2289,17 +2407,26 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
 /* ---------- 8. Candidate leaderboard + git log ---------- */
 (function(){
   const s=sec('Candidates'); const t=$('table');
-  t.append($('tr',{},$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
-    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'}),$('th',{text:'reason'})));
+  // "screened" (did this candidate pay for a cheap screen before full-val?) only shown
+  // when SOME node has a recorded signal — never rendered as a column of bare "—".
+  const showScreened=!!(S.capabilities&&S.capabilities.screened);
+  const hdr=[$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
+    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'})];
+  if(showScreened)hdr.push($('th',{text:'screened'}));
+  hdr.push($('th',{text:'reason'}));
+  t.append($('tr',{},...hdr));
   G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
     const dlt=n.parent_val!=null&&n.val!=null?(n.val-n.parent_val):null;
-    t.append($('tr',{},
+    const cells=[
       $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
-      $('td',{class:'r num',text:n.iteration}),
-      $('td',{class:'muted',text:(n.reason||'').slice(0,80)})));
+      $('td',{class:'r num',text:n.iteration})];
+    if(showScreened)cells.push($('td',{},n.screened==null?'—':
+      $('span',{class:'badge '+(n.screened?'b-accepted':'b-rejected'),text:n.screened?'✓ screened':'✗ not screened'})));
+    cells.push($('td',{class:'muted',text:(n.reason||'').slice(0,80)}));
+    t.append($('tr',{},...cells));
   });
   s.append(t);
   if(S.git_log&&S.git_log.length){

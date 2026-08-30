@@ -198,6 +198,40 @@ def test_dashboard_degrades_without_rollouts_or_finalize():
         assert '"diffs": {}' in text or '"diffs":{}' in text
 
 
+# ---- Process narrative: template-only detection ---------------------------
+
+def test_narrative_flags_an_unedited_seed_template():
+    """A run-level accumulator file that is STILL byte-for-byte its seed instructional
+    template (no real handover was ever appended) must not be presented as populated
+    narrative — it needs its own ``template_only`` flag so the renderer can flag it."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        (rd.root / "JOURNAL.md").write_text(harness._JOURNAL_SEED, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is True
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)
+        assert "template only" in html
+
+
+def test_narrative_does_not_flag_a_real_appended_entry():
+    """The moment a real entry is appended below the marker, the file is no longer
+    byte-identical to its seed — must not be flagged."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        real = harness._JOURNAL_SEED + "\n## Iteration cand_0001 — a real handover\n- did X\n"
+        (rd.root / "JOURNAL.md").write_text(real, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is False
+
+
 # ---- ANSI terminal --------------------------------------------------------
 
 def test_render_ansi_kpis_and_no_color():
