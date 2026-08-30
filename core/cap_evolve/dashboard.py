@@ -842,6 +842,13 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
+            # Structured gate numbers agent-optimize's commit.py attaches to the step/accept/
+            # reject event (delta/threshold/stderr/n/k_se/resolvable_effect_size), in addition
+            # to the prose reason above. None for any algorithm/event that doesn't carry them —
+            # the gate_decisions block below falls back to regex-parsing `reason` in that case.
+            "gate_stats": {k: ev.get(k) for k in
+                          ("delta", "threshold", "stderr", "n", "k_se",
+                           "resolvable_effect_size") if ev.get(k) is not None} or None,
         }
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
@@ -1044,9 +1051,12 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
-    # The reason string the gate wrote is the audit record; Δ̄/SE/n are parsed back out
-    # of it so the UI can show the uncertainty next to the mean instead of a bare Δ.
-    # A number that isn't in the reason stays None — never a fabricated 0.
+    # Real numbers first: agent-optimize's commit.py attaches structured gate fields
+    # (delta/threshold/stderr/n/k_se/resolvable_effect_size) straight from gate_check.py's
+    # own JSON via `node["gate_stats"]`. Only when a candidate carries none of those (any
+    # algorithm/event that predates or doesn't use that attachment) do we fall back to
+    # regex-parsing the reason string — the prior sole source, and fragile because it
+    # depended on the prose matching the deterministic gate's own wording.
     gate_decisions: list[dict] = []
     for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
                     key=lambda x: x.get("iteration") or 0):
@@ -1054,6 +1064,7 @@ def reduce_run(run_dir) -> dict:
         verdict = ("accept" if n["status"] == "accepted"
                    else "indecisive" if n["status"] == "indecisive"
                    else "reject" if n["status"] == "rejected" else "no measurement")
+        gs = n.get("gate_stats") or {}
         m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
         # The bar `0.2·SE=0.0062` comes FIRST in the reason and also matches `SE=`, so an
         # unanchored search put the bar's value in the SE column — the gate then appeared
@@ -1069,11 +1080,17 @@ def reduce_run(run_dir) -> dict:
             "val": n.get("val"),
             "parent": n.get("parent"),
             "parent_val": n.get("parent_val"),
-            "delta": float(m_delta.group(1)) if m_delta else None,
-            "stderr": float(m_se.group(1)) if m_se else None,
-            "n": int(m_n.group(1)) if m_n else None,
-            "k_se": float(m_bar.group(1)) if m_bar else None,
-            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "delta": gs.get("delta") if gs.get("delta") is not None
+                     else (float(m_delta.group(1)) if m_delta else None),
+            "stderr": gs.get("stderr") if gs.get("stderr") is not None
+                      else (float(m_se.group(1)) if m_se else None),
+            "n": gs.get("n") if gs.get("n") is not None
+                 else (int(m_n.group(1)) if m_n else None),
+            "k_se": gs.get("k_se") if gs.get("k_se") is not None
+                    else (float(m_bar.group(1)) if m_bar else None),
+            "threshold": gs.get("threshold") if gs.get("threshold") is not None
+                         else (float(m_bar.group(2)) if m_bar else None),
+            "resolvable_effect_size": gs.get("resolvable_effect_size"),
             "reason": _sanitize_text(reason, 600),
         })
 

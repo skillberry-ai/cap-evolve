@@ -59,8 +59,8 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
-def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
-    """The verdict ``round.py`` recorded for this candidate, from its persisted table.
+def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
+    """This candidate's row from ``round.py``'s persisted table, if one exists.
 
     Readable only because ``round.py`` now writes its table to ``work/`` instead of leaving
     stdout the sole copy — before that, ``commit.py`` had no way to know what the gate had said
@@ -83,8 +83,32 @@ def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
             continue
         for row in payload.get("candidates") or []:
             if isinstance(row, dict) and str(row.get("tag")) == str(candidate_id):
-                return row.get("verdict")
+                return row
     return None
+
+
+def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
+    row = _gate_row(run_dir, candidate_id)
+    return row.get("verdict") if row else None
+
+
+def _gate_stats(run_dir: RunDir, candidate_id: str) -> dict:
+    """Structured numeric gate fields for this candidate, straight from ``round.py``'s table
+    (which reads them from ``gate_check.py``'s own JSON) — for attaching to events, IN ADDITION
+    to the prose ``--note``, so the dashboard's gate-decision view no longer has to regex-parse
+    a hand-typed note to recover Δ/SE/n/k·SE/resolvable-effect-size. Field names match what
+    ``dashboard.py``'s ``gate_decisions`` already reports, so no dashboard schema change is
+    needed to consume them. Empty dict (not an error) when this candidate was never gated via
+    ``round.py`` (e.g. a single-candidate flow that called ``gate_check.py`` directly)."""
+    row = _gate_row(run_dir, candidate_id) or {}
+    return {
+        "delta": row.get("gate_delta"),
+        "threshold": row.get("gate_threshold"),
+        "stderr": row.get("stderr"),
+        "n": row.get("n"),
+        "k_se": row.get("k_se"),
+        "resolvable_effect_size": row.get("resolvable_effect_size"),
+    }
 
 
 def main(argv=None) -> int:
@@ -177,13 +201,18 @@ def main(argv=None) -> int:
     # total, but no cost-bearing event exists to explain it, so an agent-mode run reported
     # 100% of its optimizer spend as unattributed. opt_cost_usd/opt_tokens are the field
     # names the ledger already reads from headless optimizer backends.
+    # Structured gate numbers (delta/threshold/stderr/n/k_se/resolvable_effect_size), IN
+    # ADDITION to the prose --note, so the dashboard can render them without regex-parsing a
+    # hand-typed string. {} when this candidate was never gated via round.py.
+    gate_stats = _gate_stats(run_dir, args.candidate_id)
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
-                      opt_seconds=args.optimizer_seconds or None)
+                      opt_seconds=args.optimizer_seconds or None,
+                      **gate_stats)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
@@ -195,7 +224,22 @@ def main(argv=None) -> int:
                              accepted=accepted, reason=args.note or args.decision,
                              val=args.val,
                              opt_cost_usd=args.optimizer_usd or None,
-                             opt_tokens=args.optimizer_tokens or None)
+                             opt_tokens=args.optimizer_tokens or None,
+                             **gate_stats)
+    # Re-seed JOURNAL.md onto whichever candidate is now $BEST (fresh accumulated run
+    # journal + marker), so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"`
+    # carries a clean append target forward — the round-2+ half of the fix in host.py's
+    # `_stage_context` (which seeds round 1 the same way onto the seed candidate).
+    # `record_iteration` above already folded THIS round's tail into the run-level file,
+    # so the snapshot picks up the full history regardless of accept/reject. Falls back to
+    # THIS candidate's own just-taken snapshot when there is no best_id yet (a run with no
+    # baseline) — that dir always exists (``run_dir.snapshot`` above just created it) —
+    # and is best-effort: losing this re-seed must not fail the commit itself.
+    try:
+        harness._seed_journal(
+            run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
+    except Exception as exc:  # noqa: BLE001
+        run_dir.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(exc)[:300])
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()

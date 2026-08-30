@@ -252,6 +252,14 @@ def main(argv=None) -> int:
                                              - gate_res.reward, 4)),
             "gate_delta": (g.get("gate") or {}).get("delta"),
             "gate_threshold": (g.get("gate") or {}).get("threshold"),
+            # Structured numeric fields from gate_check.py's own JSON, kept alongside
+            # gate_delta/gate_threshold above so commit.py can attach them to the events it
+            # writes, rather than only a hand-typed prose note (dashboard.py's gate_decisions
+            # previously had to regex-parse these back out of that note — see commit.py).
+            "stderr": (g.get("candidate") or {}).get("stderr"),
+            "n": g.get("paired_n"),
+            "k_se": args.k_se,
+            "resolvable_effect_size": (g.get("gate") or {}).get("resolvable_effect_size"),
             "verdict": g.get("verdict"),
             "regressions": g.get("regressions"),
             "eval_rc": ev.get("rc"),

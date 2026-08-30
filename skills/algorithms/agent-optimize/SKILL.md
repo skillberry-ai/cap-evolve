@@ -101,7 +101,7 @@ but "did the agent follow it at all". Never exercised ⇒ the **form** is wrong,
 below; exercised and still wrong ⇒ the content is.
 
 **2. Propose an edit per candidate — and address EVERY cluster the round can afford**, either as
-**sibling candidates** (one cluster each, gated independently — the safe default) or as **one bold
+**sibling candidates, default N≥3** (one cluster each, gated independently — the safe default) or as **one bold
 multi-part edit** (higher variance, but the only way a fix needing a prompt change *and* a tool change
 lands together). Bundle only *independent* parts — different files, different rules — so a rejected bundle
 can be resubmitted as its surviving part; read `regressed` (screen) and `regressions` (gate) to know which

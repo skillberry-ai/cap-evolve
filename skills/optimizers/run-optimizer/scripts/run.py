@@ -24,6 +24,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
@@ -241,6 +242,60 @@ def write_transcript(path: str, stdout: str, stderr: str, *, extra_keys=()) -> d
         return {"error": f"could not write transcript to {path}: {exc}"}
 
 
+def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
+                    transcript_path: str | None, extra_keys=()) -> tuple[int, str, str]:
+    """Run ``cmd``, TEEING each stdout line to ``transcript_path`` (redacted, append mode)
+    AS IT ARRIVES, instead of buffering the whole run in memory and writing once at exit.
+
+    A multi-hour continuous optimizer session (agent-optimize's execution mode calls this
+    once for the WHOLE session, not once per round) previously lost its entire transcript
+    on a crash, and nobody could read what it was doing mid-run — the transcript only
+    existed after the process had already exited. Still returns the full accumulated
+    stdout/stderr text so the caller's cost/stop parsing and final ``write_transcript``
+    call are byte-identical to the non-streaming behavior.
+
+    stderr is drained on a background thread while stdout is read on the main thread —
+    reading one pipe to completion before touching the other risks the classic two-pipe
+    deadlock if the child fills the other pipe's buffer while blocked on this one.
+    """
+    proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, text=True, bufsize=1)
+
+    stderr_chunks: list[str] = []
+
+    def _drain_stderr() -> None:
+        assert proc.stderr is not None
+        for line in proc.stderr:
+            stderr_chunks.append(line)
+
+    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    stderr_thread.start()
+
+    dest = None
+    if transcript_path:
+        try:
+            dest = Path(transcript_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text("", encoding="utf-8")  # start empty; each line appends below
+        except OSError:
+            dest = None  # best-effort: losing the LIVE tee must not lose the run
+
+    stdout_chunks: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        stdout_chunks.append(line)
+        if dest is not None:
+            try:
+                with dest.open("a", encoding="utf-8") as f:
+                    f.write(_redact(line, extra_keys))
+            except OSError:
+                dest = None  # stop trying; the in-memory copy still reaches write_transcript
+    proc.stdout.close()
+    proc.wait()
+    stderr_thread.join()
+    return proc.returncode, "".join(stdout_chunks), "".join(stderr_chunks)
+
+
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
                   model: str | None, self_dir: str) -> list[str]:
     """Expand the template into argv.
@@ -383,25 +438,32 @@ def main(argv=None) -> int:
     env = dict(os.environ)
     env.update(auth["env"])
 
-    proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, env=env)
+    extra_keys = tuple(str(row.get("env_keys", "")).replace(",", " ").split())
+    # Popen + a live tee to --transcript as lines arrive, not subprocess.run() buffering the
+    # whole run in memory until exit — see `_run_and_stream`'s docstring for why (a crash
+    # mid-session previously lost the entire transcript). Still returns the full stdout/
+    # stderr text, so everything below is byte-identical to the prior non-streaming behavior.
+    returncode, stdout, stderr = _run_and_stream(
+        cmd, cwd=workdir, env=env, transcript_path=args.transcript, extra_keys=extra_keys)
     # Relay the agent CLI's stderr to OUR stderr, on success as well as failure: a CLI
     # that prints a real diagnostic (rate limit, model fallback, auth warning) and then
     # exits 0 must not look silently successful. stdout stays exactly one JSON object
     # (CONTRIBUTING.md's stdout contract), so the relay cannot corrupt the payload.
-    if proc.stderr:
-        print(proc.stderr, file=sys.stderr, end="", flush=True)
-    result = {"optimizer": name, "cli_present": True, "returncode": proc.returncode,
+    if stderr:
+        print(stderr, file=sys.stderr, end="", flush=True)
+    result = {"optimizer": name, "cli_present": True, "returncode": returncode,
               "auth_present": auth["present"],
-              "stdout_tail": proc.stdout[-800:], "stderr_tail": proc.stderr[-800:]}
+              "stdout_tail": stdout[-800:], "stderr_tail": stderr[-800:]}
     # Best-effort cost capture: only when --json requested AND the row had a json_flag.
     # The prose-fed path (no --json, or empty json_flag) never reaches here, so the
-    # offline/mock and generic flows are unchanged.
+    # offline/mock and generic flows are unchanged. write_transcript() re-writes the SAME
+    # destination with the complete, final text (the live tee above already wrote it
+    # incrementally) so the returned {path, bytes, lines} contract is unchanged.
     if args.transcript:
         result["transcript"] = write_transcript(
-            args.transcript, proc.stdout, proc.stderr,
-            extra_keys=tuple(str(row.get("env_keys", "")).replace(",", " ").split()))
+            args.transcript, stdout, stderr, extra_keys=extra_keys)
     if want_json and json_flag:
-        cost = parse_cost(proc.stdout)
+        cost = parse_cost(stdout)
         result["cost"] = {"total_cost_usd": cost["usd"], "tokens": cost["tokens"]}
         if cost["usd"] is None:
             # Headless output wasn't parseable — say so; the loop falls back to no-cost.
@@ -416,7 +478,7 @@ def main(argv=None) -> int:
         if stop:
             result["stop"] = stop
     print(json.dumps(result))
-    return proc.returncode
+    return returncode
 
 
 if __name__ == "__main__":

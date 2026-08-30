@@ -161,6 +161,50 @@ agent mode *the agent is the proposer*, so `scripts/commit.py` takes `--optimize
 (which drives the stall counter). Without those, a cost- or stall-based `stop_condition` is
 unenforceable no matter how carefully it is written.
 
+## Why N≥3 sibling candidates is the default, not one candidate at a time
+
+A round pays fixed overhead regardless of how many candidates it gates: the null-control
+replicates (`--control-replicates 2` by default) plus, on the deterministic path, a baseline
+re-check. That overhead is paid ONCE whether the round proposes one candidate or several, so a
+round that proposes exactly one candidate spends nearly all of it on a single shot at the gate —
+observed directly in a live run, where two consecutive rounds each proposed one candidate and
+both were rejected, at the same fixed cost as three or more addressed in parallel would have
+been. `round.py` already supports evaluating N candidates as parallel *processes* (each with its
+own adapter `apply()`), gating them serially — the mechanism was already there; only the default
+behavior of proposing one at a time was the gap. Default to N≥3, one failure cluster each, and
+drop to fewer only when `spend.py --n-siblings N` says the remaining budget cannot afford it.
+
+## JOURNAL.md — the append-only handover, and its write protocol
+
+`$R/work/$TAG/JOURNAL.md` exists in your working copy from the moment you `cp -r
+"$R/candidates/$BEST" "$R/work/$TAG"` — the framework seeds it (`harness._seed_journal`) onto
+the seed candidate before round 1, and re-seeds it onto whichever candidate is `$BEST` after
+every `commit.py` call, so it is always present at the start of a round regardless of how many
+rounds came before. It is YOUR file (append-only, never reset): the run-level copy at
+`$R/JOURNAL.md` accumulates one entry per iteration, accepted and rejected alike.
+
+The write protocol:
+
+1. Read the WHOLE file before proposing — not just the last entry — so you build on every prior
+   attempt and never re-test a refuted idea.
+2. Append your new entry BELOW the marker line
+   `<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit
+   anything above it -->`. Never edit or delete anything above the marker.
+3. Use the heading `## Iteration <candidate id> — <one-line headline of what you tried>`,
+   followed by: the changes you made, the expected effect of each, which prior RESULTS you built
+   on (or explicitly avoided because a prior RESULT proved it regressed), refuted hypotheses, and
+   your focus for the next iteration. You cannot know your own gate result while you write it —
+   `commit.py` stamps a `**RESULT (framework, objective):**` line right below your entry
+   afterward (accept/reject, Δ, and the exact tasks fixed/broken vs the parent), which is the
+   authoritative record of what actually worked — read it, don't guess at it.
+
+This is a general convention for ANY continuous-session algorithm (one long-running optimizer
+subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration
+optimizer workdir): the framework re-seeds the same file at the same two points
+(`harness._seed_journal` called once before the session starts, and once per `commit.py` call
+afterward) so a session that never gets a fresh workdir per iteration still gets a fresh append
+target every round.
+
 ## Parallelism: fan out on the cheap steps, stay serial where state moves
 
 Arbor's discipline — dispatch independent workers into separate worktrees, evaluate each on

@@ -13,8 +13,12 @@ predicates against the run dir's persisted spend every round.
 Two functions, both pure and stdlib-only:
 
   * :func:`parse_constraints` — text → ``{"predicates": [...], "ambiguous": [...],
-    "text": "<verbatim>"}``. The original prose is always carried alongside, because a
-    parser that silently drops half a sentence is worse than no parser.
+    "unenforceable": [...], "text": "<verbatim>"}``. The original prose is always carried
+    alongside, because a parser that silently drops half a sentence is worse than no
+    parser. ``unenforceable`` is a clause-level list of prose this parser recognized NO
+    numeric/task-protection pattern in at all (a behavioral instruction like "use
+    screen.py before paying for full val") — distinct from ``ambiguous``, which is a
+    number this parser SAW but could not resolve (no unit, vague magnitude).
   * :func:`check_constraints` — predicates + measured actuals → per-predicate
     satisfied/violated + one ``stop | continue | narrow_scope`` recommendation.
 
@@ -229,6 +233,28 @@ def parse_constraints(text: str | None) -> dict:
                                  "enforces totals, so the run is effectively unbounded in $. "
                                  "Ask for a total, or set max_usd in the spec"})
 
+    # --- unenforceable prose -------------------------------------------------
+    # A clause with a NUMBER but no recognized unit is already loud (the "no recognized
+    # unit" branch above). A clause with NO number at all — a behavioral instruction like
+    # "use screen.py before paying for full val each round" — matches none of the numeric/
+    # protection patterns above and was, until now, silently dropped: neither enforced nor
+    # reported, so a driver had no way to tell "the framework checked this and it's fine"
+    # from "the framework never saw this at all". Purely mechanical: split on clause
+    # boundaries and report any clause none of the predicates/ambiguous entries above were
+    # extracted from — never an attempt to enforce the prose itself.
+    _covered = [str(p.get("source", "")).lower() for p in preds] + \
+        [str(a.get("span", "")).lower() for a in ambiguous if isinstance(a, dict)]
+    unenforceable: list = []
+    for clause in re.split(r"[;,.]\s+|\s+\band\b\s+|\s+\bor\b\s+", raw.strip()):
+        clause = clause.strip().strip(".,;")
+        if len(clause) < 8:  # too short to be a real, checkable instruction
+            continue
+        cl = clause.lower()
+        if any(span and span in cl for span in _covered):
+            continue
+        if clause not in unenforceable:
+            unenforceable.append(clause)
+
     # Tighten duplicates.
     out: list = []
     seen: dict = {}
@@ -251,7 +277,8 @@ def parse_constraints(text: str | None) -> dict:
         seen[k] = p
         out.append(p)
 
-    return {"text": raw, "predicates": out, "ambiguous": ambiguous}
+    return {"text": raw, "predicates": out, "ambiguous": ambiguous,
+            "unenforceable": unenforceable}
 
 
 def cost_target(target: float, per_task_ceiling: dict) -> dict:
@@ -386,5 +413,6 @@ def check_constraints(
         "recommendation": rec,
         "reasons": stop_reasons or warn_reasons,
         "ambiguous": parsed.get("ambiguous") or [],
+        "unenforceable": parsed.get("unenforceable") or [],
         "stop_condition_text": parsed.get("text", ""),
     }

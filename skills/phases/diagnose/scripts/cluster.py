@@ -13,8 +13,10 @@ of being re-improvised in prose on every iteration:
    preamble otherwise makes every failure look identical);
 2. reduce to content words — drop quoted literals / numbers / punctuation
    (task-specific, not causal), drop stopwords and OUTCOME-GENERIC words which say
-   *that* it failed and never *why*, and crudely stem the rest so
-   confirm/confirmed/confirmation collapse;
+   *that* it failed and never *why*, ALSO drop any stem that recurs in most of the
+   BATCH's own feedbacks (corpus-relative, on top of the fixed English list — a
+   benchmark's own recurring vocabulary is boilerplate too, just not English
+   boilerplate), and crudely stem the rest so confirm/confirmed/confirmation collapse;
 3. the surviving token set is the key — identifiers are the site, verbs the
    expectation;
 4. two keys are the same cluster when they OVERLAP: |A∩B| / min(|A|,|B|) >= 0.5,
@@ -54,6 +56,15 @@ _MIN_STEM = 4
 
 OVERLAP_MIN = 0.5
 
+# A token that recurs in more than this fraction of the batch's feedbacks is treated as
+# THIS BENCHMARK's own boilerplate, on top of (never instead of) the generic-English list
+# above. `_GENERIC`/`_STOP` are a fixed vocabulary of ENGLISH filler; they cannot know that
+# a given benchmark's scorer always says "action check state write" regardless of root
+# cause. A fixed corpus can only be told apart from noise on that corpus, so the threshold
+# is corpus-relative rather than a hardcoded word list — mechanical and benchmark-agnostic
+# by construction.
+CORPUS_STOP_FRAC = 0.65
+
 
 def _stem(tok: str) -> str:
     for suf in _SUFFIXES:
@@ -90,17 +101,48 @@ def common_prefix(feedbacks: list[str]) -> list[str]:
     return out
 
 
-def key_tokens(feedback: str, prefix: list[str] | None = None) -> frozenset[str]:
-    """The (site, expectation) key: content-word stems, boilerplate removed."""
+def _stemmed(feedback: str, prefix: list[str] | None = None) -> list[str]:
+    """Content-word stems for one feedback, with the shared boilerplate prefix removed."""
     toks = _words(feedback)
     pre = prefix or []
     if pre and toks[: len(pre)] == pre:
         toks = toks[len(pre):]
-    stems = [_stem(t) for t in toks]
-    keep = [s for s in stems if s not in _STOP and s not in _GENERIC]
+    return [_stem(t) for t in toks]
+
+
+def corpus_stopwords(stemmed_per_item: list[list[str]],
+                     threshold: float = CORPUS_STOP_FRAC) -> frozenset[str]:
+    """Stems that appear in more than ``threshold`` of the batch's feedbacks.
+
+    Document frequency, not raw count — a token used many times in ONE feedback must not
+    count as "common to the batch". Needs at least 2 feedbacks to mean anything."""
+    n = len(stemmed_per_item)
+    if n < 2:
+        return frozenset()
+    doc_freq: dict[str, int] = {}
+    for toks in stemmed_per_item:
+        for t in set(toks):
+            doc_freq[t] = doc_freq.get(t, 0) + 1
+    return frozenset(t for t, c in doc_freq.items() if c / n > threshold)
+
+
+def _filter_stems(stems: list[str], extra_stop: frozenset[str] | None = None) -> frozenset[str]:
+    """Drop generic/stopword/corpus-boilerplate stems, cascading back if that empties the
+    key — a cluster signature must never go blank just because a whole batch's failures
+    happen to share their content words too (a corpus of 2 near-identical failures, say)."""
+    extra = extra_stop or frozenset()
+    keep = [s for s in stems if s not in _STOP and s not in _GENERIC and s not in extra]
+    if not keep:                       # the corpus filter alone emptied it: back off
+        keep = [s for s in stems if s not in _STOP and s not in _GENERIC]
     if not keep:                       # all-generic feedback: fall back to what we have
         keep = [s for s in stems if s not in _STOP] or stems
     return frozenset(keep)
+
+
+def key_tokens(feedback: str, prefix: list[str] | None = None,
+              extra_stop: frozenset[str] | None = None) -> frozenset[str]:
+    """The (site, expectation) key: content-word stems, boilerplate removed."""
+    return _filter_stems(_stemmed(feedback, prefix), extra_stop)
 
 
 def overlap(a: frozenset[str], b: frozenset[str]) -> float:
@@ -116,7 +158,14 @@ def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
     order, so the output is byte-identical on repeated runs over the same input.
     """
     prefix = common_prefix([f for _, f, _ in items])
-    keys = [key_tokens(f, prefix) for _, f, _ in items]
+    stemmed = [_stemmed(f, prefix) for _, f, _ in items]
+    # Corpus-relative, IN ADDITION to the generic-English list: a benchmark's own recurring
+    # vocabulary ("action check state write") isn't English boilerplate, so no fixed list
+    # catches it, but it is exactly as uninformative once it recurs in most of THIS batch's
+    # failures. Without this, that vocabulary survives into every key and merges unrelated
+    # failures into one mega-cluster with no discriminating signal.
+    extra_stop = corpus_stopwords(stemmed)
+    keys = [_filter_stems(s, extra_stop) for s in stemmed]
 
     # Union-find over the overlap relation (transitive: A~B and B~C => one cluster).
     # ponytail: O(n^2) pair scan — fine for a val split; index by token if it grows.
