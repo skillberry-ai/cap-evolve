@@ -50,12 +50,15 @@ def _existing_trial_count(run_dir: RunDir, tag: str, split: str) -> int:
     vdir = run_dir.rollouts / split
     if not vdir.exists():
         return 0
-    counts = {}
+    # Track the HIGHEST trial index per task, then convert to a count once. Comparing a
+    # running count against the next index instead (`max(count, idx) + 1`) over-counts
+    # whenever glob order is not ascending, which leaves gaps in the merged indices.
+    highest: dict = {}
     for f in vdir.glob(f"*__{tag}__t*.json"):
         tid = f.name.split(f"__{tag}__t")[0]
         idx = int(f.name.rsplit("__t", 1)[1].removesuffix(".json"))
-        counts[tid] = max(counts.get(tid, -1), idx) + 1
-    return max(counts.values()) if counts else 0
+        highest[tid] = max(highest.get(tid, -1), idx)
+    return max(highest.values()) + 1 if highest else 0
 
 
 def _merge_grow_trials(run_dir: RunDir, candidate: str, grow_tag: str, split: str,
@@ -147,6 +150,29 @@ def main(argv=None) -> int:
     run_dir.log_event("provisional_grow", candidate=args.candidate, growth_round=args.growth_round,
                       add_trials=args.add_trials, pooled_n=len(deltas or []),
                       pooled_val=pooled.reward, verdict=verdict, recommendation=recommendation)
+
+    # Persist the POOLED gate row in the same `work/<table>.json` shape `round.py` writes,
+    # because `commit.py`'s `_gate_row` reads the newest such table to recover the verdict and
+    # the structured gate numbers it attaches to the accept/reject event. Without this the
+    # final commit on a grown candidate books the round's PRE-growth numbers — and a
+    # `promote` would be logged as `gate_verdict: reject`, reading as a driver override of a
+    # gate that in fact accepted at the pooled n. Newest-mtime wins there, so a plain write
+    # is all this needs; no special-casing on the reader's side.
+    work = run_dir.root / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / f"grow_{args.candidate}_r{args.growth_round}.json").write_text(
+        json.dumps({"grown": args.candidate, "growth_round": args.growth_round,
+                    "candidates": [{
+                        "tag": args.candidate,
+                        "reward": pooled.reward,
+                        "gate_delta": d.delta,
+                        "gate_threshold": d.threshold,
+                        "stderr": pooled.stderr,
+                        "n": len(deltas or []),
+                        "k_se": args.k_se,
+                        "resolvable_effect_size": d.resolvable_effect_size,
+                        "verdict": verdict,
+                    }]}, indent=2), encoding="utf-8")
 
     print(json.dumps({
         "candidate": args.candidate,

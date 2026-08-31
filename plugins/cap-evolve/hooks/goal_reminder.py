@@ -69,6 +69,22 @@ def _tick(run_dir: Path, cadence: int) -> int:
     return n
 
 
+def _wallclock(rd) -> float:
+    """Seconds since the run's FIRST recorded event — the same measurement ``spend.py``
+    makes. Passing 0.0 instead reported every ``max_wallclock`` predicate as wholly
+    unspent, which is the one thing this hook exists not to do."""
+    import time
+    try:
+        with rd.events_path.open(encoding="utf-8") as f:
+            first = json.loads(f.readline())
+        return max(0.0, time.time() - float(first.get("t") or 0.0))
+    except Exception:  # noqa: BLE001
+        try:
+            return max(0.0, time.time() - rd.state_path.stat().st_mtime)
+        except Exception:  # noqa: BLE001
+            return 0.0
+
+
 def _goal_context(run_dir: Path) -> str | None:
     """Build the reminder text from MEASURED state — never from anything remembered."""
     from cap_evolve import RunDir, harness
@@ -102,7 +118,7 @@ def _goal_context(run_dir: Path) -> str | None:
 
     checked = check_constraints(
         parsed, best_val=(best.reward if best else None), usd=spent.total_usd,
-        wallclock_seconds=0.0, iterations=spent.iterations, stall=spent.stall,
+        wallclock_seconds=_wallclock(rd), iterations=spent.iterations, stall=spent.stall,
         metric_calls=spent.metric_calls, regressed_tasks=regressed,
     )
     rec = "stop" if stop else checked["recommendation"]

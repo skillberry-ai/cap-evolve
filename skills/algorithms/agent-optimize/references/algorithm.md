@@ -322,18 +322,21 @@ numbers would be a copy.
 
 ## Gate as evidence, not a verdict
 
-`gate_check.py` computes the honest statistics — `delta`, `stderr`, `resolvable_effect_size`, whether both
-null-control replicates agree in sign — and prints them as its `"verdict"` field. It does not decide for
-you. Nothing in `commit.py` or `round.py` checks that field against the `--decision` you pass: `set_best()`
+The statistics come from two scripts, and it matters which one prints what: `gate_check.py` prints
+`delta`, `stderr`, `resolvable_effect_size` and its own `"verdict"` for ONE candidate; `round.py` prints
+the round-scoped numbers no single-candidate gate can see — `noise_floor_from_control` and
+`verdict_by_reference`/`verdict_stable`, the sign-agreement check across the round's null-control
+replicates. Neither decides for you. Nothing in `commit.py` or `round.py` checks that field against the `--decision` you pass: `set_best()`
 is an unconditional setter, and `--reject-basis driver_judgement` exists precisely so you can log a
 considered disagreement. Treat the printed numbers the way a careful researcher reads a stats printout,
 not the way code reads a boolean:
 
 - Read `resolvable_effect_size` first. It is the smallest true effect this round could have detected at
   all — a `delta` at or below it is not evidence either way, whatever the printed verdict says.
-- Does `delta` clear the noise floor measured for THIS round (`noise_floor_from_control`), not just the a
-  priori `k_se` threshold baked into the printed verdict?
-- Do both null-control replicates agree in sign with the candidate's direction? A round where they
+- Does `delta` clear the noise floor measured for THIS round (`round.py`'s
+  `noise_floor_from_control`), not just the a priori `k_se` threshold baked into the printed verdict?
+- Does the verdict survive the choice of control replicate (`round.py`'s `verdict_by_reference` /
+  `verdict_stable`, always computed once there is more than one control block)? A round where they
   disagree is telling you the noise floor itself is unstable this round, not just that one candidate is
   borderline.
 - Before any accept, or any decision that disagrees with the printed verdict, write one sentence in

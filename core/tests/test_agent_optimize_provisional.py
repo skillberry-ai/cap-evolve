@@ -358,3 +358,24 @@ def test_grow_merges_new_trials_onto_the_candidates_own_tag(tmp_path):
     # No stray throwaway-tag files left behind after the merge.
     vdir = run_dir.rollouts / "val"
     assert not list(vdir.glob("*__cand_1__grow1__t*.json"))
+
+    # grow.py persists its POOLED row in round.py's own `work/` table shape, so the final
+    # commit books the post-growth verdict and numbers. Without it, commit.py reads the
+    # round's PRE-growth table and a promote is logged as `gate_verdict: reject` — the
+    # accept then reads as a driver override of a gate that in fact accepted at pooled n.
+    # (this adapter's `apply` is a no-op, so the candidate measures identically to the
+    # parent — Δ=0, the honest pooled verdict is `reject`.)
+    assert payload["verdict"] == "reject", payload
+    (run_dir.root / "work").mkdir(exist_ok=True)
+    stale = run_dir.root / "work" / "round_i0.json"
+    stale.write_text(json.dumps({"candidates": [
+        {"tag": "cand_1", "verdict": "accept", "gate_delta": 0.75, "n": 4}]}), encoding="utf-8")
+    os.utime(stale, (1, 1))  # older than grow.py's row, which must win
+    rc = _commit(run_dir, "cand_1", cand_dir, "reject", val=after.reward,
+                 extra=["--reject-basis", "gate"])
+    assert rc.returncode == 0, rc.stdout + rc.stderr
+    ev = _events(run_dir, "reject")[-1]
+    assert ev["gate_verdict"] == "reject", ev
+    assert ev["overrode_gate"] is False, ev
+    # ...and the numbers on the event are the POOLED ones, not the stale table's Δ=0.75.
+    assert ev["n"] == 4 and ev["delta"] == 0.0, ev

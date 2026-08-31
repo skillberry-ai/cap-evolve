@@ -135,8 +135,11 @@ def main(argv=None) -> int:
     # this SAME candidate (never a new edit) may resolve it — see references/algorithm.md,
     # "Provisional candidates". Surfaced here so the driver notices it without having to
     # compute delta > 0 itself.
+    # Off `d.accept`, not the regression-vetoed `accept`: a candidate the GATE accepted and
+    # `--veto-regressions` then rejected has nothing left for more trials to resolve — the
+    # veto is a per-task harm call, not a measurement-power problem.
     directionally_positive_but_inconclusive = (
-        not d.indecisive and not accept and d.delta > 0)
+        not d.indecisive and not d.accept and d.delta > 0)
     next_cmd = f"scripts/commit.py --decision {'accept' if accept else 'reject'}"
     if directionally_positive_but_inconclusive:
         next_cmd += " (or --decision provisional, then scripts/grow.py, to buy more n on this candidate)"
