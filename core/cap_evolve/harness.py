@@ -936,6 +936,22 @@ def _journal_tail(workdir: Path) -> str:
     return tail.replace(_JOURNAL_MARK, "").strip()
 
 
+def pending_handover(workdir: Path, run_dir: RunDir) -> str:
+    """The optimizer's handover entry ``_reconcile_journal`` would actually book — "" if none.
+
+    Asking "is there a ## block in the workdir journal?" is not the same question: an agent
+    whose next working copy is a COPY of the last one carries the previous round's entry along,
+    and ``_reconcile_journal``'s dedup guard correctly refuses to book it twice — so a round
+    that wrote no new handover can hold a stale one. Callers that report the answer back to the
+    optimizer (``agent-optimize``'s ``commit.py``) must agree with what was booked, or the
+    round most in need of the warning is the one that does not get it.
+    """
+    tail = _journal_tail(workdir).strip()
+    run_journal = run_dir.root / "JOURNAL.md"
+    base = (run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED)
+    return "" if not tail or tail in base else tail
+
+
 def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     """Write the FACTUAL, framework-owned LEDGER.md: one row per prior iteration with
     its outcome + the exact tasks it broke/fixed. Deterministic — the objective record;
@@ -1038,7 +1054,7 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above",
     telling the next iteration to redesign an edit that had never actually been judged. The
     correct next move for an unresolved edit is to RE-MEASURE it."""
-    tail = _journal_tail(workdir)
+    tail = pending_handover(workdir, run_dir)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
     # Run-level file is pure accumulated entries — strip any marker before appending.

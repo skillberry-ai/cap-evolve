@@ -77,7 +77,12 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     parent = table.get("parent") or {}
     out = {
         "parent_val": parent.get("reward"),
-        "gate_stderr": parent.get("stderr"),
+        # NOT gate_stderr: the published ``stderr`` column is the SE of the PAIRED per-task
+        # deltas (``threshold == k_se * SE`` in every deterministic gate's own reason string),
+        # while ``parent.stderr`` is the SE of the parent's MEAN over tasks — a different,
+        # typically much larger quantity. Publishing it there put "±0.144" beside a threshold
+        # of 0.044 in one row, which is the same self-contradiction this function exists to
+        # remove. The round table records no paired SE, so it stays null like ``k_se``.
         "gate_n": parent.get("n_tasks"),
         "gate_delta": entry.get("gate_delta"),
         "gate_threshold": entry.get("gate_threshold"),
@@ -328,7 +333,11 @@ def main(argv=None) -> int:
     # every round of runs 32971129203 and 33046360451 recorded, because nothing asked the agent
     # for one. Read it BEFORE booking, and report the answer so a forgotten handover is
     # correctable while rounds remain rather than discovered when the run is over.
-    handover = bool(harness._journal_tail(src).strip())
+    # ``pending_handover``, not ``_journal_tail``: a working copy cloned from the last round
+    # still holds THAT round's entry, and _reconcile_journal's dedup guard books the placeholder
+    # rather than the same entry twice — so the plain tail reports "recorded" for exactly the
+    # round whose handover went missing.
+    handover = bool(harness.pending_handover(src, run_dir))
     reason = args.note or args.decision
     if indecisive:
         reason = f"indecisive (gate): {reason}"

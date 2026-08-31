@@ -183,7 +183,9 @@ def test_a_booked_round_carries_its_gate_numbers_not_only_prose(tmp_path):
         f"parent_val is still unpopulated though round.py measured it: {d}")
     assert d["delta"] == 0.03333333333333333, f"the gate delta was dropped: {d}"
     assert d["threshold"] == 0.0439790447668071, f"the gate threshold was dropped: {d}"
-    assert d["stderr"] == 0.14396882759686525, f"the parent stderr was dropped: {d}"
+    assert d["stderr"] is None, (
+        "the parent's MEAN stderr was published in the paired-gate `stderr` column, where "
+        f"threshold == k_se·SE — 0.144 beside a threshold of 0.044 contradicts itself: {d}")
     assert d["n"] == 10, f"the task count was dropped: {d}"
 
 
