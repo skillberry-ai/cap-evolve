@@ -429,8 +429,12 @@ its single `recommendation` (`stop` | `narrow_scope` | `continue`), as SKILL.md 
 Your always-on instructions mention `LEDGER.md`, `RUNMAP.md` and `prior_iterations/`. Those are
 built by the *deterministic* loop, which calls one optimizer per iteration; you are driving the
 whole search yourself, so they will not exist here and their absence is not a problem — do not
-go looking for them or try to recreate them. `JOURNAL.md` is different: `commit.py` reconciles
-it as you book rounds, so it accrues your own history and is worth reading from round 2 on.
+go looking for them or try to recreate them. `JOURNAL.md` is different: it is YOURS, not the
+framework's. Read it in full before proposing (from round 2 on it holds every prior round's
+handover). Then, before you end EACH round's turn — after `commit.py`, whether it accepted or
+rejected — append your own `## Iteration <cid>` entry below the marker: what you tried, why, and
+what the numbers said. `commit.py` only reconciles what you actually wrote; an empty file in, an
+empty handover out, and the next round starts blind.
 
 ## Unattended — this is the one real difference from an interactive run
 

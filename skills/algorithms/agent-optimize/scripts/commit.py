@@ -15,6 +15,14 @@ Does exactly what the deterministic loops do at the end of a step:
     canonical ``step`` record every consumer enumerates, and reconciles the
     run-level ``JOURNAL.md``. Do NOT open-code those three here again.
 
+``--decision provisional`` is a THIRD outcome, distinct from accept/reject: the candidate
+is directionally positive (Δ>0) but did not clear the significance gate, and the driver
+wants to buy more trials on this SAME, UNMODIFIED candidate (``scripts/grow.py``) before a
+final call. It snapshots and logs the event like the other two, but does NOT ``set_best``
+and does NOT call ``record_iteration`` — the iteration is not over, so the stall counter,
+LEDGER.md and JOURNAL.md must not advance for it. The same candidate id later gets a real
+``accept``/``reject`` commit once ``grow.py`` has re-gated it at the pooled n.
+
 Runner-side spend (metric_calls / usd / tokens / seconds) is already recorded by the
 evaluate phase; ``--optimizer-*`` is for the *proposer's* own cost, which in agent
 mode is you and would otherwise never be counted.
@@ -117,7 +125,7 @@ def main(argv=None) -> int:
     p.add_argument("--candidate-id", required=True,
                    help="candidate id == the tag its rollouts were written under")
     p.add_argument("--from-dir", required=True, help="the working copy to snapshot")
-    p.add_argument("--decision", required=True, choices=["accept", "reject"])
+    p.add_argument("--decision", required=True, choices=["accept", "reject", "provisional"])
     p.add_argument("--val", type=float, default=None, help="candidate's full-val mean")
     p.add_argument("--note", default="", help="one line: why this edit, in general terms")
     # The DRIVER's disposition, recorded machine-readably alongside the screen's own
@@ -168,8 +176,9 @@ def main(argv=None) -> int:
             return 2
 
     accepted = args.decision == "accept"
-    if accepted and args.reject_basis:
-        print(json.dumps({"error": "--reject-basis is meaningless on an accept",
+    provisional = args.decision == "provisional"
+    if (accepted or provisional) and args.reject_basis:
+        print(json.dumps({"error": f"--reject-basis is meaningless on --decision {args.decision}",
                           "fix": "drop it, or pass --decision reject"}, indent=2))
         return 2
     # `--reject-basis gate` asserts the gate rejected this candidate. On run 32871360361 it was
@@ -179,7 +188,7 @@ def main(argv=None) -> int:
     # legitimate (round.py leaves the decision to the driver on purpose); misattributing it is
     # not, and it is the one thing this log exists to get right.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
-    overrode_gate = bool(not accepted and gate_verdict == "accept")
+    overrode_gate = bool(not accepted and not provisional and gate_verdict == "accept")
     if overrode_gate and args.reject_basis == "gate":
         print(json.dumps({
             "error": f"--reject-basis gate, but the gate ACCEPTED {args.candidate_id} "
@@ -209,6 +218,7 @@ def main(argv=None) -> int:
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
+                      verdict=args.decision,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
@@ -216,30 +226,36 @@ def main(argv=None) -> int:
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
-    # The shared iteration step: charges iterations/stall, writes the canonical ``step``
-    # record, reconciles the run-level JOURNAL.md. ``parent_val`` is unknown in agent mode
-    # (the agent gates via gate_check, which prints but does not persist the parent mean),
-    # so it stays None rather than being guessed.
-    harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
-                             accepted=accepted, reason=args.note or args.decision,
-                             val=args.val,
-                             opt_cost_usd=args.optimizer_usd or None,
-                             opt_tokens=args.optimizer_tokens or None,
-                             **gate_stats)
-    # Re-seed JOURNAL.md onto whichever candidate is now $BEST (fresh accumulated run
-    # journal + marker), so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"`
-    # carries a clean append target forward — the round-2+ half of the fix in host.py's
-    # `_stage_context` (which seeds round 1 the same way onto the seed candidate).
-    # `record_iteration` above already folded THIS round's tail into the run-level file,
-    # so the snapshot picks up the full history regardless of accept/reject. Falls back to
-    # THIS candidate's own just-taken snapshot when there is no best_id yet (a run with no
-    # baseline) — that dir always exists (``run_dir.snapshot`` above just created it) —
-    # and is best-effort: losing this re-seed must not fail the commit itself.
-    try:
-        harness._seed_journal(
-            run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
-    except Exception as exc:  # noqa: BLE001
-        run_dir.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(exc)[:300])
+    # `provisional` books the decision above but stops here: the iteration is not over
+    # (the SAME candidate gets a real accept/reject commit later, once `grow.py` has
+    # re-gated it at a pooled n), so the stall counter, LEDGER.md and JOURNAL.md must not
+    # advance for it — that would spend an iteration's worth of "the run learned something
+    # new" bookkeeping on a decision that has not actually been made yet.
+    if not provisional:
+        # The shared iteration step: charges iterations/stall, writes the canonical ``step``
+        # record, reconciles the run-level JOURNAL.md. ``parent_val`` is unknown in agent mode
+        # (the agent gates via gate_check, which prints but does not persist the parent mean),
+        # so it stays None rather than being guessed.
+        harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
+                                 accepted=accepted, reason=args.note or args.decision,
+                                 val=args.val,
+                                 opt_cost_usd=args.optimizer_usd or None,
+                                 opt_tokens=args.optimizer_tokens or None,
+                                 **gate_stats)
+        # Re-seed JOURNAL.md onto whichever candidate is now $BEST (fresh accumulated run
+        # journal + marker), so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"`
+        # carries a clean append target forward — the round-2+ half of the fix in host.py's
+        # `_stage_context` (which seeds round 1 the same way onto the seed candidate).
+        # `record_iteration` above already folded THIS round's tail into the run-level file,
+        # so the snapshot picks up the full history regardless of accept/reject. Falls back to
+        # THIS candidate's own just-taken snapshot when there is no best_id yet (a run with no
+        # baseline) — that dir always exists (``run_dir.snapshot`` above just created it) —
+        # and is best-effort: losing this re-seed must not fail the commit itself.
+        try:
+            harness._seed_journal(
+                run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
+        except Exception as exc:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(exc)[:300])
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()

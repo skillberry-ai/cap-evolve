@@ -337,7 +337,7 @@ _ALGO_MARKERS = (
 #: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
 #: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
 #: candidate on the same (current) runs, so it never carried a graph anyone needs.
-_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject")
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
@@ -780,7 +780,14 @@ def reduce_run(run_dir) -> dict:
         # not a rejection and not a failure: the gate declined to judge, so the edit's
         # quality is unknown. Collapsing it into "rejected" (the old behaviour) told
         # the reader a measured verdict existed when none did.
-        if cid in indecisive_ids:
+        if kind == "provisional":
+            # Directionally positive (Δ>0) but not yet gate-significant, and the driver
+            # chose to buy more trials on this SAME candidate (scripts/grow.py) instead of
+            # a final accept/reject — neither "accepted" nor "rejected" describes that, and
+            # falling through to the accepted/rejected branch below would misreport it as
+            # one or the other while it is still pending.
+            status = "provisional"
+        elif cid in indecisive_ids:
             status = "indecisive"
         elif val is None and not per and kind not in ("accept", "reject"):
             # ``failed`` means NO VERDICT AND NO MEASUREMENT — a step that produced
@@ -1063,6 +1070,7 @@ def reduce_run(run_dir) -> dict:
         reason = str(n.get("reason") or "")
         verdict = ("accept" if n["status"] == "accepted"
                    else "indecisive" if n["status"] == "indecisive"
+                   else "provisional" if n["status"] == "provisional"
                    else "reject" if n["status"] == "rejected" else "no measurement")
         gs = n.get("gate_stats") or {}
         m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
@@ -2091,7 +2099,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   t2.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'verdict'}),
     $('th',{class:'r',text:'val'}),$('th',{class:'r',text:'parent val'}),$('th',{class:'r',text:'Δ̄'}),
     $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'})));
-  const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive'};
+  const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive',provisional:'b-indecisive'};
   const n4=v=>v==null?'—':(+v).toFixed(4);
   D.forEach(d=>{
     t2.append($('tr',{},

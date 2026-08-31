@@ -7,6 +7,7 @@
 - [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
 - [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
 - [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
+- [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
 - [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
 - [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
 - [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
@@ -124,6 +125,19 @@ the tasks the edit targeted**, not as a statistical test: a tier-1 subset contai
 val task that comes back 0-for-N on them is a sound reason to stop spending on that candidate. Book
 that as a budget decision on screen evidence (`--reject-basis budget`), never as a gate decision.
 
+### Targeted screening: draw the collateral-damage holdout from outside the cluster
+
+`--broken <ids>` biases a screen toward the tasks an edit is meant to fix — the right bias for
+"did the targeted tasks improve", the wrong one for "did anything else break", because those
+targeted ids crowd out the holdout that would otherwise catch a regression elsewhere. Two
+separate calls answer the two questions cleanly: `--broken <cluster-ids> --k <n> --holdout-frac
+0` for a pure read on the cluster, and a second call with no `--broken` and a normal
+`--holdout-frac` for collateral damage — its holdout draws from tasks the parent already
+*passes* (`select_screen_subset`'s `passing` set), which a diagnosed failure cluster is not, so
+it checks the untouched surface without having to name it. One `--k`-sized draw that mixes both
+either drowns the targeted signal in noise or lets the same tasks stand for both target and
+holdout at once.
+
 ### `phases/gate` is an inspection front-end, not the round's gate
 
 `phases/gate/scripts/run.py --mode paired` reaches the *same* paired gate off the *same* persisted
@@ -187,6 +201,46 @@ been. `round.py` already supports evaluating N candidates as parallel *processes
 own adapter `apply()`), gating them serially — the mechanism was already there; only the default
 behavior of proposing one at a time was the gap. Default to N≥3, one failure cluster each, and
 drop to fewer only when `spend.py --n-siblings N` says the remaining budget cannot afford it.
+
+## Provisional candidates: sequential evidence, not compounded edits
+
+A candidate that clears `Δ>0` but not `Δ > k·SE` is not the same as one at `Δ<=0`: the first is
+a real positive direction the gate could not yet resolve at this `n`; the second has no
+direction to chase. Discarding both alike wastes the first kind of evidence — three real rounds
+on one benchmark each proposed a single candidate, paid the round's full fixed overhead, and
+bounced off the noise floor with nothing carried forward, even though at least one of those
+candidates' `Δ` was positive and simply under-measured.
+
+The fix is a THIRD decision, `commit.py --decision provisional`, for exactly that case
+(`gate_check.py` flags it as `directionally_positive_but_inconclusive`). It is deliberately
+narrow: the only thing that happens next is buying more trials on the **same, unmodified**
+candidate (`scripts/grow.py`) — never a new edit stacked on top of it. This is the line that
+keeps sequential evidence-gathering from becoming the failure mode this project's own
+post-mortems already named — "fewer mechanisms beat more", i.e. compounding edits on
+unconfirmed ground. A provisional candidate buys precision on ONE measurement; it never becomes
+the base a sibling edit builds from until it has actually been accepted.
+
+**The pooling has to be real pooling, not two verdicts averaged.** `grow.py` runs the additional
+trials under a throwaway tag, then `loop.pool_split_results` concatenates each shared task's
+`trial_rewards` (not its mean) before re-aggregating — so the pooled `SplitResult` is what a
+single evaluation at `n = n_old + n_new` would have produced, and the paired significance test
+that follows sees the honest combined variance. Averaging the two rounds' *deltas* instead would
+silently discard the fact that more trials narrow the SE; averaging their *verdicts* would treat
+a 60%-confidence read and a 40%-confidence read as one vote each. `grow.py` then merges the new
+rollout files onto the candidate's own tag (renumbered past its existing trial indices), so every
+later reader — `gate_check.py`, `commit.py`, the dashboard — sees one candidate at the pooled
+`n` with no special-casing for having been grown.
+
+**The honest risk, and its cap.** Could a provisional lineage get stuck accumulating trials on a
+false positive for many rounds, burning budget chasing noise that looked promising once? Yes —
+that is exactly the failure mode a gate without a stopping rule invites, and it is why growth is
+capped at **`--max-growth-rounds 2`** (`grow.py`'s default): at most two extra rounds of added
+trials before the candidate must be finally promoted or abandoned, never grown a third time.
+Two rounds is enough to roughly double or triple `n` on a candidate that started with a small
+val, which is where most of the SE reduction from added trials actually lives (diminishing
+returns set in well before a fourth round would). A candidate that still has not cleared the bar
+after two growth rounds is abandoned (`commit.py --decision reject --reject-basis gate`) — the
+cap turns "maybe next round" into a bounded, auditable cost rather than an open-ended one.
 
 ## JOURNAL.md — the append-only handover, and its write protocol
 
