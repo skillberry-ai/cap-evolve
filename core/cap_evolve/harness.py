@@ -1510,30 +1510,38 @@ _MAX_CONSECUTIVE_EVAL_ERRORS = 3  # N raises in a row -> the environment, not th
 
 def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, error: str,
                      current_val: SplitResult, optimizer_seconds: float,
-                     opt_cost_usd: float, opt_tokens: int, optimizer_error,
-                     rejected=None) -> dict:
-    """A REJECTED step (mirrors the optimizer_error handling above) for a candidate
-    whose ``evaluate_candidate`` call raised — e.g. an adapter's ``live()``/rollout
-    setup blew up on this one candidate (#286). Same discipline as the optimizer
-    call beside it: log it, reject the candidate (parent unchanged, stall counted),
-    keep the run going. Unlike a tamper/validation step this is NOT indecisive —
-    there is no candidate-side wrongdoing to exempt from the stall counter, just a
-    failed evaluation, exactly like a failed proposal.
+                     opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
+    """An INDECISIVE step for a candidate whose ``evaluate_candidate`` call raised —
+    e.g. an adapter's ``live()``/rollout setup blew up (#286). The run keeps going
+    (that is the whole point: one candidate's cost, not the run's) but the candidate
+    was NEVER MEASURED, so it takes the same path as a 0%-coverage eval and a tamper:
+
+      * ``indecisive=True`` leaves the stall counter alone — a failed evaluation is
+        not evidence the optimizer ran out of ideas (unlike ``optimizer_error``,
+        where the workdir stays == parent and the gate scores a real Δ of 0);
+      * it is NOT filed in the rejected memory — that list is fed back as "these
+        edits did not work", and an infra failure says nothing about the edit
+        (``test_infra_errors_not_zeros``: the optimizer must not burn an iteration
+        rediscovering that a rollout crash was not a content regression);
+      * no reward is recorded, so nothing poisons the split mean or the paired gate.
+
+    A genuinely unrunnable environment is caught by ``_MAX_CONSECUTIVE_EVAL_ERRORS``
+    in the caller, which re-raises — not by letting the stall counter guess.
     """
-    reason = f"candidate evaluation raised: {error}"
-    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    reason = f"indecisive (evaluation error): candidate evaluation raised: {error}"
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
                      reason=reason, val=None, parent_val=current_val.reward,
+                     indecisive=True,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
-    summary = f"candidate {cid} (evaluation failed)"
-    if rejected is not None:
-        rejected.add(cid, summary, reason, None)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
     run_dir.record_spend_warnings()
     return {
         "candidate_id": cid,
         "accepted": False,
-        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0},
+        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
+                     "indecisive": True},
         "candidate_val": None,
         "parent_val": current_val.to_dict(),
         "eval_error": error,
@@ -1679,8 +1687,8 @@ def run_step(
         # from live()/rollout setup for a reason specific to ONE candidate (a bad
         # sandbox, an unrunnable candidate artifact) — that must cost an iteration,
         # not the run. But N of these IN A ROW means the environment itself is
-        # unrunnable, not that N candidates in a row happened to be bad — that must
-        # still fail loudly rather than silently look like N ordinary rejections.
+        # unrunnable, not that N candidates in a row happened to be unlucky — that
+        # must still fail loudly rather than silently look like N skipped candidates.
         streak = getattr(run_dir, "_consecutive_eval_errors", 0) + 1
         run_dir._consecutive_eval_errors = streak
         eval_error = str(e)
@@ -1695,7 +1703,7 @@ def run_step(
                                 error=eval_error, current_val=current_val,
                                 optimizer_seconds=optimizer_seconds,
                                 opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
-                                optimizer_error=optimizer_error, rejected=rejected)
+                                optimizer_error=optimizer_error)
     run_dir._consecutive_eval_errors = 0
 
     # Paired gate is the default when per-task data is available: candidate and

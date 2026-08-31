@@ -2,8 +2,10 @@
 live()/rollout setup raising) must cost one candidate, not abort the run — the
 same discipline ``run_step`` already applies to the optimizer call beside it.
 
-* a single evaluate_candidate raise is a REJECTED step (parent unchanged, stall
-  counted), and the run keeps going to the next iteration;
+* a single evaluate_candidate raise is an INDECISIVE step (parent unchanged, stall
+  NOT counted, not filed in the rejected memory — the candidate was never measured,
+  so it is neither evidence the optimizer ran out of ideas nor a fact about the
+  edit), and the run keeps going to the next iteration;
 * N consecutive raises look like a broken environment, not N unlucky candidates,
   and must surface loudly (raise out of run_step) instead of being swallowed.
 """
@@ -106,25 +108,33 @@ def _step(rd, adapter, base, optimizer, **kw):
                             gate_kwargs={"mode": "significant", "k_se": 1.0}, **kw)
 
 
-def test_a_single_live_error_rejects_the_candidate_and_continues(tmp_path):
-    """One adapter raise costs an iteration, not the run — mirrors optimizer_error."""
+def test_a_single_live_error_is_indecisive_and_the_run_continues(tmp_path):
+    """One adapter raise costs an iteration, not the run — and is INDECISIVE, because
+    an unmeasured candidate is missing data, not a rejection (test_infra_errors_not_zeros)."""
+    from cap_evolve.memory import RejectedMemory
     inner = _adapter()
     adapter = RaisingLiveAdapter(inner, fail_times=1, skip=1)
     rd, base = _fresh_run(tmp_path, adapter, "single_error")
     best_before, stall_before = rd.best_id, rd.spent.stall
+    rejected = RejectedMemory(tmp_path / "single_error" / "rejected.jsonl")
 
-    step = _step(rd, adapter, base, _good_edit)
+    step = _step(rd, adapter, base, _good_edit, rejected=rejected)
 
     assert step["candidate_val"] is None
     assert step["accepted"] is False
+    assert step["decision"]["indecisive"] is True
     assert "eval_error" in step and "blew up" in step["eval_error"]
-    # a real rejection (unlike a tamper/validation step): parent unchanged, but the
-    # stall counter DOES count it — it is a wasted iteration, same as optimizer_error.
+    # parent unchanged, the iteration IS charged, but the stall counter is NOT — the
+    # candidate was never judged, so it is no evidence the optimizer ran out of ideas.
     assert rd.best_id == best_before
-    assert rd.spent.stall == stall_before + 1
+    assert rd.spent.stall == stall_before
     assert rd.spent.iterations == 1
+    # and it is NOT taught to the optimizer as a failed edit: an infra failure says
+    # nothing about the content of the candidate.
+    assert not rejected.path.exists() or rejected.path.read_text(encoding="utf-8").strip() == ""
     ev = _events(rd, "evaluate_error")
     assert len(ev) == 1 and ev[0]["consecutive"] == 1
+    assert len(_events(rd, "step_indecisive")) == 1
 
     # the run continues: a second, clean step on the same run_dir still works.
     step2 = _step(rd, adapter, base, _good_edit)
