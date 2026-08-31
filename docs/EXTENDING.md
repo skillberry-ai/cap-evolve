@@ -10,7 +10,7 @@ core. Adding a capability, algorithm, or optimizer is the same three steps.
    cp -R templates/skill skills/<component>/<your-skill>
    ```
    `<component>` is one of `phases`, `capabilities`, `algorithms`, `optimizers`,
-   `orchestrate`.
+   `orchestrate`, `interventions`.
 
 2. **Fill it in.**
    - `SKILL.md` (required) — frontmatter (`name`, `description`, `component`, `needs`,

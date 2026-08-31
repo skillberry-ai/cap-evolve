@@ -71,7 +71,8 @@ def _manifest_drift(skills_root: Path) -> str:
     listed = {s["path"] for s in
               json.loads(manifest.read_text(encoding="utf-8"))["skills"].values()}
     found = {p.parent.relative_to(skills_root).as_posix()
-             for p in skills_root.glob("*/*/SKILL.md")}
+             for p in skills_root.rglob("SKILL.md")
+             if "_registry" not in p.parts}
     if found == listed:
         return ""
     return (f"{len(found)} skill package(s) on disk do not match the {len(listed)} in "
@@ -85,7 +86,10 @@ def lint(skills_root: Path) -> tuple[dict[str, list[str]], dict[str, list[str]],
     validator = _load_validator(skills_root)
     errors: dict[str, list[str]] = {}
     advisories: dict[str, list[str]] = {}
-    skills = sorted(skills_root.glob("*/*/SKILL.md"))
+    # rglob, not */*/: a component may GROUP its skills one level deeper
+    # (interventions/llm-proxies/spa). A fixed depth would silently stop linting it,
+    # which is exactly what the anti-vacuity guard below exists to catch.
+    skills = sorted(p for p in skills_root.rglob("SKILL.md") if "_registry" not in p.parts)
     for skill_md in skills:
         skill_dir = skill_md.parent
         key = skill_dir.relative_to(skills_root).as_posix()

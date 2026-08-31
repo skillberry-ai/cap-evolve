@@ -234,7 +234,10 @@ def test_a_new_violation_fails_the_lint(tmp_path):
 def test_discovery_is_dynamic_and_sees_every_skill():
     """The lint globs; it never reads a committed list that could go stale."""
     mod = _lint_module()
-    on_disk = {p.parent.relative_to(SKILLS).as_posix() for p in SKILLS.glob("*/*/SKILL.md")}
+    # rglob: a component may group its skills one level deeper
+    # (interventions/llm-proxies/spa), and this test asserts the lint sees EVERY skill.
+    on_disk = {p.parent.relative_to(SKILLS).as_posix()
+               for p in SKILLS.rglob("SKILL.md") if "_registry" not in p.parts}
     _, _, n = mod.lint(SKILLS)
     assert n == len(on_disk), (n, sorted(on_disk))
     assert not mod._manifest_drift(SKILLS)

@@ -74,6 +74,20 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
     their optimizer_usd/optimizer_seconds are 0.0. ``best_id`` labels the ``finalize``
     row's candidate (the "evaluate" event itself only carries a fixed tag, not the
     actual candidate id — the caller already knows it from state.json).
+
+    A final ``unattributed`` row carries whatever the run METERED but no phase above claims,
+    because every consumer of these rows (``record.rollup``, ``results_md``, the Totals line
+    below, the Pages per-run table) reports cost by SUMMING them — so spend that belonged to no
+    step was not merely unattributed, it was published as if it had never happened. Measured on
+    smoke spreadsheetbench run 33046360451: ``suite.optimizer_usd: 0`` and ``eval_usd: 5.25``
+    for a run whose own state held ``optimizer_usd 9.11`` / ``usd 12.55`` — a $21.66 run
+    published as $5.25, a 4x understatement in the one figure a full tier's budget gets
+    projected from. Two independent holes fed it: agent mode meters the optimizer ONCE for the
+    whole loop (no round can own a share of it), and control replicates, re-gates and abandoned
+    rounds are real evaluations that no ``step`` event references. The residual is the honest
+    name for both, and it is visible as its own row rather than smuggled into a round that did
+    not spend it. Being a residual and not a sum, a run that DOES attribute everything per round
+    emits no row at all, and an unmetered run (``usd == 0``) cannot produce a negative one.
     """
     events_path = Path(run_dir) / "events.jsonl"
     rows: list[dict] = []
@@ -81,6 +95,12 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
         return rows
     seen_baseline = False
     it = 0
+    # Every candidate's eval cost/time is recorded on its own ``evaluate`` event. The
+    # deterministic loops ALSO copy those onto the ``step`` event; agent mode's commit.py does
+    # not, so run 32971129203 rendered "eval $ —" for all three rounds while its events.jsonl
+    # held $0.456/629.84s for cand_1 alone. A candidate is evaluated before it is booked, so
+    # accumulating as we go is enough — no second pass.
+    eval_by_tag: dict[str, dict] = {}
     for line in events_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
@@ -90,6 +110,8 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
         except Exception:
             continue
         kind = ev.get("kind")
+        if kind == "evaluate" and ev.get("tag"):
+            eval_by_tag[str(ev.get("tag"))] = ev
         if kind == "evaluate" and ev.get("tag") == "seed" and ev.get("split") == "val" and not seen_baseline:
             seen_baseline = True
             rows.append({
@@ -100,12 +122,19 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
             })
         elif kind == "step":
             it += 1
+            # The step's own figures win when it has them (the deterministic path); otherwise
+            # fall back to this candidate's evaluate event rather than rendering a dash over
+            # a cost the run did measure.
+            cev = eval_by_tag.get(str(ev.get("candidate"))) or {}
+            e_usd = ev.get("cost_usd")
+            e_secs = ev.get("runner_seconds")
             rows.append({
                 "phase": "iterate", "iter": it, "candidate": ev.get("candidate"),
                 "accepted": ev.get("accept"), "reward": ev.get("val"),
                 "optimizer_usd": round(ev.get("opt_cost_usd") or 0.0, 6),
                 "optimizer_seconds": ev.get("optimizer_seconds"),
-                "eval_usd": ev.get("cost_usd"), "eval_seconds": ev.get("runner_seconds"),
+                "eval_usd": e_usd if e_usd is not None else cev.get("cost_usd"),
+                "eval_seconds": e_secs if e_secs is not None else cev.get("seconds"),
             })
         elif kind == "evaluate" and ev.get("tag") == "FINAL" and ev.get("split") == "test":
             rows.append({
@@ -121,7 +150,53 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
                 "optimizer_usd": 0.0, "optimizer_seconds": 0.0,
                 "eval_usd": ev.get("cost_usd"), "eval_seconds": ev.get("seconds"),
             })
+    residual = _unattributed_row(Path(run_dir), rows)
+    if residual:
+        rows.append(residual)
     return rows
+
+
+# Below a cent in either role, the residual is rounding between the meter and the events, and a
+# row saying "$0.00 went somewhere" costs a reader more than it tells them.
+_RESIDUAL_FLOOR_USD = 0.01
+
+
+def _unattributed_row(run_dir: Path, rows: list[dict]) -> dict | None:
+    """Metered spend that no row in ``rows`` accounts for, as one row — or None if it all is.
+
+    The run's own ``state.json`` is the meter of record: ``spent.usd`` is every rollout the run
+    paid for and ``spent.optimizer_usd`` every proposal, both accumulated by ``update_spent`` at
+    each booking, so each is an upper bound on what the per-phase events can attribute. Intake
+    spend rides in the optimizer column: it is non-runner cost with no step to call its own, and
+    the alternative is to keep dropping it.
+    """
+    state = _load(run_dir / "state.json")
+    spent = state.get("spent") or {}
+    if not spent:
+        return None
+    opt_metered = (spent.get("optimizer_usd") or 0.0) + (spent.get("intake_usd") or 0.0)
+    eval_metered = spent.get("usd") or 0.0
+    opt_secs_metered = ((spent.get("optimizer_seconds") or 0.0)
+                        + (spent.get("intake_seconds") or 0.0))
+    eval_secs_metered = spent.get("runner_seconds") or 0.0
+    opt_usd = round(max(0.0, opt_metered - sum(r.get("optimizer_usd") or 0.0 for r in rows)), 6)
+    eval_usd = round(max(0.0, eval_metered - sum(r.get("eval_usd") or 0.0 for r in rows)), 6)
+    if opt_usd < _RESIDUAL_FLOOR_USD and eval_usd < _RESIDUAL_FLOOR_USD:
+        return None
+    # Seconds only where the same role has unattributed money, so a row cannot claim time for a
+    # role whose spend was fully accounted for.
+    opt_secs = (round(max(0.0, opt_secs_metered
+                          - sum(r.get("optimizer_seconds") or 0.0 for r in rows)), 2)
+                if opt_usd >= _RESIDUAL_FLOOR_USD else 0.0)
+    eval_secs = (round(max(0.0, eval_secs_metered
+                           - sum(r.get("eval_seconds") or 0.0 for r in rows)), 2)
+                 if eval_usd >= _RESIDUAL_FLOOR_USD else None)
+    return {
+        "phase": "unattributed", "iter": None, "candidate": "(whole run)", "accepted": None,
+        "reward": None,
+        "optimizer_usd": opt_usd, "optimizer_seconds": opt_secs,
+        "eval_usd": eval_usd, "eval_seconds": eval_secs,
+    }
 
 
 def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_path: str = "",
@@ -149,6 +224,12 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
     state = _load(rd / "state.json")
     spent = state.get("spent", {})
     best_id = state.get("best_id", "seed")
+    # NULL RUN: no candidate cleared the gate, so the "optimized" capability IS the seed and
+    # the two evals paired below score the SAME BYTES. Every difference between them is
+    # re-measurement noise. Run 32971129203 published "0.500 → 0.544 (Δ +0.044 (+9% rel))"
+    # for a capability it never edited, with per-task rows to match (`47484` +0.333, `53161`
+    # -0.333) — and +0.044 was exactly the replicate noise round.py measured that run at.
+    null_run = best_id in ("seed", "", None)
 
     bval = baseline.get("val") or {}
     ftest = final.get("test") or {}
@@ -166,6 +247,15 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
         held_out = False
         base_pt = val_pt
         task_ids = list(base_pt) or list(opt_pt)
+
+    # Pair the baseline against ITSELF on a null run, so no phantom per-task delta reaches
+    # metrics.jsonl — and from there record.rollup and the published benchmarks page, which is
+    # the durable harm. The discarded measurement is kept and reported below as what it is: a
+    # free read on the tier's noise floor, which a reader needs in order to judge whether the
+    # run could have resolved a real effect at all.
+    remeasured = ftest.get("reward") if null_run else None
+    if null_run and base_pt:
+        opt_pt = base_pt
 
     rows = []
     for tid in task_ids:
@@ -226,7 +316,9 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
     else:
         agg_b = bval.get("reward")
     agg_o = ftest.get("reward")
-    accepted = "seed (no candidate beat baseline)" if best_id in ("seed", "", None) else f"`{best_id}`"
+    if null_run and isinstance(agg_b, (int, float)):
+        agg_o = agg_b
+    accepted = "seed (no candidate beat baseline)" if null_run else f"`{best_id}`"
     out.append("")
     if isinstance(agg_b, (int, float)) and isinstance(agg_o, (int, float)):
         rel = f" ({(agg_o-agg_b)/agg_b*100:+.0f}% rel)" if agg_b else ""
@@ -234,6 +326,14 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
                    f"(Δ {agg_o-agg_b:+.3f}{rel}) · best = {accepted} · "
                    f"optimizer ${spent.get('optimizer_usd',0) or 0:.2f} over {spent.get('iterations','?')} iter(s)"
                    + (f" · {infra_n} task(s) infra-errored" if infra_n else ""))
+        if isinstance(remeasured, (int, float)) and isinstance(agg_b, (int, float)):
+            out.append("")
+            out.append(f"> No candidate was accepted, so base→opt is the seed against itself and Δ is "
+                       f"0.000 by construction. Re-scoring those same bytes for the finalize read "
+                       f"{remeasured:.3f} against the baseline's {agg_b:.3f} — a spread of "
+                       f"{abs(remeasured - agg_b):.3f}. That is this tier's re-measurement **noise**, "
+                       f"not a change in the capability, and it is the floor any real effect here "
+                       f"would have to clear.")
     elif infra_n:
         out.append(f"**Suite:** ⚠️ {infra_n}/{len(rows)} tasks infra-errored (gateway/runtime) — "
                    "no valid result. Check the model gateway (budget/429).")
@@ -261,8 +361,32 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
             eval_usd_t += s["eval_usd"] or 0
             eval_s_t += s["eval_seconds"] or 0
         out.append("")
+        # These sum the rows, INCLUDING the `unattributed` one, so they now reconcile with the
+        # run's own meters instead of reporting only the share some phase happened to claim.
+        # Agent mode runs ONE optimizer process for the whole loop, so no per-round optimizer
+        # cost exists to sum — and summing the absent figures printed "optimizer $0.0000 over 0s"
+        # directly underneath a headline reading "optimizer $7.95" (run 32971129203). The note
+        # below names whichever role the residual came from rather than letting the total imply
+        # it was attributed per round.
         out.append(f"**Totals:** optimizer ${opt_usd_t:.4f} over {_fmt_duration(opt_s_t)} · "
                    f"eval ${eval_usd_t:.4f} over {_fmt_duration(eval_s_t)}")
+        resid = next((s for s in steps if s["phase"] == "unattributed"), None)
+        if resid:
+            parts = []
+            if (resid["optimizer_usd"] or 0) > 0:
+                parts.append(f"optimizer ${resid['optimizer_usd']:.4f} — agent mode runs ONE "
+                             "optimizer process, metered whole-loop, so no round owns a share "
+                             "of it")
+            if (resid["eval_usd"] or 0) > 0:
+                parts.append(f"eval ${resid['eval_usd']:.4f} — control replicates, re-gates and "
+                             "abandoned rounds are real evaluations that no committed step "
+                             "references")
+            out.append("")
+            out.append("> The `unattributed` row is metered spend no phase above owns ("
+                       + "; ".join(parts) + "). It is shown rather than dropped so these totals "
+                       f"match what the run actually paid: `spent` reads "
+                       f"${spent.get('usd', 0) or 0:.2f} runner + "
+                       f"${spent.get('optimizer_usd', 0) or 0:.2f} optimizer.")
     return "\n".join(out)
 
 

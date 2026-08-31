@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success" alt="deps">
   <img src="https://img.shields.io/badge/license-Apache--2.0-informational" alt="license">
-  <img src="https://img.shields.io/badge/agent%20skills-20-7c5cff" alt="skills">
+  <img src="https://img.shields.io/badge/agent%20skills-21-7c5cff" alt="skills">
 </p>
 
 **cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed

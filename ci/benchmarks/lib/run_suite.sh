@@ -95,7 +95,10 @@ case "$ALGORITHM" in
  recommendation is 'stop', or after ${_rounds} rounds.${_stop_usd} Do NOT stop early merely\
  because rounds were rejected: a rejection is the signal to change the edit FORM or the SURFACE\
  on the next round, not to finish. Use every round the budget allows. Gate every candidate on\
- FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Always\
+ FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\
+ --gate-against control on every round.py call: its default reference is the parent's reward as\
+ measured in an EARLIER round, so that reward's drift since then sits inside every candidate\
+ delta, while a control is a byte-identical replicate measured in the SAME round. Always\
  finish by sealing test exactly once with measure.py and writing the report — a run with no\
  finalize has no result."
     ;;

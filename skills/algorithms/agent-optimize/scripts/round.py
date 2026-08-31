@@ -48,16 +48,109 @@ HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 
 
+def _table_attempt(name: str, iteration: int) -> int | None:
+    """Attempt index encoded in a round-table filename, or None if it is a different round.
+
+    Matched strictly rather than by glob: ``round_i1*.json`` also matches ``round_i10.json``, so
+    a glob would count iteration 10's tables as re-gates of iteration 1 and shift every name in
+    this round — quietly, and worse the further a run gets.
+    """
+    stem = name.removesuffix(".json")
+    if stem == name:
+        return None
+    tail = stem.removeprefix(f"round_i{iteration}")
+    if tail == stem:
+        return None
+    if tail == "":
+        return 0
+    if tail.startswith(".r") and tail[2:].isdigit():
+        return int(tail[2:])
+    return None
+
+
+def _round_tables(run_dir) -> list[tuple[int, Path]]:
+    """This iteration's tables as (attempt, path), lowest attempt first."""
+    work = run_dir.root / "work"
+    if not work.is_dir():
+        return []
+    it = int(run_dir.spent.iterations)
+    found = []
+    for path in work.iterdir():
+        if not path.is_file():
+            continue
+        att = _table_attempt(path.name, it)
+        if att is not None:
+            found.append((att, path))
+    return sorted(found)
+
+
+def round_attempt(run_dir) -> int:
+    """How many times this iteration has already been gated: 0 for the first attempt.
+
+    A round's identity is (iteration, attempt), and BOTH halves have to reach the names on
+    disk. The table already had the attempt half — a same-iteration re-run is written
+    ``round_i1.r1.json`` rather than overwriting ``round_i1.json`` — but the control ROLLOUTS
+    did not, so the one operation this script explicitly supports re-measured the previous
+    attempt's control under the same tag and deleted the numbers the first table cites.
+    Counting the tables here is what keeps the two halves in agreement.
+    """
+    tables = _round_tables(run_dir)
+    # max+1 rather than len, so a hand-deleted table cannot hand out a name that is still taken.
+    return max((att for att, _ in tables), default=-1) + 1
+
+
+def table_stem(run_dir) -> str:
+    """Filename stem for this attempt's table: ``round_i1``, then ``round_i1.r1``, …"""
+    it = int(run_dir.spent.iterations)
+    a = round_attempt(run_dir)
+    return f"round_i{it}" if a == 0 else f"round_i{it}.r{a}"
+
+
 def control_tag(run_dir) -> str:
-    """Round-scoped control tag, e.g. ``ctl_null_i2``.
+    """Round-scoped control tag, e.g. ``ctl_null_i2`` — and ``ctl_null_i2a1`` on a re-gate.
 
     Rollout files are ``<task>__<tag>__t<k>.json``, so a fixed ``ctl_null`` tag makes each
     round's control OVERWRITE the previous round's on disk — destroying the one measurement
     that proves what zero change looked like at that point in the run. The noise floor is
     evidence, and it is per-round (it moves with the parent and with the provider's mood),
     so it gets its own tag per iteration.
+
+    The same argument applies WITHIN an iteration, which is what the ``a<k>`` suffix is for. A
+    re-gate is normally run to buy MORE evidence about the same round, and without the suffix it
+    bought none: on run 33046360451 the second attempt at iteration 1 re-measured
+    ``ctl_null_i1`` (0.4967 -> 0.5067) and ``ctl_null_i1r1`` (0.4800 -> 0.4367) under those exact
+    tags, spending 200 metric calls to swap two readings for two others. The round's replicate
+    spread went 0.0167 -> 0.0700 and ``round_i1.json`` was left quoting an ``evidence_bar``
+    computed from two numbers that no longer existed. With the suffix the attempts accumulate,
+    ``prior_attempt_controls`` pools them, and the re-gate gets the four samples it paid for.
     """
-    return f"ctl_null_i{int(run_dir.spent.iterations)}"
+    it = int(run_dir.spent.iterations)
+    a = round_attempt(run_dir)
+    return f"ctl_null_i{it}" if a == 0 else f"ctl_null_i{it}a{a}"
+
+
+def prior_attempt_controls(run_dir) -> list[dict]:
+    """Control replicates measured by EARLIER attempts at this same iteration.
+
+    Read from those attempts' tables rather than from rollouts, because the table is the record
+    that survives: a pre-fix run has tables whose rollouts were already overwritten, and the
+    table is then the only place the destroyed reading still exists.
+
+    They are byte-identical copies of the same parent measured in the same round, so they are
+    samples of the same null and belong in it. Pooling them is the entire point of re-gating.
+    """
+    out: list[dict] = []
+    for att, path in _round_tables(run_dir):
+        try:
+            table = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(table, dict):
+            continue
+        for row in table.get("control_replicates") or []:
+            if isinstance(row, dict) and row.get("reward") is not None:
+                out.append({**row, "from_attempt": att})
+    return out
 
 
 def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
@@ -179,6 +272,11 @@ def main(argv=None) -> int:
 
     # The null control is built here, not by the driver, so it cannot silently be skipped
     # or accidentally differ from the parent.
+    # Derive the round's identity ONCE: the table name and the control tags are two halves of
+    # it, and independently derived halves can disagree about which attempt this is.
+    ATTEMPT = round_attempt(run_dir)
+    STEM = table_stem(run_dir)
+    PRIOR_CTL = prior_attempt_controls(run_dir)
     CTL = control_tag(run_dir)
     ctl_tags: list[str] = []
     if not args.no_control:
@@ -311,10 +409,16 @@ def main(argv=None) -> int:
     # bytes on the same seeds: whatever separates them is pure re-measurement. Two such
     # replicates differed by 0.0800 paired on this benchmark — enough to pass a k_se=1.0 gate on
     # zero change — so a candidate that does not clear this number has shown nothing.
+    #
+    # Earlier attempts at THIS iteration are pooled in. They are the same parent bytes on the
+    # same seeds in the same round, so they are samples of the same null, and a re-gate is run
+    # precisely to buy more of them: reporting only this attempt's two would discard half the
+    # evidence the round has already paid for. `max - min` needs no change to accept them.
     ctl_rows = [r for r in rows if r["tag"] in ctl_tags and r.get("reward") is not None]
+    pooled_rows = [{**r, "from_attempt": ATTEMPT} for r in ctl_rows] + PRIOR_CTL
     null_delta = None
-    if len(ctl_rows) > 1:
-        rewards = [r["reward"] for r in ctl_rows]
+    if len(pooled_rows) > 1:
+        rewards = [r["reward"] for r in pooled_rows]
         null_delta = round(max(rewards) - min(rewards), 4)
     conc_warning = None
     if args.concurrency and args.concurrency > 12:
@@ -325,6 +429,18 @@ def main(argv=None) -> int:
             "smaller than roughly 0.08. Re-run the gate at --concurrency 8 before believing an "
             "accept.")
     out = {
+        # Which gate of this iteration this is. On the live run nothing in the output
+        # distinguished "second opinion on iteration 1" from "iteration 1", so an operator
+        # watching the stream saw two identical control evaluations and no statement that the
+        # second had replaced the first.
+        "attempt": ATTEMPT,
+        "attempt_reading": (
+            f"RE-GATE: attempt {ATTEMPT} at iteration {int(run_dir.spent.iterations)}. Its "
+            f"{len(PRIOR_CTL)} earlier control replicate(s) are pooled into `null_delta_...` "
+            "below, so the bar here rests on every replicate this round has paid for. This "
+            "attempt's candidate rollouts are written under fresh tags; the earlier attempt's "
+            "table is still on disk beside this one."
+            if ATTEMPT else "first gate of this iteration"),
         "parent": {"tag": best, "reward": parent_res.reward, "stderr": parent_res.stderr,
                    "n_tasks": len(parent_res.per_task or [])},
         # What the deltas and thresholds in `candidates` are actually measured against.
@@ -345,9 +461,12 @@ def main(argv=None) -> int:
         "measurement_concurrency": args.concurrency,
         "concurrency_warning": conc_warning,
         "null_delta_between_control_replicates": null_delta,
+        "null_delta_replicates": len(pooled_rows),
         "null_delta_reading": (
             "identical bytes on identical seeds, so this is pure re-measurement noise. Any "
             "candidate delta at or below it is NOT evidence, whatever its verdict says."
+            + (f" Pooled over {len(pooled_rows)} replicates of this iteration, "
+               f"{len(PRIOR_CTL)} of them from earlier attempts." if PRIOR_CTL else "")
             if null_delta is not None else
             "only one control replicate — run with --control-replicates 2 to measure the bar "
             "instead of assuming a formula gives it"),
@@ -386,10 +505,26 @@ def main(argv=None) -> int:
             "A candidate marked `verdict_stable: false` has an UNSTABLE verdict and is "
             "INCONCLUSIVE, never accepted: its "
             "verdict changed depending on which byte-identical control replicate happened to be "
-            "the reference, so the round cannot tell its edit from re-measurement. Re-run it "
-            "with more trials before believing either answer. "
-            "Judge every candidate's delta against `evidence_bar`, not against any other number "
-            "here. `noise_floor_from_control` is the gap between a byte-identical control "
+            "the reference, so the round cannot tell its edit from re-measurement. Book it as "
+            "`commit.py --decision inconclusive` — that charges the iteration but NOT the stall "
+            "counter, because a measurement that could not resolve is no evidence you have run "
+            "out of ideas, and it keeps the edit out of `rejected.jsonl` so a later round is not "
+            "taught to avoid a change nothing ever judged. To resolve it, re-measure under a "
+            "FRESH tag (e.g. `cand_2b`) or ask for the higher `--trials` in ONE evaluation: "
+            "rollouts are written `<task>__<tag>__t{k}.json` for k in range(n_trials), so "
+            "re-running the SAME tag REPLACES t0..t9 rather than adding t10..t19 — it swaps a "
+            "reading for another reading and buys no extra evidence. That applies to the "
+            "CANDIDATE tags you pass; the control side is handled for you — a re-gate of the "
+            "same iteration gets its own `ctl_null_i<N>a<k>` replicates and POOLS the earlier "
+            "attempt's into `null_delta_between_control_replicates`, so re-running this script "
+            "adds control evidence instead of replacing it. Do not re-use a candidate tag to "
+            "get that; there is no pooling for candidates. "
+            "Judge every candidate's delta against `evidence_bar` rather than any other noise "
+            "number here — but clearing it is NECESSARY, not sufficient: `gate_threshold` "
+            "(k·SE on the paired per-task differences) is what each `verdict` is actually "
+            "computed from and is usually the stricter of the two, so a delta above "
+            "`evidence_bar` and below `gate_threshold` is not an accept. "
+            "`noise_floor_from_control` is the gap between a byte-identical control "
             "measured now and the parent's STORED reward: that is re-measurement DRIFT, and it "
             "bounds how far the ABSOLUTE rewards in this table can be trusted — it is not a bar "
             "a candidate gated against a concurrent control has to clear, because that "
@@ -407,8 +542,14 @@ def main(argv=None) -> int:
         "candidates": sorted((r for r in rows if r["tag"] not in ctl_tags),
                              key=lambda r: (r["reward"] is None, -(r["reward"] or 0.0))),
         "control": ctl,
+        # `control_replicates` stays THIS attempt's own measurements — that is what a later
+        # attempt reads back to pool, and storing the pooled set here would make attempt 2
+        # count attempt 0's replicates twice. The pooled view is reported separately.
         "control_replicates": ctl_rows,
-        "next": "read regressions, then commit.py --decision accept|reject per candidate",
+        "pooled_control_replicates": pooled_rows if PRIOR_CTL else None,
+        "next": ("read regressions, then commit.py --decision accept|reject|inconclusive per "
+                 "candidate — `inconclusive` for any row whose `verdict` is inconclusive, so the "
+                 "round is not recorded as refuting an edit it could not judge"),
     }
     # Persist the table as well as printing it. Until now the ONLY copy lived on stdout, so
     # whether a round's verdict survived depended on the driver remembering to redirect —
@@ -420,14 +561,18 @@ def main(argv=None) -> int:
     # would let each round destroy the previous round's table. A same-iteration re-run gets a
     # suffix rather than overwriting, since a re-gate is usually being COMPARED with the
     # first one.
+    #
+    # The name comes from the SAME attempt index the control tags were built from, rather than
+    # from a second, independent probe of the directory. When the two derivations disagreed the
+    # table survived and the rollouts it cites did not, which is the whole defect this attempt
+    # index exists to close.
     try:
         work.mkdir(parents=True, exist_ok=True)
-        stem = f"round_i{int(run_dir.spent.iterations)}"
-        table = work / f"{stem}.json"
-        n = 1
-        while table.exists():
-            table = work / f"{stem}.r{n}.json"
+        table = work / f"{STEM}.json"
+        n = ATTEMPT
+        while table.exists():  # belt-and-braces: never overwrite a sibling attempt's table
             n += 1
+            table = work / f"round_i{int(run_dir.spent.iterations)}.r{n}.json"
         table.write_text(json.dumps(out, indent=2), encoding="utf-8")
         out["table_path"] = str(table)
     except OSError as exc:  # noqa: BLE001 — the printed table is still the primary output

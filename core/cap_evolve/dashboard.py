@@ -26,16 +26,16 @@ The candidate **graph** schema (``reduced["graph"]``)::
          "val", "stderr", "per_task": {task_id: reward}, "feedback": {task_id: str},
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
          "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
-         "gate_fields": {delta?, stderr?, n?, k_se?, threshold?, resolvable_effect_size?},
-         "screened": bool | None}
+         "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
+         "gate_resolvable_effect_size"?, "screened": bool | None}
      ],
      "root": "seed", "best_id": "..."}
 
-``gate_fields`` holds whichever of those keys the commit event carried DIRECTLY (any
-algorithm's commit step may attach them to its accept/reject event); absent keys mean the
-gate-decisions table falls back to parsing the prose ``reason`` string instead. ``screened``
-is ``None`` when no event recorded compliance for this candidate's tag, else the
-``screened_before_fullval`` value read generically off any event that carries it.
+The ``gate_*`` keys are present only when the algorithm's commit step RECORDED that number
+on its accept/reject event instead of leaving it to be regexed out of the prose ``reason``;
+the gate-decisions table prefers them and falls back to the regex parse otherwise.
+``screened`` is ``None`` when no event recorded compliance for this candidate's tag, else
+the ``screened_before_fullval`` value read generically off any event that carries it.
 
 The **summary** schema (``reduced["summary"]``)::
 
@@ -1061,19 +1061,21 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
-            # Structured gate fields, WHEN a commit event carries them directly (any
-            # algorithm's commit step may attach these to its accept/reject event instead
-            # of leaving them only in prose) — read generically by key, never assumed to be
-            # agent-optimize-specific. Absent on older runs / algorithms that never
-            # populate them; the gate-decisions table below falls back to parsing ``reason``.
-            "gate_fields": {k: ev.get(k) for k in
-                            ("delta", "stderr", "n", "k_se", "threshold",
-                             "resolvable_effect_size") if ev.get(k) is not None},
             # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
             # looked up generically by tag below (see ``screened_by_tag``), not tied to the
             # agent-optimize algorithm that happens to be the first emitter.
             "screened": screened_by_tag.get(cid),
         }
+        # Structured gate numbers, when the algorithm recorded them instead of leaving them
+        # to be regexed out of a reason string (agent-optimize's commit.py reads them back
+        # from round.py's persisted table). Copied verbatim and only when present, so a
+        # deterministic step is byte-identical to before.
+        for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
+                    "gate_resolvable_effect_size",
+                    "gate_mode", "gate_table", "control_relative_verdict",
+                    "control_relative_delta", "evidence_bar"):
+            if ev.get(_gk) is not None:
+                node[_gk] = ev.get(_gk)
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
@@ -1275,17 +1277,13 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
-    # Preferred source: structured fields a commit event attaches directly (``gate_fields``,
-    # captured generically above — any algorithm's commit step may populate ``delta``/
-    # ``stderr``/``n``/``k_se``/``threshold``/``resolvable_effect_size`` on its accept/reject
-    # event). Fallback: the reason string is the audit record when those fields are absent
-    # (older runs, or an algorithm that never populates them), so Δ̄/SE/n are parsed back out
-    # of it. A number that isn't available from either source stays None — never fabricated.
+    # The reason string the gate wrote is the audit record; Δ̄/SE/n are parsed back out
+    # of it so the UI can show the uncertainty next to the mean instead of a bare Δ.
+    # A number that isn't in the reason stays None — never a fabricated 0.
     gate_decisions: list[dict] = []
     for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
                     key=lambda x: x.get("iteration") or 0):
         reason = str(n.get("reason") or "")
-        gf = n.get("gate_fields") or {}
         verdict = ("accept" if n["status"] == "accepted"
                    else "indecisive" if n["status"] == "indecisive"
                    else "reject" if n["status"] == "rejected" else "no measurement")
@@ -1298,22 +1296,39 @@ def reduce_run(run_dir) -> dict:
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
         m_res = re.search(r"resolvable effect size 2·SE\s*=\s*([\d.]+)", reason)
-        gate_decisions.append({
+        # A number the algorithm RECORDED beats the same number scraped out of prose. Agent
+        # mode writes free text, so every regex above missed and the whole numeric half of
+        # this record came back null (run 32971129203); the deterministic loops record no
+        # structured fields, so they still take the regex path exactly as before.
+        row = {
             "iteration": n.get("iteration"),
             "candidate": n["id"],
             "verdict": verdict,
             "val": n.get("val"),
             "parent": n.get("parent"),
             "parent_val": n.get("parent_val"),
-            "delta": gf["delta"] if "delta" in gf else (float(m_delta.group(1)) if m_delta else None),
-            "stderr": gf["stderr"] if "stderr" in gf else (float(m_se.group(1)) if m_se else None),
-            "n": gf["n"] if "n" in gf else (int(m_n.group(1)) if m_n else None),
-            "k_se": gf["k_se"] if "k_se" in gf else (float(m_bar.group(1)) if m_bar else None),
-            "threshold": gf["threshold"] if "threshold" in gf else (float(m_bar.group(2)) if m_bar else None),
-            "resolvable_effect_size": gf["resolvable_effect_size"] if "resolvable_effect_size" in gf
-                                      else (float(m_res.group(1)) if m_res else None),
+            "delta": float(m_delta.group(1)) if m_delta else None,
+            "stderr": float(m_se.group(1)) if m_se else None,
+            "n": int(m_n.group(1)) if m_n else None,
+            "k_se": float(m_bar.group(1)) if m_bar else None,
+            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "resolvable_effect_size": float(m_res.group(1)) if m_res else None,
             "reason": _sanitize_text(reason, 600),
-        })
+        }
+        for _field, _key in (("delta", "gate_delta"), ("stderr", "gate_stderr"),
+                             ("n", "gate_n"), ("k_se", "gate_k_se"),
+                             ("threshold", "gate_threshold"),
+                             ("resolvable_effect_size", "gate_resolvable_effect_size")):
+            if n.get(_key) is not None:
+                row[_field] = n.get(_key)
+        # Which reference the gate actually used, and the drift-free second opinion when the
+        # round measured one. Without these a reader cannot tell that a rejection was
+        # reference-dependent — the finding run 32971129203 turned on.
+        for _key in ("gate_mode", "control_relative_verdict", "control_relative_delta",
+                     "evidence_bar"):
+            if n.get(_key) is not None:
+                row[_key] = n.get(_key)
+        gate_decisions.append(row)
 
     # --- cost ledger: every dollar, attributed to the thing that spent it -----
     # Rows are built from the events that actually recorded a spend (intake, each

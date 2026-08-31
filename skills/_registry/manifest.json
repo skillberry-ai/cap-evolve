@@ -219,6 +219,29 @@
         ]
       }
     },
+    "spa": {
+      "component": "intervention",
+      "path": "interventions/llm-proxies/spa",
+      "summary": "Deliver the optimized capability through the Skillberry proxy stack (store + proxy-agent) instead of handing files to the runner \u2014 provision, run, deploy, stop and clean that stack.",
+      "entry": "scripts/run.py",
+      "abstract": null,
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [],
+      "provides": [],
+      "compatible_with": {
+        "capabilities": [
+          "*"
+        ],
+        "optimizers": [
+          "*"
+        ],
+        "algorithms": [
+          "*"
+        ]
+      }
+    },
     "run-optimizer": {
       "component": "optimizer",
       "path": "optimizers/run-optimizer",

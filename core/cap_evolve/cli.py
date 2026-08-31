@@ -656,6 +656,34 @@ def _cmd_run(argv):
         # run print TWO json documents, so `cap-evolve run | jq` could not parse it.
         if _stderr_is_usable():
             print(json.dumps(status), file=sys.stderr, flush=True)
+    # How the candidate will be DELIVERED (spec `intervention:`). Checked here, before any
+    # step runs: for an out-of-process intervention a dead stack makes every candidate's
+    # deployment fail, and since that is correctly per-candidate infra noise, the run
+    # would not crash — it would error every rollout and finish having measured nothing.
+    from . import intervention as _intervention
+    try:
+        if args.plan_only:
+            # --plan-only prints the plan and executes nothing, so it must not preflight:
+            # preflight STARTS a provisioned-but-stopped stack, which would give an
+            # inspection flag service side effects (and fail outright when the stack is
+            # not provisioned at all). The declared VALUE is still validated — that is
+            # offline, so an unknown intervention is refused here too.
+            intervention_rec = {"intervention": _intervention.declared(spec)}
+        else:
+            intervention_rec = _intervention.preflight(spec, skills, skills_dir)
+    except RuntimeError as e:
+        # RuntimeError, not just intervention.InterventionError (a subclass of it): the intervention
+        # SKILL raises plain RuntimeError for "port held by something else" and "health
+        # check timed out". Catching only the subclass let those escape as a traceback
+        # with NO JSON on stdout, which breaks the one-document contract every caller
+        # parses — and the operator loses the diagnostic that says which service is wrong.
+        err = {"error": str(e), "step": "intervention-preflight"}
+        print(json.dumps(err))
+        print(f"intervention preflight failed: {e}", file=sys.stderr)
+        return 1
+    if not args.plan_only and _stderr_is_usable():
+        print(_intervention.describe(intervention_rec), file=sys.stderr, flush=True)
+
     cap_path = spec.get("capability_path", "seed_capability")
     ratios = f"{spec.get('split_train',0.5)},{spec.get('split_val',0.25)},{spec.get('split_test',0.25)}"
 
@@ -720,6 +748,7 @@ def _cmd_run(argv):
                           "spec_path": str(spec_path), "spec": spec,
                           "optimizer": optimizer_name, "optimizer_cmd": opt_cmd,
                           "algorithm": algorithm_name, "focus": algorithm_focus,
+                          "intervention": intervention_rec,
                           "target_model": spec.get("target_model", ""),
                           "orchestration_mode": orchestration_mode,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),

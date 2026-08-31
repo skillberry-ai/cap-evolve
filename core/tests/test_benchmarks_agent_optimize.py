@@ -413,3 +413,35 @@ def test_the_iterations_input_defaults_to_blank_so_the_tier_default_can_win():
         f"from a deliberate choice — otherwise smoke silently gets the input's number: {block}")
     assert "BLANK" in block or "blank" in block, (
         f"the input description must tell the operator blank means the tier default: {block}")
+
+
+def test_agent_mode_gates_against_a_concurrent_control_not_a_stored_reward():
+    """The derived stop_condition named the gate's STRICTNESS but never its REFERENCE.
+
+    `round.py` defaults to `--gate-against parent`, which compares a candidate against the
+    parent's reward as it was measured EARLIER — so however much that stored number has
+    drifted since, the drift lands inside every candidate delta. `--gate-against control`
+    pairs against a byte-identical replicate measured in the SAME round, which removes it.
+    The stop_condition said only "Gate every candidate on FULL val at gate_k_se=... over N
+    trial(s)", so the agent took the default and every round carried drift.
+
+    Measured on smoke spreadsheetbench run 32971129203, whose `work/round_i0.json` recorded
+    BOTH comparisons for cand_1:
+
+        parent  (default) delta 0.0333 vs threshold 0.0440 -> reject
+        control          delta 0.0556 vs threshold 0.0341 -> ACCEPT
+
+    0.0556 also cleared that round's own `evidence_bar` of 0.0444, so it was real evidence.
+    Rounds i1/i2 rejected under both modes — genuine negatives. So exactly one candidate in
+    the run mattered and the default reference discarded it, and the run published `best=seed`
+    ("null result") on the strength of a comparison its own round table called drift-carrying.
+    PR #399 named this as a follow-up on tau2 evidence alone; this is a second benchmark.
+    """
+    got = _select(ALGORITHM="agent-optimize", ITERATIONS="3", NUM_TRIALS="3", GATE_K_SE="1.0")
+    stop = got["stop"]
+
+    assert "--gate-against control" in stop, (
+        "the stop_condition does not tell the agent which gate REFERENCE to use, so round.py's "
+        f"drift-carrying `parent` default wins: {stop}")
+    assert "drift" in stop.lower(), (
+        f"the stop_condition does not say WHY the control reference is required: {stop}")

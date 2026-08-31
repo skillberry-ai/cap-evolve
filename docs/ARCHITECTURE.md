@@ -86,12 +86,12 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 
 ## Skill library
 
-20 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
+21 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
 the core. Extending is one folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
 
 **How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.
 one row of the generated [`skills/_registry/manifest.json`](../skills/_registry/manifest.json)
-— phases, capabilities, algorithms, optimizers and orchestrate all count. An *algorithm* is a
+— phases, capabilities, algorithms, optimizers, interventions and orchestrate all count. An *algorithm* is a
 skill whose `meta.yaml` `component: algorithm`; agent-mode-only algorithms count too. An
 algorithm is *run-executable* when `cap-evolve run` drives its deterministic loop; it is
 *agent-mode* when its `meta.yaml` declares agent-mode only, in which case `cap-evolve run`

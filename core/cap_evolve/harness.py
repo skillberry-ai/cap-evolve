@@ -257,6 +257,32 @@ def evaluate_candidate(
     out_dir = run_dir.rollouts / split
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Trials are written as ``<task>__<tag>__t{k}.json`` for ``k in range(n_trials)``, so
+    # re-evaluating a tag that already has rollouts REPLACES ``t0..t9`` — it does not append
+    # ``t10..t19``. Re-evaluation is legitimate (``--resume`` reads its champion's val score
+    # back off disk), so this warns rather than refuses. What it must not be is silent: on run
+    # 33046360451 the agent, told by ``round.py`` to "re-run with more trials" after an
+    # inconclusive verdict, re-measured control ``ctl_null_i1`` under its own tag and replaced a
+    # 0.4967 replicate with 0.5067 — spending 100 metric calls to swap a data point rather than
+    # add one, and WIDENING the round's replicate spread. In the event stream that is
+    # indistinguishable from progress. ``prior_reward`` is recorded because once the files are
+    # overwritten the destroyed reading exists nowhere else.
+    prior = sorted(out_dir.glob(f"*__{tag}__t*.json"))
+    if prior:
+        prior_reward = None
+        try:
+            prior_reward = split_result_from_rollouts(run_dir, tag, split).reward
+        except Exception:  # noqa: BLE001 — a torn/partial rollout must not block the eval
+            pass
+        run_dir.log_event(
+            "rollout_overwrite_warning", split=split, tag=tag,
+            prior_trials=len({p.name.rsplit("__t", 1)[-1] for p in prior}),
+            prior_rollouts=len(prior), prior_reward=prior_reward,
+            why=("this tag already has rollouts and they are being REPLACED, not added to — "
+                 "trials are always written t0..t{n_trials-1}. To accumulate evidence instead, "
+                 "use a fresh tag, or ask for the higher trial count in ONE evaluation."),
+        )
+
     from .stats import mean, stderr
     has_batch = hasattr(adapter, "run_batch")
     has_run_trials = hasattr(adapter, "run_trials")
@@ -1003,8 +1029,12 @@ def _journal_tail(workdir: Path) -> str:
         tail = text.split(_JOURNAL_MARK, 1)[1].strip()
     else:
         # Optimizer rewrote the file (no marker) — fall back to its last ## Iteration block.
-        idx = text.rfind("\n## ")
-        tail = text[idx:].strip() if idx != -1 else ""
+        # Anchored per-line rather than on "\n## ": an agent-mode optimizer is not handed a
+        # seeded journal to append to, so it writes a FRESH file that STARTS with its heading,
+        # and a "\n## " search misses a heading at offset 0 — silently booking "(no handover
+        # written by the optimizer)" for a handover that was in fact written.
+        heads = list(re.finditer(r"(?m)^## ", text))
+        tail = text[heads[-1].start():].strip() if heads else ""
     # Strip any marker the optimizer copied into its entry text.
     return tail.replace(_JOURNAL_MARK, "").strip()
 
@@ -1096,7 +1126,7 @@ def _seed_journal(workdir: Path, run_dir: RunDir) -> None:
 
 def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
                        accepted: bool, val: float | None, delta: float | None,
-                       reason: str | None = None) -> None:
+                       reason: str | None = None, indecisive: bool = False) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
     stamped with the framework's objective outcome. Append-only at the run level so the
     handover truly accumulates across accepted AND rejected iterations.
@@ -1104,6 +1134,13 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
     minibatch-local reject) or whose measurement is void (an indecisive tamper step):
     the entry is still folded in, with "—" where the number would be.
+
+    ``indecisive=True`` gets its own verdict, because the RESULT line is the one artifact
+    written to stop the next iteration repeating a refuted idea — and a void measurement
+    refutes nothing. Stamped as a rejection it read "REJECTED (champion unchanged) … its
+    WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above",
+    telling the next iteration to redesign an edit that had never actually been judged. The
+    correct next move for an unresolved edit is to RE-MEASURE it.
 
     A genuinely empty handover is still ESCALATED — logged as an
     ``optimizer_context_warning`` event, so an operator or the dashboard can see it
@@ -1126,15 +1163,43 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     impact = _candidate_task_impact(run_dir, cid, "val") or {}
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
-    verdict = "ACCEPTED (new champion)" if accepted else "REJECTED (champion unchanged)"
-    guidance = ("" if accepted else
-                " — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
-                "break a task above, dropping/redesigning the ones that did.")
+    if indecisive:
+        verdict = "UNRESOLVED (not judged; champion unchanged)"
+        guidance = (" — the measurement could not separate this edit from re-measurement noise, "
+                    "so it is NOT evidence against the edit. Its batch was still reverted. To "
+                    "resolve it, re-measure it under a FRESH tag (re-running the same tag "
+                    "REPLACES its rollouts) or with more trials in ONE evaluation; do not "
+                    "redesign it on this round's numbers, and do not re-derive it as a new idea.")
+    elif accepted:
+        verdict, guidance = "ACCEPTED (new champion)", ""
+    elif impact.get("broke"):
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
+                    "break a task above, dropping/redesigning the ones that did.")
+    elif impact:
+        # Rejected with NOTHING regressed: the batch was not harmful, it just did not clear the
+        # bar. The regression guidance is not merely unhelpful here, it is misdirection — it
+        # says "drop nothing, redesign nothing" while inviting a rewrite of edits that were
+        # just measured HELPING. Observed on a round stamped `Δ=+0.043 · fixed={2 tasks} ·
+        # broke={—}`, rejected against a 0.048 threshold.
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — no task that was passing under the parent regressed: this batch did not "
+                    "clear the gate's threshold, it did not do damage. So the lever is POWER or "
+                    "SIZE, not a redesign — re-measure with more trials in ONE evaluation, or "
+                    "make the effect bigger. Keep the edits that produced the `fixed` tasks "
+                    "above as your starting point; do not rewrite them on this round's numbers.")
+    else:
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted. No per-task comparison was available this "
+                    "round (one side had no rollouts on disk), so `fixed`/`broke` above are "
+                    "UNKNOWN rather than empty and this line cannot tell you which edit cost "
+                    "you: attribute per-task before redesigning anything.")
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
     stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "
              f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
-             f"<!-- {cid}: {'ACCEPTED' if accepted else 'rejected'} "
+             f"<!-- {cid}: "
+             f"{'unresolved' if indecisive else 'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
     tail = tail.strip()
     if not tail:
@@ -1207,7 +1272,7 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     delta = (val - parent_val if isinstance(val, (int, float))
              and isinstance(parent_val, (int, float)) else None)
     _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
-                       reason=reason)
+                       reason=reason, indecisive=indecisive)
     for filename, seed, mark in _ACCUMULATORS:
         _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
 
@@ -1654,6 +1719,55 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
     }
 
 
+_MAX_CONSECUTIVE_EVAL_ERRORS = 3  # N raises in a row -> the environment, not the candidates
+
+
+def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, error: str,
+                     current_val: SplitResult, optimizer_seconds: float,
+                     opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
+    """An INDECISIVE step for a candidate whose ``evaluate_candidate`` call raised —
+    e.g. an adapter's ``live()``/rollout setup blew up (#286). The run keeps going
+    (that is the whole point: one candidate's cost, not the run's) but the candidate
+    was NEVER MEASURED, so it takes the same path as a 0%-coverage eval and a tamper:
+
+      * ``indecisive=True`` leaves the stall counter alone — a failed evaluation is
+        not evidence the optimizer ran out of ideas (unlike ``optimizer_error``,
+        where the workdir stays == parent and the gate scores a real Δ of 0);
+      * it is NOT filed in the rejected memory — that list is fed back as "these
+        edits did not work", and an infra failure says nothing about the edit
+        (``test_infra_errors_not_zeros``: the optimizer must not burn an iteration
+        rediscovering that a rollout crash was not a content regression);
+      * no reward is recorded, so nothing poisons the split mean or the paired gate.
+
+    A genuinely unrunnable environment is caught by ``_MAX_CONSECUTIVE_EVAL_ERRORS``
+    in the caller, which re-raises — not by letting the stall counter guess.
+    """
+    reason = f"indecisive (evaluation error): candidate evaluation raised: {error}"
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
+                     reason=reason, val=None, parent_val=current_val.reward,
+                     indecisive=True,
+                     optimizer_seconds=round(optimizer_seconds, 2),
+                     opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
+    run_dir.record_spend_warnings()
+    return {
+        "candidate_id": cid,
+        "accepted": False,
+        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
+                     "indecisive": True},
+        "candidate_val": None,
+        "parent_val": current_val.to_dict(),
+        "eval_error": error,
+        "regressions": [],
+        "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
+        "optimizer_error": optimizer_error,
+        "workdir": str(workdir),
+    }
+
+
 def run_step(
     adapter,
     *,
@@ -1779,8 +1893,32 @@ def run_step(
                                 event="capability_invalid", detail_key="validation",
                                 rejected=rejected)
 
-    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
-                                  n_trials=n_trials, tag=cid)
+    try:
+        cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
+                                      n_trials=n_trials, tag=cid)
+    except Exception as e:  # noqa: BLE001
+        # Mirrors the optimizer-call protection above (#286): an adapter can raise
+        # from live()/rollout setup for a reason specific to ONE candidate (a bad
+        # sandbox, an unrunnable candidate artifact) — that must cost an iteration,
+        # not the run. But N of these IN A ROW means the environment itself is
+        # unrunnable, not that N candidates in a row happened to be unlucky — that
+        # must still fail loudly rather than silently look like N skipped candidates.
+        streak = getattr(run_dir, "_consecutive_eval_errors", 0) + 1
+        run_dir._consecutive_eval_errors = streak
+        eval_error = str(e)
+        run_dir.log_event("evaluate_error", candidate=cid, error=eval_error[:500],
+                          error_full=eval_error, consecutive=streak)
+        if streak >= _MAX_CONSECUTIVE_EVAL_ERRORS:
+            raise RuntimeError(
+                f"{streak} consecutive candidate evaluations raised — this looks like "
+                f"a broken environment/adapter, not bad candidates. Last error: {eval_error}"
+            ) from e
+        return _eval_error_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                error=eval_error, current_val=current_val,
+                                optimizer_seconds=optimizer_seconds,
+                                opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                optimizer_error=optimizer_error)
+    run_dir._consecutive_eval_errors = 0
 
     # Paired gate is the default when per-task data is available: candidate and
     # current were scored on the SAME val tasks, so the correct (and far more

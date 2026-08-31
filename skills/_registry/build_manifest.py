@@ -22,7 +22,11 @@ from pathlib import Path
 # Components are SINGULAR (matching what meta.yaml actually carries); the old list
 # had plurals that matched nothing, so validation was dead. The directory layout
 # uses the plural (skills/<plural>/<skill>/) but the meta `component` is singular.
-COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate"}
+#
+# `intervention` names HOW a candidate is delivered to the model under test, as opposed to
+# WHAT is optimized (`capability`). An intervention skill owns an out-of-process delivery
+# stack rather than a step in the run DAG, so it declares no needs/provides tokens.
+COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate", "intervention"}
 
 # The needs/provides token vocabulary. Every needs/provides entry must be one of
 # these; a misspelling ("score" for "scores") fails the build instead of silently
