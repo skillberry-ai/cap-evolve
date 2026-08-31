@@ -263,13 +263,20 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
     We ban the *shape* — any absolute http(s) subresource — with a tiny allowlist.
     Targets are discovered by glob, so a bundle added later is covered by
     construction, and a floor on the discovered count fails loudly if one vanishes.
+
+    ``vendor/`` is excluded: it holds gitignored third-party CLONES an example's setup
+    pulls down at onboarding time (a benchmark checkout, the Skillberry services), not
+    assets cap-evolve ships. Auditing those made this guard fail on whatever a cloned
+    dependency happens to have in its own ``ui/`` — a finding about someone else's
+    frontend, which says nothing about our offline story.
     """
     exts = {".css", ".js", ".jsx", ".ts", ".tsx", ".html"}
     # Every shipped/served bundle dir, discovered — not enumerated.
     bundles = sorted(
         p for pat in ("**/dist", "**/ui") for p in REPO.glob(pat)
         if p.is_dir() and "node_modules" not in p.parts
-        and p.relative_to(REPO).parts[0] != "site"  # site/ is issue #123
+        and p.relative_to(REPO).parts[0] != "site"      # site/ is issue #123
+        and p.relative_to(REPO).parts[0] != "vendor"    # third-party clones, see below
     )
     # Glob alone can't notice a bundle that MOVED (it just stops finding it), so the
     # known served bundles are also named and asserted to exist. Glob = new coverage,

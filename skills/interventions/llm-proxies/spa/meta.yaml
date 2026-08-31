@@ -1,0 +1,11 @@
+component: intervention
+name: spa
+summary: Deliver the optimized capability through the Skillberry proxy stack (store + proxy-agent) instead of handing files to the runner — provision, run, deploy, stop and clean that stack.
+entry: scripts/run.py
+check: scripts/check.py
+needs: []
+provides: []
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]
