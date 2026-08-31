@@ -1095,7 +1095,8 @@ def _seed_journal(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
-                       accepted: bool, val: float | None, delta: float | None) -> None:
+                       accepted: bool, val: float | None, delta: float | None,
+                       reason: str | None = None) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
     stamped with the framework's objective outcome. Append-only at the run level so the
     handover truly accumulates across accepted AND rejected iterations.
@@ -1104,11 +1105,15 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     minibatch-local reject) or whose measurement is void (an indecisive tamper step):
     the entry is still folded in, with "—" where the number would be.
 
-    A genuinely empty handover (the confirmed bug this fixes) is no longer silently
-    accepted: it is ESCALATED — logged as an ``optimizer_context_warning`` event and
-    stamped into the journal itself with a visible ``EMPTY HANDOVER`` marker — so an
-    operator or the dashboard can see it happened, instead of the old placeholder text
-    reading like an unremarkable, silently-accepted note.
+    A genuinely empty handover is still ESCALATED — logged as an
+    ``optimizer_context_warning`` event, so an operator or the dashboard can see it
+    happened — but the journal itself is no longer left contentless: every caller
+    already carries a real, substantive ``reason`` (the same text that becomes the
+    commit's ``--note``, confirmed rich in practice across every accept/reject this
+    repo has produced), so that text is folded in as the entry's content instead of
+    a placeholder that admits nothing was learned. This is a fallback, not a
+    substitute for the optimizer's own reflection — it does not fire when the
+    optimizer already wrote a real entry.
     """
     tail = _journal_tail(workdir)
     run_journal = run_dir.root / "JOURNAL.md"
@@ -1140,12 +1145,15 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
         run_dir.log_event("optimizer_context_warning", what="JOURNAL.md",
                           error="empty handover: optimizer wrote no ## Iteration entry",
                           candidate=cid)
-        tail = (f"## Iteration {cid} — ⚠ EMPTY HANDOVER (framework escalation)\n"
-                "The optimizer wrote NO journal entry this iteration. This is a bug "
-                "in the optimizer/session, not a normal outcome — see the "
-                "`optimizer_context_warning` event in events.jsonl. The next "
-                "iteration has no narrative context for this candidate beyond the "
-                "RESULT line below.")
+        synthesized = (reason or "").strip()
+        tail = (f"## Iteration {cid} — ⚠ EMPTY HANDOVER, framework-synthesized from the "
+                "commit reason (the optimizer wrote no entry of its own — see the "
+                "`optimizer_context_warning` event):\n" + synthesized) if synthesized else (
+                f"## Iteration {cid} — ⚠ EMPTY HANDOVER (framework escalation)\n"
+                "The optimizer wrote NO journal entry this iteration, and no commit "
+                "reason was available to synthesize one from. This is a bug in the "
+                "optimizer/session, not a normal outcome — see the "
+                "`optimizer_context_warning` event in events.jsonl.")
     elif tail in base:
         # Dedup guard: the optimizer dropped the marker without appending (so the tail
         # fallback returned an entry already recorded in the run-level journal). Do NOT
@@ -1198,7 +1206,8 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                       val=val, parent=parent_id, parent_val=parent_val, **extra)
     delta = (val - parent_val if isinstance(val, (int, float))
              and isinstance(parent_val, (int, float)) else None)
-    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta)
+    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
+                       reason=reason)
     for filename, seed, mark in _ACCUMULATORS:
         _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
 
