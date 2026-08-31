@@ -2539,7 +2539,10 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
 
 /* ---------- 10c. Config — the full run configuration ---------- */
 (function(){
-  const CFG=S.config; if(!CFG)return;
+  // An absent config reduces to `{}`, which is TRUTHY in JS — guard on the field the
+  // header text needs, or a run with no project dir renders an empty Config section
+  // claiming to have read "straight off undefined".
+  const CFG=S.config; if(!CFG||!CFG.project_dir)return;
   const s=sec('Config — run configuration');
   s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
     'Every input the intake phase produced or the user set, read straight off '+

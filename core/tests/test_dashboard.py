@@ -330,6 +330,11 @@ def test_config_absent_without_a_project_dir():
         r = dashboard.reduce_run(rd)
         assert r["summary"]["config"] == {}
         assert r["summary"]["capabilities"]["config"] is False
+        # The Config panel's JS guards on `CFG.project_dir`, not on `CFG` itself: `{}` is
+        # truthy in JS, so a bare `if(!CFG)return` would render an empty panel claiming to
+        # have read the config "straight off undefined". (Can't be asserted from the HTML
+        # text — the section title is a JS string literal that is always present.)
+        assert "project_dir" not in r["summary"]["config"]
 
 
 # ---- ANSI terminal --------------------------------------------------------
