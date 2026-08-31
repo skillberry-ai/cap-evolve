@@ -146,6 +146,26 @@ def test_the_handover_flag_is_true_when_one_was_written(tmp_path):
         f"warned about a handover that was in fact written: {out}")
 
 
+def test_a_stale_handover_carried_over_from_the_last_round_is_not_reported_as_written(tmp_path):
+    """An agent's next working copy is usually a COPY of the last one, so it arrives with the
+    previous round's JOURNAL entry already in it. ``_reconcile_journal`` refuses to book the
+    same entry twice (it writes the "(no handover written)" placeholder instead), so reporting
+    that entry as this round's handover warns nobody about the round that actually lost one."""
+    run_dir, work = _staged(tmp_path)
+    (work / "JOURNAL.md").write_text(HANDOVER, encoding="utf-8")
+    _commit(run_dir, work)                       # round 1: the entry is booked
+
+    work2 = run_dir.root / "work" / "cand_2"     # round 2: cloned, and NOT updated
+    shutil.copytree(work, work2)
+    out = _commit(run_dir, work2, cid="cand_2")
+
+    journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
+    assert "no handover written by the optimizer" in journal, (
+        "the dedup guard changed: this test is about agreeing with what it books")
+    assert out.get("handover_recorded") is False, (
+        f"a stale entry the journal refused to book was reported as this round's handover: {out}")
+
+
 # --- 3. the guidance that asks for it ----------------------------------------------------
 
 def test_the_host_tells_the_agent_to_write_the_handover():
