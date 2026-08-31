@@ -354,9 +354,10 @@ def test_an_accepted_candidate_still_raises_the_running_best():
 # ---- second round: gate structured fields / null-control replicates / screened badge ----
 
 def test_gate_fields_read_directly_from_the_event_when_present():
-    """A commit event that attaches delta/stderr/n/k_se/threshold/resolvable_effect_size
-    directly is preferred over parsing them back out of the prose ``reason`` (#402 will
-    make agent-optimize's commit.py do this; the reducer must not assume it has landed)."""
+    """A commit event that RECORDS the gate numbers (``gate_delta``/``gate_stderr``/
+    ``gate_n``/``gate_k_se``/``gate_threshold``/``gate_resolvable_effect_size``) is
+    preferred over parsing them back out of the prose ``reason``; a prose-only event
+    (every deterministic loop) still takes the regex path unchanged."""
     from cap_evolve import Budget, RunDir, dashboard
     tmp = Path(tempfile.mkdtemp())
     rd = RunDir.create(tmp, ts="t", budget=Budget())
@@ -371,8 +372,8 @@ def test_gate_fields_read_directly_from_the_event_when_present():
         # Structured fields present — must win over the (deliberately contradictory) prose.
         {"t": 5.0, "kind": "reject", "candidate": "cand_struct", "val": 0.55,
          "note": "Δ̄=+0.0300 <= 1.0·SE=0.0500 (SE=0.0500, n=8)",
-         "delta": 0.099, "stderr": 0.011, "n": 40, "k_se": 1.0, "threshold": 0.011,
-         "resolvable_effect_size": 0.022},
+         "gate_delta": 0.099, "gate_stderr": 0.011, "gate_n": 40, "gate_k_se": 1.0,
+         "gate_threshold": 0.011, "gate_resolvable_effect_size": 0.022},
     ]
     rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
     (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
