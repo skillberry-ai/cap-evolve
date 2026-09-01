@@ -198,6 +198,145 @@ def test_dashboard_degrades_without_rollouts_or_finalize():
         assert '"diffs": {}' in text or '"diffs":{}' in text
 
 
+# ---- Process narrative: template-only detection ---------------------------
+
+def test_narrative_flags_an_unedited_seed_template():
+    """A run-level accumulator file that is STILL byte-for-byte its seed instructional
+    template (no real handover was ever appended) must not be presented as populated
+    narrative — it needs its own ``template_only`` flag so the renderer can flag it."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        (rd.root / "JOURNAL.md").write_text(harness._JOURNAL_SEED, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is True
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)
+        assert "template only" in html
+
+
+def test_narrative_does_not_flag_a_real_appended_entry():
+    """The moment a real entry is appended below the marker, the file is no longer
+    byte-identical to its seed — must not be flagged."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        real = harness._JOURNAL_SEED + "\n## Iteration cand_0001 — a real handover\n- did X\n"
+        (rd.root / "JOURNAL.md").write_text(real, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is False
+
+
+# ---- Config tab: full run configuration ------------------------------------
+
+def _mk_project(base: Path, *, extra_spec: str = "", write_project_md: bool = True):
+    """A minimal project dir mirroring the real tau2_airline layout (capevolve.yaml,
+    PROJECT.md, adapters/, seed_capability/) without depending on the live path."""
+    proj = base / "project"
+    proj.mkdir(parents=True, exist_ok=True)
+    (proj / "capevolve.yaml").write_text(
+        "capabilities:       [system-prompt, tools]\n"
+        "capability_path:    seed_capability\n"
+        "algorithm_skill:    agent-optimize\n"
+        "optimizer_skill:    claude-code\n"
+        "gate_mode:          paired\n"
+        "gate_k_se:          1.0\n"
+        "split_ids_file:     split_ids.json\n"
+        + extra_spec, encoding="utf-8")
+    if write_project_md:
+        (proj / "PROJECT.md").write_text(
+            "# Project\n\n- num_trials=1 — single-trial scores\n", encoding="utf-8")
+    (proj / "adapters").mkdir(exist_ok=True)
+    (proj / "adapters" / "adapter.py").write_text(
+        "def run_target():\n    pass\n", encoding="utf-8")
+    (proj / "seed_capability" / "policy").mkdir(parents=True, exist_ok=True)
+    (proj / "seed_capability" / "policy" / "policy.md").write_text(
+        "# Policy\nBe helpful.\n", encoding="utf-8")
+    return proj
+
+
+def test_config_reads_spec_groups_project_md_and_files():
+    """A future, unrecognised spec key must still show up (in 'Other'), never vanish."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        _mk_project(base, extra_spec="future_input:      some-new-thing\n")
+        rd = _mk_run(base, events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        cfg = r["summary"]["config"]
+        assert r["summary"]["capabilities"]["config"] is True
+
+        groups = {g["group"]: {i["key"]: i["value"] for i in g["items"]}
+                   for g in cfg["spec_groups"]}
+        assert groups["Capability"]["capability_path"] == "seed_capability"
+        assert groups["Algorithm & optimizer"]["algorithm_skill"] == "agent-optimize"
+        assert groups["Budget & gate"]["gate_mode"] == "paired"
+        # unrecognised key lands in "Other", not dropped
+        assert groups["Other"]["future_input"] == "some-new-thing"
+
+        assert "single-trial scores" in cfg["project_md"]
+
+        files = {f["path"]: f for f in cfg["files"]}
+        assert "adapters/adapter.py" in files
+        assert "def run_target" in files["adapters/adapter.py"]["preview"]
+        assert "seed_capability/policy/policy.md" in files
+        # capevolve.yaml / PROJECT.md are shown separately, not duplicated in the tree
+        assert "capevolve.yaml" not in files
+        assert "PROJECT.md" not in files
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)
+        assert "Config — run configuration" in html
+        assert "future_input" in html
+
+
+def test_config_degrades_binary_and_oversized_files():
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        proj = _mk_project(base)
+        (proj / "seed_capability" / "reference").mkdir(parents=True, exist_ok=True)
+        (proj / "seed_capability" / "reference" / "blob.bin").write_bytes(bytes(range(256)) * 4)
+        big = proj / "seed_capability" / "reference" / "huge.py"
+        big.write_text("x = 1\n" * 60000, encoding="utf-8")  # > 200_000 bytes
+
+        rd = _mk_run(base, events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        files = {f["path"]: f for f in r["summary"]["config"]["files"]}
+
+        blob = files["seed_capability/reference/blob.bin"]
+        assert blob["binary"] is True
+        assert blob["preview"] is None
+
+        huge = files["seed_capability/reference/huge.py"]
+        assert huge["binary"] is False
+        assert huge["preview"] is None  # too large to preview — size + path only
+        assert huge["size"] > 200_000
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)  # renders without trying to dump the huge/binary file
+
+
+def test_config_absent_without_a_project_dir():
+    """No sibling project/ at all → the panel's data is absent, not faked."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        assert r["summary"]["config"] == {}
+        assert r["summary"]["capabilities"]["config"] is False
+        # The Config panel's JS guards on `CFG.project_dir`, not on `CFG` itself: `{}` is
+        # truthy in JS, so a bare `if(!CFG)return` would render an empty panel claiming to
+        # have read the config "straight off undefined". (Can't be asserted from the HTML
+        # text — the section title is a JS string literal that is always present.)
+        assert "project_dir" not in r["summary"]["config"]
+
+
 # ---- ANSI terminal --------------------------------------------------------
 
 def test_render_ansi_kpis_and_no_color():
@@ -307,3 +446,144 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
     # Floors: a vanished bundle dir or an emptied bundle must fail, not silently pass.
     assert len(bundles) >= 4, f"expected >=4 bundle dirs, discovered {len(bundles)}: {bundles}"
     assert checked >= 60, f"expected >=60 shipped SPA files, checked only {checked} — paths moved?"
+
+
+def test_gate_fields_read_both_prefixed_and_unprefixed_conventions(tmp_path):
+    """The gate-decisions table must find the numbers under EITHER naming convention.
+
+    Both are real and both are on disk: current ``commit.py`` writes ``gate_delta`` &co on
+    the accept/reject event, older revisions wrote ``delta``/``stderr``/``n``/``k_se``/
+    ``threshold``/``resolvable_effect_size`` directly. Reading only the prefixed spelling
+    made every already-completed run of the older kind render "—" for every gate stat and
+    fall back to regexing the prose ``reason`` — with the real numbers in the same event.
+    """
+    from cap_evolve.dashboard import reduce_run
+    numbers = {"delta": 0.05, "stderr": 0.0705, "n": 30, "k_se": 1.0,
+               "threshold": 0.0295, "resolvable_effect_size": 0.0589}
+    for prefixed in (False, True):
+        payload = ({"gate_" + k: v for k, v in numbers.items()} if prefixed
+                   else dict(numbers))
+        rd = _mk_run(tmp_path / ("pre" if prefixed else "un"), events=[
+            {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+            {"kind": "evaluate", "split": "val", "tag": "c1", "reward": 0.55},
+            # No parseable numbers in the prose: the structured fields are the only source.
+            {"kind": "accept", "candidate": "c1", "val": 0.55,
+             "note": "accepted on the driver's judgement", **payload},
+        ])
+        row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+                   if r["candidate"] == "c1")
+        for field, want in numbers.items():
+            assert row[field] == want, (
+                f"{'prefixed' if prefixed else 'unprefixed'} {field!r}: "
+                f"got {row[field]!r}, want {want!r}")
+
+
+def test_gate_prefixed_field_wins_over_unprefixed(tmp_path):
+    """When an event carries both, the PREFIXED (current-convention) value is used."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "accept", "candidate": "c1", "val": 0.55, "note": "ok",
+         "gate_delta": 0.05, "delta": 0.99},
+    ])
+    row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+               if r["candidate"] == "c1")
+    assert row["delta"] == 0.05
+
+
+def test_gate_regex_on_prose_is_still_the_last_resort(tmp_path):
+    """Even-older data has neither convention — the prose scrape must still work."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "step", "candidate": "c1", "val": 0.55, "accept": True,
+         "reason": "accept: Δ̄ = 0.0500 > 1.0·SE=0.0295 (SE=0.0295, n=30)"},
+    ])
+    row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+               if r["candidate"] == "c1")
+    assert row["delta"] == 0.05 and row["n"] == 30
+
+
+def test_control_replicates_are_detected_by_tag_prefix(tmp_path):
+    """Null-control replicates are identifiable ONLY by their ``ctl_null`` tag today.
+
+    Nothing in round.py/commit.py sets ``role``/``is_control``, so requiring either dropped
+    the entire noise-floor section on every real run that measured one — including a run
+    whose controls swung 0.06, more than the accepted candidate's own delta. Controls must
+    reach the ``controls`` list AND the evaluations table, labelled as controls.
+    """
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.50},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i0", "reward": 0.58,
+         "stderr": 0.069, "n_scored": 30},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i0r1", "reward": 0.57},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i3a1", "reward": 0.65},
+        {"kind": "evaluate", "split": "val", "tag": "cand_1", "reward": 0.61},
+    ])
+    S = reduce_run(rd)["summary"]
+    assert [c["tag"] for c in S["controls"]] == ["ctl_null_i0", "ctl_null_i0r1", "ctl_null_i3a1"]
+    assert S["controls"][0]["reward"] == 0.58 and S["controls"][0]["n"] == 30
+    assert S["capabilities"]["controls"] is True
+    # ...and they are not invisible in the eval table either (the old bug put them in NEITHER).
+    ctl_rows = [e for e in S["evaluations"] if e["kind"] == "control"]
+    assert [e["candidate"] for e in ctl_rows] == [c["tag"] for c in S["controls"]]
+    assert "cand_1" not in [e["candidate"] for e in ctl_rows]
+
+
+def test_control_replicates_still_detected_by_explicit_role_field(tmp_path):
+    """Forward-compatibility: an explicit ``role``/``is_control`` marker also counts."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "evaluate", "split": "val", "tag": "replay_a", "reward": 0.51,
+         "role": "control"},
+        {"kind": "evaluate", "split": "val", "tag": "replay_b", "reward": 0.49,
+         "is_control": True},
+    ])
+    assert [c["tag"] for c in reduce_run(rd)["summary"]["controls"]] == ["replay_a", "replay_b"]
+
+
+def test_a_plain_candidate_eval_is_not_mistaken_for_a_control(tmp_path):
+    """The prefix must not swallow ordinary tags — no controls means an absent section."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "evaluate", "split": "val", "tag": "controller_fix", "reward": 0.55},
+        {"kind": "evaluate", "split": "val", "tag": "cand_1", "reward": 0.55},
+    ])
+    S = reduce_run(rd)["summary"]
+    assert S["controls"] == [] and S["capabilities"]["controls"] is False
+
+
+def test_optimizer_spend_recorded_only_in_state_json_is_attributed(tmp_path):
+    """Money and time must land in the SAME bucket.
+
+    An agent-mode run whose proposer spend reaches only state.json's Spent attributed $0 of
+    it, so the KPI strip showed one dollar figure as both "cost" and "unattributed" (100%
+    unattributed) while the wall-clock KPI put every second in the other bucket.
+    """
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5, "cost_usd": 0.0},
+        {"kind": "accept", "candidate": "c1", "val": 0.6, "note": "ok"},
+    ])
+    rd.update_spent(optimizer_usd=4.8, optimizer_tokens=69224, optimizer_seconds=12.0)
+    L = reduce_run(rd)["summary"]["cost_ledger"]
+    assert abs(L["unattributed_usd"]) < 0.001, L
+    recon = [r for r in L["rows"] if r["kind"] == "optimizer_reconciliation"]
+    assert len(recon) == 1 and abs(recon[0]["usd"] - 4.8) < 1e-6
+
+
+def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
+    """No capevolve.yaml is a NOTE, not a reason to omit every project artifact."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+    ])
+    proj = rd.root.parent / "project"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text("# real adapter\n", encoding="utf-8")
+    cfg = reduce_run(rd)["summary"]["config"]
+    assert cfg["spec_missing"] is True
+    assert [f["path"] for f in cfg["files"]] == ["adapters/adapter.py"]

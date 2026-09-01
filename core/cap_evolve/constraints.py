@@ -13,8 +13,12 @@ predicates against the run dir's persisted spend every round.
 Two functions, both pure and stdlib-only:
 
   * :func:`parse_constraints` — text → ``{"predicates": [...], "ambiguous": [...],
-    "text": "<verbatim>"}``. The original prose is always carried alongside, because a
-    parser that silently drops half a sentence is worse than no parser.
+    "unenforceable": [...], "text": "<verbatim>"}``. The original prose is always carried
+    alongside, because a parser that silently drops half a sentence is worse than no
+    parser. ``unenforceable`` is a clause-level list of prose this parser recognized NO
+    numeric/task-protection pattern in at all (a behavioral instruction like "use
+    screen.py before paying for full val") — distinct from ``ambiguous``, which is a
+    number this parser SAW but could not resolve (no unit, vague magnitude).
   * :func:`check_constraints` — predicates + measured actuals → per-predicate
     satisfied/violated + one ``stop | continue | narrow_scope`` recommendation.
 
@@ -29,7 +33,7 @@ from __future__ import annotations
 
 import re
 
-__all__ = ["parse_constraints", "check_constraints"]
+__all__ = ["parse_constraints", "check_constraints", "cost_target"]
 
 #: Recognized kinds. ``max_*`` are ceilings (violated when actual >= target);
 #: ``target_val_score`` is a goal (satisfied when actual >= target).
@@ -229,6 +233,28 @@ def parse_constraints(text: str | None) -> dict:
                                  "enforces totals, so the run is effectively unbounded in $. "
                                  "Ask for a total, or set max_usd in the spec"})
 
+    # --- unenforceable prose -------------------------------------------------
+    # A clause with a NUMBER but no recognized unit is already loud (the "no recognized
+    # unit" branch above). A clause with NO number at all — a behavioral instruction like
+    # "use screen.py before paying for full val each round" — matches none of the numeric/
+    # protection patterns above and was, until now, silently dropped: neither enforced nor
+    # reported, so a driver had no way to tell "the framework checked this and it's fine"
+    # from "the framework never saw this at all". Purely mechanical: split on clause
+    # boundaries and report any clause none of the predicates/ambiguous entries above were
+    # extracted from — never an attempt to enforce the prose itself.
+    _covered = [str(p.get("source", "")).lower() for p in preds] + \
+        [str(a.get("span", "")).lower() for a in ambiguous if isinstance(a, dict)]
+    unenforceable: list = []
+    for clause in re.split(r"[;,.]\s+|\s+\band\b\s+|\s+\bor\b\s+", raw.strip()):
+        clause = clause.strip().strip(".,;")
+        if len(clause) < 8:  # too short to be a real, checkable instruction
+            continue
+        cl = clause.lower()
+        if any(span and span in cl for span in _covered):
+            continue
+        if clause not in unenforceable:
+            unenforceable.append(clause)
+
     # Tighten duplicates.
     out: list = []
     seen: dict = {}
@@ -251,7 +277,43 @@ def parse_constraints(text: str | None) -> dict:
         seen[k] = p
         out.append(p)
 
-    return {"text": raw, "predicates": out, "ambiguous": ambiguous}
+    return {"text": raw, "predicates": out, "ambiguous": ambiguous,
+            "unenforceable": unenforceable}
+
+
+def cost_target(target: float, per_task_ceiling: dict) -> dict:
+    """Cost a ``target_val_score`` against measured per-task headroom before accepting it.
+
+    ``per_task_ceiling`` maps ``task_id -> highest rate that task can structurally reach``
+    (e.g. ``min(0.95, measured_component_cap)`` — a task whose COMMUNICATE component rate
+    measures 0.667 cannot reach 1.0 no matter what a capability edit does). The costed
+    ceiling is the mean of those caps, i.e. ``1 - sum(1 - ceiling_t) / n``: the score no
+    capability edit can exceed. A target above it is not a capability problem and should be
+    renegotiated with the user rather than chased with more iterations.
+
+    Motivating case: docs/TAU2_SUMMARY.md's own ceiling analysis found a ≈0.92 ceiling set by
+    three tasks capped by things no edit could touch (a leaking user simulator, two
+    COMMUNICATE-component rates) — two points of slack a 90%-target run had no way to close.
+    """
+    if not per_task_ceiling:
+        return {"target": float(target), "feasible": None,
+                "reason": "no per-task ceiling data — cannot cost this target"}
+    ceiling = sum(per_task_ceiling.values()) / len(per_task_ceiling)
+    feasible = float(target) <= ceiling + 1e-9
+    return {
+        "target": float(target),
+        "costed_ceiling": round(ceiling, 4),
+        "headroom": round(ceiling - float(target), 4),
+        "feasible": feasible,
+        "reason": (
+            f"target {float(target):.4f} is "
+            f"{'within' if feasible else 'ABOVE'} the costed ceiling {ceiling:.4f} "
+            f"(mean of {len(per_task_ceiling)} per-task caps) — "
+            + ("reachable by a capability edit" if feasible else
+               "NOT reachable by any capability edit; renegotiate the target or the caps "
+               "before spending more budget chasing it")
+        ),
+    }
 
 
 def check_constraints(
@@ -265,6 +327,7 @@ def check_constraints(
     metric_calls: int = 0,
     regressed_tasks: list | None = None,
     warn_frac: float = 0.8,
+    per_task_ceiling: dict | None = None,
 ) -> dict:
     """Check every parsed predicate against MEASURED actuals from the run dir.
 
@@ -315,9 +378,17 @@ def check_constraints(
         elif kind == "target_val_score":
             actual = None if best_val is None else float(best_val)
             met = actual is not None and actual >= float(p["target"]) - 1e-9
-            rows.append({**p, "actual": actual, "satisfied": met, "violated": False,
-                         "note": "checked on the FULL-val mean only; a subset screen "
-                                 "can never satisfy this"})
+            row = {**p, "actual": actual, "satisfied": met, "violated": False,
+                   "note": "checked on the FULL-val mean only; a subset screen "
+                           "can never satisfy this"}
+            if per_task_ceiling:
+                cost = cost_target(float(p["target"]), per_task_ceiling)
+                row["cost"] = cost
+                if cost.get("feasible") is False:
+                    warn_reasons.append(
+                        f"target_val_score {p['target']:.4f} is above the costed ceiling "
+                        f"{cost['costed_ceiling']:.4f} — not reachable by any capability edit")
+            rows.append(row)
             if met:
                 stop_reasons.append(f"score goal met on full val "
                                     f"({actual:.4f} >= {p['target']:.4f})")
@@ -342,5 +413,6 @@ def check_constraints(
         "recommendation": rec,
         "reasons": stop_reasons or warn_reasons,
         "ambiguous": parsed.get("ambiguous") or [],
+        "unenforceable": parsed.get("unenforceable") or [],
         "stop_condition_text": parsed.get("text", ""),
     }

@@ -121,9 +121,16 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
           hint={
             summary.delta_pct != null
               ? `${summary.delta_pct > 0 ? '+' : ''}${summary.delta_pct}% relative`
-              : 'relative % undefined off a zero baseline'
+              : // A null delta_pct has TWO causes and they are not the same statement.
+                // Only one of them is "the baseline was 0"; the other is "there is no
+                // baseline (or no best val) to divide yet", which is what every live
+                // snapshot taken before the seed finishes scoring looks like. Printing
+                // the zero-baseline sentence there invents a measurement.
+                summary.baseline_val == null || summary.best_val == null
+                ? 'no baseline measured yet — nothing to compare'
+                : 'relative % undefined off a zero baseline'
           }
-          title="Absolute change in val. The relative % is undefined when the baseline is 0."
+          title="Absolute change in val. The relative % is undefined when the baseline is 0, and there is no % at all until both the baseline and a best val exist."
         >
           <CountUp value={delta} format={(v) => signed(v)} />
         </Kpi>

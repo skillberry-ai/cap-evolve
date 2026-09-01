@@ -163,6 +163,47 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     )
 
 
+def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2)) -> SplitResult:
+    """Pool two evaluations of the SAME unmodified candidate into one honest SplitResult.
+
+    For sequential evidence-gathering (agent-optimize's "provisional" candidates): growing
+    ``n`` on a candidate means running it again and POOLING the trials, not averaging two
+    separate verdicts — a paired significance test needs the combined per-task trial vector,
+    since averaging two means (or two SEs) understates the truth: two runs of 5 trials each
+    are one candidate measured at n=10, not two half-strength candidates.
+
+    Concatenates each shared task's ``trial_rewards`` (never just its mean) and
+    re-aggregates from scratch, so ``reward``/``stderr``/``pass_k`` on the result reflect
+    every trial actually run. A task present on only one side keeps only that side's
+    trials — nothing is discarded, nothing is invented.
+    """
+    by_task: dict[str, list[float]] = {}
+    feedback: dict[str, str] = {}
+    errored: dict[str, bool] = {}
+    errored_trials: dict[str, int] = {}
+    for res in (a, b):
+        for pt in (res.per_task or []):
+            tid = pt.get("task_id")
+            if tid is None:
+                continue
+            raw = pt.get("raw") or {}
+            trials = pt.get("trial_rewards") or []
+            by_task.setdefault(tid, []).extend(float(x) for x in trials)
+            if pt.get("feedback"):
+                feedback[tid] = pt["feedback"]
+            errored[tid] = errored.get(tid, False) or bool(raw.get("errored"))
+            errored_trials[tid] = errored_trials.get(tid, 0) + int(raw.get("errored_trials") or 0)
+    from .stats import mean, stderr
+    scores = [
+        Score(task_id=t, reward=mean(tr), feedback=feedback.get(t, ""),
+              n=len(tr), stderr=stderr(tr), trial_rewards=tr,
+              raw={"errored": errored.get(t, False), "errored_trials": errored_trials.get(t, 0),
+                   "valid_trials": len(tr), "n_trials": len(tr)})
+        for t, tr in by_task.items()
+    ]
+    return aggregate_scores(a.split or b.split, scores, ks=ks)
+
+
 # ---- parent selection over a frontier of candidates ------------------------
 
 def select_parent(

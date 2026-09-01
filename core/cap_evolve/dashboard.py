@@ -25,9 +25,19 @@ The candidate **graph** schema (``reduced["graph"]``)::
         {"id", "parent", "children": [...], "status": seed|accepted|rejected|failed,
          "val", "stderr", "per_task": {task_id: reward}, "feedback": {task_id: str},
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
-         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far"}
+         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
+         "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
+         "gate_resolvable_effect_size"?, "screened": bool | None}
      ],
      "root": "seed", "best_id": "..."}
+
+The ``gate_*`` keys are present when the algorithm's commit step RECORDED that number on its
+accept/reject event — under either naming convention on disk: the prefixed ``gate_delta`` a
+current ``commit.py`` writes, or the UNPREFIXED ``delta`` an older one wrote (see
+``_GATE_FIELD_ALIASES``). The gate-decisions table prefers whichever is present and falls back
+to regexing the prose ``reason`` only when neither is.
+``screened`` is ``None`` when no event recorded compliance for this candidate's tag, else
+the ``screened_before_fullval`` value read generically off any event that carries it.
 
 The **summary** schema (``reduced["summary"]``)::
 
@@ -36,7 +46,14 @@ The **summary** schema (``reduced["summary"]``)::
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
-     "gate_warnings": [...], "diagnoses": [...], "git_log": [...]}
+     "gate_warnings": [...], "diagnoses": [...], "git_log": [...],
+     "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...]}
+
+``controls`` lists null-control replicate evaluations — evaluate-only measurements with no
+candidate-graph node — detected by ``_is_control_event``: the documented ``ctl_null`` TAG
+PREFIX convention (agent-optimize's ``ctl_null_i<N>`` plus its ``r<k>``/``a<k>`` replicates),
+or an explicit ``role: "control"`` / truthy ``is_control`` field on the event. They also appear
+in ``evaluations`` with ``kind: "control"``, so a control is never in neither place.
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
@@ -319,7 +336,8 @@ _ALGO_MARKERS = (
     # real agent-optimize run that logs only screen/accept/reject — the shape every
     # actual run has, since the agent drives the loop and emits no "agent_round" —
     # matched nothing and rendered as "algorithm not recorded" with no agent panels.
-    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step", "screen")),
+    ("agent-optimize", ("agent_round", "agent_subset", "agent_optimize_step", "screen",
+                        "agent_optimize_compliance")),
     ("hill-climb", ("convergence", "step")),
 )
 
@@ -336,10 +354,44 @@ _ALGO_MARKERS = (
 #: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
 #: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
 #: candidate on the same (current) runs, so it never carried a graph anyone needs.
-_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject")
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
+
+#: Prefixed gate field → the UNPREFIXED spelling of the same number. Both conventions are
+#: real and both are on disk: older ``commit.py`` revisions wrote ``delta``/``stderr``/``n``/
+#: ``k_se``/``threshold``/``resolvable_effect_size`` straight onto the accept/reject event,
+#: current ones write ``gate_*``. The reducer reads the prefixed name first and falls back to
+#: the unprefixed one, so a run renders its real gate numbers whichever version produced it.
+_GATE_FIELD_ALIASES = {
+    "gate_delta": "delta",
+    "gate_stderr": "stderr",
+    "gate_n": "n",
+    "gate_k_se": "k_se",
+    "gate_threshold": "threshold",
+    "gate_resolvable_effect_size": "resolvable_effect_size",
+}
+
+#: Tag-naming convention for a null-control replicate: any evaluate tag starting with
+#: ``ctl_null`` (agent-optimize's ``round.py`` writes ``ctl_null_i<N>`` per round plus
+#: ``...r<k>``/``...a<k>`` replicates). This is a DOCUMENTED convention, not one algorithm's
+#: private detail — an algorithm that wants its controls surfaced either follows the prefix
+#: or sets ``role: "control"`` / ``is_control`` on the event.
+_CONTROL_TAG_PREFIX = "ctl_null"
+
+
+def _is_control_event(ev: dict) -> bool:
+    """Is this ``evaluate`` event a null-control replicate (a noise-floor measurement)?
+
+    Three signals, any of which suffices: an explicit ``role: "control"``, a truthy
+    ``is_control``, or the ``ctl_null`` tag prefix. Only the last one is actually emitted
+    today (checked round.py/commit.py), which is exactly why reading only the first two
+    dropped the whole noise-floor section for every real run; the explicit fields stay
+    recognized so an algorithm that starts setting them needs no reducer change.
+    """
+    return bool(ev.get("role") == "control" or ev.get("is_control")
+                or str(ev.get("tag") or "").startswith(_CONTROL_TAG_PREFIX))
 
 
 def _algorithm_from_spec(root: Path) -> str | None:
@@ -371,6 +423,14 @@ def _algorithm_from_spec(root: Path) -> str | None:
 #: a kill than "dead" during a legitimately slow step.
 STALE_AFTER_SECONDS = 45 * 60.0
 
+#: The same window, widened, for a run whose last event is an ``eval_start`` with no
+#: closing ``evaluate`` — i.e. a split is provably mid-flight. Nothing is logged inside
+#: an evaluation, and a legitimate one runs from minutes to many hours (639 test tasks;
+#: swebench builds a container per task), so the ordinary window would call a healthy
+#: run dead partway through its baseline. An evaluation that has not returned in eight
+#: hours is a different matter, and past that the run is reported as interrupted.
+EVAL_STALE_AFTER_SECONDS = 8 * 3600.0
+
 _PHASE_OF_KIND = {
     "intake": "intake", "target_profile": "intake", "seed_dir_created": "intake",
     "splits": "baseline", "splits_warning": "baseline", "baseline": "baseline",
@@ -383,8 +443,9 @@ def _phase_for(ev: dict) -> str:
     kind = str(ev.get("kind") or "")
     if kind in _PHASE_OF_KIND:
         return _PHASE_OF_KIND[kind]
-    if kind == "evaluate":
+    if kind in ("evaluate", "eval_start"):
         # The seed-on-val eval IS the baseline; the sealed test eval is finalize.
+        # ``eval_start`` is the same evaluation, just its opening bracket.
         if ev.get("split") == "test":
             return "finalize"
         if ev.get("tag") == "seed":
@@ -467,9 +528,25 @@ def _spend_metered(total_usd: float, paid_calls: int) -> bool:
     return not (paid_calls > 0 and total_usd == 0.0)
 
 
+def _eval_busy(ev: dict) -> str:
+    """"scoring <tag> on <split> (N rollouts)" — what an open ``eval_start`` is doing.
+
+    Only facts the event carries; a field the event omits is left out rather than
+    guessed at, so the sentence never over-claims.
+    """
+    split = ev.get("split") or "a split"
+    tag = ev.get("tag")
+    n = ev.get("rollouts")
+    who = f"candidate {tag}" if tag and tag != "seed" else "the seed"
+    if tag == "FINAL":
+        who = "the best candidate"
+    scale = f" ({int(n)} rollouts)" if isinstance(n, (int, float)) and n else ""
+    return f"scoring {who} on the {split} split{scale}"
+
+
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
                    has_candidates: bool, has_baseline: bool) -> tuple[str, str]:
-    """``(status, reason)`` for a run — the five outcomes an operator must tell apart.
+    """``(status, reason)`` for a run — the six outcomes an operator must tell apart.
 
     ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
     no finalize followed) · ``stalled`` (the algorithm declared convergence) ·
@@ -479,23 +556,22 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     The old logic collapsed everything that was not finalized into ``live``, so a run
     that died weeks ago still reported as running. Here the last event's timestamp is
     the evidence, and a truncated/killed run is never called live.
+
+    **Freshness is evidence, and it outranks "nothing has been scored yet."** A run
+    writes ``splits``/``splits_warning`` and then goes quiet for as long as the seed's
+    baseline takes — for spreadsheetbench that is ten agent rollouts, many minutes with
+    no event in between. Judging "no baseline and no candidate" *before* looking at the
+    clock stamped a red ``failed`` badge on every live snapshot taken during that window
+    (run 33492876620), which is the same class of lie as calling a dead run live: it
+    reports an outcome for a run that has not reached one. So the timestamps are read
+    first, and "nothing evaluated" is only a failure once the log has actually stopped
+    moving (or a cap/convergence already ended the run).
     """
     kinds = [str(e.get("kind") or "") for e in events]
     if not events:
         return "failed", "no events recorded — the run never started"
     if "finalize" in kinds:
         return "completed", "finalize sealed the test split"
-    if not has_baseline and not has_candidates:
-        return "failed", "no baseline and no candidate was ever evaluated"
-    if agent_mode and has_baseline and not has_candidates:
-        # ``cap-evolve run`` in agent mode deliberately stops after baseline and hands
-        # the loop to the coding agent. That is neither finished nor dead nor running —
-        # it is waiting for a human/agent to drive it, and saying "live" (or "failed")
-        # about it is the exact class of wrong status the old logic produced.
-        return "awaiting_agent", (
-            "baseline is done and `cap-evolve run` handed off — the agent has not "
-            "committed a candidate yet (agent-mode runs end by running the finalize "
-            "phase script)")
 
     last_t = 0.0
     for e in reversed(events):
@@ -511,9 +587,61 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     stop_kinds = {"gepa_stop", "convergence"}
     stopped = next((k for k in reversed(kinds) if k in stop_kinds), None)
 
-    fresh = silent is not None and silent < STALE_AFTER_SECONDS
-    if fresh and not exhausted and not stopped:
-        return "running", f"last event {silent:.0f}s ago"
+    # An ``eval_start`` that no ``evaluate`` has closed means a split is provably being
+    # scored right now, and evaluations log nothing while they run — so the silence is
+    # expected and gets the wider window. `open_eval` is the event itself, so the reason
+    # string can name what the run is busy with instead of inferring it.
+    open_eval = None
+    for e in reversed(events):
+        k = str(e.get("kind") or "")
+        if k == "evaluate":
+            break
+        if k == "eval_start":
+            open_eval = e
+            break
+    window = EVAL_STALE_AFTER_SECONDS if open_eval else STALE_AFTER_SECONDS
+    fresh = silent is not None and silent < window
+    alive = fresh and not exhausted and not stopped
+
+    if not has_baseline and not has_candidates:
+        if alive:
+            # The phase that produces the very first number has not returned yet. That
+            # is progress, not an outcome, and must never be reported as one.
+            return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+                               if open_eval else
+                               "the seed's baseline is still being scored — no candidate "
+                               f"has been evaluated yet; last event {silent:.0f}s ago")
+        why = "no baseline and no candidate was ever evaluated"
+        if exhausted:
+            return "failed", f"{why} ({exhausted})"
+        if stopped:
+            return "failed", f"{why} (algorithm stopped: {stopped})"
+        if silent is None:
+            return "failed", f"{why}; events carry no timestamps"
+        if open_eval is not None:
+            # It started measuring and never came back. "failed — nothing ran" would be
+            # wrong about the one thing that is certain: something did run.
+            return "interrupted", (
+                f"{_eval_busy(open_eval)} and never returned — silent for "
+                f"{silent / 60.0:.0f} min, so {why}")
+        return "failed", f"{why}; silent for {silent / 60.0:.0f} min"
+    if agent_mode and has_baseline and not has_candidates and not (alive and open_eval):
+        # ``cap-evolve run`` in agent mode deliberately stops after baseline and hands
+        # the loop to the coding agent. That is neither finished nor dead nor running —
+        # it is waiting for a human/agent to drive it, and saying "live" (or "failed")
+        # about it is the exact class of wrong status the old logic produced.
+        #
+        # An OPEN eval is the one thing that overrides it: "awaiting" asserts that
+        # nothing is happening, and an evaluation in flight is a counter-example — the
+        # agent is scoring its first candidate right now, not waiting to be driven.
+        return "awaiting_agent", (
+            "baseline is done and `cap-evolve run` handed off — the agent has not "
+            "committed a candidate yet (agent-mode runs end by running the finalize "
+            "phase script)")
+
+    if alive:
+        return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+                           if open_eval else f"last event {silent:.0f}s ago")
     if stopped:
         return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
     if exhausted:
@@ -626,6 +754,221 @@ def _read_evograph(root: Path) -> dict:
     return {"rounds": rounds, "weaknesses": weaknesses}
 
 
+#: run-level narrative files, in reading order — see harness.py's cross-iteration
+#: file-header comment (JOURNAL/INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS).
+_NARRATIVE_FILES = (
+    ("JOURNAL.md", "Journal — per-iteration handover"),
+    ("INSIGHTS.md", "Insights — verified findings"),
+    ("META_INSIGHTS.md", "Meta-insights — the optimization process"),
+    ("FRAMEWORK_IMPROVEMENTS.md", "Framework improvements — for cap-evolve itself"),
+)
+
+
+# ---------------------------------------------------------------------------
+# Config tab: the full run configuration (spec + PROJECT.md + project dir)
+# ---------------------------------------------------------------------------
+
+#: A small, generic classification of the ``capevolve.yaml`` keys documented in
+#: ``skills/phases/intake/inputs/INPUTS.md``. Anything NOT listed here (an older key,
+#: or a new input a future intake adds) falls into "Other" rather than disappearing —
+#: this is a display grouping only, never a schema/validation of the spec.
+_CONFIG_KEY_GROUPS = {
+    "capabilities": "Capability", "capability_path": "Capability",
+    "capability_sources": "Capability", "actions": "Capability",
+    "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
+    "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
+    "optimizer_usd_per_iter": "Algorithm & optimizer",
+    "optimizer_instructions_file": "Algorithm & optimizer",
+    "orchestration_mode": "Algorithm & optimizer", "stop_condition": "Algorithm & optimizer",
+    "target_model": "Algorithm & optimizer", "target_profile_file": "Algorithm & optimizer",
+    "runner_repo_path": "Algorithm & optimizer",
+    "dataset_source": "Data & splits", "split_seed": "Data & splits",
+    "split_train": "Data & splits", "split_val": "Data & splits", "split_test": "Data & splits",
+    "split_ids_file": "Data & splits", "num_trials": "Data & splits",
+    "max_iterations": "Budget & gate", "stall": "Budget & gate",
+    "max_metric_calls": "Budget & gate", "max_usd": "Budget & gate",
+    "max_optimizer_usd": "Budget & gate", "gate_mode": "Budget & gate",
+    "gate_k_se": "Budget & gate", "no_regression": "Budget & gate",
+    "memory_skill": "Memory",
+    "metric_primary": "Metrics & display", "metrics_display": "Metrics & display",
+    "metric_directions": "Metrics & display",
+    "github_integration": "GitHub",
+}
+_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+                        "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
+
+#: A file this big gets size + path only in the Config tab's file tree — never an
+#: attempt to read and render megabytes of adapter/trajectory content.
+_PROJECT_PREVIEW_MAX_BYTES = 200_000
+
+
+def _find_project_dir(root: Path) -> Path | None:
+    """The ``project/`` dir that scaffolded this run, or ``None``.
+
+    Same two candidate locations ``_algorithm_from_spec`` already reads (a sibling
+    ``project/`` next to the run dir is the normal shape; some fixtures write
+    ``capevolve.yaml`` directly under the run dir).
+
+    A sibling ``project/`` dir with NO ``capevolve.yaml`` still counts: it holds adapters/,
+    seed_capability/, split files — the whole Config section used to vanish with no explanation
+    when the spec file was missing, hiding project artifacts that were sitting right there.
+    ``root`` itself is only accepted WITH a spec, since a run dir full of rollouts/ and
+    events.jsonl is not a project listing.
+    """
+    for cand in (_safe_subpath(root.parent, "project"), root):
+        if cand is not None and cand.is_dir() and (cand / "capevolve.yaml").is_file():
+            return cand
+    sibling = _safe_subpath(root.parent, "project")
+    if sibling is not None and sibling.is_dir():
+        return sibling
+    return None
+
+
+def _read_project_files(project_dir: Path, skip: set) -> list[dict]:
+    """Every file under ``project_dir`` except ``skip`` (top-level names already
+    shown elsewhere — ``capevolve.yaml``, ``PROJECT.md``), walked generically so a
+    NEW artifact (a future intake output, a split file, an intake transcript) shows
+    up automatically instead of needing a new reader.
+
+    Returns ``[{"path", "size", "preview", "truncated", "binary"}]`` sorted by path.
+    ``preview`` is ``None`` for a binary file or one over ``_PROJECT_PREVIEW_MAX_BYTES``
+    — those degrade to size + path only, never a megabyte dump.
+    """
+    out = []
+    for f in sorted(project_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        rel = f.relative_to(project_dir)
+        if str(rel) in skip or "__pycache__" in rel.parts or ".git" in rel.parts:
+            continue
+        try:
+            size = f.stat().st_size
+        except OSError:
+            continue
+        rec = {"path": str(rel), "size": size, "preview": None,
+               "truncated": False, "binary": False}
+        if size == 0:
+            rec["preview"] = ""
+        elif size <= _PROJECT_PREVIEW_MAX_BYTES:
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                rec["binary"] = True
+            else:
+                rec["preview"] = _sanitize_text(text, 4000)
+                rec["truncated"] = len(text) > 4000
+        out.append(rec)
+    return out
+
+
+def _read_config(root: Path) -> dict:
+    """The full run configuration, generically — every intake artifact on disk.
+
+    Reads the sibling ``project/`` dir's ``capevolve.yaml`` (the parsed spec, grouped
+    for display — see ``_CONFIG_KEY_GROUPS``), ``PROJECT.md`` (the intake-authored
+    narrative of what was resolved/defaulted), and every other file under the project
+    dir (adapters/, seed_capability/, split files, ...) as a generic listing/preview.
+    Returns ``{}`` when no project dir is found — the panel hides itself.
+    """
+    project_dir = _find_project_dir(root)
+    if project_dir is None:
+        return {}
+    from .specfile import read_yaml
+    # Joined through _safe_subpath like every other path here: the spec is read (and its
+    # presence reported) only when it is proven inside the project dir, so a capevolve.yaml
+    # symlinked out of it is treated as absent rather than followed.
+    spec_file = _safe_subpath(project_dir, "capevolve.yaml")
+    spec = {}
+    if spec_file is not None:
+        try:
+            spec = read_yaml(spec_file.read_text(encoding="utf-8")) or {}
+        except OSError:
+            spec = {}
+    groups: dict[str, list] = {}
+    for k, v in spec.items():
+        groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
+    spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
+
+    project_md = None
+    pmd = project_dir / "PROJECT.md"
+    if pmd.is_file():
+        try:
+            project_md = _sanitize_text(pmd.read_text(encoding="utf-8"), 20000)
+        except OSError:
+            project_md = None
+
+    files = _read_project_files(project_dir, {"capevolve.yaml", "PROJECT.md"})
+    if not spec_groups and not project_md and not files:
+        return {}
+    return {
+        "project_dir": str(project_dir),
+        # True ⇒ the project dir exists but has no capevolve.yaml. The section says so and still
+        # lists the artifacts that ARE there, instead of disappearing without explanation.
+        "spec_missing": spec_file is None or not spec_file.is_file(),
+        "spec_groups": spec_groups,
+        "project_md": project_md,
+        "files": files,
+    }
+
+
+def _read_narrative(root: Path, best_id: str | None) -> dict:
+    """The optimizer-authored process narrative for this run, read straight off disk.
+
+    Every run gets this by default (#400): the run-level accumulator files the
+    optimizer wrote across iterations, plus the best candidate's final ``PROCESS.md``
+    (why THAT iteration was done the way it was). Returns ``{}`` when none of these
+    exist yet (e.g. a synthetic log with no real optimizer session).
+
+    Each file is compared against its own known seed-template text (harness.py's
+    ``_seed_journal``/``_seed_accumulator``/``_PROCESS_SEED``): a file whose content is
+    STILL exactly that template — no real entry ever appended — carries
+    ``"template_only": True`` so the renderer can flag it instead of presenting an
+    unedited instructional template as real optimizer narrative.
+    """
+    try:
+        from . import harness
+        seed_by_name = {
+            "JOURNAL.md": harness._JOURNAL_SEED,
+            "INSIGHTS.md": harness._INSIGHTS_SEED,
+            "META_INSIGHTS.md": harness._META_INSIGHTS_SEED,
+            "FRAMEWORK_IMPROVEMENTS.md": harness._FRAMEWORK_IMPROVEMENTS_SEED,
+        }
+        process_seed = harness._PROCESS_SEED.strip()
+    except Exception:  # noqa: BLE001 — template detection is a nicety, not load-bearing
+        seed_by_name, process_seed = {}, None
+    files = []
+    for name, title in _NARRATIVE_FILES:
+        p = _safe_subpath(root, name)
+        if p is None or not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if text:
+            seed_text = seed_by_name.get(name)
+            # ``name`` is the bare filename: the section intro lists what this run ACTUALLY
+            # wrote instead of the fixed catalogue of every narrative file that could exist.
+            files.append({"name": name, "title": title, "text": _sanitize_text(text, 20000),
+                          "template_only": bool(seed_text) and text == seed_text.strip()})
+    process_text = None
+    if best_id:
+        p = _safe_subpath(root, "candidates", best_id, "PROCESS.md")
+        if p is not None and p.is_file():
+            try:
+                process_text = p.read_text(encoding="utf-8").strip() or None
+            except OSError:
+                process_text = None
+    if process_text:
+        files.append({"name": "PROCESS.md",
+                      "title": f"Process — best candidate ({best_id})",
+                      "text": _sanitize_text(process_text, 20000),
+                      "template_only": bool(process_seed) and process_text == process_seed})
+    if not files:
+        return {}
+    return {"files": files}
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -719,6 +1062,18 @@ def reduce_run(run_dir) -> dict:
         if ev.get("kind") == "minibatch":
             minibatch_evals.add(ev.get("tag"))
 
+    # Cheap-screen compliance, keyed by candidate tag: whether a candidate paid for a
+    # cheap screen before its full-val eval. Read generically off ANY event that carries a
+    # ``screened_before_fullval`` field (agent-optimize's ``agent_optimize_compliance`` is
+    # the first emitter, but nothing here assumes that kind name — a future algorithm
+    # emitting the same field under a different event kind is picked up identically).
+    screened_by_tag: dict = {}
+    for ev in events:
+        if "screened_before_fullval" in ev:
+            tag = ev.get("tag") or ev.get("candidate")
+            if tag:
+                screened_by_tag[str(tag)] = bool(ev.get("screened_before_fullval"))
+
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
     last_accepted = "seed"
@@ -779,7 +1134,14 @@ def reduce_run(run_dir) -> dict:
         # not a rejection and not a failure: the gate declined to judge, so the edit's
         # quality is unknown. Collapsing it into "rejected" (the old behaviour) told
         # the reader a measured verdict existed when none did.
-        if cid in indecisive_ids:
+        if kind == "provisional":
+            # Directionally positive (Δ>0) but not yet gate-significant, and the driver
+            # chose to buy more trials on this SAME candidate (scripts/grow.py) instead of
+            # a final accept/reject — neither "accepted" nor "rejected" describes that, and
+            # falling through to the accepted/rejected branch below would misreport it as
+            # one or the other while it is still pending.
+            status = "provisional"
+        elif cid in indecisive_ids:
             status = "indecisive"
         elif val is None and not per and kind not in ("accept", "reject"):
             # ``failed`` means NO VERDICT AND NO MEASUREMENT — a step that produced
@@ -841,16 +1203,29 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
+            # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
+            # looked up generically by tag below (see ``screened_by_tag``), not tied to the
+            # agent-optimize algorithm that happens to be the first emitter.
+            "screened": screened_by_tag.get(cid),
         }
         # Structured gate numbers, when the algorithm recorded them instead of leaving them
         # to be regexed out of a reason string (agent-optimize's commit.py reads them back
         # from round.py's persisted table). Copied verbatim and only when present, so a
         # deterministic step is byte-identical to before.
         for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
+                    "gate_resolvable_effect_size",
                     "gate_mode", "gate_table", "control_relative_verdict",
                     "control_relative_delta", "evidence_bar"):
-            if ev.get(_gk) is not None:
-                node[_gk] = ev.get(_gk)
+            _v = ev.get(_gk)
+            # Version skew, not a hypothetical: older commit.py revisions wrote these on the
+            # accept/reject event UNPREFIXED (``delta``/``stderr``/``n``/...), current ones write
+            # ``gate_*``. Reading only the prefixed name made every already-completed run render
+            # "—" for every gate stat while the real numbers sat in the same event, and pushed the
+            # gate table onto its lossy regex-on-prose fallback. Accept both spellings.
+            if _v is None:
+                _v = ev.get(_GATE_FIELD_ALIASES.get(_gk, ""))
+            if _v is not None:
+                node[_gk] = _v
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
@@ -985,6 +1360,35 @@ def reduce_run(run_dir) -> dict:
         "resolution_note": tp_ev.get("resolution_note") or "",
     } if tp_ev is not None else None)
 
+    # --- null-control replicates: the noise-floor check, kept OUT of the candidate graph ---
+    # A control replicate (a byte-identical re-measurement, run to bound run-to-run noise) is
+    # evaluate-only: it never gets an accept/reject commit, so it has no graph node. Detection
+    # is ``_is_control_event`` — the ``ctl_null`` tag-prefix CONVENTION plus the explicit
+    # ``role``/``is_control`` fields. Reading only the explicit fields (which nothing emits)
+    # produced an empty list and a silently dropped section on every real run that measured a
+    # noise floor: run_finalrun5 has four such evaluations (ctl_null_i0=0.58, ctl_null_i0r1=0.57,
+    # ctl_null_i3=0.653, ctl_null_i3r1=0.593) whose 0.06 swing is larger than the accepted
+    # candidate's own Δ — the single most important finding in that run.
+    #
+    # Kept as its own top-level summary list (not nested under algo_extra): a null-control
+    # replicate is a generic evaluation-methodology signal any algorithm could emit, not a
+    # per-algorithm extra like screens/gepa/skillopt.
+    control_events = [e for e in events
+                      if e.get("kind") == "evaluate" and _is_control_event(e)]
+    controls = [{
+        "tag": e.get("tag"),
+        "split": e.get("split"),
+        "reward": e.get("reward"),
+        "stderr": e.get("stderr"),
+        # ``n_scored`` is the modern field; older evaluate events wrote ``n``.
+        "n": e.get("n_scored") if e.get("n_scored") is not None else e.get("n"),
+        "iteration": e.get("iteration"),
+        "cost_usd": e.get("cost_usd"),
+        "seconds": e.get("seconds"),
+        "tokens": e.get("tokens"),
+        "t": e.get("t"),
+    } for e in control_events]
+
     # --- first-class evaluations (split-oriented, distinct from per_iteration) ---
     # An evaluation is one scoring of a candidate on one split: the seed baseline on
     # val, every candidate that earned a full val score on val, and the sealed test
@@ -1032,6 +1436,22 @@ def reduce_run(run_dir) -> dict:
             "tokens": int(n.get("tokens") or 0),
         })
 
+    # null-control replicates. They have no graph node (evaluate-only), so the loop above
+    # cannot see them and they used to appear in NEITHER this table nor the noise-floor
+    # section. Labeled ``kind: "control"`` so the UI can show them as controls rather than
+    # mixing a re-measurement of the SAME capability in as an anonymous candidate row.
+    for c in controls:
+        evaluations.append({
+            "id": c["tag"], "kind": "control", "candidate": c["tag"],
+            "split": c.get("split") or "val",
+            "reward": c.get("reward"), "stderr": c.get("stderr"),
+            "n_tasks": c.get("n") or 0,
+            "trials": _trials_for(run_dir, str(c["tag"]), c.get("split") or "val") or 1,
+            "cost_usd": float(c.get("cost_usd") or 0.0),
+            "seconds": float(c.get("seconds") or 0.0),
+            "tokens": int(c.get("tokens") or 0),
+        })
+
     # test (the sealed test eval, from final.json)
     test_obj = final.get("test") or {}
     if test_obj:
@@ -1052,17 +1472,24 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
-    # The reason string the gate wrote is the audit record; Δ̄/SE/n are parsed back out
-    # of it so the UI can show the uncertainty next to the mean instead of a bare Δ.
-    # A number that isn't in the reason stays None — never a fabricated 0.
+    # Regex-parsing the reason string is the FALLBACK, not the source: it was the prior sole
+    # source and is fragile because it depends on the prose matching the deterministic gate's
+    # own wording. Any structured ``gate_*`` field the algorithm recorded (agent-optimize's
+    # commit.py reads them back from round.py's persisted table, which in turn takes them from
+    # gate_check.py's own JSON) overrides it below.
     gate_decisions: list[dict] = []
     for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
                     key=lambda x: x.get("iteration") or 0):
         reason = str(n.get("reason") or "")
         verdict = ("accept" if n["status"] == "accepted"
                    else "indecisive" if n["status"] == "indecisive"
+                   else "provisional" if n["status"] == "provisional"
                    else "reject" if n["status"] == "rejected" else "no measurement")
-        m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
+        # Agent-authored notes write "delta -0.0167 vs cand_3, threshold 0.0276" where the
+        # deterministic gate writes "Δ̄ = -0.0167"; matching only the symbol left three real
+        # rejections in run_finalrun5 with an all-"—" row whose numbers were right there in
+        # the prose. Both spellings, with or without the ``=``.
+        m_delta = re.search(r"(?:Δ̄?|\bdelta)\s*=?\s*([+-]?\d*\.?\d+)", reason)
         # The bar `0.2·SE=0.0062` comes FIRST in the reason and also matches `SE=`, so an
         # unanchored search put the bar's value in the SE column — the gate then appeared
         # to have compared Δ̄ against five times its own standard error. Skip the `k·SE`
@@ -1070,6 +1497,8 @@ def reduce_run(run_dir) -> dict:
         m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
+        m_thr = re.search(r"\bthreshold\s*=?\s*(\d*\.?\d+)", reason)
+        m_res = re.search(r"resolvable effect size 2·SE\s*=\s*([\d.]+)", reason)
         # A number the algorithm RECORDED beats the same number scraped out of prose. Agent
         # mode writes free text, so every regex above missed and the whole numeric half of
         # this record came back null (run 32971129203); the deterministic loops record no
@@ -1085,12 +1514,15 @@ def reduce_run(run_dir) -> dict:
             "stderr": float(m_se.group(1)) if m_se else None,
             "n": int(m_n.group(1)) if m_n else None,
             "k_se": float(m_bar.group(1)) if m_bar else None,
-            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "threshold": (float(m_bar.group(2)) if m_bar else
+                          float(m_thr.group(1)) if m_thr else None),
+            "resolvable_effect_size": float(m_res.group(1)) if m_res else None,
             "reason": _sanitize_text(reason, 600),
         }
         for _field, _key in (("delta", "gate_delta"), ("stderr", "gate_stderr"),
                              ("n", "gate_n"), ("k_se", "gate_k_se"),
-                             ("threshold", "gate_threshold")):
+                             ("threshold", "gate_threshold"),
+                             ("resolvable_effect_size", "gate_resolvable_effect_size")):
             if n.get(_key) is not None:
                 row[_field] = n.get(_key)
         # Which reference the gate actually used, and the drift-free second opinion when the
@@ -1156,6 +1588,39 @@ def reduce_run(run_dir) -> dict:
                 "note": ("the optimizer process exited non-zero (commonly its own budget "
                          "cap) — the spend below is real and was still charged"
                          if truncated else ""),
+            })
+    # --- reconcile the rows against Spent, PER ROLE ---------------------------
+    # A run whose proposer spend lives only in state.json's Spent (agent mode: older commit.py
+    # revisions never put opt_cost_usd on the decision event) attributed $0 of it, so the KPI
+    # strip showed the SAME dollar figure as both "cost" and "unattributed" — 100% unattributed —
+    # while the wall-clock KPI put every second in the runner bucket. Two contradictory readings
+    # of one run. Book the Spent-recorded remainder to the ROLE that actually spent it as an
+    # explicit reconciliation row: the money now lands in the same bucket the seconds do, and
+    # "unattributed" means what it says (spend no role can explain) instead of "spend no event
+    # happened to carry".
+    _ROLE_FOR_KIND = {"intake": "intake", "optimizer_call": "optimizer"}
+    by_role = {"runner": 0.0, "optimizer": 0.0, "intake": 0.0}
+    for r in ledger:
+        if r["usd"] is not None:
+            by_role[_ROLE_FOR_KIND.get(r["kind"], "runner")] += float(r["usd"])
+    for _role, _spent, _secs, _tok, _label in (
+            ("optimizer", opt_usd, opt_secs, opt_tokens,
+             "Optimizer spend recorded in state.json but carried by no event"),
+            ("runner", runner_usd, run_secs, tokens - opt_tokens - int(intake_tokens or 0),
+             "Runner spend recorded in state.json but carried by no event")):
+        gap = round(float(_spent or 0.0) - by_role[_role], 6)
+        if abs(gap) > 5e-5:
+            ledger.append({
+                "phase": "optimize" if _role == "optimizer" else "evaluate",
+                "kind": _role + "_reconciliation", "split": None,
+                "label": _label, "candidate": None, "usd": gap,
+                # Seconds/tokens are NOT re-added here — the per-role rows above already
+                # carry them, and double-counting time to reconcile money would trade one
+                # inconsistency for another.
+                "seconds": 0.0, "tokens": 0,
+                "note": (f"the run's Spent accumulator books ${_spent:.4f} to the {_role}; "
+                         f"{_secs:.0f}s and {max(0, int(_tok or 0)):,} tokens are attributed to "
+                         f"the same role, so the dollars and the time now agree"),
             })
     attributed = sum(r["usd"] for r in ledger if r["usd"] is not None)
     total_usd = round(opt_usd + runner_usd + intake_usd, 6)
@@ -1285,9 +1750,23 @@ def reduce_run(run_dir) -> dict:
     if screens:
         algo_extra["screens"] = screens
 
+    # Compliance instrumentation (issue #401): whether screen.py ran on a candidate
+    # BEFORE its full-val eval this round — round.py logs one of these per candidate per
+    # round.py invocation. Surfaced as its own distinct dashboard entry so a real run's
+    # screen-then-full-val discipline (or the lack of it) is visible, not just inferable
+    # from SKILL.md prose.
+    compliance = [{"candidate": e.get("tag"), "iteration": e.get("iteration"),
+                   "screened_before_fullval": bool(e.get("screened_before_fullval")),
+                   "t": e.get("t")}
+                  for e in events if e.get("kind") == "agent_optimize_compliance"]
+    if compliance:
+        algo_extra["compliance"] = compliance
+
     evograph = _read_evograph(root)
     if evograph:
         algo_extra["evograph"] = evograph
+    narrative = _read_narrative(root, best_id)
+    config = _read_config(root)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
@@ -1313,16 +1792,33 @@ def reduce_run(run_dir) -> dict:
         "evograph": "evograph" in algo_extra,
         "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
+        "narrative": bool(narrative),
+        "config": bool(config),
+        "controls": bool(controls),
+        "screened": any(n.get("screened") is not None for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
     }
 
+    now = _now()
     status, status_reason = _derive_status(
-        events=events, now=_now(), budget=(run_dir.budget if sp is not None else None),
+        events=events, now=now, budget=(run_dir.budget if sp is not None else None),
         spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
         has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None)
     ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
+
+    # Elapsed wall time. For a finished run that is first event → last event. For a run
+    # that is STILL RUNNING the last event is not the end, so measuring to it reports
+    # "0s elapsed" for a job nine minutes into its baseline — a number that invites the
+    # reader to conclude nothing is happening. A live run is therefore measured to now,
+    # and ``elapsed_open`` tells the renderer the interval has no end yet so it can
+    # label it that way instead of implying a final duration.
+    elapsed_open = status == "running" and bool(ts)
+    if elapsed_open:
+        elapsed_seconds = round(now - min(ts), 1)
+    else:
+        elapsed_seconds = round(max(ts) - min(ts), 1) if len(ts) > 1 else None
 
     delta_pct = None
     if baseline_val not in (None, 0) and best_val is not None:
@@ -1341,13 +1837,17 @@ def reduce_run(run_dir) -> dict:
         "status_reason": status_reason,
         "started_t": (min(ts) if ts else None),
         "last_event_t": (max(ts) if ts else None),
-        # Real elapsed wall time between first and last event — distinct from
+        # Real elapsed wall time: first event → last event for a finished run, first
+        # event → now while the run is still live (see elapsed_open). Distinct from
         # wall_clock_seconds, which is the SUM of measured optimizer+runner+intake time
         # and therefore excludes idle/queueing gaps.
-        "elapsed_seconds": (round(max(ts) - min(ts), 1) if len(ts) > 1 else None),
+        "elapsed_seconds": elapsed_seconds,
+        # True ⇒ elapsed_seconds is still growing; render it as "so far", not a total.
+        "elapsed_open": elapsed_open,
         "event_count": len(events),
         "splits": splits_info,
         "gate_decisions": gate_decisions,
+        "controls": controls,
         "cost_ledger": cost_ledger,
         "log": log_rows,
         "algo_extra": algo_extra,
@@ -1399,6 +1899,8 @@ def reduce_run(run_dir) -> dict:
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
+        "narrative": narrative,
+        "config": config,
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
@@ -1414,7 +1916,8 @@ def reduce_run(run_dir) -> dict:
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
 _DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+              "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md"}
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
@@ -1656,6 +2159,9 @@ header .meta{color:var(--muted);font-size:12px}
 main{max-width:1180px;margin:0 auto;padding:26px;display:flex;flex-direction:column;gap:26px}
 section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
 section h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 14px}
+/* The page header is position:sticky, so jumping to an anchor scrolled the target heading
+   underneath it. scroll-margin-top parks the landing point below the header instead. */
+section,section h2,section h3{scroll-margin-top:74px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px}
 .kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
@@ -1712,6 +2218,14 @@ border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
 .diff .file{color:var(--text);font-weight:700;margin:8px 0 2px}
 .ann{border-left:3px solid var(--warn);padding:6px 12px;margin:8px 0;background:var(--card2);border-radius:0 8px 8px 0}
 .ann.diag{border-left-color:var(--accent)}
+.narrative-box{background:var(--card2);border:1px solid var(--line);border-radius:8px;
+padding:12px 14px;overflow:auto;max-height:480px}
+.md h2,.md h3,.md h4{margin:14px 0 6px;color:var(--text)}
+.md h2:first-child,.md h3:first-child,.md h4:first-child{margin-top:0}
+.md p{margin:6px 0}
+.md ul{margin:6px 0;padding-left:20px}
+.md blockquote{margin:8px 0;padding:4px 10px;border-left:3px solid var(--accent);
+background:var(--card);color:var(--muted)}
 .ann .who{color:var(--muted);font-size:11px}
 .heat rect{cursor:pointer} .heat text{fill:var(--muted);font-size:10px}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
@@ -1743,6 +2257,32 @@ const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Obj
    the fitness chart (heatmap, lineage, cost, evaluations, candidates). */
 const txt=(el,a,content)=>{const n=svg('text',a);n.textContent=content==null?'':String(content);el.append(n);return n;};
 const fmt=v=>v==null?'—':(+v).toFixed(3);
+function escN(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+// A tiny, deliberately non-general markdown renderer: headings, bullet lines,
+// blockquotes, bold, everything else is a paragraph. Good enough for the structured
+// templates the narrative files are seeded from (_JOURNAL_SEED etc.) and for a
+// PROJECT.md — not a general markdown engine, so it never needs a dependency. Shared
+// by the Process narrative and Config tabs so there is exactly one renderer.
+function mdToHtml(text){
+  const lines=escN(text).split('\n');
+  let html='',inList=false;
+  const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+  lines.forEach(line=>{
+    const bold=line.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    let m;
+    if((m=bold.match(/^(#{1,4})\s+(.*)$/))){closeList();
+      html+=`<h${Math.min(4,m[1].length)+1}>${m[2]}</h${Math.min(4,m[1].length)+1}>`;}
+    else if(/^\s*[-*]\s+/.test(bold)){if(!inList){html+='<ul>';inList=true;}
+      html+='<li>'+bold.replace(/^\s*[-*]\s+/,'')+'</li>';}
+    else if(/^>\s?/.test(bold)){closeList();
+      html+='<blockquote>'+bold.replace(/^>\s?/,'')+'</blockquote>';}
+    else if(/^<!--/.test(bold.trim())){/* skip HTML-comment markers */}
+    else if(!bold.trim()){closeList();}
+    else{closeList();html+='<p>'+bold+'</p>';}
+  });
+  closeList();
+  return html;
+}
 const main=document.getElementById('main'), tip=document.getElementById('tip');
 const STATUS_META={running:['running','var(--accent)'],awaiting_agent:['awaiting agent','var(--idk)'],
   completed:['completed','var(--ok)'],budget_exhausted:['budget exhausted','var(--warn)'],
@@ -1769,13 +2309,24 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     kp('best val',fmt(S.best_val),'champ',S.best_id),
     kp('baseline',fmt(S.baseline_val)),
     kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
-    kp('held-out test',fmt(S.test_reward),'',S.test_sealed?'sealed once':'not finalized'),
+    kp('held-out test',fmt(S.test_reward),'',
+       // The raw sealed score alone is not the result — the DELTA against the seed's own test
+       // score is, and both were already in final.json. A run can lift val and lose test.
+       (S.test_delta!=null||S.test_baseline_reward!=null)
+         ?((S.test_delta!=null?(S.test_delta>0?'+':'')+S.test_delta.toFixed(3)+' vs seed ':'')+
+           (S.test_baseline_reward!=null?fmt(S.test_baseline_reward):'')+
+           (S.test_sealed?' · sealed once':''))
+         :(S.test_sealed?'sealed once':'not finalized')),
     kp('candidates',c.total-(c.seed||0),'',
        `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive||0} indecisive · ${c.failed} no-measure`),
     kp('frontier',S.frontier,'','gated leaves with no accepted child'),
     kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
     kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
-    kp('tokens',S.tokens.toLocaleString()),
+    // Token count without its split reads as implausible next to the dollar figure (a real run:
+    // 206M tokens for $4.80). The split explains it: nearly all of them are RUNNER tokens on a
+    // self-hosted endpoint that bills $0, and the dollars are the optimizer's.
+    kp('tokens',S.tokens.toLocaleString(),'',S.tokens_by_role?
+       `run ${S.tokens_by_role.runner.toLocaleString()} · opt ${S.tokens_by_role.optimizer.toLocaleString()}`:''),
     kp('unattributed $',
        S.cost_ledger?`$${S.cost_ledger.unattributed_usd.toFixed(4)}`:'—',
        (S.cost_ledger&&Math.abs(S.cost_ledger.unattributed_usd)>0.0005?'champ':''),
@@ -1797,7 +2348,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(S.algorithm)head.append($('span',{class:'pill',style:'color:var(--accent);border-color:#7c5cff66',
     text:S.algorithm+(S.algorithm_source?' · from '+S.algorithm_source:'')}));
   head.append($('span',{class:'pill',text:S.test_sealed?'test sealed':'test not sealed'}));
-  if(S.elapsed_seconds!=null)head.append($('span',{class:'muted num',text:dsecs(S.elapsed_seconds)+' elapsed'}));
+  if(S.elapsed_seconds!=null)head.append($('span',{class:'muted num',text:dsecs(S.elapsed_seconds)+(S.elapsed_open?' elapsed so far':' elapsed')}));
   s.append(head);
   if(S.status_reason)s.append($('p',{class:'muted',style:'margin:0 0 10px',text:S.status_reason}));
   const sp=S.splits;
@@ -1885,7 +2436,12 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   const champ=pts.reduce((a,b)=>(b.best_so_far>=a.best_so_far?b:a),pts[0]);
   const cx=X(champ.iteration),cy=Y(champ.best_so_far);
   el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'var(--champion)',stroke:'var(--bg)'}));
-  txt(el,{x:cx+10,y:cy-8,fill:'var(--text)','font-size':12},fmt(champ.best_so_far));
+  // The champion is usually the RIGHTMOST point, where a left-anchored label runs off the plot
+  // and gets clipped by the viewBox. Flip the anchor to the left of the star when there is not
+  // room to its right.
+  const tight=cx>W-m.r-46;
+  txt(el,{x:tight?cx-10:cx+10,y:cy-8,fill:'var(--text)','font-size':12,
+          'text-anchor':tight?'end':'start'},fmt(champ.best_so_far));
   s.append(el);
   s.append($('div',{class:'legend',html:
     '<span><i style="background:var(--ok)"></i>running best / accept</span>'+
@@ -1990,7 +2546,11 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       stroke:spine.has(n.id)?'var(--champion)':'var(--bg)','stroke-width':spine.has(n.id)?2:1});
     c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
     c.addEventListener('mouseleave',hideTip); el.append(c);
-    txt(el,{x:p.x+12,y:p.y+4,fill:'var(--muted)','font-size':10},n.id);
+    // A node with outgoing edges (the seed, above all) has a connector leaving at exactly
+    // y=p.y, so a label on the baseline right of the node is drawn UNDER that line and reads
+    // as struck through. Lift those labels clear of the connector.
+    const outgoing=(n.children||[]).some(c2=>pos[c2]);
+    txt(el,{x:p.x+12,y:outgoing?p.y-8:p.y+4,fill:'var(--muted)','font-size':10},n.id);
   });
   s.append(el);
   s.append($('div',{class:'legend',html:'<span><i style="background:var(--champion)"></i>best lineage spine</span>'+
@@ -2003,15 +2563,15 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(!evals.length)return;
   const s=sec('Evaluations');
   s.append($('p',{class:'muted',text:'Each scoring of a candidate on a split — '+
-    'baseline (seed on val), every full val eval, and the sealed test eval. '+
-    'Distinct from the optimizer-step view above.'}));
+    'baseline (seed on val), every full val eval, each null-control replicate, and the '+
+    'sealed test eval. Distinct from the optimizer-step view above.'}));
   const t=$('table');
   t.append($('tr',{},$('th',{text:'kind'}),$('th',{text:'candidate'}),$('th',{text:'split'}),
     $('th',{class:'r',text:'reward ± stderr'}),$('th',{class:'r',text:'runner $'}),
     $('th',{class:'r',text:'time'}),$('th',{class:'r',text:'tokens'}),$('th',{class:'r',text:'tasks × trials'})));
   const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
-  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed'};
+  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed',control:'b-indecisive'};
   evals.forEach(e=>{
     const re=e.reward==null?'—':fmt(e.reward)+(e.stderr!=null?' ± '+(+e.stderr).toFixed(3):'');
     t.append($('tr',{},
@@ -2022,7 +2582,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       $('td',{class:'r num',text:e.cost_usd?'$'+(+e.cost_usd).toFixed(4):'—'}),
       $('td',{class:'r num',text:dsec(e.seconds)}),
       $('td',{class:'r num',text:(e.tokens||0).toLocaleString()}),
-      $('td',{class:'r num',text:(e.n_tasks||0)+' × '+(e.trials||1)})));
+      $('td',{class:'r num',text:e.n_tasks?e.n_tasks+' × '+(e.trials||1):'—'})));
   });
   s.append(t);
 })();
@@ -2086,8 +2646,9 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   const t2=$('table');
   t2.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'verdict'}),
     $('th',{class:'r',text:'val'}),$('th',{class:'r',text:'parent val'}),$('th',{class:'r',text:'Δ̄'}),
-    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'})));
-  const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive'};
+    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'}),
+    $('th',{class:'r',text:'resolvable ±'})));
+  const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive',provisional:'b-indecisive'};
   const n4=v=>v==null?'—':(+v).toFixed(4);
   D.forEach(d=>{
     t2.append($('tr',{},
@@ -2100,11 +2661,33 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
               text:d.delta==null?'—':(d.delta>0?'+':'')+d.delta.toFixed(4)}),
       $('td',{class:'r num muted',text:d.stderr==null?'—':'±'+d.stderr.toFixed(4)}),
       $('td',{class:'r num muted',text:d.n??'—'}),
-      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')})));
+      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')}),
+      $('td',{class:'r num muted',text:d.resolvable_effect_size==null?'—':'±'+(+d.resolvable_effect_size).toFixed(4)})));
   });
   s.append(t2);
   D.forEach(d=>s.append($('div',{class:'ann',style:'margin:6px 0'},
     $('div',{class:'who',text:d.candidate}),$('div',{text:d.reason}))));
+})();
+
+/* ---------- 6g. Noise-floor check — null-control replicates ---------- */
+(function(){
+  const C=S.controls||[]; if(!C.length)return;
+  const s=sec('Noise-floor check (null-control replicates)');
+  const rewards=C.map(c=>c.reward).filter(x=>x!=null);
+  const spread=rewards.length>1?(Math.max(...rewards)-Math.min(...rewards)):null;
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    C.length+' control replicate(s) evaluated this run — byte-identical re-measurements '+
+    'run to bound run-to-run noise, never gated/committed as candidates.'+
+    (spread!=null?' Spread between replicates: '+spread.toFixed(4)+' — the empirical noise floor.':'')}));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'tag'}),$('th',{class:'r',text:'reward ± stderr'}),
+    $('th',{class:'r',text:'n'}),$('th',{class:'r',text:'iter'})));
+  C.forEach(c=>t.append($('tr',{},
+    $('td',{},$('code',{text:c.tag||'—'})),
+    $('td',{class:'r num',text:c.reward==null?'—':fmt(c.reward)+(c.stderr!=null?' ± '+(+c.stderr).toFixed(4):'')}),
+    $('td',{class:'r num muted',text:c.n??'—'}),
+    $('td',{class:'r num muted',text:c.iteration??'—'}))));
+  s.append(t);
 })();
 
 /* ---------- 9. Activity log — every event, filterable ---------- */
@@ -2214,20 +2797,129 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   });
 })();
 
+/* ---------- 10b. process narrative — optimizer-authored, self-contained ---------- */
+(function(){
+  const NAR=S.narrative; if(!NAR||!(NAR.files||[]).length)return;
+  const s=sec('Process narrative');
+  // List what this run ACTUALLY has, not the full catalogue of narrative files that could
+  // exist — the fixed list implied four missing documents on a run that wrote one.
+  const names=(NAR.files||[]).map(f=>f.name||f.title).filter(Boolean);
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Written by the optimizer as it worked'+(names.length?' ('+names.join(' / ')+')':'')+
+    ' — rendered here as-is, for a human reader.'}));
+  (NAR.files||[]).forEach(f=>{
+    const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
+    box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
+    // The file is still byte-for-byte the seed instructional template — no real entry
+    // was ever appended. Flagged rather than rendered as if it were populated narrative.
+    if(f.template_only)box.append($('div',{class:'banner',style:'margin-bottom:10px',
+      text:'⚠ template only — no real entries yet'}));
+    box.append($('div',{class:'md',html:mdToHtml(f.text)}));
+    s.append(box);
+  });
+})();
+
+/* ---------- 10c. Config — the full run configuration ---------- */
+(function(){
+  // An absent config reduces to `{}`, which is TRUTHY in JS — guard on the field the
+  // header text needs, or a run with no project dir renders an empty Config section
+  // claiming to have read "straight off undefined".
+  const CFG=S.config; if(!CFG||!CFG.project_dir)return;
+  const s=sec('Config — run configuration');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Every input the intake phase produced or the user set, read straight off '+
+    CFG.project_dir+' — the parsed capevolve.yaml spec, PROJECT.md, and every other '+
+    'project artifact (adapters/, seed_capability/, split files, ...).'}));
+  if(CFG.spec_missing)s.append($('div',{class:'banner',style:'margin:0 0 12px',
+    text:'No capevolve.yaml found in this project dir, so there is no parsed spec to show. '+
+         'Everything else the project contains is listed below.'}));
+  const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;'+
+    'font-size:13px;color:var(--text)',text:t});
+  (CFG.spec_groups||[]).forEach(g=>{
+    s.append(h3(g.group));
+    const t=$('table');
+    g.items.forEach(it=>{
+      const v=it.value;
+      const vt=v==null?'—':(typeof v==='object'?JSON.stringify(v):String(v));
+      t.append($('tr',{},$('td',{},$('code',{text:it.key})),
+        $('td',{class:'muted',style:'white-space:pre-wrap',text:vt})));
+    });
+    s.append(t);
+  });
+  if(CFG.project_md){
+    s.append(h3('PROJECT.md'));
+    s.append($('div',{class:'narrative-box md',html:mdToHtml(CFG.project_md)}));
+  }
+  const files=CFG.files||[];
+  if(files.length){
+    s.append(h3('Other project files ('+files.length+')'));
+    const bySize=v=>v<1024?v+' B':v<1048576?(v/1024).toFixed(1)+' KB':(v/1048576).toFixed(1)+' MB';
+    const groups=new Map();
+    files.forEach(f=>{
+      const top=f.path.includes('/')?f.path.split('/')[0]:'.';
+      if(!groups.has(top))groups.set(top,[]);
+      groups.get(top).push(f);
+    });
+    [...groups.keys()].sort().forEach(top=>{
+      const det=$('details',{style:'margin:4px 0'});
+      det.append($('summary',{style:'cursor:pointer;font-weight:600',
+        text:top+' ('+groups.get(top).length+')'}));
+      groups.get(top).forEach(f=>{
+        const fdet=$('details',{style:'margin:2px 0 2px 16px'});
+        fdet.append($('summary',{style:'cursor:pointer;color:var(--muted2);font-size:12px',
+          text:f.path+'  ·  '+bySize(f.size)+
+               (f.binary?' · binary':f.truncated?' · truncated preview':'')}));
+        if(f.binary){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'binary file — not previewed'}));
+        }else if(f.preview==null){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',
+            text:'too large to preview — '+bySize(f.size)}));
+        }else if(f.preview===''){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'empty file'}));
+        }else{
+          fdet.append($('div',{class:'diff',style:'max-height:260px',text:f.preview}));
+        }
+        det.append(fdet);
+      });
+      s.append(det);
+    });
+  }
+})();
+
 /* ---------- 8. Candidate leaderboard + git log ---------- */
 (function(){
   const s=sec('Candidates'); const t=$('table');
-  t.append($('tr',{},$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
-    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'}),$('th',{text:'reason'})));
+  // "screened" (did this candidate pay for a cheap screen before full-val?) only shown
+  // when SOME node has a recorded signal — never rendered as a column of bare "—".
+  const showScreened=!!(S.capabilities&&S.capabilities.screened);
+  // agent-optimize's cheap screen is OPTIONAL. In a run that never attempted one, every
+  // candidate carried a warning-orange "✗ not screened" badge, which reads as a compliance
+  // violation when nothing was violated. The badge is only a flag when SOME candidate in the
+  // run did screen and this one skipped it; otherwise the column shows "—", the way the seed
+  // row already correctly did.
+  const anyScreened=G.nodes.some(n=>n.screened===true);
+  const byId=Object.fromEntries(G.nodes.map(n=>[n.id,n]));
+  const hdr=[$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
+    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'})];
+  if(showScreened)hdr.push($('th',{text:'screened'}));
+  hdr.push($('th',{text:'reason'}));
+  t.append($('tr',{},...hdr));
   G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
-    const dlt=n.parent_val!=null&&n.val!=null?(n.val-n.parent_val):null;
-    t.append($('tr',{},
+    // parent_val is only recorded when the algorithm's round table carried it; when it did
+    // not, the parent's OWN val is sitting right there in the same graph, so fall back to it
+    // rather than printing "—" for a delta both halves of which are known.
+    const pv=n.parent_val!=null?n.parent_val:(n.parent&&byId[n.parent]?byId[n.parent].val:null);
+    const dlt=pv!=null&&n.val!=null?(n.val-pv):null;
+    const cells=[
       $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
-      $('td',{class:'r num',text:n.iteration}),
-      $('td',{class:'muted',text:(n.reason||'').slice(0,80)})));
+      $('td',{class:'r num',text:n.iteration})];
+    if(showScreened)cells.push($('td',{},(n.screened==null||(!n.screened&&!anyScreened))?'—':
+      $('span',{class:'badge '+(n.screened?'b-accepted':'b-rejected'),text:n.screened?'✓ screened':'✗ not screened'})));
+    cells.push($('td',{class:'muted',text:(n.reason||'').slice(0,80)}));
+    t.append($('tr',{},...cells));
   });
   s.append(t);
   if(S.git_log&&S.git_log.length){

@@ -66,6 +66,29 @@ of the screen and `regressions` out of the gate to know which part to drop.
   Prose is the right form when the agent *lacks* a decision criterion; code is the right form when it
   has one and violates it.
 
+## Confirmation-without-execution: the agent narrates the change instead of making it
+
+A named failure class, and the one most reliably mis-diagnosed. The trajectory shows the agent
+proposing a change, the user approving it, and the final message reporting the change as done —
+with specifics — while **no mutating tool call appears anywhere in the trace**. The model has
+taken its own completion signal (the approval) as satisfying the task and substituted narration
+for the call. It is a documented property of LLM agents, not a property of any benchmark, so
+expect it on any multi-turn capability that asks before it writes. `diagnose` names it
+mechanically as the `narrated_without_action` cluster; without that it hides inside a
+"wrong write" cluster, because a scorer describes both the same way, and the round then ships
+an argument fix for a call that never happened.
+
+**A prose reminder will not fix it.** "Always call the tool after the user confirms" has been
+tried here and rejected: the agent already knows the rule and violates it anyway, which is
+exactly the case the edit-form table sends to code rather than to prose.
+
+The fix is structural — make *confirmed by the user* and *mutation executed* the SAME action, so
+no code path can reach one without the other. In practice: one call that takes the approved
+change and performs it, sharing the body with whatever the confirmation path already does, and
+`remove` the primitives that let the two come apart. Then check the fix FIRES on the failing
+trajectory: re-run the new body on that trajectory's own arguments. Ship nothing whose only
+change is a sentence telling the agent to act.
+
 ## Guard closure: a guard that forbids the harmless option can force the harmful one
 
 **Ask what the agent does INSTEAD.** Measured: a guard refusing a change that changes nothing ("this

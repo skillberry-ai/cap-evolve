@@ -78,6 +78,7 @@ def diagnose(records: list[dict], mode: str = "root-cause",
              traces: str | None = None) -> dict:
     reflective = []
     items: list[tuple[str, str, float]] = []
+    narrated: list[tuple[str, str, float]] = []
     kept = []
     for rec in records:
         sc = rec.get("score", {})
@@ -87,6 +88,8 @@ def diagnose(records: list[dict], mode: str = "root-cause",
             kept.append(sc.get("task_id"))
             continue
         fb = sc.get("feedback", "") or ""
+        # Mechanical, trace-derived, and benchmark-agnostic — see cluster.narrated_without_action.
+        flagged = _cluster.narrated_without_action(ro)
         reflective.append({
             "task_id": sc.get("task_id"),
             # The actual task INPUT (carried through the rollout file), NOT the id.
@@ -96,8 +99,10 @@ def diagnose(records: list[dict], mode: str = "root-cause",
             # Where the FULL trace is. A path, not parsed content: the format is the
             # runner's business and the adapter's to expose.
             "Trajectory": traces or rec.get("__file"),
+            _cluster.NARRATED_WITHOUT_ACTION: flagged,
         })
-        items.append((sc.get("task_id"), fb, max(0.0, 1.0 - float(reward))))
+        row = (sc.get("task_id"), fb, max(0.0, 1.0 - float(reward)))
+        (narrated if flagged else items).append(row)
 
     if mode == "first-words":
         groups = defaultdict(list)
@@ -112,6 +117,26 @@ def diagnose(records: list[dict], mode: str = "root-cause",
         clusters.sort(key=lambda c: (-c["score_lost"], -len(c["tasks"]), c["signature"]))
     else:
         clusters = _cluster.cluster(items)
+
+    # Its own named cluster, never folded into a lexical one: the scorer's wording for
+    # "narrated a change it never made" is the same wording it uses for a wrong write, so
+    # merging them sends the optimizer to fix the arguments of a call that never happened.
+    if narrated:
+        clusters.append({
+            "signature": _cluster.NARRATED_WITHOUT_ACTION,
+            "tasks": sorted(t for t, _, _ in narrated),
+            "score_lost": round(sum(sl for _, _, sl in narrated), 4),
+            "detector": "mechanical: completion language in the final message, no mutating "
+                        "tool call anywhere in the trace",
+            "reading": "the agent treated its own completion signal (typically the user's "
+                       "confirmation) as the action and narrated the change instead of "
+                       "executing it. A prose reminder to call the tool does not fix this; "
+                       "the fix is structural — make 'confirmed' and 'executed' the same "
+                       "call, so no code path can reach one without the other.",
+            "tag": None,
+            "blast_radius": None,
+        })
+        clusters.sort(key=lambda c: (-c["score_lost"], -len(c["tasks"]), c["signature"]))
 
     return {
         "reflective_dataset": reflective,

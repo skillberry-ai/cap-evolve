@@ -25,6 +25,12 @@ def _free_port(start: int, tries: int = 25) -> int:
     if another (possibly unrelated) server already holds ``start``, our spawn would
     silently fail to bind and that stale server would keep serving the WRONG run.
     Picking a free port guarantees this run gets its own dashboard on its own base.
+
+    Raises when every port in the scanned range is taken, rather than falling back
+    to ``start`` — a caller that silently reused a taken port would print a URL that
+    actually serves a stale, unrelated dashboard (observed live: ~25 leaked dashboard
+    processes from old sessions squatting this whole range made every run's dashboard
+    silently point at someone else's project). Callers decide how to surface this.
     """
     for p in range(start, start + tries):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -33,7 +39,9 @@ def _free_port(start: int, tries: int = 25) -> int:
                 return p
             except OSError:
                 continue
-    return start
+    raise RuntimeError(
+        f"no free port in [{start}, {start + tries}) — {tries} candidates all taken; "
+        "leaked dashboard processes from prior runs may be squatting this range")
 
 
 def resolve_mode(cli_arg: str | None, spec_value: str | None, default: str = "auto") -> str:
@@ -75,7 +83,10 @@ def maybe_launch(base_dir, *, mode: str, port: int = DEFAULT_PORT,
         return {"dashboard": "skipped",
                 "reason": "capevolve-dashboard not installed "
                           "(pip install -e dashboard/backend)"}
-    port = _free_port(port)  # avoid reusing a stale server squatting the default port
+    try:
+        port = _free_port(port)  # avoid reusing a stale server squatting the default port
+    except RuntimeError as e:
+        return {"dashboard": "error", "reason": str(e)}
     try:
         subprocess.Popen(
             launch_command(Path(base_dir), port=port, open_browser=open_browser),

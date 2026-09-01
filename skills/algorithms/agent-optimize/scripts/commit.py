@@ -15,6 +15,19 @@ Does exactly what the deterministic loops do at the end of a step:
     canonical ``step`` record every consumer enumerates, and reconciles the
     run-level ``JOURNAL.md``. Do NOT open-code those three here again.
 
+Beyond ``accept``/``reject`` there are two more outcomes, and they are NOT the same thing:
+
+  * ``inconclusive`` — the measurement could not resolve the edit (the verdict flips between
+    byte-identical control replicates). A booked round: it charges the iteration but not the
+    stall, files no ``rejected.jsonl`` record, and must be re-measured under a FRESH tag.
+  * ``provisional`` — the candidate is directionally positive (Δ>0) but under the significance
+    bar, and the driver wants to buy more trials on this SAME, UNMODIFIED candidate
+    (``scripts/grow.py``) before calling it. NOT a booked round: it snapshots and logs the
+    event, but does NOT ``set_best`` and does NOT call ``record_iteration``, so the stall
+    counter, LEDGER.md and JOURNAL.md do not advance. The same candidate id later gets a real
+    ``accept``/``reject``/``inconclusive`` commit once ``grow.py`` has re-gated it at the
+    pooled n.
+
 Runner-side spend (metric_calls / usd / tokens / seconds) is already recorded by the
 evaluate phase; ``--optimizer-*`` is for the *proposer's* own cost, which in agent
 mode is you and would otherwise never be counted.
@@ -64,6 +77,12 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
         return int(tail[2:]) if tail.startswith(".r") and tail[2:].isdigit() else 0
     tables = sorted(work.glob(f"{stem}.json")) + sorted(work.glob(f"{stem}.r*.json"),
                                                         key=_suffix)
+    # A grown candidate's POOLED row (``grow.py``) supersedes the round's pre-growth row by
+    # construction: growth exists precisely to re-measure the same candidate at a larger n, so
+    # the round table's numbers are the ones being superseded. Sorted by growth round, last wins.
+    tables += sorted(work.glob(f"grow_{candidate_id}_r*.json"),
+                     key=lambda p: int(p.stem.rsplit("_r", 1)[-1])
+                     if p.stem.rsplit("_r", 1)[-1].isdigit() else 0)
     if not tables:
         return {}
     try:
@@ -77,17 +96,26 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     parent = table.get("parent") or {}
     out = {
         "parent_val": parent.get("reward"),
-        # NOT gate_stderr: the published ``stderr`` column is the SE of the PAIRED per-task
+        # No ``gate_stderr``: the published ``stderr`` column is the SE of the PAIRED per-task
         # deltas (``threshold == k_se * SE`` in every deterministic gate's own reason string),
-        # while ``parent.stderr`` is the SE of the parent's MEAN over tasks — a different,
-        # typically much larger quantity. Publishing it there put "±0.144" beside a threshold
-        # of 0.044 in one row, which is the same self-contradiction this function exists to
-        # remove. The round table records no paired SE, so it stays null like ``k_se``.
-        "gate_n": parent.get("n_tasks"),
+        # and NEITHER table records it — ``parent.stderr`` (round table) is the SE of the
+        # parent's MEAN over tasks and ``entry["stderr"]`` is the candidate's/pooled mean SE,
+        # both typically much larger. Publishing one there put "±0.144" beside a threshold of
+        # 0.044 in a single row, the same self-contradiction this function exists to remove, so
+        # it stays null like ``k_se``.
+        # The parent block is the round table's; a grow table has no parent, so fall back to the
+        # candidate entry's own paired n — which IS what the gate used.
+        "gate_n": parent.get("n_tasks", entry.get("n")),
         "gate_delta": entry.get("gate_delta"),
         "gate_threshold": entry.get("gate_threshold"),
         "gate_mode": (table.get("gated_against") or {}).get("mode"),
         "gate_table": tables[-1].name,
+        # The significance multiplier the bar was built from, and the smallest true effect this
+        # round could have resolved (2·SE). Without the latter a null result is unreadable: four
+        # consecutive runs of nulls were read as "the edits were bad" when the measurement simply
+        # could not resolve anything that small.
+        "gate_k_se": entry.get("k_se"),
+        "gate_resolvable_effect_size": entry.get("resolvable_effect_size"),
     }
     # The drift-free second opinion, when the round measured one. On run 32971129203 this is
     # the whole finding: cand_1 was rejected against the parent's STORED reward (Δ 0.0333 vs
@@ -169,8 +197,8 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
-def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
-    """The verdict ``round.py`` recorded for this candidate, from its persisted table.
+def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
+    """This candidate's row from ``round.py``'s persisted table, if one exists.
 
     Readable only because ``round.py`` now writes its table to ``work/`` instead of leaving
     stdout the sole copy — before that, ``commit.py`` had no way to know what the gate had said
@@ -193,8 +221,13 @@ def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
             continue
         for row in payload.get("candidates") or []:
             if isinstance(row, dict) and str(row.get("tag")) == str(candidate_id):
-                return row.get("verdict")
+                return row
     return None
+
+
+def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
+    row = _gate_row(run_dir, candidate_id)
+    return row.get("verdict") if row else None
 
 
 def main(argv=None) -> int:
@@ -209,10 +242,19 @@ def main(argv=None) -> int:
     # unresolvable round had to be booked as one of two things it was not, and booking it as a
     # reject moves the STALL counter — the signal that means "the optimizer has run out of
     # ideas", which is the one thing an ambiguous measurement is no evidence of.
-    p.add_argument("--decision", required=True, choices=["accept", "reject", "inconclusive"],
+    #
+    # ``provisional`` is a FOURTH outcome, and unlike ``inconclusive`` it does not book the
+    # round at all: the candidate is directionally positive (Δ>0) but under the significance
+    # bar, and the driver wants to buy more trials on this SAME, UNMODIFIED candidate
+    # (``scripts/grow.py``) before making a call. The iteration is not over, so the stall
+    # counter, LEDGER.md and JOURNAL.md must not advance for it.
+    p.add_argument("--decision", required=True,
+                   choices=["accept", "reject", "inconclusive", "provisional"],
                    help="accept=new champion; reject=the edit was judged and refuted; "
                         "inconclusive=the measurement could not resolve it (charges the "
-                        "iteration, not the stall; re-measure under a FRESH tag)")
+                        "iteration, not the stall; re-measure under a FRESH tag); "
+                        "provisional=Δ>0 but unresolved, buying more trials on the SAME "
+                        "candidate next (books nothing; re-commit it once grown)")
     p.add_argument("--val", type=float, default=None, help="candidate's full-val mean")
     p.add_argument("--note", default="", help="one line: why this edit, in general terms")
     # The DRIVER's disposition, recorded machine-readably alongside the screen's own
@@ -264,6 +306,7 @@ def main(argv=None) -> int:
 
     accepted = args.decision == "accept"
     indecisive = args.decision == "inconclusive"
+    provisional = args.decision == "provisional"
     if args.decision != "reject" and args.reject_basis:
         print(json.dumps({
             "error": f"--reject-basis is meaningless on an {args.decision}",
@@ -311,22 +354,24 @@ def main(argv=None) -> int:
     # total, but no cost-bearing event exists to explain it, so an agent-mode run reported
     # 100% of its optimizer spend as unattributed. opt_cost_usd/opt_tokens are the field
     # names the ledger already reads from headless optimizer backends.
+    # The gate's NUMBERS, IN ADDITION to the prose --note, so the dashboard can render them
+    # without regex-parsing a hand-typed string — read from round.py's persisted table, and
+    # simply absent when it wrote none. On the EVENT as well as the step record below, because a
+    # `provisional` decision never reaches record_iteration and would otherwise carry none.
+    gate = _round_gate_numbers(run_dir, args.candidate_id)
+    parent_val = gate.pop("parent_val", None)
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
+                      verdict=args.decision,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
-                      opt_seconds=args.optimizer_seconds or None)
+                      opt_seconds=args.optimizer_seconds or None,
+                      **gate)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
-    # The shared iteration step: charges iterations/stall, writes the canonical ``step``
-    # record, reconciles the run-level JOURNAL.md. The gate's numbers ride along so the
-    # dashboard's ``gate_decisions[]`` does not have to regex them back out of an agent's
-    # prose — read from round.py's persisted table, and simply absent when it wrote none.
-    gate = _round_gate_numbers(run_dir, args.candidate_id)
-    parent_val = gate.pop("parent_val", None)
     # Did the agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
     # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and silently
     # substitutes "(no handover written by the optimizer)" when there is none — which is what
@@ -341,37 +386,64 @@ def main(argv=None) -> int:
     reason = args.note or args.decision
     if indecisive:
         reason = f"indecisive (gate): {reason}"
-    harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
-                             accepted=accepted, reason=reason,
-                             val=args.val,
-                             parent_val=parent_val,
-                             indecisive=indecisive,
-                             opt_cost_usd=args.optimizer_usd or None,
-                             opt_tokens=args.optimizer_tokens or None,
-                             optimizer_seconds=args.optimizer_seconds or None,
-                             **gate)
-    if indecisive:
-        # The event the dashboard/TUI already read to render a step as `indecisive` rather than
-        # rejected (``dashboard`` keys its status, badge and banner off this exact kind), and the
-        # only thing that distinguishes an unresolved round from a refuted one downstream.
-        run_dir.log_event("step_indecisive", candidate=args.candidate_id, reason=reason,
-                          val=args.val, gate_verdict=gate_verdict)
-    else:
-        # Deliberately NOT for an unresolved round: ``rejected.jsonl`` is fed back as "these
-        # edits did not work", and an edit the measurement could not judge says nothing of the
-        # kind — filing it there teaches the next round to avoid a change never evaluated. Same
-        # reasoning as the deterministic hill-climb's own indecisive branch.
-        _record_memory(run_dir, args.candidate_id, accepted=accepted,
-                       reason=reason, val=args.val, parent_val=parent_val)
     warnings: list[str] = []
-    if not handover:
-        warnings.append(
-            "no handover recorded for this round: the run-level JOURNAL.md now reads "
-            "'(no handover written by the optimizer)' for "
-            f"{args.candidate_id}, so the next round can see WHICH tasks moved but not what you "
-            "tried or why. Before the next commit.py, write your entry to "
-            "<from-dir>/JOURNAL.md as a '## Iteration <candidate> — <headline>' block (changes "
-            "made, expected effect, hypotheses prior RESULT lines already refuted, focus next).")
+    # `provisional` books the decision event above but stops here: the iteration is not over
+    # (the SAME candidate gets a real accept/reject/inconclusive commit later, once `grow.py`
+    # has re-gated it at a pooled n), so the stall counter, LEDGER.md and JOURNAL.md must not
+    # advance for it — that would spend an iteration's worth of "the run learned something new"
+    # bookkeeping on a decision that has not actually been made yet. It files no memory record
+    # either, for the same reason `inconclusive` does not: nothing has been refuted.
+    if not provisional:
+        # The shared iteration step: charges iterations/stall, writes the canonical ``step``
+        # record, reconciles the run-level JOURNAL.md. The gate's numbers ride along so the
+        # dashboard's ``gate_decisions[]`` does not have to regex them out of an agent's prose.
+        harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
+                                 accepted=accepted, reason=reason,
+                                 val=args.val,
+                                 parent_val=parent_val,
+                                 indecisive=indecisive,
+                                 opt_cost_usd=args.optimizer_usd or None,
+                                 opt_tokens=args.optimizer_tokens or None,
+                                 optimizer_seconds=args.optimizer_seconds or None,
+                                 **gate)
+        # Re-seed JOURNAL.md onto whichever candidate is now $BEST (fresh accumulated run
+        # journal + marker), so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"`
+        # carries a clean append target forward — the round-2+ half of the fix in host.py's
+        # `_stage_context` (which seeds round 1 the same way onto the seed candidate).
+        # `record_iteration` above already folded THIS round's tail into the run-level file, so
+        # the snapshot picks up the full history regardless of the decision. Falls back to THIS
+        # candidate's own just-taken snapshot when there is no best_id yet (a run with no
+        # baseline) — that dir always exists (``run_dir.snapshot`` above just created it) — and
+        # is best-effort: losing this re-seed must not fail the commit itself.
+        try:
+            harness._seed_journal(
+                run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
+        except Exception as exc:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="JOURNAL.md",
+                              error=str(exc)[:300])
+        if indecisive:
+            # The event the dashboard/TUI already read to render a step as `indecisive` rather
+            # than rejected (``dashboard`` keys its status, badge and banner off this exact
+            # kind), and the only thing that distinguishes an unresolved round from a refuted
+            # one downstream.
+            run_dir.log_event("step_indecisive", candidate=args.candidate_id, reason=reason,
+                              val=args.val, gate_verdict=gate_verdict)
+        else:
+            # Deliberately NOT for an unresolved round: ``rejected.jsonl`` is fed back as "these
+            # edits did not work", and an edit the measurement could not judge says nothing of
+            # the kind — filing it there teaches the next round to avoid a change never
+            # evaluated. Same reasoning as the deterministic hill-climb's own indecisive branch.
+            _record_memory(run_dir, args.candidate_id, accepted=accepted,
+                           reason=reason, val=args.val, parent_val=parent_val)
+        if not handover:
+            warnings.append(
+                "no handover recorded for this round: the run-level JOURNAL.md now reads "
+                "'(no handover written by the optimizer)' for "
+                f"{args.candidate_id}, so the next round can see WHICH tasks moved but not what "
+                "you tried or why. Before the next commit.py, write your entry to "
+                "<from-dir>/JOURNAL.md as a '## Iteration <candidate> — <headline>' block "
+                "(changes made, expected effect, hypotheses prior RESULT lines already refuted, "
+                "focus next).")
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()

@@ -1,5 +1,20 @@
 # agent-optimize — rationale, and how honesty survives full autonomy
 
+## Contents
+
+- [Why a free-form agentic algorithm](#why-a-free-form-agentic-algorithm)
+- [How honesty survives handing the agent the wheel](#how-honesty-survives-handing-the-agent-the-wheel)
+- [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
+- [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
+- [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
+- [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
+- [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
+- [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
+- [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
+- [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
+- [Caveats](#caveats)
+- [Sources](#sources)
+
 ## Why a free-form agentic algorithm
 
 The deterministic algorithms (hill-climb, gepa, skillopt) fix the *schedule* of the
@@ -110,6 +125,19 @@ the tasks the edit targeted**, not as a statistical test: a tier-1 subset contai
 val task that comes back 0-for-N on them is a sound reason to stop spending on that candidate. Book
 that as a budget decision on screen evidence (`--reject-basis budget`), never as a gate decision.
 
+### Targeted screening: draw the collateral-damage holdout from outside the cluster
+
+`--broken <ids>` biases a screen toward the tasks an edit is meant to fix — the right bias for
+"did the targeted tasks improve", the wrong one for "did anything else break", because those
+targeted ids crowd out the holdout that would otherwise catch a regression elsewhere. Two
+separate calls answer the two questions cleanly: `--broken <cluster-ids> --k <n> --holdout-frac
+0` for a pure read on the cluster, and a second call with no `--broken` and a normal
+`--holdout-frac` for collateral damage — its holdout draws from tasks the parent already
+*passes* (`select_screen_subset`'s `passing` set), which a diagnosed failure cluster is not, so
+it checks the untouched surface without having to name it. One `--k`-sized draw that mixes both
+either drowns the targeted signal in noise or lets the same tasks stand for both target and
+holdout at once.
+
 ### `phases/gate` is an inspection front-end, not the round's gate
 
 `phases/gate/scripts/run.py --mode paired` reaches the *same* paired gate off the *same* persisted
@@ -170,6 +198,90 @@ report up to twice the optimizer spend it used, and a `max_usd` stop then fired 
 spent. Pass them when you can estimate your own cost for a round; a round you cannot price is
 better left unattributed than guessed, since the run total is right either way.
 
+## Why N≥3 sibling candidates is the default, not one candidate at a time
+
+A round pays fixed overhead regardless of how many candidates it gates: the null-control
+replicates (`--control-replicates 2` by default) plus, on the deterministic path, a baseline
+re-check. That overhead is paid ONCE whether the round proposes one candidate or several, so a
+round that proposes exactly one candidate spends nearly all of it on a single shot at the gate —
+observed directly in a live run, where two consecutive rounds each proposed one candidate and
+both were rejected, at the same fixed cost as three or more addressed in parallel would have
+been. `round.py` already supports evaluating N candidates as parallel *processes* (each with its
+own adapter `apply()`), gating them serially — the mechanism was already there; only the default
+behavior of proposing one at a time was the gap. Default to N≥3, one failure cluster each, and
+drop to fewer only when `spend.py --n-siblings N` says the remaining budget cannot afford it.
+
+## Provisional candidates: sequential evidence, not compounded edits
+
+A candidate that clears `Δ>0` but not `Δ > k·SE` is not the same as one at `Δ<=0`: the first is
+a real positive direction the gate could not yet resolve at this `n`; the second has no
+direction to chase. Discarding both alike wastes the first kind of evidence — three real rounds
+on one benchmark each proposed a single candidate, paid the round's full fixed overhead, and
+bounced off the noise floor with nothing carried forward, even though at least one of those
+candidates' `Δ` was positive and simply under-measured.
+
+The fix is a THIRD decision, `commit.py --decision provisional`, for exactly that case
+(`gate_check.py` flags it as `directionally_positive_but_inconclusive`). It is deliberately
+narrow: the only thing that happens next is buying more trials on the **same, unmodified**
+candidate (`scripts/grow.py`) — never a new edit stacked on top of it. This is the line that
+keeps sequential evidence-gathering from becoming the failure mode this project's own
+post-mortems already named — "fewer mechanisms beat more", i.e. compounding edits on
+unconfirmed ground. A provisional candidate buys precision on ONE measurement; it never becomes
+the base a sibling edit builds from until it has actually been accepted.
+
+**The pooling has to be real pooling, not two verdicts averaged.** `grow.py` runs the additional
+trials under a throwaway tag, then `loop.pool_split_results` concatenates each shared task's
+`trial_rewards` (not its mean) before re-aggregating — so the pooled `SplitResult` is what a
+single evaluation at `n = n_old + n_new` would have produced, and the paired significance test
+that follows sees the honest combined variance. Averaging the two rounds' *deltas* instead would
+silently discard the fact that more trials narrow the SE; averaging their *verdicts* would treat
+a 60%-confidence read and a 40%-confidence read as one vote each. `grow.py` then merges the new
+rollout files onto the candidate's own tag (renumbered past its existing trial indices), so every
+later reader — `gate_check.py`, `commit.py`, the dashboard — sees one candidate at the pooled
+`n` with no special-casing for having been grown.
+
+**The honest risk, and its cap.** Could a provisional lineage get stuck accumulating trials on a
+false positive for many rounds, burning budget chasing noise that looked promising once? Yes —
+that is exactly the failure mode a gate without a stopping rule invites, and it is why growth is
+capped at **`--max-growth-rounds 2`** (`grow.py`'s default): at most two extra rounds of added
+trials before the candidate must be finally promoted or abandoned, never grown a third time.
+Two rounds is enough to roughly double or triple `n` on a candidate that started with a small
+val, which is where most of the SE reduction from added trials actually lives (diminishing
+returns set in well before a fourth round would). A candidate that still has not cleared the bar
+after two growth rounds is abandoned (`commit.py --decision reject --reject-basis gate`) — the
+cap turns "maybe next round" into a bounded, auditable cost rather than an open-ended one.
+
+## JOURNAL.md — the append-only handover, and its write protocol
+
+`$R/work/$TAG/JOURNAL.md` exists in your working copy from the moment you `cp -r
+"$R/candidates/$BEST" "$R/work/$TAG"` — the framework seeds it (`harness._seed_journal`) onto
+the seed candidate before round 1, and re-seeds it onto whichever candidate is `$BEST` after
+every `commit.py` call, so it is always present at the start of a round regardless of how many
+rounds came before. It is YOUR file (append-only, never reset): the run-level copy at
+`$R/JOURNAL.md` accumulates one entry per iteration, accepted and rejected alike.
+
+The write protocol:
+
+1. Read the WHOLE file before proposing — not just the last entry — so you build on every prior
+   attempt and never re-test a refuted idea.
+2. Append your new entry BELOW the marker line
+   `<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit
+   anything above it -->`. Never edit or delete anything above the marker.
+3. Use the heading `## Iteration <candidate id> — <one-line headline of what you tried>`,
+   followed by: the changes you made, the expected effect of each, which prior RESULTS you built
+   on (or explicitly avoided because a prior RESULT proved it regressed), refuted hypotheses, and
+   your focus for the next iteration. You cannot know your own gate result while you write it —
+   `commit.py` stamps a `**RESULT (framework, objective):**` line right below your entry
+   afterward (accept/reject, Δ, and the exact tasks fixed/broken vs the parent), which is the
+   authoritative record of what actually worked — read it, don't guess at it.
+
+This is a general convention for ANY continuous-session algorithm (one long-running optimizer
+subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration
+optimizer workdir): the framework re-seeds the same file at the same two points
+(`harness._seed_journal` called once before the session starts, and once per `commit.py` call
+afterward) so a session that never gets a fresh workdir per iteration still gets a fresh append
+target every round.
+
 ## Parallelism: fan out on the cheap steps, stay serial where state moves
 
 Arbor's discipline — dispatch independent workers into separate worktrees, evaluate each on
@@ -216,6 +328,44 @@ generalisation**, with the overlap counted; and `best_id == "seed"` emits a warn
 delta is 0 *by construction* and must be reported as a null result with a diagnosed cause.
 `--train auto` also declines to pay for a train evaluation whose ids equal val's, because the
 numbers would be a copy.
+
+## Gate as evidence, not a verdict
+
+The statistics come from two scripts, and it matters which one prints what: `gate_check.py` prints
+`delta`, `stderr`, `resolvable_effect_size` and its own `"verdict"` for ONE candidate; `round.py` prints
+the round-scoped numbers no single-candidate gate can see — `noise_floor_from_control` and
+`verdict_by_reference`/`verdict_stable`, the sign-agreement check across the round's null-control
+replicates. Neither decides for you. Nothing in `commit.py` or `round.py` checks that field against the `--decision` you pass: `set_best()`
+is an unconditional setter, and `--reject-basis driver_judgement` exists precisely so you can log a
+considered disagreement. Treat the printed numbers the way a careful researcher reads a stats printout,
+not the way code reads a boolean:
+
+- Read `resolvable_effect_size` first. It is the smallest true effect this round could have detected at
+  all — a `delta` at or below it is not evidence either way, whatever the printed verdict says.
+- Does `delta` clear the noise floor measured for THIS round (`round.py`'s
+  `noise_floor_from_control`), not just the a priori `k_se` threshold baked into the printed verdict?
+- Does the verdict survive the choice of control replicate (`round.py`'s `verdict_by_reference` /
+  `verdict_stable`, always computed once there is more than one control block)? A round where they
+  disagree is telling you the noise floor itself is unstable this round, not just that one candidate is
+  borderline.
+- Before any accept, or any decision that disagrees with the printed verdict, write one sentence in
+  `commit.py`'s `--note` citing the actual numbers (delta vs resolvable effect size vs noise floor). This
+  is not optional ceremony — it is the audit trail a human reviewer uses afterward to check your judgment,
+  the same way a rigorous post-mortem checks the numbers behind every claim.
+
+**Why this doesn't regress to the coin-flip-accept failure a significance bar this loose already produced
+on a real benchmark**: the arithmetic that caused that failure — banking `delta > 0` as progress when the
+significance bar sat below the measured noise floor — is untouched. `gate_check.py` still computes the same
+rigorous statistics and prints them prominently; what changes is only that you must engage with those
+numbers in your own reasoning rather than pattern-matching a boolean field. The historical failure mode was
+"the bar sat below the noise floor and nobody could see it" — with `resolvable_effect_size` and
+`noise_floor_from_control` printed first, that is now structurally hard to miss.
+
+**The new risk this introduces, honestly stated**: a strong optimizer can rationalize accepting something
+the numbers don't support, dressing noise-chasing in confident-sounding prose — the failure mode moves from
+bad math to motivated reasoning, which is harder to catch mechanically than a wrong formula was. The only
+mitigation available is the audit trail above: every override gets a human-readable justification citing
+real numbers, reviewable after the fact, the same way this repo's own run post-mortems already work.
 
 ## Caveats
 

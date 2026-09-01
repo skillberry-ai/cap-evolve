@@ -149,7 +149,7 @@ def test_the_handover_flag_is_true_when_one_was_written(tmp_path):
 def test_a_stale_handover_carried_over_from_the_last_round_is_not_reported_as_written(tmp_path):
     """An agent's next working copy is usually a COPY of the last one, so it arrives with the
     previous round's JOURNAL entry already in it. ``_reconcile_journal`` refuses to book the
-    same entry twice (it writes the "(no handover written)" placeholder instead), so reporting
+    same entry twice (it books the "duplicate handover" placeholder instead), so reporting
     that entry as this round's handover warns nobody about the round that actually lost one."""
     run_dir, work = _staged(tmp_path)
     (work / "JOURNAL.md").write_text(HANDOVER, encoding="utf-8")
@@ -160,8 +160,11 @@ def test_a_stale_handover_carried_over_from_the_last_round_is_not_reported_as_wr
     out = _commit(run_dir, work2, cid="cand_2")
 
     journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
-    assert "no handover written by the optimizer" in journal, (
+    assert "duplicate handover" in journal, (
         "the dedup guard changed: this test is about agreeing with what it books")
+    assert "EMPTY HANDOVER" not in journal, (
+        "a stale entry is a DUPLICATE, not an empty handover: the escalation path would "
+        "synthesize an entry from the commit reason and log optimizer_context_warning")
     assert out.get("handover_recorded") is False, (
         f"a stale entry the journal refused to book was reported as this round's handover: {out}")
 

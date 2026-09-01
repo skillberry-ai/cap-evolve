@@ -92,6 +92,22 @@ task-specific values it quoted. Derive the key like this:
    not confirm the change", "omitted required confirmation step" and "missing
    confirmation before the write" as one cluster instead of three.
 
+### One cluster is detected mechanically, not lexically
+
+`narrated_without_action` — the final message claims a state change happened
+("… has been updated/cancelled/processed …") while **no mutating tool call appears
+anywhere in the trace**. The agent treated its own completion signal, usually the
+user's confirmation, as the action. A scorer words this exactly as it words a *wrong*
+write, so the lexical key above cannot separate them and the optimizer ends up fixing
+the arguments of a call that was never made. `run.py` therefore flags it from the
+rollout (`Rollout.tool_calls`, or OpenAI-style `tool_calls` inside `Rollout.trace`)
+and emits it as its own cluster, plus a per-task boolean in the reflective dataset.
+Read-only tool names are recognised by their leading verb (`get`/`list`/`search`/…);
+an adapter that knows better can mark a call `{"mutates": true}`. Nothing is flagged
+when the rollout reports no tool calls at all — that is missing data, not evidence.
+The fix this cluster calls for is structural, never a prose reminder: see
+`agent-optimize/references/edit-design-lessons.md`.
+
 Two sanity checks on the result: one cluster per failing task means the signature is
 too fine and no generalizing edit is possible; one cluster spanning visibly
 different causes means it is too coarse — usually an unstripped preamble (step 1).

@@ -801,6 +801,19 @@ the earlier attempts' replicates into `null_delta_between_control_replicates` (`
 to accept four samples instead of two). Re-gating is now accumulative: it reports the null over every
 replicate the round has paid for.
 
+**An UNCHANGED parent's noise floor is measured once, not once per round.** Across six real runs of one
+multi-turn benchmark the mandatory two null-control replicates consumed roughly **40% of every rollout
+spent** — nearly as much as all candidates combined — and most of that bought nothing: while `best_id` has
+not moved, the control is the same bytes as the control the previous round already measured, so re-running
+it re-measures a floor the run has already paid for. `round.py` therefore reuses those replicates,
+reporting it as `control_reuse` in the table, and the requirement itself is untouched: an accept moves
+`best_id`, the new parent has no established floor, and the next round measures two fresh replicates for
+it. Reuse also needs the same `measurement` context (split, trials, concurrency — both trial count and
+load move the reading) and the replicates' rollouts still on disk, since the gate re-reads them. It is
+skipped in two cases on purpose: `--gate-against control`, whose whole premise is a control measured
+*concurrently* with the candidates so the drift cancels, and a re-gate, which is run precisely to buy
+more replicate evidence. Pass `--no-reuse-control` to force a measurement.
+
 **A reject is usually not caused by a regression, and the RESULT line used to assume it was.** The
 guidance stamped under every reject read *"re-introduce only the edits that did NOT break a task
 above, dropping/redesigning the ones that did"* — unconditionally. Stamped on a real round it

@@ -393,6 +393,14 @@ with concurrency.
 {guidance}
 {arm_block}
 
+## Default to 3+ candidates per round
+
+**Default to proposing 3 sibling candidates per round via `round.py`'s parallel mode** —
+address different failure clusters in parallel, not one at a time — unless `spend.py
+--n-siblings N` says your remaining budget can't afford it. A round's fixed overhead
+(baseline + null-control replicates) is paid regardless of how many candidates it gates, so
+one candidate per round wastes most of it on a single shot at the gate.
+
 ## The primitives every round must go through
 
 SKILL.md says why; this is the checklist, because nobody is watching and a round that
@@ -643,6 +651,22 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
         # split="val" + the current best's tag: the parent step the agent builds on, which is
         # the same choice the deterministic loop makes.
         ctx.inject(adapter, rd, workdir, split="val", tag=rd.best_id or "seed")
+
+        # Seed the run's continuous JOURNAL.md into the CURRENT BEST candidate's snapshot
+        # (baseline's "seed" at round 1) so the agent's first `cp -r "$R/candidates/$BEST"
+        # "$R/work/$TAG"` (SKILL.md step 2) carries a marker-terminated JOURNAL.md forward.
+        # Without this, agent-optimize's continuous session never gets the per-iteration
+        # workdir seed the deterministic loops get from `_augment_instructions`, so
+        # JOURNAL.md never exists and every round's handover reads as empty — confirmed live.
+        # `commit.py` re-seeds the same way (onto whichever candidate becomes $BEST) after
+        # every round, so round 2+ inherits a clean append target automatically. Own
+        # try/except: a journal-seed failure must not mark the whole context (guidance,
+        # trajectories) unstaged — it is a nicety on top of staging, not staging itself.
+        try:
+            harness._seed_journal(rd.candidate_dir(rd.best_id or "seed"), rd)
+        except Exception as exc:  # noqa: BLE001
+            rd.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(exc)[:300])
+
         guidance = (sorted(g.name for g in (workdir / "guidance").iterdir())
                     if (workdir / "guidance").is_dir() else [])
         # A DECLARED capability that got no guidance dir. `harness._stage_context` skips a

@@ -67,8 +67,15 @@ export function RunHeader({
 
         <div className="tnum ml-auto flex items-center gap-3 text-xs text-muted">
           {summary.elapsed_seconds != null && (
-            <span title="First to last event — includes idle gaps, unlike measured wall clock.">
+            <span
+              title={
+                summary.elapsed_open
+                  ? 'First event to now — the run is still going, so this is not a total.'
+                  : 'First to last event — includes idle gaps, unlike measured wall clock.'
+              }
+            >
               {duration(summary.elapsed_seconds)} elapsed
+              {summary.elapsed_open ? ' so far' : ''}
             </span>
           )}
           {ago(summary.last_event_t) && <span>last event {ago(summary.last_event_t)}</span>}

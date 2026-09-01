@@ -82,6 +82,19 @@ def test_maybe_launch_steps_past_an_occupied_port(monkeypatch):
     assert str(taken) not in calls["cmd"]
 
 
+def test_maybe_launch_reports_error_when_every_port_in_range_is_taken(monkeypatch):
+    """Every port in the scanned range squatted (observed live: ~25 leaked
+    dashboard processes from old sessions) must surface as an error, not silently
+    fall back to the first (also-taken) port — that fallback used to print a URL
+    that actually served a stale, unrelated dashboard."""
+    monkeypatch.setattr(dl, "is_available", lambda: True)
+    monkeypatch.setattr(dl, "_free_port", lambda start, tries=25: (_ for _ in ()).throw(
+        RuntimeError(f"no free port in [{start}, {start + tries})")))
+    out = dl.maybe_launch("/runs", mode="auto")
+    assert out["dashboard"] == "error"
+    assert "no free port" in out["reason"]
+
+
 def test_maybe_launch_never_raises_on_spawn_error(monkeypatch):
     monkeypatch.setattr(dl, "is_available", lambda: True)
 

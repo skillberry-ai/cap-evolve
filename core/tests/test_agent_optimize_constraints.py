@@ -68,7 +68,30 @@ def test_a_number_with_no_unit_is_flagged():
 
 def test_empty_condition_parses_to_nothing_without_complaining():
     p = parse_constraints("")
-    assert p["predicates"] == [] and p["ambiguous"] == []
+    assert p["predicates"] == [] and p["ambiguous"] == [] and p["unenforceable"] == []
+
+
+def test_behavioral_prose_with_no_number_is_reported_unenforceable_not_dropped():
+    """The live-run bug: a stop_condition mixing a real numeric ceiling with a
+    behavioral clause that has NO number at all ("use screen.py before paying for
+    full val each round") used to silently drop the second clause — neither enforced
+    nor visible anywhere, which is exactly the silent-drop this field exists to end."""
+    p = parse_constraints(
+        "stop after $40; use screen.py before paying for full val each round")
+    assert any(pr["kind"] == "max_usd" for pr in p["predicates"])
+    assert any("screen.py" in u for u in p["unenforceable"]), p["unenforceable"]
+
+
+def test_a_fully_numeric_condition_leaves_nothing_unenforceable():
+    p = parse_constraints("reach val mean >= 0.75, or stop after $40 / 90 minutes")
+    assert p["unenforceable"] == [], p["unenforceable"]
+
+
+def test_unenforceable_survives_into_the_check_payload():
+    from cap_evolve.constraints import check_constraints
+    p = parse_constraints("stop after $40; use screen.py before paying for full val")
+    r = check_constraints(p, usd=0.0)
+    assert any("screen.py" in u for u in r["unenforceable"]), r["unenforceable"]
 
 
 # ---- checking -------------------------------------------------------------

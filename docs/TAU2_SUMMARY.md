@@ -121,3 +121,37 @@ Each of these came from a failure observed in these runs, not from taste.
   rollouts, and the kind of constraint an adapter should surface.
 - **Cost the target before accepting the goal.** Sum `1 - rate`, subtract per-component caps, and
   state whether the target is reachable. A target never costed against measured headroom is a wish.
+
+**Status (issue #401 — implemented in `core/cap_evolve/` and the skill's scripts):**
+
+- `gate.decide()` now returns `resolvable_effect_size` (`2·SE`) on every paired/significant
+  verdict — `core/cap_evolve/gate.py`.
+- `round.py`'s two-byte-identical-control default (`--control-replicates 2`) was already in
+  place; the sign-agreement check across those replicates (`verdict_stable`) now runs
+  unconditionally whenever there is more than one control block, not only under
+  `--gate-against control` — a parent-gated round (the default) is now covered too.
+- `--canary-auto` (mechanical, lowest-rate-first canary selection) and the mechanism ledger's
+  `--supersedes` were already implemented (`integrate.py`, `mechanisms.py`).
+- `cap_evolve.constraints.cost_target()` costs a `target_val_score` against measured per-task
+  ceilings; wired into `spend.py --ceiling-file` so a target is costed before the loop keeps
+  chasing it.
+- A `/goal`-style enforcement mechanism now exists: `plugins/cap-evolve/hooks/goal_reminder.py`
+  (a `PostToolUse` hook) re-injects the parsed `stop_condition` predicates + measured
+  spend/wallclock/protected-tasks state every `CAPEVOLVE_GOAL_CADENCE` Bash calls (default 12)
+  in an agent-mode run, independent of whether the driving agent remembers to call `spend.py`.
+- `round.py` now logs an `agent_optimize_compliance` event per candidate recording whether
+  `screen.py` ran before that candidate's full-val eval; `dashboard.py`'s `reduce_run` surfaces
+  it under `algo_extra["compliance"]` as its own distinct entry.
+- The user-simulator `###STOP###` + leaked-continuation-reasoning bug (row 7 above) is now
+  detected from the message trace in the adapter (`examples/tau2_airline/adapters/adapter.py`
+  and the shared `templates/adapters/tau2_bench/adapter.py`) and the affected rollout is marked
+  as infra noise rather than scored as an agent failure — tau2-bench itself is an external,
+  unvendored package, so the fix lives on the cap-evolve side of that boundary.
+- **Real end-to-end validation:** the implementation sandbox had no network egress, but a
+  network-connected run against real `aws/gpt-oss-120b` rollouts (via `examples/tau2_airline`,
+  a 2-task/1-trial smoke spec) confirmed the `resolvable_effect_size` annotation above is
+  produced by an actual gate decision, not just exercised by a unit test — the run's
+  `rejected.jsonl` recorded a paired-mode verdict correctly annotated with `2·SE`. The
+  candidate was correctly rejected at that sample size (n=2, SE=0.5), consistent with this
+  doc's own noise-floor analysis. The full 30/30/20 `tau2_airline` benchmark run is left as
+  follow-up work once that dedicated pass is scheduled.
