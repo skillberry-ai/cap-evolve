@@ -446,3 +446,144 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
     # Floors: a vanished bundle dir or an emptied bundle must fail, not silently pass.
     assert len(bundles) >= 4, f"expected >=4 bundle dirs, discovered {len(bundles)}: {bundles}"
     assert checked >= 60, f"expected >=60 shipped SPA files, checked only {checked} — paths moved?"
+
+
+def test_gate_fields_read_both_prefixed_and_unprefixed_conventions(tmp_path):
+    """The gate-decisions table must find the numbers under EITHER naming convention.
+
+    Both are real and both are on disk: current ``commit.py`` writes ``gate_delta`` &co on
+    the accept/reject event, older revisions wrote ``delta``/``stderr``/``n``/``k_se``/
+    ``threshold``/``resolvable_effect_size`` directly. Reading only the prefixed spelling
+    made every already-completed run of the older kind render "—" for every gate stat and
+    fall back to regexing the prose ``reason`` — with the real numbers in the same event.
+    """
+    from cap_evolve.dashboard import reduce_run
+    numbers = {"delta": 0.05, "stderr": 0.0705, "n": 30, "k_se": 1.0,
+               "threshold": 0.0295, "resolvable_effect_size": 0.0589}
+    for prefixed in (False, True):
+        payload = ({"gate_" + k: v for k, v in numbers.items()} if prefixed
+                   else dict(numbers))
+        rd = _mk_run(tmp_path / ("pre" if prefixed else "un"), events=[
+            {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+            {"kind": "evaluate", "split": "val", "tag": "c1", "reward": 0.55},
+            # No parseable numbers in the prose: the structured fields are the only source.
+            {"kind": "accept", "candidate": "c1", "val": 0.55,
+             "note": "accepted on the driver's judgement", **payload},
+        ])
+        row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+                   if r["candidate"] == "c1")
+        for field, want in numbers.items():
+            assert row[field] == want, (
+                f"{'prefixed' if prefixed else 'unprefixed'} {field!r}: "
+                f"got {row[field]!r}, want {want!r}")
+
+
+def test_gate_prefixed_field_wins_over_unprefixed(tmp_path):
+    """When an event carries both, the PREFIXED (current-convention) value is used."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "accept", "candidate": "c1", "val": 0.55, "note": "ok",
+         "gate_delta": 0.05, "delta": 0.99},
+    ])
+    row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+               if r["candidate"] == "c1")
+    assert row["delta"] == 0.05
+
+
+def test_gate_regex_on_prose_is_still_the_last_resort(tmp_path):
+    """Even-older data has neither convention — the prose scrape must still work."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "step", "candidate": "c1", "val": 0.55, "accept": True,
+         "reason": "accept: Δ̄ = 0.0500 > 1.0·SE=0.0295 (SE=0.0295, n=30)"},
+    ])
+    row = next(r for r in reduce_run(rd)["summary"]["gate_decisions"]
+               if r["candidate"] == "c1")
+    assert row["delta"] == 0.05 and row["n"] == 30
+
+
+def test_control_replicates_are_detected_by_tag_prefix(tmp_path):
+    """Null-control replicates are identifiable ONLY by their ``ctl_null`` tag today.
+
+    Nothing in round.py/commit.py sets ``role``/``is_control``, so requiring either dropped
+    the entire noise-floor section on every real run that measured one — including a run
+    whose controls swung 0.06, more than the accepted candidate's own delta. Controls must
+    reach the ``controls`` list AND the evaluations table, labelled as controls.
+    """
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.50},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i0", "reward": 0.58,
+         "stderr": 0.069, "n_scored": 30},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i0r1", "reward": 0.57},
+        {"kind": "evaluate", "split": "val", "tag": "ctl_null_i3a1", "reward": 0.65},
+        {"kind": "evaluate", "split": "val", "tag": "cand_1", "reward": 0.61},
+    ])
+    S = reduce_run(rd)["summary"]
+    assert [c["tag"] for c in S["controls"]] == ["ctl_null_i0", "ctl_null_i0r1", "ctl_null_i3a1"]
+    assert S["controls"][0]["reward"] == 0.58 and S["controls"][0]["n"] == 30
+    assert S["capabilities"]["controls"] is True
+    # ...and they are not invisible in the eval table either (the old bug put them in NEITHER).
+    ctl_rows = [e for e in S["evaluations"] if e["kind"] == "control"]
+    assert [e["candidate"] for e in ctl_rows] == [c["tag"] for c in S["controls"]]
+    assert "cand_1" not in [e["candidate"] for e in ctl_rows]
+
+
+def test_control_replicates_still_detected_by_explicit_role_field(tmp_path):
+    """Forward-compatibility: an explicit ``role``/``is_control`` marker also counts."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "evaluate", "split": "val", "tag": "replay_a", "reward": 0.51,
+         "role": "control"},
+        {"kind": "evaluate", "split": "val", "tag": "replay_b", "reward": 0.49,
+         "is_control": True},
+    ])
+    assert [c["tag"] for c in reduce_run(rd)["summary"]["controls"]] == ["replay_a", "replay_b"]
+
+
+def test_a_plain_candidate_eval_is_not_mistaken_for_a_control(tmp_path):
+    """The prefix must not swallow ordinary tags — no controls means an absent section."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"kind": "evaluate", "split": "val", "tag": "controller_fix", "reward": 0.55},
+        {"kind": "evaluate", "split": "val", "tag": "cand_1", "reward": 0.55},
+    ])
+    S = reduce_run(rd)["summary"]
+    assert S["controls"] == [] and S["capabilities"]["controls"] is False
+
+
+def test_optimizer_spend_recorded_only_in_state_json_is_attributed(tmp_path):
+    """Money and time must land in the SAME bucket.
+
+    An agent-mode run whose proposer spend reaches only state.json's Spent attributed $0 of
+    it, so the KPI strip showed one dollar figure as both "cost" and "unattributed" (100%
+    unattributed) while the wall-clock KPI put every second in the other bucket.
+    """
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5, "cost_usd": 0.0},
+        {"kind": "accept", "candidate": "c1", "val": 0.6, "note": "ok"},
+    ])
+    rd.update_spent(optimizer_usd=4.8, optimizer_tokens=69224, optimizer_seconds=12.0)
+    L = reduce_run(rd)["summary"]["cost_ledger"]
+    assert abs(L["unattributed_usd"]) < 0.001, L
+    recon = [r for r in L["rows"] if r["kind"] == "optimizer_reconciliation"]
+    assert len(recon) == 1 and abs(recon[0]["usd"] - 4.8) < 1e-6
+
+
+def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
+    """No capevolve.yaml is a NOTE, not a reason to omit every project artifact."""
+    from cap_evolve.dashboard import reduce_run
+    rd = _mk_run(tmp_path, events=[
+        {"kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+    ])
+    proj = rd.root.parent / "project"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text("# real adapter\n", encoding="utf-8")
+    cfg = reduce_run(rd)["summary"]["config"]
+    assert cfg["spec_missing"] is True
+    assert [f["path"] for f in cfg["files"]] == ["adapters/adapter.py"]

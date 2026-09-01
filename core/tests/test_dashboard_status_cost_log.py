@@ -270,13 +270,26 @@ def test_cost_ledger_attributes_every_dollar_and_reconciles():
             "intake", "baseline", "optimize", "optimize", "finalize"]
 
 
-def test_cost_ledger_publishes_the_unattributed_remainder_instead_of_hiding_it():
+def test_cost_ledger_books_the_remainder_to_the_role_that_spent_it():
+    """Spend recorded only in state.json's Spent is ROLE-TAGGED, so it is attributable.
+
+    Publishing it as "unattributed" made the KPI strip show one dollar figure as both the
+    run's cost and its unattributed cost (100% unattributed) while the wall-clock KPI put
+    every second in the other bucket — two contradictory readings of one run. It is now a
+    reconciliation row against the role Spent names, and a residual that NO role can explain
+    is what "unattributed" reports.
+    """
     from cap_evolve import dashboard
     with tempfile.TemporaryDirectory() as d:
         rd = _mk(Path(d), events=_events(finalize=False), baseline=_BASELINE)
-        rd.update_spent(usd=0.75, optimizer_usd=3.0)  # $1.75 more than events explain
-        s = dashboard.reduce_run(rd)["summary"]
-        assert s["cost_ledger"]["unattributed_usd"] == 1.75
+        # $1.75 of optimizer spend no event carries; the eval rows already explain the runner's.
+        rd.update_spent(usd=0.75, optimizer_usd=3.0)
+        led = dashboard.reduce_run(rd)["summary"]["cost_ledger"]
+        recon = {r["kind"]: r["usd"] for r in led["rows"] if "reconciliation" in r["kind"]}
+        assert recon == {"optimizer_reconciliation": 1.75}
+        assert led["total_usd"] == 3.75
+        assert led["attributed_usd"] == 3.75
+        assert led["unattributed_usd"] == 0.0
 
 
 def test_a_budget_truncated_optimizer_call_is_labelled_and_still_charged():

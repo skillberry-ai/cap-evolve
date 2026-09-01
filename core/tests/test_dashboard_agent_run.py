@@ -391,11 +391,16 @@ def test_gate_fields_read_directly_from_the_event_when_present():
 
 
 def test_controls_are_read_generically_and_absent_by_default():
-    """Null-control replicates surface as their own summary list, keyed by a generic
-    ``role``/``is_control`` marker — never by tag pattern (that would bake one
-    algorithm's naming convention, e.g. agent-optimize's ``ctl_null_i<N>``, into a
-    generic reducer). Absent today (no algorithm emits the marker yet): the list must
-    stay empty rather than guessing from tag names."""
+    """Null-control replicates surface as their own summary list, detected by EITHER the
+    documented ``ctl_null`` tag-prefix convention or a generic ``role``/``is_control``
+    marker.
+
+    The prefix half is not optional: nothing in round.py/commit.py sets ``role`` or
+    ``is_control``, so keying on the marker alone produced an empty list and a silently
+    dropped noise-floor section on every real run that measured one — while four real
+    control evaluations with real rewards sat in the same event log. The marker half stays
+    for forward-compatibility with an algorithm that names its controls differently.
+    """
     from cap_evolve import Budget, RunDir, dashboard
     tmp = Path(tempfile.mkdtemp())
     rd = RunDir.create(tmp, ts="t", budget=Budget())
@@ -403,23 +408,27 @@ def test_controls_are_read_generically_and_absent_by_default():
         {"t": 1.0, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
         {"t": 2.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
         {"t": 3.0, "kind": "baseline", "val": 0.5},
-        # Tag LOOKS like a control (agent-optimize's convention) but carries no marker —
-        # must NOT be picked up by name alone.
+        # The ``ctl_null`` prefix IS the signal agent-optimize actually emits.
         {"t": 4.0, "kind": "evaluate", "split": "val", "tag": "ctl_null_i0", "reward": 0.52},
     ]
     rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
     (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
     reduced = dashboard.reduce_run(rd)
-    assert reduced["summary"]["controls"] == []
-    assert reduced["summary"]["capabilities"]["controls"] is False
+    (by_tag,) = reduced["summary"]["controls"]
+    assert by_tag["tag"] == "ctl_null_i0" and by_tag["reward"] == 0.52
+    assert reduced["summary"]["capabilities"]["controls"] is True
+    # A control is never in NEITHER place: it has no graph node, so it must at least appear
+    # in the evaluations table, labelled as a control rather than as an anonymous row.
+    assert [e["candidate"] for e in reduced["summary"]["evaluations"]
+            if e["kind"] == "control"] == ["ctl_null_i0"]
 
-    # Now with the generic marker present — it must be picked up regardless of tag shape.
+    # And with the generic marker present — picked up regardless of tag shape.
     events.append({"t": 5.0, "kind": "evaluate", "split": "val", "tag": "anything_at_all",
                    "reward": 0.48, "stderr": 0.02, "n_scored": 4, "role": "control"})
     rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
     reduced2 = dashboard.reduce_run(rd)
-    (ctl,) = reduced2["summary"]["controls"]
-    assert ctl["tag"] == "anything_at_all" and ctl["reward"] == 0.48 and ctl["n"] == 4
+    ctl = next(c for c in reduced2["summary"]["controls"] if c["tag"] == "anything_at_all")
+    assert ctl["reward"] == 0.48 and ctl["n"] == 4
     assert reduced2["summary"]["capabilities"]["controls"] is True
 
 

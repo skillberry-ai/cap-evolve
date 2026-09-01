@@ -31,9 +31,11 @@ The candidate **graph** schema (``reduced["graph"]``)::
      ],
      "root": "seed", "best_id": "..."}
 
-The ``gate_*`` keys are present only when the algorithm's commit step RECORDED that number
-on its accept/reject event instead of leaving it to be regexed out of the prose ``reason``;
-the gate-decisions table prefers them and falls back to the regex parse otherwise.
+The ``gate_*`` keys are present when the algorithm's commit step RECORDED that number on its
+accept/reject event — under either naming convention on disk: the prefixed ``gate_delta`` a
+current ``commit.py`` writes, or the UNPREFIXED ``delta`` an older one wrote (see
+``_GATE_FIELD_ALIASES``). The gate-decisions table prefers whichever is present and falls back
+to regexing the prose ``reason`` only when neither is.
 ``screened`` is ``None`` when no event recorded compliance for this candidate's tag, else
 the ``screened_before_fullval`` value read generically off any event that carries it.
 
@@ -48,9 +50,10 @@ The **summary** schema (``reduced["summary"]``)::
      "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...]}
 
 ``controls`` lists null-control replicate evaluations — evaluate-only measurements with no
-candidate-graph node — read generically off any ``evaluate`` event carrying ``role:
-"control"`` or a truthy ``is_control`` field. Empty until an algorithm's evaluate step
-attaches either.
+candidate-graph node — detected by ``_is_control_event``: the documented ``ctl_null`` TAG
+PREFIX convention (agent-optimize's ``ctl_null_i<N>`` plus its ``r<k>``/``a<k>`` replicates),
+or an explicit ``role: "control"`` / truthy ``is_control`` field on the event. They also appear
+in ``evaluations`` with ``kind: "control"``, so a control is never in neither place.
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
@@ -355,6 +358,40 @@ _STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
+
+#: Prefixed gate field → the UNPREFIXED spelling of the same number. Both conventions are
+#: real and both are on disk: older ``commit.py`` revisions wrote ``delta``/``stderr``/``n``/
+#: ``k_se``/``threshold``/``resolvable_effect_size`` straight onto the accept/reject event,
+#: current ones write ``gate_*``. The reducer reads the prefixed name first and falls back to
+#: the unprefixed one, so a run renders its real gate numbers whichever version produced it.
+_GATE_FIELD_ALIASES = {
+    "gate_delta": "delta",
+    "gate_stderr": "stderr",
+    "gate_n": "n",
+    "gate_k_se": "k_se",
+    "gate_threshold": "threshold",
+    "gate_resolvable_effect_size": "resolvable_effect_size",
+}
+
+#: Tag-naming convention for a null-control replicate: any evaluate tag starting with
+#: ``ctl_null`` (agent-optimize's ``round.py`` writes ``ctl_null_i<N>`` per round plus
+#: ``...r<k>``/``...a<k>`` replicates). This is a DOCUMENTED convention, not one algorithm's
+#: private detail — an algorithm that wants its controls surfaced either follows the prefix
+#: or sets ``role: "control"`` / ``is_control`` on the event.
+_CONTROL_TAG_PREFIX = "ctl_null"
+
+
+def _is_control_event(ev: dict) -> bool:
+    """Is this ``evaluate`` event a null-control replicate (a noise-floor measurement)?
+
+    Three signals, any of which suffices: an explicit ``role: "control"``, a truthy
+    ``is_control``, or the ``ctl_null`` tag prefix. Only the last one is actually emitted
+    today (checked round.py/commit.py), which is exactly why reading only the first two
+    dropped the whole noise-floor section for every real run; the explicit fields stay
+    recognized so an algorithm that starts setting them needs no reducer change.
+    """
+    return bool(ev.get("role") == "control" or ev.get("is_control")
+                or str(ev.get("tag") or "").startswith(_CONTROL_TAG_PREFIX))
 
 
 def _algorithm_from_spec(root: Path) -> str | None:
@@ -695,10 +732,19 @@ def _find_project_dir(root: Path) -> Path | None:
     Same two candidate locations ``_algorithm_from_spec`` already reads (a sibling
     ``project/`` next to the run dir is the normal shape; some fixtures write
     ``capevolve.yaml`` directly under the run dir).
+
+    A sibling ``project/`` dir with NO ``capevolve.yaml`` still counts: it holds adapters/,
+    seed_capability/, split files — the whole Config section used to vanish with no explanation
+    when the spec file was missing, hiding project artifacts that were sitting right there.
+    ``root`` itself is only accepted WITH a spec, since a run dir full of rollouts/ and
+    events.jsonl is not a project listing.
     """
     for cand in (_safe_subpath(root.parent, "project"), root):
         if cand is not None and cand.is_dir() and (cand / "capevolve.yaml").is_file():
             return cand
+    sibling = _safe_subpath(root.parent, "project")
+    if sibling is not None and sibling.is_dir():
+        return sibling
     return None
 
 
@@ -774,6 +820,9 @@ def _read_config(root: Path) -> dict:
         return {}
     return {
         "project_dir": str(project_dir),
+        # True ⇒ the project dir exists but has no capevolve.yaml. The section says so and still
+        # lists the artifacts that ARE there, instead of disappearing without explanation.
+        "spec_missing": not (project_dir / "capevolve.yaml").is_file(),
         "spec_groups": spec_groups,
         "project_md": project_md,
         "files": files,
@@ -816,7 +865,9 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
             continue
         if text:
             seed_text = seed_by_name.get(name)
-            files.append({"title": title, "text": _sanitize_text(text, 20000),
+            # ``name`` is the bare filename: the section intro lists what this run ACTUALLY
+            # wrote instead of the fixed catalogue of every narrative file that could exist.
+            files.append({"name": name, "title": title, "text": _sanitize_text(text, 20000),
                           "template_only": bool(seed_text) and text == seed_text.strip()})
     process_text = None
     if best_id:
@@ -827,7 +878,8 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
             except OSError:
                 process_text = None
     if process_text:
-        files.append({"title": f"Process — best candidate ({best_id})",
+        files.append({"name": "PROCESS.md",
+                      "title": f"Process — best candidate ({best_id})",
                       "text": _sanitize_text(process_text, 20000),
                       "template_only": bool(process_seed) and process_text == process_seed})
     if not files:
@@ -1082,8 +1134,16 @@ def reduce_run(run_dir) -> dict:
                     "gate_resolvable_effect_size",
                     "gate_mode", "gate_table", "control_relative_verdict",
                     "control_relative_delta", "evidence_bar"):
-            if ev.get(_gk) is not None:
-                node[_gk] = ev.get(_gk)
+            _v = ev.get(_gk)
+            # Version skew, not a hypothetical: older commit.py revisions wrote these on the
+            # accept/reject event UNPREFIXED (``delta``/``stderr``/``n``/...), current ones write
+            # ``gate_*``. Reading only the prefixed name made every already-completed run render
+            # "—" for every gate stat while the real numbers sat in the same event, and pushed the
+            # gate table onto its lossy regex-on-prose fallback. Accept both spellings.
+            if _v is None:
+                _v = ev.get(_GATE_FIELD_ALIASES.get(_gk, ""))
+            if _v is not None:
+                node[_gk] = _v
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
@@ -1218,6 +1278,35 @@ def reduce_run(run_dir) -> dict:
         "resolution_note": tp_ev.get("resolution_note") or "",
     } if tp_ev is not None else None)
 
+    # --- null-control replicates: the noise-floor check, kept OUT of the candidate graph ---
+    # A control replicate (a byte-identical re-measurement, run to bound run-to-run noise) is
+    # evaluate-only: it never gets an accept/reject commit, so it has no graph node. Detection
+    # is ``_is_control_event`` — the ``ctl_null`` tag-prefix CONVENTION plus the explicit
+    # ``role``/``is_control`` fields. Reading only the explicit fields (which nothing emits)
+    # produced an empty list and a silently dropped section on every real run that measured a
+    # noise floor: run_finalrun5 has four such evaluations (ctl_null_i0=0.58, ctl_null_i0r1=0.57,
+    # ctl_null_i3=0.653, ctl_null_i3r1=0.593) whose 0.06 swing is larger than the accepted
+    # candidate's own Δ — the single most important finding in that run.
+    #
+    # Kept as its own top-level summary list (not nested under algo_extra): a null-control
+    # replicate is a generic evaluation-methodology signal any algorithm could emit, not a
+    # per-algorithm extra like screens/gepa/skillopt.
+    control_events = [e for e in events
+                      if e.get("kind") == "evaluate" and _is_control_event(e)]
+    controls = [{
+        "tag": e.get("tag"),
+        "split": e.get("split"),
+        "reward": e.get("reward"),
+        "stderr": e.get("stderr"),
+        # ``n_scored`` is the modern field; older evaluate events wrote ``n``.
+        "n": e.get("n_scored") if e.get("n_scored") is not None else e.get("n"),
+        "iteration": e.get("iteration"),
+        "cost_usd": e.get("cost_usd"),
+        "seconds": e.get("seconds"),
+        "tokens": e.get("tokens"),
+        "t": e.get("t"),
+    } for e in control_events]
+
     # --- first-class evaluations (split-oriented, distinct from per_iteration) ---
     # An evaluation is one scoring of a candidate on one split: the seed baseline on
     # val, every candidate that earned a full val score on val, and the sealed test
@@ -1265,6 +1354,22 @@ def reduce_run(run_dir) -> dict:
             "tokens": int(n.get("tokens") or 0),
         })
 
+    # null-control replicates. They have no graph node (evaluate-only), so the loop above
+    # cannot see them and they used to appear in NEITHER this table nor the noise-floor
+    # section. Labeled ``kind: "control"`` so the UI can show them as controls rather than
+    # mixing a re-measurement of the SAME capability in as an anonymous candidate row.
+    for c in controls:
+        evaluations.append({
+            "id": c["tag"], "kind": "control", "candidate": c["tag"],
+            "split": c.get("split") or "val",
+            "reward": c.get("reward"), "stderr": c.get("stderr"),
+            "n_tasks": c.get("n") or 0,
+            "trials": _trials_for(run_dir, str(c["tag"]), c.get("split") or "val") or 1,
+            "cost_usd": float(c.get("cost_usd") or 0.0),
+            "seconds": float(c.get("seconds") or 0.0),
+            "tokens": int(c.get("tokens") or 0),
+        })
+
     # test (the sealed test eval, from final.json)
     test_obj = final.get("test") or {}
     if test_obj:
@@ -1298,7 +1403,11 @@ def reduce_run(run_dir) -> dict:
                    else "indecisive" if n["status"] == "indecisive"
                    else "provisional" if n["status"] == "provisional"
                    else "reject" if n["status"] == "rejected" else "no measurement")
-        m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
+        # Agent-authored notes write "delta -0.0167 vs cand_3, threshold 0.0276" where the
+        # deterministic gate writes "Δ̄ = -0.0167"; matching only the symbol left three real
+        # rejections in run_finalrun5 with an all-"—" row whose numbers were right there in
+        # the prose. Both spellings, with or without the ``=``.
+        m_delta = re.search(r"(?:Δ̄?|\bdelta)\s*=?\s*([+-]?\d*\.?\d+)", reason)
         # The bar `0.2·SE=0.0062` comes FIRST in the reason and also matches `SE=`, so an
         # unanchored search put the bar's value in the SE column — the gate then appeared
         # to have compared Δ̄ against five times its own standard error. Skip the `k·SE`
@@ -1306,6 +1415,7 @@ def reduce_run(run_dir) -> dict:
         m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
+        m_thr = re.search(r"\bthreshold\s*=?\s*(\d*\.?\d+)", reason)
         m_res = re.search(r"resolvable effect size 2·SE\s*=\s*([\d.]+)", reason)
         # A number the algorithm RECORDED beats the same number scraped out of prose. Agent
         # mode writes free text, so every regex above missed and the whole numeric half of
@@ -1322,7 +1432,8 @@ def reduce_run(run_dir) -> dict:
             "stderr": float(m_se.group(1)) if m_se else None,
             "n": int(m_n.group(1)) if m_n else None,
             "k_se": float(m_bar.group(1)) if m_bar else None,
-            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "threshold": (float(m_bar.group(2)) if m_bar else
+                          float(m_thr.group(1)) if m_thr else None),
             "resolvable_effect_size": float(m_res.group(1)) if m_res else None,
             "reason": _sanitize_text(reason, 600),
         }
@@ -1395,6 +1506,39 @@ def reduce_run(run_dir) -> dict:
                 "note": ("the optimizer process exited non-zero (commonly its own budget "
                          "cap) — the spend below is real and was still charged"
                          if truncated else ""),
+            })
+    # --- reconcile the rows against Spent, PER ROLE ---------------------------
+    # A run whose proposer spend lives only in state.json's Spent (agent mode: older commit.py
+    # revisions never put opt_cost_usd on the decision event) attributed $0 of it, so the KPI
+    # strip showed the SAME dollar figure as both "cost" and "unattributed" — 100% unattributed —
+    # while the wall-clock KPI put every second in the runner bucket. Two contradictory readings
+    # of one run. Book the Spent-recorded remainder to the ROLE that actually spent it as an
+    # explicit reconciliation row: the money now lands in the same bucket the seconds do, and
+    # "unattributed" means what it says (spend no role can explain) instead of "spend no event
+    # happened to carry".
+    _ROLE_FOR_KIND = {"intake": "intake", "optimizer_call": "optimizer"}
+    by_role = {"runner": 0.0, "optimizer": 0.0, "intake": 0.0}
+    for r in ledger:
+        if r["usd"] is not None:
+            by_role[_ROLE_FOR_KIND.get(r["kind"], "runner")] += float(r["usd"])
+    for _role, _spent, _secs, _tok, _label in (
+            ("optimizer", opt_usd, opt_secs, opt_tokens,
+             "Optimizer spend recorded in state.json but carried by no event"),
+            ("runner", runner_usd, run_secs, tokens - opt_tokens - int(intake_tokens or 0),
+             "Runner spend recorded in state.json but carried by no event")):
+        gap = round(float(_spent or 0.0) - by_role[_role], 6)
+        if abs(gap) > 5e-5:
+            ledger.append({
+                "phase": "optimize" if _role == "optimizer" else "evaluate",
+                "kind": _role + "_reconciliation", "split": None,
+                "label": _label, "candidate": None, "usd": gap,
+                # Seconds/tokens are NOT re-added here — the per-role rows above already
+                # carry them, and double-counting time to reconcile money would trade one
+                # inconsistency for another.
+                "seconds": 0.0, "tokens": 0,
+                "note": (f"the run's Spent accumulator books ${_spent:.4f} to the {_role}; "
+                         f"{_secs:.0f}s and {max(0, int(_tok or 0)):,} tokens are attributed to "
+                         f"the same role, so the dollars and the time now agree"),
             })
     attributed = sum(r["usd"] for r in ledger if r["usd"] is not None)
     total_usd = round(opt_usd + runner_usd + intake_usd, 6)
@@ -1535,29 +1679,6 @@ def reduce_run(run_dir) -> dict:
                   for e in events if e.get("kind") == "agent_optimize_compliance"]
     if compliance:
         algo_extra["compliance"] = compliance
-
-    # --- null-control replicates: the noise-floor check, kept OUT of the candidate graph ---
-    # A control replicate (a byte-identical re-measurement, run to bound run-to-run noise)
-    # is evaluate-only: it never gets an accept/reject commit, so it has no graph node — and
-    # with no way to see it happened, a real run's noise-floor check was invisible in the
-    # dashboard. Detecting it by TAG naming (e.g. agent-optimize's ``ctl_null_i<N>``) would
-    # bake one algorithm's convention into a generic reducer, so this reads a generic marker
-    # instead: any ``evaluate`` event carrying ``role: "control"`` or a truthy ``is_control``
-    # field. Neither field is emitted yet as of this writing (checked agent-optimize's
-    # round.py/commit.py, which still identify their own controls only by tag) — this stays
-    # ready to surface them the moment an algorithm's evaluate step attaches either.
-    controls = [{
-        "tag": e.get("tag"),
-        "reward": e.get("reward"),
-        "stderr": e.get("stderr"),
-        "n": e.get("n_scored"),
-        "iteration": e.get("iteration"),
-        "t": e.get("t"),
-    } for e in events if e.get("kind") == "evaluate"
-       and (e.get("role") == "control" or e.get("is_control"))]
-    # Kept as its own top-level summary list (not nested under algo_extra): a null-control
-    # replicate is a generic evaluation-methodology signal any algorithm could emit, not a
-    # per-algorithm extra like screens/gepa/skillopt below.
 
     evograph = _read_evograph(root)
     if evograph:
@@ -1940,6 +2061,9 @@ header .meta{color:var(--muted);font-size:12px}
 main{max-width:1180px;margin:0 auto;padding:26px;display:flex;flex-direction:column;gap:26px}
 section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
 section h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 14px}
+/* The page header is position:sticky, so jumping to an anchor scrolled the target heading
+   underneath it. scroll-margin-top parks the landing point below the header instead. */
+section,section h2,section h3{scroll-margin-top:74px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px}
 .kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
@@ -2087,13 +2211,24 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     kp('best val',fmt(S.best_val),'champ',S.best_id),
     kp('baseline',fmt(S.baseline_val)),
     kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
-    kp('held-out test',fmt(S.test_reward),'',S.test_sealed?'sealed once':'not finalized'),
+    kp('held-out test',fmt(S.test_reward),'',
+       // The raw sealed score alone is not the result — the DELTA against the seed's own test
+       // score is, and both were already in final.json. A run can lift val and lose test.
+       (S.test_delta!=null||S.test_baseline_reward!=null)
+         ?((S.test_delta!=null?(S.test_delta>0?'+':'')+S.test_delta.toFixed(3)+' vs seed ':'')+
+           (S.test_baseline_reward!=null?fmt(S.test_baseline_reward):'')+
+           (S.test_sealed?' · sealed once':''))
+         :(S.test_sealed?'sealed once':'not finalized')),
     kp('candidates',c.total-(c.seed||0),'',
        `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive||0} indecisive · ${c.failed} no-measure`),
     kp('frontier',S.frontier,'','gated leaves with no accepted child'),
     kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
     kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
-    kp('tokens',S.tokens.toLocaleString()),
+    // Token count without its split reads as implausible next to the dollar figure (a real run:
+    // 206M tokens for $4.80). The split explains it: nearly all of them are RUNNER tokens on a
+    // self-hosted endpoint that bills $0, and the dollars are the optimizer's.
+    kp('tokens',S.tokens.toLocaleString(),'',S.tokens_by_role?
+       `run ${S.tokens_by_role.runner.toLocaleString()} · opt ${S.tokens_by_role.optimizer.toLocaleString()}`:''),
     kp('unattributed $',
        S.cost_ledger?`$${S.cost_ledger.unattributed_usd.toFixed(4)}`:'—',
        (S.cost_ledger&&Math.abs(S.cost_ledger.unattributed_usd)>0.0005?'champ':''),
@@ -2203,7 +2338,12 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   const champ=pts.reduce((a,b)=>(b.best_so_far>=a.best_so_far?b:a),pts[0]);
   const cx=X(champ.iteration),cy=Y(champ.best_so_far);
   el.append(svg('path',{d:starPath(cx,cy-12,7,3),fill:'var(--champion)',stroke:'var(--bg)'}));
-  txt(el,{x:cx+10,y:cy-8,fill:'var(--text)','font-size':12},fmt(champ.best_so_far));
+  // The champion is usually the RIGHTMOST point, where a left-anchored label runs off the plot
+  // and gets clipped by the viewBox. Flip the anchor to the left of the star when there is not
+  // room to its right.
+  const tight=cx>W-m.r-46;
+  txt(el,{x:tight?cx-10:cx+10,y:cy-8,fill:'var(--text)','font-size':12,
+          'text-anchor':tight?'end':'start'},fmt(champ.best_so_far));
   s.append(el);
   s.append($('div',{class:'legend',html:
     '<span><i style="background:var(--ok)"></i>running best / accept</span>'+
@@ -2308,7 +2448,11 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       stroke:spine.has(n.id)?'var(--champion)':'var(--bg)','stroke-width':spine.has(n.id)?2:1});
     c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
     c.addEventListener('mouseleave',hideTip); el.append(c);
-    txt(el,{x:p.x+12,y:p.y+4,fill:'var(--muted)','font-size':10},n.id);
+    // A node with outgoing edges (the seed, above all) has a connector leaving at exactly
+    // y=p.y, so a label on the baseline right of the node is drawn UNDER that line and reads
+    // as struck through. Lift those labels clear of the connector.
+    const outgoing=(n.children||[]).some(c2=>pos[c2]);
+    txt(el,{x:p.x+12,y:outgoing?p.y-8:p.y+4,fill:'var(--muted)','font-size':10},n.id);
   });
   s.append(el);
   s.append($('div',{class:'legend',html:'<span><i style="background:var(--champion)"></i>best lineage spine</span>'+
@@ -2321,15 +2465,15 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(!evals.length)return;
   const s=sec('Evaluations');
   s.append($('p',{class:'muted',text:'Each scoring of a candidate on a split — '+
-    'baseline (seed on val), every full val eval, and the sealed test eval. '+
-    'Distinct from the optimizer-step view above.'}));
+    'baseline (seed on val), every full val eval, each null-control replicate, and the '+
+    'sealed test eval. Distinct from the optimizer-step view above.'}));
   const t=$('table');
   t.append($('tr',{},$('th',{text:'kind'}),$('th',{text:'candidate'}),$('th',{text:'split'}),
     $('th',{class:'r',text:'reward ± stderr'}),$('th',{class:'r',text:'runner $'}),
     $('th',{class:'r',text:'time'}),$('th',{class:'r',text:'tokens'}),$('th',{class:'r',text:'tasks × trials'})));
   const dsec=v=>{v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     const m=Math.floor(v/60);if(m<60)return m+'m '+(v%60)+'s';return Math.floor(m/60)+'h '+(m%60)+'m';};
-  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed'};
+  const kindBadge={baseline:'b-seed',candidate:'b-accepted',test:'b-failed',control:'b-indecisive'};
   evals.forEach(e=>{
     const re=e.reward==null?'—':fmt(e.reward)+(e.stderr!=null?' ± '+(+e.stderr).toFixed(3):'');
     t.append($('tr',{},
@@ -2340,7 +2484,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       $('td',{class:'r num',text:e.cost_usd?'$'+(+e.cost_usd).toFixed(4):'—'}),
       $('td',{class:'r num',text:dsec(e.seconds)}),
       $('td',{class:'r num',text:(e.tokens||0).toLocaleString()}),
-      $('td',{class:'r num',text:(e.n_tasks||0)+' × '+(e.trials||1)})));
+      $('td',{class:'r num',text:e.n_tasks?e.n_tasks+' × '+(e.trials||1):'—'})));
   });
   s.append(t);
 })();
@@ -2559,10 +2703,12 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
 (function(){
   const NAR=S.narrative; if(!NAR||!(NAR.files||[]).length)return;
   const s=sec('Process narrative');
+  // List what this run ACTUALLY has, not the full catalogue of narrative files that could
+  // exist — the fixed list implied four missing documents on a run that wrote one.
+  const names=(NAR.files||[]).map(f=>f.name||f.title).filter(Boolean);
   s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
-    'Written by the optimizer as it worked (JOURNAL / INSIGHTS / META_INSIGHTS / '+
-    'FRAMEWORK_IMPROVEMENTS, plus the best candidate’s PROCESS.md) — rendered here '+
-    'as-is, for a human reader.'}));
+    'Written by the optimizer as it worked'+(names.length?' ('+names.join(' / ')+')':'')+
+    ' — rendered here as-is, for a human reader.'}));
   (NAR.files||[]).forEach(f=>{
     const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
     box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
@@ -2586,6 +2732,9 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     'Every input the intake phase produced or the user set, read straight off '+
     CFG.project_dir+' — the parsed capevolve.yaml spec, PROJECT.md, and every other '+
     'project artifact (adapters/, seed_capability/, split files, ...).'}));
+  if(CFG.spec_missing)s.append($('div',{class:'banner',style:'margin:0 0 12px',
+    text:'No capevolve.yaml found in this project dir, so there is no parsed spec to show. '+
+         'Everything else the project contains is listed below.'}));
   const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;'+
     'font-size:13px;color:var(--text)',text:t});
   (CFG.spec_groups||[]).forEach(g=>{
@@ -2645,20 +2794,31 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   // "screened" (did this candidate pay for a cheap screen before full-val?) only shown
   // when SOME node has a recorded signal — never rendered as a column of bare "—".
   const showScreened=!!(S.capabilities&&S.capabilities.screened);
+  // agent-optimize's cheap screen is OPTIONAL. In a run that never attempted one, every
+  // candidate carried a warning-orange "✗ not screened" badge, which reads as a compliance
+  // violation when nothing was violated. The badge is only a flag when SOME candidate in the
+  // run did screen and this one skipped it; otherwise the column shows "—", the way the seed
+  // row already correctly did.
+  const anyScreened=G.nodes.some(n=>n.screened===true);
+  const byId=Object.fromEntries(G.nodes.map(n=>[n.id,n]));
   const hdr=[$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
     $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'})];
   if(showScreened)hdr.push($('th',{text:'screened'}));
   hdr.push($('th',{text:'reason'}));
   t.append($('tr',{},...hdr));
   G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
-    const dlt=n.parent_val!=null&&n.val!=null?(n.val-n.parent_val):null;
+    // parent_val is only recorded when the algorithm's round table carried it; when it did
+    // not, the parent's OWN val is sitting right there in the same graph, so fall back to it
+    // rather than printing "—" for a delta both halves of which are known.
+    const pv=n.parent_val!=null?n.parent_val:(n.parent&&byId[n.parent]?byId[n.parent].val:null);
+    const dlt=pv!=null&&n.val!=null?(n.val-pv):null;
     const cells=[
       $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
       $('td',{class:'r num',text:n.iteration})];
-    if(showScreened)cells.push($('td',{},n.screened==null?'—':
+    if(showScreened)cells.push($('td',{},(n.screened==null||(!n.screened&&!anyScreened))?'—':
       $('span',{class:'badge '+(n.screened?'b-accepted':'b-rejected'),text:n.screened?'✓ screened':'✗ not screened'})));
     cells.push($('td',{class:'muted',text:(n.reason||'').slice(0,80)}));
     t.append($('tr',{},...cells));
