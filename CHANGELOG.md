@@ -9,6 +9,25 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A live run was reported as `failed` for as long as it was scoring its baseline.** Run
+  33492876620's live snapshot showed a red `failed` badge, "no baseline and no candidate was
+  ever evaluated" and `0s elapsed` on a smoke-spreadsheetbench job that had been healthy and
+  working for 37 minutes. `_derive_status` decided "nothing has been scored" *before* reading
+  the clock, so every snapshot taken between `splits` and the first `baseline` event — the
+  whole baseline, minutes on smoke and hours on the full tier — announced an outcome the run
+  had not reached. Three fixes, all of them making the reducer state only what the log
+  supports: (1) freshness is read first, so a moving log with nothing scored yet is `running`
+  and says *why* ("the seed's baseline is still being scored"); (2) `evaluate_candidate` now
+  brackets itself with an **`eval_start`** event (split, tag, task/trial counts, rollout
+  count), because an evaluation is the longest silent stretch in a run and until now that
+  silence carried no evidence at all — an open `eval_start` gets an 8-hour staleness window
+  instead of 45 minutes, and a run that dies inside one is `interrupted` ("scoring the seed on
+  the val split (10 rollouts) and never returned"), never `failed — nothing ran`; (3) a live
+  run's `elapsed_seconds` is measured to *now* rather than to its last event, with a new
+  `elapsed_open` flag so the header renders "9m 17s elapsed **so far**" instead of a false
+  total of `0s`. The Δ-val KPI also stopped blaming "a zero baseline" for a null relative %
+  when the real reason is that no baseline exists yet.
+
 - **Review follow-ups (PR #399).** Three findings from code review, all in the agent-optimize
   host: (1) `_CODE_SUFFIXES` was a 14-entry allowlist, so a capability whose code is C, C++, C#,
   PHP, Swift, Kotlin or Objective-C was treated as prose and never got the "the form that works

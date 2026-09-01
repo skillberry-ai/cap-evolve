@@ -386,6 +386,14 @@ def _algorithm_from_spec(root: Path) -> str | None:
 #: a kill than "dead" during a legitimately slow step.
 STALE_AFTER_SECONDS = 45 * 60.0
 
+#: The same window, widened, for a run whose last event is an ``eval_start`` with no
+#: closing ``evaluate`` — i.e. a split is provably mid-flight. Nothing is logged inside
+#: an evaluation, and a legitimate one runs from minutes to many hours (639 test tasks;
+#: swebench builds a container per task), so the ordinary window would call a healthy
+#: run dead partway through its baseline. An evaluation that has not returned in eight
+#: hours is a different matter, and past that the run is reported as interrupted.
+EVAL_STALE_AFTER_SECONDS = 8 * 3600.0
+
 _PHASE_OF_KIND = {
     "intake": "intake", "target_profile": "intake", "seed_dir_created": "intake",
     "splits": "baseline", "splits_warning": "baseline", "baseline": "baseline",
@@ -398,8 +406,9 @@ def _phase_for(ev: dict) -> str:
     kind = str(ev.get("kind") or "")
     if kind in _PHASE_OF_KIND:
         return _PHASE_OF_KIND[kind]
-    if kind == "evaluate":
+    if kind in ("evaluate", "eval_start"):
         # The seed-on-val eval IS the baseline; the sealed test eval is finalize.
+        # ``eval_start`` is the same evaluation, just its opening bracket.
         if ev.get("split") == "test":
             return "finalize"
         if ev.get("tag") == "seed":
@@ -482,9 +491,25 @@ def _spend_metered(total_usd: float, paid_calls: int) -> bool:
     return not (paid_calls > 0 and total_usd == 0.0)
 
 
+def _eval_busy(ev: dict) -> str:
+    """"scoring <tag> on <split> (N rollouts)" — what an open ``eval_start`` is doing.
+
+    Only facts the event carries; a field the event omits is left out rather than
+    guessed at, so the sentence never over-claims.
+    """
+    split = ev.get("split") or "a split"
+    tag = ev.get("tag")
+    n = ev.get("rollouts")
+    who = f"candidate {tag}" if tag and tag != "seed" else "the seed"
+    if tag == "FINAL":
+        who = "the best candidate"
+    scale = f" ({int(n)} rollouts)" if isinstance(n, (int, float)) and n else ""
+    return f"scoring {who} on the {split} split{scale}"
+
+
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
                    has_candidates: bool, has_baseline: bool) -> tuple[str, str]:
-    """``(status, reason)`` for a run — the five outcomes an operator must tell apart.
+    """``(status, reason)`` for a run — the six outcomes an operator must tell apart.
 
     ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
     no finalize followed) · ``stalled`` (the algorithm declared convergence) ·
@@ -494,23 +519,22 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     The old logic collapsed everything that was not finalized into ``live``, so a run
     that died weeks ago still reported as running. Here the last event's timestamp is
     the evidence, and a truncated/killed run is never called live.
+
+    **Freshness is evidence, and it outranks "nothing has been scored yet."** A run
+    writes ``splits``/``splits_warning`` and then goes quiet for as long as the seed's
+    baseline takes — for spreadsheetbench that is ten agent rollouts, many minutes with
+    no event in between. Judging "no baseline and no candidate" *before* looking at the
+    clock stamped a red ``failed`` badge on every live snapshot taken during that window
+    (run 33492876620), which is the same class of lie as calling a dead run live: it
+    reports an outcome for a run that has not reached one. So the timestamps are read
+    first, and "nothing evaluated" is only a failure once the log has actually stopped
+    moving (or a cap/convergence already ended the run).
     """
     kinds = [str(e.get("kind") or "") for e in events]
     if not events:
         return "failed", "no events recorded — the run never started"
     if "finalize" in kinds:
         return "completed", "finalize sealed the test split"
-    if not has_baseline and not has_candidates:
-        return "failed", "no baseline and no candidate was ever evaluated"
-    if agent_mode and has_baseline and not has_candidates:
-        # ``cap-evolve run`` in agent mode deliberately stops after baseline and hands
-        # the loop to the coding agent. That is neither finished nor dead nor running —
-        # it is waiting for a human/agent to drive it, and saying "live" (or "failed")
-        # about it is the exact class of wrong status the old logic produced.
-        return "awaiting_agent", (
-            "baseline is done and `cap-evolve run` handed off — the agent has not "
-            "committed a candidate yet (agent-mode runs end by running the finalize "
-            "phase script)")
 
     last_t = 0.0
     for e in reversed(events):
@@ -526,9 +550,61 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     stop_kinds = {"gepa_stop", "convergence"}
     stopped = next((k for k in reversed(kinds) if k in stop_kinds), None)
 
-    fresh = silent is not None and silent < STALE_AFTER_SECONDS
-    if fresh and not exhausted and not stopped:
-        return "running", f"last event {silent:.0f}s ago"
+    # An ``eval_start`` that no ``evaluate`` has closed means a split is provably being
+    # scored right now, and evaluations log nothing while they run — so the silence is
+    # expected and gets the wider window. `open_eval` is the event itself, so the reason
+    # string can name what the run is busy with instead of inferring it.
+    open_eval = None
+    for e in reversed(events):
+        k = str(e.get("kind") or "")
+        if k == "evaluate":
+            break
+        if k == "eval_start":
+            open_eval = e
+            break
+    window = EVAL_STALE_AFTER_SECONDS if open_eval else STALE_AFTER_SECONDS
+    fresh = silent is not None and silent < window
+    alive = fresh and not exhausted and not stopped
+
+    if not has_baseline and not has_candidates:
+        if alive:
+            # The phase that produces the very first number has not returned yet. That
+            # is progress, not an outcome, and must never be reported as one.
+            return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+                               if open_eval else
+                               "the seed's baseline is still being scored — no candidate "
+                               f"has been evaluated yet; last event {silent:.0f}s ago")
+        why = "no baseline and no candidate was ever evaluated"
+        if exhausted:
+            return "failed", f"{why} ({exhausted})"
+        if stopped:
+            return "failed", f"{why} (algorithm stopped: {stopped})"
+        if silent is None:
+            return "failed", f"{why}; events carry no timestamps"
+        if open_eval is not None:
+            # It started measuring and never came back. "failed — nothing ran" would be
+            # wrong about the one thing that is certain: something did run.
+            return "interrupted", (
+                f"{_eval_busy(open_eval)} and never returned — silent for "
+                f"{silent / 60.0:.0f} min, so {why}")
+        return "failed", f"{why}; silent for {silent / 60.0:.0f} min"
+    if agent_mode and has_baseline and not has_candidates and not (alive and open_eval):
+        # ``cap-evolve run`` in agent mode deliberately stops after baseline and hands
+        # the loop to the coding agent. That is neither finished nor dead nor running —
+        # it is waiting for a human/agent to drive it, and saying "live" (or "failed")
+        # about it is the exact class of wrong status the old logic produced.
+        #
+        # An OPEN eval is the one thing that overrides it: "awaiting" asserts that
+        # nothing is happening, and an evaluation in flight is a counter-example — the
+        # agent is scoring its first candidate right now, not waiting to be driven.
+        return "awaiting_agent", (
+            "baseline is done and `cap-evolve run` handed off — the agent has not "
+            "committed a candidate yet (agent-mode runs end by running the finalize "
+            "phase script)")
+
+    if alive:
+        return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+                           if open_eval else f"last event {silent:.0f}s ago")
     if stopped:
         return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
     if exhausted:
@@ -1598,11 +1674,24 @@ def reduce_run(run_dir) -> dict:
         "freeform": algorithm in ("evograph", "agent-optimize"),
     }
 
+    now = _now()
     status, status_reason = _derive_status(
-        events=events, now=_now(), budget=(run_dir.budget if sp is not None else None),
+        events=events, now=now, budget=(run_dir.budget if sp is not None else None),
         spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
         has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None)
     ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
+
+    # Elapsed wall time. For a finished run that is first event → last event. For a run
+    # that is STILL RUNNING the last event is not the end, so measuring to it reports
+    # "0s elapsed" for a job nine minutes into its baseline — a number that invites the
+    # reader to conclude nothing is happening. A live run is therefore measured to now,
+    # and ``elapsed_open`` tells the renderer the interval has no end yet so it can
+    # label it that way instead of implying a final duration.
+    elapsed_open = status == "running" and bool(ts)
+    if elapsed_open:
+        elapsed_seconds = round(now - min(ts), 1)
+    else:
+        elapsed_seconds = round(max(ts) - min(ts), 1) if len(ts) > 1 else None
 
     delta_pct = None
     if baseline_val not in (None, 0) and best_val is not None:
@@ -1621,10 +1710,13 @@ def reduce_run(run_dir) -> dict:
         "status_reason": status_reason,
         "started_t": (min(ts) if ts else None),
         "last_event_t": (max(ts) if ts else None),
-        # Real elapsed wall time between first and last event — distinct from
+        # Real elapsed wall time: first event → last event for a finished run, first
+        # event → now while the run is still live (see elapsed_open). Distinct from
         # wall_clock_seconds, which is the SUM of measured optimizer+runner+intake time
         # and therefore excludes idle/queueing gaps.
-        "elapsed_seconds": (round(max(ts) - min(ts), 1) if len(ts) > 1 else None),
+        "elapsed_seconds": elapsed_seconds,
+        # True ⇒ elapsed_seconds is still growing; render it as "so far", not a total.
+        "elapsed_open": elapsed_open,
         "event_count": len(events),
         "splits": splits_info,
         "gate_decisions": gate_decisions,
@@ -2115,7 +2207,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(S.algorithm)head.append($('span',{class:'pill',style:'color:var(--accent);border-color:#7c5cff66',
     text:S.algorithm+(S.algorithm_source?' · from '+S.algorithm_source:'')}));
   head.append($('span',{class:'pill',text:S.test_sealed?'test sealed':'test not sealed'}));
-  if(S.elapsed_seconds!=null)head.append($('span',{class:'muted num',text:dsecs(S.elapsed_seconds)+' elapsed'}));
+  if(S.elapsed_seconds!=null)head.append($('span',{class:'muted num',text:dsecs(S.elapsed_seconds)+(S.elapsed_open?' elapsed so far':' elapsed')}));
   s.append(head);
   if(S.status_reason)s.append($('p',{class:'muted',style:'margin:0 0 10px',text:S.status_reason}));
   const sp=S.splits;

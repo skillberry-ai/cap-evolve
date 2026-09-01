@@ -382,6 +382,21 @@ def evaluate_candidate(
     # first time spreadsheetbench actually scored above zero. Wrapping here also makes
     # real stdout never the "current" redirect target inside the thread pool, which is
     # exactly the invariant run_trials_pool documents for its own thread-safety.
+    # An evaluation is the longest silent stretch in a run: nothing else is logged
+    # between here and the closing ``evaluate`` event, and a real split can take from
+    # minutes (10 spreadsheetbench smoke tasks) to hours (639 test tasks, or swebench
+    # with per-task containers). A reader — human or reducer — that only sees the event
+    # log therefore cannot tell "scoring in progress" from "process died", and the
+    # dashboard resolved that ambiguity by stamping ``failed`` on healthy live runs
+    # (run 33492876620). This event says which split/tag is in flight and how much work
+    # it is, so the state during the silence is recorded rather than guessed. It pairs
+    # with the ``evaluate`` event below: an ``eval_start`` with no ``evaluate`` after it
+    # is an evaluation that never returned.
+    run_dir.log_event("eval_start", split=split, tag=tag, n_tasks=len(tasks),
+                      n_trials=n_trials, workers=workers,
+                      rollouts=len(tasks) * max(1, int(n_trials)),
+                      **({"subset": True} if ids is not None else {}))
+
     with contextlib.redirect_stdout(sys.stderr), _live(adapter, candidate_dir) as ctx:
         if has_run_trials:
             # Adapter-owned fast path: ask for ALL trials in one batch

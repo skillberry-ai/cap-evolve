@@ -129,6 +129,178 @@ def test_status_failed_when_nothing_ran():
         assert s["status"] == "failed"
 
 
+def _startup_events(t0):
+    """The first two events a real run writes: the split warning and the split sizes.
+
+    Nothing is scored yet — a long baseline (spreadsheetbench: 10 tasks of agent
+    rollouts) can sit here for many minutes before the next event lands.
+    """
+    return [
+        {"t": t0, "kind": "splits_warning", "msg": "test overlaps train/val"},
+        {"t": t0 + 0.002, "kind": "splits", "train": [1], "val": [2], "test": [2],
+         "seed": 0},
+    ]
+
+
+def test_status_running_while_the_baseline_is_still_being_scored():
+    """A live run that has not finished its baseline is RUNNING, not failed.
+
+    Regression: run 33492876620's live snapshot showed a red `failed` badge on a
+    spreadsheetbench job that was 9 minutes into its baseline. "Nothing evaluated
+    yet" was checked before the freshness evidence, so every live snapshot taken
+    before the first `baseline` event libelled a healthy run as dead.
+    """
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(
+            _mk(Path(d), events=_startup_events(NOW - 9 * 60)))["summary"]
+        assert s["status"] == "running", s["status_reason"]
+        assert "baseline" in s["status_reason"]
+
+
+def test_status_failed_when_a_run_died_before_evaluating_anything():
+    """The same shape, gone silent: that IS a failure and must still say so."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(
+            _mk(Path(d), events=_startup_events(NOW - 5 * 24 * 3600)))["summary"]
+        assert s["status"] == "failed"
+        assert "no baseline and no candidate was ever evaluated" in s["status_reason"]
+
+
+def test_status_failed_when_the_budget_ran_out_before_anything_was_evaluated():
+    from cap_evolve import dashboard
+    from cap_evolve import Budget
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk(Path(d), events=_startup_events(NOW - 30),
+                 budget=Budget(max_iterations=1))
+        rd.update_spent(iterations=1)
+        s = dashboard.reduce_run(rd)["summary"]
+        assert s["status"] == "failed"
+
+
+def test_elapsed_of_a_live_run_is_measured_to_now_not_to_its_last_event():
+    """`0s elapsed` on a run that has been alive nine minutes is the same class of
+    intermediate-state lie as the red badge: first-to-last-event is not elapsed while
+    the run is still writing events."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(
+            _mk(Path(d), events=_startup_events(NOW - 9 * 60)))["summary"]
+        assert s["elapsed_open"] is True
+        assert s["elapsed_seconds"] >= 9 * 60
+
+
+def test_elapsed_of_a_finished_run_stays_first_to_last_event():
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=_events(t0=NOW - 3600),
+                                     baseline=_BASELINE,
+                                     final={"test": {"reward": 0.8},
+                                            "best_id": "cand_0001"}))["summary"]
+        assert s["elapsed_open"] is False
+        assert s["elapsed_seconds"] == 6.0
+
+
+def test_an_agent_mode_run_scoring_a_candidate_is_running_not_awaiting():
+    """`awaiting_agent` asserts that nothing is happening. An open eval disproves it:
+    the agent is scoring its first candidate right now, not waiting to be driven."""
+    from cap_evolve import dashboard
+    t0 = NOW - 120
+    ev = _events(t0=t0, finalize=False)[:3] + [
+        {"t": NOW - 60, "kind": "eval_start", "split": "val", "tag": "cand_0001",
+         "rollouts": 30},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk(Path(d), events=ev, baseline=_BASELINE,
+                 spec="algorithm_skill: agent-optimize\norchestration_mode: agent\n")
+        s = dashboard.reduce_run(rd)["summary"]
+        assert s["status"] == "running", s["status_reason"]
+        assert "candidate cand_0001" in s["status_reason"]
+
+
+def test_an_agent_mode_handoff_with_a_closed_eval_still_awaits_the_agent():
+    """The override is only for an eval still in flight — a finished baseline eval must
+    not turn the genuine handoff state into a claim that work is under way."""
+    from cap_evolve import dashboard
+    t0 = NOW - 120
+    ev = _events(t0=t0, finalize=False)[:3]
+    ev.insert(1, {"t": t0 + 0.5, "kind": "eval_start", "split": "val", "tag": "seed"})
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk(Path(d), events=ev, baseline=_BASELINE,
+                 spec="algorithm_skill: agent-optimize\norchestration_mode: agent\n")
+        assert dashboard.reduce_run(rd)["summary"]["status"] == "awaiting_agent"
+
+
+def test_an_open_eval_is_running_far_past_the_ordinary_stale_window():
+    """Nothing is logged INSIDE an evaluation, and a real one runs for hours (639 test
+    tasks; swebench builds a container per task). An `eval_start` with no closing
+    `evaluate` is positive evidence that the silence is work, so the 45-min window that
+    is right for the step loop must not be applied to it."""
+    from cap_evolve import dashboard
+    t0 = NOW - 3 * 3600
+    ev = _startup_events(t0) + [
+        {"t": t0 + 1, "kind": "eval_start", "split": "val", "tag": "seed",
+         "n_tasks": 10, "n_trials": 1, "workers": 8, "rollouts": 10},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=ev))["summary"]
+        assert s["status"] == "running", s["status_reason"]
+        assert "the seed" in s["status_reason"] and "val" in s["status_reason"]
+
+
+def test_an_eval_that_never_returned_is_interrupted_not_failed():
+    """"failed — nothing ran" is wrong about the one certain fact: something did run."""
+    from cap_evolve import dashboard
+    t0 = NOW - 20 * 3600
+    ev = _startup_events(t0) + [
+        {"t": t0 + 1, "kind": "eval_start", "split": "val", "tag": "seed",
+         "rollouts": 10},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=ev))["summary"]
+        assert s["status"] == "interrupted"
+        assert "never returned" in s["status_reason"]
+
+
+def test_a_closed_eval_puts_the_ordinary_stale_window_back():
+    """The wide window is only for an OPEN eval. Once `evaluate` closes it, a silent run
+    is judged on the normal 45 minutes again."""
+    from cap_evolve import dashboard
+    t0 = NOW - 3 * 3600
+    ev = _events(t0=t0, finalize=False)
+    ev.insert(1, {"t": t0 + 0.5, "kind": "eval_start", "split": "val", "tag": "seed"})
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=ev, baseline=_BASELINE))["summary"]
+        assert s["status"] == "interrupted"
+
+
+def test_a_running_run_says_which_split_it_is_scoring():
+    from cap_evolve import dashboard
+    ev = _events(t0=NOW - 60, finalize=False) + [
+        {"t": NOW - 30, "kind": "eval_start", "split": "test", "tag": "FINAL",
+         "rollouts": 20},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        s = dashboard.reduce_run(_mk(Path(d), events=ev, baseline=_BASELINE))["summary"]
+        assert s["status"] == "running"
+        assert "the best candidate" in s["status_reason"]
+        assert "test split (20 rollouts)" in s["status_reason"]
+
+
+def test_eval_start_is_filed_under_the_phase_its_evaluation_belongs_to():
+    from cap_evolve import dashboard
+    ev = _startup_events(NOW - 60) + [
+        {"t": NOW - 59, "kind": "eval_start", "split": "val", "tag": "seed"},
+        {"t": NOW - 58, "kind": "eval_start", "split": "test", "tag": "FINAL"},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        rows = dashboard.reduce_run(_mk(Path(d), events=ev))["summary"]["log"]
+        by_kind = [(r["kind"], r["phase"], r["detail"].get("split")) for r in rows]
+        assert ("eval_start", "baseline", "val") in by_kind
+        assert ("eval_start", "finalize", "test") in by_kind
+
+
 # ------------------------------------------------------------ algorithm ----
 
 def test_algorithm_inferred_from_an_algorithm_specific_event():

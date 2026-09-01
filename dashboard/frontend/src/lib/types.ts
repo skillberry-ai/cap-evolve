@@ -255,8 +255,12 @@ export interface RunSummaryDetail {
   status_reason?: string
   started_t?: number | null
   last_event_t?: number | null
-  /** Real first-to-last-event wall time (includes idle gaps, unlike wall_clock_seconds). */
+  /** Real wall time: first event → last event when the run is over, first event → now
+   *  while it is still running (see elapsed_open). Includes idle gaps, unlike
+   *  wall_clock_seconds. */
   elapsed_seconds?: number | null
+  /** True ⇒ elapsed_seconds has no end yet and is still growing; label it "so far". */
+  elapsed_open?: boolean
   event_count?: number
   capabilities?: RunCapabilities
   splits?: SplitsInfo | null

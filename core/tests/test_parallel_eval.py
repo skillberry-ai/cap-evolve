@@ -148,3 +148,26 @@ def test_event_records_the_worker_count(tmp_path):
 
     assert _evals(rd_par)[-1]["workers"] == 4
     assert "workers" not in _evals(rd_ser)[-1]
+
+
+def test_an_evaluation_brackets_itself_in_the_event_log(tmp_path):
+    """`evaluate_candidate` logs nothing between its start and the closing `evaluate`,
+    and that stretch is the longest silence in a run. Without an opening bracket a
+    reader cannot tell "scoring in progress" from "process died" — which is how the live
+    dashboard came to stamp `failed` on a healthy spreadsheetbench baseline
+    (run 33492876620). The bracket must carry the scale of the work, not just its name.
+    """
+    import json
+
+    rd, res = _evaluate(_DeterministicAdapter(), tmp_path, "brk", workers=2, n_trials=3)
+    events = [json.loads(l) for l in rd.events_path.read_text().splitlines() if l.strip()]
+    starts = [e for e in events if e["kind"] == "eval_start"]
+    assert len(starts) == 1
+    s = starts[0]
+    assert (s["split"], s["tag"], s["n_tasks"], s["n_trials"], s["workers"]) == (
+        "val", "brk", len(TASK_IDS), 3, 2)
+    assert s["rollouts"] == len(TASK_IDS) * 3
+    # Opening bracket strictly before the closing one, and exactly one pair.
+    kinds = [e["kind"] for e in events if e["kind"] in ("eval_start", "evaluate")]
+    assert kinds == ["eval_start", "evaluate"]
+    assert res.reward is not None

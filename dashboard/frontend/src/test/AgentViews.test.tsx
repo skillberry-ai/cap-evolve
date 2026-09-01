@@ -96,6 +96,20 @@ describe('KpiStrip', () => {
     expect(screen.getByText('test — not sealed yet')).toBeInTheDocument()
   })
 
+  it('does not blame a zero baseline when no baseline was measured at all', () => {
+    // Live snapshot of run 33492876620: the baseline had not finished, so delta_pct was
+    // null because there was NOTHING to divide — not because the baseline was 0.0. The
+    // hint stated a reason the data does not support.
+    render(<KpiStrip summary={summary({ baseline_val: null, best_val: null })} />)
+    expect(screen.queryByText(/off a zero baseline/)).toBeNull()
+    expect(screen.getByText(/no baseline measured yet/)).toBeInTheDocument()
+  })
+
+  it('still blames the zero baseline when the baseline really is 0', () => {
+    render(<KpiStrip summary={summary({ baseline_val: 0, best_val: 0.4, delta_abs: 0.4 })} />)
+    expect(screen.getByText(/off a zero baseline/)).toBeInTheDocument()
+  })
+
   it('says spend was not reported rather than showing a confident $0.000', () => {
     // The real tau2 run made 68 rollouts through a proxy that reports no cost, so the
     // ledger sums to exactly $0. "$0.000" would assert a fact nobody measured.
