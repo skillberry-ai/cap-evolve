@@ -798,10 +798,16 @@ def _read_config(root: Path) -> dict:
     if project_dir is None:
         return {}
     from .specfile import read_yaml
-    try:
-        spec = read_yaml((project_dir / "capevolve.yaml").read_text(encoding="utf-8")) or {}
-    except OSError:
-        spec = {}
+    # Joined through _safe_subpath like every other path here: the spec is read (and its
+    # presence reported) only when it is proven inside the project dir, so a capevolve.yaml
+    # symlinked out of it is treated as absent rather than followed.
+    spec_file = _safe_subpath(project_dir, "capevolve.yaml")
+    spec = {}
+    if spec_file is not None:
+        try:
+            spec = read_yaml(spec_file.read_text(encoding="utf-8")) or {}
+        except OSError:
+            spec = {}
     groups: dict[str, list] = {}
     for k, v in spec.items():
         groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
@@ -822,7 +828,7 @@ def _read_config(root: Path) -> dict:
         "project_dir": str(project_dir),
         # True ⇒ the project dir exists but has no capevolve.yaml. The section says so and still
         # lists the artifacts that ARE there, instead of disappearing without explanation.
-        "spec_missing": not (project_dir / "capevolve.yaml").is_file(),
+        "spec_missing": spec_file is None or not spec_file.is_file(),
         "spec_groups": spec_groups,
         "project_md": project_md,
         "files": files,
