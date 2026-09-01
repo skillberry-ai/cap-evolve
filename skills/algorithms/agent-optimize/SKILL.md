@@ -128,9 +128,8 @@ Then: **no nuance clauses**; **exemption clauses do not scope** (still suppresse
 guard to a prose rule where the capability owns its tools** — prose when the agent lacks a decision
 criterion, code when it has one and violates it. Costs, and the guard-closure trap: `edit-design-lessons.md`.
 
-**Every round evaluates a null control**: copy the current best byte-for-byte into `$R/work/ctl_null`
-and evaluate it like any candidate — first, not after a surprising result. That eval is the round's own
-noise floor, and a candidate inside that band is not evidence of anything. And **read
+**Every round evaluates a null control**: a byte-for-byte copy of the current best, evaluated like any
+candidate — first, not after a surprising result. That eval is the round's own noise floor. And **read
 `$R/rejected.jsonl` and make each proposal STRUCTURALLY different from what is in it**: a different
 form, surface, or cluster — never a narrower version of a rejected rule.
 
@@ -205,8 +204,8 @@ python "$A/round.py" --run-dir "$R" --project "$P" \
        --n-trials <num_trials> --k-se <gate_k_se> --concurrency 8 --max-parallel 2
 ```
 
-`--concurrency` is the gate's *measurement* concurrency and defaults deliberately low; `round.py` warns
-once you raise it past what a gate can resolve, so never raise it to buy wall clock. Read
+`--concurrency` is the gate's *measurement* concurrency and defaults deliberately low; `round.py`
+refuses one too hot to resolve its own verdict, so never raise it to buy wall clock. Read
 `noise_floor_from_control` FIRST — a candidate inside that band is not evidence, whatever its verdict.
 `round.py` never commits: which part of a bundle to keep is your judgement.
 
@@ -251,7 +250,8 @@ a syntactic property; composition is an empirical one.
 ## Measurement discipline
 
 **Measure step 2's null control twice**: the gap between two byte-identical parents is the round's bar, and a
-bar smaller than that is not a gate. Two more rules; the rest — ceiling arithmetic, the binomial floor,
+bar smaller than that is not a gate. `round.py` does that, and reuses the replicates while `best_id` is
+unchanged (`control_reuse`). Two more rules; the rest — ceiling arithmetic, the binomial floor,
 mechanism-vs-artifact designs, gating the sum not each addend, the sign test below the floor — is in
 [`references/measured-lessons.md`](references/measured-lessons.md).
 

@@ -24,6 +24,11 @@ of being re-improvised in prose on every iteration:
    from splitting into three clusters under three phrasings.
 
 Everything is sorted, so the same input always yields byte-identical output.
+
+One failure class is detected MECHANICALLY from the rollout instead of from the feedback
+string — see ``narrated_without_action``. It is a known LLM-agent failure mode rather than
+any benchmark's own, and the feedback a scorer writes for it is indistinguishable from the
+feedback for a genuinely wrong write, so the lexical key above cannot separate the two.
 """
 
 from __future__ import annotations
@@ -64,6 +69,103 @@ OVERLAP_MIN = 0.5
 # is corpus-relative rather than a hardcoded word list — mechanical and benchmark-agnostic
 # by construction.
 CORPUS_STOP_FRAC = 0.65
+
+
+#: The name of the mechanically-detected cluster (see ``narrated_without_action``).
+NARRATED_WITHOUT_ACTION = "narrated_without_action"
+
+#: A final message CLAIMING a state change happened. Generic English completion frames
+#: ("has been updated", "I have cancelled it", "was successfully processed") — the verbs are
+#: ordinary state-change English, not any benchmark's vocabulary.
+_COMPLETION_RE = re.compile(
+    r"\b(?:has|have|had|been|was|were|is|are|i've|ive)\b[^.!?\n]{0,60}?\b(?:successfully\s+)?"
+    r"(?:updated|cancell?ed|canceled|booked|rebooked|changed|processed|created|deleted|"
+    r"removed|submitted|scheduled|rescheduled|applied|completed|refunded|transferred|"
+    r"modified|saved|sent|issued|placed|added|registered|assigned|closed|reset)\b",
+    re.IGNORECASE)
+
+#: Leading verb of a tool name that only READS. Anything else is treated as possibly
+#: mutating, so the classification errs towards NOT flagging. Adapters that know better can
+#: say so per call (``{"mutates": false}``), which wins over this heuristic.
+# ponytail: name-prefix heuristic; adapters can carry an explicit `mutates` flag instead.
+_READ_VERBS = frozenset("""
+get list search find read lookup fetch view show query count describe inspect
+calculate compute check validate verify think plan note summarize compare
+""".split())
+
+
+def _call_names(rollout: dict) -> list[str]:
+    """Every tool name the rollout reports, from the two places core's shape puts them.
+
+    ``Rollout.tool_calls`` is the declared field; a runner that stores an OpenAI-style
+    message list in ``Rollout.trace`` carries them per message instead. Both are generic
+    core/wire shapes — no runner-specific parsing.
+    """
+    out: list[str] = []
+
+    def add(call) -> None:
+        if isinstance(call, str):
+            out.append(call)
+        elif isinstance(call, dict):
+            fn = call.get("function")
+            name = call.get("name") or (fn.get("name") if isinstance(fn, dict) else None)
+            if name:
+                out.append(str(name))
+                if call.get("mutates") is True:
+                    out.append("!mutates")     # explicit adapter signal, see _mutates
+    for call in rollout.get("tool_calls") or []:
+        add(call)
+    trace = rollout.get("trace")
+    if isinstance(trace, list):
+        for msg in trace:
+            if not isinstance(msg, dict):
+                continue
+            for call in msg.get("tool_calls") or []:
+                add(call)
+    return out
+
+
+def _mutates(name: str) -> bool:
+    if name == "!mutates":
+        return True
+    head = re.split(r"[^a-z0-9]+", name.strip().lower(), maxsplit=1)[0]
+    return head not in _READ_VERBS
+
+
+def _final_text(rollout: dict) -> str:
+    out = rollout.get("output")
+    if isinstance(out, str) and out.strip():
+        return out
+    if out is not None and not isinstance(out, (list, dict)):
+        return str(out)
+    trace = rollout.get("trace")
+    if isinstance(trace, list):
+        for msg in reversed(trace):
+            if isinstance(msg, dict) and msg.get("content"):
+                return str(msg["content"])
+    return "" if out is None else str(out)
+
+
+def narrated_without_action(rollout: dict) -> bool:
+    """Did the agent NARRATE a state change it never executed?
+
+    A well-documented LLM-agent failure mode: the model treats its own completion signal
+    (usually the user's "yes, go ahead") as satisfying the task and substitutes a narration
+    of the change for the call that performs it. Mechanically: the final message claims a
+    state change happened, and no tool call in the whole trace could have made one.
+
+    Detected here rather than clustered from feedback because a scorer describes this
+    exactly as it describes a wrong write, so the two land in one cluster and the optimizer
+    ships an argument fix for a call that was never made.
+
+    Requires at least one observable tool call before flagging anything: with an empty
+    tool-call record there is no way to tell "the agent called nothing" from "this adapter
+    does not report calls", and guessing would flag every failure on such an adapter.
+    """
+    names = _call_names(rollout or {})
+    if not names or any(_mutates(n) for n in names):
+        return False
+    return bool(_COMPLETION_RE.search(_final_text(rollout or {})))
 
 
 def _stem(tok: str) -> str:

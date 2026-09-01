@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -48,40 +49,30 @@ HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 
 
-def _table_attempt(name: str, iteration: int) -> int | None:
-    """Attempt index encoded in a round-table filename, or None if it is a different round.
+def _all_tables(run_dir) -> list[tuple[int, int, Path]]:
+    """Every round table on disk as (iteration, attempt, path), oldest first.
 
-    Matched strictly rather than by glob: ``round_i1*.json`` also matches ``round_i10.json``, so
-    a glob would count iteration 10's tables as re-gates of iteration 1 and shift every name in
-    this round — quietly, and worse the further a run gets.
+    The name is matched strictly rather than by glob: ``round_i1*.json`` also matches
+    ``round_i10.json``, so a glob would count iteration 10's tables as re-gates of iteration 1
+    and shift every name in this round — quietly, and worse the further a run gets.
     """
-    stem = name.removesuffix(".json")
-    if stem == name:
-        return None
-    tail = stem.removeprefix(f"round_i{iteration}")
-    if tail == stem:
-        return None
-    if tail == "":
-        return 0
-    if tail.startswith(".r") and tail[2:].isdigit():
-        return int(tail[2:])
-    return None
-
-
-def _round_tables(run_dir) -> list[tuple[int, Path]]:
-    """This iteration's tables as (attempt, path), lowest attempt first."""
     work = run_dir.root / "work"
     if not work.is_dir():
         return []
-    it = int(run_dir.spent.iterations)
     found = []
     for path in work.iterdir():
         if not path.is_file():
             continue
-        att = _table_attempt(path.name, it)
-        if att is not None:
-            found.append((att, path))
+        m = re.fullmatch(r"round_i(\d+)(?:\.r(\d+))?\.json", path.name)
+        if m:
+            found.append((int(m.group(1)), int(m.group(2) or 0), path))
     return sorted(found)
+
+
+def _round_tables(run_dir) -> list[tuple[int, Path]]:
+    """This iteration's tables as (attempt, path), lowest attempt first."""
+    it = int(run_dir.spent.iterations)
+    return [(att, path) for i, att, path in _all_tables(run_dir) if i == it]
 
 
 def round_attempt(run_dir) -> int:
@@ -151,6 +142,76 @@ def prior_attempt_controls(run_dir) -> list[dict]:
             if isinstance(row, dict) and row.get("reward") is not None:
                 out.append({**row, "from_attempt": att})
     return out
+
+
+def measurement_context(split: str, n_trials: int, concurrency: int | None) -> dict:
+    """What a control replicate's reward is only comparable WITHIN.
+
+    Recorded in the table so a later round can tell whether an existing replicate was measured
+    under the same conditions. Trial count and load both move the reading — the concurrency
+    numbers this script refuses above are exactly that effect — so a replicate measured at a
+    different n or a different load is not a sample of this round's null.
+    """
+    return {"split": split, "n_trials": int(n_trials), "concurrency": concurrency}
+
+
+def _rollouts_present(run_dir, tag: str, split: str, n_trials: int) -> bool:
+    """Are ``tag``'s persisted rollouts still on disk at the trial depth this round needs?
+
+    Rollouts are ``<task>__<tag>__t<k>.json`` for k in range(n_trials), so the presence of the
+    LAST index is what says the measurement went as deep as this round is asking for.
+    """
+    d = run_dir.rollouts / split
+    return d.is_dir() and any(d.glob(f"*__{tag}__t{n_trials - 1}.json"))
+
+
+def reusable_controls(run_dir, best: str, measurement: dict, want: int) -> dict | None:
+    """Control replicates of THIS SAME parent, already measured in an EARLIER iteration.
+
+    A null control is a byte-identical copy of the parent, re-measured to establish the round's
+    noise floor. When ``best_id`` has not moved, the parent is the same bytes as it was, so its
+    noise floor has already been paid for and re-measuring it buys nothing: across six real runs
+    the controls consumed about 40% of every rollout spent, nearly as much as all candidates
+    combined. Reuse only removes the redundant re-measurement — the requirement itself is
+    untouched. A NEW parent (any accept) has no established floor and must be measured fresh,
+    which is what the ``parent.tag`` check below enforces.
+
+    Reuse requires ALL of:
+
+    * an earlier iteration's table whose ``parent.tag`` is the current ``best`` — i.e. the same
+      parent bytes were the parent then, so nothing has been accepted since;
+    * the same ``measurement`` context (split, trials, concurrency): a reading taken at a
+      different n or load is not a sample of this round's null;
+    * at least ``want`` replicates with a reward, all of whose rollouts are still on disk —
+      the gate re-reads them, so a pruned run dir falls back to measuring.
+
+    The most recent qualifying iteration wins. Returns None when nothing qualifies, which is the
+    signal to measure.
+    """
+    it = int(run_dir.spent.iterations)
+    for i, _att, path in reversed(_all_tables(run_dir)):
+        if i >= it:
+            continue                      # this iteration's own attempts: prior_attempt_controls
+        try:
+            table = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(table, dict):
+            continue
+        if (table.get("parent") or {}).get("tag") != best:
+            continue
+        if table.get("measurement") != measurement:
+            continue
+        rows = [r for r in (table.get("control_replicates") or [])
+                if isinstance(r, dict) and r.get("reward") is not None and r.get("tag")]
+        if len(rows) < want:
+            continue
+        if not all(_rollouts_present(run_dir, r["tag"], measurement["split"],
+                                     measurement["n_trials"]) for r in rows):
+            continue
+        return {"from_iteration": i, "from_table": str(path),
+                "tags": [str(r["tag"]) for r in rows]}
+    return None
 
 
 def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
@@ -228,6 +289,12 @@ def main(argv=None) -> int:
     p.add_argument("--allow-high-concurrency", action="store_true",
                    help="run the gate above MAX_RESOLVING_CONCURRENCY anyway. An explicit, "
                         "recorded choice: the verdicts cannot resolve a small effect")
+    p.add_argument("--no-reuse-control", action="store_true",
+                   help="measure fresh control replicates even when this parent's own replicates "
+                        "already exist from an earlier round. Reuse is on by default and is "
+                        "only ever applied when best_id has NOT changed since those replicates "
+                        "were measured, so the same bytes are not re-measured every round; a new "
+                        "parent always gets fresh ones.")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
     args = p.parse_args(argv)
@@ -290,8 +357,29 @@ def main(argv=None) -> int:
     STEM = table_stem(run_dir)
     PRIOR_CTL = prior_attempt_controls(run_dir)
     CTL = control_tag(run_dir)
+    MEASUREMENT = measurement_context(args.split, args.n_trials, args.concurrency)
     ctl_tags: list[str] = []
-    if not args.no_control:
+    REUSED = None
+    # Not under --gate-against control: that mode's whole premise is a control measured
+    # CONCURRENTLY with the candidates, so that the drift between the two cancels. A reused
+    # replicate is by definition not concurrent, and pairing against it would put the drift
+    # back into every delta while the output still claimed it had been removed. Reuse is a
+    # rollout saving, never a change to what a comparison means.
+    # Nor on a re-gate: a second attempt at the same iteration is run precisely to BUY more
+    # replicate evidence, so handing it the readings it already has would answer the question
+    # with the numbers that failed to answer it.
+    if not args.no_control and not args.no_reuse_control \
+            and args.gate_against != "control" and ATTEMPT == 0:
+        # Same parent bytes as the round that already measured this parent's noise floor, so
+        # there is nothing new to learn from measuring it again — see reusable_controls.
+        REUSED = reusable_controls(run_dir, best, MEASUREMENT,
+                                   max(1, args.control_replicates))
+    if REUSED:
+        # No copytree, no eval: the rollouts these tags name are already on disk and the gate
+        # reads them from there, so everything downstream is unchanged.
+        ctl_tags = REUSED["tags"]
+        CTL = ctl_tags[0]
+    elif not args.no_control:
         # MORE THAN ONE control replicate, because one control does not bound the noise. Measured
         # here: a byte-identical control, re-run on the SAME seeds at temperature 0, moved
         # 0.6467 -> 0.7267 — a paired delta of +0.0800 that PASSES a k_se=1.0 bar on identical
@@ -311,6 +399,10 @@ def main(argv=None) -> int:
         evals = list(pool.map(
             lambda t: _evaluate(Path(args.run_dir), project, t, args.split,
                                 args.n_trials, args.concurrency), tags))
+    if REUSED:
+        # Reused replicates are gated exactly like measured ones (gate_check reads persisted
+        # rollouts), so they join the row set here without an eval behind them.
+        evals = [{"tag": t, "rc": 0, "reused": True} for t in ctl_tags] + evals
 
     # Gate serially against the CURRENT best; the driver commits, so best_id is stable here.
     gate_ref = best
@@ -362,6 +454,8 @@ def main(argv=None) -> int:
             "regressions": g.get("regressions"),
             "eval_rc": ev.get("rc"),
             "eval_error": ev.get("error"),
+            # True only for a control replicate this round read back instead of measuring.
+            "reused": bool(ev.get("reused")),
         })
 
     # A parent-gated round has ALREADY measured the drift-free comparison — it just was not
@@ -389,7 +483,14 @@ def main(argv=None) -> int:
                 "reading": ("the same comparison with the DRIFT removed: this candidate against a "
                             "byte-identical control measured in this round rather than against a "
                             "reward measured earlier. Where the two disagree, the difference is "
-                            "drift, not the edit."),
+                            "drift, not the edit."
+                            if not REUSED else
+                            f"this candidate against a byte-identical control of the SAME parent "
+                            f"measured in iteration {REUSED['from_iteration']} and reused here. "
+                            "It removes the parent's own measurement error but NOT the drift "
+                            "since that iteration, so it is not the drift-free comparison a "
+                            "concurrent control gives — re-run with --no-reuse-control (or "
+                            "--gate-against control, which never reuses) to buy that."),
             }
 
     # Would the verdict have survived a different control replicate? On run 32871360361 round 3
@@ -485,6 +586,32 @@ def main(argv=None) -> int:
             if gate_ref != best else
             "gated against the parent's stored reward, so this round cannot see how far that "
             "reward has drifted since it was measured; --gate-against control measures it."),
+        # What these rewards are comparable within, and therefore what a LATER round has to
+        # match before it may reuse this round's control replicates (see reusable_controls).
+        "measurement": MEASUREMENT,
+        # Did this round pay for its own control replicates, or read back the ones this SAME
+        # parent already has? Reuse happens only while best_id has not moved: the parent is the
+        # same bytes, so its noise floor is already established. Any accept invalidates it and
+        # the next round measures fresh — the two-replicate requirement is unchanged either way.
+        "control_reuse": ({"reused": True, **REUSED,
+                           "rollouts_saved": len(REUSED["tags"]),
+                           "reading": "the control replicates below were measured in iteration "
+                                      f"{REUSED['from_iteration']}, when this same parent was "
+                                      "already the parent. No new control rollouts were spent. "
+                                      "The replicate GAP is still this parent's own null; what "
+                                      "it no longer contains is drift since that iteration, so "
+                                      "prefer the parent-mode reading of `evidence_bar` here."}
+                          if REUSED else
+                          {"reused": False,
+                           "reason": ("--no-control" if args.no_control else
+                                      "--no-reuse-control" if args.no_reuse_control else
+                                      "--gate-against control needs a CONCURRENT control"
+                                      if args.gate_against == "control" else
+                                      "a re-gate is run to BUY replicate evidence, so it always "
+                                      "measures" if ATTEMPT else
+                                      "no earlier round measured THIS parent's replicates under "
+                                      "this same measurement context — a new parent has no "
+                                      "established noise floor, so it must be measured")}),
         "measurement_concurrency": args.concurrency,
         "concurrency_warning": conc_warning,
         "null_delta_between_control_replicates": null_delta,
