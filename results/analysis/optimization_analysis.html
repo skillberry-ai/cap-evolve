@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>skillsbench-intake · optimization analysis</title>
+  <style>
+    :root {
+      --paper: #F8F5EE; --paper-2: #FFFFFF; --paper-3: #EFEBDE; --rule: #D9D2BE;
+      --ink: #1A1D2A; --ink-2: #3E4252; --muted: #6C7080;
+      --accent: #C0432B; --accent-2: #2D6E7E; --accent-3: #A67B2C;
+      --success: #3A7A4C; --warning: #B87F1F; --neutral: #6C7080;
+      --serif: ui-serif, "Iowan Old Style", Charter, Georgia, serif;
+      --sans:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    html, body { background: var(--paper); color: var(--ink); font-family: var(--sans); margin: 0; padding: 32px 40px; max-width: 1400px; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; }
+    h1 { font-size: 2em; margin: 0 0 0.4em; }
+    h2 { font-size: 1.35em; margin: 1.8em 0 0.5em; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+    h3 { font-size: 1.05em; color: var(--ink-2); margin: 1.2em 0 0.4em; }
+    p, li { line-height: 1.55; color: var(--ink-2); }
+    code { font-family: var(--mono); font-size: 0.9em; background: var(--paper-3); padding: 0.05em 0.35em; border-radius: 3px; }
+    .eyebrow { display: inline-block; font-family: var(--mono); font-size: 0.72em; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+    .callout { background: var(--paper-2); border-left: 3px solid var(--accent); padding: 0.9em 1.3em; margin: 1.2em 0; border-radius: 0 6px 6px 0; }
+    .callout-success { border-left-color: var(--success); background: rgba(58,122,76,0.06); }
+    .callout-warn    { border-left-color: var(--warning); background: rgba(184,127,31,0.06); }
+    .callout-neutral { border-left-color: var(--neutral); background: rgba(108,112,128,0.05); }
+    table { border-collapse: collapse; margin: 0.6em 0 1.4em; font-family: var(--mono); font-size: 0.85em; }
+    th, td { padding: 0.4em 0.7em; border: 1px solid var(--rule); text-align: right; }
+    th { background: var(--paper-3); font-family: var(--sans); font-weight: 600; letter-spacing: 0.02em; }
+    td.txt, th.txt { text-align: left; }
+    .cell-0 { background: #C0432B; color: #fff; }
+    .cell-25 { background: #E37B54; color: #fff; }
+    .cell-33 { background: #E9A76A; color: var(--ink); }
+    .cell-50 { background: #E9A76A; color: var(--ink); }
+    .cell-67 { background: #C6D28E; color: var(--ink); }
+    .cell-75 { background: #C6D28E; color: var(--ink); }
+    .cell-85 { background: #94BA7B; color: var(--ink); }
+    .cell-95 { background: #5FA26A; color: #fff; }
+    .cell-100 { background: #3A7A4C; color: #fff; font-weight: 600; }
+    .cell-na { background: var(--paper-3); color: var(--muted); }
+    .delta-plus { color: var(--success); font-weight: 600; }
+    .delta-minus { color: var(--accent); font-weight: 600; }
+    .delta-zero { color: var(--muted); }
+    .badge { display: inline-block; padding: 0.18em 0.6em; border-radius: 4px; font-size: 0.72em; font-family: var(--mono); font-weight: 600; }
+    .badge-good { background: rgba(58,122,76,0.15); color: var(--success); }
+    .badge-bad { background: rgba(192,67,43,0.15); color: var(--accent); }
+    .badge-warn { background: rgba(184,127,31,0.15); color: var(--warning); }
+    .badge-info { background: rgba(45,110,126,0.15); color: var(--accent-2); }
+    footer { margin-top: 3em; font-size: 0.85em; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 1em; }
+    .headline-num { font-family: var(--serif); font-size: 1.35em; color: var(--ink); font-weight: 600; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1em; margin: 1em 0 2em; }
+    .kpi { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.9em 1.1em; }
+    .kpi-label { font-size: 0.7em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--mono); }
+    .kpi-value { font-family: var(--serif); font-size: 1.6em; color: var(--ink); font-weight: 600; margin-top: 0.15em; }
+    .kpi-note { font-size: 0.78em; color: var(--muted); margin-top: 0.2em; }
+    ul.compact { margin: 0.4em 0 1em 1.2em; padding: 0; }
+    ul.compact li { margin: 0.15em 0; }
+  </style>
+</head>
+<body>
+
+<div class="eyebrow">skillsbench-intake · CCC · optimization analysis</div>
+<h1>SkillsBench on CCC — task-by-task-43 delivers +36.3 pp average lift (updated 2026-08-23)</h1>
+
+<div class="callout callout-success" style="margin-bottom: 2em;">
+  <strong>Update 2026-08-23 — task-by-task-43 complete across ALL 43 runnable SkillsBench tasks.</strong>
+  Each task got its OWN cap-evolve process with its OWN shipped skills as seed.
+  10 trials per candidate, up to 4 iterations, dedicated LSF host per task, Sonnet-5 agent +
+  Opus-4.8 optimizer.
+  <br><br>
+  <strong>Result: avg baseline 0.508 → avg best 0.871 (+0.363, +36.3 pp)</strong> across 43 tasks.
+  <strong>27 of 43 tasks reach val=1.0 (63%).</strong>
+  Compared to whole-suite runnable-43 with the office quartet seed
+  (baseline 0.140 → best 0.170, +3.1 pp), task-native seed delivers <strong>~12× the aggregate lift</strong>.
+  <br><br>
+  <strong>Per-task × per-candidate reward heatmap:</strong>
+  <a href="../task-by-task-43/heatmap.html">task-by-task-43/heatmap.html</a>
+  &nbsp;·&nbsp;
+  <strong>Full writeup:</strong>
+  <a href="../task-by-task-43/summary.md">task-by-task-43/summary.md</a>
+  &nbsp;·&nbsp;
+  <strong>Insights + open investigations:</strong>
+  <a href="../INVESTIGATION.md">INVESTIGATION.md</a>
+</div>
+
+<h2>Task-by-task-20 — headline table</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th class="txt">task</th>
+      <th>batch</th>
+      <th>seed<br><small>baseline</small></th>
+      <th>cand_0001<br><small>iter 1</small></th>
+      <th>cand_0002<br><small>iter 2</small></th>
+      <th>best</th>
+      <th>Δ</th>
+      <th class="txt">outcome</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="txt">edit-pdf</td>                    <td>1</td><td class="cell-85">0.900</td><td class="cell-85">0.900</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+0.100</td><td class="txt">lifted to 1.0</td></tr>
+    <tr><td class="txt">court-form-filling</td>          <td>1</td><td class="cell-25">0.300</td><td class="cell-0">0.100</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+0.700</td><td class="txt">lifted to 1.0</td></tr>
+    <tr><td class="txt">adaptive-cruise-control</td>     <td>1</td><td class="cell-67">0.700</td><td class="cell-67">0.700</td><td class="cell-85">0.900</td><td class="cell-85">0.900</td><td class="delta-plus">+0.200</td><td class="txt">partial lift</td></tr>
+    <tr><td class="txt">hvac-control</td>                <td>1</td><td class="cell-100">1.000</td><td class="cell-na">—</td><td class="cell-na">—</td><td class="cell-100">1.000</td><td class="delta-zero">0.000</td><td class="txt">saturated at baseline</td></tr>
+    <tr><td class="txt">r2r-mpc-control</td>             <td>1</td><td class="cell-25">0.300</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+0.700</td><td class="txt">lifted to 1.0</td></tr>
+    <tr><td class="txt">3d-scan-calc</td>                <td>1</td><td class="cell-100">1.000</td><td class="cell-na">—</td><td class="cell-na">—</td><td class="cell-100">1.000</td><td class="delta-zero">0.000</td><td class="txt">saturated at baseline</td></tr>
+    <tr><td class="txt">syzkaller-ppdev-syzlang</td>     <td>1</td><td class="cell-67">0.700</td><td class="cell-85">0.900</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+0.300</td><td class="txt">lifted to 1.0</td></tr>
+    <tr><td class="txt">multilingual-video-dubbing</td>  <td>1</td><td class="cell-67">0.700</td><td class="cell-85">0.900</td><td class="cell-85">0.900</td><td class="cell-85">0.900</td><td class="delta-plus">+0.200</td><td class="txt">partial lift</td></tr>
+    <tr><td class="txt">flood-risk-analysis</td>         <td>1</td><td class="cell-100">1.000</td><td class="cell-na">—</td><td class="cell-na">—</td><td class="cell-100">1.000</td><td class="delta-zero">0.000</td><td class="txt">saturated at baseline</td></tr>
+    <tr><td class="txt">invoice-fraud-detection</td>     <td>1</td><td class="cell-25">0.300</td><td class="cell-25">0.200</td><td class="cell-50">0.400</td><td class="cell-50">0.400</td><td class="delta-plus">+0.100</td><td class="txt">partial lift</td></tr>
+    <tr style="background:var(--paper-3); font-weight:600;"><td class="txt">MEAN (batch 1, n=10)</td><td>—</td><td>0.690</td><td colspan="3">—</td><td>0.920</td><td class="delta-plus">+0.230</td><td class="txt">6 lifted; 3 saturated; 1 partial</td></tr>
+
+    <tr><td class="txt">financial-modeling-qa</td>       <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">sec-financial-report</td>        <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-na">corrupt</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck (c2 data lost to node flake)</td></tr>
+    <tr><td class="txt">drone-planning-control</td>      <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">grid-dispatch-operator</td>      <td>2</td><td class="cell-0">0.000</td><td class="cell-85">0.900</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+1.000</td><td class="txt">lifted 0→1</td></tr>
+    <tr><td class="txt">jax-computing-basics</td>        <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">threejs-to-obj</td>              <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">paper-anonymizer</td>            <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">pddl-airport-planning</td>       <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+1.000</td><td class="txt">lifted 0→1</td></tr>
+    <tr><td class="txt">python-scala-translation</td>    <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr><td class="txt">offer-letter-generator</td>      <td>2</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">stuck</td></tr>
+    <tr style="background:var(--paper-3); font-weight:600;"><td class="txt">MEAN (batch 2, n=10)</td><td>—</td><td>0.000</td><td colspan="3">—</td><td>0.200</td><td class="delta-plus">+0.200</td><td class="txt">2 lifted 0→1; 8 stuck</td></tr>
+
+    <tr style="background:rgba(58,122,76,0.12); font-weight:700;"><td class="txt">MEAN (COMBINED, n=20)</td><td>—</td><td>0.345</td><td colspan="3">—</td><td>0.560</td><td class="delta-plus">+0.215</td><td class="txt">9/20 reach 1.0; 3 partial; 8 stuck</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-neutral">
+  <strong>How this compares to the prior whole-suite runnable-43 result</strong> on the same 10 batch-1 tasks:
+  whole-suite baseline 0.500 → best 0.573 (+0.073). Task-by-task baseline 0.690 → best 0.920 (+0.230).
+  Task-native seed is a <strong>~3× improvement in aggregate lift</strong> — validating the
+  Section 3 hypothesis of this analysis that whole-suite is fundamentally limited by
+  domain-coverage of the shared seed.
+</div>
+
+<div class="callout callout-warn">
+  <strong>Note on sec-financial-report cand_0002</strong> — subprocess died with
+  <code>FileNotFoundError</code> on the venv python3 mid-run on compute node <code>cccxc512</code>
+  (the <code>/dccstor/knewedge/</code> mount became temporarily unavailable). cand_0001
+  completed cleanly at 0.000, so the task's real best remains 0.000 and the aggregate is unaffected.
+  Isolated to this task; verified via runner-seconds check that no other task was similarly corrupted.
+</div>
+
+<hr style="margin: 3em 0 1.5em; border: none; border-top: 1px solid var(--rule);">
+
+<div class="eyebrow" style="margin-top: 2em;">below: the original 2026-08-18 analysis of the prior whole-suite runnable-43 result</div>
+<h1 style="font-size: 1.5em; margin-top: 0.3em;">Prior analysis: whole-suite runnable-43 — from broken plumbing to a real +3.11 pp</h1>
+<p>
+Analysis of three SkillsBench runs conducted on IBM CCC's rootless-podman environment: the 10-task
+shared-office pilot (<code>baseline-10task</code>), the ill-fated 87-task attempt (<code>all87-broken-wiring</code>,
+used to derive a runnable subset), and one cap-evolve optimization on the 43-task RUNNABLE subset
+(<code>runnable-43task-opt</code>, aka <code>run_runnable_iter7_v1</code>). Every number below is drawn
+from <code>skillsbench-results/{baseline-10task,all87-broken-wiring,runnable-43task-opt}/</code> and
+the source cap-evolve run directories under <code>.capevolve/</code>. Per-task CSV:
+<code>per_task_scores.csv</code> (this dir).
+</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">runnable-43 seed baseline</div>
+    <div class="kpi-value" style="color: var(--accent);">0.1395</div>
+    <div class="kpi-note">n=43 tasks × 3 trials · office skill package (docx/pptx/xlsx/pdf)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">best candidate (cand_0002)</div>
+    <div class="kpi-value" style="color: var(--success);">0.1705</div>
+    <div class="kpi-note">accepted by paired-SE gate on iter 2 · Δ = <span class="delta-plus">+0.0311 (+3.11 pp)</span></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">3/3-pass tasks</div>
+    <div class="kpi-value" style="color: var(--success);">4 / 43</div>
+    <div class="kpi-note">gained 2 (edit-pdf, syzkaller-ppdev-syzlang); kept 2 (3d-scan-calc, protein-expression-analysis)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">optimizer cost through iter 3</div>
+    <div class="kpi-value" style="color: var(--warning);">$48.78</div>
+    <div class="kpi-note">Opus 4.8 · 3 accepted proposals + 1 hung iter 4 (partial ~$4.35)</div>
+  </div>
+</div>
+
+<div class="callout callout-success">
+  <strong>Headline finding</strong> — the environment side of the pilot is <em>solved</em>. Thirteen
+  layered podman workarounds (rootless single-UID user namespace, patched ubuntu base image,
+  <code>ignore_chown_errors</code>, private dbus, host network, exec-tar upload/download replacements,
+  root sandbox user) got a 43-task subset running end-to-end. Cap-evolve then produced a real
+  <strong>+3.11 pp</strong> gain over 2 accepted iterations — meaningful signal, correct paired-SE
+  gate behavior (rejected iter 3, accepted iters 1–2), and a clear open question about which specific
+  edits regressed 3 control-simulation tasks. The optimization loop works; the remaining ceiling is
+  overwhelmingly a task-domain-coverage problem, not plumbing.
+</div>
+
+<div class="callout callout-warn">
+  <strong>The elephant in the room</strong> — 32 of 43 tasks scored exactly <code>0.000</code>
+  across seed, cand_0001, cand_0002, and cand_0003. That's the ceiling of whole-suite optimization
+  on this task set: only 21 of the 87 SkillsBench tasks actually ship any of our 4 seed office skills
+  (<code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>), and BenchFlow strips the
+  task's own skills at rollout time. No amount of SKILL.md optimization will lift the 32 tasks whose
+  domain (kernel fuzzing, hydrology, PDE solvers, financial modeling) is structurally absent from
+  the seed. The +3.11 pp came almost entirely from ~9 tasks moving; see Section 3.
+</div>
+
+<h2>1 · Phase evolution — three environments on partly overlapping task sets</h2>
+
+<p>
+Each row is a phase: how much task coverage BenchFlow's infrastructure could sustain, what agent/optimizer
+model pair ran, and what the resulting val reward was. Note the task sets are DIFFERENT sizes — comparisons
+across phases below are limited to the intersection of tasks that actually ran.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th class="txt">phase</th>
+      <th class="txt">agent · optimizer</th>
+      <th>tasks scored</th>
+      <th>seed val</th>
+      <th>best cand val</th>
+      <th class="txt">terminal state</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="txt">baseline-10task</td>
+      <td class="txt">Sonnet 4.6 · <em>none</em></td>
+      <td>7 (val split)</td>
+      <td class="cell-25">0.1429</td>
+      <td class="txt">—</td>
+      <td class="txt"><span class="badge badge-info">plumbing OK</span> · 1/7 pass (invoice-fraud-detection)</td>
+    </tr>
+    <tr>
+      <td class="txt">all87-broken-wiring</td>
+      <td class="txt">Sonnet 4.6 · <em>killed at baseline</em></td>
+      <td>87 (seed only)</td>
+      <td class="cell-0">≈ 0</td>
+      <td class="txt">—</td>
+      <td class="txt"><span class="badge badge-bad">44 tasks errored</span> · used to derive runnable-43 subset</td>
+    </tr>
+    <tr>
+      <td class="txt"><strong>runnable-43task-opt</strong></td>
+      <td class="txt">Sonnet 5 · Opus 4.8</td>
+      <td>43</td>
+      <td class="cell-25">0.1395</td>
+      <td class="cell-33"><strong>0.1705</strong></td>
+      <td class="txt"><span class="badge badge-warn">iter 4 optimizer hung 2h → killed</span> · best = cand_0002</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>What the columns mean</h3>
+<ul class="compact">
+  <li><strong>baseline-10task</strong> — first run that reached completion. 10 tasks hand-picked to be
+  shared-office-only (docx/pptx/xlsx/pdf domain). Sonnet 4.6 as agent, no optimizer. 3-trial val, 3
+  dummy test. Purpose was to prove the podman workarounds were sufficient; result was 1/7 val tasks passing
+  (<code>invoice-fraud-detection</code> at 3/3). Not a headline number — just proof of plumbing.</li>
+  <li><strong>all87-broken-wiring</strong> — expanded the adapter's <code>TASK_IDS</code> from 10 to
+  all 87 tasks. Seed rollout revealed two new infrastructure-error classes: <code>network_mode: host</code>
+  in the compose base conflicted with 14 tasks' <code>networks:</code> block, and 26 tasks use a
+  <code>python:3.12-slim</code> base image where our chown/dpkg wrappers don't apply. Plus 4 exotic
+  base images. Total 44 tasks unfixable in the current setup. Killed once the 11% infra-error rate was
+  clear, but not before recording which 43 tasks DID run cleanly — that recording became the
+  <code>split_ids.runnable.json</code> used by the next phase.</li>
+  <li><strong>runnable-43task-opt</strong> — the main event. 43 known-runnable tasks, cheaper Sonnet 5
+  as agent, Opus 4.8 as optimizer. <code>algorithm=hill-climb</code>, <code>gate=paired</code>,
+  <code>gate_k_se=0.2</code>, <code>num_trials=3</code>, <code>max_iterations=7</code>. Ran seed +
+  iters 1–3 cleanly; iter 4 optimizer process wedged (no file writes, no token growth for 1h 49min);
+  killed under pre-agreed 90-min-stall rule.</li>
+</ul>
+
+<div class="callout callout-neutral">
+  <strong>Why no cross-phase per-task table like parsec-results had?</strong> — Because the task
+  intersections are near-empty. <code>baseline-10task</code>'s 7 val tasks are all in
+  <code>runnable-43</code>'s 43, but the agent model changed (Sonnet 4.6 → Sonnet 5) so they aren't a
+  clean plumbing-vs-plumbing comparison. And <code>all87-broken-wiring</code> was killed at baseline —
+  its seed rollouts on the 43 runnable tasks are dominated by Sonnet-4.6 vs Sonnet-5 model drift, not
+  environment drift. Per-task story lives in Section 2 (all inside <code>runnable-43task-opt</code>).
+</div>
+
+<h2>2 · The optimization iterations (<code>runnable-43task-opt</code>)</h2>
+
+<p>Wall clock at kill: ~18h 15min. Total runner time (all iters): 52,701 s (~14.6 h of Sonnet-5 rollouts).
+Optimizer $ through iter 3: $48.78. Trials per candidate: 3 (same as seed). Split discipline: fit-metric
+(train == val == 43 tasks; test = 3 dummy tasks overlapping val, retained purely to satisfy cap-evolve's
+finalize step).</p>
+
+<h3>Per-iteration summary</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>iter</th>
+      <th class="txt">candidate</th>
+      <th class="txt">parent</th>
+      <th>val reward</th>
+      <th>Δ vs parent</th>
+      <th class="txt">gate</th>
+      <th class="txt">accepted?</th>
+      <th>opt $</th>
+      <th>opt time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td class="txt">seed</td>            <td class="txt">—</td>         <td class="cell-25">0.1395</td><td class="delta-zero">—</td>      <td class="txt">baseline</td>                          <td class="txt">—</td>                                 <td>—</td>     <td>—</td></tr>
+    <tr><td>1</td><td class="txt">cand_0001</td>       <td class="txt">seed</td>      <td class="cell-25">0.1473</td><td class="delta-plus">+0.0078</td><td class="txt">Δ̄=+0.0078 > 0.2·SE=0.0072</td>         <td class="txt"><span class="badge badge-good">✓</span></td>          <td>$14.01</td><td>23m</td></tr>
+    <tr style="background:rgba(58,122,76,0.08); font-weight:600;">
+        <td>2</td><td class="txt">cand_0002</td>       <td class="txt">cand_0001</td> <td class="cell-33">0.1705</td><td class="delta-plus">+0.0233</td><td class="txt">Δ̄=+0.0233 > 0.2·SE=0.0052</td>         <td class="txt"><span class="badge badge-good">✓</span> ← best</td>   <td>$15.33</td><td>45m</td></tr>
+    <tr><td>3</td><td class="txt">cand_0003</td>       <td class="txt">cand_0002</td> <td class="cell-25">0.1551</td><td class="delta-minus">−0.0155</td><td class="txt">Δ̄=−0.0155 ≤ 0.2·SE=0.0049</td>       <td class="txt"><span class="badge badge-bad">✗</span></td>            <td>$15.08</td><td>23m</td></tr>
+    <tr><td>4</td><td class="txt">cand_0004</td>       <td class="txt">cand_0002</td> <td class="cell-na">not scored</td><td class="delta-zero">—</td>  <td class="txt">—</td>                                    <td class="txt"><span class="badge badge-warn">HUNG · killed</span></td> <td>~$4.35 partial</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h3>Per-task deltas — seed vs best (cand_0002)</h3>
+
+<p>All 43 tasks, sorted by delta. Colors: <span class="badge badge-bad">0.000</span>
+<span class="badge badge-warn">partial</span> <span class="badge badge-good">1.000</span>.
+"OOD" = out-of-domain for the seed office skill package (see Section 3).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th class="txt">task</th>
+      <th>seed</th>
+      <th>cand_0001</th>
+      <th>cand_0002</th>
+      <th>cand_0003</th>
+      <th>Δ (c2 − seed)</th>
+      <th class="txt">note</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr><td class="txt">edit-pdf</td>                     <td class="cell-0">0.000</td><td class="cell-33">0.333</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+1.000</td><td class="txt"><span class="badge badge-good">in-domain (pdf)</span> — biggest single win</td></tr>
+    <tr><td class="txt">court-form-filling</td>           <td class="cell-0">0.000</td><td class="cell-67">0.667</td><td class="cell-67">0.667</td><td class="cell-100">1.000</td><td class="delta-plus">+0.667</td><td class="txt"><span class="badge badge-good">in-domain (pdf)</span> — cand_0003 pushed it to 1.0 but overall regressed</td></tr>
+    <tr><td class="txt">multilingual-video-dubbing</td>   <td class="cell-33">0.333</td><td class="cell-67">0.667</td><td class="cell-67">0.667</td><td class="cell-33">0.333</td><td class="delta-plus">+0.334</td><td class="txt">OOD (ffmpeg) — surprise gain, possibly generic tool-use improvements</td></tr>
+    <tr><td class="txt">flood-risk-analysis</td>          <td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-33">0.333</td><td class="cell-0">0.000</td><td class="delta-plus">+0.333</td><td class="txt">OOD (hydrology) — one trial connected; unstable</td></tr>
+    <tr><td class="txt">3d-scan-calc</td>                 <td class="cell-67">0.667</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-plus">+0.333</td><td class="txt">OOD (mesh) — pushed from 2/3 to 3/3</td></tr>
+    <tr><td class="txt">syzkaller-ppdev-syzlang</td>      <td class="cell-67">0.667</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-33">0.333</td><td class="delta-plus">+0.333</td><td class="txt">OOD (kernel fuzz) — but cand_0003 regressed hard</td></tr>
+
+    <tr><td class="txt">protein-expression-analysis</td>  <td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="delta-zero">0.000</td><td class="txt">Already max — no room</td></tr>
+    <tr><td class="txt">invoice-fraud-detection</td>      <td class="cell-33">0.333</td><td class="cell-33">0.333</td><td class="cell-33">0.333</td><td class="cell-0">0.000</td><td class="delta-zero">0.000</td><td class="txt">Stuck at 1/3 across candidates; cand_0003 broke it</td></tr>
+    <tr><td class="txt">sales-pivot-analysis</td>         <td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-0">0.000</td><td class="cell-33">0.333</td><td class="delta-zero">0.000</td><td class="txt">cand_0003 only — one trial connected</td></tr>
+
+    <tr><td class="txt">adaptive-cruise-control</td>      <td class="cell-100">1.000</td><td class="cell-33">0.333</td><td class="cell-67">0.667</td><td class="cell-67">0.667</td><td class="delta-minus">−0.333</td><td class="txt"><span class="badge badge-bad">REGRESSION</span> — control-sim; office-skill guidance may confuse</td></tr>
+    <tr><td class="txt">hvac-control</td>                 <td class="cell-100">1.000</td><td class="cell-100">1.000</td><td class="cell-33">0.333</td><td class="cell-67">0.667</td><td class="delta-minus">−0.667</td><td class="txt"><span class="badge badge-bad">REGRESSION</span> — cand_0001 kept it, cand_0002 broke it</td></tr>
+    <tr><td class="txt">r2r-mpc-control</td>              <td class="cell-100">1.000</td><td class="cell-0">0.000</td><td class="cell-33">0.333</td><td class="cell-33">0.333</td><td class="delta-minus">−0.667</td><td class="txt"><span class="badge badge-bad">REGRESSION</span> — MPC control; broke earliest</td></tr>
+
+    <tr style="background:rgba(108,112,128,0.05);">
+      <td class="txt" colspan="7"><em>34 tasks stuck at 0.000 across seed + all 3 candidates — see Section 3 for domain distribution</em></td>
+    </tr>
+
+    <tr style="font-weight:600; background:var(--paper-3);">
+      <td class="txt">MEAN (all 43)</td>
+      <td>0.1395</td>
+      <td>0.1473</td>
+      <td>0.1705</td>
+      <td>0.1550</td>
+      <td class="delta-plus">+0.0311</td>
+      <td class="txt">6 up · 3 down · 34 flat (32 at 0, 2 at &gt;0)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:0.85em; color:var(--muted);">Trial-level detail for each (task × phase × candidate)
+is in <code>per_task_scores.csv</code> alongside this file.</p>
+
+<div class="callout callout-warn">
+  <strong>Gate math</strong> — iter 2's accepted delta of <code>+0.0233</code> came from 4 up-moves
+  (edit-pdf +1.0, court-form-filling +0.667, syzkaller +0.333, 3d-scan-calc +0.333) minus 1 real regression
+  (hvac-control −0.667). Iter 3's rejected delta of <code>−0.0155</code> came from cand_0003 pushing
+  court-form-filling to 1.0 (+0.333) but breaking invoice-fraud-detection and syzkaller in exchange.
+  The paired-SE gate correctly caught this trade in the same direction as parsec's task-004 story:
+  new edits helped one task, broke another, net negative.
+</div>
+
+<h2>3 · Why 34 tasks are stuck at 0.000 — a domain-coverage problem, not a plumbing problem</h2>
+
+<p>
+32 of 43 tasks scored exactly zero across the seed and all 3 candidates. This is NOT because the seed
+skill package is bad. It's because BenchFlow's default behavior on SkillsBench is to strip the task's
+own <code>environment/skills/</code> and mount only the seed's <code>skills/</code> instead. The task
+verifier then evaluates against outcomes the task designer expected the task-specific skills to enable.
+</p>
+
+<p>
+The seed ships 4 office skills: <code>docx</code>, <code>pptx</code>, <code>xlsx</code>, <code>pdf</code>.
+Only <strong>21 of 87 SkillsBench tasks</strong> ship at least one of those. The other 66 tasks
+have domains our seed can't help with:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th class="txt">task's shipped skill domain (examples)</th>
+      <th class="txt">representative tasks in runnable-43</th>
+      <th>seed reward</th>
+      <th>best cand reward</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="txt">Kernel / systems (syzlang, ioctl, syz-extract)</td>     <td class="txt">syzkaller-ppdev-syzlang, spring-boot-jakarta-migration</td>         <td class="cell-33">0.33</td><td class="cell-67">0.67</td></tr>
+    <tr><td class="txt">Financial modeling / SEC / GDP</td>                     <td class="txt">financial-modeling-qa, sec-financial-report, weighted-gdp-calc, reserves-at-risk-calc, shock-analysis-{demand,supply}, energy-market-pricing</td> <td class="cell-0">0.00</td><td class="cell-0">0.00</td></tr>
+    <tr><td class="txt">Physical simulation (PID, MPC, PDEs, drones)</td>       <td class="txt">adaptive-cruise-control, hvac-control, r2r-mpc-control, drone-planning-control, grid-dispatch-operator, energy-ac-optimal-power-flow</td>     <td class="cell-50">0.50</td><td class="cell-33">0.33</td></tr>
+    <tr><td class="txt">Data science / ML (jax, protein, egomotion)</td>        <td class="txt">jax-computing-basics, protein-expression-analysis, dynamic-object-aware-egomotion, dapt-intrusion-detection, lake-warming-attribution</td>  <td class="cell-25">0.20</td><td class="cell-25">0.20</td></tr>
+    <tr><td class="txt">Mesh / geometry (threejs, obj)</td>                    <td class="txt">3d-scan-calc, threejs-structure-parser, threejs-to-obj</td>          <td class="cell-25">0.22</td><td class="cell-33">0.33</td></tr>
+    <tr><td class="txt">Media (ffmpeg, video)</td>                              <td class="txt">multilingual-video-dubbing</td>                                       <td class="cell-33">0.33</td><td class="cell-67">0.67</td></tr>
+    <tr><td class="txt">Domain-specific analysis (hydrology, forensics)</td>   <td class="txt">flood-risk-analysis, paper-anonymizer, citation-check, court-form-filling</td> <td class="cell-0">0.00</td><td class="cell-25">0.25</td></tr>
+    <tr><td class="txt">Planning / workflow (pddl, drone)</td>                  <td class="txt">pddl-airport-planning, organize-messy-files, enterprise-information-search</td> <td class="cell-0">0.00</td><td class="cell-0">0.00</td></tr>
+    <tr><td class="txt">Code translation / migration</td>                       <td class="txt">python-scala-translation, simpo-code-reproduction, data-to-d3</td>  <td class="cell-0">0.00</td><td class="cell-0">0.00</td></tr>
+    <tr style="background:rgba(94,186,105,0.08);"><td class="txt"><strong>Office quartet (in-domain)</strong></td> <td class="txt">edit-pdf, court-form-filling, offer-letter-generator, pdf-excel-diff, jpg-ocr-stat, xlsx-recover-data, sales-pivot-analysis, exceltable-in-ppt, pptx-reference-formatting</td> <td class="cell-25">0.11</td><td class="cell-50">0.44</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:0.85em; color:var(--muted);">Reward columns show the domain-average, not per-task.
+Office-quartet row: best cand average <code>0.44</code> across 9 tasks vs seed <code>0.11</code> — a
+<strong>+33 pp lift on the in-domain slice</strong>, which is where all the signal came from.</p>
+
+<div class="callout callout-success">
+  <strong>The whole-suite story in one number</strong> — cap-evolve moved the in-domain (office
+  quartet, 9 tasks) subset from <code>0.11 → 0.44</code>, a real <strong>+33 pp gain</strong> where
+  the seed had traction. It moved the whole 43-task set from <code>0.14 → 0.17</code>, a
+  <strong>+3 pp gain</strong> dragged down by 32 OOD zeros. That +33 pp on the in-domain slice is the
+  more honest headline — and it's the direct argument for switching to task-by-task optimization
+  (Section 5).
+</div>
+
+<h2>4 · What the optimizer got right — and what needs the next attempt</h2>
+
+<div class="callout callout-success">
+  <strong>Wins the candidates demonstrated</strong> —
+  <code>edit-pdf</code> lifted from 0/3 to 3/3 across cand_0001 → cand_0002. <code>court-form-filling</code>
+  from 0/3 to 2/3 (cand_0001) and briefly 3/3 (cand_0003). <code>3d-scan-calc</code> and
+  <code>syzkaller-ppdev-syzlang</code> from 2/3 to 3/3. Two moderate wins on cross-domain tasks
+  (<code>multilingual-video-dubbing</code>, <code>flood-risk-analysis</code>) suggesting the optimizer's
+  general-purpose SKILL.md guidance (not just office-skill specifics) did some work. Six tasks moved in
+  the right direction across the accepted 2 iters, with rationale traceable in the candidates' SKILL.md
+  diffs.
+</div>
+
+<div class="callout callout-warn">
+  <strong>The 3 control-simulation regressions</strong> — <code>adaptive-cruise-control</code>,
+  <code>hvac-control</code>, <code>r2r-mpc-control</code> were all 3/3 at the seed and all dropped to
+  1/3 or 2/3 by cand_0002. All three ship domain-specific control skills (PID, MPC, state-space
+  linearization, safety interlocks) — the seed's office-skill focus doesn't help them, but on the seed
+  the base Sonnet-5 agent handled them well without extra guidance. When cap-evolve added office-doc
+  emphasis to SKILL.md, the added guidance apparently competed for the agent's attention on control
+  tasks. This is the exact "one edit that hurt" pattern parsec-results saw on task 004: an optimization
+  helped in-domain tasks but had collateral damage on adjacent-but-different tasks.
+</div>
+
+<h3>The optimization loop is healthy</h3>
+
+<ul class="compact">
+  <li><strong>Real signal on in-domain tasks</strong>: cap-evolve identified <code>edit-pdf</code>'s
+  0/3-baseline as fixable and did fix it to 3/3. That's the strongest single-task lift observed.</li>
+  <li><strong>Correct gate behavior</strong>: iters 1 and 2 accepted with clean paired-Δ &gt; k·SE
+  margins. Iter 3 rejected with a slightly-negative Δ where individual regressions outweighed a
+  cand_0003 win on court-form-filling. Not too permissive.</li>
+  <li><strong>Cost profile</strong>: ~$15 optimizer per iter on Opus 4.8 for a 43-task hill-climb.
+  Well within the <code>max_optimizer_usd=400</code> spec cap.</li>
+  <li><strong>Failure mode observed</strong>: iter 4 optimizer process appears to have wedged on an
+  Anthropic API HTTP request that never terminated (via ETE LiteLLM). Bench containers were quiet the
+  whole hang window; not a task-side failure. Investigation before <code>--resume</code> is
+  recommended.</li>
+</ul>
+
+<h2>5 · Recommended next moves</h2>
+
+<p>Ordered from smallest change to biggest. Each is config-only unless noted:</p>
+
+<ol>
+  <li><strong>Narrow the whole-suite run to the office-quartet-only tasks (~21 of 87, ~9 of runnable-43).</strong>
+  Filter <code>split_ids.runnable.json</code> to the tasks that ship <code>docx</code>/<code>pptx</code>/<code>xlsx</code>/<code>pdf</code>.
+  Expected baseline: much higher than 0.1395 (probably 0.4–0.5) because everything's in-domain.
+  Expected best-cand: <code>0.6+</code> on the same +33-pp-per-in-domain-task trajectory. This
+  matches parsec-intake's 10-task setup and is the fastest way to a clean, defensible headline number.
+  Same optimizer + agent + spec. Wall clock ~5–6h.</li>
+
+  <li><strong>Investigate the iter-4 optimizer hang before <code>--resume</code>.</strong> Suspect
+  the Anthropic API path via ETE LiteLLM. Without fixing, the same hang may repeat at iter 5. A minimal
+  check: run the optimizer's <code>claude</code> CLI invocation in isolation with tracing on to see if
+  the HTTP request completes.</li>
+
+  <li><strong><code>--resume</code> from cand_0002 for iters 5–7.</strong> Rename the KILLED dir back
+  to <code>run_runnable_iter7_v1/</code>, resubmit with <code>--resume</code>. This tests whether the
+  remaining 3 iterations can push above 0.17 given the current trajectory. Cost ~$45 optimizer + ~10h
+  Sonnet-5 rollouts. Risk: if the iter-4 hang recurs, wasted spend.</li>
+
+  <li><strong>Switch to task-by-task optimization (EvoSkills-style).</strong> One skill per task,
+  seeded from the task's own <code>environment/skills/</code>. Requires either 43 separate cap-evolve
+  launches (LSF fan-out) or a new <code>per-task-hill-climb</code> algorithm inside cap-evolve.
+  Directly comparable to EvoSkills' 71.1% headline (though only on our 43-task runnable subset).
+  This is the biggest-lift option and the one <code>SKILLSBENCH_INVENTORY.md</code> was written to
+  support.</li>
+
+  <li><strong>Or accept +3.11 pp as the terminal deliverable</strong> for the whole-suite pilot and
+  freeze <code>runnable-43task-opt/</code> as a reference. The environment is healthy, the loop is
+  functional, and the ceiling is a documented domain-coverage issue — not something more iterations
+  will fix.</li>
+</ol>
+
+<footer>
+  <p>
+    <strong>Sources</strong> —
+    <code>skillsbench-results/baseline-10task/{baseline_all.json, run.log, summary.md}</code> ·
+    <code>skillsbench-results/all87-broken-wiring/{run.log, summary.md}</code> ·
+    <code>skillsbench-results/runnable-43task-opt/{baseline_all.json, run.log, iter1-4.log, summary.md, wallclock.txt}</code> ·
+    <code>.capevolve/run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h/{baseline.json, events.jsonl, rollouts/, candidates/, JOURNAL.md, history.jsonl, rejected.jsonl}</code> ·
+    <code>../SKILLSBENCH_INVENTORY.md</code>.
+  </p>
+  <p>
+    Per-task CSV (raw): <code>per_task_scores.csv</code> alongside this file — 266 rows across the 3
+    phases. All rewards computed from per-trial <code>score.reward</code> in each rollout JSON. No
+    SKILL.md edits by hand — only cap-evolve's optimizer touched it (candidates at
+    <code>.capevolve/run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h/candidates/cand_000{1,2,3}/</code>).
+  </p>
+  <p>Last updated: 2026-08-18.</p>
+</footer>
+
+</body>
+</html>

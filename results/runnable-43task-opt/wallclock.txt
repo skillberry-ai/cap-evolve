@@ -1,0 +1,8 @@
+Total wall clock: ~18h 15min (2026-07-30 15:18 UTC → 2026-07-31 09:33 UTC-4)
+
+Per-iter (approx):
+  baseline (seed) : 14522s eval (4h 2m)
+  iter 1 (cand_0001): 1399s optimizer + 13254s eval (23m opt + 3h 41m eval)
+  iter 2 (cand_0002): 2703s optimizer + 11747s eval (45m opt + 3h 15m eval)
+  iter 3 (cand_0003): 1400s optimizer + 13179s eval (23m opt + 3h 40m eval)
+  iter 4 (cand_0004): HUNG at ~800s + 1h 49min silence → killed

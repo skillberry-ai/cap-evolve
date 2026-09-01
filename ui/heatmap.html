@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SkillsBench task-by-task-87 — full-benchmark heatmap</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #fafafa; color: #1a1a2e; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #6b7280; margin: 0 0 20px; }
+  .controls { display: flex; gap: 16px; align-items: center; margin: 8px 0 12px; font-size: 13px; color: #6b7280; }
+  .legend { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; }
+  .legend-bar { width: 200px; height: 14px; border-radius: 3px; background: linear-gradient(to right, #dc2626 0%, #fef3c7 50%, #059669 100%); }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th { font-weight: 500; color: #6b7280; padding: 6px 10px; text-align: center; background: #f9fafb; }
+  th.row-head { text-align: right; padding-right: 12px; }
+  th.best-col { color: #92400e; background: #fef3c7; }
+  th.delta-col { border-left: 2px solid #9ca3af; }
+  td { padding: 6px 10px; text-align: center; border: 1px solid #f3f4f6; font-family: ui-monospace, monospace; font-size: 12px; }
+  td.label { text-align: right; font-weight: 500; color: #1a1a2e; background: #fff; padding-right: 12px; font-family: inherit; white-space: nowrap; }
+  td.value.na { background: #f3f4f6; color: #9ca3af; font-style: italic; }
+  td.value.saturated { border: 2px solid #f59e0b; }
+  td.value.best-cell { box-shadow: inset 0 0 0 3px rgba(79, 70, 229, 0.5); }
+  td.delta-col { border-left: 2px solid #9ca3af; font-weight: 600; }
+  td.best-col { background: #fef3c7 !important; font-weight: 600; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+  .badge-c3v1 { background: rgba(5,150,105,0.15); color: #059669; }
+  .badge-c2v2 { background: rgba(79,70,229,0.15); color: #4f46e5; }
+  .badge-c1v5 { background: rgba(37,99,235,0.15); color: #2563eb; }
+  .badge-c1v1 { background: rgba(107,114,128,0.15); color: #4b5563; }
+  .badge-c1tA { background: rgba(184,127,31,0.15); color: #a67b2c; }
+  .badge-macv2 { background: rgba(234,88,12,0.15); color: #c2410c; }
+  .badge-nosignal { background: rgba(107,114,128,0.20); color: #4b5563; }
+  .badge-cat { background: rgba(107,114,128,0.12); color: #4b5563; font-weight: 500; }
+  .footer { font-size: 12px; color: #6b7280; margin-top: 16px; line-height: 1.5; }
+  .aggregate { margin-top: 16px; padding: 14px 18px; background: #eff6ff; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+  .aggregate strong { color: #1e40af; }
+  .aggregate table { margin: 8px 0 10px; font-size: 12px; }
+  .aggregate th, .aggregate td { padding: 5px 10px; border: 1px solid #dbeafe; text-align: center; background: #fff; }
+  .aggregate th { background: #dbeafe; font-weight: 600; color: #1e40af; }
+  .aggregate td.txt { text-align: left; }
+  .summary-row td { background: #fef3c7 !important; font-weight: 600 !important; border-top: 2px solid #f59e0b !important; }
+  .summary-row td.label { background: #fef3c7 !important; color: #92400e !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SkillsBench task-by-task-87 — full-benchmark heatmap</h1>
+  <p class="subtitle">87 tasks · dedicated LSF host per task (CCC) or dedicated Docker container (Mac) · 10 trials per candidate · up to 4-iteration budget · Sonnet-5 agent + Opus-4.8 optimizer. Data merged from four sources. Badges — source: <span class="badge badge-c3v1">c3v1</span> (CCC, bucket-1/2/3 unblocks, freshest) · <span class="badge badge-c2v2">c2v2</span> (CCC, 6 clean reruns) · <span class="badge badge-c1v5">c1v5</span> (CCC, post-cache-clear) · <span class="badge badge-c1v1">c1v1</span> (CCC, original 43) · <span class="badge badge-c1tA">c1tA</span> (CCC, Track A) · <span class="badge badge-macv2">mac-v2</span> (Boaz's Mac, 7 CCC-blocked retried); state: <span class="badge badge-nosignal">no-signal</span> (task scored 0.0 for both baseline and every candidate — cap-evolve had no lever).</p>
+
+  <div class="controls">
+    <label><input type="radio" name="sort" value="id" checked> Sort by task</label>
+    <label><input type="radio" name="sort" value="delta"> Sort by Δ</label>
+    <label><input type="radio" name="sort" value="baseline"> Sort by baseline</label>
+    <label><input type="radio" name="sort" value="best"> Sort by best</label>
+    <label><input type="radio" name="sort" value="category"> Sort by category</label>
+    <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
+  </div>
+
+  <div class="card"><table id="heatmap"></table></div>
+  <div class="aggregate" id="agg"></div>
+
+  <p class="footer">
+    <strong>Cells:</strong> mean reward across 10 trials on the val split. Grey/"—" = candidate not run.<br>
+    <strong>Best (amber):</strong> best mean across all evaluated candidates; the best cell has a purple ring.<br>
+    <strong>Amber-bordered baseline:</strong> saturated at seed (val=1.0); optimizer skipped.<br>
+    <strong>no-signal badge:</strong> task scored 0.0 for both the seed and every optimizer candidate — cap-evolve had no signal to work with. 10 tasks in this state: 4 where the container built but the agent produced empty tool_calls (earthquake-phase-association, fix-build-google-auto, fix-visual-stability, seismic-phase-picking), and 6 where cap-evolve ran to completion but no candidate moved off zero (financial-modeling-qa, fix-build-agentops, fix-druid-loophole-cve, python-scala-translation, quantum-numerical-simulation, spring-boot-jakarta-migration).
+  </p>
+</div>
+
+<script>
+const DATA = [
+  {
+    "task": "3d-scan-calc",
+    "category": "industrial-physical-systems",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "ada-bathroom-plan-repair",
+    "category": "industrial-physical-systems",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.4,
+    "cand_0001": 0.5,
+    "cand_0002": 0.8,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 0.6
+  },
+  {
+    "task": "adaptive-cruise-control",
+    "category": "industrial-physical-systems",
+    "source": "c1-tA",
+    "status": "DONE",
+    "seed": 0.7,
+    "cand_0001": 0.7,
+    "cand_0002": 0.9,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "azure-bgp-oscillation-route-leak",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "bike-rebalance",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.1,
+    "cand_0001": 0.8,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "citation-check",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "civ6-adjacency-optimizer",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.31,
+    "cand_0001": 0.79,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.69
+  },
+  {
+    "task": "court-form-filling",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.3,
+    "cand_0001": 0.1,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.7
+  },
+  {
+    "task": "crystallographic-wyckoff-position-analysis",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.626,
+    "cand_0001": 0.517,
+    "cand_0002": 0.835,
+    "cand_0003": 0.627,
+    "cand_0004": 0.445,
+    "best": 0.835,
+    "best_tag": "cand_0002",
+    "delta": 0.20899999999999996
+  },
+  {
+    "task": "dapt-intrusion-detection",
+    "category": "cybersecurity",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "data-to-d3",
+    "category": "software-engineering",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.5,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.5
+  },
+  {
+    "task": "debug-trl-grpo",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.425,
+    "cand_0001": 0.865,
+    "cand_0002": 0.9199999999999999,
+    "cand_0003": 0.925,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "delta": 0.575
+  },
+  {
+    "task": "dialogue-parser",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "drone-planning-control",
+    "category": "industrial-physical-systems",
+    "source": "c1-v5",
+    "status": "DONE",
+    "seed": 0.7200001,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.3,
+    "cand_0004": 0.3,
+    "best": 0.7200001,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "dynamic-object-aware-egomotion",
+    "category": "industrial-physical-systems",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "earthquake-phase-association",
+    "category": "natural-science",
+    "source": "mac-v2",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "earthquake-plate-calculation",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "econ-detrending-correlation",
+    "category": "finance-economics",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "edit-pdf",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.9,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "energy-ac-optimal-power-flow",
+    "category": "industrial-physical-systems",
+    "source": "c2-v2",
+    "status": "KILLED_val_1.0",
+    "seed": 0.1,
+    "cand_0001": 0.5,
+    "cand_0002": 0.5,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 0.9
+  },
+  {
+    "task": "energy-market-pricing",
+    "category": "industrial-physical-systems",
+    "source": "c2-v2",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.5,
+    "cand_0002": 0.9,
+    "cand_0003": 0.6,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "energy-unit-commitment",
+    "category": "industrial-physical-systems",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.1,
+    "cand_0001": 0.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "enterprise-information-search",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "exam-block-sequencing",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.1,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "exceltable-in-ppt",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "exoplanet-detection-period",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 0.9,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "financial-modeling-qa",
+    "category": "finance-economics",
+    "source": "c1-v5",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "fix-build-agentops",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "fix-build-google-auto",
+    "category": "software-engineering",
+    "source": "mac-v2",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "fix-druid-loophole-cve",
+    "category": "cybersecurity",
+    "source": "c3-v1",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "fix-erlang-ssh-cve",
+    "category": "cybersecurity",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.6,
+    "cand_0001": 0.4,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "fix-visual-stability",
+    "category": "software-engineering",
+    "source": "mac-v2",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "flink-query",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.1,
+    "cand_0002": 0.1,
+    "cand_0003": 0.5,
+    "cand_0004": 0.9,
+    "best": 0.9,
+    "best_tag": "cand_0004",
+    "delta": 0.9
+  },
+  {
+    "task": "flood-risk-analysis",
+    "category": "natural-science",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "glm-lake-mendota",
+    "category": "natural-science",
+    "source": "mac-v2",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "gravitational-wave-detection",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "grid-dispatch-operator",
+    "category": "industrial-physical-systems",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  },
+  {
+    "task": "hvac-control",
+    "category": "industrial-physical-systems",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "invoice-fraud-detection",
+    "category": "finance-economics",
+    "source": "c1-tA",
+    "status": "DONE",
+    "seed": 0.3,
+    "cand_0001": 0.2,
+    "cand_0002": 0.4,
+    "cand_0003": 0.2,
+    "cand_0004": 0.2,
+    "best": 0.4,
+    "best_tag": "cand_0002",
+    "delta": 0.10000000000000003
+  },
+  {
+    "task": "jax-computing-basics",
+    "category": "software-engineering",
+    "source": "c1-v5",
+    "status": "DONE",
+    "seed": 0.9,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.4,
+    "cand_0004": 0.1,
+    "best": 0.9,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "jpg-ocr-stat",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "lab-unit-harmonization",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.9978999999999999,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.002100000000000102
+  },
+  {
+    "task": "lake-warming-attribution",
+    "category": "natural-science",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.1,
+    "cand_0001": 0.6,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "latex-formula-extraction",
+    "category": "office-white-collar",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.2,
+    "cand_0001": 0.0,
+    "cand_0002": 0.5,
+    "cand_0003": 0.7,
+    "cand_0004": 0.8,
+    "best": 0.8,
+    "best_tag": "cand_0004",
+    "delta": 0.6000000000000001
+  },
+  {
+    "task": "lean4-proof",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 0.9,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "llm-prefix-cache-replay",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "manufacturing-codebook-normalization",
+    "category": "industrial-physical-systems",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.2,
+    "cand_0001": 0.8,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.8
+  },
+  {
+    "task": "manufacturing-equipment-maintenance",
+    "category": "industrial-physical-systems",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.7,
+    "cand_0001": 0.9,
+    "cand_0002": 0.8,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "manufacturing-fjsp-optimization",
+    "category": "industrial-physical-systems",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "mario-coin-counting",
+    "category": "media-content-production",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "mars-clouds-clustering",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "multilingual-video-dubbing",
+    "category": "media-content-production",
+    "source": "c1-tA",
+    "status": "DONE",
+    "seed": 0.7,
+    "cand_0001": 0.9,
+    "cand_0002": 0.9,
+    "cand_0003": 0.9,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "offer-letter-generator",
+    "category": "office-white-collar",
+    "source": "mac-v2",
+    "status": "KILLED_ceiling",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 0.6666666666666666,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "organize-messy-files",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.5,
+    "cand_0001": 0.6,
+    "cand_0002": 0.6,
+    "cand_0003": 0.9,
+    "cand_0004": 0.9,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.4
+  },
+  {
+    "task": "paper-anonymizer",
+    "category": "office-white-collar",
+    "source": "c1-v5",
+    "status": "DONE",
+    "seed": 0.6,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.2,
+    "cand_0004": 0.0,
+    "best": 0.6,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "parallel-tfidf-search",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 0.9,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "paratransit-routing",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": 0.9,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "pddl-airport-planning",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  },
+  {
+    "task": "pddl-tpp-planning",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "pdf-excel-diff",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "powerlifting-coef-calc",
+    "category": "office-white-collar",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "pptx-reference-formatting",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "protein-expression-analysis",
+    "category": "natural-science",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "python-scala-translation",
+    "category": "software-engineering",
+    "source": "c1-v1",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "quantum-numerical-simulation",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "r2r-mpc-control",
+    "category": "industrial-physical-systems",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.3,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.7
+  },
+  {
+    "task": "radar-vital-signs",
+    "category": "natural-science",
+    "source": "c3-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "react-performance-debugging",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.6,
+    "cand_0001": 1.0,
+    "cand_0002": 0.9,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.4
+  },
+  {
+    "task": "reserves-at-risk-calc",
+    "category": "finance-economics",
+    "source": "c2-v2",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.7,
+    "cand_0003": 0.8,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "delta": 1.0
+  },
+  {
+    "task": "sales-pivot-analysis",
+    "category": "office-white-collar",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "sec-financial-report",
+    "category": "finance-economics",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.9,
+    "cand_0001": 0.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "seismic-phase-picking",
+    "category": "natural-science",
+    "source": "mac-v2",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "setup-fuzzing-py",
+    "category": "cybersecurity",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.364,
+    "cand_0001": 0.0,
+    "cand_0002": 0.264,
+    "cand_0003": 0.513,
+    "cand_0004": 0.549,
+    "best": 0.549,
+    "best_tag": "cand_0004",
+    "delta": 0.18500000000000005
+  },
+  {
+    "task": "shock-analysis-demand",
+    "category": "finance-economics",
+    "source": "c2-v2",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.4,
+    "cand_0004": 0.9,
+    "best": 0.9,
+    "best_tag": "cand_0004",
+    "delta": 0.9
+  },
+  {
+    "task": "shock-analysis-supply",
+    "category": "finance-economics",
+    "source": "c2-v2",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.2,
+    "cand_0002": 0.2,
+    "cand_0003": 0.2,
+    "cand_0004": 0.3,
+    "best": 0.3,
+    "best_tag": "cand_0004",
+    "delta": 0.3
+  },
+  {
+    "task": "simpo-code-reproduction",
+    "category": "software-engineering",
+    "source": "c2-v2",
+    "status": "KILLED_val_1.0",
+    "seed": 0.8,
+    "cand_0001": 0.5,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "software-dependency-audit",
+    "category": "cybersecurity",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.3,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.7
+  },
+  {
+    "task": "spring-boot-jakarta-migration",
+    "category": "software-engineering",
+    "source": "c1-v1",
+    "status": "NO_SIGNAL",
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "suricata-custom-exfil",
+    "category": "cybersecurity",
+    "source": "mac-v2",
+    "status": "DONE",
+    "seed": 0.6666666666666666,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.6666666666666666,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "syzkaller-ppdev-syzlang",
+    "category": "cybersecurity",
+    "source": "c1-v1",
+    "status": "DONE",
+    "seed": 0.7,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "threejs-structure-parser",
+    "category": "media-content-production",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.5,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.5
+  },
+  {
+    "task": "threejs-to-obj",
+    "category": "media-content-production",
+    "source": "c1-v1",
+    "status": "KILLED_saturated",
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "tictoc-unnecessary-abort-detection",
+    "category": "software-engineering",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.885,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.11499999999999999
+  },
+  {
+    "task": "travel-planning",
+    "category": "mathematics-or-formal-reasoning",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.0,
+    "cand_0001": 0.2,
+    "cand_0002": 0.6,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 1.0
+  },
+  {
+    "task": "video-silence-remover",
+    "category": "media-content-production",
+    "source": "c3-v1",
+    "status": "DONE",
+    "seed": 0.1,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "weighted-gdp-calc",
+    "category": "finance-economics",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "xlsx-recover-data",
+    "category": "finance-economics",
+    "source": "c1-v1",
+    "status": "KILLED_ceiling",
+    "seed": 0.0,
+    "cand_0001": 0.7,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  }
+];
+const CAND_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004'];
+const CAND_LABELS = ['seed','c1','c2','c3','c4'];
+
+function color(v) {
+  if (v === null || v === undefined) return '#f3f4f6';
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220,38,38], mid = [254,243,199], high = [5,150,105];
+  let r, g, b;
+  if (t < 0.5) { const k = t*2; r=low[0]+(mid[0]-low[0])*k; g=low[1]+(mid[1]-low[1])*k; b=low[2]+(mid[2]-low[2])*k; }
+  else { const k = (t-0.5)*2; r=mid[0]+(high[0]-mid[0])*k; g=mid[1]+(high[1]-mid[1])*k; b=mid[2]+(high[2]-mid[2])*k; }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+function fmt(v) { return v === null || v === undefined ? '—' : v.toFixed(3); }
+function fmtDelta(v) { if (!v) return '0.000'; return (v>0?'+':'') + v.toFixed(3); }
+
+function sourceBadgeClass(src) {
+  if (src === 'c3-v1') return 'badge-c3v1';
+  if (src === 'c2-v2') return 'badge-c2v2';
+  if (src === 'c1-v5') return 'badge-c1v5';
+  if (src === 'c1-tA') return 'badge-c1tA';
+  if (src === 'c1-v1') return 'badge-c1v1';
+  if (src === 'mac-v2') return 'badge-macv2';
+  return 'badge-c1v1';
+}
+function sourceBadgeLabel(src) {
+  if (src === 'c3-v1') return 'c3v1';
+  if (src === 'c2-v2') return 'c2v2';
+  if (src === 'c1-v5') return 'c1v5';
+  if (src === 'c1-tA') return 'c1tA';
+  if (src === 'c1-v1') return 'c1v1';
+  if (src === 'mac-v2') return 'mac-v2';
+  return src || '?';
+}
+
+function render() {
+  const sort = document.querySelector('input[name=sort]:checked').value;
+  const rows = [...DATA];
+  if (sort === 'delta') rows.sort((a,b) => (b.delta ?? 0) - (a.delta ?? 0));
+  else if (sort === 'baseline') rows.sort((a,b) => (b.seed ?? -1) - (a.seed ?? -1));
+  else if (sort === 'best') rows.sort((a,b) => (b.best ?? -1) - (a.best ?? -1));
+  else if (sort === 'category') rows.sort((a,b) => a.category.localeCompare(b.category) || a.task.localeCompare(b.task));
+  else rows.sort((a,b) => a.task.localeCompare(b.task));
+
+  let html = '<thead><tr><th class="row-head">task</th>';
+  for (const l of CAND_LABELS) html += `<th>${l}</th>`;
+  html += '<th class="best-col">best</th><th class="delta-col">Δ</th></tr></thead><tbody>';
+
+  for (const r of rows) {
+    const srcBadge = `<span class="badge ${sourceBadgeClass(r.source)}">${sourceBadgeLabel(r.source)}</span>`;
+    const catBadge = ` <span class="badge badge-cat">${r.category}</span>`;
+    let stateBadge = '';
+    if (r.status === 'NO_SIGNAL') stateBadge = ' <span class="badge badge-nosignal">no-signal</span>';
+    const saturated = (r.status === 'KILLED_saturated') || (r.seed !== null && r.seed >= 0.999 && CAND_KEYS.slice(1).every(k => r[k] === null));
+
+    html += `<tr><td class="label">${r.task} ${srcBadge}${stateBadge}${catBadge}</td>`;
+    for (const key of CAND_KEYS) {
+      const v = r[key];
+      const isNa = v === null || v === undefined;
+      const isBest = !isNa && r.best !== null && Math.abs(v - r.best) < 1e-9 && key === r.best_tag;
+      const isSat = key === 'seed' && saturated;
+      const cls = ['value', isNa?'na':'', isBest?'best-cell':'', isSat?'saturated':''].filter(Boolean).join(' ');
+      html += `<td class="${cls}" style="background:${color(v)}">${fmt(v)}</td>`;
+    }
+    html += `<td class="value best-col">${fmt(r.best)}</td>`;
+    const dColor = (r.delta ?? 0) > 0 ? '#059669' : (r.delta ?? 0) < 0 ? '#dc2626' : '#6b7280';
+    html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(r.delta ?? 0)}</td></tr>`;
+  }
+
+  const avg = (key, filter) => {
+    const arr = filter ? DATA.filter(filter) : DATA;
+    const vals = arr.map(r => r[key]).filter(v => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  };
+  html += '<tr class="summary-row"><td class="label">MEAN (n=' + DATA.length + ')</td>';
+  for (const k of CAND_KEYS) html += `<td style="background:${color(avg(k))}">${fmt(avg(k))}</td>`;
+  html += `<td class="best-col">${fmt(avg('best'))}</td>`;
+  const dc = avg('delta') > 0 ? '#059669' : '#6b7280';
+  html += `<td class="delta-col" style="color:${dc}">${fmtDelta(avg('delta'))}</td></tr>`;
+  html += '</tbody>';
+  document.getElementById('heatmap').innerHTML = html;
+
+  const nAt1 = DATA.filter(r => (r.best ?? 0) >= 0.999).length;
+  const nNoSignal = DATA.filter(r => r.status === 'NO_SIGNAL').length;
+  // Optimizer-perspective metrics:
+  //  - max candidate value (excluding seed) — the best the OPTIMIZER produced
+  //  - improved but not to 1.0: (best > seed) AND (best < 1.0)
+  //  - optimizer regressed: max(cand_*) exists AND max(cand_*) < seed
+  const maxCand = r => {
+    const vs = ['cand_0001','cand_0002','cand_0003','cand_0004'].map(k => r[k]).filter(v => v !== null && v !== undefined);
+    return vs.length ? Math.max(...vs) : null;
+  };
+  const nImprovedNot1 = DATA.filter(r => r.seed !== null && r.best !== null && r.best > r.seed + 1e-6 && r.best < 0.999).length;
+  const nOptRegressed = DATA.filter(r => {
+    const mc = maxCand(r);
+    return mc !== null && r.seed !== null && mc + 1e-6 < r.seed;
+  }).length;
+
+  // Per-category rollup
+  const cats = [...new Set(DATA.map(r => r.category))].sort();
+  let catRows = '';
+  for (const c of cats) {
+    const rs = DATA.filter(r => r.category === c);
+    const evals = rs.filter(r => r.best !== null);
+    const passing = rs.filter(r => (r.best ?? 0) >= 0.999).length;
+    const ns = rs.filter(r => r.status === 'NO_SIGNAL').length;
+    const mb = evals.length ? evals.reduce((a,r)=>a+r.best,0)/evals.length : 0;
+    const ms = evals.length ? evals.map(r=>r.seed).filter(v=>v!==null).reduce((a,b)=>a+b,0)/evals.filter(r=>r.seed!==null).length : 0;
+    catRows += `<tr><td class="txt">${c}</td><td>${rs.length}</td><td>${ns}</td><td>${passing}</td><td>${(passing/rs.length*100).toFixed(0)}%</td><td>${ms.toFixed(3)}</td><td><strong>${mb.toFixed(3)}</strong></td><td style="color:#059669">+${(mb-ms).toFixed(3)}</td></tr>`;
+  }
+
+  const nWithSignal = DATA.length - nNoSignal;
+  document.getElementById('agg').innerHTML = `
+    <strong>Bottom line — 87 tasks, task-native seed, 10 trials per candidate, 4-iteration budget, aggregated across CCC (c1/c2/c3) and Mac worktrees:</strong>
+    <table>
+      <thead><tr><th class="txt">category</th><th>n</th><th>no-signal</th><th>pass</th><th>pass rate</th><th>avg baseline</th><th>avg best</th><th>Δ</th></tr></thead>
+      <tbody>
+        ${catRows}
+        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">FULL-87</td><td>${DATA.length}</td><td>${nNoSignal}</td><td>${nAt1}</td>
+          <td>${(nAt1/DATA.length*100).toFixed(1)}%</td>
+          <td>${avg('seed').toFixed(3)}</td><td>${avg('best').toFixed(3)}</td>
+          <td style="color:#059669">+${(avg('best')-avg('seed')).toFixed(3)}</td></tr>
+      </tbody>
+    </table>
+    <strong>Task outcomes:</strong><br>
+    &nbsp;&nbsp;• <strong>${nAt1}/${DATA.length} (${(nAt1/DATA.length*100).toFixed(1)}%)</strong> reach val=1.0 (fully solved).<br>
+    &nbsp;&nbsp;• <strong>${nImprovedNot1}/${DATA.length} (${(nImprovedNot1/DATA.length*100).toFixed(1)}%)</strong> improved over seed but did NOT reach 1.0 (partial lift).<br>
+    &nbsp;&nbsp;• <strong>${nOptRegressed}/${DATA.length} (${(nOptRegressed/DATA.length*100).toFixed(1)}%)</strong> where the optimizer's best candidate was LOWER than the baseline (regression; seed still wins).<br>
+    &nbsp;&nbsp;• <strong>${nNoSignal}/${DATA.length} (${(nNoSignal/DATA.length*100).toFixed(1)}%)</strong> NO_SIGNAL — 0.0 on both seed and every candidate (cap-evolve had no lever).<br>
+    <strong>vs EvoSkill (71.1%):</strong> full-87 pass rate = ${(nAt1/DATA.length*100).toFixed(1)}% (+${((nAt1/DATA.length*100)-71.1).toFixed(1)} pp). Excluding no-signal: ${nAt1}/${nWithSignal} = ${(nAt1/nWithSignal*100).toFixed(1)}%.
+  `;
+}
+document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', render));
+render();
+</script>
+</body>
+</html>

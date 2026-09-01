@@ -1,0 +1,7 @@
+cap-evolve events (baseline-10task):
+------------------------------------------------------------
+splits: train=7 val=7 test=3 seed=0
+evaluate  split=val tag=seed reward=0.1429 seconds=2096.8
+baseline  val=0.1429 stderr=0.1429
+evaluate  split=test tag=FINAL reward=0.0000 seconds=1337.9
+finalize  test_reward=0.0 best=seed

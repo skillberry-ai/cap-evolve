@@ -1,0 +1,326 @@
+{
+  "our_per_cat": {
+    "industrial-physical-systems": {
+      "total": 14,
+      "eval": 9,
+      "pass_1_0": 6,
+      "sum_best": 8.5200001,
+      "n_best": 9,
+      "blocked": 5,
+      "tasks_pass": [
+        "3d-scan-calc",
+        "adaptive-cruise-control",
+        "dynamic-object-aware-egomotion",
+        "grid-dispatch-operator",
+        "hvac-control",
+        "r2r-mpc-control"
+      ],
+      "tasks_fail": [
+        {
+          "task": "drone-planning-control",
+          "best": 0.7200001
+        },
+        {
+          "task": "energy-ac-optimal-power-flow",
+          "best": 0.9
+        },
+        {
+          "task": "energy-market-pricing",
+          "best": 0.9
+        }
+      ],
+      "tasks_blocked": [
+        "ada-bathroom-plan-repair",
+        "energy-unit-commitment",
+        "manufacturing-codebook-normalization",
+        "manufacturing-equipment-maintenance",
+        "manufacturing-fjsp-optimization"
+      ]
+    },
+    "software-engineering": {
+      "total": 16,
+      "eval": 5,
+      "pass_1_0": 1,
+      "sum_best": 2.8,
+      "n_best": 5,
+      "blocked": 11,
+      "tasks_pass": [
+        "data-to-d3"
+      ],
+      "tasks_fail": [
+        {
+          "task": "jax-computing-basics",
+          "best": 0.9
+        },
+        {
+          "task": "python-scala-translation",
+          "best": 0.0
+        },
+        {
+          "task": "simpo-code-reproduction",
+          "best": 0.9
+        },
+        {
+          "task": "spring-boot-jakarta-migration",
+          "best": 0.0
+        }
+      ],
+      "tasks_blocked": [
+        "azure-bgp-oscillation-route-leak",
+        "debug-trl-grpo",
+        "dialogue-parser",
+        "fix-build-agentops",
+        "fix-build-google-auto",
+        "fix-visual-stability",
+        "flink-query",
+        "llm-prefix-cache-replay",
+        "parallel-tfidf-search",
+        "react-performance-debugging",
+        "tictoc-unnecessary-abort-detection"
+      ]
+    },
+    "mathematics-or-formal-reasoning": {
+      "total": 8,
+      "eval": 1,
+      "pass_1_0": 1,
+      "sum_best": 1.0,
+      "n_best": 1,
+      "blocked": 7,
+      "tasks_pass": [
+        "pddl-airport-planning"
+      ],
+      "tasks_fail": [],
+      "tasks_blocked": [
+        "bike-rebalance",
+        "civ6-adjacency-optimizer",
+        "exam-block-sequencing",
+        "lean4-proof",
+        "paratransit-routing",
+        "pddl-tpp-planning",
+        "travel-planning"
+      ]
+    },
+    "office-white-collar": {
+      "total": 14,
+      "eval": 12,
+      "pass_1_0": 9,
+      "sum_best": 10.5,
+      "n_best": 11,
+      "blocked": 2,
+      "tasks_pass": [
+        "citation-check",
+        "court-form-filling",
+        "edit-pdf",
+        "enterprise-information-search",
+        "exceltable-in-ppt",
+        "jpg-ocr-stat",
+        "pdf-excel-diff",
+        "pptx-reference-formatting",
+        "sales-pivot-analysis"
+      ],
+      "tasks_fail": [
+        {
+          "task": "organize-messy-files",
+          "best": 0.9
+        },
+        {
+          "task": "paper-anonymizer",
+          "best": 0.6
+        }
+      ],
+      "tasks_blocked": [
+        "latex-formula-extraction",
+        "powerlifting-coef-calc"
+      ]
+    },
+    "natural-science": {
+      "total": 14,
+      "eval": 3,
+      "pass_1_0": 3,
+      "sum_best": 3.0,
+      "n_best": 3,
+      "blocked": 11,
+      "tasks_pass": [
+        "flood-risk-analysis",
+        "lake-warming-attribution",
+        "protein-expression-analysis"
+      ],
+      "tasks_fail": [],
+      "tasks_blocked": [
+        "crystallographic-wyckoff-position-analysis",
+        "earthquake-phase-association",
+        "earthquake-plate-calculation",
+        "exoplanet-detection-period",
+        "glm-lake-mendota",
+        "gravitational-wave-detection",
+        "lab-unit-harmonization",
+        "mars-clouds-clustering",
+        "quantum-numerical-simulation",
+        "radar-vital-signs",
+        "seismic-phase-picking"
+      ]
+    },
+    "cybersecurity": {
+      "total": 7,
+      "eval": 2,
+      "pass_1_0": 2,
+      "sum_best": 2.0,
+      "n_best": 2,
+      "blocked": 5,
+      "tasks_pass": [
+        "dapt-intrusion-detection",
+        "syzkaller-ppdev-syzlang"
+      ],
+      "tasks_fail": [],
+      "tasks_blocked": [
+        "fix-druid-loophole-cve",
+        "fix-erlang-ssh-cve",
+        "setup-fuzzing-py",
+        "software-dependency-audit",
+        "suricata-custom-exfil"
+      ]
+    },
+    "finance-economics": {
+      "total": 9,
+      "eval": 8,
+      "pass_1_0": 3,
+      "sum_best": 6.1,
+      "n_best": 8,
+      "blocked": 1,
+      "tasks_pass": [
+        "sec-financial-report",
+        "weighted-gdp-calc",
+        "xlsx-recover-data"
+      ],
+      "tasks_fail": [
+        {
+          "task": "financial-modeling-qa",
+          "best": 0.0
+        },
+        {
+          "task": "invoice-fraud-detection",
+          "best": 0.4
+        },
+        {
+          "task": "reserves-at-risk-calc",
+          "best": 0.9
+        },
+        {
+          "task": "shock-analysis-demand",
+          "best": 0.9
+        },
+        {
+          "task": "shock-analysis-supply",
+          "best": 0.9
+        }
+      ],
+      "tasks_blocked": [
+        "econ-detrending-correlation"
+      ]
+    },
+    "media-content-production": {
+      "total": 5,
+      "eval": 3,
+      "pass_1_0": 3,
+      "sum_best": 3.0,
+      "n_best": 3,
+      "blocked": 2,
+      "tasks_pass": [
+        "multilingual-video-dubbing",
+        "threejs-structure-parser",
+        "threejs-to-obj"
+      ],
+      "tasks_fail": [],
+      "tasks_blocked": [
+        "mario-coin-counting",
+        "video-silence-remover"
+      ]
+    }
+  },
+  "evoskill_per_domain": {
+    "Finance": {
+      "n": 8,
+      "no_skill": 24,
+      "human": 47,
+      "evoskill": 82
+    },
+    "Natural Science": {
+      "n": 11,
+      "no_skill": 47,
+      "human": 47,
+      "evoskill": 84
+    },
+    "Cybersecurity": {
+      "n": 7,
+      "no_skill": 17,
+      "human": 52,
+      "evoskill": 76
+    },
+    "Office & White Collar": {
+      "n": 13,
+      "no_skill": 19,
+      "human": 52,
+      "evoskill": 73
+    },
+    "Healthcare": {
+      "n": 1,
+      "no_skill": 62,
+      "human": 62,
+      "evoskill": 100
+    },
+    "Media & Content": {
+      "n": 12,
+      "no_skill": 39,
+      "human": 47,
+      "evoskill": 69
+    },
+    "Manufacturing": {
+      "n": 3,
+      "no_skill": 49,
+      "human": 60,
+      "evoskill": 60
+    },
+    "Software Eng": {
+      "n": 13,
+      "no_skill": 43,
+      "human": 49,
+      "evoskill": 68
+    },
+    "Research": {
+      "n": 9,
+      "no_skill": 22,
+      "human": 65,
+      "evoskill": 67
+    },
+    "Energy": {
+      "n": 3,
+      "no_skill": 60,
+      "human": 60,
+      "evoskill": 67
+    },
+    "Robotics": {
+      "n": 5,
+      "no_skill": 59,
+      "human": 63,
+      "evoskill": 64
+    }
+  },
+  "our_overall": {
+    "total": 87,
+    "evaluated": 43,
+    "blocked": 44,
+    "at_1_0": 28,
+    "mean_best_of_eval": 0.8790476214285715
+  },
+  "evoskill_overall": {
+    "total": 87,
+    "pass_rate": 71.1,
+    "baselines": {
+      "no_skill": 30.6,
+      "self_gen": 32.0,
+      "cot_guided": 30.7,
+      "skill_creator": 34.1,
+      "human_curated": 53.5
+    }
+  }
+}

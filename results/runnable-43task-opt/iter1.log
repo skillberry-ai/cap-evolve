@@ -1,0 +1,14 @@
+{
+  "iter": 1,
+  "candidate": "cand_0001",
+  "parent": "seed",
+  "parent_val": 0.13953488372093023,
+  "candidate_val": 0.14728682170542634,
+  "delta": 0.007752,
+  "gate_reason": "paired Δ̄=+0.0078 > 0.2·SE=0.0072 (SE=0.0359, n=43)",
+  "gate_decision": "ACCEPTED",
+  "optimizer_seconds": 1398.96,
+  "runner_seconds": 13253.79,
+  "opt_cost_usd": 14.013555,
+  "opt_tokens": 67349
+}

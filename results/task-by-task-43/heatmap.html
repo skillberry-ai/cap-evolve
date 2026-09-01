@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>task-by-task-43 — post-v5 heatmap</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #fafafa; color: #1a1a2e; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #6b7280; margin: 0 0 20px; }
+  .controls { display: flex; gap: 16px; align-items: center; margin: 8px 0 12px; font-size: 13px; color: #6b7280; }
+  .legend { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; }
+  .legend-bar { width: 200px; height: 14px; border-radius: 3px; background: linear-gradient(to right, #dc2626 0%, #fef3c7 50%, #059669 100%); }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th { font-weight: 500; color: #6b7280; padding: 6px 10px; text-align: center; background: #f9fafb; }
+  th.row-head { text-align: right; padding-right: 12px; }
+  th.best-col { color: #92400e; background: #fef3c7; }
+  th.delta-col { border-left: 2px solid #9ca3af; }
+  td { padding: 6px 10px; text-align: center; border: 1px solid #f3f4f6; font-family: ui-monospace, monospace; font-size: 12px; }
+  td.label { text-align: right; font-weight: 500; color: #1a1a2e; background: #fff; padding-right: 12px; font-family: inherit; white-space: nowrap; }
+  td.value.na { background: #f3f4f6; color: #9ca3af; font-style: italic; }
+  td.value.saturated { border: 2px solid #f59e0b; }
+  td.value.best-cell { box-shadow: inset 0 0 0 3px rgba(79, 70, 229, 0.5); }
+  td.delta-col { border-left: 2px solid #9ca3af; font-weight: 600; }
+  td.best-col { background: #fef3c7 !important; font-weight: 600; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+  .badge-b1 { background: rgba(107,114,128,0.15); color: #4b5563; }
+  .badge-b2 { background: rgba(79,70,229,0.15); color: #4f46e5; }
+  .badge-b3 { background: rgba(217,70,239,0.15); color: #a21caf; }
+  .badge-v7 { background: rgba(5,150,105,0.15); color: #059669; }
+  .badge-v3 { background: rgba(220,38,38,0.15); color: #dc2626; }
+  .badge-v5 { background: rgba(37,99,235,0.15); color: #2563eb; }
+  .badge-tA { background: rgba(184,127,31,0.15); color: #a67b2c; }
+  .footer { font-size: 12px; color: #6b7280; margin-top: 16px; line-height: 1.5; }
+  .aggregate { margin-top: 16px; padding: 14px 18px; background: #eff6ff; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+  .aggregate strong { color: #1e40af; }
+  .aggregate table { margin: 8px 0 10px; font-size: 12px; }
+  .aggregate th, .aggregate td { padding: 5px 10px; border: 1px solid #dbeafe; text-align: center; background: #fff; }
+  .aggregate th { background: #dbeafe; font-weight: 600; color: #1e40af; }
+  .aggregate td.txt { text-align: left; }
+  .summary-row td { background: #fef3c7 !important; font-weight: 600 !important; border-top: 2px solid #f59e0b !important; }
+  .summary-row td.label { background: #fef3c7 !important; color: #92400e !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SkillsBench task-by-task-43 — post-v5 (all infra bugs cleared)</h1>
+  <p class="subtitle">43 tasks · 10 trials per candidate · up to 4 iterations · Sonnet-5 agent + Opus-4.8 optimizer · dedicated LSF host per task. Badges: <span class="badge badge-b1">b1</span>/<span class="badge badge-b2">b2</span>/<span class="badge badge-b3">b3</span> = submission batch. <span class="badge badge-v7">v7</span> = post-2026-08-21 podman-image fix. <span class="badge badge-v3">v3</span> = post-2026-08-24 stale-flock-cleared rerun. <span class="badge badge-v5">v5</span> = post-2026-08-24 full-cache-cleared + new-creds rerun. <span class="badge badge-tA">tA</span> = Track A iters 3-4 extension.</p>
+
+  <div class="controls">
+    <label><input type="radio" name="sort" value="id" checked> Sort by task</label>
+    <label><input type="radio" name="sort" value="delta"> Sort by Δ</label>
+    <label><input type="radio" name="sort" value="baseline"> Sort by baseline</label>
+    <label><input type="radio" name="sort" value="best"> Sort by best</label>
+    <label><input type="radio" name="sort" value="batch"> Sort by batch</label>
+    <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
+  </div>
+
+  <div class="card"><table id="heatmap"></table></div>
+  <div class="aggregate" id="agg"></div>
+
+  <p class="footer">
+    <strong>Cells:</strong> mean reward across 10 trials. Grey/"—" = candidate not run.<br>
+    <strong>Best (amber):</strong> best mean across all evaluated candidates; the best cell has a purple ring.<br>
+    <strong>Amber-bordered baseline:</strong> saturated at seed (val=1.0); optimizer skipped.<br>
+    <strong>v5 badge:</strong> data from 2026-08-24 rerun after clearing 4 layers of infra caching (patched-ubuntu v7 image, stale flock, 90 seed-dir cache subdirs, new ANTHROPIC creds). See <a href="../INVESTIGATION.md">INVESTIGATION.md</a>.
+  </p>
+</div>
+
+<script>
+const DATA = [
+  {
+    "task": "edit-pdf",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.9,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "court-form-filling",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.3,
+    "cand_0001": 0.1,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.7
+  },
+  {
+    "task": "adaptive-cruise-control",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": true,
+    "seed": 0.7,
+    "cand_0001": 0.7,
+    "cand_0002": 0.9,
+    "cand_0003": 1.0,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "hvac-control",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "r2r-mpc-control",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.3,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.7
+  },
+  {
+    "task": "3d-scan-calc",
+    "batch": 1,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "syzkaller-ppdev-syzlang",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.7,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "multilingual-video-dubbing",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": true,
+    "seed": 0.7,
+    "cand_0001": 0.9,
+    "cand_0002": 0.9,
+    "cand_0003": 0.9,
+    "cand_0004": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "delta": 0.30000000000000004
+  },
+  {
+    "task": "flood-risk-analysis",
+    "batch": 1,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "invoice-fraud-detection",
+    "batch": 1,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": true,
+    "seed": 0.3,
+    "cand_0001": 0.2,
+    "cand_0002": 0.4,
+    "cand_0003": 0.2,
+    "cand_0004": 0.2,
+    "best": 0.4,
+    "best_tag": "cand_0002",
+    "delta": 0.10000000000000003
+  },
+  {
+    "task": "financial-modeling-qa",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": true,
+    "v5_rerun": true,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "cand_0004",
+    "delta": 0.0
+  },
+  {
+    "task": "sec-financial-report",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.9,
+    "cand_0001": 0.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "drone-planning-control",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": true,
+    "v5_rerun": true,
+    "track_a": false,
+    "seed": 0.7200001,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.3,
+    "cand_0004": 0.3,
+    "best": 0.7200001,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "grid-dispatch-operator",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  },
+  {
+    "task": "jax-computing-basics",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": true,
+    "v5_rerun": true,
+    "track_a": false,
+    "seed": 0.9,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.4,
+    "cand_0004": 0.1,
+    "best": 0.9,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "threejs-to-obj",
+    "batch": 2,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "paper-anonymizer",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": true,
+    "v5_rerun": true,
+    "track_a": false,
+    "seed": 0.6,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.2,
+    "cand_0004": 0.0,
+    "best": 0.6,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "pddl-airport-planning",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  },
+  {
+    "task": "python-scala-translation",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 0.0,
+    "best_tag": "cand_0002",
+    "delta": 0.0
+  },
+  {
+    "task": "offer-letter-generator",
+    "batch": 2,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": true,
+    "v3_rerun": true,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": null,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": null,
+    "best_tag": "\u2014",
+    "delta": 0
+  },
+  {
+    "task": "citation-check",
+    "batch": 3,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "dapt-intrusion-detection",
+    "batch": 3,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "data-to-d3",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.5,
+    "cand_0001": 0.9,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.5
+  },
+  {
+    "task": "dynamic-object-aware-egomotion",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "energy-ac-optimal-power-flow",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.4,
+    "cand_0001": 0.5,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.5
+  },
+  {
+    "task": "energy-market-pricing",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.5,
+    "cand_0002": 0.7,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.9
+  },
+  {
+    "task": "enterprise-information-search",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 1.0
+  },
+  {
+    "task": "exceltable-in-ppt",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "jpg-ocr-stat",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "lake-warming-attribution",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.1,
+    "cand_0001": 0.6,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.9
+  },
+  {
+    "task": "organize-messy-files",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.5,
+    "cand_0001": 0.6,
+    "cand_0002": 0.6,
+    "cand_0003": 0.9,
+    "cand_0004": 0.9,
+    "best": 0.9,
+    "best_tag": "cand_0004",
+    "delta": 0.4
+  },
+  {
+    "task": "pdf-excel-diff",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.9,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "pptx-reference-formatting",
+    "batch": 3,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "protein-expression-analysis",
+    "batch": 3,
+    "saturated": true,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "delta": 0.0
+  },
+  {
+    "task": "reserves-at-risk-calc",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.9
+  },
+  {
+    "task": "sales-pivot-analysis",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 1.0
+  },
+  {
+    "task": "shock-analysis-demand",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.4,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.9
+  },
+  {
+    "task": "shock-analysis-supply",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.1,
+    "cand_0001": 0.6,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.8
+  },
+  {
+    "task": "simpo-code-reproduction",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.8,
+    "cand_0001": 0.9,
+    "cand_0002": 0.3,
+    "cand_0003": 0.9,
+    "cand_0004": 0.8,
+    "best": 0.9,
+    "best_tag": "cand_0003",
+    "delta": 0.09999999999999998
+  },
+  {
+    "task": "spring-boot-jakarta-migration",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": false,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.0,
+    "cand_0002": 0.0,
+    "cand_0003": 0.0,
+    "cand_0004": 0.0,
+    "best": 0.0,
+    "best_tag": "cand_0004",
+    "delta": 0.0
+  },
+  {
+    "task": "threejs-structure-parser",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.5,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": 1.0,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "delta": 0.5
+  },
+  {
+    "task": "weighted-gdp-calc",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 0.19999999999999996
+  },
+  {
+    "task": "xlsx-recover-data",
+    "batch": 3,
+    "saturated": false,
+    "ceiling": true,
+    "v7_rerun": false,
+    "v3_rerun": false,
+    "v5_rerun": false,
+    "track_a": false,
+    "seed": 0.0,
+    "cand_0001": 0.7,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "cand_0004": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "delta": 1.0
+  }
+];
+const CAND_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004'];
+const CAND_LABELS = ['seed','c1','c2','c3','c4'];
+
+function color(v) {
+  if (v === null || v === undefined) return '#f3f4f6';
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220,38,38], mid = [254,243,199], high = [5,150,105];
+  let r, g, b;
+  if (t < 0.5) { const k = t*2; r=low[0]+(mid[0]-low[0])*k; g=low[1]+(mid[1]-low[1])*k; b=low[2]+(mid[2]-low[2])*k; }
+  else { const k = (t-0.5)*2; r=mid[0]+(high[0]-mid[0])*k; g=mid[1]+(high[1]-mid[1])*k; b=mid[2]+(high[2]-mid[2])*k; }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+function fmt(v) { return v === null || v === undefined ? '—' : v.toFixed(3); }
+function fmtDelta(v) { if (!v) return '0.000'; return (v>0?'+':'') + v.toFixed(3); }
+
+function render() {
+  const sort = document.querySelector('input[name=sort]:checked').value;
+  const rows = [...DATA];
+  if (sort === 'delta') rows.sort((a,b) => b.delta - a.delta);
+  else if (sort === 'baseline') rows.sort((a,b) => (b.seed ?? 0) - (a.seed ?? 0));
+  else if (sort === 'best') rows.sort((a,b) => (b.best ?? 0) - (a.best ?? 0));
+  else if (sort === 'batch') rows.sort((a,b) => a.batch - b.batch || a.task.localeCompare(b.task));
+  else rows.sort((a,b) => a.task.localeCompare(b.task));
+
+  let html = '<thead><tr><th class="row-head">task</th>';
+  for (const l of CAND_LABELS) html += `<th>${l}</th>`;
+  html += '<th class="best-col">best</th><th class="delta-col">Δ</th></tr></thead><tbody>';
+
+  for (const r of rows) {
+    const b_badge = `<span class="badge badge-b${r.batch}">b${r.batch}</span>`;
+    const v7 = r.v7_rerun ? ' <span class="badge badge-v7">v7</span>' : '';
+    const v3 = r.v3_rerun ? ' <span class="badge badge-v3">v3</span>' : '';
+    const v5 = r.v5_rerun ? ' <span class="badge badge-v5">v5</span>' : '';
+    const tA = r.track_a ? ' <span class="badge badge-tA">tA</span>' : '';
+    html += `<tr><td class="label">${r.task} ${b_badge}${v7}${v3}${v5}${tA}</td>`;
+    for (const key of CAND_KEYS) {
+      const v = r[key];
+      const isNa = v === null || v === undefined;
+      const isBest = !isNa && r.best !== null && Math.abs(v - r.best) < 1e-9 && key === r.best_tag;
+      const isSat = key === 'seed' && r.saturated;
+      const cls = ['value', isNa?'na':'', isBest?'best-cell':'', isSat?'saturated':''].filter(Boolean).join(' ');
+      html += `<td class="${cls}" style="background:${color(v)}">${fmt(v)}</td>`;
+    }
+    html += `<td class="value best-col">${fmt(r.best)}</td>`;
+    const dColor = r.delta > 0 ? '#059669' : r.delta < 0 ? '#dc2626' : '#6b7280';
+    html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(r.delta)}</td></tr>`;
+  }
+
+  const avg = (key, filter) => {
+    const arr = filter ? DATA.filter(filter) : DATA;
+    const vals = arr.map(r => r[key]).filter(v => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  };
+  html += '<tr class="summary-row"><td class="label">MEAN (n=' + DATA.length + ')</td>';
+  for (const k of CAND_KEYS) html += `<td style="background:${color(avg(k))}">${fmt(avg(k))}</td>`;
+  html += `<td class="best-col">${fmt(avg('best'))}</td>`;
+  const dc = avg('delta') > 0 ? '#059669' : '#6b7280';
+  html += `<td class="delta-col" style="color:${dc}">${fmtDelta(avg('delta'))}</td></tr>`;
+  html += '</tbody>';
+  document.getElementById('heatmap').innerHTML = html;
+
+  const b1 = DATA.filter(r => r.batch === 1);
+  const b2 = DATA.filter(r => r.batch === 2);
+  const b3 = DATA.filter(r => r.batch === 3);
+  const nAt1 = DATA.filter(r => (r.best ?? 0) >= 0.999).length;
+  const nHurt = DATA.filter(r => r.v5_rerun && r.best < r.seed - 0.05).length;
+  document.getElementById('agg').innerHTML = `
+    <strong>Bottom line — 43 tasks, task-native seed, 10 trials per candidate, up to 4 iterations, post-v5 fresh data on the 4 diagnosed tasks:</strong>
+    <table>
+      <thead><tr><th class="txt">group</th><th>n</th><th>avg baseline</th><th>avg best</th><th>Δ</th></tr></thead>
+      <tbody>
+        <tr><td class="txt">batch 1</td><td>${b1.length}</td>
+          <td>${avg('seed', r => r.batch===1).toFixed(3)}</td><td><strong>${avg('best', r => r.batch===1).toFixed(3)}</strong></td>
+          <td><strong style="color:#059669">+${(avg('best', r => r.batch===1)-avg('seed', r => r.batch===1)).toFixed(3)}</strong></td></tr>
+        <tr><td class="txt">batch 2 (v5 fresh on 4 diagnosed tasks)</td><td>${b2.length}</td>
+          <td>${avg('seed', r => r.batch===2).toFixed(3)}</td><td><strong>${avg('best', r => r.batch===2).toFixed(3)}</strong></td>
+          <td><strong style="color:#059669">+${(avg('best', r => r.batch===2)-avg('seed', r => r.batch===2)).toFixed(3)}</strong></td></tr>
+        <tr><td class="txt">batch 3</td><td>${b3.length}</td>
+          <td>${avg('seed', r => r.batch===3).toFixed(3)}</td><td><strong>${avg('best', r => r.batch===3).toFixed(3)}</strong></td>
+          <td><strong style="color:#059669">+${(avg('best', r => r.batch===3)-avg('seed', r => r.batch===3)).toFixed(3)}</strong></td></tr>
+        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">FULL RUNNABLE-43</td><td>${DATA.length}</td>
+          <td>${avg('seed').toFixed(3)}</td><td>${avg('best').toFixed(3)}</td>
+          <td style="color:#059669">+${(avg('best')-avg('seed')).toFixed(3)} (+${((avg('best')-avg('seed'))*100).toFixed(1)} pp)</td></tr>
+      </tbody>
+    </table>
+    <strong>Task outcomes:</strong> ${nAt1}/43 (${(nAt1/DATA.length*100).toFixed(0)}%) reach val=1.0.<br>
+    <strong>Optimizer-hurts-baseline pattern (v5 confirmed real):</strong> drone-planning-control (seed 0.72 → all cands ≤ 0.3), jax-computing-basics (0.90 → ≤ 0.4), paper-anonymizer (0.60 → ≤ 0.2). On these, the optimizer's edits produce numerical drift or fragment cohesive skills → strict verifiers reject. See <a href="../INVESTIGATION.md">INVESTIGATION.md</a> for the 4-layer bug chain that hid this signal + 4 optimizer improvements to test + 3 task-level fixes.
+  `;
+}
+document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', render));
+render();
+</script>
+</body>
+</html>

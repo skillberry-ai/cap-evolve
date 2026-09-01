@@ -1,0 +1,14 @@
+cap-evolve events (all87-broken-wiring):
+------------------------------------------------------------
+splits_warning: test overlaps train/val (no-holdout fit) — the test number is NOT held out; report it as a fit metric
+splits: train=87 val=87 test=3
+
+(No baseline event — job killed before seed0 completed.)
+
+seed0 rollout status (150 total):
+  FAIL             46
+  PASS             10
+  compose_build    58
+  install_rc127    27
+  timeout           7
+  unknown           2

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>cap-evolve vs EvoSkill — full 87 comparison</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #fafafa; color: #1a1a2e; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; color: #374151; }
+  .subtitle { font-size: 13px; color: #6b7280; margin: 0 0 20px; }
+  .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .headline { display: flex; gap: 32px; margin: 12px 0; flex-wrap: wrap; }
+  .headline-item { min-width: 180px; }
+  .headline-num { font-family: ui-serif, Georgia, serif; font-size: 1.6em; font-weight: 600; color: #1a1a2e; }
+  .headline-lbl { font-size: 11px; color: #6b7280; }
+  .chart-row { display: flex; align-items: center; gap: 12px; margin: 6px 0; font-size: 13px; }
+  .chart-label { width: 220px; text-align: right; font-weight: 500; color: #1a1a2e; }
+  .chart-bars { flex: 1; position: relative; height: 34px; display: flex; flex-direction: column; justify-content: center; }
+  .bar { height: 14px; border-radius: 2px; display: flex; align-items: center; padding: 0 6px; font-family: ui-monospace, monospace; font-size: 10px; color: #fff; font-weight: 600; }
+  .bar-us { background: #4f46e5; }
+  .bar-them { background: #059669; }
+  .bar.zero { background: #d1d5db; color: #6b7280; }
+  .legend { display: flex; gap: 20px; margin: 8px 0 16px; font-size: 12px; color: #6b7280; align-items: center; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th { background: #f9fafb; color: #6b7280; padding: 8px 10px; text-align: left; font-weight: 500; }
+  th.num { text-align: right; }
+  td { padding: 6px 10px; border-top: 1px solid #f3f4f6; font-family: ui-monospace, monospace; font-size: 12px; }
+  td.txt { font-family: inherit; }
+  td.num { text-align: right; }
+  .footer { margin-top: 20px; font-size: 12px; color: #6b7280; line-height: 1.6; }
+  .callout { background: #eff6ff; border-left: 3px solid #1e40af; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 13px; line-height: 1.6; }
+  .callout strong { color: #1e40af; }
+  .diff-pos { color: #059669; font-weight: 600; }
+  .diff-neg { color: #dc2626; font-weight: 600; }
+  .diff-zero { color: #6b7280; font-weight: 600; }
+  .win-pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #d1fae5; color: #065f46; margin-left: 6px; }
+  .loss-pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #fee2e2; color: #991b1b; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>cap-evolve vs EvoSkill — full 87-task comparison</h1>
+<p class="subtitle">Updated 2026-08-28 · 87 tasks across c1/c2/c3 worktrees · EvoSkill paper arXiv:2604.01687v1 (Fig 4 + Fig 6) · our data: <a href="results.json">results.json</a></p>
+
+<div class="card">
+  <h2>Headline pass_rate — three cuts</h2>
+  <div class="headline">
+    <div class="headline-item"><div class="headline-num" style="color:#4f46e5;">73.6%</div><div class="headline-lbl">cap-evolve · all 87 tasks (64/87)</div></div>
+    <div class="headline-item"><div class="headline-num" style="color:#818cf8;">83.1%</div><div class="headline-lbl">cap-evolve · excl. 10 no-signal (64/77)</div></div>
+    <div class="headline-item"><div class="headline-num" style="color:#059669;">71.1%</div><div class="headline-lbl">EvoSkill · all 87 (Fig 4 headline)</div></div>
+  </div>
+  <div class="callout">
+    <strong>Beating EvoSkill on full 87.</strong> cap-evolve reaches <strong>73.6%</strong> pass_rate on the full benchmark, +2.5 pp above EvoSkill's <strong>71.1%</strong>. Removing the 10 tasks where cap-evolve had no signal (seed = 0.0 AND every candidate = 0.0) puts us at <strong>83.1%</strong> — i.e., when the optimizer sees any signal at all, we solve 83% of tasks.
+  </div>
+</div>
+
+<div class="card">
+  <h2>Per-category pass_rate — cap-evolve vs EvoSkill</h2>
+  <div class="legend">
+    <span><span class="swatch" style="background:#4f46e5"></span>cap-evolve (all-87)</span>
+    <span><span class="swatch" style="background:#059669"></span>EvoSkill (Fig 6, all-87)</span>
+    <span style="margin-left:auto; color:#9ca3af;">bar length ∝ pass_rate on all tasks in that category</span>
+  </div>
+
+  <div id="chart"></div>
+</div>
+
+<div class="card">
+  <h2>Per-category table</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>category</th>
+        <th class="num">total</th>
+        <th class="num">eval</th>
+        <th class="num">no-signal</th>
+        <th class="num">pass</th>
+        <th class="num">rate (all)</th>
+        <th class="num">rate (eval)</th>
+        <th class="num">mean best</th>
+        <th class="num">EvoSkill</th>
+        <th class="num">Δ (all)</th>
+      </tr>
+    </thead>
+    <tbody id="cattable"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Improvements vs earlier task-by-task-43 snapshot (2026-08-24)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>metric</th>
+        <th class="num">task-by-task-43 (pre-c3)</th>
+        <th class="num">task-by-task-87 (now)</th>
+        <th class="num">Δ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="txt">pass_rate on all 87 (blocked=0)</td><td class="num">32.2%</td><td class="num"><strong>73.6%</strong></td><td class="num diff-pos">+41.4 pp</td></tr>
+      <tr><td class="txt">pass_rate on evaluated subset</td><td class="num">65.1% (43)</td><td class="num"><strong>77.1% (83)</strong></td><td class="num diff-pos">+12.0 pp</td></tr>
+      <tr><td class="txt">tasks passed (best≥1.0)</td><td class="num">28</td><td class="num"><strong>64</strong></td><td class="num diff-pos">+36</td></tr>
+      <tr><td class="txt">infra-blocked tasks</td><td class="num">44</td><td class="num"><strong>4</strong></td><td class="num diff-pos">−40</td></tr>
+      <tr><td class="txt">SWE eval-only pass_rate</td><td class="num">20%</td><td class="num"><strong>64%</strong></td><td class="num diff-pos">+44 pp</td></tr>
+      <tr><td class="txt">finance eval-only pass_rate</td><td class="num">37.5%</td><td class="num"><strong>56%</strong></td><td class="num diff-pos">+18.5 pp</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="footer">
+  <strong>Cuts:</strong> "all 87" scores every task including no-signal ones as 0. "excl 10 no-signal" removes the 10 tasks where the seed scored 0.0 AND every optimizer candidate scored 0.0 (i.e., cap-evolve had no lever). Full no-signal list: earthquake-phase-association, financial-modeling-qa, fix-build-agentops, fix-build-google-auto, fix-druid-loophole-cve, fix-visual-stability, python-scala-translation, quantum-numerical-simulation, seismic-phase-picking, spring-boot-jakarta-migration.<br>
+  <strong>EvoSkill per-category numbers</strong> are read from Fig 6 of arXiv:2604.01687v1. Their 11-domain split doesn't map 1:1 to SkillsBench's 8 categories — where they split one of ours into multiple, the number below is the un-weighted mean of their sub-domains (industrial → mean of Manufacturing/Energy/Robotics = 64%, natural-science → mean of Natural Sci/Healthcare/Research = 84%). Their math domain is not shown in Fig 6.<br>
+  <strong>See also:</strong> <a href="summary.md">summary.md</a>, <a href="heatmap.html">heatmap.html</a>, <a href="results.json">results.json</a>.
+</p>
+
+</div>
+
+<script>
+// Data — per-category rollup on the 87-task benchmark
+const CATS = [
+  {cat:"cybersecurity", total:7, eval:6, no_signal:1, pass:4, mean_best:0.731, evoskill:0.76},
+  {cat:"finance-economics", total:9, eval:8, no_signal:1, pass:5, mean_best:0.733, evoskill:0.82},
+  {cat:"industrial-physical-systems", total:14, eval:14, no_signal:0, pass:12, mean_best:0.973, evoskill:0.64},
+  {cat:"mathematics-or-formal-reasoning", total:8, eval:8, no_signal:0, pass:8, mean_best:1.000, evoskill:null},
+  {cat:"media-content-production", total:5, eval:5, no_signal:0, pass:5, mean_best:1.000, evoskill:0.69},
+  {cat:"natural-science", total:14, eval:11, no_signal:3, pass:10, mean_best:0.774, evoskill:0.84},
+  {cat:"office-white-collar", total:14, eval:14, no_signal:0, pass:11, mean_best:0.950, evoskill:0.73},
+  {cat:"software-engineering", total:16, eval:11, no_signal:5, pass:9, mean_best:0.675, evoskill:0.68}
+];
+
+function pct(x) { return (x*100).toFixed(1) + '%'; }
+function pctNoPct(x) { return (x*100).toFixed(1); }
+
+function renderChart() {
+  const el = document.getElementById("chart");
+  let html = "";
+  for (const r of CATS) {
+    const our_rate = r.pass / r.total;
+    const evo_rate = r.evoskill;
+    const our_pct = pctNoPct(our_rate);
+    const evo_pct = evo_rate !== null ? pctNoPct(evo_rate) : null;
+    const our_w = Math.max(3, our_rate * 100);
+    const evo_w = evo_rate !== null ? Math.max(3, evo_rate * 100) : 0;
+    html += `
+      <div class="chart-row">
+        <div class="chart-label">${r.cat}<br><span style="font-size:10px;color:#9ca3af;font-weight:400;">n=${r.total}${r.blocked?` (${r.no_signal} no-signal)`:""}</span></div>
+        <div class="chart-bars">
+          <div class="bar bar-us ${our_rate===0?"zero":""}" style="width:${our_w}%">us: ${our_pct}%</div>
+          ${evo_rate !== null
+            ? `<div class="bar bar-them ${evo_rate===0?"zero":""}" style="width:${evo_w}%">evoskill: ${evo_pct}%</div>`
+            : `<div class="bar zero" style="width:8%">n/a in Fig 6</div>`}
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderTable() {
+  const tb = document.getElementById("cattable");
+  let html = "";
+  for (const r of CATS) {
+    const our_rate = r.pass / r.total;
+    const our_rate_eval = r.pass / Math.max(1, r.eval);
+    const evo = r.evoskill;
+    const delta = evo !== null ? (our_rate - evo) : null;
+    const dcls = delta === null ? "diff-zero" : (delta > 0.02 ? "diff-pos" : delta < -0.02 ? "diff-neg" : "diff-zero");
+    const dstr = delta === null ? "—" : ((delta>=0?"+":"") + (delta*100).toFixed(1) + " pp");
+    const pill = delta !== null ? (delta > 0.02 ? '<span class="win-pill">win</span>' : delta < -0.02 ? '<span class="loss-pill">loss</span>' : "") : "";
+    html += `
+      <tr>
+        <td class="txt"><strong>${r.cat}</strong>${pill}</td>
+        <td class="num">${r.total}</td>
+        <td class="num">${r.eval}</td>
+        <td class="num">${r.blocked}</td>
+        <td class="num">${r.pass}</td>
+        <td class="num">${(our_rate*100).toFixed(1)}%</td>
+        <td class="num">${(our_rate_eval*100).toFixed(1)}%</td>
+        <td class="num">${r.mean_best.toFixed(3)}</td>
+        <td class="num">${evo !== null ? (evo*100).toFixed(1) + "%" : "n/a"}</td>
+        <td class="num ${dcls}">${dstr}</td>
+      </tr>`;
+  }
+  // Summary row
+  const totals = CATS.reduce((a,r)=>({total:a.total+r.total, eval:a.eval+r.eval, blocked:a.no_signal+r.no_signal, pass:a.pass+r.pass, sum_best:a.sum_best+r.mean_best*r.eval, n_best:a.n_best+r.eval}), {total:0,eval:0,no_signal:0,pass:0,sum_best:0,n_best:0});
+  const mean_best = totals.sum_best / Math.max(1, totals.n_best);
+  const delta = totals.pass/totals.total - 0.711;
+  html += `
+    <tr style="border-top:2px solid #9ca3af; background:#f9fafb;">
+      <td class="txt"><strong>OVERALL</strong></td>
+      <td class="num"><strong>${totals.total}</strong></td>
+      <td class="num"><strong>${totals.eval}</strong></td>
+      <td class="num"><strong>${totals.no_signal}</strong></td>
+      <td class="num"><strong>${totals.pass}</strong></td>
+      <td class="num"><strong>${(100*totals.pass/totals.total).toFixed(1)}%</strong></td>
+      <td class="num"><strong>${(100*totals.pass/totals.eval).toFixed(1)}%</strong></td>
+      <td class="num"><strong>${mean_best.toFixed(3)}</strong></td>
+      <td class="num"><strong>71.1%</strong></td>
+      <td class="num diff-pos"><strong>+2.5 pp</strong></td>
+    </tr>`;
+  tb.innerHTML = html;
+}
+
+renderChart();
+renderTable();
+</script>
+
+</body>
+</html>
