@@ -37,7 +37,6 @@ the code that got evolved, the reasoning.
 - `proposals/` — design docs for experiments not yet (fully) run.
 - `ui/` — standalone browsable HTML artifacts (charts, heatmaps). Open directly in a
   browser from a checkout — no build step, no server.
-- `parsec/` — results from the Red Hat Harbor/"Parsec" PoC engagement.
 
 ## Working on this branch
 
