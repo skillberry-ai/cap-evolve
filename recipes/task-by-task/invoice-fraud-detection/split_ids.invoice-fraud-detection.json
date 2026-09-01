@@ -1,0 +1,5 @@
+{
+  "train": ["invoice-fraud-detection"],
+  "val": ["invoice-fraud-detection"],
+  "test": ["invoice-fraud-detection"]
+}

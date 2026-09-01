@@ -1,0 +1,5 @@
+{
+  "train": ["azure-bgp-oscillation-route-leak"],
+  "val": ["azure-bgp-oscillation-route-leak"],
+  "test": ["azure-bgp-oscillation-route-leak"]
+}

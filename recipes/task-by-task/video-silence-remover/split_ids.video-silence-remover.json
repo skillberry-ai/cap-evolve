@@ -1,0 +1,5 @@
+{
+  "train": ["video-silence-remover"],
+  "val": ["video-silence-remover"],
+  "test": ["video-silence-remover"]
+}

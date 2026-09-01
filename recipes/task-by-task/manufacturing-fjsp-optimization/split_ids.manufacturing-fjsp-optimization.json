@@ -1,0 +1,5 @@
+{
+  "train": ["manufacturing-fjsp-optimization"],
+  "val": ["manufacturing-fjsp-optimization"],
+  "test": ["manufacturing-fjsp-optimization"]
+}

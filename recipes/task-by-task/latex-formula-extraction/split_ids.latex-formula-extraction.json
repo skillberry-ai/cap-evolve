@@ -1,0 +1,5 @@
+{
+  "train": ["latex-formula-extraction"],
+  "val": ["latex-formula-extraction"],
+  "test": ["latex-formula-extraction"]
+}

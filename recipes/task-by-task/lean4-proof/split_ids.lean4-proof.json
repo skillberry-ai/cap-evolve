@@ -1,0 +1,5 @@
+{
+  "train": ["lean4-proof"],
+  "val": ["lean4-proof"],
+  "test": ["lean4-proof"]
+}

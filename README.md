@@ -29,6 +29,11 @@ the code that got evolved, the reasoning.
 
 - `results/` — result tables and ledgers, one subdir per sweep/experiment.
   `results/results.json` is the canonical results ledger.
+- `recipes/` — cap-evolve project configs (`capevolve.*.yaml` + `split_ids.*.json`),
+  organized per experiment configuration, so a given experiment can be rerun (e.g. with a
+  different model or more iterations) without needing the source worktree.
+- `artifacts/` — the `seed`/`best` skill-package snapshots those recipes actually
+  produced, mirroring `recipes/`'s subdirectory structure.
 - `insights/` — write-ups: investigations, comparisons, reports.
 - `evidence/` — concrete proof bundles for specific claims (e.g. "cap-evolve evolves
   real code, not just prose"), each with its own README, the actual before/after

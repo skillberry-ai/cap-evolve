@@ -1,0 +1,611 @@
+[
+  {
+    "task": "3d-scan-calc",
+    "source": "c2",
+    "run_dir": "run_task_3d-scan-calc_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "ada-bathroom-plan-repair",
+    "source": "c3",
+    "run_dir": "run_task_ada-bathroom-plan-repair_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0003",
+    "iterations": 3
+  },
+  {
+    "task": "adaptive-cruise-control",
+    "source": "c2",
+    "run_dir": "run_task_adaptive-cruise-control_v1",
+    "best_id": "cand_0003",
+    "iterations": 4
+  },
+  {
+    "task": "azure-bgp-oscillation-route-leak",
+    "source": "c3",
+    "run_dir": "run_task_azure-bgp-oscillation-route-leak_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "bike-rebalance",
+    "source": "c3",
+    "run_dir": "run_task_bike-rebalance_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "citation-check",
+    "source": "c2",
+    "run_dir": "run_task_citation-check_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "civ6-adjacency-optimizer",
+    "source": "c3",
+    "run_dir": "run_task_civ6-adjacency-optimizer_v1_DONE",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "court-form-filling",
+    "source": "c2",
+    "run_dir": "run_task_court-form-filling_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "crystallographic-wyckoff-position-analysis",
+    "source": "c3",
+    "run_dir": "run_task_crystallographic-wyckoff-position-analysis_v1_DONE",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "dapt-intrusion-detection",
+    "source": "c2",
+    "run_dir": "run_task_dapt-intrusion-detection_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "data-to-d3",
+    "source": "c2",
+    "run_dir": "run_task_data-to-d3_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "debug-trl-grpo",
+    "source": "c3",
+    "run_dir": "run_task_debug-trl-grpo_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "dialogue-parser",
+    "source": "c3",
+    "run_dir": "run_task_dialogue-parser_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "drone-planning-control",
+    "source": "c2",
+    "run_dir": "run_task_drone-planning-control_v5",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "dynamic-object-aware-egomotion",
+    "source": "c2",
+    "run_dir": "run_task_dynamic-object-aware-egomotion_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "earthquake-phase-association",
+    "source": "c3",
+    "run_dir": "run_task_earthquake-phase-association_v1_INFRA_BROKEN_baseline_0.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "earthquake-plate-calculation",
+    "source": "c3",
+    "run_dir": "run_task_earthquake-plate-calculation_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "econ-detrending-correlation",
+    "source": "c3",
+    "run_dir": "run_task_econ-detrending-correlation_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "edit-pdf",
+    "source": "c2",
+    "run_dir": "run_task_edit-pdf_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "energy-ac-optimal-power-flow",
+    "source": "c2",
+    "run_dir": "run_task_energy-ac-optimal-power-flow_v2",
+    "best_id": "cand_0003",
+    "iterations": 3
+  },
+  {
+    "task": "energy-market-pricing",
+    "source": "c2",
+    "run_dir": "run_task_energy-market-pricing_v2",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "energy-unit-commitment",
+    "source": "c3",
+    "run_dir": "run_task_energy-unit-commitment_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "enterprise-information-search",
+    "source": "c2",
+    "run_dir": "run_task_enterprise-information-search_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 2
+  },
+  {
+    "task": "exam-block-sequencing",
+    "source": "c3",
+    "run_dir": "run_task_exam-block-sequencing_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "exceltable-in-ppt",
+    "source": "c2",
+    "run_dir": "run_task_exceltable-in-ppt_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "exoplanet-detection-period",
+    "source": "c3",
+    "run_dir": "run_task_exoplanet-detection-period_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 2
+  },
+  {
+    "task": "financial-modeling-qa",
+    "source": "c2",
+    "run_dir": "run_task_financial-modeling-qa_v5",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "fix-build-agentops",
+    "source": "c3",
+    "run_dir": "run_task_fix-build-agentops_v1_DONE",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "fix-build-google-auto",
+    "source": "c3",
+    "run_dir": "run_task_fix-build-google-auto_v1_INFRA_BROKEN_baseline_0.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "fix-druid-loophole-cve",
+    "source": "c3",
+    "run_dir": "run_task_fix-druid-loophole-cve_v1_DONE",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "fix-erlang-ssh-cve",
+    "source": "c3",
+    "run_dir": "run_task_fix-erlang-ssh-cve_v1_DONE",
+    "best_id": "cand_0003",
+    "iterations": 4
+  },
+  {
+    "task": "fix-visual-stability",
+    "source": "c3",
+    "run_dir": "run_task_fix-visual-stability_v1_INFRA_BROKEN_baseline_0.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "flink-query",
+    "source": "c3",
+    "run_dir": "run_task_flink-query_v1_DONE",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "flood-risk-analysis",
+    "source": "c2",
+    "run_dir": "run_task_flood-risk-analysis_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "glm-lake-mendota",
+    "source": "c3",
+    "run_dir": "run_task_glm-lake-mendota_v1_INFRA_BROKEN_baseline_0.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "gravitational-wave-detection",
+    "source": "c3",
+    "run_dir": "run_task_gravitational-wave-detection_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 3
+  },
+  {
+    "task": "grid-dispatch-operator",
+    "source": "c2",
+    "run_dir": "run_task_grid-dispatch-operator_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "hvac-control",
+    "source": "c2",
+    "run_dir": "run_task_hvac-control_v1",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "invoice-fraud-detection",
+    "source": "c2",
+    "run_dir": "run_task_invoice-fraud-detection_v1",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "jax-computing-basics",
+    "source": "c2",
+    "run_dir": "run_task_jax-computing-basics_v5",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "jpg-ocr-stat",
+    "source": "c2",
+    "run_dir": "run_task_jpg-ocr-stat_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "lab-unit-harmonization",
+    "source": "c3",
+    "run_dir": "run_task_lab-unit-harmonization_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "lake-warming-attribution",
+    "source": "c2",
+    "run_dir": "run_task_lake-warming-attribution_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "latex-formula-extraction",
+    "source": "c3",
+    "run_dir": "run_task_latex-formula-extraction_v1_DONE",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "lean4-proof",
+    "source": "c3",
+    "run_dir": "run_task_lean4-proof_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "llm-prefix-cache-replay",
+    "source": "c3",
+    "run_dir": "run_task_llm-prefix-cache-replay_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "manufacturing-codebook-normalization",
+    "source": "c3",
+    "run_dir": "run_task_manufacturing-codebook-normalization_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "manufacturing-equipment-maintenance",
+    "source": "c3",
+    "run_dir": "run_task_manufacturing-equipment-maintenance_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0003",
+    "iterations": 4
+  },
+  {
+    "task": "manufacturing-fjsp-optimization",
+    "source": "c3",
+    "run_dir": "run_task_manufacturing-fjsp-optimization_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "mario-coin-counting",
+    "source": "c3",
+    "run_dir": "run_task_mario-coin-counting_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 2
+  },
+  {
+    "task": "mars-clouds-clustering",
+    "source": "c3",
+    "run_dir": "run_task_mars-clouds-clustering_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "multilingual-video-dubbing",
+    "source": "c2",
+    "run_dir": "run_task_multilingual-video-dubbing_v1",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "offer-letter-generator",
+    "source": "c2",
+    "run_dir": "run_task_offer-letter-generator_v3_KILLED_saturated_1.0_seed_valid",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "organize-messy-files",
+    "source": "c2",
+    "run_dir": "run_task_organize-messy-files_v1",
+    "best_id": "cand_0003",
+    "iterations": 4
+  },
+  {
+    "task": "paper-anonymizer",
+    "source": "c2",
+    "run_dir": "run_task_paper-anonymizer_v5",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "parallel-tfidf-search",
+    "source": "c3",
+    "run_dir": "run_task_parallel-tfidf-search_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 2
+  },
+  {
+    "task": "paratransit-routing",
+    "source": "c3",
+    "run_dir": "run_task_paratransit-routing_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 3
+  },
+  {
+    "task": "pddl-airport-planning",
+    "source": "c2",
+    "run_dir": "run_task_pddl-airport-planning_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "pddl-tpp-planning",
+    "source": "c3",
+    "run_dir": "run_task_pddl-tpp-planning_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 2
+  },
+  {
+    "task": "pdf-excel-diff",
+    "source": "c2",
+    "run_dir": "run_task_pdf-excel-diff_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "powerlifting-coef-calc",
+    "source": "c3",
+    "run_dir": "run_task_powerlifting-coef-calc_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "pptx-reference-formatting",
+    "source": "c2",
+    "run_dir": "run_task_pptx-reference-formatting_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "protein-expression-analysis",
+    "source": "c2",
+    "run_dir": "run_task_protein-expression-analysis_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "python-scala-translation",
+    "source": "c2",
+    "run_dir": "run_task_python-scala-translation_v1",
+    "best_id": "seed",
+    "iterations": 2
+  },
+  {
+    "task": "quantum-numerical-simulation",
+    "source": "c3",
+    "run_dir": "run_task_quantum-numerical-simulation_v1_DONE",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "r2r-mpc-control",
+    "source": "c2",
+    "run_dir": "run_task_r2r-mpc-control_v1",
+    "best_id": "cand_0001",
+    "iterations": 2
+  },
+  {
+    "task": "radar-vital-signs",
+    "source": "c3",
+    "run_dir": "run_task_radar-vital-signs_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "react-performance-debugging",
+    "source": "c3",
+    "run_dir": "run_task_react-performance-debugging_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "reserves-at-risk-calc",
+    "source": "c2",
+    "run_dir": "run_task_reserves-at-risk-calc_v2",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "sales-pivot-analysis",
+    "source": "c2",
+    "run_dir": "run_task_sales-pivot-analysis_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "sec-financial-report",
+    "source": "c2",
+    "run_dir": "run_task_sec-financial-report_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "seismic-phase-picking",
+    "source": "c3",
+    "run_dir": "run_task_seismic-phase-picking_v1_DONE",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "setup-fuzzing-py",
+    "source": "c3",
+    "run_dir": "run_task_setup-fuzzing-py_v1_DONE",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "shock-analysis-demand",
+    "source": "c2",
+    "run_dir": "run_task_shock-analysis-demand_v2",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "shock-analysis-supply",
+    "source": "c2",
+    "run_dir": "run_task_shock-analysis-supply_v2",
+    "best_id": "cand_0004",
+    "iterations": 4
+  },
+  {
+    "task": "simpo-code-reproduction",
+    "source": "c2",
+    "run_dir": "run_task_simpo-code-reproduction_v2",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "software-dependency-audit",
+    "source": "c3",
+    "run_dir": "run_task_software-dependency-audit_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "spring-boot-jakarta-migration",
+    "source": "c2",
+    "run_dir": "run_task_spring-boot-jakarta-migration_v1",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "suricata-custom-exfil",
+    "source": "c3",
+    "run_dir": "run_task_suricata-custom-exfil_v1_INFRA_BROKEN_baseline_0.0",
+    "best_id": "seed",
+    "iterations": 4
+  },
+  {
+    "task": "syzkaller-ppdev-syzlang",
+    "source": "c2",
+    "run_dir": "run_task_syzkaller-ppdev-syzlang_v1",
+    "best_id": "cand_0002",
+    "iterations": 2
+  },
+  {
+    "task": "threejs-structure-parser",
+    "source": "c2",
+    "run_dir": "run_task_threejs-structure-parser_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 3
+  },
+  {
+    "task": "threejs-to-obj",
+    "source": "c2",
+    "run_dir": "run_task_threejs-to-obj_v1_KILLED_saturated_1.0",
+    "best_id": "seed",
+    "iterations": 0
+  },
+  {
+    "task": "tictoc-unnecessary-abort-detection",
+    "source": "c3",
+    "run_dir": "run_task_tictoc-unnecessary-abort-detection_v1_DONE",
+    "best_id": "cand_0001",
+    "iterations": 4
+  },
+  {
+    "task": "travel-planning",
+    "source": "c3",
+    "run_dir": "run_task_travel-planning_v1_DONE",
+    "best_id": "cand_0003",
+    "iterations": 4
+  },
+  {
+    "task": "video-silence-remover",
+    "source": "c3",
+    "run_dir": "run_task_video-silence-remover_v1_DONE",
+    "best_id": "cand_0002",
+    "iterations": 4
+  },
+  {
+    "task": "weighted-gdp-calc",
+    "source": "c2",
+    "run_dir": "run_task_weighted-gdp-calc_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0001",
+    "iterations": 1
+  },
+  {
+    "task": "xlsx-recover-data",
+    "source": "c2",
+    "run_dir": "run_task_xlsx-recover-data_v1_KILLED_ceiling_reached_1.0",
+    "best_id": "cand_0002",
+    "iterations": 2
+  }
+]

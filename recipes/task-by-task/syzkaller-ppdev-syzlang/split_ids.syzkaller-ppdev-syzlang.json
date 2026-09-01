@@ -1,0 +1,5 @@
+{
+  "train": ["syzkaller-ppdev-syzlang"],
+  "val": ["syzkaller-ppdev-syzlang"],
+  "test": ["syzkaller-ppdev-syzlang"]
+}

@@ -1,0 +1,5 @@
+{
+  "train": ["mars-clouds-clustering"],
+  "val": ["mars-clouds-clustering"],
+  "test": ["mars-clouds-clustering"]
+}

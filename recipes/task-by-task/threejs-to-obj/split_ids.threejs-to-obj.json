@@ -1,0 +1,5 @@
+{
+  "train": ["threejs-to-obj"],
+  "val": ["threejs-to-obj"],
+  "test": ["threejs-to-obj"]
+}

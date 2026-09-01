@@ -1,0 +1,5 @@
+{
+  "train": ["mario-coin-counting"],
+  "val": ["mario-coin-counting"],
+  "test": ["mario-coin-counting"]
+}

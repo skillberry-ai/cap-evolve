@@ -1,0 +1,5 @@
+{
+  "train": ["fix-visual-stability"],
+  "val": ["fix-visual-stability"],
+  "test": ["fix-visual-stability"]
+}
