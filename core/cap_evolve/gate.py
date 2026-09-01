@@ -111,6 +111,7 @@ def decide(
     current_stderr: float = 0.0,
     threshold: float = 0.0,
     paired_deltas: list | None = None,
+    paired_se_floor: float = 0.0,
     coverage: float | None = None,
     min_coverage: float = 0.6,
     run_dir=None,
@@ -139,8 +140,17 @@ def decide(
     optimizer to go fix content that was never evaluated. Pass ``min_coverage=0.0``
     to disable the guard.
 
-    ``run_dir`` (optional) is used only to log a ``gate_warning`` event when an SE
-    collapses to 0 (so the silent degeneration to strict is auditable).
+    ``paired_se_floor`` (paired mode only, 0 = off) is a lower bound on the paired SE,
+    for when the CROSS-TASK SPREAD of ``paired_deltas`` is known to understate the real
+    uncertainty. The paired SE is estimated from how much the per-task deltas differ from
+    each other, which silently assumes each per-task delta is measured precisely. On a few
+    tasks it is not: a footprint-restricted vector of 4 real deltas whose values happen to
+    be {0, +0.1, 0, +0.1} yields SE 0.0046 and an ACCEPT, while each of those +0.1 moves is
+    one flipped rollout out of ten — moves ``harness.move_is_resolved`` refuses to call real
+    at all. Pass ``sqrt(Σ_t (par_se_t² + cand_se_t²)) / n`` (see
+    ``harness.paired_se_floor``) and the two tests stop contradicting each other. Measured
+    on run_finalrun6's cand_7 — a docstring-only edit — this is the difference between a
+    fabricated accept at SE 0.0046 and a reject at the floor's 0.0113.
     """
     if split.lower() != "val":
         raise TrainGateError(
@@ -176,6 +186,8 @@ def decide(
                 se = math.sqrt(var / n)
             else:
                 se = 0.0
+            # The cross-task spread cannot go below what per-task trial noise implies.
+            se = max(se, float(paired_se_floor or 0.0))
             if se == 0.0:
                 # Paired SE collapsed (n=1, or every task moved identically). Do not
                 # silently act strict — warn loudly, then apply the documented strict

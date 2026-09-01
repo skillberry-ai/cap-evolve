@@ -161,6 +161,75 @@ def test_no_footprint_data_measures_the_full_split_rather_than_guessing():
         "@@ -1 +1 @@\n+        self.cancel_reservation(rid)") == {"cancel_reservation"}
 
 
+def test_a_broadly_reached_edit_is_never_footprinted_to_a_rare_helper_it_calls():
+    """The one direction the restriction must never fail in: UNDER-inclusion.
+
+    An edit inside a broadly-reached function (`book_reservation`, exercised by 28 of 30
+    tasks) that adds a call to a rare helper (`audit_trace`, 3 tasks) really reaches all 28.
+    Footprinting it to the helper's 3 tasks zero-pads 25 tasks that DID move, and the bias
+    is not symmetric: zero-padding an out-of-footprint regression raises Δ̄ *and* lowers the
+    SE, both pushing toward accept. A candidate whose true full-split Δ is NEGATIVE can
+    therefore be accepted — a fabricated gain, which is strictly worse than the low-power
+    measurement the restriction exists to fix.
+
+    Two rules keep it out, and both are needed:
+      * the enclosing definition is ALWAYS part of the footprint, not only when the hunk
+        happens to name nothing else;
+      * a surface reaching ≥ ``_UBIQUITOUS_FRACTION`` of tasks makes the edit UNLOCALIZABLE
+        (fall back to the full vector) rather than being dropped so that the remaining rare
+        symbols can define a confident, narrow, wrong footprint.
+    """
+    from cap_evolve import footprint, harness
+    from cap_evolve.gate import decide
+    from cap_evolve.loop import Score, aggregate_scores
+
+    rd = _fresh("under")
+    parent, cand = rd.candidate_dir("seed"), rd.candidate_dir("cand_1")
+    parent.mkdir(parents=True, exist_ok=True)
+    cand.mkdir(parents=True, exist_ok=True)
+    (parent / "tools.py").write_text(
+        "def book_reservation(self, rid):\n"
+        "    total = self.price(rid)\n"
+        "    return total\n")
+    # The edit is INSIDE book_reservation; the only name it adds is the rare helper.
+    (cand / "tools.py").write_text(
+        "def book_reservation(self, rid):\n"
+        "    total = self.price(rid)\n"
+        "    audit_trace(rid)\n"
+        "    return total\n")
+
+    broad = {f"t{i}" for i in range(28)}       # exercise book_reservation
+    rare = {"t0", "t1", "t2"}                  # ALSO exercise audit_trace
+    par_r, cand_r = {}, {}
+    for i in range(30):
+        t = f"t{i}"
+        text = ("book_reservation ran " if t in broad else "searched flights ")
+        if t in rare:
+            text += "audit_trace logged"
+        par_r[t] = 1.0
+        # Net HARMFUL: every task reached by the edit lost 0.15.
+        cand_r[t] = 0.85 if t in broad else 1.0
+        _rollout(rd, "seed", t, 0, par_r[t], text=text)
+        _rollout(rd, "cand_1", t, 0, cand_r[t], text=text)
+
+    fp = footprint.footprint(rd, parent_dir=parent, cand_dir=cand,
+                             tags=("seed", "cand_1"), all_task_ids=list(par_r))
+    # NOT the rare helper's 3 tasks: either the whole broad reach, or no footprint at all.
+    assert fp is None or len(fp) >= len(broad), fp
+
+    def _sr(d):
+        return aggregate_scores("val", [Score(task_id=t, reward=r, n=10) for t, r in d.items()])
+
+    true_delta = (sum(cand_r.values()) - sum(par_r.values())) / 30
+    assert true_delta < 0, true_delta                     # the candidate is harmful
+
+    deltas = harness._paired_deltas(_sr(par_r), _sr(cand_r), footprint=fp)
+    d = decide(1.0, 1.0 + true_delta, split="val", mode="paired", paired_deltas=deltas)
+    # A net-harmful candidate must never leave the footprint-restricted gate accepted.
+    assert not d.accept, (d.reason, fp)
+    assert sum(deltas) / len(deltas) < 0, (sum(deltas) / len(deltas), fp)
+
+
 def test_an_edit_inside_a_body_takes_its_enclosing_definition_as_its_surface():
     """run_finalrun6's cand_7 rewrote one tool's docstring and nothing else. Its changed lines
     name no surface at all, so on the changed lines alone it has no footprint and gets measured
@@ -180,14 +249,19 @@ def test_an_edit_inside_a_body_takes_its_enclosing_definition_as_its_surface():
         "         return rid\n")
     assert footprint.touched_symbols(docstring_only) == {"update_reservation_passengers"}
 
-    # A hunk that names its own surface does NOT also claim the neighbour in its context.
-    names_itself = (
+    # A hunk that names its own surface keeps the enclosing definition ANYWAY. Taking only
+    # what the hunk named is what let a broadly-reached edit be footprinted to a rare helper
+    # it calls (see the under-inclusion test above); over-including a neighbour that merely
+    # sits in the context window costs power, which is the direction that cannot fabricate a
+    # gain.
+    both = (
         "@@ -1,6 +1,6 @@\n"
         "     def some_unrelated_neighbour(self):\n"
         "         pass\n"
         "+    def cancel_reservations(self, ids):\n"
         "+        return ids\n")
-    assert footprint.touched_symbols(names_itself) == {"cancel_reservations"}
+    assert footprint.touched_symbols(both) == {"cancel_reservations",
+                                              "some_unrelated_neighbour"}
 
 
 def test_control_replicates_pool_into_one_lower_variance_parent_reference():
@@ -281,6 +355,44 @@ def test_an_unresolved_move_is_named_as_such_where_the_optimizer_reads_it():
     assert "RESULT (framework, objective)" not in journal
 
 
+def test_a_small_footprint_cannot_call_a_few_flipped_rollouts_significant():
+    """The trap the footprint restriction opens, and the floor that closes it.
+
+    run_finalrun6's cand_7 restricts to 4 tasks whose deltas are {0, +0.1, 0, +0.1}. The
+    CROSS-TASK SPREAD of those four numbers is small, so the paired SE reads 0.0046 and the
+    gate ACCEPTS — on two moves of one flipped rollout each at 10 trials, the very moves
+    ``move_is_resolved`` refuses to call real. Unfloored, the two halves of this change
+    contradict each other: the ledger says ``unresolved``, the gate says ``significant``.
+    """
+    from cap_evolve import harness
+    from cap_evolve.gate import decide
+
+    deltas = [0.1, 0.0, 0.1, 0.0] + [0.0] * 26        # 4 in footprint, 26 zero-padded
+    unfloored = decide(0.5, 0.5067, split="val", mode="paired", paired_deltas=deltas)
+    assert unfloored.accept, unfloored.reason          # the trap, reproduced
+
+    # Each of those tasks carries a per-task SE of ~0.1 at 10 trials (one flip in ten).
+    se_floor = (4 * (0.1 ** 2 + 0.1 ** 2)) ** 0.5 / 30
+    floored = decide(0.5, 0.5067, split="val", mode="paired", paired_deltas=deltas,
+                     paired_se_floor=se_floor)
+    assert not floored.accept, floored.reason
+    # The ledger's bar calls the same per-task move unresolved — the two now agree.
+    assert not harness.move_is_resolved(0.9, 1.0, 0.1, 0.1)
+    # An UNRESTRICTED vector keeps the SE it always had: the floor defaults to 0.
+    assert decide(0.5, 0.5067, split="val", mode="paired",
+                  paired_deltas=deltas).threshold == unfloored.threshold
+
+
+def test_the_no_regression_veto_cannot_fire_on_one_flipped_rollout():
+    """The veto REJECTS a candidate the gate had accepted, so it is the strongest consequence
+    of the broke/fixed bar — and both the hill-climb and gepa copies were still at 1e-9."""
+    from cap_evolve import harness
+
+    assert not harness.move_is_resolved(1.0, 0.9, 0.0, 0.1)   # one flipped rollout of ten
+    assert harness.move_is_resolved(1.0, 0.0, 0.0, 0.0)       # a real break clears it
+    assert not harness.move_is_resolved(1.0, 1.0, 0.0, 0.0)   # no move at all
+
+
 # --- 3. the published SE is this round's own, not a constant -----------------------------
 
 def test_the_published_gate_stderr_is_the_se_the_threshold_was_built_from():
@@ -315,7 +427,10 @@ def test_the_published_gate_stderr_is_the_se_the_threshold_was_built_from():
         while int(rd.spent.iterations) < it:
             rd.update_spent(iterations=1)
         g = commit_mod._round_gate_numbers(rd, f"cand_{it}")
-        assert g["gate_stderr"] * g["gate_k_se"] == round(g["gate_threshold"], 6), g
+        # approx, not exact: gate_stderr is rounded to 6dp, so `k_se · stderr == threshold`
+        # holds to that precision but not bit-for-bit, and would be fragile at a
+        # non-integer k_se where the rounding error is scaled rather than preserved.
+        assert abs(g["gate_stderr"] * g["gate_k_se"] - g["gate_threshold"]) < 1e-6, g
         seen.append(g["gate_stderr"])
     # The whole point: it MOVES with the round instead of being one frozen number.
     assert len(set(seen)) == 3, seen

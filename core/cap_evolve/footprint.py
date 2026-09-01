@@ -11,26 +11,34 @@ spread (0.570-0.607) — the measurement could not tell an edit from a re-measur
 Restricting the delta vector to the tasks inside the edit's footprint is what fixes that:
 a task the edit cannot reach has Δ=0 BY CONSTRUCTION, not by measurement, so it belongs
 in the vector as a zero rather than as noise (see ``harness._paired_deltas``, which does
-the zero-padding — the vector keeps its full length, so Δ̄ stays on the same scale as the
-val reward while the SE stops being dominated by tasks the edit never touched).
+the zero-padding). The vector keeps its full LENGTH, so Δ̄ stays on the same SCALE as the
+val reward — but be clear that this changes BOTH halves of the test: the SE stops being
+dominated by tasks the edit never touched, and Δ̄ itself moves, because the out-of-footprint
+deltas that used to be averaged in are now zeros. Δ̄ moving is not a side effect, it IS the
+mechanism (the whole claim is that those deltas were noise and do not belong in the
+average) — and it is also why under-inclusion is dangerous rather than merely weak: zeroing
+a task that really regressed raises Δ̄ and lowers the SE at the same time, both pushing
+toward accept. Hence the two rules in ``_close`` and ``in_footprint_tasks`` that make a
+broadly-reaching edit unlocalizable instead of narrowly footprinted.
 
 Both steps here are deliberately dumb and generic — no benchmark, capability, agent or
 optimizer shape is assumed:
 
   * ``touched_symbols`` reads the NAMED SURFACES out of a unified diff (whatever
     ``harness._diff_capabilities`` produced for this candidate): definitions, calls, and
-    ``"name": "…"`` declarations on the changed lines, falling back per hunk to the
-    enclosing definition when a hunk names nothing of its own. Not "every identifier" —
-    most changed lines in a real capability edit are docstring prose, and its words match
-    every rollout in the split.
+    ``"name": "…"`` declarations on the changed lines, ALWAYS together with the enclosing
+    definition (an edit inside a body reaches everything that calls the body). Not "every
+    identifier" — most changed lines in a real capability edit are docstring prose, and its
+    words match every rollout in the split.
   * ``in_footprint_tasks`` asks, per task, whether any of those names appears anywhere in
     the persisted rollout record. One flat substring search over the serialized rollout,
     rather than a walk of some particular trace schema: ``Rollout.tool_calls`` is the
     framework's only cross-adapter contract for "what the agent called", and adapters
     legitimately leave it empty while putting the same names in their own trace shape
     (harbor's tau2 rollouts do exactly this). The flat search reads both and cares about
-    neither. A name that reaches almost every task is then dropped, because it localizes
-    nothing — see ``_UBIQUITOUS_FRACTION``.
+    neither. If ANY of the edit's surfaces reaches almost every task, the whole footprint is
+    ABANDONED rather than that name dropped — the edit reaches almost everything, so there is
+    no narrow footprint to be had. See ``_UBIQUITOUS_FRACTION``.
 
 The search still OVER-includes, and that is the safe direction on purpose: over-including
 gives back some of the noise the restriction removes, while under-including would zero out
@@ -44,20 +52,28 @@ meaningless, no rollouts on disk, or a footprint that covers every task anyway. 
 that gets ``None`` falls back to the full delta vector, so nothing breaks when footprint
 detection cannot determine a surface.
 
-Measured on run_finalrun6's own rollouts, this is what the restriction does to the gate's
-bar for each of the run's 7 candidates (no new rollouts spent)::
+Measured on run_finalrun6's own rollouts (no new rollouts spent), with the safety rules in
+``_close`` and ``in_footprint_tasks`` applied::
 
-    cand_1  footprint None    SE 0.0222 -> 0.0222   (cross-cutting guard: no restriction)
-    cand_2  footprint 18/30   SE 0.0250 -> 0.0193
-    cand_3  footprint 13/30   SE 0.0276 -> 0.0208
-    cand_4  footprint 14/30   SE 0.0244 -> 0.0159
-    cand_5  footprint 11/30   SE 0.0318 -> 0.0255
-    cand_6  footprint 16/30   SE 0.0313 -> 0.0262
-    cand_7  footprint  4/30   SE 0.0346 -> 0.0046   (docstring-only edit to ONE tool)
+    cand_1  None    guard across all 6 write tools -> reaches everything -> full split
+    cand_2  None    new batch tool wrapping cancel_reservation (26/30 tasks)
+    cand_3  None    bundle of cand_1 + cand_2
+    cand_4  None    re-measurement of cand_2, byte-identical
+    cand_5  17/30   SE 0.0318 -> 0.0268
+    cand_6  None    bundle of cand_2 + cand_5
+    cand_7   4/30   SE 0.0346 -> 0.0113 (floored; see ``harness.paired_se_floor``)
+
+Be honest about what that shows: on THIS run, five of seven edits reach the split broadly
+enough that no restriction is available, and neither restricted verdict changes. The
+mechanism earns its keep on genuinely narrow edits, and its real value here is that it
+ABSTAINS instead of manufacturing confidence — an earlier revision of this module, which
+took the enclosing definition only when a hunk named nothing else and dropped ubiquitous
+symbols instead of abandoning, narrowed cand_7 to those 4 tasks at SE 0.0046 and ACCEPTED a
+docstring-only edit on two flipped rollouts.
 
 Note what stays unrestricted: the candidate's recorded ``val`` reward is still the mean over
 the WHOLE split, and so is every number the report and the val curve publish. The footprint
-narrows only the vector the significance test's variance is computed from.
+narrows only the vector the significance test is computed from.
 """
 
 from __future__ import annotations
@@ -90,12 +106,12 @@ _SURFACE = re.compile(
 _ENCLOSING = re.compile(
     r"\b(?:def|class|function|func|fn|sub|method)\s+([A-Za-z_][A-Za-z0-9_]{2,})")
 
-#: A symbol found in this fraction of the split's tasks or more is discarded before the
-#: footprint is built. It localizes nothing — whatever it is (a shared exception type, a
-#: helper every rollout touches, a common English word that survived the extractor), a
-#: footprint containing it is the whole split. Adaptive rather than another stop-list: the
-#: run's own rollouts say which names discriminate, and no hand-maintained word list has to
-#: guess it per capability, language or benchmark.
+#: A surface reaching this fraction of the split's tasks or more makes the edit UNLOCALIZABLE:
+#: ``in_footprint_tasks`` abandons and the caller measures the full split. It is not dropped so
+#: the rarer surfaces beside it can define a footprint — that is precisely how a 28-of-30-task
+#: edit got narrowed to its 3-task helper. Adaptive rather than another stop-list: the run's own
+#: rollouts say which names discriminate, so no hand-maintained word list has to guess it per
+#: capability, language or benchmark.
 _UBIQUITOUS_FRACTION = 0.8
 
 #: Keywords and ubiquitous library names that take a call-shape and would otherwise be
@@ -126,10 +142,18 @@ def touched_symbols(diff_text: str, *, max_symbols: int = 40) -> set[str]:
     lines = list((diff_text or "").splitlines())
 
     def _close():
-        # A hunk that named nothing of its own is an edit INSIDE something — its surface is
-        # the enclosing definition. Only then, so a hunk that does name its surfaces cannot
-        # drag in whatever else happens to sit within the diff's context window.
-        out.update(hunk or ({enclosing} if enclosing else set()))
+        # ALWAYS both — never "the enclosing definition only when the hunk named nothing".
+        # An edit INSIDE a broadly-reached function that adds a call to a rare helper is
+        # reached by everything that calls the function, not only by the helper's own callers:
+        # taking the helper alone footprints a 28-of-30-task edit to 3 tasks and zero-pads 25
+        # tasks that really moved. That is UNDER-inclusion, the one direction this module must
+        # never fail in — zero-padding an out-of-footprint regression raises Δ̄ *and* lowers
+        # the SE, so a net-harmful candidate can come out of the gate accepted. Including a
+        # neighbouring definition that merely sits inside the diff's context window costs some
+        # of the power gain instead, which is the safe direction.
+        out.update(hunk)
+        if enclosing:
+            out.add(enclosing)
 
     for line in lines:
         if line[:3] in ("+++", "---"):
@@ -168,9 +192,9 @@ def in_footprint_tasks(run_dir, tags, symbols, split: str = "val") -> set[str]:
     if not d.is_dir():
         return set()
     symbols = set(symbols)
-    # Which tasks each symbol reaches, counted per symbol rather than unioned as we go, so a
-    # symbol that reaches nearly everything can be dropped before the union — see
-    # _UBIQUITOUS_FRACTION.
+    # Which tasks each symbol reaches, counted PER SYMBOL rather than unioned as we go: one
+    # ubiquitous surface has to be recognizable as such, and it cannot be once the reaches are
+    # merged — see _UBIQUITOUS_FRACTION and the abandon below.
     reach: dict[str, set[str]] = {s: set() for s in symbols}
     tasks: set[str] = set()
     for tag in tags:
@@ -194,8 +218,15 @@ def in_footprint_tasks(run_dir, tags, symbols, split: str = "val") -> set[str]:
     cap = _UBIQUITOUS_FRACTION * len(tasks)
     hit: set[str] = set()
     for s, ts in reach.items():
-        if ts and len(ts) < cap:
-            hit |= ts
+        if len(ts) >= cap:
+            # ABANDON, do not drop-and-keep-the-rest. One of the edit's own surfaces reaches
+            # nearly the whole split, so the EDIT reaches nearly the whole split — there is no
+            # narrow footprint to be had, and the rarer surfaces beside it would otherwise
+            # define a confident, narrow, WRONG one (the 28-of-30 function beside its 3-task
+            # helper). An empty return reads as "unlocalizable" upstream and falls back to the
+            # full vector, which is the honest answer for a broadly-reaching edit.
+            return set()
+        hit |= ts
     return hit
 
 

@@ -388,18 +388,42 @@ against its reference, reads the identifier-like names off the changed lines, an
 persisted rollouts mention any of them (`cap_evolve.footprint` — deliberately a flat substring search over
 the whole rollout record, so it works for any adapter's trace shape and any capability). Tasks outside that
 set enter the delta vector as **0.0 rather than as their measured wobble**: an edit that cannot reach a
-task has no effect on it by construction. The vector keeps its full length, so `Δ̄` stays on the same scale
-as the val reward — and every threshold, ledger row and val-curve point derived from it stays comparable —
-while only the variance changes. On the worked case in `core/tests/`, a real +0.1 on 3 of 30 tasks goes
-from unresolvable to accepted, with the bar falling roughly 4x.
+task has no effect on it by construction. The vector keeps its full LENGTH, so `Δ̄` stays on the same SCALE
+as the val reward, and every threshold, ledger row and val-curve point derived from it stays comparable.
+
+It changes **both** halves of the test, not just the variance: `Δ̄` moves too, because the out-of-footprint
+deltas that used to be averaged in are now zeros. That is the mechanism, not a side effect — and it is why
+the footprint must never UNDER-include. Zeroing a task that really regressed raises `Δ̄` *and* lowers the SE
+together, both pushing toward accept, so a net-harmful candidate could be accepted on a fabricated gain.
+Two rules prevent it: the enclosing definition is **always** part of the footprint (an edit inside a body
+reaches everything that calls the body, not just the rare helper it happens to call), and a surface that
+reaches ≥80% of tasks makes the edit **unlocalizable** — abandon and measure the full split — rather than
+being dropped so the rarer surfaces beside it can define a confident, narrow, wrong footprint.
+
+A third rule guards the other end. On a SMALL footprint the paired SE, which is estimated from the
+cross-task spread of the vector, understates the real uncertainty: 4 tasks whose deltas are
+{0, +0.1, 0, +0.1} have a small spread, so the gate reads SE 0.0046 and accepts — on two moves of one
+flipped rollout each, the very moves `broke`/`fixed` below refuses to call real. So a restricted vector's
+SE is floored by `harness.paired_se_floor`, the SE those tasks' own per-trial noise implies. Unrestricted
+vectors keep the SE they always had, so no pre-existing verdict moves.
+
+On the worked case in `core/tests/`, a real +0.1 on 3 of 30 tasks goes from unresolvable to accepted with
+the bar falling roughly 4x. On run_finalrun6's real rollouts the mechanism is far more conservative: five
+of seven edits reach the split too broadly to restrict at all, and neither restricted verdict changes
+(cand_5 17/30, SE 0.0318 → 0.0268; cand_7 4/30, SE 0.0346 → 0.0113 floored). Its value on that run is that
+it ABSTAINS rather than manufacturing confidence — an earlier revision without the three rules narrowed
+cand_7 to 4 tasks at SE 0.0046 and accepted a docstring-only edit.
 
 Read the `footprint` block in each row before the delta:
 
 - `restricted: true` — `n_in_footprint` of `n_tasks` were in play. The SE describes those tasks.
 - `restricted: false` — the surface could not be localized: no diff, a rewrite-sized diff (more distinct
-  symbols than a targeted edit would name), no rollouts on disk, or a footprint that covers every task
-  anyway. The measurement fell back to the whole split, so it carries every task's noise. **A null result
-  here is weak evidence about the edit, not evidence against it.** `--no-footprint` forces this mode.
+  symbols than a targeted edit would name), no rollouts on disk, a footprint that covers every task
+  anyway, or one of the edit's own surfaces reaching ≥80% of tasks. The measurement fell back to the whole
+  split, so it carries every task's noise. **A null result here is weak evidence about the edit, not
+  evidence against it.** `--no-footprint` forces this mode.
+- `paired_se_floor` — the bar the restricted SE was floored at. When it equals `gate_threshold / k_se`, the
+  verdict rests on per-task trial noise rather than on the cross-task spread.
 
 The over-inclusion is deliberate: a symbol mentioned only in prose still counts as a hit. Over-including
 gives back some of the noise the restriction removes; under-including would zero out a task the edit really
@@ -432,11 +456,13 @@ change behaviour at all.
 
 Every such claim now has to clear **2·SE of its own per-task measurement** — the two sides' per-task SEs in
 quadrature, the same "smallest resolvable effect" the gate reports for the split mean, applied per task.
-One function, `harness.move_is_resolved`, is the single bar behind all four places the framework makes the
-claim: `LEDGER.md` + the journal RESULT stamp (`_candidate_task_impact`), the round table's diagnosis list
-(`gate_check.regressions`), the sealed report's seed→best movement (`measure.py`), and the
-"don't regress task X" constraint check (`spend.py`). Four copies of a bar is how three of them stayed at
-`1e-9` while one got fixed.
+One function, `harness.move_is_resolved`, is the single bar behind every place the framework makes the
+claim: `LEDGER.md` + the journal RESULT stamp (`_candidate_task_impact`); the `no_regression` veto in both
+the hill-climb and gepa loops, which is the strongest consequence of the set since it turns a
+gate-PASSING candidate into a rejection; the round table's diagnosis list (`gate_check.regressions`);
+skillopt's within-epoch improved/regressed buffer (`_categorize`); the sealed report's seed→best movement
+and its improved/regressed counts (`measure.py`); and the "don't regress task X" constraint check
+(`spend.py`). Seven copies of a bar is how six of them stay at `1e-9` while one gets fixed.
 
 A sub-threshold move is reported as **`unresolved`**, which is neither "broke" nor "unchanged": the reward
 moved, and the measurement cannot say the edit did it. Do not redesign an edit because a task appears

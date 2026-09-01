@@ -169,21 +169,27 @@ def _slow_update_instructions(epoch: int, categories: dict[str, list[dict]]) -> 
 def _categorize(prev_pt: list, cur_pt: list) -> dict[str, list[dict]]:
     """Categorize each task improved / regressed / persistent_fail / stable_success
     from two per-task reward maps (carrying the CURRENT feedback)."""
-    prev = {pt.get("task_id"): float(pt.get("reward", 0.0) or 0.0) for pt in (prev_pt or [])}
+    prev = {pt.get("task_id"): pt for pt in (prev_pt or [])}
     cur = {pt.get("task_id"): pt for pt in (cur_pt or [])}
     cats: dict[str, list[dict]] = {"improved": [], "regressed": [],
                                    "persistent_fail": [], "stable_success": []}
-    eps = 1e-9
     for tid, pt in cur.items():
         if tid not in prev:
             continue
-        before = prev[tid]
+        before = float(prev[tid].get("reward", 0.0) or 0.0)
         after = float(pt.get("reward", 0.0) or 0.0)
+        # ``improved`` feeds the within-epoch buffer the optimizer prompt reads, so it must
+        # clear 2*SE of its own per-task measurement (``harness.move_is_resolved`` — the ONE
+        # shared bar). At 10 trials a 0.9 -> 1.0 move is one flipped rollout, and booking that
+        # as an improvement teaches the next mini-batch to keep an edit that did nothing.
+        resolved = harness.move_is_resolved(before, after,
+                                            prev[tid].get("stderr") or 0.0,
+                                            pt.get("stderr") or 0.0)
         passed_before = before >= 1.0
         passed_after = after >= 1.0
-        if after > before + eps:
+        if after > before and resolved:
             cats["improved"].append(pt)
-        if passed_before and not passed_after:
+        if passed_before and not passed_after and resolved:
             cats["regressed"].append(pt)
         elif not passed_before and not passed_after:
             cats["persistent_fail"].append(pt)

@@ -159,10 +159,15 @@ def main(argv=None) -> int:
             all_task_ids=[pt.get("task_id") for pt in (cand.per_task or [])])
 
     deltas = harness._paired_deltas(cur, cand, footprint=fp)
+    # Only when restricted: on a small footprint the zero-padded vector's cross-task spread
+    # understates the real uncertainty, so floor it with per-task trial noise. Unrestricted
+    # vectors keep the SE they always had.
+    se_floor = (harness.paired_se_floor(run_dir, args.candidate, cur_tags[0], fp, len(deltas))
+                if fp is not None and deltas else 0.0)
     d = decide(cur.reward, cand.reward, split="val", mode=args.mode, k_se=args.k_se,
                candidate_stderr=cand.stderr, current_stderr=cur.stderr,
                threshold=args.threshold, paired_deltas=deltas,
-               coverage=cand.coverage, run_dir=run_dir)
+               paired_se_floor=se_floor, coverage=cand.coverage, run_dir=run_dir)
 
     regs = regressions(cur, cand)
     accept = bool(d.accept) and not (regs and args.veto_regressions)
@@ -192,9 +197,13 @@ def main(argv=None) -> int:
         # tasks the edit cannot reach — read the verdict knowing that.
         "footprint": ({"restricted": True, "n_in_footprint": len(fp),
                        "n_tasks": len(cand.per_task or []), "tasks": sorted(map(str, fp)),
+                       "paired_se_floor": round(se_floor, 6),
                        "reading": "tasks OUTSIDE this set entered the delta vector as 0.0 (an "
                                   "edit that cannot reach a task has no effect on it by "
-                                  "construction), so the SE reflects only the tasks in play"}
+                                  "construction), so the SE reflects only the tasks in play — "
+                                  "floored by `paired_se_floor`, the SE those tasks' own "
+                                  "per-trial noise implies, so a handful of one-rollout flips "
+                                  "cannot read as a significant mean"}
                       if fp is not None else
                       {"restricted": False,
                        "reading": ("disabled by --no-footprint" if args.no_footprint else

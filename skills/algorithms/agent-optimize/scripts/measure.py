@@ -70,9 +70,17 @@ def _compare(seed: SplitResult | None, best: SplitResult | None, *, split: str,
     if n >= 2:
         var = sum((d - mean_d) ** 2 for d in deltas) / (n - 1)
         se = (var / n) ** 0.5
+    # `improved`/`regressed` count the RESOLVED movers (`_per_task_movement`, which applies
+    # `harness.move_is_resolved`), not every task whose reward differs by more than 1e-9.
+    # Counting the latter put two bars in one output: this block would report a task as
+    # improved while `val_per_task_movement` right beside it called the same task unresolved.
+    mv = _per_task_movement(seed, best)
     row["paired"] = {"n": n, "mean_delta": round(mean_d, 6), "se": round(se, 6),
-                     "improved": sum(1 for d in deltas if d > 1e-9),
-                     "regressed": sum(1 for d in deltas if d < -1e-9)}
+                     "improved": len(mv["fixed"]), "regressed": len(mv["broke"]),
+                     "unresolved": len(mv["unresolved"]),
+                     "counts_reading": "improved/regressed count only tasks whose move cleared "
+                                       "2*SE of its own per-task measurement; smaller movers "
+                                       "are in `unresolved` and are not evidence either way"}
     if split == "val":
         d = decide(seed.reward, best.reward, split="val", mode=mode, k_se=k_se,
                    candidate_stderr=best.stderr, current_stderr=seed.stderr,

@@ -742,8 +742,17 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult,
     buries the effect. Measured on run_finalrun6, SE(paired Δ) over all 30 val tasks ran
     0.022-0.035 while the real per-edit effects were 0.011-0.05 — the gate could not
     resolve the thing it was built to resolve. Zero-padding rather than dropping keeps the
-    vector's full length, so Δ̄ stays on the same scale as the val reward (and as every
-    threshold, ledger row and val curve derived from it) while only the variance changes.
+    vector's full LENGTH, so Δ̄ stays on the same SCALE as the val reward (and as every
+    threshold, ledger row and val curve derived from it).
+
+    It changes BOTH halves of the test, not just the variance: Δ̄ moves too, since the
+    out-of-footprint deltas that used to be averaged in are now zeros. That is the mechanism,
+    not a side effect — but it is also why the footprint must never under-include. Zeroing a
+    task that really regressed raises Δ̄ and lowers the SE together, both pushing toward
+    accept, so a net-harmful candidate could be accepted. ``footprint`` is built to abandon
+    (return ``None``) rather than narrow when it cannot be sure; see its ``_close`` and
+    ``in_footprint_tasks``.
+
     ``None`` applies no restriction, which is what every caller without footprint data
     passes.
 
@@ -1071,6 +1080,33 @@ def _per_task_stderr(run_dir: RunDir, tag: str, split: str = "val") -> dict[str,
     except Exception:  # noqa: BLE001
         return {}
     return {pt["task_id"]: float(pt.get("stderr") or 0.0) for pt in (sr.per_task or [])}
+
+
+def paired_se_floor(run_dir: RunDir, cid: str, parent_id: str, tasks, n_total: int,
+                    split: str = "val") -> float:
+    """Lower bound on the paired SE implied by PER-TASK trial noise: √Σ(σ²par+σ²cand) / n.
+
+    The paired gate estimates its SE from the cross-task SPREAD of the delta vector, which
+    quietly assumes each per-task delta is itself measured precisely. On a footprint-restricted
+    vector that assumption breaks: run_finalrun6's cand_7 restricts to 4 tasks whose deltas are
+    {0, +0.1, 0, +0.1}; the spread of those four numbers is small, so the gate read SE 0.0046
+    and ACCEPTED — on two moves of one flipped rollout each, the very moves
+    ``move_is_resolved`` refuses to call real. Without this floor the two halves of this change
+    contradict each other: the ledger says ``unresolved``, the gate says ``significant``. With
+    it, cand_7's bar is 0.0113 against a Δ̄ of +0.0067 and it correctly rejects.
+
+    ``tasks`` are the in-footprint task ids and ``n_total`` the full (zero-padded) vector
+    length, so the result is on the same split scale as the Δ̄ it bounds. Returns 0.0 — no floor
+    — when no per-task SEs exist, e.g. a single-trial run, where there is no variance estimate
+    to build one from and the cross-task spread is all there is."""
+    import math
+
+    par_se = _per_task_stderr(run_dir, parent_id, split)
+    cand_se = _per_task_stderr(run_dir, cid, split)
+    if not par_se and not cand_se:
+        return 0.0
+    total = sum(par_se.get(str(t), 0.0) ** 2 + cand_se.get(str(t), 0.0) ** 2 for t in tasks)
+    return math.sqrt(total) / n_total if n_total else 0.0
 
 
 def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
@@ -2214,6 +2250,12 @@ def run_step(
                               n_in_footprint=len(fp), n_tasks=len(cand_val.per_task or []),
                               tasks=sorted(map(str, fp))[:60])
     paired_deltas = _paired_deltas(current_val, cand_val, footprint=fp)
+    # Only when restricted: the zeros make the cross-task spread an unreliable SE estimate on
+    # a small footprint, so it is floored by what per-task trial noise implies. Unrestricted
+    # vectors keep the SE they always had, so no existing verdict moves.
+    if fp is not None and paired_deltas:
+        gate_kwargs.setdefault("paired_se_floor", paired_se_floor(
+            run_dir, cid, parent_id or "seed", fp, len(paired_deltas)))
     if "mode" not in gate_kwargs and paired_deltas is not None:
         gate_kwargs["mode"] = "paired"
     decision = gate_mod.decide(
@@ -2231,13 +2273,23 @@ def run_step(
         # actually measured — an unscored task is missing data, and treating its
         # 0.0 as "broke a task the parent passed" would let a single image-pull
         # failure veto a genuinely better candidate.
-        eps = 1e-9
-        parent_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in current_val.per_task
+        # The drop must clear 2*SE of its own per-task measurement (``move_is_resolved`` — the
+        # ONE bar every broke/fixed claim in this framework uses). This veto has a STRONGER
+        # consequence than the reported lists: it turns a gate-passing candidate into a
+        # rejection, so a single flipped rollout out of ten used to be able to veto a
+        # genuinely better edit outright.
+        parent_reward = {pt["task_id"]: pt for pt in current_val.per_task
                          if has_valid_trials(pt)}
-        cand_reward = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task
+        cand_reward = {pt["task_id"]: pt for pt in cand_val.per_task
                        if has_valid_trials(pt)}
-        regressions = sorted(t for t, pr in parent_reward.items()
-                             if t in cand_reward and cand_reward[t] < pr - eps)
+        regressions = sorted(
+            t for t, pt in parent_reward.items()
+            if t in cand_reward
+            and (cand_reward[t].get("reward", 0.0) or 0.0) < (pt.get("reward", 0.0) or 0.0)
+            and move_is_resolved(pt.get("reward", 0.0) or 0.0,
+                                 cand_reward[t].get("reward", 0.0) or 0.0,
+                                 pt.get("stderr") or 0.0,
+                                 cand_reward[t].get("stderr") or 0.0))
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"

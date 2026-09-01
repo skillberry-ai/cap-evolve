@@ -57,6 +57,7 @@ from .cache import EvalCache, hash_candidate_dir
 from .harness import (
     OptimizerContext,
     _augment_instructions,
+    move_is_resolved,
     _init_memory_store,
     _live,
     _paired_deltas,
@@ -775,15 +776,21 @@ def _full_val_gate(
     )
     accepted = decision.accept
     if accepted and no_regression:
-        eps = 1e-9
         # Compare only tasks BOTH sides actually measured: an unscored candidate
         # task is missing data, and reading its 0.0 as "broke a task the parent
         # passed" would let one image-pull failure veto a genuinely better edit.
-        pr = {pt["task_id"]: pt.get("reward", 0.0) for pt in parent_result.per_task
-              if has_valid_trials(pt)}
-        cr = {pt["task_id"]: pt.get("reward", 0.0) for pt in cand_val.per_task
-              if has_valid_trials(pt)}
-        regressions = sorted(t for t, v in pr.items() if t in cr and cr[t] < v - eps)
+        # The drop must also clear 2*SE of its own per-task measurement
+        # (``harness.move_is_resolved``): this veto REJECTS a gate-passing candidate, so a
+        # single flipped rollout out of ten must not be able to do it.
+        pr = {pt["task_id"]: pt for pt in parent_result.per_task if has_valid_trials(pt)}
+        cr = {pt["task_id"]: pt for pt in cand_val.per_task if has_valid_trials(pt)}
+        regressions = sorted(
+            t for t, pt in pr.items()
+            if t in cr
+            and (cr[t].get("reward", 0.0) or 0.0) < (pt.get("reward", 0.0) or 0.0)
+            and move_is_resolved(pt.get("reward", 0.0) or 0.0,
+                                 cr[t].get("reward", 0.0) or 0.0,
+                                 pt.get("stderr") or 0.0, cr[t].get("stderr") or 0.0))
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
