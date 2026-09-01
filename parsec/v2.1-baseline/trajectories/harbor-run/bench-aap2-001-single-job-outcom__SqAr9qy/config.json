@@ -1,0 +1,25 @@
+{
+    "task": {
+        "path": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v2/.capevolve/project/harbor-tasks-v2.1/bench-aap2-001-single-job-outcome",
+        "source": "harbor-tasks-v2.1"
+    },
+    "trial_name": "bench-aap2-001-single-job-outcom__SqAr9qy",
+    "trials_dir": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v2/.capevolve/project/logs/harbor-jobs/2026-08-16__13-03-53",
+    "agent": {
+        "name": "claude-code",
+        "model_name": "aws/claude-sonnet-4-5",
+        "env": {
+            "ANTHROPIC_BASE_URL": "https://ete-litellm.ai-models.vpc-int.res.ibm.com",
+            "ANTHROPIC_API_KEY": "sk-j****VsQ",
+            "ANTHROPIC_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": "aws/claude-sonnet-4-5",
+            "CAPEVOLVE_SEED": "0"
+        }
+    },
+    "extra_instruction_paths": [
+        "/var/folders/sf/ntm2w4vx0sn57cz6lxrp04440000gn/T/capevolve_instruction_nrx13ubp.md"
+    ],
+    "job_id": "c4e48e85-dee1-4542-8f15-7214d049a1ac"
+}

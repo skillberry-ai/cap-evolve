@@ -1,0 +1,51 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.2,
+    "answer": 0.8
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_log",
+          "controller": "east",
+          "job_id": "90810"
+        }
+      }
+    ],
+    "unmatched_expected": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_events",
+          "job_id": 90810
+        }
+      }
+    ],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [
+      {
+        "id": "failing-task",
+        "any_of": [
+          "Start broker service"
+        ],
+        "rationale": "the runner_on_failed event at counter 5"
+      },
+      {
+        "id": "preceding-task",
+        "any_of": [
+          "Install broker package 4.2.1"
+        ],
+        "rationale": "counter 4 -- requires ordering the stream, not scanning it"
+      }
+    ],
+    "forbidden_hit": [],
+    "required_total": 2,
+    "forbidden_total": 0
+  }
+}

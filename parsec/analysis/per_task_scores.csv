@@ -1,0 +1,61 @@
+task,phase,run,tag,n_trials,mean_reward,trial_rewards,notes
+bench-aap2-001-single-job-outcome,env-v2,baseline_all_1786651164,seed,1,0.267,[0.267],broken wiring — MCP failed
+bench-aap2-002-failed-jobs-on-controller,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-003-never-started-explanation,env-v2,baseline_all_1786651164,seed,1,0.400,[0.400],broken wiring
+bench-aap2-004-failing-task-and-host,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-005-find-then-diagnose,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-006-log-root-cause,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-007-count-and-oldest,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-008-preceding-task,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-009-nonexistent-job,env-v2,baseline_all_1786651164,seed,1,0.000,[0.000],broken wiring
+bench-aap2-010-log-does-not-say,env-v2,baseline_all_1786651164,seed,1,0.200,[0.200],broken wiring
+bench-aap2-001-single-job-outcome,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-002-failed-jobs-on-controller,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-003-never-started-explanation,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-004-failing-task-and-host,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-005-find-then-diagnose,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-006-log-root-cause,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-007-count-and-oldest,env-v2.1-fixed,baseline_all_1786875106,seed,1,0.500,[0.500],persistent hard
+bench-aap2-008-preceding-task,env-v2.1-fixed,baseline_all_1786875106,seed,1,1.000,[1.000],wiring fixed
+bench-aap2-009-nonexistent-job,env-v2.1-fixed,baseline_all_1786875106,seed,1,0.800,[0.800],persistent hard
+bench-aap2-010-log-does-not-say,env-v2.1-fixed,baseline_all_1786875106,seed,1,0.800,[0.800],persistent hard
+bench-aap2-001-single-job-outcome,v2.2-iter1,run_20260816_202942,seed_val,3,0.844,"[1.0, 0.533333, 1.0]",n=3
+bench-aap2-002-failed-jobs-on-controller,v2.2-iter1,run_20260816_202942,seed_val,3,0.900,"[1.0, 1.0, 0.7]",n=3
+bench-aap2-003-never-started-explanation,v2.2-iter1,run_20260816_202942,seed_val,3,1.000,"[1.0, 1.0, 1.0]",n=3
+bench-aap2-004-failing-task-and-host,v2.2-iter1,run_20260816_202942,seed_val,3,0.967,"[0.9, 1.0, 1.0]",n=3
+bench-aap2-005-find-then-diagnose,v2.2-iter1,run_20260816_202942,seed_val,3,1.000,"[1.0, 1.0, 1.0]",n=3
+bench-aap2-006-log-root-cause,v2.2-iter1,run_20260816_202942,seed_val,3,1.000,"[1.0, 1.0, 1.0]",n=3
+bench-aap2-007-count-and-oldest,v2.2-iter1,run_20260816_202942,seed_val,3,0.778,"[0.833, 0.833, 0.667]",n=3
+bench-aap2-008-preceding-task,v2.2-iter1,run_20260816_202942,seed_val,3,1.000,"[1.0, 1.0, 1.0]",n=3
+bench-aap2-009-nonexistent-job,v2.2-iter1,run_20260816_202942,seed_val,3,0.533,"[0.8, 0.8, 0.0]",n=3
+bench-aap2-010-log-does-not-say,v2.2-iter1,run_20260816_202942,seed_val,3,0.733,"[1.0, 0.4, 0.8]",n=3
+bench-aap2-001-single-job-outcome,v2.2-iter1,run_20260816_202942,cand_0001_val,3,1.000,"[1.0, 1.0, 1.0]",Retry rule helped
+bench-aap2-002-failed-jobs-on-controller,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.967,"[1.0, 0.9, 1.0]",
+bench-aap2-003-never-started-explanation,v2.2-iter1,run_20260816_202942,cand_0001_val,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-004-failing-task-and-host,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.000,"[0.0, 0.0, 0.0]",REAL regression from candidate
+bench-aap2-005-find-then-diagnose,v2.2-iter1,run_20260816_202942,cand_0001_val,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-006-log-root-cause,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.750,"[1.0, 1.0, 0.25]",one-trial flake
+bench-aap2-007-count-and-oldest,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.889,"[1.0, 1.0, 0.667]",
+bench-aap2-008-preceding-task,v2.2-iter1,run_20260816_202942,cand_0001_val,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-009-nonexistent-job,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.800,"[0.8, 0.8, 0.8]",substantive win vs seed 0.533
+bench-aap2-010-log-does-not-say,v2.2-iter1,run_20260816_202942,cand_0001_val,3,0.933,"[1.0, 1.0, 0.8]",substantive win vs seed 0.733
+bench-aap2-001-single-job-outcome,v2.2-iter1,run_20260816_202942,seed_train,3,0.667,"[0.267, 0.733, 1.0]",
+bench-aap2-002-failed-jobs-on-controller,v2.2-iter1,run_20260816_202942,seed_train,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-003-never-started-explanation,v2.2-iter1,run_20260816_202942,seed_train,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-004-failing-task-and-host,v2.2-iter1,run_20260816_202942,seed_train,3,0.667,"[1.0, 1.0, 0.0]",
+bench-aap2-005-find-then-diagnose,v2.2-iter1,run_20260816_202942,seed_train,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-006-log-root-cause,v2.2-iter1,run_20260816_202942,seed_train,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-007-count-and-oldest,v2.2-iter1,run_20260816_202942,seed_train,3,0.833,"[1.0, 1.0, 0.5]",
+bench-aap2-008-preceding-task,v2.2-iter1,run_20260816_202942,seed_train,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-009-nonexistent-job,v2.2-iter1,run_20260816_202942,seed_train,3,0.800,"[0.8, 0.8, 0.8]",
+bench-aap2-010-log-does-not-say,v2.2-iter1,run_20260816_202942,seed_train,3,0.933,"[0.8, 1.0, 1.0]",
+bench-aap2-001-single-job-outcome,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,0.756,"[1.0, 0.267, 1.0]",
+bench-aap2-002-failed-jobs-on-controller,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-003-never-started-explanation,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-004-failing-task-and-host,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,0.667,"[1.0, 1.0, 0.0]",
+bench-aap2-005-find-then-diagnose,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-006-log-root-cause,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-007-count-and-oldest,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,0.944,"[1.0, 1.0, 0.833]",
+bench-aap2-008-preceding-task,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",
+bench-aap2-009-nonexistent-job,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,0.800,"[0.8, 0.8, 0.8]",
+bench-aap2-010-log-does-not-say,v2.2-iter1,run_20260816_202942,FINAL_test_seed,3,1.000,"[1.0, 1.0, 1.0]",

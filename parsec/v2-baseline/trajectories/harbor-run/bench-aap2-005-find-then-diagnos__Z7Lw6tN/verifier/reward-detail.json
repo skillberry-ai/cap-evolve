@@ -1,0 +1,67 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.5,
+    "answer": 0.5
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "east",
+          "status": "failed",
+          "limit": "5"
+        }
+      }
+    ],
+    "unmatched_expected": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "prod0"
+        }
+      },
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_events",
+          "job_id": 90420
+        }
+      }
+    ],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [
+      {
+        "id": "job-id",
+        "any_of": [
+          "90420"
+        ],
+        "rationale": "the id is discoverable only from the find_jobs result"
+      },
+      {
+        "id": "failing-task",
+        "any_of": [
+          "Evaluate OSPP profile"
+        ],
+        "rationale": "the failed event, not the first event"
+      },
+      {
+        "id": "cause",
+        "any_of": [
+          "ssg-rhel9-ds.xml",
+          "Datastream file"
+        ],
+        "rationale": "the reason, which lives in the event's error_msg"
+      }
+    ],
+    "forbidden_hit": [],
+    "required_total": 3,
+    "forbidden_total": 0
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "aap2": {
+      "type": "sse",
+      "url": "http://host.containers.internal:9093/mcp/sse"
+    }
+  },
+  "firstStartTime": "2026-08-16T10:07:13.298Z",
+  "machineID": "fc9803e33cec445a89401dc5d113cebabd5d14ddbba0fa58e50672b0e6e9b066",
+  "opusProMigrationComplete": true,
+  "sonnet1m45MigrationComplete": true,
+  "seenNotifications": {},
+  "hasResetAutoModeOptInForDefaultOffer": true,
+  "migrationVersion": 13,
+  "userID": "14c0a86f432c7ea9c2f831af746e537fa307313e15dc4101a2213b9564017c2a"
+}

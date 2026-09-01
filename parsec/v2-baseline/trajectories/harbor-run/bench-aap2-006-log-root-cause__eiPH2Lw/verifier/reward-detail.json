@@ -1,0 +1,68 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.5,
+    "answer": 0.5
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "east",
+          "status": "failed",
+          "job_type": "job",
+          "name": "certificate"
+        }
+      }
+    ],
+    "unmatched_expected": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "prod1"
+        }
+      },
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_log",
+          "job_id": 90520
+        }
+      }
+    ],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [
+      {
+        "id": "job-id",
+        "any_of": [
+          "90520"
+        ],
+        "rationale": "the recent run, not the week-old one"
+      },
+      {
+        "id": "root-cause",
+        "any_of": [
+          "signing CA certificate expired",
+          "CA request rejected"
+        ],
+        "rationale": "the cause exists only in the log field"
+      },
+      {
+        "id": "expiry-date",
+        "any_of": [
+          "2026-07-18"
+        ],
+        "rationale": "the specific fact that makes the answer actionable"
+      }
+    ],
+    "forbidden_hit": [],
+    "required_total": 3,
+    "forbidden_total": 0
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "reward": 0.8,
+  "completion": 1.0,
+  "tool_calls": 1.0,
+  "answer": 0.75
+}

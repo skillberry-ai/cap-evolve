@@ -1,0 +1,77 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.5,
+    "answer": 0.5
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "east",
+          "template_name": "patch-rhel9",
+          "status": "failed"
+        }
+      },
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "east",
+          "template_name": "patch-rhel9",
+          "status": "error"
+        }
+      }
+    ],
+    "unmatched_expected": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "prod0",
+          "template_name": "patch-rhel9"
+        }
+      }
+    ],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [
+      {
+        "id": "count",
+        "any_of": [
+          "three",
+          "are 3",
+          "total of 3",
+          "3 in total",
+          "3 jobs"
+        ],
+        "ignore_case": true,
+        "derived": true,
+        "note": "the count is not a seed value; it follows from filtering the job list by controller prod0 and template patch-rhel9",
+        "rationale": "half the question is how many"
+      },
+      {
+        "id": "oldest",
+        "any_of": [
+          "90701"
+        ],
+        "rationale": "the earliest prod0 patch-rhel9 job; 90705 started earlier but is on prod1"
+      },
+      {
+        "id": "oldest-time",
+        "any_of": [
+          "2026-07-20T01:00:00Z",
+          "01:00"
+        ],
+        "rationale": "makes the claim checkable rather than asserted"
+      }
+    ],
+    "forbidden_hit": [],
+    "required_total": 3,
+    "forbidden_total": 0
+  }
+}

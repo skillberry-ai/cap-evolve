@@ -1,0 +1,50 @@
+{
+    "schema_version": 1,
+    "task": {
+        "name": "bench-aap2-002-failed-jobs-on-controller",
+        "type": "local",
+        "digest": "sha256:8bf6dfaebeee8a8767449014cb01c71384634bc9c5fad7c491ef3d2e12b81a07",
+        "source": "harbor-tasks-v2",
+        "path": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v2/.capevolve/project/harbor-tasks-v2/bench-aap2-002-failed-jobs-on-controller"
+    },
+    "install_only": false,
+    "timeout_multiplier": 1.0,
+    "extra_instructions": [
+        {
+            "path": "/var/folders/sf/ntm2w4vx0sn57cz6lxrp04440000gn/T/capevolve_instruction_mzvokmz4.md",
+            "digest": "sha256:ed6e89203d7f79a607ce0094c863ec8da7e41ca7d2cfe58b2cb90ffc30c7a411"
+        }
+    ],
+    "agent": {
+        "name": "claude-code",
+        "model_name": "aws/claude-sonnet-4-5",
+        "skills": [],
+        "resume_trajectory": false,
+        "extra_allowed_hosts": [],
+        "kwargs": {},
+        "env": {
+            "ANTHROPIC_BASE_URL": "https://ete-litellm.ai-models.vpc-int.res.ibm.com",
+            "ANTHROPIC_API_KEY": "sk-j****VsQ",
+            "ANTHROPIC_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": "aws/claude-sonnet-4-5",
+            "CAPEVOLVE_SEED": "0"
+        },
+        "mcp_servers": []
+    },
+    "skills": [],
+    "environment": {
+        "type": "docker",
+        "force_build": false,
+        "delete": true,
+        "cpu_enforcement_policy": "auto",
+        "memory_enforcement_policy": "auto",
+        "extra_docker_compose": [],
+        "kwargs": {},
+        "extra_allowed_hosts": []
+    },
+    "verifier": {
+        "disable": false
+    }
+}

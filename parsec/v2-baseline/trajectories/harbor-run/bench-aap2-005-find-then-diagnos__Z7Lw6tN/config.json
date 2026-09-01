@@ -1,0 +1,25 @@
+{
+    "task": {
+        "path": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v2/.capevolve/project/harbor-tasks-v2/bench-aap2-005-find-then-diagnose",
+        "source": "harbor-tasks-v2"
+    },
+    "trial_name": "bench-aap2-005-find-then-diagnos__Z7Lw6tN",
+    "trials_dir": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v2/.capevolve/project/logs/harbor-jobs/2026-08-13__22-52-49",
+    "agent": {
+        "name": "claude-code",
+        "model_name": "aws/claude-sonnet-4-5",
+        "env": {
+            "ANTHROPIC_BASE_URL": "https://ete-litellm.ai-models.vpc-int.res.ibm.com",
+            "ANTHROPIC_API_KEY": "sk-j****VsQ",
+            "ANTHROPIC_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "aws/claude-sonnet-4-5",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": "aws/claude-sonnet-4-5",
+            "CAPEVOLVE_SEED": "0"
+        }
+    },
+    "extra_instruction_paths": [
+        "/var/folders/sf/ntm2w4vx0sn57cz6lxrp04440000gn/T/capevolve_instruction_mzvokmz4.md"
+    ],
+    "job_id": "ba1b91c4-df62-4842-9255-141674dd3e86"
+}

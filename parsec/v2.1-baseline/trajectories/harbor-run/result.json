@@ -1,0 +1,103 @@
+{
+    "id": "c4e48e85-dee1-4542-8f15-7214d049a1ac",
+    "started_at": "2026-08-16T13:03:54.061133",
+    "updated_at": "2026-08-16T13:11:44.014767",
+    "finished_at": "2026-08-16T13:11:44.014767",
+    "n_total_trials": 10,
+    "stats": {
+        "n_completed_trials": 10,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "claude-code__claude-sonnet-4-5__harbor-tasks-v2.1": {
+                "n_trials": 10,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "answer": 0.875,
+                        "completion": 1.0,
+                        "reward": 0.9099999999999999,
+                        "tool_calls": 0.9
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "1.0": [
+                            "bench-aap2-002-failed-jobs-on-co__JXSX5BK",
+                            "bench-aap2-006-log-root-cause__WbhXij2",
+                            "bench-aap2-001-single-job-outcom__SqAr9qy",
+                            "bench-aap2-008-preceding-task__TUPfaG6",
+                            "bench-aap2-003-never-started-exp__HkkMuKu",
+                            "bench-aap2-005-find-then-diagnos__2UqfZNm",
+                            "bench-aap2-004-failing-task-and__ymchCcq"
+                        ],
+                        "0.5": [
+                            "bench-aap2-007-count-and-oldest__MfqWF7q"
+                        ],
+                        "0.8": [
+                            "bench-aap2-009-nonexistent-job__eZoxcfP",
+                            "bench-aap2-010-log-does-not-say__UUnh4Ss"
+                        ]
+                    },
+                    "completion": {
+                        "1.0": [
+                            "bench-aap2-002-failed-jobs-on-co__JXSX5BK",
+                            "bench-aap2-007-count-and-oldest__MfqWF7q",
+                            "bench-aap2-006-log-root-cause__WbhXij2",
+                            "bench-aap2-009-nonexistent-job__eZoxcfP",
+                            "bench-aap2-001-single-job-outcom__SqAr9qy",
+                            "bench-aap2-010-log-does-not-say__UUnh4Ss",
+                            "bench-aap2-008-preceding-task__TUPfaG6",
+                            "bench-aap2-003-never-started-exp__HkkMuKu",
+                            "bench-aap2-005-find-then-diagnos__2UqfZNm",
+                            "bench-aap2-004-failing-task-and__ymchCcq"
+                        ]
+                    },
+                    "tool_calls": {
+                        "1.0": [
+                            "bench-aap2-002-failed-jobs-on-co__JXSX5BK",
+                            "bench-aap2-007-count-and-oldest__MfqWF7q",
+                            "bench-aap2-006-log-root-cause__WbhXij2",
+                            "bench-aap2-001-single-job-outcom__SqAr9qy",
+                            "bench-aap2-010-log-does-not-say__UUnh4Ss",
+                            "bench-aap2-008-preceding-task__TUPfaG6",
+                            "bench-aap2-003-never-started-exp__HkkMuKu",
+                            "bench-aap2-005-find-then-diagnos__2UqfZNm",
+                            "bench-aap2-004-failing-task-and__ymchCcq"
+                        ],
+                        "0.0": [
+                            "bench-aap2-009-nonexistent-job__eZoxcfP"
+                        ]
+                    },
+                    "answer": {
+                        "1.0": [
+                            "bench-aap2-002-failed-jobs-on-co__JXSX5BK",
+                            "bench-aap2-006-log-root-cause__WbhXij2",
+                            "bench-aap2-009-nonexistent-job__eZoxcfP",
+                            "bench-aap2-001-single-job-outcom__SqAr9qy",
+                            "bench-aap2-008-preceding-task__TUPfaG6",
+                            "bench-aap2-003-never-started-exp__HkkMuKu",
+                            "bench-aap2-005-find-then-diagnos__2UqfZNm",
+                            "bench-aap2-004-failing-task-and__ymchCcq"
+                        ],
+                        "0.0": [
+                            "bench-aap2-007-count-and-oldest__MfqWF7q"
+                        ],
+                        "0.75": [
+                            "bench-aap2-010-log-does-not-say__UUnh4Ss"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 1234171,
+        "n_cache_tokens": 1070278,
+        "n_output_tokens": 13385,
+        "cost_usd": 1.13624115
+    }
+}

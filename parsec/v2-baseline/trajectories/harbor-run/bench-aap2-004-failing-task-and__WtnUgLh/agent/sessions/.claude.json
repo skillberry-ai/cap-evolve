@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "backend": {
+      "type": "sse",
+      "url": "http://127.0.0.1:9089/mcp/sse"
+    }
+  },
+  "firstStartTime": "2026-08-13T19:57:01.267Z",
+  "machineID": "e4aa49121b829c1852e29756e40622d68b4df6bf9167a90f9faae0e1702a5b47",
+  "opusProMigrationComplete": true,
+  "sonnet1m45MigrationComplete": true,
+  "seenNotifications": {},
+  "hasResetAutoModeOptInForDefaultOffer": true,
+  "migrationVersion": 13,
+  "userID": "47e61861be69ff92ffd5c10d0933d20a63355d70f9e9519270529029dd1b16a5"
+}

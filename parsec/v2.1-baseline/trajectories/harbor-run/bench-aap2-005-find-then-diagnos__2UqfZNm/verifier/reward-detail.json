@@ -1,0 +1,46 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.5,
+    "answer": 0.5
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "find_jobs",
+          "controller": "prod0",
+          "failed_only": true,
+          "max_results": 10
+        }
+      },
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_log",
+          "controller": "prod0",
+          "job_id": 90420
+        }
+      },
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_events",
+          "controller": "prod0",
+          "job_id": 90420,
+          "failed_only": true
+        }
+      }
+    ],
+    "unmatched_expected": [],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [],
+    "forbidden_hit": [],
+    "required_total": 3,
+    "forbidden_total": 0
+  }
+}

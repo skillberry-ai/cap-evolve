@@ -1,0 +1,43 @@
+{
+  "gate": 1.0,
+  "weights": {
+    "tool_calls": 0.2,
+    "answer": 0.8
+  },
+  "tool_calls": {
+    "match": "ordered-subsequence",
+    "actual": [
+      {
+        "name": "query_aap2",
+        "args": {
+          "action": "get_job_log",
+          "controller": "prod1",
+          "job_id": 91010
+        }
+      }
+    ],
+    "unmatched_expected": [],
+    "forbidden_violations": []
+  },
+  "answer": {
+    "required_missed": [
+      {
+        "id": "refusal",
+        "any_of": [
+          "no indication",
+          "not a network",
+          "nothing in the log",
+          "no evidence",
+          "not a connectivity"
+        ],
+        "ignore_case": true,
+        "derived": true,
+        "note": "a conclusion that the log does not support the premise; no seed value can contain it",
+        "rationale": "the question asserts a cause the data does not support, and the answer must decline it"
+      }
+    ],
+    "forbidden_hit": [],
+    "required_total": 3,
+    "forbidden_total": 1
+  }
+}
