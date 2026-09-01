@@ -662,10 +662,14 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
         # every round, so round 2+ inherits a clean append target automatically. Own
         # try/except: a journal-seed failure must not mark the whole context (guidance,
         # trajectories) unstaged — it is a nicety on top of staging, not staging itself.
+        # `seed_framework_memory`, not `_seed_journal` alone: LEDGER.md, RUNMAP.md and
+        # prior_iterations/ are named by the staged CLAUDE.md pointer AND by JOURNAL.md's own
+        # seed text, and seeding only the journal is what left them absent for a whole run.
         try:
-            harness._seed_journal(rd.candidate_dir(rd.best_id or "seed"), rd)
+            harness.seed_framework_memory(rd.candidate_dir(rd.best_id or "seed"), rd)
         except Exception as exc:  # noqa: BLE001
-            rd.log_event("optimizer_context_warning", what="JOURNAL.md", error=str(exc)[:300])
+            rd.log_event("optimizer_context_warning", what="framework_memory",
+                         error=str(exc)[:300])
 
         guidance = (sorted(g.name for g in (workdir / "guidance").iterdir())
                     if (workdir / "guidance").is_dir() else [])

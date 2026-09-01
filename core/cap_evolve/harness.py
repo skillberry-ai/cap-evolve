@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import convergence as convergence_mod
+from . import footprint as footprint_mod
 from . import gate as gate_mod
 from . import integrity
 from .loop import SplitResult, aggregate_scores, has_valid_trials
@@ -475,21 +476,31 @@ def evaluate_candidate(
     return result
 
 
-def split_result_from_rollouts(run_dir: RunDir, tag: str, split: str = "val", ks=(1, 2)) -> SplitResult:
+def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2)) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 
     Used to RESUME a run from the current best candidate (its val score is read
     back from disk) without re-scoring it.
+
+    ``tag`` may be a SEQUENCE of tags, in which case their trials are POOLED per task into
+    one estimate. That is how a round's null-control replicates become a better parent
+    reference than any one of them: they are byte-identical copies of the same parent
+    measured in the same round, so they are draws from the same distribution, and pooling
+    two of them halves the parent side's per-task variance for free — the rollouts are
+    already on disk (see ``round.py``'s ``control_replicates``). Pooling is not the same as
+    averaging their means: it merges the underlying trials, so a task measured by only one
+    replicate is not silently upweighted.
     """
     import json as _json
     from .stats import mean, stderr
+    tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
     vdir = run_dir.rollouts / split
     by_task: dict[str, list[float]] = {}
     feedback: dict[str, str] = {}
     raw: dict[str, dict] = {}
     metrics_by_task: dict[str, list] = {}
     if vdir.exists():
-        for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
+        for f in sorted(g for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
@@ -716,12 +727,25 @@ def _optimizer_failure_detail(proc: "subprocess.CompletedProcess") -> str:
 
 # ---- one propose -> gate step ---------------------------------------------
 
-def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | None:
+def _paired_deltas(current_val: SplitResult, cand_val: SplitResult,
+                   footprint=None) -> list | None:
     """Aligned per-task ``cand_reward[t] - curr_reward[t]`` over shared val tasks.
 
     Returns ``None`` if either side lacks per-task data or they share no task ids
     (so the caller falls back to the unpaired significance test). Tasks present in
     only one side are dropped — a paired test needs both halves of the pair.
+
+    ``footprint`` (optional, from ``footprint.footprint``) is the set of task ids the
+    candidate's edit can causally reach. Tasks OUTSIDE it enter the vector as **0.0**
+    rather than as their measured delta: an edit that cannot reach a task has Δ=0 by
+    construction, and the wobble measured there is pure noise that inflates the SE and
+    buries the effect. Measured on run_finalrun6, SE(paired Δ) over all 30 val tasks ran
+    0.022-0.035 while the real per-edit effects were 0.011-0.05 — the gate could not
+    resolve the thing it was built to resolve. Zero-padding rather than dropping keeps the
+    vector's full length, so Δ̄ stays on the same scale as the val reward (and as every
+    threshold, ledger row and val curve derived from it) while only the variance changes.
+    ``None`` applies no restriction, which is what every caller without footprint data
+    passes.
 
     A task is also dropped when EITHER side failed to produce a valid trial. This
     matters more here than anywhere else: pairing is per-task, so an unscored task
@@ -737,7 +761,9 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
               if t in cur and has_valid_trials(cand[t]) and has_valid_trials(cur[t])]
     if not shared:
         return None
-    return [float(cand[t].get("reward", 0.0) or 0.0)
+    fp = None if footprint is None else {str(t) for t in footprint}
+    return [0.0 if (fp is not None and str(t) not in fp) else
+            float(cand[t].get("reward", 0.0) or 0.0)
             - float(cur[t].get("reward", 0.0) or 0.0)
             for t in sorted(shared)]
 
@@ -747,8 +773,8 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 # The optimizer's working dir carries cross-iteration files, with clean ownership
 # so there is never confusion about who writes what (the recurring user complaint about
 # the old MEMORY.md/STATE.md pair):
-#   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the objective record:
-#                 per-iteration outcomes + the exact tasks each candidate broke/fixed).
+#   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the measured record:
+#                 per-iteration outcomes + the tasks each candidate measurably broke/fixed).
 #   JOURNAL.md  — OPTIMIZER-owned, JUDGMENT, append-only across the WHOLE run (what was
 #                 tried, what worked, what regressed, refuted hypotheses, focus-next).
 #   PROCESS.md  — OPTIMIZER-owned, EXPLAINABILITY, fresh each iter, snapshotted with the
@@ -774,7 +800,8 @@ _JOURNAL_SEED = (
     "EVERY prior attempt (not just the last accepted one) and never re-test a refuted "
     "idea.\n\n"
     "You CANNOT know your own gate result while you write — the harness scores you AFTER "
-    "you stop and stamps a **RESULT** line (outcome + Δ + the EXACT tasks you broke/fixed) "
+    "you stop and stamps a **RESULT** line (outcome + Δ + the tasks you measurably broke/fixed, "
+    "plus the ones whose move was too small to resolve) "
     "right below your entry. So do NOT write 'what worked' as a guess. To learn what "
     "actually worked, READ the framework RESULT lines of prior entries (and LEDGER.md): an "
     "entry whose RESULT says `rejected` with `broke={...}` tells you which specific edits to "
@@ -943,8 +970,14 @@ def _capability_files(d: Path) -> dict[str, str]:
     return out
 
 
-def _diff_capabilities(parent_dir: Path, cand_dir: Path, *, max_chars: int = 8000) -> str:
-    """Unified diff of capability files between a parent and candidate snapshot."""
+def _diff_capabilities(parent_dir: Path, cand_dir: Path, *, max_chars: int = 8000,
+                       context: int = 2) -> str:
+    """Unified diff of capability files between a parent and candidate snapshot.
+
+    ``context`` is the diff's ``n``. Footprint detection asks for a wide one: an edit inside a
+    function body (a docstring rewrite, say) names no surface on its own changed lines, and the
+    only place its enclosing definition appears is a context line — ``difflib`` does not fill
+    in the ``@@`` section label the way git does."""
     import difflib
     pf, cf = _capability_files(parent_dir), _capability_files(cand_dir)
     blocks: list[str] = []
@@ -954,7 +987,7 @@ def _diff_capabilities(parent_dir: Path, cand_dir: Path, *, max_chars: int = 800
         if a == b:
             continue
         diff = "\n".join(ln for ln in difflib.unified_diff(
-            a, b, fromfile=f"a/{path}", tofile=f"b/{path}", lineterm="", n=2))
+            a, b, fromfile=f"a/{path}", tofile=f"b/{path}", lineterm="", n=context))
         if diff.strip():
             blocks.append(diff)
     text = "\n".join(blocks)
@@ -997,15 +1030,77 @@ def _per_task_rewards(run_dir: RunDir, tag: str, split: str = "val") -> dict[str
     return {pt["task_id"]: float(pt.get("reward", 0.0)) for pt in (sr.per_task or [])}
 
 
+def move_is_resolved(par: float, cand: float,
+                     par_se: float = 0.0, cand_se: float = 0.0,
+                     eps: float = 1e-9) -> bool:
+    """Did this task's reward move by more than its own measurement error can explain?
+
+    THE one resolution bar behind every per-task broke/fixed/regressed claim the framework
+    makes — ``_candidate_task_impact`` (LEDGER.md + the journal RESULT stamp),
+    ``gate_check.regressions`` (the round table's diagnosis list), ``measure.py``'s sealed
+    seed→best movement, and ``spend.py``'s "don't regress task X" check. It lives here, once,
+    because four copies of a bar is how three of them stayed at ``1e-9`` while one was fixed.
+
+    ``2·SE`` of the PAIRED per-task difference (the two sides' per-task SEs in quadrature) —
+    the same "smallest resolvable effect" the gate reports for the split mean, applied per
+    task. Below it, the move is inside the noise of measuring the task twice and asserting
+    the edit caused it is a fabrication: on run_finalrun6 a 1.0 → 0.9 move at 10 trials (ONE
+    flipped rollout) was stamped a behavioural break, byte-identical code got different
+    broke/fixed labels across two measurements, and the optimizer spent three rounds
+    reasoning about the phantom regression — including on a docstring-only edit that cannot
+    change behaviour at all.
+
+    ``eps`` is the floor, so a run at one trial per task — where every per-task SE is 0 and
+    the single draw is all the evidence there is — classifies exactly as it always did.
+    """
+    import math
+    return abs(cand - par) > max(2.0 * math.sqrt(par_se ** 2 + cand_se ** 2), eps)
+
+
+def _per_task_stderr(run_dir: RunDir, tag: str, split: str = "val") -> dict[str, float]:
+    """Per-task standard error over trials for ``tag`` (σ/√T), rebuilt from rollouts.
+
+    The same numbers the gate's variance already rests on — ``Score.stderr``, computed by
+    ``aggregate_scores`` from the per-trial rewards — so the broke/fixed bar below is
+    derived from this run's own measured noise and carries no benchmark-specific constant.
+    ``{}`` when no rollouts were persisted; a single-trial tag yields 0.0 per task, which
+    is correct: at one trial there is no variance estimate and the one draw is all the
+    evidence there is."""
+    try:
+        sr = split_result_from_rollouts(run_dir, tag, split)
+    except Exception:  # noqa: BLE001
+        return {}
+    return {pt["task_id"]: float(pt.get("stderr") or 0.0) for pt in (sr.per_task or [])}
+
+
 def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
                            parent_of: dict | None = None) -> dict | None:
     """Per-task reward Δ of candidate ``cid`` vs its PARENT, from rollouts.
 
-    Returns ``{"broke": [...], "fixed": [...], "delta": float}`` where ``broke`` are
-    tasks that were PASSING (reward ≈ 1) under the parent and DROPPED under the
-    candidate, and ``fixed`` are tasks that were failing under the parent and now
-    PASS. ``delta`` is the mean per-task reward change over shared tasks. Returns
-    ``None`` when either side has no rollouts on disk (nothing to compare)."""
+    Returns ``{"broke": [...], "fixed": [...], "unresolved": [...], "delta": float}``.
+    ``broke`` are tasks that were PASSING (reward ≈ 1) under the parent and dropped
+    MEASURABLY under the candidate; ``fixed`` are tasks that were failing under the parent
+    and now pass. ``delta`` is the mean per-task reward change over shared tasks. Returns
+    ``None`` when either side has no rollouts on disk (nothing to compare).
+
+    "Measurably" is the whole point of the ``bar`` below, and it used to be missing: the
+    test was ``> 1e-9``, so a task that went 1.0 → 0.9 because ONE of ten rollouts flipped
+    was stamped a real behavioural break. That is not a hypothetical — on run_finalrun6,
+    byte-identical code measured twice (cand_2 and its fresh-tag re-measurement cand_4) got
+    DIFFERENT broke/fixed labels, and the optimizer reasoned from them: its journal spent
+    three rounds re-deriving that "task 27" was noise after the label asserted a regression
+    on structurally unrelated candidates, one of them a docstring-only edit that cannot
+    change behaviour at all.
+
+    So a move counts as broke/fixed only when it exceeds ``2·SE`` of its own per-task
+    measurement (SE of the paired difference: the two sides' per-task SEs in quadrature —
+    the same 2·SE "smallest resolvable effect" the gate reports for the split mean, applied
+    per task). Sub-threshold movers are returned as ``unresolved``: they moved, the
+    measurement cannot say whether the edit did it, and asserting causality either way is
+    the thing that poisoned the reasoning. At one trial per task every SE is 0, the bar
+    collapses to ``eps``, and the classification is exactly what it always was."""
+    import math
+
     parent_of = parent_of if parent_of is not None else _parent_map(run_dir)
     parent_id = parent_of.get(cid, "seed")
     cand = _per_task_rewards(run_dir, cid, split)
@@ -1016,12 +1111,22 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
     if not shared:
         return None
     eps = 1e-9
-    broke = sorted(t for t in shared
-                   if par[t] >= 1.0 - eps and cand[t] < par[t] - eps)
-    fixed = sorted(t for t in shared
-                   if par[t] < 1.0 - eps and cand[t] >= 1.0 - eps)
+    cand_se = _per_task_stderr(run_dir, cid, split)
+    par_se = _per_task_stderr(run_dir, parent_id, split)
+    broke, fixed, unresolved = [], [], []
+    for t in sorted(shared):
+        d = cand[t] - par[t]
+        if abs(d) <= eps:
+            continue
+        if not move_is_resolved(par[t], cand[t], par_se.get(t, 0.0), cand_se.get(t, 0.0)):
+            unresolved.append(t)
+        elif par[t] >= 1.0 - eps and d < 0:
+            broke.append(t)
+        elif par[t] < 1.0 - eps and cand[t] >= 1.0 - eps:
+            fixed.append(t)
     delta = sum(cand[t] - par[t] for t in shared) / len(shared)
-    return {"broke": broke, "fixed": fixed, "delta": delta, "parent": parent_id}
+    return {"broke": broke, "fixed": fixed, "unresolved": unresolved,
+            "delta": delta, "parent": parent_id}
 
 
 def _journal_tail(workdir: Path) -> str:
@@ -1072,7 +1177,7 @@ def pending_handover(workdir: Path, run_dir: RunDir) -> str:
 
 def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     """Write the FACTUAL, framework-owned LEDGER.md: one row per prior iteration with
-    its outcome + the exact tasks it broke/fixed. Deterministic — the objective record;
+    its outcome + the tasks it measurably broke/fixed. Deterministic — the measured record;
     the optimizer's own narrative lives in JOURNAL.md."""
     parent_of = _parent_map(run_dir)
     # Outcome per candidate from step events (accept/reject + val + parent).
@@ -1089,8 +1194,9 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     except Exception:  # noqa: BLE001
         rows = []
 
-    table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) | fixed |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) "
+             "| fixed | unresolved (moved < 2·SE) |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     void: list[str] = []
     for i, rec in enumerate(rows, 1):
         cid = str(rec.get("candidate"))
@@ -1109,19 +1215,27 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         imp = _candidate_task_impact(run_dir, cid, "val", parent_of=parent_of) or {}
         broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
         fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
+        unres = "{" + ", ".join(str(t) for t in (imp.get("unresolved") or [])[:20]) + "}"
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
-        table.append(f"| {i} | {cid} | {par} | {outcome} | {vstr} | {d} | {broke} | {fixed} |")
+        table.append(f"| {i} | {cid} | {par} | {outcome} | {vstr} | {d} | {broke} | {fixed} "
+                     f"| {unres} |")
     if len(table) == 2:
-        table.append("| — | (baseline only) | — | — | — | — | {} | {} |")
+        table.append("| — | (baseline only) | — | — | — | — | {} | {} | {} |")
 
     best = run_dir.best_id or "seed"
     text = (
         "# LEDGER — factual run record (framework-maintained; READ-ONLY)\n\n"
-        "The objective record of every iteration: which candidate, its parent, whether the "
-        "gate ACCEPTED it, the val reward + Δ, and the EXACT tasks it broke / fixed. Facts "
+        "The measured record of every iteration: which candidate, its parent, whether the "
+        "gate ACCEPTED it, the val reward + Δ, and the tasks it broke / fixed. Facts "
         "only — your own narrative, lessons, and refuted hypotheses go in JOURNAL.md. Use "
         "this to never re-introduce a change that broke a task, and to see which approaches "
         "the gate accepted vs rejected.\n\n"
+        "`broke` / `fixed` list only tasks whose move EXCEEDED 2·SE of its own per-task "
+        "measurement error, so they are claims the measurement can support. A task that "
+        "moved by less is in `unresolved`: it is NOT evidence the edit did anything to that "
+        "task, in either direction, and must not be reasoned about as a regression or a "
+        "win. Do not redesign an edit because a task appears there — re-measure it, or "
+        "ignore it.\n\n"
         "## Iterations\n" + "\n".join(table) + "\n\n"
         + ("## Not scored — fix the execution, keep the idea\n"
            "These candidates were never measured, so their reward says nothing. Correct the "
@@ -1159,7 +1273,7 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
                        accepted: bool, val: float | None, delta: float | None,
                        reason: str | None = None, indecisive: bool = False) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
-    stamped with the framework's objective outcome. Append-only at the run level so the
+    stamped with the framework's measured outcome. Append-only at the run level so the
     handover truly accumulates across accepted AND rejected iterations.
 
     ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
@@ -1191,12 +1305,13 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
     # Run-level file is pure accumulated entries — strip any marker before appending.
     base = base.replace(_JOURNAL_MARK, "").rstrip()
-    # Framework-owned RESULT: the objective gate outcome + the EXACT tasks this candidate
+    # Framework-owned RESULT: the gate outcome + the tasks this candidate measurably
     # broke/fixed (vs its parent), folded VISIBLY into the journal so the next iteration
     # learns what actually worked/regressed from the narrative — not just a terse comment.
     impact = _candidate_task_impact(run_dir, cid, "val") or {}
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
+    unres = ", ".join(str(t) for t in (impact.get("unresolved") or [])[:30]) or "—"
     if indecisive:
         verdict = "UNRESOLVED (not judged; champion unchanged)"
         guidance = (" — the measurement could not separate this edit from re-measurement noise, "
@@ -1230,8 +1345,10 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
                     "you: attribute per-task before redesigning anything.")
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
-    stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "
-             f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
+    stamp = (f"\n\n> **RESULT (framework, measured):** {verdict} · val={vs} "
+             f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}} · unresolved={{{unres}}} "
+             f"(moved less than 2·SE of its own measurement — NOT evidence the edit touched "
+             f"those tasks; do not redesign on them).{guidance}\n"
              f"<!-- {cid}: "
              f"{'unresolved' if indecisive else 'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
@@ -1376,6 +1493,54 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
+def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
+    """Create every cross-iteration memory file the optimizer is TOLD to read, in ``target``.
+
+    The set is exactly what ``_write_instructions_pointer`` and ``_augment_instructions``
+    promise: ``LEDGER.md``, ``JOURNAL.md``, ``PROCESS.md``, ``RUNMAP.md`` +
+    ``prior_iterations/<id>/``, and the three accumulators. All of them are pure functions
+    of the run dir's ``step`` events and candidate snapshots, so this is idempotent and
+    cheap to call again — which is why it can be the ONE place that guarantees the promise.
+
+    It exists because the promise and the creation had drifted apart. The deterministic
+    loops call ``_augment_instructions`` per iteration and get all of it; an agent-driven
+    run reaches ``_write_instructions_pointer`` (via ``OptimizerContext.inject`` →
+    ``_inject_native_skills``) and got the pointer alone. On run_finalrun6 the staged
+    ``CLAUDE.md`` told the agent to read ``./LEDGER.md``, ``./PROCESS.md``, ``./RUNMAP.md``
+    and ``./prior_iterations/<id>/`` while the working dir held only ``INSTRUCTIONS.md``,
+    ``CLAUDE.md``, ``guidance/``, ``project/`` and ``trajectories/`` — and ``JOURNAL.md``'s
+    own seed text points at ``./prior_iterations/<id>/diff.patch`` for each prior
+    candidate's exact edit, a directory nothing ever created.
+
+    Returns the names that now exist, so the caller writing the pointer can promise exactly
+    those and nothing more. Best-effort per file: one unwritable file must not cost the rest.
+    """
+    target = Path(target)
+    written: list[str] = []
+    for name, fn in (("LEDGER.md", _build_ledger), ("JOURNAL.md", _seed_journal),
+                     ("RUNMAP.md", _build_runmap)):
+        try:
+            fn(target, run_dir)
+            written.append(name)
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what=name, error=str(e)[:300])
+    for filename, seed, mark in _ACCUMULATORS:
+        try:
+            _seed_accumulator(target, run_dir, filename=filename, seed=seed, mark=mark)
+            written.append(filename)
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what=filename, error=str(e)[:300])
+    try:
+        if not (target / "PROCESS.md").exists():
+            (target / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
+        written.append("PROCESS.md")
+    except OSError as e:
+        run_dir.log_event("optimizer_context_warning", what="PROCESS.md", error=str(e)[:300])
+    if (target / "prior_iterations").is_dir():
+        written.append("prior_iterations/")
+    return written
+
+
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
     """Give the optimizer its cross-iteration files + a prompt pointer to each.
 
@@ -1388,18 +1553,14 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
       - INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — optimizer-authored,
         append-only summary layer above JOURNAL.md (see the comment near ``_INSIGHTS_MARK``).
     """
-    _build_ledger(workdir, run_dir)
-    _seed_journal(workdir, run_dir)
-    for filename, seed, mark in _ACCUMULATORS:
-        _seed_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
-    if not (workdir / "PROCESS.md").exists():
-        (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
-    _build_runmap(workdir, run_dir)
+    seed_framework_memory(workdir, run_dir)
 
     pointer = (
         "## Cross-iteration files in THIS working dir (clean ownership — read all)\n"
-        "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the exact "
-        "tasks it broke/fixed. Never re-introduce a change that broke a task.\n"
+        "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the tasks "
+        "it MEASURABLY broke/fixed, plus the ones whose move was under 2·SE and so resolves "
+        "nothing. Never re-introduce a change that broke a task; never redesign an edit "
+        "because a task landed in `unresolved`.\n"
         "- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole "
         "thing, then APPEND your entry for this iteration below the marker line. Do NOT edit "
         "earlier entries. This is how you avoid repeating refuted ideas and hitting the same "
@@ -1420,6 +1581,10 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
         "- `FRAMEWORK_IMPROVEMENTS.md` — cross-run suggestions for cap-evolve ITSELF, not this "
         "task (yours, append-only, optional): what confused you or was missing about the "
         "framework. Update AT LEAST once, at the end of the run.\n"
+        f"- `{run_dir.rejected_path}` — ALREADY-REFUTED approaches (framework, read-only; JSON "
+        "lines, one per rejected candidate with the gate's reason). Read it and make each "
+        "proposal STRUCTURALLY different from what is in it. Its sibling `history.jsonl` is "
+        "the same record for accepts.\n"
     )
     return f"{instructions}\n\n{pointer}\n"
 
@@ -1665,7 +1830,8 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
         # Always-on instructions file: write a short, generic, idempotent pointer block.
         if instructions_file:
             try:
-                _write_instructions_pointer(workdir / instructions_file, skills_dir)
+                _write_instructions_pointer(workdir / instructions_file, skills_dir,
+                                            run_dir=run_dir, workdir=workdir)
             except Exception as e:  # noqa: BLE001
                 run_dir.log_event("optimizer_context_warning",
                                   what=f"instructions/{instructions_file}", error=str(e)[:300])
@@ -1676,9 +1842,54 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
 _NATIVE_POINTER_MARK = "<!-- cap-evolve:native-skills -->"
 
 
-def _write_instructions_pointer(path: Path, skills_dir: str) -> None:
+#: The cross-iteration files the pointer describes, in the order it lists them, each with
+#: the one-line brief the optimizer needs. Only entries whose file actually exists in the
+#: working dir are written into the pointer — see ``_write_instructions_pointer``.
+_POINTER_FILES = (
+    ("LEDGER.md",
+     "`./LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the tasks "
+     "it measurably broke/fixed, and the ones whose move was too small to resolve. Never "
+     "re-introduce a change that broke a task."),
+    ("JOURNAL.md",
+     "`./JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read it, then "
+     "APPEND your entry for this iteration below the marker line. Do not edit earlier "
+     "entries. Each entry carries the framework's RESULT stamp under it."),
+    ("PROCESS.md",
+     "`./PROCESS.md` — EXPLAINABILITY (yours, REQUIRED this iteration): fill it in as you "
+     "work. It is snapshotted with your candidate."),
+    ("RUNMAP.md",
+     "`./RUNMAP.md` + `./prior_iterations/<id>/` — every prior iteration's PROCESS.md and "
+     "capability `diff.patch`, copied in for you. Read the ones targeting your cluster "
+     "BEFORE proposing, so you build on prior work instead of repeating it."),
+    ("INSIGHTS.md",
+     "`./INSIGHTS.md` — SUMMARIZED, VERIFIED findings (yours, append-only): the distilled "
+     "'what worked / what didn't / what's promising' a future iteration reads instead of "
+     "the whole journal."),
+    ("META_INSIGHTS.md",
+     "`./META_INSIGHTS.md` — about the SEARCH PROCESS itself (yours, append-only): which "
+     "strategies helped or stalled, what to try next. Update at least once."),
+    ("FRAMEWORK_IMPROVEMENTS.md",
+     "`./FRAMEWORK_IMPROVEMENTS.md` — cross-run suggestions for cap-evolve ITSELF, not this "
+     "task (yours, append-only, optional)."),
+)
+
+
+def _write_instructions_pointer(path: Path, skills_dir: str, *, run_dir=None,
+                                workdir: Path | None = None) -> None:
     """Write (or append) a short generic pointer block into the agent's instructions
-    file, idempotently (keyed on a marker comment so it is not duplicated)."""
+    file, idempotently (keyed on a marker comment so it is not duplicated).
+
+    Given ``run_dir`` + ``workdir`` it first CREATES the cross-iteration files it is about
+    to name (``seed_framework_memory``) and then lists only the ones that exist. Both
+    halves matter: the promise used to be unconditional prose, so an agent-driven run was
+    told to read four files and a directory that nothing on its path ever created (see
+    ``seed_framework_memory``). Tying the text to the filesystem means the pointer cannot
+    drift back into promising a file again — if a file stops being created, it stops being
+    named, instead of silently sending the optimizer to a dead path.
+    """
+    present = set()
+    if run_dir is not None and workdir is not None:
+        present = set(seed_framework_memory(workdir, run_dir))
     existing = ""
     if path.exists():
         try:
@@ -1689,6 +1900,26 @@ def _write_instructions_pointer(path: Path, skills_dir: str) -> None:
         return
     skills_note = (f"the optimization skills are available natively under `{skills_dir}/` and "
                    if skills_dir else "the optimization skills are available under ")
+    listed = [brief for name, brief in _POINTER_FILES if name in present]
+    files_note = ""
+    if listed:
+        files_note = ("Cross-iteration files in this directory (clean ownership) — read all of "
+                      "these before you start:\n"
+                      + "".join(f"- {b}\n" for b in listed))
+    # ``rejected.jsonl`` has always existed in the run dir and was never mentioned: it is the
+    # run's own record of approaches already refuted, written by every algorithm, and an
+    # optimizer that does not know about it re-proposes what the run has already paid to rule
+    # out. Named by absolute path because it lives in the run dir, not the working dir.
+    rejected_note = ""
+    if run_dir is not None:
+        rejected_path = getattr(run_dir, "rejected_path", None)
+        if rejected_path is not None:
+            rejected_note = (
+                f"Already-refuted approaches: `{rejected_path}` (JSON lines, one per rejected "
+                "candidate: its id, a one-line summary and the gate's reason). Read it and make "
+                "each proposal STRUCTURALLY different from what is in it — a re-proposal of a "
+                "refuted edit spends an iteration to learn what the run already knows. Its "
+                "sibling `history.jsonl` is the same record for accepts.\n")
     block = (
         f"{_NATIVE_POINTER_MARK}\n"
         "## cap-evolve optimization task\n"
@@ -1697,12 +1928,7 @@ def _write_instructions_pointer(path: Path, skills_dir: str) -> None:
         "capability to improve, the failures to fix, and how your edit is judged.\n"
         f"For method/edit-space guidance, {skills_note}under `./guidance/` "
         "(capability skill(s) + the diagnose failure-clustering method).\n"
-        "Cross-iteration files (clean ownership): `./LEDGER.md` (framework facts — every "
-        "iteration's outcome + tasks broken/fixed), `./JOURNAL.md` (YOUR append-only "
-        "handover across the whole run — append your entry below the marker), `./PROCESS.md` "
-        "(YOUR required explainability for this iteration), and `./RUNMAP.md` + "
-        "`./prior_iterations/<id>/` (every prior iteration's PROCESS.md + diff — read before "
-        "proposing). Read all of these before you start.\n"
+        + files_note + rejected_note
     )
     sep = "" if (not existing or existing.endswith("\n\n")) else ("\n" if existing.endswith("\n") else "\n\n")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1826,6 +2052,7 @@ def run_step(
     eval_split: str = "val",
     ctx: "OptimizerContext | None" = None,
     protected_patterns=None,
+    footprint_gate: bool = True,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
 
@@ -1842,6 +2069,11 @@ def run_step(
     untouched, best is unchanged) — the same discipline the coverage guard and the
     infra-error path already use, because the score would measure a compromised
     harness, not the edit.
+
+    ``footprint_gate`` (default on) restricts the paired delta vector to the val tasks the
+    candidate's edit can causally reach, so tasks outside it stop contributing noise to the
+    SE — see ``footprint`` and ``_paired_deltas``. It is a no-op whenever the footprint
+    cannot be established, and ``footprint_gate=False`` forces the full-vector behaviour.
     """
     gate_kwargs = dict(gate_kwargs or {})
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
@@ -1964,7 +2196,24 @@ def run_step(
     # powerful) test is mean(per-task Δ) vs the SE of those paired deltas. Build the
     # aligned delta vector here; fall back to the unpaired ``significant`` test when
     # the caller has pinned a different mode or the per-task data isn't aligned.
-    paired_deltas = _paired_deltas(current_val, cand_val)
+    #
+    # Restricted to the candidate's FOOTPRINT when one can be established: a task the edit
+    # cannot causally reach contributes Δ=0 by construction, so its measured wobble is
+    # noise in the SE and nothing else. ``footprint.footprint`` returns None whenever it
+    # cannot localize the edit, and ``_paired_deltas(footprint=None)`` is byte-identical to
+    # the behaviour before this existed — so a capability whose surface cannot be detected
+    # is measured exactly as it always was rather than restricted on a guess.
+    fp = None
+    if footprint_gate:
+        fp = footprint_mod.footprint(
+            run_dir, parent_dir=run_dir.candidate_dir(parent_id or "seed"),
+            cand_dir=workdir, tags=(parent_id or "seed", cid), split="val",
+            all_task_ids=[pt.get("task_id") for pt in (cand_val.per_task or [])])
+        if fp is not None:
+            run_dir.log_event("gate_footprint", candidate=cid, parent=parent_id,
+                              n_in_footprint=len(fp), n_tasks=len(cand_val.per_task or []),
+                              tasks=sorted(map(str, fp))[:60])
+    paired_deltas = _paired_deltas(current_val, cand_val, footprint=fp)
     if "mode" not in gate_kwargs and paired_deltas is not None:
         gate_kwargs["mode"] = "paired"
     decision = gate_mod.decide(

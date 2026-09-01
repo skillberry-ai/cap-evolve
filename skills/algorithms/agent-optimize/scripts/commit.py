@@ -94,15 +94,22 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     if entry is None:
         return {}
     parent = table.get("parent") or {}
+    # The SE of the PAIRED per-task deltas — the number every ``gate_threshold`` in these
+    # tables is ``k_se ×``, and therefore the only SE that belongs in the same row.
+    # DERIVED, never read off a stderr column: neither table records the paired SE, and both
+    # carry a ``stderr`` that is a mean-over-tasks SE instead. Publishing one of those is the
+    # defect this is replacing — on run_finalrun6 it put an identical ``gate_stderr``
+    # 0.0738 on rounds i0, i3 and i6 while the threshold it is supposed to generate moved
+    # 0.0222 → 0.0244 → 0.0346, i.e. a constant beside three different bars derived from it.
+    # ``resolvable_effect_size`` is ``2·SE``, written by ``gate.decide`` from the vector it
+    # actually gated on, so halving it recovers that round's real SE exactly. Absent when the
+    # gate reported no SE (threshold/strict modes, or too few paired samples), and a missing
+    # measurement must stay missing rather than become a fabricated number.
+    _res = entry.get("resolvable_effect_size")
     out = {
         "parent_val": parent.get("reward"),
-        # No ``gate_stderr``: the published ``stderr`` column is the SE of the PAIRED per-task
-        # deltas (``threshold == k_se * SE`` in every deterministic gate's own reason string),
-        # and NEITHER table records it — ``parent.stderr`` (round table) is the SE of the
-        # parent's MEAN over tasks and ``entry["stderr"]`` is the candidate's/pooled mean SE,
-        # both typically much larger. Publishing one there put "±0.144" beside a threshold of
-        # 0.044 in a single row, the same self-contradiction this function exists to remove, so
-        # it stays null like ``k_se``.
+        "gate_stderr": (round(float(_res) / 2.0, 6)
+                        if isinstance(_res, (int, float)) else None),
         # The parent block is the round table's; a grow table has no parent, so fall back to the
         # candidate entry's own paired n — which IS what the gate used.
         "gate_n": parent.get("n_tasks", entry.get("n")),
@@ -406,20 +413,24 @@ def main(argv=None) -> int:
                                  opt_tokens=args.optimizer_tokens or None,
                                  optimizer_seconds=args.optimizer_seconds or None,
                                  **gate)
-        # Re-seed JOURNAL.md onto whichever candidate is now $BEST (fresh accumulated run
-        # journal + marker), so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"`
-        # carries a clean append target forward — the round-2+ half of the fix in host.py's
-        # `_stage_context` (which seeds round 1 the same way onto the seed candidate).
-        # `record_iteration` above already folded THIS round's tail into the run-level file, so
-        # the snapshot picks up the full history regardless of the decision. Falls back to THIS
-        # candidate's own just-taken snapshot when there is no best_id yet (a run with no
-        # baseline) — that dir always exists (``run_dir.snapshot`` above just created it) — and
-        # is best-effort: losing this re-seed must not fail the commit itself.
+        # Re-seed the framework's cross-iteration memory onto whichever candidate is now
+        # $BEST, so the NEXT round's `cp -r "$R/candidates/$BEST" "$R/work/$TAG"` carries a
+        # CURRENT copy forward — the round-2+ half of the fix in host.py's `_stage_context`
+        # (which seeds round 1 the same way onto the seed candidate).
+        # `record_iteration` above already folded THIS round's tail into the run-level journal
+        # and wrote its `step` event, so the LEDGER/RUNMAP rebuilt here include this round.
+        # Everything the staged CLAUDE.md pointer names, not JOURNAL.md alone: LEDGER.md,
+        # RUNMAP.md and prior_iterations/<id>/diff.patch are the files the pointer (and
+        # JOURNAL.md's own seed text) tell the agent to read, and re-seeding only the journal
+        # is what left them absent for a whole run — see harness.seed_framework_memory.
+        # Falls back to THIS candidate's own just-taken snapshot when there is no best_id yet
+        # (a run with no baseline) — that dir always exists (``run_dir.snapshot`` above just
+        # created it) — and is best-effort: losing the re-seed must not fail the commit.
         try:
-            harness._seed_journal(
+            harness.seed_framework_memory(
                 run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
         except Exception as exc:  # noqa: BLE001
-            run_dir.log_event("optimizer_context_warning", what="JOURNAL.md",
+            run_dir.log_event("optimizer_context_warning", what="framework_memory",
                               error=str(exc)[:300])
         if indecisive:
             # The event the dashboard/TUI already read to render a step as `indecisive` rather

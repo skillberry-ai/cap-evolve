@@ -85,16 +85,34 @@ def _compare(seed: SplitResult | None, best: SplitResult | None, *, split: str,
 
 
 def _per_task_movement(seed: SplitResult, best: SplitResult) -> dict:
+    """Which tasks the whole run measurably fixed or broke, seed -> best.
+
+    `fixed`/`broke` require the move to clear 2*SE of its own per-task measurement
+    (``harness.move_is_resolved`` — the ONE bar every broke/fixed claim in the framework
+    uses). A smaller move goes to `unresolved`: it is not `unchanged` (the reward did move)
+    and it is not evidence the run changed that task's behaviour. This is the sealed report a
+    human reads, so a task listed here as fixed or broken had better be a claim the
+    measurement supports — at 10 trials the old ``1e-9`` test promoted a single flipped
+    rollout to a headline behavioural change.
+    """
     from cap_evolve.loop import has_valid_trials
-    s = {pt["task_id"]: pt.get("reward", 0.0) for pt in (seed.per_task or [])
-         if has_valid_trials(pt)}
-    b = {pt["task_id"]: pt.get("reward", 0.0) for pt in (best.per_task or [])
-         if has_valid_trials(pt)}
+    s = {pt["task_id"]: pt for pt in (seed.per_task or []) if has_valid_trials(pt)}
+    b = {pt["task_id"]: pt for pt in (best.per_task or []) if has_valid_trials(pt)}
     shared = sorted(set(s) & set(b))
+
+    def _r(d, t):
+        return d[t].get("reward", 0.0) or 0.0
+
+    def _resolved(t):
+        return harness.move_is_resolved(_r(s, t), _r(b, t),
+                                        s[t].get("stderr") or 0.0, b[t].get("stderr") or 0.0)
+
     return {
-        "fixed": [t for t in shared if b[t] > s[t] + 1e-9],
-        "broke": [t for t in shared if b[t] < s[t] - 1e-9],
-        "unchanged": [t for t in shared if abs(b[t] - s[t]) <= 1e-9],
+        "fixed": [t for t in shared if _r(b, t) > _r(s, t) and _resolved(t)],
+        "broke": [t for t in shared if _r(b, t) < _r(s, t) and _resolved(t)],
+        "unresolved": [t for t in shared
+                       if abs(_r(b, t) - _r(s, t)) > 1e-9 and not _resolved(t)],
+        "unchanged": [t for t in shared if abs(_r(b, t) - _r(s, t)) <= 1e-9],
         "unpaired": sorted((set(s) | set(b)) - set(shared)),
     }
 

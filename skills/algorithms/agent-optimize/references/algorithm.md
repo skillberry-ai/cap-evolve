@@ -12,6 +12,7 @@
 - [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
 - [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
 - [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
+- [Measuring only what the edit reaches](#measuring-only-what-the-edit-reaches)
 - [Caveats](#caveats)
 - [Sources](#sources)
 
@@ -366,6 +367,81 @@ the numbers don't support, dressing noise-chasing in confident-sounding prose �
 bad math to motivated reasoning, which is harder to catch mechanically than a wrong formula was. The only
 mitigation available is the audit trail above: every override gets a human-readable justification citing
 real numbers, reviewable after the fact, the same way this repo's own run post-mortems already work.
+
+## Measuring only what the edit reaches
+
+Two things a round prints are claims about *causality*, and both were being made at a precision the
+measurement did not have. The evidence is run_finalrun6 — 7 candidates, 30 val tasks, 10 trials.
+
+### The footprint: which tasks could the edit have moved at all?
+
+An edit touches a handful of named surfaces. The gate, though, used to measure its delta across every val
+task. The tasks the edit cannot reach do not sit at zero — they wobble, because measuring a task twice is
+not the same as measuring it once — and that wobble goes straight into the SE of the mean. On
+run_finalrun6, `SE(paired Δ)` ran **0.022-0.035** while the real per-edit effects were **0.011-0.05**: the
+bar was as wide as the thing it was measuring. The same run's 7-way null-control replicate spread
+(0.567-0.603) was statistically indistinguishable from its 7-way across-candidate spread (0.570-0.607) —
+the round could not tell an edit from a re-measurement of the same code.
+
+The fix is to measure over the tasks the edit can causally reach. `gate_check.py` diffs the candidate
+against its reference, reads the identifier-like names off the changed lines, and asks which tasks'
+persisted rollouts mention any of them (`cap_evolve.footprint` — deliberately a flat substring search over
+the whole rollout record, so it works for any adapter's trace shape and any capability). Tasks outside that
+set enter the delta vector as **0.0 rather than as their measured wobble**: an edit that cannot reach a
+task has no effect on it by construction. The vector keeps its full length, so `Δ̄` stays on the same scale
+as the val reward — and every threshold, ledger row and val-curve point derived from it stays comparable —
+while only the variance changes. On the worked case in `core/tests/`, a real +0.1 on 3 of 30 tasks goes
+from unresolvable to accepted, with the bar falling roughly 4x.
+
+Read the `footprint` block in each row before the delta:
+
+- `restricted: true` — `n_in_footprint` of `n_tasks` were in play. The SE describes those tasks.
+- `restricted: false` — the surface could not be localized: no diff, a rewrite-sized diff (more distinct
+  symbols than a targeted edit would name), no rollouts on disk, or a footprint that covers every task
+  anyway. The measurement fell back to the whole split, so it carries every task's noise. **A null result
+  here is weak evidence about the edit, not evidence against it.** `--no-footprint` forces this mode.
+
+The over-inclusion is deliberate: a symbol mentioned only in prose still counts as a hit. Over-including
+gives back some of the noise the restriction removes; under-including would zero out a task the edit really
+did move and manufacture a gain. Every unknowable case degrades to `restricted: false`, never to a crash
+and never to a restriction invented from nothing.
+
+This is also the mechanical argument for **sibling candidates over bundles**: a bundle's footprint is the
+union of its parts', so a two-surface bundle is measured at close to full-split noise while each part
+measured alone would have been resolvable.
+
+**Not built, and why**: the round does not yet spend the freed budget on more trials over the smaller
+in-footprint task set. That needs subset-scoped evaluation plumbed through `round.py`, and `grow.py`
+already buys more `n` on an unresolved candidate — footprint-scoped growth is the natural next step, not a
+prerequisite for the restriction being correct.
+
+Free on the reference side, and already done: `gate_check.py --current` accepts a comma-separated list of
+tags and **pools their trials per task**. `round.py` passes every one of the round's byte-identical
+null-control replicates, so the control-relative comparison is against a pooled estimate rather than
+whichever replicate happened to carry the round-scoped tag — which was a coin flip (the same candidate read
++0.0867 against one replicate and +0.0067 against the other). No new rollouts: those files are on disk.
+
+### broke / fixed: is this task's move a claim the measurement supports?
+
+`broke` and `fixed` used to be thresholded at `1e-9`, i.e. at nothing. At 10 trials a task that goes
+`1.0 → 0.9` has had **one rollout out of ten** flip, and that was being stamped as a task the candidate
+broke. It is not a hypothetical failure: on run_finalrun6, byte-identical code measured twice — `cand_2`
+and its own fresh-tag re-measurement `cand_4` — got *different* `broke`/`fixed` labels, and the optimizer
+reasoned from them for three rounds, including asserting a regression on a docstring-only edit that cannot
+change behaviour at all.
+
+Every such claim now has to clear **2·SE of its own per-task measurement** — the two sides' per-task SEs in
+quadrature, the same "smallest resolvable effect" the gate reports for the split mean, applied per task.
+One function, `harness.move_is_resolved`, is the single bar behind all four places the framework makes the
+claim: `LEDGER.md` + the journal RESULT stamp (`_candidate_task_impact`), the round table's diagnosis list
+(`gate_check.regressions`), the sealed report's seed→best movement (`measure.py`), and the
+"don't regress task X" constraint check (`spend.py`). Four copies of a bar is how three of them stayed at
+`1e-9` while one got fixed.
+
+A sub-threshold move is reported as **`unresolved`**, which is neither "broke" nor "unchanged": the reward
+moved, and the measurement cannot say the edit did it. Do not redesign an edit because a task appears
+there, and do not cite one as a regression — re-measure it, or ignore it. At one trial per task every
+per-task SE is 0, the bar collapses to `eps`, and the classification is exactly what it always was.
 
 ## Caveats
 

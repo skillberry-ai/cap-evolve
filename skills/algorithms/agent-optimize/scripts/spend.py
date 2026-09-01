@@ -67,11 +67,17 @@ def _regressed_vs_seed(run_dir: RunDir, best_id: str | None) -> list:
         return []
     seed = harness.split_result_from_rollouts(run_dir, "seed", "val")
     best = harness.split_result_from_rollouts(run_dir, best_id, "val")
-    s = {pt["task_id"]: pt.get("reward", 0.0) for pt in (seed.per_task or [])
-         if has_valid_trials(pt)}
-    b = {pt["task_id"]: pt.get("reward", 0.0) for pt in (best.per_task or [])
-         if has_valid_trials(pt)}
-    return sorted(str(t) for t, r in s.items() if t in b and b[t] < r - 1e-9)
+    s = {pt["task_id"]: pt for pt in (seed.per_task or []) if has_valid_trials(pt)}
+    b = {pt["task_id"]: pt for pt in (best.per_task or []) if has_valid_trials(pt)}
+    # The move must clear 2*SE of its own per-task measurement (harness.move_is_resolved —
+    # the ONE bar every broke/fixed claim in the framework uses). A constraint clause is
+    # checked against this list, so a task that only wobbled by one flipped rollout must not
+    # report a violated promise.
+    return sorted(str(t) for t in s if t in b
+                  and (b[t].get("reward", 0.0) or 0.0) < (s[t].get("reward", 0.0) or 0.0)
+                  and harness.move_is_resolved(
+                      s[t].get("reward", 0.0) or 0.0, b[t].get("reward", 0.0) or 0.0,
+                      s[t].get("stderr") or 0.0, b[t].get("stderr") or 0.0))
 
 
 def _afford(run_dir: RunDir, spec: dict, n_siblings: int, n_trials: int) -> dict:

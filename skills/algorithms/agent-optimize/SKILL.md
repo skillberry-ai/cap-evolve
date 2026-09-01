@@ -84,8 +84,6 @@ scores val only, so pay one `evaluate --split train` first.)
 | `4/10` – `7/10` | genuinely unstable behaviour | fix by *removing* ambiguity, not adding rules |
 | `8/10` – `9/10` | noise around a working path | **leave it alone**; "fixing" it is how churn starts |
 
-A task that "regressed" from `10/10` to `9/10` between rounds is a re-measurement, not damage.
-
 **Audit the MEASUREMENT before you credit a failure**, in round 1 while it is still free (scoring
 re-derives on persisted rollouts): a failing task is a claim by the scorer, and an optimizer that skips
 this optimizes against its own instrumentation. Does the feedback name the **defect** or only the tool;
@@ -101,9 +99,9 @@ still wrong ⇒ the content is.
 **sibling candidates, default N≥3** (one cluster each, gated independently — the safe default) or as **one bold
 multi-part edit** (higher variance, but the only way a fix needing a prompt change *and* a tool change
 lands together). Bundle only *independent* parts — different files, different rules — so a rejected bundle
-can be resubmitted as its surviving part; read `regressed` (screen) and `regressions` (gate) to know which
-to drop. That is also what stops **churn** — a candidate whose mean matches its parent while a *different*
-set of tasks passes — from reading as a tie.
+can be resubmitted as its surviving part; `regressed` (screen) and `regressions` (gate) say which to drop.
+Siblings gate better (a narrow edit's footprint is resolvable, a bundle's is the whole split) and stop
+**churn** — same mean, a *different* set of tasks passing — from reading as a tie.
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
@@ -158,10 +156,10 @@ python "$A/gate_check.py" --run-dir "$R" --candidate "$TAG" --k-se <gate_k_se>
 
 `"verdict"` is evidence, not a command — decide accept/reject yourself, citing the numbers in
 `commit.py --note` (`references/algorithm.md`, "Gate as evidence"). `"indecisive"` means too little of val
-ran, not a rejection. **`regressions` is diagnosis, not a veto** — a per-task drop at `n` trials is an
-estimate, not proof, and the old no-regression veto rejected byte-identical seed copies often enough to dominate false
-rejects (`--veto-regressions` restores it, at that rate). `phases/gate/scripts/run.py` inspects the same
-gate but books no decision.
+ran, not a rejection. **`regressions` is diagnosis, not a veto**: a per-task drop at `n` trials is an
+estimate, not proof (`--veto-regressions` restores the old no-regression veto; see `gate_check.py`). **Read
+`footprint` before the delta; `unresolved` is no evidence** — `references/algorithm.md`, "Measuring only
+what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but books no decision.
 
 **5. Commit the decision through the run dir**, so `best_id`, the stall counter, the dashboard and the
 audit log stay real. `--decision reject` keeps the old best; either way it snapshots the candidate, logs

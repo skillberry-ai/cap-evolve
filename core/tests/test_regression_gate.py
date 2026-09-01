@@ -116,7 +116,9 @@ def test_gate_check_regression_matches_the_harness_rule():
     assert gc.regressions(_Side({"t1": 0.4}), _Side({"t1": 1.0})) == []
 
     # The harness's rule, written out once. gate_check must agree on every
-    # combination of fifths -- the reward granularity at num_trials=5.
+    # combination of fifths -- the reward granularity at num_trials=5. Written with the SEs
+    # at 0 (the `_Side` fixture records none), which is the single-trial case where the
+    # 2*SE bar both sides now apply collapses to eps and the rule is the historical one.
     eps = 1e-9
     def harness_rule(par, cand):
         return sorted(t for t in cand if t in par
@@ -130,10 +132,17 @@ def test_gate_check_regression_matches_the_harness_rule():
 
     # And pin the harness source, so changing ITS rule fails here and forces the two
     # to be re-synced rather than silently diverging again.
+    # Both halves of the shared rule are pinned: the parent-passed condition AND the 2*SE
+    # bar the drop has to clear. The bar is the half that was missing -- a 1.0 -> 0.9 move at
+    # 10 trials was stamped a real break -- so a change to either must re-sync gate_check.
     src = (CORE / "cap_evolve" / "harness.py").read_text()
-    assert "par[t] >= 1.0 - eps and cand[t] < par[t] - eps" in src, (
+    assert "par[t] >= 1.0 - eps and d < 0" in src, (
         "harness's no-regression predicate changed -- re-sync "
         "skills/algorithms/agent-optimize/scripts/gate_check.py:regressions()")
+    assert "abs(cand - par) > max(2.0 * math.sqrt(par_se ** 2 + cand_se ** 2), eps)" in src, (
+        "harness.move_is_resolved -- the ONE per-task resolution bar shared by "
+        "_candidate_task_impact, gate_check.regressions, measure.py and spend.py -- changed. "
+        "Re-check every caller.")
     assert harness is not None      # the import is the point: keep it live
 
 

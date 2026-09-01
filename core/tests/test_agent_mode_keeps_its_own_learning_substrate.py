@@ -119,7 +119,7 @@ def test_a_handover_the_agent_wrote_is_folded_into_the_run_journal(tmp_path):
     assert "compute-not-hardcode replay + over-write contract" in journal
     assert "no handover written by the optimizer" not in journal, (
         "the agent DID write a handover and it was still recorded as absent")
-    assert "RESULT (framework, objective)" in journal, "the framework RESULT half is missing"
+    assert "RESULT (framework, measured)" in journal, "the framework RESULT half is missing"
 
 
 def test_a_missing_handover_is_reported_back_to_the_agent(tmp_path):

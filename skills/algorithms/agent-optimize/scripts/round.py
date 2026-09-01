@@ -450,6 +450,11 @@ def main(argv=None) -> int:
             "n": g.get("paired_n"),
             "k_se": args.k_se,
             "resolvable_effect_size": (g.get("gate") or {}).get("resolvable_effect_size"),
+            # Which val tasks the delta was actually measured over. A row whose footprint is
+            # `restricted: false` was measured across the whole split, so its SE carries the
+            # noise of every task the edit cannot reach — the defect that made SE(paired Δ)
+            # 0.022-0.035 on run_finalrun6 while real per-edit effects were 0.011-0.05.
+            "footprint": g.get("footprint"),
             "verdict": g.get("verdict"),
             "regressions": g.get("regressions"),
             "eval_rc": ev.get("rc"),
@@ -473,17 +478,26 @@ def main(argv=None) -> int:
         for r in rows:
             if r["tag"] in ctl_tags or r.get("reward") is None:
                 continue
+            # POOLED over every control replicate this round has, not just the one carrying
+            # the round-scoped tag. They are byte-identical copies of the same parent measured
+            # in the same round, so they are draws from one distribution and pooling their
+            # trials per task is the lower-variance estimate of the same quantity — for free,
+            # since these rollouts are already on disk. Measuring against a single replicate is
+            # what made this comparison a coin flip: the same candidate read +0.0867 against
+            # one replicate and +0.0067 against the other.
             g = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
-                      args.veto_regressions, current=CTL)
+                      args.veto_regressions, current=",".join(ctl_tags))
             r["control_relative"] = {
-                "reference": CTL,
+                "reference": ctl_tags if len(ctl_tags) > 1 else CTL,
                 "gate_delta": (g.get("gate") or {}).get("delta"),
                 "gate_threshold": (g.get("gate") or {}).get("threshold"),
                 "verdict": g.get("verdict"),
-                "reading": ("the same comparison with the DRIFT removed: this candidate against a "
-                            "byte-identical control measured in this round rather than against a "
-                            "reward measured earlier. Where the two disagree, the difference is "
-                            "drift, not the edit."
+                "reading": ("the same comparison with the DRIFT removed: this candidate against "
+                            f"{len(ctl_tags)} byte-identical control(s) measured in this round — "
+                            "their trials POOLED per task, so the reference carries less of its "
+                            "own measurement error than any single replicate — rather than "
+                            "against a reward measured earlier. Where the two disagree, the "
+                            "difference is drift, not the edit."
                             if not REUSED else
                             f"this candidate against a byte-identical control of the SAME parent "
                             f"measured in iteration {REUSED['from_iteration']} and reused here. "

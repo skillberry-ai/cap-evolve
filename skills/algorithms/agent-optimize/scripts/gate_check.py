@@ -30,7 +30,7 @@ from pathlib import Path
 # cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, footprint, harness
 from cap_evolve.gate import decide
 from cap_evolve.loop import has_valid_trials
 
@@ -81,13 +81,26 @@ def regressions(current, candidate) -> list[str]:
 
     The old rule got WORSE as trials rose, so no trial count could fix it; the
     harness rule converges, which is the behaviour a variance-aware gate must have.
+
+    And it converges FASTER than "any strict drop below 1.0", because the drop must clear
+    ``2·SE`` of its own per-task measurement — the same bar ``harness._candidate_task_impact``
+    applies, kept in sync by ``test_regression_gate``. Without it the list reported a task as
+    regressed for a single flipped rollout out of ten: on run_finalrun6 the same "task 27"
+    was reported against structurally unrelated candidates, one of them a docstring-only edit
+    that cannot change behaviour, and the optimizer spent three rounds re-deriving that it was
+    noise. At one trial every SE is 0, the bar collapses to ``EPS``, and the rule is
+    unchanged.
     """
-    cur = {pt["task_id"]: pt.get("reward", 0.0) for pt in (current.per_task or [])
-           if has_valid_trials(pt)}
-    cand = {pt["task_id"]: pt.get("reward", 0.0) for pt in (candidate.per_task or [])
-            if has_valid_trials(pt)}
-    return sorted(t for t, pr in cur.items()
-                  if t in cand and pr >= 1.0 - EPS and cand[t] < pr - EPS)
+    cur = {pt["task_id"]: pt for pt in (current.per_task or []) if has_valid_trials(pt)}
+    cand = {pt["task_id"]: pt for pt in (candidate.per_task or []) if has_valid_trials(pt)}
+
+    def _dropped(t) -> bool:
+        pr = cur[t].get("reward", 0.0) or 0.0
+        cd = cand[t].get("reward", 0.0) or 0.0
+        return pr >= 1.0 - EPS and cd < pr and harness.move_is_resolved(
+            pr, cd, cur[t].get("stderr") or 0.0, cand[t].get("stderr") or 0.0)
+
+    return sorted(t for t in cur if t in cand and _dropped(t))
 
 
 def main(argv=None) -> int:
@@ -95,7 +108,17 @@ def main(argv=None) -> int:
     p.add_argument("--run-dir", required=True)
     p.add_argument("--candidate", required=True, help="candidate tag (== its dir name)")
     p.add_argument("--current", default=None,
-                   help="tag to compare against; default = the run's current best_id")
+                   help="tag to compare against; default = the run's current best_id. Accepts a "
+                        "COMMA-SEPARATED list, whose trials are POOLED per task into one "
+                        "reference — the way a round's byte-identical null-control replicates "
+                        "become a lower-variance estimate of the same parent for free, since "
+                        "their rollouts are already on disk (see round.py's control_replicates).")
+    p.add_argument("--no-footprint", action="store_true",
+                   help="measure the delta across EVERY val task, including the ones the edit "
+                        "cannot causally reach. Footprint restriction is on by default and is a "
+                        "no-op whenever the edit's surface cannot be determined; see "
+                        "cap_evolve.footprint for why the unrestricted vector buries real "
+                        "effects in the noise of tasks the edit never touched.")
     p.add_argument("--mode", default="paired",
                    choices=["paired", "significant", "strict", "threshold"])
     p.add_argument("--k-se", type=float, default=1.0)
@@ -108,20 +131,34 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
-    cur_tag = args.current or run_dir.best_id
-    if not cur_tag:
+    cur_tags = [t.strip() for t in (args.current or "").split(",") if t.strip()] \
+        or ([run_dir.best_id] if run_dir.best_id else [])
+    if not cur_tags:
         print(json.dumps({"error": "no --current tag and no best_id in the run dir "
                                    "(has baseline run?)"}, indent=2))
         return 2
+    cur_tag = ",".join(cur_tags)
 
-    cur = harness.split_result_from_rollouts(run_dir, cur_tag, "val")
+    cur = harness.split_result_from_rollouts(run_dir, cur_tags, "val")
     cand = harness.split_result_from_rollouts(run_dir, args.candidate, "val")
     if not cand.per_task:
         print(json.dumps({"error": f"no val rollouts for tag {args.candidate!r} — run the "
                                    "evaluate phase on FULL val first"}, indent=2))
         return 2
 
-    deltas = harness._paired_deltas(cur, cand)
+    # Which val tasks the edit can causally reach. The candidate snapshot is diffed against
+    # the FIRST reference tag's snapshot: a pooled reference is several byte-identical copies
+    # of one parent, so any of them gives the same diff. None when it cannot be determined,
+    # which leaves the full-vector behaviour exactly as it was.
+    fp = None
+    if not args.no_footprint:
+        fp = footprint.footprint(
+            run_dir, parent_dir=run_dir.candidate_dir(cur_tags[0]),
+            cand_dir=run_dir.candidate_dir(args.candidate),
+            tags=[*cur_tags, args.candidate], split="val",
+            all_task_ids=[pt.get("task_id") for pt in (cand.per_task or [])])
+
+    deltas = harness._paired_deltas(cur, cand, footprint=fp)
     d = decide(cur.reward, cand.reward, split="val", mode=args.mode, k_se=args.k_se,
                candidate_stderr=cand.stderr, current_stderr=cur.stderr,
                threshold=args.threshold, paired_deltas=deltas,
@@ -144,11 +181,26 @@ def main(argv=None) -> int:
     if directionally_positive_but_inconclusive:
         next_cmd += " (or --decision provisional, then scripts/grow.py, to buy more n on this candidate)"
     print(json.dumps({
-        "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr},
+        "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr,
+                    "pooled_tags": cur_tags if len(cur_tags) > 1 else None},
         "candidate": {"tag": args.candidate, "reward": cand.reward,
                       "stderr": cand.stderr, "coverage": cand.coverage},
         "gate": d.to_dict(),
         "paired_n": len(deltas or []),
+        # What the delta was measured over. `restricted: false` means the edit's surface could
+        # not be determined, so every val task is in the vector and the SE carries the noise of
+        # tasks the edit cannot reach — read the verdict knowing that.
+        "footprint": ({"restricted": True, "n_in_footprint": len(fp),
+                       "n_tasks": len(cand.per_task or []), "tasks": sorted(map(str, fp)),
+                       "reading": "tasks OUTSIDE this set entered the delta vector as 0.0 (an "
+                                  "edit that cannot reach a task has no effect on it by "
+                                  "construction), so the SE reflects only the tasks in play"}
+                      if fp is not None else
+                      {"restricted": False,
+                       "reading": ("disabled by --no-footprint" if args.no_footprint else
+                                   "the edit's surface could not be localized (no diff, a "
+                                   "rewrite-sized diff, no rollouts, or it reaches every "
+                                   "task) — full-vector measurement, as before")}),
         "regressions": regs,
         "verdict": verdict,
         "directionally_positive_but_inconclusive": directionally_positive_but_inconclusive,
