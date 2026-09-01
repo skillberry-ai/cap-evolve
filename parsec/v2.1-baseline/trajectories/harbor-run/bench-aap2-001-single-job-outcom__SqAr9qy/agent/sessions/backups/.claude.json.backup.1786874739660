@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "aap2": {
-      "type": "sse",
-      "url": "http://host.containers.internal:9086/mcp/sse"
-    }
-  }
-}
