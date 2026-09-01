@@ -172,6 +172,68 @@ def test_baseline_with_nonexistent_seed_dir(tmp_path):
     assert seed.is_dir()
 
 
+# ---- _reconcile_journal: synthesize from the commit reason on an empty handover ----
+
+def test_reconcile_journal_synthesizes_from_reason_when_handover_is_empty(tmp_path):
+    """A confirmed live gap: the optimizer's own handover is empty, but every caller
+    already carries a real, substantive ``reason`` (the same text that becomes the
+    commit's --note). The journal must not be left contentless when that text is
+    available — it folds the reason in as the entry, instead of an admission-only
+    placeholder, while still escalating the warning event."""
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    (workdir / "JOURNAL.md").write_text(harness._JOURNAL_SEED, encoding="utf-8")  # no entry appended
+
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="synth", budget=Budget(max_iterations=1))
+    harness._reconcile_journal(workdir, run_dir, "cand_1", accepted=False, val=0.5, delta=-0.02,
+                               reason="policy.md: tried X because Y. Gate rejected: below threshold.")
+
+    journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
+    assert "policy.md: tried X because Y. Gate rejected: below threshold." in journal
+    assert "EMPTY HANDOVER" in journal  # still visibly flagged, not silently papered over
+
+    warnings = [json.loads(ln) for ln in run_dir.events_path.read_text(encoding="utf-8").splitlines()
+                if ln.strip() and json.loads(ln).get("kind") == "optimizer_context_warning"]
+    assert any(w.get("candidate") == "cand_1" for w in warnings)
+
+
+def test_reconcile_journal_falls_back_to_generic_note_with_no_reason(tmp_path):
+    """When there is truly nothing to synthesize from (no reason string either), the
+    old generic escalation text is still used — this fallback must not crash or
+    silently invent content."""
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    (workdir / "JOURNAL.md").write_text(harness._JOURNAL_SEED, encoding="utf-8")
+
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="nosynth", budget=Budget(max_iterations=1))
+    harness._reconcile_journal(workdir, run_dir, "cand_1", accepted=False, val=None, delta=None,
+                               reason=None)
+
+    journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
+    assert "EMPTY HANDOVER" in journal
+    assert "no commit reason was available" in journal
+
+
+def test_reconcile_journal_prefers_the_optimizers_own_entry_over_synthesis(tmp_path):
+    """Synthesis is a fallback, not a substitute: when the optimizer DID write a real
+    entry, its own text is used verbatim and the reason-based synthesis never fires."""
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    (workdir / "JOURNAL.md").write_text(
+        harness._JOURNAL_SEED + "\n\n" + harness._JOURNAL_MARK
+        + "\n\n## Iteration cand_1 — my own reflection\n",
+        encoding="utf-8")
+
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="own", budget=Budget(max_iterations=1))
+    harness._reconcile_journal(workdir, run_dir, "cand_1", accepted=False, val=0.5, delta=-0.02,
+                               reason="a completely different synthesized reason that must not appear")
+
+    journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
+    assert "my own reflection" in journal
+    assert "must not appear" not in journal
+    assert "EMPTY HANDOVER" not in journal
+
+
 # ---- optimizer instructions: empty seed note ------------------------------
 
 def test_empty_seed_note_when_all_failing():

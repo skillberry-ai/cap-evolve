@@ -189,6 +189,15 @@ agent mode *the agent is the proposer*, so `scripts/commit.py` takes `--optimize
 (which drives the stall counter). Without those, a cost- or stall-based `stop_condition` is
 unenforceable no matter how carefully it is written.
 
+Those per-round figures **attribute** cost inside the total the host already meters for your
+whole process; they do not add to it. The host books the residual (`host.optimizer_spend_to_book`),
+so passing them moves spend from the run-level `unattributed` row onto the round that caused it
+and never double-counts — which is exactly what it used to do: the host booked its metered total
+*on top of* whatever the agent had booked, so an agent following this instruction made the run
+report up to twice the optimizer spend it used, and a `max_usd` stop then fired on money nobody
+spent. Pass them when you can estimate your own cost for a round; a round you cannot price is
+better left unattributed than guessed, since the run total is right either way.
+
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
 
 A round pays fixed overhead regardless of how many candidates it gates: the null-control

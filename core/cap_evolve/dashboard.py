@@ -25,9 +25,17 @@ The candidate **graph** schema (``reduced["graph"]``)::
         {"id", "parent", "children": [...], "status": seed|accepted|rejected|failed,
          "val", "stderr", "per_task": {task_id: reward}, "feedback": {task_id: str},
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
-         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far"}
+         "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
+         "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
+         "gate_resolvable_effect_size"?, "screened": bool | None}
      ],
      "root": "seed", "best_id": "..."}
+
+The ``gate_*`` keys are present only when the algorithm's commit step RECORDED that number
+on its accept/reject event instead of leaving it to be regexed out of the prose ``reason``;
+the gate-decisions table prefers them and falls back to the regex parse otherwise.
+``screened`` is ``None`` when no event recorded compliance for this candidate's tag, else
+the ``screened_before_fullval`` value read generically off any event that carries it.
 
 The **summary** schema (``reduced["summary"]``)::
 
@@ -36,7 +44,13 @@ The **summary** schema (``reduced["summary"]``)::
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
-     "gate_warnings": [...], "diagnoses": [...], "git_log": [...]}
+     "gate_warnings": [...], "diagnoses": [...], "git_log": [...],
+     "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...]}
+
+``controls`` lists null-control replicate evaluations — evaluate-only measurements with no
+candidate-graph node — read generically off any ``evaluate`` event carrying ``role:
+"control"`` or a truthy ``is_control`` field. Empty until an algorithm's evaluate step
+attaches either.
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
@@ -627,6 +641,200 @@ def _read_evograph(root: Path) -> dict:
     return {"rounds": rounds, "weaknesses": weaknesses}
 
 
+#: run-level narrative files, in reading order — see harness.py's cross-iteration
+#: file-header comment (JOURNAL/INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS).
+_NARRATIVE_FILES = (
+    ("JOURNAL.md", "Journal — per-iteration handover"),
+    ("INSIGHTS.md", "Insights — verified findings"),
+    ("META_INSIGHTS.md", "Meta-insights — the optimization process"),
+    ("FRAMEWORK_IMPROVEMENTS.md", "Framework improvements — for cap-evolve itself"),
+)
+
+
+# ---------------------------------------------------------------------------
+# Config tab: the full run configuration (spec + PROJECT.md + project dir)
+# ---------------------------------------------------------------------------
+
+#: A small, generic classification of the ``capevolve.yaml`` keys documented in
+#: ``skills/phases/intake/inputs/INPUTS.md``. Anything NOT listed here (an older key,
+#: or a new input a future intake adds) falls into "Other" rather than disappearing —
+#: this is a display grouping only, never a schema/validation of the spec.
+_CONFIG_KEY_GROUPS = {
+    "capabilities": "Capability", "capability_path": "Capability",
+    "capability_sources": "Capability", "actions": "Capability",
+    "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
+    "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
+    "optimizer_usd_per_iter": "Algorithm & optimizer",
+    "optimizer_instructions_file": "Algorithm & optimizer",
+    "orchestration_mode": "Algorithm & optimizer", "stop_condition": "Algorithm & optimizer",
+    "target_model": "Algorithm & optimizer", "target_profile_file": "Algorithm & optimizer",
+    "runner_repo_path": "Algorithm & optimizer",
+    "dataset_source": "Data & splits", "split_seed": "Data & splits",
+    "split_train": "Data & splits", "split_val": "Data & splits", "split_test": "Data & splits",
+    "split_ids_file": "Data & splits", "num_trials": "Data & splits",
+    "max_iterations": "Budget & gate", "stall": "Budget & gate",
+    "max_metric_calls": "Budget & gate", "max_usd": "Budget & gate",
+    "max_optimizer_usd": "Budget & gate", "gate_mode": "Budget & gate",
+    "gate_k_se": "Budget & gate", "no_regression": "Budget & gate",
+    "memory_skill": "Memory",
+    "metric_primary": "Metrics & display", "metrics_display": "Metrics & display",
+    "metric_directions": "Metrics & display",
+    "github_integration": "GitHub",
+}
+_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+                        "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
+
+#: A file this big gets size + path only in the Config tab's file tree — never an
+#: attempt to read and render megabytes of adapter/trajectory content.
+_PROJECT_PREVIEW_MAX_BYTES = 200_000
+
+
+def _find_project_dir(root: Path) -> Path | None:
+    """The ``project/`` dir that scaffolded this run, or ``None``.
+
+    Same two candidate locations ``_algorithm_from_spec`` already reads (a sibling
+    ``project/`` next to the run dir is the normal shape; some fixtures write
+    ``capevolve.yaml`` directly under the run dir).
+    """
+    for cand in (_safe_subpath(root.parent, "project"), root):
+        if cand is not None and cand.is_dir() and (cand / "capevolve.yaml").is_file():
+            return cand
+    return None
+
+
+def _read_project_files(project_dir: Path, skip: set) -> list[dict]:
+    """Every file under ``project_dir`` except ``skip`` (top-level names already
+    shown elsewhere — ``capevolve.yaml``, ``PROJECT.md``), walked generically so a
+    NEW artifact (a future intake output, a split file, an intake transcript) shows
+    up automatically instead of needing a new reader.
+
+    Returns ``[{"path", "size", "preview", "truncated", "binary"}]`` sorted by path.
+    ``preview`` is ``None`` for a binary file or one over ``_PROJECT_PREVIEW_MAX_BYTES``
+    — those degrade to size + path only, never a megabyte dump.
+    """
+    out = []
+    for f in sorted(project_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        rel = f.relative_to(project_dir)
+        if str(rel) in skip or "__pycache__" in rel.parts or ".git" in rel.parts:
+            continue
+        try:
+            size = f.stat().st_size
+        except OSError:
+            continue
+        rec = {"path": str(rel), "size": size, "preview": None,
+               "truncated": False, "binary": False}
+        if size == 0:
+            rec["preview"] = ""
+        elif size <= _PROJECT_PREVIEW_MAX_BYTES:
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                rec["binary"] = True
+            else:
+                rec["preview"] = _sanitize_text(text, 4000)
+                rec["truncated"] = len(text) > 4000
+        out.append(rec)
+    return out
+
+
+def _read_config(root: Path) -> dict:
+    """The full run configuration, generically — every intake artifact on disk.
+
+    Reads the sibling ``project/`` dir's ``capevolve.yaml`` (the parsed spec, grouped
+    for display — see ``_CONFIG_KEY_GROUPS``), ``PROJECT.md`` (the intake-authored
+    narrative of what was resolved/defaulted), and every other file under the project
+    dir (adapters/, seed_capability/, split files, ...) as a generic listing/preview.
+    Returns ``{}`` when no project dir is found — the panel hides itself.
+    """
+    project_dir = _find_project_dir(root)
+    if project_dir is None:
+        return {}
+    from .specfile import read_yaml
+    try:
+        spec = read_yaml((project_dir / "capevolve.yaml").read_text(encoding="utf-8")) or {}
+    except OSError:
+        spec = {}
+    groups: dict[str, list] = {}
+    for k, v in spec.items():
+        groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
+    spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
+
+    project_md = None
+    pmd = project_dir / "PROJECT.md"
+    if pmd.is_file():
+        try:
+            project_md = _sanitize_text(pmd.read_text(encoding="utf-8"), 20000)
+        except OSError:
+            project_md = None
+
+    files = _read_project_files(project_dir, {"capevolve.yaml", "PROJECT.md"})
+    if not spec_groups and not project_md and not files:
+        return {}
+    return {
+        "project_dir": str(project_dir),
+        "spec_groups": spec_groups,
+        "project_md": project_md,
+        "files": files,
+    }
+
+
+def _read_narrative(root: Path, best_id: str | None) -> dict:
+    """The optimizer-authored process narrative for this run, read straight off disk.
+
+    Every run gets this by default (#400): the run-level accumulator files the
+    optimizer wrote across iterations, plus the best candidate's final ``PROCESS.md``
+    (why THAT iteration was done the way it was). Returns ``{}`` when none of these
+    exist yet (e.g. a synthetic log with no real optimizer session).
+
+    Each file is compared against its own known seed-template text (harness.py's
+    ``_seed_journal``/``_seed_accumulator``/``_PROCESS_SEED``): a file whose content is
+    STILL exactly that template — no real entry ever appended — carries
+    ``"template_only": True`` so the renderer can flag it instead of presenting an
+    unedited instructional template as real optimizer narrative.
+    """
+    try:
+        from . import harness
+        seed_by_name = {
+            "JOURNAL.md": harness._JOURNAL_SEED,
+            "INSIGHTS.md": harness._INSIGHTS_SEED,
+            "META_INSIGHTS.md": harness._META_INSIGHTS_SEED,
+            "FRAMEWORK_IMPROVEMENTS.md": harness._FRAMEWORK_IMPROVEMENTS_SEED,
+        }
+        process_seed = harness._PROCESS_SEED.strip()
+    except Exception:  # noqa: BLE001 — template detection is a nicety, not load-bearing
+        seed_by_name, process_seed = {}, None
+    files = []
+    for name, title in _NARRATIVE_FILES:
+        p = _safe_subpath(root, name)
+        if p is None or not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if text:
+            seed_text = seed_by_name.get(name)
+            files.append({"title": title, "text": _sanitize_text(text, 20000),
+                          "template_only": bool(seed_text) and text == seed_text.strip()})
+    process_text = None
+    if best_id:
+        p = _safe_subpath(root, "candidates", best_id, "PROCESS.md")
+        if p is not None and p.is_file():
+            try:
+                process_text = p.read_text(encoding="utf-8").strip() or None
+            except OSError:
+                process_text = None
+    if process_text:
+        files.append({"title": f"Process — best candidate ({best_id})",
+                      "text": _sanitize_text(process_text, 20000),
+                      "template_only": bool(process_seed) and process_text == process_seed})
+    if not files:
+        return {}
+    return {"files": files}
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -719,6 +927,18 @@ def reduce_run(run_dir) -> dict:
             minibatch_evals.discard(ev.get("tag"))
         if ev.get("kind") == "minibatch":
             minibatch_evals.add(ev.get("tag"))
+
+    # Cheap-screen compliance, keyed by candidate tag: whether a candidate paid for a
+    # cheap screen before its full-val eval. Read generically off ANY event that carries a
+    # ``screened_before_fullval`` field (agent-optimize's ``agent_optimize_compliance`` is
+    # the first emitter, but nothing here assumes that kind name — a future algorithm
+    # emitting the same field under a different event kind is picked up identically).
+    screened_by_tag: dict = {}
+    for ev in events:
+        if "screened_before_fullval" in ev:
+            tag = ev.get("tag") or ev.get("candidate")
+            if tag:
+                screened_by_tag[str(tag)] = bool(ev.get("screened_before_fullval"))
 
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
@@ -849,14 +1069,21 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             "best_so_far": best,
-            # Structured gate numbers agent-optimize's commit.py attaches to the step/accept/
-            # reject event (delta/threshold/stderr/n/k_se/resolvable_effect_size), in addition
-            # to the prose reason above. None for any algorithm/event that doesn't carry them —
-            # the gate_decisions block below falls back to regex-parsing `reason` in that case.
-            "gate_stats": {k: ev.get(k) for k in
-                          ("delta", "threshold", "stderr", "n", "k_se",
-                           "resolvable_effect_size") if ev.get(k) is not None} or None,
+            # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
+            # looked up generically by tag below (see ``screened_by_tag``), not tied to the
+            # agent-optimize algorithm that happens to be the first emitter.
+            "screened": screened_by_tag.get(cid),
         }
+        # Structured gate numbers, when the algorithm recorded them instead of leaving them
+        # to be regexed out of a reason string (agent-optimize's commit.py reads them back
+        # from round.py's persisted table). Copied verbatim and only when present, so a
+        # deterministic step is byte-identical to before.
+        for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
+                    "gate_resolvable_effect_size",
+                    "gate_mode", "gate_table", "control_relative_verdict",
+                    "control_relative_delta", "evidence_bar"):
+            if ev.get(_gk) is not None:
+                node[_gk] = ev.get(_gk)
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
@@ -1058,12 +1285,11 @@ def reduce_run(run_dir) -> dict:
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
-    # Real numbers first: agent-optimize's commit.py attaches structured gate fields
-    # (delta/threshold/stderr/n/k_se/resolvable_effect_size) straight from gate_check.py's
-    # own JSON via `node["gate_stats"]`. Only when a candidate carries none of those (any
-    # algorithm/event that predates or doesn't use that attachment) do we fall back to
-    # regex-parsing the reason string — the prior sole source, and fragile because it
-    # depended on the prose matching the deterministic gate's own wording.
+    # Regex-parsing the reason string is the FALLBACK, not the source: it was the prior sole
+    # source and is fragile because it depends on the prose matching the deterministic gate's
+    # own wording. Any structured ``gate_*`` field the algorithm recorded (agent-optimize's
+    # commit.py reads them back from round.py's persisted table, which in turn takes them from
+    # gate_check.py's own JSON) overrides it below.
     gate_decisions: list[dict] = []
     for n in sorted((x for x in nodes.values() if x["id"] != "seed"),
                     key=lambda x: x.get("iteration") or 0):
@@ -1072,7 +1298,6 @@ def reduce_run(run_dir) -> dict:
                    else "indecisive" if n["status"] == "indecisive"
                    else "provisional" if n["status"] == "provisional"
                    else "reject" if n["status"] == "rejected" else "no measurement")
-        gs = n.get("gate_stats") or {}
         m_delta = re.search(r"Δ̄?\s*=\s*([+-]?\d*\.?\d+)", reason)
         # The bar `0.2·SE=0.0062` comes FIRST in the reason and also matches `SE=`, so an
         # unanchored search put the bar's value in the SE column — the gate then appeared
@@ -1081,26 +1306,40 @@ def reduce_run(run_dir) -> dict:
         m_se = re.search(r"(?<!·)\bSE\s*=\s*(\d*\.?\d+)", reason)
         m_n = re.search(r"\bn\s*=\s*(\d+)", reason)
         m_bar = re.search(r"([\d.]+)·SE\s*=\s*(\d*\.?\d+)", reason)
-        gate_decisions.append({
+        m_res = re.search(r"resolvable effect size 2·SE\s*=\s*([\d.]+)", reason)
+        # A number the algorithm RECORDED beats the same number scraped out of prose. Agent
+        # mode writes free text, so every regex above missed and the whole numeric half of
+        # this record came back null (run 32971129203); the deterministic loops record no
+        # structured fields, so they still take the regex path exactly as before.
+        row = {
             "iteration": n.get("iteration"),
             "candidate": n["id"],
             "verdict": verdict,
             "val": n.get("val"),
             "parent": n.get("parent"),
             "parent_val": n.get("parent_val"),
-            "delta": gs.get("delta") if gs.get("delta") is not None
-                     else (float(m_delta.group(1)) if m_delta else None),
-            "stderr": gs.get("stderr") if gs.get("stderr") is not None
-                      else (float(m_se.group(1)) if m_se else None),
-            "n": gs.get("n") if gs.get("n") is not None
-                 else (int(m_n.group(1)) if m_n else None),
-            "k_se": gs.get("k_se") if gs.get("k_se") is not None
-                    else (float(m_bar.group(1)) if m_bar else None),
-            "threshold": gs.get("threshold") if gs.get("threshold") is not None
-                         else (float(m_bar.group(2)) if m_bar else None),
-            "resolvable_effect_size": gs.get("resolvable_effect_size"),
+            "delta": float(m_delta.group(1)) if m_delta else None,
+            "stderr": float(m_se.group(1)) if m_se else None,
+            "n": int(m_n.group(1)) if m_n else None,
+            "k_se": float(m_bar.group(1)) if m_bar else None,
+            "threshold": float(m_bar.group(2)) if m_bar else None,
+            "resolvable_effect_size": float(m_res.group(1)) if m_res else None,
             "reason": _sanitize_text(reason, 600),
-        })
+        }
+        for _field, _key in (("delta", "gate_delta"), ("stderr", "gate_stderr"),
+                             ("n", "gate_n"), ("k_se", "gate_k_se"),
+                             ("threshold", "gate_threshold"),
+                             ("resolvable_effect_size", "gate_resolvable_effect_size")):
+            if n.get(_key) is not None:
+                row[_field] = n.get(_key)
+        # Which reference the gate actually used, and the drift-free second opinion when the
+        # round measured one. Without these a reader cannot tell that a rejection was
+        # reference-dependent — the finding run 32971129203 turned on.
+        for _key in ("gate_mode", "control_relative_verdict", "control_relative_delta",
+                     "evidence_bar"):
+            if n.get(_key) is not None:
+                row[_key] = n.get(_key)
+        gate_decisions.append(row)
 
     # --- cost ledger: every dollar, attributed to the thing that spent it -----
     # Rows are built from the events that actually recorded a spend (intake, each
@@ -1297,9 +1536,34 @@ def reduce_run(run_dir) -> dict:
     if compliance:
         algo_extra["compliance"] = compliance
 
+    # --- null-control replicates: the noise-floor check, kept OUT of the candidate graph ---
+    # A control replicate (a byte-identical re-measurement, run to bound run-to-run noise)
+    # is evaluate-only: it never gets an accept/reject commit, so it has no graph node — and
+    # with no way to see it happened, a real run's noise-floor check was invisible in the
+    # dashboard. Detecting it by TAG naming (e.g. agent-optimize's ``ctl_null_i<N>``) would
+    # bake one algorithm's convention into a generic reducer, so this reads a generic marker
+    # instead: any ``evaluate`` event carrying ``role: "control"`` or a truthy ``is_control``
+    # field. Neither field is emitted yet as of this writing (checked agent-optimize's
+    # round.py/commit.py, which still identify their own controls only by tag) — this stays
+    # ready to surface them the moment an algorithm's evaluate step attaches either.
+    controls = [{
+        "tag": e.get("tag"),
+        "reward": e.get("reward"),
+        "stderr": e.get("stderr"),
+        "n": e.get("n_scored"),
+        "iteration": e.get("iteration"),
+        "t": e.get("t"),
+    } for e in events if e.get("kind") == "evaluate"
+       and (e.get("role") == "control" or e.get("is_control"))]
+    # Kept as its own top-level summary list (not nested under algo_extra): a null-control
+    # replicate is a generic evaluation-methodology signal any algorithm could emit, not a
+    # per-algorithm extra like screens/gepa/skillopt below.
+
     evograph = _read_evograph(root)
     if evograph:
         algo_extra["evograph"] = evograph
+    narrative = _read_narrative(root, best_id)
+    config = _read_config(root)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
@@ -1325,6 +1589,10 @@ def reduce_run(run_dir) -> dict:
         "evograph": "evograph" in algo_extra,
         "screens": "screens" in algo_extra,
         "parallel": "parallel" in algo_extra,
+        "narrative": bool(narrative),
+        "config": bool(config),
+        "controls": bool(controls),
+        "screened": any(n.get("screened") is not None for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
@@ -1360,6 +1628,7 @@ def reduce_run(run_dir) -> dict:
         "event_count": len(events),
         "splits": splits_info,
         "gate_decisions": gate_decisions,
+        "controls": controls,
         "cost_ledger": cost_ledger,
         "log": log_rows,
         "algo_extra": algo_extra,
@@ -1411,6 +1680,8 @@ def reduce_run(run_dir) -> dict:
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
+        "narrative": narrative,
+        "config": config,
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
@@ -1426,7 +1697,8 @@ def reduce_run(run_dir) -> dict:
 # shows only the real change. (The big read-context dirs trajectories/ and guidance/
 # are already excluded from the snapshot itself; see harness._SNAPSHOT_IGNORE.)
 _DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+              "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+              "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md"}
 
 
 def _read_dir_files(d: Path) -> dict[str, str]:
@@ -1724,6 +1996,14 @@ border-radius:8px;padding:10px;overflow:auto;max-height:420px;white-space:pre}
 .diff .file{color:var(--text);font-weight:700;margin:8px 0 2px}
 .ann{border-left:3px solid var(--warn);padding:6px 12px;margin:8px 0;background:var(--card2);border-radius:0 8px 8px 0}
 .ann.diag{border-left-color:var(--accent)}
+.narrative-box{background:var(--card2);border:1px solid var(--line);border-radius:8px;
+padding:12px 14px;overflow:auto;max-height:480px}
+.md h2,.md h3,.md h4{margin:14px 0 6px;color:var(--text)}
+.md h2:first-child,.md h3:first-child,.md h4:first-child{margin-top:0}
+.md p{margin:6px 0}
+.md ul{margin:6px 0;padding-left:20px}
+.md blockquote{margin:8px 0;padding:4px 10px;border-left:3px solid var(--accent);
+background:var(--card);color:var(--muted)}
 .ann .who{color:var(--muted);font-size:11px}
 .heat rect{cursor:pointer} .heat text{fill:var(--muted);font-size:10px}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
@@ -1755,6 +2035,32 @@ const svg=(t,a={})=>{const e=document.createElementNS(NS,t);for(const[p,v]of Obj
    the fitness chart (heatmap, lineage, cost, evaluations, candidates). */
 const txt=(el,a,content)=>{const n=svg('text',a);n.textContent=content==null?'':String(content);el.append(n);return n;};
 const fmt=v=>v==null?'—':(+v).toFixed(3);
+function escN(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+// A tiny, deliberately non-general markdown renderer: headings, bullet lines,
+// blockquotes, bold, everything else is a paragraph. Good enough for the structured
+// templates the narrative files are seeded from (_JOURNAL_SEED etc.) and for a
+// PROJECT.md — not a general markdown engine, so it never needs a dependency. Shared
+// by the Process narrative and Config tabs so there is exactly one renderer.
+function mdToHtml(text){
+  const lines=escN(text).split('\n');
+  let html='',inList=false;
+  const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+  lines.forEach(line=>{
+    const bold=line.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    let m;
+    if((m=bold.match(/^(#{1,4})\s+(.*)$/))){closeList();
+      html+=`<h${Math.min(4,m[1].length)+1}>${m[2]}</h${Math.min(4,m[1].length)+1}>`;}
+    else if(/^\s*[-*]\s+/.test(bold)){if(!inList){html+='<ul>';inList=true;}
+      html+='<li>'+bold.replace(/^\s*[-*]\s+/,'')+'</li>';}
+    else if(/^>\s?/.test(bold)){closeList();
+      html+='<blockquote>'+bold.replace(/^>\s?/,'')+'</blockquote>';}
+    else if(/^<!--/.test(bold.trim())){/* skip HTML-comment markers */}
+    else if(!bold.trim()){closeList();}
+    else{closeList();html+='<p>'+bold+'</p>';}
+  });
+  closeList();
+  return html;
+}
 const main=document.getElementById('main'), tip=document.getElementById('tip');
 const STATUS_META={running:['running','var(--accent)'],awaiting_agent:['awaiting agent','var(--idk)'],
   completed:['completed','var(--ok)'],budget_exhausted:['budget exhausted','var(--warn)'],
@@ -2098,7 +2404,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   const t2=$('table');
   t2.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'verdict'}),
     $('th',{class:'r',text:'val'}),$('th',{class:'r',text:'parent val'}),$('th',{class:'r',text:'Δ̄'}),
-    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'})));
+    $('th',{class:'r',text:'SE'}),$('th',{class:'r',text:'n'}),$('th',{class:'r',text:'bar (k·SE)'}),
+    $('th',{class:'r',text:'resolvable ±'})));
   const BADGE={accept:'b-accepted',reject:'b-rejected',indecisive:'b-indecisive',provisional:'b-indecisive'};
   const n4=v=>v==null?'—':(+v).toFixed(4);
   D.forEach(d=>{
@@ -2112,11 +2419,33 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
               text:d.delta==null?'—':(d.delta>0?'+':'')+d.delta.toFixed(4)}),
       $('td',{class:'r num muted',text:d.stderr==null?'—':'±'+d.stderr.toFixed(4)}),
       $('td',{class:'r num muted',text:d.n??'—'}),
-      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')})));
+      $('td',{class:'r num muted',text:n4(d.threshold)+(d.k_se!=null?'  k='+d.k_se:'')}),
+      $('td',{class:'r num muted',text:d.resolvable_effect_size==null?'—':'±'+(+d.resolvable_effect_size).toFixed(4)})));
   });
   s.append(t2);
   D.forEach(d=>s.append($('div',{class:'ann',style:'margin:6px 0'},
     $('div',{class:'who',text:d.candidate}),$('div',{text:d.reason}))));
+})();
+
+/* ---------- 6g. Noise-floor check — null-control replicates ---------- */
+(function(){
+  const C=S.controls||[]; if(!C.length)return;
+  const s=sec('Noise-floor check (null-control replicates)');
+  const rewards=C.map(c=>c.reward).filter(x=>x!=null);
+  const spread=rewards.length>1?(Math.max(...rewards)-Math.min(...rewards)):null;
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    C.length+' control replicate(s) evaluated this run — byte-identical re-measurements '+
+    'run to bound run-to-run noise, never gated/committed as candidates.'+
+    (spread!=null?' Spread between replicates: '+spread.toFixed(4)+' — the empirical noise floor.':'')}));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'tag'}),$('th',{class:'r',text:'reward ± stderr'}),
+    $('th',{class:'r',text:'n'}),$('th',{class:'r',text:'iter'})));
+  C.forEach(c=>t.append($('tr',{},
+    $('td',{},$('code',{text:c.tag||'—'})),
+    $('td',{class:'r num',text:c.reward==null?'—':fmt(c.reward)+(c.stderr!=null?' ± '+(+c.stderr).toFixed(4):'')}),
+    $('td',{class:'r num muted',text:c.n??'—'}),
+    $('td',{class:'r num muted',text:c.iteration??'—'}))));
+  s.append(t);
 })();
 
 /* ---------- 9. Activity log — every event, filterable ---------- */
@@ -2226,20 +2555,113 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   });
 })();
 
+/* ---------- 10b. process narrative — optimizer-authored, self-contained ---------- */
+(function(){
+  const NAR=S.narrative; if(!NAR||!(NAR.files||[]).length)return;
+  const s=sec('Process narrative');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Written by the optimizer as it worked (JOURNAL / INSIGHTS / META_INSIGHTS / '+
+    'FRAMEWORK_IMPROVEMENTS, plus the best candidate’s PROCESS.md) — rendered here '+
+    'as-is, for a human reader.'}));
+  (NAR.files||[]).forEach(f=>{
+    const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
+    box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
+    // The file is still byte-for-byte the seed instructional template — no real entry
+    // was ever appended. Flagged rather than rendered as if it were populated narrative.
+    if(f.template_only)box.append($('div',{class:'banner',style:'margin-bottom:10px',
+      text:'⚠ template only — no real entries yet'}));
+    box.append($('div',{class:'md',html:mdToHtml(f.text)}));
+    s.append(box);
+  });
+})();
+
+/* ---------- 10c. Config — the full run configuration ---------- */
+(function(){
+  // An absent config reduces to `{}`, which is TRUTHY in JS — guard on the field the
+  // header text needs, or a run with no project dir renders an empty Config section
+  // claiming to have read "straight off undefined".
+  const CFG=S.config; if(!CFG||!CFG.project_dir)return;
+  const s=sec('Config — run configuration');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'Every input the intake phase produced or the user set, read straight off '+
+    CFG.project_dir+' — the parsed capevolve.yaml spec, PROJECT.md, and every other '+
+    'project artifact (adapters/, seed_capability/, split files, ...).'}));
+  const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;'+
+    'font-size:13px;color:var(--text)',text:t});
+  (CFG.spec_groups||[]).forEach(g=>{
+    s.append(h3(g.group));
+    const t=$('table');
+    g.items.forEach(it=>{
+      const v=it.value;
+      const vt=v==null?'—':(typeof v==='object'?JSON.stringify(v):String(v));
+      t.append($('tr',{},$('td',{},$('code',{text:it.key})),
+        $('td',{class:'muted',style:'white-space:pre-wrap',text:vt})));
+    });
+    s.append(t);
+  });
+  if(CFG.project_md){
+    s.append(h3('PROJECT.md'));
+    s.append($('div',{class:'narrative-box md',html:mdToHtml(CFG.project_md)}));
+  }
+  const files=CFG.files||[];
+  if(files.length){
+    s.append(h3('Other project files ('+files.length+')'));
+    const bySize=v=>v<1024?v+' B':v<1048576?(v/1024).toFixed(1)+' KB':(v/1048576).toFixed(1)+' MB';
+    const groups=new Map();
+    files.forEach(f=>{
+      const top=f.path.includes('/')?f.path.split('/')[0]:'.';
+      if(!groups.has(top))groups.set(top,[]);
+      groups.get(top).push(f);
+    });
+    [...groups.keys()].sort().forEach(top=>{
+      const det=$('details',{style:'margin:4px 0'});
+      det.append($('summary',{style:'cursor:pointer;font-weight:600',
+        text:top+' ('+groups.get(top).length+')'}));
+      groups.get(top).forEach(f=>{
+        const fdet=$('details',{style:'margin:2px 0 2px 16px'});
+        fdet.append($('summary',{style:'cursor:pointer;color:var(--muted2);font-size:12px',
+          text:f.path+'  ·  '+bySize(f.size)+
+               (f.binary?' · binary':f.truncated?' · truncated preview':'')}));
+        if(f.binary){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'binary file — not previewed'}));
+        }else if(f.preview==null){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',
+            text:'too large to preview — '+bySize(f.size)}));
+        }else if(f.preview===''){
+          fdet.append($('p',{class:'muted',style:'margin:4px 0',text:'empty file'}));
+        }else{
+          fdet.append($('div',{class:'diff',style:'max-height:260px',text:f.preview}));
+        }
+        det.append(fdet);
+      });
+      s.append(det);
+    });
+  }
+})();
+
 /* ---------- 8. Candidate leaderboard + git log ---------- */
 (function(){
   const s=sec('Candidates'); const t=$('table');
-  t.append($('tr',{},$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
-    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'}),$('th',{text:'reason'})));
+  // "screened" (did this candidate pay for a cheap screen before full-val?) only shown
+  // when SOME node has a recorded signal — never rendered as a column of bare "—".
+  const showScreened=!!(S.capabilities&&S.capabilities.screened);
+  const hdr=[$('th',{text:'id'}),$('th',{text:'status'}),$('th',{class:'r',text:'val'}),
+    $('th',{class:'r',text:'Δ parent'}),$('th',{class:'r',text:'iter'})];
+  if(showScreened)hdr.push($('th',{text:'screened'}));
+  hdr.push($('th',{text:'reason'}));
+  t.append($('tr',{},...hdr));
   G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
     const dlt=n.parent_val!=null&&n.val!=null?(n.val-n.parent_val):null;
-    t.append($('tr',{},
+    const cells=[
       $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
-      $('td',{class:'r num',text:n.iteration}),
-      $('td',{class:'muted',text:(n.reason||'').slice(0,80)})));
+      $('td',{class:'r num',text:n.iteration})];
+    if(showScreened)cells.push($('td',{},n.screened==null?'—':
+      $('span',{class:'badge '+(n.screened?'b-accepted':'b-rejected'),text:n.screened?'✓ screened':'✗ not screened'})));
+    cells.push($('td',{class:'muted',text:(n.reason||'').slice(0,80)}));
+    t.append($('tr',{},...cells));
   });
   s.append(t);
   if(S.git_log&&S.git_log.length){

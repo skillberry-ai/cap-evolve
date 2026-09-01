@@ -179,18 +179,19 @@ full-val paired gate ran and said reject), `screen_kill` (the screen proved harm
 proved no accept reachable, full val never paid), `budget` (screen evidence plus a budget call, not a
 gate decision), `infra` (missing data). So `screen: promote` + `reject_basis: ceiling` is coherent.
 
-`commit.py` **refuses a `--candidate-id` that already carries an accept/reject event** (`--force` only to
+`commit.py` **refuses a `--candidate-id` that already carries a decision event** (`--force` only to
 repair a record deliberately): two drivers tagging a candidate alike otherwise produce two decision
 events over ONE set of rollouts. Pass `--optimizer-usd/--optimizer-tokens/--optimizer-seconds` for
 **your own** proposal cost — the evaluate phase records the runner's, nothing records the proposer's.
 
-**Rejected but Δ>0 (`gate_check.py`'s `directionally_positive_but_inconclusive`)?** `commit.py --decision
-provisional` books that, then `grow.py` buys more trials on the SAME unmodified candidate and re-gates at
-the pooled n — capped at 2 growth rounds (see `references/algorithm.md`).
+**Two decisions that are NOT rejects** (a reject advances **stall**): `--decision inconclusive` for an
+unresolved round (`verdict_stable: false`), re-measured under a FRESH tag; `--decision provisional` for a
+Δ>0 round under the bar (`directionally_positive_but_inconclusive`), after which `grow.py` buys trials on
+the SAME candidate and re-gates at the pooled n, capped at 2 rounds. `references/algorithm.md`.
 
-**6. Write the handover before ending this round** — append one `## Iteration <cid>` entry to
-`JOURNAL.md` below the marker line: what you tried, why, what the numbers said. The only thing the NEXT
-round reads; `commit.py` folds it in only if you wrote one (see `references/algorithm.md`).
+**6. Write the handover before ending this round** — append one `## Iteration <cid>` entry below
+`JOURNAL.md`'s marker: what you tried, why, what the numbers said. The only thing the NEXT round reads,
+and `commit.py` folds in only what you wrote (`references/algorithm.md`).
 
 ## Parallel round (optional)
 
@@ -204,9 +205,9 @@ python "$A/round.py" --run-dir "$R" --project "$P" \
        --n-trials <num_trials> --k-se <gate_k_se> --concurrency 8 --max-parallel 2
 ```
 
-`--concurrency` is the gate's *measurement* concurrency and defaults deliberately low; `round.py` warns once
-you raise it past what a gate can resolve, so do not raise it to buy wall clock. Read
-`noise_floor_from_control` FIRST — a candidate inside that band is not evidence, whatever its verdict says.
+`--concurrency` is the gate's *measurement* concurrency and defaults deliberately low; `round.py` warns
+once you raise it past what a gate can resolve, so never raise it to buy wall clock. Read
+`noise_floor_from_control` FIRST — a candidate inside that band is not evidence, whatever its verdict.
 `round.py` never commits: which part of a bundle to keep is your judgement.
 
 Four invariants, to state before every fan-out (the reasoning, and where fan-out pays best, are under
@@ -267,9 +268,8 @@ mechanism-vs-artifact designs, gating the sum not each addend, the sign test bel
 
 Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run `spend.py`.
 Everything it reports is re-read from the run dir, never a total in your head — which keeps a `$6.00`
-cap from becoming `$6.01`. (The Stop hook re-nudges you across turns until finalized; a `PostToolUse`
-hook also re-injects the same predicates on a fixed cadence even if you skip `spend.py` — see
-`goal_reminder.py`.)
+cap from becoming `$6.01`. (The Stop hook re-nudges you until finalized; a `PostToolUse` hook
+re-injects the same predicates on a cadence even if you skip `spend.py` — `goal_reminder.py`.)
 Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs best on
 **val**, on **train** when the spec defines one worth reporting, and on the **sealed test** split
 scored once:
@@ -301,8 +301,8 @@ One level deep — each is read on its own, and none points at another.
 
 - [`references/algorithm.md`](references/algorithm.md) — why free-form, how the honesty invariants
   survive full autonomy, the screening break-even (incl. targeted-cluster holdouts), which steps
-  parallelise safely, the constraint surface, and provisional candidates (Δ>0, gate-inconclusive).
-  **Load** before relying on a screen, growing a provisional candidate, or skipping a rule.
+  parallelise safely, the constraint surface, provisional candidates. **Load** before relying on a
+  screen, growing a candidate, or skipping a rule.
 - [`references/measured-lessons.md`](references/measured-lessons.md) — every measurement rule with the
   number that bought it: binomial floor, full val vs a hard subset, the load-vs-noise tables, the sign
   test, the across-runs estimator. **Load** before your first gate decision on a new benchmark, or

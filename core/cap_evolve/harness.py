@@ -257,6 +257,32 @@ def evaluate_candidate(
     out_dir = run_dir.rollouts / split
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Trials are written as ``<task>__<tag>__t{k}.json`` for ``k in range(n_trials)``, so
+    # re-evaluating a tag that already has rollouts REPLACES ``t0..t9`` — it does not append
+    # ``t10..t19``. Re-evaluation is legitimate (``--resume`` reads its champion's val score
+    # back off disk), so this warns rather than refuses. What it must not be is silent: on run
+    # 33046360451 the agent, told by ``round.py`` to "re-run with more trials" after an
+    # inconclusive verdict, re-measured control ``ctl_null_i1`` under its own tag and replaced a
+    # 0.4967 replicate with 0.5067 — spending 100 metric calls to swap a data point rather than
+    # add one, and WIDENING the round's replicate spread. In the event stream that is
+    # indistinguishable from progress. ``prior_reward`` is recorded because once the files are
+    # overwritten the destroyed reading exists nowhere else.
+    prior = sorted(out_dir.glob(f"*__{tag}__t*.json"))
+    if prior:
+        prior_reward = None
+        try:
+            prior_reward = split_result_from_rollouts(run_dir, tag, split).reward
+        except Exception:  # noqa: BLE001 — a torn/partial rollout must not block the eval
+            pass
+        run_dir.log_event(
+            "rollout_overwrite_warning", split=split, tag=tag,
+            prior_trials=len({p.name.rsplit("__t", 1)[-1] for p in prior}),
+            prior_rollouts=len(prior), prior_reward=prior_reward,
+            why=("this tag already has rollouts and they are being REPLACED, not added to — "
+                 "trials are always written t0..t{n_trials-1}. To accumulate evidence instead, "
+                 "use a fresh tag, or ask for the higher trial count in ONE evaluation."),
+        )
+
     from .stats import mean, stderr
     has_batch = hasattr(adapter, "run_batch")
     has_run_trials = hasattr(adapter, "run_trials")
@@ -703,7 +729,7 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 
 
 
-# The optimizer's working dir carries FOUR cross-iteration files, with clean ownership
+# The optimizer's working dir carries cross-iteration files, with clean ownership
 # so there is never confusion about who writes what (the recurring user complaint about
 # the old MEMORY.md/STATE.md pair):
 #   LEDGER.md   — FRAMEWORK-owned, FACTUAL, regenerated each iter (the objective record:
@@ -715,6 +741,11 @@ def _paired_deltas(current_val: SplitResult, cand_val: SplitResult) -> list | No
 #                 subagents/features used, what to preserve).
 #   RUNMAP.md   — FRAMEWORK-owned manifest of every prior iteration's working dir, with
 #                 each prior PROCESS.md + capability diff copied into ./prior_iterations/.
+#   INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — OPTIMIZER-owned,
+#                 append-only across the WHOLE run like JOURNAL.md, but a SUMMARY layer
+#                 above it (verified findings / process meta-learning / cross-run
+#                 framework feedback) so a future iteration need not re-read the whole
+#                 journal. See the comment near ``_INSIGHTS_MARK``.
 # Rule: FACTS are deterministic + framework-owned; JUDGMENT and PROCESS are agent-owned.
 
 _JOURNAL_MARK = "<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit anything above it -->"
@@ -748,6 +779,103 @@ _JOURNAL_SEED = (
     "    - Focus next iteration:\n"
 )
 
+#   INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — OPTIMIZER-owned,
+#   append-only across the WHOLE run like JOURNAL.md, but each is a SUMMARY layer
+#   above it: JOURNAL.md is the per-iteration narrative (verbose, one entry per
+#   candidate); these three are the compressed, verified takeaways a future
+#   iteration (or a human) should read INSTEAD of re-reading the whole journal.
+#   Same accumulate-across-the-run mechanic as JOURNAL.md, no framework RESULT
+#   stamp (that is journal-specific) — see ``_seed_accumulator``/``_fold_accumulator``.
+
+_INSIGHTS_MARK = "<!-- cap-evolve:insights-append-below -->"
+_INSIGHTS_SEED = (
+    "# INSIGHTS — summarized, verified findings (accumulate across the whole run)\n\n"
+    "The JOURNAL is your per-iteration diary; THIS file is the distilled, VERIFIED "
+    "takeaway a future iteration should read instead of re-reading the whole journal "
+    "or old sessions/traces. Update it whenever you have a genuinely NEW, confirmed "
+    "finding (an accepted/rejected RESULT counts as confirmation; a guess does not) — "
+    "not every iteration needs a new entry. Structure each addition as:\n\n"
+    "    ## <task or mechanism name>\n"
+    "    - What worked (confirmed by a RESULT, cite the candidate id):\n"
+    "    - What didn't (confirmed by a RESULT, cite the candidate id):\n"
+    "    - Promising but not yet tried:\n"
+)
+
+_META_INSIGHTS_MARK = "<!-- cap-evolve:meta-insights-append-below -->"
+_META_INSIGHTS_SEED = (
+    "# META-INSIGHTS — about the optimization PROCESS itself (this run)\n\n"
+    "Not about the capability — about HOW this run is searching for it: which "
+    "strategies/edit classes/algorithms are helping vs stalling, and what to try "
+    "next iteration. Update at the end of the run at minimum; sooner if a plateau "
+    "or a clear strategy shift is worth recording now. Structure each addition as:\n\n"
+    "    ## Iteration <id> (or 'run so far')\n"
+    "    - Strategy tried, and whether it moved val (cite LEDGER rows):\n"
+    "    - Plateau/stall signal, if any, and the lever switched to:\n"
+    "    - What to try next iteration:\n"
+)
+
+_FRAMEWORK_IMPROVEMENTS_MARK = "<!-- cap-evolve:framework-improvements-append-below -->"
+_FRAMEWORK_IMPROVEMENTS_SEED = (
+    "# FRAMEWORK-IMPROVEMENTS — suggestions for cap-evolve itself (cross-run)\n\n"
+    "NOT about this capability or this run's result — about what cap-evolve the "
+    "FRAMEWORK should change so FUTURE runs (any capability, any project) go better: "
+    "a confusing prompt section, a missing tool, a file you wished existed, a gate "
+    "that felt wrong. Optional most iterations; add an entry whenever something "
+    "about the framework itself (not the task) got in your way or surprised you.\n"
+)
+
+
+def _seed_accumulator(workdir: Path, run_dir: RunDir, *, filename: str, seed: str,
+                      mark: str) -> None:
+    """Generic ``_seed_journal``: copy a run-level, whole-run accumulator file into
+    the workdir with its marker re-appended, ready for the optimizer to append below."""
+    run_file = run_dir.root / filename
+    try:
+        text = run_file.read_text(encoding="utf-8") if run_file.exists() else seed
+    except Exception:  # noqa: BLE001
+        text = seed
+    text = text.replace(mark, "").rstrip() + "\n\n" + mark + "\n"
+    (workdir / filename).write_text(text, encoding="utf-8")
+
+
+def _fold_accumulator(workdir: Path, run_dir: RunDir, *, filename: str, seed: str,
+                      mark: str) -> None:
+    """Generic ``_reconcile_journal`` minus the framework RESULT stamp: fold whatever
+    the optimizer appended below the marker back into the run-level accumulator file.
+
+    Unlike JOURNAL.md, an empty tail here is NOT escalated — a summarized-insights
+    file legitimately has nothing new to add most iterations (see the seed text)."""
+    path = workdir / filename
+    if not path.exists():
+        return
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        return
+    tail = (text.split(mark, 1)[1] if mark in text else "").replace(mark, "").strip()
+    if not tail:
+        return
+    run_file = run_dir.root / filename
+    try:
+        base = run_file.read_text(encoding="utf-8") if run_file.exists() else seed
+    except Exception:  # noqa: BLE001
+        base = seed
+    base = base.replace(mark, "").rstrip()
+    if tail in base:  # already recorded — do not duplicate
+        return
+    try:
+        run_file.write_text(base + "\n\n" + tail + "\n", encoding="utf-8")
+    except Exception as e:  # noqa: BLE001
+        run_dir.log_event("optimizer_context_warning", what=filename, error=str(e)[:300])
+
+
+_ACCUMULATORS = (
+    ("INSIGHTS.md", _INSIGHTS_SEED, _INSIGHTS_MARK),
+    ("META_INSIGHTS.md", _META_INSIGHTS_SEED, _META_INSIGHTS_MARK),
+    ("FRAMEWORK_IMPROVEMENTS.md", _FRAMEWORK_IMPROVEMENTS_SEED, _FRAMEWORK_IMPROVEMENTS_MARK),
+)
+
+
 _PROCESS_SEED = (
     "# PROCESS — what I did this iteration (explainability; REQUIRED)\n\n"
     "Fill this in as you work. It is the human-readable record of HOW this iteration was "
@@ -774,7 +902,8 @@ _PROCESS_SEED = (
 # State/handover files that are NOT part of the capability — excluded from any
 # capability diff (kept in one place; mirrors dashboard._DIFF_SKIP).
 _CAP_DIFF_SKIP = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
-                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"}
+                  "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+                  "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md"}
 
 
 def _capability_files(d: Path) -> dict[str, str]:
@@ -900,8 +1029,12 @@ def _journal_tail(workdir: Path) -> str:
         tail = text.split(_JOURNAL_MARK, 1)[1].strip()
     else:
         # Optimizer rewrote the file (no marker) — fall back to its last ## Iteration block.
-        idx = text.rfind("\n## ")
-        tail = text[idx:].strip() if idx != -1 else ""
+        # Anchored per-line rather than on "\n## ": an agent-mode optimizer is not handed a
+        # seeded journal to append to, so it writes a FRESH file that STARTS with its heading,
+        # and a "\n## " search misses a heading at offset 0 — silently booking "(no handover
+        # written by the optimizer)" for a handover that was in fact written.
+        heads = list(re.finditer(r"(?m)^## ", text))
+        tail = text[heads[-1].start():].strip() if heads else ""
     # Strip any marker the optimizer copied into its entry text.
     return tail.replace(_JOURNAL_MARK, "").strip()
 
@@ -992,14 +1125,33 @@ def _seed_journal(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
-                       accepted: bool, val: float | None, delta: float | None) -> None:
+                       accepted: bool, val: float | None, delta: float | None,
+                       reason: str | None = None, indecisive: bool = False) -> None:
     """Fold the optimizer's newly-appended journal entry into the run-level JOURNAL,
     stamped with the framework's objective outcome. Append-only at the run level so the
     handover truly accumulates across accepted AND rejected iterations.
 
     ``val``/``delta`` are None for an iteration that never bought a val eval (gepa's
     minibatch-local reject) or whose measurement is void (an indecisive tamper step):
-    the entry is still folded in, with "—" where the number would be."""
+    the entry is still folded in, with "—" where the number would be.
+
+    ``indecisive=True`` gets its own verdict, because the RESULT line is the one artifact
+    written to stop the next iteration repeating a refuted idea — and a void measurement
+    refutes nothing. Stamped as a rejection it read "REJECTED (champion unchanged) … its
+    WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above",
+    telling the next iteration to redesign an edit that had never actually been judged. The
+    correct next move for an unresolved edit is to RE-MEASURE it.
+
+    A genuinely empty handover is still ESCALATED — logged as an
+    ``optimizer_context_warning`` event, so an operator or the dashboard can see it
+    happened — but the journal itself is no longer left contentless: every caller
+    already carries a real, substantive ``reason`` (the same text that becomes the
+    commit's ``--note``, confirmed rich in practice across every accept/reject this
+    repo has produced), so that text is folded in as the entry's content instead of
+    a placeholder that admits nothing was learned. This is a fallback, not a
+    substitute for the optimizer's own reflection — it does not fire when the
+    optimizer already wrote a real entry.
+    """
     tail = _journal_tail(workdir)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
@@ -1011,22 +1163,67 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     impact = _candidate_task_impact(run_dir, cid, "val") or {}
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
-    verdict = "ACCEPTED (new champion)" if accepted else "REJECTED (champion unchanged)"
-    guidance = ("" if accepted else
-                " — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
-                "break a task above, dropping/redesigning the ones that did.")
+    if indecisive:
+        verdict = "UNRESOLVED (not judged; champion unchanged)"
+        guidance = (" — the measurement could not separate this edit from re-measurement noise, "
+                    "so it is NOT evidence against the edit. Its batch was still reverted. To "
+                    "resolve it, re-measure it under a FRESH tag (re-running the same tag "
+                    "REPLACES its rollouts) or with more trials in ONE evaluation; do not "
+                    "redesign it on this round's numbers, and do not re-derive it as a new idea.")
+    elif accepted:
+        verdict, guidance = "ACCEPTED (new champion)", ""
+    elif impact.get("broke"):
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
+                    "break a task above, dropping/redesigning the ones that did.")
+    elif impact:
+        # Rejected with NOTHING regressed: the batch was not harmful, it just did not clear the
+        # bar. The regression guidance is not merely unhelpful here, it is misdirection — it
+        # says "drop nothing, redesign nothing" while inviting a rewrite of edits that were
+        # just measured HELPING. Observed on a round stamped `Δ=+0.043 · fixed={2 tasks} ·
+        # broke={—}`, rejected against a 0.048 threshold.
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — no task that was passing under the parent regressed: this batch did not "
+                    "clear the gate's threshold, it did not do damage. So the lever is POWER or "
+                    "SIZE, not a redesign — re-measure with more trials in ONE evaluation, or "
+                    "make the effect bigger. Keep the edits that produced the `fixed` tasks "
+                    "above as your starting point; do not rewrite them on this round's numbers.")
+    else:
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — its WHOLE batch was reverted. No per-task comparison was available this "
+                    "round (one side had no rollouts on disk), so `fixed`/`broke` above are "
+                    "UNKNOWN rather than empty and this line cannot tell you which edit cost "
+                    "you: attribute per-task before redesigning anything.")
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
     stamp = (f"\n\n> **RESULT (framework, objective):** {verdict} · val={vs} "
              f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}}.{guidance}\n"
-             f"<!-- {cid}: {'ACCEPTED' if accepted else 'rejected'} "
+             f"<!-- {cid}: "
+             f"{'unresolved' if indecisive else 'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
     tail = tail.strip()
-    # Dedup guard: if the optimizer dropped the marker without appending (so the tail
-    # fallback returned an entry already recorded in the run-level journal), do NOT
-    # re-append it — that would duplicate a prior iteration's entry under this cid.
-    if not tail or (tail and tail in base):
-        tail = f"## Iteration {cid} — (no handover written by the optimizer)"
+    if not tail:
+        # Confirmed data-loss bug (#400): the optimizer wrote no handover at all, and
+        # this used to be accepted with no trace anywhere. Escalate — log it AND make
+        # the journal entry itself unmissable — instead of a placeholder that reads
+        # like ordinary content.
+        run_dir.log_event("optimizer_context_warning", what="JOURNAL.md",
+                          error="empty handover: optimizer wrote no ## Iteration entry",
+                          candidate=cid)
+        synthesized = (reason or "").strip()
+        tail = (f"## Iteration {cid} — ⚠ EMPTY HANDOVER, framework-synthesized from the "
+                "commit reason (the optimizer wrote no entry of its own — see the "
+                "`optimizer_context_warning` event):\n" + synthesized) if synthesized else (
+                f"## Iteration {cid} — ⚠ EMPTY HANDOVER (framework escalation)\n"
+                "The optimizer wrote NO journal entry this iteration, and no commit "
+                "reason was available to synthesize one from. This is a bug in the "
+                "optimizer/session, not a normal outcome — see the "
+                "`optimizer_context_warning` event in events.jsonl.")
+    elif tail in base:
+        # Dedup guard: the optimizer dropped the marker without appending (so the tail
+        # fallback returned an entry already recorded in the run-level journal). Do NOT
+        # re-append it — that would duplicate a prior iteration's entry under this cid.
+        tail = f"## Iteration {cid} — (duplicate handover; optimizer re-appended a prior entry unchanged)"
     new = base + "\n\n" + tail + stamp + "\n"
     try:
         run_journal.write_text(new, encoding="utf-8")
@@ -1074,7 +1271,10 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                       val=val, parent=parent_id, parent_val=parent_val, **extra)
     delta = (val - parent_val if isinstance(val, (int, float))
              and isinstance(parent_val, (int, float)) else None)
-    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta)
+    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
+                       reason=reason, indecisive=indecisive)
+    for filename, seed, mark in _ACCUMULATORS:
+        _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
 
 
 def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
@@ -1141,7 +1341,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
 
 
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
-    """Give the optimizer its four cross-iteration files + a prompt pointer to each.
+    """Give the optimizer its cross-iteration files + a prompt pointer to each.
 
     Clean ownership (see the file-header comment near ``_JOURNAL_SEED``):
       - LEDGER.md  — framework-written facts (outcomes + per-task broke/fixed);
@@ -1149,15 +1349,19 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
       - PROCESS.md — optimizer-authored explainability, fresh each iteration;
       - RUNMAP.md + prior_iterations/ — framework manifest + copies of every prior
         iteration's PROCESS.md and capability diff (real prior-work-dir access).
+      - INSIGHTS.md / META_INSIGHTS.md / FRAMEWORK_IMPROVEMENTS.md — optimizer-authored,
+        append-only summary layer above JOURNAL.md (see the comment near ``_INSIGHTS_MARK``).
     """
     _build_ledger(workdir, run_dir)
     _seed_journal(workdir, run_dir)
+    for filename, seed, mark in _ACCUMULATORS:
+        _seed_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
     if not (workdir / "PROCESS.md").exists():
         (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
     _build_runmap(workdir, run_dir)
 
     pointer = (
-        "## Cross-iteration files in THIS working dir (clean ownership — read all four)\n"
+        "## Cross-iteration files in THIS working dir (clean ownership — read all)\n"
         "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the exact "
         "tasks it broke/fixed. Never re-introduce a change that broke a task.\n"
         "- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole "
@@ -1170,6 +1374,16 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
         "- `RUNMAP.md` + `./prior_iterations/<id>/` — every prior iteration's PROCESS.md + "
         "capability diff, copied in for you. Read the ones targeting your cluster BEFORE "
         "proposing, so you build on prior work instead of repeating it.\n"
+        "- `INSIGHTS.md` — SUMMARIZED, VERIFIED findings (yours, append-only, optional most "
+        "iterations): a distilled 'what worked / what didn't / what's promising' a future "
+        "iteration reads INSTEAD of the whole journal. Add an entry whenever you have a new "
+        "CONFIRMED finding (cite the RESULT that confirmed it).\n"
+        "- `META_INSIGHTS.md` — about the SEARCH PROCESS itself (yours, append-only): which "
+        "strategies helped or stalled, what to try next. Update AT LEAST once, at the end of "
+        "the run.\n"
+        "- `FRAMEWORK_IMPROVEMENTS.md` — cross-run suggestions for cap-evolve ITSELF, not this "
+        "task (yours, append-only, optional): what confused you or was missing about the "
+        "framework. Update AT LEAST once, at the end of the run.\n"
     )
     return f"{instructions}\n\n{pointer}\n"
 
@@ -1508,6 +1722,55 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
     }
 
 
+_MAX_CONSECUTIVE_EVAL_ERRORS = 3  # N raises in a row -> the environment, not the candidates
+
+
+def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, error: str,
+                     current_val: SplitResult, optimizer_seconds: float,
+                     opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
+    """An INDECISIVE step for a candidate whose ``evaluate_candidate`` call raised —
+    e.g. an adapter's ``live()``/rollout setup blew up (#286). The run keeps going
+    (that is the whole point: one candidate's cost, not the run's) but the candidate
+    was NEVER MEASURED, so it takes the same path as a 0%-coverage eval and a tamper:
+
+      * ``indecisive=True`` leaves the stall counter alone — a failed evaluation is
+        not evidence the optimizer ran out of ideas (unlike ``optimizer_error``,
+        where the workdir stays == parent and the gate scores a real Δ of 0);
+      * it is NOT filed in the rejected memory — that list is fed back as "these
+        edits did not work", and an infra failure says nothing about the edit
+        (``test_infra_errors_not_zeros``: the optimizer must not burn an iteration
+        rediscovering that a rollout crash was not a content regression);
+      * no reward is recorded, so nothing poisons the split mean or the paired gate.
+
+    A genuinely unrunnable environment is caught by ``_MAX_CONSECUTIVE_EVAL_ERRORS``
+    in the caller, which re-raises — not by letting the stall counter guess.
+    """
+    reason = f"indecisive (evaluation error): candidate evaluation raised: {error}"
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
+                     reason=reason, val=None, parent_val=current_val.reward,
+                     indecisive=True,
+                     optimizer_seconds=round(optimizer_seconds, 2),
+                     opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
+    run_dir.record_spend_warnings()
+    return {
+        "candidate_id": cid,
+        "accepted": False,
+        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
+                     "indecisive": True},
+        "candidate_val": None,
+        "parent_val": current_val.to_dict(),
+        "eval_error": error,
+        "regressions": [],
+        "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
+        "optimizer_error": optimizer_error,
+        "workdir": str(workdir),
+    }
+
+
 def run_step(
     adapter,
     *,
@@ -1633,8 +1896,32 @@ def run_step(
                                 event="capability_invalid", detail_key="validation",
                                 rejected=rejected)
 
-    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
-                                  n_trials=n_trials, tag=cid)
+    try:
+        cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
+                                      n_trials=n_trials, tag=cid)
+    except Exception as e:  # noqa: BLE001
+        # Mirrors the optimizer-call protection above (#286): an adapter can raise
+        # from live()/rollout setup for a reason specific to ONE candidate (a bad
+        # sandbox, an unrunnable candidate artifact) — that must cost an iteration,
+        # not the run. But N of these IN A ROW means the environment itself is
+        # unrunnable, not that N candidates in a row happened to be unlucky — that
+        # must still fail loudly rather than silently look like N skipped candidates.
+        streak = getattr(run_dir, "_consecutive_eval_errors", 0) + 1
+        run_dir._consecutive_eval_errors = streak
+        eval_error = str(e)
+        run_dir.log_event("evaluate_error", candidate=cid, error=eval_error[:500],
+                          error_full=eval_error, consecutive=streak)
+        if streak >= _MAX_CONSECUTIVE_EVAL_ERRORS:
+            raise RuntimeError(
+                f"{streak} consecutive candidate evaluations raised — this looks like "
+                f"a broken environment/adapter, not bad candidates. Last error: {eval_error}"
+            ) from e
+        return _eval_error_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                error=eval_error, current_val=current_val,
+                                optimizer_seconds=optimizer_seconds,
+                                opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                optimizer_error=optimizer_error)
+    run_dir._consecutive_eval_errors = 0
 
     # Paired gate is the default when per-task data is available: candidate and
     # current were scored on the SAME val tasks, so the correct (and far more
@@ -1977,6 +2264,7 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # beside it, so the literal list has to be complete anyway.)
 _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
                     "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
+                    "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md",
                     "FOCUS.md", "REFLECTION.md",
                     ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")

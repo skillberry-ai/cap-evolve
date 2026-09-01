@@ -152,12 +152,12 @@ def main(argv=None) -> int:
                       pooled_val=pooled.reward, verdict=verdict, recommendation=recommendation)
 
     # Persist the POOLED gate row in the same `work/<table>.json` shape `round.py` writes,
-    # because `commit.py`'s `_gate_row` reads the newest such table to recover the verdict and
-    # the structured gate numbers it attaches to the accept/reject event. Without this the
-    # final commit on a grown candidate books the round's PRE-growth numbers — and a
-    # `promote` would be logged as `gate_verdict: reject`, reading as a driver override of a
-    # gate that in fact accepted at the pooled n. Newest-mtime wins there, so a plain write
-    # is all this needs; no special-casing on the reader's side.
+    # because `commit.py` reads such a table to recover the verdict (`_gate_row`, newest mtime)
+    # and the structured gate numbers it attaches to the decision event
+    # (`_round_gate_numbers`, which prefers a `grow_<cand>_r<k>.json` over the round's own row
+    # for exactly this candidate). Without this the final commit on a grown candidate books the
+    # round's PRE-growth numbers — and a `promote` would be logged as `gate_verdict: reject`,
+    # reading as a driver override of a gate that in fact accepted at the pooled n.
     work = run_dir.root / "work"
     work.mkdir(parents=True, exist_ok=True)
     (work / f"grow_{args.candidate}_r{args.growth_round}.json").write_text(

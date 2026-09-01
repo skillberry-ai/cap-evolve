@@ -31,6 +31,12 @@ def rollup(tasks: list[dict], steps: list[dict] | None = None) -> dict | None:
     each hill-climb step, finalize), NOT from summing a per-task field: every task row
     in ``tasks`` shares the SAME run-level reward only, it never carried real per-task
     cost/latency, so summing over tasks previously double/N-counted a constant value.
+
+    Summing ``steps`` is only honest because ``metrics.iteration_rows`` emits an
+    ``unattributed`` row for metered spend that no phase owns. Without it this rollup published
+    ``optimizer_usd: 0`` for every agent-mode run (one optimizer process drives the whole loop,
+    so no round can own a share of it) and silently dropped every control replicate and re-gate
+    from ``eval_usd`` — run 33046360451 went out as $5.25 against a metered $21.66.
     """
     # Infra-errored tasks are EXCLUDED from both means. An ungradeable task is missing data,
     # not a reward of 0.0 — the same principle the harness enforces via n_scored. Averaging

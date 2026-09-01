@@ -378,4 +378,5 @@ def test_grow_merges_new_trials_onto_the_candidates_own_tag(tmp_path):
     assert ev["gate_verdict"] == "reject", ev
     assert ev["overrode_gate"] is False, ev
     # ...and the numbers on the event are the POOLED ones, not the stale table's Δ=0.75.
-    assert ev["n"] == 4 and ev["delta"] == 0.0, ev
+    # `gate_*` is the field naming `dashboard.reduce_run` reads verbatim onto a graph node.
+    assert ev["gate_n"] == 4 and ev["gate_delta"] == 0.0, ev

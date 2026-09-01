@@ -198,6 +198,145 @@ def test_dashboard_degrades_without_rollouts_or_finalize():
         assert '"diffs": {}' in text or '"diffs":{}' in text
 
 
+# ---- Process narrative: template-only detection ---------------------------
+
+def test_narrative_flags_an_unedited_seed_template():
+    """A run-level accumulator file that is STILL byte-for-byte its seed instructional
+    template (no real handover was ever appended) must not be presented as populated
+    narrative — it needs its own ``template_only`` flag so the renderer can flag it."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        (rd.root / "JOURNAL.md").write_text(harness._JOURNAL_SEED, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is True
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)
+        assert "template only" in html
+
+
+def test_narrative_does_not_flag_a_real_appended_entry():
+    """The moment a real entry is appended below the marker, the file is no longer
+    byte-identical to its seed — must not be flagged."""
+    from cap_evolve import dashboard, harness
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        real = harness._JOURNAL_SEED + "\n## Iteration cand_0001 — a real handover\n- did X\n"
+        (rd.root / "JOURNAL.md").write_text(real, encoding="utf-8")
+        r = dashboard.reduce_run(rd)
+        (journal,) = [f for f in r["summary"]["narrative"]["files"]
+                      if f["title"].startswith("Journal")]
+        assert journal["template_only"] is False
+
+
+# ---- Config tab: full run configuration ------------------------------------
+
+def _mk_project(base: Path, *, extra_spec: str = "", write_project_md: bool = True):
+    """A minimal project dir mirroring the real tau2_airline layout (capevolve.yaml,
+    PROJECT.md, adapters/, seed_capability/) without depending on the live path."""
+    proj = base / "project"
+    proj.mkdir(parents=True, exist_ok=True)
+    (proj / "capevolve.yaml").write_text(
+        "capabilities:       [system-prompt, tools]\n"
+        "capability_path:    seed_capability\n"
+        "algorithm_skill:    agent-optimize\n"
+        "optimizer_skill:    claude-code\n"
+        "gate_mode:          paired\n"
+        "gate_k_se:          1.0\n"
+        "split_ids_file:     split_ids.json\n"
+        + extra_spec, encoding="utf-8")
+    if write_project_md:
+        (proj / "PROJECT.md").write_text(
+            "# Project\n\n- num_trials=1 — single-trial scores\n", encoding="utf-8")
+    (proj / "adapters").mkdir(exist_ok=True)
+    (proj / "adapters" / "adapter.py").write_text(
+        "def run_target():\n    pass\n", encoding="utf-8")
+    (proj / "seed_capability" / "policy").mkdir(parents=True, exist_ok=True)
+    (proj / "seed_capability" / "policy" / "policy.md").write_text(
+        "# Policy\nBe helpful.\n", encoding="utf-8")
+    return proj
+
+
+def test_config_reads_spec_groups_project_md_and_files():
+    """A future, unrecognised spec key must still show up (in 'Other'), never vanish."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        _mk_project(base, extra_spec="future_input:      some-new-thing\n")
+        rd = _mk_run(base, events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        cfg = r["summary"]["config"]
+        assert r["summary"]["capabilities"]["config"] is True
+
+        groups = {g["group"]: {i["key"]: i["value"] for i in g["items"]}
+                   for g in cfg["spec_groups"]}
+        assert groups["Capability"]["capability_path"] == "seed_capability"
+        assert groups["Algorithm & optimizer"]["algorithm_skill"] == "agent-optimize"
+        assert groups["Budget & gate"]["gate_mode"] == "paired"
+        # unrecognised key lands in "Other", not dropped
+        assert groups["Other"]["future_input"] == "some-new-thing"
+
+        assert "single-trial scores" in cfg["project_md"]
+
+        files = {f["path"]: f for f in cfg["files"]}
+        assert "adapters/adapter.py" in files
+        assert "def run_target" in files["adapters/adapter.py"]["preview"]
+        assert "seed_capability/policy/policy.md" in files
+        # capevolve.yaml / PROJECT.md are shown separately, not duplicated in the tree
+        assert "capevolve.yaml" not in files
+        assert "PROJECT.md" not in files
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)
+        assert "Config — run configuration" in html
+        assert "future_input" in html
+
+
+def test_config_degrades_binary_and_oversized_files():
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        proj = _mk_project(base)
+        (proj / "seed_capability" / "reference").mkdir(parents=True, exist_ok=True)
+        (proj / "seed_capability" / "reference" / "blob.bin").write_bytes(bytes(range(256)) * 4)
+        big = proj / "seed_capability" / "reference" / "huge.py"
+        big.write_text("x = 1\n" * 60000, encoding="utf-8")  # > 200_000 bytes
+
+        rd = _mk_run(base, events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        files = {f["path"]: f for f in r["summary"]["config"]["files"]}
+
+        blob = files["seed_capability/reference/blob.bin"]
+        assert blob["binary"] is True
+        assert blob["preview"] is None
+
+        huge = files["seed_capability/reference/huge.py"]
+        assert huge["binary"] is False
+        assert huge["preview"] is None  # too large to preview — size + path only
+        assert huge["size"] > 200_000
+
+        html = dashboard.render_html(r, rd)
+        _parse_html(html)  # renders without trying to dump the huge/binary file
+
+
+def test_config_absent_without_a_project_dir():
+    """No sibling project/ at all → the panel's data is absent, not faked."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        assert r["summary"]["config"] == {}
+        assert r["summary"]["capabilities"]["config"] is False
+        # The Config panel's JS guards on `CFG.project_dir`, not on `CFG` itself: `{}` is
+        # truthy in JS, so a bare `if(!CFG)return` would render an empty panel claiming to
+        # have read the config "straight off undefined". (Can't be asserted from the HTML
+        # text — the section title is a JS string literal that is always present.)
+        assert "project_dir" not in r["summary"]["config"]
+
+
 # ---- ANSI terminal --------------------------------------------------------
 
 def test_render_ansi_kpis_and_no_color():

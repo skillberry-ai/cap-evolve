@@ -349,3 +349,101 @@ def test_an_accepted_candidate_still_raises_the_running_best():
         assert any(n["status"] == "accepted" for n in nodes), run
         assert max(n.get("best_so_far") or 0 for n in nodes) == red["summary"]["best_val"]
         assert red["summary"]["best_val"] == 1.0, run
+
+
+# ---- second round: gate structured fields / null-control replicates / screened badge ----
+
+def test_gate_fields_read_directly_from_the_event_when_present():
+    """A commit event that RECORDS the gate numbers (``gate_delta``/``gate_stderr``/
+    ``gate_n``/``gate_k_se``/``gate_threshold``/``gate_resolvable_effect_size``) is
+    preferred over parsing them back out of the prose ``reason``; a prose-only event
+    (every deterministic loop) still takes the regex path unchanged."""
+    from cap_evolve import Budget, RunDir, dashboard
+    tmp = Path(tempfile.mkdtemp())
+    rd = RunDir.create(tmp, ts="t", budget=Budget())
+    events = [
+        {"t": 1.0, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
+        {"t": 2.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"t": 3.0, "kind": "baseline", "val": 0.5},
+        # No structured fields at all — the fallback path (prose-only, as every existing
+        # agent-optimize run writes today) must still populate delta/stderr/n from ``note``.
+        {"t": 4.0, "kind": "reject", "candidate": "cand_prose", "val": 0.53,
+         "note": "Δ̄=+0.0300 <= 1.0·SE=0.0500 (SE=0.0500, n=8)"},
+        # Structured fields present — must win over the (deliberately contradictory) prose.
+        {"t": 5.0, "kind": "reject", "candidate": "cand_struct", "val": 0.55,
+         "note": "Δ̄=+0.0300 <= 1.0·SE=0.0500 (SE=0.0500, n=8)",
+         "gate_delta": 0.099, "gate_stderr": 0.011, "gate_n": 40, "gate_k_se": 1.0,
+         "gate_threshold": 0.011, "gate_resolvable_effect_size": 0.022},
+    ]
+    rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
+    reduced = dashboard.reduce_run(rd)
+    gd = {d["candidate"]: d for d in reduced["summary"]["gate_decisions"]}
+
+    prose = gd["cand_prose"]
+    assert prose["delta"] == 0.03 and prose["stderr"] == 0.05 and prose["n"] == 8
+    assert prose["resolvable_effect_size"] is None  # not in the prose, no fallback pattern
+
+    struct = gd["cand_struct"]
+    assert struct["delta"] == 0.099 and struct["stderr"] == 0.011 and struct["n"] == 40
+    assert struct["k_se"] == 1.0 and struct["threshold"] == 0.011
+    assert struct["resolvable_effect_size"] == 0.022
+
+
+def test_controls_are_read_generically_and_absent_by_default():
+    """Null-control replicates surface as their own summary list, keyed by a generic
+    ``role``/``is_control`` marker — never by tag pattern (that would bake one
+    algorithm's naming convention, e.g. agent-optimize's ``ctl_null_i<N>``, into a
+    generic reducer). Absent today (no algorithm emits the marker yet): the list must
+    stay empty rather than guessing from tag names."""
+    from cap_evolve import Budget, RunDir, dashboard
+    tmp = Path(tempfile.mkdtemp())
+    rd = RunDir.create(tmp, ts="t", budget=Budget())
+    events = [
+        {"t": 1.0, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
+        {"t": 2.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"t": 3.0, "kind": "baseline", "val": 0.5},
+        # Tag LOOKS like a control (agent-optimize's convention) but carries no marker —
+        # must NOT be picked up by name alone.
+        {"t": 4.0, "kind": "evaluate", "split": "val", "tag": "ctl_null_i0", "reward": 0.52},
+    ]
+    rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
+    reduced = dashboard.reduce_run(rd)
+    assert reduced["summary"]["controls"] == []
+    assert reduced["summary"]["capabilities"]["controls"] is False
+
+    # Now with the generic marker present — it must be picked up regardless of tag shape.
+    events.append({"t": 5.0, "kind": "evaluate", "split": "val", "tag": "anything_at_all",
+                   "reward": 0.48, "stderr": 0.02, "n_scored": 4, "role": "control"})
+    rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    reduced2 = dashboard.reduce_run(rd)
+    (ctl,) = reduced2["summary"]["controls"]
+    assert ctl["tag"] == "anything_at_all" and ctl["reward"] == 0.48 and ctl["n"] == 4
+    assert reduced2["summary"]["capabilities"]["controls"] is True
+
+
+def test_screened_badge_read_generically_by_candidate_tag():
+    """``screened_before_fullval`` is looked up by whatever event carries it, keyed by
+    tag — not tied to the ``agent_optimize_compliance`` kind name agent-optimize happens
+    to emit it under today."""
+    from cap_evolve import Budget, RunDir, dashboard
+    tmp = Path(tempfile.mkdtemp())
+    rd = RunDir.create(tmp, ts="t", budget=Budget())
+    events = [
+        {"t": 1.0, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
+        {"t": 2.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"t": 3.0, "kind": "baseline", "val": 0.5},
+        {"t": 4.0, "kind": "some_future_algorithms_event", "tag": "cand_1",
+         "screened_before_fullval": True},
+        {"t": 5.0, "kind": "reject", "candidate": "cand_1", "val": 0.5, "note": "x"},
+        # cand_2 has no compliance signal at all -> stays None, not False.
+        {"t": 6.0, "kind": "reject", "candidate": "cand_2", "val": 0.51, "note": "y"},
+    ]
+    rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
+    reduced = dashboard.reduce_run(rd)
+    nodes = {n["id"]: n for n in reduced["graph"]["nodes"]}
+    assert nodes["cand_1"]["screened"] is True
+    assert nodes["cand_2"]["screened"] is None
+    assert reduced["summary"]["capabilities"]["screened"] is True

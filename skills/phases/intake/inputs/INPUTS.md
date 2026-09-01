@@ -105,6 +105,14 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`
   to see the available names); `optimizer_model` is the backend-specific model id.
 
+- **memory_skill** (default `md-files`): which cross-iteration memory scheme the
+  optimizer reads/writes. `md-files` is `harness.py`'s built-in LEDGER/JOURNAL/
+  INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS scheme (always on today — every run
+  gets it regardless of this key) and is the only fully-wired option; note the choice
+  in `PROJECT.md` either way. The deprecated `evograph` algorithm's `wiki/` weakness-
+  graph format is a candidate SECOND option once it is extracted into a standalone
+  memory skill (tracked separately — not selectable yet).
+
 - **target_model** (default `""` = profile-agnostic): the runtime/CONSUMING LLM the
   agent reads these capabilities with — DISTINCT from `optimizer_model`, which proposes
   the edits. Give a concrete model id (e.g. `gpt-oss-120b`) or a capability tier

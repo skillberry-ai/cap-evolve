@@ -750,3 +750,82 @@ seed **42.8%** of the time at 5 trials, and in one run it vetoed *both* candidat
 significance test. Read `regressions` as a pointer to look at, never as a verdict, and always next to
 the control's own list.
 
+
+**"Not resolvable" is a decision you can book, and booking it as a reject costs the run.**
+`round.py` marks a candidate `verdict: inconclusive` when `verdict_stable: false` — its verdict changed
+depending on which byte-identical control replicate happened to be the reference, so the round cannot tell
+its edit from re-measurement. Measured on a smoke run: cand_2 at Δ +0.0433 against a threshold of 0.0492,
+`verdict_by_reference: {ctl_null_i1: reject, ctl_null_i1r1: accept}`.
+
+Book it as `commit.py --decision inconclusive`. Two things follow from booking it as a `reject` instead, and
+neither is cosmetic:
+
+- **A reject advances the stall counter, and stall ends the run.** `update_spent(accepted=False)` increments
+  it, and `budget_exhausted()` stops on the cap (3 in the smoke tier). Stall means *the optimizer has run out
+  of ideas* — the one thing an ambiguous measurement is no evidence of. On a benchmark whose replicate noise
+  makes ambiguity common, two unresolved rounds can end a run for a reason that never happened.
+  `inconclusive` charges `iterations` (the budget really was spent) and leaves stall alone.
+- **A reject files the edit in `rejected.jsonl`**, which later rounds read as *tried, did not work*. An edit
+  nothing could judge has not been tried in that sense, so filing it there teaches you to avoid your own
+  untested idea. `inconclusive` skips that file and logs `step_indecisive` instead — which is also the event
+  the dashboard reads to render the step as `indecisive` rather than red.
+
+The `JOURNAL.md` RESULT line follows the same rule: an unresolved round is stamped `UNRESOLVED (not judged)`,
+not `REJECTED … its WHOLE batch was reverted`, because the correct next move for an unresolved edit is to
+**re-measure** it, not to redesign it.
+
+**To re-measure, use a FRESH tag.** Rollouts are written `<task>__<tag>__t{k}.json` for
+`k in range(n_trials)`, so re-running a tag **replaces** `t0..t9` rather than adding `t10..t19` — it swaps a
+reading for another reading and buys no evidence. Either pick a new tag (`cand_2b`) or ask for the higher
+`--trials` in ONE evaluation. This is not hypothetical: told to "re-run with more trials", one run
+re-measured its own control under the same tag, spent 100 metric calls, replaced a 0.4967 replicate with a
+0.5067 one, and *widened* the round's replicate spread. `harness` now logs a `rollout_overwrite_warning`
+naming the reading that was destroyed, because once the files are gone it exists nowhere else.
+
+**`evidence_bar` is necessary, not sufficient.** It is the noise floor to compare a delta against, but
+`gate_threshold` (k·SE on the paired per-task differences) is what each `verdict` is actually computed from,
+and it is usually stricter. A delta above `evidence_bar` and below `gate_threshold` is not an accept — cand_2
+above cleared 0.0167 and missed 0.0492.
+
+**A re-gate must not eat the evidence it was run to add.** `round.py` gave its *table* a `.r<k>` suffix on a
+same-iteration re-run — "since a re-gate is usually being COMPARED with the first one" — but gave the control
+*rollouts* the same `ctl_null_i<N>` tags as the first attempt. So the one operation the script explicitly
+supports preserved the summary and deleted the measurements it summarises. Measured: the second attempt at
+iteration 1 replaced `ctl_null_i1` (0.4967 → 0.5067) and `ctl_null_i1r1` (0.4800 → 0.4367), spending 200 of
+the run's 900 metric calls to swap two readings for two others; the replicate spread went 0.0167 → 0.0700, so
+the bar grew 4.2×, and `round_i1.json` was left quoting an `evidence_bar` derived from two numbers that no
+longer existed anywhere on disk. The round's identity is (iteration, attempt) and **both** halves have to
+reach the names on disk: control tags are now `ctl_null_i<N>a<k>` from the second attempt on, the table name
+comes from the same attempt index rather than a second independent probe, and `prior_attempt_controls` pools
+the earlier attempts' replicates into `null_delta_between_control_replicates` (`max − min` needed no change
+to accept four samples instead of two). Re-gating is now accumulative: it reports the null over every
+replicate the round has paid for.
+
+**A reject is usually not caused by a regression, and the RESULT line used to assume it was.** The
+guidance stamped under every reject read *"re-introduce only the edits that did NOT break a task
+above, dropping/redesigning the ones that did"* — unconditionally. Stamped on a real round it
+produced `REJECTED · val=0.553 Δ=+0.043 · fixed={47484, 53161} · broke={—}`: the batch fixed two
+tasks, broke none, and lost to a 0.048 threshold on a +0.047 effect. The one sentence meant to say
+what to do next told the next iteration to drop nothing and redesign nothing — while inviting a
+rewrite of the edits that had just been measured helping. The stamp now branches: a reject WITH
+regressions keeps that guidance; a reject with none says the lever is power or size (more trials in
+one evaluation, or a bigger effect) and to keep the `fixed` edits as the starting point; and a
+reject where no per-task comparison was possible at all says `fixed`/`broke` are UNKNOWN rather
+than empty, instead of implying nothing regressed.
+
+**A run published a quarter of what it spent, and the two causes pulled in opposite directions.**
+The benchmark record's cost is a sum over per-phase rows (baseline, each committed round, finalize),
+so metered spend that no phase owned was not merely unattributed — it was published as if it had
+never happened. Run 33046360451 went out as `optimizer_usd: 0` / `eval_usd: 5.25` while its own
+state held `optimizer_usd 9.11` / `usd 12.55`: a $21.66 run reported as $5.25, in the one figure a
+full tier's budget gets projected from. Two independent holes fed it — agent mode meters the
+optimizer once for the whole loop, so no round can own a share of it; and control replicates,
+re-gates and abandoned rounds are real rollouts that no committed step references. Both are fixed by
+giving the residual a row of its own rather than inventing a per-round split the run never measured.
+The opposite error was live at the same time and worse: the host booked its metered process total
+*on top of* any `commit.py --optimizer-usd` the agent had already booked for the same money, so an
+agent that followed the skill's own instruction made the run report up to twice its optimizer spend
+— and a cost-based `stop_condition` would have ended a run that still had budget. The host now books
+only the residual, bracketed to its own invocation so a `--resume` run does not mistake an earlier
+host's spend for this agent's attribution, and it books the loop's wall time, which nothing recorded
+at all (`optimizer_seconds: 0.0` for a run that took hours).
