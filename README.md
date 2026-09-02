@@ -1,4 +1,4 @@
-# skillbench-history
+# skillsbench-history
 
 This is an **orphan branch** (no shared history with `main`) holding hand-authored
 evidence, results, and insights from optimizing SkillsBench-facing skills with
@@ -19,7 +19,7 @@ cap-evolve work here splits into two kinds of contribution:
    `.github/workflows/benchmark-history-prune.yml`. Hand-authored content placed there
    would eventually be deleted.
 
-`skillbench-history` is the home for kind 2. Dashboard **metrics** (the numbers behind
+`skillsbench-history` is the home for kind 2. Dashboard **metrics** (the numbers behind
 the live results table) still go through the normal `benchmark-history` pipeline — see
 `ci/benchmarks/PUBLISHING.md` — since `skillsbench` is already a first-class `bench`
 value there. This branch is for everything a metrics record can't hold: the narrative,
@@ -45,16 +45,21 @@ the code that got evolved, the reasoning.
 
 ## Working on this branch
 
-Always via a dedicated worktree, never `git switch skillbench-history` in an existing
+Always via a dedicated worktree, never `git switch skillsbench-history` in an existing
 checkout of `main` or another branch:
 
 ```bash
-git worktree add ../cap-evolve-worktrees/skillbench-history skillbench-history
+git worktree add ../cap-evolve-worktrees/skillsbench-history skillsbench-history
 ```
 
-(The branch was named `skillbench_history` until 2026-09-02, renamed to match
-`benchmark-history`. GitHub redirects links to the old name, but a checkout that predates
-the rename needs `git fetch --prune` and `git branch -m` to follow it.)
+(Renamed twice on 2026-09-02: `skillbench_history` → `skillbench-history` → this, to match
+both `benchmark-history`'s hyphenation and the `skillsbench` spelling the rest of the repo
+uses. GitHub redirects both older names, but a checkout that predates a rename needs
+`git fetch --prune` and `git branch -m` to follow it.)
+
+Note that `intake_skillbench_c*` worktree directories and `third_party/skillbench/` paths
+appearing throughout this branch are **not** typos to fix — they name real directories, and
+correcting the spelling would point them at paths that don't exist.
 
 Before every commit, run `git status` and review it — this branch has no `.gitignore`
 inherited from `main`, so double-check no `.env`, `.cache/`, or `__pycache__/` content
