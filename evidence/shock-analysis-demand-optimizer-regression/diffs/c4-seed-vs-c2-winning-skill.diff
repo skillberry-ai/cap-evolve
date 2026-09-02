@@ -1,0 +1,78 @@
+--- /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/skillbench_history/evidence/shock-analysis-demand-optimizer-regression/c4-current-run/SKILL.md.seed	2026-09-02 04:10:29.853104000 -0400
++++ /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/skillbench_history/evidence/shock-analysis-demand-optimizer-regression/c2-v2-prior-run/SKILL.md.cand_0004	2026-09-02 04:10:29.788822000 -0400
+@@ -1,9 +1,45 @@
+ ---
+ name: xlsx
+-description: "Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization. When Claude needs to work with spreadsheets (.xlsx, .xlsm, .csv, .tsv, etc) for: (1) Creating new spreadsheets with formulas and formatting, (2) Reading or analyzing data, (3) Modify existing spreadsheets while preserving formulas, (4) Data analysis and visualization in spreadsheets, or (5) Recalculating formulas"
++description: "Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization. When Claude needs to work with spreadsheets (.xlsx, .xlsm, .csv, .tsv, etc) for: (1) Creating new spreadsheets with formulas and formatting, (2) Reading or analyzing data, (3) Modify existing spreadsheets while preserving formulas, (4) Data analysis and visualization in spreadsheets, (5) Recalculating formulas, or (6) Building a macro-accounting / national-accounts economic model that estimates an investment or spending shock to an economy in Excel (IMF WEO GDP projections, a statistics-office supply-use table, and a multi-scenario impact table)"
+ license: Proprietary. LICENSE.txt has complete terms
+ ---
+ 
++# START HERE — is this a macro-accounting economic shock / impact-analysis task?
++
++Before anything else, check the task type. If the task asks you to **estimate an
++investment or spending shock to an economy** (a macro-accounting / national-accounts,
++"demand-side" or "supply-side" impact model), typically referencing **IMF WEO** GDP
++data, a statistics-office **supply-use table**, and a **National-Accounts (NA)** impact
++table with **multiple scenarios**, and to deliver an Excel workbook with sheets like
++`WEO_Data`, `SUT Calc`, `SUPPLY (…)`, `USE (…)`, `NA` — then your **FIRST action is to
++run the bundled scaffolder**, before collecting any web data and before writing any
++openpyxl/pandas code:
++
++```bash
++python scripts/build_shock_model.py --out <target.xlsx> \
++    --investment <amount> --fx <rate> --multiplier <m> \
++    --scenario2-multiplier <m2> --scenario3-import-share <s3>
++```
++
++Why run it first (do NOT hand-build these sheets):
++- The scaffolder lays out every required sheet, column order, and the projection /
++  cross-sheet / scenario / bell-shape-allocation / import-share **formulas** exactly.
++  Building the `NA` scenario blocks and `SUT Calc` links cell-by-cell by hand is
++  error-prone and is the usual reason these models come out wrong.
++- If the task says **"only use Excel, no Python, no hardcoded numbers"**, running this
++  scaffolder is fully compliant: it writes **Excel formulas** (Excel does the arithmetic),
++  it embeds **no answer data** — every number it writes is a live formula, and all
++  numeric parameters (`--investment`, `--fx`, `--multiplier`, …) come from the task
++  statement. It is NOT "computing the answer in Python". Hand-building with openpyxl
++  writes the same formulas but risks getting the layout wrong.
++- The scaffolder loads a provided template in place (preserving its `NA` sheet, year
++  rows, and assumption labels) and only adds the sheets that are missing.
++- Do this even if you have not yet collected the IMF/Geostat data — scaffold first,
++  then paste the actuals into the blank cells and run `python recalc.py <target.xlsx>`.
++
++After scaffolding, see `references/shock_analysis_model.md` for the full layout and the
++data fill-in steps. Only if the task is NOT this economic-shock type, continue below.
++
+ # Requirements for Outputs
+ 
+ ## All Excel files
+@@ -93,6 +129,28 @@
+ 
+ ## Excel File Workflows
+ 
++## Macro-accounting shock / impact-analysis workbooks
++
++If the task asks you to estimate an **investment or spending shock** to an economy
++using the **macro accounting (demand-side) framework** — building an Excel model
++with IMF **WEO** GDP projections, a statistics-office **supply-use table**, and a
++**National-Accounts (NA)** impact table with multiple scenarios (required sheets
++such as `WEO_Data`, `SUT Calc`, `SUPPLY (…)`, `USE (…)`, `NA`) — **do not hand-build
++the sheet skeleton.** Run the bundled scaffolder, which lays out every sheet, column
++order, and projection/cross-sheet formula correctly, then paste in the data you
++collected:
++
++```bash
++python scripts/build_shock_model.py --out <target.xlsx> \
++    --investment <amount> --fx <rate> --multiplier <m> \
++    --scenario2-multiplier <m2> --scenario3-import-share <s3>
++```
++
++All parameters come from the task statement (the script embeds **no answer data**,
++only structure). It preserves any provided template sheet and fills it in place.
++See `references/shock_analysis_model.md` for the full layout and the fill-in steps.
++Then paste the collected actuals into the blank cells and run `recalc.py`.
++
+ ## CRITICAL: Use Formulas, Not Hardcoded Values
+ 
+ **Always use Excel formulas instead of calculating values in Python and hardcoding them.** This ensures the spreadsheet remains dynamic and updateable.
