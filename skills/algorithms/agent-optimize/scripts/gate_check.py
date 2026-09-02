@@ -103,7 +103,15 @@ def regressions(current, candidate) -> list[str]:
     return sorted(t for t in cur if t in cand and _dropped(t))
 
 
-def main(argv=None) -> int:
+# The gate modes THIS script implements, and the single source of truth for them.
+# `round.py` forwards its own --mode here verbatim, so it imports this list rather than
+# repeating it: on run 33492876620 round 3 the two disagreed (round.py had no `choices=` at
+# all), `--mode val` sailed through round.py, was rejected here, and emptied the entire
+# round table while `eval_rc` stayed 0. Two copies of a list is how that happens.
+GATE_MODES = ["paired", "significant", "strict", "threshold"]
+
+
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="gate_check")
     p.add_argument("--run-dir", required=True)
     p.add_argument("--candidate", required=True, help="candidate tag (== its dir name)")
@@ -119,8 +127,7 @@ def main(argv=None) -> int:
                         "no-op whenever the edit's surface cannot be determined; see "
                         "cap_evolve.footprint for why the unrestricted vector buries real "
                         "effects in the noise of tasks the edit never touched.")
-    p.add_argument("--mode", default="paired",
-                   choices=["paired", "significant", "strict", "threshold"])
+    p.add_argument("--mode", default="paired", choices=GATE_MODES)
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--threshold", type=float, default=0.0)
     p.add_argument("--veto-regressions", action="store_true",
@@ -128,7 +135,11 @@ def main(argv=None) -> int:
                         "measured-and-passed. OFF by default — see regressions() for why.")
     p.add_argument("--allow-regression", action="store_true",
                    help="deprecated no-op: regressions no longer veto unless --veto-regressions")
-    args = p.parse_args(argv)
+    return p
+
+
+def main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
     cur_tags = [t.strip() for t in (args.current or "").split(",") if t.strip()] \

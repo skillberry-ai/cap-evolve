@@ -9,6 +9,28 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **A gate that never ran was published as a gate that decided nothing.** On run 33492876620
+  round 3 the whole round table came back with `reward`, `gate_delta`, `gate_threshold` and
+  `verdict` `null` for all three candidates *and* for the control, `control_replicates: []` and
+  `evidence_bar: null` — while `eval_rc: 0` and all 100 rollouts sat on disk, fully scored. The
+  round was booked anyway, and only the driver noticing by hand kept a garbage verdict out of
+  the ledger. Three things had to line up: `round.py`'s `--mode` had no `choices=` at all, so
+  argparse accepted `--mode val` (the caller meant `--split val`, which is the default and a
+  no-op); `gate_check.py` *does* validate `--mode`, so it exited 2 with empty stdout; and
+  `_gate` caught the `json.loads` failure and returned `{"error": ...}` — a dict with every
+  verdict key **missing**, which the caller `.get()`s into `None`. A row that reads "this
+  candidate did not move" for a candidate nothing judged is the most expensive kind of wrong
+  this script can be. Fixed at all three levels: `--mode`'s `choices=` is now imported from
+  `gate_check.GATE_MODES` rather than repeated, so the two cannot drift apart again; `_gate`
+  raises `GateCheckFailed` on any non-zero rc, which also closes the **second** path to the same
+  silent table — the two `return 2` branches in `gate_check.py` print well-formed JSON, so
+  `json.loads` *succeeded* on them and `_gate` never noticed it had failed; and
+  `assert_rows_were_judged` refuses to publish any row with no reward whose evaluation
+  succeeded, as a backstop independent of the cause. The one case where a missing verdict is
+  honest is preserved: a candidate whose own **evaluation** failed has no rollouts to gate, so
+  `gate_unless_eval_failed` keeps that row in the table carrying its `eval_rc`/`eval_error`
+  instead of killing the round — a real infrastructure failure stays a report rather than
+  becoming a crash.
 - **A live run was reported as `failed` for as long as it was scoring its baseline.** Run
   33492876620's live snapshot showed a red `failed` badge, "no baseline and no candidate was
   ever evaluated" and `0s elapsed` on a smoke-spreadsheetbench job that had been healthy and

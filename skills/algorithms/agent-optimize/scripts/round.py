@@ -37,6 +37,11 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
+# Sibling script, imported for GATE_MODES: --mode is forwarded to it verbatim, so its list of
+# accepted values is the only correct source for ours. Importable on the same terms as
+# _bootstrap above — this directory is already on sys.path or that import would have failed.
+import gate_check
+
 from cap_evolve import RunDir, harness
 
 #: Gate measurement concurrency. The default is deliberately low; the ceiling is where the
@@ -237,6 +242,26 @@ def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
         return {"tag": tag, "rc": p.returncode, "error": (p.stderr or p.stdout)[-800:]}
 
 
+class GateCheckFailed(RuntimeError):
+    """The gate did not run. That is NOT the same as a gate that decided against a candidate.
+
+    On run 33492876620 round 3 this distinction did not exist. ``_gate`` returned
+    ``{"error": ...}`` — a dict with every verdict key MISSING — and the caller ``.get()``s the
+    keys it wants, so the table was written with ``reward``, ``gate_delta``, ``gate_threshold``
+    and ``verdict`` all ``null`` for all three candidates AND the control, ``eval_rc: 0``,
+    100/100 rollouts scored on disk. A row that reads "this candidate did not move" for a
+    candidate nothing judged is the most expensive kind of wrong this script can be.
+    """
+
+    def __init__(self, tag: str, rc: int, detail: str):
+        self.tag, self.rc, self.detail = tag, rc, detail
+        super().__init__(
+            f"gate_check.py failed for tag {tag!r} (rc={rc}): {detail}\n"
+            "The round is NOT booked. Nothing was written to the round table, because a failed "
+            "gate is not a verdict — fix the cause and re-run this round; the rollouts are "
+            "already on disk, so re-gating costs nothing.")
+
+
 def _gate(run_dir: Path, tag: str, k_se: float, mode: str, veto: bool,
           current: str | None = None) -> dict:
     cmd = [sys.executable, str(HERE / "gate_check.py"), "--run-dir", str(run_dir),
@@ -246,13 +271,57 @@ def _gate(run_dir: Path, tag: str, k_se: float, mode: str, veto: bool,
     if veto:
         cmd.append("--veto-regressions")
     p = subprocess.run(cmd, capture_output=True, text=True)
+    # A non-zero rc is a failure whether or not its stdout parses. gate_check.py's own two
+    # `return 2` paths (no --current and no best_id; no rollouts for the tag) print WELL-FORMED
+    # JSON, so `json.loads` succeeds on them and the old code handed the error dict straight
+    # back as if it were a result. Checking rc first is what closes that second path — fixing
+    # the --mode flag alone would have left it wide open.
+    if p.returncode != 0:
+        raise GateCheckFailed(tag, p.returncode, ((p.stderr or p.stdout) or "").strip()[-800:])
     try:
         return json.loads(p.stdout)
-    except Exception:  # noqa: BLE001
-        return {"error": (p.stderr or p.stdout)[-800:]}
+    except Exception as exc:  # noqa: BLE001
+        raise GateCheckFailed(
+            tag, p.returncode,
+            f"exited 0 but stdout is not JSON: {(p.stdout or '').strip()[-800:]}") from exc
 
 
-def main(argv=None) -> int:
+def gate_unless_eval_failed(ev: dict, run_dir: Path, tag: str, k_se: float, mode: str,
+                            veto: bool, current: str | None = None) -> dict:
+    """Gate a tag, unless its own EVALUATION failed — then there was never anything to gate.
+
+    The distinction the round needs and did not have. A candidate whose eval died has no
+    rollouts, so ``gate_check.py`` exits 2 for a legitimate reason and the row belongs in the
+    table carrying its ``eval_rc``/``eval_error``. A candidate whose eval SUCCEEDED and whose
+    gate still failed is a framework bug, and the round stops.
+    """
+    try:
+        return _gate(run_dir, tag, k_se, mode, veto, current)
+    except GateCheckFailed:
+        if ev.get("rc") or ev.get("error"):
+            return {}
+        raise
+
+
+def assert_rows_were_judged(rows: list[dict]) -> None:
+    """Refuse to publish a round table row that no gate actually decided.
+
+    The backstop for the invariant itself, independent of any particular cause: a row whose
+    ``eval_rc`` is 0 was measured — its rollouts exist and were scored — so a missing reward can
+    only mean the GATE failed. A row whose evaluation genuinely failed keeps its ``None`` and its
+    ``eval_rc``/``eval_error``, because a real infrastructure failure must stay a REPORT rather
+    than becoming a crash: that is the one case where "no verdict" is the honest answer.
+    """
+    unjudged = [r["tag"] for r in rows
+                if r.get("reward") is None and not r.get("eval_rc") and not r.get("eval_error")]
+    if unjudged:
+        raise GateCheckFailed(
+            ", ".join(unjudged), 0,
+            "the evaluation succeeded (eval_rc 0, rollouts scored) but no gate verdict came "
+            "back, so these rows would publish as 'no movement' for candidates nothing judged")
+
+
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="round")
     p.add_argument("--run-dir", required=True)
     p.add_argument("--project", required=True)
@@ -260,7 +329,10 @@ def main(argv=None) -> int:
                    help="comma-separated tags that already exist under $R/work/")
     p.add_argument("--n-trials", type=int, required=True)
     p.add_argument("--k-se", type=float, default=1.0)
-    p.add_argument("--mode", default="paired")
+    # choices= imported from gate_check.py, never repeated here: this value is forwarded to it
+    # verbatim, so a value only one side accepts empties the whole round table (run 33492876620
+    # round 3, `--mode val` — the caller meant `--split val`, which is the default anyway).
+    p.add_argument("--mode", default="paired", choices=gate_check.GATE_MODES)
     p.add_argument("--split", default="val")
     p.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
                    help="rollout concurrency per eval process (total = this x n_tags). Default "
@@ -297,7 +369,21 @@ def main(argv=None) -> int:
                         "parent always gets fresh ones.")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
-    args = p.parse_args(argv)
+    return p
+
+
+def main(argv=None) -> int:
+    try:
+        return _main(argv)
+    except GateCheckFailed as exc:
+        # A traceback would be loud enough, but the driver reads this output to decide what to do
+        # next, so say it in the words the skill uses: the round is not booked, re-gating is free.
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+
+def _main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
 
     # A gate too coarse to resolve its own verdict is refused, not warned about. Measured on
     # run 32861747778: the driver gated at --concurrency 100 after SKILL.md had told it "do not
@@ -430,10 +516,13 @@ def main(argv=None) -> int:
     for ev in evals:
         tag = ev["tag"]
         if tag == CTL:
-            g = _gate(Path(args.run_dir), tag, args.k_se, args.mode, args.veto_regressions)
+            g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
+                                        args.veto_regressions)
         else:
-            g = _gate(Path(args.run_dir), tag, args.k_se, args.mode, args.veto_regressions,
-                      current=gate_ref if args.gate_against == "control" else None)
+            g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
+                                        args.veto_regressions,
+                                        current=gate_ref if args.gate_against == "control"
+                                        else None)
         rows.append({
             "tag": tag,
             "reward": (g.get("candidate") or {}).get("reward"),
@@ -462,6 +551,10 @@ def main(argv=None) -> int:
             # True only for a control replicate this round read back instead of measuring.
             "reused": bool(ev.get("reused")),
         })
+
+    # Nothing derived from these rows — the drift-free re-gate, the evidence bar, the noise
+    # floor, the written table — is meaningful if a row was never judged. Check before any of it.
+    assert_rows_were_judged(rows)
 
     # A parent-gated round has ALREADY measured the drift-free comparison — it just was not
     # reporting it. On run 32871360361 round 4 the table showed cand4 at +0.15 against the seed's
