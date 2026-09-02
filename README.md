@@ -1,4 +1,4 @@
-# skillbench_history
+# skillbench-history
 
 This is an **orphan branch** (no shared history with `main`) holding hand-authored
 evidence, results, and insights from optimizing SkillsBench-facing skills with
@@ -19,7 +19,7 @@ cap-evolve work here splits into two kinds of contribution:
    `.github/workflows/benchmark-history-prune.yml`. Hand-authored content placed there
    would eventually be deleted.
 
-`skillbench_history` is the home for kind 2. Dashboard **metrics** (the numbers behind
+`skillbench-history` is the home for kind 2. Dashboard **metrics** (the numbers behind
 the live results table) still go through the normal `benchmark-history` pipeline — see
 `ci/benchmarks/PUBLISHING.md` — since `skillsbench` is already a first-class `bench`
 value there. This branch is for everything a metrics record can't hold: the narrative,
@@ -45,12 +45,16 @@ the code that got evolved, the reasoning.
 
 ## Working on this branch
 
-Always via a dedicated worktree, never `git switch skillbench_history` in an existing
+Always via a dedicated worktree, never `git switch skillbench-history` in an existing
 checkout of `main` or another branch:
 
 ```bash
-git worktree add ../cap-evolve-worktrees/skillbench_history skillbench_history
+git worktree add ../cap-evolve-worktrees/skillbench-history skillbench-history
 ```
+
+(The branch was named `skillbench_history` until 2026-09-02, renamed to match
+`benchmark-history`. GitHub redirects links to the old name, but a checkout that predates
+the rename needs `git fetch --prune` and `git branch -m` to follow it.)
 
 Before every commit, run `git status` and review it — this branch has no `.gitignore`
 inherited from `main`, so double-check no `.env`, `.cache/`, or `__pycache__/` content
