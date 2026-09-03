@@ -1,0 +1,38 @@
+{
+  "train": [
+    "traces_parsec-aap2-0004",
+    "traces_parsec-aap2-0006",
+    "traces_parsec-aap2-0016",
+    "traces_parsec-aap2-0018",
+    "traces_parsec-aap2-0021",
+    "traces_parsec-aap2-0023",
+    "traces_parsec-aap2-0030",
+    "traces_parsec-aap2-0037",
+    "traces_parsec-aap2-0049",
+    "traces_parsec-aap2-0074",
+    "traces_parsec-aap2-0080",
+    "traces_parsec-aap2-0081",
+    "traces_parsec-aap2-0082",
+    "traces_parsec-aap2-0084",
+    "traces_parsec-aap2-0087",
+    "traces_parsec-aap2-0092",
+    "traces_parsec-aap2-0094",
+    "traces_parsec-aap2-0113"
+  ],
+  "val": [
+    "traces_parsec-aap2-0036",
+    "traces_parsec-aap2-0044",
+    "traces_parsec-aap2-0052",
+    "traces_parsec-aap2-0053",
+    "traces_parsec-aap2-0085",
+    "traces_parsec-aap2-0112"
+  ],
+  "test": [
+    "traces_parsec-aap2-0005",
+    "traces_parsec-aap2-0032",
+    "traces_parsec-aap2-0047",
+    "traces_parsec-aap2-0048",
+    "traces_parsec-aap2-0088",
+    "traces_parsec-aap2-0104"
+  ]
+}
