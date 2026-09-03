@@ -16,6 +16,8 @@
   table { border-collapse: collapse; font-size: 13px; }
   th { font-weight: 500; color: #6b7280; padding: 6px 10px; text-align: center; background: #f9fafb; }
   th.row-head { text-align: right; padding-right: 12px; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: #1a1a2e; background: #f0f1f3; }
   th.best-col { color: #92400e; background: #fef3c7; }
   th.delta-col { border-left: 2px solid #9ca3af; }
   td { padding: 6px 10px; text-align: center; border: 1px solid #f3f4f6; font-family: ui-monospace, monospace; font-size: 12px; }
@@ -1410,6 +1412,17 @@ const DATA = [
 const CAND_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004'];
 const CAND_LABELS = ['seed','c1','c2','c3','c4'];
 
+// Column headers are clickable sort handles, kept in sync with the radio controls above the
+// table (both drive the same sortState; clicking a header a second time flips direction).
+const RADIO_TO_SORT = { id: {key:'task', dir:'asc'}, delta: {key:'delta', dir:'desc'}, baseline: {key:'seed', dir:'desc'}, best: {key:'best', dir:'desc'}, category: {key:'category', dir:'asc'} };
+let sortState = { key: 'task', dir: 'asc' };
+function sortRows(rows, key, dir) {
+  const mul = dir === 'desc' ? -1 : 1;
+  if (key === 'task') rows.sort((a,b) => mul * a.task.localeCompare(b.task));
+  else if (key === 'category') rows.sort((a,b) => mul * a.category.localeCompare(b.category) || a.task.localeCompare(b.task));
+  else rows.sort((a,b) => mul * ((a[key] ?? -1) - (b[key] ?? -1)));
+}
+
 // Level 3: each task label links to its per-task report (what changed, what worked, what
 // didn't, what we can learn). Plain <a> rather than a click handler on purpose — both tables
 // are rebuilt via innerHTML on every re-sort, which would destroy per-cell listeners, and a
@@ -1450,17 +1463,15 @@ function sourceBadgeLabel(src) {
 }
 
 function render() {
-  const sort = document.querySelector('input[name=sort]:checked').value;
   const rows = [...DATA];
-  if (sort === 'delta') rows.sort((a,b) => (b.delta ?? 0) - (a.delta ?? 0));
-  else if (sort === 'baseline') rows.sort((a,b) => (b.seed ?? -1) - (a.seed ?? -1));
-  else if (sort === 'best') rows.sort((a,b) => (b.best ?? -1) - (a.best ?? -1));
-  else if (sort === 'category') rows.sort((a,b) => a.category.localeCompare(b.category) || a.task.localeCompare(b.task));
-  else rows.sort((a,b) => a.task.localeCompare(b.task));
+  sortRows(rows, sortState.key, sortState.dir);
 
-  let html = '<thead><tr><th class="row-head">task</th>';
-  for (const l of CAND_LABELS) html += `<th>${l}</th>`;
-  html += '<th class="best-col">best</th><th class="delta-col">Δ</th></tr></thead><tbody>';
+  const arrow = key => sortState.key === key ? (sortState.dir === 'desc' ? ' ▼' : ' ▲') : '';
+  let html = `<thead><tr><th class="row-head sortable" data-sort-key="task">task${arrow('task')}</th>`;
+  for (let i = 0; i < CAND_KEYS.length; i++) {
+    html += `<th class="sortable" data-sort-key="${CAND_KEYS[i]}">${CAND_LABELS[i]}${arrow(CAND_KEYS[i])}</th>`;
+  }
+  html += `<th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th><th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th></tr></thead><tbody>`;
 
   for (const r of rows) {
     const srcBadge = `<span class="badge ${sourceBadgeClass(r.source)}">${sourceBadgeLabel(r.source)}</span>`;
@@ -1550,7 +1561,17 @@ function render() {
     <strong>vs EvoSkill (71.1%):</strong> full-87 pass rate = ${(nAt1/DATA.length*100).toFixed(1)}% (+${((nAt1/DATA.length*100)-71.1).toFixed(1)} pp). Excluding no-signal: ${nAt1}/${nWithSignal} = ${(nAt1/nWithSignal*100).toFixed(1)}%.
   `;
 }
-document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', render));
+document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', () => {
+  sortState = { ...RADIO_TO_SORT[el.value] };
+  render();
+}));
+document.getElementById('heatmap').addEventListener('click', e => {
+  const th = e.target.closest('th.sortable');
+  if (!th) return;
+  const key = th.dataset.sortKey;
+  sortState = sortState.key === key ? { key, dir: sortState.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: key === 'task' ? 'asc' : 'desc' };
+  render();
+});
 render();
 </script>
 
@@ -1584,10 +1605,14 @@ render();
     (same source badge/data as the full-87 heatmap); <span class="run-tag run-tag-curr">curr</span> = this c4 run's
     val scores. Grey/"—" = candidate not run.<br>
     <strong>Best (amber), purple ring:</strong> as above — best mean across all evaluated candidates in that run.<br>
-    <strong><span class="status-pill status-done">DONE</span></strong> finalize completed (Best is a held-out-test-eligible result).
-    <strong><span class="status-pill status-stalled">STALLED</span></strong> optimizer iterations finished but finalize never ran
-    (no job currently executing) — Best shown is the in-run val leader, not yet confirmed on held-out test.<br>
+    <strong><span class="status-pill status-done">DONE</span></strong> all 10 c4 tasks finished their optimizer budget; Best is
+    the val leader across seed + all evaluated candidates.<br>
     <strong>Red ring on curr-best:</strong> curr's best fell short of prev's best. <strong>Green ring:</strong> curr's best beat prev's best.<br>
+    <strong>test column:</strong> shown only where finalize sealed a held-out score. organize-messy-files and setup-fuzzing-py
+    hit cap-evolve's TestSealError (an earlier, unrelated finalize attempt had partially scored test without committing a
+    seal, and a second look at test is refused by design) — Best there is the val result, same as every other task. Since
+    train/val/test all hold the identical single task in these single-task runs, test carries no held-out signal anyway;
+    val is the number that matters.<br>
     shock-analysis-supply's curr Best (cand_0003=0.667) is the accepted champion from its JOURNAL.md; cand_0004-0006
     are independently-rejected candidates whose own scores are noise/failed experiments, not a decline off 0.667.
     flink-query's curr test (0.0) reflects test-infra noise (Maven/podman failures) per its own JOURNAL.md, not a real signal.
@@ -1607,7 +1632,7 @@ const DATA_C4 = [
   {
     task: 'organize-messy-files', category: 'office-white-collar',
     prev: { source: 'c1-v1', seed: 0.5, cand_0001: 0.6, cand_0002: 0.6, cand_0003: 0.9, cand_0004: 0.9, best: 0.9, best_tag: 'cand_0003', status: 'DONE' },
-    curr: { source: 'c4v1', seed: 0.6, cand_0001: 0.4, cand_0002: 0.6, cand_0003: 0.6, cand_0004: 0.9, cand_0005: 0.7, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0006', status: 'STALLED' }
+    curr: { source: 'c4v1', seed: 0.6, cand_0001: 0.4, cand_0002: 0.6, cand_0003: 0.6, cand_0004: 0.9, cand_0005: 0.7, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0006', status: 'DONE' }
   },
   {
     task: 'shock-analysis-demand', category: 'finance-economics',
@@ -1627,7 +1652,7 @@ const DATA_C4 = [
   {
     task: 'fix-erlang-ssh-cve', category: 'cybersecurity',
     prev: { source: 'c3-v1', seed: 0.6, cand_0001: 0.4, cand_0002: 0.3, cand_0003: 0.9, cand_0004: 0.8, best: 0.9, best_tag: 'cand_0003', status: 'DONE', test: 1.0 },
-    curr: { source: 'c4v1', seed: 1.0, best: 1.0, best_tag: 'seed', status: 'STALLED' }
+    curr: { source: 'c4v1', seed: 1.0, cand_0001: 0.0, cand_0002: 0.0, cand_0003: 0.0, cand_0004: 0.0, cand_0005: 0.0, cand_0006: 0.0, best: 1.0, best_tag: 'seed', status: 'DONE', test: 1.0 }
   },
   {
     task: 'flink-query', category: 'software-engineering',
@@ -1642,12 +1667,12 @@ const DATA_C4 = [
   {
     task: 'latex-formula-extraction', category: 'office-white-collar',
     prev: { source: 'c3-v1', seed: 0.2, cand_0001: 0.0, cand_0002: 0.5, cand_0003: 0.7, cand_0004: 0.8, best: 0.8, best_tag: 'cand_0004', status: 'DONE' },
-    curr: { source: 'c4v1', seed: 0.4, cand_0001: 0.4, cand_0002: 0.222, cand_0003: 0.333, cand_0004: 0.556, cand_0005: 1.0, best: 1.0, best_tag: 'cand_0005', status: 'STALLED' }
+    curr: { source: 'c4v1', seed: 0.4, cand_0001: 0.4, cand_0002: 0.222, cand_0003: 0.333, cand_0004: 0.556, cand_0005: 1.0, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0005', status: 'DONE', test: 0.0 }
   },
   {
     task: 'setup-fuzzing-py', category: 'cybersecurity',
     prev: { source: 'c3-v1', seed: 0.364, cand_0001: 0.0, cand_0002: 0.264, cand_0003: 0.513, cand_0004: 0.549, best: 0.549, best_tag: 'cand_0004', status: 'DONE' },
-    curr: { source: 'c4v1', seed: 0.216, cand_0001: 0.264, cand_0002: 0.232, cand_0003: 0.182, cand_0004: 0.422, cand_0005: 0.588, cand_0006: 0.479, best: 0.588, best_tag: 'cand_0005', status: 'STALLED' }
+    curr: { source: 'c4v1', seed: 0.216, cand_0001: 0.264, cand_0002: 0.232, cand_0003: 0.182, cand_0004: 0.422, cand_0005: 0.588, cand_0006: 0.479, best: 0.588, best_tag: 'cand_0005', status: 'DONE' }
   }
 ];
 
