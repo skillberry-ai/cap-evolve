@@ -307,10 +307,14 @@ def test_the_hosted_agent_gets_the_same_optimizer_context_as_every_other_algorit
         "INSTRUCTIONS.md and the run-dir briefing differ — two versions of the brief means "
         "no way to tell which one the agent followed")
 
-    # That same pointer names deterministic-loop artifacts this loop never builds.
-    assert "LEDGER.md" in body and "will not exist here" in body, (
-        "the briefing does not tell the agent that LEDGER.md/RUNMAP.md belong to the other "
-        "loop, so it will hunt for files that are legitimately absent")
+    # seed_framework_memory builds LEDGER.md/RUNMAP.md/prior_iterations for this loop too —
+    # the briefing must say so, not claim they're deterministic-loop-only and absent here.
+    assert "LEDGER.md" in body and "real here too" in body, (
+        "the briefing must tell the agent LEDGER.md/RUNMAP.md/prior_iterations are real and "
+        "populated in agent mode, not a deterministic-loop-only artifact it should ignore")
+    assert "will not exist here" not in body, (
+        "the briefing still tells the agent these files won't exist, contradicting "
+        "seed_framework_memory which builds them for real")
 
 
 def test_the_briefing_carries_the_same_measured_blocks_the_deterministic_prompt_does(tmp_path):

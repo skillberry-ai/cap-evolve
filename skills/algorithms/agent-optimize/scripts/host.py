@@ -446,12 +446,13 @@ accepted or returned inconclusive, because that field is the run's record of wha
 `spend.py` parses that text into checkable predicates; run it before each round and act on
 its single `recommendation` (`stop` | `narrow_scope` | `continue`), as SKILL.md describes.
 
-## Files in your working directory that belong to the OTHER loop
+## `LEDGER.md`, `RUNMAP.md`, `prior_iterations/`
 
-Your always-on instructions mention `LEDGER.md`, `RUNMAP.md` and `prior_iterations/`. Those are
-built by the *deterministic* loop, which calls one optimizer per iteration; you are driving the
-whole search yourself, so they will not exist here and their absence is not a problem — do not
-go looking for them or try to recreate them.
+Your always-on instructions mention these. They are real here too — `seed_framework_memory`
+builds them for this loop the same as for the deterministic one, so read them; do not assume
+they're a deterministic-loop-only artifact. `rejected.jsonl` and `history.jsonl` sit next to
+them and are worth reading as well — they hold every prior candidate's real outcome, not just
+what made it into `JOURNAL.md`'s prose.
 
 `JOURNAL.md` is different, and it has TWO halves — one of them is yours to write.
 
