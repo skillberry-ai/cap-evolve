@@ -2,7 +2,7 @@
 
 _Generated 2026-09-02 · 8 folds · 5 distinct tasks · dedicated LSF host per fold (CCC) · `cap-evolve run --max-iterations 0` (pure evaluation, no optimizer loop) · Sonnet-5 agent._
 
-**Status: 7 of 8 folds complete.** Fold 1 (`shock-analysis-demand` → `shock-analysis-supply`) is rerunning as LSF job **555427**; this report will be updated when it lands.
+**Status: 8 of 8 folds complete.**
 
 ## What the experiment asks
 
@@ -17,7 +17,7 @@ The comparison of interest is the transferred skill's score on B versus **B's ow
 
 | # | skill from (train task) | evaluate on (test task) | job | status | transfer reward | native seed | native optimized | transfer − native seed |
 |---|---|---|---|---|---|---|---|---|
-| 1 | shock-analysis-demand | shock-analysis-supply | 555427 | RUN | _pending_ | 0.0 | 0.2 | _pending_ |
+| 1 | shock-analysis-demand | shock-analysis-supply | 555427 | DONE | 0.1 | 0.0 | 0.2 | **+0.1** |
 | 2 | shock-analysis-demand | weighted-gdp-calc | 540431 | DONE | 0.2 | 0.8 | 1.0 ‡ | **−0.6** |
 | 3 | shock-analysis-supply | shock-analysis-demand | 543167 | DONE | 0.0 | 0.0 | 0.9 | 0.0 |
 | 4 | shock-analysis-supply | weighted-gdp-calc | 540433 | DONE | 0.3 | 0.8 | 1.0 ‡ | **−0.5** |
@@ -28,12 +28,12 @@ The comparison of interest is the transferred skill's score on B versus **B's ow
 
 ‡ In-loop **val** score, not a held-out test score. These four tasks are `KILLED_ceiling` in `results.json` with `final_test: null` — optimization saturated and the run was stopped before a held-out test eval ran. Rows 3 and 5 use held-out `final_test` (0.9); row 1/6's 0.2 is `shock-analysis-supply`'s `final_test` (its val `best` was 0.3).
 
-## Reading of the 7 completed folds
+## Reading of all 8 folds
 
 - **No fold reaches the test task's own optimized score.** The best transfer result (0.4, fold 8) sits far below that task's 1.0. Zero-shot transfer does not substitute for optimizing on the target task.
 - **Transfer actively hurts when the target already has a strong seed.** `weighted-gdp-calc` scores 0.8 on its own seed, but donor skills from either shock-analysis task drag it to 0.2–0.3 (folds 2 and 4, −0.6 and −0.5). A skill tuned elsewhere is worse than no skill at all here.
-- **Transfer gives a small positive lift only where the native seed was at or near zero** (folds 6, 7, 8: +0.1, +0.2, +0.3). This is the weakest possible baseline to beat, so the lift is not strong evidence of genuine skill reuse.
-- **The `shock-analysis-demand` ↔ `shock-analysis-supply` pair is the most natural transfer candidate** (same domain, near-identical framing) yet fold 3 yields 0.0 — no signal in either direction on that task. Fold 1 will complete this pair.
+- **Transfer gives a small positive lift only where the native seed was at or near zero** (folds 1, 6, 7, 8: +0.1, +0.1, +0.2, +0.3). This is the weakest possible baseline to beat, so the lift is not strong evidence of genuine skill reuse.
+- **The `shock-analysis-demand` ↔ `shock-analysis-supply` pair is asymmetric.** demand→supply (fold 1, supply's native seed is 0.0) gives +0.1; the reverse, supply→demand (fold 3, demand's native seed is also 0.0), gives 0.0 — no signal at all. Same domain, near-identical framing, but transfer only helps in one direction.
 - Sample size is 8 folds over 5 tasks in 2 domains. Treat all of the above as directional, not conclusive.
 
 ## Methodological caveat — ignore cap-evolve's own `test_delta`
@@ -56,7 +56,7 @@ Worth recording because it cost several reruns:
 - **Poll the job's own `cap-evolve.log`, not just `bjobs` STAT.** A finished-but-hung job sits in `RUN` forever. The working procedure is: once the log contains a complete result JSON (`"iterations"` key present), kill that **exact** job ID. Folds 5, 7 and 8 were resolved this way; fold 6 is the only one that exited cleanly on its own.
 - **One dedicated host per concurrent job (`bsub -m <host>`).** Rootless podman's graphroot is per-user-per-host, so packing two of these onto one host corrupts container state.
 - **`-n 1`, not `-n 4`.** These are single-eval runs with no internal parallelism.
-- **Fold 1's first attempt (543166) hung in setup**, not in the payload: 15.6 h in `RUN` with stdout frozen at "Phase 2: loading .env", never reaching `cap-evolve run`, no `cap-evolve.log` ever created. Killed and resubmitted on a fresh host as 555427 with `--run-ts ..._v3`.
+- **Fold 1's first attempt (543166) hung in setup**, not in the payload: 15.6 h in `RUN` with stdout frozen at "Phase 2: loading .env", never reaching `cap-evolve run`, no `cap-evolve.log` ever created. Killed and resubmitted on a fresh host as 555427 with `--run-ts ..._v3`, which then hit the same post-run hang as folds 2–5/7/8: log showed a complete result (`test_reward=0.1`) after ~1h20m of payload time, but the job sat in `RUN` for a further ~23h before being killed by exact ID.
 - `scripts/ccc/submit_ccc_experiment.sh` hardcodes both `-W` and `-n 4`, so these folds were submitted with direct `bsub` calls instead.
 
 ## Provenance

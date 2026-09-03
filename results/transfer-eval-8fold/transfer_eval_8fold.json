@@ -4,7 +4,7 @@
   "source_worktree": "cap-evolve-worktrees/intake_skillbench_c5",
   "experiment": "zero-shot skill transfer: frozen winning skill from train task, evaluated on a different test task with --max-iterations 0 (no adaptation)",
   "total_folds": 8,
-  "complete_folds": 7,
+  "complete_folds": 8,
   "native_reference": "results/results.json (task-by-task-87 aggregate, generated 2026-08-28)",
   "caveats": {
     "test_delta_is_meaningless": "Every fold reports best_id='seed', test_reward == test_baseline_reward, test_delta == 0.0. This is an artifact of --max-iterations 0: the transfer project's seed IS the frozen donor skill and is the only artifact evaluated, so cap-evolve compares it against itself. Real transfer effect = transfer_reward - native_seed.",
@@ -17,14 +17,20 @@
       "train_task": "shock-analysis-demand",
       "test_task": "shock-analysis-supply",
       "job_id": 555427,
-      "status": "RUN",
-      "transfer_reward": null,
+      "status": "DONE",
+      "lsf_stat": "killed after log showed complete result",
+      "transfer_reward": 0.1,
+      "test_baseline_reward": 0.1,
+      "baseline_val": 0.1,
+      "test_delta_reported": 0.0,
+      "test_pass_k": {"1": 0.1, "2": 0.0},
       "native_seed": 0.0,
       "native_optimized": 0.2,
       "native_optimized_kind": "final_test",
       "native_status": "DONE",
-      "transfer_minus_native_seed": null,
-      "note": "First attempt (543166) hung in podman/env setup for 15.6h without ever reaching cap-evolve run; killed and resubmitted with --run-ts ..._v3 on a fresh host."
+      "transfer_minus_native_seed": 0.1,
+      "run_dir": ".capevolve/run_transfer_shock-analysis-demand_to_shock-analysis-supply_v3",
+      "note": "First attempt (543166) hung in podman/env setup for 15.6h without ever reaching cap-evolve run; killed and resubmitted with --run-ts ..._v3 on a fresh host, which then hit the same post-run hang as other folds (payload done in ~1h20m, killed by exact ID after ~23h in RUN)."
     },
     {
       "fold": 2,
