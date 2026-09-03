@@ -43,6 +43,21 @@
   .aggregate td.txt { text-align: left; }
   .summary-row td { background: #fef3c7 !important; font-weight: 600 !important; border-top: 2px solid #f59e0b !important; }
   .summary-row td.label { background: #fef3c7 !important; color: #92400e !important; }
+
+  .section-sep { max-width: 1400px; margin: 40px auto 0; border: none; border-top: 2px solid #e5e7eb; }
+  tr.prev-row td { background: #fff; }
+  tr.curr-row td { background: #fbfbfd; }
+  tr.curr-row td.label { border-top: none; }
+  tr.prev-row td.label, tr.curr-row td.label { font-family: inherit; }
+  .run-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-right: 6px; min-width: 34px; text-align: center; }
+  .run-tag-prev { background: rgba(107,114,128,0.15); color: #4b5563; }
+  .run-tag-curr { background: rgba(79,70,229,0.15); color: #4f46e5; }
+  .status-pill { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
+  .status-done { background: rgba(5,150,105,0.15); color: #059669; }
+  .status-stalled { background: rgba(220,38,38,0.15); color: #dc2626; }
+  td.value.regressed { box-shadow: inset 0 0 0 2px #dc2626; }
+  td.value.improved { box-shadow: inset 0 0 0 2px #059669; }
+  .task-group-sep td { border-top: 2px solid #d1d5db !important; }
 </style>
 </head>
 <body>
@@ -1424,6 +1439,157 @@ function render() {
 }
 document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', render));
 render();
+</script>
+
+<hr class="section-sep">
+
+<div class="wrap" id="c4-section">
+  <h1>c4 re-run — prev (c1/c2/c3) vs current (c4)</h1>
+  <p class="subtitle">
+    10 tasks re-run in a fresh worktree (<code>intake_skillbench_c4</code>) against a from-scratch seed capability,
+    up to 6-iteration budget, <strong>optimizer model <code>claude-opus-4-6</code></strong> (down from
+    <code>claude-opus-4-8</code> on the prior run of these same tasks). "prev" is each task's own row from the
+    full-87 heatmap above (same source badges apply); "curr" is the c4 run.
+    cap-evolve's optimizer state does not carry forward between independent runs against a shared skill —
+    a fresh run has to re-derive any fix from scratch within its budget, so a plateau here is lost progress,
+    not a new bug. See
+    <a href="../evidence/shock-analysis-demand-optimizer-regression/README.md">evidence/shock-analysis-demand-optimizer-regression</a>
+    for a fully-worked example (shock-analysis-demand, Δ +0.9 → +0.0).
+  </p>
+
+  <div class="controls">
+    <label><input type="radio" name="c4sort" value="id" checked> Sort by task</label>
+    <label><input type="radio" name="c4sort" value="regression"> Sort by regression (curr − prev)</label>
+    <label><input type="radio" name="c4sort" value="status"> Sort by status</label>
+    <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
+  </div>
+
+  <div class="card"><table id="c4heatmap"></table></div>
+
+  <p class="footer">
+    <strong>Two rows per task:</strong> <span class="run-tag run-tag-prev">prev</span> = prior run's val scores
+    (same source badge/data as the full-87 heatmap); <span class="run-tag run-tag-curr">curr</span> = this c4 run's
+    val scores. Grey/"—" = candidate not run.<br>
+    <strong>Best (amber), purple ring:</strong> as above — best mean across all evaluated candidates in that run.<br>
+    <strong><span class="status-pill status-done">DONE</span></strong> finalize completed (Best is a held-out-test-eligible result).
+    <strong><span class="status-pill status-stalled">STALLED</span></strong> optimizer iterations finished but finalize never ran
+    (no job currently executing) — Best shown is the in-run val leader, not yet confirmed on held-out test.<br>
+    <strong>Red ring on curr-best:</strong> curr's best fell short of prev's best. <strong>Green ring:</strong> curr's best beat prev's best.<br>
+    shock-analysis-supply's curr Best (cand_0003=0.667) is the accepted champion from its JOURNAL.md; cand_0004-0006
+    are independently-rejected candidates whose own scores are noise/failed experiments, not a decline off 0.667.
+    flink-query's curr test (0.0) reflects test-infra noise (Maven/podman failures) per its own JOURNAL.md, not a real signal.
+  </p>
+</div>
+
+<script>
+const CAND6_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004','cand_0005','cand_0006'];
+const CAND6_LABELS = ['seed','c1','c2','c3','c4','c5','c6'];
+
+const DATA_C4 = [
+  {
+    task: 'energy-market-pricing', category: 'industrial-physical-systems',
+    prev: { source: 'c2-v2', seed: 0.0, cand_0001: 0.5, cand_0002: 0.9, cand_0003: 0.6, cand_0004: 0.8, best: 0.9, best_tag: 'cand_0002', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.0, cand_0003: 0.1, cand_0004: 0.7, cand_0005: 1.0, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0005', status: 'DONE', test: 1.0 }
+  },
+  {
+    task: 'organize-messy-files', category: 'office-white-collar',
+    prev: { source: 'c1-v1', seed: 0.5, cand_0001: 0.6, cand_0002: 0.6, cand_0003: 0.9, cand_0004: 0.9, best: 0.9, best_tag: 'cand_0003', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.6, cand_0001: 0.4, cand_0002: 0.6, cand_0003: 0.6, cand_0004: 0.9, cand_0005: 0.7, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0006', status: 'STALLED' }
+  },
+  {
+    task: 'shock-analysis-demand', category: 'finance-economics',
+    prev: { source: 'c2-v2', seed: 0.0, cand_0001: 0.0, cand_0002: 0.0, cand_0003: 0.4, cand_0004: 0.9, best: 0.9, best_tag: 'cand_0004', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.0, cand_0001: 0.0, cand_0002: 0.0, cand_0003: 0.0, cand_0004: 0.0, cand_0005: 0.0, cand_0006: 0.0, best: 0.0, best_tag: 'seed', status: 'DONE', test: 0.0 }
+  },
+  {
+    task: 'shock-analysis-supply', category: 'finance-economics',
+    prev: { source: 'c2-v2', seed: 0.0, cand_0001: 0.2, cand_0002: 0.2, cand_0003: 0.2, cand_0004: 0.3, best: 0.3, best_tag: 'cand_0004', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.0, cand_0001: 0.0, cand_0002: 0.0, cand_0003: 0.667, cand_0004: 0.4, cand_0005: 0.0, cand_0006: 0.0, best: 0.667, best_tag: 'cand_0003', status: 'DONE', test: 0.0 }
+  },
+  {
+    task: 'invoice-fraud-detection', category: 'finance-economics',
+    prev: { source: 'c1-tA', seed: 0.3, cand_0001: 0.2, cand_0002: 0.4, cand_0003: 0.2, cand_0004: 0.2, best: 0.4, best_tag: 'cand_0002', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.0, cand_0003: 0.8, cand_0004: 1.0, cand_0005: 1.0, cand_0006: 1.0, best: 1.0, best_tag: 'cand_0004', status: 'DONE', test: 1.0 }
+  },
+  {
+    task: 'fix-erlang-ssh-cve', category: 'cybersecurity',
+    prev: { source: 'c3-v1', seed: 0.6, cand_0001: 0.4, cand_0002: 0.3, cand_0003: 0.9, cand_0004: 0.8, best: 0.9, best_tag: 'cand_0003', status: 'DONE', test: 1.0 },
+    curr: { source: 'c4v1', seed: 1.0, best: 1.0, best_tag: 'seed', status: 'STALLED' }
+  },
+  {
+    task: 'flink-query', category: 'software-engineering',
+    prev: { source: 'c3-v1', seed: 0.0, cand_0001: 0.1, cand_0002: 0.1, cand_0003: 0.5, cand_0004: 0.9, best: 0.9, best_tag: 'cand_0004', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.0, cand_0001: 0.2, cand_0002: 0.0, cand_0003: 0.0, cand_0004: 0.0, cand_0005: 0.0, cand_0006: 0.0, best: 0.2, best_tag: 'cand_0001', status: 'DONE', test: 0.0 }
+  },
+  {
+    task: 'crystallographic-wyckoff-position-analysis', category: 'natural-science',
+    prev: { source: 'c3-v1', seed: 0.626, cand_0001: 0.517, cand_0002: 0.835, cand_0003: 0.627, cand_0004: 0.445, best: 0.835, best_tag: 'cand_0002', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.819, cand_0001: 0.592, cand_0002: 0.674, cand_0003: 0.618, cand_0004: 0.545, cand_0006: 0.560, best: 0.819, best_tag: 'seed', status: 'DONE', test: 0.819 }
+  },
+  {
+    task: 'latex-formula-extraction', category: 'office-white-collar',
+    prev: { source: 'c3-v1', seed: 0.2, cand_0001: 0.0, cand_0002: 0.5, cand_0003: 0.7, cand_0004: 0.8, best: 0.8, best_tag: 'cand_0004', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.4, cand_0001: 0.4, cand_0002: 0.222, cand_0003: 0.333, cand_0004: 0.556, cand_0005: 1.0, best: 1.0, best_tag: 'cand_0005', status: 'STALLED' }
+  },
+  {
+    task: 'setup-fuzzing-py', category: 'cybersecurity',
+    prev: { source: 'c3-v1', seed: 0.364, cand_0001: 0.0, cand_0002: 0.264, cand_0003: 0.513, cand_0004: 0.549, best: 0.549, best_tag: 'cand_0004', status: 'DONE' },
+    curr: { source: 'c4v1', seed: 0.216, cand_0001: 0.264, cand_0002: 0.232, cand_0003: 0.182, cand_0004: 0.422, cand_0005: 0.588, cand_0006: 0.479, best: 0.588, best_tag: 'cand_0005', status: 'STALLED' }
+  }
+];
+
+function c4StatusPill(status) {
+  return status === 'DONE'
+    ? '<span class="status-pill status-done">DONE</span>'
+    : '<span class="status-pill status-stalled">STALLED</span>';
+}
+
+function renderC4() {
+  const sort = document.querySelector('input[name=c4sort]:checked').value;
+  const rows = [...DATA_C4];
+  if (sort === 'regression') rows.sort((a,b) => (a.curr.best - a.prev.best) - (b.curr.best - b.prev.best));
+  else if (sort === 'status') rows.sort((a,b) => (a.curr.status === b.curr.status ? 0 : (a.curr.status === 'STALLED' ? -1 : 1)));
+  else rows.sort((a,b) => a.task.localeCompare(b.task));
+
+  let html = '<thead><tr><th class="row-head">task / run</th>';
+  for (const l of CAND6_LABELS) html += `<th>${l}</th>`;
+  html += '<th class="best-col">best</th><th class="delta-col">Δ vs seed</th><th>test</th><th>status</th></tr></thead><tbody>';
+
+  for (const r of rows) {
+    for (const which of ['prev', 'curr']) {
+      const run = r[which];
+      const isCurr = which === 'curr';
+      const otherBest = isCurr ? r.prev.best : null;
+      const runTag = isCurr
+        ? '<span class="run-tag run-tag-curr">curr</span>'
+        : '<span class="run-tag run-tag-prev">prev</span>';
+      const srcBadge = `<span class="badge ${sourceBadgeClass(run.source)}" style="${isCurr ? 'background:rgba(79,70,229,0.15);color:#4f46e5;' : ''}">${run.source}</span>`;
+      html += `<tr class="${which}-row${isCurr ? ' task-group-sep' : ''}"><td class="label">${runTag}${r.task} ${srcBadge}</td>`;
+      for (const key of CAND6_KEYS) {
+        const v = run[key];
+        const isNa = v === null || v === undefined;
+        const isBest = !isNa && run.best !== null && Math.abs(v - run.best) < 1e-9 && key === run.best_tag;
+        const cls = ['value', isNa?'na':'', isBest?'best-cell':''].filter(Boolean).join(' ');
+        html += `<td class="${cls}" style="background:${color(v)}">${fmt(v)}</td>`;
+      }
+      let bestCls = 'value best-col';
+      if (isCurr && otherBest !== null) {
+        if (run.best + 1e-6 < otherBest) bestCls += ' regressed';
+        else if (run.best - 1e-6 > otherBest) bestCls += ' improved';
+      }
+      html += `<td class="${bestCls}">${fmt(run.best)}</td>`;
+      const delta = run.best - run.seed;
+      const dColor = delta > 0 ? '#059669' : delta < 0 ? '#dc2626' : '#6b7280';
+      html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(delta)}</td>`;
+      html += `<td class="value">${run.test !== undefined ? fmt(run.test) : '—'}</td>`;
+      html += `<td>${c4StatusPill(run.status)}</td></tr>`;
+    }
+  }
+  html += '</tbody>';
+  document.getElementById('c4heatmap').innerHTML = html;
+}
+document.querySelectorAll('input[name=c4sort]').forEach(el => el.addEventListener('change', renderC4));
+renderC4();
 </script>
 </body>
 </html>
