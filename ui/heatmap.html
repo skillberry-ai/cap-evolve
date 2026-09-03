@@ -44,6 +44,11 @@
   .summary-row td { background: #fef3c7 !important; font-weight: 600 !important; border-top: 2px solid #f59e0b !important; }
   .summary-row td.label { background: #fef3c7 !important; color: #92400e !important; }
 
+  /* Task labels link to reports/task-by-task/<task>.md (level 3). Kept visually quiet —
+     inheriting the label's colour — so 87 rows of links don't read as a wall of blue. */
+  a.task-link { color: inherit; text-decoration: none; border-bottom: 1px dotted #9ca3af; }
+  a.task-link:hover { color: #4f46e5; border-bottom-color: #4f46e5; }
+
   .section-sep { max-width: 1400px; margin: 40px auto 0; border: none; border-top: 2px solid #e5e7eb; }
   tr.prev-row td { background: #fff; }
   tr.curr-row td { background: #fbfbfd; }
@@ -74,11 +79,20 @@
     <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
   </div>
 
+  <p class="subtitle" style="margin-top:-6px;">
+    <strong>Click any task name</strong> to open its report — what changed, what worked, what didn't,
+    and what we can (or can't) learn from that task. See
+    <a href="../reports/README.md">reports/README.md</a> for how far along that is: tasks already at
+    1.0 on seed, and the four no-signal tasks that are infrastructure failures, are answered in full;
+    most of the rest are still placeholders.
+  </p>
+
   <div class="card"><table id="heatmap"></table></div>
   <div class="aggregate" id="agg"></div>
 
   <p class="footer">
     <strong>Cells:</strong> mean reward across 10 trials on the val split. Grey/"—" = candidate not run.<br>
+    <strong>Task names</strong> link to per-task reports in <code>reports/task-by-task/</code>.<br>
     <strong>Best (amber):</strong> best mean across all evaluated candidates; the best cell has a purple ring.<br>
     <strong>Amber-bordered baseline:</strong> saturated at seed (val=1.0); optimizer skipped.<br>
     <strong>no-signal badge:</strong> task scored 0.0 for both the seed and every optimizer candidate — cap-evolve had no signal to work with. 10 tasks in this state: 4 where the container built but the agent produced empty tool_calls (earthquake-phase-association, fix-build-google-auto, fix-visual-stability, seismic-phase-picking), and 6 where cap-evolve ran to completion but no candidate moved off zero (financial-modeling-qa, fix-build-agentops, fix-druid-loophole-cve, python-scala-translation, quantum-numerical-simulation, spring-boot-jakarta-migration).
@@ -1396,6 +1410,14 @@ const DATA = [
 const CAND_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004'];
 const CAND_LABELS = ['seed','c1','c2','c3','c4'];
 
+// Level 3: each task label links to its per-task report (what changed, what worked, what
+// didn't, what we can learn). Plain <a> rather than a click handler on purpose — both tables
+// are rebuilt via innerHTML on every re-sort, which would destroy per-cell listeners, and a
+// real href keeps working when this file is opened straight from a checkout over file://.
+function reportLink(task) {
+  return `<a class="task-link" href="../reports/task-by-task/${task}.md">${task}</a>`;
+}
+
 function color(v) {
   if (v === null || v === undefined) return '#f3f4f6';
   const t = Math.max(0, Math.min(1, v));
@@ -1447,7 +1469,7 @@ function render() {
     if (r.status === 'NO_SIGNAL') stateBadge = ' <span class="badge badge-nosignal">no-signal</span>';
     const saturated = (r.status === 'KILLED_saturated') || (r.seed !== null && r.seed >= 0.999 && CAND_KEYS.slice(1).every(k => r[k] === null));
 
-    html += `<tr><td class="label">${r.task} ${srcBadge}${stateBadge}${catBadge}</td>`;
+    html += `<tr><td class="label">${reportLink(r.task)} ${srcBadge}${stateBadge}${catBadge}</td>`;
     for (const key of CAND_KEYS) {
       const v = r[key];
       const isNa = v === null || v === undefined;
@@ -1655,7 +1677,7 @@ function renderC4() {
         ? '<span class="run-tag run-tag-curr">curr</span>'
         : '<span class="run-tag run-tag-prev">prev</span>';
       const srcBadge = `<span class="badge ${sourceBadgeClass(run.source)}" style="${isCurr ? 'background:rgba(79,70,229,0.15);color:#4f46e5;' : ''}">${run.source}</span>`;
-      html += `<tr class="${which}-row${isCurr ? ' task-group-sep' : ''}"><td class="label">${runTag}${r.task} ${srcBadge}</td>`;
+      html += `<tr class="${which}-row${isCurr ? ' task-group-sep' : ''}"><td class="label">${runTag}${reportLink(r.task)} ${srcBadge}</td>`;
       for (const key of CAND6_KEYS) {
         const v = run[key];
         const isNa = v === null || v === undefined;
