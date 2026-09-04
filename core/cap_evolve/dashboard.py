@@ -971,6 +971,95 @@ def _read_narrative(root: Path, best_id: str | None) -> dict:
     return {"files": files}
 
 
+#: A real transcript.jsonl can be 1.6MB / 600+ lines (a full Claude Code session for one
+#: agent-optimize run). Never parsed/embedded whole — capped on both bytes (read at all)
+#: and turns (rendered), same "preview + point at the real path" shape as _read_project_files.
+_HOST_PROMPT_MAX_BYTES = 40_000
+_HOST_TRANSCRIPT_MAX_BYTES = 8_000_000
+_HOST_TRANSCRIPT_MAX_TURNS = 300
+
+
+def _transcript_turn(ev: dict) -> dict | None:
+    """One line of ``host/transcript.jsonl`` -> a compact turn, or ``None`` to skip it.
+
+    Only ``assistant`` (text / tool_use / thinking) and ``user`` (tool_result) lines carry
+    anything a human would read here; ``system``/``tool_progress``/``result`` lines are
+    session plumbing and are dropped rather than rendered as empty turns.
+    """
+    t = ev.get("type")
+    msg = ev.get("message") or {}
+    content = msg.get("content")
+    if not isinstance(content, list):
+        return None
+    parts = []
+    if t == "assistant":
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            bt = block.get("type")
+            if bt == "text" and block.get("text"):
+                parts.append(_sanitize_text(block["text"], 500))
+            elif bt == "tool_use":
+                parts.append(f"[tool] {block.get('name')} "
+                             f"{_sanitize_text(json.dumps(block.get('input', {})), 400)}")
+            elif bt == "thinking" and block.get("thinking"):
+                parts.append("[thinking] " + _sanitize_text(block["thinking"], 300))
+    elif t == "user":
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                c = block.get("content")
+                if isinstance(c, list):
+                    c = "".join(x.get("text", "") for x in c if isinstance(x, dict))
+                parts.append("[result] " + _sanitize_text(str(c or ""), 500))
+    if not parts:
+        return None
+    return {"role": t, "t": ev.get("timestamp"), "text": "\n".join(parts)}
+
+
+def _read_host_session(root: Path) -> dict:
+    """The agent-optimize host's own record of the run — the ONLY place the full
+    turn-by-turn optimizer session lives (#432). ``events.jsonl`` records coarse
+    accept/reject decisions; this reads what actually produced them.
+
+    Returns ``{}`` when there is no ``host/`` dir (e.g. a deterministic-loop algorithm
+    with no LLM driver session) so the panel hides itself rather than showing empty.
+    """
+    hdir = _safe_subpath(root, "host")
+    if hdir is None or not hdir.is_dir():
+        return {}
+    out: dict = {}
+    pf = _safe_subpath(hdir, "driver_prompt.md")
+    if pf is not None and pf.is_file():
+        try:
+            out["driver_prompt"] = _sanitize_text(
+                pf.read_text(encoding="utf-8"), _HOST_PROMPT_MAX_BYTES)
+        except OSError:
+            pass
+    tf = _safe_subpath(hdir, "transcript.jsonl")
+    if tf is not None and tf.is_file():
+        try:
+            size = tf.stat().st_size
+        except OSError:
+            size = 0
+        out["transcript_path"] = str(tf)
+        out["transcript_bytes"] = size
+        if size > _HOST_TRANSCRIPT_MAX_BYTES:
+            # Too big to safely read+parse into this HTML — point at the real file
+            # instead of embedding a partial/garbled slice of it.
+            out["transcript_too_large"] = True
+        else:
+            lines = _read_jsonl(tf)
+            out["transcript_total_lines"] = len(lines)
+            turns = [turn for ev in lines[:_HOST_TRANSCRIPT_MAX_TURNS]
+                     if (turn := _transcript_turn(ev)) is not None]
+            out["transcript_turns"] = turns
+            out["transcript_truncated"] = len(lines) > _HOST_TRANSCRIPT_MAX_TURNS
+    if not out.get("driver_prompt") and not out.get("transcript_turns") \
+            and not out.get("transcript_too_large"):
+        return {}
+    return out
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -1769,6 +1858,7 @@ def reduce_run(run_dir) -> dict:
         algo_extra["evograph"] = evograph
     narrative = _read_narrative(root, best_id)
     config = _read_config(root)
+    host_session = _read_host_session(root)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
@@ -1793,9 +1883,11 @@ def reduce_run(run_dir) -> dict:
         "focus": "focus" in algo_extra,
         "evograph": "evograph" in algo_extra,
         "screens": "screens" in algo_extra,
+        "compliance": "compliance" in algo_extra,
         "parallel": "parallel" in algo_extra,
         "narrative": bool(narrative),
         "config": bool(config),
+        "host_transcript": bool(host_session),
         "controls": bool(controls),
         "screened": any(n.get("screened") is not None for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
@@ -1903,6 +1995,7 @@ def reduce_run(run_dir) -> dict:
         "git_log": _git_log(root),
         "narrative": narrative,
         "config": config,
+        "host_session": host_session,
     }
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
@@ -2886,6 +2979,117 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       s.append(det);
     });
   }
+})();
+
+/* ---------- 10d. Host session — the optimizer's own turn-by-turn record (#432) ---------- */
+(function(){
+  const HS=S.host_session; if(!HS)return;
+  const s=sec('Host session — optimizer transcript');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    'For an agent-driven run, this is the ONLY full record of what the optimizer actually did — '+
+    'every tool call, bash command, file edit and reasoning turn between the coarse accept/reject '+
+    'events above.'}));
+  const h3t=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)',text:t});
+  if(HS.driver_prompt){
+    s.append(h3t('Driver prompt'));
+    s.append($('div',{class:'narrative-box md',style:'margin-bottom:14px',html:mdToHtml(HS.driver_prompt)}));
+  }
+  if(HS.transcript_too_large){
+    s.append($('div',{class:'banner',text:
+      'transcript.jsonl is '+(HS.transcript_bytes/1e6).toFixed(1)+' MB — too large to parse into '+
+      'this dashboard. Read it directly at '+HS.transcript_path}));
+    return;
+  }
+  const turns=HS.transcript_turns||[];
+  if(!turns.length)return;
+  s.append(h3t('Turns ('+turns.length+(HS.transcript_truncated?' of '+HS.transcript_total_lines+', truncated':'')+')'));
+  const list=$('div'); s.append(list);
+  turns.forEach(tn=>{
+    const row=$('div',{class:'logrow',style:'grid-template-columns:100px 90px 1fr'});
+    const clock=tn.t?new Date(tn.t).toLocaleTimeString([],{hour12:false}):'--:--:--';
+    const gist=tn.text.split('\n')[0].slice(0,140);
+    row.append($('span',{class:'muted num',text:clock}),
+      $('span',{class:'k',style:'color:var(--accent)',text:tn.role}),
+      $('span',{class:'muted2',style:'color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
+                text:gist}));
+    list.append(row);
+    const det=$('div',{class:'logdet'});
+    det.textContent=tn.text; // model-authored — never parsed as markup
+    det.style.display='none';
+    list.append(det);
+    row.addEventListener('click',()=>{det.style.display=det.style.display==='block'?'none':'block';});
+  });
+  if(HS.transcript_truncated)s.append($('p',{class:'muted',style:'margin-top:8px',text:
+    'Showing the first '+turns.length+' of '+HS.transcript_total_lines+' turns — full record at '+
+    HS.transcript_path}));
+})();
+
+/* ---------- 10e. agent-optimize internals — screens/compliance/minibatch/gepa/skillopt/parallel (#433) ---------- */
+(function(){
+  const C=S.capabilities||{}, AE=S.algo_extra||{};
+  if(!(C.screens||C.compliance||C.minibatch||C.gepa||C.skillopt||C.parallel))return;
+  const s=sec('agent-optimize internals');
+  s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
+    "Signals the algorithm computed about its own process — which subset of tasks a cheap screen "+
+    "evaluated, whether the discipline of screening before a full-val eval was actually followed, "+
+    "and any minibatch/gepa/skillopt/parallel bookkeeping this run recorded."}));
+  const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)',text:t});
+
+  if(C.compliance){
+    s.append(h3('Screen-before-full-val compliance'));
+    const t=$('table');
+    t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'iteration'}),$('th',{text:'screened before full-val'})));
+    (AE.compliance||[]).forEach(r=>t.append($('tr',{},
+      $('td',{},$('code',{text:r.candidate})),
+      $('td',{class:'r num',text:r.iteration}),
+      $('td',{},$('span',{class:'badge '+(r.screened_before_fullval?'b-accepted':'b-rejected'),
+        text:r.screened_before_fullval?'✓ yes':'✗ no'})))));
+    s.append(t);
+  }
+
+  if(C.screens){
+    s.append(h3('Screens — cheap subset evals'));
+    (AE.screens||[]).forEach(sc=>{
+      const box=$('div',{class:'dead',style:'border-left-color:var(--accent)'});
+      const head=$('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center'});
+      head.append($('code',{text:sc.candidate}),
+        $('span',{class:'badge '+(sc.decision==='pass'?'b-accepted':sc.decision==='fail'?'b-rejected':'b-indecisive'),
+          text:String(sc.decision||'—')+(sc.inconclusive?' (inconclusive)':'')}));
+      if(sc.tier!=null)head.append($('span',{class:'muted',style:'font-size:11px',text:'tier '+sc.tier}));
+      box.append(head);
+      const bits=[];
+      if((sc.ids||[]).length)bits.push('subset ('+sc.ids.length+'): '+sc.ids.join(', '));
+      if((sc.fixed||[]).length)bits.push('fixed: '+sc.fixed.join(', '));
+      if((sc.regressed||[]).length)bits.push('regressed: '+sc.regressed.join(', '));
+      if(sc.mean_delta!=null)bits.push('Δ='+(+sc.mean_delta).toFixed(3)+(sc.se!=null?' ± '+(+sc.se).toFixed(3):''));
+      if(sc.threshold!=null)bits.push('threshold='+sc.threshold);
+      box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:bits.join('  ·  ')}));
+      s.append(box);
+    });
+  }
+
+  [['minibatch','Minibatch'],['gepa','GEPA'],['skillopt','SkillOpt'],['parallel','Parallel']].forEach(([key,label])=>{
+    if(!C[key])return;
+    s.append(h3(label));
+    const rows=AE[key]||[];
+    const t=$('table');
+    if(key==='minibatch'){
+      t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'reward'}),
+        $('th',{class:'r',text:'n tasks'}),$('th',{text:'tasks'})));
+      rows.forEach(r=>t.append($('tr',{},
+        $('td',{},$('code',{text:r.candidate||'—'})),
+        $('td',{class:'r num',text:fmt(r.reward)}),
+        $('td',{class:'r num',text:r.n_tasks==null?'—':r.n_tasks}),
+        $('td',{class:'muted',text:(r.tasks||[]).join(', ').slice(0,120)}))));
+    }else{
+      t.append($('tr',{},$('th',{text:'kind'}),$('th',{text:'candidate'}),$('th',{text:'detail'})));
+      rows.forEach(r=>t.append($('tr',{},
+        $('td',{},$('code',{text:r.kind||'—'})),
+        $('td',{},r.candidate||'—'),
+        $('td',{class:'muted',style:'font-size:11px',text:JSON.stringify(r.detail||{}).slice(0,200)}))));
+    }
+    s.append(t);
+  });
 })();
 
 /* ---------- 8. Candidate leaderboard + git log ---------- */
