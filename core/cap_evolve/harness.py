@@ -1197,8 +1197,29 @@ def _journal_tail(workdir: Path) -> str:
     return tail.replace(_JOURNAL_MARK, "").strip()
 
 
-def pending_handover(workdir: Path, run_dir: RunDir) -> str:
-    """The optimizer's handover entry ``_reconcile_journal`` would actually book — "" if none.
+_ITER_HEAD_RE = re.compile(r"(?m)^## Iteration\s+(\S+)")
+
+
+def _split_journal_blocks(tail: str) -> list[str]:
+    """Split a journal tail into its individual ``## ...`` blocks.
+
+    N sibling candidates proposed in one shared session/workdir all start from the SAME
+    workdir, so every sibling's snapshot ``JOURNAL.md`` tail holds ALL N candidates' ``##
+    Iteration`` blocks, not just its own (#429). Splitting on the heading pattern
+    ``_journal_tail``'s own fallback already uses lets callers fold in one candidate's
+    block at a time instead of treating the whole multi-candidate tail as one unit."""
+    if not tail.strip():
+        return []
+    heads = list(re.finditer(r"(?m)^## ", tail))
+    if not heads:
+        return [tail.strip()]
+    return [tail[h.start():(heads[i + 1].start() if i + 1 < len(heads) else len(tail))].strip()
+            for i, h in enumerate(heads)]
+
+
+def pending_handover(workdir: Path, run_dir: RunDir, cid: str | None = None) -> str:
+    """This candidate's own handover block ``_reconcile_journal`` would actually book — ""
+    if none.
 
     Asking "is there a ## block in the workdir journal?" is not the same question: an agent
     whose next working copy is a COPY of the last one carries the previous round's entry along,
@@ -1206,11 +1227,30 @@ def pending_handover(workdir: Path, run_dir: RunDir) -> str:
     that wrote no new handover can hold a stale one. Callers that report the answer back to the
     optimizer (``agent-optimize``'s ``commit.py``) must agree with what was booked, or the
     round most in need of the warning is the one that does not get it.
+
+    ``cid``, when given, picks THIS candidate's block out of a multi-block tail (#429): first
+    by heading id match (the optimizer is asked to head each block ``## Iteration <cid> —
+    ...``), falling back to the first block not yet folded into the run-level journal — so a
+    batch of siblings sharing one tail each get their own distinct block rather than all
+    colliding on "already in base" after the first one is booked.
     """
     tail = _journal_tail(workdir).strip()
+    if not tail:
+        return ""
     run_journal = run_dir.root / "JOURNAL.md"
     base = (run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED)
-    return "" if not tail or tail in base else tail
+    blocks = _split_journal_blocks(tail)
+    if len(blocks) <= 1:
+        return "" if tail in base else tail
+    if cid is not None:
+        for block in blocks:
+            m = _ITER_HEAD_RE.match(block)
+            if m and m.group(1) == cid:
+                return "" if block in base else block
+    for block in blocks:
+        if block not in base:
+            return block
+    return ""
 
 
 def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
@@ -1338,7 +1378,7 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     # ``pending_handover``, not ``_journal_tail``: ONE place decides whether this round has a
     # bookable handover, so what ``commit.py`` reports back to the optimizer cannot drift from
     # what is actually booked here.
-    tail = pending_handover(workdir, run_dir)
+    tail = pending_handover(workdir, run_dir, cid)
     run_journal = run_dir.root / "JOURNAL.md"
     base = run_journal.read_text(encoding="utf-8") if run_journal.exists() else _JOURNAL_SEED
     # Run-level file is pure accumulated entries — strip any marker before appending.
@@ -1391,12 +1431,19 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
              f"{'unresolved' if indecisive else 'ACCEPTED' if accepted else 'rejected'} "
              f"val={vs} Δ={ds} -->")
     tail = tail.strip()
-    if not tail and _journal_tail(workdir).strip():
-        # Dedup guard: the optimizer dropped the marker without appending (so the tail
-        # fallback returned an entry already recorded in the run-level journal — typically a
-        # working copy CLONED from the last round). Do NOT re-append it — that would
-        # duplicate a prior iteration's entry under this cid. Not the empty-handover
+    raw_tail = _journal_tail(workdir).strip()
+    if not tail and raw_tail:
+        # Dedup guard: this candidate's own block (matched by ``pending_handover`` above) was
+        # already folded into the run-level journal — typically a working copy CLONED from the
+        # last round, still carrying THAT round's entry unchanged. Do NOT re-append it — that
+        # would duplicate a prior iteration's entry under this cid. Not the empty-handover
         # escalation below either: an entry was written, just not by this round.
+        if len(_split_journal_blocks(raw_tail)) > 1:
+            # A multi-block tail (sibling candidates sharing one batch session/workdir, #429)
+            # reaching this guard means every block was already booked by an earlier sibling —
+            # log it so a genuine collision is never silent, even though nothing is discarded
+            # here (pending_handover already gave each sibling its own distinct block).
+            run_dir.log_event("journal_sibling_collision", what="JOURNAL.md", candidate=cid)
         tail = f"## Iteration {cid} — (duplicate handover; optimizer re-appended a prior entry unchanged)"
     elif not tail:
         # Confirmed data-loss bug (#400): the optimizer wrote no handover at all, and

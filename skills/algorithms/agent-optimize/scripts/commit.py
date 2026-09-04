@@ -389,7 +389,7 @@ def main(argv=None) -> int:
     # still holds THAT round's entry, and _reconcile_journal's dedup guard books the placeholder
     # rather than the same entry twice — so the plain tail reports "recorded" for exactly the
     # round whose handover went missing.
-    handover = bool(harness.pending_handover(src, run_dir))
+    handover = bool(harness.pending_handover(src, run_dir, args.candidate_id))
     reason = args.note or args.decision
     if indecisive:
         reason = f"indecisive (gate): {reason}"
