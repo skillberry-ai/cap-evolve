@@ -53,10 +53,13 @@ gate will correctly reject marginal gains"), so the cost is visible at report ti
    value pre-filled as a default plus a free-text escape — including the ones only a
    human can answer: which metric gates accept/reject and each shown metric's
    direction, GitHub mirroring, deterministic vs agent orchestration (plus
-   `stop_condition` in agent mode), splits, trials, budget. `inputs/INPUTS.md` →
-   RECOMMENDED is the authority on each key; SKILL.md only fixes *when* to ask. Define
-   jargon in a clause before using it ("pass^k — how often it succeeds on all k
-   tries"); the user may be a domain expert, not an ML one.
+   `stop_condition` in agent mode), splits, trials, budget, and `memory_skill`
+   (default `md-files`; offer `wiki` — the weakness-graph format, see
+   `inputs/INPUTS.md` — when the user wants weaknesses tracked as a persistent graph
+   rather than an append-only journal). `inputs/INPUTS.md` → RECOMMENDED is the
+   authority on each key; SKILL.md only fixes *when* to ask. Define jargon in a
+   clause before using it ("pass^k — how often it succeeds on all k tries"); the user
+   may be a domain expert, not an ML one.
 5. **Confirm before scaffolding.** Echo the resolved spec back as one block —
    capability, optimizer, algorithm, dataset, splits, budget, every RECOMMENDED input
    you are defaulting — and get a yes. A misread is cheapest to fix here.

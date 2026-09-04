@@ -86,7 +86,7 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 
 ## Skill library
 
-21 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
+22 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
 the core. Extending is one folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
 
 **How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.

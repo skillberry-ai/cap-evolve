@@ -26,7 +26,13 @@ from pathlib import Path
 # `intervention` names HOW a candidate is delivered to the model under test, as opposed to
 # WHAT is optimized (`capability`). An intervention skill owns an out-of-process delivery
 # stack rather than a step in the run DAG, so it declares no needs/provides tokens.
-COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate", "intervention"}
+#
+# `memory` names WHICH cross-iteration memory scheme the harness drives (#400, #404) —
+# selected via `memory_skill` in capevolve.yaml the same way `capability`/`optimizer` are,
+# but it owns no step in the run DAG either (declares no needs/provides), same as
+# `intervention`.
+COMPONENTS = {"phase", "capability", "algorithm", "optimizer", "orchestrate", "intervention",
+             "memory"}
 
 # The needs/provides token vocabulary. Every needs/provides entry must be one of
 # these; a misspelling ("score" for "scores") fails the build instead of silently

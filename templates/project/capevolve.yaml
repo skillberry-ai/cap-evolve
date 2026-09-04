@@ -35,6 +35,7 @@ target_profile_file: ""
 algorithm_skill: hill-climb              # algorithms/<skill>: hill-climb | gepa | skillopt | agent-optimize (REQUIRES orchestration_mode: agent). evograph is deprecated -- use agent-optimize.
 algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
 orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with the finalize phase script)
+memory_skill: md-files                   # cross-iteration memory: md-files (LEDGER/JOURNAL/PROCESS/INSIGHTS, default) | wiki (weakness-graph format, skills/memory/wiki/SKILL.md)
 
 # --- what context the optimizer gets (hill-climb | gepa | skillopt) ---------
 # The per-iteration optimizer prompt is RENDERED from this template (intake authors it,

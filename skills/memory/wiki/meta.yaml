@@ -1,0 +1,10 @@
+component: memory
+name: wiki
+summary: Cross-iteration memory as a weakness graph (weakness nodes + solution cards), extracted from the deprecated evograph algorithm. Select via memory_skill: wiki in capevolve.yaml.
+entry: scripts/run.py
+check: scripts/check.py
+needs: []
+provides: []
+compatible_with:
+  optimizers: ["*"]
+  algorithms: ["*"]

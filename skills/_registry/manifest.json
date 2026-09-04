@@ -242,6 +242,26 @@
         ]
       }
     },
+    "wiki": {
+      "component": "memory",
+      "path": "memory/wiki",
+      "summary": "Cross-iteration memory as a weakness graph (weakness nodes + solution cards), extracted from the deprecated evograph algorithm. Select via memory_skill: wiki in capevolve.yaml.",
+      "entry": "scripts/run.py",
+      "abstract": null,
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [],
+      "provides": [],
+      "compatible_with": {
+        "optimizers": [
+          "*"
+        ],
+        "algorithms": [
+          "*"
+        ]
+      }
+    },
     "run-optimizer": {
       "component": "optimizer",
       "path": "optimizers/run-optimizer",

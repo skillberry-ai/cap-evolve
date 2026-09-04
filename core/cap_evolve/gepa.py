@@ -56,7 +56,6 @@ from . import selection
 from .cache import EvalCache, hash_candidate_dir
 from .harness import (
     OptimizerContext,
-    _augment_instructions,
     move_is_resolved,
     _init_memory_store,
     _live,
@@ -602,7 +601,7 @@ def gepa_loop(
                            f"{focus_label}",
             algorithm="gepa", parent_dir=parent_dir,
             extra=_instructions(refl_summary, focus_label, mb))
-        instructions = _augment_instructions(instructions, workdir, run_dir)
+        instructions = ctx.augment_instructions(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather
         # than via ``harness.run_step``, so it needs the same two calls. None = off.
@@ -636,7 +635,8 @@ def gepa_loop(
                                   report=report.to_dict(), reason=report.reason)
                 _reason = "indecisive (integrity): " + report.reason
                 record_iteration(run_dir, workdir, cid, parent_id=parent["id"],
-                                 accepted=False, reason=_reason, indecisive=True)
+                                 accepted=False, reason=_reason, indecisive=True,
+                                 memory_skill=ctx.memory_skill)
                 run_dir.log_event("step_indecisive", candidate=cid, reason=_reason)
                 steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
                               "accepted": False, "candidate_val": None,
@@ -667,6 +667,7 @@ def gepa_loop(
             record_iteration(run_dir, workdir, cid, parent_id=parent["id"], accepted=False,
                              reason="local minibatch gate: sum(child) <= sum(parent)",
                              parent_val=parent["result"].reward, focus=focus_label,
+                             memory_skill=ctx.memory_skill,
                              mb_child=child_mb.reward, mb_parent=parent_mb.reward)
             rejected.add(cid, f"candidate {cid} (mb {child_mb.reward:.3f} vs parent "
                               f"{parent_mb.reward:.3f})",
@@ -684,6 +685,7 @@ def gepa_loop(
             adapter, run_dir=run_dir, workdir=workdir, parent_result=parent_result,
             cid=cid, n_trials=n_trials, gate_kwargs=gate_kwargs,
             no_regression=no_regression, parent_id=parent["id"],
+            memory_skill=ctx.memory_skill,
         )
         step["decision"] = decision_dict
         step["candidate_val"] = cand_val.to_dict()
@@ -715,7 +717,7 @@ def gepa_loop(
                 mb_size=minibatch_size, rng=rng, n_trials=n_trials,
                 gate_kwargs=gate_kwargs, no_regression=no_regression,
                 store=store, history=history, rejected=rejected, train_ids=train_ids,
-                idx=step_offset + len(steps), seed=seed,
+                idx=step_offset + len(steps), seed=seed, ctx=ctx,
             )
             if merge_step is not None:
                 steps.append(merge_step)
@@ -753,7 +755,7 @@ def _sample_minibatch(train_ids: list[str], size: int, rng: random.Random) -> li
 def _full_val_gate(
     adapter, *, run_dir: RunDir, workdir: Path, parent_result: SplitResult,
     cid: str, n_trials: int, gate_kwargs: dict, no_regression: bool,
-    parent_id: str | None = None,
+    parent_id: str | None = None, memory_skill: str | None = None,
 ) -> tuple[dict, bool, SplitResult]:
     """Full-val eval + the honest significance gate (the same path ``run_step``
     uses, replicated WITHOUT bypassing gate/seal).
@@ -799,7 +801,7 @@ def _full_val_gate(
     # neither charges the budget itself.
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
                      reason=decision.reason, val=cand_val.reward,
-                     parent_val=parent_result.reward,
+                     parent_val=parent_result.reward, memory_skill=memory_skill,
                      runner_seconds=round(cand_val.seconds, 2),
                      cost_usd=cand_val.cost_usd, tokens=cand_val.tokens)
     return decision.to_dict(), accepted, cand_val
@@ -809,7 +811,7 @@ def _try_merge(
     adapter, *, run_dir: RunDir, pool: list[dict], lineage: dict[str, str | None],
     cache: EvalCache, mb_size: int, rng: random.Random, n_trials: int,
     gate_kwargs: dict, no_regression: bool, store, history, rejected,
-    train_ids: list[str], idx: int, seed: int,
+    train_ids: list[str], idx: int, seed: int, ctx: "OptimizerContext | None" = None,
 ) -> dict | None:
     """Find a complementary frontier pair, build a component-wise merge, minibatch-
     gate it (>= max(parents) on the minibatch), then full-val + standard gate.
@@ -860,7 +862,7 @@ def _try_merge(
     decision_dict, accepted, cand_val = _full_val_gate(
         adapter, run_dir=run_dir, workdir=workdir, parent_result=base_parent["result"],
         cid=mid, n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
-        parent_id=base_parent["id"],
+        parent_id=base_parent["id"], memory_skill=(ctx.memory_skill if ctx else None),
     )
     step["decision"] = decision_dict
     step["candidate_val"] = cand_val.to_dict()

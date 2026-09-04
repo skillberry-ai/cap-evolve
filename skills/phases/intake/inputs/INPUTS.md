@@ -105,13 +105,20 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   `run-optimizer` skill against `optimizers/registry.yaml` (run `run-optimizer --list`
   to see the available names); `optimizer_model` is the backend-specific model id.
 
-- **memory_skill** (default `md-files`): which cross-iteration memory scheme the
-  optimizer reads/writes. `md-files` is `harness.py`'s built-in LEDGER/JOURNAL/
-  INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS scheme (always on today — every run
-  gets it regardless of this key) and is the only fully-wired option; note the choice
-  in `PROJECT.md` either way. The deprecated `evograph` algorithm's `wiki/` weakness-
-  graph format is a candidate SECOND option once it is extracted into a standalone
-  memory skill (tracked separately — not selectable yet).
+- **memory_skill** (default `md-files`, ask alongside algorithm/optimizer): which
+  cross-iteration memory scheme the optimizer reads/writes, selected the same way as
+  `algorithm_skill`/`optimizer_skill` (`harness.OptimizerContext` threads it through
+  every algorithm's `run.py` via `--memory-skill`; resolved off `MEMORY_SKILLS` in
+  `core/cap_evolve/harness.py`). Two options today:
+  - `md-files` (default) — `harness.py`'s built-in LEDGER/JOURNAL/PROCESS/INSIGHTS/
+    META_INSIGHTS/FRAMEWORK_IMPROVEMENTS scheme, append-only prose read fresh each
+    iteration.
+  - `wiki` — the weakness-graph format extracted from the deprecated `evograph`
+    algorithm (`skills/memory/wiki/SKILL.md`): persistent weakness nodes + solution
+    cards under `<run_dir>/wiki/`, rendered by the dashboard's Weakness-graph tab.
+    Offer this when the user wants to inspect known weaknesses across iterations as a
+    graph rather than scroll a journal, or is migrating off `evograph`.
+  Note the choice in `PROJECT.md` either way.
 
 - **target_model** (default `""` = profile-agnostic): the runtime/CONSUMING LLM the
   agent reads these capabilities with — DISTINCT from `optimizer_model`, which proposes

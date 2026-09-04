@@ -704,7 +704,7 @@ def _stage_context(*, run_dir: Path, project: Path, workdir: Path, spec: dict,
         # prior_iterations/ are named by the staged CLAUDE.md pointer AND by JOURNAL.md's own
         # seed text, and seeding only the journal is what left them absent for a whole run.
         try:
-            harness.seed_framework_memory(rd.candidate_dir(rd.best_id or "seed"), rd)
+            harness.resolve_memory(ctx.memory_skill).seed(rd.candidate_dir(rd.best_id or "seed"), rd)
         except Exception as exc:  # noqa: BLE001
             rd.log_event("optimizer_context_warning", what="framework_memory",
                          error=str(exc)[:300])

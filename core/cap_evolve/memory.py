@@ -21,6 +21,36 @@ from pathlib import Path
 from typing import Optional
 
 
+class MemorySkill:
+    """Minimal common interface a cross-iteration memory scheme implements, so
+    ``harness.py`` can drive ANY of them the same way it already drives capability/
+    optimizer skills — one selectable component (``memory_skill`` in ``capevolve.yaml``,
+    default ``md-files``), not one hardcoded scheme (#400, #404).
+
+    Three hooks, one per thing the harness needs from memory each iteration:
+
+    - ``seed`` — write/refresh whatever memory artifacts the optimizer reads. May write
+      into ``workdir`` (the per-iteration working copy) and/or elsewhere (e.g. the run
+      root, for a scheme the optimizer must reach from every iteration at one stable
+      absolute path). Returns the names written, for logging.
+    - ``augment_instructions`` — call ``seed`` and return the per-iteration prompt with a
+      pointer to what got written and where to find it.
+    - ``write_handover`` — after the gate decides this iteration's outcome, record
+      whatever this scheme calls a "handover". A scheme whose optimizer writes its own
+      memory directly (no framework-owned accumulator to fold) can leave this a no-op.
+    """
+    name = "base"
+
+    def seed(self, workdir: Path, run_dir) -> list[str]:
+        return []
+
+    def augment_instructions(self, instructions: str, workdir: Path, run_dir) -> str:
+        return instructions
+
+    def write_handover(self, run_dir, workdir: Path, cid: str, **kwargs) -> None:
+        pass
+
+
 class RejectedMemory:
     def __init__(self, path: Path):
         self.path = Path(path)

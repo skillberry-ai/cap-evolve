@@ -30,6 +30,7 @@ from . import footprint as footprint_mod
 from . import gate as gate_mod
 from . import graph as graph_mod
 from . import integrity
+from .memory import MemorySkill
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
@@ -1474,7 +1475,8 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                      parent_id: str | None, accepted: bool, reason: str,
                      val: float | None = None, parent_val: float | None = None,
                      indecisive: bool = False, parents: list | None = None,
-                     edit_kind: str | None = None, **extra) -> None:
+                     edit_kind: str | None = None, memory_skill: str | None = None,
+                     **extra) -> None:
     """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
 
     Three things must happen exactly once per iteration, and they used to be
@@ -1517,12 +1519,9 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                          best_val=val if accepted and val is not None else None)
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=reason,
                       val=val, parent=parent_id, parent_val=parent_val, **extra)
-    delta = (val - parent_val if isinstance(val, (int, float))
-             and isinstance(parent_val, (int, float)) else None)
-    _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
-                       reason=reason, indecisive=indecisive)
-    for filename, seed, mark in _ACCUMULATORS:
-        _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
+    resolve_memory(memory_skill).write_handover(
+        run_dir, workdir, cid, accepted=accepted, val=val, parent_val=parent_val,
+        reason=reason, indecisive=indecisive)
     try:
         graph_mod.append_node(
             run_dir, node_id=cid,
@@ -1736,6 +1735,98 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
     return f"{instructions}\n\n{pointer}\n"
 
 
+class MdFilesMemory(MemorySkill):
+    """Default memory scheme: LEDGER/JOURNAL/PROCESS/RUNMAP + the three summary
+    accumulators (see the file-header comment near ``_JOURNAL_MARK``) — exactly the
+    behavior every algorithm has always had, now reachable through the plug-in
+    interface instead of only via bare module functions."""
+    name = "md-files"
+
+    def seed(self, workdir: Path, run_dir: RunDir) -> list[str]:
+        return seed_framework_memory(workdir, run_dir)
+
+    def augment_instructions(self, instructions: str, workdir: Path, run_dir: RunDir) -> str:
+        return _augment_instructions(instructions, workdir, run_dir)
+
+    def write_handover(self, run_dir: RunDir, workdir: Path, cid: str, *,
+                       accepted: bool, val=None, parent_val=None, reason: str | None = None,
+                       indecisive: bool = False) -> None:
+        delta = (val - parent_val if isinstance(val, (int, float))
+                 and isinstance(parent_val, (int, float)) else None)
+        _reconcile_journal(workdir, run_dir, cid, accepted=accepted, val=val, delta=delta,
+                           reason=reason, indecisive=indecisive)
+        for filename, seed, mark in _ACCUMULATORS:
+            _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
+
+
+class WikiMemory(MemorySkill):
+    """Wiki memory: weakness nodes + solution cards, extracted from the deprecated
+    ``evograph`` algorithm's run-dir format per its own maintainer note (a memory
+    FORMAT, not a search strategy — see ``skills/algorithms/evograph/SKILL.md``),
+    now selectable independent of algorithm.
+
+    Unlike ``md-files``, the optimizer writes ``wiki/`` itself at the run root's
+    ABSOLUTE path, not into the per-iteration ``workdir`` — every iteration's working
+    copy sees the same live tree, so nothing needs copying in or folding back, and
+    ``write_handover`` has nothing to do.
+    """
+    name = "wiki"
+
+    def seed(self, workdir: Path, run_dir: RunDir) -> list[str]:
+        written: list[str] = []
+        for sub in ("weaknesses", "solutions", "results"):
+            (run_dir.root / "wiki" / sub).mkdir(parents=True, exist_ok=True)
+        written.append("wiki/")
+        try:
+            _build_ledger(workdir, run_dir)
+            written.append("LEDGER.md")
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="LEDGER.md", error=str(e)[:300])
+        # PROCESS.md (per-iteration explainability) is orthogonal to the handover
+        # FORMAT — every memory scheme wants it, so it is seeded here too, not just
+        # by md-files.
+        try:
+            if not (workdir / "PROCESS.md").exists():
+                (workdir / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
+            written.append("PROCESS.md")
+        except OSError as e:
+            run_dir.log_event("optimizer_context_warning", what="PROCESS.md", error=str(e)[:300])
+        return written
+
+    def augment_instructions(self, instructions: str, workdir: Path, run_dir: RunDir) -> str:
+        self.seed(workdir, run_dir)
+        wiki_root = run_dir.root / "wiki"
+        pointer = (
+            "## Cross-iteration memory: the WIKI (this run's memory_skill)\n"
+            f"Write directly to the ABSOLUTE path `{wiki_root}` — never a relative copy "
+            "inside this working dir, it must stay visible across every iteration.\n"
+            "- `weaknesses/<slug>.md` — one file per known weakness (front matter: slug, "
+            "status, tags, discovered_in_round, attacked_in_rounds, solved_in_round, "
+            "affected_tasks, related). Read every existing one before proposing, so you "
+            "build on or close a weakness instead of rediscovering it.\n"
+            "- `solutions/<weakness-slug>/<sol-id>/{solution.md,changes.diff}` — a kept "
+            "improvement for that weakness. Write one for any weakness you fix or "
+            "materially improve this iteration.\n"
+            "- `results/round-<N>.json` — this iteration's metrics.\n"
+            "Full format + examples: `./guidance/memory-wiki/SKILL.md`.\n"
+            "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + "
+            "which val tasks it measurably broke/fixed.\n"
+        )
+        return f"{instructions}\n\n{pointer}\n"
+
+    def write_handover(self, run_dir: RunDir, workdir: Path, cid: str, **kwargs) -> None:
+        pass  # the optimizer already wrote directly to wiki/ at the absolute path
+
+
+MEMORY_SKILLS: dict[str, MemorySkill] = {"md-files": MdFilesMemory(), "wiki": WikiMemory()}
+
+
+def resolve_memory(name: str | None) -> MemorySkill:
+    """Look up a ``memory_skill`` name, falling back to the default (``md-files``)
+    for an unset or unknown one — a run must never crash over a bad memory choice."""
+    return MEMORY_SKILLS.get(str(name or "md-files").strip()) or MEMORY_SKILLS["md-files"]
+
+
 def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
                             tag: str | None = None) -> None:
     """Copy ONLY the current best/parent candidate's per-tag rollouts for ``split``
@@ -1816,7 +1907,7 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
 def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
                               capabilities=None, optimizer_name: str | None = None,
                               capability_sources=None, project_dir: Path | None = None,
-                              tag: str | None = None) -> None:
+                              tag: str | None = None, memory_skill: str | None = None) -> None:
     """Give the optimizer everything it needs to read, inside its own working dir.
 
     Copies, VERBATIM and without parsing:
@@ -1917,11 +2008,32 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # instructions file. All best-effort: a missing registry / unknown agent just skips
     # native placement (./guidance/ still works).
     if optimizer_name:
-        _inject_native_skills(run_dir, workdir, caps, repo_root, optimizer_name)
+        _inject_native_skills(run_dir, workdir, caps, repo_root, optimizer_name,
+                              memory_skill=memory_skill)
+
+
+def _inject_memory_skill_guidance(run_dir: RunDir, workdir: Path, memory_skill: str) -> None:
+    """Copy the non-default ``memory_skill``'s own skill directory into
+    ``workdir/guidance/memory-<name>/``, the same way capability/diagnose skills are
+    copied — so ``wiki``'s pointer text ("full format: ./guidance/memory-wiki/SKILL.md")
+    resolves to a real file instead of a promise. Best-effort: a missing skill dir
+    just means the inline pointer text is all the optimizer gets."""
+    repo_root = Path(__file__).resolve().parents[2]
+    src = repo_root / "skills" / "memory" / memory_skill
+    if not src.is_dir():
+        return
+    try:
+        dst = workdir / "guidance" / f"memory-{memory_skill}"
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"))
+    except Exception as e:  # noqa: BLE001
+        run_dir.log_event("optimizer_context_warning",
+                          what=f"guidance/memory-{memory_skill}", error=str(e)[:300])
 
 
 def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
-                          optimizer_name: str) -> None:
+                          optimizer_name: str, memory_skill: str | None = None) -> None:
     """Place capability + diagnose skills where ``optimizer_name`` natively discovers
     them, and write a pointer into its always-on instructions file.
 
@@ -1978,7 +2090,8 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
         if instructions_file:
             try:
                 _write_instructions_pointer(workdir / instructions_file, skills_dir,
-                                            run_dir=run_dir, workdir=workdir)
+                                            run_dir=run_dir, workdir=workdir,
+                                            memory_skill=memory_skill)
             except Exception as e:  # noqa: BLE001
                 run_dir.log_event("optimizer_context_warning",
                                   what=f"instructions/{instructions_file}", error=str(e)[:300])
@@ -2022,21 +2135,23 @@ _POINTER_FILES = (
 
 
 def _write_instructions_pointer(path: Path, skills_dir: str, *, run_dir=None,
-                                workdir: Path | None = None) -> None:
+                                workdir: Path | None = None,
+                                memory_skill: str | None = None) -> None:
     """Write (or append) a short generic pointer block into the agent's instructions
     file, idempotently (keyed on a marker comment so it is not duplicated).
 
     Given ``run_dir`` + ``workdir`` it first CREATES the cross-iteration files it is about
-    to name (``seed_framework_memory``) and then lists only the ones that exist. Both
-    halves matter: the promise used to be unconditional prose, so an agent-driven run was
-    told to read four files and a directory that nothing on its path ever created (see
-    ``seed_framework_memory``). Tying the text to the filesystem means the pointer cannot
-    drift back into promising a file again — if a file stops being created, it stops being
-    named, instead of silently sending the optimizer to a dead path.
+    to name (through the chosen ``memory_skill``, default ``md-files``) and then lists
+    only the ones that exist. Both halves matter: the promise used to be unconditional
+    prose, so an agent-driven run was told to read four files and a directory that
+    nothing on its path ever created. Tying the text to the filesystem means the pointer
+    cannot drift back into promising a file again — if a file stops being created, it
+    stops being named, instead of silently sending the optimizer to a dead path.
     """
     present = set()
+    memory = resolve_memory(memory_skill)
     if run_dir is not None and workdir is not None:
-        present = set(seed_framework_memory(workdir, run_dir))
+        present = set(memory.seed(workdir, run_dir))
     existing = ""
     if path.exists():
         try:
@@ -2047,12 +2162,20 @@ def _write_instructions_pointer(path: Path, skills_dir: str, *, run_dir=None,
         return
     skills_note = (f"the optimization skills are available natively under `{skills_dir}/` and "
                    if skills_dir else "the optimization skills are available under ")
-    listed = [brief for name, brief in _POINTER_FILES if name in present]
     files_note = ""
-    if listed:
-        files_note = ("Cross-iteration files in this directory (clean ownership) — read all of "
-                      "these before you start:\n"
-                      + "".join(f"- {b}\n" for b in listed))
+    if memory.name == "md-files":
+        listed = [brief for name, brief in _POINTER_FILES if name in present]
+        if listed:
+            files_note = ("Cross-iteration files in this directory (clean ownership) — read "
+                          "all of these before you start:\n"
+                          + "".join(f"- {b}\n" for b in listed))
+    else:
+        # Non-default memory scheme (e.g. wiki): its own pointer text fully replaces the
+        # md-files listing above, since it describes a different set of files/paths.
+        memo_note = memory.augment_instructions("", workdir, run_dir).strip() if (
+            run_dir is not None and workdir is not None) else ""
+        if memo_note:
+            files_note = memo_note + "\n"
     # ``rejected.jsonl`` has always existed in the run dir and was never mentioned: it is the
     # run's own record of approaches already refuted, written by every algorithm, and an
     # optimizer that does not know about it re-proposes what the run has already paid to rule
@@ -2086,7 +2209,8 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
                  report, current_val: SplitResult, optimizer_seconds: float,
                  opt_cost_usd: float, opt_tokens: int, optimizer_error,
                  kind: str = "integrity", event: str = "tamper_detected",
-                 detail_key: str = "tamper", rejected=None) -> dict:
+                 detail_key: str = "tamper", rejected=None,
+                 memory_skill: str | None = None) -> dict:
     """An INDECISIVE step for a candidate that was never validly measurable.
 
     Two causes share this path: the candidate edited a protected file (integrity),
@@ -2108,7 +2232,7 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
                      reason=reason, val=None, parent_val=current_val.reward,
-                     indecisive=True,
+                     indecisive=True, memory_skill=memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
     run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
@@ -2136,7 +2260,8 @@ _MAX_CONSECUTIVE_EVAL_ERRORS = 3  # N raises in a row -> the environment, not th
 
 def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, error: str,
                      current_val: SplitResult, optimizer_seconds: float,
-                     opt_cost_usd: float, opt_tokens: int, optimizer_error) -> dict:
+                     opt_cost_usd: float, opt_tokens: int, optimizer_error,
+                     memory_skill: str | None = None) -> dict:
     """An INDECISIVE step for a candidate whose ``evaluate_candidate`` call raised —
     e.g. an adapter's ``live()``/rollout setup blew up (#286). The run keeps going
     (that is the whole point: one candidate's cost, not the run's) but the candidate
@@ -2158,7 +2283,7 @@ def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, err
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
                      reason=reason, val=None, parent_val=current_val.reward,
-                     indecisive=True,
+                     indecisive=True, memory_skill=memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
     run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
@@ -2240,7 +2365,7 @@ def run_step(
     ctx = ctx or OptimizerContext()
     ctx.inject(adapter, run_dir, workdir, split=eval_split)
 
-    instructions = _augment_instructions(instructions, workdir, run_dir)
+    instructions = ctx.augment_instructions(instructions, workdir, run_dir)
 
     # Seal the eval surface (hash manifest + best-effort read-only bits) AFTER the
     # context injection wrote its scratch files, so nothing we add ourselves reads as
@@ -2290,7 +2415,7 @@ def run_step(
                                 report=report, current_val=current_val,
                                 optimizer_seconds=optimizer_seconds,
                                 opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
-                                optimizer_error=optimizer_error)
+                                optimizer_error=optimizer_error, memory_skill=ctx.memory_skill)
 
     # The capability's OWN validity rules, checked here (still before the gate, and
     # before any rollout is paid for) rather than left to prose the optimizer may skip.
@@ -2309,7 +2434,7 @@ def run_step(
                                 opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
                                 optimizer_error=optimizer_error, kind="validation",
                                 event="capability_invalid", detail_key="validation",
-                                rejected=rejected)
+                                rejected=rejected, memory_skill=ctx.memory_skill)
 
     try:
         cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
@@ -2335,7 +2460,7 @@ def run_step(
                                 error=eval_error, current_val=current_val,
                                 optimizer_seconds=optimizer_seconds,
                                 opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
-                                optimizer_error=optimizer_error)
+                                optimizer_error=optimizer_error, memory_skill=ctx.memory_skill)
     run_dir._consecutive_eval_errors = 0
 
     # Paired gate is the default when per-task data is available: candidate and
@@ -2423,6 +2548,7 @@ def run_step(
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
                      reason=decision.reason, val=cand_val.reward,
                      parent_val=current_val.reward, indecisive=decision.indecisive,
+                     memory_skill=ctx.memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      runner_seconds=round(cand_val.seconds, 2),
                      cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
@@ -3142,6 +3268,7 @@ class OptimizerContext:
     instructions_file: str | None = None
     bench_repo: str | None = None
     target_reader: str = ""
+    memory_skill: str = "md-files"
 
     # ---- construction from an algorithm run.py --------------------------------
 
@@ -3174,6 +3301,8 @@ class OptimizerContext:
                        help="consuming/runtime model id or tier keyword (frontier|strong|mid|weak)")
         p.add_argument("--target-profile-file", default=None,
                        help="optional project-local brief overriding the tier's built-in brief")
+        p.add_argument("--memory-skill", default=None,
+                       help="cross-iteration memory scheme (md-files|wiki); defaults to md-files")
 
     @classmethod
     def from_args(cls, args, run_dir: RunDir | None = None) -> "OptimizerContext":
@@ -3204,6 +3333,7 @@ class OptimizerContext:
             instructions_file=getattr(args, "instructions_file", None),
             bench_repo=getattr(args, "bench_repo", None),
             target_reader=_tp.reader_block(profile),
+            memory_skill=getattr(args, "memory_skill", None) or "md-files",
         )
 
     @classmethod
@@ -3227,6 +3357,7 @@ class OptimizerContext:
             instructions_file=(str(spec.get("optimizer_instructions_file") or "") or None),
             bench_repo=(str(spec.get("bench_repo") or "") or None),
             target_reader=_tp.reader_block(profile),
+            memory_skill=str(spec.get("memory_skill") or "md-files"),
         )
 
     # ---- reusable prompt blocks ----------------------------------------------
@@ -3315,7 +3446,18 @@ class OptimizerContext:
                                   capabilities=list(self.capabilities),
                                   optimizer_name=self.optimizer_name,
                                   capability_sources=list(self.capability_sources),
-                                  project_dir=self.project_dir, tag=tag)
+                                  project_dir=self.project_dir, tag=tag,
+                                  memory_skill=self.memory_skill)
+        if self.memory_skill and self.memory_skill != "md-files":
+            _inject_memory_skill_guidance(run_dir, workdir, self.memory_skill)
+
+    def augment_instructions(self, instructions: str, workdir: Path, run_dir: RunDir) -> str:
+        """Seed this run's chosen ``memory_skill``'s files and append its pointer text."""
+        return resolve_memory(self.memory_skill).augment_instructions(instructions, workdir, run_dir)
+
+    def write_handover(self, run_dir: RunDir, workdir: Path, cid: str, **kwargs) -> None:
+        """Record this iteration's handover the way the chosen ``memory_skill`` wants it."""
+        resolve_memory(self.memory_skill).write_handover(run_dir, workdir, cid, **kwargs)
 
     def instructions(self, current_val: SplitResult, focus_ids, label: str, *,
                      algorithm: str, parent_dir: Path | None = None,

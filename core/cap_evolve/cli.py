@@ -955,6 +955,10 @@ def _cmd_run(argv):
             if not tpf_p.is_absolute() and not tpf_p.exists():
                 tpf_p = Path(project) / str(tpf)
             alg_cmd += ["--target-profile-file", str(tpf_p)]
+        # Cross-iteration memory scheme (md-files default, or wiki). Selectable per
+        # #400/#404 instead of hardcoded LEDGER/JOURNAL in every run.
+        if spec.get("memory_skill"):
+            alg_cmd += ["--memory-skill", str(spec["memory_skill"])]
     # Protected-path seal + graded convergence signal. Both are OPT-IN: absent keys
     # add no flags at all, so an existing spec runs byte-identically.
     if algorithm_name in ("hill-climb", "skillopt", "gepa"):

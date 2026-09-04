@@ -1087,12 +1087,17 @@ def reduce_run(run_dir) -> dict:
     algorithm_source = "run_config" if cfg_algo else ("events" if algorithm else None)
     wiki_dir = _safe_subpath(root, "wiki")
     has_wiki = wiki_dir is not None and wiki_dir.is_dir()
-    if algorithm is None or has_wiki:
+    # ``wiki/`` used to mean "this is an evograph run" unconditionally — now any
+    # algorithm can write it via ``memory_skill: wiki`` (#400, #404), so it is only a
+    # fallback label for the genuinely-unlabeled case (an old evograph run with no
+    # ``run_config`` event), never an override of an algorithm already known from
+    # ``run_config``/events.
+    if algorithm is None:
         from_spec = _algorithm_from_spec(root)
-        if has_wiki:
-            algorithm, algorithm_source = "evograph", "run-dir wiki/"
-        elif from_spec:
+        if from_spec:
             algorithm, algorithm_source = from_spec, "capevolve.yaml"
+        elif has_wiki:
+            algorithm, algorithm_source = "evograph", "run-dir wiki/"
     # Candidates the gate REFUSED TO JUDGE (low coverage, or an integrity tamper).
     # These are neither accepted nor rejected: the edit was never validly measured.
     indecisive_ids = {

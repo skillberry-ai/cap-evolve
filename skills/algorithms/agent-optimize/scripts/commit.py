@@ -48,6 +48,28 @@ import _bootstrap  # noqa: F401  # side-effect import, see above
 from cap_evolve import RunDir, harness
 
 
+def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
+    """``memory_skill`` from the sibling project spec, or ``None``.
+
+    Agent mode invokes this script standalone with only ``--run-dir`` — no ``--project``,
+    no spec object — so the choice has to be read off disk the same zero-dependency way
+    ``dashboard.py``'s ``_algorithm_from_spec`` reads ``algorithm_skill``: flat ``key: value``
+    lines only, from ``<base>/project/capevolve.yaml`` next to the run dir. Best-effort — a
+    missing/unreadable spec just means the default (``md-files``) applies, same as today.
+    """
+    spec_path = run_dir.root.parent / "project" / "capevolve.yaml"
+    if not spec_path.is_file():
+        return None
+    try:
+        for line in spec_path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("memory_skill:"):
+                val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+                return val or None
+    except OSError:
+        pass
+    return None
+
+
 def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     """The gate's NUMBERS for ``candidate_id``, read back from ``round.py``'s own table.
 
@@ -450,6 +472,7 @@ def main(argv=None) -> int:
     # bookkeeping on a decision that has not actually been made yet. It files no memory record
     # either, for the same reason `inconclusive` does not: nothing has been refuted.
     if not provisional:
+        memory_skill = _memory_skill_from_spec(run_dir)
         # The shared iteration step: charges iterations/stall, writes the canonical ``step``
         # record, reconciles the run-level JOURNAL.md. The gate's numbers ride along so the
         # dashboard's ``gate_decisions[]`` does not have to regex them out of an agent's prose.
@@ -457,7 +480,7 @@ def main(argv=None) -> int:
                                  accepted=accepted, reason=reason,
                                  val=args.val,
                                  parent_val=parent_val,
-                                 indecisive=indecisive,
+                                 indecisive=indecisive, memory_skill=memory_skill,
                                  parents=parents, edit_kind=args.edit_kind,
                                  opt_cost_usd=args.optimizer_usd or None,
                                  opt_tokens=args.optimizer_tokens or None,
@@ -477,7 +500,7 @@ def main(argv=None) -> int:
         # (a run with no baseline) — that dir always exists (``run_dir.snapshot`` above just
         # created it) — and is best-effort: losing the re-seed must not fail the commit.
         try:
-            harness.seed_framework_memory(
+            harness.resolve_memory(memory_skill).seed(
                 run_dir.candidate_dir(run_dir.best_id or args.candidate_id), run_dir)
         except Exception as exc:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning", what="framework_memory",

@@ -21,8 +21,8 @@ sources: [evo-graph]
 # evograph — DEPRECATED
 
 **Do not select `algorithm_skill: evograph` for a new run.** Use `agent-optimize` (agent mode) or
-`hill-climb` / `gepa` / `skillopt` (deterministic). This file stays so an existing evograph run dir
-is still readable and so the wiki file-format contract has an owner until it moves.
+`hill-climb` / `gepa` / `skillopt` (deterministic) with `memory_skill: wiki` if you want THIS run's
+weakness-graph format. This file stays so an existing evograph run dir is still readable.
 
 ## Why it is deprecated
 
@@ -44,7 +44,9 @@ that capability is not distinctive and the part that *was* distinctive was a def
 - **What remains unique is an output format, not a search strategy.** The run-dir `wiki/` is
   genuinely useful, but the dashboard renders the Weakness-graph tab from `wiki/` presence alone,
   for any algorithm that writes the format (`core/cap_evolve/dashboard.py`). An output contract
-  does not earn a second agent-mode algorithm that users must choose between.
+  does not earn a second agent-mode algorithm that users must choose between — it has since moved
+  to `skills/memory/wiki/SKILL.md`, a standalone `memory_skill` any algorithm can select (#400,
+  #404), so it no longer needs evograph to stay alive.
 
 ## There is no deterministic engine
 
@@ -69,13 +71,16 @@ used by anything writing the wiki.
 
 ## Removal is a separate decision
 
-Deprecation is reversible; removal is not. Still to decide (maintainer): move the wiki format
-contract into `agent-optimize` as an optional output, stop `dashboard.py` inferring
-`algorithm = "evograph"` from `wiki/` presence, then delete this directory.
+Deprecation is reversible; removal is not. The wiki format contract now has a real owner
+(`skills/memory/wiki/SKILL.md`), so what's left to decide (maintainer): stop `dashboard.py`
+inferring `algorithm = "evograph"` from `wiki/` presence alone (any `memory_skill: wiki` run now
+writes it too), then delete this directory.
 
 ## References
-- [references/dashboard.md](references/dashboard.md) — the wiki file formats the dashboard tab
-  reads. Load it to write or parse `<run_dir>/wiki/`.
+- [skills/memory/wiki/SKILL.md](../../memory/wiki/SKILL.md) — the wiki format contract's current
+  home: weakness-node/solution-card schemas, generalized for any algorithm via `memory_skill: wiki`.
+- [references/dashboard.md](references/dashboard.md) — the same file formats, kept here for reading
+  an existing evograph run dir's branch/round-revert specifics the generalized skill dropped.
 - [references/clustering.md](references/clustering.md) — weakness-node schema and the
   `affected_tasks` freeze rule, kept for reading historical run dirs.
 - [references/graph.md](references/graph.md) — solution-card schema, branch layout, whole-round
