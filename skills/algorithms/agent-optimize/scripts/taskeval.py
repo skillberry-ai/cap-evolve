@@ -132,9 +132,6 @@ def main() -> int:
         print("WARNING: no --canary. A per-task edit that breaks a working task will not be "
               "visible until the full-val gate.", file=sys.stderr)
 
-    adapter.apply(cand)
-    ctx = adapter.materialize(cand) if hasattr(adapter, "materialize") else None
-
     groups = [(want, args.n, "target")]
     if canary:
         groups.append((canary, args.canary_n, "canary"))
@@ -148,37 +145,46 @@ def main() -> int:
         lambda: defaultdict(list))
     t0 = time.time()
 
-    for ids, n, kind in groups:
-        tasks = [by_id[i] for i in ids]
-        for i in ids:
-            role[i] = kind
-        out = adapter.run_trials(tasks, ctx, n_trials=n, base_seed=0)
-        for tid, rolls in sorted(out.items()):
-            for k, roll in enumerate(rolls or []):
-                if roll is None or getattr(roll, "error", None):
-                    infra[tid] += 1          # missing data, NOT a zero
-                    continue
-                s = adapter.score(by_id[tid], roll)
-                rates[tid].append(float(s.reward))
-                for comp, v in component_rates(s, roll).items():
-                    comps[tid][comp].append(v)
-                if s.reward < 1.0:
-                    if s.feedback:
-                        fb[tid].append(s.feedback)
-                    if args.traces:
-                        traces.append({
-                            "task": tid, "trial": k, "reward": s.reward,
-                            "feedback": s.feedback,
-                            "tool_calls": [
-                                {"name": c.get("name"), "arguments": c.get("arguments")}
-                                for c in (getattr(roll, "tool_calls", None) or [])
-                            ],
-                            "trace": [
-                                {"role": m.get("role"),
-                                 "content": str(m.get("content") or "")[:900]}
-                                for m in (getattr(roll, "trace", None) or [])
-                            ],
-                        })
+    # `adapter.live(cand)` is the documented contract `run_target`'s docstring points to
+    # ("ctx is whatever live() yielded (default: the candidate dir Path)") — NOT
+    # `adapter.materialize(cand)`, whose default implementation writes `edits` (there are
+    # none here) and returns None. Calling it directly silently made `ctx` None for every
+    # adapter using the standard materialize/live split, so every rollout below raised
+    # inside run_trials_pool and was counted as an infra drop rather than scored — the
+    # reason this script, like integrate.py which calls it, was measured (#434/#438) to
+    # have never actually produced a per-task result on a real run.
+    with adapter.live(cand) as ctx:
+        for ids, n, kind in groups:
+            tasks = [by_id[i] for i in ids]
+            for i in ids:
+                role[i] = kind
+            out = adapter.run_trials(tasks, ctx, n_trials=n, base_seed=0)
+            for tid, rolls in sorted(out.items()):
+                for k, roll in enumerate(rolls or []):
+                    if roll is None or getattr(roll, "error", None):
+                        infra[tid] += 1          # missing data, NOT a zero
+                        continue
+                    s = adapter.score(by_id[tid], roll)
+                    rates[tid].append(float(s.reward))
+                    for comp, v in component_rates(s, roll).items():
+                        comps[tid][comp].append(v)
+                    if s.reward < 1.0:
+                        if s.feedback:
+                            fb[tid].append(s.feedback)
+                        if args.traces:
+                            traces.append({
+                                "task": tid, "trial": k, "reward": s.reward,
+                                "feedback": s.feedback,
+                                "tool_calls": [
+                                    {"name": c.get("name"), "arguments": c.get("arguments")}
+                                    for c in (getattr(roll, "tool_calls", None) or [])
+                                ],
+                                "trace": [
+                                    {"role": m.get("role"),
+                                     "content": str(m.get("content") or "")[:900]}
+                                    for m in (getattr(roll, "trace", None) or [])
+                                ],
+                            })
 
     per_task = {
         tid: {

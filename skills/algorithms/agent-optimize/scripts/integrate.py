@@ -46,11 +46,19 @@ HERE = Path(__file__).resolve().parent
 
 
 def _measure(pyexe: str, taskeval: Path, cand: Path, tasks: str, canary: str,
-             n: int, conc: int, base_seed: int) -> dict:
-    """Run taskeval on one candidate and return {task: rate} plus the objective."""
+             n: int, conc: int, base_seed: int, project: str) -> dict:
+    """Run taskeval on one candidate and return {task: rate} plus the objective.
+
+    ``base_seed`` is accepted for the caller's own record-keeping (see the ``measurement``
+    block in the final report) but is NOT forwarded to taskeval.py, which has no such flag —
+    it always evaluates at its own internal seed 0. Forwarding it anyway used to make this
+    call fail argparse outright with "unrecognized arguments", right after failing it a
+    second way for the missing ``--project`` this function now supplies: this script had
+    never actually been run end-to-end (see #434/#438), and both defects were latent.
+    """
     out = cand.parent / f".{cand.name}_eval.json"
-    cmd = [pyexe, str(taskeval), str(cand), tasks, "--n", str(n), "--conc", str(conc),
-           "--base-seed", str(base_seed), "--json", str(out)]
+    cmd = [pyexe, str(taskeval), str(cand), tasks, "--project", project,
+           "--n", str(n), "--conc", str(conc), "--json", str(out)]
     if canary:
         cmd += ["--canary", canary, "--canary-n", str(max(3, n // 2))]
     p = subprocess.run(cmd, capture_output=True, text=True)
@@ -80,6 +88,8 @@ def _objective(rates: dict, tasks: list[str], canary: list[str]) -> float | None
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="integrate")
     ap.add_argument("--base", required=True, help="starting artifact dir (the current best)")
+    ap.add_argument("--project", required=True,
+                    help="cap-evolve project dir (holds adapters/), forwarded to taskeval.py")
     ap.add_argument("--branches", nargs="+", required=True,
                     help="branch artifact dirs, applied in the order given; put the "
                          "best-evidenced branch first so a later regression is attributable")
@@ -158,7 +168,7 @@ def main(argv=None) -> int:
         shutil.rmtree(junk, ignore_errors=True)
 
     ev = _measure(args.python, taskeval, out, args.tasks, args.canary,
-                  args.n, args.conc, args.base_seed)
+                  args.n, args.conc, args.base_seed, args.project)
     if "error" in ev:
         print(json.dumps({"error": "baseline measurement failed", "detail": ev["error"]}, indent=2))
         return 2
@@ -194,7 +204,7 @@ def main(argv=None) -> int:
                                   "NOT applied; base prose already modified by an earlier step"})
 
         ev = _measure(args.python, taskeval, trial, args.tasks, args.canary,
-                      args.n, args.conc, args.base_seed)
+                      args.n, args.conc, args.base_seed, args.project)
         if "error" in ev:
             steps.append({"step": b.name, "decision": "reject", "reason": "eval failed",
                           "detail": ev["error"]})
