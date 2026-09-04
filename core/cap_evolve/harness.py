@@ -1627,6 +1627,49 @@ def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
     return written
 
 
+def _run_ending_signal(run_dir: RunDir) -> str:
+    """Tell the optimizer where this iteration sits against the run's budget.
+
+    ``META_INSIGHTS.md``/``FRAMEWORK_IMPROVEMENTS.md`` are only required "at the end
+    of the run", and with no signal of when that is, the optimizer reasonably ranks
+    them below the REQUIRED ``PROCESS.md`` every iteration (issue #404 item 2: a real
+    run left both empty). Everything below is read straight from ``run_dir.budget``/
+    ``run_dir.spent`` — the same numbers ``spend.py`` reports — never guessed.
+    """
+    b, s = run_dir.budget, run_dir.spent
+    this_iter = s.iterations + 1
+    parts: list[str] = []
+    iters_left = None
+    if b.max_iterations:
+        iters_left = max(b.max_iterations - this_iter, 0)
+        parts.append(f"iteration {this_iter}/{b.max_iterations} ({iters_left} after this one)")
+    if b.max_usd:
+        parts.append(f"${s.total_usd:.2f}/${b.max_usd:.2f} spent "
+                      f"({100 * s.total_usd / b.max_usd:.0f}%)")
+    if b.max_metric_calls:
+        parts.append(f"{s.metric_calls}/{b.max_metric_calls} rollouts used "
+                      f"({100 * s.metric_calls / b.max_metric_calls:.0f}%)")
+    if b.stall:
+        parts.append(f"{s.stall}/{b.stall} consecutive rejects")
+    if not parts:
+        return ""
+
+    is_last = (
+        iters_left == 0
+        or (b.max_usd and s.total_usd / b.max_usd >= 0.85)
+        or (b.max_metric_calls and s.metric_calls / b.max_metric_calls >= 0.85)
+        or (b.stall and s.stall + 1 >= b.stall)
+    )
+    status = "; ".join(parts)
+    if is_last:
+        return (
+            f"## Run budget — THIS MAY BE YOUR LAST ITERATION ({status})\n"
+            "Update `META_INSIGHTS.md` and `FRAMEWORK_IMPROVEMENTS.md` THIS iteration — "
+            "there may be no next one to do it in.\n\n"
+        )
+    return f"## Run budget ({status})\n\n"
+
+
 def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> str:
     """Give the optimizer its cross-iteration files + a prompt pointer to each.
 
@@ -1642,7 +1685,8 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
     seed_framework_memory(workdir, run_dir)
 
     pointer = (
-        "## Cross-iteration files in THIS working dir (clean ownership — read all)\n"
+        _run_ending_signal(run_dir)
+        + "## Cross-iteration files in THIS working dir (clean ownership — read all)\n"
         "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the tasks "
         "it MEASURABLY broke/fixed, plus the ones whose move was under 2·SE and so resolves "
         "nothing. Never re-introduce a change that broke a task; never redesign an edit "
