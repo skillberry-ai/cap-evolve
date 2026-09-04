@@ -302,6 +302,7 @@ from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skills
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Installation or a run failed |
 | [Roadmap](docs/ROADMAP.md) | You want planned work |
 | [How-to guides](docs/how-to/cap-evolve-with-exgentic-tau2.md) | You want a specific harness + benchmark recipe |
+| [Docker/Podman on CCC](docs/how-to/ccc/CCC_PODMAN_SETUP.md) | You are running on a cluster with no root, no `sudo`, no subuid range (IBM CCC), or submitting cap-evolve through LSF |
 
 ## Project status and support
 

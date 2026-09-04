@@ -56,3 +56,8 @@ ci/benchmarks/.work/
 
 # generic dashboard-ui shell built fresh by pages.yml (CI-only, never committed)
 site/dashboard-ui/
+
+# CCC/LSF run outputs — scripts/ccc/run_ccc_*.sh write results/<suite>/<run>/
+# here, including env_snapshot.txt (a redacted .env) and LSF job logs.
+# Credentials-adjacent: never commit.
+/results/
