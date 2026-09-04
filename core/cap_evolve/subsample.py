@@ -152,7 +152,30 @@ def select_screen_subset(
         "seed": int(seed),
         "holdout_frac": float(holdout_frac),
         "pool_n": len(pool),
+        "rationale": _subset_rationale(broken=broken, informative=informative, holdout=holdout,
+                                       seed=seed),
     }
+
+
+def _subset_rationale(*, broken: list, informative: list, holdout: list, seed: int) -> str:
+    """One sentence explaining WHICH tasks are in the subset and WHY — issue #437's
+
+    ``subset.rationale``: a screen must say why its subset looks the way it does, not
+    just what the ids are.
+    """
+    parts = []
+    if broken:
+        parts.append(f"{len(broken)} previously-broken task(s) {broken} (a prior edit's "
+                     "known regression, highest-value to re-check)")
+    if informative:
+        parts.append(f"{len(informative)} most-informative failing/high-variance task(s) "
+                     f"{informative}")
+    if holdout:
+        parts.append(f"{len(holdout)} random regression-canary task(s) {holdout} drawn "
+                     f"(seed {seed}) from tasks the parent currently passes")
+    if not parts:
+        return "empty subset — no valid parent measurements to screen against"
+    return "; ".join(parts)
 
 
 def paired_deltas_on(parent_per_task: list, cand_per_task: list, ids: list) -> dict:

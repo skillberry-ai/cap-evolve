@@ -48,6 +48,22 @@ def test_broken_tasks_are_screened_first():
     assert "t0" in s["ids"] and s["broken"] == ["t0"]
 
 
+# ---- rationale (issue #437) -----------------------------------------------
+
+def test_rationale_names_broken_informative_and_holdout_tasks():
+    s = select_screen_subset(PARENT, k=6, seed=1, holdout_frac=0.5, broken_ids=["t0"])
+    assert "t0" in s["rationale"]
+    for tid in s["informative"]:
+        assert tid in s["rationale"]
+    for tid in s["holdout"]:
+        assert tid in s["rationale"]
+
+
+def test_rationale_is_never_empty_for_a_nonempty_subset():
+    s = select_screen_subset(PARENT, k=4, seed=1)
+    assert s["rationale"]
+
+
 def test_unmeasured_tasks_are_never_screened():
     """A task with no valid trial is missing data, not a 0.0 to go re-measure."""
     parent = PARENT + [_pt("ghost", 0.0, valid=0)]

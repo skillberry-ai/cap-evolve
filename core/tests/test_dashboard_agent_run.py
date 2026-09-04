@@ -34,7 +34,10 @@ _EVENTS = [
     {"t": 3.0, "kind": "baseline", "val": 0.5, "stderr": 0.25, "n_scored": 2},
     {"t": 4.0, "kind": "screen", "tag": "cand_a", "tier": 1, "ids": ["t1", "t2"],
      "fired": 2, "decision": "promote", "mean_delta": 0.5, "se": 0.5, "n": 2,
-     "inconclusive": True, "net_rollouts": -2},
+     "inconclusive": True, "net_rollouts": -2,
+     "rationale": "1 most-informative failing/high-variance task(s) ['t2']; 1 random "
+                  "regression-canary task(s) ['t1'] drawn (seed 1) from tasks the parent "
+                  "currently passes"},
     {"t": 5.0, "kind": "evaluate", "split": "val", "tag": "cand_a", "reward": 0.5,
      "stderr": 0.25, "cost_usd": 1.25, "tokens": 20, "seconds": 30.0, "n_scored": 2},
     {"t": 6.0, "kind": "reject", "candidate": "cand_a", "val": 0.5,
@@ -160,6 +163,7 @@ def test_screens_expose_the_subset_and_its_movement():
     assert sc["holdout"] == ["t1"] and sc["informative"] == ["t2"]
     assert sc["fixed"] == ["t2"] and sc["regressed"] == ["t1"]
     assert sc["pool_n"] == 2
+    assert "t2" in sc["rationale"] and "t1" in sc["rationale"]
 
 
 def test_no_screens_means_no_screens_capability():

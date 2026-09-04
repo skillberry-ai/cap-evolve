@@ -208,7 +208,7 @@ def main(argv=None) -> int:
                       fired=fired, decision=decision["decision"],
                       mean_delta=decision["mean_delta"], se=decision["se"],
                       n=decision["n"], inconclusive=decision["inconclusive"],
-                      net_rollouts=savings["net_rollouts"])
+                      net_rollouts=savings["net_rollouts"], rationale=sub["rationale"])
     print(json.dumps(payload, indent=2))
     return 0
 

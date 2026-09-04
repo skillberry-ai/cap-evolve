@@ -1836,6 +1836,7 @@ def reduce_run(run_dir) -> dict:
             "fixed": [str(x) for x in (paired.get("fixed") or [])],
             "regressed": [str(x) for x in (paired.get("regressed") or [])],
             "pool_n": sub.get("pool_n"),
+            "rationale": e.get("rationale") or sub.get("rationale"),
             "t": e.get("t"),
         })
     if screens:
@@ -3064,6 +3065,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       if(sc.mean_delta!=null)bits.push('Δ='+(+sc.mean_delta).toFixed(3)+(sc.se!=null?' ± '+(+sc.se).toFixed(3):''));
       if(sc.threshold!=null)bits.push('threshold='+sc.threshold);
       box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:bits.join('  ·  ')}));
+      if(sc.rationale)box.append($('div',{class:'muted',style:'font-size:11px;margin-top:4px',text:'why this subset: '+sc.rationale}));
       s.append(box);
     });
   }
