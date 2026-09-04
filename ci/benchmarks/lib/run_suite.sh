@@ -150,15 +150,22 @@ PY
 [ "${#IDS[@]}" -gt 0 ] || { echo "::warning::tasks.json empty for $BENCH/$TIER"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks)" >> "$OUT/report.md"; exit 0; }
 # AGENT_MODEL (env — the workflow's `agent_model` input, or its default) is
 # AUTHORITATIVE: it's what this run actually uses. tasks.json's per-task "agent"
-# field is only consulted to WARN on a mismatch (e.g. a curated task pinned to a
-# different model than requested) — it never silently overrides the caller's choice.
-"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" <<'PY'
+# field is PROVENANCE, not a pin to enforce — it records which model a tier's tasks were
+# curated/measured against (e.g. pilot/tasks.json's "agent" names the one model the whole
+# tier exists to validate — see make_pilot.py's AGENT). Picking a different agent_model on
+# dispatch is a normal, deliberate thing to do (that IS the benchmark), so a mismatch is
+# informational, never a "::warning::" — a same-every-time warning trains people to stop
+# reading warnings (#420 item 10).
+"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" "$BENCH/$TIER" <<'PY'
 import json,sys
 ts=json.load(open(sys.argv[1]))
 agents={t.get("agent") for t in ts if t.get("agent")}
-env_model=sys.argv[2]
+env_model, tier = sys.argv[2], sys.argv[3]
 if agents and agents != {env_model}:
-    sys.stderr.write(f"::warning::tasks.json pins agent(s) {sorted(agents)} but this run uses {env_model!r} (override)\n")
+    sys.stderr.write(f"::notice::tasks.json records {sorted(agents)} as the agent "
+                      f"{tier}'s tasks were curated/measured against; this run uses "
+                      f"{env_model!r} instead, which is expected when deliberately "
+                      f"evaluating a different agent\n")
 PY
 IDS_CSV="$(IFS=,; echo "${IDS[*]}")"
 echo ">>> $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MODEL, ${ITER} iters)" >&2

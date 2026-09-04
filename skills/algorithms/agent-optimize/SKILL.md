@@ -294,6 +294,17 @@ for you: **never hand a subset result to `gate_check.py`** — its `coverage` re
 denominator *is* the subset; and **a round that produced no run-dir artifacts is a bug**, so fix it
 rather than driving around the primitives.
 
+**A broken framework file is reported, never hand-worked-around.** `round.py`/`gate_check.py` already
+raise `GateCheckFailed` and write nothing to the round table when a gate fails to run — that specific
+crash can no longer produce a null-filled table to work around. The rule is general and covers every
+other framework output too: if a round-table row, a `screen.py`/`measure.py` result, or any other
+framework artifact comes back malformed (missing keys, unparsable JSON, a non-zero exit), **stop and
+say exactly what is broken** in your report — do not recompute the verdict by hand from raw files and
+keep going, even if your hand-computed number is correct. The rollouts stay on disk, so re-running the
+tool that produced the artifact is free; silently substituting your own arithmetic is the one thing
+that is not, because nothing downstream can then tell the difference between a judged round and one
+you judged yourself. `references/algorithm.md`, "How honesty survives handing the agent the wheel".
+
 ## References
 
 One level deep — each is read on its own, and none points at another.

@@ -54,6 +54,22 @@ agent does:
   applies. It is what diagnose's `kept_good` list exists to protect.
 - **Edits are audited.** Every candidate is snapshotted in the git-backed store and every
   round is appended to `events.jsonl`, so the search is fully reconstructable.
+- **A broken framework file stops the round, it does not get hand-worked-around.** On run
+  33492876620 round 3, `_gate()` swallowed a `gate_check.py` crash into `{"error": ...}` and
+  the caller `.get()`'d the missing verdict keys into `null`s in the round table; the agent
+  noticed, recomputed the verdicts itself from `gate_check.py`'s raw output, booked the round
+  `inconclusive` by hand, and said so in `JOURNAL.md`. That specific case is now closed by
+  code: `_gate()` raises `GateCheckFailed` on a non-zero exit or unparsable stdout,
+  `assert_rows_were_judged` refuses to publish any row whose reward is `null` when its own
+  eval succeeded, and `round.py` exits non-zero with nothing written to the table — so there
+  is no broken table left standing to work around. The **general** rule survives that fix and
+  covers every other framework artifact (a malformed `screen.py`/`measure.py`/`diagnose`
+  output, a torn JSON file on disk): treat it the same way `GateCheckFailed` is treated,
+  never the way the old `_gate()` did. Stop, report the malformed file and what it should have
+  contained, and let the caller re-run it — the underlying rollouts are already on disk, so
+  re-deriving the verdict is free. Do **not** recompute a substitute number by hand and keep
+  going, even when the hand-computed number turns out right, because the run is no longer
+  telling anyone when this happens.
 
 So the "free" in free-form is freedom of *strategy*, not freedom to fake a result. The
 headline number is still produced once, on data the search never saw.

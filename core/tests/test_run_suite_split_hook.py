@@ -160,3 +160,48 @@ def test_spreadsheetbench_tier_defaults(tier, turns, concurrency, dataset):
 def test_max_turns_is_overridable():
     src = RUN_SUITE.read_text(encoding="utf-8")
     assert "SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}" in src
+
+
+def _agent_provenance_block() -> str:
+    """Lift the tasks.json agent-provenance check verbatim out of run_suite.sh."""
+    src = RUN_SUITE.read_text(encoding="utf-8")
+    start = src.index("# AGENT_MODEL (env")
+    end = src.index("IDS_CSV=", start)
+    block = src[start:end]
+    assert '"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" "$BENCH/$TIER"' in block
+    return block
+
+
+def _run_agent_provenance(tmp_path: Path, tasks: list[dict], agent_model: str):
+    base = tmp_path / "base"
+    base.mkdir(parents=True)
+    (base / "tasks.json").write_text(json.dumps(tasks), encoding="utf-8")
+    script = textwrap.dedent(f"""
+        set -euo pipefail
+        PY=python3
+        BASE={base}
+        BENCH=spreadsheetbench
+        TIER=pilot
+        AGENT_MODEL={agent_model}
+    """) + _agent_provenance_block()
+    return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+
+
+def test_agent_mismatch_annotation(tmp_path):
+    """#420 item 10: the field is provenance (which agent a tier was curated/measured against),
+    not a canonical pin — deliberately running a different agent is expected, so the annotation
+    must not read as "::warning::" (a same-every-run warning teaches people to ignore warnings).
+    """
+    proc = _run_agent_provenance(
+        tmp_path, [{"id": "1", "agent": "azure/gpt-5.5"}], "aws/gpt-oss-120b")
+    assert proc.returncode == 0, proc.stderr
+    assert "::warning::" not in proc.stderr
+    assert "::notice::" in proc.stderr
+    assert "azure/gpt-5.5" in proc.stderr and "aws/gpt-oss-120b" in proc.stderr
+
+
+def test_agent_match_emits_nothing(tmp_path):
+    proc = _run_agent_provenance(
+        tmp_path, [{"id": "1", "agent": "aws/gpt-oss-120b"}], "aws/gpt-oss-120b")
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == ""
