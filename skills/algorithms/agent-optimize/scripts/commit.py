@@ -300,6 +300,16 @@ def main(argv=None) -> int:
                    help="commit even though this candidate id already has a decision "
                         "(audit/repair only — it overwrites the earlier snapshot); also "
                         "overrides the inconclusive-without-growth guard below")
+    # graph.jsonl (#435): a MERGE candidate (integrate.py/funcmerge.py/merge_taskopt.py)
+    # has 2+ parents this script has no other way to learn — those scripts produce a
+    # merged artifact dir, not a commit. An ordinary edit's single parent is already
+    # known (best_id at gate time, below) and needs no flag.
+    p.add_argument("--parents", default=None,
+                   help="comma-separated parent candidate ids, for a MERGE candidate "
+                        "(2+ parents). Omit for an ordinary edit.")
+    p.add_argument("--edit-kind", default=None, choices=["prompt", "code", "merge"],
+                   help="graph.jsonl node kind; defaults to 'merge' when --parents has "
+                        "2+ ids, else 'code'.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -388,6 +398,8 @@ def main(argv=None) -> int:
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
+    parents = ([p.strip() for p in args.parents.split(",") if p.strip()]
+               if args.parents else [parent_id])
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
         run_dir.set_best(args.candidate_id)
@@ -444,6 +456,7 @@ def main(argv=None) -> int:
                                  val=args.val,
                                  parent_val=parent_val,
                                  indecisive=indecisive,
+                                 parents=parents, edit_kind=args.edit_kind,
                                  opt_cost_usd=args.optimizer_usd or None,
                                  opt_tokens=args.optimizer_tokens or None,
                                  optimizer_seconds=args.optimizer_seconds or None,

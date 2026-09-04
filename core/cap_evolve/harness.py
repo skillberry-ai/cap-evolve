@@ -28,6 +28,7 @@ from typing import Callable
 from . import convergence as convergence_mod
 from . import footprint as footprint_mod
 from . import gate as gate_mod
+from . import graph as graph_mod
 from . import integrity
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
@@ -1472,7 +1473,8 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
 def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                      parent_id: str | None, accepted: bool, reason: str,
                      val: float | None = None, parent_val: float | None = None,
-                     indecisive: bool = False, **extra) -> None:
+                     indecisive: bool = False, parents: list | None = None,
+                     edit_kind: str | None = None, **extra) -> None:
     """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
 
     Three things must happen exactly once per iteration, and they used to be
@@ -1503,6 +1505,13 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     algorithm-specific (run_step snapshots every candidate with ``_SNAPSHOT_IGNORE``,
     gepa only accepted ones) and they are not silently-droppable the way the three
     above were.
+
+    A 4th thing happens here too: a ``graph.jsonl`` node (#435) — a pure VIEW over the
+    ``step`` event just written plus whatever gate/screen artifacts already exist on
+    disk for ``cid``, so every candidate this framework ever judges (agent-mode via
+    ``commit.py``, or a deterministic algorithm via ``run_step``) gets exactly one DAG
+    node with no separate plumbing per caller. ``parents`` defaults to ``[parent_id]``
+    (an edit); pass 2+ ids for a merge node (#438's job to populate, not this one's).
     """
     run_dir.update_spent(iterations=1, accepted=None if indecisive else accepted,
                          best_val=val if accepted and val is not None else None)
@@ -1514,6 +1523,14 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                        reason=reason, indecisive=indecisive)
     for filename, seed, mark in _ACCUMULATORS:
         _fold_accumulator(workdir, run_dir, filename=filename, seed=seed, mark=mark)
+    try:
+        graph_mod.append_node(
+            run_dir, node_id=cid,
+            parents=list(parents) if parents else [parent_id or "seed"],
+            edit_kind=edit_kind, status="accepted" if accepted else "rejected",
+            val_mean=val, note=reason)
+    except Exception as e:  # noqa: BLE001 — a log write must never break a run
+        run_dir.log_event("optimizer_context_warning", what="graph.jsonl", error=str(e)[:300])
 
 
 def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
