@@ -1,0 +1,10 @@
+{
+  "task_id": "10",
+  "reward": 0.0,
+  "feedback": "Task reward: 0.000. Database state does NOT match the expected final state, but NO gold action mismatched \u2014 so this is not a wrong argument value. The divergence is an EXTRA or DUPLICATED write, or a write side effect: every successful update appends a charge to `payment_history`, and re-issuing a corrected write does not undo the first one. The 2 write(s) you performed, in order: update_reservation_flights(cabin='business', reservation_id='4NQLHD'); update_reservation_flights(cabin='business', reservation_id='4NQLHD'). Check whether one of them should not have happened at all, or happened twice.",
+  "n": 1,
+  "stderr": 0.0,
+  "trial_rewards": [],
+  "raw": {},
+  "metrics": []
+}

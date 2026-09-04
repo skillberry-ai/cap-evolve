@@ -1,0 +1,11 @@
+id: netguard_duplicate_payment
+cluster_id: netguard_duplicate_payment
+source_task_ids: [10]
+source_rollout: run3_task10_seed_t8_duplicate_payment.json
+timeout_s: 10
+expects: guard_fires
+description: "A revised update_reservation_flights call on a reservation already updated once in this conversation must not append a second payment_history entry (the toolkit should net the delta into the prior entry, not append a duplicate charge)."
+assert:
+  metric: payment_history_len
+  op: "<="
+  value: 1

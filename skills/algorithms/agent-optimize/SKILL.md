@@ -84,30 +84,28 @@ scores val only, so pay one `evaluate --split train` first.)
 | `4/10` – `7/10` | genuinely unstable behaviour | fix by *removing* ambiguity, not adding rules |
 | `8/10` – `9/10` | noise around a working path | **leave it alone**; "fixing" it is how churn starts |
 
-**Audit the MEASUREMENT before you credit a failure**, in round 1 while it is still free (scoring
-re-derives on persisted rollouts): a failing task is a claim by the scorer, and an optimizer that skips
-this optimizes against its own instrumentation. Does the feedback name the **defect** or only the tool;
-does any helper fail **silently**; is *silent* distinguished from *wrong*; did the rollout **run**, or is
-this missing data wearing a 0.0; which components actually **gate**? The failure behind each item:
-`references/edit-design-lessons.md`.
+**Audit the MEASUREMENT before you credit a failure**, in round 1 while free (scoring re-derives
+on persisted rollouts): a failing task is a claim by the scorer. Does the feedback name the
+**defect** or only the tool; does any helper fail **silently**; is *silent* distinguished from
+*wrong*; did the rollout **run**, or is this missing data wearing a 0.0; which components
+actually **gate**? `references/edit-design-lessons.md`.
 
 **After two rejected rounds, read the candidate's TRACE before writing a third** — not "was the rule
 right" but "did the agent follow it at all". Never exercised ⇒ the **form** is wrong; exercised and
 still wrong ⇒ the content is.
 
 **2. Propose an edit per candidate — and address EVERY cluster the round can afford**, either as
-**sibling candidates, default N≥3** (one cluster each, gated independently — the safe default) or as **one bold
-multi-part edit** (higher variance, but the only way a fix needing a prompt change *and* a tool change
-lands together). Bundle only *independent* parts — different files, different rules — so a rejected bundle
-can be resubmitted as its surviving part; `regressed` (screen) and `regressions` (gate) say which to drop.
-Siblings gate better (a narrow edit's footprint is resolvable, a bundle's is the whole split) and stop
-**churn** — same mean, a *different* set of tasks passing — from reading as a tie.
+**sibling candidates, default N≥3** (one cluster each, gated independently — the safe default) or
+**one bold multi-part edit** (higher variance, but the only way a prompt change *and* a tool change
+land together). Bundle only *independent* parts — different files, different rules — so a rejected
+bundle can be resubmitted as its surviving part; `regressed`/`regressions` say which to drop.
+Siblings gate better (a narrow edit's footprint is resolvable, a bundle's is the whole split) and
+stop **churn** — same mean, a *different* set of tasks passing — from reading as a tie.
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
 cp -r "$R/candidates/$BEST" "$R/work/$TAG"
-# …now edit the files under $R/work/$TAG that your capability owns. Example only:
-# read capability_path in Phase 0 for the real layout.
+# edit the files under $R/work/$TAG your capability owns (Example only: see capability_path).
 ```
 
 Every edit encodes a **general rule** — never a task's id, gold value, or answer.
@@ -126,10 +124,12 @@ Then: **no nuance clauses**; **exemption clauses do not scope** (still suppresse
 guard to a prose rule where the capability owns its tools** — prose when the agent lacks a decision
 criterion, code when it has one and violates it. Costs, and the guard-closure trap: `edit-design-lessons.md`.
 
-**Every round evaluates a null control**: a byte-for-byte copy of the current best, evaluated like any
-candidate — first, not after a surprising result. That eval is the round's own noise floor. And **read
-`$R/rejected.jsonl` and make each proposal STRUCTURALLY different from what is in it**: a different
-form, surface, or cluster — never a narrower version of a rejected rule.
+**Every round evaluates a null control** first — a byte-for-byte copy of the current best; that
+eval is the round's noise floor. **Read `$R/rejected.jsonl` and make each proposal STRUCTURALLY
+different from what is in it** — never a narrower version of a rejected rule.
+
+**2b. Micro-test first, when the cluster has one** — `microcase.py run-all`; `micro_test_fail`
+rejects on the spot, no rollout paid.
 
 **3. Cheap SUBSET screen — the promotion ladder.** Do not pay full val to learn an edit is bad:
 
@@ -312,3 +312,5 @@ One level deep — each is read on its own, and none points at another.
 - [`references/edit-design-lessons.md`](references/edit-design-lessons.md) — the scorer audit, guard
   closure, and the measured backfires behind the edit-form table. **Load** before editing a surface
   for the first time, or after two rejects.
+- [`references/microcase.md`](references/microcase.md) — the micro-test schema and `gen` contract.
+  **Load** before proposing a candidate for a cluster with (or needing) a case.

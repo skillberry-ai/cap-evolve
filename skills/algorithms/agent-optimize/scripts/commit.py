@@ -286,11 +286,13 @@ def main(argv=None) -> int:
     # that asserts a full-val paired gate actually ran.
     p.add_argument("--reject-basis", default=None,
                    choices=["gate", "screen_kill", "ceiling", "budget", "infra",
-                            "driver_judgement"],
+                            "micro_test_fail", "driver_judgement"],
                    help="what evidence the reject rests on: gate=full-val paired gate ran AND "
                         "rejected; screen_kill=screen proved harm; ceiling=arithmetic proof no "
                         "accept was reachable, so full val was never paid; budget=screen "
                         "evidence plus a budget call; infra=missing data, not a judgement; "
+                        "micro_test_fail=microcase.py proved the candidate's own targeted "
+                        "mechanism does not fire, before any rollout was spent (#436); "
                         "driver_judgement=the gate ACCEPTED and you are overriding it (say why "
                         "in --note)")
     p.add_argument("--optimizer-usd", type=float, default=0.0)

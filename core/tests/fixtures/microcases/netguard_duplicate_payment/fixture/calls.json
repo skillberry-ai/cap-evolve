@@ -1,0 +1,108 @@
+{
+  "calls": [
+    {
+      "name": "get_user_details",
+      "arguments": {
+        "user_id": "liam_khan_2521"
+      }
+    },
+    {
+      "name": "get_reservation_details",
+      "arguments": {
+        "reservation_id": "4NQLHD"
+      }
+    },
+    {
+      "name": "search_onestop_flight",
+      "arguments": {
+        "origin": "IAH",
+        "destination": "SEA",
+        "date": "2024-05-24"
+      }
+    },
+    {
+      "name": "search_direct_flight",
+      "arguments": {
+        "origin": "SEA",
+        "destination": "JFK",
+        "date": "2024-05-26"
+      }
+    },
+    {
+      "name": "search_direct_flight",
+      "arguments": {
+        "destination": "IAH",
+        "date": "2024-05-27",
+        "origin": "JFK"
+      }
+    },
+    {
+      "name": "update_reservation_flights",
+      "arguments": {
+        "reservation_id": "4NQLHD",
+        "cabin": "business",
+        "flights": [
+          {
+            "flight_number": "HAT190",
+            "origin": "IAH",
+            "destination": "LAS",
+            "date": "2024-05-24"
+          },
+          {
+            "flight_number": "HAT047",
+            "origin": "LAS",
+            "destination": "SEA",
+            "date": "2024-05-24"
+          },
+          {
+            "flight_number": "HAT021",
+            "origin": "SEA",
+            "destination": "JFK",
+            "date": "2024-05-26"
+          },
+          {
+            "flight_number": "HAT279",
+            "origin": "JFK",
+            "destination": "IAH",
+            "date": "2024-05-27"
+          }
+        ],
+        "payment_id": "credit_card_7434610"
+      }
+    },
+    {
+      "name": "update_reservation_flights",
+      "arguments": {
+        "reservation_id": "4NQLHD",
+        "cabin": "business",
+        "flights": [
+          {
+            "flight_number": "HAT112",
+            "origin": "IAH",
+            "destination": "LAS",
+            "date": "2024-05-24"
+          },
+          {
+            "flight_number": "HAT047",
+            "origin": "LAS",
+            "destination": "SEA",
+            "date": "2024-05-24"
+          },
+          {
+            "flight_number": "HAT089",
+            "origin": "SEA",
+            "destination": "JFK",
+            "date": "2024-05-26"
+          },
+          {
+            "flight_number": "HAT279",
+            "origin": "JFK",
+            "destination": "IAH",
+            "date": "2024-05-27"
+          }
+        ],
+        "payment_id": "credit_card_7434610"
+      }
+    }
+  ]
+}
