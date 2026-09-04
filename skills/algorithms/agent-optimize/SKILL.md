@@ -182,9 +182,10 @@ events over ONE set of rollouts. Pass `--optimizer-usd/--optimizer-tokens/--opti
 **your own** proposal cost — the evaluate phase records the runner's, nothing records the proposer's.
 
 **Two decisions that are NOT rejects** (a reject advances **stall**): `--decision inconclusive` for an
-unresolved round (`verdict_stable: false`), re-measured under a FRESH tag; `--decision provisional` for a
-Δ>0 round under the bar (`directionally_positive_but_inconclusive`), after which `grow.py` buys trials on
-the SAME candidate and re-gates at the pooled n, capped at 2 rounds. `references/algorithm.md`.
+unresolved round (`verdict_stable: false`) — run `grow.py` first, required unless forced;
+`--decision provisional` for a Δ>0 round under the bar (`directionally_positive_but_inconclusive`),
+after which `grow.py` buys trials on the SAME candidate, re-gating at the pooled n, capped at 2.
+`references/algorithm.md`.
 
 **6. Write the handover before ending this round** — append one `## Iteration <cid>` entry below
 `JOURNAL.md`'s marker: what you tried, why, what the numbers said. The only thing the NEXT round reads,

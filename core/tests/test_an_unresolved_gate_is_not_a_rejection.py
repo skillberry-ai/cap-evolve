@@ -70,12 +70,16 @@ def _staged(tmp_path, cid="cand_2", table=UNSTABLE_TABLE):
 
 
 def _commit(run_dir, work, *extra, cid="cand_2", decision="inconclusive", val="0.54"):
+    # This file tests the booking MECHANICS of `inconclusive` — issue #420 item 3 (a separate
+    # test file) covers the newer, orthogonal rule that commit.py refuses that decision without
+    # a prior scripts/grow.py run. `--force` here is that override, not a re-test of it.
+    force = ["--force"] if decision == "inconclusive" and "--force" not in extra else []
     return subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", cid, "--from-dir", str(work),
          "--decision", decision, "--val", val,
          "--note", "verdict flipped between control replicates; not resolvable this round",
-         *extra],
+         *extra, *force],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
 

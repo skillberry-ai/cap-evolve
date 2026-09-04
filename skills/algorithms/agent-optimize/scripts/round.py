@@ -160,6 +160,45 @@ def measurement_context(split: str, n_trials: int, concurrency: int | None) -> d
     return {"split": split, "n_trials": int(n_trials), "concurrency": concurrency}
 
 
+def prior_round_settings(run_dir) -> dict | None:
+    """The most recent EARLIER iteration's ``--concurrency``/``--max-parallel``, or ``None``.
+
+    Issue #420 item 9: round 3 of a real run got ``--max-parallel`` 4 (the default) after
+    rounds 1-2 both explicitly passed 2, doubling how many candidate evals ran concurrently
+    against the same target — a load change that makes the round's own noise floor
+    incomparable with the rounds before it, and nobody noticed because nothing was recorded
+    to notice it from.
+    """
+    it = int(run_dir.spent.iterations)
+    for i, _att, path in reversed(_all_tables(run_dir)):
+        if i >= it:
+            continue
+        try:
+            table = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        return {"concurrency": table.get("measurement_concurrency"),
+                "max_parallel": table.get("measurement_max_parallel")}
+    return None
+
+
+def parallel_drift_warning(prior: dict | None, concurrency: int | None,
+                           max_parallel: int) -> str | None:
+    """Did this round's load settings drift from the previous round's, unannounced?
+
+    ``None`` on a prior round that never recorded ``max_parallel`` (a table written before
+    this field existed) — a missing measurement is not evidence of drift.
+    """
+    if not prior:
+        return None
+    if prior["concurrency"] in (None, concurrency) and prior["max_parallel"] in (None, max_parallel):
+        return None
+    return (f"this round used --concurrency {concurrency} --max-parallel {max_parallel}, but "
+            f"the previous round used --concurrency {prior['concurrency']} --max-parallel "
+            f"{prior['max_parallel']}. Gate settings that drift between rounds make the "
+            "rounds' noise floors incomparable — confirm this was a deliberate change.")
+
+
 def _rollouts_present(run_dir, tag: str, split: str, n_trials: int) -> bool:
     """Are ``tag``'s persisted rollouts still on disk at the trial depth this round needs?
 
@@ -369,6 +408,10 @@ def build_parser() -> argparse.ArgumentParser:
                         "parent always gets fresh ones.")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
+    p.add_argument("--skip-screen-ladder", action="store_true",
+                   help="run full-val on a candidate with no screen.py record for it (NOT "
+                        "recommended — see the compliance check above). An explicit, recorded "
+                        "choice, the same idiom as --allow-high-concurrency.")
     return p
 
 
@@ -429,11 +472,36 @@ def _main(argv=None) -> int:
     # `<run_dir>/screens/<tag>__screenN.json`; its absence means this candidate skipped
     # straight to full-val, which the dashboard can now show as its own event kind.
     screens_dir = run_dir.root / "screens"
+    unscreened = []
     for t in tags:
         screened = screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
         run_dir.log_event("agent_optimize_compliance", tag=t,
                           screened_before_fullval=screened,
                           iteration=int(run_dir.spent.iterations))
+        if not screened:
+            unscreened.append(t)
+
+    # Made a hard refusal, not a logged fact: issue #420 item 4 found that EVERY candidate
+    # in a whole run skipped screen.py, even the ones (`cand_scope`, harmful;
+    # `cand_e2_verifytype`, flat) it exists to kill for a quarter of the price — because
+    # using it was optional, so a real, working, cheap tool never ran once. The compliance
+    # event above already proved this cannot be caught after the fact by inference; making
+    # it a warning would just be a third restatement of the same prose SKILL.md already
+    # carried. `--skip-screen-ladder` is the deliberate, recorded override (e.g. a
+    # candidate whose val is small enough that screening buys nothing).
+    if unscreened and not args.skip_screen_ladder:
+        print(json.dumps({
+            "error": f"candidate(s) {unscreened} went straight to a full-val eval without a "
+                     "screen.py record under $R/screens/",
+            "why": "screen.py triages a candidate on a cheap val SUBSET before this full-val "
+                   "eval is paid — see its own docstring. Skipping it because it is optional "
+                   "is the exact failure issue #420 item 4 found: every candidate paid full "
+                   "val, including ones a quarter-price screen would have killed.",
+            "fix": "run screen.py --tier 1 (then --tier 2 if it promotes) on each of these "
+                   "tags first, or pass --skip-screen-ladder to record the deliberate choice "
+                   "to skip it.",
+        }, indent=2))
+        return 2
 
     # The null control is built here, not by the driver, so it cannot silently be skipped
     # or accidentally differ from the parent.
@@ -663,6 +731,9 @@ def _main(argv=None) -> int:
             "and ~0.03 at conc 8. A verdict from this round can therefore not resolve an effect "
             "smaller than roughly 0.08. Re-run the gate at --concurrency 8 before believing an "
             "accept.")
+
+    prior_settings = prior_round_settings(run_dir)
+    parallel_warning = parallel_drift_warning(prior_settings, args.concurrency, args.max_parallel)
     out = {
         # Which gate of this iteration this is. On the live run nothing in the output
         # distinguished "second opinion on iteration 1" from "iteration 1", so an operator
@@ -721,6 +792,8 @@ def _main(argv=None) -> int:
                                       "established noise floor, so it must be measured")}),
         "measurement_concurrency": args.concurrency,
         "concurrency_warning": conc_warning,
+        "measurement_max_parallel": args.max_parallel,
+        "parallel_warning": parallel_warning,
         "null_delta_between_control_replicates": null_delta,
         "null_delta_replicates": len(pooled_rows),
         "null_delta_reading": (
@@ -766,16 +839,22 @@ def _main(argv=None) -> int:
             "A candidate marked `verdict_stable: false` has an UNSTABLE verdict and is "
             "INCONCLUSIVE, never accepted: its "
             "verdict changed depending on which byte-identical control replicate happened to be "
-            "the reference, so the round cannot tell its edit from re-measurement. Book it as "
-            "`commit.py --decision inconclusive` — that charges the iteration but NOT the stall "
-            "counter, because a measurement that could not resolve is no evidence you have run "
-            "out of ideas, and it keeps the edit out of `rejected.jsonl` so a later round is not "
-            "taught to avoid a change nothing ever judged. To resolve it, re-measure under a "
-            "FRESH tag (e.g. `cand_2b`) or ask for the higher `--trials` in ONE evaluation: "
+            "the reference, so the round cannot tell its edit from re-measurement. Run "
+            "`scripts/grow.py --candidate <tag> --growth-round 1 --add-trials <n>` on it BEFORE "
+            "booking anything — commit.py refuses `--decision inconclusive` until grow.py has "
+            "bought this candidate at least one extra round of trials (issue #420 item 3: this "
+            "exact case was read-and-skipped, never run, across two prior runs). grow.py pools "
+            "the new trials onto the SAME candidate and re-gates at the pooled n; commit its "
+            "recommendation (promote/grow_again/abandon) once it has one. Only if growth "
+            "genuinely cannot help (e.g. delta <= 0) book `commit.py --decision inconclusive "
+            "--force` and say why in --note — that still charges the iteration but NOT the "
+            "stall counter, because a measurement that could not resolve is no evidence you "
+            "have run out of ideas, and it keeps the edit out of `rejected.jsonl` so a later "
+            "round is not taught to avoid a change nothing ever judged. "
             "rollouts are written `<task>__<tag>__t{k}.json` for k in range(n_trials), so "
             "re-running the SAME tag REPLACES t0..t9 rather than adding t10..t19 — it swaps a "
-            "reading for another reading and buys no extra evidence. That applies to the "
-            "CANDIDATE tags you pass; the control side is handled for you — a re-gate of the "
+            "reading for another reading and buys no extra evidence; grow.py's own throwaway "
+            "tag avoids that. The control side is handled for you — a re-gate of the "
             "same iteration gets its own `ctl_null_i<N>a<k>` replicates and POOLS the earlier "
             "attempt's into `null_delta_between_control_replicates`, so re-running this script "
             "adds control evidence instead of replacing it. Do not re-use a candidate tag to "

@@ -237,6 +237,19 @@ def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
     return row.get("verdict") if row else None
 
 
+def _has_grown(run_dir: RunDir, candidate_id: str) -> bool:
+    """Has ``scripts/grow.py`` already bought this candidate at least one extra round of
+    trials? True iff a ``work/grow_<candidate_id>_r*.json`` table exists.
+
+    On run 33492876620 round 3 a candidate landed exactly on ``grow.py``'s reason for
+    existing — Δ>0, below the significance bar, verdict flipping between control
+    replicates — and was booked ``inconclusive`` and left there. The transcript shows the
+    agent had read ``grow.py --help``, so this was not a discovery gap: the tool was
+    optional, so it went unused. See ``main``'s guard below.
+    """
+    return any((run_dir.root / "work").glob(f"grow_{candidate_id}_r*.json"))
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="commit")
     p.add_argument("--run-dir", required=True)
@@ -285,7 +298,8 @@ def main(argv=None) -> int:
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
     p.add_argument("--force", action="store_true",
                    help="commit even though this candidate id already has a decision "
-                        "(audit/repair only — it overwrites the earlier snapshot)")
+                        "(audit/repair only — it overwrites the earlier snapshot); also "
+                        "overrides the inconclusive-without-growth guard below")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -314,6 +328,27 @@ def main(argv=None) -> int:
     accepted = args.decision == "accept"
     indecisive = args.decision == "inconclusive"
     provisional = args.decision == "provisional"
+
+    # An inconclusive round is UNRESOLVED, not refuted — ``grow.py`` exists precisely to
+    # resolve it by buying more trials on this same candidate, and issue #420 item 3 found
+    # it had never run once across two real runs that hit this exact case. Making it
+    # optional is why: the fix is a guard here, not a third restatement in SKILL.md prose
+    # (the same argument round.py's own concurrency guard already makes). ``--force`` is
+    # the deliberate override, for a candidate growth genuinely cannot help (e.g. Δ<=0).
+    if indecisive and not args.force and not _has_grown(run_dir, args.candidate_id):
+        print(json.dumps({
+            "error": f"--decision inconclusive for {args.candidate_id!r}, but scripts/grow.py "
+                     "has not bought it any extra trials yet",
+            "why": "an inconclusive verdict means the measurement could not resolve the edit, "
+                   "not that the edit was refuted. grow.py exists to buy more trials on this "
+                   "SAME candidate and re-gate at the pooled n before it is left unresolved.",
+            "fix": f"run scripts/grow.py --candidate {args.candidate_id} --growth-round 1 "
+                   "--add-trials <n> first (it recommends promote/grow_again/abandon), then "
+                   "commit its recommendation; or pass --force here if growth genuinely "
+                   "cannot help this candidate (e.g. its delta is <= 0) and say why in --note.",
+        }, indent=2))
+        return 2
+
     if args.decision != "reject" and args.reject_basis:
         print(json.dumps({
             "error": f"--reject-basis is meaningless on an {args.decision}",
