@@ -1,11 +1,43 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle2, FileText, XCircle } from 'lucide-react'
+import { BookOpen, CheckCircle2, FileText, XCircle } from 'lucide-react'
 import { api } from '../lib/api'
-import type { RunGraph } from '../lib/types'
+import type { RunGraph, RunSummaryDetail } from '../lib/types'
 import { pct } from '../lib/format'
 import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
+
+/** Run-level optimizer narrative — JOURNAL/INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS
+ * plus the best candidate's PROCESS.md. A file still holding its unedited seed template
+ * (no real entry ever appended) is flagged rather than presented as real narrative. */
+export function NarrativePanel({ summary }: { summary: RunSummaryDetail }) {
+  const files = summary.narrative?.files ?? []
+  if (!files.length) return null
+  return (
+    <Card className="p-4">
+      <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+        <BookOpen size={15} className="text-primary" /> Process narrative
+      </h3>
+      <div className="divide-y divide-border">
+        {files.map((f, i) => (
+          <details key={f.name} open={i === 0} className="py-1.5">
+            <summary className="cursor-pointer font-mono text-xs text-muted hover:text-foreground">
+              {f.title}
+              {f.template_only && (
+                <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">
+                  unedited template — no entry appended
+                </span>
+              )}
+            </summary>
+            <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-xs">
+              {f.text}
+            </pre>
+          </details>
+        ))}
+      </div>
+    </Card>
+  )
+}
 
 /** Optimizer memory: accepted history, rejected candidates (an audit trail — the core
  * does not re-read it to avoid re-proposing), and the

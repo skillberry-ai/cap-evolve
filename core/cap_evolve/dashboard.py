@@ -2688,6 +2688,41 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   s.append(t);
 })();
 
+/* ---------- 6d2. Per-iteration timing — optimizer vs runner seconds per step ---------- */
+(function(){
+  const PI=S.per_iteration||[]; if(!PI.length)return;
+  const s=sec('Per-iteration timing');
+  s.append($('p',{class:'muted',text:
+    'Wall time spent on each optimizer step, split into the optimizer call and the runner '+
+    '(target-agent) eval that produced its score. A step with no cost recorded still has a '+
+    'real time — time is always shown, cost only when the run reported it.'}));
+  const maxSec=Math.max(1e-9,...PI.map(r=>(r.optimizer_seconds||0)+(r.runner_seconds||0)));
+  const t=$('table');
+  t.append($('tr',{},$('th',{text:'iter'}),$('th',{text:'candidate'}),$('th',{text:'status'}),
+    $('th',{class:'r',text:'optimizer time'}),$('th',{class:'r',text:'runner time'}),
+    $('th',{class:'r',text:'optimizer $'}),$('th',{class:'r',text:'runner $'}),$('th',{text:'time'})));
+  const STBADGE={accepted:'b-accepted',rejected:'b-rejected',failed:'b-failed',
+    indecisive:'b-indecisive',provisional:'b-indecisive'};
+  PI.forEach(r=>{
+    const total=(r.optimizer_seconds||0)+(r.runner_seconds||0);
+    const bar=$('div',{class:'bar'});
+    if(r.optimizer_seconds)bar.append($('i',{style:`width:${(r.optimizer_seconds/maxSec*100).toFixed(1)}%;background:var(--champion)`}));
+    if(r.runner_seconds)bar.append($('i',{style:`width:${(r.runner_seconds/maxSec*100).toFixed(1)}%;background:var(--accent)`}));
+    t.append($('tr',{},
+      $('td',{class:'num muted',text:r.iteration??'—'}),
+      $('td',{},$('code',{text:r.candidate})),
+      $('td',{},$('span',{class:'badge '+(STBADGE[r.status]||'b-seed'),text:r.status})),
+      $('td',{class:'r num',text:dsecs(r.optimizer_seconds)}),
+      $('td',{class:'r num',text:dsecs(r.runner_seconds)}),
+      $('td',{class:'r num muted',text:r.optimizer_usd==null?'—':'$'+(+r.optimizer_usd).toFixed(4)}),
+      $('td',{class:'r num muted',text:r.runner_usd==null?'—':'$'+(+r.runner_usd).toFixed(4)}),
+      $('td',{},bar)));
+  });
+  s.append(t);
+  s.append($('div',{class:'legend',html:'<span><i style="background:var(--champion)"></i>optimizer</span>'+
+    '<span><i style="background:var(--accent)"></i>runner</span>'}));
+})();
+
 /* ---------- 6e. Cost ledger — every dollar, attributed ---------- */
 (function(){
   const L=S.cost_ledger; if(!L||!L.rows.length)return;

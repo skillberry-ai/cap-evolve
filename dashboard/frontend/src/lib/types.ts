@@ -332,6 +332,20 @@ export interface RunSummaryDetail {
   gate_warnings?: unknown[]
   diagnoses?: unknown[]
   git_log?: { hash: string; subject: string }[]
+  /** The intake-authored project config — capevolve.yaml (grouped), PROJECT.md, and
+   *  every other file under the project dir (adapters/, seed_capability/, splits). */
+  config?: {
+    project_dir: string
+    spec_missing: boolean
+    spec_groups: { group: string; items: { key: string; value: unknown }[] }[]
+    project_md: string | null
+    files: { path: string; size: number; preview: string | null; truncated: boolean; binary: boolean }[]
+  } | null
+  /** Run-level optimizer narrative — JOURNAL/INSIGHTS/META_INSIGHTS/FRAMEWORK_IMPROVEMENTS
+   *  plus the best candidate's PROCESS.md, in that order. */
+  narrative?: {
+    files: { name: string; title: string; text: string; template_only: boolean }[]
+  } | null
 }
 
 /** GET /api/runs/{id}. */

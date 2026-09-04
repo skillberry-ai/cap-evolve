@@ -184,6 +184,22 @@ def test_render_html_self_contained_and_parseable():
             assert panel in text, f"missing panel: {panel}"
 
 
+def test_render_html_shows_per_iteration_latency():
+    """``summary.per_iteration`` (optimizer vs runner seconds per step) is COMPUTED
+    by the reducer regardless of rendering — this asserts the HTML artifact actually
+    renders it as a visible panel, not just carries it in the embedded JSON payload."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE,
+                     final={"test": {"reward": 0.8}, "best_id": "cand_0001"})
+        r = dashboard.reduce_run(rd)
+        assert [n["optimizer_seconds"] for n in r["summary"]["per_iteration"]] == [1.2, 1.0]
+        text = dashboard.render_html(r, rd)
+        _parse_html(text)
+        assert "Per-iteration timing" in text
+        assert "S.per_iteration" in text
+
+
 def test_dashboard_degrades_without_rollouts_or_finalize():
     """No rollouts, no finalize, no candidate dirs → still reduces + renders."""
     from cap_evolve import dashboard

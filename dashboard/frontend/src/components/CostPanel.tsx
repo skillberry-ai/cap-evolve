@@ -176,7 +176,7 @@ function IntakePanel({ summary }: { summary: RunSummaryDetail }) {
 /** Per-iteration optimizer vs runner cost + time, plus an explicit intake row.
  * Time is always shown; cost only when a real number is present ("—" otherwise,
  * since RITS runner cost is frequently $0/null). */
-function PerIterationCostTime({ summary }: { summary: RunSummaryDetail }) {
+export function PerIterationCostTime({ summary }: { summary: RunSummaryDetail }) {
   const rows = summary.per_iteration ?? []
   const intake = summary.intake ?? { usd: 0, seconds: 0, tokens: 0 }
   const optMaxSec = Math.max(1e-6, ...rows.map((r) => r.optimizer_seconds))

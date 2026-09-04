@@ -15,8 +15,9 @@ import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
-import { MemoryPanel } from '../components/MemoryPanel'
-import { BudgetPanel } from '../components/CostPanel'
+import { MemoryPanel, NarrativePanel } from '../components/MemoryPanel'
+import { ConfigPanel } from '../components/ConfigPanel'
+import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
 import { CostLedger } from '../components/CostLedger'
 import { GatePanel } from '../components/GatePanel'
 import { TaskMatrix } from '../components/TaskMatrix'
@@ -80,6 +81,7 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
   if (c.diffs) tabs.push({ id: 'diffs', label: 'Diffs' })
   if (c.trajectories) tabs.push({ id: 'trajectories', label: 'Trajectories' })
   tabs.push({ id: 'memory', label: 'Memory' })
+  if (detail?.summary.config) tabs.push({ id: 'config', label: 'Config' })
   tabs.push({ id: 'files', label: 'Files' })
   return tabs
 }
@@ -187,13 +189,15 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
     case 'tasks':
       return <TaskMatrix summary={s} nodes={data.graph.nodes} />
     case 'cost':
-      // The ledger already accounts for every dollar by phase; CostPanel is mounted only
-      // for what it uniquely adds (budget meters + the evaluation-centric table). Its
-      // by-role chart and per-iteration table restated the ledger and were dropped.
+      // The ledger already accounts for every dollar by phase; CostPanel's by-role chart
+      // restated the ledger and was dropped. Its per-iteration table is the only place
+      // per-step optimizer-vs-runner LATENCY is visible (the ledger and BudgetPanel are
+      // cost/reward-oriented, not time-oriented), so it stays.
       return (
         <div className="space-y-5">
           <CostLedger summary={s} />
           <BudgetPanel summary={s} />
+          <PerIterationCostTime summary={s} />
         </div>
       )
     case 'logs':
@@ -215,10 +219,13 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
     case 'memory':
       return (
         <div className="space-y-5">
+          <NarrativePanel summary={s} />
           <MemoryPanel runId={runId} graph={data.graph} />
           <GitDiff runId={runId} />
         </div>
       )
+    case 'config':
+      return <ConfigPanel summary={s} />
     case 'files':
       return <FileTree runId={runId} />
     default:
