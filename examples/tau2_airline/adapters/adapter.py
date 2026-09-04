@@ -63,6 +63,79 @@ def _leaked_stop_continuation(messages) -> bool:
     return False
 
 
+_cost_unpriced_warned = False
+
+
+def _cost_and_tokens(sim) -> tuple[float, int, dict]:
+    """Cost and token usage for one simulation, plus metadata saying how solid the cost is.
+
+    ``sim.agent_cost``/``sim.user_cost`` come from tau2's ``get_cost``, which is
+    ALL-OR-NOTHING: it returns ``None`` the moment ANY non-tool message lacks a
+    per-message ``cost``. The previous ``sim.agent_cost or 0.0`` therefore collapsed
+    "the provider did not price this" into "$0.00" — every RITS/proxy run (the
+    ``aws/gpt-oss-120b`` target model included) reported $0.0000 of eval spend despite
+    real rollouts, so a genuinely free run was indistinguishable from an unpriced one.
+
+    What this does about it:
+      * TOKENS are always recovered via tau2's ``get_token_usage`` (skips messages
+        without usage instead of nulling the whole run) rather than hardcoding
+        ``tokens=0`` and discarding real usage.
+      * COST falls back to summing the per-message ``cost`` values that ARE present,
+        which beats zero when only a few messages are unpriced.
+      * It deliberately does NOT price tokens from a public rate table here — the
+        proxy/RITS endpoint's real rates are not knowable from this adapter, and a
+        fabricated dollar figure next to measured ones is worse than an absent one.
+      * ``cost_source``/``messages_missing_cost`` record which case happened, so a
+        0.0 reads as "unpriced" rather than "free" (``Rollout.cost_usd`` is a
+        non-optional float that coerces ``None`` to ``0.0``).
+    """
+    global _cost_unpriced_warned
+
+    agent_cost, user_cost = sim.agent_cost, sim.user_cost
+    try:
+        messages = list(sim.get_messages())
+    except Exception:  # noqa: BLE001
+        messages = []
+
+    try:
+        from tau2.utils.llm_utils import get_token_usage
+
+        usage = get_token_usage(messages) or {}
+        tokens = int(usage.get("prompt_tokens", 0)) + int(usage.get("completion_tokens", 0))
+    except Exception:  # noqa: BLE001
+        tokens = 0
+    missing_usage = sum(1 for m in messages if getattr(m, "usage", None) is None)
+
+    if agent_cost is not None or user_cost is not None:
+        return (
+            float(agent_cost or 0.0) + float(user_cost or 0.0),
+            tokens,
+            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
+        )
+
+    # tau2 gave up on the whole run: salvage whatever the provider did price.
+    priced = [m for m in messages if getattr(m, "cost", None) is not None]
+    missing = len(messages) - len(priced)
+    partial = float(sum(m.cost for m in priced))
+    if priced:
+        source = "partial_messages"
+    else:
+        source = "unpriced"
+        if not _cost_unpriced_warned:
+            _cost_unpriced_warned = True
+            print(
+                "tau2: the provider returned no per-message cost for this target model, "
+                "so eval spend cannot be measured for this run; reporting tokens instead. "
+                "Rollout cost_usd will read 0.0 with metadata cost_source='unpriced'.",
+                file=sys.stderr,
+            )
+    return partial, tokens, {
+        "cost_source": source,
+        "messages_missing_cost": missing,
+        "messages_missing_usage": missing_usage,
+    }
+
+
 def _shown_metrics(reward: float, reward_info: dict, rollout) -> list:
     """Shown-only secondary metrics for display; the GATE still uses reward (primary).
 
@@ -292,8 +365,7 @@ class Adapter(CapabilityAdapter):
             if reward_info is not None and reward_info.reward is not None
             else 0.0
         )
-        agent_cost = sim.agent_cost or 0.0
-        user_cost = sim.user_cost or 0.0
+        cost_usd, tokens, cost_meta = _cost_and_tokens(sim)
         term = sim.termination_reason
         error = None
         if term in infra_reasons:
@@ -320,14 +392,15 @@ class Adapter(CapabilityAdapter):
             task_id=task_id,
             output=messages,
             trace=messages,
-            cost_usd=float(agent_cost) + float(user_cost),
-            tokens=0,
+            cost_usd=cost_usd,
+            tokens=tokens,
             error=error,
             metadata={
                 "domain": DOMAIN,
                 "tau2_reward": reward,
                 "tau2_reward_info": reward_info_dump,
                 "termination_reason": str(term),
+                **cost_meta,
             },
         )
 
