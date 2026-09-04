@@ -1172,3 +1172,170 @@ def test_a_fully_staged_run_reports_no_guidance_gap(tmp_path):
 
     assert out["context"].get("guidance_missing") == [], (
         f"a fully-staged run reports a phantom gap: {out['context']}")
+
+
+# --- #428/#430: a crash with subtype=success must not read as a clean success, and a ------
+# --- transient crash gets a bounded retry rather than forfeiting the run's budget. --------
+
+
+def _crash_stub(tmp_path: Path) -> Path:
+    """A stub `run-optimizer` that ALWAYS reports the run_e2e_run3 crash shape.
+
+    `subtype: "success"` in the SAME object as `is_error: true` /
+    `terminal_reason: "api_error"` — exactly issue #428's evidence, so host.py's
+    classification cannot be tricked by `subtype` alone.
+    """
+    stub = tmp_path / "fake_run_optimizer.py"
+    payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 1,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": True, "terminal_reason": "api_error",
+                 "result": "API Error: Can't reach the API server (ENOTFOUND)",
+                 "num_turns": 146},
+    }
+    stub.write_text(
+        f"import json, sys\nprint(json.dumps({payload!r}))\nsys.exit(1)\n",
+        encoding="utf-8")
+    return stub
+
+
+def _host_events(run_dir, kind: str) -> list:
+    events = (run_dir.root / "events.jsonl").read_text(encoding="utf-8")
+    return [json.loads(ln) for ln in events.splitlines() if ln.strip()
+            and json.loads(ln).get("kind") == kind]
+
+
+def test_a_crash_with_subtype_success_is_not_logged_as_clean_success(tmp_path):
+    """#428: `subtype: "success"` + `is_error: true` must be classified as a crash.
+
+    Evidence: run_e2e_run3's `events.jsonl` recorded `stop_reason: "success"` for a run
+    whose CLI payload carried `is_error: true, terminal_reason: "api_error"` in the same
+    object, with 3 of 10 iterations and 2000 of 8000 rollouts spent. host.py must surface
+    the crash, not let `subtype` alone paper over it.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = _crash_stub(tmp_path)
+
+    # --max-retries 0 isolates the classification from #430's retry behavior.
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "0")
+
+    # The raw fields must reach the host's own output, not just get absorbed into `subtype`.
+    assert out.get("stop_reason") == "success", out
+    host_ev = _host_events(run_dir, "host")
+    assert host_ev, "no host event was logged"
+    assert host_ev[-1]["is_error"] is True, (
+        f"the host event never records is_error, so the crash is indistinguishable from a "
+        f"clean success in the audit trail: {host_ev[-1]}")
+    assert host_ev[-1]["terminal_reason"] == "api_error", host_ev[-1]
+
+    # And the operator-facing diagnosis must name the crash, not read as voluntary/finished.
+    msg = str(out.get("incomplete") or "").lower()
+    assert msg, f"a crashed run with rounds left must not read as complete: {out}"
+    assert "infra failure" in msg or "error termination" in msg, (
+        f"the crash was not called out as its own diagnosis: {msg}")
+    assert "voluntary" not in msg and "sealed the run itself" not in msg, (
+        f"a crash must not be diagnosed as a voluntary/finished stop: {msg}")
+
+
+def test_a_transient_crash_triggers_a_bounded_retry_and_can_recover(tmp_path):
+    """#430: a DNS/network blip gets retried against the SAME run_dir, not forfeited.
+
+    The stub crashes on its first two invocations (api_error) and succeeds on the third —
+    exactly the "transient" case #430 exists for. With --max-retries 2 the host must retry
+    twice and pick up the eventual success rather than sealing on the first crash.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    counter = tmp_path / "attempts.txt"
+    stub = tmp_path / "fake_run_optimizer.py"
+    crash_payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 1,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": True, "terminal_reason": "api_error",
+                 "num_turns": 50},
+    }
+    ok_payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": False, "stop_reason": "end_turn",
+                 "num_turns": 10},
+    }
+    stub.write_text(
+        "import json, sys\n"
+        "from pathlib import Path\n"
+        f"counter = Path(r'{counter}')\n"
+        "n = int(counter.read_text()) if counter.exists() else 0\n"
+        "counter.write_text(str(n + 1))\n"
+        "if n < 2:\n"
+        f"    print(json.dumps({crash_payload!r}))\n"
+        "    sys.exit(1)\n"
+        "else:\n"
+        f"    print(json.dumps({ok_payload!r}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    assert int(counter.read_text()) == 3, (
+        "expected exactly 1 initial attempt + 2 retries (3 CLI invocations), got "
+        f"{counter.read_text()}")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert len(retry_ev) == 2, f"expected 2 retry events, got: {retry_ev}"
+    assert [e["attempt"] for e in retry_ev] == [1, 2], retry_ev
+    assert all(e["terminal_reason"] == "api_error" for e in retry_ev), retry_ev
+
+    # The FINAL attempt succeeded, so the classification must not still call it a crash.
+    msg = str(out.get("incomplete") or "").lower()
+    assert "infra failure" not in msg, (
+        f"the run recovered on its final retry but is still diagnosed as crashed: {msg}")
+
+
+def test_a_permanent_crash_exhausts_retries_and_surfaces_clearly(tmp_path):
+    """#430 acceptance criteria: a bounded retry count, and the final failure is clear.
+
+    The stub NEVER recovers — a persistently broken endpoint. The host must not retry
+    forever (bounded by --max-retries) and must still report the crash plainly rather than
+    quietly sealing on a "success"-shaped payload once it gives up.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    counter = tmp_path / "attempts.txt"
+    stub = tmp_path / "fake_run_optimizer.py"
+    crash_payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 1,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": True, "terminal_reason": "api_error",
+                 "num_turns": 50},
+    }
+    stub.write_text(
+        "import json, sys\n"
+        "from pathlib import Path\n"
+        f"counter = Path(r'{counter}')\n"
+        "n = int(counter.read_text()) if counter.exists() else 0\n"
+        "counter.write_text(str(n + 1))\n"
+        f"print(json.dumps({crash_payload!r}))\n"
+        "sys.exit(1)\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    # Bounded: exactly 1 initial attempt + 2 retries, never an unbounded loop against a
+    # genuinely broken endpoint.
+    assert int(counter.read_text()) == 3, (
+        f"expected exactly 3 CLI invocations (bounded retries), got {counter.read_text()}")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert len(retry_ev) == 2, f"retries were not bounded to --max-retries: {retry_ev}"
+
+    msg = str(out.get("incomplete") or "").lower()
+    assert msg, f"an exhausted-retry crash must still surface, not read as complete: {out}"
+    assert "infra failure" in msg or "error termination" in msg, (
+        f"the exhausted crash is not clearly diagnosed: {msg}")
+    assert "2 retries" in msg or "2 retry" in msg, (
+        f"the diagnosis should say how many retries were already spent: {msg}")
