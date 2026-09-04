@@ -1355,10 +1355,10 @@ def test_claude_code_registry_row_structurally_disallows_monitor():
     ``--allowedTools``, so asserting it is present (and that it survives command-building)
     is what makes the guard structural rather than an accident of what else is allowed.
     """
-    import yaml
+    from cap_evolve.specfile import read_yaml
 
     registry_path = REPO / "skills" / "optimizers" / "registry.yaml"
-    registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    registry = read_yaml(registry_path.read_text(encoding="utf-8"))
     template = registry["claude-code"]["command_template"]
     assert "--disallowedTools" in template and "Monitor" in template, (
         f"claude-code's command_template no longer structurally disallows Monitor: {template}")
