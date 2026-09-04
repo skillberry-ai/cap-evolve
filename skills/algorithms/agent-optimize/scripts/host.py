@@ -88,6 +88,38 @@ REGISTRY = SKILLS / "optimizers" / "registry.yaml"
 #: other real stop condition must never be retried, only this small allow-list.
 _RETRYABLE_TERMINAL_REASONS = {"api_error"}
 
+#: #431: ``permission_denials`` entries whose ``tool_input`` shape says the driver tried to
+#: DETACH a wait rather than stay in the foreground — a persistent ``Monitor``, or a
+#: ``tail -f`` / ``nohup`` / backgrounding-shaped Bash command. ``registry.yaml``'s
+#: ``--disallowedTools Monitor`` now makes the Monitor case structurally impossible for
+#: claude-code specifically, but ``permission_denials`` is read from the CLI's own payload
+#: regardless of agent or registry row, so a near-miss on any other tool/CLI is still flagged
+#: instead of only visible in a raw transcript nobody was going to read.
+_DETACH_COMMAND_PATTERNS = ("tail -f", "nohup ", "disown", "setsid ")
+
+
+def _looks_like_a_detach_attempt(denial) -> bool:
+    if not isinstance(denial, dict):
+        return False
+    if str(denial.get("tool_name") or "") == "Monitor":
+        return True
+    tool_input = denial.get("tool_input")
+    if isinstance(tool_input, dict):
+        if tool_input.get("persistent") is True:
+            return True
+        command = str(tool_input.get("command") or "")
+        if any(pat in command for pat in _DETACH_COMMAND_PATTERNS):
+            return True
+    return False
+
+
+def _backgrounding_near_misses(permission_denials) -> list[dict]:
+    """``permission_denials`` entries shaped like a detached-wait attempt, not a plain denial."""
+    if not isinstance(permission_denials, list):
+        return []
+    return [d for d in permission_denials if _looks_like_a_detach_attempt(d)]
+
+
 # 4h. Long enough for a full-val eval on the slowest benchmark in this repo
 # (spreadsheetbench full: one Docker container per task x trials), while still bounding a
 # genuinely hung command instead of waiting forever.
@@ -1138,6 +1170,7 @@ def main(argv=None) -> int:
         "instructions_warning": arm_warning,
         "context": context,
         "optimizer": payload,
+        "backgrounding_near_misses": _backgrounding_near_misses(permission_denials),
         **seal,
     }
     if proc is not None and proc.returncode != 0:
@@ -1145,6 +1178,16 @@ def main(argv=None) -> int:
     print(json.dumps(out, indent=2))
     if incomplete:
         print(f"::warning::agent-optimize: {incomplete}", file=sys.stderr)
+    if out["backgrounding_near_misses"]:
+        # A near-miss, not the incomplete-run diagnosis above: the permission system already
+        # denied it, so the run may have finished cleanly regardless. Reported anyway — #431's
+        # run_e2e_run3 was exactly this shape, and it was only recoverable by hand-reading
+        # host/transcript.jsonl before this.
+        print("::warning::agent-optimize: the driver attempted to background/detach a wait "
+              f"({len(out['backgrounding_near_misses'])} denial(s): "
+              f"{[d.get('tool_name') for d in out['backgrounding_near_misses']]}) and was "
+              "denied by the permission system — see backgrounding_near_misses in this run's "
+              "output and the briefing's Unattended section", file=sys.stderr)
     # The run's worth is its sealed number, so that — not the agent's exit code — decides
     # ours. An agent that ran out of turns after three honest rounds produced a result; one
     # that exited 0 without sealing did not.

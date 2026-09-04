@@ -1343,3 +1343,88 @@ def test_a_permanent_crash_exhausts_retries_and_surfaces_clearly(tmp_path):
         f"the exhausted crash is not clearly diagnosed: {msg}")
     assert "2 retries" in msg or "2 retry" in msg, (
         f"the diagnosis should say how many retries were already spent: {msg}")
+
+
+def test_claude_code_registry_row_structurally_disallows_monitor():
+    """#431: the Monitor denial on run_e2e_run3 must not depend on luck.
+
+    ``--allowedTools Bash`` alone denies anything not on the list only because ``-p`` has no
+    human to ask — a future row change (a broader allowlist, a different permission mode)
+    could silently make a persistent ``Monitor`` call succeed instead of denied. `Claude
+    Code's own precedence rule is that ``--disallowedTools`` always wins over
+    ``--allowedTools``, so asserting it is present (and that it survives command-building)
+    is what makes the guard structural rather than an accident of what else is allowed.
+    """
+    import yaml
+
+    registry_path = REPO / "skills" / "optimizers" / "registry.yaml"
+    registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    template = registry["claude-code"]["command_template"]
+    assert "--disallowedTools" in template and "Monitor" in template, (
+        f"claude-code's command_template no longer structurally disallows Monitor: {template}")
+
+    sys.path.insert(0, str(REPO / "skills" / "optimizers" / "run-optimizer" / "scripts"))
+    import run as run_optimizer  # noqa: E402
+
+    cmd = run_optimizer.build_command(
+        template, workdir="/tmp/w", prompt="/tmp/p.md", prompt_text="do the thing",
+        model="claude-sonnet-5", self_dir="/tmp")
+    assert "--disallowedTools" in cmd, f"the flag was dropped during command-building: {cmd}"
+    assert cmd[cmd.index("--disallowedTools") + 1] == "Monitor", (
+        f"Monitor is not the value that ends up on the built command: {cmd}")
+
+
+def _permission_denial_stub(tmp_path: Path, *, denials: list) -> Path:
+    stub = tmp_path / "fake_run_optimizer.py"
+    payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "success", "stop_reason": "end_turn", "num_turns": 5,
+                 "permission_denials": denials},
+    }
+    stub.write_text(f"import json\nprint(json.dumps({payload!r}))\n", encoding="utf-8")
+    return stub
+
+
+def test_a_denied_persistent_monitor_call_is_flagged_as_a_near_miss(tmp_path):
+    """#431's own evidence, replayed: a denied persistent ``Monitor`` must be visible in the
+    run's own report, not only recoverable by hand-reading ``host/transcript.jsonl``.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = _permission_denial_stub(tmp_path, denials=[{
+        "tool_name": "Monitor",
+        "tool_input": {"description": "round.py progress for iteration 1 (3 candidates)",
+                       "timeout_ms": 3600000, "persistent": True,
+                       "command": "tail -f -n +1 /tmp/round1.log"},
+    }])
+
+    p = subprocess.run(
+        [sys.executable, str(HOST), "--run-dir", str(run_dir.root), "--project", str(project),
+         "--agent", "claude-code", "--run-optimizer", str(stub)],
+        capture_output=True, text=True, env=_env())
+    out = json.loads(p.stdout)
+
+    misses = out.get("backgrounding_near_misses")
+    assert misses and len(misses) == 1, f"the Monitor denial was not flagged: {out}"
+    assert misses[0]["tool_name"] == "Monitor", misses
+    assert "backgrounding" in p.stderr.lower() or "detach" in p.stderr.lower(), (
+        f"no near-miss warning reached stderr: {p.stderr}")
+
+
+def test_an_unrelated_permission_denial_is_not_flagged_as_a_backgrounding_attempt(tmp_path):
+    """A denial with no persistent/backgrounding shape must not be misread as this anti-pattern
+    — flagging every denial would bury the real signal in noise the first time an agent is
+    denied something ordinary (e.g. a write outside its workdir).
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = _permission_denial_stub(tmp_path, denials=[{
+        "tool_name": "Write", "tool_input": {"file_path": "/etc/passwd", "content": "x"},
+    }])
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out.get("backgrounding_near_misses") == [], (
+        f"an unrelated denial was misclassified as a detach attempt: {out}")

@@ -80,7 +80,16 @@ claude-code:
   # text it can't test, so it conservatively avoids shipping scripts/tool code. Verifying edits
   # is core to optimizing skills/tools, so this is on by default. Edits stay auto-approved
   # (acceptEdits); the optimizer runs in an isolated candidate-copy workdir.
-  command_template: "claude -p {prompt_text} --permission-mode acceptEdits --allowedTools Bash --model {model}"
+  #
+  # --disallowedTools Monitor (issue #431): on run_e2e_run3 the driver reached for a persistent
+  # ``Monitor`` (a ``tail -f`` watch on a round's gate) to background the wait instead of
+  # staying in the foreground as the briefing demands, and was saved only by the permission
+  # system happening to deny it — Monitor was never in --allowedTools, so it fell back to
+  # -p's no-human-to-ask auto-deny. That is luck, not a guarantee: it depends on Monitor
+  # staying off an allowlist nobody wrote to protect this. --disallowedTools always takes
+  # precedence over --allowedTools in Claude Code's own permission resolution, so listing
+  # Monitor here makes the denial unconditional instead of an accident of what else is allowed.
+  command_template: "claude -p {prompt_text} --permission-mode acceptEdits --allowedTools Bash --disallowedTools Monitor --model {model}"
   env_keys: "ANTHROPIC_API_KEY"
   install_url: "https://docs.claude.com/claude-code"
   auth_notes: "Logged-in Claude Code session or ANTHROPIC_API_KEY."
