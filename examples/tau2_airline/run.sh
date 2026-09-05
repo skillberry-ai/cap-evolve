@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full cap-evolve run on tau2-bench airline via IBM RITS, with a live dashboard.
+# Full cap-evolve run on tau2-bench airline via the ETE gateway, with a live dashboard.
 # Prereq: bash examples/tau2_airline/setup.sh  (installs deps + scaffolds + checks).
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

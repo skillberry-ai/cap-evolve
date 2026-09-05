@@ -3,17 +3,18 @@
 # optimization run used as an on-demand regression check for the pipeline. Cheap:
 # 1 task, 1 trial, 1 iteration.
 #
-#   - agent + user simulator : claude-haiku-4-5 via the IBM Anthropic-compatible gateway
+#   - agent + user simulator : aws/claude-haiku-4-5 via the ETE gateway
 #   - optimizer              : claude-code @ claude-sonnet-4-6
 #   - seed                   : the existing airline policy + tools
-#   - credentials            : ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN
+#   - credentials            : OPENAI_BASE_URL + OPENAI_API_KEY (the runner's gateway);
+#                              the claude-code optimizer authenticates separately
 #
 # Exit code is the test result (0 = pass) — the asserter gates it.
 set -euo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../.." && pwd)"
-TAU2_DIR="$(cd "$REPO/.." && pwd)/tau2-bench"
+TAU2_DIR="$REPO/vendor/tau2-bench"
 # tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
 # the venv (and/or the venv path) when the default `python3` is outside that range:
 #   PYTHON=/opt/homebrew/bin/python3.12 VENV=.venv-tau2 bash setup.sh
@@ -25,9 +26,11 @@ PROJECT="$REPO/.capevolve/project"
 say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 die(){ printf '\n\033[1;31mITEST FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
-# Run the agent + user simulator on claude via the gateway (default for this test).
-export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-anthropic/claude-haiku-4-5}"
-export TAU2_USER_MODEL="${TAU2_USER_MODEL:-anthropic/claude-haiku-4-5}"
+# Run the agent + user simulator on claude via the gateway (default for this test). The
+# aws/ namespace matters: gateway.py normalizes it to openai/aws/... so litellm takes the
+# gateway's OpenAI-compatible route, which is the one the key's model scope is enforced on.
+export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-aws/claude-haiku-4-5}"
+export TAU2_USER_MODEL="${TAU2_USER_MODEL:-aws/claude-haiku-4-5}"
 
 say "1/4  Install cap-evolve core + tau2-bench"
 [ -x "$PY" ] || "$PYTHON" -m venv "$VENV" \
@@ -41,19 +44,24 @@ fi
 "$PY" -m pip install -q -e "$TAU2_DIR" || die "pip install tau2-bench failed"
 "$PY" -c "import tau2" >/dev/null 2>&1 || die "tau2 import failed after install"
 
-say "2/4  Credentials (IBM Anthropic-compatible gateway)"
-# The adapter (rits.py) and the claude-code optimizer read these from the environment;
-# we deliberately do NOT write them to a .env file (a self-hosted runner's workspace
-# may persist, so this test never leaves the token on disk). An existing .env is honored.
-if { [ -z "${ANTHROPIC_BASE_URL:-}" ] || [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; } && [ ! -f "$REPO/.env" ]; then
-  die "Set ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN in the environment (or provide $REPO/.env)."
+say "2/4  Credentials (the runner's gateway)"
+# adapters/gateway.py reads these from the environment; we deliberately do NOT write them
+# to a .env file (a self-hosted runner's workspace may persist, so this test never leaves
+# the token on disk). An existing .env is honored.
+# The key must be scoped for the model above: a key provisioned only for gpt-oss answers
+# "key can only access models=[...]" on every rollout, which reads as a broken run rather
+# than a narrow credential.
+if { [ -z "${OPENAI_BASE_URL:-}" ] || [ -z "${OPENAI_API_KEY:-}" ]; } && [ ! -f "$REPO/.env" ]; then
+  die "Set OPENAI_BASE_URL + OPENAI_API_KEY in the environment (or provide $REPO/.env)."
 fi
+# The claude-code optimizer authenticates on its own (a logged-in session or its own env),
+# so it is NOT covered by the check above and is not this script's to configure.
 
 say "3/4  Wire the project (adapter + seed + spec) + hard gate"
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$REPO/.capevolve" --workdir "$REPO" --force >/dev/null \
   || die "intake scaffold failed"
 mkdir -p "$PROJECT/adapters"
-cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/rits.py" "$PROJECT/adapters/"
+cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$PROJECT/adapters/"
 rm -rf "$PROJECT/seed_capability"; cp -R "$EX_DIR/seed_capability" "$PROJECT/seed_capability"
 cp "$EX_DIR/capevolve.itest.yaml" "$EX_DIR/itest_split.json" "$PROJECT/"
 PYTHONPATH="$PROJECT/adapters" "$VENV/bin/cap-evolve" check "$PROJECT" || die "cap-evolve check did not pass"

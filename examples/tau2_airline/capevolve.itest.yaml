@@ -1,7 +1,7 @@
 # INTEGRATION-TEST spec — taubench (tau2 airline) regression on ONE task (task 9).
 # General end-to-end regression for the optimization pipeline on a real benchmark:
-# existing seed (policy + tools), agent + user simulator = claude-haiku-4-5 via the IBM
-# Anthropic-compatible gateway (set TAU2_AGENT_MODEL / TAU2_USER_MODEL), optimizer =
+# existing seed (policy + tools), agent + user simulator = aws/claude-haiku-4-5 via the
+# ETE gateway (itest.sh exports TAU2_AGENT_MODEL / TAU2_USER_MODEL), optimizer =
 # claude-code @ claude-sonnet-4-6. Cheap: 1 task, 1 trial, 1 iteration.
 capabilities: [system-prompt, tools]
 capability_path: seed_capability

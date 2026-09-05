@@ -18,9 +18,10 @@ optimizer_model: claude-opus-4-6         # the optimizer's Claude model id
 optimizer_max_turns: 400                 # generous per-iteration turn cap; the real ceiling is the $ cap below
 optimizer_usd_per_iter: 40.0             # per-iteration $ cap, enforced by claude (--max-budget-usd N)
 
-# The tau2 airline runner (agent + user sim) is openai/gpt-oss-120b via RITS — a mid-tier
-# reader. Optimize the policy + tools FOR that reader (distinct from the opus optimizer).
-target_model: gpt-oss-120b
+# The tau2 airline runner (agent + user sim) is aws/gpt-oss-120b via the ETE gateway — a
+# mid-tier reader. Optimize the policy + tools FOR that reader (distinct from the opus
+# optimizer). Normalized to openai/aws/gpt-oss-120b by adapters/gateway.py.
+target_model: aws/gpt-oss-120b
 
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb              # algorithms/<skill>

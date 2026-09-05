@@ -36,12 +36,18 @@ core. Run the example's `setup.sh` **first**.
 
 **Missing credentials at runtime** — real runs need the optimizer CLI credentials (e.g. a
 logged-in Claude Code session or `ANTHROPIC_API_KEY`) and the runner model credentials in a
-repo-root `.env` (`OPENAI_API_KEY`, `RITS_API_KEY` + `RITS_API_URL`, `WATSONX_*`, or an
-`ANTHROPIC_BASE_URL` gateway). See [`INSTALL.md`](INSTALL.md#credentials-only-for-real-runs).
+repo-root `.env` (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, `WATSONX_*`, or
+`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` for an Anthropic-compatible gateway). The
+optimizer's credential and the runner's are SEPARATE — a logged-in optimizer says nothing
+about whether the runner can reach its model. See
+[`INSTALL.md`](INSTALL.md#credentials-only-for-real-runs).
 
-**RITS calls fail** — set both `RITS_API_KEY` and `RITS_API_URL`; the tau2 example passes
-them per-call (no litellm monkeypatch, no tau2 fork). Check your endpoint and concurrency
-knob (`TAU2_MAX_CONCURRENCY`).
+**Runner LLM calls fail** — the variables to set depend on how the example reaches its
+model, and each example documents its own; take them from there.
+Credentials are passed per-call (no litellm monkeypatch, no benchmark fork).
+
+A `key not allowed to access model` reply means the key is scoped to a different model than
+the spec's `target_model` — a narrow credential, not a wrong config.
 
 **SkillsBench: Docker / benchflow errors** — Docker must be running; install the CLI with
 `uv tool install benchflow` and provide gateway creds (`ANTHROPIC_BASE_URL`,

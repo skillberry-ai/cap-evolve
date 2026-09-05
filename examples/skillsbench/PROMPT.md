@@ -143,9 +143,9 @@ exists). Here is everything intake needs:
     .env (copy them there from ~/.claude/settings.json's env block — base URL
     https://ete-litellm.ai-models.vpc-int.res.ibm.com, model id claude-sonnet-4-6) and
     PROPAGATE them into the sandboxed agent with --agent-env (above). Use the same .env
-    loader pattern as examples/tau2_airline/adapters/rits.py (_load_env walks parents,
-    setdefault, no python-dotenv dep); read ANTHROPIC_* instead of RITS_*. Never hardcode
-    the token.
+    loader pattern as examples/tau2_airline/adapters/gateway.py (load_env walks parents,
+    setdefault, no python-dotenv dep); read ANTHROPIC_* rather than that module's OPENAI_*.
+    Never hardcode the token.
 - INTEGRATION RISK to validate during implement-and-check (resolve empirically, fix as a
     framework gap if needed): (a) the in-sandbox claude agent must honor ANTHROPIC_BASE_URL
     /ANTHROPIC_AUTH_TOKEN and reach the VPC gateway from inside Docker — if BenchFlow's own

@@ -53,7 +53,7 @@ the "what did we get" view.
    the **actual git diff** for that step. This is the money shot: the optimizer is
    writing **code into the tool bodies**, not just editing prose (see Scene 2).
 4. **Cost / intake panel** — per-iteration optimizer + runner cost & time, plus the
-   one-time intake cost. Honest note: **RITS is internal/free**, so runner `$` is
+   one-time intake cost. Honest note: **the ETE gateway does not meter cost**, so runner `$` is
    `$0`; the budget governs the Claude optimizer (~\$148 optimizer spend over the run,
    per-iteration capped at `--max-budget-usd 40`).
 5. **Memory** — the cross-iteration `JOURNAL.md`: each iteration's intent plus the
@@ -141,7 +141,7 @@ Tie it together (mirrors the asciinema cast and `docs/REPRODUCE_tau2.md`):
 1. **Intake builds the integration.** From one prompt, intake clones + `pip install -e`
    tau2-bench (recording the commit), scaffolds `.capevolve/project`, and wires the
    adapter (`run_batch` → tau2's runner, batched `run_trials` fast path,
-   `trajectories()` = native tau2 traces, `score()` reads `reward_info`), the RITS
+   `trajectories()` = native tau2 traces, `score()` reads `reward_info`), the gateway
    shim, and the editable seed capability (`policy/` + `tools/`).
 2. **Hard gate.** `cap-evolve check` must return `{"ok": true}` — verifies the
    adapter contract and that `score()` is deterministic — **before any \$ is spent**.
@@ -162,11 +162,11 @@ Tie it together (mirrors the asciinema cast and `docs/REPRODUCE_tau2.md`):
 ## The two commands a viewer runs
 
 ```bash
-# 0. clone the repo; put RITS creds in repo-root .env (RITS_API_KEY, RITS_API_URL);
+# 0. clone the repo; put gateway creds in repo-root .env (OPENAI_BASE_URL, OPENAI_API_KEY);
 #    be logged into Claude Code (or export ANTHROPIC_API_KEY) for the optimizer.
 
 bash examples/tau2_airline/setup.sh    # intake onboarding: install cap-evolve, clone/install
-                                       # tau2-bench, scaffold + wire adapter/RITS/seed, then
+                                       # tau2-bench, scaffold + wire adapter/gateway/seed, then
                                        # cap-evolve check (the hard gate)
 bash examples/tau2_airline/run.sh      # full run: 50 tasks · 10 trials · live dashboard
 ```
@@ -187,8 +187,8 @@ agg examples/tau2_airline/run_full/demo.cast demo.gif      # render to GIF for t
 - **No-holdout** (train = val = test = all 50): val **is** the fit metric and the
   sealed-test number is reported as a fit metric (the engine logs a
   `splits_warning`). For a held-out result, pin a 30/10/10 split via `split_ids.json`.
-- **RITS is internal/free** → runner `$` is honestly `$0`; the budget governs the
-  Claude optimizer, and the per-iteration cap is enforced by the Claude CLI itself
+- **the ETE gateway does not meter cost** → runner `$` is honestly `$0`; the budget governs
+  the Claude optimizer, and the per-iteration cap is enforced by the Claude CLI itself
   (`--max-budget-usd`).
 - The gate **correctly refuses** gains it can't distinguish from noise on a small
   val — that is the system working, not failing. 5 of the 10 iterations were rejected,

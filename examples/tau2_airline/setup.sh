@@ -12,7 +12,7 @@ set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../.." && pwd)"
-TAU2_DIR="$(cd "$REPO/.." && pwd)/tau2-bench"
+TAU2_DIR="$REPO/vendor/tau2-bench"
 # tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
 # the venv (and/or the venv path) when the default `python3` is outside that range:
 #   PYTHON=/opt/homebrew/bin/python3.12 VENV=.venv-tau2 bash setup.sh
@@ -67,18 +67,20 @@ echo "  tau2-bench installed @ $TAU2_SHA"
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$REPO/.capevolve" --workdir "$REPO" --force >/dev/null \
   || die "intake scaffold failed"
 PROJECT="$REPO/.capevolve/project"
-# (c) Wire the integration the agent authored: adapter + RITS shim + seed capability + spec.
+# (c) Wire the integration the agent authored: adapter + gateway shim + seed capability + spec.
 mkdir -p "$PROJECT/adapters"
-cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/rits.py" "$PROJECT/adapters/"
+cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$PROJECT/adapters/"
 rm -rf "$PROJECT/seed_capability"; cp -R "$EX_DIR/seed_capability" "$PROJECT/seed_capability"
 cp "$EX_DIR/capevolve.yaml" "$EX_DIR/capevolve.smoke.yaml" \
    "$EX_DIR/split_ids.json" "$EX_DIR/smoke_split.json" "$PROJECT/"
 echo "  project scaffolded + integration wired at $PROJECT"
 
 say "3/3  Hard gate — cap-evolve check (credentials + adapter contract)"
-if [ -z "${RITS_API_KEY:-}" ] && ! grep -q '^RITS_API_KEY=' "$REPO/.env" 2>/dev/null; then
-  echo "  WARNING: RITS_API_KEY not set and not in $REPO/.env — the run needs it (agent + user simulator)."
-fi
+for v in OPENAI_BASE_URL OPENAI_API_KEY; do
+  if [ -z "${!v:-}" ] && ! grep -q "^$v=" "$REPO/.env" 2>/dev/null; then
+    echo "  WARNING: $v not set and not in $REPO/.env — the run needs it (agent + user simulator)."
+  fi
+done
 PYTHONPATH="$PROJECT/adapters" "$VENV/bin/cap-evolve" check "$PROJECT" || die "cap-evolve check did not pass"
 
 printf '\n\033[1;32mREADY.\033[0m  Next:\n  bash %s/run.sh     # full run (10 iters · 50 tasks · 10 trials) + live dashboard\n  bash %s/smoke.sh   # 2-task autonomy smoke (cheap)\n' "$EX_DIR" "$EX_DIR"

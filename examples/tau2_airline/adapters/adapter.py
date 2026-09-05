@@ -1,9 +1,9 @@
-"""Project adapter — optimize tau2-bench AIRLINE (system-prompt POLICY + TOOLS) via IBM RITS.
+"""Project adapter — optimize tau2-bench AIRLINE (system-prompt POLICY + TOOLS) via the ETE gateway.
 
 Wires cap-evolve to the tau2 airline domain:
 
   * ``tasks``      -> all 50 airline tasks (stable, non-empty for every split).
-  * ``run_batch``  -> tau2's own batch runner (``run_tasks``) with a RITS-backed
+  * ``run_batch``  -> tau2's own batch runner (``run_tasks``) with a gateway-backed
                       ``TextRunConfig``; maps each ``SimulationRun`` to a ``Rollout``.
   * ``run_target`` -> thin wrapper over ``run_batch`` for one task.
   * ``score``      -> tau2's own reward in [0,1] (deterministic given a rollout);
@@ -16,7 +16,7 @@ Wires cap-evolve to the tau2 airline domain:
                       always resets to a pristine snapshot before applying.
 
 ``cap-evolve check`` does NO live LLM call: ``tasks``/``score``/``materialize`` are
-network-free, and RITS endpoint resolution is lazy (only on a real ``run_batch``).
+network-free, and gateway credential resolution is lazy (only on a real ``run_batch``).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-# Make sibling helper modules (rits.py) importable regardless of caller cwd.
+# Make sibling helper modules (gateway.py) importable regardless of caller cwd.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cap_evolve import CapabilityAdapter, Rollout, Score, Task
@@ -274,13 +274,13 @@ class Adapter(CapabilityAdapter):
     def run_batch(self, tasks: list[Task], ctx, *, seed: int = 0) -> dict:
         """Run a batch of airline tasks through tau2's own batch runner.
 
-        Builds a RITS-backed ``TextRunConfig`` and calls ``run_tasks`` with
+        Builds a gateway-backed ``TextRunConfig`` and calls ``run_tasks`` with
         ``num_trials=1`` (cap-evolve owns trials) and ``seed=int(seed)`` so each
         cap-evolve trial is an independent draw. Returns ``{task_id: Rollout}``.
         """
         import os
 
-        import rits  # sibling module
+        import gateway  # sibling module
         from tau2.data_model.simulation import TextRunConfig
         from tau2.runner import run_tasks
 
@@ -297,18 +297,18 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks:
             return results
 
-        agent_m = rits.agent_model()
-        user_m = rits.user_model()
+        agent_m = gateway.agent_model()
+        user_m = gateway.user_model()
         max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "100"))
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
             llm_agent=agent_m,
-            llm_args_agent=rits.llm_args_for(agent_m),
+            llm_args_agent=gateway.llm_args_for(agent_m),
             user="user_simulator",
             llm_user=user_m,
-            llm_args_user=rits.llm_args_for(user_m),
+            llm_args_user=gateway.llm_args_for(user_m),
             num_trials=1,
             max_steps=100,
             max_errors=10,
@@ -419,7 +419,7 @@ class Adapter(CapabilityAdapter):
         """
         import os
 
-        import rits  # sibling module
+        import gateway  # sibling module
         from tau2.data_model.simulation import TextRunConfig
         from tau2.runner import run_tasks
 
@@ -441,18 +441,18 @@ class Adapter(CapabilityAdapter):
         if not tau2_tasks or n_trials <= 0:
             return results
 
-        agent_m = rits.agent_model()
-        user_m = rits.user_model()
+        agent_m = gateway.agent_model()
+        user_m = gateway.user_model()
         max_concurrency = int(os.environ.get("TAU2_MAX_CONCURRENCY", "125"))
 
         config = TextRunConfig(
             domain=DOMAIN,
             agent="llm_agent",
             llm_agent=agent_m,
-            llm_args_agent=rits.llm_args_for(agent_m),
+            llm_args_agent=gateway.llm_args_for(agent_m),
             user="user_simulator",
             llm_user=user_m,
-            llm_args_user=rits.llm_args_for(user_m),
+            llm_args_user=gateway.llm_args_for(user_m),
             num_trials=n_trials,
             max_steps=100,
             max_errors=10,

@@ -82,8 +82,8 @@ bash examples/tau2_airline/run.sh      # full run + live capybara dashboard (see
    and (default on) install the dashboard server `./dashboard/backend`. The built
    capybara frontend is committed, so no Node is needed at runtime. Toggle with
    `--dashboard` / `--no-dashboard`.
-2. **Onboard the benchmark** — clone tau2-bench (latest `main`) as a sibling
-   `../tau2-bench`, `pip install -e ../tau2-bench`, and **record the resolved commit** to
+2. **Onboard the benchmark** — clone tau2-bench (latest `main`) into
+   `vendor/tau2-bench`, `pip install -e vendor/tau2-bench`, and **record the resolved commit** to
    `examples/tau2_airline/run_full/TAU2_COMMIT.txt`.
 3. **Scaffold + wire (the full integration)** — run the `intake` scaffold into
    `.capevolve/project`, then copy in the authored integration: the adapter

@@ -11,9 +11,10 @@
 #   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.v4.gptoss.yaml \
 #          --project .capevolve/project --dashboard off
 #
-# TAU2_AGENT_MODEL / TAU2_USER_MODEL are REQUIRED: adapters/rits.py otherwise falls back to
-# the RITS default and demands RITS_API_KEY. (This was the reproducibility gap recorded for
-# the previous run; it is stated here rather than left to be rediscovered.)
+# OPENAI_BASE_URL / OPENAI_API_KEY are REQUIRED: without gateway credentials every rollout
+# 401s, which reads as a bad capability rather than a bad config. TAU2_AGENT_MODEL /
+# TAU2_USER_MODEL are stated above for explicitness; aws/gpt-oss-120b is also
+# adapters/gateway.py's default.
 #
 # AGENT-OPTIMIZE spec — tau2-bench airline, driven by skills/algorithms/agent-optimize.
 #
@@ -26,10 +27,11 @@
 #     index stride (val = 0,4,8…; test = 1,5,9…; train = the rest) so the three splits
 #     draw uniformly from the task list — the cheapest available defence against the
 #     split-difficulty mismatch a previous run hit (val 0.75, test 0.25 on 12+8 ids).
-#   * agent + user simulator run on aws/gpt-oss-120b through the IBM litellm PROXY
-#     (TAU2_AGENT_MODEL / TAU2_USER_MODEL, handled by adapters/rits.py). NOTE: the proxy
-#     does NOT meter cost, so max_usd is unenforceable on this path — max_iterations and
-#     stall are the real ceilings, and spend.py says so via runner_spend_metered: false.
+#   * agent + user simulator run on aws/gpt-oss-120b through the ETE litellm GATEWAY
+#     (TAU2_AGENT_MODEL / TAU2_USER_MODEL, handled by adapters/gateway.py). NOTE: the
+#     gateway does NOT meter cost, so max_usd is unenforceable on this path —
+#     max_iterations and stall are the real ceilings, and spend.py says so via
+#     runner_spend_metered: false.
 #
 # Do NOT repoint capevolve.yaml / capevolve.itest.yaml / capevolve.smoke.yaml at this —
 # CI asserts on their contents.
@@ -51,7 +53,7 @@ optimizer_model: aws/claude-opus-5
 optimizer_max_turns: 120
 optimizer_usd_per_iter: 6.0
 
-target_model: aws/gpt-oss-120b            # the agent+user-sim under optimization (normalized by adapters/rits.py)
+target_model: aws/gpt-oss-120b            # the agent+user-sim under optimization (normalized by adapters/gateway.py)
 
 # --- data + splits ---------------------------------------------------------
 dataset_source: adapter

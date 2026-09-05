@@ -2,7 +2,7 @@
 
 Paste this to your coding agent (Claude Code) at the cap-evolve repo root and say
 **"follow RUN.md."** Intake treats this as a brand-new benchmark: the integration
-step **clones + installs tau2-bench**, wires RITS, writes the adapter, runs the
+step **clones + installs tau2-bench**, wires the ETE gateway, writes the adapter, runs the
 `cap-evolve check` gate, then the full optimize → gate → sealed-test → report loop
 with a live dashboard. Everything below is the input intake needs.
 
@@ -29,7 +29,7 @@ exists). Here is everything intake needs:
 # 2. BENCHMARK / DATASET  (the eval) — INSTALL IT DURING INTAKE
 - benchmark:    tau2-bench, airline domain
 - repo:         https://github.com/sierra-research/tau2-bench   (latest main; record the resolved commit)
-- install:      git clone as a sibling dir ../tau2-bench, then `pip install -e ../tau2-bench`
+- install:      git clone into vendor/tau2-bench, then `pip install -e vendor/tau2-bench`
 - tasks:        "adapter" — the adapter loads all 50 airline tasks from tau2
                 (tau2.domains.airline.environment.get_tasks)
 - splits:       all 50 tasks as train = val = test  (no-holdout fit metric; the engine
@@ -45,10 +45,10 @@ exists). Here is everything intake needs:
                 instead of looping run_batch per trial; per-trial persistence
                 (rollouts/<split>/<task>__<tag>__t<k>.json) is UNCHANGED so pass^k / SE / resume
                 keep working. This collapses N sequential eval passes into one batched run.
-- agent AND user simulator:  openai/gpt-oss-120b  via IBM RITS
-- RITS wiring:  litellm model "hosted_vllm/openai/gpt-oss-120b" + per-call api_base +
-                extra_headers {"RITS_API_KEY": ...}  (NO litellm monkeypatch, NO tau2 fork)
-- credentials:  RITS_API_KEY (+ RITS_API_URL) in the repo-root .env
+- agent AND user simulator:  aws/gpt-oss-120b  via the internal ETE LiteLLM gateway
+- gateway wiring:  OpenAI-compatible endpoint, standard bearer auth, catalog ids normalized
+                once to `openai/<alias>`  (NO litellm monkeypatch, NO tau2 fork)
+- credentials:  OPENAI_BASE_URL (or OPENAI_API_BASE) + OPENAI_API_KEY in the repo-root .env
 - concurrency:  TAU2_MAX_CONCURRENCY=125
 
 # 4. SCORER  (what to optimize against) — and WHERE the metric comes from
@@ -92,7 +92,7 @@ exists). Here is everything intake needs:
 - optimizer:    claude-code
 - model:        claude-opus-4-6
 - credentials:  a logged-in Claude Code session (or ANTHROPIC_API_KEY)
-- runner_repo_path:  ../tau2-bench  (the cloned checkout — surfaced to the optimizer as
+- runner_repo_path:  ../../vendor/tau2-bench  (the cloned checkout — surfaced to the optimizer as
                 read-only context so it can consult tau2's tools/scoring/task structure)
 - optimizer instructions: author .capevolve/project/optimizer/INSTRUCTIONS.md from the scaffolded
                 template (keep its {{...}} placeholders intact — the harness fills them per
@@ -132,7 +132,7 @@ exists). Here is everything intake needs:
                 (./trajectories/, ./guidance/<cap>/SKILL.md for EACH selected capability,
                 ./guidance/diagnose/SKILL.md, ./guidance/optimizer/claude-code.md, ./guidance/sources/
                 [the data model], ./LEDGER.md, ./JOURNAL.md, ./RUNMAP.md + ./prior_iterations/,
-                ./PROCESS.md, ../tau2-bench).
+                ./PROCESS.md, ../../vendor/tau2-bench).
 - (vi) the CROSS-ITERATION FILE CONTRACT + NEW-TOOLS-FIRST-CLASS mandate — the authored
                 INSTRUCTIONS must tell the optimizer to READ all four cross-iteration files first
                 (LEDGER facts, the whole JOURNAL handover, RUNMAP + prior_iterations diffs/PROCESS),
@@ -182,7 +182,7 @@ exists). Here is everything intake needs:
 ```
 
 > The bundled `examples/tau2_airline/` is the **result** of following this prompt:
-> the adapter (`adapters/adapter.py`), the RITS shim (`adapters/rits.py`), the seed
+> the adapter (`adapters/adapter.py`), the gateway shim (`adapters/gateway.py`), the seed
 > capability (`seed_capability/`), and the optimizer instructions
 > (`.capevolve/project/optimizer/INSTRUCTIONS.md`) are what the intake/implement-and-check
 > flow produced — including `adapter.trajectories()` (native tau2 traces) and `score()`
