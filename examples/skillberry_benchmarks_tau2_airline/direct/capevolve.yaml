@@ -1,0 +1,83 @@
+# cap-evolve run spec — tau2-bench AIRLINE, the agent's TOOL SURFACE, DIRECT delivery.
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [tools]                    # the agent's TOOL SURFACE ONLY
+#   tau2's system prompt (the airline policy) is deliberately NOT a capability here: it is
+#   fixed, reaches the agent exactly as the benchmark ships it, and is not an edit surface.
+capability_path: seed_capability         # tools/tools.py (THE artifact) + reference/ (read-only)
+actions: [edit]
+
+# The data model the editable tool code imports, copied VERBATIM into the optimizer's
+# ./guidance/sources/ so it can write correct tool code against the real types.
+capability_sources: [seed_capability/reference/data_model.py]
+
+# --- HOW the capability reaches the model -----------------------------------
+# No `intervention:` line: DIRECT is the default, and it is what this project is wired
+# for. The runner reads the candidate's tools in its own process — no proxy, no store, no
+# environment service. The SPA arm is a SEPARATE onboarding in its own project; the two
+# numbers are NOT like-for-like and must never be averaged.
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code             # resolved by run-optimizer via optimizers/registry.yaml
+optimizer_model: claude-opus-4-8         # the optimizer's Claude model id
+optimizer_max_turns: 400                 # generous; the real per-iteration ceiling is the $ cap
+optimizer_usd_per_iter: 40.0             # per-iteration $ cap (claude --max-budget-usd, CLI-enforced)
+
+# --- consuming (runtime) LLM the capability is optimized FOR -----------------
+# The AGENT UNDER TEST reads these tools as aws/gpt-oss-120b via the gateway — a mid-tier
+# reader, DISTINCT from the opus optimizer that proposes the edits.
+target_model: gpt-oss-120b
+target_profile_file: ""
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+
+# --- what context the optimizer gets ----------------------------------------
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md
+# The pinned benchmark checkout, read-only context: the real tool implementations, the
+# task definitions, and the reward checks. Resolved PROJECT-relative.
+runner_repo_path: ../../vendor/skillberry-benchmarks
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter                  # the adapter's tasks() -> all 50 airline tasks
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# THIS RUN is pinned to task 9 (train == val == test == ["9"]): a no-holdout fit, so the
+# engine logs a splits_warning and the report flags the test number as a FIT metric, not a
+# generalization estimate. split_ids.json in this directory pins the all-50 no-holdout
+# split for a full run.
+split_ids_file: split_ids_task9.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 5               # gpt-oss is stochastic; 5 trials -> mean + stderr + pass^k
+
+# --- metrics (display) ------------------------------------------------------
+# The GATE uses the PRIMARY metric only (tau2's reward). db_match and cost_usd are
+# reported by the adapter as shown-only secondaries and never affect accept/reject.
+metrics_display: []
+metric_primary: ""
+metric_directions: []
+
+# --- integrations / stop ----------------------------------------------------
+github_integration: false
+stop_condition: ""
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired            # per-task paired SE on the SAME tasks both sides -> a real
+                             # 1-task gain banks instead of drowning in between-task variance
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 2
+stall: 3
+max_metric_calls: 0
+max_usd: 400.0
+max_optimizer_usd: 400.0
+
+# --- iteration store (how each iteration is versioned for an inspectable process)
+store: git

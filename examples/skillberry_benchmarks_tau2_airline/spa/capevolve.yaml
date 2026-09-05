@@ -1,0 +1,80 @@
+# cap-evolve run spec — optimize tau2-bench AIRLINE's TOOL SURFACE, delivered via SPA.
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [tools]                    # the agent's TOOL SURFACE only
+capability_path: seed_capability         # my_skill/ (THE capability) + primitive_tools/ (FROZEN)
+actions: [edit]
+# The seed is generated from tau2's own primitives and the wrappers call them by NAME
+# through the store — no shared types module is imported by the editable code.
+capability_sources: []
+
+# --- how the candidate REACHES the model (the intervention) -----------------
+# capabilities: says WHAT is edited; intervention: says HOW it is delivered. Under `spa`
+# the candidate is imported into the Skillberry Store and the Skillberry Proxy-Agent
+# injects it into the agent's LLM calls — the benchmark never sees skill files.
+# capevolve.yaml-only: there is no CLI override.
+intervention: spa
+# SPA serves exactly ONE skill, and with no name it silently falls back to searching the
+# store (which "succeeds" even against an empty one), so the name is required.
+skill_name: my_skill
+
+# --- what the optimizer may NOT change --------------------------------------
+# The frozen substrate is part of the SEED but NOT part of the capability: the primitives
+# and the shim to the benchmark's environment service are what make the measurement
+# comparable. SKILL.md is not an edit surface for this run either (an empty file = a
+# neutral seed: the tool surface, not prose, is what is being optimized). Editing one of
+# these makes the candidate INDECISIVE (the measurement is void) rather than scored 0.0.
+protected_paths: ["primitive_tools/*", "my_skill/SKILL.md"]
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 400                 # generous; the $ cap below is the real ceiling
+optimizer_usd_per_iter: 40.0             # per-iteration $ cap (claude --max-budget-usd)
+
+# The agent under test reads these tools as gpt-oss-120b (what SPA calls upstream) —
+# distinct from the opus optimizer that PROPOSES the edits.
+target_model: gpt-oss-120b
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+
+# --- what context the optimizer gets ----------------------------------------
+# Project-RELATIVE (this is also the silent default path), so the example is portable.
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md
+# The pinned benchmark checkout, READ-ONLY: task definitions, the real tool
+# implementations, and the reward checks.
+# One level deeper than the live project (examples/<name>/spa/), hence ../../../.
+runner_repo_path: ../../../vendor/skillberry-benchmarks
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter                  # the adapter's tasks() -> all 50 airline tasks
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# This run's budget fixes the work to airline task 9 (see PROJECT.md): train==val==test=={9},
+# a no-holdout FIT metric — the engine logs a splits_warning and the report flags the test
+# number as a fit metric. `split_ids.json` in this dir pins the same no-holdout shape over
+# ALL 50 tasks, for a later full run.
+split_ids_file: split_ids_task9.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 5                            # gpt-oss is stochastic: 5 trials -> mean + SE (+ pass^k)
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired                        # per-task paired SE — banks a real 1-task gain
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 2
+stall: 3
+max_metric_calls: 0
+max_usd: 400.0
+max_optimizer_usd: 400.0
+
+# --- iteration store --------------------------------------------------------
+store: git                               # every iteration committed for an inspectable process
