@@ -65,6 +65,58 @@ def test_driver_prompt_and_transcript_are_read_and_summarized():
     assert hs["transcript_truncated"] is False
 
 
+def test_transcript_turn_skips_system_line_with_string_message():
+    """A "system" line can carry a plain string ``message`` (e.g. a permission-denial
+    notice) instead of the usual ``{"content": [...]}`` dict. ``.get()`` on a string
+    used to raise AttributeError before the type ever got checked."""
+    from cap_evolve import dashboard
+    ev = {"type": "system", "subtype": "permission_denied",
+          "message": "Permission to use Write has been denied."}
+    assert dashboard._transcript_turn(ev) is None
+
+
+def test_transcript_with_string_message_system_line_does_not_crash_reduce_run():
+    """Regression for a real run (host/transcript.jsonl line 239): a system line whose
+    "message" is a plain string used to crash _transcript_turn, which cascaded through
+    reduce_run and 500'd GET /api/runs/{run_id} for the whole run, not just this panel."""
+    rd, dashboard = _make_run()
+    hdir = rd.root / "host"
+    hdir.mkdir()
+    real_permission_denied_line = (
+        '{"type":"system","subtype":"permission_denied","tool_name":"Write",'
+        '"tool_use_id":"toolu_bdrk_01GGCHTW4SctBqUjDWoxYp9t","agent_id":"ad621f6b49843494a",'
+        '"decision_reason_type":"asyncAgent",'
+        '"decision_reason":"Permission prompts are not available in this context",'
+        '"message":"Permission to use Write has been denied. IMPORTANT: You *may* attempt '
+        'to accomplish this action using other tools that might naturally be used to '
+        'accomplish this goal, e.g. using head instead of cat. But you *should not* attempt '
+        'to work around this denial in malicious ways, e.g. do not use your ability to run '
+        'tests to execute non-test actions. You should only try to work around this '
+        'restriction in reasonable ways that do not attempt to bypass the intent behind '
+        'this denial. If you believe this capability is essential to complete the user\'s '
+        'request, STOP and explain to the user what you were trying to do and why you need '
+        'this permission. Let the user decide how to proceed.",'
+        '"uuid":"e141aa19-5db5-4d49-a823-cc29fa0c3d5c","session_id":"a7e94a62-23c9-4200-94ed-'
+        'a8f5b192f7a4"}'
+    )
+    transcript = [
+        {"type": "assistant", "timestamp": "2026-09-03T12:00:00Z",
+         "message": {"content": [{"type": "text", "text": "Before the bad line."}]}},
+        real_permission_denied_line,  # raw text: the fixture line as it appears on disk
+        {"type": "assistant", "timestamp": "2026-09-03T12:00:02Z",
+         "message": {"content": [{"type": "text", "text": "After the bad line."}]}},
+    ]
+    lines = [t if isinstance(t, str) else json.dumps(t) for t in transcript]
+    (hdir / "transcript.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    reduced = dashboard.reduce_run(rd)  # must not raise
+    hs = reduced["summary"]["host_session"]
+    assert hs["transcript_total_lines"] == 3
+    assert len(hs["transcript_turns"]) == 2
+    assert "Before the bad line" in hs["transcript_turns"][0]["text"]
+    assert "After the bad line" in hs["transcript_turns"][1]["text"]
+
+
 def test_oversized_transcript_is_not_parsed_just_pointed_at():
     """A multi-megabyte transcript must never be read into memory whole and rendered —
     the section links out to the real path instead."""

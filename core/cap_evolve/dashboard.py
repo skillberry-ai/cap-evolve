@@ -987,7 +987,11 @@ def _transcript_turn(ev: dict) -> dict | None:
     session plumbing and are dropped rather than rendered as empty turns.
     """
     t = ev.get("type")
-    msg = ev.get("message") or {}
+    msg = ev.get("message")
+    if not isinstance(msg, dict):
+        # e.g. a "system" permission-denial line whose "message" is a plain string,
+        # not the usual {"content": [...]} shape — plumbing either way, drop it.
+        return None
     content = msg.get("content")
     if not isinstance(content, list):
         return None
