@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|parsec)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -286,6 +286,76 @@ ENV
     export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$ANTHROPIC_BASE_URL}"
     export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$ANTHROPIC_AUTH_TOKEN}"
     export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+    : > "$WORK/.env"
+    ;;
+  parsec)
+    # Parsec = Red Hat's LLM-agentic troubleshooting tool. The aap2 sub-agent
+    # is the subject. Harbor is the runner (same template as swebench), BUT
+    # with HARBOR_LOCAL_ASIS=1 because Parsec's task dirs already ship per-task
+    # task.toml + tests/verify.py + expected.json + a ubi9 Dockerfile — the
+    # default package_dataset repacking would blow those away.
+    #
+    # LOCAL-ONLY / INTERNAL-ONLY. Deliberately absent from benchmarks.yml's
+    # BENCHES, so nothing dispatches this in CI. Neither the dataset (RH's
+    # harbor task tree, not in the public rhpds/parsec repo) nor the kaegis
+    # simulators (github.ibm.com/kaegis/simulation-harness) exist outside
+    # IBM/RH, so a GitHub-hosted or public run could only ever fail. See
+    # ci/benchmarks/parsec/README.md.
+    cp "$TPL/harbor/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/harbor/seed_capability" "$PROJ/seed_capability"
+    CAPS="[system-prompt]"
+    # HARBOR_DATASET is a per-TIER shadow of the RH task tree, regenerated
+    # locally by the matching utils/patch-harbor-tasks*.sh — never committed
+    # (same convention as skillsbench/spreadsheetbench: local dataset shadows
+    # live under the gitignored e2e/).
+    #
+    #   smoke|pilot (v1) — 30 real-trace aap2 tasks, FOUR SHARED kaegis sim
+    #     endpoints (aap2 :8086, github :8087, babylon :8088,
+    #     provisions_db :8090) across every task. Icinga :8089 is optional
+    #     (no aap2 task uses it; blocked on an api.json fix upstream).
+    #     Producer: utils/patch-harbor-tasks.sh
+    #   v2 — 10 authored bench-aap2-* tasks, ONE ISOLATED kaegis sim per task
+    #     (:9086..:9095) seeded from that task's own seed.json. The tier's
+    #     basis is harbor-tasks-v2.1, the downstream patch that fixes the
+    #     three container-correctness bugs (MCP server name, verify.py prefix
+    #     strip, host.containers.internal). Producers, in order:
+    #       utils/patch-harbor-tasks-v2.sh   → harbor-tasks-v2
+    #       utils/bake-aap2-skill.sh         → the kaegis skill artifacts
+    #       utils/start-sims-v2.sh           → the 10 sims + per-task MCP URLs
+    #       utils/patch-harbor-tasks-v2.1.sh → harbor-tasks-v2.1  (this default)
+    case "${TIER:-smoke}" in
+      v2) export HARBOR_DATASET="${PARSEC_HARBOR_TASKS_V2_DST:-$REPO/e2e/parsec/v2/harbor-tasks-v2.1}" ;;
+      *)  export HARBOR_DATASET="${PARSEC_HARBOR_TASKS_DST:-$REPO/e2e/parsec/harbor-tasks-patched}" ;;
+    esac
+    [ -d "$HARBOR_DATASET" ] || { echo "::error:: parsec shadow tasks not found at $HARBOR_DATASET (set PARSEC_HARBOR_TASKS_V2_DST / PARSEC_HARBOR_TASKS_DST, or run the matching ci/benchmarks/parsec/utils/patch-harbor-tasks*.sh first — see ci/benchmarks/parsec/README.md)"; exit 1; }
+    export HARBOR_LOCAL_ASIS=1
+    export HARBOR_AGENT=claude-code
+    export HARBOR_MODEL="$AGENT_MODEL"
+    case "${TIER:-smoke}" in
+      smoke) _hp_default=2 ;;
+      *)     _hp_default=4 ;;
+    esac
+    export HARBOR_PARALLEL="${HARBOR_PARALLEL:-$_hp_default}"
+    export HARBOR_TIMEOUT="${HARBOR_TIMEOUT:-900}"
+    export HARBOR_TASK_IDS="$IDS_CSV"
+    # Job dir + TMPDIR on the shared cache volume, same rationale as swebench.
+    _hb_jobs_base="${CAPEVOLVE_CI_CACHE:-${HOME}/.cache/capevolve-ci}"
+    if mkdir -p "$_hb_jobs_base/harbor-jobs" 2>/dev/null; then
+      export HARBOR_JOBS_DIR="${HARBOR_JOBS_DIR:-$_hb_jobs_base/harbor-jobs}"
+      export TMPDIR="${TMPDIR:-$_hb_jobs_base/tmp}"; mkdir -p "$TMPDIR" 2>/dev/null || true
+    fi
+    # Route the in-container claude-code at the VPC gateway (same rationale as
+    # swebench). Without HARBOR_AGENT_BASE_URL the adapter falls back to bare
+    # api.anthropic.com which is unreachable from the runner.
+    export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$ANTHROPIC_BASE_URL}"
+    export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$ANTHROPIC_AUTH_TOKEN}"
+    export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+    # BACKEND_MCP_URL retained for compatibility with any lingering ${VAR}
+    # placeholder in task.toml (the v1 shadow patcher replaces most). Points at
+    # the aap2 sim by default. Inert for v2, whose task.toml files carry a
+    # concrete per-task host.containers.internal:908X URL baked in by
+    # start-sims-v2.sh.
+    export BACKEND_MCP_URL="${BACKEND_MCP_URL:-http://host.containers.internal:8086/mcp/sse}"
     : > "$WORK/.env"
     ;;
   skillsbench)

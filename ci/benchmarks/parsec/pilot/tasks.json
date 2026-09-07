@@ -1,0 +1,152 @@
+[
+  {
+    "id": "traces_parsec-aap2-0004",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0005",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0006",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0016",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0018",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0021",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0023",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0030",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0032",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0036",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0037",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0044",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0047",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0048",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0049",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0052",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0053",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0074",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0080",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0081",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0082",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0084",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0085",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0087",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0088",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0092",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0094",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0104",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0112",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0113",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  }
+]

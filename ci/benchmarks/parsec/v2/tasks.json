@@ -1,0 +1,52 @@
+[
+  {
+    "id": "bench-aap2-001-single-job-outcome",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-002-failed-jobs-on-controller",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-003-never-started-explanation",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-004-failing-task-and-host",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-005-find-then-diagnose",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-006-log-root-cause",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-007-count-and-oldest",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-008-preceding-task",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-009-nonexistent-job",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "bench-aap2-010-log-does-not-say",
+    "tag": "aap2",
+    "agent": "aws/claude-sonnet-4-5"
+  }
+]

@@ -122,10 +122,21 @@ def test_which_benches_ship_a_pilot_tier():
     four-figure proposition: 50 stratified tasks (every repo represented, proportions
     tracking full) validate the per-trial cost and runtime at 10x smoke's scale before
     anyone commits to full.
+
+    parsec ships one too, and it is the exception that proves the rule: it ships
+    `pilot/tasks.json` so the tier is runnable *locally* (`TIER=pilot bash
+    ci/benchmarks/lib/run_suite.sh parsec`), but it is deliberately absent from
+    `benchmarks.yml`'s `BENCHES`, so the planner never enumerates it and the
+    `benchmark-pilot` / `tier=pilot` fan-out assertions above are unaffected — see
+    `test_pilot_label_reaches_only_the_benchmarks_that_ship_it`, which still lists two
+    benches. It stays out of CI because neither its task trees (internal Red Hat) nor
+    its kaegis simulators (`github.ibm.com/kaegis/simulation-harness`) exist outside
+    IBM/RH; revisit both this list and the fan-out assertions if that ever changes and
+    parsec becomes CI-dispatchable.
     """
     shipped = sorted(p.parent.parent.name
                      for p in (REPO / "ci" / "benchmarks").glob("*/pilot/tasks.json"))
-    assert shipped == ["spreadsheetbench", "swebench"], shipped
+    assert shipped == ["parsec", "spreadsheetbench", "swebench"], shipped
 
 
 # ---- the missing-checkout regression (run 30682558719) -----------------------

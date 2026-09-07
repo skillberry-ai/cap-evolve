@@ -27,6 +27,18 @@ not a leaderboard.
 - Results are uploaded as an artifact and posted as a sticky PR comment (metrics table +
   optimized-capability diff).
 
+> **Also in this tree, but not part of the CI suite: [`parsec`](parsec/README.md)**
+> (**local-only / internal-only**). Red Hat's LLM-agentic troubleshooting tool; tiers
+> `smoke` (5) · `pilot` (30 v1 real-trace tasks) · `v2` (10 authored tasks, one isolated
+> simulator each). `run_suite.sh` accepts it as a `<bench>`, so it runs the same code path
+> locally, but it is deliberately absent from `benchmarks.yml`'s `BENCHES` and from every
+> other dispatch list: neither its task trees (internal RH, not in the public
+> `rhpds/parsec`) nor its kaegis simulators (`github.ibm.com/kaegis/simulation-harness`)
+> exist outside IBM/RH, so a dispatched leg could only ever fail for infrastructure
+> reasons. Nothing but per-tier `tasks.json` metadata is committed — the datasets are
+> regenerated locally by `parsec/utils/`. See its README for the setup pipelines and the
+> reasoning.
+
 ## Layout
 
 ```
