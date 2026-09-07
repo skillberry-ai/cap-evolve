@@ -1412,6 +1412,17 @@ const DATA = [
 const CAND_KEYS = ['seed','cand_0001','cand_0002','cand_0003','cand_0004'];
 const CAND_LABELS = ['seed','c1','c2','c3','c4'];
 
+// EvoSkill-comparable pass flag: test where available, else val — NOT best-OR-test (that
+// credits a val-only 1.0 the sealed test never confirmed, which is how 73.6% overstates this
+// vs EvoSkill's 71.1%; see summary.md "Reading the comparison honestly"). This is the number
+// that's actually apples-to-apples with their pass_rate, computed per task so it sits right in
+// the table instead of only in prose.
+for (const r of DATA) {
+  r.pass = (r.final_test !== null && r.final_test !== undefined)
+    ? (r.final_test >= 0.999 ? 1 : 0)
+    : ((r.best ?? 0) >= 0.999 ? 1 : 0);
+}
+
 // Column headers are clickable sort handles, kept in sync with the radio controls above the
 // table (both drive the same sortState; clicking a header a second time flips direction).
 const RADIO_TO_SORT = { id: {key:'task', dir:'asc'}, delta: {key:'delta', dir:'desc'}, baseline: {key:'seed', dir:'desc'}, best: {key:'best', dir:'desc'}, category: {key:'category', dir:'asc'} };
@@ -1471,7 +1482,7 @@ function render() {
   for (let i = 0; i < CAND_KEYS.length; i++) {
     html += `<th class="sortable" data-sort-key="${CAND_KEYS[i]}">${CAND_LABELS[i]}${arrow(CAND_KEYS[i])}</th>`;
   }
-  html += `<th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th><th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th></tr></thead><tbody>`;
+  html += `<th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th><th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th><th class="sortable" data-sort-key="pass" title="test where available, else val — the EvoSkill-comparable cut">pass${arrow('pass')}</th></tr></thead><tbody>`;
 
   for (const r of rows) {
     const srcBadge = `<span class="badge ${sourceBadgeClass(r.source)}">${sourceBadgeLabel(r.source)}</span>`;
@@ -1491,7 +1502,8 @@ function render() {
     }
     html += `<td class="value best-col">${fmt(r.best)}</td>`;
     const dColor = (r.delta ?? 0) > 0 ? '#059669' : (r.delta ?? 0) < 0 ? '#dc2626' : '#6b7280';
-    html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(r.delta ?? 0)}</td></tr>`;
+    html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(r.delta ?? 0)}</td>`;
+    html += `<td class="value" style="text-align:center; font-weight:700; background:${r.pass ? '#d1fae5' : '#fee2e2'}; color:${r.pass ? '#065f46' : '#991b1b'}">${r.pass}</td></tr>`;
   }
 
   const avg = (key, filter) => {
@@ -1503,15 +1515,19 @@ function render() {
   for (const k of CAND_KEYS) html += `<td style="background:${color(avg(k))}">${fmt(avg(k))}</td>`;
   html += `<td class="best-col">${fmt(avg('best'))}</td>`;
   const dc = avg('delta') > 0 ? '#059669' : '#6b7280';
-  html += `<td class="delta-col" style="color:${dc}">${fmtDelta(avg('delta'))}</td></tr>`;
+  html += `<td class="delta-col" style="color:${dc}">${fmtDelta(avg('delta'))}</td>`;
+  html += `<td style="text-align:center; font-weight:700;">${(avg('pass')*100).toFixed(1)}%</td></tr>`;
   html += '</tbody>';
   document.getElementById('heatmap').innerHTML = html;
 
-  // A task counts as reaching 1.0 if either its best val candidate did, OR its held-out
-  // test score did (test-only wins happen: a candidate can be selected on val for other
-  // reasons and still score 1.0 on the sealed test split). See summary.md's own definition
-  // of this cut — this DATA now carries final_test so the two files agree.
+  // Two different "reaches 1.0" cuts — they disagree, and the gap matters:
+  //  - nAt1: best-OR-test ≥ 1.0. Optimistic — credits a val-only 1.0 even when the sealed
+  //    test was never run to confirm it (45 of these 64 passes are val-only).
+  //  - nPass (= sum of the per-row r.pass column above): test-where-available, else val.
+  //    This is the one that's actually comparable to EvoSkill's pass_rate. See summary.md
+  //    "Reading the comparison honestly" for the derivation (62/87 = 71.3%, a tie with 71.1%).
   const nAt1 = DATA.filter(r => (r.best ?? 0) >= 0.999 || (r.final_test ?? 0) >= 0.999).length;
+  const nPass = DATA.filter(r => r.pass === 1).length;
   const nNoSignal = DATA.filter(r => r.status === 'NO_SIGNAL').length;
   // Optimizer-perspective metrics:
   //  - max candidate value (excluding seed) — the best the OPTIMIZER produced
@@ -1547,18 +1563,20 @@ function render() {
       <thead><tr><th class="txt">category</th><th>n</th><th>no-signal</th><th>pass</th><th>pass rate</th><th>avg baseline</th><th>avg best</th><th>Δ</th></tr></thead>
       <tbody>
         ${catRows}
-        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">FULL-87</td><td>${DATA.length}</td><td>${nNoSignal}</td><td>${nAt1}</td>
-          <td>${(nAt1/DATA.length*100).toFixed(1)}%</td>
+        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">FULL-87</td><td>${DATA.length}</td><td>${nNoSignal}</td><td>${nPass}</td>
+          <td>${(nPass/DATA.length*100).toFixed(1)}%</td>
           <td>${avg('seed').toFixed(3)}</td><td>${avg('best').toFixed(3)}</td>
           <td style="color:#059669">+${(avg('best')-avg('seed')).toFixed(3)}</td></tr>
       </tbody>
     </table>
+    <p style="font-size:11px; color:#9ca3af; margin:2px 0 12px;">Per-category "pass" above is val-only ≥ 1.0 (a third, looser cut) — rows won't sum to the FULL-87 row, which uses the honest test-where-available cut. Kept for the category breakdown; don't quote per-category numbers against EvoSkill without the same caveat as the headline.</p>
     <strong>Task outcomes:</strong><br>
-    &nbsp;&nbsp;• <strong>${nAt1}/${DATA.length} (${(nAt1/DATA.length*100).toFixed(1)}%)</strong> reach val=1.0 (fully solved).<br>
+    &nbsp;&nbsp;• <strong>${nPass}/${DATA.length} (${(nPass/DATA.length*100).toFixed(1)}%)</strong> pass — test where available, else val ≥ 1.0. This is the <strong>"pass" column</strong> in the table above; its average IS this number.<br>
+    &nbsp;&nbsp;• <strong>${nAt1}/${DATA.length} (${(nAt1/DATA.length*100).toFixed(1)}%)</strong> reach best-OR-test = 1.0 — a looser, optimistic cut that also credits val-only 1.0s the sealed test never confirmed. Not the number to quote against EvoSkill.<br>
     &nbsp;&nbsp;• <strong>${nImprovedNot1}/${DATA.length} (${(nImprovedNot1/DATA.length*100).toFixed(1)}%)</strong> improved over seed but did NOT reach 1.0 (partial lift).<br>
     &nbsp;&nbsp;• <strong>${nOptRegressed}/${DATA.length} (${(nOptRegressed/DATA.length*100).toFixed(1)}%)</strong> where the optimizer's best candidate was LOWER than the baseline (regression; seed still wins).<br>
     &nbsp;&nbsp;• <strong>${nNoSignal}/${DATA.length} (${(nNoSignal/DATA.length*100).toFixed(1)}%)</strong> NO_SIGNAL — 0.0 on both seed and every candidate (cap-evolve had no lever).<br>
-    <strong>vs EvoSkill (71.1%):</strong> full-87 pass rate = ${(nAt1/DATA.length*100).toFixed(1)}% (+${((nAt1/DATA.length*100)-71.1).toFixed(1)} pp). Excluding no-signal: ${nAt1}/${nWithSignal} = ${(nAt1/nWithSignal*100).toFixed(1)}%.
+    <strong>vs EvoSkill (71.1%):</strong> full-87 pass rate = <strong>${nPass}/${DATA.length} = ${(nPass/DATA.length*100).toFixed(1)}%</strong> (${((nPass/DATA.length*100)-71.1)>=0?'+':''}${((nPass/DATA.length*100)-71.1).toFixed(1)} pp — a statistical tie, not a lead; see <a href="../results/task-by-task-87/summary.md">summary.md</a>). Excluding no-signal: ${nPass}/${nWithSignal} = ${(nPass/nWithSignal*100).toFixed(1)}%.
   `;
 }
 document.querySelectorAll('input[name=sort]').forEach(el => el.addEventListener('change', () => {
