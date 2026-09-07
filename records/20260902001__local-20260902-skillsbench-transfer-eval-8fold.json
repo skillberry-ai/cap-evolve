@@ -1,0 +1,37 @@
+{
+  "run_id": 20260902001,
+  "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/transfer-eval-8fold/summary.md",
+  "bench": "skillsbench",
+  "tier": "full",
+  "experiment": "transfer-eval-8fold",
+  "event": "local",
+  "source": "bcarmeli",
+  "pr": null,
+  "branch": null,
+  "sha": null,
+  "date": "2026-09-02T00:00:00Z",
+  "iterations": 0,
+  "trials": 1,
+  "agent_model": "claude-sonnet-5",
+  "optimizer_model": "none",
+  "conclusion": "success",
+  "schema": 1,
+  "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/transfer-eval-8fold/summary.md",
+  "tasks": [
+    {"task": "shock-analysis-demand→shock-analysis-supply", "reward_baseline": 0.0, "reward_opt": 0.1},
+    {"task": "shock-analysis-demand→weighted-gdp-calc", "reward_baseline": 0.8, "reward_opt": 0.2},
+    {"task": "shock-analysis-supply→shock-analysis-demand", "reward_baseline": 0.0, "reward_opt": 0.0},
+    {"task": "shock-analysis-supply→weighted-gdp-calc", "reward_baseline": 0.8, "reward_opt": 0.3},
+    {"task": "weighted-gdp-calc→shock-analysis-demand", "reward_baseline": 0.0, "reward_opt": 0.0},
+    {"task": "weighted-gdp-calc→shock-analysis-supply", "reward_baseline": 0.0, "reward_opt": 0.1},
+    {"task": "exam-block-sequencing→paratransit-routing", "reward_baseline": 0.0, "reward_opt": 0.2},
+    {"task": "paratransit-routing→exam-block-sequencing", "reward_baseline": 0.1, "reward_opt": 0.4}
+  ],
+  "steps": [],
+  "suite": {
+    "reward_base": 0.2125,
+    "reward_opt": 0.1625,
+    "n": 8
+  },
+  "note": "Zero-shot skill transfer pilot (transfer_eval_v1): a frozen winning skill from a train task is evaluated zero-shot (--max-iterations 0, no adaptation) on a different test task. Each of the 8 rows is one train→test fold, not a SkillsBench task; 'task' names the fold. cap-evolve's own per-fold test_delta is always 0.0 by construction under --max-iterations 0 (the frozen donor skill is the only artifact evaluated, so it's compared against itself) and is NOT reproduced here. Instead reward_baseline/reward_opt show the real comparison the source report makes: the test task's own native seed score (pre-optimization, from the task-by-task-87 run) vs. the transferred donor skill's score on that same task. Net effect across all 8 folds is negative (0.2125 → 0.1625): transfer gives a small lift only where the native seed was already near zero, and actively hurts (-0.5, -0.6) on the one task (weighted-gdp-calc) with a strong native seed. Sample size is 8 folds over 5 tasks in 2 domains — directional only, not conclusive. Full per-fold detail, methodology, and operational notes: results/transfer-eval-8fold/summary.md on the skillsbench-history branch."
+}
