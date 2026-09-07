@@ -1482,7 +1482,7 @@ function render() {
   for (let i = 0; i < CAND_KEYS.length; i++) {
     html += `<th class="sortable" data-sort-key="${CAND_KEYS[i]}">${CAND_LABELS[i]}${arrow(CAND_KEYS[i])}</th>`;
   }
-  html += `<th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th><th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th><th class="sortable" data-sort-key="pass" title="test where available, else val — the EvoSkill-comparable cut">pass${arrow('pass')}</th></tr></thead><tbody>`;
+  html += `<th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th><th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th><th class="sortable" data-sort-key="final_test" title="sealed test-split score, scored once at finalize — may diverge from best (val)">test${arrow('final_test')}</th><th class="sortable" data-sort-key="pass" title="test where available, else val — the EvoSkill-comparable cut">pass${arrow('pass')}</th></tr></thead><tbody>`;
 
   for (const r of rows) {
     const srcBadge = `<span class="badge ${sourceBadgeClass(r.source)}">${sourceBadgeLabel(r.source)}</span>`;
@@ -1503,6 +1503,8 @@ function render() {
     html += `<td class="value best-col">${fmt(r.best)}</td>`;
     const dColor = (r.delta ?? 0) > 0 ? '#059669' : (r.delta ?? 0) < 0 ? '#dc2626' : '#6b7280';
     html += `<td class="value delta-col" style="color:${dColor}">${fmtDelta(r.delta ?? 0)}</td>`;
+    const hasTest = r.final_test !== null && r.final_test !== undefined;
+    html += `<td class="value" style="${hasTest ? '' : 'color:#9ca3af;'}">${hasTest ? fmt(r.final_test) : '—'}</td>`;
     html += `<td class="value" style="text-align:center; font-weight:700; background:${r.pass ? '#d1fae5' : '#fee2e2'}; color:${r.pass ? '#065f46' : '#991b1b'}">${r.pass}</td></tr>`;
   }
 
@@ -1516,6 +1518,8 @@ function render() {
   html += `<td class="best-col">${fmt(avg('best'))}</td>`;
   const dc = avg('delta') > 0 ? '#059669' : '#6b7280';
   html += `<td class="delta-col" style="color:${dc}">${fmtDelta(avg('delta'))}</td>`;
+  const nWithTest = DATA.filter(r => r.final_test !== null && r.final_test !== undefined).length;
+  html += `<td style="color:#6b7280;" title="mean over ${nWithTest}/${DATA.length} tasks with a sealed test score">${fmt(avg('final_test'))} <span style="font-size:10px;">(n=${nWithTest})</span></td>`;
   html += `<td style="text-align:center; font-weight:700;">${(avg('pass')*100).toFixed(1)}%</td></tr>`;
   html += '</tbody>';
   document.getElementById('heatmap').innerHTML = html;
