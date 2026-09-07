@@ -53,6 +53,15 @@ HARBOR_TIMEOUT = int(os.environ.get("HARBOR_TIMEOUT", "1800"))
 HARBOR_EXTRA_FLAGS = shlex.split(os.environ.get("HARBOR_EXTRA_FLAGS", ""))
 HARBOR_JOBS_DIR = os.environ.get("HARBOR_JOBS_DIR", "")
 
+# ``HARBOR_LOCAL_ASIS=1`` — when set, a local dataset dir is passed to ``harbor
+# run`` VERBATIM (no ``package_dataset`` repacking). Use this when the local
+# dataset already ships everything Harbor needs per task — task.toml, tests/
+# with a real verifier + expected.json, and any pre-built Dockerfile — and the
+# default repackaging (which overwrites those with generic templates) would
+# destroy semantic content. Downstream benchmarks that want to hand-author
+# rich task dirs (Parsec, etc.) set this in their overrides.env.
+HARBOR_LOCAL_ASIS = os.environ.get("HARBOR_LOCAL_ASIS", "").strip() in ("1", "true", "yes")
+
 # Task IDs to include (comma-separated, without dataset prefix).
 # e.g. "astropy__astropy-12907,django__django-11099"
 HARBOR_TASK_IDS = [
@@ -158,6 +167,34 @@ def _build_harbor_mounts() -> list[dict] | None:
     return mounts or None
 
 
+# The only candidate files HARBOR_LOCAL_ASIS can deliver: ``_write_candidate_instruction``
+# reads the TEXT of the first of these that is non-empty and passes it via
+# ``--extra-instruction-path``. With no ``package_dataset`` step there is no
+# environment/capability/ dir, so anything else in the candidate never reaches the container.
+_ASIS_DELIVERABLE = ("prompt.md", "SKILL.md")
+
+
+def _assert_asis_can_deliver(candidate_dir: Path) -> None:
+    """ASIS delivers instruction TEXT only; anything else in the candidate is dropped.
+
+    This template's declared default is ``capabilities: [skill-package]`` (capevolve.yaml),
+    so without this guard a skill-package candidate run under ``HARBOR_LOCAL_ASIS=1`` loses
+    its bundled ``scripts/``/``references/`` silently: the run completes, the gate runs and
+    the numbers get published, while every edit outside the SKILL.md body was never
+    delivered. Fail before the first container starts instead.
+    """
+    extra = sorted(p.name for p in Path(candidate_dir).iterdir()
+                   if p.name not in _ASIS_DELIVERABLE)
+    if extra:
+        raise ValueError(
+            f"HARBOR_LOCAL_ASIS=1 only delivers {_ASIS_DELIVERABLE} to the container "
+            f"(via --extra-instruction-path); it silently drops everything else. "
+            f"Candidate dir {candidate_dir} also contains: {extra}. "
+            f"Either unset HARBOR_LOCAL_ASIS (use the default package_dataset repack), "
+            f"or reduce this capability to instruction text only."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
@@ -248,6 +285,14 @@ class Adapter(CapabilityAdapter):
             ]
             dataset_path = None
             dataset_name = HARBOR_DATASET
+        elif HARBOR_LOCAL_ASIS:
+            _assert_asis_can_deliver(candidate_dir)
+            # Point harbor at the pre-built local dataset directly — no repacking.
+            # Each task dir must already contain task.toml + tests/ + environment/
+            # (Harbor's TaskModel.is_valid_dir requirement). Filter to the requested IDs.
+            harbor_task_names = [t.id for t in tasks]
+            dataset_path = Path(HARBOR_DATASET)
+            dataset_name = None
         else:
             harbor_task_names = None
             packaged_dir = Path(tempfile.mkdtemp(prefix="harbor_dataset_"))
