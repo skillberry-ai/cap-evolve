@@ -213,6 +213,476 @@
     "has_ui": true
   },
   {
+    "run_id": 20260903001,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-87/summary.md",
+    "bench": "skillsbench",
+    "tier": "full",
+    "experiment": "task-by-task",
+    "event": "local",
+    "source": "bcarmeli",
+    "pr": null,
+    "branch": null,
+    "sha": null,
+    "date": "2026-08-28T00:00:00Z",
+    "iterations": 4,
+    "trials": 10,
+    "agent_model": "claude-sonnet-5",
+    "optimizer_model": "claude-opus-4-8",
+    "conclusion": "success",
+    "schema": 1,
+    "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-87/summary.md",
+    "tasks": [
+      {
+        "task": "3d-scan-calc",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "ada-bathroom-plan-repair",
+        "reward_baseline": 0.4,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "adaptive-cruise-control",
+        "reward_baseline": 0.7,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "azure-bgp-oscillation-route-leak",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "bike-rebalance",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "citation-check",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "civ6-adjacency-optimizer",
+        "reward_baseline": 0.31,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "court-form-filling",
+        "reward_baseline": 0.3,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "crystallographic-wyckoff-position-analysis",
+        "reward_baseline": 0.626,
+        "reward_opt": 0.835
+      },
+      {
+        "task": "dapt-intrusion-detection",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "data-to-d3",
+        "reward_baseline": 0.5,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "debug-trl-grpo",
+        "reward_baseline": 0.425,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "dialogue-parser",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "drone-planning-control",
+        "reward_baseline": 0.7200001,
+        "reward_opt": 0.7200001
+      },
+      {
+        "task": "dynamic-object-aware-egomotion",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "earthquake-phase-association",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "earthquake-plate-calculation",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "econ-detrending-correlation",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "edit-pdf",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "energy-ac-optimal-power-flow",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "energy-market-pricing",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "energy-unit-commitment",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "enterprise-information-search",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "exam-block-sequencing",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "exceltable-in-ppt",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "exoplanet-detection-period",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "financial-modeling-qa",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "fix-build-agentops",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "fix-build-google-auto",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "fix-druid-loophole-cve",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "fix-erlang-ssh-cve",
+        "reward_baseline": 0.6,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "fix-visual-stability",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "flink-query",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "flood-risk-analysis",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "glm-lake-mendota",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "gravitational-wave-detection",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "grid-dispatch-operator",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "hvac-control",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "invoice-fraud-detection",
+        "reward_baseline": 0.3,
+        "reward_opt": 0.4
+      },
+      {
+        "task": "jax-computing-basics",
+        "reward_baseline": 0.9,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "jpg-ocr-stat",
+        "reward_baseline": 0.8,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "lab-unit-harmonization",
+        "reward_baseline": 0.9978999999999999,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "lake-warming-attribution",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "latex-formula-extraction",
+        "reward_baseline": 0.2,
+        "reward_opt": 0.8
+      },
+      {
+        "task": "lean4-proof",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "llm-prefix-cache-replay",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "manufacturing-codebook-normalization",
+        "reward_baseline": 0.2,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "manufacturing-equipment-maintenance",
+        "reward_baseline": 0.7,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "manufacturing-fjsp-optimization",
+        "reward_baseline": 0.8,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "mario-coin-counting",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "mars-clouds-clustering",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "multilingual-video-dubbing",
+        "reward_baseline": 0.7,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "offer-letter-generator",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "organize-messy-files",
+        "reward_baseline": 0.5,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "paper-anonymizer",
+        "reward_baseline": 0.6,
+        "reward_opt": 0.6
+      },
+      {
+        "task": "parallel-tfidf-search",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "paratransit-routing",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "pddl-airport-planning",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "pddl-tpp-planning",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "pdf-excel-diff",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "powerlifting-coef-calc",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "pptx-reference-formatting",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "protein-expression-analysis",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "python-scala-translation",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "quantum-numerical-simulation",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "r2r-mpc-control",
+        "reward_baseline": 0.3,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "radar-vital-signs",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "react-performance-debugging",
+        "reward_baseline": 0.6,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "reserves-at-risk-calc",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "sales-pivot-analysis",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "sec-financial-report",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "seismic-phase-picking",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "setup-fuzzing-py",
+        "reward_baseline": 0.364,
+        "reward_opt": 0.549
+      },
+      {
+        "task": "shock-analysis-demand",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.9
+      },
+      {
+        "task": "shock-analysis-supply",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.3
+      },
+      {
+        "task": "simpo-code-reproduction",
+        "reward_baseline": 0.8,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "software-dependency-audit",
+        "reward_baseline": 0.3,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "spring-boot-jakarta-migration",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0
+      },
+      {
+        "task": "suricata-custom-exfil",
+        "reward_baseline": 0.6666666666666666,
+        "reward_opt": 0.6666666666666666
+      },
+      {
+        "task": "syzkaller-ppdev-syzlang",
+        "reward_baseline": 0.7,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "threejs-structure-parser",
+        "reward_baseline": 0.5,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "threejs-to-obj",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "tictoc-unnecessary-abort-detection",
+        "reward_baseline": 0.885,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "travel-planning",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "video-silence-remover",
+        "reward_baseline": 0.1,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "weighted-gdp-calc",
+        "reward_baseline": 0.8,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "xlsx-recover-data",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0
+      }
+    ],
+    "steps": [],
+    "suite": {
+      "reward_base": 0.507984,
+      "reward_opt": 0.842192,
+      "n": 87
+    },
+    "counts": {
+      "passed": 63,
+      "partial": 14,
+      "errored": 0,
+      "failed": 10
+    },
+    "note": "Pass rate depends on which split you read: 64/87=73.6% takes the better of val\u22651.0 OR final_test\u22651.0 per task (45 of those 64 passes are val-only, since only 34/87 tasks have a held-out test at all). Recomputed as test-where-available-else-val: 62/87=71.3% \u2014 a statistical tie with EvoSkill's 71.1% (+2.5pp headline is 0.52 SE, not significant either way). 10/87 are NO_SIGNAL (scored 0.0 on seed and every candidate); 4 of those are infra failures (container built, agent produced no tool_calls), not genuine optimizer misses. Full breakdown, caveats, and per-category table: results/task-by-task-87/summary.md on this branch. Per-task heatmap: ui/heatmap.html. Per-task narrative reports: reports/task-by-task/."
+  },
+  {
     "run_id": 33046360451,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/33046360451",
     "bench": "spreadsheetbench",
@@ -21561,7 +22031,8 @@
     "run_id": 20260731001,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/benchmark-history/docs/runs/local-20260730-skillsbench-runnable-sonnet5-optimize.md",
     "bench": "skillsbench",
-    "tier": "runnable-subset-43",
+    "tier": "full",
+    "experiment": "runnable-subset-43",
     "event": "local",
     "source": "bcarmeli",
     "pr": null,
