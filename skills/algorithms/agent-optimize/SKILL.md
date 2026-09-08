@@ -37,7 +37,7 @@ per-task **feedback** says — that is your learning signal. Note the val/test s
 `gate_mode`/`gate_k_se` and the allowed edit surface.
 
 Then let `spend.py` parse the free-text **`stop_condition`** rather than restating it from memory: it prints
-`constraints.predicates`, every concrete check it could extract, with its measured actual. **If
+`constraints.predicates`, every concrete check it could extract, with its actual. **If
 `constraints.ambiguous` is non-empty, ASK THE USER before the loop starts** — a vague clause is reported,
 never guessed at, and this is the one moment where asking is cheap.
 
@@ -162,8 +162,8 @@ estimate, not proof (`--veto-regressions` restores the old no-regression veto; s
 what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but books no decision.
 
 **5. Commit the decision through the run dir**, so `best_id`, the stall counter and the audit log
-stay real. `--decision reject` keeps the old best; either way it snapshots the candidate, logs
-the event and advances `iterations` + stall:
+stay real. `--decision reject` keeps the old best; it snapshots the candidate, logs the event
+and advances `iterations` + stall:
 
 ```bash
 python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$TAG" \
