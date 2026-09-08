@@ -3555,6 +3555,165 @@
     "has_ui": true
   },
   {
+    "run_id": 20260908002,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v2/runs/run_20260818_161550/report.md",
+    "bench": "parsec",
+    "tier": "v2",
+    "experiment": "v2",
+    "event": "local",
+    "source": "bcarmeli",
+    "pr": null,
+    "branch": null,
+    "sha": null,
+    "date": "2026-08-18T16:15:50Z",
+    "iterations": 1,
+    "trials": 9,
+    "agent_model": "claude-sonnet-4-20250514",
+    "optimizer_model": "claude-opus-4-7",
+    "gate_k_se": 0.2,
+    "conclusion": "success",
+    "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v2/summary.md",
+    "note": "No held-out test exists yet, so this is train/val-fit, not a generalization claim. reward_base/reward_opt quote the honest equal-n framing (seed re-measured at n=9, errored trials dropped) rather than cap-evolve's own gate output (+0.086, a mixed-n comparison against a reused n=3 baseline). See results/v2/summary.md on parsec-history for the three-framings comparison, cost-recovery detail, and diff description.",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-001-single-job-outcome",
+        "reward_baseline": 0.5,
+        "reward_opt": 1.0,
+        "reward_delta": 0.5,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-002-failed-jobs-on-controller",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-003-never-started-explanation",
+        "reward_baseline": 0.75,
+        "reward_opt": 1.0,
+        "reward_delta": 0.25,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-004-failing-task-and-host",
+        "reward_baseline": 0.8,
+        "reward_opt": 0.978,
+        "reward_delta": 0.178,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-005-find-then-diagnose",
+        "reward_baseline": 0.844,
+        "reward_opt": 1.0,
+        "reward_delta": 0.156,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-006-log-root-cause",
+        "reward_baseline": 0.778,
+        "reward_opt": 0.778,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-007-count-and-oldest",
+        "reward_baseline": 0.958,
+        "reward_opt": 0.907,
+        "reward_delta": -0.051,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-008-preceding-task",
+        "reward_baseline": 0.844,
+        "reward_opt": 0.978,
+        "reward_delta": 0.133,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-009-nonexistent-job",
+        "reward_baseline": 0.8,
+        "reward_opt": 1.0,
+        "reward_delta": 0.2,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      },
+      {
+        "bench": "parsec",
+        "tier": "v2",
+        "task": "bench-aap2-010-log-does-not-say",
+        "reward_baseline": 0.95,
+        "reward_opt": 0.978,
+        "reward_delta": 0.028,
+        "opt_infra": false,
+        "run_dir": "run_20260818_161550"
+      }
+    ],
+    "steps": [
+      {
+        "phase": "baseline",
+        "iter": null,
+        "candidate": "seed_train",
+        "accepted": null,
+        "reward": 0.822,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 9509.4
+      },
+      {
+        "phase": "iterate",
+        "iter": 1,
+        "candidate": "cand_0001",
+        "accepted": true,
+        "reward": 0.962,
+        "optimizer_usd": 3.2292,
+        "optimizer_seconds": 933.94,
+        "eval_usd": 0.0,
+        "eval_seconds": 9509.4
+      }
+    ],
+    "suite": {
+      "reward_base": 0.8224,
+      "reward_opt": 0.9619,
+      "n": 10,
+      "n_scored": 10,
+      "eval_usd": 0,
+      "optimizer_usd": 3.2292,
+      "eval_seconds": 19018.8,
+      "optimizer_seconds": 933.94
+    },
+    "has_ui": false
+  },
+  {
     "run_id": 32138917153,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/32138917153",
     "bench": "spreadsheetbench",
@@ -3754,6 +3913,107 @@
       "optimizer_seconds": 2737.81
     },
     "has_ui": true
+  },
+  {
+    "run_id": 20260908001,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v1/runs/run_20260814_214843/report.md",
+    "bench": "parsec",
+    "tier": "pilot",
+    "experiment": "v1",
+    "event": "local",
+    "source": "bcarmeli",
+    "pr": null,
+    "branch": null,
+    "sha": null,
+    "date": "2026-08-14T21:48:43Z",
+    "iterations": 5,
+    "trials": 30,
+    "agent_model": "aws/claude-sonnet-4-5",
+    "optimizer_model": "claude-opus-4-7",
+    "gate_k_se": 1.0,
+    "conclusion": "success",
+    "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v1/summary.md",
+    "note": "Train-fit only \u2014 train==val==test are the same 2 tasks (traces_parsec-aap2-0047/0048). best=seed: both candidates were rejected by the paired-SE gate, so this is two measurements of the byte-identical seed (baseline vs. finalize), not an accepted improvement \u2014 the +0.009 delta is measurement noise. See results/v1/summary.md on parsec-history for the full per-task history and data-quality caveats.",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "parsec",
+        "tier": "pilot",
+        "task": "traces_parsec-aap2-0047",
+        "reward_baseline": 0.2878785,
+        "reward_opt": 0.2777775,
+        "reward_delta": -0.010101,
+        "opt_infra": false,
+        "run_dir": ".capevolve/run_20260814_214843"
+      },
+      {
+        "bench": "parsec",
+        "tier": "pilot",
+        "task": "traces_parsec-aap2-0048",
+        "reward_baseline": 0.34545454545454546,
+        "reward_opt": 0.37333333333333335,
+        "reward_delta": 0.027879,
+        "opt_infra": false,
+        "run_dir": ".capevolve/run_20260814_214843"
+      }
+    ],
+    "steps": [
+      {
+        "phase": "baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.3166665227272727,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 126091.14
+      },
+      {
+        "phase": "iterate",
+        "iter": 1,
+        "candidate": "cand_0001",
+        "accepted": false,
+        "reward": 0.22499988333333332,
+        "optimizer_usd": 5.522572,
+        "optimizer_seconds": 1211.13,
+        "eval_usd": 0.0,
+        "eval_seconds": 16210.83
+      },
+      {
+        "phase": "iterate",
+        "iter": 2,
+        "candidate": "cand_0002",
+        "accepted": false,
+        "reward": 0.1566666,
+        "optimizer_usd": 3.087652,
+        "optimizer_seconds": 979.39,
+        "eval_usd": 0.0,
+        "eval_seconds": 19123.6
+      },
+      {
+        "phase": "finalize",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.32555541666666665,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 13182.21
+      }
+    ],
+    "suite": {
+      "reward_base": 0.316667,
+      "reward_opt": 0.325555,
+      "n": 2,
+      "n_scored": 2,
+      "eval_usd": 0,
+      "optimizer_usd": 8.610224,
+      "eval_seconds": 174607.78,
+      "optimizer_seconds": 2190.52
+    },
+    "has_ui": false
   },
   {
     "run_id": 31331458168,
