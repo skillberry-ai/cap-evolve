@@ -17,6 +17,7 @@
   "conclusion": "success",
   "schema": 1,
   "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/transfer-eval-8fold/summary.md",
+  "report_url": "https://skillberry-ai.github.io/cap-evolve/skillsbench/results/transfer-eval-8fold/summary.html",
   "tasks": [
     {"task": "shock-analysis-demand→shock-analysis-supply", "reward_baseline": 0.0, "reward_opt": 0.1},
     {"task": "shock-analysis-demand→weighted-gdp-calc", "reward_baseline": 0.8, "reward_opt": 0.2},

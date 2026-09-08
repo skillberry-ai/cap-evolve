@@ -17,6 +17,7 @@
   "conclusion": "success",
   "schema": 1,
   "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-87/summary.md",
+  "report_url": "https://skillberry-ai.github.io/cap-evolve/skillsbench/results/task-by-task-87/summary.html",
   "tasks": [
     {
       "task": "3d-scan-calc",
