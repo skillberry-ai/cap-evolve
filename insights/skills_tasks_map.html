@@ -18,6 +18,9 @@
   #toc a { margin-right: 1rem; }
   tr:hover { background: #fafafa; }
   .boilerplate-tag { color: #b45309; font-weight: 600; }
+  .test-tag { color: #0a7d2f; font-weight: 600; }
+  .no-split { color: #888; font-style: italic; }
+  ul.testlist { margin: .3rem 0 1rem; }
 </style>
 </head>
 <body>
@@ -30,14 +33,12 @@
 5 of those are boilerplate filenames, not real skills &mdash; <code>README.md</code>,
 <code>LICENSE</code>, <code>INSTALLATION.md</code>, <code>TESTING.md</code>, <code>reference.md</code>
 &mdash; carried over from how the source repo lays out its <code>environment/skills/</code>
-directories (e.g. <code>lean4-proof</code> ships its real skills <code>lean4-memories</code> /
-<code>lean4-theorem-proving</code> alongside a <code>README.md</code>/<code>LICENSE</code>/etc.).
-These are marked <span class="boilerplate-tag">B</span> below rather than given a skill number,
-so the numbering (1&ndash;196) covers only actual skills. Task numbers (1&ndash;87) and skill
-numbers follow the order used in <code>SKILLSBENCH_INVENTORY.md</code> (category order, then
-first-appearance order).
+directories. These are marked <span class="boilerplate-tag">B</span> below rather than given a
+skill number, so the numbering (1&ndash;196) covers only actual skills. Task numbers (1&ndash;87)
+and skill numbers follow the order used in <code>SKILLSBENCH_INVENTORY.md</code> (category order,
+then first-appearance order).
 </div>
-<div id="toc"><a href="#table-a">Table A: tasks &rarr; skills</a> <a href="#table-b">Table B: skills &rarr; tasks</a> <a href="#boilerplate">Boilerplate entries</a></div>
+<div id="toc"><a href="#table-a">Table A: tasks &rarr; skills</a> <a href="#table-b">Table B: skills &rarr; tasks</a> <a href="#table-c">Table C: train/test split</a> <a href="#boilerplate">Boilerplate entries</a></div>
 
 <h2 id="table-a">Table A &mdash; all 87 tasks, by category, with skill numbers</h2>
 <h3>software-engineering (16 tasks)</h3>
@@ -351,6 +352,52 @@ first-appearance order).
 <tr><td class='num'>195</td><td><code>silence-detector</code></td><td class='num'>1</td><td><span class='cat-badge'>media-content-production</span></td><td>87</td></tr>
 <tr><td class='num'>196</td><td><code>video-processor</code></td><td class='num'>1</td><td><span class='cat-badge'>media-content-production</span></td><td>87</td></tr>
 </tbody></table>
+<h2 id="table-c">Table C &mdash; per-category train/test split (skill-disjoint-safe)</h2>
+<p>For each category: a <strong>test</strong> subset of tasks whose skills all also appear in at least one <strong>train</strong> task of the same category &mdash; every skill the test set needs is still available, unseen-combination, in the train set. Intended use: optimize/tune skills on the train tasks, then evaluate held-out on the test tasks. Target was ~20&ndash;30% of each category, found greedily. Where a skill is unique to a single task within its category, that task can never be a test task &mdash; this caps the achievable split, sometimes to 0%.</p>
+<table><thead><tr><th>Category</th><th class='num'>n</th><th class='num'>Test (n, %)</th><th>Train task #s</th><th>Test task #s</th></tr></thead><tbody>
+<tr><td>software-engineering</td><td class='num'>16</td><td class='num'>1 (6.2%)</td><td>1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16</td><td>13</td></tr>
+<tr><td>industrial-physical-systems</td><td class='num'>14</td><td class='num'>1 (7.1%)</td><td>17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30</td><td>25</td></tr>
+<tr><td>office-white-collar</td><td class='num'>14</td><td class='num'>4 (28.6%)</td><td>31, 33, 34, 36, 37, 39, 40, 41, 42, 44</td><td>32, 35, 38, 43</td></tr>
+<tr class='no-split'><td>natural-science</td><td class='num'>14</td><td class='num'>0 (0.0%)</td><td>45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58</td><td>&mdash;</td></tr>
+<tr><td>finance-economics</td><td class='num'>9</td><td class='num'>3 (33.3%)</td><td>59, 60, 61, 63, 66, 67</td><td>62, 64, 65</td></tr>
+<tr><td>mathematics-or-formal-reasoning</td><td class='num'>8</td><td class='num'>1 (12.5%)</td><td>68, 69, 70, 71, 72, 74, 75</td><td>73</td></tr>
+<tr class='no-split'><td>cybersecurity</td><td class='num'>7</td><td class='num'>0 (0.0%)</td><td>76, 77, 78, 79, 80, 81, 82</td><td>&mdash;</td></tr>
+<tr><td>media-content-production</td><td class='num'>5</td><td class='num'>1 (20.0%)</td><td>83, 84, 86, 87</td><td>85</td></tr>
+</tbody></table>
+<h3>Table C detail &mdash; test task names by category</h3>
+<p><strong>software-engineering</strong> &mdash; <span class='test-tag'>1/16 (6.2%)</span></p>
+<ul class='testlist'>
+<li><code>react-performance-debugging</code> (#13, skills 14, 15)</li>
+</ul>
+<p><strong>industrial-physical-systems</strong> &mdash; <span class='test-tag'>1/14 (7.1%)</span></p>
+<ul class='testlist'>
+<li><code>grid-dispatch-operator</code> (#25, skills 62, 63, 61)</li>
+</ul>
+<p><strong>office-white-collar</strong> &mdash; <span class='test-tag'>4/14 (28.6%)</span></p>
+<ul class='testlist'>
+<li><code>court-form-filling</code> (#32, skills 17)</li>
+<li><code>exceltable-in-ppt</code> (#35, skills 85, 86)</li>
+<li><code>offer-letter-generator</code> (#38, skills 91)</li>
+<li><code>pptx-reference-formatting</code> (#43, skills 85)</li>
+</ul>
+<p><strong>natural-science</strong> &mdash; <span class='test-tag'>0/14 (0.0%)</span></p>
+<p class='no-split'>No valid split found &mdash; every task in this category has at least one skill unique to it within the category.</p>
+<p><strong>finance-economics</strong> &mdash; <span class='test-tag'>3/9 (33.3%)</span></p>
+<ul class='testlist'>
+<li><code>reserves-at-risk-calc</code> (#62, skills 86)</li>
+<li><code>shock-analysis-demand</code> (#64, skills 86)</li>
+<li><code>shock-analysis-supply</code> (#65, skills 86)</li>
+</ul>
+<p><strong>mathematics-or-formal-reasoning</strong> &mdash; <span class='test-tag'>1/8 (12.5%)</span></p>
+<ul class='testlist'>
+<li><code>pddl-airport-planning</code> (#73, skills 150)</li>
+</ul>
+<p><strong>cybersecurity</strong> &mdash; <span class='test-tag'>0/7 (0.0%)</span></p>
+<p class='no-split'>No valid split found &mdash; every task in this category has at least one skill unique to it within the category.</p>
+<p><strong>media-content-production</strong> &mdash; <span class='test-tag'>1/5 (20.0%)</span></p>
+<ul class='testlist'>
+<li><code>threejs-structure-parser</code> (#85, skills 188, 189)</li>
+</ul>
 <h2 id="boilerplate">Boilerplate entries (not numbered as skills)</h2>
 <table><thead><tr><th>Filename</th><th class='num'># tasks</th><th>Task #s</th></tr></thead><tbody>
 <tr><td><code>reference.md</code></td><td class='num'>3</td><td>27, 28, 29</td></tr>

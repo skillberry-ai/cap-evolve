@@ -4,7 +4,7 @@ Derived from `insights/SKILLSBENCH_INVENTORY.md`'s per-task "Shipped skills" dat
 
 - **201 distinct skill names** appear across the 87 tasks' shipped-skill lists. 5 of those are boilerplate filenames, not real skills — `README.md`, `LICENSE`, `INSTALLATION.md`, `TESTING.md`, `reference.md` — carried over from how the source repo lays out its `environment/skills/` directories (e.g. `lean4-proof` ships its real skills `lean4-memories`/`lean4-theorem-proving` alongside a `README.md`/`LICENSE`/etc.). These are marked **B** below rather than given a skill number, so the numbering (1–196) covers only actual skills.
 
-- Task numbers (1–87) follow the category order and task order used in `SKILLSBENCH_INVENTORY.md`. Skill numbers (1–196) follow first-appearance order in that same document.
+- Task numbers (1–87) follow the category order and task order used in `SKILLSBENCH_INVENTORY.md`. Skill numbers follow first-appearance order in that same document.
 
 ## Table A — all 87 tasks, by category, with skill numbers
 
@@ -338,6 +338,53 @@ Rows = skills, numbered by first appearance in Table A. "Categories" lists every
 | 194 | `segment-combiner` | 1 | media-content-production | 87 |
 | 195 | `silence-detector` | 1 | media-content-production | 87 |
 | 196 | `video-processor` | 1 | media-content-production | 87 |
+
+## Table C — per-category train/test split (skill-disjoint-safe)
+
+For each category: a **test** subset of tasks whose skills all also appear in at least one **train** task of the same category — i.e. every skill the test set needs to succeed is still present, unseen-combination, in the train set. Intended use: optimize/tune skills on the train tasks, then evaluate held-out on the test tasks. Target was ~20–30% of each category, found greedily (tasks with the fewest skills tried first, since they're least likely to strand a skill). Where a skill is unique to a single task within its category, that task can never be a test task — this is what caps the achievable split, sometimes to 0%.
+
+| Category | n | Test tasks (n, %) | Train task #s | Test task #s |
+|---|---:|---|---|---|
+| software-engineering | 16 | 1 (6.2%) | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16 | 13 |
+| industrial-physical-systems | 14 | 1 (7.1%) | 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30 | 25 |
+| office-white-collar | 14 | 4 (28.6%) | 31, 33, 34, 36, 37, 39, 40, 41, 42, 44 | 32, 35, 38, 43 |
+| natural-science | 14 | 0 (0.0%) | 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58 | — |
+| finance-economics | 9 | 3 (33.3%) | 59, 60, 61, 63, 66, 67 | 62, 64, 65 |
+| mathematics-or-formal-reasoning | 8 | 1 (12.5%) | 68, 69, 70, 71, 72, 74, 75 | 73 |
+| cybersecurity | 7 | 0 (0.0%) | 76, 77, 78, 79, 80, 81, 82 | — |
+| media-content-production | 5 | 1 (20.0%) | 83, 84, 86, 87 | 85 |
+
+### Table C detail — test task names by category
+
+
+**software-engineering** — 1/16 (6.2%)
+- `react-performance-debugging` (#13, skills 14, 15)
+
+**industrial-physical-systems** — 1/14 (7.1%)
+- `grid-dispatch-operator` (#25, skills 62, 63, 61)
+
+**office-white-collar** — 4/14 (28.6%)
+- `court-form-filling` (#32, skills 17)
+- `exceltable-in-ppt` (#35, skills 85, 86)
+- `offer-letter-generator` (#38, skills 91)
+- `pptx-reference-formatting` (#43, skills 85)
+
+**natural-science** — 0/14 (0.0%)
+- _No valid split found — every task in this category has at least one skill unique to it within the category._
+
+**finance-economics** — 3/9 (33.3%)
+- `reserves-at-risk-calc` (#62, skills 86)
+- `shock-analysis-demand` (#64, skills 86)
+- `shock-analysis-supply` (#65, skills 86)
+
+**mathematics-or-formal-reasoning** — 1/8 (12.5%)
+- `pddl-airport-planning` (#73, skills 150)
+
+**cybersecurity** — 0/7 (0.0%)
+- _No valid split found — every task in this category has at least one skill unique to it within the category._
+
+**media-content-production** — 1/5 (20.0%)
+- `threejs-structure-parser` (#85, skills 188, 189)
 
 ## Boilerplate entries (not numbered as skills)
 
