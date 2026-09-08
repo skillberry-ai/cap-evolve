@@ -181,9 +181,15 @@ def _read_jsonl(path: Path | None) -> list[dict]:
             line = line.strip()
             if line:
                 try:
-                    out.append(json.loads(line))
+                    rec = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                # A line that decodes to valid JSON but not an object (e.g. a bare
+                # string) is not a record any caller here can use — every caller
+                # treats each line as a dict (``ev.get(...)``); skip it like a
+                # malformed line rather than handing callers a non-dict to crash on.
+                if isinstance(rec, dict):
+                    out.append(rec)
     return out
 
 
