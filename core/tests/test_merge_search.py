@@ -18,12 +18,26 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPTS = REPO / "skills" / "algorithms" / "agent-optimize" / "scripts"
+
+
+def _env() -> dict:
+    """Pin every subprocess this file spawns to THIS checkout's own cap_evolve, the same
+    way every other subprocess-spawning test here does (e.g.
+    ``test_round_requires_screen_ladder.py``). ``merge_search.py``, ``screen.py`` and
+    ``round.py`` each ``import _bootstrap`` to resolve ``cap_evolve``; without an explicit
+    ``CAPEVOLVE_CORE``, that falls back to walking up from the script's own path OR
+    whatever checkout happens to hold the ambient editable install — usually fine, but a
+    test should not depend on "usually".
+    """
+    return dict(os.environ, CAPEVOLVE_CORE=str(REPO / "core"),
+                CAPEVOLVE_SKILLS_DIR=str(REPO / "skills"))
 
 TOOLS_BASE = '''
 def fn_a(x):
@@ -150,7 +164,7 @@ def _run_dir_with_survivors(tmp_path: Path):
                        "--mechanism", f"fixes {tag}", "--evidence", "screen promoted it",
                        "--touches", "tools/tools.py",
                        *[a for t in tids for a in ("--task", t)]],
-                      capture_output=True, text=True, check=True)
+                      capture_output=True, text=True, check=True, env=_env())
     return run_dir, project, adapter
 
 
@@ -166,7 +180,7 @@ def _run_merge_search(run_dir, project, **extra):
                 cmd += [f"--{k}", item]
         else:
             cmd += [f"--{k}", str(v)]
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, env=_env())
     assert p.returncode == 0, f"merge_search.py failed: {p.stdout}\n{p.stderr}"
     return json.loads(p.stdout)
 
@@ -227,7 +241,7 @@ def test_the_merge_result_goes_through_rounds_normal_gate_cascade(tmp_path):
         [sys.executable, str(SCRIPTS / "screen.py"), "--run-dir", str(run_dir.root),
          "--project", str(project), "--candidate", str(run_dir.root / "work" / ab["tag"]),
          "--tag", ab["tag"], "--tier", "1"],
-        capture_output=True, text=True)
+        capture_output=True, text=True, env=_env())
     assert screen.returncode == 0, f"screen.py failed on the merge candidate: {screen.stdout}\n{screen.stderr}"
     assert json.loads(screen.stdout)["decision"] == "promote", (
         "the merge should screen as a real improvement, not get killed pre-gate: "
@@ -237,7 +251,7 @@ def test_the_merge_result_goes_through_rounds_normal_gate_cascade(tmp_path):
         [sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
          "--project", str(project), "--candidates", ab["tag"], "--n-trials", "2",
          "--concurrency", "1"],
-        capture_output=True, text=True)
+        capture_output=True, text=True, env=_env())
     assert p.returncode == 0, f"round.py could not gate the merge candidate: {p.stdout}\n{p.stderr}"
     table = json.loads(p.stdout)
 
