@@ -267,9 +267,17 @@ function render() {
     const optUsd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const latency = r.suite && (r.suite.eval_seconds != null || r.suite.optimizer_seconds != null)
       ? fmtDuration((r.suite.eval_seconds ?? 0) + (r.suite.optimizer_seconds ?? 0)) : "—";
-    const ui = r.has_ui
-      ? `<a href="./benchmark-ui/runs/${encodeURIComponent(r.run_id)}__${esc(r.tier || "smoke")}-${encodeURIComponent(r.bench)}/ui/index.html#/runs/run_suite" target="_blank" rel="noopener">Open UI</a>`
-      : `<span class="muted">—</span>`;
+    // `report_url` points at a rendered drill-down page on the site (level 2:
+    // a heatmap/summary; level 3, where it exists, is linked from there on) —
+    // additive alongside `has_ui`'s CapEvolve UI snapshot link, not a replacement.
+    const uiParts = [];
+    if (r.has_ui) {
+      uiParts.push(`<a href="./benchmark-ui/runs/${encodeURIComponent(r.run_id)}__${esc(r.tier || "smoke")}-${encodeURIComponent(r.bench)}/ui/index.html#/runs/run_suite" target="_blank" rel="noopener">Open UI</a>`);
+    }
+    if (r.report_url) {
+      uiParts.push(`<a href="${esc(r.report_url)}" target="_blank" rel="noopener">Report ↗</a>`);
+    }
+    const ui = uiParts.length ? uiParts.join(" · ") : `<span class="muted">—</span>`;
     // Source column: link to the PR when set, else to `summary_url` when set
     // (per-run detail page for local/manual runs). Backward compatible: records
     // without `pr` or `summary_url` render as plain text.

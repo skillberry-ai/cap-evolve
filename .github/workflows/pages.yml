@@ -86,6 +86,22 @@ jobs:
             cp -R _bench_history/runs site/benchmark-ui/runs
           fi
 
+      # skillsbench-history's summaries, heatmaps and per-task reports are rendered
+      # at deploy time by scripts/build_skillsbench_site.py — see that script's
+      # docstring for the design. site/skillsbench/index.html is the one file in
+      # this tree that's hand-authored and committed on main; everything else here
+      # is generated fresh from the branch on every deploy.
+      - name: Fold in skillsbench-history (rendered)
+        run: |
+          rm -rf _sbh
+          git clone --depth 1 --branch skillsbench-history \
+            "https://github.com/${{ github.repository }}.git" _sbh || {
+              echo "skillsbench-history branch not found — deploying without it"; exit 0; }
+          pip install --quiet markdown
+          python3 scripts/build_skillsbench_site.py --src _sbh --out site/skillsbench
+          test -f site/skillsbench/ui/heatmap.html || {
+            echo "site/skillsbench/ui/heatmap.html missing after render — failing loudly"; exit 1; }
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
