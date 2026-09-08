@@ -111,6 +111,25 @@ def regressions(current, candidate) -> list[str]:
 GATE_MODES = ["paired", "significant", "strict", "threshold"]
 
 
+def _frozen_coverage(run_dir, per_task, split: str = "val") -> float:
+    """Real coverage against the FROZEN split, not just the tasks a rollout exists for.
+
+    ``SplitResult.coverage`` is ``n_scored / n_tasks`` where ``n_tasks`` counts only
+    tasks that have a rollout file under this tag — reconstructed purely from disk
+    (``harness.split_result_from_rollouts``). A candidate evaluated on a SUBSET of val
+    (deliberately via ``--ids``, or by an eval that died partway through) therefore
+    reads back ``coverage == 1.0``: every task it DID measure, it measured. That is
+    exactly the blind spot ``gate.decide``'s low-coverage guard exists to catch, and it
+    cannot see through it unless coverage is computed against the split cap-evolve
+    actually froze, not against whatever happened to land on disk.
+    """
+    frozen = {str(i) for i in (run_dir.read_splits().ids(split) or [])}
+    if not frozen:
+        return 1.0
+    scored = {str(pt.get("task_id")) for pt in (per_task or []) if has_valid_trials(pt)}
+    return len(scored & frozen) / len(frozen)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="gate_check")
     p.add_argument("--run-dir", required=True)
@@ -169,6 +188,15 @@ def main(argv=None) -> int:
             tags=[*cur_tags, args.candidate], split="val",
             all_task_ids=[pt.get("task_id") for pt in (cand.per_task or [])])
 
+    # Real coverage against the frozen split (see `_frozen_coverage`), min of both sides —
+    # a candidate OR a reference measured on a subset is equally invalid to gate on.
+    cand_frozen_cov = _frozen_coverage(run_dir, cand.per_task, "val")
+    cur_frozen_cov = _frozen_coverage(run_dir, cur.per_task, "val")
+    frozen_coverage = min(cand_frozen_cov, cur_frozen_cov)
+    frozen_ids = {str(i) for i in (run_dir.read_splits().ids("val") or [])}
+    cand_ids = {str(pt.get("task_id")) for pt in (cand.per_task or []) if has_valid_trials(pt)}
+    missing_from_frozen_val = sorted(frozen_ids - cand_ids)
+
     deltas = harness._paired_deltas(cur, cand, footprint=fp)
     # Only when restricted: on a small footprint the zero-padded vector's cross-task spread
     # understates the real uncertainty, so floor it with per-task trial noise. Unrestricted
@@ -178,7 +206,7 @@ def main(argv=None) -> int:
     d = decide(cur.reward, cand.reward, split="val", mode=args.mode, k_se=args.k_se,
                candidate_stderr=cand.stderr, current_stderr=cur.stderr,
                threshold=args.threshold, paired_deltas=deltas,
-               paired_se_floor=se_floor, coverage=cand.coverage, run_dir=run_dir)
+               paired_se_floor=se_floor, coverage=frozen_coverage, run_dir=run_dir)
 
     regs = regressions(cur, cand)
     accept = bool(d.accept) and not (regs and args.veto_regressions)
@@ -200,7 +228,9 @@ def main(argv=None) -> int:
         "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr,
                     "pooled_tags": cur_tags if len(cur_tags) > 1 else None},
         "candidate": {"tag": args.candidate, "reward": cand.reward,
-                      "stderr": cand.stderr, "coverage": cand.coverage},
+                      "stderr": cand.stderr, "coverage": cand.coverage,
+                      "coverage_of_frozen_val": round(frozen_coverage, 4),
+                      "missing_from_frozen_val": missing_from_frozen_val},
         "gate": d.to_dict(),
         "paired_n": len(deltas or []),
         # What the delta was measured over. `restricted: false` means the edit's surface could
