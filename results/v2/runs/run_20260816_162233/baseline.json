@@ -1,0 +1,57 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "pass_at_k": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "per_task": [
+      {
+        "task_id": "bench-aap2-001-single-job-outcome",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-003-never-started-explanation",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 785.0970840454102
+  },
+  "best_id": "seed"
+}

@@ -1,0 +1,113 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.8444443333333334,
+    "stderr": 0.112902200112039,
+    "pass_k": {
+      "1": 0.5,
+      "2": 0.16666666666666666
+    },
+    "pass_at_k": {
+      "1": 0.5,
+      "2": 0.8333333333333334
+    },
+    "per_task": [
+      {
+        "task_id": "bench-aap2-007-count-and-oldest",
+        "reward": 0.8888886666666668,
+        "feedback": "Partial success (reward 0.833). Metrics: completion=1.0, tool_calls=1.0, answer=0.666667.",
+        "n": 3,
+        "stderr": 0.05555566666666667,
+        "trial_rewards": [
+          1.0,
+          0.833333,
+          0.833333
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-010-log-does-not-say",
+        "reward": 0.7999999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 3,
+        "stderr": 0.2,
+        "trial_rewards": [
+          0.4,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 620.1050808429718
+  },
+  "best_id": "seed",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.8444443333333334,
+    "stderr": 0.112902200112039,
+    "pass_k": {
+      "1": 0.5,
+      "2": 0.16666666666666666
+    },
+    "pass_at_k": {
+      "1": 0.5,
+      "2": 0.8333333333333334
+    },
+    "per_task": [
+      {
+        "task_id": "bench-aap2-007-count-and-oldest",
+        "reward": 0.8888886666666668,
+        "feedback": "Partial success (reward 0.833). Metrics: completion=1.0, tool_calls=1.0, answer=0.666667.",
+        "n": 3,
+        "stderr": 0.05555566666666667,
+        "trial_rewards": [
+          1.0,
+          0.833333,
+          0.833333
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-010-log-does-not-say",
+        "reward": 0.7999999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 3,
+        "stderr": 0.2,
+        "trial_rewards": [
+          0.4,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 620.1050808429718
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.0
+}

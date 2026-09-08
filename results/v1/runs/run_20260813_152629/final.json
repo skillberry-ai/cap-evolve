@@ -1,0 +1,149 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.3466665,
+    "stderr": 0.02403710095352599,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "traces_parsec-aap2-0047",
+        "reward": 0.333333,
+        "feedback": "Partial success (reward 0.333). Metrics: completion=1.0, trajectory=0.0, assertions=0.6666666666666666.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 10,
+          "n_trials": 10
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "traces_parsec-aap2-0048",
+        "reward": 0.36,
+        "feedback": "Partial success (reward 0.400). Metrics: completion=1.0, trajectory=0.0, assertions=0.8.",
+        "n": 10,
+        "stderr": 0.04,
+        "trial_rewards": [
+          0.4,
+          0.4,
+          0.0,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 10,
+          "n_trials": 10
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 3027.7159221172333,
+    "n_tasks": 2,
+    "n_scored": 2
+  },
+  "best_id": "cand_0002",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.34999985,
+    "stderr": 0.052704764701542894,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "traces_parsec-aap2-0047",
+        "reward": 0.2999997,
+        "feedback": "Partial success (reward 0.333). Metrics: completion=1.0, trajectory=0.0, assertions=0.6666666666666666.",
+        "n": 10,
+        "stderr": 0.0333333,
+        "trial_rewards": [
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.0,
+          0.333333,
+          0.333333
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 10,
+          "n_trials": 10
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "traces_parsec-aap2-0048",
+        "reward": 0.4,
+        "feedback": "Partial success (reward 0.400). Metrics: completion=1.0, trajectory=0.0, assertions=0.8.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 10,
+          "n_trials": 10
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 3677.5029649734497,
+    "n_tasks": 2,
+    "n_scored": 2
+  },
+  "baseline_id": "seed",
+  "test_delta": -0.003333
+}

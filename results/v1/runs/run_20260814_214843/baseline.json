@@ -1,0 +1,99 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.3166665227272727,
+    "stderr": 0.03476851505702414,
+    "pass_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0,
+      "2": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "traces_parsec-aap2-0047",
+        "reward": 0.2878785,
+        "feedback": "Partial success (reward 0.333). Metrics: completion=1.0, trajectory=0.0, assertions=0.6666666666666666.",
+        "n": 30,
+        "stderr": 0.024962231736164936,
+        "trial_rewards": [
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.0,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.0,
+          0.333333,
+          0.0,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333,
+          0.333333
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 8,
+          "valid_trials": 22,
+          "n_trials": 30
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "traces_parsec-aap2-0048",
+        "reward": 0.34545454545454546,
+        "feedback": "Partial success (reward 0.400). Metrics: completion=1.0, trajectory=0.0, assertions=0.8.",
+        "n": 30,
+        "stderr": 0.029954708038105963,
+        "trial_rewards": [
+          0.4,
+          0.4,
+          0.0,
+          0.4,
+          0.4,
+          0.4,
+          0.0,
+          0.4,
+          0.4,
+          0.0,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4,
+          0.4
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 8,
+          "valid_trials": 22,
+          "n_trials": 30
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 126091.13605809212,
+    "n_tasks": 2,
+    "n_scored": 2
+  },
+  "best_id": "seed"
+}

@@ -1,0 +1,16 @@
+{
+  "train": [
+    "traces_parsec-aap2-0047",
+    "traces_parsec-aap2-0048"
+  ],
+  "val": [
+    "traces_parsec-aap2-0047",
+    "traces_parsec-aap2-0048"
+  ],
+  "test": [
+    "traces_parsec-aap2-0047",
+    "traces_parsec-aap2-0048"
+  ],
+  "seed": 0,
+  "test_used": true
+}

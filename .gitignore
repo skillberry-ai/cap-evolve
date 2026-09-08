@@ -1,0 +1,15 @@
+# A deliberate departure from `skillsbench-history`, which has no `.gitignore` and
+# instead asks the author, in its README, to "double-check no `.env`, `.cache/`, or
+# `__pycache__/` content is staged" before every commit. Running the three generator
+# scripts in `scripts/` creates `scripts/__pycache__/`, so that manual check has a
+# standing failure mode; this file removes it mechanically.
+#
+# Deliberately narrow. It ignores build noise and secrets, NOT results: everything in
+# `results/`, `artifacts/`, `recipes/` and `reports/` is the point of the branch and
+# must never be excluded by a pattern here.
+__pycache__/
+*.py[cod]
+.env
+.env.*
+.cache/
+.DS_Store

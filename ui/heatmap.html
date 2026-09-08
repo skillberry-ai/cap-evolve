@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>parsec — per-task heatmap (v1 traces · v2 authored)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #fafafa; color: #1a1a2e; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 22px 0 6px; }
+  .subtitle { font-size: 13px; color: #6b7280; margin: 0 0 20px; line-height: 1.55; }
+  .controls { display: flex; gap: 16px; align-items: center; margin: 8px 0 12px; font-size: 13px; color: #6b7280; flex-wrap: wrap; }
+  .legend { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; }
+  .legend-bar { width: 200px; height: 14px; border-radius: 3px; background: linear-gradient(to right, #dc2626 0%, #fef3c7 50%, #059669 100%); }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th { font-weight: 500; color: #6b7280; padding: 6px 10px; text-align: center; background: #f9fafb; white-space: nowrap; }
+  th.row-head { text-align: right; padding-right: 12px; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: #1a1a2e; background: #f0f1f3; }
+  th.best-col { color: #92400e; background: #fef3c7; }
+  th.delta-col { border-left: 2px solid #9ca3af; }
+  th .n { font-size: 10px; color: #9ca3af; font-weight: 400; }
+  td { padding: 6px 10px; text-align: center; border: 1px solid #f3f4f6; font-family: ui-monospace, monospace; font-size: 12px; }
+  td.label { text-align: right; font-weight: 500; color: #1a1a2e; background: #fff; padding-right: 12px; font-family: inherit; white-space: nowrap; }
+  td.value.na { background: #f3f4f6; color: #9ca3af; font-style: italic; }
+  td.value.best-cell { box-shadow: inset 0 0 0 3px rgba(79, 70, 229, 0.5); }
+  td.delta-col { border-left: 2px solid #9ca3af; font-weight: 600; }
+  td.best-col { background: #fef3c7 !important; font-weight: 600; }
+  td.txt { text-align: left; font-family: inherit; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+  .badge-traj { background: rgba(5,150,105,0.15); color: #059669; }
+  .badge-multi { background: rgba(107,114,128,0.15); color: #4b5563; }
+  .badge-gate { background: rgba(220,38,38,0.15); color: #dc2626; }
+  .badge-cap { background: rgba(234,88,12,0.15); color: #c2410c; }
+  .badge-gap { background: rgba(180,83,9,0.18); color: #92400e; }
+  .badge-solved { background: rgba(37,99,235,0.15); color: #2563eb; }
+  .badge-opt { background: rgba(79,70,229,0.15); color: #4f46e5; }
+  .badge-bo { background: rgba(107,114,128,0.20); color: #4b5563; }
+  .badge-cat { background: rgba(107,114,128,0.12); color: #4b5563; font-weight: 500; }
+  .footer { font-size: 12px; color: #6b7280; margin-top: 16px; line-height: 1.6; }
+  .aggregate { margin-top: 16px; padding: 14px 18px; background: #eff6ff; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+  .aggregate strong { color: #1e40af; }
+  .aggregate table { margin: 8px 0 10px; font-size: 12px; }
+  .aggregate th, .aggregate td { padding: 5px 10px; border: 1px solid #dbeafe; text-align: center; background: #fff; }
+  .aggregate th { background: #dbeafe; font-weight: 600; color: #1e40af; }
+  .summary-row td { background: #fef3c7 !important; font-weight: 600 !important; border-top: 2px solid #f59e0b !important; }
+  .summary-row td.label { background: #fef3c7 !important; color: #92400e !important; }
+
+  /* The load-bearing caveat on this page. Styled loudly on purpose: every v2 number below is
+     a measurement of a skill whose own baseline moved 0.267 between measurements. */
+  .warn { margin: 14px 0 18px; padding: 14px 18px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px; font-size: 13px; line-height: 1.65; color: #7f1d1d; }
+  .warn strong { color: #991b1b; }
+  .warn code { background: rgba(153,27,27,0.08); padding: 1px 4px; border-radius: 3px; }
+
+  a.task-link { color: inherit; text-decoration: none; border-bottom: 1px dotted #9ca3af; }
+  a.task-link:hover { color: #4f46e5; border-bottom-color: #4f46e5; }
+  .section-sep { max-width: 1400px; margin: 40px auto 0; border: none; border-top: 2px solid #e5e7eb; }
+  .pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+  .pill-head { background: rgba(79,70,229,0.15); color: #4f46e5; }
+  .pill-sup { background: rgba(107,114,128,0.15); color: #4b5563; }
+  .pill-disc { background: rgba(220,38,38,0.15); color: #dc2626; }
+  tr.head-row td { background: #f5f3ff !important; }
+  td.spread { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>parsec — per-task heatmap</h1>
+  <p class="subtitle">
+    Optimization target: the <strong>parsec <code>aap2</code> sub-agent's <code>SKILL.md</code></strong>
+    (<code>capabilities: [system-prompt]</code>). Agent: Sonnet-4. Harness: Harbor tasks against a
+    kaegis simulated AAP2/GitHub/Babylon/provisions-db fixture set.
+    Two independent benchmark generations are shown, and they are <strong>not comparable to each other</strong>
+    — different tasks, different scoring schema, different trial counts:
+    <br>
+    <strong>v1</strong> — 30 tasks extracted from real prod0 AAP2 job traces; reward =
+    <code>gate · (0.5·trajectory + 0.5·assertions)</code>; 2 of the 30 went through cap-evolve.
+    <strong>v2</strong> — 10 hand-authored tasks with per-task answer contracts (schema <code>bench/v2</code>);
+    reward = <code>gate · (w<sub>tc</sub>·tool_calls + w<sub>ans</sub>·answer)</code> with weights that
+    <em>vary per task</em>; all 10 went through cap-evolve.
+    <br>
+    <strong>Click any task name</strong> for its report — what changed, what worked, what didn't, what we can
+    (or can't) learn. See <a href="../reports/README.md">reports/README.md</a>.
+  </p>
+
+  <div class="warn">
+    <strong>Read the v2 section with this in front of you.</strong> The seed <code>SKILL.md</code> is
+    byte-identical across all nine runs on this page, so every seed measurement below is a
+    measurement of <em>the same artifact</em>. On v2's ten tasks it measured
+    <strong>0.910 · 0.876 · 0.749 · 0.662 · 0.643</strong> depending on trial count and run — a spread of
+    <strong>0.267</strong>, against a headline accepted improvement of <strong>+0.086</strong>. v1 reached the
+    same conclusion first and wrote it down ("N=10 is not enough") after seeing its own seed move
+    0.203 between two n=10 measurements. v2 then ran at n=9 with the significance gate
+    <em>loosened</em> from <code>gate_k_se: 1.0</code> to <code>0.2</code>. The v2 improvement is
+    inside its own baseline's noise band. Full derivation:
+    <a href="../results/v2/summary.md">results/v2/summary.md</a>, and the ladder table at the
+    bottom of this page.
+  </div>
+
+  <h2>v1 — 30 trace-extracted tasks</h2>
+  <p class="subtitle" style="margin-bottom:8px;">
+    Badges — <span class="badge badge-traj">traj-match</span> baseline trajectory = 1.0 (the seed already
+    reproduces the golden tool sequence) · <span class="badge badge-multi">multi-tool</span> it does not ·
+    <span class="badge badge-gate">gate-failed</span> baseline <code>completion</code> = 0.0 ·
+    <span class="badge badge-cap">capped 0.5</span> perfect trajectory, zero assertions — the 50/50
+    weighting caps the reward at 0.5 ·
+    <span class="badge badge-gap">tool gap</span> the contract demands a tool no simulator served, so
+    <code>trajectory: 1.0</code> was unreachable and the reward capped at 0.5 by the harness ·
+    <span class="badge badge-solved">solved</span> baseline reward = 1.0 ·
+    <span class="badge badge-opt">optimized</span> entered a cap-evolve run ·
+    <span class="badge badge-bo">baseline-only</span> baselined but never optimized.
+  </p>
+  <div class="controls">
+    <label><input type="radio" name="sortv1" value="id" checked> Sort by task</label>
+    <label><input type="radio" name="sortv1" value="baseline"> Sort by baseline</label>
+    <label><input type="radio" name="sortv1" value="delta"> Sort by Δ</label>
+    <label><input type="radio" name="sortv1" value="best"> Sort by best</label>
+    <label><input type="radio" name="sortv1" value="category"> Sort by subcategory</label>
+    <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
+  </div>
+  <div class="card"><table id="hm-v1"></table></div>
+  <div class="aggregate" id="agg-v1"></div>
+  <p class="footer">
+    <strong>baseline</strong> — the 30-task sweep, <strong>n=1 trial per task</strong>
+    (<code>results/v1/baseline_all_1786543049.json</code>). One trial. Treat every baseline cell as a
+    single draw, not an estimate.<br>
+    <strong>gate / traj / assn</strong> — the baseline's <code>completion</code>, <code>trajectory</code> and
+    <code>assertions</code> components. <code>gate</code> = 0 zeroes the whole reward regardless of the other two.<br>
+    <strong>seed / c1 / c2 / best / Δ / test</strong> — only the 2 tasks in the cap-evolve run have these.
+    Blank is not a zero; it means the optimizer never saw the task.<br>
+    <strong>test is NOT held out for v1</strong> — the run's own splits are <code>train = val = test = {0047, 0048}</code>
+    and cap-evolve fired <code>splits_warning: "test overlaps train/val (no-holdout fit)"</code>. Read the
+    test column as a fit metric.
+  </p>
+</div>
+
+<hr class="section-sep">
+
+<div class="wrap">
+  <h2>v2 — 10 hand-authored tasks</h2>
+  <p class="subtitle" style="margin-bottom:8px;">
+    All 10 tasks are in <code>train</code> and <code>val</code>; <code>test</code> is <strong>empty</strong>. The
+    <code>report.md</code> for this run nevertheless prints "Held-out test (optimized skills): 0.0" and
+    "the improvement above is on held-out tasks the optimizer never saw" — that is an evaluation of an
+    empty split, and it cost 2 × 2700 s of wall clock. There is no test column here because there is no test.
+  </p>
+  <div class="controls">
+    <label><input type="radio" name="sortv2" value="id" checked> Sort by task</label>
+    <label><input type="radio" name="sortv2" value="baseline"> Sort by baseline</label>
+    <label><input type="radio" name="sortv2" value="delta"> Sort by Δ</label>
+    <label><input type="radio" name="sortv2" value="best"> Sort by best</label>
+    <div class="legend"><span>0.00</span><div class="legend-bar"></div><span>1.00</span></div>
+  </div>
+  <div class="card"><table id="hm-v2"></table></div>
+  <div class="aggregate" id="agg-v2"></div>
+  <p class="footer">
+    <strong>baseline</strong> — the v2.1 archived sweep, <strong>n=1</strong>
+    (<code>results/v2/baseline_all_1786875106.json</code>, mean 0.910).<br>
+    <strong>seed</strong> — the headline run's val baseline. It was <strong>not measured by that run</strong>:
+    it is <code>baseline_reused</code> from <code>run_20260816_202942</code> at <strong>n=3</strong>.<br>
+    <strong>seed@9</strong> — the same seed skill re-measured by the headline run itself on <code>train</code>
+    at <strong>n=9</strong>. Compare it with <code>seed</code>: same artifact, same tasks, different n.<br>
+    <strong>c1</strong> — the accepted champion, at <strong>n=9</strong>.<br>
+    <strong>Δ</strong> — <code>c1 − seed</code>, i.e. n=9 candidate minus n=3 baseline. Against the n=9
+    <code>seed@9</code> instead, the same candidate's split-level delta is +0.213. Both are real; which one
+    you quote is a choice, so the page shows both columns rather than picking.<br>
+    <strong>w</strong> — this task's contract weights, <code>tool_calls / answer</code>. They differ per task,
+    so a 0.9 on one row is not the same achievement as a 0.9 on another.
+  </p>
+</div>
+
+<hr class="section-sep">
+
+<div class="wrap">
+  <h2>The seed ladder — every measurement of the same byte-identical skill</h2>
+  <p class="subtitle">
+    <code>seed/SKILL.md</code> is identical in all nine runs
+    (<code>sha256 ed6e8920…7411</code>, 484 lines). Each row below is therefore a measurement of the
+    same artifact. Rows are grouped by experiment and ordered as the runs happened. The
+    <strong>spread</strong> row is the max−min within each (experiment, split) group — read it against
+    the accepted Δ for that experiment.
+  </p>
+  <div class="card"><table id="ladder"></table></div>
+  <p class="footer">
+    <strong>conv</strong> — which denominator reproduces cap-evolve's own reported figure from the raw
+    per-trial rewards: <code>valid</code> = errored trials dropped, <code>all</code> = errored trials counted as
+    0.0, <code>either</code> = nothing errored so the cell cannot distinguish them.
+    <strong>Both <code>valid</code> and <code>all</code> appear in this table</strong>, in different runs, for the
+    same kind of aggregate — v1's headline val/seed drops 16 errored trials from the denominator, v2's
+    headline train/seed_train counts 8 of them as zeros. That is an open question about cap-evolve, not a
+    diagnosis; see <a href="../results/README.md">results/README.md</a>.<br>
+    <code>superseded-measurement</code> — a later evaluation in the same run reused this split+tag and
+    overwrote its rollouts, so the reported number is real but cannot be re-derived from what is committed.
+    <code>empty-split</code> — a mean over zero tasks.
+  </p>
+</div>
+
+<script>
+const DATA_V1 = [
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0004",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.090909,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.181818,
+    "n_trajectory_ops": 8,
+    "trajectory_match": "subset",
+    "n_assertions": 11,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0004.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0005",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.045455,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.090909,
+    "n_trajectory_ops": 6,
+    "trajectory_match": "subset",
+    "n_assertions": 11,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0005.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0006",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.05,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.1,
+    "n_trajectory_ops": 10,
+    "trajectory_match": "subset",
+    "n_assertions": 10,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0006.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0016",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.5,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 1.0,
+    "n_trajectory_ops": 36,
+    "trajectory_match": "subset",
+    "n_assertions": 2,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "db_describe_table",
+      "lookup_catalog_item",
+      "query_provisions_db"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "capped-at-0.5-by-50/50-weighting",
+      "trajectory-unreachable-tool-gap",
+      "long-trace-contract"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0016.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0018",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 13,
+    "trajectory_match": "subset",
+    "n_assertions": 4,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0018.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0021",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0625,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.125,
+    "n_trajectory_ops": 16,
+    "trajectory_match": "subset",
+    "n_assertions": 8,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0021.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0023",
+    "category": "aap2",
+    "subcategory": "trajectory-match",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.625,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 1.0,
+    "baseline_assertions": 0.25,
+    "n_trajectory_ops": 4,
+    "trajectory_match": "subset",
+    "n_assertions": 4,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": true,
+    "trajectory_tools_missing_at_baseline": [],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v1-aap2-0023.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0030",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.083333,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.166667,
+    "n_trajectory_ops": 11,
+    "trajectory_match": "subset",
+    "n_assertions": 6,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "db_describe_table",
+      "query_provisions_db"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0030.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0032",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 16,
+    "trajectory_match": "subset",
+    "n_assertions": 10,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "db_describe_table",
+      "query_provisions_db"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0032.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0036",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.5,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 1.0,
+    "n_trajectory_ops": 18,
+    "trajectory_match": "subset",
+    "n_assertions": 2,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "capped-at-0.5-by-50/50-weighting",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0036.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0037",
+    "category": "aap2",
+    "subcategory": "trajectory-match",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 1.0,
+    "baseline_assertions": 1.0,
+    "n_trajectory_ops": 4,
+    "trajectory_match": "subset",
+    "n_assertions": 5,
+    "baseline_assertions_passed": 5,
+    "trajectory_reachable_at_baseline": true,
+    "trajectory_tools_missing_at_baseline": [],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "solved-at-baseline"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0037.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0044",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 27,
+    "trajectory_match": "subset",
+    "n_assertions": 4,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "db_describe_table",
+      "lookup_catalog_item",
+      "query_babylon_catalog",
+      "query_provisions_db"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap",
+      "long-trace-contract"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0044.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0047",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "OPTIMIZED",
+    "baseline": 0.0,
+    "baseline_gate": 0.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 13,
+    "trajectory_match": "subset",
+    "n_assertions": 6,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": 0.287878,
+    "seed_n": 30,
+    "seed_all": 0.211111,
+    "seed_train": 0.311111,
+    "seed_train_n": 30,
+    "seed_train_all": 0.311111,
+    "cand_0001": 0.233333,
+    "cand_0001_all": 0.233333,
+    "cand_0002": 0.15,
+    "best": 0.287878,
+    "best_tag": "seed",
+    "delta": 0.0,
+    "final_test": 0.277778,
+    "trials_errored": 8,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "gate-failed-at-baseline",
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0047.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0048",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "OPTIMIZED",
+    "baseline": 0.0,
+    "baseline_gate": 0.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 11,
+    "trajectory_match": "subset",
+    "n_assertions": 5,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": 0.345455,
+    "seed_n": 30,
+    "seed_all": 0.253333,
+    "seed_train": 0.373333,
+    "seed_train_n": 30,
+    "seed_train_all": 0.373333,
+    "cand_0001": 0.216667,
+    "cand_0001_all": 0.216667,
+    "cand_0002": 0.163333,
+    "best": 0.345455,
+    "best_tag": "seed",
+    "delta": 0.0,
+    "final_test": 0.373333,
+    "trials_errored": 8,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "gate-failed-at-baseline",
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0048.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0049",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.4,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.8,
+    "n_trajectory_ops": 14,
+    "trajectory_match": "subset",
+    "n_assertions": 5,
+    "baseline_assertions_passed": 4,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0049.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0052",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.5,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 1.0,
+    "n_trajectory_ops": 9,
+    "trajectory_match": "subset",
+    "n_assertions": 0,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "db_describe_table",
+      "query_provisions_db"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "capped-at-0.5-by-50/50-weighting",
+      "no-assertions-scores-vacuous-1.0",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0052.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0053",
+    "category": "aap2",
+    "subcategory": "trajectory-match",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.625,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 1.0,
+    "baseline_assertions": 0.25,
+    "n_trajectory_ops": 3,
+    "trajectory_match": "subset",
+    "n_assertions": 4,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": true,
+    "trajectory_tools_missing_at_baseline": [],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v1-aap2-0053.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0074",
+    "category": "aap2",
+    "subcategory": "trajectory-match",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.9,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 1.0,
+    "baseline_assertions": 0.8,
+    "n_trajectory_ops": 8,
+    "trajectory_match": "subset",
+    "n_assertions": 5,
+    "baseline_assertions_passed": 4,
+    "trajectory_reachable_at_baseline": true,
+    "trajectory_tools_missing_at_baseline": [],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v1-aap2-0074.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0080",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 8,
+    "trajectory_match": "subset",
+    "n_assertions": 2,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0080.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0081",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.111111,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.222222,
+    "n_trajectory_ops": 22,
+    "trajectory_match": "subset",
+    "n_assertions": 9,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap",
+      "long-trace-contract"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0081.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0082",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.142857,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.285714,
+    "n_trajectory_ops": 13,
+    "trajectory_match": "subset",
+    "n_assertions": 7,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0082.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0084",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.25,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.5,
+    "n_trajectory_ops": 14,
+    "trajectory_match": "subset",
+    "n_assertions": 2,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0084.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0085",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.166667,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.333333,
+    "n_trajectory_ops": 10,
+    "trajectory_match": "subset",
+    "n_assertions": 6,
+    "baseline_assertions_passed": 2,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0085.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0087",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.15,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.3,
+    "n_trajectory_ops": 7,
+    "trajectory_match": "subset",
+    "n_assertions": 10,
+    "baseline_assertions_passed": 3,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0087.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0088",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.166667,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.333333,
+    "n_trajectory_ops": 11,
+    "trajectory_match": "subset",
+    "n_assertions": 3,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0088.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0092",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.035714,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.071429,
+    "n_trajectory_ops": 11,
+    "trajectory_match": "subset",
+    "n_assertions": 14,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0092.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0094",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.25,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.5,
+    "n_trajectory_ops": 15,
+    "trajectory_match": "subset",
+    "n_assertions": 2,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0094.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0104",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 20,
+    "trajectory_match": "subset",
+    "n_assertions": 4,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "zero-at-baseline",
+      "trajectory-unreachable-tool-gap",
+      "long-trace-contract"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0104.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0112",
+    "category": "aap2",
+    "subcategory": "multi-tool",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.055556,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 0.0,
+    "baseline_assertions": 0.111111,
+    "n_trajectory_ops": 12,
+    "trajectory_match": "subset",
+    "n_assertions": 9,
+    "baseline_assertions_passed": 1,
+    "trajectory_reachable_at_baseline": false,
+    "trajectory_tools_missing_at_baseline": [
+      "lookup_catalog_item"
+    ],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "trajectory-unreachable-tool-gap"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0112.md"
+  },
+  {
+    "experiment": "v1",
+    "task": "traces_parsec-aap2-0113",
+    "category": "aap2",
+    "subcategory": "trajectory-match",
+    "source": "trace-extracted",
+    "status": "BASELINE_ONLY",
+    "baseline": 0.5,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": 1.0,
+    "baseline_assertions": 0.0,
+    "n_trajectory_ops": 2,
+    "trajectory_match": "subset",
+    "n_assertions": 1,
+    "baseline_assertions_passed": 0,
+    "trajectory_reachable_at_baseline": true,
+    "trajectory_tools_missing_at_baseline": [],
+    "n_expected_calls": null,
+    "n_required_facts": null,
+    "n_derived_facts": null,
+    "seed": null,
+    "seed_n": null,
+    "seed_all": null,
+    "seed_train": null,
+    "seed_train_n": null,
+    "seed_train_all": null,
+    "cand_0001": null,
+    "cand_0001_all": null,
+    "cand_0002": null,
+    "best": null,
+    "best_tag": null,
+    "delta": null,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "trajectory": 0.5,
+      "assertions": 0.5
+    },
+    "flags": [
+      "capped-at-0.5-by-50/50-weighting"
+    ],
+    "report": "reports/task-by-task/v1-aap2-0113.md"
+  }
+];
+
+const DATA_V2 = [
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-001-single-job-outcome",
+    "category": "aap2",
+    "subcategory": "single-job-outcome",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 3,
+    "n_derived_facts": 0,
+    "seed": 0.844444,
+    "seed_n": 3,
+    "seed_all": 0.844444,
+    "seed_train": 0.5,
+    "seed_train_n": 9,
+    "seed_train_all": 0.444444,
+    "cand_0001": 1.0,
+    "cand_0001_all": 1.0,
+    "cand_0002": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.155556,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-001-single-job-outcome.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-002-failed-jobs-on-controller",
+    "category": "aap2",
+    "subcategory": "failed-jobs-on-controller",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 4,
+    "n_derived_facts": 1,
+    "seed": 0.9,
+    "seed_n": 3,
+    "seed_all": 0.9,
+    "seed_train": 1.0,
+    "seed_train_n": 9,
+    "seed_train_all": 0.888889,
+    "cand_0001": 1.0,
+    "cand_0001_all": 1.0,
+    "cand_0002": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.1,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.6,
+      "answer": 0.4
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-002-failed-jobs-on-controller.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-003-never-started-explanation",
+    "category": "aap2",
+    "subcategory": "never-started-explanation",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 3,
+    "n_derived_facts": 0,
+    "seed": 1.0,
+    "seed_n": 3,
+    "seed_all": 1.0,
+    "seed_train": 0.75,
+    "seed_train_n": 9,
+    "seed_train_all": 0.666667,
+    "cand_0001": 1.0,
+    "cand_0001_all": 1.0,
+    "cand_0002": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.0,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-003-never-started-explanation.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-004-failing-task-and-host",
+    "category": "aap2",
+    "subcategory": "failing-task-and-host",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 2,
+    "n_required_facts": 2,
+    "n_derived_facts": 0,
+    "seed": 0.966667,
+    "seed_n": 3,
+    "seed_all": 0.966667,
+    "seed_train": 0.8,
+    "seed_train_n": 9,
+    "seed_train_all": 0.711111,
+    "cand_0001": 0.977778,
+    "cand_0001_all": 0.977778,
+    "cand_0002": null,
+    "best": 0.977778,
+    "best_tag": "cand_0001",
+    "delta": 0.011111,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-004-failing-task-and-host.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-005-find-then-diagnose",
+    "category": "aap2",
+    "subcategory": "find-then-diagnose",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 2,
+    "n_required_facts": 3,
+    "n_derived_facts": 0,
+    "seed": 1.0,
+    "seed_n": 3,
+    "seed_all": 1.0,
+    "seed_train": 0.84375,
+    "seed_train_n": 9,
+    "seed_train_all": 0.75,
+    "cand_0001": 1.0,
+    "cand_0001_all": 1.0,
+    "cand_0002": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.0,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.5,
+      "answer": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-005-find-then-diagnose.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-006-log-root-cause",
+    "category": "aap2",
+    "subcategory": "log-root-cause",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 2,
+    "n_required_facts": 3,
+    "n_derived_facts": 0,
+    "seed": 1.0,
+    "seed_n": 3,
+    "seed_all": 1.0,
+    "seed_train": 0.777778,
+    "seed_train_n": 9,
+    "seed_train_all": 0.777778,
+    "cand_0001": 0.777778,
+    "cand_0001_all": 0.777778,
+    "cand_0002": null,
+    "best": 0.777778,
+    "best_tag": "cand_0001",
+    "delta": -0.222222,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "tool_calls": 0.5,
+      "answer": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-006-log-root-cause.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-007-count-and-oldest",
+    "category": "aap2",
+    "subcategory": "count-and-oldest",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 0.5,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 3,
+    "n_derived_facts": 1,
+    "seed": 0.777778,
+    "seed_n": 3,
+    "seed_all": 0.777778,
+    "seed_train": 0.958333,
+    "seed_train_n": 9,
+    "seed_train_all": 0.851852,
+    "cand_0001": 0.907407,
+    "cand_0001_all": 0.907407,
+    "cand_0002": null,
+    "best": 0.907407,
+    "best_tag": "cand_0001",
+    "delta": 0.129629,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.5,
+      "answer": 0.5
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-007-count-and-oldest.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-008-preceding-task",
+    "category": "aap2",
+    "subcategory": "preceding-task",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 1.0,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 2,
+    "n_derived_facts": 0,
+    "seed": 1.0,
+    "seed_n": 3,
+    "seed_all": 1.0,
+    "seed_train": 0.844444,
+    "seed_train_n": 9,
+    "seed_train_all": 0.844444,
+    "cand_0001": 0.977778,
+    "cand_0001_all": 0.977778,
+    "cand_0002": null,
+    "best": 0.977778,
+    "best_tag": "cand_0001",
+    "delta": -0.022222,
+    "final_test": null,
+    "trials_errored": 0,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-008-preceding-task.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-009-nonexistent-job",
+    "category": "aap2",
+    "subcategory": "nonexistent-job",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 0.8,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 1,
+    "n_derived_facts": 1,
+    "seed": 0.533333,
+    "seed_n": 3,
+    "seed_all": 0.533333,
+    "seed_train": 0.8,
+    "seed_train_n": 9,
+    "seed_train_all": 0.711111,
+    "cand_0001": 1.0,
+    "cand_0001_all": 1.0,
+    "cand_0002": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "delta": 0.466667,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-009-nonexistent-job.md"
+  },
+  {
+    "experiment": "v2",
+    "task": "bench-aap2-010-log-does-not-say",
+    "category": "aap2",
+    "subcategory": "log-does-not-say",
+    "source": "hand-authored",
+    "status": "OPTIMIZED",
+    "baseline": 0.8,
+    "baseline_gate": 1.0,
+    "baseline_trajectory": null,
+    "baseline_assertions": null,
+    "n_trajectory_ops": null,
+    "trajectory_match": null,
+    "n_assertions": null,
+    "baseline_assertions_passed": null,
+    "trajectory_reachable_at_baseline": null,
+    "trajectory_tools_missing_at_baseline": null,
+    "n_expected_calls": 1,
+    "n_required_facts": 3,
+    "n_derived_facts": 1,
+    "seed": 0.733333,
+    "seed_n": 3,
+    "seed_all": 0.733333,
+    "seed_train": 0.95,
+    "seed_train_n": 9,
+    "seed_train_all": 0.844444,
+    "cand_0001": 0.977778,
+    "cand_0001_all": 0.977778,
+    "cand_0002": null,
+    "best": 0.977778,
+    "best_tag": "cand_0001",
+    "delta": 0.244445,
+    "final_test": null,
+    "trials_errored": 1,
+    "weights": {
+      "tool_calls": 0.2,
+      "answer": 0.8
+    },
+    "flags": [],
+    "report": "reports/task-by-task/v2-bench-aap2-010-log-does-not-say.md"
+  }
+];
+
+const SEED_LADDER = [
+  {
+    "experiment": "v1",
+    "run": "run_20260813_120630",
+    "role": "superseded-n1",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 1,
+    "reward": 0.0,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_120630",
+    "role": "superseded-n1",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 1,
+    "reward": 0.0,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_120630",
+    "role": "superseded-n1",
+    "headline": false,
+    "split": "test",
+    "tag": "FINAL_seed",
+    "n": 1,
+    "reward": 0.0,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_152629",
+    "role": "superseded-n10-a",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 10,
+    "reward": 0.016667,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_152629",
+    "role": "superseded-n10-a",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 10,
+    "reward": 0.036667,
+    "from_run": null,
+    "convention": "unreconciled",
+    "n_errored": 0,
+    "reason": "superseded-measurement"
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_152629",
+    "role": "superseded-n10-a",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 10,
+    "reward": 0.366667,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260813_152629",
+    "role": "superseded-n10-a",
+    "headline": false,
+    "split": "test",
+    "tag": "FINAL_seed",
+    "n": 10,
+    "reward": 0.35,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260814_160930",
+    "role": "superseded-n10-b",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 10,
+    "reward": 0.22,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260814_160930",
+    "role": "superseded-n10-b",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 10,
+    "reward": 0.13,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260814_214843",
+    "role": "headline-n30",
+    "headline": true,
+    "split": "val",
+    "tag": "seed",
+    "n": 30,
+    "reward": 0.316667,
+    "from_run": null,
+    "convention": "valid",
+    "n_errored": 16,
+    "reason": null
+  },
+  {
+    "experiment": "v1",
+    "run": "run_20260814_214843",
+    "role": "headline-n30",
+    "headline": true,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 30,
+    "reward": 0.342222,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_143826",
+    "role": "superseded-v2.1-opt-iter1",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 1,
+    "reward": 0.766666,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_143826",
+    "role": "superseded-v2.1-opt-iter1",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 1,
+    "reward": 0.366667,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_162233",
+    "role": "superseded-v2.1-opt-iter2",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 3,
+    "reward": 1.0,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_162233",
+    "role": "superseded-v2.1-opt-iter2",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 3,
+    "reward": 0.9,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_202942",
+    "role": "superseded-v2.2-iter1",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 3,
+    "reward": 0.875556,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_202942",
+    "role": "superseded-v2.2-iter1",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 3,
+    "reward": 0.958889,
+    "from_run": null,
+    "convention": "unreconciled",
+    "n_errored": 0,
+    "reason": "superseded-measurement"
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260816_202942",
+    "role": "superseded-v2.2-iter1",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 3,
+    "reward": 0.89,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260818_161550",
+    "role": "headline-v2.2-iter2",
+    "headline": true,
+    "split": "val",
+    "tag": "seed (reused)",
+    "n": 3,
+    "reward": 0.875556,
+    "from_run": ".capevolve/run_20260816_202942",
+    "convention": null,
+    "n_errored": 0
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260818_161550",
+    "role": "headline-v2.2-iter2",
+    "headline": true,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 9,
+    "reward": 0.749074,
+    "from_run": null,
+    "convention": "all",
+    "n_errored": 8,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_20260818_161550",
+    "role": "headline-v2.2-iter2",
+    "headline": true,
+    "split": "test",
+    "tag": "FINAL_seed",
+    "n": null,
+    "reward": 0.0,
+    "from_run": null,
+    "convention": "unreconciled",
+    "n_errored": 0,
+    "reason": "empty-split"
+  },
+  {
+    "experiment": "v2",
+    "run": "run_run_20260818_161550",
+    "role": "discarded-aborted-iter3",
+    "headline": false,
+    "split": "val",
+    "tag": "seed",
+    "n": 9,
+    "reward": 0.662037,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_run_20260818_161550",
+    "role": "discarded-aborted-iter3",
+    "headline": false,
+    "split": "train",
+    "tag": "seed_train",
+    "n": 9,
+    "reward": 0.643148,
+    "from_run": null,
+    "convention": "either",
+    "n_errored": 0,
+    "reason": null
+  },
+  {
+    "experiment": "v2",
+    "run": "run_run_20260818_161550",
+    "role": "discarded-aborted-iter3",
+    "headline": false,
+    "split": "test",
+    "tag": "FINAL_seed",
+    "n": null,
+    "reward": 0.0,
+    "from_run": null,
+    "convention": "unreconciled",
+    "n_errored": 0,
+    "reason": "empty-split"
+  }
+];
+
+/* ------------------------------------------------------------------ shared helpers */
+
+function color(v) {
+  if (v === null || v === undefined) return '#f3f4f6';
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220,38,38], mid = [254,243,199], high = [5,150,105];
+  let r, g, b;
+  if (t < 0.5) { const k = t*2; r=low[0]+(mid[0]-low[0])*k; g=low[1]+(mid[1]-low[1])*k; b=low[2]+(mid[2]-low[2])*k; }
+  else { const k = (t-0.5)*2; r=mid[0]+(high[0]-mid[0])*k; g=mid[1]+(high[1]-mid[1])*k; b=mid[2]+(high[2]-mid[2])*k; }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+function fmt(v)  { return (v === null || v === undefined) ? '—' : v.toFixed(3); }
+function fmtD(v) { if (v === null || v === undefined) return '—'; if (!v) return '0.000'; return (v>0?'+':'') + v.toFixed(3); }
+function avg(arr, key) {
+  const vs = arr.map(r => r[key]).filter(v => v !== null && v !== undefined);
+  return vs.length ? vs.reduce((a,b)=>a+b,0)/vs.length : null;
+}
+function stdev(arr, key) {
+  const vs = arr.map(r => r[key]).filter(v => v !== null && v !== undefined);
+  if (vs.length < 2) return null;
+  const m = vs.reduce((a,b)=>a+b,0)/vs.length;
+  return Math.sqrt(vs.reduce((a,b)=>a+(b-m)*(b-m),0)/(vs.length-1));
+}
+
+/* Task labels link to their report. A real <a href> rather than a click handler: the tables are
+   rebuilt via innerHTML on every re-sort (which would destroy per-cell listeners) and an href
+   keeps working when this file is opened straight from a checkout over file://. */
+function reportLink(r) {
+  return `<a class="task-link" href="../${r.report}">${r.task}</a>`;
+}
+
+const FLAG_BADGE = {
+  'gate-failed-at-baseline':          ['badge-gate',   'gate-failed'],
+  'capped-at-0.5-by-50/50-weighting': ['badge-cap',    'capped 0.5'],
+  'solved-at-baseline':               ['badge-solved', 'solved'],
+  'trajectory-unreachable-tool-gap':  ['badge-gap',    'tool gap'],
+};
+function flagBadges(r) {
+  return (r.flags || []).map(f => FLAG_BADGE[f])
+    .filter(Boolean)
+    .map(([cls, label]) => ` <span class="badge ${cls}">${label}</span>`).join('');
+}
+function statusBadge(r) {
+  return r.status === 'OPTIMIZED'
+    ? ' <span class="badge badge-opt">optimized</span>'
+    : ' <span class="badge badge-bo">baseline-only</span>';
+}
+
+function makeSorter(rows) {
+  return (key, dir) => {
+    const mul = dir === 'desc' ? -1 : 1;
+    if (key === 'task') rows.sort((a,b) => mul * a.task.localeCompare(b.task));
+    else if (key === 'subcategory') rows.sort((a,b) => mul * a.subcategory.localeCompare(b.subcategory) || a.task.localeCompare(b.task));
+    else rows.sort((a,b) => mul * ((a[key] ?? -1) - (b[key] ?? -1)));
+    return rows;
+  };
+}
+const RADIO_TO_SORT = {
+  id:       {key:'task',        dir:'asc'},
+  baseline: {key:'baseline',    dir:'desc'},
+  delta:    {key:'delta',       dir:'desc'},
+  best:     {key:'best',        dir:'desc'},
+  category: {key:'subcategory', dir:'asc'},
+};
+
+/* --------------------------------------------------------------------------- v1 table */
+
+let sortV1 = { key: 'task', dir: 'asc' };
+
+function renderV1() {
+  const rows = makeSorter([...DATA_V1])(sortV1.key, sortV1.dir);
+  const arrow = k => sortV1.key === k ? (sortV1.dir === 'desc' ? ' ▼' : ' ▲') : '';
+  const seedN = DATA_V1.find(r => r.seed_n)?.seed_n ?? '?';
+
+  let html = `<thead><tr>
+    <th class="row-head sortable" data-sort-key="task">task${arrow('task')}</th>
+    <th class="sortable" data-sort-key="n_trajectory_ops" title="tool calls the extracted trace demands (subset match) — the trajectory column's denominator">ops${arrow('n_trajectory_ops')}</th>
+    <th class="sortable" data-sort-key="trajectory_reachable_at_baseline" title="was trajectory 1.0 reachable at all? — whether every demanded op had a running simulator on 2026-08-12">reach${arrow('trajectory_reachable_at_baseline')}</th>
+    <th class="sortable" data-sort-key="n_assertions" title="answer_contains strings passed / demanded, at baseline">assn<br><span class="n">k/n</span>${arrow('n_assertions')}</th>
+    <th class="sortable" data-sort-key="baseline">baseline<br><span class="n">n=1</span>${arrow('baseline')}</th>
+    <th class="sortable" data-sort-key="baseline_gate">gate${arrow('baseline_gate')}</th>
+    <th class="sortable" data-sort-key="baseline_trajectory">traj${arrow('baseline_trajectory')}</th>
+    <th class="sortable" data-sort-key="baseline_assertions">assn${arrow('baseline_assertions')}</th>
+    <th class="sortable" data-sort-key="seed">seed<br><span class="n">n=${seedN}</span>${arrow('seed')}</th>
+    <th class="sortable" data-sort-key="cand_0001">c1${arrow('cand_0001')}</th>
+    <th class="sortable" data-sort-key="cand_0002">c2${arrow('cand_0002')}</th>
+    <th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th>
+    <th class="delta-col sortable" data-sort-key="delta">Δ${arrow('delta')}</th>
+    <th class="sortable" data-sort-key="final_test" title="NOT held out — test overlaps train/val">test<br><span class="n">fit</span>${arrow('final_test')}</th>
+  </tr></thead><tbody>`;
+
+  for (const r of rows) {
+    const sub = `<span class="badge ${r.subcategory === 'trajectory-match' ? 'badge-traj' : 'badge-multi'}">${r.subcategory === 'trajectory-match' ? 'traj-match' : 'multi-tool'}</span>`;
+    html += `<tr${r.status === 'OPTIMIZED' ? ' class="head-row"' : ''}><td class="label">${reportLink(r)} ${sub}${flagBadges(r)}${statusBadge(r)}</td>`;
+    // Reachability, not length, is what separates the trajectory column: 5 of 5 reachable tasks
+    // matched and 0 of 25 unreachable ones did. So the reachable rows are the ones highlighted,
+    // and ops is left as a plain denominator (four of the five are also the four shortest, which
+    // is the confound the earlier <=4-ops highlight was actually showing).
+    const gap = r.trajectory_tools_missing_at_baseline || [];
+    const reachable = r.trajectory_reachable_at_baseline === true;
+    html += `<td class="value" style="color:#6b7280">${r.n_trajectory_ops ?? '—'}</td>`;
+    html += reachable
+      ? `<td class="value" style="color:#047857;font-weight:700" title="every demanded op was callable">✓</td>`
+      : `<td class="value" style="color:#92400e;font-weight:700" title="uncallable at baseline: ${gap.join(', ')} — trajectory 1.0 unreachable, reward capped at 0.5">gap</td>`;
+    html += `<td class="value" style="color:${r.n_assertions === 0 ? '#b45309;font-weight:700' : '#6b7280'}">${r.n_assertions === 0 ? '0/0' : `${r.baseline_assertions_passed ?? '?'}/${r.n_assertions}`}</td>`;
+    html += `<td class="value" style="background:${color(r.baseline)}">${fmt(r.baseline)}</td>`;
+    for (const k of ['baseline_gate','baseline_trajectory','baseline_assertions']) {
+      const v = r[k];
+      html += `<td class="value${v===null?' na':''}" style="color:#6b7280">${fmt(v)}</td>`;
+    }
+    for (const k of ['seed','cand_0001','cand_0002']) {
+      const v = r[k];
+      const na = v === null || v === undefined;
+      const isBest = !na && r.best !== null && k === r.best_tag;
+      html += `<td class="value${na?' na':''}${isBest?' best-cell':''}" style="background:${color(v)}">${fmt(v)}</td>`;
+    }
+    html += `<td class="value best-col">${fmt(r.best)}</td>`;
+    const dc = (r.delta ?? 0) > 0 ? '#059669' : (r.delta ?? 0) < 0 ? '#dc2626' : '#6b7280';
+    html += `<td class="value delta-col" style="color:${dc}">${fmtD(r.delta)}</td>`;
+    html += `<td class="value${r.final_test===null?' na':''}">${fmt(r.final_test)}</td></tr>`;
+  }
+
+  const opsTot = DATA_V1.reduce((a,r)=>a+(r.n_trajectory_ops||0),0);
+  const assnPass = DATA_V1.reduce((a,r)=>a+(r.baseline_assertions_passed||0),0);
+  const assnTot = DATA_V1.reduce((a,r)=>a+(r.n_assertions||0),0);
+  html += `<tr class="summary-row"><td class="label">MEAN (n=${DATA_V1.length} tasks)</td>`;
+  html += `<td title="total demanded ops ${opsTot}">${(opsTot/DATA_V1.length).toFixed(1)}</td>`;
+  html += `<td title="tasks whose whole demanded sequence was callable">${DATA_V1.filter(r=>r.trajectory_reachable_at_baseline===true).length}/${DATA_V1.length}</td>`;
+  html += `<td title="assertions passed / demanded, summed over all 30 tasks">${assnPass}/${assnTot}</td>`;
+  for (const k of ['baseline','baseline_gate','baseline_trajectory','baseline_assertions','seed','cand_0001','cand_0002']) {
+    html += `<td style="background:${color(avg(DATA_V1,k))}">${fmt(avg(DATA_V1,k))}</td>`;
+  }
+  html += `<td class="best-col">${fmt(avg(DATA_V1,'best'))}</td>`;
+  html += `<td class="delta-col" style="color:#6b7280">${fmtD(avg(DATA_V1,'delta'))}</td>`;
+  html += `<td>${fmt(avg(DATA_V1,'final_test'))}</td></tr></tbody>`;
+  document.getElementById('hm-v1').innerHTML = html;
+
+  const traj = DATA_V1.filter(r => r.subcategory === 'trajectory-match');
+  const multi = DATA_V1.filter(r => r.subcategory !== 'trajectory-match');
+  const nGate = DATA_V1.filter(r => (r.flags||[]).includes('gate-failed-at-baseline')).length;
+  const nCap  = DATA_V1.filter(r => (r.flags||[]).includes('capped-at-0.5-by-50/50-weighting')).length;
+  const nSolv = DATA_V1.filter(r => (r.flags||[]).includes('solved-at-baseline')).length;
+  const nZero = DATA_V1.filter(r => r.baseline === 0).length;
+  const nOpt  = DATA_V1.filter(r => r.status === 'OPTIMIZED').length;
+
+  document.getElementById('agg-v1').innerHTML = `
+    <strong>v1 bottom line — 30 tasks, n=1 baseline sweep; ${nOpt} of 30 entered cap-evolve at n=30:</strong>
+    <table>
+      <thead><tr><th class="txt">group</th><th>n</th><th>mean baseline</th><th>stdev</th><th>mean traj</th><th>mean assn</th></tr></thead>
+      <tbody>
+        <tr><td class="txt">trajectory-match (baseline traj = 1.0)</td><td>${traj.length}</td><td><strong>${fmt(avg(traj,'baseline'))}</strong></td><td>${fmt(stdev(traj,'baseline'))}</td><td>${fmt(avg(traj,'baseline_trajectory'))}</td><td>${fmt(avg(traj,'baseline_assertions'))}</td></tr>
+        <tr><td class="txt">multi-tool (baseline traj &lt; 1.0)</td><td>${multi.length}</td><td><strong>${fmt(avg(multi,'baseline'))}</strong></td><td>${fmt(stdev(multi,'baseline'))}</td><td>${fmt(avg(multi,'baseline_trajectory'))}</td><td>${fmt(avg(multi,'baseline_assertions'))}</td></tr>
+        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">ALL v1</td><td>${DATA_V1.length}</td><td>${fmt(avg(DATA_V1,'baseline'))}</td><td>${fmt(stdev(DATA_V1,'baseline'))}</td><td>${fmt(avg(DATA_V1,'baseline_trajectory'))}</td><td>${fmt(avg(DATA_V1,'baseline_assertions'))}</td></tr>
+      </tbody>
+    </table>
+    <strong>Baseline shape:</strong><br>
+    &nbsp;&nbsp;• <strong>${nSolv}/30</strong> solved outright at baseline · <strong>${nZero}/30</strong> scored 0.000 ·
+    <strong>${nGate}/30</strong> gate-failed (<code>completion</code> = 0, which zeroes the reward whatever the trajectory did) ·
+    <strong>${nCap}/30</strong> hit the 0.5 ceiling the 50/50 weighting imposes on a perfect trajectory with no assertion credit.<br>
+    &nbsp;&nbsp;• The trajectory-match / multi-tool split is the one that predicts baseline reward
+    (<strong>${fmt(avg(traj,'baseline'))}</strong> vs <strong>${fmt(avg(multi,'baseline'))}</strong>), which is why it is used as the
+    subcategory rather than a hand-assigned taxonomy.<br>
+    <div class="warn" style="margin-top:10px">
+      <strong>But that split is not a property of the skill at all — it is a property of which simulators
+      were running.</strong>
+      Every v1 task scores <code>trajectory</code> by <code>subset</code>-matching the agent's tool calls
+      against the sequence its source trace happened to contain. When the 30-task sweep ran on 2026-08-12,
+      two kaegis simulators were up (aap2 <code>:8086</code>, github <code>:8087</code>) serving five tools:
+      <code>query_aap2</code>, <code>fetch_github_file</code>, <code>search_github_repo</code>,
+      <code>search_github_code</code>, <code>search_agnosticv_prs</code>. Sort by the
+      <strong>reach</strong> column:
+      <table style="margin:8px 0">
+        <thead><tr><th class="txt">was trajectory 1.0 reachable?</th><th>tasks</th><th>trajectory = 1.0</th><th>mean baseline</th><th>mean assn</th></tr></thead>
+        <tbody>
+          ${[[true,'yes — every demanded op had a running sim'],[false,'no — at least one op was uncallable']].map(([ok,lab]) => {
+            const g = DATA_V1.filter(r => r.trajectory_reachable_at_baseline === ok);
+            const h = g.filter(r => r.baseline_trajectory === 1.0).length;
+            return `<tr><td class="txt">${lab}</td><td>${g.length}</td><td><strong>${h}/${g.length}</strong></td><td>${fmt(avg(g,'baseline'))}</td><td>${fmt(avg(g,'baseline_assertions'))}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <strong>5 of 5 and 0 of 25.</strong> Under a subset match one uncallable op fails the whole ordered
+      containment, so on 25 of the 30 tasks <code>trajectory: 1.0</code> was <strong>unreachable by
+      construction</strong> and the reward was capped at 0.5 by the harness, not by the skill. The tools
+      those 25 tasks needed and could not call:
+      ${Object.entries(DATA_V1.reduce((a,r)=>{for(const x of (r.trajectory_tools_missing_at_baseline||[])) a[x]=(a[x]||0)+1; return a;},{}))
+        .sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<code>${k}</code> (${v} tasks)`).join(' · ')}.
+      <strong>Every mean over the 25 flagged rows is a measurement of the benchmark harness.</strong>
+      Fixing that comes before any skill edit.
+      <br><br>
+      Two things this does <em>not</em> license. First, the tool gap alone would put the aggregate at
+      (25 × 0.5 + 5 × 1.0) / 30 = <strong>0.583</strong>; the observed mean is
+      <strong>${fmt(avg(DATA_V1,'baseline'))}</strong>, so the gap is a ceiling on the experiment, not an
+      excuse for its result — the assertion half was failing too. Second, by the 2026-08-14 pilot the
+      babylon and provisions_db sims were also up (v1's <code>cand_0002</code> matched the trajectory on
+      <code>-0047</code> and <code>-0048</code>, which both demand <code>lookup_catalog_item</code>), so all
+      30 contracts would have been reachable then. <strong>The 28 baseline-only rows and the 2 optimized
+      rows were measured against different tool surfaces, and nothing in this branch records when it
+      changed.</strong>
+      <br><br>
+      <details style="margin-bottom:8px">
+        <summary style="cursor:pointer"><strong>Demanded-sequence length — the weaker, confounded story</strong></summary>
+        <table style="margin:8px 0">
+          <thead><tr><th class="txt">demanded ops</th><th>tasks</th><th>trajectory = 1.0</th><th>reachable</th><th>mean baseline</th></tr></thead>
+          <tbody>
+            ${[[0,4,'≤ 4'],[5,8,'5–8'],[9,14,'9–14'],[15,99,'15+']].map(([lo,hi,lab]) => {
+              const g = DATA_V1.filter(r => r.n_trajectory_ops >= lo && r.n_trajectory_ops <= hi);
+              const h = g.filter(r => r.baseline_trajectory === 1.0).length;
+              const rc = g.filter(r => r.trajectory_reachable_at_baseline === true).length;
+              return `<tr><td class="txt">${lab}</td><td>${g.length}</td><td><strong>${h}/${g.length}</strong></td><td>${rc}/${g.length}</td><td>${fmt(avg(g,'baseline'))}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        Demanded sequences run
+        <strong>${Math.min(...DATA_V1.map(r=>r.n_trajectory_ops))} to ${Math.max(...DATA_V1.map(r=>r.n_trajectory_ops))} calls</strong>
+        (mean ${(opsTot/DATA_V1.length).toFixed(1)}), and <strong>4 of 4</strong> tasks demanding ≤ 4 calls
+        matched against <strong>1 of 26</strong> above. That looks like a length effect and it is mostly the
+        coverage effect in disguise: four of the five reachable tasks are also the four shortest, and the
+        fifth (<code>-0074</code>) demands 8 calls and matched anyway. Within the reachable five, length
+        ranges 2–8 and every one matched — so length has no residual predictive power once reachability is
+        known. It remains true that half of every v1 reward is gated on a quantity nobody chose
+        deliberately: how chatty the human whose session was scraped happened to be.
+      </details>
+      Assertion side, same shape: the seed passed <strong>${assnPass} of ${assnTot}</strong> demanded
+      <code>answer_contains</code> strings across the 30 tasks (${(100*assnPass/assnTot).toFixed(0)}%), over
+      per-task contracts ranging from ${Math.min(...DATA_V1.filter(r=>r.n_assertions>0).map(r=>r.n_assertions))} to
+      ${Math.max(...DATA_V1.map(r=>r.n_assertions))} strings — and
+      <code>traces_parsec-aap2-0052</code> demands <strong>zero</strong>, so its <code>assertions</code> term
+      scores a vacuous <strong>1.0</strong> and half its 0.500 baseline measures nothing at all.
+    </div>
+    <strong>Optimizer outcome: the optimizer never won.</strong> <code>best_id = seed</code>; both candidates
+    scored below the seed on val (paired Δ̄ −0.092 and −0.160, both rejected at <code>gate_k_se = 1.0</code>),
+    <code>test_delta = +0.0</code>. <code>artifacts/v1/best/SKILL.md</code> is therefore byte-identical to
+    <code>artifacts/v1/seed/SKILL.md</code> — that is not a packaging mistake, it is the result.
+  `;
+}
+
+/* --------------------------------------------------------------------------- v2 table */
+
+let sortV2 = { key: 'task', dir: 'asc' };
+
+function renderV2() {
+  const rows = makeSorter([...DATA_V2])(sortV2.key, sortV2.dir);
+  const arrow = k => sortV2.key === k ? (sortV2.dir === 'desc' ? ' ▼' : ' ▲') : '';
+  const sN = DATA_V2.find(r => r.seed_n)?.seed_n ?? '?';
+  const stN = DATA_V2.find(r => r.seed_train_n)?.seed_train_n ?? '?';
+
+  let html = `<thead><tr>
+    <th class="row-head sortable" data-sort-key="task">task${arrow('task')}</th>
+    <th>w<br><span class="n">tc/ans</span></th>
+    <th class="sortable" data-sort-key="n_expected_calls" title="expected tool calls · required answer facts (of which derived)">contract<br><span class="n">calls·facts</span>${arrow('n_expected_calls')}</th>
+    <th class="sortable" data-sort-key="baseline">baseline<br><span class="n">n=1</span>${arrow('baseline')}</th>
+    <th class="sortable" data-sort-key="seed">seed<br><span class="n">n=${sN}, reused</span>${arrow('seed')}</th>
+    <th class="sortable" data-sort-key="seed_train">seed@${stN}<br><span class="n">n=${stN}, train</span>${arrow('seed_train')}</th>
+    <th class="sortable" data-sort-key="cand_0001">c1<br><span class="n">n=${stN}</span>${arrow('cand_0001')}</th>
+    <th class="best-col sortable" data-sort-key="best">best${arrow('best')}</th>
+    <th class="delta-col sortable" data-sort-key="delta" title="c1 − seed (n=9 candidate vs n=3 reused baseline)">Δ vs seed${arrow('delta')}</th>
+    <th class="sortable" data-sort-key="delta_at_n" title="c1 − seed@9: same trial count on both sides">Δ vs seed@${stN}${arrow('delta_at_n')}</th>
+    <th title="harness-errored trials in this task's cells">err</th>
+  </tr></thead><tbody>`;
+
+  for (const r of rows) {
+    const w = r.weights ? `${r.weights.tool_calls}/${r.weights.answer}` : '—';
+    html += `<tr><td class="label">${reportLink(r)} <span class="badge badge-cat">${r.subcategory}</span></td>`;
+    html += `<td class="value" style="color:#6b7280">${w}</td>`;
+    html += `<td class="value" style="color:#6b7280">${r.n_expected_calls ?? '—'}·${r.n_required_facts ?? '—'}${r.n_derived_facts ? `<span style="color:#7c3aed">†</span>` : ''}</td>`;
+    for (const k of ['baseline','seed','seed_train','cand_0001']) {
+      const v = r[k];
+      const na = v === null || v === undefined;
+      const isBest = !na && k === r.best_tag;
+      html += `<td class="value${na?' na':''}${isBest?' best-cell':''}" style="background:${color(v)}">${fmt(v)}</td>`;
+    }
+    html += `<td class="value best-col">${fmt(r.best)}</td>`;
+    const dc = v => (v ?? 0) > 0 ? '#059669' : (v ?? 0) < 0 ? '#dc2626' : '#6b7280';
+    html += `<td class="value delta-col" style="color:${dc(r.delta)}">${fmtD(r.delta)}</td>`;
+    html += `<td class="value" style="color:${dc(r.delta_at_n)}">${fmtD(r.delta_at_n)}</td>`;
+    html += `<td class="value" style="color:${r.trials_errored ? '#c2410c' : '#9ca3af'}">${r.trials_errored || '—'}</td></tr>`;
+  }
+
+  const callsTot = DATA_V2.reduce((a,r)=>a+(r.n_expected_calls||0),0);
+  const factsTot = DATA_V2.reduce((a,r)=>a+(r.n_required_facts||0),0);
+  html += `<tr class="summary-row"><td class="label">MEAN (n=${DATA_V2.length} tasks)</td><td>—</td>`;
+  html += `<td title="totals across all 10 tasks">${callsTot}·${factsTot}</td>`;
+  for (const k of ['baseline','seed','seed_train','cand_0001']) {
+    html += `<td style="background:${color(avg(DATA_V2,k))}">${fmt(avg(DATA_V2,k))}</td>`;
+  }
+  html += `<td class="best-col">${fmt(avg(DATA_V2,'best'))}</td>`;
+  html += `<td class="delta-col" style="color:#059669">${fmtD(avg(DATA_V2,'delta'))}</td>`;
+  html += `<td style="color:#059669">${fmtD(avg(DATA_V2,'delta_at_n'))}</td>`;
+  html += `<td>${DATA_V2.reduce((a,r)=>a+(r.trials_errored||0),0)}</td></tr></tbody>`;
+  document.getElementById('hm-v2').innerHTML = html;
+
+  const improved  = DATA_V2.filter(r => r.delta !== null && r.delta > 1e-6).length;
+  const regressed = DATA_V2.filter(r => r.delta !== null && r.delta < -1e-6).length;
+  const flat      = DATA_V2.length - improved - regressed;
+  const ceil      = DATA_V2.filter(r => r.seed !== null && r.seed >= 0.999).length;
+  const swing     = DATA_V2.map(r => (r.seed !== null && r.seed_train !== null) ? Math.abs(r.seed - r.seed_train) : null)
+                           .filter(v => v !== null);
+  const maxSwing  = swing.length ? Math.max(...swing) : null;
+  const lowerAt9  = DATA_V2.filter(r => r.seed !== null && r.seed_train !== null && r.seed_train < r.seed - 1e-6).length;
+
+  document.getElementById('agg-v2').innerHTML = `
+    <strong>v2 bottom line — 10 tasks, 1 accepted candidate, no held-out test:</strong>
+    <table>
+      <thead><tr><th class="txt">measurement</th><th>n trials</th><th>split mean</th><th>source</th></tr></thead>
+      <tbody>
+        <tr><td class="txt">baseline sweep (v2.1 archived)</td><td>1</td><td><strong>${fmt(avg(DATA_V2,'baseline'))}</strong></td><td>baseline_all_1786875106.json</td></tr>
+        <tr><td class="txt">seed on val — <em>reused</em> from run_20260816_202942</td><td>${sN}</td><td><strong>${fmt(avg(DATA_V2,'seed'))}</strong></td><td>events.jsonl <code>baseline_reused</code></td></tr>
+        <tr><td class="txt">seed on train — measured by the headline run itself, <em>errored trials dropped</em></td><td>${stN}</td><td><strong>${fmt(avg(DATA_V2,'seed_train'))}</strong></td><td>per-trial rewards, <code>mean_valid</code></td></tr>
+        <tr><td class="txt">seed on train — <em>errored trials counted as 0.0</em> — <strong>this is the figure cap-evolve itself reported</strong></td><td>${stN}</td><td><strong>${fmt(avg(DATA_V2,'seed_train_all'))}</strong></td><td>events.jsonl <code>seed_train</code></td></tr>
+        <tr style="background:#dbeafe; font-weight:700;"><td class="txt">cand_0001 (accepted champion)</td><td>${stN}</td><td>${fmt(avg(DATA_V2,'cand_0001'))}</td><td>events.jsonl <code>cand_0001</code></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:11px; color:#6b7280; margin:2px 0 12px;">The two <code>seed on train</code> rows are the
+    same 90 trials under two denominators; 8 of the 90 errored at the harness level
+    (6 × <code>AgentSetupTimeoutError</code>, 2 × <code>NetworkConnectionError</code>) and were written to disk
+    with <code>reward: 0.0</code>, indistinguishable from a genuine zero except via <code>rollout.error</code>.
+    cap-evolve's documented behaviour is to drop them (<code>raw.valid_trials</code>) and that is what
+    reproduces v1's headline val/seed figure — but the number it printed here is the
+    errored-as-zero one. <strong>0.073 of this experiment's spread is a denominator choice, not a measurement.</strong></p>
+    <strong>Per-task outcome vs the reused n=3 seed:</strong> ${improved} improved · ${regressed} regressed ·
+    ${flat} unchanged. <strong>${ceil}/10</strong> tasks were already at 1.000 on the seed, so they could
+    not improve and could only fall.<br>
+    <strong>The instability, per task:</strong> within the headline run alone, the same seed skill on the
+    same 10 tasks moved by up to <strong>${fmt(maxSwing)}</strong> between its n=${sN} and n=${stN}
+    measurements, and measured <em>lower</em> at n=${stN} on <strong>${lowerAt9} of 10</strong> tasks.
+    The accepted gate margin was <code>paired Δ̄ = +0.086 &gt; 0.2·SE = 0.012</code>, computed against the
+    n=${sN} side.<br>
+    <strong>Two independent reasons not to quote the +0.086 as a result:</strong>
+    (a) the gate compared an n=${stN} candidate against a reused n=${sN} baseline, and
+    (b) <code>gate_k_se</code> had been loosened from 1.0 to 0.2 — the exact knob v1's write-up
+    identifies as the cause of false-positive accepts at low n.
+    See <a href="../results/v2/summary.md">results/v2/summary.md</a>.<br><br>
+    <strong>v2's ~${fmt(avg(DATA_V2,'baseline'))} baseline is not evidence that the skill got better between
+    v1 and v2.</strong> The two experiments measure different things. v2 asks for
+    <strong>${callsTot} tool calls across 10 tasks</strong> (1–2 each) against a per-call match;
+    v1 asks for <strong>${DATA_V1.reduce((a,r)=>a+(r.n_trajectory_ops||0),0)} across 30</strong>
+    (2–36 each) against one ordered subset containment per task. Same target skill, different
+    instrument, ${(avg(DATA_V2,'baseline')/avg(DATA_V1,'baseline')).toFixed(1)}× the baseline. The
+    honest comparison between them is not their scores — it is that v2 is the only one of the two
+    whose contracts were designed, reviewed, and defect-logged before being scored.
+  `;
+}
+
+/* ------------------------------------------------------------------------ seed ladder */
+
+function renderLadder() {
+  const groups = [...new Set(SEED_LADDER.map(r => r.experiment))];
+  let html = `<thead><tr>
+    <th class="row-head">run</th><th>role</th><th>split · tag</th><th>n</th><th>seed reward</th><th>conv</th><th>err</th><th class="row-head" style="text-align:left">note</th>
+  </tr></thead><tbody>`;
+
+  for (const g of groups) {
+    const rows = SEED_LADDER.filter(r => r.experiment === g);
+    html += `<tr style="background:#dbeafe;"><td class="label" colspan="8" style="background:#dbeafe; text-align:left; font-weight:700; color:#1e40af;">${g}</td></tr>`;
+    for (const r of rows) {
+      const pill = r.headline ? '<span class="pill pill-head">headline</span>'
+        : r.role.startsWith('discarded') ? '<span class="pill pill-disc">discarded</span>'
+        : '<span class="pill pill-sup">superseded</span>';
+      const usable = r.reason !== 'empty-split' && r.reason !== 'superseded-measurement';
+      html += `<tr><td class="label">${r.run}</td><td class="value">${pill}</td>`;
+      html += `<td class="value">${r.split} · ${r.tag}</td>`;
+      html += `<td class="value">${r.n ?? '—'}</td>`;
+      html += `<td class="value" style="background:${usable ? color(r.reward) : '#f3f4f6'}; ${usable ? '' : 'color:#9ca3af; font-style:italic;'}">${fmt(r.reward)}</td>`;
+      html += `<td class="value" style="color:${r.convention === 'valid' || r.convention === 'all' ? '#c2410c' : '#9ca3af'}">${r.convention ?? '—'}</td>`;
+      html += `<td class="value" style="color:${r.n_errored ? '#c2410c' : '#9ca3af'}">${r.n_errored || '—'}</td>`;
+      const note = r.from_run ? `reused from <code>${r.from_run}</code>` : (r.reason ?? '');
+      html += `<td class="txt" style="color:#6b7280; font-size:11px;">${note}</td></tr>`;
+    }
+    // Spread over the rows that actually measure something comparable.
+    for (const split of ['val','train']) {
+      const vs = rows.filter(r => r.split === split && r.reason !== 'empty-split' && r.reason !== 'superseded-measurement')
+                     .map(r => r.reward).filter(v => v !== null);
+      if (vs.length < 2) continue;
+      const sp = Math.max(...vs) - Math.min(...vs);
+      html += `<tr class="summary-row"><td class="label">SPREAD — ${g} ${split}</td><td colspan="2" class="txt">max−min over ${vs.length} measurements of the same skill</td>`;
+      html += `<td>—</td><td class="spread" style="background:${sp > 0.15 ? '#fee2e2' : '#d1fae5'}">${sp.toFixed(3)}</td><td colspan="3" class="txt">min ${Math.min(...vs).toFixed(3)} · max ${Math.max(...vs).toFixed(3)}</td></tr>`;
+    }
+  }
+  html += '</tbody>';
+  document.getElementById('ladder').innerHTML = html;
+}
+
+/* ---------------------------------------------------------------------------- wiring */
+
+// v2 carries a second delta the data does not: c1 measured at n=9 against seed_train measured at
+// n=9. Derived here rather than in results.json because it is a presentation choice — which of
+// two equally real deltas to lead with — not a fact about the run.
+for (const r of DATA_V2) {
+  r.delta_at_n = (r.cand_0001 !== null && r.seed_train !== null)
+    ? Math.round((r.cand_0001 - r.seed_train) * 1e6) / 1e6
+    : null;
+}
+
+document.querySelectorAll('input[name=sortv1]').forEach(el => el.addEventListener('change', () => {
+  sortV1 = { ...RADIO_TO_SORT[el.value] }; renderV1();
+}));
+document.querySelectorAll('input[name=sortv2]').forEach(el => el.addEventListener('change', () => {
+  sortV2 = { ...RADIO_TO_SORT[el.value] }; renderV2();
+}));
+document.getElementById('hm-v1').addEventListener('click', e => {
+  const th = e.target.closest('th.sortable'); if (!th) return;
+  const k = th.dataset.sortKey;
+  sortV1 = sortV1.key === k ? { key: k, dir: sortV1.dir === 'desc' ? 'asc' : 'desc' } : { key: k, dir: k === 'task' ? 'asc' : 'desc' };
+  renderV1();
+});
+document.getElementById('hm-v2').addEventListener('click', e => {
+  const th = e.target.closest('th.sortable'); if (!th) return;
+  const k = th.dataset.sortKey;
+  sortV2 = sortV2.key === k ? { key: k, dir: sortV2.dir === 'desc' ? 'asc' : 'desc' } : { key: k, dir: k === 'task' ? 'asc' : 'desc' };
+  renderV2();
+});
+
+renderV1();
+renderV2();
+renderLadder();
+</script>
+</body>
+</html>

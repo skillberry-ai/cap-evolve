@@ -1,0 +1,12 @@
+{"t": 1786901382.279212, "kind": "splits_warning", "msg": "test overlaps train/val (no-holdout fit) \u2014 the test number is NOT held out; report it as a fit metric"}
+{"t": 1786901382.279553, "kind": "splits", "train": 10, "val": 10, "test": 10, "seed": 0}
+{"t": 1786902898.020342, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.8755555333333334, "stderr": 0.06341558919825026, "cost_usd": 0.0, "tokens": 0, "seconds": 1515.74}
+{"t": 1786902898.020745, "kind": "baseline", "val": 0.8755555333333334, "stderr": 0.06341558919825026}
+{"t": 1786902898.121593, "kind": "target_profile", "model": "claude-sonnet-4-20250514", "tier": "strong", "suggested_num_trials": 3, "resolution_note": "unknown model id 'claude-sonnet-4-20250514'; defaulting to tier 'strong' \u2014 set a tier keyword (frontier|strong|mid|weak) explicitly to override"}
+{"t": 1786904737.309572, "kind": "evaluate", "split": "train", "tag": "seed_train", "reward": 0.9588888666666667, "stderr": 0.023433071549630938, "cost_usd": 0.0, "tokens": 0, "seconds": 1838.91}
+{"t": 1786905107.8849359, "kind": "target_profile", "model": "claude-sonnet-4-20250514", "tier": "strong", "suggested_num_trials": 3, "resolution_note": "unknown model id 'claude-sonnet-4-20250514'; defaulting to tier 'strong' \u2014 set a tier keyword (frontier|strong|mid|weak) explicitly to override"}
+{"t": 1786907114.184308, "kind": "evaluate", "split": "train", "tag": "seed_train", "reward": 0.89, "stderr": 0.061804146850366, "cost_usd": 0.0, "tokens": 0, "seconds": 2006.24}
+{"t": 1786908898.525439, "kind": "evaluate", "split": "val", "tag": "cand_0001", "reward": 0.8338888666666667, "stderr": 0.10047111175007925, "cost_usd": 0.0, "tokens": 0, "seconds": 1127.75}
+{"t": 1786908898.529052, "kind": "step", "candidate": "cand_0001", "accept": false, "reason": "paired \u0394\u0304=-0.0417 <= 0.2\u00b7SE=0.0224 (SE=0.1121, n=10)", "val": 0.8338888666666667, "parent": "seed", "parent_val": 0.8755555333333334, "optimizer_seconds": 656.52, "runner_seconds": 1127.75, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 2.367854, "opt_tokens": 18719}
+{"t": 1786910614.7239811, "kind": "evaluate", "split": "test", "tag": "FINAL", "reward": 0.9166666666666666, "stderr": 0.057837093887537286, "cost_usd": 0.0, "tokens": 0, "seconds": 1715.94}
+{"t": 1786910614.7256699, "kind": "finalize", "test_reward": 0.9166666666666666, "test_baseline_reward": 0.9166666666666666, "test_delta": 0.0, "best_id": "seed"}

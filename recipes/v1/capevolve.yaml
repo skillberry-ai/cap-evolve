@@ -1,0 +1,80 @@
+# cap-evolve run spec — Parsec / aap2 sub-agent pilot.
+#
+# Filled by intake on 2026-08-10 based on:
+#   - /Users/boazc/workarea/Python/rhdp-parsec/docs/rh_collaboration_proposal.md
+#   - PalmPalm7/parsec branch migration/full-sdk (PR #40)
+#   - /Users/boazc/workarea/Python/rhdp-parsec/harbor-tasks/ (113 tasks, 30 aap2)
+# See PROJECT.md for detected defaults, decisions, and the BLOCKED prerequisites
+# (Harbor CLI + Docker + tools-injection wiring).
+
+# --- what to optimize -------------------------------------------------------
+# Phase-1 pilot: prompt-only. See docs/architecture-brief.html for the two-axis
+# framing and the wrapper-principle commitment that governs phase 2. The tools
+# capability is deferred (not dropped) — phase 2 restores it by re-copying
+# rhpds/parsec's src/tools/aap2*.py into seed_capability/tools/ and flipping
+# `capabilities` back to [system-prompt, tools].
+capabilities: [system-prompt]               # aap2 SKILL.md prompt only (proposal §33-35, restaged)
+capability_path: seed_capability            # copied verbatim from rhpds/parsec PR #40:
+                                            #   config/prompts/aap2_agent.md → seed_capability/SKILL.md
+actions: [edit]                             # system-prompt is edit-only
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code                # native parallel subagents → two-phase diagnose→implement fan-out
+optimizer_model: ""                         # leave blank → claude-code's default; override if needed
+optimizer_max_turns: 30                     # per-iter WORK cap (claude --max-turns 30)
+optimizer_usd_per_iter: 4.0                 # per-iter $ cap  (claude --max-budget-usd 4.0)
+
+# --- consuming (runtime) LLM the capabilities are optimized FOR --------------
+target_model: claude-sonnet-4-20250514      # proposal §186 — the model Parsec runs at inference
+target_profile_file: ""
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: hardest-first              # n=18 train → focus on the lowest-scoring tasks first
+orchestration_mode: deterministic
+
+# --- what context the optimizer gets (hill-climb) ---------------------------
+optimizer_instructions_file: optimizer/INSTRUCTIONS.md
+runner_repo_path: /Users/boazc/workarea/Python/rhdp-parsec-src   # rhpds/parsec PR #40 clone — read-only reference
+capability_sources: []                       # aap2 tools import stdlib + parsec internals already exposed via runner_repo_path
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter                     # adapter.tasks() reads HARBOR_TASK_IDS / scans harbor-tasks/
+split_seed: 0
+split_train: 0.6                            # 30 aap2 tasks → 18 train / 6 val / 6 test
+split_val: 0.2
+split_test: 0.2
+split_ids_file: ""                          # (option: pin later if a canonical split emerges)
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1                               # bump to 3 after pilot proves wiring — Parsec verifier is deterministic
+                                            # but the LLM-simulated backend introduces trial variance
+
+# --- metrics (display) ------------------------------------------------------
+# Harbor's verify.py emits reward = gate * (0.5*trajectory + 0.5*assertions).
+# reward is the SCALAR the gate uses. The three sub-scores flow through
+# TrialResult.reward_json and can be surfaced later as shown-only secondaries.
+metrics_display: [reward]
+metric_primary: reward
+metric_directions: [higher]
+
+# --- integrations / stop ----------------------------------------------------
+github_integration: false                   # off for first run; can enable later against a mirror repo
+stop_condition: ""
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired                           # paired SE fits small val (n=6) and banks real 1-task gains
+gate_k_se: 1.0
+
+# --- budget (pilot preset) --------------------------------------------------
+max_iterations: 5
+stall: 2
+max_metric_calls: 0                         # unlimited — hard cap via max_usd
+max_usd: 50.0                               # total: runner + optimizer + intake
+max_optimizer_usd: 20.0                     # optimizer alone (~5 iter × $4)
+
+# --- iteration store --------------------------------------------------------
+store: git
+
+# --- run display name (optional) --------------------------------------------
+# run_name: parsec-aap2-pilot-v1

@@ -1,0 +1,27 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {},
+    "pass_at_k": {},
+    "per_task": [],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2700.1449081897736
+  },
+  "best_id": "cand_0001",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {},
+    "pass_at_k": {},
+    "per_task": [],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2699.88716006279
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.0
+}

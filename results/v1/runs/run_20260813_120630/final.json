@@ -1,0 +1,109 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "traces_parsec-aap2-0047",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=0.0, trajectory=0.0, assertions=0.0.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "traces_parsec-aap2-0048",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=0.0, trajectory=0.0, assertions=0.0.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 687.3381469249725,
+    "n_tasks": 2,
+    "n_scored": 2
+  },
+  "best_id": "cand_0002",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "pass_k": {
+      "1": 0.0
+    },
+    "pass_at_k": {
+      "1": 0.0
+    },
+    "per_task": [
+      {
+        "task_id": "traces_parsec-aap2-0047",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=0.0, trajectory=0.0, assertions=0.0.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "traces_parsec-aap2-0048",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=0.0, trajectory=0.0, assertions=0.0.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 689.77006483078,
+    "n_tasks": 2,
+    "n_scored": 2
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.0
+}

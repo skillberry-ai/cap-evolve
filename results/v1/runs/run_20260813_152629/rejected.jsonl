@@ -1,0 +1,2 @@
+{"candidate_id": "cand_0003", "summary": "candidate cand_0003 (val 0.367, \u0394 +0.000)", "reason": "paired \u0394\u0304=+0.0000 <= 0 (SE=0 \u2192 STRICT fallback, warned; n=2)", "val": 0.3666665}
+{"candidate_id": "cand_0004", "summary": "candidate cand_0004 (val 0.367, \u0394 +0.000)", "reason": "paired \u0394\u0304=+0.0000 <= 0 (SE=0 \u2192 STRICT fallback, warned; n=2)", "val": 0.3666665}

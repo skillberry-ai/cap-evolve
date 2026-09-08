@@ -1,0 +1,30 @@
+{
+  "spec_summary": {
+    "val_tasks": 10,
+    "num_trials": 9,
+    "max_iterations": 1,
+    "optimizer_model": "",
+    "runner_model": null
+  },
+  "calls": {
+    "metric_calls": 90,
+    "optimizer_calls": 1
+  },
+  "budget": {
+    "max_usd": 50.0,
+    "max_optimizer_usd": 20.0,
+    "max_metric_calls": 0
+  },
+  "dominant_cost_knob": "max_iterations (\u00d7 val \u00d7 trials drives runner calls)",
+  "calibration": {
+    "usd_per_optimizer_call": 2.243669
+  },
+  "cost_usd": {
+    "source": "calibrated from prior runs",
+    "runner_usd": null,
+    "optimizer_usd": 2.2437,
+    "expected": 2.24,
+    "low": 1.12,
+    "high": 4.49
+  }
+}

@@ -1,0 +1,8 @@
+{"t": 1786712970.6837702, "kind": "splits_warning", "msg": "test overlaps train/val (no-holdout fit) \u2014 the test number is NOT held out; report it as a fit metric"}
+{"t": 1786712970.684172, "kind": "splits", "train": 2, "val": 2, "test": 2, "seed": 0}
+{"t": 1786718421.251515, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.21999990000000003, "stderr": 0.04698308127333357, "cost_usd": 0.0, "tokens": 0, "seconds": 5450.57}
+{"t": 1786718421.252148, "kind": "baseline", "val": 0.21999990000000003, "stderr": 0.04698308127333357, "n_scored": 2, "n_tasks": 2}
+{"t": 1786718421.365191, "kind": "target_profile", "model": "claude-sonnet-4-20250514", "tier": "strong", "suggested_num_trials": 3, "resolution_note": "unknown model id 'claude-sonnet-4-20250514'; defaulting to tier 'strong' \u2014 set a tier keyword (frontier|strong|mid|weak) explicitly to override"}
+{"t": 1786724368.430902, "kind": "evaluate", "split": "train", "tag": "seed_train", "reward": 0.12999995, "stderr": 0.05113527665439649, "cost_usd": 0.0, "tokens": 0, "seconds": 5946.77}
+{"t": 1786730762.753581, "kind": "evaluate", "split": "test", "tag": "FINAL", "reward": 0.14333325000000002, "stderr": 0.04742760044487105, "cost_usd": 0.0, "tokens": 0, "seconds": 6394.21}
+{"t": 1786730762.755659, "kind": "finalize", "test_reward": 0.14333325000000002, "test_baseline_reward": 0.14333325000000002, "test_delta": 0.0, "best_id": "seed"}

@@ -1,0 +1,14 @@
+{"dashboard": "skipped", "reason": "capevolve-dashboard not installed (pip install -e dashboard/backend)"}
+{
+  "run_dir": ".capevolve/run_run_20260818_161550",
+  "best_id": "cand_0002",
+  "baseline_val": 0.6620370111111111,
+  "test_reward": 0.0,
+  "test_baseline_reward": 0.0,
+  "test_delta": 0.0,
+  "test_pass_k": {},
+  "iterations": 2,
+  "dashboard": ".capevolve/run_run_20260818_161550/dashboard.html",
+  "dashboard_server": "skipped"
+}
+

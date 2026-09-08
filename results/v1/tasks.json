@@ -1,0 +1,1238 @@
+{
+  "experiment": "v1",
+  "generator": "scripts/extract_rollout_scores.py",
+  "source_task_dir": "/Users/boazc/workarea/Python/skillberry_ai/cap-evolve-worktrees/parsec-intake_v1/.capevolve/project/harbor-tasks-patched",
+  "n_tasks": 30,
+  "tasks": [
+    {
+      "task": "traces_parsec-aap2-0004",
+      "prompt": "debug aap2 log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/45274/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 8,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 11,
+      "assertion_values": [
+        "45274",
+        "failed",
+        "l8ggd",
+        "openshift_cnv",
+        "cloud-vms-base",
+        "ocp-adv-1.0.1",
+        "provision",
+        "rhpds.ocp_adv_troubleshooting",
+        "Wait for async_must_gather task to complete",
+        "rhel9",
+        "quay.io/agnosticd/ee-multicloud:chained-2026-05-04"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0005",
+      "prompt": "debug aap2 log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/45274/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 6,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "search_agnosticv_prs",
+        "lookup_catalog_item",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 11,
+      "assertion_values": [
+        "45274",
+        "54v8f",
+        "destroy",
+        "openshift_cnv",
+        "host_ocp4_assisted_destroy",
+        "Delete DNS records",
+        "Route53",
+        "AccessDenied",
+        "dynamic-route53-manager",
+        "route53:ListResourceRecordSets",
+        "Z009829317DQYBBJZ02ZU"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0006",
+      "prompt": "debug aap log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/44029/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 10,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 10,
+      "assertion_values": [
+        "44029",
+        "failed",
+        "qbtrv",
+        "openshift_cnv",
+        "cloud-vms-base",
+        "main",
+        "rhpds.ocp_adv_troubleshooting",
+        "Wait for async_must_gather task to complete",
+        "rhel9",
+        "quay.io/agnosticd/ee-multicloud:chained-2026-05-04"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0016",
+      "prompt": "debug snippet from 42287: [ERROR]: Task failed: Module failed: Traceback (most recent call last): File \"/tmp/ansible_ansible.legacy.async_wrapper_payload_cru4p2c5/ansible_ansible.legacy.async_wrapper_payload.zip/ansible/modules/async_wrapper.py\", line 173, in _run_module File \"/tmp/ansible_ansible.legacy.async_wrapper_payload_cru4p2c5/ansible_ansible.legacy.async_wrapper_payload.zip/ansible/modul\u2026",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 36,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_provisions_db",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 2,
+      "assertion_values": [
+        "42238",
+        "agnosticd.cloud_provider_openshift_cnv.create_inventory"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0018",
+      "prompt": "Keep investigating",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 13,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 4,
+      "assertion_values": [
+        "43762",
+        "Developer Experience - OpenShift",
+        "infra-openshift-cnv-resources",
+        "NetworkAttachmentDefinition"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0021",
+      "prompt": "debug failed provision https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2626877/output and suggest fix",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 16,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo"
+      ],
+      "n_assertions": 8,
+      "assertion_values": [
+        "2626877",
+        "failed",
+        "create_network.yaml",
+        "infra-openshift-cnv-resources",
+        "openshift_cnv",
+        "qjqq6-1",
+        "zero-touch-base-rhel",
+        "to_json"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0023",
+      "prompt": "Check AAP2 job 38627 logs for specific error messages about pool discovery or resource references",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 4,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 4,
+      "assertion_values": [
+        "38627",
+        "bl42b-1",
+        "ocp-cluster-cnv",
+        "ocp-cluster-cnv-pools"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0030",
+      "prompt": "Keep investigating",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 11,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_provisions_db",
+        "db_describe_table",
+        "query_provisions_db",
+        "db_describe_table",
+        "query_provisions_db"
+      ],
+      "n_assertions": 6,
+      "assertion_values": [
+        "38627",
+        "25249",
+        "prod0",
+        "prod1",
+        "failed",
+        "ansible-playbook"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0032",
+      "prompt": "Keep investigating",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 16,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_provisions_db",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 10,
+      "assertion_values": [
+        "38627",
+        "25249",
+        "event0",
+        "successful",
+        "47",
+        "destroy",
+        "east",
+        "west",
+        "partner0",
+        "tower_job_log"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0036",
+      "prompt": "full logs provided --- Attached file: job_23449.txt --- Vault password (gpte_vault_0): PLAY [Step 0000 Set Action] **************************************************** TASK [Set ACTION to provision when undefined] ********************************** Sunday 05 July 2026 23:33:30 +0000 (0:00:00.009) 0:00:00.009 *********** skipping: [localhost] PLAY [Step 0000 Setup runtime] ************************\u2026",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 18,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "query_aap2",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo"
+      ],
+      "n_assertions": 2,
+      "assertion_values": [
+        "23449",
+        "failed"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0037",
+      "prompt": "aap2 troubleshoot the logs job_23449",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 4,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 5,
+      "assertion_values": [
+        "23449",
+        "east",
+        "west",
+        "event",
+        "partner"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0044",
+      "prompt": "why is agd-v2.troshka-dedicated.dev-qllxm failing?",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 27,
+      "trajectory_ops": [
+        "query_provisions_db",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_babylon_catalog",
+        "query_babylon_catalog",
+        "query_babylon_catalog",
+        "query_babylon_catalog",
+        "query_babylon_catalog",
+        "query_babylon_catalog",
+        "query_aap2",
+        "query_aap2",
+        "query_provisions_db",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_babylon_catalog",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_provisions_db",
+        "query_aap2",
+        "lookup_catalog_item",
+        "lookup_catalog_item",
+        "lookup_catalog_item"
+      ],
+      "n_assertions": 4,
+      "assertion_values": [
+        "agd-v2.troshka-dedicated.dev-qllxm",
+        "troshka-dedicated",
+        "does not exist",
+        "qllxm"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0047",
+      "prompt": "debug aap logs: 297831, 297926, 297964, 298164. recommend fix for provision failure issue.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 13,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 6,
+      "assertion_values": [
+        "297831",
+        "297926",
+        "297964",
+        "298164",
+        "enterprise.redhat-ads-demo.prod",
+        "rhads-2.3"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0048",
+      "prompt": "debug aap logs: 297831, 297926, 297964, 298164. recommend fix for provision failure issue.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 11,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 5,
+      "assertion_values": [
+        "297831",
+        "297926",
+        "297964",
+        "298164",
+        "OpenShift"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0049",
+      "prompt": "compare aap logs 153426, 153388, and 153401. recommend fix for provision failure issue.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 14,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 5,
+      "assertion_values": [
+        "153426",
+        "153388",
+        "153401",
+        "agnosticd",
+        "partner0"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0052",
+      "prompt": "can you check the user count also, some of this would be 1 users, while the failed one was 30 or 40 i think",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 9,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "db_describe_table",
+        "db_describe_table",
+        "query_provisions_db",
+        "query_provisions_db",
+        "query_provisions_db",
+        "query_provisions_db"
+      ],
+      "n_assertions": 0,
+      "assertion_values": [],
+      "assertion_kinds": []
+    },
+    {
+      "task": "traces_parsec-aap2-0053",
+      "prompt": "Can you lookup any aap2 jobs with sandboxes-gpte.ocp-gitops.prod and provision in the name. i need table of number of users, min time to provision, average time to provsion, max time to provision. also number of provisions. is there a stat that is better than average? i want to know how close to the 3h provisioning deadline we get. some of these jobs will have failed. go back 3 months if possible.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 3,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 4,
+      "assertion_values": [
+        "sandboxes-gpte.ocp-gitops.prod",
+        "provision",
+        "147",
+        "2026-06-29"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0074",
+      "prompt": "What are the most recent AAP2 job failures across the controllers, and do any of them share a common root cause?",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 8,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 5,
+      "assertion_values": [
+        "east",
+        "west",
+        "partner0",
+        "event0",
+        "41"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0080",
+      "prompt": "aap 2 log job_2585893",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 8,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 2,
+      "assertion_values": [
+        "failed",
+        "tower-lhqdd"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0081",
+      "prompt": "compare aap logs 2585964 and 2585712. investigate for reason for deployment failure and suggest a recommended fix.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 22,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo"
+      ],
+      "n_assertions": 9,
+      "assertion_values": [
+        "2585964",
+        "2585712",
+        "execution_nodes",
+        "Wait for AAP installation playbook to finish",
+        "aap_inventory.openshift_cnv.j2",
+        "SAP_E2E_DEMO_RHEL9_CNV",
+        "sap-hana-rhel9",
+        "openshift_cnv",
+        "cnv-sap-end2end-rhel9-0.0.9"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0082",
+      "prompt": "aap log to troubleshoot: job_2585893",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 13,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo"
+      ],
+      "n_assertions": 7,
+      "assertion_values": [
+        "2585893",
+        "CNV",
+        "hana",
+        "tower",
+        "cnv-sap-end2end-rhel9-0.0.9",
+        "SSH",
+        "AAP"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0084",
+      "prompt": "debug aap log: 2584889 . describe why this deployment failed and recommend any suggested fix.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 14,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 2,
+      "assertion_values": [
+        "2584889",
+        "Start cluster installation"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0085",
+      "prompt": "debug aap log 2575814 and correllate with ansible error: TASK [redhat.rhel_system_roles.rhc : Set or unset the release] ***************** task path: /usr/share/ansible/collections/ansible_collections/redhat/rhel_system_roles/roles/rhc/tasks/subscription-manager.yml:50 fatal: [edpm-compute-1]: FAILED! => {\"changed\": false, \"cmd\": \"/sbin/subscription-manager release --set 9.4\", \"msg\": \"No releases \u2026",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 10,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo"
+      ],
+      "n_assertions": 6,
+      "assertion_values": [
+        "2575814",
+        "successful",
+        "ocp4-cluster",
+        "twkp2",
+        "openshift_cnv",
+        "9.4"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0087",
+      "prompt": "Investigate this AAP2 failed job. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2574152/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 7,
+      "trajectory_ops": [
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 10,
+      "assertion_values": [
+        "2574152",
+        "failed",
+        "rosa-consolidated",
+        "qnl74",
+        "ec2",
+        "uplift-and-shift-1.0.2",
+        "Wait for ROSA HCP installer completion",
+        "120",
+        "0",
+        "3"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0088",
+      "prompt": "aap2 job failure log job_2575942",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 11,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 3,
+      "assertion_values": [
+        "2575942",
+        "ocp4-demo-rhods-nvidia-aws-0.8",
+        "cloud_template.j2"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0092",
+      "prompt": "Investigate & suggest fix for this AAP2 job failure. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2572577/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 11,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 14,
+      "assertion_values": [
+        "2572577",
+        "failed",
+        "rosa-consolidated",
+        "ec2",
+        "tdsf4",
+        "uplift-and-shift-1.0.2",
+        "ocp4_workload_rosa_machinepool",
+        "Wait for Nodes to be available",
+        "bastion.tdsf4.internal",
+        "50",
+        "79",
+        "i3en.metal",
+        "i3.metal",
+        "i4i.metal"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0094",
+      "prompt": "troubleshoot aap2 logs job_2566771",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 15,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 2,
+      "assertion_values": [
+        "2566771",
+        "0 bytes"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0104",
+      "prompt": "analyze and compare aap logs 2560582 and 2560167. recommend fix to prevent consecutive failure.",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 20,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "fetch_github_file"
+      ],
+      "n_assertions": 4,
+      "assertion_values": [
+        "2560167",
+        "2560582",
+        "Install ai501-toolings Helm chart",
+        "Chart.yaml"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0112",
+      "prompt": "Investigate and suggest fix on this AAP2 job. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2557893/output",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 12,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2",
+        "lookup_catalog_item",
+        "fetch_github_file",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "search_github_repo",
+        "search_github_repo",
+        "fetch_github_file",
+        "fetch_github_file"
+      ],
+      "n_assertions": 9,
+      "assertion_values": [
+        "2557893",
+        "Failed",
+        "infra_vmware_ibm_resources : Add vm to the network",
+        "Failed to attach vif uuid to network nsx.LogicalSwitch:7a685924-409c-436b-ad90-714e0bb8d259",
+        "Please check if the connectivity between Host and NSX Manager is up.",
+        "bm9qx",
+        "bastion-bm9qx",
+        "vmware_ibm",
+        "vmware-ibm-1.0.6"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    },
+    {
+      "task": "traces_parsec-aap2-0113",
+      "prompt": "aap2 check logs for job job_2557893",
+      "scoring": "gate * (0.5*trajectory + 0.5*assertions)",
+      "weights": {
+        "trajectory": 0.5,
+        "assertions": 0.5
+      },
+      "completion": {
+        "status": "ok",
+        "nonempty_answer": true
+      },
+      "trajectory_match": "subset",
+      "n_trajectory_ops": 2,
+      "trajectory_ops": [
+        "query_aap2",
+        "query_aap2"
+      ],
+      "n_assertions": 1,
+      "assertion_values": [
+        "NSX Manager"
+      ],
+      "assertion_kinds": [
+        "answer_contains"
+      ]
+    }
+  ]
+}

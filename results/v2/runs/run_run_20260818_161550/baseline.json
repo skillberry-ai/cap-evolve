@@ -1,0 +1,261 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.6620370111111111,
+    "stderr": 0.10617193740429623,
+    "pass_k": {
+      "1": 0.3555555555555555,
+      "2": 0.28888888888888886
+    },
+    "pass_at_k": {
+      "1": 0.3555555555555555,
+      "2": 0.4222222222222222
+    },
+    "per_task": [
+      {
+        "task_id": "bench-aap2-001-single-job-outcome",
+        "reward": 0.5037034444444444,
+        "feedback": "Partial success (reward 0.533). Metrics: completion=1.0, tool_calls=0.0, answer=0.666667.",
+        "n": 9,
+        "stderr": 0.02962955555555555,
+        "trial_rewards": [
+          0.533333,
+          0.533333,
+          0.533333,
+          0.266667,
+          0.533333,
+          0.533333,
+          0.533333,
+          0.533333,
+          0.533333
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-002-failed-jobs-on-controller",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-003-never-started-explanation",
+        "reward": 0.8,
+        "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-004-failing-task-and-host",
+        "reward": 0.011111111111111112,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+        "n": 9,
+        "stderr": 0.011111111111111112,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-005-find-then-diagnose",
+        "reward": 0.8888888888888888,
+        "feedback": "Partial success (reward 0.750). Metrics: completion=1.0, tool_calls=0.5, answer=1.0.",
+        "n": 9,
+        "stderr": 0.04392052305789416,
+        "trial_rewards": [
+          1.0,
+          0.75,
+          1.0,
+          0.75,
+          1.0,
+          1.0,
+          1.0,
+          0.75,
+          0.75
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-006-log-root-cause",
+        "reward": 0.5277777777777778,
+        "feedback": "Partial success (reward 0.250). Metrics: completion=1.0, tool_calls=0.5, answer=0.0.",
+        "n": 9,
+        "stderr": 0.08784104611578832,
+        "trial_rewards": [
+          0.75,
+          0.25,
+          0.75,
+          0.75,
+          0.75,
+          0.75,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-007-count-and-oldest",
+        "reward": 0.7777777777777778,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.1469861839480328,
+        "trial_rewards": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-008-preceding-task",
+        "reward": 0.8444444444444446,
+        "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.029397236789606554,
+        "trial_rewards": [
+          0.8,
+          0.8,
+          0.8,
+          1.0,
+          0.8,
+          0.8,
+          1.0,
+          0.8,
+          0.8
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-009-nonexistent-job",
+        "reward": 0.2666666666666667,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+        "n": 9,
+        "stderr": 0.13333333333333336,
+        "trial_rewards": [
+          0.8,
+          0.8,
+          0.0,
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "bench-aap2-010-log-does-not-say",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 9
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 3847.6517548561096
+  },
+  "best_id": "seed"
+}

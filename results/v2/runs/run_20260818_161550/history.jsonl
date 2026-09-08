@@ -1,0 +1,1 @@
+{"candidate_id": "cand_0001", "summary": "candidate cand_0001 (val 0.962, \u0394 +0.086)", "val": 0.9618518333333335, "broke": ["bench-aap2-006-log-root-cause", "bench-aap2-008-preceding-task"], "fixed": ["bench-aap2-001-single-job-outcome", "bench-aap2-002-failed-jobs-on-controller", "bench-aap2-009-nonexistent-job"]}

@@ -1,0 +1,9 @@
+{"t": 1786886553.117162, "kind": "splits", "train": 6, "val": 2, "test": 2, "seed": 0}
+{"t": 1786887338.216919, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 1.0, "stderr": 0.0, "cost_usd": 0.0, "tokens": 0, "seconds": 785.1}
+{"t": 1786887338.217236, "kind": "baseline", "val": 1.0, "stderr": 0.0}
+{"t": 1786887338.321459, "kind": "target_profile", "model": "claude-sonnet-4-20250514", "tier": "strong", "suggested_num_trials": 3, "resolution_note": "unknown model id 'claude-sonnet-4-20250514'; defaulting to tier 'strong' \u2014 set a tier keyword (frontier|strong|mid|weak) explicitly to override"}
+{"t": 1786888508.805992, "kind": "evaluate", "split": "train", "tag": "seed_train", "reward": 0.9, "stderr": 0.07938809190176112, "cost_usd": 0.0, "tokens": 0, "seconds": 1170.22}
+{"t": 1786889216.580999, "kind": "evaluate", "split": "val", "tag": "cand_0001", "reward": 0.8333333333333333, "stderr": 0.19813946173416733, "cost_usd": 0.0, "tokens": 0, "seconds": 506.39}
+{"t": 1786889216.584754, "kind": "step", "candidate": "cand_0001", "accept": false, "reason": "paired \u0394\u0304=-0.1667 <= 0.2\u00b7SE=0.0333 (SE=0.1667, n=2)", "val": 0.8333333333333333, "parent": "seed", "parent_val": 1.0, "optimizer_seconds": 201.34, "runner_seconds": 506.39, "cost_usd": 0.0, "tokens": 0, "opt_cost_usd": 1.120182, "opt_tokens": 7645}
+{"t": 1786889836.899294, "kind": "evaluate", "split": "test", "tag": "FINAL", "reward": 0.8444443333333334, "stderr": 0.112902200112039, "cost_usd": 0.0, "tokens": 0, "seconds": 620.11}
+{"t": 1786889836.900542, "kind": "finalize", "test_reward": 0.8444443333333334, "test_baseline_reward": 0.8444443333333334, "test_delta": 0.0, "best_id": "seed"}

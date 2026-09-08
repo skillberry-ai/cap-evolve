@@ -1,0 +1,40 @@
+{
+  "train": [
+    "bench-aap2-001-single-job-outcome",
+    "bench-aap2-002-failed-jobs-on-controller",
+    "bench-aap2-003-never-started-explanation",
+    "bench-aap2-004-failing-task-and-host",
+    "bench-aap2-005-find-then-diagnose",
+    "bench-aap2-006-log-root-cause",
+    "bench-aap2-007-count-and-oldest",
+    "bench-aap2-008-preceding-task",
+    "bench-aap2-009-nonexistent-job",
+    "bench-aap2-010-log-does-not-say"
+  ],
+  "val": [
+    "bench-aap2-001-single-job-outcome",
+    "bench-aap2-002-failed-jobs-on-controller",
+    "bench-aap2-003-never-started-explanation",
+    "bench-aap2-004-failing-task-and-host",
+    "bench-aap2-005-find-then-diagnose",
+    "bench-aap2-006-log-root-cause",
+    "bench-aap2-007-count-and-oldest",
+    "bench-aap2-008-preceding-task",
+    "bench-aap2-009-nonexistent-job",
+    "bench-aap2-010-log-does-not-say"
+  ],
+  "test": [
+    "bench-aap2-001-single-job-outcome",
+    "bench-aap2-002-failed-jobs-on-controller",
+    "bench-aap2-003-never-started-explanation",
+    "bench-aap2-004-failing-task-and-host",
+    "bench-aap2-005-find-then-diagnose",
+    "bench-aap2-006-log-root-cause",
+    "bench-aap2-007-count-and-oldest",
+    "bench-aap2-008-preceding-task",
+    "bench-aap2-009-nonexistent-job",
+    "bench-aap2-010-log-does-not-say"
+  ],
+  "seed": 0,
+  "test_used": true
+}
