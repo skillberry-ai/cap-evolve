@@ -128,10 +128,11 @@ export function CostPanel({ summary }: { summary: RunSummaryDetail }) {
 
 /** Intake summary — the cost/time/tokens the intake phase spent scaffolding the run,
  * plus the human-readable output_summary and the list of adapter/skill methods it
- * implemented. Surfaces the `intake` event the CLI logs (falls back to spent-derived
- * numbers when the event is absent). */
+ * implemented. Cost shows "—"/"not metered" unless an `intake` event was actually
+ * logged: intake runs inline in the orchestrating agent's own session (no separately
+ * spawned, cost-measurable CLI call), so an unrecorded $0 is not a confirmed fact. */
 function IntakePanel({ summary }: { summary: RunSummaryDetail }) {
-  const intake = summary.intake ?? { usd: 0, seconds: 0, tokens: 0 }
+  const intake = summary.intake ?? { usd: 0, seconds: 0, tokens: 0, recorded: false }
   const implemented = intake.implemented ?? []
   return (
     <Card className="p-4">
@@ -142,8 +143,10 @@ function IntakePanel({ summary }: { summary: RunSummaryDetail }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded bg-surface-2 px-2 py-2">
           <div className="text-[11px] uppercase tracking-wide text-muted">cost</div>
-          <div className="tnum mt-1 text-sm font-semibold">{usd(intake.usd)}</div>
-          {intake.usd === 0 && <div className="text-[11px] text-muted">spent $0</div>}
+          <div className="tnum mt-1 text-sm font-semibold">{intake.recorded ? usd(intake.usd) : '—'}</div>
+          <div className="text-[11px] text-muted">
+            {intake.recorded ? (intake.usd === 0 ? 'spent $0' : null) : 'not metered'}
+          </div>
         </div>
         <div className="rounded bg-surface-2 px-2 py-2">
           <div className="text-[11px] uppercase tracking-wide text-muted">time</div>
@@ -178,7 +181,7 @@ function IntakePanel({ summary }: { summary: RunSummaryDetail }) {
  * since RITS runner cost is frequently $0/null). */
 export function PerIterationCostTime({ summary }: { summary: RunSummaryDetail }) {
   const rows = summary.per_iteration ?? []
-  const intake = summary.intake ?? { usd: 0, seconds: 0, tokens: 0 }
+  const intake = summary.intake ?? { usd: 0, seconds: 0, tokens: 0, recorded: false }
   const optMaxSec = Math.max(1e-6, ...rows.map((r) => r.optimizer_seconds))
   const runMaxSec = Math.max(1e-6, ...rows.map((r) => r.runner_seconds))
 
@@ -189,15 +192,23 @@ export function PerIterationCostTime({ summary }: { summary: RunSummaryDetail })
         <span className="text-[11px] text-muted">optimizer vs runner · $ when available · time always</span>
       </div>
 
-      {/* Intake row — always shown, even at $0, so it's clear intake spent nothing. */}
+      {/* Intake row — always shown; cost only when actually recorded (intake.json
+          written), never a bare $0 that reads as "confirmed free". */}
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded bg-surface-2 px-3 py-2 text-xs">
         <span className="inline-flex items-center gap-1.5 font-medium">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'var(--seed)' }} />
           Intake
         </span>
         <span className="tnum text-muted">
-          cost <span className="font-semibold text-foreground">{usd(intake.usd)}</span>
-          {intake.usd === 0 ? <span className="ml-1 text-muted">(spent $0)</span> : null}
+          cost{' '}
+          <span className="font-semibold text-foreground">
+            {intake.recorded ? usd(intake.usd) : '—'}
+          </span>
+          {intake.recorded && intake.usd === 0 ? (
+            <span className="ml-1 text-muted">(spent $0)</span>
+          ) : !intake.recorded ? (
+            <span className="ml-1 text-muted">(not metered)</span>
+          ) : null}
         </span>
         <span className="tnum text-muted">
           time <span className="font-semibold text-foreground">{duration(intake.seconds)}</span>
@@ -268,6 +279,13 @@ function TimeBar({ seconds, max, color }: { seconds: number; max: number; color:
   )
 }
 
+/** count of rollouts an adapter tagged as unpriced/partially-priced — see
+ * Rollout.metadata["cost_source"] in core/cap_evolve/adapter.py. */
+function unpricedCount(costSource?: Record<string, number>): number {
+  if (!costSource) return 0
+  return (costSource.unpriced ?? 0) + (costSource.partial_messages ?? 0)
+}
+
 const EVAL_BADGE: Record<Evaluation['kind'], { label: string; color: string }> = {
   baseline: { label: 'baseline', color: 'var(--seed)' },
   candidate: { label: 'candidate', color: 'var(--accepted)' },
@@ -319,7 +337,20 @@ function EvaluationsTable({ summary }: { summary: RunSummaryDetail }) {
                       {pct(e.reward)}
                       {e.stderr != null && <span className="text-muted"> ± {(e.stderr * 100).toFixed(1)}%</span>}
                     </td>
-                    <td className="tnum py-1.5 pr-2 text-right">{e.cost_usd ? usd(e.cost_usd) : '—'}</td>
+                    <td className="tnum py-1.5 pr-2 text-right">
+                      {e.cost_usd ? (
+                        usd(e.cost_usd)
+                      ) : unpricedCount(e.cost_source) ? (
+                        <span
+                          className="text-muted"
+                          title={`the target model's provider returned no per-message cost for ${unpricedCount(e.cost_source)} rollout(s) — see tokens instead`}
+                        >
+                          unpriced
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="tnum py-1.5 pr-2 text-right">{duration(e.seconds)}</td>
                     <td className="tnum py-1.5 pr-2 text-right">{compactNum(e.tokens || null)}</td>
                     <td className="tnum py-1.5 pr-2 text-right">

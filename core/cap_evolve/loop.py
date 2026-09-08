@@ -69,6 +69,10 @@ class SplitResult:
     cost_usd: float = 0.0
     tokens: int = 0
     seconds: float = 0.0
+    # {cost_source: count} from Rollout.metadata, e.g. {"unpriced": 12} — present only
+    # when an adapter tags it (an unmetered target model), so cost_usd==0.0 next to
+    # nonzero tokens reads as "unpriced", not "free".
+    cost_source: dict = field(default_factory=dict)
     # Honest denominator: how many of the split's tasks actually produced a
     # measurement. ``reward`` is the mean over ``n_scored`` tasks, NOT over
     # ``n_tasks`` — so a caller can tell "scored 0.08" from "0.08 because two
@@ -94,6 +98,7 @@ class SplitResult:
             "cost_usd": self.cost_usd,
             "tokens": self.tokens,
             "seconds": self.seconds,
+            "cost_source": self.cost_source,
             "n_tasks": self.n_tasks,
             "n_scored": self.n_scored,
         }
@@ -110,6 +115,7 @@ class SplitResult:
             cost_usd=float(d.get("cost_usd") or 0.0),
             tokens=int(d.get("tokens") or 0),
             seconds=float(d.get("seconds") or 0.0),
+            cost_source=dict(d.get("cost_source") or {}),
             n_tasks=int(d.get("n_tasks") or 0),
             n_scored=int(d.get("n_scored") or 0),
         )

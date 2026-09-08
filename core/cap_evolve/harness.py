@@ -298,7 +298,7 @@ def evaluate_candidate(
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
     task_by_id = {t.id: t for t in tasks}
-    run_acc = {"cost": 0.0, "tokens": 0}    # RUNNER spend, summed over rollouts (mutable for closure)
+    run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}}  # RUNNER spend, summed over rollouts
     t0 = time.time()
 
     def _persist_trial(k: int, rollouts_for_k: dict) -> None:
@@ -333,6 +333,12 @@ def evaluate_candidate(
                 per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
+            # An adapter that cannot price its rollouts (e.g. an unmetered proxy
+            # endpoint) tags this in metadata rather than silently reporting $0 as
+            # "free" — count it so the eval record can say "unpriced", not "$0".
+            _cs = (getattr(rollout, "metadata", None) or {}).get("cost_source")
+            if _cs:
+                run_acc["cost_source"][_cs] = run_acc["cost_source"].get(_cs, 0) + 1
             sc = scores_by_id.get(tid)
             if sc is None:  # not in has_score_batch mode, or the batch omitted this id
                 sc = adapter.score(task, rollout)
@@ -441,6 +447,7 @@ def evaluate_candidate(
                 _persist_trial(k, rollouts)
 
     run_cost, run_tokens = run_acc["cost"], run_acc["tokens"]
+    cost_source_counts = run_acc["cost_source"]
 
     scores: list[Score] = []
     for tid in task_by_id:
@@ -466,6 +473,7 @@ def evaluate_candidate(
                          runner_tokens=run_tokens, runner_seconds=elapsed)
     result = aggregate_scores(split, scores, ks=ks)
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
+    result.cost_source = cost_source_counts
     run_dir.log_event("evaluate", split=split, tag=tag, reward=result.reward,
                       stderr=result.stderr, cost_usd=run_cost, tokens=run_tokens,
                       seconds=round(elapsed, 2),
@@ -474,7 +482,11 @@ def evaluate_candidate(
                       # only on a SUBSET eval, so a full-split event record is unchanged.
                       # Present ⇒ this reward is a triage signal, not a gateable score.
                       **({"subset_ids": [t.id for t in tasks], "subset": True}
-                         if ids is not None else {}))
+                         if ids is not None else {}),
+                      # Present only when some rollout tagged how solid its cost is
+                      # (see adapter.Rollout.metadata["cost_source"]) — absent for
+                      # adapters that never set it, so this never fabricates a claim.
+                      **({"cost_source_counts": cost_source_counts} if cost_source_counts else {}))
     return result
 
 

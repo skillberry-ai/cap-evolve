@@ -1491,14 +1491,22 @@ def reduce_run(run_dir) -> dict:
             "tokens": int(intake_ev.get("tokens") or intake_tokens or 0),
             "output_summary": intake_ev.get("output_summary") or "",
             "implemented": list(intake_ev.get("implemented") or []),
+            # An "intake" event exists ⇒ <project>/intake.json was written and its
+            # numbers (however small) were actually recorded.
+            "recorded": True,
         }
     else:
+        # No event at all. Intake usually runs as part of the SAME conversational
+        # agent session that drives the whole run (see orchestrate SKILL.md: "one
+        # continuous agent"), not a separately-spawned, cost-measurable CLI call —
+        # so $0 here is "never metered", never a confirmed "spent nothing".
         intake = {
             "usd": round(intake_usd, 4),
             "seconds": round(intake_secs, 2),
             "tokens": int(intake_tokens),
             "output_summary": "",
             "implemented": [],
+            "recorded": False,
         }
 
     # Consuming-LLM profile (the runtime model the capabilities are optimized FOR;
@@ -1562,6 +1570,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": (base_val_obj.get("cost_usd") or 0.0),
             "seconds": (base_val_obj.get("seconds") or 0.0),
             "tokens": int(base_val_obj.get("tokens") or 0),
+            "cost_source": base_val_obj.get("cost_source") or {},
         })
 
     # candidates (one per candidate node that earned a full val score)
@@ -1584,6 +1593,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(n.get("cost_usd") or 0.0),
             "seconds": float(n.get("runner_seconds") or 0.0),
             "tokens": int(n.get("tokens") or 0),
+            "cost_source": n.get("cost_source") or {},
         })
 
     # null-control replicates. They have no graph node (evaluate-only), so the loop above
@@ -1600,6 +1610,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(c.get("cost_usd") or 0.0),
             "seconds": float(c.get("seconds") or 0.0),
             "tokens": int(c.get("tokens") or 0),
+            "cost_source": c.get("cost_source") or {},
         })
 
     # test (the sealed test eval, from final.json)
@@ -1619,6 +1630,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(test_obj.get("cost_usd") or 0.0),
             "seconds": float(test_obj.get("seconds") or 0.0),
             "tokens": int(test_obj.get("tokens") or 0),
+            "cost_source": test_obj.get("cost_source") or {},
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
@@ -1707,6 +1719,17 @@ def reduce_run(run_dir) -> dict:
         if kind == "evaluate":
             tag, split = ev.get("tag") or "?", ev.get("split") or "?"
             is_base = tag == "seed" and split == "val"
+            note = (f"reward {ev['reward']:.3f}" if isinstance(ev.get("reward"), (int, float))
+                    else "")
+            # A $0 next to real tokens reads as broken unless the adapter's own
+            # attribution (Rollout.metadata["cost_source"]) is surfaced alongside it —
+            # e.g. an unmetered RITS/proxy target model prices every call at 0.0.
+            cs_counts = ev.get("cost_source_counts") or {}
+            unpriced = cs_counts.get("unpriced", 0) + cs_counts.get("partial_messages", 0)
+            if unpriced and not (ev.get("cost_usd") or 0.0):
+                note = (f"{note + ' — ' if note else ''}unpriced: the target model's "
+                        f"provider returned no per-message cost for {unpriced} rollout(s) "
+                        f"({int(ev.get('tokens') or 0):,} tokens recorded instead)")
             ledger.append({
                 "phase": _phase_for(ev), "split": split,
                 "kind": "baseline_eval" if is_base else ("test_eval" if split == "test"
@@ -1717,8 +1740,7 @@ def reduce_run(run_dir) -> dict:
                 "candidate": tag,
                 "usd": ev.get("cost_usd"), "seconds": ev.get("seconds") or 0.0,
                 "tokens": int(ev.get("tokens") or 0),
-                "note": (f"reward {ev['reward']:.3f}" if isinstance(ev.get("reward"), (int, float))
-                         else ""),
+                "note": note,
             })
         elif kind in _STEP_KINDS:
             cid = _step_candidate(ev)

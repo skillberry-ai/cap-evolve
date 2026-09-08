@@ -212,6 +212,9 @@ export interface Evaluation {
   cost_usd: number
   seconds: number
   tokens: number
+  /** {cost_source: count} from Rollout.metadata, e.g. {"unpriced": 12} — present only
+   * when some rollout's adapter tagged it (an unmetered target model). */
+  cost_source?: Record<string, number>
 }
 
 /** A candidate in reduced["graph"].nodes. */
@@ -321,7 +324,16 @@ export interface RunSummaryDetail {
   tokens_by_role?: { runner: number; optimizer: number; intake: number }
   per_iteration?: PerIterationCost[]
   evaluations?: Evaluation[]
-  intake?: { usd: number; seconds: number; tokens: number; output_summary?: string; implemented?: string[] }
+  intake?: {
+    usd: number
+    seconds: number
+    tokens: number
+    output_summary?: string
+    implemented?: string[]
+    /** True only when an "intake" event was actually logged (intake.json was
+     * written) — false means intake's cost was never metered, not that it was $0. */
+    recorded?: boolean
+  }
   budget?: {
     max_iterations?: number
     max_metric_calls?: number
