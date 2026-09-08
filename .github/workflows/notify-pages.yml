@@ -1,0 +1,17 @@
+name: Notify Pages build
+
+on:
+  push:
+    branches: [skillsbench-history]
+
+permissions:
+  actions: write
+
+jobs:
+  trigger-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pages.yml on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --repo ${{ github.repository }} --ref main
