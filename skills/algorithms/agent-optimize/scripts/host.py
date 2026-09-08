@@ -524,6 +524,15 @@ Three consequences worth being explicit about:
    once) and the report phase, as SKILL.md's "Stop & seal" section shows. A run with no
    finalize has no result. If you are running out of budget, stop optimizing and seal —
    sealing what you have beats one more candidate.
+
+   `measure.py` is the *last* long-running eval you launch — it opens the sealed test split
+   (`eval_start(split=test, tag=FINAL)`), and this seal is single-use. Rule 3 below applies
+   here MOST of all: stay in the foreground until it exits. Ending your turn while it is
+   still running does not just lose the number — the abandoned attempt's partial rollouts
+   then make even a RETRY refuse (`begin_test_attempt` sees test already has rollouts on it),
+   so the seal is wasted, not merely delayed. Measured on three separate runs: an
+   `eval_start(split=test, tag=FINAL)` with no matching `evaluate` and no `final.json` ever
+   written.
 2. **A null result is a valid outcome, honestly reported.** If nothing beat the baseline
    through the gate, say so and seal anyway. Do not lower the gate, gate on a screen
    subset, or present a screen `promote` as an accept to manufacture a gain.
@@ -632,6 +641,60 @@ def _unbooked_rounds(run_dir: Path) -> list[dict]:
                           "parent": (payload.get("parent") or {}).get("tag"),
                           "log": log.name})
     return found
+
+
+def _dangling_eval(run_dir: Path) -> dict | None:
+    """The last ``eval_start`` with no matching ``evaluate`` for the same (split, tag).
+
+    ``harness.py``'s own docstring names the invariant: "an eval_start with no evaluate
+    after it is an evaluation that never returned." Measured on three separate runs: the
+    driver issued ``eval_start(split=test, tag=FINAL)`` (the sealed test eval `measure.py`/
+    `finalize.py` opens with — see ``harness.finalize``) near the end of its turns and the
+    process exited before the matching ``evaluate`` was ever logged — no ``final.json``, no
+    error, just a Bash call that outlived the turn that launched it. Reported here so the
+    host's run summary (and the `incomplete` diagnosis) can say which eval was abandoned
+    instead of the operator diffing rollout files by hand.
+
+    Not benchmark-specific: split/tag are read straight off the events, whatever adapter or
+    algorithm wrote them.
+    """
+    starts: dict[tuple, dict] = {}
+    try:
+        with (run_dir / "events.jsonl").open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001 — a torn line carries no eval state
+                    continue
+                if not isinstance(ev, dict):
+                    continue
+                kind = ev.get("kind")
+                key = (ev.get("split"), ev.get("tag"))
+                if kind == "eval_start":
+                    starts[key] = ev
+                elif kind == "evaluate":
+                    starts.pop(key, None)
+    except OSError:
+        return None
+    if not starts:
+        return None
+    # Last one issued, by event time — an earlier dangling start that a later retry of the
+    # SAME (split, tag) resolved is not itself abandoned; only the most recent open one is.
+    last = max(starts.values(), key=lambda e: e.get("t") or 0)
+    return last
+
+
+def _log_eval_abandoned(run_dir: Path, dangling_eval: dict) -> None:
+    """Flag a dangling ``eval_start`` in ``events.jsonl`` so the run's audit log names it
+    instead of leaving it discoverable only by hand-diffing eval_start/evaluate pairs."""
+    try:
+        from cap_evolve import RunDir as _RunDir
+
+        _RunDir.open(run_dir).log_event(
+            "eval_abandoned", split=dangling_eval.get("split"),
+            tag=dangling_eval.get("tag"), started_at=dangling_eval.get("t"))
+    except Exception:  # noqa: BLE001 — flagging the gap must not crash a run report
+        pass
 
 
 def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) -> dict:
@@ -837,6 +900,9 @@ def main(argv=None) -> int:
         # is the path most likely to be sitting on an abandoned round. Reporting it only on
         # the full host path would hide it from exactly the reader who came looking.
         out["unbooked_rounds"] = _unbooked_rounds(run_dir)
+        out["dangling_eval"] = _dangling_eval(run_dir) if not out["sealed"] else None
+        if out["dangling_eval"] is not None:
+            _log_eval_abandoned(run_dir, out["dangling_eval"])
         print(json.dumps({"run_dir": str(run_dir), "seal_only": True, **out}, indent=2))
         return 0 if out["sealed"] else 1
 
@@ -1070,6 +1136,13 @@ def main(argv=None) -> int:
     # check made before sealing would have found an empty work/ and reported nothing.
     unbooked = _unbooked_rounds(run_dir)
 
+    # Also after the seal: `_seal` may itself have just closed the open eval (e.g. the agent's
+    # FINAL attempt was still running and finished during measure.py, same as an unbooked
+    # round above). Only an eval still open AFTER the seal attempt is genuinely abandoned.
+    dangling_eval = _dangling_eval(run_dir) if not seal.get("sealed") else None
+    if dangling_eval is not None:
+        _log_eval_abandoned(run_dir, dangling_eval)
+
     # An agent that stopped with rounds left is a DEFECT, not a finished run — and it must not
     # read as completion. Measured: one run booked 1 of 3 rounds with a higher-scoring
     # candidate already evaluated but never committed, and reported success. The host cannot
@@ -1147,6 +1220,13 @@ def main(argv=None) -> int:
                       + (f" after {num_turns} turns" if num_turns else "")
                       + evidence + " — " + fix)
 
+    if dangling_eval is not None:
+        note = (f"the agent opened an eval (split={dangling_eval.get('split')!r}, "
+                f"tag={dangling_eval.get('tag')!r}) and its turn/process ended before the "
+                "matching evaluate ever logged — that eval was abandoned mid-flight, not "
+                "backgrounded successfully; logged as eval_abandoned in events.jsonl")
+        incomplete = f"{incomplete}; {note}" if incomplete else note
+
     out = {
         "run_dir": str(run_dir),
         "agent": args.agent,
@@ -1160,6 +1240,7 @@ def main(argv=None) -> int:
         "rounds_booked": rounds_done,
         "rounds_budget": rounds_budget,
         "unbooked_rounds": unbooked,
+        "dangling_eval": dangling_eval,
         "incomplete": incomplete,
         "seconds": round(seconds, 3),
         "usd": usd,

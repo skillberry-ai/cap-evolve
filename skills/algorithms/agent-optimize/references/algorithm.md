@@ -346,6 +346,33 @@ delta is 0 *by construction* and must be reported as a null result with a diagno
 `--train auto` also declines to pay for a train evaluation whose ids equal val's, because the
 numbers would be a copy.
 
+### Never abandon a running FINAL eval
+
+`measure.py` opens the sealed test split by logging `eval_start(split=test, tag=FINAL)` before
+it starts scoring — the same pairing every eval in the run uses (`harness.py`'s own docstring:
+"an eval_start with no evaluate after it is an evaluation that never returned"). The test seal
+is single-use, so this is the one eval in the whole run where abandoning it mid-flight is not
+just a wasted wait:
+
+- If your turn or process ends while `measure.py`/`finalize.py` is still running, nothing is
+  left to read `final.json` even if the eval finishes on its own a minute later — the same
+  failure mode `host.py`'s Unattended briefing warns about for a round's gate, just at the
+  one point in the run where it also costs the seal.
+- Worse than a mid-round eval: the abandoned attempt's PARTIAL test rollouts are enough to make
+  a retry refuse. `begin_test_attempt` (`rundir.py`) sees test already has rollout files on
+  disk and raises `TestSealError`, because it cannot tell "crashed before scoring" from
+  "crashed after scoring but before the result was read" — the second case must not be
+  silently re-scored, so it isn't, even when the first case is what actually happened.
+- Measured on three separate runs: `eval_start(split=test, tag=FINAL)` on disk, no matching
+  `evaluate`, no `final.json` — the seal was never consumed, just spent on nothing. `host.py`
+  flags this shape as an `eval_abandoned` event and reports it in `dangling_eval` when its own
+  seal backstop (`_seal`) also fails for exactly this reason, so at least the gap is visible
+  instead of silently read as "the run just never finalized."
+
+So: run `measure.py` in the foreground, and do not end your turn — or let a headless session
+exit — until it has printed its result. If you are running low on turns/budget, that is a
+reason to run it SOONER, not to launch it and move on.
+
 ## Gate as evidence, not a verdict
 
 The statistics come from two scripts, and it matters which one prints what: `gate_check.py` prints

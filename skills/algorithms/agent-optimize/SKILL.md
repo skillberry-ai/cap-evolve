@@ -267,8 +267,8 @@ mechanism-vs-artifact designs, gating the sum not each addend, the sign test bel
 
 Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run `spend.py`.
 Everything it reports is re-read from the run dir, never a total in your head — which keeps a `$6.00`
-cap from becoming `$6.01`. (The Stop hook re-nudges you until finalized; a `PostToolUse` hook
-re-injects the same predicates on a cadence even if you skip `spend.py` — `goal_reminder.py`.)
+cap from becoming `$6.01`. (The Stop hook re-nudges you until finalized; `goal_reminder.py`
+re-injects the same predicates even if you skip `spend.py`.)
 Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs best on
 **val**, on **train** when the spec defines one worth reporting, and on the **sealed test** split
 scored once:
@@ -284,7 +284,7 @@ interchangeable with `phases/finalize/scripts/run.py`. Report its four refusals 
 generalisation**, with the overlap counted; a negative `screen_ledger.net_rollouts` says screening was
 pure overhead; `best_id == "seed"` is a **null result with a diagnosed cause**, not a 0.000 gain.
 (Sealing is that phase script, **not a CLI subcommand**; a second finalize raises `TestSealError`.)
-No finalize, no result.
+Wait for it to exit, or the seal is wasted. No finalize, no result.
 
 ## Honesty invariants that are yours by hand
 

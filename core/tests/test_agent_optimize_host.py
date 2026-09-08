@@ -939,6 +939,60 @@ def test_seal_only_also_reports_an_abandoned_round(tmp_path):
         f"--seal-only sealed the run and said nothing about the abandoned round: {out}")
 
 
+# --- dangling FINAL eval: eval_start with no matching evaluate ----------------
+
+
+def test_a_dangling_final_eval_with_no_matching_evaluate_is_reported(tmp_path):
+    """The optimizer's own driving session can open a sealed-test eval and have its turn
+    or process end before the matching `evaluate` event is ever logged — no crash, no
+    error, just a Bash call that outlived the turn that launched it. Measured on three
+    separate runs: `eval_start(split=test, tag=FINAL)` on disk, no `evaluate` after it, no
+    `final.json`. The abandoned attempt also leaves a partial rollout on disk, which is
+    exactly what makes the host's own seal backstop fail too (`begin_test_attempt` refuses
+    to re-score a test split that already has rollouts on it) — the seal was never
+    consumed, just wasted.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    run_dir.log_event("eval_start", split="test", tag="FINAL", n_tasks=1, n_trials=1,
+                      workers=1, rollouts=1)
+    # The partial artifact the abandoned attempt leaves behind — enough to make the
+    # host's own seal backstop refuse to re-score test, same as a real interrupted eval.
+    (run_dir.rollouts / "test").mkdir(parents=True, exist_ok=True)
+    (run_dir.rollouts / "test" / "task0__FINAL__t0.json").write_text("{}", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--seal-only",
+                expect_rc=1)
+
+    assert out["sealed"] is False, (
+        f"the pre-existing partial test rollout should have blocked the seal, not {out}")
+    dangling = out.get("dangling_eval")
+    assert dangling is not None, f"the open eval_start was not detected: {out}"
+    assert dangling["split"] == "test" and dangling["tag"] == "FINAL", dangling
+
+    events = [json.loads(l) for l in
+              (run_dir.root / "events.jsonl").read_text(encoding="utf-8").splitlines() if l]
+    assert any(e.get("kind") == "eval_abandoned" and e.get("split") == "test"
+               and e.get("tag") == "FINAL" for e in events), (
+        f"the abandoned eval was not flagged in events.jsonl: {events}")
+
+
+def test_an_eval_start_followed_by_its_evaluate_is_not_flagged_as_dangling(tmp_path):
+    """The backstop must be silent once the matching close event is on record."""
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    run_dir.log_event("eval_start", split="val", tag="cand_1", n_tasks=1, n_trials=1,
+                      workers=1, rollouts=1)
+    run_dir.log_event("evaluate", split="val", tag="cand_1", reward=0.5, stderr=0.01)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project), "--seal-only")
+
+    assert out.get("dangling_eval") is None, (
+        f"a closed eval_start/evaluate pair was flagged as abandoned: {out}")
+
+
 # --- run 32861747778: round 1 died on the interpreter, then on concurrency ----
 
 
