@@ -97,6 +97,45 @@ def test_status_interrupted_when_a_run_died_without_finalizing():
         assert "died" in s["status_reason"] or "killed" in s["status_reason"]
 
 
+def test_status_names_the_relaunch_when_hosts_own_pid_is_confirmed_dead():
+    """A dead `host/heartbeat.json` pid upgrades the generic "died, was killed, or..."
+    guess into an actionable "needs relaunch" reason — the agent-optimize host.py stall
+    this was written for: the process died mid-turn with no distinguishing event at all.
+    """
+    from cap_evolve import dashboard
+    old = NOW - 5 * 24 * 3600
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk(Path(d), events=_events(t0=old, finalize=False), baseline=_BASELINE)
+        host_dir = rd.root / "host"
+        host_dir.mkdir(exist_ok=True)
+        # A pid that (almost certainly) does not exist on this machine.
+        (host_dir / "heartbeat.json").write_text(
+            json.dumps({"pid": 999999, "ts": old + 4}), encoding="utf-8")
+        s = dashboard.reduce_run(rd)["summary"]
+        assert s["status"] == "interrupted"
+        assert "Needs relaunch" in s["status_reason"]
+        assert "999999" in s["status_reason"]
+
+
+def test_a_live_heartbeat_pid_does_not_get_the_relaunch_wording():
+    """The current process's own pid IS alive, so a heartbeat pointing at it must not be
+    accused of being dead — that would tell an operator to relaunch a run that is fine.
+    """
+    import os
+
+    from cap_evolve import dashboard
+    old = NOW - 5 * 24 * 3600
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk(Path(d), events=_events(t0=old, finalize=False), baseline=_BASELINE)
+        host_dir = rd.root / "host"
+        host_dir.mkdir(exist_ok=True)
+        (host_dir / "heartbeat.json").write_text(
+            json.dumps({"pid": os.getpid(), "ts": old + 4}), encoding="utf-8")
+        s = dashboard.reduce_run(rd)["summary"]
+        assert s["status"] == "interrupted"
+        assert "Needs relaunch" not in s["status_reason"]
+
+
 def test_status_budget_exhausted_is_distinct_from_running_and_from_completed():
     from cap_evolve import dashboard
     from cap_evolve import Budget

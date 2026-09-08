@@ -63,6 +63,19 @@ It reports rather than books: booking an accept after ``measure.py`` sealed agai
 
 That check runs AFTER the seal on purpose — the abandoned round's evals outlived the agent by
 14 minutes, so a pre-seal check would have found an empty ``work/``.
+
+**A heartbeat, for when THIS process dies rather than the CLI it launches.** Everything above
+covers the hosted CLI stopping short while host.py itself stays alive to notice. Nothing here
+covers host.py's own OS process dying — the machine sleeping, the terminal it ran in closing —
+which is a distinct failure `watchdog.py` (this dir) exists to catch from outside: it reads
+``host/heartbeat.json``, written every ``HEARTBEAT_INTERVAL_SECONDS`` while a CLI invocation is
+in flight, and relaunches host.py against the same run dir when the heartbeat goes stale and no
+process still holds its pid. Re-running host.py is already safe to do by hand (``commit.py``
+refuses to double-book a decided candidate, ``_seal`` is idempotent) — the watchdog only
+automates noticing and doing that, using ``host/launch_args.json`` (written on every launch) to
+reconstruct the original command line. It is a process supervisor, not a resume of a hung
+turn: see the briefing's Unattended section for why a turn that ends with work outstanding can
+never be resumed from inside the conversation.
 """
 
 from __future__ import annotations
@@ -72,6 +85,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -124,6 +138,43 @@ def _backgrounding_near_misses(permission_denials) -> list[dict]:
 # (spreadsheetbench full: one Docker container per task x trials), while still bounding a
 # genuinely hung command instead of waiting forever.
 BASH_TIMEOUT_MS = 4 * 60 * 60 * 1000
+#: How often, while a CLI invocation is in flight, host.py touches ``host/heartbeat.json``.
+#: ``watchdog.py`` treats anything older than a few multiples of this as evidence the
+#: process died rather than just being between writes.
+HEARTBEAT_INTERVAL_SECONDS = 60
+
+
+def _write_heartbeat(run_dir: Path, *, pid: int) -> None:
+    """Best-effort liveness marker for ``watchdog.py``. Never raises: a missed write is not
+    worth failing an otherwise-healthy run over, and the watchdog already tolerates a
+    heartbeat a few intervals stale.
+    """
+    path = run_dir / "host" / "heartbeat.json"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"pid": pid, "ts": time.time()}), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        pass
+
+
+def _heartbeat_loop(run_dir: Path, pid: int, stop: threading.Event) -> None:
+    while not stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+        _write_heartbeat(run_dir, pid=pid)
+
+
+def _save_launch_args(run_dir: Path, argv: list[str]) -> None:
+    """Persist this invocation's CLI args so ``watchdog.py`` can reconstruct the exact
+    command line on a relaunch, without a human remembering ``--agent``/``--model``/etc.
+    """
+    try:
+        path = run_dir / "host" / "launch_args.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"argv": argv, "python": sys.executable}, indent=2),
+                        encoding="utf-8")
+    except OSError:
+        pass
 #: Measurement concurrency handed to the agent when the spec names none. Matches ``round.py``'s
 #: own default and its refusal bound; see the concurrency note in the briefing.
 GATE_CONCURRENCY = 8
@@ -852,6 +903,12 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
+    # So `watchdog.py` can relaunch this exact invocation without a human reconstructing
+    # the flags. Not saved for --prompt-only (a render-and-exit probe, never actually
+    # relaunchable) or --seal-only (handled above, before this line is even reached).
+    if not args.prompt_only:
+        _save_launch_args(run_dir, list(argv if argv is not None else sys.argv[1:]))
+
     # The agent needs write access to BOTH the run dir and the project; their common parent
     # is the natural workdir, and it is where the staged guidance + native skills land.
     workdir = _common_parent(run_dir, project)
@@ -965,6 +1022,11 @@ def main(argv=None) -> int:
             pass
 
         started = time.time()
+        stop_hb = threading.Event()
+        _write_heartbeat(run_dir, pid=os.getpid())
+        hb_thread = threading.Thread(target=_heartbeat_loop, args=(run_dir, os.getpid(), stop_hb),
+                                     daemon=True)
+        hb_thread.start()
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout,
                                   env={**_child_env(), **agent_env})
@@ -972,6 +1034,8 @@ def main(argv=None) -> int:
         except subprocess.TimeoutExpired:
             proc = None
             timed_out = True
+        finally:
+            stop_hb.set()
         seconds = time.time() - started
 
         payload: dict = {}

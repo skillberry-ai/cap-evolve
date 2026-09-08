@@ -546,8 +546,27 @@ def _eval_busy(ev: dict) -> str:
     return f"scoring {who} on the {split} split{scale}"
 
 
+def _heartbeat_pid_alive(pid) -> bool:
+    """Same liveness check `watchdog.py` uses, duplicated rather than imported: `core`
+    (this module) must not depend on a `skills/` script, so a 3-line stdlib check is
+    cheaper than a shared util module for it.
+    """
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
-                   has_candidates: bool, has_baseline: bool) -> tuple[str, str]:
+                   has_candidates: bool, has_baseline: bool,
+                   heartbeat: dict | None = None) -> tuple[str, str]:
     """``(status, reason)`` for a run — the six outcomes an operator must tell apart.
 
     ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
@@ -568,6 +587,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     reports an outcome for a run that has not reached one. So the timestamps are read
     first, and "nothing evaluated" is only a failure once the log has actually stopped
     moving (or a cap/convergence already ended the run).
+
+    ``heartbeat`` (``host/heartbeat.json``, written by `agent-optimize`'s ``host.py`` while
+    an agent invocation is in flight) is a second, independent liveness signal on top of
+    events: an unattended `host.py` that dies mid-turn (machine sleep, closed terminal)
+    leaves events silent with no distinguishing event to explain it, which otherwise reads
+    identically to "still mid-eval" until the wide `EVAL_STALE_AFTER_SECONDS` window also
+    expires. A confirmed-dead heartbeat pid turns that "interrupted" into an explicit
+    "needs relaunch" reason instead of a bare "died, was killed, or ...".
     """
     kinds = [str(e.get("kind") or "") for e in events]
     if not events:
@@ -650,6 +677,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
         return "budget_exhausted", f"{exhausted}; test split never sealed"
     if silent is None:
         return "interrupted", "events carry no timestamps — cannot tell if it is still alive"
+
+    heartbeat_pid = (heartbeat or {}).get("pid")
+    heartbeat_dead = heartbeat is not None and not _heartbeat_pid_alive(heartbeat_pid)
+    if heartbeat_dead:
+        return "interrupted", (
+            f"stalled — no activity in {silent / 60.0:.0f}m and host.py's pid ({heartbeat_pid}) "
+            "is gone: it died mid-turn rather than stopping cleanly. Needs relaunch — re-run "
+            "host.py against this run dir, or point watchdog.py at it")
     return "interrupted", (
         f"no finalize and no event for {silent / 60.0:.0f} min — the run died, was "
         "killed, or is still being written by a process that is no longer logging")
@@ -1906,10 +1941,12 @@ def reduce_run(run_dir) -> dict:
     }
 
     now = _now()
+    heartbeat = _read_json(_safe_subpath(root, "host/heartbeat.json")) or None
     status, status_reason = _derive_status(
         events=events, now=now, budget=(run_dir.budget if sp is not None else None),
         spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
-        has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None)
+        has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None,
+        heartbeat=heartbeat)
     ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
 
     # Elapsed wall time. For a finished run that is first event → last event. For a run
