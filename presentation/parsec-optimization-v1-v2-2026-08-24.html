@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Parsec Optimization — IBM ↔ Red Hat PoC</title>
+
+  <link rel="stylesheet" href="reveal/dist/reset.css">
+  <link rel="stylesheet" href="reveal/dist/reveal.css">
+  <link rel="stylesheet" href="reveal/dist/theme/white.css" id="theme">
+
+  <style>
+    :root {
+      --paper:       #F8F5EE;
+      --paper-2:     #FFFFFF;
+      --paper-3:     #EFEBDE;
+      --rule:        #D9D2BE;
+      --ink:         #1A1D2A;
+      --ink-2:       #3E4252;
+      --muted:       #6C7080;
+      --accent:      #C0432B;
+      --accent-2:    #2D6E7E;
+      --accent-3:    #A67B2C;
+      --success:     #3A7A4C;
+      --warning:     #B87F1F;
+
+      --serif: ui-serif, "Iowan Old Style", "Charter", Georgia, serif;
+      --sans:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    html, body { background: var(--paper); }
+    body { color: var(--ink); }
+
+    /* --- Reveal theme overrides (light) --- */
+    .reveal { font-family: var(--sans); color: var(--ink); }
+    .reveal .slides { text-align: left; }
+    .reveal .slides > section,
+    .reveal .slides > section > section { padding-bottom: 80px; box-sizing: border-box; }
+    .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+      font-family: var(--serif);
+      color: var(--ink);
+      text-transform: none;
+      letter-spacing: -0.01em;
+      font-weight: 600;
+      text-shadow: none;
+    }
+    .reveal h1 { font-size: 2.4em; line-height: 1.05; }
+    .reveal h2 { font-size: 1.4em; line-height: 1.15; margin: 0 0 0.3em; }
+    .reveal h3 { font-size: 1.1em; color: var(--ink-2); }
+    .reveal p  { font-family: var(--sans); color: var(--ink-2); font-size: 0.72em; line-height: 1.5; }
+    .reveal a  { color: var(--accent-2); }
+    .reveal .progress { color: var(--accent); }
+    .reveal .controls { color: var(--muted); }
+    .reveal .slide-number { color: var(--muted); background: transparent; font-family: var(--mono); }
+    ::selection { background: var(--paper-3); }
+
+    /* --- Eyebrow / pill --- */
+    .reveal .eyebrow {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.5em;
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.2em 0;
+      margin-bottom: 0.6em;
+      border-bottom: 1px solid var(--rule);
+    }
+    .reveal .caption {
+      font-family: var(--mono);
+      font-size: 0.5em;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-top: 0.6em;
+    }
+
+    /* --- Grids --- */
+    .reveal .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; margin-top: 0.6em; }
+    .reveal .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 0.6em; }
+    .reveal .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8em; margin-top: 0.6em; }
+
+    /* --- Cards --- */
+    .reveal .card {
+      background: var(--paper-2);
+      border: 1.5px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.85em 0.9em;
+      text-align: left;
+    }
+    .reveal .card .head {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.68em;
+      color: var(--accent-2);
+      letter-spacing: 0.02em;
+      margin-bottom: 0.35em;
+    }
+    .reveal .card .desc {
+      font-family: var(--sans);
+      color: var(--ink-2);
+      font-size: 0.58em;
+      line-height: 1.45;
+      margin-bottom: 0.5em;
+    }
+    .reveal .card .pill-stack { display: flex; flex-direction: column; gap: 0.3em; margin: 0.3em 0; }
+    .reveal .card .foot {
+      font-family: var(--mono);
+      font-size: 0.5em;
+      color: var(--muted);
+      margin-top: 0.5em;
+      padding-top: 0.4em;
+      border-top: 1px dashed var(--rule);
+    }
+
+    .reveal .pill {
+      display: inline-block;
+      background: var(--paper-3);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 0.5em;
+      padding: 0.3em 0.6em;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+    .reveal .pill.accent { background: rgba(192,67,43,0.10); color: var(--accent); }
+    .reveal .pill.warn   { background: rgba(184,127,31,0.14); color: var(--warning); }
+    .reveal .pill.ok     { background: rgba(58,122,76,0.12); color: var(--success); }
+
+    /* --- Stat callout for slide 5 --- */
+    .reveal .mega-number {
+      font-family: var(--serif);
+      font-size: 10rem;
+      line-height: 1;
+      text-align: center;
+      color: var(--accent);
+      letter-spacing: -0.04em;
+      margin: 0.1em 0 0.2em;
+      font-weight: 600;
+    }
+    .reveal .stat-card {
+      background: var(--paper-2);
+      border: 1.5px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.7em 0.6em;
+      text-align: center;
+    }
+    .reveal .stat-card .k { font-family: var(--mono); font-size: 0.5em; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+    .reveal .stat-card .v { font-family: var(--serif); font-size: 1.5em; color: var(--ink); margin: 0.15em 0; }
+    .reveal .stat-card .c { font-family: var(--sans); font-size: 0.5em; color: var(--ink-2); font-style: italic; }
+    .reveal .formula {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.55em;
+      color: var(--muted);
+      margin-top: 0.8em;
+    }
+    .reveal .formula .em { color: var(--accent); font-weight: 600; }
+
+    /* --- Big numbered blocks (slide 12) --- */
+    .reveal .qblock {
+      background: var(--paper-2);
+      border: 1.5px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.9em 1em;
+      display: flex;
+      align-items: baseline;
+      gap: 0.7em;
+    }
+    .reveal .qblock .num {
+      font-family: var(--serif);
+      font-size: 2.3em;
+      color: var(--accent);
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+    .reveal .qblock .txt {
+      font-family: var(--sans);
+      font-size: 0.72em;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+
+    /* --- Roadmap bars (slide 11) --- */
+    .reveal .phase-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 0.9em;
+      align-items: center;
+      margin: 0.4em 0;
+    }
+    .reveal .phase-row .lbl {
+      font-family: var(--mono);
+      font-size: 0.55em;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      text-align: right;
+    }
+    .reveal .phase-bar {
+      border-radius: 8px;
+      padding: 0.55em 0.9em;
+      color: var(--paper-2);
+    }
+    .reveal .phase-bar.done    { background: var(--success); }
+    .reveal .phase-bar.next    { background: var(--accent); }
+    .reveal .phase-bar.neutral { background: var(--paper-3); color: var(--ink-2); border: 1px solid var(--rule); }
+    .reveal .phase-bar .title  { font-family: var(--serif); font-size: 0.85em; font-weight: 600; letter-spacing: -0.005em; }
+    .reveal .phase-bar .sub    { font-family: var(--sans); font-size: 0.55em; opacity: 0.9; margin-top: 0.15em; }
+    .reveal .phase-bar.neutral .sub { color: var(--muted); }
+
+    /* --- Card icons --- */
+    .reveal .card-icon {
+      float: right;
+      width: 42px;
+      height: 42px;
+      margin-left: 0.4em;
+    }
+    .reveal .card.bordered-warn { border-color: var(--accent-3); border-width: 2px; }
+    .reveal .card.bordered-accent { border-color: var(--accent); border-width: 2px; }
+    .reveal .card .body {
+      font-family: var(--sans);
+      color: var(--ink-2);
+      font-size: 0.62em;
+      line-height: 1.5;
+      margin: 0.4em 0 0.6em;
+    }
+
+    /* --- Cover --- */
+    .reveal .cover {
+      text-align: left;
+      padding-left: 0.3em;
+    }
+    .reveal .cover .brand {
+      font-family: var(--mono);
+      font-size: 0.55em;
+      color: var(--muted);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 0.8em;
+    }
+    .reveal .cover h1 {
+      font-family: var(--serif);
+      font-size: 3.4em;
+      letter-spacing: -0.035em;
+      line-height: 1;
+      margin: 0.1em 0 0.2em;
+    }
+    .reveal .cover .sub {
+      font-family: var(--sans);
+      font-size: 0.85em;
+      color: var(--ink-2);
+      margin-top: 0.3em;
+    }
+    .reveal .cover .foot-note {
+      font-family: var(--mono);
+      font-size: 0.5em;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      margin-top: 2.5em;
+      text-transform: uppercase;
+    }
+
+    /* --- SVG common --- */
+    .fig-wrap { margin: 0.4em auto 0; width: 100%; }
+    .fig-wrap svg { display: block; margin: 0 auto; width: 100%; height: auto; max-height: 620px; }
+    .fig-legend {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.45em;
+      color: var(--muted);
+      margin-top: 0.4em;
+      letter-spacing: 0.03em;
+    }
+
+    /* --- Slide 5: anatomy of one task --- */
+    .reveal .task-quote {
+      background: var(--paper-2);
+      border-left: 3px solid var(--accent-2);
+      border-radius: 6px;
+      padding: 0.45em 0.7em;
+      margin: 0.3em 0;
+      font-family: var(--sans);
+      font-size: 0.55em;
+      text-align: left;
+    }
+    .reveal .task-quote .task-label {
+      font-family: var(--mono);
+      font-size: 0.78em;
+      color: var(--accent-2);
+      letter-spacing: 0.14em;
+      margin-right: 0.7em;
+      text-transform: uppercase;
+    }
+    .reveal .task-quote .task-text {
+      font-family: var(--mono);
+      color: var(--ink);
+      word-break: break-all;
+    }
+    .reveal .col-card {
+      background: var(--paper-2);
+      border: 1.5px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.55em 0.7em;
+      text-align: left;
+    }
+    .reveal .col-title {
+      font-family: var(--sans);
+      font-size: 0.55em;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3em;
+    }
+    .reveal .col-title.mt { margin-top: 0.55em; }
+    .reveal .col-title .mono-muted { font-family: var(--mono); color: var(--muted); font-weight: 400; }
+    .reveal .tool-flow { display: flex; flex-wrap: wrap; gap: 0.22em; margin: 0.15em 0; align-items: center; }
+    .reveal .tool-pill {
+      font-family: var(--mono);
+      font-size: 0.4em;
+      padding: 0.26em 0.55em;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .reveal .tool-pill.green { background: rgba(58,122,76,0.14); color: var(--success); font-weight: 700; }
+    .reveal .tool-pill.outlined { background: var(--paper-3); color: var(--ink-2); border: 1px solid var(--rule); }
+    .reveal .flow-note { font-family: var(--mono); font-size: 0.4em; color: var(--muted); padding: 0.24em 0.5em; }
+    .reveal .assertion-grid { display: flex; flex-wrap: wrap; gap: 0.2em; margin: 0.15em 0; }
+    .reveal .a-pill {
+      font-family: var(--mono);
+      font-size: 0.38em;
+      padding: 0.26em 0.5em;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--rule);
+    }
+    .reveal .a-pill.matched {
+      background: rgba(192,67,43,0.15);
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .reveal .score-line {
+      font-family: var(--mono);
+      font-size: 0.5em;
+      color: var(--ink);
+      margin-top: 0.5em;
+      padding-top: 0.35em;
+      border-top: 1px dashed var(--rule);
+    }
+    .reveal .score-line .accent { color: var(--accent); font-weight: 700; }
+    .reveal .score-line .warning { color: var(--warning); font-weight: 700; }
+    .reveal .reward-eqn {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.58em;
+      color: var(--ink);
+      margin: 0.5em 0 0.15em;
+    }
+    .reveal .reward-eqn .ok { color: var(--success); font-weight: 600; }
+    .reveal .reward-eqn .accent { color: var(--accent); font-weight: 600; }
+    .reveal .reward-eqn .warning { color: var(--warning); font-weight: 600; }
+    .reveal .reward-eqn .mega {
+      font-family: var(--serif);
+      font-size: 1.55em;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .reveal .footnote-block {
+      margin-top: 0.35em;
+      font-family: var(--sans);
+      font-size: 0.48em;
+      color: var(--ink-2);
+      text-align: center;
+    }
+    .reveal .footnote-block .k { font-family: var(--mono); color: var(--muted); margin-right: 0.4em; }
+    .reveal .footnote-block .accent { color: var(--accent); font-weight: 600; }
+    .reveal .footnote-block > div { margin: 0.1em 0; }
+
+    /* --- Tables (slides 4 + 5) --- */
+    .reveal .table-wrap { margin: 0.4em 0; width: 100%; }
+    .reveal .table-wrap table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-family: var(--sans);
+      background: var(--paper-2);
+      border: 1.5px solid var(--rule);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .reveal .table-wrap thead th {
+      background: var(--paper-3);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.55em;
+      text-align: left;
+      padding: 0.5em 0.75em;
+      border-bottom: 1.5px solid var(--rule);
+      letter-spacing: 0.02em;
+      vertical-align: bottom;
+    }
+    .reveal .table-wrap thead th .th-sub {
+      font-family: var(--mono);
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 0.85em;
+      display: block;
+      margin-top: 0.15em;
+    }
+    .reveal .table-wrap tbody td {
+      padding: 0.45em 0.75em;
+      font-size: 0.52em;
+      color: var(--ink-2);
+      line-height: 1.4;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+      background: var(--paper-2);
+    }
+    .reveal .table-wrap tbody tr:nth-child(even) td { background: var(--paper-3); }
+    .reveal .table-wrap tbody tr:last-child td { border-bottom: none; }
+    .reveal .table-wrap td.axis-col,
+    .reveal .table-wrap th.axis-col {
+      font-family: var(--sans);
+      font-weight: 700;
+      color: var(--ink);
+      width: 20%;
+    }
+    .reveal .table-wrap td.mono-cell {
+      font-family: var(--mono);
+      font-size: 0.48em;
+      color: var(--ink);
+      line-height: 1.35;
+    }
+    .reveal .table-wrap td.dim-cell {
+      font-family: var(--mono);
+      font-size: 0.48em;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .reveal .table-wrap .ok-mark {
+      color: var(--success);
+      font-weight: 700;
+      margin-right: 0.2em;
+    }
+    .reveal .table-wrap td .pill {
+      font-size: 0.88em;
+      padding: 0.28em 0.55em;
+    }
+  </style>
+</head>
+<body>
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ─────────────────────── SLIDE 1 — COVER ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">Parsec &times; cap-evolve &nbsp;&middot;&nbsp; IBM &harr; Red Hat</div>
+        <h1>Parsec Optimization</h1>
+        <div class="sub">Proof of concept &mdash; where we are, what we found, what's next</div>
+        <div class="foot-note">for the Parsec team &middot; 2026-08-17</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 2 — THE MENTAL MODEL (METAPHOR) ─────────────────────── -->
+    <section style="padding-bottom: 20px;">
+      <div class="eyebrow">the mental model</div>
+      <h2>Two pillars and a bridge</h2>
+
+      <div style="max-width: 940px; margin: 0.4em auto 0;">
+      <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" role="img"
+           aria-label="Two pillars support a bridge deck. Left pillar: Task & Reward Extraction (Rubrica) — extracts tasks and rewards from trajectories. Right pillar: Simulation Harness — stands in for the real backends. On top of the pillars, a bridge deck holds Parsec, the SUT, at its center; the deck itself is Harbor, the runner infrastructure. Above the bridge, a dashed frame labels Optimization by cap-evolve — the layer that iterates once the bridge stands.">
+        <defs>
+          <marker id="arrow-up-metaphor" viewBox="0 0 10 10" refX="5" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+            <path d="M0,10 L5,0 L10,10 z" fill="#C0432B"/>
+          </marker>
+        </defs>
+
+        <!-- ground line -->
+        <line x1="30" y1="530" x2="870" y2="530" stroke="#1A1D2A" stroke-width="2"/>
+
+        <!-- LEFT PILLAR: Task & Reward Extraction (product name: Rubrica) -->
+        <rect x="90" y="280" width="180" height="240" fill="#FFFFFF" stroke="#2D6E7E" stroke-width="2.5" rx="6"/>
+        <text x="180" y="316" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle" letter-spacing="0.15em">STAND 1</text>
+        <text x="180" y="352" font-family="ui-serif, Georgia, serif" font-size="18" font-weight="700" fill="#1A1D2A" text-anchor="middle">Task &amp; Reward</text>
+        <text x="180" y="374" font-family="ui-serif, Georgia, serif" font-size="18" font-weight="700" fill="#1A1D2A" text-anchor="middle">Extraction</text>
+        <a href="https://github.ibm.com/kaegis/rubrica" target="_blank" rel="noopener">
+          <text x="180" y="393" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#2D6E7E" text-anchor="middle" letter-spacing="0.15em" text-decoration="underline">RUBRICA</text>
+        </a>
+        <line x1="120" y1="406" x2="240" y2="406" stroke="#D9D2BE" stroke-width="1"/>
+        <text x="180" y="426" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#3E4252" text-anchor="middle">from trajectories</text>
+        <text x="180" y="452" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v1: 130 traces &rarr; 30 tasks</text>
+        <text x="180" y="472" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v2: 10 authored scenarios</text>
+
+        <!-- RIGHT PILLAR: Simulation Harness -->
+        <rect x="630" y="280" width="180" height="240" fill="#FFFFFF" stroke="#2D6E7E" stroke-width="2.5" rx="6"/>
+        <text x="720" y="316" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle" letter-spacing="0.15em">STAND 2</text>
+        <a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener">
+          <text x="720" y="352" font-family="ui-serif, Georgia, serif" font-size="20" font-weight="700" fill="#2D6E7E" text-anchor="middle" text-decoration="underline">Simulation</text>
+          <text x="720" y="374" font-family="ui-serif, Georgia, serif" font-size="20" font-weight="700" fill="#2D6E7E" text-anchor="middle" text-decoration="underline">Harness</text>
+        </a>
+        <line x1="660" y1="400" x2="780" y2="400" stroke="#D9D2BE" stroke-width="1"/>
+        <text x="720" y="424" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#3E4252" text-anchor="middle">of Parsec's backends</text>
+        <text x="720" y="452" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">aap2 &middot; github &middot; babylon</text>
+        <text x="720" y="472" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">provisions_db &middot; (icinga)</text>
+
+        <!-- BRIDGE DECK spanning the two pillars -->
+        <rect x="60" y="200" width="780" height="80" fill="#F8F5EE" stroke="#1A1D2A" stroke-width="2" rx="4"/>
+        <a href="https://github.com/harbor-framework/harbor" target="_blank" rel="noopener">
+          <text x="115" y="230" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="#6C7080" letter-spacing="0.18em" text-decoration="underline">HARBOR</text>
+        </a>
+        <text x="115" y="248" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080">runner infra</text>
+        <text x="115" y="264" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080">(container / task)</text>
+
+        <a href="https://github.com/harbor-framework/harbor" target="_blank" rel="noopener">
+          <text x="785" y="230" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="#6C7080" letter-spacing="0.18em" text-anchor="end" text-decoration="underline">HARBOR</text>
+        </a>
+        <text x="785" y="248" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="end">MCP wiring</text>
+        <text x="785" y="264" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="end">verifier &rarr; reward</text>
+
+        <!-- SUT card centered on the midpoint between pillars (x=450) -->
+        <rect x="350" y="180" width="200" height="120" fill="#C0432B" stroke="#8f321f" stroke-width="2" rx="8"/>
+        <text x="450" y="214" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.15em" opacity="0.85">SYSTEM UNDER TEST</text>
+        <a href="https://github.com/rhpds/parsec" target="_blank" rel="noopener">
+          <text x="450" y="252" font-family="ui-serif, Georgia, serif" font-size="28" font-weight="700" fill="#FFFFFF" text-anchor="middle" text-decoration="underline">Parsec</text>
+        </a>
+        <text x="450" y="280" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#FFFFFF" text-anchor="middle" opacity="0.85">aap2 sub-agent (pilot)</text>
+
+        <!-- OPTIMIZATION frame above the bridge, centered on x=450 -->
+        <rect x="300" y="20" width="300" height="130" fill="#EFEBDE" stroke="#A67B2C" stroke-width="2" stroke-dasharray="6 3" rx="8"/>
+        <text x="450" y="50" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle" letter-spacing="0.18em">RAMP UP</text>
+        <a href="https://github.com/skillberry-ai/cap-evolve" target="_blank" rel="noopener">
+          <text x="450" y="86" font-family="ui-serif, Georgia, serif" font-size="22" font-weight="600" fill="#1A1D2A" text-anchor="middle" text-decoration="underline">Optimization</text>
+        </a>
+        <text x="450" y="112" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" fill="#3E4252" text-anchor="middle">cap-evolve iterating</text>
+        <text x="450" y="132" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#6C7080" text-anchor="middle">prompt &middot; tools &middot; composites</text>
+
+        <!-- arrow from Parsec up to Optimization (at x=450, centered) -->
+        <line x1="450" y1="180" x2="450" y2="160" stroke="#C0432B" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="442,163 450,150 458,163" fill="#C0432B"/>
+      </svg>
+      </div>
+
+      <div class="caption" style="text-align:center; margin-top: 0.2em;">
+        Two independent capabilities support the bridge. Parsec runs on it; Harbor is the deck; cap-evolve iterates above.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 3 — PARSEC ARCHITECTURE: ORCHESTRATOR + 5 SPECIALISTS ─────────────────────── -->
+    <section style="font-size: 0.82em;">
+      <div class="eyebrow">system under test</div>
+      <h2><a href="https://github.com/rhpds/parsec" target="_blank" rel="noopener">Parsec</a> &mdash; Red Hat's LLM-agentic troubleshooter for the Red Hat Demo Platform</h2>
+
+      <p style="max-width: 940px; margin-bottom: 0.4em;">An <strong>orchestrator</strong> routes each user question to one of <strong>five domain specialists</strong>.</p>
+
+      <!-- Orchestrator on top -->
+      <div style="max-width: 620px; margin: 0.6em auto 0.2em;">
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.55em 0.8em; text-align: center;">
+          <div class="head" style="color: var(--accent-2); margin-bottom: 0.15em;">orchestrator &middot; router &middot; 30 traces</div>
+          <div class="desc" style="margin-bottom: 0;">receives the user question &middot; picks a specialist &middot; dispatches</div>
+        </div>
+      </div>
+
+      <!-- Arrow down -->
+      <div style="text-align: center; margin: 0.15em 0;">
+        <svg width="28" height="34" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <line x1="10" y1="1" x2="10" y2="20" stroke="#3E4252" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="4,17 10,25 16,17" fill="#3E4252"/>
+        </svg>
+        <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase;">dispatches to one of five specialists</div>
+      </div>
+
+      <!-- 5 specialists as peers -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.55em; margin-top: 0.4em;">
+        <div class="card" style="padding: 0.45em 0.6em;">
+          <div class="head" style="font-size: 0.68em;">aap2 &middot; 31</div>
+          <div class="desc" style="font-size: 0.52em; margin-bottom: 0;">AAP2 job failures</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.6em;">
+          <div class="head" style="font-size: 0.68em;">icinga &middot; 33</div>
+          <div class="desc" style="font-size: 0.52em; margin-bottom: 0;">monitoring alerts</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.6em;">
+          <div class="head" style="font-size: 0.68em;">babylon &middot; 27</div>
+          <div class="desc" style="font-size: 0.52em; margin-bottom: 0;">catalog &middot; provisioning</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.6em;">
+          <div class="head" style="font-size: 0.68em;">ocpv &middot; 6</div>
+          <div class="desc" style="font-size: 0.52em; margin-bottom: 0;">OpenShift virt</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.6em;">
+          <div class="head" style="font-size: 0.68em;">cost &middot; 3</div>
+          <div class="desc" style="font-size: 0.52em; margin-bottom: 0;">cost queries</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.7em; font-size: 0.55em;">
+        Trace counts (of 130 total) come from the MLflow dump &middot; each specialist is an independent optimization target.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 4 — WHAT WE GOT FROM PARSEC (130-TRACE MLFLOW DUMP STATS) ─────────────────────── -->
+    <section style="font-size: 0.8em;">
+      <div class="eyebrow">the data &middot; what we got from Parsec</div>
+      <h2>130 agent runs from real users</h2>
+      <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; margin: -0.3em 0 0.9em;">
+        15 Jun &ndash; 13 Jul 2026 &middot; 29 days &middot; 20 days with traffic &middot; experiment 1
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.55em; margin-top: 0.4em;">
+        <div class="stat-card" style="border-color: var(--accent); border-width: 2px;">
+          <div class="k">traces</div>
+          <div class="v" style="color: var(--accent); font-size: 1.8em;">130</div>
+          <div class="c">agent runs</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">sessions</div>
+          <div class="v">97</div>
+          <div class="c">distinct</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">users</div>
+          <div class="v">2</div>
+          <div class="c">see caveat</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">tool calls</div>
+          <div class="v">859</div>
+          <div class="c">across 21 tools</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">LLM calls</div>
+          <div class="v">1,034</div>
+          <div class="c">6.6 avg / run (med 4)</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.55em; margin-top: 0.6em;">
+        <div class="stat-card">
+          <div class="k">tokens</div>
+          <div class="v">28.8M</div>
+          <div class="c">consumed</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">median latency</div>
+          <div class="v">61s</div>
+          <div class="c">per run</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--warning);">
+          <div class="k">tool errors</div>
+          <div class="v" style="color: var(--warning);">11%</div>
+          <div class="c">of calls fail</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">delegated</div>
+          <div class="v">76%</div>
+          <div class="c">of runs to sub-agent</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">single-turn</div>
+          <div class="v">81%</div>
+          <div class="c">of sessions</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.8em; max-width: 940px; margin-left: auto; margin-right: auto; font-size: 0.5em; line-height: 1.55; font-style: italic;">
+        <strong style="color: var(--warning); font-style: normal;">READ WITH CARE</strong> &mdash; pilot-scale sample: 130 runs over 29 days. Treat the averages as directional, not steady-state production. The 2 &ldquo;users&rdquo; are OpenShift container UIDs, not verified people: they behave like two distinct operators (different intents, no shared session), but the field cannot prove that one UID is one human.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 4B — GOALS OF THE COLLABORATION ─────────────────────── -->
+    <section style="font-size: 0.78em;">
+      <div class="eyebrow">why we're both here</div>
+      <h2>Goals of the collaboration</h2>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.5em; gap: 1.3em;">
+
+        <!-- RH goals -->
+        <div class="card" style="border-color: var(--accent); border-width: 2px; padding: 0.7em 0.9em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.3em;">Red Hat</div>
+          <div class="head" style="color: var(--accent);">Improve Parsec</div>
+          <div class="qblock" style="margin-bottom: 0.35em; padding: 0.45em 0.65em; gap: 0.5em; margin-top: 0.4em;">
+            <div class="num" style="color: var(--accent); font-size: 1.4em;">1</div>
+            <div class="txt" style="font-size: 0.72em;"><strong>Better answers for real users.</strong> Raise diagnostic quality across all six sub-agents, cut latency, reduce cost per query.</div>
+          </div>
+          <div class="qblock" style="padding: 0.45em 0.65em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.4em;">2</div>
+            <div class="txt" style="font-size: 0.72em;"><strong>Help IBM develop the tech</strong> that RH (and others) can apply to other agentic systems going forward.</div>
+          </div>
+        </div>
+
+        <!-- IBM goals -->
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.7em 0.9em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--accent-2); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.3em;">IBM Research</div>
+          <div class="head" style="color: var(--accent-2);">Prove &amp; harden the tech</div>
+          <div class="qblock" style="margin-bottom: 0.35em; padding: 0.45em 0.65em; gap: 0.5em; margin-top: 0.4em;">
+            <div class="num" style="color: var(--accent-2); font-size: 1.4em;">1</div>
+            <div class="txt" style="font-size: 0.72em;"><strong>Show <a href="https://github.com/skillberry-ai/cap-evolve" target="_blank" rel="noopener">cap-evolve</a> works</strong> against a real client system &mdash; Parsec as a case study, not a toy benchmark.</div>
+          </div>
+          <div class="qblock" style="padding: 0.45em 0.65em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent-2); font-size: 1.4em;">2</div>
+            <div class="txt" style="font-size: 0.72em;"><strong>Develop the surrounding tech</strong> for the typical client-engagement constraint: traces + SUT available, but <em>no</em> access to real backends and <em>no</em> benchmark to evaluate on &mdash; hence <a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener">Simulation Harness</a> + <a href="https://github.ibm.com/kaegis/rubrica" target="_blank" rel="noopener">Rubrica</a>.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.7em; font-size: 0.55em;">
+        The goals are aligned but different &mdash; RH wants a better Parsec, IBM wants a repeatable methodology. This PoC advances both.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 5A — WHAT WE'VE BUILT (INFRASTRUCTURE) ─────────────────────── -->
+    <section style="font-size: 0.85em;">
+      <div class="eyebrow">where we stand today</div>
+      <h2>What we've built</h2>
+
+      <div style="max-width: 920px; margin: 0.5em auto 0;">
+        <div class="qblock" style="margin-bottom: 0.4em; padding: 0.55em 0.8em; gap: 0.6em;">
+          <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+          <div class="txt" style="font-size: 0.78em;"><strong><a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener">Simulation Harness</a></strong> &mdash; 4 kaegis sim endpoints (aap2, github, babylon, provisions_db) stand in for the real backends.</div>
+        </div>
+        <div class="qblock" style="margin-bottom: 0.4em; padding: 0.55em 0.8em; gap: 0.6em;">
+          <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+          <div class="txt" style="font-size: 0.78em;"><strong><a href="https://github.ibm.com/kaegis/rubrica" target="_blank" rel="noopener">Rubrica</a> pipeline</strong> &mdash; task &amp; reward extraction from traces (v1) plus authored-scenario schema (v2).</div>
+        </div>
+        <div class="qblock" style="margin-bottom: 0.4em; padding: 0.55em 0.8em; gap: 0.6em;">
+          <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+          <div class="txt" style="font-size: 0.78em;"><strong>Harbor + <a href="https://github.com/skillberry-ai/cap-evolve" target="_blank" rel="noopener">cap-evolve</a> end-to-end loop</strong> &mdash; container-per-task, MCP wired to sims, verifier scoring, hill-climb optimizer, paired-SE gate.</div>
+        </div>
+        <div class="qblock" style="padding: 0.55em 0.8em; gap: 0.6em;">
+          <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+          <div class="txt" style="font-size: 0.78em;"><strong>Two <span style="color: var(--accent);">aap2</span> optimization pilots complete</strong> &mdash; v1 traced (2 tasks &times; N=30) and v2 authored (10 tasks &times; N=9), both with clean before/after data.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 6B — TWO DATA VERSIONS: REAL vs SYNTHETIC ─────────────────────── -->
+    <section style="font-size: 0.85em;">
+      <div class="eyebrow">the data &middot; stand 1 (<a href="https://github.ibm.com/kaegis/rubrica" target="_blank" rel="noopener">Rubrica</a> input)</div>
+      <h2>Two task sources &mdash; real vs. synthetic</h2>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.7em; gap: 1.4em;">
+
+        <!-- v1: REAL -->
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.75em 0.95em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--accent-2); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.25em;">REAL</div>
+          <div class="head" style="color: var(--accent-2);">v1 &middot; traced &middot; 30 aap2 tasks</div>
+          <div class="desc">Real user questions extracted from the 130-trace MLflow dump.</div>
+          <div class="foot">
+            <span style="color: var(--success);"><strong>+</strong> authentic user-intent distribution</span><br/>
+            <span style="color: var(--warning);"><strong>&minus;</strong> small sample &middot; ground truth reverse-engineered from observed behavior &middot; drifts as the SUT changes</span>
+          </div>
+        </div>
+
+        <!-- v2: SYNTHETIC -->
+        <div class="card" style="border-color: var(--success); border-width: 2px; padding: 0.75em 0.95em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--success); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.25em;">SYNTHETIC</div>
+          <div class="head" style="color: var(--success);">v2 &middot; authored &middot; 10 bench-aap2 scenarios</div>
+          <div class="desc">Hand-authored scenarios with per-task <code style="font-family: var(--mono);">seed.json</code> feeding the Simulation Harness.</div>
+          <div class="foot">
+            <span style="color: var(--success);"><strong>+</strong> controlled &middot; expandable &middot; no PII / customer-data concerns</span><br/>
+            <span style="color: var(--warning);"><strong>&minus;</strong> sample of 10 &middot; not yet reflective of real-user diversity</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.7em; font-size: 0.55em;">
+        Complementary, not alternatives &mdash; both feed the same Harbor runner and Simulation Harness.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 6 — AAP2 PILOT DETAIL ─────────────────────── -->
+    <section style="font-size: 0.72em;">
+      <div class="eyebrow">system under test &middot; the pilot</div>
+      <h2>Why we start with <span style="color: var(--accent);">aap2</span></h2>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.4em; gap: 1.2em;">
+
+        <!-- Left: what aap2 does -->
+        <div class="card" style="border-color: var(--accent); border-width: 2.5px; padding: 0.6em 0.8em;">
+          <div class="head" style="color: var(--accent);">aap2 &middot; 31 traces</div>
+          <div class="desc">Investigates AAP2 job failures &mdash; traces failures through the <code style="font-family: var(--mono);">agnosticv</code> / <code style="font-family: var(--mono);">agnosticd</code> config hierarchy on GitHub and analyzes job logs for root cause.</div>
+
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin: 0.5em 0 0.2em;">tool group</div>
+          <div class="pill-stack">
+            <span class="pill">query_aap2 &middot; get_job_log &middot; find_jobs</span>
+            <span class="pill">lookup_catalog_item</span>
+            <span class="pill">fetch_github_file &middot; search_github_repo</span>
+            <span class="pill">query_provisions_db (some tasks)</span>
+          </div>
+        </div>
+
+        <!-- Right: why aap2 first -->
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.3em;">why this specialist first</div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.5em 0.7em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.6em;">1</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Most instrumented.</strong> 31 traces &mdash; enough behavioral signal to see failure modes clearly.</div>
+          </div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.5em 0.7em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.6em;">2</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Widest tool coverage.</strong> Uses 4 of 5 tool families (aap2 &middot; github &middot; babylon &middot; provisions_db) &mdash; learnings transfer.</div>
+          </div>
+          <div class="qblock" style="padding: 0.5em 0.7em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.6em;">3</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Cleanest gold-trace extraction.</strong> aap2's recorded trajectories are the clearest &mdash; best starting point for Rubrica.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.5em; font-size: 0.55em;">
+        Framework is designed so each specialist is an independent optimization target &mdash; the aap2 workflow generalizes to the others.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── v1 SECTION DIVIDER ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">optimization pilot &nbsp;&middot;&nbsp; part 1</div>
+        <h1>v1 &middot; traced tasks</h1>
+        <div class="sub">real user questions from the 130-trace dump &middot; 30 aap2 tasks</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE (v1) — BASELINES ─────────────────────── -->
+    <section style="font-size: 0.85em;">
+      <div class="eyebrow">baselines &middot; three clean numbers</div>
+      <h2>The agent works &mdash; results depend on the task shape</h2>
+
+      <div class="grid-3" style="margin-top: 0.7em; align-items: stretch;">
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--accent-2);">v1 &middot; 30 tasks &times; 1 trial</div>
+          <div class="desc" style="min-height: 6.5em;">Full aap2 pilot set. Seed capability unmodified. Single trial per task.</div>
+          <div style="text-align:center; margin: 0.4em 0; display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1;">
+            <div style="font-family: var(--serif); font-size: 2.6em; color: var(--accent); font-weight: 600; line-height: 1;">0.240</div>
+            <div style="font-family: var(--mono); font-size: 0.5em; color: var(--muted); letter-spacing: 0.12em; margin-top: 0.4em;">MEAN REWARD</div>
+          </div>
+          <div class="foot">5 tasks perfect tool_calls match (mean 0.730) &middot; 25 multi-tool (mean 0.142) &middot; 2 gate-failed (0047/0048)</div>
+        </div>
+
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--accent-2);">v1 &middot; 2 tasks &times; N=30</div>
+          <div class="desc" style="min-height: 6.5em;">Deep re-measure on aap2-0047/0048 (the combinatorial-sweep failure mode). 30 trials to average out gate stochasticity.</div>
+          <div style="text-align:center; margin: 0.4em 0; display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1;">
+            <div style="font-family: var(--serif); font-size: 2.6em; color: var(--accent); font-weight: 600; line-height: 1;">0.317</div>
+            <div style="font-family: var(--mono); font-size: 0.5em; color: var(--muted); letter-spacing: 0.12em; margin-top: 0.4em;">&plusmn; 0.035 SE</div>
+          </div>
+          <div class="foot">noise floor characterized &middot; N=10 was too few to see optimizer signal above trial variance</div>
+        </div>
+
+        <div class="card" style="border-color: var(--success); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--success);">v2.1 &middot; 10 authored &times; 1</div>
+          <div class="desc" style="min-height: 6.5em;">Authored scenarios, MCP wiring fixed via <code style="font-family: var(--mono);">host.containers.internal</code>. Same seed prompt.</div>
+          <div style="text-align:center; margin: 0.4em 0; display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1;">
+            <div style="font-family: var(--serif); font-size: 2.6em; color: var(--success); font-weight: 700; line-height: 1;">0.910</div>
+            <div style="font-family: var(--mono); font-size: 0.5em; color: var(--muted); letter-spacing: 0.12em; margin-top: 0.4em;">MEAN REWARD</div>
+          </div>
+          <div class="foot">the agent solves nearly all authored tasks &middot; 10/10 MCP connected &middot; wall 7.9 min</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.9em; font-size: 0.55em;">
+        <strong style="color: var(--ink);">Reading</strong>: v2.1 &rarr; the agent is CAPABLE on clean tasks. v1's 25 multi-tool tasks averaged <strong>0.142 at N=1</strong> &mdash; but the 2 we re-measured at N=30 scored <strong>0.317</strong>, so the N=1 number was noise-heavy. Real headroom is smaller than the raw gap suggests, but still there.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 8A — TRAJECTORY BEFORE/AFTER ─────────────────────── -->
+    <section style="font-size: 0.68em;">
+      <div class="eyebrow">what we tried &middot; the trajectory</div>
+      <h2>The edit that shifted &ldquo;give up&rdquo; &rarr; &ldquo;produce a report&rdquo;</h2>
+
+      <p style="max-width: 940px; font-size: 0.85em; margin-bottom: 0.35em;">Task <code style="font-family: var(--mono);">aap2-0048</code>, trial 0 &middot; same input, same MCP tools, only the SKILL.md changed.</p>
+
+      <div style="display: flex; align-items: flex-start; gap: 0.6em; margin: 0.4em 0 0.3em; padding: 0.45em 0.7em; background: var(--paper-3); border-left: 3px solid var(--ink); border-radius: 4px;">
+        <div style="font-family: var(--mono); font-size: 0.62em; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; padding-top: 0.15em;">USER PROMPT</div>
+        <div style="font-family: var(--mono); font-size: 0.78em; color: var(--ink); line-height: 1.45;">debug aap logs: <strong>297831, 297926, 297964, 298164</strong>. recommend fix for provision failure issue.</div>
+      </div>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.4em; gap: 0.9em;">
+
+        <!-- BEFORE: seed -->
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--muted); background: var(--paper-2);">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5em;">
+            <div style="font-family: var(--mono); font-size: 0.62em; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase;">BEFORE &middot; seed</div>
+            <div style="font-family: var(--serif); font-size: 1.4em; color: var(--accent); font-weight: 700;">0.00</div>
+          </div>
+          <table style="width: 100%; font-family: var(--mono); font-size: 0.62em; line-height: 1.55; color: var(--ink-2); background: rgba(216,206,181,0.35); border-radius: 5px; border-collapse: collapse;">
+            <colgroup>
+              <col style="width: 5em;">
+              <col>
+              <col style="width: 40%;">
+            </colgroup>
+            <tbody>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 1</td><td style="padding: 0.2em 0.3em;">user prompt</td><td style="padding: 0.2em 0.5em;"></td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 2</td><td style="padding: 0.2em 0.3em;">query_aap2 &times; 4</td><td style="padding: 0.2em 0.5em; color: var(--muted);">batch across controllers</td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 3</td><td style="padding: 0.2em 0.3em;">query_aap2 &times; 5</td><td style="padding: 0.2em 0.5em; color: var(--accent);">sweep continues</td></tr>
+              <tr><td colspan="3" style="padding: 0.4em 0.5em 0.15em; border-top: 1px dashed var(--accent); color: var(--accent);">&mdash; session terminates &middot; <code>stop_reason = tool_use</code></td></tr>
+              <tr><td colspan="3" style="padding: 0.15em 0.5em; color: var(--accent);">&mdash; no final message emitted</td></tr>
+            </tbody>
+          </table>
+          <div class="foot" style="border-top: 1px dashed var(--muted); margin-top: 0.5em; padding-top: 0.35em; color: var(--accent);">gate = 0 &middot; tool_calls = 0 &middot; answer = 0 &rarr; reward = 0.00</div>
+        </div>
+
+        <!-- AFTER: cand_0001 -->
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--success); border-width: 2px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5em;">
+            <div style="font-family: var(--mono); font-size: 0.62em; color: var(--success); letter-spacing: 0.15em; text-transform: uppercase;">AFTER &middot; cand_0001</div>
+            <div style="font-family: var(--serif); font-size: 1.4em; color: var(--success); font-weight: 700;">0.40</div>
+          </div>
+          <table style="width: 100%; font-family: var(--mono); font-size: 0.62em; line-height: 1.55; color: var(--ink-2); background: rgba(58,122,76,0.09); border-radius: 5px; border-collapse: collapse;">
+            <colgroup>
+              <col style="width: 5em;">
+              <col>
+              <col style="width: 40%;">
+            </colgroup>
+            <tbody>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 1</td><td style="padding: 0.2em 0.3em;">user prompt</td><td style="padding: 0.2em 0.5em;"></td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 2</td><td style="padding: 0.2em 0.3em;">query_aap2 &times; 4</td><td style="padding: 0.2em 0.5em; color: var(--muted);">batch across controllers</td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 3</td><td style="padding: 0.2em 0.3em;">query_aap2 &times; 2</td><td style="padding: 0.2em 0.5em; color: var(--success);">round 2, bounded</td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 4</td><td style="padding: 0.2em 0.3em;">query_aap2 &times; 2</td><td style="padding: 0.2em 0.5em; color: var(--success);">round 3, then stops</td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 5&ndash;7</td><td style="padding: 0.2em 0.3em;">provisions_db + describe_table</td><td style="padding: 0.2em 0.5em; color: var(--success);">PIVOTS</td></tr>
+              <tr><td style="padding: 0.2em 0.5em; color: var(--muted);">step 8</td><td style="padding: 0.2em 0.3em;">&ldquo;Investigation Report&rdquo;</td><td style="padding: 0.2em 0.5em; color: var(--success);">stop_reason = end_turn</td></tr>
+            </tbody>
+          </table>
+          <div class="foot" style="border-top: 1px dashed var(--success); margin-top: 0.5em; padding-top: 0.35em; color: var(--success);">gate = 1 &middot; tool_calls = 0 &middot; <strong>answer = 0.80</strong> &rarr; reward = 0.40</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.7em; font-size: 0.55em;">
+        Per-trial evidence &mdash; on aap2-0048 the seed produced 0/10 successful trials, cand_0001 produced 6/10 (rewards 0.30&ndash;0.40). <strong>The direction of the edit is correct.</strong> The SKILL.md diff on the next slide shows what did it.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 8B — SKILL.MD DIFF (WHAT THE OPTIMIZER ADDED) ─────────────────────── -->
+    <section style="font-size: 0.7em;">
+      <div class="eyebrow">what we tried &middot; the SKILL.md edit</div>
+      <h2>What the optimizer added &mdash; a diff view</h2>
+
+      <p style="max-width: 940px; font-size: 0.85em; margin-bottom: 0.4em;">77 lines added to the seed <code style="font-family: var(--mono);">aap2_agent.md</code>. Three self-contained groups, each targeting a specific failure mode:</p>
+
+      <div class="grid-3" style="align-items: stretch; margin-top: 0.4em; gap: 0.8em;">
+
+        <!-- Rule 1: Always emit -->
+        <div class="card" style="padding: 0.55em 0.75em;">
+          <div class="head" style="color: var(--accent);">1 &middot; Always emit a report</div>
+          <pre style="font-family: var(--mono); font-size: 0.55em; line-height: 1.55; margin: 0.4em 0 0; padding: 0.5em 0.6em; background: var(--paper-3); border-radius: 4px; white-space: pre-wrap; word-break: break-word;"><span style="color: var(--muted);">  the report — not more narration.</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">+ If tools do not return everything you</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  wanted, PRODUCE THE REPORT ANYWAY</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  with what you have — a partial report</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  is worth far more than silence.</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  Every specific job ID the user asked</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  about MUST appear verbatim in the</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  final report.</span></pre>
+          <div class="foot" style="font-size: 0.5em; margin-top: 0.4em; padding-top: 0.3em;"><strong>targets</strong>: agent ends its turn without emitting a message</div>
+        </div>
+
+        <!-- Rule 2: Budget rounds -->
+        <div class="card" style="padding: 0.55em 0.75em;">
+          <div class="head" style="color: var(--accent);">2 &middot; Budget rounds &mdash; no sweep</div>
+          <pre style="font-family: var(--mono); font-size: 0.55em; line-height: 1.55; margin: 0.4em 0 0; padding: 0.5em 0.6em; background: var(--paper-3); border-radius: 4px; white-space: pre-wrap; word-break: break-word;"><span style="color: var(--muted);">  ...report with some gaps.</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">+ Hard cap: no more than 2 rounds</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  of query_aap2 calls before you MUST</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  either advance to lookup_catalog_item</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  / fetch_github_file, or write the</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  report. Do NOT loop back to</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  query_aap2 after GitHub fetches.</span></pre>
+          <div class="foot" style="font-size: 0.5em; margin-top: 0.4em; padding-top: 0.3em;"><strong>targets</strong>: combinatorial sweep of <code style="font-family: var(--mono);">query_aap2</code></div>
+        </div>
+
+        <!-- Rule 3: Recovery protocol (new section) -->
+        <div class="card" style="padding: 0.55em 0.75em;">
+          <div class="head" style="color: var(--accent);">3 &middot; Recovery Protocol <span style="font-weight: 400; color: var(--muted); font-size: 0.75em;">(new section)</span></div>
+          <pre style="font-family: var(--mono); font-size: 0.55em; line-height: 1.55; margin: 0.4em 0 0; padding: 0.5em 0.6em; background: var(--paper-3); border-radius: 4px; white-space: pre-wrap; word-break: break-word;"><span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">+ ### Recovery — get_job_log not-found</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  Round 1: get_job_log(east) for all IDs</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  Round 2: find_jobs on east AND west</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">    (one parallel batch)</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  Round 3: lookup_catalog_item →</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">    fetch_github_file → analysis</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  Never sweep controllers with the</span>
+<span style="color: var(--success); background: rgba(58,122,76,0.10); display: inline-block; width: 100%;">  same missing IDs.</span></pre>
+          <div class="foot" style="font-size: 0.5em; margin-top: 0.4em; padding-top: 0.3em;"><strong>targets</strong>: dead-end retry across controllers when a job ID isn't found</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.6em; font-size: 0.55em;">
+        Semantically coherent additions &mdash; the optimizer read the failure trace, identified the three failure modes, and proposed a structured fix for each.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 9B — WHY THE FIX DIDN'T MOVE THE NEEDLE ─────────────────────── -->
+    <section style="font-size: 0.75em;">
+      <div class="eyebrow">why the aggregate didn't move</div>
+      <h2>We fixed one failure &mdash; and stopped some successes</h2>
+
+      <p style="max-width: 940px; font-size: 0.9em; margin-bottom: 0.5em;">The seed's rewards are <strong>bimodal</strong>: agent either fully succeeds (reward = 1.0, gold trajectory matched) or fully fails (reward = 0.0, no report emitted). Cand_0001 <strong>flattens the distribution</strong>: always produces a report, always at &asymp; 0.35. Same average, different shape &mdash; but the trade is currently a net loss.</p>
+
+      <div class="grid-3" style="align-items: stretch; margin-top: 0.5em; gap: 0.9em;">
+
+        <!-- HELPS -->
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--success); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--success);">where the fix HELPS</div>
+          <div class="desc" style="min-height: 3em;">
+            Trials where seed would have <strong>timed out</strong> (reward = 0.0). Cand_0001 forces a partial report &mdash; job IDs verbatim, some answer substrings match.
+          </div>
+          <div style="text-align: center; font-family: var(--mono); font-size: 0.72em; color: var(--ink); margin: 0.4em 0 0.2em; margin-top: auto;">
+            <span style="color: var(--accent);">0.00</span> &nbsp;&rarr;&nbsp; <span style="color: var(--success); font-weight: 700;">~0.35</span>
+          </div>
+          <div class="foot" style="color: var(--success);">gain per rescued trial: <strong>+0.35</strong></div>
+        </div>
+
+        <!-- HURTS -->
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--accent); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--accent);">where the fix HURTS</div>
+          <div class="desc" style="min-height: 3em;">
+            Trials where seed would have <strong>succeeded fully</strong> (reward = 1.0). The new Recovery Protocol steers the agent AWAY from the gold trajectory &mdash; even when the agent could have followed it.
+          </div>
+          <div style="text-align: center; font-family: var(--mono); font-size: 0.72em; color: var(--ink); margin: 0.4em 0 0.2em; margin-top: auto;">
+            <span style="color: var(--success);">1.00</span> &nbsp;&rarr;&nbsp; <span style="color: var(--accent); font-weight: 700;">~0.35</span>
+          </div>
+          <div class="foot" style="color: var(--accent);">cost per broken success: <strong>&minus;0.65</strong></div>
+        </div>
+
+        <!-- NET -->
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--muted); border-width: 2px; display: flex; flex-direction: column;">
+          <div class="head" style="color: var(--muted);">the aggregate arithmetic</div>
+          <div class="desc" style="min-height: 3em;">
+            On the N=30 mix (roughly half seed-wins, half seed-losses), the +0.35 gains don't outweigh the &minus;0.65 costs.
+          </div>
+          <div style="text-align: center; font-family: var(--mono); font-size: 0.72em; color: var(--ink); margin: 0.4em 0 0.2em; margin-top: auto;">
+            seed <span style="color: var(--success);">0.317</span> &nbsp;&rarr;&nbsp; cand_0001 <span style="color: var(--accent); font-weight: 700;">0.225</span>
+          </div>
+          <div class="foot" style="color: var(--accent);">observed net: <strong>&minus;0.09</strong></div>
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid var(--success); padding: 0.5em 0.9em; margin-top: 0.8em; background: rgba(58,122,76,0.05); border-radius: 0 4px 4px 0;">
+        <div style="font-family: var(--mono); font-size: 0.55em; color: var(--success); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.3em;">what a well-tuned fix would look like</div>
+        <div style="font-family: var(--sans); font-size: 0.75em; line-height: 1.55; color: var(--ink);">
+          Make the PIVOT to <code style="font-family: var(--mono);">find_jobs</code> <strong>conditional</strong> &mdash; trigger it only when <code style="font-family: var(--mono);">get_job_log</code> genuinely returns nothing useful, otherwise follow the successful gold flow. <strong>Keep the wins, rescue the losses.</strong> Estimated headroom: <strong>~+0.15 above seed</strong> (i.e., 0.32 &rarr; ~0.47) &mdash; and that's what the second optimization attempt is aiming for.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 6 — N=30 OPTIMIZATION PILOT ─────────────────────── -->
+    <section style="font-size: 0.82em;">
+      <div class="eyebrow">optimization attempt &middot; N=30 pilot</div>
+      <h2>The optimizer found no improvement on the 2 hardest tasks</h2>
+
+      <div class="grid-2" style="align-items: start; gap: 1.6em; margin-top: 0.4em;">
+        <!-- LEFT: results table -->
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 0.4em;">2 tasks &middot; 30 trials &middot; hill-climb, max_iterations=5</div>
+          <table style="width: 100%; font-family: var(--sans); font-size: 0.78em; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--rule); color: var(--muted); font-family: var(--mono); font-size: 0.68em; letter-spacing: 0.08em; text-transform: uppercase;">
+                <th style="text-align:left; padding: 0.4em 0.5em;"></th>
+                <th style="text-align:right; padding: 0.4em 0.5em;">val reward</th>
+                <th style="text-align:right; padding: 0.4em 0.5em;">stderr</th>
+                <th style="text-align:left; padding: 0.4em 0.5em;">verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 0.5em 0.5em; font-family: var(--serif); font-weight: 600;">seed</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--success); font-weight: 700;">0.317</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--muted);">0.035</td>
+                <td style="padding: 0.5em 0.5em; color: var(--muted); font-style: italic;">baseline</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.5em 0.5em; font-family: var(--serif); font-weight: 600;">cand_0001</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--accent);">0.225</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--muted);">0.025</td>
+                <td style="padding: 0.5em 0.5em; color: var(--accent);"><strong>rejected</strong> &middot; &Delta; = &minus;0.092</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.5em 0.5em; font-family: var(--serif); font-weight: 600;">cand_0002</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--accent);">0.157</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--muted);">0.029</td>
+                <td style="padding: 0.5em 0.5em; color: var(--accent);"><strong>rejected</strong> &middot; &Delta; = &minus;0.160</td>
+              </tr>
+              <tr style="border-top: 1px solid var(--rule);">
+                <td style="padding: 0.5em 0.5em; font-family: var(--serif); font-weight: 600;">test (best = seed)</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--ink);">0.326</td>
+                <td style="text-align:right; padding: 0.5em 0.5em; font-family: var(--mono); color: var(--muted);">0.050</td>
+                <td style="padding: 0.5em 0.5em; color: var(--muted);">test_delta = 0.000</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-family: var(--sans); font-size: 0.55em; color: var(--muted); margin-top: 0.6em; font-style: italic; line-height: 1.5;">
+            <code style="font-family: var(--mono);">stall=2</code> triggered &rarr; run halted at iter=2 (of 5) &middot; optimizer spend $8.61 of $40 budget
+          </div>
+        </div>
+
+        <!-- RIGHT: the takeaway -->
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 0.4em;">what this tells us</div>
+          <div style="font-family: var(--sans); font-size: 0.72em; color: var(--ink); line-height: 1.55; margin-bottom: 0.7em;">
+            Parsec's <code style="font-family: var(--mono);">aap2_agent.md</code> (from PR #40's SDK migration) <strong>is already tuned on these 2 tasks</strong>. The optimizer's proposed additions (&ldquo;always emit final report&rdquo;, &ldquo;budget your rounds&rdquo;, &ldquo;no controller sweep&rdquo;) over-constrain the agent and hurt reward &mdash; two independent proposals, both regressed.
+          </div>
+
+          <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.6em 0.7em; margin-top: 0.5em;">
+            <div class="head" style="color: var(--accent-2); font-size: 0.6em;">what this tells us about the setup</div>
+            <div class="body" style="font-size: 0.55em; line-height: 1.55;">
+              &bull; <strong>Framework works end-to-end</strong> at N=30. Paired-SE gate correctly rejected both regressions.<br/>
+              &bull; <strong>N=10 is too few</strong> on gate-stochastic tasks &mdash; an earlier N=10 pilot on the same 2 tasks measured seed val = 0.017 (95% <code style="font-family: var(--mono);">gate=0</code>). Same SKILL.md, unstable window.<br/>
+              &bull; <strong>Real headroom is elsewhere</strong>: the 25 multi-tool v1 tasks (mean 0.142), the tool-side error rates, and composite tools &mdash; not further prompt tweaks on aap2-0047/0048.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── v2 SECTION DIVIDER ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">optimization pilot &nbsp;&middot;&nbsp; part 2</div>
+        <h1>v2 &middot; authored tasks</h1>
+        <div class="sub">10 hand-authored scenarios &middot; synthetic data per task &middot; where the gold path is reachable</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 12A — v2 SYNTHETIC PILOT: SETUP ─────────────────────── -->
+    <section style="font-size: 0.82em;">
+      <div class="eyebrow">v2 &middot; synthetic pilot &middot; a controlled test</div>
+      <h2>10 authored tasks &mdash; where the gold path is reachable</h2>
+
+      <p style="max-width: 940px; margin-bottom: 0.4em;">Switching from v1's traced tasks (unreachable gold on this sim) to <strong>10 hand-authored <code style="font-family: var(--mono);">bench-aap2-*</code> scenarios</strong> lets us actually optimize. Same Simulation Harness, cleaner task&nbsp;definitions, n=9 trials per task.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.55em; margin-top: 0.7em;">
+        <div class="stat-card" style="border-color: var(--accent-2); border-width: 2px;">
+          <div class="k">tasks</div>
+          <div class="v" style="color: var(--accent-2);">10</div>
+          <div class="c">authored (bench/v2)</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">trials / task</div>
+          <div class="v">9</div>
+          <div class="c">SE &asymp; 0.02 &mdash; tight</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">seed baseline</div>
+          <div class="v" style="color: var(--accent);">0.749</div>
+          <div class="c">v2.2 n=9 mean</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--success); border-width: 2px;">
+          <div class="k">achieved</div>
+          <div class="v" style="color: var(--success);">0.962</div>
+          <div class="c">cand_0001 &middot; &Delta; +0.213</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">ceiling</div>
+          <div class="v">1.000</div>
+          <div class="c">reachable &mdash; unlike v1</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.9em; font-size: 0.6em;">
+        Environment is healthy (MCP <code style="font-family: var(--mono);">status:connected</code> on all trials &middot; 3 wiring patches landed). Room to move exists &mdash; and cap-evolve found it.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 12B — v2 OPTIMIZATION RESULT ─────────────────────── -->
+    <section style="font-size: 0.65em;">
+      <div class="eyebrow">v2 &middot; optimization result</div>
+      <h2>cap-evolve accepted &Delta; = <span style="color: var(--success);">+0.213</span> &mdash; 9 of 10 tasks improved, zero regressions</h2>
+
+      <div class="grid-2" style="align-items: start; margin-top: 0.4em; gap: 1.1em;">
+        <div>
+          <table style="width: 100%; font-family: var(--sans); font-size: 0.9em; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--rule); color: var(--muted); font-family: var(--mono); font-size: 0.7em; letter-spacing: 0.08em; text-transform: uppercase;">
+                <th style="text-align: left; padding: 0.28em 0.5em;">task</th>
+                <th style="text-align: right; padding: 0.28em 0.5em;">seed</th>
+                <th style="text-align: right; padding: 0.28em 0.5em;">cand_0001</th>
+                <th style="text-align: right; padding: 0.28em 0.5em;">&Delta;</th>
+              </tr>
+            </thead>
+            <tbody style="font-family: var(--mono); font-size: 0.85em;">
+              <tr><td style="padding: 0.22em 0.5em;">001 &middot; single-job-outcome</td><td style="text-align: right; padding: 0.22em 0.5em;">0.444</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">1.000</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success); font-weight: 700;">+0.556</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">002 &middot; failed-jobs-on-controller</td><td style="text-align: right; padding: 0.22em 0.5em;">0.889</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">1.000</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.111</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">003 &middot; never-started-explanation</td><td style="text-align: right; padding: 0.22em 0.5em;">0.667</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">1.000</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success); font-weight: 700;">+0.333</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">004 &middot; failing-task-and-host</td><td style="text-align: right; padding: 0.22em 0.5em;">0.711</td><td style="text-align: right; padding: 0.22em 0.5em;">0.978</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.267</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">005 &middot; find-then-diagnose</td><td style="text-align: right; padding: 0.22em 0.5em;">0.750</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">1.000</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.250</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">006 &middot; log-root-cause</td><td style="text-align: right; padding: 0.22em 0.5em;">0.778</td><td style="text-align: right; padding: 0.22em 0.5em;">0.778</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--muted);">0.000</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">007 &middot; count-and-oldest</td><td style="text-align: right; padding: 0.22em 0.5em;">0.852</td><td style="text-align: right; padding: 0.22em 0.5em;">0.907</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.055</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">008 &middot; preceding-task</td><td style="text-align: right; padding: 0.22em 0.5em;">0.844</td><td style="text-align: right; padding: 0.22em 0.5em;">0.978</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.134</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">009 &middot; nonexistent-job</td><td style="text-align: right; padding: 0.22em 0.5em;">0.711</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">1.000</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success); font-weight: 700;">+0.289</td></tr>
+              <tr><td style="padding: 0.22em 0.5em;">010 &middot; log-does-not-say</td><td style="text-align: right; padding: 0.22em 0.5em;">0.844</td><td style="text-align: right; padding: 0.22em 0.5em;">0.978</td><td style="text-align: right; padding: 0.22em 0.5em; color: var(--success);">+0.134</td></tr>
+              <tr style="border-top: 2px solid var(--success); background: rgba(58,122,76,0.12);">
+                <td style="padding: 0.4em 0.5em; font-family: var(--serif); font-weight: 700; font-size: 1.1em; color: var(--success);">MEAN &middot; bottom line</td>
+                <td style="text-align: right; padding: 0.4em 0.5em; font-family: var(--serif); font-weight: 700; font-size: 1.1em;">0.749</td>
+                <td style="text-align: right; padding: 0.4em 0.5em; color: var(--success); font-family: var(--serif); font-weight: 700; font-size: 1.15em;">0.962</td>
+                <td style="text-align: right; padding: 0.4em 0.5em; color: var(--success); font-family: var(--serif); font-weight: 700; font-size: 1.15em;">+0.213</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4em;">what the optimizer changed in SKILL.md</div>
+          <div class="qblock" style="margin-bottom: 0.25em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.3em;">1</div>
+            <div class="txt" style="font-size: 0.68em;"><strong>Short-report path.</strong> For metadata-only questions, a short report is enough &mdash; skip the full config trace.</div>
+          </div>
+          <div class="qblock" style="margin-bottom: 0.25em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.3em;">2</div>
+            <div class="txt" style="font-size: 0.68em;"><strong>Complementary tools.</strong> <code style="font-family: var(--mono);">get_job</code> and <code style="font-family: var(--mono);">get_job_log</code> return different fields &mdash; call both when needed.</div>
+          </div>
+          <div class="qblock" style="margin-bottom: 0.25em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.3em;">3</div>
+            <div class="txt" style="font-size: 0.68em;"><strong>Retry once on transient errors.</strong> Catches <code style="font-family: var(--mono);">session_expired</code>, <code style="font-family: var(--mono);">idle_timeout</code>, etc.</div>
+          </div>
+          <div class="qblock" style="padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--accent); font-size: 1.3em;">4</div>
+            <div class="txt" style="font-size: 0.68em;"><strong>Decision table.</strong> Replaced &ldquo;always use <code style="font-family: var(--mono);">get_job_log</code>&rdquo; with an explicit which-action-for-which-question map.</div>
+          </div>
+          <div class="caption" style="margin-top: 0.4em; text-align: left; font-size: 0.62em;">
+            SE 0.023 at n=9 &middot; gate KEPT ✓ &middot; run <code style="font-family: var(--mono);">run_20260818_161550</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 12C — THE TRAJECTORY (get_job_log vs get_job) ─────────────────────── -->
+    <section style="font-size: 0.7em;">
+      <div class="eyebrow">v2 &middot; one clear before/after</div>
+      <h2>Task 001 &mdash; the SKILL.md flipped from <code style="font-family: var(--mono);">get_job_log</code> to <code style="font-family: var(--mono);">get_job</code></h2>
+
+      <p style="max-width: 940px; font-size: 0.85em; margin-bottom: 0.35em;">User prompt: <em>"What was the outcome of AAP2 job 90142 on controller prod0, and which job template ran it?"</em></p>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.4em; gap: 0.9em;">
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--muted); background: var(--paper-2); display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4em;">
+            <div style="font-family: var(--mono); font-size: 0.62em; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase;">BEFORE &middot; seed</div>
+            <div style="font-family: var(--serif); font-size: 1.4em; color: var(--accent); font-weight: 700;">0.533</div>
+          </div>
+          <div style="font-family: var(--mono); font-size: 0.62em; line-height: 1.55; color: var(--ink-2); background: rgba(216,206,181,0.35); padding: 0.4em 0.6em; border-radius: 5px;">
+            <strong>tool</strong>: <code>query_aap2(action="get_job_log", job_id=90142)</code><br/>
+            <strong>report</strong> (rich, diagnostic):<br/>
+            &bull; Job 90142 &middot; Template <span style="color: var(--accent);"><em>deploy-monitoring-stack</em></span> &middot; failed<br/>
+            &bull; Failed task: "Wait for Alertmanager pods to become ready"<br/>
+            &bull; Host: mon-prod-app-01 &middot; namespace <code>monitoring</code><br/>
+            &bull; Root cause: timeout after ~8.5 min<br/>
+          </div>
+          <div class="foot" style="border-top: 1px dashed var(--muted); margin-top: 0.4em; padding-top: 0.35em; color: var(--accent);">tool_calls = 0 (wrong tool for scorer) &middot; answer = 0.667 (missed &quot;<em>monitoring-stack-deploy</em>&quot;)</div>
+        </div>
+
+        <div class="card" style="padding: 0.55em 0.75em; border-color: var(--success); border-width: 2px; display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4em;">
+            <div style="font-family: var(--mono); font-size: 0.62em; color: var(--success); letter-spacing: 0.15em; text-transform: uppercase;">AFTER &middot; cand_0001</div>
+            <div style="font-family: var(--serif); font-size: 1.4em; color: var(--success); font-weight: 700;">1.000</div>
+          </div>
+          <div style="font-family: var(--mono); font-size: 0.62em; line-height: 1.55; color: var(--ink-2); background: rgba(58,122,76,0.09); padding: 0.4em 0.6em; border-radius: 5px;">
+            <strong>tool</strong>: <code>query_aap2(action="get_job", job_id=90142)</code><br/>
+            <strong>report</strong> (bare metadata):<br/>
+            &bull; Job 90142 &middot; Controller prod0 &middot; Status: failed<br/>
+            &bull; Template: <span style="color: var(--success);"><em>monitoring-stack-deploy</em></span><br/>
+            &bull; Duration ~8.5 min<br/>
+            &bull; <em>(no root cause, no failed-task detail)</em>
+          </div>
+          <div class="foot" style="border-top: 1px dashed var(--success); margin-top: 0.4em; padding-top: 0.35em; color: var(--success);">tool_calls = 1.0 &middot; answer = 1.0 (exact template string matched) &rarr; reward = 1.0</div>
+        </div>
+      </div>
+
+      <div class="caption" style="text-align: center; margin-top: 0.5em; font-size: 0.6em;">
+        Same question. <strong style="color: var(--ink);">The seed's report is more useful to a human.</strong> The candidate's report is shorter &mdash; but hits the exact expected string. Scorer says: candidate wins.
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 12D — THE CATCH: NUMBERS UP FOR WRONG REASON ─────────────────────── -->
+    <section style="font-size: 0.62em;">
+      <div class="eyebrow">v2 &middot; the honest read</div>
+      <h2>Numbers up &mdash; but the SKILL.md is now tuned to the scorer, not to the user</h2>
+
+      <p style="max-width: 940px; font-size: 0.9em; margin-bottom: 0.3em;">The optimizer worked as designed &mdash; it found edits that lift the reward. But those edits trade real diagnostic value for scoring artifacts.</p>
+
+      <div class="grid-3" style="align-items: stretch; margin-top: 0.4em; gap: 0.7em;">
+        <div class="card" style="padding: 0.45em 0.65em; border-color: var(--warning); border-width: 2px;">
+          <div class="head" style="color: var(--warning); font-size: 0.7em;">Task 001 &middot; <code style="font-family: var(--mono);">get_job</code> beats <code style="font-family: var(--mono);">get_job_log</code></div>
+          <div class="desc" style="font-size: 0.62em; margin-bottom: 0;">Scorer expected <code style="font-family: var(--mono);">get_job</code> (bare metadata). Seed used <code style="font-family: var(--mono);">get_job_log</code> (full diagnostic). Seed's answer <strong>more useful</strong>; candidate's <strong>higher-scoring</strong>.</div>
+          <div class="foot" style="font-size: 0.5em; color: var(--warning); margin-top: 0.35em; padding-top: 0.25em;">SKILL.md now prefers bare metadata on questions where the log is what the user needs</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.65em; border-color: var(--warning); border-width: 2px;">
+          <div class="head" style="color: var(--warning); font-size: 0.7em;">Task 003 &middot; verbatim quote demanded</div>
+          <div class="desc" style="font-size: 0.62em; margin-bottom: 0;">Same tools, same info. Seed described the error in its own words. Candidate quotes <code style="font-family: var(--mono);">"line 4 column 18"</code> verbatim &mdash; the exact required substring.</div>
+          <div class="foot" style="font-size: 0.5em; color: var(--warning); margin-top: 0.35em; padding-top: 0.25em;">rewards precise mimicry of gold wording, not clarity</div>
+        </div>
+        <div class="card" style="padding: 0.45em 0.65em; border-color: var(--warning); border-width: 2px;">
+          <div class="head" style="color: var(--warning); font-size: 0.7em;">Task 009 &middot; specific &ldquo;not found&rdquo; phrasing</div>
+          <div class="desc" style="font-size: 0.62em; margin-bottom: 0;">Same 2-tool trajectory. Candidate adds <em>"job 91999 does not exist on controller prod0"</em> verbatim &mdash; wording rigged to the assertion string.</div>
+          <div class="foot" style="font-size: 0.5em; color: var(--warning); margin-top: 0.35em; padding-top: 0.25em;">rewards wording-match, not reasoning</div>
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid var(--accent); padding: 0.4em 0.8em; margin-top: 0.5em; background: rgba(192,67,43,0.05); border-radius: 0 4px 4px 0;">
+        <div style="font-family: var(--mono); font-size: 0.55em; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.25em;">the real finding &mdash; ground truth quality is the OTHER lever</div>
+        <div style="font-family: var(--sans); font-size: 0.8em; line-height: 1.45; color: var(--ink);">
+          Rubrica extracted these tasks from traces. Its <code style="font-family: var(--mono);">expected.json</code> encoded specific tool names + verbatim substrings that <strong>don't fully capture what &ldquo;good&rdquo; means</strong>. cap-evolve then correctly adapted the SKILL.md to match. <strong>Score ↑ · agent quality ↓.</strong> Rubrica's task extraction needs a human-review step for tool choice and answer substrings &mdash; before the optimizer runs.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SECTION DIVIDER — BEYOND SKILL.MD ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">improvement levers &nbsp;&middot;&nbsp; part 3</div>
+        <h1>Beyond SKILL.md</h1>
+        <div class="sub">tool ergonomics, composite tools, and other non-prompt levers</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 7 — COMPOSITE TOOLS + TOOL ERGONOMICS ─────────────────────── -->
+    <section style="font-size: 0.78em;">
+      <div class="eyebrow">what we saw in the 130-trace mining</div>
+      <h2>One RH-owned win &middot; two joint pilots to validate</h2>
+
+      <p style="max-width: 940px; margin-bottom: 0.5em;">Compressible patterns fall into two categories: <strong>tool ergonomics fixes</strong> (RH ships independently) and <strong>composite tools</strong> (jointly-piloted, need task-review support).</p>
+
+      <div class="grid-3" style="align-items: stretch; margin-top: 0.5em; gap: 0.8em;">
+
+        <!-- Card 1: RH-owned tool ergonomics (was card 2 — now first) -->
+        <div class="card" style="border-color: var(--warning); border-width: 2.5px; padding: 0.55em 0.75em; display: flex; flex-direction: column;">
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--warning); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.2em;">RH-owned &middot; ship anytime</div>
+          <div class="head" style="color: var(--warning);">1. Tool ergonomics fix</div>
+          <div class="desc" style="font-size: 0.75em;"><code style="font-family: var(--mono);">query_babylon_catalog</code> errors on <strong>43% of 44 calls</strong> (cluster ambiguity). <code style="font-family: var(--mono);">query_aap2</code> errors on <strong>17% of 122 calls</strong>. Both force re-plans that inflate the loop <em>before</em> any skill change matters.</div>
+          <div class="foot" style="color: var(--warning); margin-top: auto;"><strong>ask</strong>: default-cluster inference or an explicit "which cluster?" affordance &mdash; no IBM in the loop</div>
+        </div>
+
+        <!-- Card 2: debug_aap2_job() as pilot proposal -->
+        <div class="card" style="border-color: var(--accent); border-width: 2px; padding: 0.55em 0.75em; display: flex; flex-direction: column;">
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.2em;">joint pilot proposal</div>
+          <div class="head" style="color: var(--accent);">2. debug_aap2_job() &mdash; mini-skill</div>
+          <div class="desc" style="font-size: 0.75em;"><code style="font-family: var(--mono); font-size: 0.9em;">query_aap2 &rarr; lookup_catalog_item &rarr; fetch_github_file</code> recurs in <strong>21 traces</strong>. Argument keys drift, so this reads as a <em>mini-skill</em> not a fixed-signature tool.</div>
+          <div class="foot" style="color: var(--accent); margin-top: auto;"><strong>ask</strong>: RH review of <code style="font-family: var(--mono);">expected.json</code> for pilot tasks first &mdash; then joint validation</div>
+        </div>
+
+        <!-- Card 3: provisions_db batching -->
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.55em 0.75em; display: flex; flex-direction: column;">
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--accent-2); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.2em;">joint pilot proposal</div>
+          <div class="head" style="color: var(--accent-2);">3. provisions_db batching</div>
+          <div class="desc" style="font-size: 0.75em;">In <code style="font-family: var(--mono);">ocpv</code>: <code style="font-family: var(--mono);">query_provisions_db &rarr; db_describe_table &rarr; query_provisions_db</code> has <strong>stable arg keys</strong> &mdash; cleanest fixed-signature composite candidate.</div>
+          <div class="foot" style="color: var(--accent-2); margin-top: auto;"><strong>ask</strong>: does the pattern still hold on SDK-path traces? Small sub-agent, easy pilot</div>
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid var(--muted); padding: 0.4em 0.9em; margin-top: 0.7em; background: var(--paper-2); border-radius: 0 4px 4px 0;">
+        <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.2em;">caveats to state explicitly</div>
+        <div style="font-family: var(--sans); font-size: 0.72em; line-height: 1.5; color: var(--ink-2);">
+          Directional findings from <strong>130 legacy traces</strong> (2 pod identities, 29 days) &middot; PR #40's SDK path will shift some patterns &middot; task-quality review (v2 lesson) is a prerequisite before optimizing against composites.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SECTION DIVIDER — TAKEAWAYS & NEXT STEPS ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">wrap-up &nbsp;&middot;&nbsp; part 4</div>
+        <h1>Takeaways &amp; next steps</h1>
+        <div class="sub">what the pilots taught us, and where we could go from here</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 7B — WHAT WE LEARNED (LESSONS) ─────────────────────── -->
+    <section style="font-size: 0.7em;">
+      <div class="eyebrow">what we learned</div>
+      <h2>Four takeaways from the pilots</h2>
+
+      <div style="max-width: 920px; margin: 0.4em auto 0;">
+        <div class="qblock" style="margin-bottom: 0.3em; padding: 0.45em 0.7em; gap: 0.55em;">
+          <div class="num" style="color: var(--accent); font-size: 1.4em;">1</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>The framework works end-to-end.</strong> Loop closes cleanly, statistics resolve at N=9&ndash;30, gate accepts / rejects with defensible math.</div>
+        </div>
+        <div class="qblock" style="margin-bottom: 0.3em; padding: 0.45em 0.7em; gap: 0.55em;">
+          <div class="num" style="color: var(--accent); font-size: 1.4em;">2</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Data quality dominates.</strong> v1's unreachable gold trajectory and v2's scorer-gaming both trace back to how tasks were compiled &mdash; not to the optimizer itself.</div>
+        </div>
+        <div class="qblock" style="margin-bottom: 0.3em; padding: 0.45em 0.7em; gap: 0.55em;">
+          <div class="num" style="color: var(--accent); font-size: 1.4em;">3</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Ground truth needs a human review step.</strong> Rubrica's extraction is a strong starting point; RH domain review is the missing loop closure.</div>
+        </div>
+        <div class="qblock" style="padding: 0.45em 0.7em; gap: 0.55em;">
+          <div class="num" style="color: var(--accent); font-size: 1.4em;">4</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Tool ergonomics is a parallel lever.</strong> The 43% <code style="font-family: var(--mono);">query_babylon_catalog</code> error rate is a real, RH-owned win that doesn't wait on us.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 7C — POTENTIAL DIRECTIONS (OPEN QUESTIONS) ─────────────────────── -->
+    <section style="font-size: 0.72em;">
+      <div class="eyebrow">where do we go from here &middot; joint discussion</div>
+      <h2>Potential directions</h2>
+
+      <p style="max-width: 940px; font-size: 0.88em; margin-bottom: 0.5em;">Open questions we'd like to work through together &mdash; not decisions to close today.</p>
+
+      <div class="grid-2" style="align-items: stretch; margin-top: 0.4em; gap: 1.1em; row-gap: 0.9em;">
+
+        <!-- Question 1: benchmark -->
+        <div class="card" style="border-color: var(--accent-2); border-width: 2px; padding: 0.6em 0.8em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--accent-2); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.25em;">Question 1</div>
+          <div class="head" style="color: var(--accent-2);">The benchmark question</div>
+          <div class="desc" style="font-size: 0.9em; margin-bottom: 0;">What's the best way to build a benchmark we can optimize against?</div>
+        </div>
+
+        <!-- Question 2: which agent -->
+        <div class="card" style="border-color: var(--accent); border-width: 2px; padding: 0.6em 0.8em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.25em;">Question 2</div>
+          <div class="head" style="color: var(--accent);">Which sub-agent next?</div>
+          <div class="desc" style="font-size: 0.9em; margin-bottom: 0;">Where should the next optimization iteration focus?</div>
+        </div>
+
+        <!-- Question 3: RH takes cap-evolve -->
+        <div class="card" style="border-color: var(--warning); border-width: 2px; padding: 0.6em 0.8em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--warning); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.25em;">Question 3</div>
+          <div class="head" style="color: var(--warning);">Should RH run cap-evolve directly?</div>
+          <div class="desc" style="font-size: 0.9em; margin-bottom: 0;">Can RH take the loop and iterate on their side?</div>
+        </div>
+
+        <!-- Question 4: More data from RH -->
+        <div class="card" style="border-color: var(--success); border-width: 2px; padding: 0.6em 0.8em;">
+          <div style="font-family: var(--mono); font-size: 0.6em; color: var(--success); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.25em;">Question 4</div>
+          <div class="head" style="color: var(--success);">More data from RH?</div>
+          <div class="desc" style="font-size: 0.9em; margin-bottom: 0;">What additional data should we get from RH &mdash; more traces (SDK-path or richer), evaluation sets, or something else?</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── BACKUP DIVIDER ─────────────────────── -->
+    <section>
+      <div class="cover">
+        <div class="brand">supporting material</div>
+        <h1>Backup</h1>
+        <div class="sub">additional detail &mdash; not part of the linear story</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── BACKUP — WHAT WE DID SO FAR (JOURNEY SUMMARY) ─────────────────────── -->
+    <section style="font-size: 0.75em;">
+      <div class="eyebrow">what we did so far &middot; the journey</div>
+      <h2>From traces to a working pilot &mdash; and where we hit friction</h2>
+
+      <div class="grid-3" style="align-items: stretch; margin-top: 0.5em; gap: 0.9em;">
+
+        <div class="qblock" style="padding: 0.55em 0.75em; gap: 0.55em; align-items: flex-start;">
+          <div class="num" style="color: var(--accent-2); font-size: 1.5em; flex-shrink: 0;">1</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Analyzed the 130 traces.</strong> Mined the trace corpus for tool-error rates and recurring composite / macro opportunities.</div>
+        </div>
+
+        <div class="qblock" style="padding: 0.55em 0.75em; gap: 0.55em; align-items: flex-start;">
+          <div class="num" style="color: var(--accent-2); font-size: 1.5em; flex-shrink: 0;">2</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Chose <span style="color: var(--accent);">aap2</span> as the first pilot subject.</strong> Most instrumented (31 traces) + widest tool coverage + cleanest gold-trace extraction.</div>
+        </div>
+
+        <div class="qblock" style="padding: 0.55em 0.75em; gap: 0.55em; align-items: flex-start;">
+          <div class="num" style="color: var(--accent-2); font-size: 1.5em; flex-shrink: 0;">3</div>
+          <div class="txt" style="font-size: 0.72em;"><strong>Created two task suites.</strong><br/>
+            <span style="color: var(--accent-2);"><strong>v1</strong></span> &middot; 30 aap2 tasks extracted from the traces (real data)<br/>
+            <span style="color: var(--success);"><strong>v2</strong></span> &middot; 10 authored scenarios (synthetic data per task)</div>
+        </div>
+      </div>
+
+      <div style="border-left: 3px solid var(--accent); padding: 0.5em 0.9em; margin-top: 0.7em; background: rgba(192,67,43,0.05); border-radius: 0 4px 4px 0;">
+        <div style="font-family: var(--mono); font-size: 0.55em; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.25em;">bottom line &mdash; the current bottleneck</div>
+        <div style="font-family: var(--sans); font-size: 0.88em; line-height: 1.5; color: var(--ink);">
+          Both pilots close the loop end-to-end, but the results expose the same root issue: <strong>we need to improve task extraction and data injection</strong>. v1's gold trajectory referenced job data the sim doesn't have; v2's authored assertions rewarded scorer-matching over real diagnostic value. The optimizer is doing its job &mdash; the ground truth is upstream.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── BACKUP — ROADMAP ─────────────────────── -->
+    <section style="font-size: 0.75em;">
+      <div class="eyebrow">roadmap</div>
+      <h2>Where the PoC leads</h2>
+
+      <div style="max-width: 96%; margin: 0.3em auto 0;">
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl">Phase 1a &middot; DONE</div>
+          <div class="phase-bar done" style="padding: 0.28em 0.75em;">
+            <div class="title">
+              <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px; margin-right:0.3em;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M4 12 l6 6 l10 -12" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Bridge is up
+            </div>
+            <div class="sub" style="margin-top: 0.1em;">Harbor + <a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Simulation Harness</a> (4 endpoints) + v1 traced 30 tasks &middot; v2 authored 10 &middot; 3 clean baselines</div>
+          </div>
+        </div>
+
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl">Phase 1b &middot; DONE</div>
+          <div class="phase-bar done" style="padding: 0.28em 0.75em;">
+            <div class="title">
+              <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px; margin-right:0.3em;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M4 12 l6 6 l10 -12" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              First optimization attempt
+            </div>
+            <div class="sub" style="margin-top: 0.1em;">N=30 pilot on 2 hardest tasks &middot; both candidates regressed &middot; seed at local optimum on this sample</div>
+          </div>
+        </div>
+
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl" style="color: var(--accent-3);">Phase 1c &middot; NOW</div>
+          <div class="phase-bar" style="padding: 0.28em 0.75em; background: var(--accent-3); color: var(--paper-2);">
+            <div class="title">
+              <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px; margin-right:0.3em;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="14 42"/>
+              </svg>
+              Second optimization attempt &middot; <em style="font-weight: 400; opacity: 0.9;">in progress</em>
+            </div>
+            <div class="sub" style="margin-top: 0.1em;">more compute &middot; deeper N per candidate &middot; broader task coverage &middot; multiple SKILL.md variants under eval</div>
+          </div>
+        </div>
+
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl">Phase 1d &middot; NEXT</div>
+          <div class="phase-bar neutral" style="padding: 0.28em 0.75em;">
+            <div class="title">Broaden the task pool</div>
+            <div class="sub" style="margin-top: 0.1em;">run cap-evolve across all 30 aap2 tasks &middot; re-run v2.1 authored with more trials &middot; SDK-path traces when available</div>
+          </div>
+        </div>
+
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl">Phase 2 &middot; JOINT</div>
+          <div class="phase-bar neutral" style="padding: 0.28em 0.75em;">
+            <div class="title">Composite tools</div>
+            <div class="sub" style="margin-top: 0.1em;"><code style="font-family: var(--mono);">debug_aap2_job()</code> pilot (joint) &middot; <code style="font-family: var(--mono);">query_provisions_db</code> batching (IBM) &middot; tool ergonomics on babylon / aap2 (RH)</div>
+          </div>
+        </div>
+
+        <div class="phase-row" style="margin: 0.35em 0;">
+          <div class="lbl">Phase 3 &middot; FAR</div>
+          <div class="phase-bar neutral" style="padding: 0.28em 0.75em;">
+            <div class="title">Cross-subdomain</div>
+            <div class="sub" style="margin-top: 0.1em;">extend to icinga &middot; babylon &middot; ocpv &middot; cost sub-agents (each uses a subset of the 4-5 <a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Simulation Harness</a> endpoints already in place)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── SLIDE 9 — BOTTOM LINE + DISCUSSION ─────────────────────── -->
+    <section style="font-size: 0.65em;">
+      <div class="eyebrow">bottom line</div>
+      <h2>Where we stand &mdash; and what we'd like to discuss</h2>
+
+      <div class="grid-2" style="align-items: start; margin-top: 0.4em; gap: 0.9em;">
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35em;">what works</div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Bridge is up.</strong> Harbor + <a href="https://github.ibm.com/kaegis/simulation-harness" target="_blank" rel="noopener">Simulation Harness</a> (4 endpoints) + two data versions run end-to-end.</div>
+          </div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Clean statistics.</strong> N=30 on 2 tasks: seed = 0.317 &plusmn; 0.035, tight enough to reject &plusmn;0.07 regressions.</div>
+          </div>
+          <div class="qblock" style="padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="color: var(--success); font-size: 1.5em;">&check;</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Agent capability confirmed.</strong> v2.1 authored: 0.910 mean &mdash; the agent solves nearly all when the task shape is clean.</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-family: var(--mono); font-size: 0.55em; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35em;">open for discussion</div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="font-size: 1.5em;">1</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Ground truth from RH.</strong> v1 answer strings are LLM-drafted (<code style="font-family: var(--mono);">needs_review: true</code>) &mdash; can RH validate the pilot subset before we optimize against them?</div>
+          </div>
+          <div class="qblock" style="margin-bottom: 0.3em; padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="font-size: 1.5em;">2</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Composite tool optimization.</strong> Which composite to pilot first? <strong>debug_aap2_job()</strong>; <strong>babylon ergonomics</strong>; other.</div>
+          </div>
+          <div class="qblock" style="padding: 0.4em 0.6em; gap: 0.5em;">
+            <div class="num" style="font-size: 1.5em;">3</div>
+            <div class="txt" style="font-size: 0.65em;"><strong>Where to expand.</strong> Next dataset priorities: expand v2 to more sub-agents? Compile a fresh SDK-path trace dump (PR #40) for a v3?</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="reveal/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: true,
+    center: true,
+    transition: 'fade',
+    width: 1280,
+    height: 800,
+    margin: 0.06,
+  });
+</script>
+</body>
+</html>

@@ -36,6 +36,7 @@ v2" table for exactly why.
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
 | [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` — everything numeric in this branch is derived by one of these, never hand-typed twice |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap |
+| [`presentation/`](presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
 
 No `insights/`, `evidence/`, `handoffs/`, or `proposals/` here — those are
 `skillsbench-history` directories for a scope (87 skillsbench tasks, multiple transfer-eval
