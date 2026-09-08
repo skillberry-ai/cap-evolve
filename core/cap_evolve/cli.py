@@ -1042,7 +1042,19 @@ def _cmd_dashboard(argv):
     p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
     p.add_argument("--port", type=int, default=dashboard_launch.DEFAULT_PORT)
     p.add_argument("--no-open", action="store_true", help="don't open a browser")
+    p.add_argument("--export", metavar="RUN_DIR",
+                    help="write a self-contained dashboard.html for one run dir and exit "
+                         "(no server) -- the same artifact the report phase renders, so an "
+                         "optimizer agent can regenerate it mid-run as a process/reasoning "
+                         "artifact")
     args = p.parse_args(argv)
+
+    if args.export:
+        from . import dashboard
+        from .rundir import RunDir
+        out = dashboard.write_dashboard(RunDir.open(Path(args.export)))
+        print(json.dumps({"dashboard_html": str(out)}))
+        return 0
 
     status = dashboard_launch.maybe_launch(
         args.base, mode="auto", port=args.port, open_browser=not args.no_open

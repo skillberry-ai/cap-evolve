@@ -10,6 +10,8 @@ export interface LaidNode {
   onSpine: boolean
   col: number // x slot (by depth from root)
   row: number // y slot (0 = spine, >0 = branch lanes)
+  subset?: { task_ids: string[]; tier: number | null } | null
+  clusterIds?: string[]
 }
 
 export interface LineageLayout {
@@ -71,6 +73,8 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
       onSpine,
       col,
       row,
+      subset: n.subset,
+      clusterIds: n.cluster_ids,
     }
   })
 

@@ -14,6 +14,7 @@
 - [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
 - [Measuring only what the edit reaches](#measuring-only-what-the-edit-reaches)
 - [Caveats](#caveats)
+- [Process snapshot](#process-snapshot)
 - [Sources](#sources)
 
 ## Why a free-form agentic algorithm
@@ -492,6 +493,28 @@ per-task SE is 0, the bar collapses to `eps`, and the classification is exactly 
 - At `num_trials: 1` on a stochastic benchmark, single-trial val means carry real variance;
   the paired k·SE gate curbs false accepts, but consider a re-eval before sealing if the
   score goal is only just met.
+
+## Process snapshot
+
+`graph.jsonl` (#446) already records every candidate's parents, `cluster_ids`, screened
+`subset`, `micro_tests`, and gate verdict as it's committed — a VIEW over `events.jsonl` /
+`round.py` / `screen.py`, not a new source of truth (`graph.py`'s own docstring). Nothing reads
+it back mid-run by default, so the reasoning behind a run is invisible until the `report` phase
+renders it at the very end.
+
+Regenerating it live closes that gap with no new mechanism: `python -m cap_evolve dashboard
+--export "$R"` calls the exact same `dashboard.reduce_run` + `render_html` the `report` phase
+uses, and writes the result to `$R/dashboard.html` — a single self-contained HTML file (inline
+CSS/JS/SVG, no CDN) with the candidate DAG (nodes colored by accept/reject, edges for parent
+links, a tooltip per node with its screened task subset and cluster ids), gate decisions, cost,
+and your own accept/reject notes. Call it after every `commit.py` — the run is small enough that
+re-reducing it each time is cheap, and it overwrites in place, so there is always exactly one
+current snapshot on disk, not a growing pile of stale ones.
+
+The live dashboard's "Process" tab appears automatically once `dashboard.html` exists in the run
+dir (`capabilities.process_html`) — this is the artifact both a human watching the run AND you,
+re-reading it on your next turn, use to see the shape of the search so far without re-deriving it
+from raw events.
 
 ## Sources
 

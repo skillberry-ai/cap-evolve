@@ -146,4 +146,8 @@ export const api = {
     ),
 
   streamURL: (id: string) => `/api/runs/${encodeURIComponent(id)}/stream`,
+
+  /** The optimizer's own self-rendered dashboard.html, served raw (not through the
+   *  size-capped /file route) so it renders as a real document in an iframe. */
+  processHtmlURL: (id: string) => `/api/runs/${encodeURIComponent(id)}/process-html`,
 }

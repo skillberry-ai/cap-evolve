@@ -30,6 +30,7 @@ import {
   SkillOptPanel,
 } from '../components/AlgoPanels'
 import { FileTree } from '../components/FileTree'
+import { ProcessPanel } from '../components/ProcessPanel'
 import { GitDiff } from '../components/GitDiff'
 import type { RunCapabilities, RunDetail } from '../lib/types'
 
@@ -77,6 +78,7 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
   if (c.gepa || c.minibatch) tabs.push({ id: 'gepa', label: 'GEPA' })
   if (c.skillopt || c.epochs) tabs.push({ id: 'skillopt', label: 'SkillOpt' })
   if (c.evograph) tabs.push({ id: 'evograph', label: 'Weakness graph' })
+  if (c.process_html) tabs.push({ id: 'process', label: 'Process' })
 
   if (c.diffs) tabs.push({ id: 'diffs', label: 'Diffs' })
   if (c.trajectories) tabs.push({ id: 'trajectories', label: 'Trajectories' })
@@ -212,6 +214,8 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
       return <SkillOptPanel extra={extra} nodes={data.graph.nodes} />
     case 'evograph':
       return <EvographPanel extra={extra} />
+    case 'process':
+      return <ProcessPanel runId={runId} />
     case 'diffs':
       return <IterationsDiff runId={runId} graph={data.graph} />
     case 'trajectories':

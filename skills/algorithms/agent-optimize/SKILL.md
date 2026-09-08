@@ -45,7 +45,7 @@ never guessed at, and this is the one moment where asking is cheap.
 
 Baseline has scored the seed on val and set `best_id = seed`. Each round:
 
-**0. Check you can afford the round — for the number of candidates you actually intend to run**, with
+**0. Check you can afford the round — for the number of candidates you intend to run**, with
 `--n-siblings N` whenever you plan N of them, *before* spending:
 
 ```bash
@@ -161,13 +161,14 @@ estimate, not proof (`--veto-regressions` restores the old no-regression veto; s
 `footprint` before the delta; `unresolved` is no evidence** — `references/algorithm.md`, "Measuring only
 what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but books no decision.
 
-**5. Commit the decision through the run dir**, so `best_id`, the stall counter, the dashboard and the
-audit log stay real. `--decision reject` keeps the old best; either way it snapshots the candidate, logs
+**5. Commit the decision through the run dir**, so `best_id`, the stall counter and the audit log
+stay real. `--decision reject` keeps the old best; either way it snapshots the candidate, logs
 the event and advances `iterations` + stall:
 
 ```bash
 python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$TAG" \
        --decision accept --val <cand_mean> --note "<one line: the general rule you added>"
+cap-evolve dashboard --export "$R"
 ```
 
 **On a reject, pass `--reject-basis`** — `screen.py`'s "promote" means "could not prove harm", never "was

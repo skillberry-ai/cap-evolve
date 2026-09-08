@@ -88,6 +88,9 @@ export interface RunCapabilities {
   freeform: boolean
   /** agent-optimize recorded tiered cheap screens (`screen` events + `screens/*.json`). */
   screens: boolean
+  /** The optimizer wrote its own `dashboard.html` snapshot mid-run (via `cap-evolve
+   *  dashboard --export`) -- shows the "Process" tab. */
+  process_html: boolean
 }
 
 export interface SplitsInfo {
@@ -239,6 +242,11 @@ export interface GraphNode {
   epoch?: number
   merge_of?: string[]
   best_so_far?: boolean
+  /** Which diagnose() failure cluster(s) this edit targeted (graph.jsonl, #446). */
+  cluster_ids?: string[]
+  /** The task subset a cheap screen ran this candidate on before full val (graph.jsonl). */
+  subset?: { task_ids: string[]; tier: number | null } | null
+  micro_tests?: string[]
 }
 
 export interface RunGraph {

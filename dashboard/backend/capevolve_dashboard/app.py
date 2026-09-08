@@ -5,7 +5,7 @@ import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from . import compare, runs, trajectories
 from . import memory as _memory
@@ -79,6 +79,16 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="path escapes run dir")
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="file not found")
+
+    @app.get("/api/runs/{run_id}/process-html")
+    def get_process_html(run_id: str):
+        """The optimizer's own self-rendered ``dashboard.html`` (see cli's ``dashboard
+        --export``) -- served raw so it renders as a real document in an iframe, not
+        truncated/escaped through the generic (256KB-capped, text-only) ``/file`` route."""
+        path = _resolve_or_404(run_id) / "dashboard.html"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="no process html for this run")
+        return HTMLResponse(path.read_text(encoding="utf-8"))
 
     @app.get("/api/runs/{run_id}/git/log")
     def get_git_log(run_id: str):

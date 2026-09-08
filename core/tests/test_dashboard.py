@@ -591,6 +591,46 @@ def test_optimizer_spend_recorded_only_in_state_json_is_attributed(tmp_path):
     assert len(recon) == 1 and abs(recon[0]["usd"] - 4.8) < 1e-6
 
 
+def test_reduce_run_enriches_nodes_from_graph_jsonl():
+    """graph.jsonl (#446) carries cluster_ids/subset/micro_tests that events.jsonl alone
+    cannot -- the reducer must copy them onto the matching node, additively (#446 follow-up:
+    wire the candidate DAG's extra fields into the dashboard)."""
+    from cap_evolve import dashboard, graph
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        graph.append_node(rd, node_id="cand_0001", parents=["seed"], status="accepted",
+                           val_mean=0.75, cluster_ids=["missing_tool_call"],
+                           micro_tests=["mt_1"])
+        (rd.root / "screens").mkdir()
+        (rd.root / "screens" / "cand_0001__screen1.json").write_text(json.dumps(
+            {"tag": "cand_0001", "tier": 1, "subset": {"ids": ["t1", "t2"]},
+             "decision": "promote", "mean_delta": 0.1, "se": 0.02}), encoding="utf-8")
+        graph.append_node(rd, node_id="cand_0001", parents=["seed"], status="accepted",
+                           val_mean=0.75, cluster_ids=["missing_tool_call"],
+                           micro_tests=["mt_1"])  # re-append: last write wins, subset now set
+
+        nodes = {n["id"]: n for n in dashboard.reduce_run(rd)["graph"]["nodes"]}
+        assert nodes["cand_0001"]["cluster_ids"] == ["missing_tool_call"]
+        assert nodes["cand_0001"]["micro_tests"] == ["mt_1"]
+        assert nodes["cand_0001"]["subset"]["task_ids"] == ["t1", "t2"]
+        # cand_0002 has no graph.jsonl node at all -- enrichment must not fabricate one.
+        assert "cluster_ids" not in nodes["cand_0002"]
+        assert "subset" not in nodes["cand_0002"]
+
+
+def test_process_html_capability_reflects_dashboard_html_presence():
+    """The optimizer regenerates ``dashboard.html`` mid-run (``cap-evolve dashboard
+    --export``); the live UI's "Process" tab is gated on this flag, not on the algorithm."""
+    from cap_evolve.dashboard import reduce_run, write_dashboard
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        assert reduce_run(rd)["summary"]["capabilities"]["process_html"] is False
+        write_dashboard(rd)
+        assert reduce_run(rd)["summary"]["capabilities"]["process_html"] is True
+
+
 def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
     """No capevolve.yaml is a NOTE, not a reason to omit every project artifact."""
     from cap_evolve.dashboard import reduce_run
