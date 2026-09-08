@@ -155,6 +155,30 @@ it checks the untouched surface without having to name it. One `--k`-sized draw 
 either drowns the targeted signal in noise or lets the same tasks stand for both target and
 holdout at once.
 
+### Choosing your own subset
+
+`select_screen_subset`'s broken/informative/holdout heuristic is the DEFAULT selection, not the
+only one you may use. `screen.py --ids <comma-separated task ids>` bypasses it entirely: name the
+val tasks you want screened — from your own read of the candidate's target failure cluster's
+rollouts, grouped by trajectory similarity (same tool misused, same failure site, same violated
+expectation), or by any other method — and the same paired-delta kill/promote decision runs on
+exactly those ids, with the same audit trail under `$R/screens/`. It can still only kill, never
+accept, for the same reason the heuristic path can't: a subset you picked because it targets the
+edit is biased toward that edit, which is excellent triage and an invalid basis for acceptance.
+
+On **train** there is no screen/gate ceremony to bypass at all: `evaluate.py --split train --ids
+<your subset>` (`cap_evolve.harness.evaluate_candidate`'s `ids` parameter, exposed on the CLI)
+runs exactly the ids you name and nothing else, under a tag you control. Iterate on it as many
+times as you find useful — different clustering, different candidate, different cluster size —
+before ever touching val; train carries none of the honesty machinery, so there is nothing to
+protect there.
+
+**Never pass `--ids` to the step 4 full-val gate eval.** That call is the one place the loop's
+freedom stops: `gate_check.py`'s coverage guard (`min_coverage`) exists to catch an
+under-measured candidate, and a deliberately-chosen subset's `coverage` reads 1.0 by construction
+(its denominator IS the subset) — the exact blind spot the guard cannot see through. The full-val
+eval stays the whole split every round, same as the heuristic-screened path always required.
+
 ### `phases/gate` is an inspection front-end, not the round's gate
 
 `phases/gate/scripts/run.py --mode paired` reaches the *same* paired gate off the *same* persisted

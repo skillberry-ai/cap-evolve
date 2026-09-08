@@ -101,6 +101,14 @@ def main(argv=None) -> int:
                    help="kill only when Δ̄ + k·SE < 0 on the subset (default 1.0)")
     p.add_argument("--broken", default="",
                    help="comma-separated task ids a previous edit broke — screened first")
+    p.add_argument("--ids", default="",
+                   help="comma-separated val task ids to screen on, chosen by YOUR OWN method "
+                        "(trajectory-similarity clustering, reading rollouts, anything) — "
+                        "bypasses select_screen_subset's fixed broken/informative/holdout "
+                        "heuristic entirely. --tier/--k/--broken/--holdout-frac are ignored "
+                        "when this is set. The kill/promote decision and audit trail are "
+                        "unchanged — this only changes WHICH tasks are screened, never "
+                        "whether a screen can accept (it still can't).")
     p.add_argument("--n-trials", type=int, default=1,
                    help="trials per screened task (1 is the point; >1 is not a gate)")
     p.add_argument("--workers", type=int, default=None,
@@ -131,13 +139,24 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
-    frac = TIER_FRAC[args.tier]
-    k = args.k or max(MIN_K, int(round(frac * len(val_ids))))
-    seed = args.seed if args.seed is not None else int(run_dir.read_splits().seed) + args.tier
-    broken = [b for b in (args.broken or "").split(",") if b.strip()]
-    sub = select_screen_subset(parent.per_task, k=k, seed=seed,
-                               holdout_frac=args.holdout_frac,
-                               broken_ids=[b.strip() for b in broken])
+    custom_ids = [i.strip() for i in (args.ids or "").split(",") if i.strip()]
+    if custom_ids:
+        val_id_set = {str(i) for i in val_ids}
+        chosen = sorted({i for i in custom_ids if i in val_id_set})
+        sub = {"ids": chosen, "broken": [], "holdout": [], "informative": chosen,
+               "k": len(chosen), "requested_k": len(custom_ids), "seed": None,
+               "holdout_frac": None, "pool_n": len(parent.per_task),
+               "rationale": f"optimizer-chosen subset ({len(chosen)} of {len(custom_ids)} "
+                            "requested ids fell inside the frozen val split), bypassing "
+                            "select_screen_subset's heuristic"}
+    else:
+        frac = TIER_FRAC[args.tier]
+        k = args.k or max(MIN_K, int(round(frac * len(val_ids))))
+        seed = args.seed if args.seed is not None else int(run_dir.read_splits().seed) + args.tier
+        broken = [b for b in (args.broken or "").split(",") if b.strip()]
+        sub = select_screen_subset(parent.per_task, k=k, seed=seed,
+                                   holdout_frac=args.holdout_frac,
+                                   broken_ids=[b.strip() for b in broken])
 
     # Rungs are cumulative: never re-run a task an earlier rung already screened.
     prior_tags = _screen_tags(run_dir, tag)
