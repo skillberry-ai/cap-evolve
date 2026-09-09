@@ -17,9 +17,13 @@ type SortKey = 'iteration' | 'val' | 'delta'
 export function CandidatesPanel({
   graph,
   summary,
+  selectedId,
+  onSelectId,
 }: {
   graph: RunGraph
   summary: RunSummaryDetail
+  selectedId?: string | null
+  onSelectId?: (id: string) => void
 }) {
   const [sort, setSort] = useState<SortKey>('iteration')
 
@@ -41,7 +45,7 @@ export function CandidatesPanel({
 
   return (
     <div className="space-y-5">
-      <LineageTree graph={graph} />
+      <LineageTree graph={graph} selectedId={selectedId} onSelectId={onSelectId} />
 
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
@@ -85,7 +89,15 @@ export function CandidatesPanel({
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((n) => (
-                <tr key={n.id} className="hover:bg-surface-2">
+                <tr
+                  key={n.id}
+                  onClick={() => onSelectId?.(n.id)}
+                  className={cn(
+                    'hover:bg-surface-2',
+                    onSelectId && 'cursor-pointer',
+                    n.id === selectedId && 'bg-primary-soft',
+                  )}
+                >
                   <td className="tnum px-3 py-1.5 text-muted">{n.iteration ?? 0}</td>
                   <td className="px-3 py-1.5">
                     <span className="inline-flex items-center gap-1.5 font-mono">

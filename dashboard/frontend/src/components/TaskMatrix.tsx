@@ -25,13 +25,20 @@ function cellFor(v: number | null | undefined) {
  * are the candidates in iteration order, and the seed column is the baseline to read
  * across from. Works for every algorithm: it needs only per-task rewards, and an
  * algorithm that evaluates a SUBSET (agent-optimize) simply leaves the rest "not run".
+ *
+ * `selectedId` narrows the rows to exactly the task ids present in that candidate's own
+ * `per_task` — the same sparse map that already means "not run" for an absent key, so no
+ * separate subset/screen field is needed to know what a candidate actually touched. No
+ * selection (or a candidate with no per_task) falls back to the full task universe.
  */
 export function TaskMatrix({
   summary,
   nodes,
+  selectedId,
 }: {
   summary: RunSummaryDetail
   nodes: GraphNode[]
+  selectedId?: string | null
 }) {
   const [hover, setHover] = useState<{ task: string; node: GraphNode } | null>(null)
 
@@ -43,7 +50,17 @@ export function TaskMatrix({
     [nodes],
   )
 
+  const selectedNode = useMemo(
+    () => (selectedId ? cols.find((n) => n.id === selectedId) : undefined),
+    [cols, selectedId],
+  )
+  const selectedTaskIds = selectedNode ? Object.keys(selectedNode.per_task ?? {}) : null
+
   const rows = useMemo(() => {
+    if (selectedTaskIds && selectedTaskIds.length > 0) {
+      const mean = (t: string) => selectedNode!.per_task?.[t] ?? -1
+      return [...selectedTaskIds].sort((a, b) => mean(a) - mean(b))
+    }
     const ids = new Set(summary.tasks ?? [])
     for (const n of cols) for (const t of Object.keys(n.per_task ?? {})) ids.add(t)
     const mean = (t: string) => {
@@ -51,7 +68,7 @@ export function TaskMatrix({
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : -1
     }
     return [...ids].sort((a, b) => mean(a) - mean(b))
-  }, [summary.tasks, cols])
+  }, [summary.tasks, cols, selectedTaskIds, selectedNode])
 
   if (cols.length === 0 || rows.length === 0) {
     return (
@@ -69,6 +86,16 @@ export function TaskMatrix({
 
   return (
     <div className="space-y-4">
+      {selectedTaskIds && selectedTaskIds.length > 0 && (
+        <Card className="border-primary/40 bg-primary-soft">
+          <p className="p-3.5 text-[12px] leading-relaxed text-muted-strong">
+            Showing <span className="font-medium text-foreground">{selectedTaskIds.length}</span>{' '}
+            task(s) — the subset <span className="font-mono">{selectedId}</span> was actually
+            evaluated on. Select a different candidate, or deselect it, to see the full task
+            universe.
+          </p>
+        </Card>
+      )}
       {churn.length > 0 && (
         <Card className="border-accent/40 bg-accent/[0.04]">
           <p className="p-3.5 text-[12px] leading-relaxed text-muted-strong">

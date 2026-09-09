@@ -20,10 +20,24 @@ const FILL: Record<GraphNode['status'], string> = {
 }
 
 /** Best-path-as-spine lineage: the winning chain reads as a flat amber line
- * across the top; off-spine candidates hang below with L-connectors. */
-export function LineageTree({ graph }: { graph: RunGraph }) {
+ * across the top; off-spine candidates hang below with L-connectors.
+ *
+ * Selection is controlled by the parent when `selectedId`/`onSelectId` are given, so the
+ * Tasks tab (a sibling of this panel, not a child) can react to the same click — falls
+ * back to local state so the panel still works standalone. */
+export function LineageTree({
+  graph,
+  selectedId,
+  onSelectId,
+}: {
+  graph: RunGraph
+  selectedId?: string | null
+  onSelectId?: (id: string) => void
+}) {
   const layout = layoutLineage(graph)
-  const [selected, setSelected] = useState<string | null>(graph.best_id)
+  const [localSelected, setLocalSelected] = useState<string | null>(graph.best_id)
+  const selected = selectedId !== undefined ? selectedId : localSelected
+  const setSelected = onSelectId ?? setLocalSelected
   const reduce = prefersReducedMotion()
 
   if (layout.nodes.length === 0) {

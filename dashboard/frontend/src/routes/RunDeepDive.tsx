@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
@@ -91,6 +91,9 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
 export function RunDeepDive() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
+  // Shared with the Tasks tab so it can filter to whichever candidate the Candidates tab
+  // has selected, instead of always showing the full task universe.
+  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['run', id],
@@ -165,7 +168,17 @@ export function RunDeepDive() {
               liveEvents={stream.status === 'live' ? stream.count : 0}
             />
             <KpiStrip summary={summary} />
-            <Tabs tabs={tabs}>{(active) => <TabBody active={active} data={data} runId={id!} />}</Tabs>
+            <Tabs tabs={tabs}>
+              {(active) => (
+                <TabBody
+                  active={active}
+                  data={data}
+                  runId={id!}
+                  selectedCandidate={selectedCandidate}
+                  onSelectCandidate={setSelectedCandidate}
+                />
+              )}
+            </Tabs>
           </div>
         )}
       </div>
@@ -173,7 +186,19 @@ export function RunDeepDive() {
   )
 }
 
-function TabBody({ active, data, runId }: { active: string; data: RunDetail; runId: string }) {
+function TabBody({
+  active,
+  data,
+  runId,
+  selectedCandidate,
+  onSelectCandidate,
+}: {
+  active: string
+  data: RunDetail
+  runId: string
+  selectedCandidate: string | null
+  onSelectCandidate: (id: string) => void
+}) {
   const s = data.summary
   const extra = s.algo_extra ?? {}
   switch (active) {
@@ -185,11 +210,18 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
         </div>
       )
     case 'candidates':
-      return <CandidatesPanel graph={data.graph} summary={s} />
+      return (
+        <CandidatesPanel
+          graph={data.graph}
+          summary={s}
+          selectedId={selectedCandidate}
+          onSelectId={onSelectCandidate}
+        />
+      )
     case 'gate':
       return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
-      return <TaskMatrix summary={s} nodes={data.graph.nodes} />
+      return <TaskMatrix summary={s} nodes={data.graph.nodes} selectedId={selectedCandidate} />
     case 'cost':
       // The ledger already accounts for every dollar by phase; CostPanel's by-role chart
       // restated the ledger and was dropped. Its per-iteration table is the only place
