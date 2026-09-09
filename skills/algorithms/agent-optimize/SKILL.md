@@ -189,8 +189,8 @@ after which `grow.py` buys trials on the SAME candidate, re-gating at the pooled
 `references/algorithm.md`.
 
 **6. Write the handover before ending this round** — append one `## Iteration <cid>` entry below
-`JOURNAL.md`'s marker: what you tried, why, what the numbers said. The only thing the NEXT round reads,
-and `commit.py` folds in only what you wrote (`references/algorithm.md`).
+`work/$TAG/JOURNAL.md`'s marker (never `$R/JOURNAL.md`, framework-owned): what you tried, why, what
+the numbers said. The only thing the NEXT round reads (`references/algorithm.md`).
 
 ## Parallel round (optional)
 

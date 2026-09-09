@@ -300,13 +300,17 @@ cap turns "maybe next round" into a bounded, auditable cost rather than an open-
 the seed candidate before round 1, and re-seeds it onto whichever candidate is `$BEST` after
 every `commit.py` call, so it is always present at the start of a round regardless of how many
 rounds came before. It is YOUR file (append-only, never reset): the run-level copy at
-`$R/JOURNAL.md` accumulates one entry per iteration, accepted and rejected alike.
+`$R/JOURNAL.md` accumulates one entry per iteration, accepted and rejected alike — but that
+accumulation is done BY THE FRAMEWORK (`harness._reconcile_journal`), never by you directly.
+Edit `$R/work/$TAG/JOURNAL.md` only; never append to `$R/JOURNAL.md` yourself (e.g. via a bash
+`cat >>`) — it is rewritten wholesale on the next `_seed_journal`/`_reconcile_journal` pass, so a
+direct edit there is invisible to the parser and gets clobbered.
 
 The write protocol:
 
 1. Read the WHOLE file before proposing — not just the last entry — so you build on every prior
    attempt and never re-test a refuted idea.
-2. Append your new entry BELOW the marker line
+2. Append your new entry BELOW the marker line, in `$R/work/$TAG/JOURNAL.md`
    `<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit
    anything above it -->`. Never edit or delete anything above the marker.
 3. Use the heading `## Iteration <candidate id> — <one-line headline of what you tried>`,
