@@ -1,0 +1,5 @@
+{
+  "train": ["debug-trl-grpo"],
+  "val": ["debug-trl-grpo"],
+  "test": ["debug-trl-grpo"]
+}

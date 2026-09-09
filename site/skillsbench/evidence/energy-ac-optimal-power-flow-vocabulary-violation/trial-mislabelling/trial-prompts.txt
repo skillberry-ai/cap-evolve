@@ -1,0 +1,44 @@
+# Trial mislabelling in run_task_energy-ac-optimal-power-flow_v1_CORRUPTED_batch3
+# Every trial file is named/tagged energy-ac-optimal-power-flow, but the prompts
+# belong to several different SkillsBench tasks. Source:
+#   work/cand_0003/trajectories/energy-ac-optimal-power-flow__cand_0001__t*.json
+
+--- t0  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    As an operator-planner in an Independent System Operator, you create a base case for tomorrow's peak hour each morning in order to establish the voltage profile and verify that the day-ahead market schedule is AC-feasibl
+
+--- t1  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    As an operator-planner in an Independent System Operator, you create a base case for tomorrow's peak hour each morning in order to establish the voltage profile and verify that the day-ahead market schedule is AC-feasibl
+
+--- t2  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    As an operator-planner in an Independent System Operator, you create a base case for tomorrow's peak hour each morning in order to establish the voltage profile and verify that the day-ahead market schedule is AC-feasibl
+
+--- t3  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    As an operator-planner in an Independent System Operator, you create a base case for tomorrow's peak hour each morning in order to establish the voltage profile and verify that the day-ahead market schedule is AC-feasibl
+
+--- t4  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    As an operator-planner in an Independent System Operator, you create a base case for tomorrow's peak hour each morning in order to establish the voltage profile and verify that the day-ahead market schedule is AC-feasibl
+
+--- t5  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    You are helping an HR department identify differences between its old employee records and the current database. The company previously saved employee data as a backup in a PDF file (`/root/employees_backup.pdf`). Since 
+
+--- t6  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    You are given a `PDF` file at `/root/input/input.pdf` and a text file at `/root/input/input.txt` containing natural language instructions and updated information. Your task is to update this PDF using the latest informat
+
+--- t7  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    Fill the California Small Claims Court form at `/root/sc100-blank.pdf` based on the case description below, and save the filled one to `/root/sc100-filled.pdf`. Only fill in the necessary fields and leave the court-fille
+
+--- t8  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    You are helping an HR department identify differences between its old employee records and the current database. The company previously saved employee data as a backup in a PDF file (`/root/employees_backup.pdf`). Since 
+
+--- t9  input='energy-ac-optimal-power-flow'  rollout.task_id='energy-ac-optimal-power-flow'
+    first user_message (first 220 chars):
+    You need to analyze the following files to find any potential invoice fraud: - `/root/invoices.pdf`: One invoice per page. - `/root/vendors.xlsx`: Approved vendors with corresponding Vendor ID, Name, and authorized IBAN.

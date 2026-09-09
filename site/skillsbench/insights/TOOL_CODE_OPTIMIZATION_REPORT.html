@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TOOL_CODE_OPTIMIZATION_REPO — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/TOOL_CODE_OPTIMIZATION_REPORT.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/TOOL_CODE_OPTIMIZATION_REPORT.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/TOOL_CODE_OPTIMIZATION_REPORT.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="does-cap-evolve-optimize-actual-toolscript-code-or-only-prompt-text">Does cap-evolve optimize actual tool/script CODE, or only prompt text?</h1>
+<p><strong>Short answer: yes — confirmed with two independent, checked-in, git-tracked examples
+where cap-evolve rewrote real Python code and the reward improved in lockstep with the
+code changes. The mechanism that gets that code running inside a sandboxed benchmark
+container is whole-file deployment + subprocess execution — not a <code>PYTHONPATH</code>/<code>sys.path</code>
+import trick, which does not exist anywhere in this codebase today.</strong></p>
+<p>This report answers three questions: (1) can cap-evolve edit real code, not just prose;
+(2) is there evidence it has actually done so; (3) how does an evolved script end up
+running inside a Docker sandbox.</p>
+<hr />
+<h2 id="1-the-capability-types">1. The capability types</h2>
+<p>cap-evolve's optimizer edits a "capability" — the artifact under optimization. Four
+types exist, each governed by its own <code>SKILL.md</code> under <code>skills/capabilities/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>What's editable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>system-prompt</code></td>
+<td>A prompt/policy text file only</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>The agent's <strong>own</strong> tools — docstrings/descriptions <strong>and tool behavior/code</strong>, plus adding/removing composite tools</td>
+</tr>
+<tr>
+<td><code>mcp-tool</code></td>
+<td>Tools served by an <strong>external</strong> MCP server — docs/exposed-set only; code is explicitly NOT editable (the server isn't yours)</td>
+</tr>
+<tr>
+<td><code>skill-package</code></td>
+<td>A whole Agent Skill directory: <code>SKILL.md</code> + <code>references/</code> + <code>scripts/</code> + <code>assets/</code> — <strong>all of it editable</strong>, including creating brand-new bundled scripts</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>tools</code> capability's own <code>SKILL.md</code> states directly: <em>"names, descriptions,
+parameter docs, in-description examples, the JSON Schema, and the implementation code
+are all fair game."</em> The <code>skill-package</code> capability's <code>SKILL.md</code> lists "a skipped step →
+a bundled script" as one of its highest-leverage optimization moves, with <code>apply()</code>
+explicitly allowed to "rewrite or CREATE" a script.</p>
+<p>So the capability to edit real code is real, not aspirational — but capability
+documentation alone isn't proof it was <em>used</em>. Two concrete runs confirm it was.</p>
+<hr />
+<h2 id="2-example-a-tau2_airline-capability-system-prompt-tools">2. Example A — <code>tau2_airline</code> (capability: <code>system-prompt</code> + <code>tools</code>)</h2>
+<p><code>examples/tau2_airline</code> optimizes a tau2-bench airline agent's system prompt <strong>and</strong>
+its own tool implementations jointly. Results are recorded in <code>docs/RESULTS.md</code>:
+<strong>val +90.5%, sealed test +125%</strong> when <code>[skill-package, system-prompt, tools]</code> are
+optimized together versus the seed.</p>
+<p>The evolved tool code is loaded via <code>importlib.util.spec_from_file_location(...)</code> +
+<code>spec.loader.exec_module(mod)</code> in <code>adapters/adapter.py</code>'s <code>_load_candidate_tools_class()</code>
+— executed fresh, in-process, on every candidate. This runner is not containerized (it's
+an in-process/subprocess litellm agent), so there's no sandbox-injection step to
+describe for this example — it's included here purely to establish that tool-<em>code</em>
+optimization, not just prompt optimization, is real and measured.</p>
+<hr />
+<h2 id="3-example-b-exam-block-sequencing-capability-skill-package">3. Example B — <code>exam-block-sequencing</code> (capability: <code>skill-package</code>)</h2>
+<p>This is the more striking example: the optimizer <strong>wrote an entire new solver from
+scratch</strong>, not just SKILL.md text.</p>
+<p><strong>Location:</strong> <code>intake_skillbench_c3/.capevolve/project_exam-block-sequencing</code>, run store
+<code>intake_skillbench_c3/.capevolve/run_task_exam-block-sequencing_v1_KILLED_ceiling_reached_1.0</code>
+— a real git repo (<code>store: git</code> in <code>capevolve.exam-block-sequencing.yaml</code>), so every
+iteration is a commit.</p>
+<p><strong>Seed state:</strong> the seed skill package contained <strong>only two <code>SKILL.md</code> files</strong>
+(<code>ordered-window-sequencing-mip/SKILL.md</code>, <code>mip-solver-and-solution-audit/SKILL.md</code>).
+No script existed. Seed reward: <strong>0.1</strong>.</p>
+<p><strong>Iteration 1 (<code>cand_0001</code>, val 0.9):</strong> the optimizer <strong>created</strong>
+<code>ordered-window-sequencing-mip/scripts/solve_sequencing.py</code> — a 465-line heuristic
+solver implementing a feasible front-loaded initializer followed by restarted 2-swap
+simulated-annealing / steepest-descent local search.</p>
+<p><strong>Iteration 2 (<code>cand_0002</code>, best/final, val 1.0):</strong> the optimizer <strong>modified</strong> that
+script to 549 lines, adding new functions <code>build_feasible()</code> and <code>relocate()</code>, and
+widening the search neighborhood from plain 2-swap to 2-swap + or-opt(1) relocation.
+<code>history.jsonl</code> logs this explicitly as a "script-only" edit:</p>
+<blockquote>
+<p><em>"enlarged the local-search neighborhood from 2-swap-only to 2-swap + or-opt(1)
+relocation... added <code>build_feasible</code>... + <code>relocate</code> helper."</em></p>
+</blockquote>
+<p>Diff excerpt (cand_0001 → cand_0002):</p>
+<pre><code class="language-diff">&lt;   2. runs restarted steepest-descent 2-swap local search on the EXACT objective
+---
+&gt;   2. runs restarted local search over a combined 2-swap + or-opt(1) relocation
+&gt;      neighborhood (simulated annealing then steepest descent) on the EXACT
+</code></pre>
+<p><code>git log --stat</code> on the run store shows both accept commits (<code>iter 1: ACCEPT candidate
+cand_0001</code>, <code>iter 2: ACCEPT candidate cand_0002</code>) touching <code>scripts/solve_sequencing.py</code>
+alongside the SKILL.md files each time — and a compiled
+<code>__pycache__/solve_sequencing.cpython-312.pyc</code> sitting next to it confirms the script
+was actually <strong>executed</strong>, not just written and ignored.</p>
+<p>No <code>policy.json</code> existed anywhere in this project or run store, so script edits were
+fully unrestricted for this run.</p>
+<p><strong>Reward trajectory</strong> (<code>results.json</code>, task <code>exam-block-sequencing</code>): seed 0.1 →
+cand_0001 0.9 → cand_0002 1.0 (final, status <code>KILLED_ceiling</code>). The reward jump tracks
+the code changes directly, not a prose reword.</p>
+<hr />
+<h2 id="4-how-the-evolved-code-actually-runs-inside-the-sandboxed-container">4. How the evolved code actually runs inside the sandboxed container</h2>
+<p>Using SkillsBench (the benchmark <code>exam-block-sequencing</code> and similar tasks run under)
+as the concrete pipeline, from <code>examples/skillsbench/adapters/adapter.py</code>:</p>
+<p><strong>Step 1 — materialize.</strong> The optimizer's edits are written as plain files into the
+candidate's <code>seed_capability/&lt;sub-skill&gt;/</code> directory on the host/pod filesystem. No
+container yet.</p>
+<p><strong>Step 2 — stage a clean copy.</strong> The adapter copies (never symlinks — deliberately,
+because BenchFlow's own deploy step <code>copytree</code>s the skills dir and <em>silently skips
+symlinked entries</em>) each sub-skill into a fresh temp directory:</p>
+<pre><code class="language-python">skills_root = Path(tempfile.mkdtemp(prefix=&quot;skillsbench_skills_&quot;, dir=str(_BENCH_CWD)))
+for sub in sorted(candidate_dir.iterdir()):
+    if sub.is_dir() and (sub / &quot;SKILL.md&quot;).exists():
+        shutil.copytree(sub, skills_root / sub.name)
+</code></pre>
+<p><strong>Step 3 — hand it to the benchmark's own CLI.</strong> cap-evolve never touches Docker
+directly; it shells out to BenchFlow:</p>
+<pre><code class="language-python">cmd = [BENCH_BIN, &quot;eval&quot;, &quot;run&quot;, ...,
+       &quot;--sandbox&quot;, &quot;docker&quot;,
+       &quot;--skill-mode&quot;, &quot;with-skill&quot;, &quot;--skills-dir&quot;, str(skills_root), ...]
+</code></pre>
+<p><strong>Step 4 — BenchFlow deploys it into the container at <code>/skills</code>.</strong> Per the adapter's
+own docstring: <em>"the CANDIDATE'S four skills injected verbatim at /skills."</em> BenchFlow
+owns the container's full lifecycle (build, start, teardown).</p>
+<p><strong>Step 5 — the in-container agent runs the script as a subprocess.</strong> The Claude agent
+inside the Docker sandbox reads <code>SKILL.md</code>, sees the instruction to invoke
+<code>scripts/solve_sequencing.py</code>, and runs it <strong>as a command-line program via its own Bash
+tool</strong> — not via any Python <code>import</code>. This is exactly why the exam-block-sequencing
+run left behind a <code>__pycache__/*.pyc</code>: that's the interpreter <em>inside the container</em>
+compiling the script on first execution, independent of the host.</p>
+<p><strong>Step 6 — results flow back out.</strong> BenchFlow writes the verifier reward, CTRF report,
+and transcript to a jobs directory on the host; the adapter reads those back into a
+<code>Rollout</code> that the optimizer scores.</p>
+<h3 id="why-not-pythonpath-syspath">Why not <code>PYTHONPATH</code> / <code>sys.path</code>?</h3>
+<p>A separate, exhaustive search across the main repo and all 15 worktrees found <strong>every</strong>
+<code>PYTHONPATH</code>/<code>sys.path</code> occurrence to be host-side plumbing — the cap-evolve CLI, its
+tests, or adapter helper scripts importing <code>cap_evolve</code> or a sibling helper module on
+the <em>host</em> process. None of them set or manipulate the Python path <strong>inside</strong> a
+benchmark's container. The mechanism that actually gets tool code into a container is
+the copy-and-execute pipeline above: the whole file lands on disk inside the sandbox,
+and the agent's own Bash tool runs it as a subprocess. If a PYTHONPATH-based import
+trick was discussed previously, it was never implemented — it would be a plausible
+extension of this existing "copy the whole directory in" pattern, but no such code,
+config, or design doc exists in the repository today.</p>
+<hr />
+<h2 id="bottom-line">Bottom line</h2>
+<ul>
+<li><strong>Real, measured, code-level optimization exists</strong> — twice over, via two different
+  mechanisms: in-process <code>importlib.exec_module</code> reload (tau2_airline, tool code) and
+  whole-directory container deployment + subprocess execution (exam-block-sequencing,
+  skill-bundled script, from-scratch solver).</li>
+<li><strong>The reward numbers back it up</strong> — both examples show reward moving with the actual
+  code changes, not just wording changes.</li>
+<li><strong>No PYTHONPATH/import-based container injection exists</strong> in this codebase. Don't
+  claim that specific mechanism was built — it wasn't. The copy-and-execute pattern
+  above is the real, working answer to "how does evolved code get into the container."</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

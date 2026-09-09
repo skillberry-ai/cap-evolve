@@ -1,0 +1,5 @@
+{
+  "train": ["earthquake-phase-association"],
+  "val": ["earthquake-phase-association"],
+  "test": ["earthquake-phase-association"]
+}

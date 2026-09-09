@@ -1,0 +1,2217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKILLS_TASKS_M — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/SKILLS_TASKS_MAP.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/SKILLS_TASKS_MAP.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/SKILLS_TASKS_MAP.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="skillsbench-skills-tasks-map-87-tasks">SkillsBench: skills ↔ tasks map (87 tasks)</h1>
+<p>Derived from <code>insights/SKILLSBENCH_INVENTORY.md</code>'s per-task "Shipped skills" data (the task-by-task-87 run seeds each task from this same per-task skill set — see "Implications for a task-by-task optimization strategy" §1 in that doc).</p>
+<ul>
+<li>
+<p><strong>201 distinct skill names</strong> appear across the 87 tasks' shipped-skill lists. 5 of those are boilerplate filenames, not real skills — <code>README.md</code>, <code>LICENSE</code>, <code>INSTALLATION.md</code>, <code>TESTING.md</code>, <code>reference.md</code> — carried over from how the source repo lays out its <code>environment/skills/</code> directories (e.g. <code>lean4-proof</code> ships its real skills <code>lean4-memories</code>/<code>lean4-theorem-proving</code> alongside a <code>README.md</code>/<code>LICENSE</code>/etc.). These are marked <strong>B</strong> below rather than given a skill number, so the numbering (1–196) covers only actual skills.</p>
+</li>
+<li>
+<p>Task numbers (1–87) follow the category order and task order used in <code>SKILLSBENCH_INVENTORY.md</code>. Skill numbers follow first-appearance order in that same document.</p>
+</li>
+</ul>
+<h2 id="table-a-all-87-tasks-by-category-with-skill-numbers">Table A — all 87 tasks, by category, with skill numbers</h2>
+<h3 id="software-engineering-16-tasks">software-engineering (16 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>azure-bgp-oscillation-route-leak</code></td>
+<td>medium</td>
+<td>1</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>data-to-d3</code></td>
+<td>medium</td>
+<td>2</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>debug-trl-grpo</code></td>
+<td>hard</td>
+<td>3, 4, 5</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>dialogue-parser</code></td>
+<td>easy</td>
+<td>6</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td><code>fix-build-agentops</code></td>
+<td>easy</td>
+<td>7, 8, 9, 10</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td><code>fix-build-google-auto</code></td>
+<td>easy</td>
+<td>11, 12, 13</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td><code>fix-visual-stability</code></td>
+<td>hard</td>
+<td>14, 15, 16</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td><code>flink-query</code></td>
+<td>hard</td>
+<td>17, 18</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td><code>jax-computing-basics</code></td>
+<td>medium</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><code>llm-prefix-cache-replay</code></td>
+<td>medium</td>
+<td>20, 21</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><code>parallel-tfidf-search</code></td>
+<td>medium</td>
+<td>22, 23, 24</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><code>python-scala-translation</code></td>
+<td>medium</td>
+<td>25, 26, 27, 28, 29, 30</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td><code>react-performance-debugging</code></td>
+<td>hard</td>
+<td>14, 15</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td><code>simpo-code-reproduction</code></td>
+<td>hard</td>
+<td>31, 17</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td><code>spring-boot-jakarta-migration</code></td>
+<td>hard</td>
+<td>32, 33, 34, 35, 36</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td><code>tictoc-unnecessary-abort-detection</code></td>
+<td>hard</td>
+<td>37, 38, 39</td>
+</tr>
+</tbody>
+</table>
+<h3 id="industrial-physical-systems-14-tasks">industrial-physical-systems (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">17</td>
+<td><code>3d-scan-calc</code></td>
+<td>hard</td>
+<td>40</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td><code>ada-bathroom-plan-repair</code></td>
+<td>hard</td>
+<td>41, 42, 43</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td><code>adaptive-cruise-control</code></td>
+<td>medium</td>
+<td>44, 45, 46, 47, 48</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td><code>drone-planning-control</code></td>
+<td>medium</td>
+<td>49, 50, 51, 52, 53, 54</td>
+</tr>
+<tr>
+<td style="text-align: right;">21</td>
+<td><code>dynamic-object-aware-egomotion</code></td>
+<td>medium</td>
+<td>55, 56, 57, 58</td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td><code>energy-ac-optimal-power-flow</code></td>
+<td>medium</td>
+<td>59, 60, 61</td>
+</tr>
+<tr>
+<td style="text-align: right;">23</td>
+<td><code>energy-market-pricing</code></td>
+<td>hard</td>
+<td>62, 63, 64, 61</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td><code>energy-unit-commitment</code></td>
+<td>hard</td>
+<td>65, 66, 67</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td><code>grid-dispatch-operator</code></td>
+<td>medium</td>
+<td>62, 63, 61</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td><code>hvac-control</code></td>
+<td>medium</td>
+<td>68, 69, 70, 71, 72</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td><code>manufacturing-codebook-normalization</code></td>
+<td>medium</td>
+<td>73, B</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td><code>manufacturing-equipment-maintenance</code></td>
+<td>medium</td>
+<td>B, 74, 75</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td><code>manufacturing-fjsp-optimization</code></td>
+<td>medium</td>
+<td>76, B</td>
+</tr>
+<tr>
+<td style="text-align: right;">30</td>
+<td><code>r2r-mpc-control</code></td>
+<td>medium</td>
+<td>77, 78, 79, 80</td>
+</tr>
+</tbody>
+</table>
+<h3 id="office-white-collar-14-tasks">office-white-collar (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">31</td>
+<td><code>citation-check</code></td>
+<td>medium</td>
+<td>81</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td><code>court-form-filling</code></td>
+<td>easy</td>
+<td>17</td>
+</tr>
+<tr>
+<td style="text-align: right;">33</td>
+<td><code>edit-pdf</code></td>
+<td>medium</td>
+<td>82, 83</td>
+</tr>
+<tr>
+<td style="text-align: right;">34</td>
+<td><code>enterprise-information-search</code></td>
+<td>hard</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">35</td>
+<td><code>exceltable-in-ppt</code></td>
+<td>medium</td>
+<td>85, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">36</td>
+<td><code>jpg-ocr-stat</code></td>
+<td>hard</td>
+<td>87, 88, 17, 89, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">37</td>
+<td><code>latex-formula-extraction</code></td>
+<td>medium</td>
+<td>90, 17</td>
+</tr>
+<tr>
+<td style="text-align: right;">38</td>
+<td><code>offer-letter-generator</code></td>
+<td>easy</td>
+<td>91</td>
+</tr>
+<tr>
+<td style="text-align: right;">39</td>
+<td><code>organize-messy-files</code></td>
+<td>medium</td>
+<td>91, 92, 17, 93, 85</td>
+</tr>
+<tr>
+<td style="text-align: right;">40</td>
+<td><code>paper-anonymizer</code></td>
+<td>medium</td>
+<td>94, 17</td>
+</tr>
+<tr>
+<td style="text-align: right;">41</td>
+<td><code>pdf-excel-diff</code></td>
+<td>medium</td>
+<td>17, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">42</td>
+<td><code>powerlifting-coef-calc</code></td>
+<td>easy</td>
+<td>95, 96, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">43</td>
+<td><code>pptx-reference-formatting</code></td>
+<td>medium</td>
+<td>85</td>
+</tr>
+<tr>
+<td style="text-align: right;">44</td>
+<td><code>sales-pivot-analysis</code></td>
+<td>medium</td>
+<td>17, 86</td>
+</tr>
+</tbody>
+</table>
+<h3 id="natural-science-14-tasks">natural-science (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">45</td>
+<td><code>crystallographic-wyckoff-position-analysis</code></td>
+<td>medium</td>
+<td>97, 98</td>
+</tr>
+<tr>
+<td style="text-align: right;">46</td>
+<td><code>earthquake-phase-association</code></td>
+<td>hard</td>
+<td>99, 100, 101, 102, 103</td>
+</tr>
+<tr>
+<td style="text-align: right;">47</td>
+<td><code>earthquake-plate-calculation</code></td>
+<td>medium</td>
+<td>104</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td><code>exoplanet-detection-period</code></td>
+<td>medium</td>
+<td>105, 106, 107, 108, 109</td>
+</tr>
+<tr>
+<td style="text-align: right;">49</td>
+<td><code>flood-risk-analysis</code></td>
+<td>medium</td>
+<td>110, 111, 112</td>
+</tr>
+<tr>
+<td style="text-align: right;">50</td>
+<td><code>glm-lake-mendota</code></td>
+<td>hard</td>
+<td>113, 114, 115</td>
+</tr>
+<tr>
+<td style="text-align: right;">51</td>
+<td><code>gravitational-wave-detection</code></td>
+<td>medium</td>
+<td>116, 117</td>
+</tr>
+<tr>
+<td style="text-align: right;">52</td>
+<td><code>lab-unit-harmonization</code></td>
+<td>medium</td>
+<td>118</td>
+</tr>
+<tr>
+<td style="text-align: right;">53</td>
+<td><code>lake-warming-attribution</code></td>
+<td>medium</td>
+<td>119, 120, 121, 122</td>
+</tr>
+<tr>
+<td style="text-align: right;">54</td>
+<td><code>mars-clouds-clustering</code></td>
+<td>hard</td>
+<td>123, 124, 125</td>
+</tr>
+<tr>
+<td style="text-align: right;">55</td>
+<td><code>protein-expression-analysis</code></td>
+<td>medium</td>
+<td>86</td>
+</tr>
+<tr>
+<td style="text-align: right;">56</td>
+<td><code>quantum-numerical-simulation</code></td>
+<td>medium</td>
+<td>126</td>
+</tr>
+<tr>
+<td style="text-align: right;">57</td>
+<td><code>radar-vital-signs</code></td>
+<td>medium</td>
+<td>127, 128, 129</td>
+</tr>
+<tr>
+<td style="text-align: right;">58</td>
+<td><code>seismic-phase-picking</code></td>
+<td>hard</td>
+<td>100, 101, 130, 102, 103</td>
+</tr>
+</tbody>
+</table>
+<h3 id="finance-economics-9-tasks">finance-economics (9 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">59</td>
+<td><code>econ-detrending-correlation</code></td>
+<td>medium</td>
+<td>131</td>
+</tr>
+<tr>
+<td style="text-align: right;">60</td>
+<td><code>financial-modeling-qa</code></td>
+<td>hard</td>
+<td>17, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">61</td>
+<td><code>invoice-fraud-detection</code></td>
+<td>hard</td>
+<td>132, 17, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">62</td>
+<td><code>reserves-at-risk-calc</code></td>
+<td>medium</td>
+<td>86</td>
+</tr>
+<tr>
+<td style="text-align: right;">63</td>
+<td><code>sec-financial-report</code></td>
+<td>hard</td>
+<td>133, 134</td>
+</tr>
+<tr>
+<td style="text-align: right;">64</td>
+<td><code>shock-analysis-demand</code></td>
+<td>medium</td>
+<td>86</td>
+</tr>
+<tr>
+<td style="text-align: right;">65</td>
+<td><code>shock-analysis-supply</code></td>
+<td>hard</td>
+<td>86</td>
+</tr>
+<tr>
+<td style="text-align: right;">66</td>
+<td><code>weighted-gdp-calc</code></td>
+<td>medium</td>
+<td>86</td>
+</tr>
+<tr>
+<td style="text-align: right;">67</td>
+<td><code>xlsx-recover-data</code></td>
+<td>medium</td>
+<td>135, 86</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mathematics-or-formal-reasoning-8-tasks">mathematics-or-formal-reasoning (8 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">68</td>
+<td><code>bike-rebalance</code></td>
+<td>medium</td>
+<td>136, 137, 138, 139</td>
+</tr>
+<tr>
+<td style="text-align: right;">69</td>
+<td><code>civ6-adjacency-optimizer</code></td>
+<td>hard</td>
+<td>140, 141, 142, 143</td>
+</tr>
+<tr>
+<td style="text-align: right;">70</td>
+<td><code>exam-block-sequencing</code></td>
+<td>hard</td>
+<td>144, 145</td>
+</tr>
+<tr>
+<td style="text-align: right;">71</td>
+<td><code>lean4-proof</code></td>
+<td>medium</td>
+<td>B, B, B, B, 146, 147</td>
+</tr>
+<tr>
+<td style="text-align: right;">72</td>
+<td><code>paratransit-routing</code></td>
+<td>hard</td>
+<td>148, 149</td>
+</tr>
+<tr>
+<td style="text-align: right;">73</td>
+<td><code>pddl-airport-planning</code></td>
+<td>medium</td>
+<td>150</td>
+</tr>
+<tr>
+<td style="text-align: right;">74</td>
+<td><code>pddl-tpp-planning</code></td>
+<td>medium</td>
+<td>150</td>
+</tr>
+<tr>
+<td style="text-align: right;">75</td>
+<td><code>travel-planning</code></td>
+<td>medium</td>
+<td>151, 152, 153, 154, 155, 156</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cybersecurity-7-tasks">cybersecurity (7 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">76</td>
+<td><code>dapt-intrusion-detection</code></td>
+<td>hard</td>
+<td>157, 158</td>
+</tr>
+<tr>
+<td style="text-align: right;">77</td>
+<td><code>fix-druid-loophole-cve</code></td>
+<td>hard</td>
+<td>159, 160</td>
+</tr>
+<tr>
+<td style="text-align: right;">78</td>
+<td><code>fix-erlang-ssh-cve</code></td>
+<td>hard</td>
+<td>161, 162, 163, 164, 165, 166</td>
+</tr>
+<tr>
+<td style="text-align: right;">79</td>
+<td><code>setup-fuzzing-py</code></td>
+<td>medium</td>
+<td>167, 168, 169</td>
+</tr>
+<tr>
+<td style="text-align: right;">80</td>
+<td><code>software-dependency-audit</code></td>
+<td>medium</td>
+<td>170, 171, 172</td>
+</tr>
+<tr>
+<td style="text-align: right;">81</td>
+<td><code>suricata-custom-exfil</code></td>
+<td>medium</td>
+<td>173, 174, 175</td>
+</tr>
+<tr>
+<td style="text-align: right;">82</td>
+<td><code>syzkaller-ppdev-syzlang</code></td>
+<td>medium</td>
+<td>176, 177, 178</td>
+</tr>
+</tbody>
+</table>
+<h3 id="media-content-production-5-tasks">media-content-production (5 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Skills (by #)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">83</td>
+<td><code>mario-coin-counting</code></td>
+<td>medium</td>
+<td>179, 180, 181</td>
+</tr>
+<tr>
+<td style="text-align: right;">84</td>
+<td><code>multilingual-video-dubbing</code></td>
+<td>medium</td>
+<td>182, 183, 184, 185, 186, 187</td>
+</tr>
+<tr>
+<td style="text-align: right;">85</td>
+<td><code>threejs-structure-parser</code></td>
+<td>medium</td>
+<td>188, 189</td>
+</tr>
+<tr>
+<td style="text-align: right;">86</td>
+<td><code>threejs-to-obj</code></td>
+<td>medium</td>
+<td>188, 189</td>
+</tr>
+<tr>
+<td style="text-align: right;">87</td>
+<td><code>video-silence-remover</code></td>
+<td>hard</td>
+<td>190, 191, 192, 193, 194, 195, 196</td>
+</tr>
+</tbody>
+</table>
+<h2 id="table-b-skills-index-with-the-tasks-that-use-each">Table B — skills index, with the tasks that use each</h2>
+<p>Rows = skills, numbered by first appearance in Table A. "Categories" lists every category the skill appears in (most skills are single-category; a few — e.g. <code>pdf</code>, <code>xlsx</code> — cross several).</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">#</th>
+<th>Skill</th>
+<th style="text-align: right;"># tasks</th>
+<th>Categories</th>
+<th>Task #s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>azure-bgp</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>1</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>d3-visualization</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>2</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>grpo</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>3</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>rl-post-training</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>3</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td><code>trl</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>3</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td><code>dialogue-graph</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>4</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td><code>analyze-ci</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>5</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td><code>temporal-python-testing</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>5</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td><code>testing-python</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>5</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><code>uv-package-manager</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>5</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><code>maven-build-lifecycle</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>6</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><code>maven-dependency-management</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>6</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td><code>maven-plugin-configuration</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>6</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td><code>browser-testing</code></td>
+<td style="text-align: right;">2</td>
+<td>software-engineering</td>
+<td>7, 13</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td><code>react-best-practices</code></td>
+<td style="text-align: right;">2</td>
+<td>software-engineering</td>
+<td>7, 13</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td><code>web-interface-guidelines</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>7</td>
+</tr>
+<tr>
+<td style="text-align: right;">17</td>
+<td><code>pdf</code></td>
+<td style="text-align: right;">11</td>
+<td>finance-economics, office-white-collar, software-engineering</td>
+<td>8, 14, 32, 36, 37, 39, 40, 41, 44, 60, 61</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td><code>senior-data-engineer</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>8</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td><code>jax-skills</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>9</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td><code>cache-policy-comparison</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>10</td>
+</tr>
+<tr>
+<td style="text-align: right;">21</td>
+<td><code>prefix-cache-replay</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>10</td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td><code>memory-optimization</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>11</td>
+</tr>
+<tr>
+<td style="text-align: right;">23</td>
+<td><code>python-parallelization</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>11</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td><code>workload-balancing</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>11</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td><code>python-scala-collections</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td><code>python-scala-functional</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td><code>python-scala-idioms</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td><code>python-scala-libraries</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td><code>python-scala-oop</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">30</td>
+<td><code>python-scala-syntax-mapping</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>12</td>
+</tr>
+<tr>
+<td style="text-align: right;">31</td>
+<td><code>nlp-research-repo-package-installment</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>14</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td><code>hibernate-upgrade</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>15</td>
+</tr>
+<tr>
+<td style="text-align: right;">33</td>
+<td><code>jakarta-namespace</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>15</td>
+</tr>
+<tr>
+<td style="text-align: right;">34</td>
+<td><code>restclient-migration</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>15</td>
+</tr>
+<tr>
+<td style="text-align: right;">35</td>
+<td><code>spring-boot-migration</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>15</td>
+</tr>
+<tr>
+<td style="text-align: right;">36</td>
+<td><code>spring-security-6</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>15</td>
+</tr>
+<tr>
+<td style="text-align: right;">37</td>
+<td><code>transaction-concurrency-control-foundations</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>16</td>
+</tr>
+<tr>
+<td style="text-align: right;">38</td>
+<td><code>transaction-protocol-reasoning</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>16</td>
+</tr>
+<tr>
+<td style="text-align: right;">39</td>
+<td><code>transaction-trace-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>software-engineering</td>
+<td>16</td>
+</tr>
+<tr>
+<td style="text-align: right;">40</td>
+<td><code>mesh-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>17</td>
+</tr>
+<tr>
+<td style="text-align: right;">41</td>
+<td><code>ada-plan-view-accessibility</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>18</td>
+</tr>
+<tr>
+<td style="text-align: right;">42</td>
+<td><code>architectural-dxf-extraction</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>18</td>
+</tr>
+<tr>
+<td style="text-align: right;">43</td>
+<td><code>geometric-layout-repair</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>18</td>
+</tr>
+<tr>
+<td style="text-align: right;">44</td>
+<td><code>csv-processing</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">45</td>
+<td><code>pid-controller</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">46</td>
+<td><code>simulation-metrics</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">47</td>
+<td><code>vehicle-dynamics</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td><code>yaml-config</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>19</td>
+</tr>
+<tr>
+<td style="text-align: right;">49</td>
+<td><code>attitude-controller-planner</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">50</td>
+<td><code>flight-plan-parser</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">51</td>
+<td><code>motor-model-dynamics</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">52</td>
+<td><code>plot-quadrotor</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">53</td>
+<td><code>position-controller-trajectory-planner</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">54</td>
+<td><code>stepinfo-3d</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>20</td>
+</tr>
+<tr>
+<td style="text-align: right;">55</td>
+<td><code>dyn-object-masks</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>21</td>
+</tr>
+<tr>
+<td style="text-align: right;">56</td>
+<td><code>egomotion-estimation</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>21</td>
+</tr>
+<tr>
+<td style="text-align: right;">57</td>
+<td><code>output-validation</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>21</td>
+</tr>
+<tr>
+<td style="text-align: right;">58</td>
+<td><code>sampling-and-indexing</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>21</td>
+</tr>
+<tr>
+<td style="text-align: right;">59</td>
+<td><code>ac-branch-pi-model</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>22</td>
+</tr>
+<tr>
+<td style="text-align: right;">60</td>
+<td><code>casadi-ipopt-nlp</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>22</td>
+</tr>
+<tr>
+<td style="text-align: right;">61</td>
+<td><code>power-flow-data</code></td>
+<td style="text-align: right;">3</td>
+<td>industrial-physical-systems</td>
+<td>22, 23, 25</td>
+</tr>
+<tr>
+<td style="text-align: right;">62</td>
+<td><code>dc-power-flow</code></td>
+<td style="text-align: right;">2</td>
+<td>industrial-physical-systems</td>
+<td>23, 25</td>
+</tr>
+<tr>
+<td style="text-align: right;">63</td>
+<td><code>economic-dispatch</code></td>
+<td style="text-align: right;">2</td>
+<td>industrial-physical-systems</td>
+<td>23, 25</td>
+</tr>
+<tr>
+<td style="text-align: right;">64</td>
+<td><code>locational-marginal-prices</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>23</td>
+</tr>
+<tr>
+<td style="text-align: right;">65</td>
+<td><code>milp-solver-workflow</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>24</td>
+</tr>
+<tr>
+<td style="text-align: right;">66</td>
+<td><code>unit-commitment-data-modeling</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>24</td>
+</tr>
+<tr>
+<td style="text-align: right;">67</td>
+<td><code>unit-commitment-operating-rules</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>24</td>
+</tr>
+<tr>
+<td style="text-align: right;">68</td>
+<td><code>excitation-signal-design</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>26</td>
+</tr>
+<tr>
+<td style="text-align: right;">69</td>
+<td><code>first-order-model-fitting</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>26</td>
+</tr>
+<tr>
+<td style="text-align: right;">70</td>
+<td><code>imc-tuning-rules</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>26</td>
+</tr>
+<tr>
+<td style="text-align: right;">71</td>
+<td><code>safety-interlocks</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>26</td>
+</tr>
+<tr>
+<td style="text-align: right;">72</td>
+<td><code>scipy-curve-fit</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>26</td>
+</tr>
+<tr>
+<td style="text-align: right;">73</td>
+<td><code>manufacturing-failure-reason-codebook-normalization</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>27</td>
+</tr>
+<tr>
+<td style="text-align: right;">74</td>
+<td><code>reflow-machine-maintenance-guidance</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>28</td>
+</tr>
+<tr>
+<td style="text-align: right;">75</td>
+<td><code>reflow-profile-compliance-toolkit</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>28</td>
+</tr>
+<tr>
+<td style="text-align: right;">76</td>
+<td><code>fjsp-baseline-repair-with-downtime-and-policy</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>29</td>
+</tr>
+<tr>
+<td style="text-align: right;">77</td>
+<td><code>finite-horizon-lqr</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>30</td>
+</tr>
+<tr>
+<td style="text-align: right;">78</td>
+<td><code>integral-action-design</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>30</td>
+</tr>
+<tr>
+<td style="text-align: right;">79</td>
+<td><code>mpc-horizon-tuning</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>30</td>
+</tr>
+<tr>
+<td style="text-align: right;">80</td>
+<td><code>state-space-linearization</code></td>
+<td style="text-align: right;">1</td>
+<td>industrial-physical-systems</td>
+<td>30</td>
+</tr>
+<tr>
+<td style="text-align: right;">81</td>
+<td><code>citation-management</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>31</td>
+</tr>
+<tr>
+<td style="text-align: right;">82</td>
+<td><code>pdf-editing</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>33</td>
+</tr>
+<tr>
+<td style="text-align: right;">83</td>
+<td><code>text-parser</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>33</td>
+</tr>
+<tr>
+<td style="text-align: right;">84</td>
+<td><code>enterprise-artifact-search</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>34</td>
+</tr>
+<tr>
+<td style="text-align: right;">85</td>
+<td><code>pptx</code></td>
+<td style="text-align: right;">3</td>
+<td>office-white-collar</td>
+<td>35, 39, 43</td>
+</tr>
+<tr>
+<td style="text-align: right;">86</td>
+<td><code>xlsx</code></td>
+<td style="text-align: right;">13</td>
+<td>finance-economics, natural-science, office-white-collar</td>
+<td>35, 36, 41, 42, 44, 55, 60, 61, 62, 64, 65, 66, 67</td>
+</tr>
+<tr>
+<td style="text-align: right;">87</td>
+<td><code>image-ocr</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>36</td>
+</tr>
+<tr>
+<td style="text-align: right;">88</td>
+<td><code>openai-vision</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>36</td>
+</tr>
+<tr>
+<td style="text-align: right;">89</td>
+<td><code>video-frame-extraction</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>36</td>
+</tr>
+<tr>
+<td style="text-align: right;">90</td>
+<td><code>marker</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>37</td>
+</tr>
+<tr>
+<td style="text-align: right;">91</td>
+<td><code>docx</code></td>
+<td style="text-align: right;">2</td>
+<td>office-white-collar</td>
+<td>38, 39</td>
+</tr>
+<tr>
+<td style="text-align: right;">92</td>
+<td><code>file-organizer</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>39</td>
+</tr>
+<tr>
+<td style="text-align: right;">93</td>
+<td><code>planning-with-files</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>39</td>
+</tr>
+<tr>
+<td style="text-align: right;">94</td>
+<td><code>academic-pdf-redaction</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>40</td>
+</tr>
+<tr>
+<td style="text-align: right;">95</td>
+<td><code>powerlifting</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>42</td>
+</tr>
+<tr>
+<td style="text-align: right;">96</td>
+<td><code>senior-data-scientist</code></td>
+<td style="text-align: right;">1</td>
+<td>office-white-collar</td>
+<td>42</td>
+</tr>
+<tr>
+<td style="text-align: right;">97</td>
+<td><code>pymatgen</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>45</td>
+</tr>
+<tr>
+<td style="text-align: right;">98</td>
+<td><code>sympy</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>45</td>
+</tr>
+<tr>
+<td style="text-align: right;">99</td>
+<td><code>gamma-phase-associator</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>46</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td><code>licenses</code></td>
+<td style="text-align: right;">2</td>
+<td>natural-science</td>
+<td>46, 58</td>
+</tr>
+<tr>
+<td style="text-align: right;">101</td>
+<td><code>obspy-data-api</code></td>
+<td style="text-align: right;">2</td>
+<td>natural-science</td>
+<td>46, 58</td>
+</tr>
+<tr>
+<td style="text-align: right;">102</td>
+<td><code>seisbench-model-api</code></td>
+<td style="text-align: right;">2</td>
+<td>natural-science</td>
+<td>46, 58</td>
+</tr>
+<tr>
+<td style="text-align: right;">103</td>
+<td><code>seismic-picker-selection</code></td>
+<td style="text-align: right;">2</td>
+<td>natural-science</td>
+<td>46, 58</td>
+</tr>
+<tr>
+<td style="text-align: right;">104</td>
+<td><code>geospatial-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>47</td>
+</tr>
+<tr>
+<td style="text-align: right;">105</td>
+<td><code>box-least-squares</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>48</td>
+</tr>
+<tr>
+<td style="text-align: right;">106</td>
+<td><code>exoplanet-workflows</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>48</td>
+</tr>
+<tr>
+<td style="text-align: right;">107</td>
+<td><code>light-curve-preprocessing</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>48</td>
+</tr>
+<tr>
+<td style="text-align: right;">108</td>
+<td><code>lomb-scargle-periodogram</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>48</td>
+</tr>
+<tr>
+<td style="text-align: right;">109</td>
+<td><code>transit-least-squares</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>48</td>
+</tr>
+<tr>
+<td style="text-align: right;">110</td>
+<td><code>flood-detection</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>49</td>
+</tr>
+<tr>
+<td style="text-align: right;">111</td>
+<td><code>nws-flood-thresholds</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>49</td>
+</tr>
+<tr>
+<td style="text-align: right;">112</td>
+<td><code>usgs-data-download</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>49</td>
+</tr>
+<tr>
+<td style="text-align: right;">113</td>
+<td><code>glm-basics</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>50</td>
+</tr>
+<tr>
+<td style="text-align: right;">114</td>
+<td><code>glm-calibration</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>50</td>
+</tr>
+<tr>
+<td style="text-align: right;">115</td>
+<td><code>glm-output</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>50</td>
+</tr>
+<tr>
+<td style="text-align: right;">116</td>
+<td><code>conditioning</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>51</td>
+</tr>
+<tr>
+<td style="text-align: right;">117</td>
+<td><code>matched-filtering</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>51</td>
+</tr>
+<tr>
+<td style="text-align: right;">118</td>
+<td><code>lab-unit-harmonization</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>52</td>
+</tr>
+<tr>
+<td style="text-align: right;">119</td>
+<td><code>contribution-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>53</td>
+</tr>
+<tr>
+<td style="text-align: right;">120</td>
+<td><code>meteorology-driver-classification</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>53</td>
+</tr>
+<tr>
+<td style="text-align: right;">121</td>
+<td><code>pca-decomposition</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>53</td>
+</tr>
+<tr>
+<td style="text-align: right;">122</td>
+<td><code>trend-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>53</td>
+</tr>
+<tr>
+<td style="text-align: right;">123</td>
+<td><code>custom-distance-metrics</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>54</td>
+</tr>
+<tr>
+<td style="text-align: right;">124</td>
+<td><code>parallel-processing</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>54</td>
+</tr>
+<tr>
+<td style="text-align: right;">125</td>
+<td><code>pareto-optimization</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>54</td>
+</tr>
+<tr>
+<td style="text-align: right;">126</td>
+<td><code>qutip</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>56</td>
+</tr>
+<tr>
+<td style="text-align: right;">127</td>
+<td><code>radar-signal-processing</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>57</td>
+</tr>
+<tr>
+<td style="text-align: right;">128</td>
+<td><code>radar-vital-signs</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>57</td>
+</tr>
+<tr>
+<td style="text-align: right;">129</td>
+<td><code>vital-sign-extraction</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>57</td>
+</tr>
+<tr>
+<td style="text-align: right;">130</td>
+<td><code>obspy-datacenter-client</code></td>
+<td style="text-align: right;">1</td>
+<td>natural-science</td>
+<td>58</td>
+</tr>
+<tr>
+<td style="text-align: right;">131</td>
+<td><code>timeseries-detrending</code></td>
+<td style="text-align: right;">1</td>
+<td>finance-economics</td>
+<td>59</td>
+</tr>
+<tr>
+<td style="text-align: right;">132</td>
+<td><code>fuzzy-match</code></td>
+<td style="text-align: right;">1</td>
+<td>finance-economics</td>
+<td>61</td>
+</tr>
+<tr>
+<td style="text-align: right;">133</td>
+<td><code>13f-analyzer</code></td>
+<td style="text-align: right;">1</td>
+<td>finance-economics</td>
+<td>63</td>
+</tr>
+<tr>
+<td style="text-align: right;">134</td>
+<td><code>fuzzy-name-search</code></td>
+<td style="text-align: right;">1</td>
+<td>finance-economics</td>
+<td>63</td>
+</tr>
+<tr>
+<td style="text-align: right;">135</td>
+<td><code>data-reconciliation</code></td>
+<td style="text-align: right;">1</td>
+<td>finance-economics</td>
+<td>67</td>
+</tr>
+<tr>
+<td style="text-align: right;">136</td>
+<td><code>geospatial-routing-data</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>68</td>
+</tr>
+<tr>
+<td style="text-align: right;">137</td>
+<td><code>logistics-rules-to-optimization</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>68</td>
+</tr>
+<tr>
+<td style="text-align: right;">138</td>
+<td><code>routing-subtour-elimination</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>68</td>
+</tr>
+<tr>
+<td style="text-align: right;">139</td>
+<td><code>scip-opt</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>68</td>
+</tr>
+<tr>
+<td style="text-align: right;">140</td>
+<td><code>civ6lib</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>69</td>
+</tr>
+<tr>
+<td style="text-align: right;">141</td>
+<td><code>hex-grid-spatial</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>69</td>
+</tr>
+<tr>
+<td style="text-align: right;">142</td>
+<td><code>map-optimization-strategy</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>69</td>
+</tr>
+<tr>
+<td style="text-align: right;">143</td>
+<td><code>sqlite-map-parser</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>69</td>
+</tr>
+<tr>
+<td style="text-align: right;">144</td>
+<td><code>mip-solver-and-solution-audit</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>70</td>
+</tr>
+<tr>
+<td style="text-align: right;">145</td>
+<td><code>ordered-window-sequencing-mip</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>70</td>
+</tr>
+<tr>
+<td style="text-align: right;">146</td>
+<td><code>lean4-memories</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>71</td>
+</tr>
+<tr>
+<td style="text-align: right;">147</td>
+<td><code>lean4-theorem-proving</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>71</td>
+</tr>
+<tr>
+<td style="text-align: right;">148</td>
+<td><code>ortools-pickup-delivery-routing</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>72</td>
+</tr>
+<tr>
+<td style="text-align: right;">149</td>
+<td><code>ortools-routing-modeling</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>72</td>
+</tr>
+<tr>
+<td style="text-align: right;">150</td>
+<td><code>pddl-skills</code></td>
+<td style="text-align: right;">2</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>73, 74</td>
+</tr>
+<tr>
+<td style="text-align: right;">151</td>
+<td><code>search-accommodations</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">152</td>
+<td><code>search-attractions</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">153</td>
+<td><code>search-cities</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">154</td>
+<td><code>search-driving-distance</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">155</td>
+<td><code>search-flights</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">156</td>
+<td><code>search-restaurants</code></td>
+<td style="text-align: right;">1</td>
+<td>mathematics-or-formal-reasoning</td>
+<td>75</td>
+</tr>
+<tr>
+<td style="text-align: right;">157</td>
+<td><code>pcap-analysis</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>76</td>
+</tr>
+<tr>
+<td style="text-align: right;">158</td>
+<td><code>threat-detection</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>76</td>
+</tr>
+<tr>
+<td style="text-align: right;">159</td>
+<td><code>jackson-security</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>77</td>
+</tr>
+<tr>
+<td style="text-align: right;">160</td>
+<td><code>senior-java</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>77</td>
+</tr>
+<tr>
+<td style="text-align: right;">161</td>
+<td><code>erlang-concurrency</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">162</td>
+<td><code>erlang-distribution</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">163</td>
+<td><code>erlang-otp-behaviors</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">164</td>
+<td><code>find-bugs</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">165</td>
+<td><code>senior-security</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">166</td>
+<td><code>ssh-penetration-testing</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>78</td>
+</tr>
+<tr>
+<td style="text-align: right;">167</td>
+<td><code>discover-important-function</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>79</td>
+</tr>
+<tr>
+<td style="text-align: right;">168</td>
+<td><code>fuzzing-python</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>79</td>
+</tr>
+<tr>
+<td style="text-align: right;">169</td>
+<td><code>setup-env</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>79</td>
+</tr>
+<tr>
+<td style="text-align: right;">170</td>
+<td><code>cvss-score-extraction</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>80</td>
+</tr>
+<tr>
+<td style="text-align: right;">171</td>
+<td><code>trivy-offline-vulnerability-scanning</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>80</td>
+</tr>
+<tr>
+<td style="text-align: right;">172</td>
+<td><code>vulnerability-csv-reporting</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>80</td>
+</tr>
+<tr>
+<td style="text-align: right;">173</td>
+<td><code>pcap-triage-tshark</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>81</td>
+</tr>
+<tr>
+<td style="text-align: right;">174</td>
+<td><code>suricata-offline-evejson</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>81</td>
+</tr>
+<tr>
+<td style="text-align: right;">175</td>
+<td><code>suricata-rules-basics</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>81</td>
+</tr>
+<tr>
+<td style="text-align: right;">176</td>
+<td><code>syz-extract-constants</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>82</td>
+</tr>
+<tr>
+<td style="text-align: right;">177</td>
+<td><code>syzkaller-build-loop</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>82</td>
+</tr>
+<tr>
+<td style="text-align: right;">178</td>
+<td><code>syzlang-ioctl-basics</code></td>
+<td style="text-align: right;">1</td>
+<td>cybersecurity</td>
+<td>82</td>
+</tr>
+<tr>
+<td style="text-align: right;">179</td>
+<td><code>ffmpeg-keyframe-extraction</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>83</td>
+</tr>
+<tr>
+<td style="text-align: right;">180</td>
+<td><code>image-editing</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>83</td>
+</tr>
+<tr>
+<td style="text-align: right;">181</td>
+<td><code>object-counter</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>83</td>
+</tr>
+<tr>
+<td style="text-align: right;">182</td>
+<td><code>ffmpeg-audio-processing</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">183</td>
+<td><code>ffmpeg-format-conversion</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">184</td>
+<td><code>ffmpeg-media-info</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">185</td>
+<td><code>ffmpeg-video-editing</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">186</td>
+<td><code>ffmpeg-video-filters</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">187</td>
+<td><code>text-to-speech</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>84</td>
+</tr>
+<tr>
+<td style="text-align: right;">188</td>
+<td><code>obj-exporter</code></td>
+<td style="text-align: right;">2</td>
+<td>media-content-production</td>
+<td>85, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">189</td>
+<td><code>threejs</code></td>
+<td style="text-align: right;">2</td>
+<td>media-content-production</td>
+<td>85, 86</td>
+</tr>
+<tr>
+<td style="text-align: right;">190</td>
+<td><code>audio-extractor</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">191</td>
+<td><code>energy-calculator</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">192</td>
+<td><code>pause-detector</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">193</td>
+<td><code>report-generator</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">194</td>
+<td><code>segment-combiner</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">195</td>
+<td><code>silence-detector</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+<tr>
+<td style="text-align: right;">196</td>
+<td><code>video-processor</code></td>
+<td style="text-align: right;">1</td>
+<td>media-content-production</td>
+<td>87</td>
+</tr>
+</tbody>
+</table>
+<h2 id="table-c-per-category-traintest-split-skill-disjoint-safe">Table C — per-category train/test split (skill-disjoint-safe)</h2>
+<p>For each category: a <strong>test</strong> subset of tasks whose skills all also appear in at least one <strong>train</strong> task of the same category — i.e. every skill the test set needs to succeed is still present, unseen-combination, in the train set. Intended use: optimize/tune skills on the train tasks, then evaluate held-out on the test tasks. Target was ~20–30% of each category, found greedily (tasks with the fewest skills tried first, since they're least likely to strand a skill). Where a skill is unique to a single task within its category, that task can never be a test task — this is what caps the achievable split, sometimes to 0%.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th style="text-align: right;">n</th>
+<th>Test tasks (n, %)</th>
+<th>Train task #s</th>
+<th>Test task #s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>software-engineering</td>
+<td style="text-align: right;">16</td>
+<td>1 (6.2%)</td>
+<td>1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16</td>
+<td>13</td>
+</tr>
+<tr>
+<td>industrial-physical-systems</td>
+<td style="text-align: right;">14</td>
+<td>1 (7.1%)</td>
+<td>17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30</td>
+<td>25</td>
+</tr>
+<tr>
+<td>office-white-collar</td>
+<td style="text-align: right;">14</td>
+<td>4 (28.6%)</td>
+<td>31, 33, 34, 36, 37, 39, 40, 41, 42, 44</td>
+<td>32, 35, 38, 43</td>
+</tr>
+<tr>
+<td>natural-science</td>
+<td style="text-align: right;">14</td>
+<td>0 (0.0%)</td>
+<td>45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58</td>
+<td>—</td>
+</tr>
+<tr>
+<td>finance-economics</td>
+<td style="text-align: right;">9</td>
+<td>3 (33.3%)</td>
+<td>59, 60, 61, 63, 66, 67</td>
+<td>62, 64, 65</td>
+</tr>
+<tr>
+<td>mathematics-or-formal-reasoning</td>
+<td style="text-align: right;">8</td>
+<td>1 (12.5%)</td>
+<td>68, 69, 70, 71, 72, 74, 75</td>
+<td>73</td>
+</tr>
+<tr>
+<td>cybersecurity</td>
+<td style="text-align: right;">7</td>
+<td>0 (0.0%)</td>
+<td>76, 77, 78, 79, 80, 81, 82</td>
+<td>—</td>
+</tr>
+<tr>
+<td>media-content-production</td>
+<td style="text-align: right;">5</td>
+<td>1 (20.0%)</td>
+<td>83, 84, 86, 87</td>
+<td>85</td>
+</tr>
+</tbody>
+</table>
+<h3 id="table-c-detail-test-task-names-by-category">Table C detail — test task names by category</h3>
+<p><strong>software-engineering</strong> — 1/16 (6.2%)
+- <code>react-performance-debugging</code> (#13, skills 14, 15)</p>
+<p><strong>industrial-physical-systems</strong> — 1/14 (7.1%)
+- <code>grid-dispatch-operator</code> (#25, skills 62, 63, 61)</p>
+<p><strong>office-white-collar</strong> — 4/14 (28.6%)
+- <code>court-form-filling</code> (#32, skills 17)
+- <code>exceltable-in-ppt</code> (#35, skills 85, 86)
+- <code>offer-letter-generator</code> (#38, skills 91)
+- <code>pptx-reference-formatting</code> (#43, skills 85)</p>
+<p><strong>natural-science</strong> — 0/14 (0.0%)
+- <em>No valid split found — every task in this category has at least one skill unique to it within the category.</em></p>
+<p><strong>finance-economics</strong> — 3/9 (33.3%)
+- <code>reserves-at-risk-calc</code> (#62, skills 86)
+- <code>shock-analysis-demand</code> (#64, skills 86)
+- <code>shock-analysis-supply</code> (#65, skills 86)</p>
+<p><strong>mathematics-or-formal-reasoning</strong> — 1/8 (12.5%)
+- <code>pddl-airport-planning</code> (#73, skills 150)</p>
+<p><strong>cybersecurity</strong> — 0/7 (0.0%)
+- <em>No valid split found — every task in this category has at least one skill unique to it within the category.</em></p>
+<p><strong>media-content-production</strong> — 1/5 (20.0%)
+- <code>threejs-structure-parser</code> (#85, skills 188, 189)</p>
+<h2 id="boilerplate-entries-not-numbered-as-skills">Boilerplate entries (not numbered as skills)</h2>
+<table>
+<thead>
+<tr>
+<th>Filename</th>
+<th style="text-align: right;"># tasks</th>
+<th>Task #s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reference.md</code></td>
+<td style="text-align: right;">3</td>
+<td>27, 28, 29</td>
+</tr>
+<tr>
+<td><code>INSTALLATION.md</code></td>
+<td style="text-align: right;">1</td>
+<td>71</td>
+</tr>
+<tr>
+<td><code>LICENSE</code></td>
+<td style="text-align: right;">1</td>
+<td>71</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td style="text-align: right;">1</td>
+<td>71</td>
+</tr>
+<tr>
+<td><code>TESTING.md</code></td>
+<td style="text-align: right;">1</td>
+<td>71</td>
+</tr>
+</tbody>
+</table>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

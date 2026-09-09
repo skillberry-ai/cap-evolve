@@ -1,0 +1,5 @@
+{
+  "train": ["energy-unit-commitment"],
+  "val": ["energy-unit-commitment"],
+  "test": ["energy-unit-commitment"]
+}

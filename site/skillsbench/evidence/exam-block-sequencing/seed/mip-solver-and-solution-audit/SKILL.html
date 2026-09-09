@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKI — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/exam-block-sequencing/seed/mip-solver-and-solution-audit/SKILL.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../../"><img src="../../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../../getting-started.html">Get started</a>
+      <a href="../../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../../results.html">Results</a>
+      <a href="../../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../../architecture.html">Architecture</a>
+      <a href="../../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../../harbor.html">Harbor</a>
+      <a href="../../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/seed/mip-solver-and-solution-audit/SKILL.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/seed/mip-solver-and-solution-audit/SKILL.md">view source on GitHub ↗</a>
+  </p>
+<hr />
+<p>name: mip-solver-and-solution-audit
+description: "Operational workflow for hard integer-programming optimization tasks: selecting an installed solver, preserving solver/incumbent certificates, extracting feasible schedules, recomputing metrics from final outputs, and writing consistent reports. Use when a task requires a MIP, solver status, objective value, bound, gap, formulation write-up, or benchmark output files."</p>
+<hr />
+<h1 id="mip-solver-and-solution-audit">MIP Solver and Solution Audit</h1>
+<h2 id="core-principle">Core principle</h2>
+<p>A valid optimization submission has one final solution, one set of recomputed
+metrics, and one truthful solver report. The solver objective, written output,
+metrics file, and explanation must all refer to the same final solution.</p>
+<p>Feasible does not mean optimal. A time-limited MIP solve may return a useful
+incumbent without proving optimality. Report that distinction clearly.</p>
+<h2 id="solver-discovery">Solver discovery</h2>
+<p>For Python optimization tasks, test installed solver packages before concluding
+that no solver is available. Prefer a callable installed solver over writing a
+model for an unavailable package or falling back to a heuristic-only method.</p>
+<p>PySCIPOpt is a good first check for binary and mixed-integer models:</p>
+<pre><code class="language-python">try:
+    from pyscipopt import Model, quicksum
+    SCIP_AVAILABLE = True
+except Exception as exc:
+    SCIP_AVAILABLE = False
+    SCIP_IMPORT_ERROR = exc
+</code></pre>
+<p>If PySCIPOpt imports successfully, use it unless the task or environment clearly
+provides a better solver. Do not skip it because other packages or command-line
+binaries are unavailable.</p>
+<p>If the task requires an integer program or optimization solver, do not submit a
+pure greedy search, local search, swap heuristic, or advisory script as the main
+method unless the task explicitly allows that substitution.</p>
+<h2 id="minimal-pyscipopt-pattern">Minimal PySCIPOpt pattern</h2>
+<pre><code class="language-python">from pyscipopt import Model, quicksum
+
+model = Model(&quot;mip_model&quot;)
+model.setParam(&quot;limits/time&quot;, 600.0)
+
+# create binary/integer variables
+# add hard constraints
+# build named objective components
+model.setObjective(objective_expr, &quot;minimize&quot;)
+
+model.optimize()
+status = str(model.getStatus()).lower()
+
+if model.getNSols() == 0:
+    raise RuntimeError(f&quot;No feasible solution found; solver status={status}&quot;)
+
+sol = model.getBestSol()
+incumbent_objective = float(model.getObjVal())
+
+try:
+    best_bound = float(model.getDualbound())
+except Exception:
+    best_bound = None
+
+try:
+    mip_gap = float(model.getGap())
+except Exception:
+    mip_gap = None
+</code></pre>
+<p>Use <code>model.getSolVal(sol, var)</code> or <code>model.getVal(var)</code> to read values. Do not
+call unsupported variable methods such as <code>var.getVal()</code>.</p>
+<h2 id="incumbent-bound-and-gap">Incumbent, bound, and gap</h2>
+<p>Record solver information whenever the output format allows it:</p>
+<ul>
+<li>solver name and interface;</li>
+<li>solver status;</li>
+<li>time limit;</li>
+<li>incumbent objective;</li>
+<li>best bound, if available;</li>
+<li>MIP gap, if available;</li>
+<li>whether the solution is proven optimal, within a stated gap, or only a
+  feasible incumbent.</li>
+</ul>
+<p>Do not claim “optimal” unless the solver status or gap certifies it. Statuses
+such as time limit, node limit, solution limit, or gap limit usually mean the
+submitted solution is an incumbent, not a proof of global optimality.</p>
+<p>For minimization, a useful manual check is:</p>
+<pre><code class="language-python">absolute_gap = incumbent_objective - best_bound
+relative_gap = absolute_gap / max(1.0, abs(incumbent_objective))
+</code></pre>
+<p>Prefer the solver-provided gap when available, because solvers may use their own
+safe conventions for bounds and tolerances.</p>
+<h2 id="extraction-discipline">Extraction discipline</h2>
+<p>After solving, extract the final output from the selected incumbent solution and
+validate the extracted artifact directly.</p>
+<pre><code class="language-python">sol = model.getBestSol()
+
+for binary_var in binary_vars:
+    value = model.getSolVal(sol, binary_var)
+    if value &gt; 0.5:
+        # include the corresponding assignment, route arc, sequence position, etc.
+        pass
+</code></pre>
+<p>Validate hard rules from the output itself, not only from solver feasibility:</p>
+<ul>
+<li>every required item is assigned or served exactly as required;</li>
+<li>every required slot, position, capacity, or resource rule is satisfied;</li>
+<li>there are no duplicates or missing assignments;</li>
+<li>all task-specific eligibility, timing, and policy constraints hold;</li>
+<li>all numeric fields are finite and have the expected type.</li>
+</ul>
+<p>If extraction fails, fix the model or extraction logic before writing output
+files.</p>
+<h2 id="independent-metric-evaluator">Independent metric evaluator</h2>
+<p>Build a pure evaluator that depends only on the input data and the final output,
+not on solver variables. Use it to write the metrics file and to check the solver
+objective.</p>
+<pre><code class="language-python">def evaluate_output(final_output, input_data):
+    components = {}
+    components[&quot;component_a&quot;] = compute_component_a(final_output, input_data)
+    components[&quot;component_b&quot;] = compute_component_b(final_output, input_data)
+    components[&quot;objective&quot;] = weighted_sum(components)
+    return components
+
+final_output = extract_solution(model, sol)
+validate_hard_rules(final_output, input_data)
+metrics = evaluate_output(final_output, input_data)
+</code></pre>
+<p>If the solved model is intended to match the official objective, compare the
+independent evaluator with the solver objective:</p>
+<pre><code class="language-python">if abs(metrics[&quot;objective&quot;] - incumbent_objective) &gt; 1e-6:
+    raise AssertionError(
+        &quot;solver objective and independently recomputed objective differ; &quot;
+        &quot;check the linearization, extraction, weights, and reported output&quot;
+    )
+</code></pre>
+<p>Write reported metrics from the independent evaluator. Do not mix solver
+expressions from one solution with a schedule, route, or assignment from another
+solution.</p>
+<p>For sequence, route, timetable, or assignment tasks, make the evaluator mirror
+the official objective semantics, not a simplified human interpretation:</p>
+<ul>
+<li>preserve ordered tuple keys unless unordered keys are explicitly specified;</li>
+<li>use the declared start-position masks for each component;</li>
+<li>follow the declared successor/order relation instead of assuming zero-based
+  contiguous positions;</li>
+<li>implement overlap terms exactly as defined, not as a broader span count or all
+  combinations in a window unless that is the stated rule;</li>
+<li>treat missing rows consistently with the data contract, usually zero only when
+  the task or table format supports sparse costs.</li>
+</ul>
+<p>Never write <code>metrics.json</code> before reloading and evaluating the exact artifact that will
+be submitted.</p>
+<p>Minimal final-artifact audit template:</p>
+<pre><code class="language-python">def load_final_output(path):
+    # Parse the exact CSV/JSON/text file that will be submitted.
+    ...
+
+def evaluate_output(final_output, input_data):
+    # Pure function: no solver variables, no cached incumbent state.
+    ...
+
+final_output = load_final_output(output_path)
+validate_hard_rules(final_output, input_data)
+metrics = evaluate_output(final_output, input_data)
+
+with open(metrics_path, &quot;w&quot;) as f:
+    json.dump(metrics, f, indent=2)
+
+roundtrip = load_final_output(output_path)
+roundtrip_metrics = evaluate_output(roundtrip, input_data)
+assert roundtrip_metrics == metrics
+</code></pre>
+<h2 id="post-processing-rule">Post-processing rule</h2>
+<p>If post-processing is used after the solver, disclose it and recompute all
+metrics from the post-processed output. Do not reuse the original solver gap or
+optimality certificate for a modified solution unless the modification is part
+of a certified solver process.</p>
+<p>For solver-required tasks, prefer the solver-extracted incumbent as the final
+output. Use heuristics only for warm starts, incumbent construction, or allowed
+improvement steps, and keep the final report honest about what is certified.</p>
+<h2 id="writing-a-formulation-report">Writing a formulation report</h2>
+<p>When the task asks for a formulation or method file, make it specific enough to
+show that an integer program was actually built and solved. Include:</p>
+<ul>
+<li>decision variable names, types, and meanings;</li>
+<li>the main hard constraint families;</li>
+<li>auxiliary variables and how they are linked;</li>
+<li>named objective components and weights or cost sources;</li>
+<li>solver package/interface and time limit;</li>
+<li>solver status, incumbent objective, bound, and gap when available;</li>
+<li>how the final solution was extracted;</li>
+<li>how feasibility and metrics were independently audited;</li>
+<li>any simplification, time-limit behavior, or post-processing used.</li>
+</ul>
+<p>A short statement such as “I solved a MIP” is usually not enough for a benchmark
+that checks method quality.</p>
+<p>Clearly specify minimization/maximization in formulation files, and avoid only saying "best",
+"optimal", or "lower score" without the word "minimize" or "minimization".</p>
+<p>For permutation or assignment schedules, include these exact concepts in plain
+language:</p>
+<ul>
+<li>each block/item/job is assigned exactly once;</li>
+<li>each slot/position/resource receives exactly one item, when applicable;</li>
+<li>no duplicates or missing assignments are allowed;</li>
+<li>adjacent-pair burden terms;</li>
+<li>three-position or n-gram burden terms;</li>
+<li>overlap or short-horizon pressure terms;</li>
+<li>optional eligibility/front-loading/pinning constraints, even when inactive;</li>
+<li>the solution approach and whether it is exact, time-limited, or heuristic.</li>
+</ul>
+<p>This wording is not task-specific; it makes the mathematical contract auditable
+by both humans and simple benchmark checks.</p>
+<h2 id="output-consistency-workflow">Output consistency workflow</h2>
+<p>Use this order before final submission:</p>
+<ol>
+<li>Build the complete intended MIP objective and constraints.</li>
+<li>Solve with an installed solver and capture status/certificate information.</li>
+<li>Extract one final solution from the incumbent.</li>
+<li>Validate all hard constraints from the extracted output.</li>
+<li>Recompute every metric from the extracted output.</li>
+<li>Compare recomputed objective to solver objective when they should match.</li>
+<li>Write the final output files, metrics file, and formulation/report from the
+   same final solution.</li>
+<li>Reload the written output files from disk and rerun the pure evaluator.</li>
+<li>If any reported metric differs from the disk-recomputed metric, fix the
+   objective semantics or the output extraction before submitting.</li>
+</ol>
+<h2 id="common-mistakes">Common mistakes</h2>
+<ul>
+<li>Abandoning an installed MIP solver after one unavailable package fails.</li>
+<li>Claiming optimality after a time-limited run.</li>
+<li>Reporting a solver objective from one incumbent but writing a different final
+  output.</li>
+<li>Using local search as the main method when the task requires a solver-based
+  integer program.</li>
+<li>Writing metrics directly from solver expressions without checking the final
+  output.</li>
+<li>Recomputing metrics from an in-memory schedule but submitting a different
+  schedule file.</li>
+<li>Sorting, symmetrizing, or permuting tuple keys in the audit evaluator when the
+  objective is ordered.</li>
+<li>Replacing an overlap term with a broader "all combinations in a window"
+  metric.</li>
+<li>Forgetting to include explicit "minimize" and "each item exactly once" wording
+  in a formulation file.</li>
+<li>Omitting the solver status, bound, gap, or time limit from the report.</li>
+<li>Rounding non-integral binary values without investigating extraction errors.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

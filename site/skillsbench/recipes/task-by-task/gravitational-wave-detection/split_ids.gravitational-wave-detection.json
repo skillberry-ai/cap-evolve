@@ -1,0 +1,5 @@
+{
+  "train": ["gravitational-wave-detection"],
+  "val": ["gravitational-wave-detection"],
+  "test": ["gravitational-wave-detection"]
+}

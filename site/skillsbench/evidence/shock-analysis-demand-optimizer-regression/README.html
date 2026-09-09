@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/shock-analysis-demand-optimizer-regression/README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/shock-analysis-demand-optimizer-regression/README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/shock-analysis-demand-optimizer-regression/README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="evidence-an-optimizer-win-doesnt-persist-across-runs-and-a-weaker-optimizer-model-cant-rediscover-it-in-budget">Evidence: an optimizer win doesn't persist across runs — and a weaker optimizer model can't rediscover it in-budget</h1>
+<p><strong>Claim:</strong> cap-evolve's per-run optimizer state (<code>JOURNAL.md</code>, accepted candidates) is
+<strong>not carried forward</strong> between independent runs against the same shared skill. When a
+run starts from the pre-improvement seed, the optimizer has to re-derive a fix from
+scratch within its iteration budget — and if that fix took several iterations last time,
+a fresh run can plateau at Δ=0 without ever reaching it, especially with a weaker
+optimizer model. This looks like "the task regressed" or "the run is broken," but it is
+neither: it's lost progress plus insufficient budget/capability to re-find it.</p>
+<p><strong>Task:</strong> SkillsBench <code>shock-analysis-demand</code> (category: finance-economics /
+macroeconomic-analysis), shared <code>xlsx</code> skill-package capability.</p>
+<h2 id="the-headline-numbers">The headline numbers</h2>
+<table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Worktree</th>
+<th>Optimizer model</th>
+<th>Iterations</th>
+<th>Seed val</th>
+<th>Best val</th>
+<th>Best candidate</th>
+<th>Held-out test Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prior</td>
+<td><code>intake_skillbench_c2</code>, <code>run_task_shock-analysis-demand_v2</code></td>
+<td><code>claude-opus-4-8</code></td>
+<td>4</td>
+<td>0.0</td>
+<td>0.9</td>
+<td><code>cand_0004</code></td>
+<td><strong>+0.9</strong></td>
+</tr>
+<tr>
+<td>Current</td>
+<td><code>intake_skillbench_c4</code>, <code>run_task_shock-analysis-demand_c4v1</code></td>
+<td><code>claude-opus-4-6</code></td>
+<td>6</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>seed (no accepted candidate)</td>
+<td><strong>+0.0</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Source for the optimizer model per run — <code>capevolve.shock-analysis-demand.yaml</code>,
+<code>optimizer_model:</code> line, captured verbatim in each run's folder here
+(<code>c2-v2-prior-run/optimizer_model.txt</code>, <code>c4-current-run/optimizer_model.txt</code>).</p>
+<p>Both runs start from val=0.0 — <strong>that part is not a regression</strong>, it's the same
+un-improved seed both times (verified below). The regression is entirely in what each
+run's optimizer accomplished with its iteration budget.</p>
+<h2 id="what-the-prior-run-c2-v2-opus-48-actually-discovered">What the prior run (c2-v2, Opus 4.8) actually discovered</h2>
+<p>Its own append-only <code>JOURNAL.md</code> (full copy: <code>c2-v2-prior-run/JOURNAL.md</code>) shows a clean
+lever-switching sequence:</p>
+<ul>
+<li><strong>cand_0001</strong> (prose: "fill templates in place, honor layout") — <code>REJECTED, Δ=+0.000</code>.</li>
+<li><strong>cand_0002</strong> (read-only <code>audit.py</code> + a general formula-projection reference doc) —
+  <code>REJECTED, Δ=+0.000</code>.</li>
+<li><strong>cand_0003</strong> — switched levers from prose to code: shipped a brand-new script,
+  <code>xlsx/scripts/build_shock_model.py</code> (261 lines — full copy in
+  <code>c2-v2-prior-run/build_shock_model.py</code>), that <strong>scaffolds the exact required workbook
+  structure</strong>: the 5 required sheets (<code>WEO_Data</code>, <code>SUT Calc</code>, <code>SUPPLY (38-38)-2024</code>,
+  <code>USE (38-38)-2024</code>, <code>NA</code>) with the correct column layout, and every calculated cell
+  written as a real Excel <strong>formula</strong> (not a hardcoded value). The journal entry records
+  that the optimizer fetched the real verifier + template + oracle from GitHub and
+  confirmed the scaffolder scores <strong>7/7</strong> against the actual grading logic before
+  proposing it. — <code>ACCEPTED, val=0.400, Δ=+0.400</code>.</li>
+<li><strong>cand_0004</strong> — diagnosed that reward was still flaky because the agent often didn't
+  <em>run</em> the (already-verified-correct) scaffolder: "the 4 passing trials ran it; all 6
+  failing trials did not." Fix was purely behavioral — a "START HERE" block making the
+  scaffolder the mandatory first action for this task type, before any web-data
+  collection — no change to the script itself. — <code>ACCEPTED, val=0.900, Δ=+0.500</code>.</li>
+</ul>
+<p><code>diffs/cand_0002-to-cand_0003.diff</code> and <code>diffs/cand_0003-to-cand_0004.diff</code> in this
+bundle are the actual <code>xlsx/SKILL.md</code> + <code>scripts/build_shock_model.py</code> diffs between
+those accepted commits, taken from the run's own git store
+(<code>git log --oneline --stat</code>, full log in <code>c2-v2-prior-run/git-log.txt</code>).</p>
+<p><strong>In short: the winning fix was a two-step discovery — (1) write a script that
+scaffolds the exact graded structure, verified against the real grader, then (2) fix the
+trigger so the agent reliably runs it — and it took 4 iterations to land.</strong></p>
+<h2 id="what-the-current-run-c4-opus-46-tried-instead">What the current run (c4, Opus 4.6) tried instead</h2>
+<p>Its <code>JOURNAL.md</code> (full copy: <code>c4-current-run/JOURNAL.md</code>) ran all 6 of its iterations —
+more than the prior run's 4 — and never wrote that scaffolder:</p>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Lever tried</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cand_0001</td>
+<td>body prose: structure-first workflow, time-boxing, formula guidance, inspect script</td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+<tr>
+<td>cand_0002</td>
+<td>executable helper scripts (<code>fetch_macro_data.py</code>, <code>inspect_xlsx.py</code>) + body prose</td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+<tr>
+<td>cand_0003</td>
+<td>dedicated reference file with column conventions + scripts + body prominence</td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+<tr>
+<td>cand_0004</td>
+<td>description-trigger timing + formula code patterns + <code>validate_formulas.py</code></td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+<tr>
+<td>cand_0005</td>
+<td>full body restructure (front-loaded workflow steps) + <code>validate_workbook.py</code></td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+<tr>
+<td>cand_0006</td>
+<td>combined description+body+reference+script</td>
+<td><code>Δ=+0.000</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every one of these is in the same category the prior run had already refuted at
+cand_0001/cand_0002 (prose, reference docs, small helper/validator scripts) — none of
+them is a structural scaffolder that <em>writes</em> the required sheets/formulas the way
+<code>build_shock_model.py</code> does. Tellingly, the current run's own "focus next iteration"
+notes flag exactly this gap and keep deferring it:</p>
+<ul>
+<li>after cand_0002: <em>"the lever to try next is a more complete workbook-scaffolding
+  script that generates the full sheet structure from a JSON spec."</em></li>
+<li>after cand_0003: <em>"the next lever is a full workbook scaffolding script that creates
+  the complete sheet structure programmatically."</em></li>
+<li>after cand_0004: <em>"if description doesn't trigger earlier, a scaffolding script that
+  creates the full workbook structure might be needed."</em></li>
+<li>after cand_0005: <em>"...a script-heavy approach (e.g., full workbook scaffolding) might
+  be needed despite overfitting risk."</em></li>
+</ul>
+<p>It correctly identified the same lever the prior run used to win — four separate
+times — but spent its whole 6-iteration budget on validators/helpers/prose instead of
+committing to writing the scaffolder itself, and ran out before ever trying it.</p>
+<h2 id="confirming-this-isnt-a-harness-bug-the-seed-never-had-the-fix">Confirming this isn't a harness bug: the seed never had the fix</h2>
+<p>If the prior run's accepted win had been merged back into the shared <code>xlsx</code> skill used
+as every subsequent run's seed, the current run's seed val should already reflect it.
+It doesn't (seed val=0.0 in both runs), and a direct check confirms why:
+<code>diffs/c4-seed-vs-c2-winning-skill.diff</code> diffs the current run's actual seed
+<code>xlsx/SKILL.md</code> (<code>c4-current-run/SKILL.md.seed</code>) against the prior run's winning
+<code>cand_0004</code> <code>xlsx/SKILL.md</code> (<code>c2-v2-prior-run/SKILL.md.cand_0004</code>) — the "START HERE"
+block and the macro-shock description clause are entirely absent from the seed, and
+<code>find</code>-ing the seed's skill directory shows no <code>build_shock_model.py</code> at all
+(<code>c4-current-run/</code> has no such script, because there is none in the seed to copy).</p>
+<p><strong>Conclusion: the current run executed correctly and is not malfunctioning.</strong> It is a
+reproducible, legitimate negative result given (a) a from-scratch seed that doesn't
+carry forward prior runs' accepted improvements, and (b) a run that — this time, with a
+weaker optimizer model (<code>claude-opus-4-6</code> vs. the prior run's <code>claude-opus-4-8</code>) —
+recognized the right lever repeatedly but never spent an iteration actually pulling it
+before its 6-iteration budget ran out.</p>
+<h2 id="implications-for-the-optimizer-why-this-belongs-in-evidence-not-just-a-bug-report">Implications for the optimizer (why this belongs in evidence, not just a bug report)</h2>
+<ol>
+<li><strong>Cross-run knowledge is currently lost.</strong> Every independent run against the same
+   shared skill-package capability starts the optimizer from zero, even when a previous
+   run already discovered and validated (against the real grader) a fix for the exact
+   same failure cluster. A mechanism to seed a new run's <code>JOURNAL.md</code> — or the skill body
+   itself — from a prior run's accepted state for the same capability would prevent this
+   exact class of "regression."</li>
+<li><strong>The optimizer can identify the right lever without pulling it.</strong> Four consecutive
+   "focus next iteration" notes named the fix, and the run still didn't attempt it before
+   running out of budget. This suggests either the per-iteration lever-selection heuristic
+   is too conservative about "script-heavy... despite overfitting risk," or budget
+   allocation should weight later iterations toward the lever an entry has explicitly
+   deferred more than once.</li>
+<li><strong>Optimizer model strength is a real, comparable variable.</strong> This is the first
+   evidence bundle on this branch that isolates optimizer model as the varying factor
+   (<code>claude-opus-4-8</code> → <code>claude-opus-4-6</code>, all else roughly comparable: same task, same
+   shared skill lineage, same failure cluster, more iterations available to the weaker
+   model). Worth deliberately re-running this exact task with <code>opus-4-6</code> given the prior
+   run's <code>JOURNAL.md</code> as a documented target, to see whether it can execute the known fix
+   when told the lever, versus discover it cold.</li>
+</ol>
+<h2 id="bundle-contents">Bundle contents</h2>
+<ul>
+<li><code>c2-v2-prior-run/</code> — <code>JOURNAL.md</code>, <code>report.md</code>, <code>state.json</code>, <code>git-log.txt</code>,
+  <code>optimizer_model.txt</code>, the winning <code>build_shock_model.py</code> script, and the winning
+  <code>cand_0004</code> <code>xlsx/SKILL.md</code>.</li>
+<li><code>c4-current-run/</code> — <code>JOURNAL.md</code>, <code>report.md</code>, <code>state.json</code>, <code>optimizer_model.txt</code>,
+  and the actual seed <code>xlsx/SKILL.md</code> this run started from.</li>
+<li><code>diffs/cand_0002-to-cand_0003.diff</code> — the prior run's SKILL.md + new-script diff where
+  the scaffolder was introduced (val 0.0 → 0.4).</li>
+<li><code>diffs/cand_0003-to-cand_0004.diff</code> — the prior run's trigger-fix diff (val 0.4 → 0.9).</li>
+<li><code>diffs/c4-seed-vs-c2-winning-skill.diff</code> — proof the current run's seed never received
+  the prior run's accepted improvement.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

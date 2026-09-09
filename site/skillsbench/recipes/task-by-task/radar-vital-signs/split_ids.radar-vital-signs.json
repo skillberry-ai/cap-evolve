@@ -1,0 +1,5 @@
+{
+  "train": ["radar-vital-signs"],
+  "val": ["radar-vital-signs"],
+  "test": ["radar-vital-signs"]
+}

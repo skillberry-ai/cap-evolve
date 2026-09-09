@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROJE — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from recipes/task-by-task/_shared/PROJECT.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../"><img src="../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../getting-started.html">Get started</a>
+      <a href="../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../results.html">Results</a>
+      <a href="../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../architecture.html">Architecture</a>
+      <a href="../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../harbor.html">Harbor</a>
+      <a href="../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/recipes/task-by-task/_shared/PROJECT.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/recipes/task-by-task/_shared/PROJECT.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="acapo-project">Acapo project — <target name></h1>
+<p>Filled by the <code>intake</code> skill. Records the decisions behind this run so anyone
+(human or agent) can understand and reproduce it.</p>
+<h2 id="what-were-optimizing">What we're optimizing</h2>
+<ul>
+<li>Capability: <skill-package | tools | mcp-tool | system-prompt | ...></li>
+<li>Artifact: <code>&lt;path&gt;</code></li>
+<li>Allowed edits: &lt;...&gt;</li>
+</ul>
+<h2 id="how-we-run-the-target-the-runner">How we run the target (the RUNNER)</h2>
+<ul>
+<li>Agent under test: &lt;...&gt;</li>
+<li>How <code>run_target</code> invokes it: &lt;...&gt;</li>
+</ul>
+<h2 id="how-we-score">How we score</h2>
+<ul>
+<li>Metric: &lt;...&gt; (reward in [0,1])</li>
+<li>Feedback signal: <what the scorer reports back as the learning signal></li>
+</ul>
+<h2 id="data">Data</h2>
+<ul>
+<li>Source: <code>&lt;path or "adapter"&gt;</code></li>
+<li>Split: train/val/test (seed <n>) — test is sealed, scored once at finalize.</li>
+</ul>
+<h2 id="optimizer-algorithm">Optimizer + algorithm</h2>
+<ul>
+<li>Optimizer (proposer): <claude-code | codex | gemini-cli | ... | mock></li>
+<li>Algorithm: <hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt></li>
+<li>Budget: <iterations / metric-calls / usd / optimizer-usd / stall / optimizer-max-turns></li>
+</ul>
+<h2 id="inputs-status">Inputs status</h2>
+<ul>
+<li>NEEDED inputs resolved: <list></li>
+<li>RECOMMENDED inputs skipped: <list + why></li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

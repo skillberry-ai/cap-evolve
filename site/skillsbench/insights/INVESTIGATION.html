@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INVESTIGATI — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/INVESTIGATION.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/INVESTIGATION.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/INVESTIGATION.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="skillsbench-task-by-task-insights-findings-and-open-investigations">SkillsBench task-by-task — insights, findings, and open investigations</h1>
+<p>Consolidated after the 2026-08-22 update covering task-by-task-20 (batch 1 +
+batch 2 + Track A + v7 podman fix reruns).</p>
+<h2 id="headline">Headline</h2>
+<p>Task-by-task cap-evolve on SkillsBench (each task gets its OWN cap-evolve
+process with the task's OWN shipped skills as seed) delivers <strong>+23.0 pp
+average lift across 20 tasks (0.577 → 0.807)</strong>. Compared to whole-suite
+optimization on the same 10 batch-1 tasks (+7.3 pp), task-native seed is
+<strong>~3× more effective in aggregate lift</strong>.</p>
+<ul>
+<li>9 of 20 tasks lifted from seed to val=1.0 by the optimizer.</li>
+<li>4 of 20 already saturated at baseline (val=1.0 seed).</li>
+<li>3 of 20 landed at 0.4-0.85 (partial lift).</li>
+<li>2 of 20 stuck at 0.000 through 2 iterations.</li>
+</ul>
+<h2 id="insight-0-the-v8-podman-fix-2026-08-25-unblocking-44-more-tasks">Insight 0 — the v8 podman fix (2026-08-25): unblocking 44 more tasks</h2>
+<p><strong>Problem:</strong> After task-by-task-43 finished, 44 SkillsBench tasks were
+still blocked by CCC's rootless-podman constraints — same <code>_apt</code>-user
+<code>seteuid 42</code> failure that ubuntu:24.04-v2 originally fixed, but on
+different base images:</p>
+<ul>
+<li><strong>29 python:3.x-slim</strong> tasks (26× <code>python:3.12-slim</code>, 2× <code>python:3.11-slim</code>,
+  1× <code>python:3.12.8-slim</code>) — direct debian-slim <code>apt-get install</code> fails
+  before any task-specific setup runs.</li>
+<li><strong>10 ubuntu:24.04 heavy-dep</strong> tasks (Java Druid, Erlang OTP, Java Flink,
+  Playwright browsers, Lean 4 toolchain, PDDL planning, LibreOffice+gnumeric,
+  Node/React) — v7 base applies, but each still had per-task quirks worth
+  trying to run.</li>
+<li><strong>5 misc-base</strong> tasks — <code>ubuntu:20.04</code>, <code>bugswarm/cached-images</code>,
+  <code>gcr.io/oss-fuzz-base/base-builder-python</code>, <code>jasonish/suricata:7.0.11</code>.</li>
+</ul>
+<p><strong>Fix (v8 of the patched base images, <code>_patch_slim_base</code> helper in
+<a href="../../scripts/ccc/setup_podman.sh"><code>setup_podman.sh</code></a>):</strong></p>
+<ul>
+<li>Refactored the v7 ubuntu:24.04-specific Dockerfile block into a shell
+  function <code>_patch_slim_base &lt;base_tag&gt; &lt;marker_name&gt;</code> that applies the
+  same recipe (apt-sandbox-user root, chown/adduser/dpkg-statoverride
+  wrappers, TAR_OPTIONS=--no-same-owner, uv-preinstall at both
+  <code>/usr/local/bin</code> and <code>/root/.local/bin</code>) to any Debian-based image.</li>
+<li>Added apt-installed <code>curl</code> and <code>ca-certificates</code> at the start of the
+  helper — python-slim images ship without either, and the uv installer
+  needs both.</li>
+<li>Applied to: <code>python:3.12-slim</code>, <code>python:3.11-slim</code>, <code>python:3.12.8-slim</code>,
+  and <code>ubuntu:20.04</code>.</li>
+<li>ubuntu:24.04 v7 block kept as-is (still has task-shared heavy preinstalls
+  <code>poppler-utils build-essential</code> which python-slim tasks don't need).</li>
+</ul>
+<p><strong>Verification:</strong> bike-rebalance's downstream image (FROM python:3.12-slim,
+apt-installs bash+ca-certificates+curl+libgfortran5, pip-installs
+pytest+pyscipopt) now builds cleanly. First live rollout
+(econ-detrending-correlation seed_t0) verified end-to-end on the v8 image
+at reward=1.0 (4/4 pytest passing).</p>
+<p><strong>Impact:</strong> 44 tasks unblocked at the image-build layer. Runtime failures
+still possible per-task, but the systemic "can't apt-install anything"
+class is now solved for these bases too.</p>
+<p><strong>PR:</strong> <a href="https://github.com/bcarmeli/cap-evolve/tree/add-python-slim-base-support"><code>bcarmeli/cap-evolve</code> <code>add-python-slim-base-support</code></a>,
+branched off <code>add-ccc-support</code>.</p>
+<p><strong>Cache invalidation note:</strong> the cache-key bug from v7 (Layer 3 of
+Insight 3) means cap-evolve caches from pre-v8 runs may collide with
+fresh v8 evaluations. For c2 tasks re-run in c3 with v8, ensure the
+run dir is fresh (different <code>--run-ts</code>) OR rename any stale
+<code>.bench_runs/.../&lt;task&gt;__&lt;hash&gt;/</code> subdirs (all 10 seed dirs, not just
+seed0) with a <code>_STALE_pre_v8</code> suffix before submitting.</p>
+<h3 id="2026-08-25-landing-of-the-44-task-push-in-c3">2026-08-25 landing of the 44-task push in c3</h3>
+<p>Submitted 44 tasks task-by-task with <code>--max-iterations 4</code> on dedicated
+LSF hosts.</p>
+<p><strong>Buckets 1–3 baseline classification (as of ~11:00 UTC):</strong></p>
+<ul>
+<li><strong>11 saturated at seed val=1.0</strong> (killed per standing rule; run dirs
+  renamed <code>_KILLED_saturated_1.0</code>): dialogue-parser,
+  econ-detrending-correlation, exoplanet-detection-period,
+  gravitational-wave-detection, llm-prefix-cache-replay,
+  mario-coin-counting, mars-clouds-clustering, parallel-tfidf-search,
+  pddl-tpp-planning, powerlifting-coef-calc, radar-vital-signs.</li>
+<li><strong>12 with real signal (0.1–0.998)</strong> — optimizer has room:
+  lab-unit-harmonization (0.998), earthquake-plate-calculation (0.90),
+  lean4-proof (0.90), tictoc-unnecessary-abort-detection (0.885),
+  manufacturing-fjsp-optimization (0.80),
+  manufacturing-equipment-maintenance (0.70),
+  react-performance-debugging (0.60), debug-trl-grpo (0.425),
+  civ6-adjacency-optimizer (0.31), software-dependency-audit (0.30),
+  bike-rebalance (0.10), video-silence-remover (0.10).</li>
+<li><strong>3 baseline=0.0, genuinely hard for agent</strong> (verifier ran, agent
+  fails 1 of N strict checks — NOT infra-broken):</li>
+<li><code>azure-bgp-oscillation-route-leak</code> — 21/22 solution-classification
+    tests pass; agent misses the RPKI origin-validation case.</li>
+<li><code>paratransit-routing</code> — agent produces routes serving 0 trips vs
+    required 442 (≥95% of reference-solved).</li>
+<li><code>travel-planning</code> — Day-1 attraction returned as '-' (empty
+    placeholder); other 9 tests pass.</li>
+<li><strong>7 baseline=0.0, infra-broken</strong> (killed; run dirs renamed
+  <code>_INFRA_BROKEN_baseline_0.0</code>):
+  1. <code>fix-build-agentops</code> — <code>FROM bugswarm/cached-images:AgentOps-AI-*</code>
+     hits uv-install tar-chown at STEP 10 (uid=1001/gid=117). Same
+     tar-chown class we solved on ubuntu:24.04/python-slim, but on a
+     third-party base we don't patch. <strong>Fixable:</strong> extend
+     <code>_patch_slim_base</code> to bugswarm base tags. Task-specific — one
+     tag per bugswarm-based task.
+  2. <code>fix-build-google-auto</code> — multi-stage: <code>FROM bugswarm/... AS auto</code><ul>
+<li><code>FROM --platform=linux/amd64 ubuntu:20.04 AS final</code>. Second stage
+ fails: <code>_apt</code> seteuid 100 in ubuntu:20.04 apt-get. Root cause:
+ <code>--platform=linux/amd64</code> FORCES podman to auto-pull the vanilla
+ remote ubuntu:20.04 for that platform, OVERWRITING our locally-
+ patched tag mid-build. Our marker file survives, but the tag's
+ contents (<code>/etc/apt/apt.conf.d/00-rootless</code>) are gone. <code>pull_policy
+ = "missing"</code> in containers.conf does NOT prevent this — the
+ <code>--platform</code> flag bypasses the policy.
+ <strong>Fixable options</strong> (deferred):</li>
+<li>patch benchflow's <code>docker.py</code> to pass <code>--pull=never</code> to the
+   <code>podman build</code> invocation, so downstream builds cannot pull;</li>
+<li>modify the two affected task Dockerfiles at build time to
+   strip <code>--platform=linux/amd64</code> (task-data-modifying);</li>
+<li>author a local buildah policy that pins by digest.
+ Content-check in setup_podman.sh (added in commit <code>7c5b3314</code>)
+ detects the overwrite on the NEXT setup run, but not within the
+ same job.
+  3. <code>glm-lake-mendota</code> — same <code>--platform=linux/amd64 ubuntu:20.04</code>
+ overwrite issue as fix-build-google-auto.
+  4. <code>setup-fuzzing-py</code> — <code>FROM gcr.io/oss-fuzz-base/base-builder-python</code>
+ hits uv-install tar-chown at STEP 10 (same as agentops). Would
+ need extending <code>_patch_slim_base</code> to the oss-fuzz base.
+  5. <code>suricata-custom-exfil</code> — <code>FROM jasonish/suricata:7.0.11</code>
+ (Fedora-based, dnf not apt). RPM cpio chown fails installing
+ <code>wireshark-cli</code>: <code>error: unpacking of archive failed on file
+ /usr/bin/dumpcap;6a8ddca7: cpio: chown failed - No data
+ available</code>. Different failure class (rpm not tar). Fixable but
+ needs different mechanism than the apt-family wrappers.
+  6. <code>earthquake-phase-association</code> — <code>FROM python:3.12-slim</code>, apt +
+ pip succeed (v8 works), then STEP 6 runs a Python inline script
+ that downloads a PhaseNet ML model from <code>https://seisbench.
+ github.io/</code> (with 6-retry backoff). Compute nodes without
+ outbound access to that host fail all 6 retries. <strong>Fixable:</strong>
+ pre-download the seisbench model into /dccstor and volume-mount
+ into the container's <code>~/.seisbench/</code> cache dir; or run
+ containerization on a login node that has network reach and
+ export the built image.
+  7. <code>fix-visual-stability</code> — task ships its own
+ <code>docker-compose.yaml</code> with <code>networks: task-net</code> (a bridge
+ network) that overrides our benchflow-level
+ <code>network_mode: host</code> patch. Bridge → netavark → aardvark-dns
+ → systemd (missing on compute nodes) → boot fails. <strong>Fixable
+ options</strong> (deferred): patch this specific task's
+ docker-compose.yaml to <code>network_mode: host</code>; or set up
+ aardvark-dns via a userspace systemd substitute.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Post-diagnostic active set:</strong> 24 running (23 mine + 1 c2 391812) + 1
+pending (energy-unit-commitment, waiting on LSF advance reservation) +
+2 zombies (seismic-phase-picking + crystallographic-wyckoff-position-
+analysis on unavail hosts — real progress on disk, will resume with
+<code>--resume</code> after LSF reaps).</p>
+<h2 id="insight-1-the-v7-podman-fix-2026-08-21">Insight 1 — the v7 podman fix (2026-08-21)</h2>
+<p><strong>Problem discovered:</strong> 8 of the initial 20 batch-2 tasks scored 0.000 across
+seed + cand_0001 + cand_0002. Interpreted at first as "genuinely hard OOD
+tasks" — but Track B diagnosis showed every one of them was infra-broken
+inside the container:</p>
+<pre><code>/verifier/test.sh: line 8: /root/.local/bin/env: No such file or directory
+/verifier/test.sh: line 15: uvx: command not found
+</code></pre>
+<p>Root cause: SkillsBench verifier test.sh scripts almost universally begin:</p>
+<pre><code class="language-bash">curl -LsSf https://astral.sh/uv/&lt;ver&gt;/install.sh | sh &gt; /dev/null 2&gt;&amp;1
+source $HOME/.local/bin/env
+uvx --with pytest ... pytest ...
+</code></pre>
+<p>Two independent failure modes cause the install to fail silently:</p>
+<ol>
+<li><strong>Compute nodes lack outbound access to <code>https://astral.sh</code></strong>. <code>curl</code> errors,
+   <code>2&gt;/dev/null</code> swallows it, <code>/root/.local/bin/env</code> never exists,
+   <code>source</code> errors, <code>uvx: command not found</code>.</li>
+<li><strong>When curl works, the tar-extract still fails</strong> — Astral's uv tarball
+   embeds file entries with uid=1001/gid=117 (uv's build user). Under
+   rootless podman single-UID user namespace, <code>tar</code> fails with
+   <code>Cannot change ownership to uid 1001, gid 117: Invalid argument</code>.</li>
+</ol>
+<p><strong>Fix (v7 of the patched-ubuntu base image, in
+<a href="../../scripts/ccc/setup_podman.sh"><code>../../scripts/ccc/setup_podman.sh</code></a>):</strong></p>
+<ul>
+<li>Pre-install <code>uv</code>/<code>uvx</code> to <code>/usr/local/bin</code> (system-wide).</li>
+<li>Pre-install <code>uv</code>/<code>uvx</code> <strong>also</strong> to <code>/root/.local/bin</code> at build time,
+  including the verifier-expected <code>env</code> activation script (installer honors
+  <code>HOME=/root</code>). This is what the verifier's hardcoded <code>source
+  $HOME/.local/bin/env</code> uses.</li>
+<li>Set <code>TAR_OPTIONS=--no-same-owner</code> in the container env as a
+  belt-and-braces fallback for other tar-based installers.</li>
+</ul>
+<p><strong>Impact:</strong> 6 of 8 previously "stuck at 0" tasks unblocked:</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>pre-v7</th>
+<th>post-v7 best</th>
+<th>change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td>0.000</td>
+<td><strong>1.000</strong> (saturated at seed)</td>
+<td>+1.000</td>
+</tr>
+<tr>
+<td><code>threejs-to-obj</code></td>
+<td>0.000</td>
+<td><strong>1.000</strong> (saturated at seed)</td>
+<td>+1.000</td>
+</tr>
+<tr>
+<td><code>sec-financial-report</code></td>
+<td>0.000</td>
+<td><strong>1.000</strong> (0.9 → cand_0002 1.0)</td>
+<td>+1.000</td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td>0.000</td>
+<td>0.847 (seed 0.85)</td>
+<td>+0.847</td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td>0.000</td>
+<td>0.500 (seed 0.5)</td>
+<td>+0.500</td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td>0.000</td>
+<td>0.400 (seed 0.4)</td>
+<td>+0.400</td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>python-scala-translation</code></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lesson:</strong> always check verifier <code>test-stdout.txt</code> before treating an
+all-zero task as "genuinely hard". Infra failure and genuine hardness are
+indistinguishable from the reward-only signal.</p>
+<p><strong>Not fixed by v7:</strong>
+- <code>python-scala-translation</code> — Scala/GraalVM native-image runtime crashes inside
+  the container. Different infra class. Needs task-specific Dockerfile
+  patch or a v8 base image with <code>openjdk-21</code> / <code>sbt</code> preinstalled.
+- <code>financial-modeling-qa</code> — verifier now runs; agent produces output but
+  verifier says wrong. Genuinely hard on task semantics.</p>
+<h2 id="insight-2-track-a-iter-3-4-saved-2-of-3-partial-lift-tasks">Insight 2 — Track A: iter 3-4 saved 2 of 3 partial-lift tasks</h2>
+<p>Batch 1 finished with 3 tasks at 0.9 or below despite showing real signal:
+adaptive-cruise-control (0.7→0.9), multilingual-video-dubbing (0.7→0.9),
+invoice-fraud-detection (0.3→0.4). Question: was max_iterations=2 too small?</p>
+<p>Ran <code>--resume</code> on each with <code>max_iterations=4</code>. Result:</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>seed</th>
+<th>c2 (iter 2)</th>
+<th>c3 (iter 3)</th>
+<th>c4 (iter 4)</th>
+<th>verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>adaptive-cruise-control</code></td>
+<td>0.7</td>
+<td>0.9</td>
+<td><strong>1.0</strong></td>
+<td>1.0</td>
+<td>iter 3 unlocked</td>
+</tr>
+<tr>
+<td><code>multilingual-video-dubbing</code></td>
+<td>0.7</td>
+<td>0.9</td>
+<td>0.9</td>
+<td><strong>1.0</strong></td>
+<td>iter 4 unlocked</td>
+</tr>
+<tr>
+<td><code>invoice-fraud-detection</code></td>
+<td>0.3</td>
+<td>0.4</td>
+<td>0.2</td>
+<td>0.2</td>
+<td>plateau at 0.4 (real ceiling)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lesson:</strong> <code>max_iterations=2</code> was too small for tasks with real signal
+between iter 2 and 4. Default should be <code>max_iterations=4</code> for future
+task-by-task runs. Cost trade-off: ~$25/task extra optimizer for iters 3-4.</p>
+<h2 id="insight-3-un-retracted-optimizer-hurts-baseline-is-real-confirmed-by-v5-rerun-after-clearing-4-layers-of-infra-bugs">Insight 3 — UN-RETRACTED: "optimizer hurts baseline" is real, confirmed by v5 rerun after clearing 4 layers of infra bugs</h2>
+<p><strong>Final date: 2026-08-24.</strong> The original hypothesis (optimizer degrades
+already-good baselines) is <strong>correct</strong> — but proving it required peeling
+through four independent infrastructure caching/config bugs first, each
+of which was returning fake 0.0 rewards that made the optimizer look
+worse than it is on 3 tasks, and made it impossible to tell what the
+real behavior was on 2 more. Only after all four were resolved did
+truly-fresh evaluations reveal the real optimizer pattern.</p>
+<h3 id="the-4-layer-bug-chain-chronological-order-of-discovery">The 4-layer bug chain (chronological order of discovery)</h3>
+<p><strong>Layer 1 — patched-ubuntu image v7 (2026-08-21).</strong> Base image lacked
+pre-installed <code>uv</code>/<code>uvx</code>, so verifier <code>test.sh</code> scripts crashed at
+<code>tar: Cannot change ownership to uid 1001, gid 117</code> when trying to
+install uv at test time. Fixed by adding uv to <code>/usr/local/bin</code> AND
+<code>/root/.local/bin</code> at image build. Unblocked 6 of 8 previously "stuck
+at 0" tasks. Documented in <code>CCC_PODMAN_SETUP.md</code>.</p>
+<p><strong>Layer 2 — stale <code>.skillsbench.lock</code> from crashed Aug 22 job.</strong> All
+concurrent bench jobs try to <code>flock()</code> the same source-cache file;
+when a previous job died, its PID still lived in the lockfile and new
+jobs got "Timed out waiting for source cache lock" for the entire
+baseline. Fixed by moving the stale lock aside. Documented as a
+cap-evolve issue: <strong>stale-flock recovery is missing.</strong></p>
+<p><strong>Layer 3 — bench cache-key includes only content hash, not image
+version — AND uses per-seed dirs (seed0…seed9).</strong> After Layer 1 and 2
+were fixed, cand_0001/cand_0002 evaluations still returned 0.0 in
+70–100 seconds. Root cause: cap-evolve+bench cache is stored at
+<code>.bench_runs/default/&lt;cand&gt;/seed&lt;N&gt;/&lt;dated&gt;/&lt;task&gt;__&lt;content_hash&gt;/</code>.
+On the Aug 22 --resume, the optimizer proposed candidates that hashed
+identically to Aug 20 attempts. Cap-evolve reused the Aug 20 rewards
+(which were 0.0 from verifier crashes) without re-running bench.
+My first rename attempt targeted seed0 only (10% of cache).
+The complete fix required renaming across all 10 seed dirs — 90 subdirs
+total for the 5 v3-rerun tasks. Documented as a cap-evolve issue:
+<strong>cache key needs image-version and preferably a <code>cache_invalidation_key</code>
+config option.</strong></p>
+<p><strong>Layer 4 — c2/.env had old ANTHROPIC creds while ~/.claude/settings.json
+had new ones.</strong> After the base image, flock, and 90-dir cache were all
+cleared, v4 rewards still came back 0.0. Feedback showed
+<code>ACP error -32603: Internal error: API Error</code>. The ETE proxy had
+migrated from <code>.vpc-int.res.ibm.com</code> (old) to <code>.vpc.res.ibm.com</code> (new),
+and the auth token changed. User updated <code>~/.claude/settings.json</code> and
+<code>~/.bashrc</code>, but c2/.env was Aug 18 stale (<code>vpc-int</code> URL + old token).
+Cap-evolve adapter passes .env vars to bench, so agent's ACP calls hit
+the dead old proxy. Fixed by updating .env to match settings.json.
+Documented as user-side: <strong>anywhere ANTHROPIC creds are duplicated,
+they need a single source of truth.</strong></p>
+<h3 id="v5-result-the-pattern-is-real-finally">v5 result: the pattern IS real (finally)</h3>
+<p>After all four layers cleared, v5 ran fully-fresh evaluations:</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>seed</th>
+<th>c1</th>
+<th>c2</th>
+<th>c3</th>
+<th>c4</th>
+<th>best</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td><strong>1.000</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>1.000 (saturated, killed early)</td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td><strong>0.900</strong></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.400</td>
+<td>0.100</td>
+<td>0.900 (seed)</td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td><strong>0.720</strong></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.300</td>
+<td>0.300</td>
+<td>0.720 (seed)</td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td><strong>0.600</strong></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.200</td>
+<td>0.000</td>
+<td>0.600 (seed)</td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000 (all zero, truly hard)</td>
+</tr>
+</tbody>
+</table>
+<p>Every single cand for 3 non-zero, non-saturated tasks scored below its
+own seed. cand_0003 shows partial recovery (0.2–0.4) but never matches.
+The pattern is real, consistent, and reproducible on fresh data.</p>
+<h3 id="root-cause-of-the-optimizer-failure-jax-as-worked-example">Root cause of the optimizer failure (jax as worked example)</h3>
+<p>For <code>jax-computing-basics</code>, the optimizer's cand_0001 edit was a
+"helpful" addition to <code>jax-skills/jax_skills.py</code>: a new <code>mlp_forward</code>
+helper defined as <code>relu(X @ W1 + b1) @ W2 + b2</code>, with SKILL.md guidance
+"prefer this helper, do NOT reimplement the MLP by hand". The agent
+faithfully used the helper on the <code>jit_mlp</code> sub-task.</p>
+<p><strong>Result:</strong> the agent's numerical output differed from the reference
+by more than <code>rtol=1e-5, atol=1e-6</code> (the verifier's <code>np.allclose</code>
+tolerance). The reference was pre-computed by the task author with
+plain <code>relu(X @ W1 + b1) @ W2 + b2</code> (no wrapper). Wrapping the same
+math in a helper introduces micro-differences from JIT tracing paths,
+op-order rearrangement, and possible dtype promotion. Verifier
+compared byte-for-byte within tolerance and said "wrong". Every trial
+scored 0.</p>
+<p>The agent's transcript ends with "All five tasks are complete and
+verified against reference/" — the agent believed it succeeded.</p>
+<h3 id="the-generalized-pattern">The generalized pattern</h3>
+<p>Across drone, jax, and paper-anonymizer, the optimizer's edits share a
+family shape:</p>
+<ul>
+<li><strong>Add a "reference implementation" or "helper" file</strong> meant to
+  reduce agent variance</li>
+<li><strong>Add SKILL.md guidance</strong> with "execute intent" language ("prefer
+  this helper", "do NOT reimplement", "run this script first")</li>
+<li><strong>Verify locally on task fixtures</strong> — the optimizer claims (in
+  JOURNAL) it ran and matched reference</li>
+</ul>
+<p>The failure modes:</p>
+<ol>
+<li><strong>Numerical drift</strong> (jax): helper produces same math but different
+   float32 bytes; verifier is strict.</li>
+<li><strong>Contract mismatch</strong> (drone): "verified" helper expected specific
+   input parsing; real task input has minor structural differences
+   the optimizer didn't test against.</li>
+<li><strong>Skill fragmentation</strong> (paper-anonymizer): the optimizer split
+   the skill's cohesive prose into "read this reference for redaction
+   rules" pointers that the agent skimmed instead of following.</li>
+</ol>
+<p>The core failure isn't ONE bad optimizer choice — it's a systematic
+tendency to over-specify with "look like it should help" edits that
+create surface area for tiny divergences to fail strict verifiers.</p>
+<p>Cap-evolve's optimizer never sees:
+- The verifier's tolerance settings
+- The reference-computation code
+- Whether the "verified locally" step actually mimicked the container's
+  execution path (JIT compile order, dtype, etc.)</p>
+<p>So it optimizes with an intuition of "clearer, more helpful skill"
+without knowing that clearer is worse when the verifier expects
+byte-identical output.</p>
+<h3 id="cap-evolve-issues-to-file">Cap-evolve issues to file</h3>
+<ol>
+<li><strong>Cache key needs image + base-env identity.</strong> <code>&lt;task&gt;__&lt;hash&gt;</code> should
+   incorporate <code>podman image inspect ubuntu:24.04 | grep Id</code> (or similar
+   image-content hash) so image upgrades invalidate cache.</li>
+<li><strong>Cache key needs a user-settable invalidation flag.</strong> A
+   <code>cache_invalidation_key: "any-string"</code> in the spec YAML that gets
+   folded into <code>&lt;hash&gt;</code> would let users force fresh runs without
+   filesystem surgery.</li>
+<li><strong>Optimizer needs verifier-tolerance signal.</strong> If the verifier uses
+   <code>np.allclose(rtol=1e-5)</code>, the optimizer should be told "prefer
+   preserving the reference computation exactly; do NOT wrap math in
+   helpers that could reorder ops". Otherwise every helper-wrapper edit
+   is a coin flip against a strict tolerance.</li>
+<li><strong>Stale-flock recovery.</strong> Bench's source-cache flock should include
+   a PID health check: if the recorded PID is dead, force-release.</li>
+<li><strong>Regression guard.</strong> Currently paired-SE gate rejects a proposal
+   that drops the mean but doesn't punish the OPTIMIZER for the drop.
+   The optimizer keeps proposing similar edits. A regression guard —
+   "if baseline was ≥0.5, reject any candidate that drops below
+   baseline − 2·SE" — would stop the optimizer from wasting iters
+   repeating the same failure mode.</li>
+</ol>
+<h3 id="optimizer-improvements-to-test-in-order-of-expected-impact">Optimizer improvements to test (in order of expected impact)</h3>
+<ul>
+<li><strong>A. Baseline-anchored edit rule.</strong> In hill-climb's optimizer prompt,
+  add: "Never add scripts, wrapper functions, or 'reference
+  implementations' that recompute existing math. If the seed skill
+  already has a computation, edit its prose, not its code."</li>
+<li><strong>B. Fewer, smaller edits per iter.</strong> Constrain <code>optimizer_max_turns</code>
+  from 200 → 50. Forces the optimizer to make one focused edit rather
+  than 3-5 "helpful additions".</li>
+<li><strong>C. Failure-feedback ingestion.</strong> Pass the verifier's failure
+  messages (CTRF, stdout, first failing assertion) to the optimizer's
+  prompt on the NEXT iteration. Currently the optimizer proposes iter 2
+  based on the SAME state as iter 1, so it makes similar mistakes.</li>
+<li><strong>D. Verifier-tolerance annotation.</strong> If the task has a numerical
+  verifier with a tolerance, add a note to the optimizer's system
+  prompt: "This task's verifier uses np.allclose(rtol=1e-5). Byte-level
+  output changes count as failures."</li>
+</ul>
+<h3 id="task-level-skill-improvements-for-the-3-hurt-tasks">Task-level skill improvements (for the 3 hurt tasks)</h3>
+<ul>
+<li><strong>jax-computing-basics:</strong> the seed already documents the exact
+  functions and their semantics. The optimizer should be BLOCKED from
+  adding helper wrappers. Alternatively: teach the seed to say "use
+  the reference implementation verbatim; do not JIT unless the task
+  explicitly asks".</li>
+<li><strong>drone-planning-control:</strong> seed ships 6 tightly-coupled controllers.
+  The optimizer's tendency to add a "unified reference runner" script
+  breaks integration. Better: the seed should include an explicit
+  "test invocation" section so the optimizer sees "this is how the
+  agent uses these skills together".</li>
+<li><strong>paper-anonymizer:</strong> the seed's <code>academic-pdf-redaction/SKILL.md</code>
+  is a single 112-line doc. The optimizer tends to split this into
+  reference files. Better: mark the seed skill as <code>structure_locked: true</code>
+  in the spec (once cap-evolve supports it) so the optimizer only
+  changes SKILL.md prose, not adds sibling files.</li>
+</ul>
+<hr style="border: 0; border-top: 1px dashed #ccc; margin: 2em 0;">
+
+<p><strong>Historical context (2026-08-22 retraction, now retracted):</strong> I had
+briefly retracted this insight thinking the whole pattern was Layer 3
+caching (see "the smoking gun" below). That was true for THE FIRST
+observation — the Aug 22 pre-v3 reruns had cached data. But the pattern
+came back with the same shape after cache clear (v5). Layers 1–4 all
+had to be resolved before the underlying optimizer behavior was
+visible.</p>
+<hr />
+<p><strong>Historical Aug 22 retraction text (kept for the record):</strong></p>
+<p>Cap-evolve did not re-run these candidates when I
+did the v7 reruns on Aug 21 because it reused cached rewards keyed only
+by skill-package content hash — but not by base-image version.</p>
+<h3 id="the-pattern-that-was-observed">The pattern that was observed</h3>
+<p>Five tasks looked like:</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>seed (post-v7 real)</th>
+<th>cand_0001 (stale pre-v7)</th>
+<th>cand_0002 (stale pre-v7)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td>1.000</td>
+<td>0.000 (cached)</td>
+<td>0.000 (cached)</td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td>0.847</td>
+<td>0.000 (cached)</td>
+<td>0.000 (cached)</td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td>0.500</td>
+<td>0.000 (cached)</td>
+<td>0.000 (cached)</td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td>0.400</td>
+<td>0.000 (cached)</td>
+<td>0.000 (cached)</td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>0.000</td>
+<td>0.000 (cached, indistinguishable)</td>
+<td>0.000 (cached, indistinguishable)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-the-caching-bug-works">How the caching bug works</h3>
+<p>Cap-evolve stores per-candidate bench outputs under
+<code>.capevolve/.bench_runs/default/&lt;candidate&gt;/seed0/&lt;dated&gt;/&lt;task&gt;__&lt;hash&gt;/</code>
+where <code>&lt;hash&gt;</code> is a content hash of the skill package. On re-submission,
+if the optimizer proposes a candidate whose skill package hashes to the
+same value as a prior attempt, cap-evolve reuses the cached rewards and
+skips re-execution. Between Aug 20 (v6 image, verifier crashes) and Aug 22
+(v7 image, verifier works), the base image changed but the skill package
+hashes did NOT — the optimizer, given the same seed skill and same
+optimizer state on --resume, proposed cand_0001 with identical content.
+Cap-evolve found matching stale cache from Aug 20 and returned 0.0
+without re-running.</p>
+<h3 id="the-smoking-gun">The smoking gun</h3>
+<p>Inspecting <code>.bench_runs/default/cand_0001/seed0/&lt;dated&gt;/&lt;task&gt;__&lt;hash&gt;/</code>
+mtimes: all 5 "hurt" tasks show Aug 20 timestamps on config.json,
+trajectory JSONL, verifier reward.txt, and verifier test-stdout.txt.
+The <code>verifier/test-stdout.txt</code> file for each still shows the exact
+uvx/tar-chown error from the pre-v7 verifier crash.</p>
+<p>In contrast, <strong>sec-financial-report cand_0002 shows an Aug 22 timestamp</strong>
+— because iter 1 was accepted, iter 2 was proposed from a DIFFERENT
+starting state, its hash differed from the Aug 20 attempt, cache MISSED,
+and cap-evolve re-ran it fresh with v7. That re-run scored 1.0. This is
+the pattern-buster and it points directly at the cache-key bug.</p>
+<h3 id="corrected-interpretation">Corrected interpretation</h3>
+<p>The observed "0.0 across cand_0001+cand_0002" for these 5 tasks is
+<strong>pre-v7 verifier crashes reappearing through the cache</strong>, NOT the
+optimizer making bad proposals. The true post-v7 optimizer behavior on
+these tasks is unknown until re-run with cache cleared.</p>
+<p>The "prefer small edits" hypothesis in Insight 3 was built on this bad
+data and should be discarded.</p>
+<h3 id="the-real-cap-evolve-issue-to-file">The real cap-evolve issue to file</h3>
+<p><strong>Cache key bug:</strong> <code>&lt;task&gt;__&lt;hash&gt;</code> uses only skill-package content
+hash. It should also incorporate:
+- Base image version (or a full image-content hash)
+- OR: an explicit "cache_invalidation_key" the user can bump in the spec</p>
+<p>Currently there is no way to force a re-run except by deleting the
+cache dir or renaming it aside.</p>
+<h3 id="fix-plan-for-the-5-affected-tasks">Fix plan for the 5 affected tasks</h3>
+<ol>
+<li>Rename each stale <code>.bench_runs/default/cand_000{1,2}/seed0/&lt;dated&gt;/&lt;task&gt;__&lt;hash&gt;/</code>
+   subdir with a <code>_STALE_pre_v7</code> suffix (preserves data, breaks cache
+   lookup).</li>
+<li>Rename each run dir <code>run_task_&lt;task&gt;_v1</code> → <code>run_task_&lt;task&gt;_v1_STALE_cand_data</code>.</li>
+<li>Submit a fresh run with <code>--run-ts task_&lt;task&gt;_v2</code> (fresh baseline +
+   iters, all with v7 image).</li>
+</ol>
+<p>Expected outcome: some tasks (offer-letter, drone) likely stay high,
+some (paper-anonymizer, jax) may reveal real optimizer behavior. Either
+way we get truth, not stale artifacts.</p>
+<h2 id="insight-4-sec-financial-reports-cand_0002-was-the-only-real-optimizer-lift">Insight 4 — sec-financial-report's cand_0002 was the only real optimizer lift</h2>
+<p>sec-financial-report: seed 0.9 → cand_0002 1.0 (accepted). Timestamps
+show cand_0002 ran fresh on Aug 22 post-v7 — its skill package hashed
+differently from the Aug 20 attempt because iter 1's acceptance shifted
+the optimizer's starting state. This is the ONLY task among the v7-rerun
+set where cand_0002 was a real re-execution, and it was the ONLY one
+that lifted.</p>
+<p><strong>This does NOT support the "prefer small edits" hypothesis</strong> anymore
+(retracted with Insight 3). It just means when caching didn't hide the
+result, we saw one real optimizer improvement. Whether the optimizer
+actually helps or hurts the other 4 tasks remains unknown until we clear
+the cache and re-run.</p>
+<h2 id="cost-tally">Cost tally</h2>
+<p>Approximate spend across the task-by-task work (2026-08-19 → 2026-08-22):</p>
+<table>
+<thead>
+<tr>
+<th>phase</th>
+<th>tasks</th>
+<th>approx cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>batch 1 (10 tasks × 2 iters)</td>
+<td>10</td>
+<td>~$500</td>
+</tr>
+<tr>
+<td>batch 2 (10 tasks × 2 iters)</td>
+<td>10</td>
+<td>~$500</td>
+</tr>
+<tr>
+<td>Track A (3 tasks × 2 extra iters)</td>
+<td>3</td>
+<td>~$150</td>
+</tr>
+<tr>
+<td>v7 podman fix + reruns (8 tasks × 2 iters)</td>
+<td>8</td>
+<td>~$300</td>
+</tr>
+<tr>
+<td>smoke/diagnostic bsub</td>
+<td>—</td>
+<td>~$30</td>
+</tr>
+<tr>
+<td><strong>TOTAL</strong></td>
+<td><strong>20 unique tasks</strong></td>
+<td><strong>~$1,480</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Cost per unique-task-evaluated: ~$74.</p>
+<h2 id="where-things-stand-for-future-work">Where things stand for future work</h2>
+<p><strong>Ready:</strong>
+- Task-by-task pipeline (scripts/ccc/<em>.sh, .capevolve/project_<task>/</em>)
+- v7 patched-ubuntu image (unblocks most SkillsBench verifiers)
+- Dedicated-host LSF submission pattern
+- Results folder with heatmap + summary + CSV + per-task logs</p>
+<p><strong>Open:</strong>
+- <strong>Root-cause the optimizer-hurts-baseline pattern</strong> on drone, jax,
+  paper-anonymizer (see Insight 3 above for investigation lines)
+- <strong>v8 base image</strong> to unblock python-scala-translation (openjdk-21 +
+  sbt or GraalVM native-image)
+- <strong>Optimizer improvements</strong> — small-edit constraint, failure feedback,
+  regression guard — see Insight 3 suggestions</p>
+<p>Not open (already decided):
+- Whether task-by-task beats whole-suite: yes, confirmed +23 pp vs +7 pp.
+- Whether more iters on partial-lift tasks helps: yes, Track A validated
+  bumping max_iterations to 4 as the new default.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

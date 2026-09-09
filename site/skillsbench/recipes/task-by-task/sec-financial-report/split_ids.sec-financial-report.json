@@ -1,0 +1,5 @@
+{
+  "train": ["sec-financial-report"],
+  "val": ["sec-financial-report"],
+  "test": ["sec-financial-report"]
+}

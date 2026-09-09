@@ -1,0 +1,3018 @@
+{
+  "batch1": [
+    {
+      "task": "edit-pdf",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "court-form-filling",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.1
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "adaptive-cruise-control",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": true,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      }
+    },
+    {
+      "task": "hvac-control",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "r2r-mpc-control",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "3d-scan-calc",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "syzkaller-ppdev-syzlang",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "multilingual-video-dubbing",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": true,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      }
+    },
+    {
+      "task": "flood-risk-analysis",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "invoice-fraud-detection",
+      "batch": "batch1",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": true,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.2
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.4
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.2
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.2
+      }
+    }
+  ],
+  "batch2": [
+    {
+      "task": "financial-modeling-qa",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": true,
+      "v5_rerun": true,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      }
+    },
+    {
+      "task": "sec-financial-report",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "drone-planning-control",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": true,
+      "v5_rerun": true,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.566667,
+          0.566667,
+          0.5,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.566667,
+          1.0
+        ],
+        "mean": 0.7200001
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.3
+      }
+    },
+    {
+      "task": "grid-dispatch-operator",
+      "batch": "batch2",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "jax-computing-basics",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": true,
+      "v5_rerun": true,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.4
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.1
+      }
+    },
+    {
+      "task": "threejs-to-obj",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "paper-anonymizer",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": true,
+      "v5_rerun": true,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.6
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.2
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      }
+    },
+    {
+      "task": "pddl-airport-planning",
+      "batch": "batch2",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "python-scala-translation",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "offer-letter-generator",
+      "batch": "batch2",
+      "v7_rerun": true,
+      "v3_rerun": true,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    }
+  ],
+  "batch3": [
+    {
+      "task": "citation-check",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "dapt-intrusion-detection",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "data-to-d3",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.5
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "dynamic-object-aware-egomotion",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "energy-ac-optimal-power-flow",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.4
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.5
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "energy-market-pricing",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.5
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "enterprise-information-search",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 4,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "exceltable-in-ppt",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "jpg-ocr-stat",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.8
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "lake-warming-attribution",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.1
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.6
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "organize-messy-files",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.5
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.6
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.6
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      }
+    },
+    {
+      "task": "pdf-excel-diff",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 6,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "pptx-reference-formatting",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "protein-expression-analysis",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": true,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0001": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "reserves-at-risk-calc",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "sales-pivot-analysis",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "shock-analysis-demand",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.4
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "shock-analysis-supply",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.1
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.6
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "simpo-code-reproduction",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.8
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.3
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ],
+        "mean": 0.9
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.8
+      }
+    },
+    {
+      "task": "spring-boot-jakarta-migration",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": false,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0004": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      }
+    },
+    {
+      "task": "threejs-structure-parser",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.5
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "weighted-gdp-calc",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "mean": 0.8
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0002": {
+        "n": 7,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    },
+    {
+      "task": "xlsx-recover-data",
+      "batch": "batch3",
+      "v7_rerun": false,
+      "v3_rerun": false,
+      "v5_rerun": false,
+      "track_a": false,
+      "killed_saturated": false,
+      "killed_ceiling": true,
+      "seed": {
+        "n": 10,
+        "trials": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0
+      },
+      "cand_0001": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "mean": 0.7
+      },
+      "cand_0002": {
+        "n": 10,
+        "trials": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mean": 1.0
+      },
+      "cand_0003": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      },
+      "cand_0004": {
+        "n": 0,
+        "trials": [],
+        "mean": null
+      }
+    }
+  ]
+}
