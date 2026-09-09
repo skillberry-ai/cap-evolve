@@ -49,7 +49,8 @@ the ``screened_before_fullval`` value read generically off any event that carrie
 The **summary** schema (``reduced["summary"]``)::
 
     {"run_id", "baseline_val", "best_val", "delta_pct", "test_reward", "test_sealed",
-     "test_pass_k", "counts": {accepted, rejected, failed, seed, total},
+     "test_pass_k", "train_reward", "train_baseline_reward", "train_delta", "train_equals_val",
+     "counts": {accepted, rejected, failed, seed, total},
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
@@ -2057,6 +2058,19 @@ def reduce_run(run_dir) -> dict:
                                 else final.get("test_baseline_reward"),
         "test_delta": final.get("test_delta"),
         "test_sealed": sealed,
+        # The full bookend `finalize` now writes into final.json (seed/best × train/val/
+        # test): surfaced here as a couple of scalars rather than the raw nested shape,
+        # matching how test_reward/test_baseline_reward are already flattened above.
+        # `train` is a dict when measured, or a {"status": "..."} note when skipped
+        # (empty split / identical to val) — only the measured case has a "reward".
+        "train_reward": ((final.get("best") or {}).get("train") or {}).get("reward"),
+        "train_baseline_reward": ((final.get("seed") or {}).get("train") or {}).get("reward"),
+        "train_delta": (round(((final.get("best") or {}).get("train") or {}).get("reward")
+                              - ((final.get("seed") or {}).get("train") or {}).get("reward"), 6)
+                        if isinstance(((final.get("best") or {}).get("train") or {}).get("reward"), (int, float))
+                        and isinstance(((final.get("seed") or {}).get("train") or {}).get("reward"), (int, float))
+                        else None),
+        "train_equals_val": final.get("train_equals_val"),
         "counts": counts,
         "frontier": frontier,
         "tasks": tasks,

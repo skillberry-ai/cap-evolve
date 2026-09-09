@@ -238,11 +238,15 @@ def main(argv=None) -> int:
                                               n_trials=n_trials, tag=tag,
                                               workers=args.workers), False
 
-        s, s_reused = _train("seed", "MEASURE_seed")
+        # Tags match the ones `evaluate_candidate`/`harness.finalize` use elsewhere
+        # ("seed" and the candidate's own id) — not a "MEASURE_*" alias — so this eval
+        # and `finalize`'s own train+val bookend (below, via measure.py's test section)
+        # see the SAME rollouts on disk and never pay for the same measurement twice.
+        s, s_reused = _train("seed", "seed")
         if best_id == "seed":
             b, b_reused = s, s_reused
         else:
-            b, b_reused = _train(best_id, "MEASURE_best")
+            b, b_reused = _train(best_id, best_id)
         row = _compare(s, b, split="train", k_se=k_se, mode=mode)
         row["rollouts_reused"] = {"seed": s_reused, "best": b_reused}
         rows.append(row)

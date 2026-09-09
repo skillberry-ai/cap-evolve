@@ -295,6 +295,14 @@ export interface RunSummaryDetail {
   test_delta?: number | null
   /** {k: pass^k}. A k is ABSENT when k > num_trials (undefined ⇒ show "N/A", never 0). */
   test_pass_k?: Record<string, number> | null
+  /** The full bookend `finalize` writes into final.json (seed/best × train/val/test),
+   *  flattened to scalars the same way test_reward/test_baseline_reward already are.
+   *  Absent/null when train was skipped (empty split, or identical to val — see
+   *  train_equals_val) rather than genuinely 0. */
+  train_reward?: number | null
+  train_baseline_reward?: number | null
+  train_delta?: number | null
+  train_equals_val?: boolean | null
   counts?: {
     accepted: number
     rejected: number

@@ -749,10 +749,18 @@ def _log_eval_abandoned(run_dir: Path, dangling_eval: dict) -> None:
 
 
 def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) -> dict:
-    """Ensure the run has a sealed test number. Idempotent.
+    """Ensure the run has a sealed test number AND the full seed-vs-best bookend
+    (train + val + test, both candidates) that ``harness.finalize`` now always writes
+    into ``final.json``. Idempotent.
 
     Returns ``{"sealed": bool, "seal": "agent"|"host"|"failed", ...}``. ``agent`` means
     final.json was already there when the host looked — the normal, desired outcome.
+
+    The bookend guarantee lives in ``harness.finalize`` itself (called from ``measure.py``
+    below, and from every other path that ever produces ``final.json``), not here — this
+    function only guarantees that SOMETHING calls it. Doing it there rather than here
+    means the same guarantee, and the same "reuse rollouts already on disk instead of
+    re-measuring" dedup, apply to a run the agent sealed itself, not only to this fallback.
     """
     final = run_dir / "final.json"
     if final.exists():

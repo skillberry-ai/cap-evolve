@@ -92,6 +92,15 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
   const testHint = isMeasured(summary.test_baseline_reward)
     ? `seed ${pct(summary.test_baseline_reward)} · Δ ${signed(testDelta)}`
     : (passKHint(summary.test_pass_k) ?? seHint(summary.test_reward, summary.test_stderr))
+  // Train is the same seed-vs-best bookend as test, on the split the optimizer trains
+  // against — absent when train was skipped (empty, or identical to val: see
+  // train_equals_val) rather than genuinely unmeasured.
+  const trainHint =
+    isMeasured(summary.train_reward) && isMeasured(summary.train_baseline_reward)
+      ? ` · train seed ${pct(summary.train_baseline_reward)} → best ${pct(summary.train_reward)} (Δ ${signed(summary.train_delta)})`
+      : summary.train_equals_val
+        ? ' · train = val (not re-measured)'
+        : ''
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
@@ -141,7 +150,7 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
           hint={
             summary.test_reward == null
               ? 'scored once by `cap-evolve finalize`, on data the optimizer never saw'
-              : testHint
+              : `${testHint}${trainHint}`
           }
           title="Scored exactly once on data the optimizer never saw. This is the honest headline."
         >

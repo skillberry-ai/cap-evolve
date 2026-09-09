@@ -555,8 +555,32 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
 
 # ---- baseline -------------------------------------------------------------
 
+def _baseline_train(adapter, run_dir: RunDir, *, n_trials: int, ks=(1, 2)) -> tuple[SplitResult | None, str | None]:
+    """Full-split TRAIN evaluation of the seed, run alongside baseline's val eval.
+
+    Without this, the run's ONLY start-of-run measurement was val — every later
+    train-side comparison (diagnose, the end-of-run bookend) had no seed number to
+    compare against on train specifically. Symmetric with val: same tag ("seed"),
+    same candidate, full split, no subset.
+
+    Dedup: when train and val resolve to the IDENTICAL task-id set, a second full
+    eval would spend the same rollouts twice measuring the same work — skip it and
+    let callers read the val result for both. Returns ``(None, note)`` for that case
+    and for an empty train split; ``(result, None)`` when a real eval ran.
+    """
+    splits = run_dir.read_splits()
+    tr, va = set(splits.train), set(splits.val)
+    if not tr:
+        return None, "empty — no train ids in the frozen split"
+    if tr == va:
+        return None, "train ids identical to val — not re-evaluated; see baseline.val"
+    result = evaluate_candidate(adapter, run_dir.candidate_dir("seed"), run_dir=run_dir,
+                               split="train", n_trials=n_trials, ks=ks, tag="seed")
+    return result, None
+
+
 def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=(1, 2)) -> SplitResult:
-    """Snapshot the seed capability as candidate ``seed``, score it on val, set best.
+    """Snapshot the seed capability as candidate ``seed``, score it on val AND train, set best.
 
     Establishes the starting point every algorithm compares against. Assumes
     ``ensure_splits`` has been called.
@@ -564,6 +588,10 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     An empty ``seed_dir`` (no files) is accepted — the directory is created if
     needed and snapshotted as an empty candidate. The optimizer will create the
     initial capability content from the failing trajectories.
+
+    Returns the VAL result (the gate's reference number); the train result (or the
+    reason it was skipped) is recorded in ``baseline.json`` and the event log via
+    ``_baseline_train`` — see there for the train/val dedup rule.
     """
     seed_dir = Path(seed_dir)
     if not seed_dir.exists():
@@ -576,10 +604,18 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     run_dir.set_best("seed")
     result = evaluate_candidate(adapter, run_dir.candidate_dir("seed"), run_dir=run_dir,
                                split="val", n_trials=n_trials, ks=ks, tag="seed")
+    train_result, train_note = _baseline_train(adapter, run_dir, n_trials=n_trials, ks=ks)
+    baseline_payload = {"val": result.to_dict(), "best_id": "seed"}
+    if train_result is not None:
+        baseline_payload["train"] = train_result.to_dict()
+    if train_note:
+        baseline_payload["train_note"] = train_note
     (run_dir.root / "baseline.json").write_text(
-        json.dumps({"val": result.to_dict(), "best_id": "seed"}, indent=2), encoding="utf-8")
+        json.dumps(baseline_payload, indent=2), encoding="utf-8")
     run_dir.log_event("baseline", val=result.reward, stderr=result.stderr,
-                      n_scored=result.n_scored, n_tasks=result.n_tasks)
+                      n_scored=result.n_scored, n_tasks=result.n_tasks,
+                      **({"train": train_result.reward} if train_result is not None else {}),
+                      **({"train_note": train_note} if train_note else {}))
     run_dir.update_spent(best_val=result.reward)
     # The baseline is the number every later delta is measured against, so a
     # partially-evaluated one poisons the whole run rather than a single iteration.
@@ -3651,9 +3687,52 @@ def hill_climb_loop(
 
 # ---- finalize -------------------------------------------------------------
 
+def _finalize_train_val(adapter, run_dir: RunDir, cid: str, tag: str, *,
+                        n_trials: int, ks=(1, 2)) -> dict:
+    """TRAIN + VAL measurement of one candidate for the run's final bookend report.
+
+    ``val`` is free: the candidate's val rollouts already exist on disk (baseline
+    scored the seed there; the gate scored every accepted candidate there before it
+    could become ``best``), so this is a pure read via ``split_result_from_rollouts``
+    — never a re-evaluation.
+
+    ``train`` is deduped: skipped when the frozen train ids are identical to val's
+    (the numbers would be a copy — see ``_baseline_train``), reused when this tag's
+    train rollouts already cover the whole split (e.g. because the seed's baseline
+    train eval, or an earlier finalize/measure pass, already measured it under this
+    exact tag — ``evaluate_candidate`` and this reuse check share the tag-scoped
+    on-disk convention, so anyone measuring under the SAME tag is found), and
+    evaluated fresh only when neither applies. This is what makes the guarantee
+    "don't double-pay for rollouts already measured" hold generically, without
+    parsing events.jsonl for what already ran.
+    """
+    splits = run_dir.read_splits()
+    tr, va = set(splits.train), set(splits.val)
+
+    val_sr = split_result_from_rollouts(run_dir, tag, "val")
+    val_out = (val_sr.to_dict() if val_sr.per_task else
+              {"status": "not measured — no val rollouts on disk for this candidate"})
+
+    if not tr:
+        train_out = {"status": "empty — no train ids in the frozen split"}
+    elif tr == va:
+        train_out = {"status": "skipped: train ids are identical to val — see the val entry"}
+    else:
+        have = split_result_from_rollouts(run_dir, tag, "train")
+        if have.per_task and have.n_scored >= len(tr):
+            train_out = have.to_dict()
+            train_out["reused_rollouts"] = True
+        else:
+            result = evaluate_candidate(adapter, run_dir.candidate_dir(cid), run_dir=run_dir,
+                                       split="train", n_trials=n_trials, ks=ks, tag=tag)
+            train_out = result.to_dict()
+    return {"train": train_out, "val": val_out}
+
+
 def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=(1, 2),
              baseline_dir: Path | None = None) -> dict:
-    """Score the best candidate on the SEALED test split exactly once.
+    """Score the best candidate on the SEALED test split exactly once — and write the
+    run's full seed-vs-best bookend report (train + val + test, both candidates).
 
     Also scores the BASELINE (seed) capability on the SAME sealed test split, so the
     headline is the honest *improvement* on held-out data — optimized vs. baseline —
@@ -3672,6 +3751,14 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
     crash BEFORE test was scored from a crash AFTER. Once test rollouts exist the held-out set has
     been observed, so a retry would make the headline a second look — refused here, before anything
     is spent, unless deliberately overridden.
+
+    ``finalize`` is the ONE place ``final.json`` is written, and every path that ever
+    produces a sealed run goes through it — the deterministic ``finalize`` phase, and
+    agent-optimize's ``measure.py`` (called by the optimizer itself, or by ``host.py``'s
+    guaranteed-seal fallback when the optimizer didn't). So making the train+val bookend
+    a step here, rather than prose the optimizer is asked to run separately, makes it a
+    CODE guarantee for every one of those callers at once — general, not benchmark- or
+    algorithm-specific — instead of prompted behaviour that a run can skip.
     """
     run_dir.begin_test_attempt()
     result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
@@ -3690,6 +3777,18 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
         payload["test_baseline"] = result.to_dict()
         payload["baseline_id"] = run_dir.best_id
         payload["test_delta"] = 0.0
+
+    # Full bookend: seed AND best on train + val too, so final.json shows the whole
+    # seed-vs-best comparison across every split the run has, not only the held-out one.
+    best_tv = _finalize_train_val(adapter, run_dir, run_dir.best_id, run_dir.best_id,
+                                  n_trials=n_trials, ks=ks)
+    payload["best"] = {**best_tv, "test": payload["test"]}
+    if baseline_dir is not None:
+        seed_tv = _finalize_train_val(adapter, run_dir, "seed", "seed",
+                                      n_trials=n_trials, ks=ks)
+        payload["seed"] = {**seed_tv, "test": payload["test_baseline"]}
+    splits = run_dir.read_splits()
+    payload["train_equals_val"] = bool(splits.train) and set(splits.train) == set(splits.val)
 
     _atomic_write(run_dir.root / "final.json", json.dumps(payload, indent=2))
     run_dir.commit_test()  # burn the seal ONLY now that the result(s) are computed + written
