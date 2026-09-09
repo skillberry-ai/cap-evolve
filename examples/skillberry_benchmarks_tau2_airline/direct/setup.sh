@@ -111,7 +111,10 @@ say "3/4  Wire the project (adapter + gateway + seed + spec)"
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$BASE" --workdir "$REPO" --force >/dev/null \
   || die "intake scaffold failed"
 mkdir -p "$PROJECT/adapters"
-cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$PROJECT/adapters/"
+# scoring.py is shared by BOTH arms (see ../scoring.py) and ships beside adapter.py in
+# the deployed project, so `import scoring` resolves the same way `import gateway` does.
+cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$EX_DIR/../scoring.py" \
+   "$PROJECT/adapters/"
 # The seed is TWO things: tools/tools.py (the artifact the optimizer edits) and reference/
 # (read-only — the data model the tool code imports, handed to the optimizer verbatim via
 # the spec's capability_sources). Copy both.
