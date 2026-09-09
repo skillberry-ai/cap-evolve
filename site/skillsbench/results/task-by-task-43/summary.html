@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>summa — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from results/task-by-task-43/summary.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-43/summary.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-43/summary.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="task-by-task-43-evoskills-style-one-skill-per-task-all-43-runnable-skillsbench-tasks">task-by-task-43 — EvoSkills-style, one skill per task, ALL 43 runnable SkillsBench tasks</h1>
+<p><strong>Date:</strong> 2026-08-19 → 2026-08-23
+- Batch 1 (10 tasks): initial 2-iter runs (2026-08-19)
+- Batch 2 (10 tasks): all-zero-in-whole-suite (2026-08-20)
+- Track A: 3 partial-lift tasks from batch 1 re-run with --resume, max_iterations=4 (2026-08-21)
+- v7 podman fix: 8 previously infra-blocked batch-2 tasks re-run (2026-08-21)
+- Batch 3 (23 tasks): the remaining runnable, max_iterations=4 (2026-08-22 → 08-23)</p>
+<p><strong>Worktree:</strong> <code>intake_skillbench_c2</code> on branch <code>intake_skillbench_c2</code>
+<strong>Agent:</strong> claude-sonnet-5 · <strong>Optimizer:</strong> claude-opus-4-8
+<strong>Trials per candidate:</strong> 10 · <strong>Split:</strong> train == val == test == [single task] · <strong>Gate:</strong> paired-SE, k=0.2</p>
+<h2 id="aggregate-full-43-task-result">Aggregate — full 43-task result</h2>
+<table>
+<thead>
+<tr>
+<th>batch</th>
+<th>n</th>
+<th>avg baseline</th>
+<th>avg best</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>batch 1</td>
+<td>10</td>
+<td>0.690</td>
+<td>0.940</td>
+<td>+0.250</td>
+</tr>
+<tr>
+<td>batch 2 (post-v7 fix)</td>
+<td>10</td>
+<td>0.412</td>
+<td>0.622</td>
+<td>+0.210</td>
+</tr>
+<tr>
+<td>batch 3 (max_iterations=4)</td>
+<td>23</td>
+<td>0.448</td>
+<td>0.926</td>
+<td>+0.478</td>
+</tr>
+<tr>
+<td><strong>FULL RUNNABLE-43</strong></td>
+<td><strong>43</strong></td>
+<td><strong>0.496</strong></td>
+<td><strong>0.859</strong></td>
+<td><strong>+0.363 (+36.3 pp)</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="vs-whole-suite-runnable-43-2026-07-30-baseline">vs whole-suite runnable-43 (2026-07-30 baseline)</h2>
+<p>The same 43-task set, evaluated with the shared office quartet as seed instead of each task's own skills:</p>
+<table>
+<thead>
+<tr>
+<th>metric</th>
+<th>whole-suite (office seed)</th>
+<th>task-by-task-43 (own seed)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>avg baseline</td>
+<td>0.140</td>
+<td>0.496</td>
+</tr>
+<tr>
+<td>avg best</td>
+<td>0.170</td>
+<td>0.859</td>
+</tr>
+<tr>
+<td>avg Δ</td>
+<td>+0.030 (+3.1 pp)</td>
+<td><strong>+0.363 (+36.3 pp)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Task-native seed delivers <strong>~12× the aggregate lift</strong> of the office quartet on the same 43 tasks.</p>
+<h2 id="task-outcomes">Task outcomes</h2>
+<ul>
+<li><strong>28/43 tasks reach val=1.0</strong> (65%)</li>
+<li><strong>7 saturated at baseline</strong> (killed early): <code>3d-scan-calc</code>, <code>flood-risk-analysis</code>, <code>threejs-to-obj</code>, <code>citation-check</code>, <code>dapt-intrusion-detection</code>, <code>pptx-reference-formatting</code>, <code>protein-expression-analysis</code></li>
+<li><strong>11 reached ceiling via optimizer</strong> (killed early once cand hit 1.0): <code>data-to-d3</code>, <code>dynamic-object-aware-egomotion</code>, <code>enterprise-information-search</code>, <code>exceltable-in-ppt</code>, <code>jpg-ocr-stat</code>, <code>lake-warming-attribution</code>, <code>pdf-excel-diff</code>, <code>sales-pivot-analysis</code>, <code>threejs-structure-parser</code>, <code>weighted-gdp-calc</code>, <code>xlsx-recover-data</code></li>
+<li><strong>11 partial lifts</strong> (0.05–0.99 range)</li>
+<li><strong>3 stuck at 0</strong>: <code>financial-modeling-qa</code>, <code>python-scala-translation</code>, <code>spring-boot-jakarta-migration</code></li>
+</ul>
+<h2 id="per-task-table">Per-task table</h2>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>batch</th>
+<th>seed</th>
+<th>c1</th>
+<th>c2</th>
+<th>c3</th>
+<th>c4</th>
+<th>best</th>
+<th>Δ</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>edit-pdf</code></td>
+<td>b1</td>
+<td>0.900</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.100</td>
+<td></td>
+</tr>
+<tr>
+<td><code>court-form-filling</code></td>
+<td>b1</td>
+<td>0.300</td>
+<td>0.100</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.700</td>
+<td></td>
+</tr>
+<tr>
+<td><code>adaptive-cruise-control</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>0.700</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>1.000</td>
+<td><strong>1.000</strong> (cand_0004)</td>
+<td>+0.300</td>
+<td>Track A iters 3-4</td>
+</tr>
+<tr>
+<td><code>hvac-control</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>r2r-mpc-control</code></td>
+<td>b1</td>
+<td>0.300</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.700</td>
+<td></td>
+</tr>
+<tr>
+<td><code>3d-scan-calc</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>syzkaller-ppdev-syzlang</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.300</td>
+<td></td>
+</tr>
+<tr>
+<td><code>multilingual-video-dubbing</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>0.900</td>
+<td>0.900</td>
+<td>0.900</td>
+<td>1.000</td>
+<td><strong>1.000</strong> (cand_0004)</td>
+<td>+0.300</td>
+<td>Track A iters 3-4</td>
+</tr>
+<tr>
+<td><code>flood-risk-analysis</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>invoice-fraud-detection</code></td>
+<td>b1</td>
+<td>0.300</td>
+<td>0.200</td>
+<td>0.400</td>
+<td>0.200</td>
+<td>0.200</td>
+<td><strong>0.400</strong> (cand_0002)</td>
+<td>+0.100</td>
+<td>Track A iters 3-4</td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td><strong>0.000</strong> (cand_0004)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>sec-financial-report</code></td>
+<td>b2</td>
+<td>0.900</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.100</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td>b2</td>
+<td>0.720</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.300</td>
+<td>0.300</td>
+<td><strong>0.720</strong> (seed)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>grid-dispatch-operator</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+1.000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td>b2</td>
+<td>0.900</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.400</td>
+<td>0.100</td>
+<td><strong>0.900</strong> (seed)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>threejs-to-obj</code></td>
+<td>b2</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed); v7 rerun</td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td>b2</td>
+<td>0.600</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.200</td>
+<td>0.000</td>
+<td><strong>0.600</strong> (seed)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>pddl-airport-planning</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+1.000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>python-scala-translation</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>0.000</strong> (cand_0002)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td>b2</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>—</strong> (—)</td>
+<td>+0.000</td>
+<td>v7 rerun</td>
+</tr>
+<tr>
+<td><code>citation-check</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>dapt-intrusion-detection</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>data-to-d3</code></td>
+<td>b3</td>
+<td>0.500</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.500</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>dynamic-object-aware-egomotion</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0001)</td>
+<td>+1.000</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>energy-ac-optimal-power-flow</code></td>
+<td>b3</td>
+<td>0.400</td>
+<td>0.500</td>
+<td>0.300</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.500</td>
+<td></td>
+</tr>
+<tr>
+<td><code>energy-market-pricing</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>0.500</td>
+<td>0.700</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.900</td>
+<td></td>
+</tr>
+<tr>
+<td><code>enterprise-information-search</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0003)</td>
+<td>+1.000</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>exceltable-in-ppt</code></td>
+<td>b3</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0001)</td>
+<td>+0.100</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>jpg-ocr-stat</code></td>
+<td>b3</td>
+<td>0.800</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0001)</td>
+<td>+0.200</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>lake-warming-attribution</code></td>
+<td>b3</td>
+<td>0.100</td>
+<td>0.600</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.900</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>organize-messy-files</code></td>
+<td>b3</td>
+<td>0.500</td>
+<td>0.600</td>
+<td>0.600</td>
+<td>0.900</td>
+<td>0.900</td>
+<td><strong>0.900</strong> (cand_0004)</td>
+<td>+0.400</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pdf-excel-diff</code></td>
+<td>b3</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.100</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>pptx-reference-formatting</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>protein-expression-analysis</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (seed)</td>
+<td>+0.000</td>
+<td>saturated (killed)</td>
+</tr>
+<tr>
+<td><code>reserves-at-risk-calc</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.300</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.900</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sales-pivot-analysis</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0001)</td>
+<td>+1.000</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>shock-analysis-demand</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>0.400</td>
+<td>0.300</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.900</td>
+<td></td>
+</tr>
+<tr>
+<td><code>shock-analysis-supply</code></td>
+<td>b3</td>
+<td>0.100</td>
+<td>0.600</td>
+<td>0.300</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.800</td>
+<td></td>
+</tr>
+<tr>
+<td><code>simpo-code-reproduction</code></td>
+<td>b3</td>
+<td>0.800</td>
+<td>0.900</td>
+<td>0.300</td>
+<td>0.900</td>
+<td>0.800</td>
+<td><strong>0.900</strong> (cand_0003)</td>
+<td>+0.100</td>
+<td></td>
+</tr>
+<tr>
+<td><code>spring-boot-jakarta-migration</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td>0.000</td>
+<td><strong>0.000</strong> (cand_0004)</td>
+<td>+0.000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>threejs-structure-parser</code></td>
+<td>b3</td>
+<td>0.500</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0003)</td>
+<td>+0.500</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>weighted-gdp-calc</code></td>
+<td>b3</td>
+<td>0.800</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+0.200</td>
+<td>ceiling reached (killed)</td>
+</tr>
+<tr>
+<td><code>xlsx-recover-data</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>0.700</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td><strong>1.000</strong> (cand_0002)</td>
+<td>+1.000</td>
+<td>ceiling reached (killed)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="wins-tasks-reaching-val10">Wins — tasks reaching val=1.0</h2>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>batch</th>
+<th>baseline</th>
+<th>best</th>
+<th>lift</th>
+<th>winning cand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>edit-pdf</code></td>
+<td>b1</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>+0.100</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>court-form-filling</code></td>
+<td>b1</td>
+<td>0.300</td>
+<td>1.000</td>
+<td>+0.700</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>adaptive-cruise-control</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>1.000</td>
+<td>+0.300</td>
+<td>cand_0004</td>
+</tr>
+<tr>
+<td><code>hvac-control</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>r2r-mpc-control</code></td>
+<td>b1</td>
+<td>0.300</td>
+<td>1.000</td>
+<td>+0.700</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>3d-scan-calc</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>syzkaller-ppdev-syzlang</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>1.000</td>
+<td>+0.300</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>multilingual-video-dubbing</code></td>
+<td>b1</td>
+<td>0.700</td>
+<td>1.000</td>
+<td>+0.300</td>
+<td>cand_0004</td>
+</tr>
+<tr>
+<td><code>flood-risk-analysis</code></td>
+<td>b1</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>sec-financial-report</code></td>
+<td>b2</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>+0.100</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>grid-dispatch-operator</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>threejs-to-obj</code></td>
+<td>b2</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>pddl-airport-planning</code></td>
+<td>b2</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>citation-check</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>dapt-intrusion-detection</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>data-to-d3</code></td>
+<td>b3</td>
+<td>0.500</td>
+<td>1.000</td>
+<td>+0.500</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>dynamic-object-aware-egomotion</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0001</td>
+</tr>
+<tr>
+<td><code>enterprise-information-search</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0003</td>
+</tr>
+<tr>
+<td><code>exceltable-in-ppt</code></td>
+<td>b3</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>+0.100</td>
+<td>cand_0001</td>
+</tr>
+<tr>
+<td><code>jpg-ocr-stat</code></td>
+<td>b3</td>
+<td>0.800</td>
+<td>1.000</td>
+<td>+0.200</td>
+<td>cand_0001</td>
+</tr>
+<tr>
+<td><code>lake-warming-attribution</code></td>
+<td>b3</td>
+<td>0.100</td>
+<td>1.000</td>
+<td>+0.900</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>pdf-excel-diff</code></td>
+<td>b3</td>
+<td>0.900</td>
+<td>1.000</td>
+<td>+0.100</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>pptx-reference-formatting</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>protein-expression-analysis</code></td>
+<td>b3</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>+0.000</td>
+<td>seed</td>
+</tr>
+<tr>
+<td><code>sales-pivot-analysis</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0001</td>
+</tr>
+<tr>
+<td><code>threejs-structure-parser</code></td>
+<td>b3</td>
+<td>0.500</td>
+<td>1.000</td>
+<td>+0.500</td>
+<td>cand_0003</td>
+</tr>
+<tr>
+<td><code>weighted-gdp-calc</code></td>
+<td>b3</td>
+<td>0.800</td>
+<td>1.000</td>
+<td>+0.200</td>
+<td>cand_0002</td>
+</tr>
+<tr>
+<td><code>xlsx-recover-data</code></td>
+<td>b3</td>
+<td>0.000</td>
+<td>1.000</td>
+<td>+1.000</td>
+<td>cand_0002</td>
+</tr>
+</tbody>
+</table>
+<h2 id="remaining-stuck-at-0000">Remaining stuck at 0.000</h2>
+<ul>
+<li><code>financial-modeling-qa</code> (batch2) — genuinely hard (verifier runs, agent can't produce correct output)</li>
+<li><code>python-scala-translation</code> (batch2) — Scala/GraalVM runtime crash inside container</li>
+<li><code>spring-boot-jakarta-migration</code> (batch3) — JVM tooling / Java migration tooling infra</li>
+</ul>
+<h2 id="files">Files</h2>
+<ul>
+<li><code>summary.md</code> — this file</li>
+<li><code>results.json</code> — raw per-task per-tag data (5 candidate slots)</li>
+<li><code>heatmap.html</code> — interactive heatmap</li>
+<li><code>per-task-logs/&lt;task&gt;.md</code> — 43 files, one per task with per-trial rewards</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# task-by-task-20 batch 3 (2026-08-22), max_iterations=4 based on Track A learning
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [edit]
+capability_sources: []
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 50.0
+runner_repo_path: ../../vendor/skillsbench
+algorithm_skill: hill-climb
+algorithm_focus: all
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: split_ids.organize-messy-files.json
+num_trials: 10
+gate_mode: paired
+gate_k_se: 0.2
+max_iterations: 4
+stall: 0
+max_metric_calls: 0
+max_usd: 250.0
+max_optimizer_usd: 150.0
+store: git

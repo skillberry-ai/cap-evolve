@@ -1,0 +1,5 @@
+{
+  "train": ["dialogue-parser"],
+  "val": ["dialogue-parser"],
+  "test": ["dialogue-parser"]
+}

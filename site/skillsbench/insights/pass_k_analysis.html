@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pass_k_analys — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/pass_k_analysis.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/pass_k_analysis.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/pass_k_analysis.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="passk-analysis-skillsbench-87-task-scoreboard-cap-evolve">pass^k analysis — SkillsBench 87-task scoreboard (cap-evolve)</h1>
+<p>Generated from <code>results.json</code> (87 tasks) + raw per-trial <code>verifier/reward.txt</code> files in the
+<code>.capevolve/run_task_*/bench_jobs/&lt;winning_tag&gt;/seedN/&lt;timestamp&gt;/&lt;task&gt;__&lt;hash&gt;/verifier/</code> trees of the
+<code>intake_skillbench_c2</code> (c1-v1 / c1-tA / c1-v5 / c2-v2 runs), <code>intake_skillbench_c3</code> (c3-v1) and
+<code>intake_skillbench_v2</code> (mac-v2) worktrees. Nothing else in this directory was modified.</p>
+<h2 id="1-methodology">1. Methodology</h2>
+<p><strong>pass^k (tau-bench, Yao et al.)</strong> — probability that a random size-<code>k</code> subset of the <code>n</code> available trials
+for a task contains <em>only</em> successes:</p>
+<pre><code>pass^k = C(c, k) / C(n, k)      (= 0 when c &lt; k;  undefined when n &lt; k)
+</code></pre>
+<p>where <code>c</code> = number of successful trials out of <code>n</code>. This is the hypergeometric "all k succeed" probability —
+the <strong>opposite</strong> of pass@k (<code>1 - C(n-c,k)/C(n,k)</code>, "at least one success"). Reported here:</p>
+<ul>
+<li><code>pass^1 = c/n</code> — plain per-trial success rate.</li>
+<li><code>pass^5</code> — headline reliability number (k=5 chosen to mirror EvoSkill's 5 independent full-benchmark runs).</li>
+<li><code>pass^10 = 1 if c == n else 0</code> — strict all-trials-pass.</li>
+</ul>
+<p><strong>Success threshold.</strong> A trial counts as a success iff its raw reward <code>&gt;= 0.999</code>. Most tasks are binary 0/1,
+but a few emit continuous partial credit (e.g. 0.45, 0.82, 0.5, 0.6, 0.9667); those partial values count as
+failures, so <code>pass^1</code> here is <em>not</em> the same as the mean reward recorded in <code>results.json</code>.</p>
+<p><strong>Which candidate.</strong> For each task the winning candidate is <code>best_tag</code> from <code>results.json</code> (<code>seed</code> for the
+KILLED_saturated tasks, where the seed capability itself is the winner). Trials are read from that tag's
+<code>bench_jobs</code> subtree; when a <code>seedN</code> directory held more than one timestamp (a retry), only the latest
+timestamp was used, and where a timestamp held more than one job directory the newest was used (3 tasks:
+<code>court-form-filling</code>, <code>flink-query</code>, <code>paper-anonymizer</code>).</p>
+<p><strong>Errored / pruned trials.</strong> A trial whose <code>reward.txt</code> is absent was cross-checked against the
+harness-recorded <code>trial_rewards</code> array in the same run's <code>final.json</code> / <code>baseline.json</code>; in every such case
+the harness had recorded 0.0 (infrastructure error or timeout counted as a failure). Where the recorded
+array agreed with every <code>reward.txt</code> actually found, the full 10-value array was used and the substitution is
+noted per task. No value was invented.</p>
+<p><strong>Which evaluation.</strong> cap-evolve prunes <code>bench_jobs</code> as a run proceeds, so what survives on disk is the
+<em>last</em> 10-trial evaluation of the winning tag. For runs that finished (<code>DONE</code>) that is the held-out <strong>test</strong>
+evaluation; for runs killed the moment val hit the ceiling (<code>KILLED_ceiling</code>, <code>KILLED_saturated</code>,
+<code>KILLED_val_1.0</code>) it is the <strong>val</strong> evaluation. The <code>split</code> column records which. This matters: for several
+tasks the winner scored val 1.0 but test &lt; 1.0 (e.g. <code>edit-pdf</code> 1.0 -&gt; 0.8, <code>travel-planning</code> 1.0 -&gt; 0.8,
+<code>syzkaller-ppdev-syzlang</code> 1.0 -&gt; 0.9, <code>energy-unit-commitment</code> 1.0 -&gt; 0.1, <code>organize-messy-files</code> 0.9 -&gt; 0.0),
+so val-sourced rows are systematically more optimistic than test-sourced rows.</p>
+<p><strong>CAVEAT on comparability.</strong> EvoSkill's 71.1% averages 5 <em>independent full-benchmark runs</em> — each run repeats
+the entire optimization process, so their spread captures <strong>optimizer-outcome variance</strong>. Our 10 trials are
+repeated <em>evaluations of one fixed, already-optimized candidate</em>, so <code>pass^5</code> here measures <strong>within-run
+trial-noise reliability</strong> only. It is a useful additional cut (and a much harder bar than the mean reward),
+not a like-for-like substitute; it says nothing about how often our optimizer would rediscover the same
+winning candidate.</p>
+<h2 id="2-per-task-table">2. Per-task table</h2>
+<p><code>n</code> = trials found. <code>D</code> marks the 19 rows whose <code>c</code> was <strong>derived</strong> rather than read (see notes / §3).</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>category</th>
+<th>split</th>
+<th>n</th>
+<th>c</th>
+<th>pass^1</th>
+<th>pass^5</th>
+<th>pass^10</th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>3d-scan-calc</code></td>
+<td>industrial-physical-systems</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ada-bathroom-plan-repair</code></td>
+<td>industrial-physical-systems</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>adaptive-cruise-control</code></td>
+<td>industrial-physical-systems</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>azure-bgp-oscillation-route-leak</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>bike-rebalance</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>val (run killed at ceiling)</td>
+<td>2</td>
+<td>2</td>
+<td>1</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>eval truncated by kill: only 2 trials on disk.</td>
+</tr>
+<tr>
+<td><code>citation-check</code></td>
+<td>office-white-collar</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>civ6-adjacency-optimizer</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>court-form-filling</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>[seed4:2jobdirs]</td>
+</tr>
+<tr>
+<td><code>crystallographic-wyckoff-position-analysis</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>10</td>
+<td>1</td>
+<td>0.1</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 3,5,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>dapt-intrusion-detection</code></td>
+<td>cybersecurity</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>data-to-d3</code></td>
+<td>software-engineering</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>debug-trl-grpo</code></td>
+<td>software-engineering</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>dialogue-parser</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>5</td>
+<td>0.5</td>
+<td>0.004</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dynamic-object-aware-egomotion</code></td>
+<td>industrial-physical-systems</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>earthquake-phase-association</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>earthquake-plate-calculation</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>econ-detrending-correlation</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>edit-pdf</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>8</td>
+<td>0.8</td>
+<td>0.2222</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>energy-ac-optimal-power-flow</code></td>
+<td>industrial-physical-systems</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>energy-market-pricing</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>8</td>
+<td>0.8</td>
+<td>0.2222</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>energy-unit-commitment</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>1</td>
+<td>0.1</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 1,2,3,4,5,6,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>enterprise-information-search</code></td>
+<td>office-white-collar</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>exam-block-sequencing</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>exceltable-in-ppt</code></td>
+<td>office-white-collar</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>exoplanet-detection-period</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fix-build-agentops</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>2 run dirs; used newest mtime.</td>
+</tr>
+<tr>
+<td><code>fix-build-google-auto</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>fix-druid-loophole-cve</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fix-erlang-ssh-cve</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fix-visual-stability</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>flink-query</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>9</td>
+<td>0.9</td>
+<td>0.5</td>
+<td>0</td>
+<td>[seed7:2jobdirs]</td>
+</tr>
+<tr>
+<td><code>flood-risk-analysis</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>glm-lake-mendota</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>3</td>
+<td>3</td>
+<td>1</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>mac-v2 run: only 3 trials configured</td>
+</tr>
+<tr>
+<td><code>gravitational-wave-detection</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>grid-dispatch-operator</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>hvac-control</code></td>
+<td>industrial-physical-systems</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>invoice-fraud-detection</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>3</td>
+<td>0.3</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>9</td>
+<td>0.9</td>
+<td>0.5</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>jpg-ocr-stat</code></td>
+<td>office-white-collar</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>lab-unit-harmonization</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>lake-warming-attribution</code></td>
+<td>natural-science</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>latex-formula-extraction</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>8</td>
+<td>0.8</td>
+<td>0.2222</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>lean4-proof</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>llm-prefix-cache-replay</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>manufacturing-codebook-normalization</code></td>
+<td>industrial-physical-systems</td>
+<td>val (run killed at ceiling)</td>
+<td>6</td>
+<td>6</td>
+<td>1</td>
+<td>1</td>
+<td>n/a</td>
+<td>eval truncated by kill: only 6 trials on disk.</td>
+</tr>
+<tr>
+<td><code>manufacturing-equipment-maintenance</code></td>
+<td>industrial-physical-systems</td>
+<td>val (run killed at ceiling)</td>
+<td>3</td>
+<td>3</td>
+<td>1</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>eval truncated by kill: only 3 trials on disk.</td>
+</tr>
+<tr>
+<td><code>manufacturing-fjsp-optimization</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>mario-coin-counting</code></td>
+<td>media-content-production</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>mars-clouds-clustering</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>multilingual-video-dubbing</code></td>
+<td>media-content-production</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>3</td>
+<td>3</td>
+<td>1</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>mac-v2 run: only 3 trials configured</td>
+</tr>
+<tr>
+<td><code>organize-messy-files</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 0,1,2,3,4,5,6,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>6</td>
+<td>0.6</td>
+<td>0.0238</td>
+<td>0</td>
+<td>[seed9:2jobdirs]</td>
+</tr>
+<tr>
+<td><code>parallel-tfidf-search</code></td>
+<td>software-engineering</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>paratransit-routing</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>pddl-airport-planning</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pddl-tpp-planning</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pdf-excel-diff</code></td>
+<td>office-white-collar</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>powerlifting-coef-calc</code></td>
+<td>office-white-collar</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pptx-reference-formatting</code></td>
+<td>office-white-collar</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protein-expression-analysis</code></td>
+<td>natural-science</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>python-scala-translation</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>2 run dirs; used newest mtime. reward.txt pruned for trial(s) 0,1,2,3,4,5,6,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>quantum-numerical-simulation</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 0,1,2,5,6,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>r2r-mpc-control</code></td>
+<td>industrial-physical-systems</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>radar-vital-signs</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>react-performance-debugging</code></td>
+<td>software-engineering</td>
+<td>val (run killed at ceiling)</td>
+<td>3</td>
+<td>3</td>
+<td>1</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>eval truncated by kill: only 3 trials on disk.</td>
+</tr>
+<tr>
+<td><code>reserves-at-risk-calc</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sales-pivot-analysis</code></td>
+<td>office-white-collar</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>sec-financial-report</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>2 run dirs; used newest mtime.</td>
+</tr>
+<tr>
+<td><code>seismic-phase-picking</code></td>
+<td>natural-science</td>
+<td>test</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>setup-fuzzing-py</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>10</td>
+<td>3</td>
+<td>0.3</td>
+<td>0</td>
+<td>0</td>
+<td>2 run dirs; used newest mtime.</td>
+</tr>
+<tr>
+<td><code>shock-analysis-demand</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>9</td>
+<td>0.9</td>
+<td>0.5</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>shock-analysis-supply</code></td>
+<td>finance-economics</td>
+<td>test</td>
+<td>10</td>
+<td>2</td>
+<td>0.2</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 2,7; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>simpo-code-reproduction</code></td>
+<td>software-engineering</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>software-dependency-audit</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>spring-boot-jakarta-migration</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>reward.txt pruned for trial(s) 0,1,2,3,4,5,6,7,8,9; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>suricata-custom-exfil</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>3</td>
+<td>2</td>
+<td>0.6667</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>reward.txt pruned for trial(s) 2; harness-recorded value used.</td>
+</tr>
+<tr>
+<td><code>syzkaller-ppdev-syzlang</code></td>
+<td>cybersecurity</td>
+<td>test</td>
+<td>10</td>
+<td>9</td>
+<td>0.9</td>
+<td>0.5</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>threejs-structure-parser</code></td>
+<td>media-content-production</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>threejs-to-obj</code></td>
+<td>media-content-production</td>
+<td>val(seed)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>2 run dirs; used newest mtime.</td>
+</tr>
+<tr>
+<td><code>tictoc-unnecessary-abort-detection</code></td>
+<td>software-engineering</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>travel-planning</code></td>
+<td>mathematics-or-formal-reasoning</td>
+<td>test</td>
+<td>10</td>
+<td>8</td>
+<td>0.8</td>
+<td>0.2222</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>video-silence-remover</code></td>
+<td>media-content-production</td>
+<td>test</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><code>weighted-gdp-calc</code></td>
+<td>finance-economics</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+<tr>
+<td><code>xlsx-recover-data</code></td>
+<td>finance-economics</td>
+<td>val (derived)</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><strong>D</strong> reward.txt pruned (run killed at ceiling); winner's val eval = 1.000 over n=10 in history.jsonl, so all 10 trials must be 1.0 -&gt; c=10 derived, not read.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-aggregates">3. Aggregates</h2>
+<p>Two cuts, because 19 of 87 tasks had their winning candidate's <code>bench_jobs</code> tree pruned when the run was
+killed at the val ceiling.</p>
+<h3 id="a-raw-data-only-68-tasks-with-per-trial-rewards-actually-on-disk-recorded-by-the-harness">A. Raw-data-only (68 tasks with per-trial rewards actually on disk / recorded by the harness)</h3>
+<table>
+<thead>
+<tr>
+<th>metric</th>
+<th>mean</th>
+<th>tasks in mean</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mean pass^1</td>
+<td><strong>74.4%</strong></td>
+<td>68</td>
+</tr>
+<tr>
+<td>mean pass^5</td>
+<td><strong>67.1%</strong></td>
+<td>58 (10 tasks have n&lt;5 -&gt; pass^5 undefined, excluded)</td>
+</tr>
+<tr>
+<td>mean pass^10</td>
+<td><strong>61.4%</strong></td>
+<td>57 (11 tasks have n&lt;10 -&gt; pass^10 undefined, excluded)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b-all-87-tasks-with-the-19-pruned-tasks-filled-in-by-derivation">B. All 87 tasks, with the 19 pruned tasks filled in by derivation</h3>
+<p>For all 19, <code>history.jsonl</code> records the winning candidate's val reward as <strong>exactly 1.000</strong> over the standard
+<code>n=10</code> evaluation. Since no single trial can exceed 1.0, a mean of exactly 1.0 over 10 trials forces all 10
+trials to be 1.0, so <code>c=10</code> is entailed, not guessed. These are val-split numbers, and val-sourced rows run
+optimistic (see §1), so treat B as an upper bound.</p>
+<table>
+<thead>
+<tr>
+<th>metric</th>
+<th>mean</th>
+<th>tasks in mean</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mean pass^1</td>
+<td><strong>80.0%</strong></td>
+<td>87</td>
+</tr>
+<tr>
+<td>mean pass^5</td>
+<td><strong>75.2%</strong></td>
+<td>77 (10 tasks have n&lt;5 -&gt; pass^5 undefined, excluded)</td>
+</tr>
+<tr>
+<td>mean pass^10</td>
+<td><strong>71.1%</strong></td>
+<td>76 (11 tasks have n&lt;10 -&gt; pass^10 undefined, excluded)</td>
+</tr>
+</tbody>
+</table>
+<p>For reference, the scoreboard's mean <code>best</code> reward over the same 87 tasks is <strong>84.2%</strong>, and EvoSkill reports <strong>71.1%</strong>.</p>
+<h3 id="tasks-not-fully-computable">Tasks not fully computable</h3>
+<ul>
+<li><strong>0 tasks</strong> had no locatable run directory.</li>
+<li><strong>19 tasks</strong> had no raw per-trial file for the winning candidate (bench_jobs pruned on kill): <code>ada-bathroom-plan-repair</code>, <code>adaptive-cruise-control</code>, <code>data-to-d3</code>, <code>debug-trl-grpo</code>, <code>dynamic-object-aware-egomotion</code>, <code>energy-ac-optimal-power-flow</code>, <code>enterprise-information-search</code>, <code>exam-block-sequencing</code>, <code>exceltable-in-ppt</code>, <code>jpg-ocr-stat</code>, <code>lake-warming-attribution</code>, <code>multilingual-video-dubbing</code>, <code>paratransit-routing</code>, <code>pdf-excel-diff</code>, <code>sales-pivot-analysis</code>, <code>simpo-code-reproduction</code>, <code>threejs-structure-parser</code>, <code>weighted-gdp-calc</code>, <code>xlsx-recover-data</code>. Handled by derivation as above; they are the <code>D</code> rows.</li>
+<li><strong>11 tasks</strong> have <code>n != 10</code> (mac-v2 runs were configured with 3 trials; some ceiling-kills cut the eval short), so <code>pass^10</code> is undefined for all of them and <code>pass^5</code> is undefined for the 10 with n&lt;5:</li>
+<li><code>bike-rebalance</code>: n=2 — eval truncated by kill: only 2 trials on disk.</li>
+<li><code>earthquake-phase-association</code>: n=3 — reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</li>
+<li><code>fix-build-google-auto</code>: n=3 — reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</li>
+<li><code>fix-visual-stability</code>: n=3 — reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</li>
+<li><code>glm-lake-mendota</code>: n=3 — mac-v2 run configured with only 3 trials (all 3 reward.txt present).</li>
+<li><code>manufacturing-codebook-normalization</code>: n=6 — eval truncated by kill: only 6 trials on disk.</li>
+<li><code>manufacturing-equipment-maintenance</code>: n=3 — eval truncated by kill: only 3 trials on disk.</li>
+<li><code>offer-letter-generator</code>: n=3 — mac-v2 run configured with only 3 trials (all 3 reward.txt present).</li>
+<li><code>react-performance-debugging</code>: n=3 — eval truncated by kill: only 3 trials on disk.</li>
+<li><code>seismic-phase-picking</code>: n=3 — reward.txt pruned for trial(s) 0,1,2; harness-recorded value used.</li>
+<li><code>suricata-custom-exfil</code>: n=3 — reward.txt pruned for trial(s) 2; harness-recorded value used.</li>
+</ul>
+<h3 id="disagreements-judgement-calls">Disagreements / judgement calls</h3>
+<ul>
+<li><code>fix-build-agentops</code>, <code>python-scala-translation</code>, <code>sec-financial-report</code>, <code>setup-fuzzing-py</code>,
+  <code>threejs-to-obj</code> each had 2 candidate run directories (an earlier <code>INFRA_BROKEN</code> / <code>infra_broken_uvx</code>
+  attempt plus the good one); the most recently modified was used, which in every case is the non-broken run.</li>
+<li><code>fix-erlang-ssh-cve</code> shows c=10 (test) against a recorded val of 0.9 — the winner did better on test.</li>
+<li><code>crystallographic-wyckoff-position-analysis</code> and <code>setup-fuzzing-py</code> are the main continuous-reward tasks;
+  their pass^1 (0.1 and 0.3) is far below their mean reward (0.317 and 0.881) because partial credit does
+  not clear the 0.999 threshold.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

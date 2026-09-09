@@ -1,0 +1,20 @@
+cap-evolve events (runnable-43task-opt):
+------------------------------------------------------------
+splits_warning: test overlaps train/val (no-holdout fit) — the test number is NOT held out; report it as a fit metric
+splits: train=43 val=43 test=3
+evaluate  split=val tag=seed         reward=0.1395  seconds=14522
+baseline  val=0.1395  stderr=0.0511
+evaluate  split=val tag=cand_0001    reward=0.1473  seconds=13254
+step [accept]  cand_0001  val=0.1473  parent=seed (0.1395)
+           reason: paired Δ̄=+0.0078 > 0.2·SE=0.0072 (SE=0.0359, n=43)
+           optimizer_seconds=1399.0  runner_seconds=13253.8  opt_cost=$14.01
+evaluate  split=val tag=cand_0002    reward=0.1705  seconds=11747
+step [accept]  cand_0002  val=0.1705  parent=cand_0001 (0.1473)
+           reason: paired Δ̄=+0.0233 > 0.2·SE=0.0052 (SE=0.0258, n=43)
+           optimizer_seconds=2702.7  runner_seconds=11746.8  opt_cost=$15.33
+evaluate  split=val tag=cand_0003    reward=0.1550  seconds=13179
+step [REJECT]  cand_0003  val=0.1550  parent=cand_0002 (0.1705)
+           reason: paired Δ̄=-0.0155 <= 0.2·SE=0.0049 (SE=0.0247, n=43)
+           optimizer_seconds=1400.1  runner_seconds=13178.8  opt_cost=$15.08
+
+(job killed at ~09:33 EDT under 90-min-stall rule; iter 4 optimizer hung after ~13 min of tokens.)

@@ -1,0 +1,5 @@
+{
+  "train": ["powerlifting-coef-calc"],
+  "val": ["powerlifting-coef-calc"],
+  "test": ["powerlifting-coef-calc"]
+}

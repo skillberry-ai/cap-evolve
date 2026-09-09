@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKI — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/fuzzy-match/SKILL.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../../../"><img src="../../../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../../../getting-started.html">Get started</a>
+      <a href="../../../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../../../results.html">Results</a>
+      <a href="../../../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../../../architecture.html">Architecture</a>
+      <a href="../../../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../../../harbor.html">Harbor</a>
+      <a href="../../../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/fuzzy-match/SKILL.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/fuzzy-match/SKILL.md">view source on GitHub ↗</a>
+  </p>
+<hr />
+<p>name: fuzzy-match
+description: "Reconcile transactional records (invoices, transactions, line items) against authoritative reference tables — approved-vendor lists, purchase-order/order registers, customer masters — including fuzzy entity-name matching and foreign-key (PO/vendor/order id) validation. Use when detecting invoice or payment fraud, validating that a record's reference id exists in a lookup table, or matching vendor/company names that have spelling variations or suffix differences (Ltd vs Limited)."</p>
+<hr />
+<h1 id="reconciling-records-against-reference-tables">Reconciling Records Against Reference Tables</h1>
+<p>Use this when cross-checking transactional records (invoices, transactions, line items)
+against authoritative lookup tables (an approved-vendor list, a purchase-order/order
+register, a customer master) — e.g. invoice-fraud detection.</p>
+<h2 id="output-convention-for-unresolved-reference-keys-read-this-first">Output convention for unresolved reference keys (read this first)</h2>
+<p>A record often carries a <strong>foreign key</strong> — a PO number, order id, vendor id, reference
+number — that is supposed to resolve to a row in a reference table. Handle a key that does
+NOT resolve as follows, because downstream checks define it this way:</p>
+<ul>
+<li><strong>An unresolved reference key is "missing" — output it as <code>null</code>, never the raw string.</strong>
+  If the key is malformed, fails the expected format, or is simply absent from the reference
+  table, do <strong>not</strong> echo the raw unmatched value (e.g. <code>"PO-INVALID"</code>, <code>"N/A"</code>, an empty
+  string) into your output. Report that key field as <code>null</code>.</li>
+<li>Only emit the literal key value when it <strong>actually matches a row</strong> in the reference table.</li>
+<li>Instructions like <em>"if the PO is missing, set it to null"</em> mean <em>not found in the reference
+  table</em>, not merely blank on the record. An id that is present on the record but absent from
+  (or malformed for) the lookup counts as missing → <code>null</code>.</li>
+</ul>
+<pre><code class="language-python">import re
+# po_raw is the value parsed off the record; po_db is the set/dict of valid PO keys.
+# Validate the expected key shape, then require membership in the reference table.
+po_key = po_raw if (po_raw and re.fullmatch(r&quot;PO-\d+&quot;, po_raw) and po_raw in po_db) else None
+# po_key is None  -&gt;  the reference is invalid/missing; report null (do NOT write po_raw).
+</code></pre>
+<p>(The <code>PO-\d+</code> pattern above is illustrative — use the key shape your reference table
+actually uses.)</p>
+<h2 id="normalize-entity-names-before-fuzzy-matching">Normalize entity names before fuzzy matching</h2>
+<p>Raw fuzzy scores without normalization misclassify legitimate spelling variants as unknown.
+Before comparing names, on BOTH sides: lower-case, strip punctuation, collapse whitespace,
+and canonicalize common entity suffixes (<code>Ltd</code>↔<code>Limited</code>, <code>Inc</code>↔<code>Incorporated</code>,
+<code>Corp</code>↔<code>Corporation</code>, <code>Co</code>↔<code>Company</code>).</p>
+<h2 id="apply-classification-criteria-strictly-in-priority-order">Apply classification criteria strictly in priority order</h2>
+<p>When a record can match several criteria, stop at the FIRST that fires in the stated order.
+Checks that need the reference row to exist (amount/value comparison, cross-link/ownership
+checks) can only run AFTER the key resolves. If the key is unresolved, the record's reason is
+the invalid-reference case and its key field is <code>null</code> — do not attempt the later checks.</p>
+<h2 id="fuzzy-string-matching-how-to-compute-similarity">Fuzzy string matching (how to compute similarity)</h2>
+<h3 id="difflib-standard-library-always-available">difflib (standard library, always available)</h3>
+<pre><code class="language-python">from difflib import SequenceMatcher, get_close_matches
+
+def similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()   # 0..1
+
+# best match within a candidate list
+matches = get_close_matches(&quot;Acme Corp&quot;, [&quot;Acme Corporation&quot;, &quot;Beta LLC&quot;], n=1, cutoff=0.85)
+</code></pre>
+<h3 id="rapidfuzz-faster-more-metrics-use-if-installed-pip-install-rapidfuzz">rapidfuzz (faster, more metrics — use if installed: <code>pip install rapidfuzz</code>)</h3>
+<pre><code class="language-python">from rapidfuzz import fuzz, process
+fuzz.ratio(&quot;Acme Corp&quot;, &quot;Acme Corporation&quot;)            # 0..100
+process.extractOne(&quot;Acme Corp&quot;, [&quot;Acme Corporation&quot;])  # (match, score, index)
+</code></pre>
+<p>Pick a cutoff (e.g. ratio &gt; 85 / 0.85) that accepts suffix/typo variants but rejects genuinely
+different entities; when in doubt, normalize first (above) so the threshold is meaningful.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

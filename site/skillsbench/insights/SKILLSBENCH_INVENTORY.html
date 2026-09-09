@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKILLSBENCH_INVENTO — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/SKILLSBENCH_INVENTORY.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/SKILLSBENCH_INVENTORY.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/SKILLSBENCH_INVENTORY.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="skillsbench-taskskill-inventory-87-tasks">SkillsBench task/skill inventory (87 tasks)</h1>
+<p>Extracted from <code>benchflow-ai/skillsbench@9a1f4dd</code> — each task's <code>task.md</code> frontmatter and <code>environment/skills/</code> directory.</p>
+<h2 id="category-breakdown">Category breakdown</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th style="text-align: right;">Tasks</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>software-engineering</td>
+<td style="text-align: right;">16</td>
+<td>CVE fixes, build system upgrades, dependency audits, migration tasks. Each is essentially a code-modification task with a project-specific verifier.</td>
+</tr>
+<tr>
+<td>industrial-physical-systems</td>
+<td style="text-align: right;">14</td>
+<td>Power-flow / grid dispatch, HVAC, aerospace flight planning, manufacturing scheduling. Heavy math + specialized libraries.</td>
+</tr>
+<tr>
+<td>office-white-collar</td>
+<td style="text-align: right;">14</td>
+<td>Documents (docx/pptx/xlsx/pdf), spreadsheets, forms. <strong>This is the domain our current 4-skill seed package targets.</strong></td>
+</tr>
+<tr>
+<td>natural-science</td>
+<td style="text-align: right;">14</td>
+<td>Astrophysics, seismology, biology/protein, hydrology, chemistry. Domain-specific data formats + numerical methods.</td>
+</tr>
+<tr>
+<td>finance-economics</td>
+<td style="text-align: right;">9</td>
+<td>Financial reports, tax forms, economic modelling. Some overlap with office-doc tasks; some heavy math.</td>
+</tr>
+<tr>
+<td>mathematics-or-formal-reasoning</td>
+<td style="text-align: right;">8</td>
+<td>Lean4 proofs, planning (PDDL), MIP/optimization solvers, statistical analysis. Very-domain-specific tooling.</td>
+</tr>
+<tr>
+<td>cybersecurity</td>
+<td style="text-align: right;">7</td>
+<td>PCAP analysis, Suricata rules, fuzzing setups, CVE triage. Each is task-specific-tool-heavy.</td>
+</tr>
+<tr>
+<td>media-content-production</td>
+<td style="text-align: right;">5</td>
+<td>Video/audio processing, OCR, image editing, TTS. Media codec + ML libraries.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="coverage-of-our-current-seed-skills-docxpptxxlsxpdf">Coverage of our current seed skills (docx/pptx/xlsx/pdf)</h2>
+<p><strong>21 tasks ship one or more of our 4 seed skills</strong> in their own <code>environment/skills/</code>. When BenchFlow mounts <code>--skill-mode with-skill --skills-dir &lt;ours&gt;</code>, it <em>replaces</em> the task's own set with ours. So on these tasks the optimization can plausibly matter; on the other 87−21 tasks the office-skill package is out-of-domain.</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>office skills the task itself ships</th>
+<th>full shipped set</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>court-form-filling</code></td>
+<td><code>pdf</code></td>
+<td><code>pdf</code></td>
+</tr>
+<tr>
+<td><code>exceltable-in-ppt</code></td>
+<td><code>pptx</code> · <code>xlsx</code></td>
+<td><code>pptx</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>flink-query</code></td>
+<td><code>pdf</code></td>
+<td><code>pdf</code> · <code>senior-data-engineer</code></td>
+</tr>
+<tr>
+<td><code>invoice-fraud-detection</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+<td><code>fuzzy-match</code> · <code>pdf</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>jpg-ocr-stat</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+<td><code>image-ocr</code> · <code>openai-vision</code> · <code>pdf</code> · <code>video-frame-extraction</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>latex-formula-extraction</code></td>
+<td><code>pdf</code></td>
+<td><code>marker</code> · <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td><code>docx</code></td>
+<td><code>docx</code></td>
+</tr>
+<tr>
+<td><code>organize-messy-files</code></td>
+<td><code>docx</code> · <code>pdf</code> · <code>pptx</code></td>
+<td><code>docx</code> · <code>file-organizer</code> · <code>pdf</code> · <code>planning-with-files</code> · <code>pptx</code></td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td><code>pdf</code></td>
+<td><code>academic-pdf-redaction</code> · <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>pdf-excel-diff</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>powerlifting-coef-calc</code></td>
+<td><code>xlsx</code></td>
+<td><code>powerlifting</code> · <code>senior-data-scientist</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>pptx-reference-formatting</code></td>
+<td><code>pptx</code></td>
+<td><code>pptx</code></td>
+</tr>
+<tr>
+<td><code>protein-expression-analysis</code></td>
+<td><code>xlsx</code></td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>reserves-at-risk-calc</code></td>
+<td><code>xlsx</code></td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>sales-pivot-analysis</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+<td><code>pdf</code> · <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>shock-analysis-demand</code></td>
+<td><code>xlsx</code></td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>shock-analysis-supply</code></td>
+<td><code>xlsx</code></td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>simpo-code-reproduction</code></td>
+<td><code>pdf</code></td>
+<td><code>nlp-research-repo-package-installment</code> · <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>weighted-gdp-calc</code></td>
+<td><code>xlsx</code></td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>xlsx-recover-data</code></td>
+<td><code>xlsx</code></td>
+<td><code>data-reconciliation</code> · <code>xlsx</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="all-87-tasks-grouped-by-category">All 87 tasks, grouped by category</h2>
+<p>For each task: <strong>difficulty</strong> — task_type — the skills the task's environment ships (which BenchFlow strips + replaces with the seed when running under <code>--skill-mode with-skill</code>).</p>
+<h3 id="software-engineering-16-tasks">software-engineering (16 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>azure-bgp-oscillation-route-leak</code></td>
+<td>medium</td>
+<td>detection, analysis</td>
+<td><code>azure-bgp</code></td>
+</tr>
+<tr>
+<td><code>data-to-d3</code></td>
+<td>medium</td>
+<td>implementation, generation</td>
+<td><code>d3-visualization</code></td>
+</tr>
+<tr>
+<td><code>debug-trl-grpo</code></td>
+<td>hard</td>
+<td>debugging, repair</td>
+<td><code>grpo</code>, <code>rl-post-training</code>, <code>trl</code></td>
+</tr>
+<tr>
+<td><code>dialogue-parser</code></td>
+<td>easy</td>
+<td>implementation, transformation</td>
+<td><code>dialogue-graph</code></td>
+</tr>
+<tr>
+<td><code>fix-build-agentops</code></td>
+<td>easy</td>
+<td>repair, debugging</td>
+<td><code>analyze-ci</code>, <code>temporal-python-testing</code>, <code>testing-python</code>, <code>uv-package-manager</code></td>
+</tr>
+<tr>
+<td><code>fix-build-google-auto</code></td>
+<td>easy</td>
+<td>repair, debugging</td>
+<td><code>maven-build-lifecycle</code>, <code>maven-dependency-management</code>, <code>maven-plugin-configuration</code></td>
+</tr>
+<tr>
+<td><code>fix-visual-stability</code></td>
+<td>hard</td>
+<td>repair, debugging</td>
+<td><code>browser-testing</code>, <code>react-best-practices</code>, <code>web-interface-guidelines</code></td>
+</tr>
+<tr>
+<td><code>flink-query</code></td>
+<td>hard</td>
+<td>implementation, analysis</td>
+<td><code>pdf</code>, <code>senior-data-engineer</code></td>
+</tr>
+<tr>
+<td><code>jax-computing-basics</code></td>
+<td>medium</td>
+<td>implementation, calculation</td>
+<td><code>jax-skills</code></td>
+</tr>
+<tr>
+<td><code>llm-prefix-cache-replay</code></td>
+<td>medium</td>
+<td>implementation, simulation</td>
+<td><code>cache-policy-comparison</code>, <code>prefix-cache-replay</code></td>
+</tr>
+<tr>
+<td><code>parallel-tfidf-search</code></td>
+<td>medium</td>
+<td>implementation, optimization</td>
+<td><code>memory-optimization</code>, <code>python-parallelization</code>, <code>workload-balancing</code></td>
+</tr>
+<tr>
+<td><code>python-scala-translation</code></td>
+<td>medium</td>
+<td>transformation, implementation</td>
+<td><code>python-scala-collections</code>, <code>python-scala-functional</code>, <code>python-scala-idioms</code>, <code>python-scala-libraries</code>, <code>python-scala-oop</code>, <code>python-scala-syntax-mapping</code></td>
+</tr>
+<tr>
+<td><code>react-performance-debugging</code></td>
+<td>hard</td>
+<td>debugging, optimization</td>
+<td><code>browser-testing</code>, <code>react-best-practices</code></td>
+</tr>
+<tr>
+<td><code>simpo-code-reproduction</code></td>
+<td>hard</td>
+<td>implementation</td>
+<td><code>nlp-research-repo-package-installment</code>, <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>spring-boot-jakarta-migration</code></td>
+<td>hard</td>
+<td>transformation</td>
+<td><code>hibernate-upgrade</code>, <code>jakarta-namespace</code>, <code>restclient-migration</code>, <code>spring-boot-migration</code>, <code>spring-security-6</code></td>
+</tr>
+<tr>
+<td><code>tictoc-unnecessary-abort-detection</code></td>
+<td>hard</td>
+<td>detection, analysis</td>
+<td><code>transaction-concurrency-control-foundations</code>, <code>transaction-protocol-reasoning</code>, <code>transaction-trace-analysis</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="industrial-physical-systems-14-tasks">industrial-physical-systems (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>3d-scan-calc</code></td>
+<td>hard</td>
+<td>calculation, extraction</td>
+<td><code>mesh-analysis</code></td>
+</tr>
+<tr>
+<td><code>ada-bathroom-plan-repair</code></td>
+<td>hard</td>
+<td>repair, extraction</td>
+<td><code>ada-plan-view-accessibility</code>, <code>architectural-dxf-extraction</code>, <code>geometric-layout-repair</code></td>
+</tr>
+<tr>
+<td><code>adaptive-cruise-control</code></td>
+<td>medium</td>
+<td>implementation, simulation</td>
+<td><code>csv-processing</code>, <code>pid-controller</code>, <code>simulation-metrics</code>, <code>vehicle-dynamics</code>, <code>yaml-config</code></td>
+</tr>
+<tr>
+<td><code>drone-planning-control</code></td>
+<td>medium</td>
+<td>implementation, simulation, optimization</td>
+<td><code>attitude-controller-planner</code>, <code>flight-plan-parser</code>, <code>motor-model-dynamics</code>, <code>plot-quadrotor</code>, <code>position-controller-trajectory-planner</code>, <code>stepinfo-3d</code></td>
+</tr>
+<tr>
+<td><code>dynamic-object-aware-egomotion</code></td>
+<td>medium</td>
+<td>analysis, detection, classification</td>
+<td><code>dyn-object-masks</code>, <code>egomotion-estimation</code>, <code>output-validation</code>, <code>sampling-and-indexing</code></td>
+</tr>
+<tr>
+<td><code>energy-ac-optimal-power-flow</code></td>
+<td>medium</td>
+<td>optimization, verification</td>
+<td><code>ac-branch-pi-model</code>, <code>casadi-ipopt-nlp</code>, <code>power-flow-data</code></td>
+</tr>
+<tr>
+<td><code>energy-market-pricing</code></td>
+<td>hard</td>
+<td>optimization, analysis</td>
+<td><code>dc-power-flow</code>, <code>economic-dispatch</code>, <code>locational-marginal-prices</code>, <code>power-flow-data</code></td>
+</tr>
+<tr>
+<td><code>energy-unit-commitment</code></td>
+<td>hard</td>
+<td>optimization, planning</td>
+<td><code>milp-solver-workflow</code>, <code>unit-commitment-data-modeling</code>, <code>unit-commitment-operating-rules</code></td>
+</tr>
+<tr>
+<td><code>grid-dispatch-operator</code></td>
+<td>medium</td>
+<td>optimization, calculation</td>
+<td><code>dc-power-flow</code>, <code>economic-dispatch</code>, <code>power-flow-data</code></td>
+</tr>
+<tr>
+<td><code>hvac-control</code></td>
+<td>medium</td>
+<td>implementation, simulation</td>
+<td><code>excitation-signal-design</code>, <code>first-order-model-fitting</code>, <code>imc-tuning-rules</code>, <code>safety-interlocks</code>, <code>scipy-curve-fit</code></td>
+</tr>
+<tr>
+<td><code>manufacturing-codebook-normalization</code></td>
+<td>medium</td>
+<td>classification, transformation</td>
+<td><code>manufacturing-failure-reason-codebook-normalization</code>, <code>reference.md</code></td>
+</tr>
+<tr>
+<td><code>manufacturing-equipment-maintenance</code></td>
+<td>medium</td>
+<td>analysis, calculation</td>
+<td><code>reference.md</code>, <code>reflow-machine-maintenance-guidance</code>, <code>reflow-profile-compliance-toolkit</code></td>
+</tr>
+<tr>
+<td><code>manufacturing-fjsp-optimization</code></td>
+<td>medium</td>
+<td>optimization, planning</td>
+<td><code>fjsp-baseline-repair-with-downtime-and-policy</code>, <code>reference.md</code></td>
+</tr>
+<tr>
+<td><code>r2r-mpc-control</code></td>
+<td>medium</td>
+<td>implementation, simulation</td>
+<td><code>finite-horizon-lqr</code>, <code>integral-action-design</code>, <code>mpc-horizon-tuning</code>, <code>state-space-linearization</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="office-white-collar-14-tasks">office-white-collar (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>citation-check</code></td>
+<td>medium</td>
+<td>verification, search</td>
+<td><code>citation-management</code></td>
+</tr>
+<tr>
+<td><code>court-form-filling</code></td>
+<td>easy</td>
+<td>extraction, generation</td>
+<td><code>pdf</code></td>
+</tr>
+<tr>
+<td><code>edit-pdf</code></td>
+<td>medium</td>
+<td>transformation, formatting</td>
+<td><code>pdf-editing</code>, <code>text-parser</code></td>
+</tr>
+<tr>
+<td><code>enterprise-information-search</code></td>
+<td>hard</td>
+<td>search, extraction</td>
+<td><code>enterprise-artifact-search</code></td>
+</tr>
+<tr>
+<td><code>exceltable-in-ppt</code></td>
+<td>medium</td>
+<td>transformation, extraction</td>
+<td><code>pptx</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>jpg-ocr-stat</code></td>
+<td>hard</td>
+<td>extraction, transformation</td>
+<td><code>image-ocr</code>, <code>openai-vision</code>, <code>pdf</code>, <code>video-frame-extraction</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>latex-formula-extraction</code></td>
+<td>medium</td>
+<td>extraction, repair</td>
+<td><code>marker</code>, <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>offer-letter-generator</code></td>
+<td>easy</td>
+<td>generation, formatting</td>
+<td><code>docx</code></td>
+</tr>
+<tr>
+<td><code>organize-messy-files</code></td>
+<td>medium</td>
+<td>classification</td>
+<td><code>docx</code>, <code>file-organizer</code>, <code>pdf</code>, <code>planning-with-files</code>, <code>pptx</code></td>
+</tr>
+<tr>
+<td><code>paper-anonymizer</code></td>
+<td>medium</td>
+<td>transformation, detection</td>
+<td><code>academic-pdf-redaction</code>, <code>pdf</code></td>
+</tr>
+<tr>
+<td><code>pdf-excel-diff</code></td>
+<td>medium</td>
+<td>extraction, analysis</td>
+<td><code>pdf</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>powerlifting-coef-calc</code></td>
+<td>easy</td>
+<td>calculation, transformation</td>
+<td><code>powerlifting</code>, <code>senior-data-scientist</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>pptx-reference-formatting</code></td>
+<td>medium</td>
+<td>formatting, transformation</td>
+<td><code>pptx</code></td>
+</tr>
+<tr>
+<td><code>sales-pivot-analysis</code></td>
+<td>medium</td>
+<td>analysis, transformation</td>
+<td><code>pdf</code>, <code>xlsx</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="natural-science-14-tasks">natural-science (14 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crystallographic-wyckoff-position-analysis</code></td>
+<td>medium</td>
+<td>analysis, calculation</td>
+<td><code>pymatgen</code>, <code>sympy</code></td>
+</tr>
+<tr>
+<td><code>earthquake-phase-association</code></td>
+<td>hard</td>
+<td>detection, analysis</td>
+<td><code>gamma-phase-associator</code>, <code>licenses</code>, <code>obspy-data-api</code>, <code>seisbench-model-api</code>, <code>seismic-picker-selection</code></td>
+</tr>
+<tr>
+<td><code>earthquake-plate-calculation</code></td>
+<td>medium</td>
+<td>calculation, analysis</td>
+<td><code>geospatial-analysis</code></td>
+</tr>
+<tr>
+<td><code>exoplanet-detection-period</code></td>
+<td>medium</td>
+<td>detection, analysis</td>
+<td><code>box-least-squares</code>, <code>exoplanet-workflows</code>, <code>light-curve-preprocessing</code>, <code>lomb-scargle-periodogram</code>, <code>transit-least-squares</code></td>
+</tr>
+<tr>
+<td><code>flood-risk-analysis</code></td>
+<td>medium</td>
+<td>analysis, detection</td>
+<td><code>flood-detection</code>, <code>nws-flood-thresholds</code>, <code>usgs-data-download</code></td>
+</tr>
+<tr>
+<td><code>glm-lake-mendota</code></td>
+<td>hard</td>
+<td>simulation, calculation</td>
+<td><code>glm-basics</code>, <code>glm-calibration</code>, <code>glm-output</code></td>
+</tr>
+<tr>
+<td><code>gravitational-wave-detection</code></td>
+<td>medium</td>
+<td>detection, analysis</td>
+<td><code>conditioning</code>, <code>matched-filtering</code></td>
+</tr>
+<tr>
+<td><code>lab-unit-harmonization</code></td>
+<td>medium</td>
+<td>transformation</td>
+<td><code>lab-unit-harmonization</code></td>
+</tr>
+<tr>
+<td><code>lake-warming-attribution</code></td>
+<td>medium</td>
+<td>analysis, calculation</td>
+<td><code>contribution-analysis</code>, <code>meteorology-driver-classification</code>, <code>pca-decomposition</code>, <code>trend-analysis</code></td>
+</tr>
+<tr>
+<td><code>mars-clouds-clustering</code></td>
+<td>hard</td>
+<td>optimization, classification</td>
+<td><code>custom-distance-metrics</code>, <code>parallel-processing</code>, <code>pareto-optimization</code></td>
+</tr>
+<tr>
+<td><code>protein-expression-analysis</code></td>
+<td>medium</td>
+<td>analysis, calculation</td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>quantum-numerical-simulation</code></td>
+<td>medium</td>
+<td>simulation, calculation</td>
+<td><code>qutip</code></td>
+</tr>
+<tr>
+<td><code>radar-vital-signs</code></td>
+<td>medium</td>
+<td>extraction, calculation</td>
+<td><code>radar-signal-processing</code>, <code>radar-vital-signs</code>, <code>vital-sign-extraction</code></td>
+</tr>
+<tr>
+<td><code>seismic-phase-picking</code></td>
+<td>hard</td>
+<td>detection, classification</td>
+<td><code>licenses</code>, <code>obspy-data-api</code>, <code>obspy-datacenter-client</code>, <code>seisbench-model-api</code>, <code>seismic-picker-selection</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="finance-economics-9-tasks">finance-economics (9 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>econ-detrending-correlation</code></td>
+<td>medium</td>
+<td>calculation, analysis</td>
+<td><code>timeseries-detrending</code></td>
+</tr>
+<tr>
+<td><code>financial-modeling-qa</code></td>
+<td>hard</td>
+<td>analysis, extraction</td>
+<td><code>pdf</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>invoice-fraud-detection</code></td>
+<td>hard</td>
+<td>detection, verification</td>
+<td><code>fuzzy-match</code>, <code>pdf</code>, <code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>reserves-at-risk-calc</code></td>
+<td>medium</td>
+<td>calculation, analysis</td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>sec-financial-report</code></td>
+<td>hard</td>
+<td>search, analysis</td>
+<td><code>13f-analyzer</code>, <code>fuzzy-name-search</code></td>
+</tr>
+<tr>
+<td><code>shock-analysis-demand</code></td>
+<td>medium</td>
+<td>calculation, analysis</td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>shock-analysis-supply</code></td>
+<td>hard</td>
+<td>calculation, analysis</td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>weighted-gdp-calc</code></td>
+<td>medium</td>
+<td>calculation</td>
+<td><code>xlsx</code></td>
+</tr>
+<tr>
+<td><code>xlsx-recover-data</code></td>
+<td>medium</td>
+<td>analysis, calculation</td>
+<td><code>data-reconciliation</code>, <code>xlsx</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="mathematics-or-formal-reasoning-8-tasks">mathematics-or-formal-reasoning (8 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bike-rebalance</code></td>
+<td>medium</td>
+<td>optimization, planning</td>
+<td><code>geospatial-routing-data</code>, <code>logistics-rules-to-optimization</code>, <code>routing-subtour-elimination</code>, <code>scip-opt</code></td>
+</tr>
+<tr>
+<td><code>civ6-adjacency-optimizer</code></td>
+<td>hard</td>
+<td>optimization, planning</td>
+<td><code>civ6lib</code>, <code>hex-grid-spatial</code>, <code>map-optimization-strategy</code>, <code>sqlite-map-parser</code></td>
+</tr>
+<tr>
+<td><code>exam-block-sequencing</code></td>
+<td>hard</td>
+<td>optimization, planning</td>
+<td><code>mip-solver-and-solution-audit</code>, <code>ordered-window-sequencing-mip</code></td>
+</tr>
+<tr>
+<td><code>lean4-proof</code></td>
+<td>medium</td>
+<td>verification, implementation</td>
+<td><code>INSTALLATION.md</code>, <code>LICENSE</code>, <code>README.md</code>, <code>TESTING.md</code>, <code>lean4-memories</code>, <code>lean4-theorem-proving</code></td>
+</tr>
+<tr>
+<td><code>paratransit-routing</code></td>
+<td>hard</td>
+<td>optimization, planning</td>
+<td><code>ortools-pickup-delivery-routing</code>, <code>ortools-routing-modeling</code></td>
+</tr>
+<tr>
+<td><code>pddl-airport-planning</code></td>
+<td>medium</td>
+<td>planning</td>
+<td><code>pddl-skills</code></td>
+</tr>
+<tr>
+<td><code>pddl-tpp-planning</code></td>
+<td>medium</td>
+<td>planning, generation</td>
+<td><code>pddl-skills</code></td>
+</tr>
+<tr>
+<td><code>travel-planning</code></td>
+<td>medium</td>
+<td>planning, search</td>
+<td><code>search-accommodations</code>, <code>search-attractions</code>, <code>search-cities</code>, <code>search-driving-distance</code>, <code>search-flights</code>, <code>search-restaurants</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="cybersecurity-7-tasks">cybersecurity (7 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dapt-intrusion-detection</code></td>
+<td>hard</td>
+<td>analysis, detection, calculation</td>
+<td><code>pcap-analysis</code>, <code>threat-detection</code></td>
+</tr>
+<tr>
+<td><code>fix-druid-loophole-cve</code></td>
+<td>hard</td>
+<td>repair</td>
+<td><code>jackson-security</code>, <code>senior-java</code></td>
+</tr>
+<tr>
+<td><code>fix-erlang-ssh-cve</code></td>
+<td>hard</td>
+<td>repair, debugging</td>
+<td><code>erlang-concurrency</code>, <code>erlang-distribution</code>, <code>erlang-otp-behaviors</code>, <code>find-bugs</code>, <code>senior-security</code>, <code>ssh-penetration-testing</code></td>
+</tr>
+<tr>
+<td><code>setup-fuzzing-py</code></td>
+<td>medium</td>
+<td>implementation, verification</td>
+<td><code>discover-important-function</code>, <code>fuzzing-python</code>, <code>setup-env</code></td>
+</tr>
+<tr>
+<td><code>software-dependency-audit</code></td>
+<td>medium</td>
+<td>detection, analysis</td>
+<td><code>cvss-score-extraction</code>, <code>trivy-offline-vulnerability-scanning</code>, <code>vulnerability-csv-reporting</code></td>
+</tr>
+<tr>
+<td><code>suricata-custom-exfil</code></td>
+<td>medium</td>
+<td>detection, implementation</td>
+<td><code>pcap-triage-tshark</code>, <code>suricata-offline-evejson</code>, <code>suricata-rules-basics</code></td>
+</tr>
+<tr>
+<td><code>syzkaller-ppdev-syzlang</code></td>
+<td>medium</td>
+<td>implementation</td>
+<td><code>syz-extract-constants</code>, <code>syzkaller-build-loop</code>, <code>syzlang-ioctl-basics</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="media-content-production-5-tasks">media-content-production (5 tasks)</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Difficulty</th>
+<th>Task type</th>
+<th>Shipped skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mario-coin-counting</code></td>
+<td>medium</td>
+<td>detection, transformation</td>
+<td><code>ffmpeg-keyframe-extraction</code>, <code>image-editing</code>, <code>object-counter</code></td>
+</tr>
+<tr>
+<td><code>multilingual-video-dubbing</code></td>
+<td>medium</td>
+<td>generation, transformation</td>
+<td><code>ffmpeg-audio-processing</code>, <code>ffmpeg-format-conversion</code>, <code>ffmpeg-media-info</code>, <code>ffmpeg-video-editing</code>, <code>ffmpeg-video-filters</code>, <code>text-to-speech</code></td>
+</tr>
+<tr>
+<td><code>threejs-structure-parser</code></td>
+<td>medium</td>
+<td>extraction, transformation</td>
+<td><code>obj-exporter</code>, <code>threejs</code></td>
+</tr>
+<tr>
+<td><code>threejs-to-obj</code></td>
+<td>medium</td>
+<td>transformation</td>
+<td><code>obj-exporter</code>, <code>threejs</code></td>
+</tr>
+<tr>
+<td><code>video-silence-remover</code></td>
+<td>hard</td>
+<td>detection, transformation</td>
+<td><code>audio-extractor</code>, <code>energy-calculator</code>, <code>pause-detector</code>, <code>report-generator</code>, <code>segment-combiner</code>, <code>silence-detector</code>, <code>video-processor</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="skill-type-methodological-index">Skill-type (methodological) index</h2>
+<p>Every task classifies itself by one or more <code>skill_type</code> tags. These describe the <em>kind</em> of skill needed, independent of domain:</p>
+<table>
+<thead>
+<tr>
+<th>skill_type</th>
+<th style="text-align: right;"># tasks</th>
+<th>example tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>domain-procedure</td>
+<td style="text-align: right;">58</td>
+<td><code>ada-bathroom-plan-repair</code>, <code>adaptive-cruise-control</code>, <code>azure-bgp-oscillation-route-leak</code>…</td>
+</tr>
+<tr>
+<td>library-api-usage</td>
+<td style="text-align: right;">31</td>
+<td><code>crystallographic-wyckoff-position-analysis</code>, <code>dapt-intrusion-detection</code>, <code>data-to-d3</code>…</td>
+</tr>
+<tr>
+<td>mathematical-method</td>
+<td style="text-align: right;">30</td>
+<td><code>3d-scan-calc</code>, <code>adaptive-cruise-control</code>, <code>bike-rebalance</code>…</td>
+</tr>
+<tr>
+<td>tool-workflow</td>
+<td style="text-align: right;">20</td>
+<td><code>citation-check</code>, <code>data-to-d3</code>, <code>edit-pdf</code>…</td>
+</tr>
+<tr>
+<td>file-format-knowledge</td>
+<td style="text-align: right;">17</td>
+<td><code>3d-scan-calc</code>, <code>ada-bathroom-plan-repair</code>, <code>court-form-filling</code>…</td>
+</tr>
+<tr>
+<td>debugging-heuristic</td>
+<td style="text-align: right;">8</td>
+<td><code>debug-trl-grpo</code>, <code>fix-build-agentops</code>, <code>fix-build-google-auto</code>…</td>
+</tr>
+<tr>
+<td>data-cleaning-procedure</td>
+<td style="text-align: right;">6</td>
+<td><code>flood-risk-analysis</code>, <code>invoice-fraud-detection</code>, <code>lab-unit-harmonization</code>…</td>
+</tr>
+<tr>
+<td>evaluation-protocol</td>
+<td style="text-align: right;">3</td>
+<td><code>llm-prefix-cache-replay</code>, <code>manufacturing-equipment-maintenance</code>, <code>setup-fuzzing-py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="implications-for-a-task-by-task-optimization-strategy">Implications for a task-by-task optimization strategy</h2>
+<p><strong>Two very different setups:</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>current (whole-suite)</th>
+<th>task-by-task (EvoSkills-style)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>optimizer target</td>
+<td>one shared 4-skill package (docx/pptx/xlsx/pdf)</td>
+<td>one skill per task, seeded from the task's own <code>environment/skills/</code></td>
+</tr>
+<tr>
+<td>optimization signal</td>
+<td>average reward across N tasks × 3 trials</td>
+<td>reward on the single task × 3 trials</td>
+</tr>
+<tr>
+<td>gate</td>
+<td>paired-SE across N tasks</td>
+<td>per-task variance across trials</td>
+</tr>
+<tr>
+<td>cost per iter</td>
+<td>N × 3 rollouts</td>
+<td>1 × 3 rollouts (~1/N cheaper per iter)</td>
+</tr>
+<tr>
+<td>interpretation</td>
+<td>"can generalist office skills help these tasks?"</td>
+<td>"can we make each task's own skill better?"</td>
+</tr>
+<tr>
+<td>out-of-domain risk</td>
+<td>high (77 tasks don't need office skills)</td>
+<td>low (each optimization sees its own task's tools)</td>
+</tr>
+<tr>
+<td>paper analog</td>
+<td>cap-evolve's original design</td>
+<td>EvoSkills 71.1% headline</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Concrete implications:</strong></p>
+<ol>
+<li>
+<p><strong>Skill seed changes per task.</strong> For task-by-task, the <code>seed_capability</code> must vary. Adapter's <code>run_batch</code> would run each task with its own skill package as seed. Simplest: for each task, copy <code>environment/skills/*</code> into a per-task seed dir at intake time.</p>
+</li>
+<li>
+<p><strong>Optimizer prompt changes.</strong> Currently the optimizer sees N tasks' results and proposes edits to the shared package. For per-task, the optimizer sees just 1 task's results and edits just that task's skill set. Much narrower context; probably faster (fewer tokens) and more focused.</p>
+</li>
+<li>
+<p><strong>Budget scales differently.</strong> Full-suite: 43 tasks × 3 trials × 7 iter = 903 rollouts + 7 optimizer calls. Task-by-task: 43 tasks × 3 trials × 7 iter = <strong>same 903 rollouts but 43 × 7 = 301 optimizer calls</strong> (each smaller). Optimizer $ likely goes up; runner $ same.</p>
+</li>
+<li>
+<p><strong>Comparison with paper.</strong> EvoSkills reports 71.1% on all 87 tasks with per-task optimization. Our 43-task subset baseline was 13.95%; best-so-far (after 2 accepted whole-suite iterations) 17.05%. Per-task-EvoSkills-style optimization on our runnable subset would be the direct comparison.</p>
+</li>
+<li>
+<p><strong>Cap-evolve doesn't natively do this.</strong> Cap-evolve is designed for one shared skill package. A task-by-task run would either (a) launch 43 separate cap-evolve runs (one per task, each with its own project dir + seed + spec), or (b) require an adapter/algorithm change so cap-evolve loops over tasks within its own iteration structure.</p>
+</li>
+<li>
+<p><strong>The per-task seed does NOT pin the skill vocabulary — verify this per run.</strong> The "low out-of-domain risk" claim in the table above assumes each optimization stays within its task's own skills. It isn't enforced: <code>skill-package/scripts/abstract.py</code> discovers sub-packages from disk and permits <code>add</code>, so the optimizer can append a brand-new skill mid-run. Observed on <code>energy-ac-optimal-power-flow</code>, where an invented <code>fuzzy-match/</code> skill became the accepted champion and the final scored result came out 0.4 → 0.0 — see <a href="../evidence/energy-ac-optimal-power-flow-vocabulary-violation/README.html"><code>evidence/energy-ac-optimal-power-flow-vocabulary-violation/</code></a>, which also documents a second near-miss on <code>simpo-code-reproduction</code> and the mislabelled-trial defect behind the <code>*_CORRUPTED_batch3</code> runs.</p>
+</li>
+</ol>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

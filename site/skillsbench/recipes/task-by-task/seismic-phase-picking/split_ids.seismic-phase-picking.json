@@ -1,0 +1,5 @@
+{
+  "train": ["seismic-phase-picking"],
+  "val": ["seismic-phase-picking"],
+  "test": ["seismic-phase-picking"]
+}

@@ -1,0 +1,5 @@
+{
+  "train": ["manufacturing-equipment-maintenance"],
+  "val": ["manufacturing-equipment-maintenance"],
+  "test": ["manufacturing-equipment-maintenance"]
+}

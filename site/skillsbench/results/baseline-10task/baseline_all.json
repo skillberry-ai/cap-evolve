@@ -1,0 +1,147 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.14285714285714285,
+    "stderr": 0.14285714285714288,
+    "pass_k": {
+      "1": 0.14285714285714285,
+      "2": 0.14285714285714285
+    },
+    "pass_at_k": {
+      "1": 0.14285714285714285,
+      "2": 0.14285714285714285
+    },
+    "per_task": [
+      {
+        "task_id": "offer-letter-generator",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "exceltable-in-ppt",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "xlsx-recover-data",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sales-pivot-analysis",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 4 verifier test(s) failed:\n  - ::TestPivotTableConfiguration::test_pivot_row_is_state: The test failed in the call phase\n  - ::TestPivotTableConfiguration::test_pivot_uses_correct_aggregation: The test failed in the call phase\n  - ::TestSourceDataContent::test_quarter_values_are_valid: The test failed in the call phase due to an assertion error\n  - ::TestDataTransformationCorrectness::test_pivot_cache_has_fields: The test failed in the call phase",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "invoice-fraud-detection",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "weighted-gdp-calc",
+        "reward": 0.0,
+        "feedback": "Rollout did not complete for an infrastructure reason (no verifier reward for weighted-gdp-calc under /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c1/.capevolve/run_baseline/bench_jobs/seed/seed2 (rc=1). tail: .local/share/uv/tools/benchflow/lib/python3.12/site-packages/benchflow/sandbox/_compose_files/docker-compose-base.yaml -f /u/boazc/.local/share/uv/tools/benchflow/lib/python3.12/site-packages/benchflow/sandbox/_compose_files/docker-compose-build.yaml build: exit status 1\n. Stderr: None. \n[ERR] weighted-gdp-calc (tools=0) (Docker compose command failed for environment\u2026)\n  \u2192 end_turn, 7 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 0.0}\n[FAIL] offer-letter-generator (tools=7)\n  \u2192 end_turn, 11 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 0.0}\n[FAIL] exceltable-in-ppt (tools=11)\n  \u2192 end_turn, 17 total tool calls\nProcess terminated\n  \u2192 end_turn, 8 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\n  \u2192 end_turn, 11 total tool calls\nProcess terminated\nRewards: {'reward': 1.0}\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\n[PASS] invoice-fraud-detection (tools=8)\nRewards: {'reward': 0.0}\n[FAIL] sales-pivot-analysis (tools=11)\nRewards: {'reward': 0.0}\n[FAIL] financial-modeling-qa (tools=17)\n  \u2192 end_turn, 8 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 0.0}\n[FAIL] xlsx-recover-data (tools=8)\nJob complete: 1/7 (14.3%), errors=1, idle_timeouts=0, time=7.4min\n). Uncontrollable noise, not a skill defect; do not optimize against it.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 3,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "financial-modeling-qa",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 2096.770369052887
+  },
+  "best_id": "seed"
+}

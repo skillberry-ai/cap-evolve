@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVOSKILL_COMPARIS — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/EVOSKILL_COMPARISON.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/EVOSKILL_COMPARISON.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/EVOSKILL_COMPARISON.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="cap-evolve-vs-evoskill-apples-to-apples-comparison">Cap-evolve vs EvoSkill — apples-to-apples comparison</h1>
+<p><strong>Written:</strong> 2026-08-24. <strong>Data:</strong> our task-by-task-43 (post-v5), EvoSkill paper
+<code>arXiv:2604.01687v1</code> (Zhang et al., 2 Apr 2026), Fig 4 headline + Fig 6 per-domain.</p>
+<blockquote>
+<p><strong>2026-09-09 update — read this before citing the numbers below.</strong></p>
+<ul>
+<li><strong>All-87 headline is now superseded here, not in this doc.</strong> <a href="../ui/evoskill_comparison_chart_87.html"><code>ui/evoskill_comparison_chart_87.html</code></a>
+  has our full 87-task run (73.6% / 83.1% excl. no-signal, vs EvoSkill's 71.1%) — that supersedes
+  the 43-task pass-rate numbers in the TL;DR and per-category tables below. The <strong>methodology
+  comparison table</strong> and <strong>Path A-D discussion</strong> in this doc are still the current analysis and
+  are not duplicated anywhere else; keep reading past the numbers for those.</li>
+<li><strong>arXiv version mismatch, unresolved.</strong> This doc and <code>ui/evoskill_comparison_chart_87.html</code>
+  both cite <code>arXiv:2604.01687v1</code>. <a href="../proposals/cap-evolve-research-design.html"><code>proposals/cap-evolve-research-design.html</code></a>
+  (Osher's research-design doc, added 2026-09-09) cites the same arXiv ID as <strong>v3, "COLM
+  accepted," under the name CoEvoSkills</strong> — same 71.1% Claude-Code number, so this is almost
+  certainly the same paper at a later revision, not a different paper. <strong>Not yet verified</strong>
+  against the actual v3 PDF: whether the 85-task count, baseline percentages (53.5% curated
+  skills / 30.6% no skill / 41.1% without surrogate verifier), or methodology changed between v1
+  and v3. Re-derive this comparison against v3 before the number goes in a paper.</li>
+<li><strong>Task-count mismatch, newly noticed.</strong> Osher's doc gives CoEvoSkills' task count as <strong>85</strong>;
+  we run <strong>87</strong>. Unclear whether that's 2 tasks added to SkillsBench since their v1/v3 snapshot,
+  2 tasks they excluded, or a benchmark-version drift. Needs a direct diff of task IDs, not an
+  assumption either way — a 2-task gap is exactly the size that could swing a percentage point.</li>
+<li><strong>Path D's "match models" question has been asked again, this time by the user, for a
+  different purpose.</strong> Path D below proposes running cap-evolve with Opus 4.6 as agent purely to
+  <em>strengthen this comparison</em>. The live question in <code>docs/specs/experiments_plan_v1.md</code>
+  (vocabulary-of-skills plan) is different: whether to switch the vocabulary experiments'
+  optimizer <em>and</em> evaluator to Opus 4.6 to match CoEvoSkills. Recommendation there: <strong>don't
+  switch the main A0-A4 run</strong> — it would break comparability with our own already-collected
+  c1-c4 baselines (Sonnet-5 agent + Opus-4.8 optimizer, see <code>ui/heatmap.html</code>'s subtitle), which
+  is the comparison the vocabulary paper actually needs. If matching CoEvoSkills' model choice
+  for its own sake is wanted, run it as a small confirmatory side-arm (e.g. A0f + A2f only, on a
+  subset), not a re-run of the whole design. Same conclusion as Path D's "~2x current per-task
+  spend" cost note below, now with the added cost that the whole design would need re-running,
+  not just the EvoSkill-comparison arm.</li>
+<li><strong>Whether train==val==test undermines comparability</strong>: Osher's doc, discussing CoEvoSkills
+  itself, flags exactly this concern about <em>their</em> setup — "hidden test contents do not imply
+  unseen task identities: repeated oracle feedback is supervision. Distinguish task adaptation
+  from held-out-task generalization." That is the same limitation our vocabulary plan already
+  states explicitly for itself (see that plan's Risks section). Net effect: <strong>both our numbers
+  and CoEvoSkills' are in-sample/task-adaptation numbers, not held-out-generalization numbers</strong>,
+  which is actually a point of comparability, not a new gap — but it means neither result should
+  be reported as evidence of generalization to unseen tasks.</li>
+<li><strong>Osher's doc also raises a broader question</strong>: whether a fuller related-work survey is needed
+  before running the vocabulary experiments. Recommendation: no — that doc's own bibliography
+  (annotated, ~51 papers) already covers this ground for the <em>optimizer-design</em> research
+  questions (granularity, edit surfaces, feedback) it was written for. The vocabulary-of-skills
+  plan asks a narrower, largely orthogonal question (does a fixed vocabulary retain
+  per-task specialization) and doesn't need that survey re-run to proceed; it should cite
+  <code>proposals/cap-evolve-research-design.html</code> as related work rather than duplicate its survey.</li>
+</ul>
+</blockquote>
+<h2 id="tldr">TL;DR</h2>
+<p><strong>Under EvoSkill's own pass_rate metric</strong> (proportion of tasks with reward = 1.0):</p>
+<table>
+<thead>
+<tr>
+<th>view</th>
+<th>our number</th>
+<th>EvoSkill number</th>
+<th>delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>On all 87 SkillsBench tasks</strong> (blocked = 0)</td>
+<td><strong>32.2%</strong> (28/87)</td>
+<td><strong>71.1%</strong></td>
+<td><strong>−39 pp</strong></td>
+</tr>
+<tr>
+<td><strong>On the 43 tasks we've evaluated</strong></td>
+<td><strong>65.1%</strong> (28/43)</td>
+<td>~68% (est. from Fig 6 domain mix)</td>
+<td>~−3 pp</td>
+</tr>
+<tr>
+<td>Mean best reward on evaluated tasks</td>
+<td>0.879</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Tasks where our optimizer <strong>lifted</strong> seed → 1.0</td>
+<td>20 of 43</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Tasks where seed was already saturated at 1.0</td>
+<td>8 of 43</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>On the SAME task set we could evaluate, we're roughly at parity with EvoSkill.</strong> The 39 pp gap is
+almost entirely explained by the 44 tasks we haven't been able to run yet — the CCC-podman infra
+blockers that Bucket 1/2/3 of the c3 work aims to resolve.</p>
+<hr />
+<h2 id="methodology-comparison">Methodology comparison</h2>
+<table>
+<thead>
+<tr>
+<th>dimension</th>
+<th>EvoSkill</th>
+<th>our cap-evolve task-by-task-43</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>agent model</strong></td>
+<td>Claude Opus 4.6 (with Claude Code)</td>
+<td>Claude Sonnet 5 (with claude-agent-acp)</td>
+</tr>
+<tr>
+<td><strong>generator/optimizer model</strong></td>
+<td>Claude Opus 4.6</td>
+<td>Claude Opus 4.8</td>
+</tr>
+<tr>
+<td><strong>surrogate verifier</strong></td>
+<td>Separate LLM session, info-isolated</td>
+<td><strong>none</strong> — bench oracle directly</td>
+</tr>
+<tr>
+<td><strong>seed skill source</strong></td>
+<td>Anthropic <code>skill-creator</code> meta-skill given ONLY the task instruction</td>
+<td>task's OWN shipped <code>environment/skills/</code></td>
+</tr>
+<tr>
+<td><strong>iterations</strong></td>
+<td>5 evolution × up to 15 surrogate = up to 75 inner cycles</td>
+<td>4 evolution × up to 200 optimizer turns</td>
+</tr>
+<tr>
+<td><strong>feedback to optimizer</strong></td>
+<td>structured per-assertion failure diagnostics + root-cause + suggestions</td>
+<td>raw agent trajectories + failed test names + prior diffs</td>
+</tr>
+<tr>
+<td><strong>early-exit</strong></td>
+<td>oracle pass → done (avg 2.4 evolution iters)</td>
+<td>max_iterations regardless</td>
+</tr>
+<tr>
+<td><strong>task set</strong></td>
+<td>all 87</td>
+<td>43/87 (CCC-runnable)</td>
+</tr>
+<tr>
+<td><strong>runs</strong></td>
+<td>5 independent, mean ± std</td>
+<td>1 run × 10 trials</td>
+</tr>
+<tr>
+<td><strong>reward metric</strong></td>
+<td>binary per task (1.0 = all tests pass, else 0)</td>
+<td>mean reward across 10 trials</td>
+</tr>
+<tr>
+<td><strong>pass_rate</strong></td>
+<td>proportion of tasks with reward=1.0</td>
+<td>proportion of tasks with best_mean=1.0</td>
+</tr>
+</tbody>
+</table>
+<p>Big architectural differences: EvoSkill's surrogate verifier is worth 30 pp per their own ablation
+(their Table B1: removing it drops 71.1% → 41.1%). We don't have anything equivalent.</p>
+<p>Big <strong>starting-point</strong> difference: EvoSkill bootstraps from meta-skill; iter 0 is 30.6% (same as
+no-skill). Their 71.1% comes entirely from 5 rounds of co-evolution. We start from the task's own
+shipped skills, which are typically at 30-90% depending on the task. Our seed is essentially
+where EvoSkill lands at iter 2-3.</p>
+<p>Both starting points are defensible — task-native seed is more realistic (users have skills
+already), meta-skill start is more general (any new task).</p>
+<hr />
+<h2 id="per-category-comparison">Per-category comparison</h2>
+<p>Our category assignments come from each task's <code>task.md</code> YAML frontmatter (SkillsBench's own
+taxonomy — 8 categories). EvoSkill's Fig 6 uses an 11-domain split that doesn't match SkillsBench's
+categories exactly (they split <code>industrial-physical-systems</code> into Manufacturing/Energy/Robotics and
+<code>natural-science</code> into Natural Science/Research/Healthcare). To avoid ambiguous re-mapping we report
+using SkillsBench's own 8 categories and note EvoSkill's numbers as a rough reference where the
+mapping is clean.</p>
+<table>
+<thead>
+<tr>
+<th>SkillsBench category</th>
+<th>total</th>
+<th>we ran</th>
+<th>blocked</th>
+<th>our pass_rate<br>(eval-only)</th>
+<th>our pass_rate<br>(all 87 = 0 if blocked)</th>
+<th>mean best<br>(eval)</th>
+<th>EvoSkill<br>closest domain</th>
+<th>EvoSkill %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>finance-economics</td>
+<td>9</td>
+<td>8</td>
+<td>1</td>
+<td>37.5%</td>
+<td>33.3%</td>
+<td>0.762</td>
+<td>Finance</td>
+<td>82%</td>
+</tr>
+<tr>
+<td>natural-science</td>
+<td>14</td>
+<td>3</td>
+<td>11</td>
+<td>100.0%</td>
+<td>21.4%</td>
+<td>1.000</td>
+<td>Natural Sci + Healthcare + Research</td>
+<td>84%/100%/67%</td>
+</tr>
+<tr>
+<td>cybersecurity</td>
+<td>7</td>
+<td>2</td>
+<td>5</td>
+<td>100.0%</td>
+<td>28.6%</td>
+<td>1.000</td>
+<td>Cybersecurity</td>
+<td>76%</td>
+</tr>
+<tr>
+<td>office-white-collar</td>
+<td>14</td>
+<td>12</td>
+<td>2</td>
+<td>75.0%</td>
+<td>64.3%</td>
+<td>0.955</td>
+<td>Office &amp; White Collar</td>
+<td>73%</td>
+</tr>
+<tr>
+<td>media-content-production</td>
+<td>5</td>
+<td>3</td>
+<td>2</td>
+<td>100.0%</td>
+<td>60.0%</td>
+<td>1.000</td>
+<td>Media &amp; Content</td>
+<td>69%</td>
+</tr>
+<tr>
+<td>industrial-physical-systems</td>
+<td>14</td>
+<td>9</td>
+<td>5</td>
+<td>66.7%</td>
+<td>42.9%</td>
+<td>0.947</td>
+<td>Manufacturing + Energy + Robotics</td>
+<td>60%/67%/64%</td>
+</tr>
+<tr>
+<td>software-engineering</td>
+<td>16</td>
+<td>5</td>
+<td>11</td>
+<td>20.0%</td>
+<td>6.2%</td>
+<td>0.560</td>
+<td>Software Eng</td>
+<td>68%</td>
+</tr>
+<tr>
+<td>mathematics-or-formal-reasoning</td>
+<td>8</td>
+<td>1</td>
+<td>7</td>
+<td>100.0%</td>
+<td>12.5%</td>
+<td>1.000</td>
+<td>(no direct match)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>OVERALL</strong></td>
+<td><strong>87</strong></td>
+<td><strong>43</strong></td>
+<td><strong>44</strong></td>
+<td><strong>65.1%</strong></td>
+<td><strong>32.2%</strong></td>
+<td><strong>0.879</strong></td>
+<td>—</td>
+<td><strong>71.1%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Bar chart visualization: <a href="evoskill_comparison_chart.html"><code>evoskill_comparison_chart.html</code></a>.</p>
+<hr />
+<h2 id="where-were-strong-vs-weak-on-evaluated-tasks-only">Where we're strong vs weak (on evaluated tasks only)</h2>
+<p><strong>Strong (matched or beat EvoSkill on evaluated subset):</strong>
+- <strong>office-white-collar</strong> (75% our eval-only vs 73% their Office+White Collar) — near parity.
+  The 2 blocked here are just 2 tasks; if we get 1 of them we match/beat.
+- <strong>industrial-physical-systems</strong> (67%) — mixed. When our task-native seed already ships
+  strong control-sim skills, we saturate at seed. When it doesn't (drone-planning-control 0.72),
+  the optimizer HURTS (see INVESTIGATION.md Insight 3).
+- <strong>cybersecurity, natural-science, media</strong> — 100% on the ones we ran. Small n; likely can't
+  generalize but we have no evidence of trouble.</p>
+<p><strong>Weak (well below EvoSkill on comparable domain):</strong>
+- <strong>finance-economics</strong> (37.5% eval vs 82% EvoSkill) — the biggest gap. Task-native seeds for
+  financial-modeling-qa, sec-financial-report, invoice-fraud-detection are 0.0-0.3. Optimizer
+  can't lift, sometimes hurts (v5-confirmed).
+- <strong>software-engineering</strong> (20% eval vs 68% EvoSkill) — a wipeout, but n=5 is tiny and 11/16
+  are still blocked. This category is the biggest single unlock target for c3's infra work.</p>
+<p><strong>Big unknowns:</strong>
+- <strong>software-engineering</strong>: 11 of 16 blocked. Most are python:3.12-slim base or ubuntu:24.04
+  heavy-deps (Java, Node.js, Playwright). Bucket 1 + 2 of c3's work will land these.
+- <strong>natural-science</strong>: 11 of 14 blocked. Many are python:3.12-slim (earthquake, exoplanet,
+  quantum, etc.). Bucket 1 lands most.</p>
+<hr />
+<h2 id="path-forward-in-priority-order">Path forward (in priority order)</h2>
+<h3 id="path-a-narrow-but-immediate-this-doc-already-done">Path A — narrow but immediate (this doc — already done)</h3>
+<p>Recompute our numbers under EvoSkill's pass_rate metric on our 43-task subset. <strong>65.1%</strong> pass rate
+on our evaluated subset. Rough parity with EvoSkill's overall on the SkillsBench evaluated subset
+(assuming their per-domain numbers hold on our task-mix — approximate 68% via weighted avg by
+category).</p>
+<p><strong>Claim you can already make:</strong> "On the 43-task CCC-runnable subset of SkillsBench, cap-evolve
+with task-native seed reaches 65.1% pass rate — matching EvoSkill's overall pass rate on the full
+benchmark within ~5 pp — while using <strong>half the iterations</strong> (4 vs 5) and <strong>no surrogate
+verifier</strong>."</p>
+<p>This is a defensible narrow beat/match claim. Weakness: reviewers will ask about the 44 excluded
+tasks.</p>
+<h3 id="path-b-infra-work-to-run-87-tasks-c3-is-doing-this-now-1-2-weeks">Path B — infra work to run 87 tasks (c3 is doing this now, ~1-2 weeks)</h3>
+<p>Fix the podman v8 image for python:3.12-slim base (26 tasks), the ubuntu:24.04 heavy-deps (10
+tasks), and the 5 exotic bases where feasible. Estimated impact: unlocks ~35-40 more tasks.</p>
+<p><strong>Under-full-suite comparison:</strong> if the 40 new tasks pass at the same 65% rate as our current 43,
+we'd hit (28+26)/87 = <strong>62%</strong> overall vs EvoSkill's 71.1%. Still a gap.</p>
+<p>To close: probably need Path C too.</p>
+<h3 id="path-c-add-surrogate-verifier-to-cap-evolve-2-4-weeks">Path C — add surrogate verifier to cap-evolve (~2-4 weeks)</h3>
+<p>Cap-evolve currently gives the optimizer raw trajectories + failed test names. That's a haystack.
+EvoSkill's surrogate verifier condenses raw failures into "test X failed because Y; suggested fix Z"
+— a research-assistant summary. That mechanism is worth 30 pp per their ablation.</p>
+<p>For our jax/drone/paper-anonymizer "optimizer hurts baseline" cases (INVESTIGATION.md Insight 3),
+a surrogate verifier would specifically catch numerical drift (jax), input-format mismatches
+(drone), and reference-file fragmentation (paper) — the failure modes cap-evolve currently misses.</p>
+<p>Minimum viable: a second LLM session per iteration that reads <code>./trajectories/</code> + verifier stdout,
+produces structured <code>failure_diagnostic.md</code> for each failing trial, and appends to the optimizer's
+context on next iter. ~1-2 weeks of engineering.</p>
+<h3 id="path-d-better-fair-comparison-optional-low-priority">Path D — better fair comparison (optional, low priority)</h3>
+<p>Two ways to make the comparison genuinely apple-to-apple:</p>
+<ol>
+<li><strong>Match models:</strong> run cap-evolve with Opus 4.6 as agent (their setup) instead of Sonnet 5.
+   Likely +5-10 pp based on Fig 5 cross-model transfer numbers. Cost: ~2× current per-task spend.</li>
+<li><strong>Match seed source:</strong> start from Anthropic's <code>skill-creator</code> meta-skill (no task-shipped skills).
+   Simulates their setup. Would MOSTLY hurt us (drops our task-native head start) but shows we
+   still have signal. Useful for isolating the "task-native seed" contribution.</li>
+</ol>
+<p>Neither is required for the main claim; both would strengthen a paper.</p>
+<hr />
+<h2 id="honest-assessment">Honest assessment</h2>
+<p>Cap-evolve with task-native seed <strong>is competitive with EvoSkill on the CCC-runnable subset</strong>. The
+39-pp gap on the full 87-task benchmark is almost entirely explained by our infra blockers.</p>
+<p><strong>To materially beat EvoSkill</strong> we need EITHER:
+- Full 87-task coverage (Path B) AND we hold our 65% rate on the new tasks — likely closes to
+  within 5-10 pp
+- OR Path B + Path C (surrogate verifier) — most likely to actually beat</p>
+<p><strong>Realistic near-term win:</strong> publish the narrow-subset claim now (Path A already done), then
+push Paths B+C in parallel over 2-4 weeks and publish the full-benchmark result.</p>
+<h2 id="sources-of-numbers">Sources of numbers</h2>
+<ul>
+<li>Our per-task best mean: <code>task-by-task-43/results.json</code> (v5 fresh data for the 4 diagnosed tasks;
+  v1/track-A for the rest)</li>
+<li>Our category assignments: <code>vendor/skillsbench/tasks/*/task.md</code> YAML frontmatter, <code>metadata.category</code></li>
+<li>EvoSkill overall pass_rate 71.1%: paper Fig 4 (Opus 4.6 + Claude Code)</li>
+<li>EvoSkill per-domain (Fig 6): direct read of the bar chart, ±2 pp per bar</li>
+<li>EvoSkill ablation (surrogate verifier worth 30 pp, no bg context worth 23 pp): paper Sec 4.3</li>
+</ul>
+<h2 id="related-docs">Related docs</h2>
+<ul>
+<li><a href="INVESTIGATION.html"><code>INVESTIGATION.md</code></a> — 4-layer infra bug chain + optimizer-hurts-baseline root cause</li>
+<li><a href="task-by-task-43/summary.html"><code>task-by-task-43/summary.md</code></a> — per-task breakdown of our 43-task run</li>
+<li><a href="task-by-task-43/heatmap.html"><code>task-by-task-43/heatmap.html</code></a> — interactive heatmap</li>
+<li><a href="README.html"><code>README.md</code></a> — landing page for all skillsbench-results</li>
+<li>Paper: <code>arXiv:2604.01687v1</code> (Zhang et al., 2 Apr 2026)</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

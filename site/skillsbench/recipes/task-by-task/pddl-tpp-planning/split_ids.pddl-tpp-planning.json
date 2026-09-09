@@ -1,0 +1,5 @@
+{
+  "train": ["pddl-tpp-planning"],
+  "val": ["pddl-tpp-planning"],
+  "test": ["pddl-tpp-planning"]
+}

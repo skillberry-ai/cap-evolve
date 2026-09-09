@@ -1,0 +1,5 @@
+{
+  "train": ["court-form-filling"],
+  "val": ["court-form-filling"],
+  "test": ["court-form-filling"]
+}

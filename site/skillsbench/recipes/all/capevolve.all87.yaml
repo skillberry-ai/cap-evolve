@@ -1,0 +1,54 @@
+# cap-evolve run spec — ALL-87-TASK pass-rate-parity variant.
+# Same optimizer, algorithm, gate as capevolve.yaml, but sweeps every
+# SkillsBench task (fit metric, per parent HANDOFF's "pass-rate parity"
+# option). Budget scaled ~13× for the wider fleet.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [edit]
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 60.0             # ~1.5× the 10-task cap; wider task list → bigger context per optimizer call.
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# All 87 tasks in train==val (fit metric). Test kept as the original 3
+# held-out tasks; not scientifically meaningful under fit-metric mode
+# but satisfies cap-evolve's finalize step.
+split_ids_file: split_ids.all87.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 3                            # same as the 10-task setup — 3 trials/task for stochasticity
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+# 10-task capevolve.yaml budgets: $600 total / $400 optimizer-only for
+# 7 iter × 21 rollouts/iter = 147 rollouts total.
+# All-87 fleet: 7 iter × (87 tasks × 3 trials) = 1827 rollouts.
+# Scale rollout budget ~13×: $8000. Optimizer budget ~1.5× per iter
+# because the task list is longer but not 13× the reasoning.
+max_iterations: 7
+stall: 0
+max_metric_calls: 0
+max_usd: 8000.0
+max_optimizer_usd: 500.0
+
+# --- iteration store --------------------------------------------------------
+store: git

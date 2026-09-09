@@ -1,0 +1,5 @@
+{
+  "train": ["react-performance-debugging"],
+  "val": ["react-performance-debugging"],
+  "test": ["react-performance-debugging"]
+}

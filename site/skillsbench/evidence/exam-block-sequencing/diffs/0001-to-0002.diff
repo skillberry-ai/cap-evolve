@@ -1,0 +1,240 @@
+--- cand_0001/ordered-window-sequencing-mip/scripts/solve_sequencing.py	2026-09-01 09:04:54.730915000 -0400
++++ cand_0002/ordered-window-sequencing-mip/scripts/solve_sequencing.py	2026-09-01 09:04:54.940079000 -0400
+@@ -15,8 +15,10 @@
+ does NOT hardcode any answer. It:
+ 
+   1. builds a feasible front-loaded initial schedule,
+-  2. runs restarted steepest-descent 2-swap local search on the EXACT objective
+-     (ordered tuples; the active-pattern four-slot overlap `z`), staying feasible,
++  2. runs restarted local search over a combined 2-swap + or-opt(1) relocation
++     neighborhood (simulated annealing then steepest descent) on the EXACT
++     objective (ordered tuples; the active-pattern four-slot overlap `z`),
++     staying feasible at every step,
+   3. writes schedule.csv, metrics.json, formulation.md, report.md,
+   4. re-reads schedule.csv from disk and re-evaluates, asserting the reported
+      metrics equal the disk-recomputed metrics.
+@@ -226,8 +228,45 @@
+     return swap_ok
+ 
+ 
+-def greedy_descent(obj, perm, swap_ok, deadline):
+-    """Steepest-descent 2-swap polish on a permutation."""
++def build_feasible(inst):
++    """Return (feasible(perm), late_pos): the front-loading feasibility predicate.
++
++    Front-loading requires every large block to sit in an early slot. Equivalently,
++    no large block may occupy a NON-early ("late") position. There are only a
++    handful of late positions, so checking them is O(#late) for ANY move type
++    (swap or relocation), which lets the search use a richer neighborhood cheaply."""
++    blocks = list(inst["all_blocks"])
++    pos = {slot: i for i, slot in enumerate(blocks)}
++    large = set(inst["large_blocks"])
++    early_pos = set(pos[s] for s in inst["early_slots"])
++    late_pos = [p for p in range(len(blocks)) if p not in early_pos]
++
++    def feasible(perm):
++        for p in late_pos:
++            if perm[p] in large:
++                return False
++        return True
++
++    return feasible, late_pos
++
++
++def relocate(perm, p, q):
++    """or-opt(1): remove the block at position p and re-insert it at position q,
++    shifting the intervening blocks by one. Length-preserving; returns a new list."""
++    x = list(perm)
++    b = x.pop(p)
++    x.insert(q, b)
++    return x
++
++
++def greedy_descent(obj, perm, swap_ok, deadline, feasible=None):
++    """Steepest-descent polish over the 2-swap AND or-opt(1) relocation moves.
++
++    Enlarging the neighborhood beyond 2-swap lets the descent escape swap-only
++    local optima (relocation shifts a whole run of positions, a move no single
++    swap reproduces), so it converges to an equal-or-better local optimum. The
++    steepest (most-improving) feasible move is applied each sweep; only strictly
++    improving moves are accepted, so the objective is monotonically non-increasing."""
+     n = len(perm)
+     cur = list(perm)
+     cur_val = obj.evaluate_perm(cur)
+@@ -235,7 +274,7 @@
+     while improved and time.time() < deadline:
+         improved = False
+         best_delta = 0
+-        best_pair = None
++        best_move = None  # ('s', p, q) swap  or  ('r', p, q) relocation
+         for p in range(n):
+             for q in range(p + 1, n):
+                 if cur[p] == cur[q] or not swap_ok(cur, p, q):
+@@ -245,19 +284,41 @@
+                 cur[p], cur[q] = cur[q], cur[p]
+                 if val - cur_val < best_delta:
+                     best_delta = val - cur_val
+-                    best_pair = (p, q)
++                    best_move = ("s", p, q)
+             if time.time() >= deadline:
+                 break
+-        if best_pair is not None:
+-            p, q = best_pair
+-            cur[p], cur[q] = cur[q], cur[p]
++        if feasible is not None:
++            for p in range(n):
++                for q in range(n):
++                    if p == q:
++                        continue
++                    cand = relocate(cur, p, q)
++                    if cand == cur or not feasible(cand):
++                        continue
++                    val = obj.evaluate_perm(cand)
++                    if val - cur_val < best_delta:
++                        best_delta = val - cur_val
++                        best_move = ("r", p, q)
++                if time.time() >= deadline:
++                    break
++        if best_move is not None:
++            kind, p, q = best_move
++            if kind == "s":
++                cur[p], cur[q] = cur[q], cur[p]
++            else:
++                cur = relocate(cur, p, q)
+             cur_val += best_delta
+             improved = True
+     return cur, cur_val
+ 
+ 
+-def simulated_annealing(obj, perm, swap_ok, deadline, rng, t0, t_end):
+-    """Feasibility-preserving 2-swap simulated annealing on a permutation."""
++def simulated_annealing(obj, perm, swap_ok, deadline, rng, t0, t_end, feasible=None):
++    """Feasibility-preserving simulated annealing over 2-swap + or-opt(1) moves.
++
++    Each step proposes, with equal probability, a 2-swap or a single-block
++    relocation. Mixing the two neighborhoods explores the sequence space far more
++    effectively than swaps alone (relocations reach permutations many swaps away),
++    which drives the incumbent objective lower and reduces run-to-run variance."""
+     import math
+     n = len(perm)
+     cur = list(perm)
+@@ -276,20 +337,39 @@
+                 break
+         frac = (now - seg_start) / seg_len
+         T = t0 * (t_end / t0) ** (frac if frac < 1.0 else 1.0)
+-        p = rng.randrange(n)
+-        q = rng.randrange(n)
+-        if p == q or cur[p] == cur[q] or not swap_ok(cur, p, q):
+-            continue
+-        cur[p], cur[q] = cur[q], cur[p]
+-        val = obj.evaluate_perm(cur)
+-        delta = val - cur_val
+-        if delta <= 0 or rng.random() < math.exp(-delta / (T if T > 1e-9 else 1e-9)):
+-            cur_val = val
+-            if val < best_val:
+-                best_val = val
+-                best = list(cur)
++        if feasible is None or rng.random() < 0.5:
++            # 2-swap move (in place, revert on reject)
++            p = rng.randrange(n)
++            q = rng.randrange(n)
++            if p == q or cur[p] == cur[q] or not swap_ok(cur, p, q):
++                continue
++            cur[p], cur[q] = cur[q], cur[p]
++            val = obj.evaluate_perm(cur)
++            delta = val - cur_val
++            if delta <= 0 or rng.random() < math.exp(-delta / (T if T > 1e-9 else 1e-9)):
++                cur_val = val
++                if val < best_val:
++                    best_val = val
++                    best = list(cur)
++            else:
++                cur[p], cur[q] = cur[q], cur[p]  # reject
+         else:
+-            cur[p], cur[q] = cur[q], cur[p]  # reject
++            # or-opt(1) relocation move
++            p = rng.randrange(n)
++            q = rng.randrange(n)
++            if p == q:
++                continue
++            cand = relocate(cur, p, q)
++            if not feasible(cand):
++                continue
++            val = obj.evaluate_perm(cand)
++            delta = val - cur_val
++            if delta <= 0 or rng.random() < math.exp(-delta / (T if T > 1e-9 else 1e-9)):
++                cur = cand
++                cur_val = val
++                if val < best_val:
++                    best_val = val
++                    best = list(cur)
+     return best, best_val
+ 
+ 
+@@ -302,6 +382,7 @@
+     start = time.time()
+     deadline = start + time_limit
+     swap_ok = build_swap_ok(inst)
++    feasible, _late = build_feasible(inst)
+     best = None
+     best_val = None
+     restart = 0
+@@ -309,23 +390,24 @@
+     polish_budget = min(10.0, 0.05 * time_limit)
+     sa_deadline = deadline - polish_budget
+     # Many short SA restarts (best-of-N) drive variance down far more reliably
+-    # than a few long runs. ~6s/restart -> tens of restarts at a normal budget.
+-    seg = max(4.0, min(8.0, time_limit / 25.0))
++    # than a few long runs. ~5s/restart -> tens of restarts at a normal budget.
++    seg = max(3.0, min(6.0, time_limit / 25.0))
+     while time.time() < sa_deadline or best is None:
+         seg_deadline = min(sa_deadline, time.time() + seg)
+         if best is not None and time.time() >= sa_deadline:
+             break
+         init = feasible_initial_perm(inst, rng)
+         cand, val = simulated_annealing(obj, init, swap_ok, seg_deadline, rng,
+-                                        t0=400.0, t_end=0.5)
+-        cand, val = greedy_descent(obj, cand, swap_ok, seg_deadline)
++                                        t0=400.0, t_end=0.5, feasible=feasible)
++        cand, val = greedy_descent(obj, cand, swap_ok, seg_deadline, feasible=feasible)
+         if best_val is None or val < best_val:
+             best_val, best = val, list(cand)
+         restart += 1
+         if restart >= 100000:
+             break
+     # final polish of the global best
+-    best, best_val = greedy_descent(obj, best, swap_ok, time.time() + polish_budget)
++    best, best_val = greedy_descent(obj, best, swap_ok, time.time() + polish_budget,
++                                    feasible=feasible)
+     return perm_to_schedule(inst, best), best_val, restart
+ 
+ 
+@@ -383,11 +465,12 @@
+ The exact linearization of this instance requires on the order of hundreds of
+ thousands of binaries (near-dense triplet table + the overlap term) and does not
+ solve to optimality inside the available time budget. The task explicitly permits
+-a heuristic, so the schedule was produced by restarted steepest-descent 2-swap
+-local search on the exact objective above, keeping the front-loading constraint
+-feasible at every step.
++a heuristic, so the schedule was produced by restarted local search on the exact
++objective above over a combined 2-swap + or-opt(1) relocation neighborhood
++(simulated annealing followed by steepest descent), keeping the front-loading
++constraint feasible at every step.
+ 
+-- method: multi-restart feasibility-preserving 2-swap local search
++- method: multi-restart feasibility-preserving 2-swap + or-opt local search
+ - restarts completed: {restarts}
+ - wall-clock budget: {time_limit:.0f}s
+ - solution status: feasible incumbent (heuristic; optimality NOT certified)
+@@ -415,8 +498,9 @@
+ - metrics.json was recomputed from the on-disk schedule.csv and re-verified.
+ 
+ ## Solution method
+-Restarted steepest-descent 2-swap local search on the exact objective, with the
+-front-loading constraint enforced on every candidate swap. Feasible outputs were
++Restarted local search on the exact objective over a combined 2-swap + or-opt(1)
++relocation neighborhood (simulated annealing then steepest descent), with the
++front-loading constraint enforced on every candidate move. Feasible outputs were
+ written first, then improved in place. Optimality is not certified; this is a
+ feasible heuristic incumbent.
+ """

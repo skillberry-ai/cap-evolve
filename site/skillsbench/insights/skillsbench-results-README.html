@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>skillsbench-results-READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from insights/skillsbench-results-README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/skillsbench-results-README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/insights/skillsbench-results-README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="skillsbench-results-skillsbench-intake-results-ccc">skillsbench-results — SkillsBench intake results (CCC)</h1>
+<p>Landing page for the four SkillsBench runs conducted on CCC. Structured to
+mirror <code>parsec-results/</code> from the parent parsec-intake worktree: one folder per
+run phase (with per-task or per-iter logs, <code>summary.md</code>, raw results) plus a
+top-level <code>analysis/</code> folder with a cross-phase flat CSV.</p>
+<p>Last updated: 2026-08-23.</p>
+<hr />
+<h2 id="one-line-summary">One-line summary</h2>
+<p><strong>Task-by-task optimization (EvoSkills-style, task's own skills as seed) delivers
++36.3 pp average lift across ALL 43 runnable SkillsBench tasks (0.508 → 0.871).
+27 of 43 tasks reach val=1.0 (63%). Compared to whole-suite optimization on
+the same 43 tasks (+3.1 pp), task-native seed delivers ~12× the aggregate lift.</strong></p>
+<ul>
+<li>Prior main event (whole-suite runnable-43): PR #270 merged 2026-07-31 — <a href="https://github.com/skillberry-ai/cap-evolve/blob/benchmark-history/docs/runs/local-20260730-skillsbench-runnable-sonnet5-optimize.md"><code>local-20260730-skillsbench-runnable-sonnet5-optimize.md</code></a></li>
+<li>New main event (task-by-task-43): c2 worktree, 43 tasks × 10 trials × up to 4 iters, ~$3,000 spent across 2026-08-19 → 2026-08-23.</li>
+</ul>
+<hr />
+<h2 id="phase-folders">Phase folders</h2>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>What it is</th>
+<th>Best result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="baseline-10task/"><code>baseline-10task/</code></a></td>
+<td>First working run — 10-task shared-office subset, Sonnet-4.6. Small sample, used to validate CCC plumbing.</td>
+<td>val = 14.29% (1/7 tasks pass)</td>
+</tr>
+<tr>
+<td><a href="all87-broken-wiring/"><code>all87-broken-wiring/</code></a></td>
+<td>87-task attempt after adapter was expanded. Killed once we spotted new infra-error classes (<code>network_mode</code> conflict on 14 tasks, <code>python:3.12-slim</code> base failures on 26 tasks). Used to derive the 43-task RUNNABLE subset.</td>
+<td><em>baseline never completed</em></td>
+</tr>
+<tr>
+<td><a href="runnable-43task-opt/"><code>runnable-43task-opt/</code></a></td>
+<td>43-task RUNNABLE subset, Sonnet-5 agent + Opus-4.8 optimizer, office quartet as seed. Baseline 13.95% → best cand_0002 17.05% (+3.11 pp, gate-accepted); cand_0004 optimizer hung 2h → job killed.</td>
+<td>val = 17.05% (+3.11 pp)</td>
+</tr>
+<tr>
+<td><a href="task-by-task-43/"><code>task-by-task-43/</code></a></td>
+<td><strong>NEW main event.</strong> ALL 43 runnable tasks, one cap-evolve process per task with task's OWN shipped skills as seed, 10 trials × up to 4 iterations, dedicated LSF host per task. Three submission batches. See <code>summary.md</code>, <code>heatmap.html</code>, and <code>per-task-logs/</code> (43 files).</td>
+<td><strong>avg val = 87.1% (+36.3 pp)</strong></td>
+</tr>
+<tr>
+<td><a href="analysis/"><code>analysis/</code></a></td>
+<td>Cross-phase flat CSV (<code>per_task_scores.csv</code>) — one row per (task × phase × candidate) with mean_reward, trial_rewards, notes. 400 rows. Plus <code>optimization_analysis.html</code>.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><a href="INVESTIGATION.html"><code>INVESTIGATION.md</code></a></td>
+<td>Insights + open investigations: v7 podman fix, Track A, optimizer-hurts-baseline pattern, next-steps for cap-evolve improvements.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Each phase folder contains:</p>
+<ul>
+<li><code>summary.md</code> — human-readable summary (headline table, per-iter breakdown, cost + wall clock, next moves).</li>
+<li><code>run.log</code> — event-stream digest from <code>events.jsonl</code> (baseline + iterN + step accept/reject).</li>
+<li><code>iter{N}.log</code> — one file per iteration (JSON), gate decision + optimizer cost/tokens.</li>
+<li><code>baseline_all.json</code> — cap-evolve's <code>baseline.json</code> (per-trial rewards for the seed skill).</li>
+</ul>
+<hr />
+<h2 id="numbers-at-a-glance">Numbers at a glance</h2>
+<h3 id="task-by-task-43-the-new-headline">task-by-task-43 (the new headline)</h3>
+<table>
+<thead>
+<tr>
+<th>batch</th>
+<th>n</th>
+<th>avg baseline</th>
+<th>avg best</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>batch 1 (moderate signal in whole-suite; iters up to 4 for 3 partial-lifts)</td>
+<td>10</td>
+<td>0.690</td>
+<td>0.940</td>
+<td>+0.250</td>
+</tr>
+<tr>
+<td>batch 2 (all-zero in whole-suite; post-v7 podman fix)</td>
+<td>10</td>
+<td>0.465</td>
+<td>0.675</td>
+<td>+0.210</td>
+</tr>
+<tr>
+<td>batch 3 (23 remaining runnable; max_iterations=4 from start)</td>
+<td>23</td>
+<td>0.448</td>
+<td>0.926</td>
+<td><strong>+0.478</strong></td>
+</tr>
+<tr>
+<td><strong>FULL RUNNABLE-43</strong></td>
+<td><strong>43</strong></td>
+<td><strong>0.508</strong></td>
+<td><strong>0.871</strong></td>
+<td><strong>+0.363 (+36.3 pp)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>vs whole-suite runnable-43 (same 43 tasks, office quartet as seed):</strong> baseline 0.140 → best 0.170 (+3.1 pp). Task-native seed delivers <strong>~12× the aggregate lift</strong>.</p>
+<ul>
+<li><strong>27 of 43 tasks reach val=1.0</strong> (63%). 7 saturated at baseline. 20 lifted by optimizer.</li>
+<li><strong>14 partial lifts</strong> in the 0.05–0.99 range (mostly 0.4-0.9).</li>
+<li><strong>2 stuck at 0.000</strong>: <code>python-scala-translation</code> (Scala/GraalVM runtime crash — different infra failure not covered by v7 fix), <code>spring-boot-jakarta-migration</code> (JVM tooling infra).</li>
+</ul>
+<p>See <a href="task-by-task-43/heatmap.html"><code>task-by-task-43/heatmap.html</code></a> for the interactive per-task × per-candidate heatmap. Full breakdown in <a href="task-by-task-43/summary.html"><code>task-by-task-43/summary.md</code></a>.</p>
+<h3 id="runnable-43task-opt-prior-main-event">runnable-43task-opt (prior main event)</h3>
+<table>
+<thead>
+<tr>
+<th>step</th>
+<th>candidate</th>
+<th>val reward</th>
+<th>Δ vs parent</th>
+<th>accepted?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>seed</code></td>
+<td>0.1395 (13.95%)</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>cand_0001</code></td>
+<td>0.1473 (14.73%)</td>
+<td>+0.78 pp</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td><strong><code>cand_0002</code></strong></td>
+<td><strong>0.1705 (17.05%)</strong></td>
+<td><strong>+2.33 pp</strong></td>
+<td>✓ ← best</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>cand_0003</code></td>
+<td>0.1551 (15.51%)</td>
+<td>−1.55 pp</td>
+<td>✗ (paired-SE gate)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>cand_0004</code></td>
+<td><em>not scored — optimizer hung</em></td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Cumulative spend at kill time: <strong>$48.78 optimizer</strong> (Opus 4.8) + ~14.6h of Sonnet-5 rollouts.</p>
+<hr />
+<h2 id="where-the-source-files-live-in-this-worktree">Where the source files live (in this worktree)</h2>
+<p>Cap-evolve run directories (kept preserved, do not delete):</p>
+<table>
+<thead>
+<tr>
+<th>Phase folder here</th>
+<th>Corresponds to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>baseline-10task/</code></td>
+<td><code>.capevolve/run_baseline/</code></td>
+</tr>
+<tr>
+<td><code>all87-broken-wiring/</code></td>
+<td><code>.capevolve/run_all87_iter7_v2_KILLED_11pct_errors/</code></td>
+</tr>
+<tr>
+<td><code>runnable-43task-opt/</code></td>
+<td><code>.capevolve/run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Config + adapters used across phases:</p>
+<ul>
+<li><a href="../.capevolve/project/capevolve.yaml"><code>.capevolve/project/capevolve.yaml</code></a> — 10-task shared-office spec</li>
+<li><a href="../.capevolve/project/capevolve.runnable.yaml"><code>.capevolve/project/capevolve.runnable.yaml</code></a> — 43-task RUNNABLE subset spec (main event)</li>
+<li><a href="../.capevolve/project/capevolve.all87.yaml"><code>.capevolve/project/capevolve.all87.yaml</code></a> — full 87-task spec (blocked)</li>
+<li><a href="../.capevolve/project/split_ids.runnable.json"><code>.capevolve/project/split_ids.runnable.json</code></a> — the 43-task subset list</li>
+<li><a href="../.capevolve/project/adapters/adapter.py"><code>.capevolve/project/adapters/adapter.py</code></a> — env-driven MODEL/AGENT</li>
+<li><a href="../.env"><code>.env</code></a> — ETE creds + <code>SKILLSBENCH_MODEL=claude-sonnet-5</code> + <code>SKILLSBENCH_SANDBOX_USER=</code> (root)</li>
+</ul>
+<p>Documentation for re-picking-up context:</p>
+<ul>
+<li><a href="../HANDOFF_CCC.html"><code>HANDOFF_CCC.md</code></a> — long-form; every workaround and its why.</li>
+<li><a href="../CCC_PODMAN_SETUP.html"><code>CCC_PODMAN_SETUP.md</code></a> — colleague-facing recipe for rootless podman on CCC.</li>
+<li><a href="../SKILLSBENCH_INVENTORY.html"><code>SKILLSBENCH_INVENTORY.md</code></a> — 87-task landscape by category, difficulty, task-type, shipped skills.</li>
+</ul>
+<hr />
+<h2 id="to-resume-the-runnable-sonnet5-run-pick-up-from-iter-4-attempting-from-cand_0002">To resume the runnable-sonnet5 run (pick up from iter 4 attempting from cand_0002)</h2>
+<pre><code class="language-bash">cd /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c1
+mv .capevolve/run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h \
+   .capevolve/run_runnable_iter7_v1
+bsub -q normal -M 100G -n 1 -W 30:00 \
+  -J capevolve_runnable_iter7_resume \
+  -oo /dccstor/knewedge2/boazc/ccc_logs/%J.stdout \
+  -eo /dccstor/knewedge2/boazc/ccc_logs/%J.stderr \
+  bash scripts/ccc/run_ccc_experiment.sh \
+    --suite-id runnable_iter7_v1 \
+    --run-ts runnable_iter7_v1 \
+    --resume \
+    --max-iterations 7 \
+    --spec .capevolve/project/capevolve.runnable.yaml
+</code></pre>
+<hr />
+<h2 id="where-we-are-now-2026-08-21">Where we are now (2026-08-21)</h2>
+<p>The task-by-task strategy hypothesized in the previous README revision has been
+<strong>run and validated</strong> on 20 tasks — see <a href="task-by-task-20/"><code>task-by-task-20/</code></a>.</p>
+<p>Key findings:</p>
+<ul>
+<li><strong>Task-by-task with task-native seed delivers ~3× the aggregate lift</strong> of whole-suite
+  with the office quartet on the same 10 batch-1 tasks (+23 pp vs +7.3 pp).</li>
+<li><strong>On batch-2 tasks that scored 0.000 in whole-suite</strong>, task-by-task lifts 2 of 10
+  to val=1.0 (grid-dispatch-operator, pddl-airport-planning) — proving the strategy
+  scales beyond in-domain tasks. But 8 of 10 remain stuck at 0.000 through both iters:
+  those are genuinely hard for the sonnet-5 agent regardless of skill mounting.</li>
+<li><strong>9 of 20 total tasks reach val=1.0</strong> (6 lifted, 3 saturated at baseline).</li>
+</ul>
+<p>Open questions:</p>
+<ul>
+<li>Do the 8 stuck-at-0 tasks yield to more iterations (3+) or a larger optimizer budget?</li>
+<li>Do the 3 partial-lift tasks (0.7→0.9 range) reach 1.0 with iter 3?</li>
+<li>Would per-trial seed variance (<code>num_trials=20</code>) tighten the paired-SE gate enough
+  to accept marginal improvements that iter 2's gate currently rejects?</li>
+</ul>
+<hr />
+<h2 id="open-prs-from-bcarmelicap-evolve-fork">Open PRs (from <code>bcarmeli/cap-evolve</code> fork)</h2>
+<table>
+<thead>
+<tr>
+<th>PR</th>
+<th>Purpose</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/bcarmeli/cap-evolve/tree/add-ccc-support"><code>add-ccc-support</code></a></td>
+<td>CCC docs + scripts → main</td>
+<td>awaiting merge</td>
+</tr>
+<tr>
+<td><a href="https://github.com/bcarmeli/cap-evolve/tree/docs/remove-docs-runs-migrated-to-bench-history"><code>docs/remove-docs-runs-migrated-to-bench-history</code></a></td>
+<td>delete <code>docs/runs/</code> from main (now that they're on <code>benchmark-history</code>)</td>
+<td>awaiting merge</td>
+</tr>
+<tr>
+<td><a href="https://github.com/bcarmeli/cap-evolve/tree/bench-history/regen-benchmarks-json"><code>bench-history/regen-benchmarks-json</code></a></td>
+<td>superseded by #270 which merged the same content</td>
+<td><strong>close without merging</strong></td>
+</tr>
+<tr>
+<td><a href="https://github.com/skillberry-ai/cap-evolve/pull/270"><code>bench-history/fix-runnable-sonnet5-md-tables</code></a></td>
+<td><strong>merged as PR #270</strong></td>
+<td>✓ merged</td>
+</tr>
+<tr>
+<td><a href="https://github.com/skillberry-ai/cap-evolve/pull/259"><code>bench-history/migrate-docs-runs-from-main</code></a></td>
+<td>merged</td>
+<td>✓ merged</td>
+</tr>
+<tr>
+<td><a href="https://github.com/skillberry-ai/cap-evolve/pull/258"><code>bench-history/add-runnable-sonnet5-run</code></a></td>
+<td>merged</td>
+<td>✓ merged</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="rebuilding-memory-in-30-seconds">Rebuilding memory in 30 seconds</h2>
+<p>The three files to open in order:</p>
+<ol>
+<li><strong><a href="../HANDOFF_CCC.html">HANDOFF_CCC.md</a></strong> — long-form; every workaround and its why.</li>
+<li><strong>This file</strong> — quick pointers + phase-folder index.</li>
+<li><strong><a href="../SKILLSBENCH_INVENTORY.html">SKILLSBENCH_INVENTORY.md</a></strong> — for the task-by-task discussion.</li>
+</ol>
+<p>If your fresh Claude session is picking up cold, tell it to read HANDOFF_CCC.md first.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

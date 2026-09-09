@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C5_HANDO — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from handoffs/C5_HANDOFF.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/handoffs/C5_HANDOFF.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/handoffs/C5_HANDOFF.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="c5-handoff-zero-shot-skill-transfer-pilot-traintest-split-by-shared-skill">C5 HANDOFF — zero-shot skill-transfer pilot (train/test split by shared skill)</h1>
+<p><strong>Status as of 2026-09-01:</strong> design/handoff only. No <code>c5</code> worktree exists yet. No runs
+have been started. The 8 pilot fold-runs below are fully scoped and their project dirs
+are <strong>already built</strong> (living in <code>c2</code>/<code>c3</code> — you just need to copy them in).</p>
+<p><strong>You can ask the person who owns this session (boazc) for more information at any
+point</strong> — if a path, a number, or an instruction below turns out to be stale or wrong
+once you check it yourself, say so and ask rather than guessing your way past it. This
+doc was written by a prior Claude session working from the same repo; it isn't gospel.</p>
+<h2 id="mission">Mission</h2>
+<p>Full design: <a href="../docs/train_test_split_proposal.html"><code>../docs/train_test_split_proposal.md</code></a>.
+Already-scoped pilot list: <a href="../docs/transfer_eval_runs.html"><code>../docs/transfer_eval_runs.md</code></a>.
+Read both before starting — this handoff summarizes them but they're the source of truth.</p>
+<p>The question: do skills cap-evolve evolves on one task <strong>transfer</strong> to a different task
+that plausibly shares the same underlying domain skill, or are they overfit to the task
+they were evolved on? For each of the two highest-priority subcategory groups from the
+proposal — groups where at least one task showed real optimizer lift (<code>best &gt; seed</code>) —
+take the <strong>winning skill</strong> from a <em>train</em> task's completed run, freeze it, drop it
+unmodified into a <em>test</em> task's project as <code>seed_capability/</code>, and score it <strong>zero-shot</strong>
+(<code>--max-iterations 0</code>, baseline-only, no optimizer loop) on that test task's own val/test
+split. Compare the transferred skill's reward to the test task's own <strong>native seed
+baseline</strong> (already recorded in <code>results.json</code>).</p>
+<h2 id="the-8-fold-runs-from-transfer_eval_runsmd">The 8 fold-runs (from <code>transfer_eval_runs.md</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>train (skill source)</th>
+<th>test (target)</th>
+<th>project dir (already built)</th>
+<th>source worktree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>shock-analysis-demand</td>
+<td>shock-analysis-supply</td>
+<td><code>.capevolve/project_shock-analysis-supply_from_shock-analysis-demand</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>shock-analysis-demand</td>
+<td>weighted-gdp-calc</td>
+<td><code>.capevolve/project_weighted-gdp-calc_from_shock-analysis-demand</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>shock-analysis-supply</td>
+<td>shock-analysis-demand</td>
+<td><code>.capevolve/project_shock-analysis-demand_from_shock-analysis-supply</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>shock-analysis-supply</td>
+<td>weighted-gdp-calc</td>
+<td><code>.capevolve/project_weighted-gdp-calc_from_shock-analysis-supply</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>5</td>
+<td>weighted-gdp-calc</td>
+<td>shock-analysis-demand</td>
+<td><code>.capevolve/project_shock-analysis-demand_from_weighted-gdp-calc</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>weighted-gdp-calc</td>
+<td>shock-analysis-supply</td>
+<td><code>.capevolve/project_shock-analysis-supply_from_weighted-gdp-calc</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>7</td>
+<td>exam-block-sequencing</td>
+<td>paratransit-routing</td>
+<td><code>.capevolve/project_paratransit-routing_from_exam-block-sequencing</code></td>
+<td>c3</td>
+</tr>
+<tr>
+<td>8</td>
+<td>paratransit-routing</td>
+<td>exam-block-sequencing</td>
+<td><code>.capevolve/project_exam-block-sequencing_from_paratransit-routing</code></td>
+<td>c3</td>
+</tr>
+</tbody>
+</table>
+<p>Own-skill (native) baselines to compare against, from <code>results.json</code>:
+- shock-analysis-demand: seed=0.0 / final_test=0.9
+- shock-analysis-supply: seed=0.0 / final_test=0.2
+- weighted-gdp-calc: seed=0.8 / best=1.0 (KILLED_ceiling, no final_test recorded)
+- exam-block-sequencing: seed=0.1 / best=1.0 (KILLED_ceiling)
+- paratransit-routing: seed=0.0 / best=1.0 (KILLED_ceiling)</p>
+<p>For #7/#8, "success" isn't hitting 1.0 again — it's whether the <em>other</em> task's skill
+lifts these off their own low seed at all.</p>
+<h2 id="step-1-create-the-worktree">Step 1 — create the worktree</h2>
+<p>Run from the repo root, mirroring how c2/c3/c4 were created — a sibling of the repo, not
+nested inside it:</p>
+<pre><code class="language-bash">cd /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve
+git worktree add -b intake_skillbench_c5 \
+  /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c5 \
+  main
+</code></pre>
+<h2 id="step-2-populate">Step 2 — populate</h2>
+<p>None of this is tracked by git (it's all gitignored <code>.capevolve/</code> state, secrets, and
+untracked helper scripts) — copy it in from the sibling worktrees rather than
+re-authoring:</p>
+<pre><code class="language-bash">C5=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c5
+C2=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c2
+C3=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c3
+C4=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c4
+
+# 1. The 8 pre-built transfer project dirs
+mkdir -p &quot;$C5/.capevolve&quot;
+for t in shock-analysis-supply_from_shock-analysis-demand \
+         weighted-gdp-calc_from_shock-analysis-demand \
+         shock-analysis-demand_from_shock-analysis-supply \
+         weighted-gdp-calc_from_shock-analysis-supply \
+         shock-analysis-demand_from_weighted-gdp-calc \
+         shock-analysis-supply_from_weighted-gdp-calc; do
+  cp -r &quot;$C2/.capevolve/project_$t&quot; &quot;$C5/.capevolve/&quot;
+done
+for t in paratransit-routing_from_exam-block-sequencing \
+         exam-block-sequencing_from_paratransit-routing; do
+  cp -r &quot;$C3/.capevolve/project_$t&quot; &quot;$C5/.capevolve/&quot;
+done
+
+# 2. Secrets — NEVER commit this, it's gitignored, keep it that way
+cp &quot;$C4/.env&quot; &quot;$C5/.env&quot;
+
+# 3. CCC job-submission scripts. Best-of-both: c4's submit_ccc_experiment.sh has
+#    --host support and the correct &quot;normal&quot; default queue (c3's/c2's copy still
+#    defaults to &quot;x86_6h&quot;, which does NOT work on this cluster — see Step 4); c3's
+#    setup_podman.sh is the superset with the extra python-slim/ubuntu-20.04/
+#    bugswarm/oss-fuzz base-image patches. Take both, don't mix-and-match further.
+mkdir -p &quot;$C5/scripts/ccc&quot;
+cp &quot;$C4/scripts/ccc/run_ccc_experiment.sh&quot; &quot;$C4/scripts/ccc/submit_ccc_experiment.sh&quot; \
+   &quot;$C4/scripts/ccc/run_ccc_smoke.sh&quot; &quot;$C5/scripts/ccc/&quot;
+cp &quot;$C3/scripts/ccc/setup_podman.sh&quot; &quot;$C3/scripts/ccc/generate_task_project.sh&quot; \
+   &quot;$C5/scripts/ccc/&quot;
+chmod +x &quot;$C5&quot;/scripts/ccc/*.sh
+</code></pre>
+<p>Also confirm reachable (shared across worktrees, should already be true):
+- SkillsBench clone: <code>.../skillberry_ai/cap-evolve-benchmarks/skillsbench/</code>
+- <code>bench</code> CLI: <code>~/.local/bin/bench</code> (benchflow 0.6.5)</p>
+<h2 id="step-3-venv">Step 3 — venv</h2>
+<p>This experiment makes <strong>no changes to <code>core/cap_evolve/</code></strong> — it only runs existing spec
+files with <code>--max-iterations 0</code>. That means the shared <code>cap-evolve/.venv</code> is fine to use,
+consistent with how c1/c2/c3 ran. Verify before trusting it:</p>
+<pre><code class="language-bash">cap-evolve/.venv/bin/python -c &quot;import cap_evolve; print(cap_evolve.__file__)&quot;
+</code></pre>
+<p>If at any point you find yourself editing <code>core/cap_evolve/</code> (you shouldn't need to for
+this task) — <strong>never edit it in the main repo</strong>, c1/c2/c3/c4 share it; build c5 its own
+venv first (<code>uv venv .venv &amp;&amp; uv pip install -e core[dev]</code> from inside <code>intake_skillbench_c5/</code>).</p>
+<h2 id="step-4-how-to-run-jobs-on-ccc-this-section-was-missing-from-c4s-handoff">Step 4 — how to run jobs on CCC (this section was missing from C4's handoff)</h2>
+<p>CCC is IBM's internal compute cluster; jobs are scheduled with <strong>LSF</strong> (<code>bsub</code>/<code>bjobs</code>/
+<code>bkill</code>), not run inline on the login node. Every job needs podman's rootless-container
+workarounds set up fresh on whatever compute host it lands on — that's what
+<code>scripts/ccc/run_ccc_experiment.sh</code> does for you <em>inside</em> the job; you don't need to
+<code>ssh</code> anywhere or set that up by hand.</p>
+<p><strong>Before submitting anything</strong>, activate a venv with <code>cap-evolve</code> on <code>PATH</code> in your
+submitting shell — <code>bsub</code> jobs inherit the environment of the shell that calls <code>bsub</code>:</p>
+<pre><code class="language-bash">source /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve/.venv/bin/activate
+cd /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c5
+</code></pre>
+<h3 id="option-a-recommended-the-submit_ccc_experimentsh-wrapper">Option A (recommended) — the <code>submit_ccc_experiment.sh</code> wrapper</h3>
+<p>Builds the <code>bsub</code> command for you, including host pinning:</p>
+<pre><code class="language-bash">bash scripts/ccc/submit_ccc_experiment.sh \
+    --suite-id transfer_eval_v1 \
+    --run-id  transfer_&lt;train&gt;_to_&lt;test&gt;_v1 \
+    --max-iterations 0 \
+    --spec    &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;/capevolve.&lt;test&gt;.yaml&quot; \
+    --project &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;&quot; \
+    --queue normal \
+    --host  &lt;dedicated_host&gt;
+</code></pre>
+<p>Add <code>--dry-run</code> first to print the exact <code>bsub</code> invocation without submitting, so you can
+sanity-check paths before spending a job slot. Run <code>bash scripts/ccc/submit_ccc_experiment.sh</code>
+with no args, or read the comment header at the top of the file, for the full flag list
+(<code>--memory</code>, <code>--walltime</code>, <code>--cpus</code>, <code>--extra-args</code> are also available).</p>
+<p><strong>Important — the script's own <code>--queue</code> default is stale.</strong> It defaults to <code>x86_6h</code>,
+which is not a submittable queue on this cluster. Always pass <code>--queue normal</code> explicitly
+(see below) until/unless someone fixes the default.</p>
+<h3 id="option-b-raw-bsub-if-you-want-full-manual-control">Option B — raw <code>bsub</code>, if you want full manual control</h3>
+<pre><code class="language-bash">bsub -q normal -M 64G -n 4 -W 2:00 -m &lt;dedicated_host&gt; \
+    -J capevolve_transfer_&lt;train&gt;_to_&lt;test&gt; \
+    -oo /dccstor/knewedge2/boazc/ccc_logs/%J.stdout \
+    -eo /dccstor/knewedge2/boazc/ccc_logs/%J.stderr \
+    bash scripts/ccc/run_ccc_experiment.sh \
+        --suite-id transfer_eval_v1 \
+        --run-ts  transfer_&lt;train&gt;_to_&lt;test&gt;_v1 \
+        --max-iterations 0 \
+        --spec    &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;/capevolve.&lt;test&gt;.yaml&quot; \
+        --project &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;&quot;
+</code></pre>
+<p>Flag meanings (all confirmed against real usage in this repo, not guessed):
+- <code>-q normal</code> — the <strong>only</strong> submittable non-idle queue on this cluster. <code>x86_1h</code> /
+  <code>x86_6h</code> from older docs/scripts do not exist here — don't use them.
+- <code>-M 64G -n 4 -W 2:00</code> — memory, CPU slots, wall-clock limit (<code>H:MM</code>). These runs are
+  <code>--max-iterations 0</code> (single eval, no optimizer loop), so 2:00 is generous; shrink if
+  you want to pack more jobs through the queue.
+- <code>-m &lt;dedicated_host&gt;</code> — <strong>required</strong>, not optional. Podman's <code>graphroot</code>/<code>runroot</code>
+  live under host-local <code>/tmp</code>, keyed <strong>per user, not per job</strong> — two jobs landing on the
+  same host at the same time corrupt each other's podman state. Pick a free host with
+  <code>bhosts -w</code> (look for a low/no job count) and give each <em>concurrently running</em> job a
+  distinct one. Sequential jobs can reuse a host once the earlier one has finished.
+- <code>-J &lt;name&gt;</code> — job name, shown in <code>bjobs</code>; make it descriptive (<code>capevolve_transfer_&lt;train&gt;_to_&lt;test&gt;</code>)
+  since you'll have 8 of these in flight.
+- <code>-oo</code>/<code>-eo</code> — raw LSF stdout/stderr, written to <code>/dccstor/knewedge2/boazc/ccc_logs/%J.{stdout,stderr}</code>
+  (<code>%J</code> = LSF job ID). Use the <code>/dccstor/...</code> path, not <code>/tmp</code> — <code>/tmp</code> is host-local and
+  unreadable once you're on a different node or login session.</p>
+<h3 id="what-happens-inside-the-job">What happens inside the job</h3>
+<p><code>run_ccc_experiment.sh</code>: sources <code>setup_podman.sh</code> (private dbus, rootless-podman apt/chown
+workarounds, patched base images — all idempotent, safe to re-run), loads <code>.env</code> secrets,
+resolves the <code>cap-evolve</code> binary from <code>PATH</code> (your activated venv) or <code>$CAP_EVOLVE_BIN</code>,
+then runs <code>cap-evolve run --spec ... --project ... --max-iterations 0</code>. Structured output
+lands under, inside the c5 worktree:</p>
+<pre><code>results/&lt;suite-id&gt;/&lt;run-id&gt;/setup.log          # setup_podman.sh output
+results/&lt;suite-id&gt;/&lt;run-id&gt;/cap-evolve.log     # cap-evolve stdout+stderr
+results/&lt;suite-id&gt;/&lt;run-id&gt;/env_snapshot.txt   # host, LSF vars, redacted .env, git commit, podman info
+results/&lt;suite-id&gt;/&lt;run-id&gt;/run/               # symlink to .capevolve/run_&lt;run-ts&gt;/ (state.json, rollouts, etc.)
+</code></pre>
+<p><code>&lt;run-id&gt;</code> is the LSF job ID (<code>$LSB_JOBID</code>) when submitted via <code>bsub</code>/the wrapper, or
+<code>local_&lt;timestamp&gt;</code> if you ever run the script directly without LSF.</p>
+<h3 id="checking-on-jobs">Checking on jobs</h3>
+<pre><code class="language-bash">bjobs -w            # all your running/pending jobs, wide format
+bjobs -l &lt;jobid&gt;     # full detail on one job
+tail -f /dccstor/knewedge2/boazc/ccc_logs/&lt;jobid&gt;.stdout   # live log
+</code></pre>
+<p>There's no wait/poll helper in this repo (no <code>bwait</code>) — checking is manual: re-run
+<code>bjobs -w</code> or tail the log.</p>
+<h3 id="killing-a-job">Killing a job</h3>
+<pre><code class="language-bash">bkill &lt;exact_jobid&gt;
+</code></pre>
+<p><strong>Never</strong> a wildcard, never <code>bkill 0</code>, never <code>bkill -u boazc</code> — sibling Claude Code
+sessions on this account share your UID, and a bulk kill takes their jobs down too.</p>
+<h2 id="step-5-run-the-8-folds">Step 5 — run the 8 folds</h2>
+<p>Run one at a time, or several in parallel each on its own <code>--host</code> (check <code>bhosts -w</code>
+first). <code>--max-iterations 0</code> runs are cheap — a single baseline eval, no optimizer loop —
+so parallelizing across hosts is reasonable if slots are free.</p>
+<p>For each row in the table in "Mission" above, substitute <code>&lt;train&gt;</code>/<code>&lt;test&gt;</code> into either
+the Option A or Option B command. Example for fold #1:</p>
+<pre><code class="language-bash">bash scripts/ccc/submit_ccc_experiment.sh \
+    --suite-id transfer_eval_v1 \
+    --run-id  transfer_shock-analysis-demand_to_shock-analysis-supply_v1 \
+    --max-iterations 0 \
+    --spec    &quot;.capevolve/project_shock-analysis-supply_from_shock-analysis-demand/capevolve.shock-analysis-supply.yaml&quot; \
+    --project &quot;.capevolve/project_shock-analysis-supply_from_shock-analysis-demand&quot; \
+    --queue normal \
+    --host  &lt;dedicated_host&gt;
+</code></pre>
+<h2 id="step-6-record-results">Step 6 — record results</h2>
+<p>Report the <strong>test</strong> reward from each fold-run against the test task's own <strong>native seed
+baseline</strong> (table above). Append rows to <code>results.json</code> with <code>source: transfer-eval-v1</code>,
+per the convention <code>C4_HANDOFF.md</code> set.</p>
+<p><strong>Coordination note:</strong> the canonical <code>results.json</code> lives only in the
+<code>results/skillsbench-task-by-task-87</code> worktree (<code>intake_skillbench_c1</code>), not in c2/c3/c4/c5
+— it was never copied because it's the single shared results ledger. Before writing into
+it directly from c5: check whether a session is actively using the c1 worktree right now
+(ask the user), since two sessions editing the same file concurrently can silently drop
+each other's writes. If in doubt, keep your 8 new rows in a local file under
+<code>c5/results/transfer_eval_v1_results.json</code> instead, and ask the user to merge them into
+the canonical <code>results.json</code> by hand.</p>
+<h2 id="step-7-optional-extend-beyond-the-pilot-not-required-ask-first">Step 7 — optional: extend beyond the pilot (not required, ask first)</h2>
+<p>If this pilot is informative and you're asked to continue, <code>train_test_split_proposal.md</code>
+lists more groups (priority 3+: cybersecurity/vulnerability-analysis, cybersecurity/fuzzing,
+and others) whose project dirs are <strong>not</strong> built yet — you'd need to copy the winning
+skill out of the train task's completed run and author a new
+<code>project_&lt;test&gt;_from_&lt;train&gt;/</code> dir (spec + <code>seed_capability/</code>) before you can run them.
+<code>scripts/ccc/generate_task_project.sh</code> (copied into c5 above, from c3) may help scaffold
+this — read it first, it wasn't written for this exact purpose and may need adapting.
+Ask the user before spending time on this; the proposal itself says to decide whether to
+scale up only after seeing the priority-1/2 pilot results.</p>
+<h2 id="standing-rules-carry-over-unchanged">Standing rules (carry over, unchanged)</h2>
+<ul>
+<li><code>bsub -m &lt;dedicated_host&gt;</code> per job — podman graphroot is per-user, not per-pid; packing
+  two jobs on one host corrupts state.</li>
+<li><code>bkill</code> by <strong>exact job ID only</strong>, never a wildcard — sibling Claude sessions share the
+  UID, and a bulk kill catches their jobs too.</li>
+<li><strong>Never</strong> push to public git remotes without explicit approval.</li>
+<li><code>.env</code> is gitignored — don't commit it, in c5 or anywhere else.</li>
+<li><strong>Never</strong> edit <code>cap-evolve/core/</code> in the main repo directly — c1/c2/c3/c4 all share it.</li>
+<li>If something about this handoff doesn't match what you find on disk, <strong>ask the user</strong>
+  rather than silently working around it or guessing — paths and script versions drift
+  between worktrees faster than handoff docs get updated.</li>
+</ul>
+<h2 id="out-of-scope-for-c5">Out of scope for c5</h2>
+<ul>
+<li>Building project dirs for priority-3+ groups (see Step 7 — ask before doing this).</li>
+<li>Anything to do with the 10 partial-lift or 10 NO_SIGNAL tasks from <code>C4_HANDOFF.md</code> —
+  unrelated experiment, different worktree (<code>c4</code>).</li>
+<li>The Opus 4.6 → newer-model migration for optimizer/evaluator — separate item.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

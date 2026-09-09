@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C4_HANDO — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from handoffs/C4_HANDOFF.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/handoffs/C4_HANDOFF.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/handoffs/C4_HANDOFF.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="c4-handoff-re-run-the-10-partial-lift-tasks">C4 HANDOFF — re-run the 10 partial-lift tasks</h1>
+<p><strong>Status as of 2026-08-31:</strong> design/handoff only. No <code>c4</code> worktree exists yet. No runs
+have been started. Whoever picks this up sets the exact budget/iteration parameters
+(the owner will do this themselves) — this file specifies <em>what must be true</em>, not the
+numbers.</p>
+<h2 id="mission">Mission</h2>
+<p>10/87 tasks (11.5%) improved over seed but did <strong>not</strong> reach 1.0 in the original 4
+iterations — the most tractable remaining headroom, since cap-evolve already has a
+working lever on each of them (unlike the 10 NO_SIGNAL tasks, which stayed at 0.0 with
+no lever at all — out of scope here, see bottom).</p>
+<p><strong>Success</strong> = any task crossing reward ≥ 0.999 on the <strong>test</strong> split (not val — val
+has already shown it can overstate; see the table below).</p>
+<h2 id="the-10-tasks">The 10 tasks</h2>
+<p>Verified against <code>results.json</code> with the filter <code>best &gt; seed + 1e-6 and best &lt; 0.999</code>,
+all currently <code>status=DONE</code>, <code>iters_spent=4</code>. Ordered by apparent headroom:</p>
+<table>
+<thead>
+<tr>
+<th>task</th>
+<th>category / subcategory</th>
+<th>seed</th>
+<th>best (val)</th>
+<th>final_test</th>
+<th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fix-erlang-ssh-cve</td>
+<td>cybersecurity / vulnerability-analysis</td>
+<td>0.600</td>
+<td>0.900</td>
+<td><strong>1.0</strong></td>
+<td>already solved on test — re-verify, may not even need a re-run</td>
+</tr>
+<tr>
+<td>setup-fuzzing-py</td>
+<td>cybersecurity / fuzzing</td>
+<td>0.364</td>
+<td>0.549</td>
+<td>0.881</td>
+<td>test &gt; val already; real headroom, gate was the limiter</td>
+</tr>
+<tr>
+<td>energy-market-pricing</td>
+<td>industrial-physical-systems / electricity-market-pricing</td>
+<td>0.000</td>
+<td>0.900</td>
+<td>0.8</td>
+<td></td>
+</tr>
+<tr>
+<td>flink-query</td>
+<td>software-engineering / implementation</td>
+<td>0.000</td>
+<td>0.900</td>
+<td>0.9</td>
+<td></td>
+</tr>
+<tr>
+<td>shock-analysis-demand</td>
+<td>finance-economics / macroeconomic-analysis</td>
+<td>0.000</td>
+<td>0.900</td>
+<td>0.9</td>
+<td></td>
+</tr>
+<tr>
+<td>latex-formula-extraction</td>
+<td>office-white-collar / pdf-formula-extraction</td>
+<td>0.200</td>
+<td>0.800</td>
+<td>0.8</td>
+<td></td>
+</tr>
+<tr>
+<td>organize-messy-files</td>
+<td>office-white-collar / document-classification</td>
+<td>0.500</td>
+<td>0.900</td>
+<td>— (not recorded)</td>
+<td></td>
+</tr>
+<tr>
+<td>invoice-fraud-detection</td>
+<td>finance-economics / fraud-detection</td>
+<td>0.300</td>
+<td>0.400</td>
+<td>— (not recorded)</td>
+<td>least headroom found so far</td>
+</tr>
+<tr>
+<td>shock-analysis-supply</td>
+<td>finance-economics / macroeconomic-analysis</td>
+<td>0.000</td>
+<td>0.300</td>
+<td>0.2</td>
+<td>least headroom</td>
+</tr>
+<tr>
+<td>crystallographic-wyckoff-position-analysis</td>
+<td>natural-science / crystallography</td>
+<td>0.626</td>
+<td>0.835</td>
+<td><strong>0.317</strong></td>
+<td>⚠️ val/test divergence — probable val overfit; more iterations may make test <em>worse</em>, treat as diagnostic not headroom</td>
+</tr>
+</tbody>
+</table>
+<p>Source projects: 5 tasks live in <code>intake_skillbench_c2</code>, 4 in <code>intake_skillbench_c3</code>,
+<code>invoice-fraud-detection</code> in <code>intake_skillbench_c1</code> (tag <code>c1-tA</code>).</p>
+<h2 id="step-1-create-the-worktree">Step 1 — create the worktree</h2>
+<p>Run from the repo root. <strong>Note:</strong> <code>cap-evolve-worktrees/</code> is a <em>sibling</em> of the repo,
+not inside it — don't nest the <code>git worktree add</code> path under <code>cap-evolve/</code>.</p>
+<pre><code class="language-bash">cd /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve
+git worktree add -b intake_skillbench_c4 \
+  /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c4 \
+  main
+</code></pre>
+<p>This gives c4 its own full checkout of <code>core/cap_evolve/</code>, isolated from c1/c2/c3 — safe
+to modify without affecting the sibling worktrees or being affected by them.</p>
+<h2 id="step-2-populate-the-10-project-dirs-secrets">Step 2 — populate the 10 project dirs + secrets</h2>
+<p>Each task's cap-evolve project (adapter, seed skill, spec, split ids — untracked,
+~118K each) already exists in c2/c3. Copy them in rather than re-authoring:</p>
+<pre><code class="language-bash">C4=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c4
+C2=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c2
+C3=/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c3
+
+mkdir -p &quot;$C4/.capevolve&quot;
+for t in energy-market-pricing organize-messy-files shock-analysis-demand \
+         shock-analysis-supply; do
+  cp -r &quot;$C2/.capevolve/project_$t&quot; &quot;$C4/.capevolve/&quot;
+done
+for t in fix-erlang-ssh-cve flink-query crystallographic-wyckoff-position-analysis \
+         latex-formula-extraction setup-fuzzing-py; do
+  cp -r &quot;$C3/.capevolve/project_$t&quot; &quot;$C4/.capevolve/&quot;
+done
+# invoice-fraud-detection lives in c1 (tag c1-tA) — locate and copy similarly.
+
+cp &quot;$C3/.env&quot; &quot;$C4/.env&quot;   # NEVER commit this — it's gitignored, keep it that way
+</code></pre>
+<p>Also confirm reachable (should already be true, shared across worktrees):
+- SkillsBench clone: <code>.../skillberry_ai/cap-evolve-benchmarks/skillsbench/</code> @ <code>9a1f4dd5</code>
+- <code>bench</code> CLI: <code>~/.local/bin/bench</code> (benchflow 0.6.5)
+- On a fresh compute node: re-source <code>/dccstor/knewedge2/boazc/workarea/python/setup_podman.sh</code>
+  before any run — podman graphroot/socket state is host-local.</p>
+<h2 id="step-3-venv-read-this-before-running-anything">Step 3 — venv: read this before running anything</h2>
+<p><strong>Finding from this session:</strong> there is currently <strong>one shared venv</strong>, at
+<code>cap-evolve/.venv</code>, and it resolves <code>import cap_evolve</code> to <strong>main's</strong>
+<code>core/cap_evolve/</code>:</p>
+<pre><code>$ cap-evolve/.venv/bin/python -c &quot;import cap_evolve; print(cap_evolve.__file__)&quot;
+/…/skillberry_ai/cap-evolve/core/cap_evolve/__init__.py
+</code></pre>
+<p>None of c1/c2/c3 has ever had its own <code>.venv</code> — every run so far has executed <strong>main's</strong>
+harness code, whatever commit main happened to be at that day.</p>
+<p>This matters for c4 specifically:
+- <strong>If c4 makes no code change</strong> to <code>core/cap_evolve/</code>: using the shared
+  <code>cap-evolve/.venv</code> is fine and consistent with how c1/c2/c3 ran.
+- <strong>If c4 changes harness behavior at all</strong> (e.g. anything touching the ground-truth
+  isolation question below): it <strong>must</strong> build its own venv with an editable install of
+  <strong>c4's own</strong> <code>./core</code>, e.g. <code>uv venv .venv &amp;&amp; uv pip install -e core[dev]</code> run from
+  inside <code>intake_skillbench_c4/</code>. Using the shared venv in that case makes the edit a
+  silent no-op — the run would still execute main's unmodified code.
+- Either way: <strong>never edit <code>cap-evolve/core/</code> in the main repo</strong> — c1/c2/c3 (and anyone
+  else) share it.</p>
+<h2 id="step-4-ground-truth-isolation-the-headline-requirement">Step 4 — ground-truth isolation (the headline requirement)</h2>
+<p>Requirement as given: <em>"the trained skills (the optimizer) do not have access to the
+ground-truth… It should only get the reward from the evaluator."</em></p>
+<p><strong>This is already true, by design, for all 10 tasks — verified below.</strong> Re-verify
+rather than trust this doc; the paths are given so you can check yourself.</p>
+<p><strong>Already gold-safe by construction</strong>, in every <code>.capevolve/project_&lt;task&gt;/adapters/adapter.py</code>:
+- <code>score()</code> (~line 284) reads the recorded reward + CTRF from <code>rollout.metadata</code>; it
+  never re-invokes the verifier or touches a gold/oracle file.
+- <code>_build_feedback()</code> (~line 467) states the contract explicitly: <em>"Gold-SAFE: we never
+  read the oracle/solve.sh/gold output — only the failing test name + its message."</em>
+- Empirically confirmed this session: searching a completed run's entire <code>bench_jobs/</code>
+  tree for <code>test_*.py</code>, <code>solve.sh</code>, <code>gold*</code>, <code>oracle*</code> returned <strong>zero hits</strong>. The
+  verifier directories the optimizer can see contain only the agent's own produced
+  artifacts, the CTRF report, and <code>test-stdout.txt</code> — never the benchmark's held-out
+  test code or answer key.</p>
+<p><strong>What the optimizer <em>does</em> see (reward-derived, not gold — matches what was asked
+for):</strong>
+- aggregate val reward + per-task reward: <code>harness.py</code> <code>_focus_instructions</code> (~1763),
+  <code>_fmt</code> (~1544), <code>_algorithm_brief</code> (~1583)
+- per-iteration val + Δ-vs-parent: <code>LEDGER.md</code> (built ~755), <code>RUNMAP.md</code> (~864)
+- full per-trial <code>trial_rewards</code> and the complete CTRF (every test name, pass/fail,
+  assertion message) via rollout JSONs copied into <code>work/&lt;cand&gt;/trajectories/</code>
+- <code>RUNMAP.md</code> also points the optimizer at the read-only run dir "if you need
+  <code>rollouts/&lt;split&gt;/</code> traces or the git log" — i.e. it <em>can</em> go look at more detail than
+  what's summarized, but still only reward-derived detail, never gold.</p>
+<p><strong>One bounded grey area, named honestly rather than silently changed:</strong> a CTRF
+assertion message for a <em>failing</em> test can embed the value the test expected. That's
+the evaluator telling the agent what it got wrong — richer than a bare scalar reward,
+and arguably the same kind of channel EvoSkill's isolated surrogate verifier is designed
+to avoid. It is <strong>not</strong> gold-file access. If you (the person picking this up) want
+stricter isolation than "reward + failing-test-names + assertion messages," that's a
+deliberate scope decision to make explicitly, not something to patch as a bug — flag it
+back rather than quietly editing <code>_build_feedback()</code>.</p>
+<p><strong>No config flag exists</strong> for any of this. <code>rundir.py</code>'s <code>Budget</code> dataclass has exactly
+five fields (<code>max_iterations</code>, <code>max_metric_calls</code>, <code>max_usd</code>, <code>stall</code>,
+<code>max_optimizer_usd</code>) — nothing reward-related. There's also <strong>no stop-on-max-reward
+parameter</strong>: <code>stall: N</code> (currently <code>0</code>/disabled in every task's spec) is the closest
+substitute — at val=1.0 the paired-SE gate rejects every candidate, so <code>stall: 1-2</code>
+approximates "stop once you've hit the ceiling," if that's a knob you want to set.</p>
+<h2 id="step-5-run">Step 5 — run</h2>
+<p>One task at a time; give each a unique <code>--run-ts</code>.</p>
+<pre><code class="language-bash">source .venv/bin/activate            # c4's own venv, or the shared cap-evolve/.venv — see Step 3
+export $(grep -v '^#' .env | xargs)
+
+cap-evolve run \
+  --spec    .capevolve/project_&lt;TASK&gt;/capevolve.&lt;TASK&gt;.yaml \
+  --project .capevolve/project_&lt;TASK&gt; \
+  --run-ts  task_&lt;TASK&gt;_c4v1 \
+  --max-iterations &lt;SET BY OWNER&gt;
+</code></pre>
+<p>Current per-task spec defaults you're starting from (already in each task's yaml,
+change if you want a different bar): <code>num_trials: 10</code>, <code>gate_mode: paired</code>,
+<code>gate_k_se: 0.2</code>, <code>max_iterations: 4</code>, <code>stall: 0</code>, <code>max_usd: 250</code>,
+<code>max_optimizer_usd: 150</code>. Current models: agent/evaluator <code>claude-sonnet-5</code> (from
+<code>.env</code>), optimizer <code>claude-opus-4-8</code> (per-task yaml <code>optimizer_model</code>) — unless you're
+also folding in the separate Opus 4.6 migration, which is a different item, not part of
+this handoff.</p>
+<h2 id="step-6-record-results">Step 6 — record results</h2>
+<p>Report <strong>test</strong> reward, not val (see the crystallographic-wyckoff warning above — val
+can overstate). Append rows to <code>results.json</code> with <code>source: c4-v1</code> so they're
+distinguishable from the original c1/c2/c3 numbers.</p>
+<h2 id="standing-rules-carry-over-unchanged">Standing rules (carry over, unchanged)</h2>
+<ul>
+<li><code>bsub -m &lt;dedicated_host&gt;</code> per job — podman graphroot is per-user, not per-pid;
+  packing two jobs on one host corrupts state.</li>
+<li><code>bkill</code> by <strong>exact job ID only</strong>, never a wildcard — sibling Claude sessions share the
+  UID, and a bulk kill catches their jobs too.</li>
+<li>If a task's val hits 1.0 at seed, kill that run — no room left for the optimizer to
+  improve.</li>
+<li><strong>Never</strong> push to public git remotes without explicit approval.</li>
+<li><code>.env</code> is gitignored — don't commit it, in c4 or anywhere else.</li>
+</ul>
+<h2 id="out-of-scope-for-c4-handled-separately-already-parked">Out of scope for c4 (handled separately / already parked)</h2>
+<ul>
+<li>The 10 NO_SIGNAL tasks (seed=0.0 and every candidate=0.0 — no lever at all).</li>
+<li>The Opus 4.6 migration for optimizer + evaluator.</li>
+<li>Executing the train/test-split-by-shared-skill proposal (design delivered in
+  <code>../docs/train_test_split_proposal.md</code>, execution deferred).</li>
+<li>Any edit to <code>heatmap.html</code> / <code>summary.md</code> / <code>evoskill_comparison_chart.html</code>, including
+  the known <code>r.blocked</code>→<code>no_signal</code> JS field-rename bug and the 63/87-vs-64/87 pass-rate
+  discrepancy — both intentionally left as-is for now.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>
