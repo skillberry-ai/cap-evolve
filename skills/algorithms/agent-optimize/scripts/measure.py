@@ -43,6 +43,8 @@ from cap_evolve.gate import decide
 from cap_evolve.loop import SplitResult
 from cap_evolve.specfile import spec_for_run
 
+import merge_search
+
 
 def _num(sr: SplitResult | None) -> dict:
     if sr is None:
@@ -172,6 +174,14 @@ def main(argv=None) -> int:
 
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project)
+
+    # Compliance signal (SKILL.md: merge disjoint-cluster accepted candidates before any
+    # end-of-run measurement) — see merge_search.check_merge_compliance's own docstring.
+    # Never blocks; just makes an ignored requirement visible in events.jsonl/dashboard.
+    merge_warning = merge_search.check_merge_compliance(run_dir)
+    if merge_warning:
+        run_dir.log_event("merge_compliance_warning", **merge_warning)
+
     spec = spec_for_run(run_dir, project)
     n_trials = args.n_trials or int(spec.get("num_trials") or 1)
     k_se = args.k_se if args.k_se is not None else float(spec.get("gate_k_se") or 1.0)

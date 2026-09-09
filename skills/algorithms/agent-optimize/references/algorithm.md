@@ -541,6 +541,32 @@ moved, and the measurement cannot say the edit did it. Do not redesign an edit b
 there, and do not cite one as a regression — re-measure it, or ignore it. At one trial per task every
 per-task SE is 0, the bar collapses to `eps`, and the classification is exactly what it always was.
 
+## Merging accepted candidates before you finalize
+
+`merge_search.py` (#438) exists precisely because run_agentoptv3/run_agentoptv4 produced 3-6
+narrow, single-issue candidates per round and never combined them (see its own module
+docstring). SKILL.md's "Before finalizing" step makes running it, once 2+ accepted candidates
+target disjoint clusters, a REQUIRED step rather than an available tool nobody reaches for under
+time pressure — the same gap that let `screen.py` sit unused for a whole run before its own
+compliance event existed (#420 item 4).
+
+Practically: `--survivors` takes any tag under `$R/work/`, whether or not it individually cleared
+the gate — an `accepted` graph node works exactly like a screening survivor for this purpose, since
+disjointness is a property of what the edits TOUCHED, not of how they were judged. `--targets`
+(or a `mechanisms.jsonl` row per tag) supplies each one's task ids; a tag with neither is skipped,
+never silently merged on an empty objective. The merge itself pays `integrate.py`/`funcmerge.py`,
+same as any hand-driven merge (per-task-fanout.md); a real edit collision (both branches touch the
+same function differently) is refused, never force-merged.
+
+`measure.py` runs `merge_search.check_merge_compliance` at the start of every finalize-time call:
+it reads `graph.jsonl` for `accepted` nodes, their target ids (`cluster_ids` when populated, else
+the same `mechanisms.jsonl` fallback `merge_search.py` itself uses), and whether any node anywhere
+in the graph carries `edit_kind == "merge"`. Two or more accepted candidates with disjoint targets
+and NO merge attempt anywhere in the run logs `merge_compliance_warning` to `events.jsonl` — visible
+in the dashboard's activity log like any other event. It never blocks: host.py owns no algorithm
+decisions (the "orchestration freedom" invariant), so this is an audit signal for the same reason
+`agent_optimize_compliance` is one for the screen ladder, not a second enforcement mechanism.
+
 ## Caveats
 
 - With `train == val` the val gate is a *fit*, not a held-out check — only the sealed test

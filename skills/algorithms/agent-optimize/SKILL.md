@@ -252,7 +252,7 @@ a syntactic property; composition is an empirical one.
 **Measure step 2's null control twice**: the gap between two byte-identical parents is the round's bar, and a
 bar smaller than that is not a gate. `round.py` does that, and reuses the replicates while `best_id` is
 unchanged (`control_reuse`). Two more rules; the rest — ceiling arithmetic, the binomial floor,
-mechanism-vs-artifact designs, gating the sum not each addend, the sign test below the floor — is in
+mechanism-vs-artifact designs, gating the sum, the sign test — is in
 [`references/measured-lessons.md`](references/measured-lessons.md).
 
 1. **Explore fast, gate slow, gate ALONE.** The load knob is *total in-flight requests* (K processes at
@@ -266,10 +266,10 @@ mechanism-vs-artifact designs, gating the sum not each addend, the sign test bel
 
 ## Stop & seal, then MEASURE (once)
 
-Spend is not a CLI subcommand: **every 2–3 rounds** (and always before a fan-out) run `spend.py`.
+**Before you stop, merge disjoint-cluster `accepted` candidates — required** (`algorithm.md`
+§Merging). Spend is not a CLI subcommand: **every 2–3 rounds** run `spend.py`.
 Everything it reports is re-read from the run dir, never a total in your head — which keeps a `$6.00`
-cap from becoming `$6.01`. (The Stop hook re-nudges you until finalized; `goal_reminder.py`
-re-injects the same predicates even if you skip `spend.py`.)
+cap from becoming `$6.01`. (The Stop hook re-nudges until finalized; `goal_reminder.py` re-injects.)
 Stop when `recommendation` is `stop`, then produce the run's one honest table — seed vs best on
 **val**, on **train** when the spec defines one worth reporting, and on the **sealed test** split
 scored once:
