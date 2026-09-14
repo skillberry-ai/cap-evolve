@@ -298,7 +298,7 @@ count — A1 was 87 separate runs. Use `core/cap_evolve/subsample.py` (`select_s
 only promising candidates pay for the full 87, which is how this becomes affordable at all.
 Record the budget-matching arithmetic in the run's `PROJECT.md`.
 
-Two failure modes from the prior attempts to pre-empt, both already documented: the optimizer hung
+Two failure modes from the prior attempts to preempt, both already documented: the optimizer hung
 for 2 h at iteration 4, and 11 % of tasks errored on infra. Cap optimizer turns, and restrict to
 the runnable set if infra failures exceed a stated threshold — reporting that restriction rather
 than silently absorbing it.
