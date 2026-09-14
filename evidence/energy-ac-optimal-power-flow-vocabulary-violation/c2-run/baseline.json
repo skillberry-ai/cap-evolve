@@ -1,0 +1,46 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.4,
+    "stderr": 0.16329931618554522,
+    "pass_k": {
+      "1": 0.4,
+      "2": 0.13333333333333333
+    },
+    "pass_at_k": {
+      "1": 0.4,
+      "2": 0.6666666666666667
+    },
+    "per_task": [
+      {
+        "task_id": "energy-ac-optimal-power-flow",
+        "reward": 0.4,
+        "feedback": "Rollout did not complete for an infrastructure reason (no verifier reward for energy-ac-optimal-power-flow under /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c2/.capevolve/run_task_energy-ac-optimal-power-flow_v1/bench_jobs/seed/seed9 (rc=0). tail: p\nSession: 1c61ed79-f42e-429b-ac9a-1a01a5bc6390\nACP model config option 'model' set to: claude-sonnet-5\nPrompt 1/1: As an operator-planner in an Independent System Operator, you create a base case...\n  \u2192 end_turn, 22 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nverifier timed out after 240.0s\nRetrying energy-ac-optimal-power-flow (attempt 3): verifier timed out after 240.0s\nRetry backoff: 4.0s before attempt 3\nSkills injected into Dockerfile: 3 items\nStarting environment: energy-ac-optimal-power-flow\nInstalling claude-agent-acp in sandbox (timeout=900s)...\nSkills already injected via Dockerfile\nSkills distributed to 1 paths for claude-agent-acp\n[Step] scene-0-turn-0-agent scene=default role=agent\nSkipping LiteLLM proxy: native subscription auth will use agent ACP usage telemetry\nDocker process started (pid=3659174, project=energy-ac-optimal-power-flow__85acd2bb)\nContainerTransport: agent started (/opt/benchflow/bin/claude-agent-acp)\nACP agent: @agentclientprotocol/claude-agent-acp\nSession: 59bb6d9f-d1bb-44e3-8218-1ce099429c69\nACP model config option 'model' set to: claude-sonnet-5\nPrompt 1/1: As an operator-planner in an Independent System Operator, you create a base case...\n  \u2192 end_turn, 17 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 1.0}\n[PASS] energy-ac-optimal-power-flow (tools=17)\nJob complete: 1/1 (100.0%), errors=0, idle_timeouts=0, time=28.3min\n). Uncontrollable noise, not a skill defect; do not optimize against it.",
+        "n": 10,
+        "stderr": 0.16329931618554522,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 3,
+          "n_trials": 10
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 8627.837977409363
+  },
+  "best_id": "seed"
+}

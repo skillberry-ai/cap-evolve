@@ -3,6 +3,53 @@
 **Written:** 2026-08-24. **Data:** our task-by-task-43 (post-v5), EvoSkill paper
 `arXiv:2604.01687v1` (Zhang et al., 2 Apr 2026), Fig 4 headline + Fig 6 per-domain.
 
+> **2026-09-09 update — read this before citing the numbers below.**
+>
+> - **All-87 headline is now superseded here, not in this doc.** [`ui/evoskill_comparison_chart_87.html`](../ui/evoskill_comparison_chart_87.html)
+>   has our full 87-task run (73.6% / 83.1% excl. no-signal, vs EvoSkill's 71.1%) — that supersedes
+>   the 43-task pass-rate numbers in the TL;DR and per-category tables below. The **methodology
+>   comparison table** and **Path A-D discussion** in this doc are still the current analysis and
+>   are not duplicated anywhere else; keep reading past the numbers for those.
+> - **arXiv version mismatch, unresolved.** This doc and `ui/evoskill_comparison_chart_87.html`
+>   both cite `arXiv:2604.01687v1`. [`proposals/cap-evolve-research-design.html`](../proposals/cap-evolve-research-design.html)
+>   (Osher's research-design doc, added 2026-09-09) cites the same arXiv ID as **v3, "COLM
+>   accepted," under the name CoEvoSkills** — same 71.1% Claude-Code number, so this is almost
+>   certainly the same paper at a later revision, not a different paper. **Not yet verified**
+>   against the actual v3 PDF: whether the 85-task count, baseline percentages (53.5% curated
+>   skills / 30.6% no skill / 41.1% without surrogate verifier), or methodology changed between v1
+>   and v3. Re-derive this comparison against v3 before the number goes in a paper.
+> - **Task-count mismatch, newly noticed.** Osher's doc gives CoEvoSkills' task count as **85**;
+>   we run **87**. Unclear whether that's 2 tasks added to SkillsBench since their v1/v3 snapshot,
+>   2 tasks they excluded, or a benchmark-version drift. Needs a direct diff of task IDs, not an
+>   assumption either way — a 2-task gap is exactly the size that could swing a percentage point.
+> - **Path D's "match models" question has been asked again, this time by the user, for a
+>   different purpose.** Path D below proposes running cap-evolve with Opus 4.6 as agent purely to
+>   *strengthen this comparison*. The live question in `docs/specs/experiments_plan_v1.md`
+>   (vocabulary-of-skills plan) is different: whether to switch the vocabulary experiments'
+>   optimizer *and* evaluator to Opus 4.6 to match CoEvoSkills. Recommendation there: **don't
+>   switch the main A0-A4 run** — it would break comparability with our own already-collected
+>   c1-c4 baselines (Sonnet-5 agent + Opus-4.8 optimizer, see `ui/heatmap.html`'s subtitle), which
+>   is the comparison the vocabulary paper actually needs. If matching CoEvoSkills' model choice
+>   for its own sake is wanted, run it as a small confirmatory side-arm (e.g. A0f + A2f only, on a
+>   subset), not a re-run of the whole design. Same conclusion as Path D's "~2x current per-task
+>   spend" cost note below, now with the added cost that the whole design would need re-running,
+>   not just the EvoSkill-comparison arm.
+> - **Whether train==val==test undermines comparability**: Osher's doc, discussing CoEvoSkills
+>   itself, flags exactly this concern about *their* setup — "hidden test contents do not imply
+>   unseen task identities: repeated oracle feedback is supervision. Distinguish task adaptation
+>   from held-out-task generalization." That is the same limitation our vocabulary plan already
+>   states explicitly for itself (see that plan's Risks section). Net effect: **both our numbers
+>   and CoEvoSkills' are in-sample/task-adaptation numbers, not held-out-generalization numbers**,
+>   which is actually a point of comparability, not a new gap — but it means neither result should
+>   be reported as evidence of generalization to unseen tasks.
+> - **Osher's doc also raises a broader question**: whether a fuller related-work survey is needed
+>   before running the vocabulary experiments. Recommendation: no — that doc's own bibliography
+>   (annotated, ~51 papers) already covers this ground for the *optimizer-design* research
+>   questions (granularity, edit surfaces, feedback) it was written for. The vocabulary-of-skills
+>   plan asks a narrower, largely orthogonal question (does a fixed vocabulary retain
+>   per-task specialization) and doesn't need that survey re-run to proceed; it should cite
+>   `proposals/cap-evolve-research-design.html` as related work rather than duplicate its survey.
+
 ## TL;DR
 
 **Under EvoSkill's own pass_rate metric** (proportion of tasks with reward = 1.0):

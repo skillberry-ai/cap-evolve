@@ -38,7 +38,7 @@ skill number, so the numbering (1&ndash;196) covers only actual skills. Task num
 and skill numbers follow the order used in <code>SKILLSBENCH_INVENTORY.md</code> (category order,
 then first-appearance order).
 </div>
-<div id="toc"><a href="#table-a">Table A: tasks &rarr; skills</a> <a href="#table-b">Table B: skills &rarr; tasks</a> <a href="#table-c">Table C: train/test split</a> <a href="#boilerplate">Boilerplate entries</a></div>
+<div id="toc"><a href="#table-a">Table A: tasks &rarr; skills</a> <a href="#table-b">Table B: skills &rarr; tasks</a> <a href="#table-c">Table C: train/test split</a> <a href="#table-d-per-task-skill-capability-changes-best-candidate-vs-seed">Table D: capability changes</a> <a href="#table-e-skill-level-rollup-cross-task-conflicts">Table E: cross-task conflicts</a> <a href="#boilerplate">Boilerplate entries</a></div>
 
 <h2 id="table-a">Table A &mdash; all 87 tasks, by category, with skill numbers</h2>
 <h3>software-engineering (16 tasks)</h3>
@@ -406,4 +406,181 @@ then first-appearance order).
 <tr><td><code>README.md</code></td><td class='num'>1</td><td>71</td></tr>
 <tr><td><code>TESTING.md</code></td><td class='num'>1</td><td>71</td></tr>
 </tbody></table>
+<h2 id="capability-change-classification-tables-d-and-e">Capability-change classification (Tables D and E)</h2>
+<p>For each of the 87 tasks, <code>ui/heatmap.html</code>'s <code>DATA</code> array names the accepted best candidate (<code>best_tag</code>, <code>"seed"</code> if the optimizer never improved on seed). For every task where <code>best_tag != "seed"</code> (52 tasks), this walks that task's run directory across the six c1-c5/v2 worktrees, diffs <code>candidates/seed/&lt;skill&gt;/</code> against <code>candidates/&lt;best_tag&gt;/&lt;skill&gt;/</code> file-by-file (excluding cap-evolve's own <code>INSTRUCTIONS.md</code>/<code>PROCESS.md</code>), and classifies every changed file per skill. <strong>Row key is (task, skill)</strong>, not (task, best-candidate) alone: a task has exactly one accepted candidate, but that one candidate snapshot can touch several skill packages at once (e.g. <code>energy-ac-optimal-power-flow</code>'s <code>cand_0003</code> touches both <code>ac-branch-pi-model</code> and <code>casadi-ipopt-nlp</code>), so a single task-level row would collapse independent per-skill changes into one ambiguous line. Best-candidate ID and its val score are metadata columns on each row, constant across all of a task's rows.</p>
+<p><strong>Disambiguation</strong>: 14 of the 52 changed tasks have more than one <code>run_task_&lt;id&gt;*</code> directory across the six worktrees (reruns, corrupted batches, infra-broken attempts). Each run's <code>state.json.best_id</code> is compared against <code>heatmap.html</code>'s recorded <code>best_tag</code> for that task; a unique match is used. Where more than one run matches (<code>energy-ac-optimal-power-flow</code>: both its <code>v2</code> and its <code>v1_CORRUPTED_batch3</code> run report the same <code>best_id</code>), the non-corrupted run is preferred — for that task this agrees with <code>heatmap.html</code>'s own <code>source: "c2-v2"</code> field, i.e. it independently confirms the corrupted run is correctly excluded. <strong>This script does not attempt to adjudicate <code>prev</code>-vs-<code>curr</code> for the 7 tasks with a <code>DATA_C4</code> rerun entry</strong> (<code>crystallographic-wyckoff-position-analysis</code>, <code>energy-market-pricing</code>, <code>fix-erlang-ssh-cve</code>, <code>flink-query</code>, <code>invoice-fraud-detection</code>, <code>organize-messy-files</code>, <code>shock-analysis-demand</code>) — it takes whatever the main <code>DATA</code> array already records as authoritative, since several of those reruns are regressions or fall back to <code>best_tag: "seed"</code> rather than uniformly superseding the original run, so "latest wins" is not a safe blanket rule there. That reconciliation is a separate, open question from this classification and is not resolved here.</p>
+<p><strong>Columns</strong>: <code>skill-added</code>/<code>skill-deleted</code> — the whole top-level skill directory is new/missing relative to seed (blocked once <code>fixed_vocabulary: true</code>, per Step 2, ships). <code>skill-prompt</code> — <code>SKILL.md</code> content changed (0/1). <code>skill-package</code> — count of added/removed/edited non-<code>SKILL.md</code>, non-script package files (<code>references/*.md</code>, <code>forms.md</code>, etc.). <code>tool-added</code>/<code>tool-deleted</code>/ <code>tool-edited</code> — counts of added/removed/edited files under <code>scripts/</code> or a top-level executable script (e.g. <code>recalc.py</code>). <code>other</code> — anything unclassified (empty in this data).</p>
+<p>One task, <code>fix-erlang-ssh-cve</code>, produced zero package-level file changes despite its accepted candidate scoring above seed (0.6 -&gt; 0.9) — the improvement is not attributable to any skill edit in this diff; see Unresolved below.</p>
+<h2 id="table-d-per-task-skill-capability-changes-best-candidate-vs-seed">Table D — per-(task, skill) capability changes, best candidate vs seed</h2>
+<table><thead><tr><th>task</th><th>skill</th><th>best_candidate</th><th>val</th><th>skill-added</th><th>skill-deleted</th><th>skill-prompt</th><th>skill-package</th><th>tool-added</th><th>tool-deleted</th><th>tool-edited</th><th>other</th></tr></thead><tbody>
+<tr><td>ada-bathroom-plan-repair</td><td>ada-plan-view-accessibility</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ada-bathroom-plan-repair</td><td>architectural-dxf-extraction</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ada-bathroom-plan-repair</td><td>geometric-layout-repair</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>adaptive-cruise-control</td><td>pid-controller</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>adaptive-cruise-control</td><td>simulation-metrics</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>adaptive-cruise-control</td><td>vehicle-dynamics</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>azure-bgp-oscillation-route-leak</td><td>azure-bgp</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>bike-rebalance</td><td>logistics-rules-to-optimization</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>bike-rebalance</td><td>scip-opt</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>civ6-adjacency-optimizer</td><td>civ6lib</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>3</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>court-form-filling</td><td>pdf</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>crystallographic-wyckoff-position-analysis</td><td>pymatgen</td><td>cand_0002</td><td>0.835</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>data-to-d3</td><td>d3-visualization</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>debug-trl-grpo</td><td>grpo</td><td>cand_0004</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>debug-trl-grpo</td><td>rl-post-training</td><td>cand_0004</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>debug-trl-grpo</td><td>trl</td><td>cand_0004</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>dynamic-object-aware-egomotion</td><td>dyn-object-masks</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>dynamic-object-aware-egomotion</td><td>egomotion-estimation</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>earthquake-plate-calculation</td><td>geospatial-analysis</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>edit-pdf</td><td>pdf-editing</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-ac-optimal-power-flow</td><td>ac-branch-pi-model</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-ac-optimal-power-flow</td><td>casadi-ipopt-nlp</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-market-pricing</td><td>dc-power-flow</td><td>cand_0002</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-market-pricing</td><td>economic-dispatch</td><td>cand_0002</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-market-pricing</td><td>locational-marginal-prices</td><td>cand_0002</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-market-pricing</td><td>power-flow-data</td><td>cand_0002</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-unit-commitment</td><td>milp-solver-workflow</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>energy-unit-commitment</td><td>unit-commitment-operating-rules</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>enterprise-information-search</td><td>enterprise-artifact-search</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>exam-block-sequencing</td><td>mip-solver-and-solution-audit</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>exam-block-sequencing</td><td>ordered-window-sequencing-mip</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>exceltable-in-ppt</td><td>pptx</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>exceltable-in-ppt</td><td>xlsx</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>flink-query</td><td>senior-data-engineer</td><td>cand_0004</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>grid-dispatch-operator</td><td>dc-power-flow</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>grid-dispatch-operator</td><td>economic-dispatch</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>grid-dispatch-operator</td><td>power-flow-data</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>invoice-fraud-detection</td><td>fuzzy-match</td><td>cand_0002</td><td>0.4</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>jpg-ocr-stat</td><td>image-ocr</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lab-unit-harmonization</td><td>lab-unit-harmonization</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lake-warming-attribution</td><td>contribution-analysis</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lake-warming-attribution</td><td>meteorology-driver-classification</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lake-warming-attribution</td><td>trend-analysis</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>latex-formula-extraction</td><td>marker</td><td>cand_0004</td><td>0.8</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lean4-proof</td><td>lean4-theorem-proving</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>manufacturing-codebook-normalization</td><td>manufacturing-failure-reason-codebook-normalization</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>manufacturing-equipment-maintenance</td><td>reflow-machine-maintenance-guidance</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>manufacturing-equipment-maintenance</td><td>reflow-profile-compliance-toolkit</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>manufacturing-fjsp-optimization</td><td>fjsp-baseline-repair-with-downtime-and-policy</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>multilingual-video-dubbing</td><td>text-to-speech</td><td>cand_0004</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>organize-messy-files</td><td>file-organizer</td><td>cand_0003</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>paratransit-routing</td><td>ortools-pickup-delivery-routing</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>paratransit-routing</td><td>ortools-routing-modeling</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pddl-airport-planning</td><td>pddl-skills</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pdf-excel-diff</td><td>pdf</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>r2r-mpc-control</td><td>finite-horizon-lqr</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>r2r-mpc-control</td><td>mpc-horizon-tuning</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>react-performance-debugging</td><td>react-best-practices</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>2</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>reserves-at-risk-calc</td><td>xlsx</td><td>cand_0004</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>sales-pivot-analysis</td><td>xlsx</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>sec-financial-report</td><td>13f-analyzer</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>setup-fuzzing-py</td><td>discover-important-function</td><td>cand_0004</td><td>0.549</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>setup-fuzzing-py</td><td>fuzzing-python</td><td>cand_0004</td><td>0.549</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>shock-analysis-demand</td><td>xlsx</td><td>cand_0004</td><td>0.9</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>shock-analysis-supply</td><td>xlsx</td><td>cand_0004</td><td>0.3</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>simpo-code-reproduction</td><td>nlp-research-repo-package-installment</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>software-dependency-audit</td><td>trivy-offline-vulnerability-scanning</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>software-dependency-audit</td><td>vulnerability-csv-reporting</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syzkaller-ppdev-syzlang</td><td>syz-extract-constants</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syzkaller-ppdev-syzlang</td><td>syzkaller-build-loop</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syzkaller-ppdev-syzlang</td><td>syzlang-ioctl-basics</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>threejs-structure-parser</td><td>threejs</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>tictoc-unnecessary-abort-detection</td><td>transaction-trace-analysis</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>travel-planning</td><td>search-attractions</td><td>cand_0003</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>video-silence-remover</td><td>pause-detector</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>video-silence-remover</td><td>silence-detector</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>video-silence-remover</td><td>video-processor</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>weighted-gdp-calc</td><td>xlsx</td><td>cand_0001</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>xlsx-recover-data</td><td>data-reconciliation</td><td>cand_0002</td><td>1.0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td><strong>TOTAL</strong></td><td>70 distinct</td><td>51 tasks</td><td></td><td>0</td><td>0</td><td>78</td><td>7</td><td>52</td><td>0</td><td>7</td><td>0</td></tr>
+<h2 id="table-e-skill-level-rollup-cross-task-conflicts">Table E — skill-level rollup, cross-task conflicts</h2>
+<tr><td>skill</td><td>tasks touched</td><td>conflict</td><td>skill-added</td><td>skill-deleted</td><td>skill-prompt</td><td>skill-package</td><td>tool-added</td><td>tool-deleted</td><td>tool-edited</td><td>other</td></tr>
+<tr><td>13f-analyzer</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>ac-branch-pi-model</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ada-plan-view-accessibility</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>architectural-dxf-extraction</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>azure-bgp</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>casadi-ipopt-nlp</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>civ6lib</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>3</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>contribution-analysis</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>d3-visualization</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>data-reconciliation</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>dc-power-flow</td><td>2</td><td>yes</td><td>0</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>discover-important-function</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>dyn-object-masks</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>economic-dispatch</td><td>2</td><td>yes</td><td>0</td><td>0</td><td>2</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>egomotion-estimation</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>enterprise-artifact-search</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>file-organizer</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>finite-horizon-lqr</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>fjsp-baseline-repair-with-downtime-and-policy</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>fuzzing-python</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>fuzzy-match</td><td>1</td><td>vocab-violation¹</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>geometric-layout-repair</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>geospatial-analysis</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>grpo</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>image-ocr</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lab-unit-harmonization</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lean4-theorem-proving</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>locational-marginal-prices</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>logistics-rules-to-optimization</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>manufacturing-failure-reason-codebook-normalization</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>marker</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>meteorology-driver-classification</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>milp-solver-workflow</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>mip-solver-and-solution-audit</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>mpc-horizon-tuning</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>nlp-research-repo-package-installment</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ordered-window-sequencing-mip</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ortools-pickup-delivery-routing</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>ortools-routing-modeling</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pause-detector</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>pddl-skills</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pdf</td><td>2</td><td>yes</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pdf-editing</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pid-controller</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>power-flow-data</td><td>2</td><td>yes</td><td>0</td><td>0</td><td>2</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pptx</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>pymatgen</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>react-best-practices</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>2</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>reflow-machine-maintenance-guidance</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>reflow-profile-compliance-toolkit</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>rl-post-training</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>scip-opt</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>search-attractions</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>senior-data-engineer</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>silence-detector</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>simulation-metrics</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syz-extract-constants</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syzkaller-build-loop</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>syzlang-ioctl-basics</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>text-to-speech</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>threejs</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><td>transaction-trace-analysis</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>trend-analysis</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>trivy-offline-vulnerability-scanning</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>trl</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>unit-commitment-operating-rules</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>vehicle-dynamics</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>video-processor</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>vulnerability-csv-reporting</td><td>1</td><td></td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>xlsx</td><td>6</td><td>yes</td><td>0</td><td>0</td><td>6</td><td>2</td><td>4</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td><strong>TOTAL</strong></td><td>70 skills</td><td>6 conflicted</td><td>0</td><td>0</td><td>78</td><td>7</td><td>52</td><td>0</td><td>7</td><td>0</td></tr>
+</tbody></table>
+<p>¹ <code>fuzzy-match</code> is not a clean cross-task conflict under the DATA-authoritative source used here (its seed only serves <code>invoice-fraud-detection</code>); it is counted with the conflict set because a separate, since-excluded candidate for <code>energy-ac-optimal-power-flow</code> (the <code>v1_CORRUPTED_batch3</code> run, superseded by <code>v2</code> in <code>heatmap.html</code>'s own <code>source</code> field) invented an out-of-vocabulary <code>fuzzy-match</code> package — see <code>evidence/energy-ac-optimal-power-flow-vocabulary-violation/</code>. This is the 6th skill in the plan's original "6 skills edited under 2+ tasks" count: 5 clean conflicts (<code>dc-power-flow</code>, <code>economic-dispatch</code>, <code>pdf</code>, <code>power-flow-data</code>, <code>xlsx</code>) plus this one vocabulary-violation case.</p>
+<h2 id="provenance-conflicted-vocab-violation-skills">Provenance — conflicted / vocab-violation skills</h2>
+<p><strong>dc-power-flow</strong></p>
+<ul class='testlist'><li><code>energy-market-pricing</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2</code> / <code>cand_0002</code> (val 0.9)</li><li><code>grid-dispatch-operator</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1</code> / <code>cand_0002</code> (val 1.0)</li></ul>
+<p><strong>economic-dispatch</strong></p>
+<ul class='testlist'><li><code>energy-market-pricing</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2</code> / <code>cand_0002</code> (val 0.9)</li><li><code>grid-dispatch-operator</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1</code> / <code>cand_0002</code> (val 1.0)</li></ul>
+<p><strong>fuzzy-match</strong></p>
+<ul class='testlist'><li><code>invoice-fraud-detection</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_invoice-fraud-detection_v1</code> / <code>cand_0002</code> (val 0.4)</li><li><code>energy-ac-optimal-power-flow</code> (excluded) -&gt; <code>intake_skillbench_c2/.capevolve/run_task_energy-ac-optimal-power-flow_v1_CORRUPTED_batch3</code> / <code>cand_0002</code>/<code>cand_0003</code> — out-of-vocabulary, superseded by <code>v2</code> in <code>heatmap.html</code></li></ul>
+<p><strong>pdf</strong></p>
+<ul class='testlist'><li><code>court-form-filling</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_court-form-filling_v1</code> / <code>cand_0002</code> (val 1.0)</li><li><code>pdf-excel-diff</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_pdf-excel-diff_v1_KILLED_ceiling_reached_1.0</code> / <code>cand_0001</code> (val 1.0)</li></ul>
+<p><strong>power-flow-data</strong></p>
+<ul class='testlist'><li><code>energy-market-pricing</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2</code> / <code>cand_0002</code> (val 0.9)</li><li><code>grid-dispatch-operator</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1</code> / <code>cand_0002</code> (val 1.0)</li></ul>
+<p><strong>xlsx</strong></p>
+<ul class='testlist'><li><code>exceltable-in-ppt</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_exceltable-in-ppt_v1_KILLED_ceiling_reached_1.0</code> / <code>cand_0001</code> (val 1.0)</li><li><code>reserves-at-risk-calc</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_reserves-at-risk-calc_v2</code> / <code>cand_0004</code> (val 1.0)</li><li><code>sales-pivot-analysis</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_sales-pivot-analysis_v1_KILLED_ceiling_reached_1.0</code> / <code>cand_0001</code> (val 1.0)</li><li><code>shock-analysis-demand</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_shock-analysis-demand_v2</code> / <code>cand_0004</code> (val 0.9)</li><li><code>shock-analysis-supply</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_shock-analysis-supply_v2</code> / <code>cand_0004</code> (val 0.3)</li><li><code>weighted-gdp-calc</code> -&gt; <code>intake_skillbench_c2/.capevolve/run_task_weighted-gdp-calc_v1_KILLED_ceiling_reached_1.0</code> / <code>cand_0001</code> (val 1.0)</li></ul>
+<h2 id="unresolved">Unresolved</h2>
+<ul class='testlist'><li>fix-erlang-ssh-cve: best_tag=cand_0003 (val 0.9) in run_task_fix-erlang-ssh-cve_v1_DONE produced no package-level file changes vs seed (score change not attributable to a skill edit; possibly rollout/eval variance)</li></ul>
 </body></html>

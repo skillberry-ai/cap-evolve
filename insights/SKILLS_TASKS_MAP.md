@@ -395,3 +395,245 @@ For each category: a **test** subset of tasks whose skills all also appear in at
 | `LICENSE` | 1 | 71 |
 | `README.md` | 1 | 71 |
 | `TESTING.md` | 1 | 71 |
+
+## Capability-change classification (Tables D and E)
+
+For each of the 87 tasks, `ui/heatmap.html`'s `DATA` array names the accepted best candidate
+(`best_tag`, `"seed"` if the optimizer never improved on seed). For every task where
+`best_tag != "seed"` (52 tasks), this walks that task's run directory across the six
+c1-c5/v2 worktrees, diffs `candidates/seed/<skill>/` against `candidates/<best_tag>/<skill>/`
+file-by-file (excluding cap-evolve's own `INSTRUCTIONS.md`/`PROCESS.md`), and classifies every
+changed file per skill. **Row key is (task, skill)**, not (task, best-candidate) alone: a
+task has exactly one accepted candidate, but that one candidate snapshot can touch several skill
+packages at once (e.g. `energy-ac-optimal-power-flow`'s `cand_0003` touches both
+`ac-branch-pi-model` and `casadi-ipopt-nlp`), so a single task-level row would collapse
+independent per-skill changes into one ambiguous line. Best-candidate ID and its val score are
+metadata columns on each row, constant across all of a task's rows.
+
+**Disambiguation**: 14 of the 52 changed tasks have more than one `run_task_<id>*` directory
+across the six worktrees (reruns, corrupted batches, infra-broken attempts). Each run's
+`state.json.best_id` is compared against `heatmap.html`'s recorded `best_tag` for that task; a
+unique match is used. Where more than one run matches (`energy-ac-optimal-power-flow`: both its
+`v2` and its `v1_CORRUPTED_batch3` run report the same `best_id`), the non-corrupted run is
+preferred — for that task this agrees with `heatmap.html`'s own `source: "c2-v2"` field, i.e. it
+independently confirms the corrupted run is correctly excluded. **This script does not attempt
+to adjudicate `prev`-vs-`curr` for the 7 tasks with a `DATA_C4` rerun entry**
+(`crystallographic-wyckoff-position-analysis`, `energy-market-pricing`, `fix-erlang-ssh-cve`,
+`flink-query`, `invoice-fraud-detection`, `organize-messy-files`, `shock-analysis-demand`) — it takes whatever
+the main `DATA` array already records as authoritative, since several of those reruns are
+regressions or fall back to `best_tag: "seed"` rather than uniformly superseding the original
+run, so "latest wins" is not a safe blanket rule there. That reconciliation is a separate,
+open question from this classification and is not resolved here.
+
+**Columns**: `skill-added`/`skill-deleted` — the whole top-level skill directory is new/missing
+relative to seed (blocked once `fixed_vocabulary: true`, per Step 2, ships). `skill-prompt` —
+`SKILL.md` content changed (0/1). `skill-package` — count of added/removed/edited non-`SKILL.md`,
+non-script package files (`references/*.md`, `forms.md`, etc.). `tool-added`/`tool-deleted`/
+`tool-edited` — counts of added/removed/edited files under `scripts/` or a top-level executable
+script (e.g. `recalc.py`). `other` — anything unclassified (empty in this data).
+
+One task, `fix-erlang-ssh-cve`, produced zero package-level file changes despite its accepted
+candidate scoring above seed (0.6 -> 0.9) — the improvement is not attributable to any skill edit
+in this diff; see Unresolved below.
+
+
+## Table D — per-(task, skill) capability changes, best candidate vs seed
+
+| task | skill | best_candidate | val | skill-added | skill-deleted | skill-prompt | skill-package | tool-added | tool-deleted | tool-edited | other |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| ada-bathroom-plan-repair | ada-plan-view-accessibility | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| ada-bathroom-plan-repair | architectural-dxf-extraction | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| ada-bathroom-plan-repair | geometric-layout-repair | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| adaptive-cruise-control | pid-controller | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| adaptive-cruise-control | simulation-metrics | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| adaptive-cruise-control | vehicle-dynamics | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| azure-bgp-oscillation-route-leak | azure-bgp | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| bike-rebalance | logistics-rules-to-optimization | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| bike-rebalance | scip-opt | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| civ6-adjacency-optimizer | civ6lib | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 3 | 0 | 0 | 0 |
+| court-form-filling | pdf | cand_0002 | 1.0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
+| crystallographic-wyckoff-position-analysis | pymatgen | cand_0002 | 0.835 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| data-to-d3 | d3-visualization | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| debug-trl-grpo | grpo | cand_0004 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| debug-trl-grpo | rl-post-training | cand_0004 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| debug-trl-grpo | trl | cand_0004 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| dynamic-object-aware-egomotion | dyn-object-masks | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| dynamic-object-aware-egomotion | egomotion-estimation | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| earthquake-plate-calculation | geospatial-analysis | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| edit-pdf | pdf-editing | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| energy-ac-optimal-power-flow | ac-branch-pi-model | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| energy-ac-optimal-power-flow | casadi-ipopt-nlp | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| energy-market-pricing | dc-power-flow | cand_0002 | 0.9 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| energy-market-pricing | economic-dispatch | cand_0002 | 0.9 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| energy-market-pricing | locational-marginal-prices | cand_0002 | 0.9 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| energy-market-pricing | power-flow-data | cand_0002 | 0.9 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| energy-unit-commitment | milp-solver-workflow | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| energy-unit-commitment | unit-commitment-operating-rules | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| enterprise-information-search | enterprise-artifact-search | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| exam-block-sequencing | mip-solver-and-solution-audit | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| exam-block-sequencing | ordered-window-sequencing-mip | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| exceltable-in-ppt | pptx | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| exceltable-in-ppt | xlsx | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| flink-query | senior-data-engineer | cand_0004 | 0.9 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+| grid-dispatch-operator | dc-power-flow | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| grid-dispatch-operator | economic-dispatch | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| grid-dispatch-operator | power-flow-data | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| invoice-fraud-detection | fuzzy-match | cand_0002 | 0.4 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| jpg-ocr-stat | image-ocr | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lab-unit-harmonization | lab-unit-harmonization | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lake-warming-attribution | contribution-analysis | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lake-warming-attribution | meteorology-driver-classification | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| lake-warming-attribution | trend-analysis | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| latex-formula-extraction | marker | cand_0004 | 0.8 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lean4-proof | lean4-theorem-proving | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| manufacturing-codebook-normalization | manufacturing-failure-reason-codebook-normalization | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| manufacturing-equipment-maintenance | reflow-machine-maintenance-guidance | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| manufacturing-equipment-maintenance | reflow-profile-compliance-toolkit | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| manufacturing-fjsp-optimization | fjsp-baseline-repair-with-downtime-and-policy | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| multilingual-video-dubbing | text-to-speech | cand_0004 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| organize-messy-files | file-organizer | cand_0003 | 0.9 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| paratransit-routing | ortools-pickup-delivery-routing | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| paratransit-routing | ortools-routing-modeling | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| pddl-airport-planning | pddl-skills | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| pdf-excel-diff | pdf | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| r2r-mpc-control | finite-horizon-lqr | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| r2r-mpc-control | mpc-horizon-tuning | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| react-performance-debugging | react-best-practices | cand_0001 | 1.0 | 0 | 0 | 1 | 2 | 1 | 0 | 0 | 0 |
+| reserves-at-risk-calc | xlsx | cand_0004 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| sales-pivot-analysis | xlsx | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| sec-financial-report | 13f-analyzer | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| setup-fuzzing-py | discover-important-function | cand_0004 | 0.549 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| setup-fuzzing-py | fuzzing-python | cand_0004 | 0.549 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| shock-analysis-demand | xlsx | cand_0004 | 0.9 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| shock-analysis-supply | xlsx | cand_0004 | 0.3 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| simpo-code-reproduction | nlp-research-repo-package-installment | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| software-dependency-audit | trivy-offline-vulnerability-scanning | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| software-dependency-audit | vulnerability-csv-reporting | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| syzkaller-ppdev-syzlang | syz-extract-constants | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| syzkaller-ppdev-syzlang | syzkaller-build-loop | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| syzkaller-ppdev-syzlang | syzlang-ioctl-basics | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| threejs-structure-parser | threejs | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 0 |
+| tictoc-unnecessary-abort-detection | transaction-trace-analysis | cand_0001 | 1.0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| travel-planning | search-attractions | cand_0003 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 0 |
+| video-silence-remover | pause-detector | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| video-silence-remover | silence-detector | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| video-silence-remover | video-processor | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| weighted-gdp-calc | xlsx | cand_0001 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| xlsx-recover-data | data-reconciliation | cand_0002 | 1.0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| **TOTAL** | 70 distinct | 51 tasks |  | 0 | 0 | 78 | 7 | 52 | 0 | 7 | 0 |
+
+
+## Table E — skill-level rollup, cross-task conflicts
+
+| skill | tasks touched | conflict | skill-added | skill-deleted | skill-prompt | skill-package | tool-added | tool-deleted | tool-edited | other |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 13f-analyzer | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| ac-branch-pi-model | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| ada-plan-view-accessibility | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| architectural-dxf-extraction | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| azure-bgp | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| casadi-ipopt-nlp | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| civ6lib | 1 |  | 0 | 0 | 1 | 0 | 3 | 0 | 0 | 0 |
+| contribution-analysis | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| d3-visualization | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| data-reconciliation | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| dc-power-flow | 2 | yes | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| discover-important-function | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| dyn-object-masks | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| economic-dispatch | 2 | yes | 0 | 0 | 2 | 0 | 2 | 0 | 0 | 0 |
+| egomotion-estimation | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| enterprise-artifact-search | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| file-organizer | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| finite-horizon-lqr | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| fjsp-baseline-repair-with-downtime-and-policy | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| fuzzing-python | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| fuzzy-match | 1 | vocab-violation¹ | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| geometric-layout-repair | 1 |  | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| geospatial-analysis | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| grpo | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| image-ocr | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lab-unit-harmonization | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| lean4-theorem-proving | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| locational-marginal-prices | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| logistics-rules-to-optimization | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| manufacturing-failure-reason-codebook-normalization | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| marker | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| meteorology-driver-classification | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| milp-solver-workflow | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| mip-solver-and-solution-audit | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| mpc-horizon-tuning | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| nlp-research-repo-package-installment | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| ordered-window-sequencing-mip | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| ortools-pickup-delivery-routing | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| ortools-routing-modeling | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| pause-detector | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| pddl-skills | 1 |  | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| pdf | 2 | yes | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| pdf-editing | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| pid-controller | 1 |  | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| power-flow-data | 2 | yes | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 0 |
+| pptx | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| pymatgen | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| react-best-practices | 1 |  | 0 | 0 | 1 | 2 | 1 | 0 | 0 | 0 |
+| reflow-machine-maintenance-guidance | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| reflow-profile-compliance-toolkit | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| rl-post-training | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| scip-opt | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| search-attractions | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 0 |
+| senior-data-engineer | 1 |  | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+| silence-detector | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| simulation-metrics | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| syz-extract-constants | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| syzkaller-build-loop | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| syzlang-ioctl-basics | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| text-to-speech | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| threejs | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 0 |
+| transaction-trace-analysis | 1 |  | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| trend-analysis | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| trivy-offline-vulnerability-scanning | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| trl | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| unit-commitment-operating-rules | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| vehicle-dynamics | 1 |  | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
+| video-processor | 1 |  | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
+| vulnerability-csv-reporting | 1 |  | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| xlsx | 6 | yes | 0 | 0 | 6 | 2 | 4 | 0 | 0 | 0 |
+| **TOTAL** | 70 skills | 6 conflicted | 0 | 0 | 78 | 7 | 52 | 0 | 7 | 0 |
+
+¹ `fuzzy-match` is not a clean cross-task conflict under the DATA-authoritative source used here (its seed only serves `invoice-fraud-detection`); it is counted with the conflict set because a separate, since-excluded candidate for `energy-ac-optimal-power-flow` (the `v1_CORRUPTED_batch3` run, superseded by `v2` in `heatmap.html`'s own `source` field) invented an out-of-vocabulary `fuzzy-match` package — see `evidence/energy-ac-optimal-power-flow-vocabulary-violation/`. This is the 6th skill in the plan's original "6 skills edited under 2+ tasks" count: 5 clean conflicts (`dc-power-flow`, `economic-dispatch`, `pdf`, `power-flow-data`, `xlsx`) plus this one vocabulary-violation case.
+
+
+## Provenance — conflicted / vocab-violation skills
+
+
+**dc-power-flow**
+- `energy-market-pricing` -> `intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2` / `cand_0002` (val 0.9)
+- `grid-dispatch-operator` -> `intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1` / `cand_0002` (val 1.0)
+
+**economic-dispatch**
+- `energy-market-pricing` -> `intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2` / `cand_0002` (val 0.9)
+- `grid-dispatch-operator` -> `intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1` / `cand_0002` (val 1.0)
+
+**fuzzy-match**
+- `invoice-fraud-detection` -> `intake_skillbench_c2/.capevolve/run_task_invoice-fraud-detection_v1` / `cand_0002` (val 0.4)
+- `energy-ac-optimal-power-flow` (excluded) -> `intake_skillbench_c2/.capevolve/run_task_energy-ac-optimal-power-flow_v1_CORRUPTED_batch3` / `cand_0002`/`cand_0003` — out-of-vocabulary, superseded by `v2` in `heatmap.html`
+
+**pdf**
+- `court-form-filling` -> `intake_skillbench_c2/.capevolve/run_task_court-form-filling_v1` / `cand_0002` (val 1.0)
+- `pdf-excel-diff` -> `intake_skillbench_c2/.capevolve/run_task_pdf-excel-diff_v1_KILLED_ceiling_reached_1.0` / `cand_0001` (val 1.0)
+
+**power-flow-data**
+- `energy-market-pricing` -> `intake_skillbench_c2/.capevolve/run_task_energy-market-pricing_v2` / `cand_0002` (val 0.9)
+- `grid-dispatch-operator` -> `intake_skillbench_c2/.capevolve/run_task_grid-dispatch-operator_v1` / `cand_0002` (val 1.0)
+
+**xlsx**
+- `exceltable-in-ppt` -> `intake_skillbench_c2/.capevolve/run_task_exceltable-in-ppt_v1_KILLED_ceiling_reached_1.0` / `cand_0001` (val 1.0)
+- `reserves-at-risk-calc` -> `intake_skillbench_c2/.capevolve/run_task_reserves-at-risk-calc_v2` / `cand_0004` (val 1.0)
+- `sales-pivot-analysis` -> `intake_skillbench_c2/.capevolve/run_task_sales-pivot-analysis_v1_KILLED_ceiling_reached_1.0` / `cand_0001` (val 1.0)
+- `shock-analysis-demand` -> `intake_skillbench_c2/.capevolve/run_task_shock-analysis-demand_v2` / `cand_0004` (val 0.9)
+- `shock-analysis-supply` -> `intake_skillbench_c2/.capevolve/run_task_shock-analysis-supply_v2` / `cand_0004` (val 0.3)
+- `weighted-gdp-calc` -> `intake_skillbench_c2/.capevolve/run_task_weighted-gdp-calc_v1_KILLED_ceiling_reached_1.0` / `cand_0001` (val 1.0)
+
+
+## Unresolved
+
+- fix-erlang-ssh-cve: best_tag=cand_0003 (val 0.9) in run_task_fix-erlang-ssh-cve_v1_DONE produced no package-level file changes vs seed (score change not attributable to a skill edit; possibly rollout/eval variance)

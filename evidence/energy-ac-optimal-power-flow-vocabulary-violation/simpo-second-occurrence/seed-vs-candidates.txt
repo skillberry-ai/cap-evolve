@@ -1,0 +1,9 @@
+$ ls .capevolve/project_simpo-code-reproduction/seed_capability/
+nlp-research-repo-package-installment
+pdf
+
+cand_0001: nlp-research-repo-package-installment pdf 
+cand_0002: nlp-research-repo-package-installment pdf 
+cand_0003: fuzzy-match nlp-research-repo-package-installment pdf 
+cand_0004: nlp-research-repo-package-installment pdf 
+seed: nlp-research-repo-package-installment pdf 
