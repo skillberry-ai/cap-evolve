@@ -185,6 +185,31 @@ Sources for the append: the c2/c3/c4 worktree run dirs (authoritative — they c
 and `scripts/`, `heatmap.html`'s JSON does not) cross-checked against
 `skillsbench-history:artifacts/task-by-task/`.
 
+**Step 1 complete (2026-09-10).** Two corrections to the plan text above, both confirmed while
+building the append:
+
+- **A new script was needed after all.** The "no new script needed" claim held for Table A/B (the
+  seed vocabulary and per-task provenance) but not for the conflict view itself — computing a
+  correct per-(task, skill) diff requires walking each task's actual run directory across all six
+  c1–c5/v2 worktrees and diffing whole skill packages, not just reading `heatmap.html`'s JSON
+  (which has no package contents). `scripts/build_capability_change_tables.py` (on
+  `skillsbench-history`, PR #484) does this; it disambiguates the 14 tasks with multiple
+  `run_task_<id>*` directories via each run's `state.json.best_id` matched against
+  `heatmap.html`'s `best_tag`.
+- **The append landed as Table D and Table E, not Table C/D as planned above** —
+  `SKILLS_TASKS_MAP.md` already has an unrelated, pre-existing "Table C" (the train/test split),
+  which this plan's earlier draft hadn't accounted for. Table D is the granular per-(task, skill)
+  view described above; Table E is the skill-level rollup with the cross-task `conflict` flag.
+
+The "6 skills edited under 2+ tasks" figure reconciles as **5 clean cross-task conflicts**
+(`dc-power-flow`, `economic-dispatch`, `pdf`, `power-flow-data`, `xlsx`) **plus `fuzzy-match`** —
+not a legitimate shared skill, but the vocabulary-violation case already on file at
+`evidence/energy-ac-optimal-power-flow-vocabulary-violation/` (a since-excluded, corrupted
+candidate invented an out-of-vocabulary `fuzzy-match` package). One further finding surfaced by
+the diff and logged in the tables' own "Unresolved" section: `fix-erlang-ssh-cve`'s accepted
+candidate scores above seed (0.6 → 0.9) with **zero attributable skill-package change** in this
+methodology — its package is byte-identical to seed outside cap-evolve's own bookkeeping files.
+
 ### Step 2 — enforce the fixed-vocabulary invariant (currently unenforced)
 
 `skills/capabilities/skill-package/scripts/abstract.py` discovers sub-packages dynamically —
@@ -346,9 +371,11 @@ size with specialization held at zero.
    `skillsbench-history:proposals/` alongside `train_test_split_proposal.md` and
    `transfer_eval_runs.md`, which is where the *data* provenance docs live; the plan itself
    belongs with the code that implements it.
-2. Step 1 — Table D append to `SKILLS_TASKS_MAP.md`/`skills_tasks_map.html` + evidence cross-links
-   (no compute, no new script).
-3. Step 2 invariant + tests (no compute).
+2. **Done (2026-09-10).** Step 1 — Table D/E append to `SKILLS_TASKS_MAP.md`/`skills_tasks_map.html`
+   + evidence cross-links, via `scripts/build_capability_change_tables.py` (no compute; a new
+   script was needed after all — see Step 1's completion note above). Landed on
+   `skillsbench-history` PR #484.
+3. Step 2 invariant + tests (no compute) — **next up**.
 4. **A0f** — cheapest arm, highest information, and it de-risks everything downstream.
 5. A1 re-score, A2 merge + A2p/A2f.
 6. A3, then A4 only if warranted.
