@@ -1,0 +1,47 @@
+# cap-evolve run spec — A0f (FULL 196-skill seed library) variant for civ6-adjacency-optimizer.
+# Seed skills = the shared 196-skill union at .capevolve/seed_capability_full196 (ALL seed skills, not just this task's own).
+# Single-task split (train=val=test=[civ6-adjacency-optimizer]); num_trials=10; max_iterations=0 (pure baseline eval).
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]
+capability_path: ../seed_capability_full196
+actions: [edit]
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 50.0
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: split_ids.civ6-adjacency-optimizer.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 10
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+# 1 task * 10 trials * 1 eval (baseline only, max_iterations=0) = 10 rollouts, all against the full 196-skill library.
+# Runner ~$0.30/rollout = ~$9. Optimizer 2 * ~$15 = ~$30. Total ~$50 headroom $150.
+max_iterations: 0
+stall: 0
+max_metric_calls: 0
+max_usd: 150.0
+max_optimizer_usd: 80.0
+
+# --- iteration store --------------------------------------------------------
+store: git

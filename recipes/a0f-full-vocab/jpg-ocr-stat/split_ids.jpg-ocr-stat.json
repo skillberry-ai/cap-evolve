@@ -1,0 +1,5 @@
+{
+  "train": ["jpg-ocr-stat"],
+  "val": ["jpg-ocr-stat"],
+  "test": ["jpg-ocr-stat"]
+}
