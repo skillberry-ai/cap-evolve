@@ -1,7 +1,7 @@
 # Benchmark regression suite
 
 Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
-spreadsheetbench**,
+spreadsheetbench · rfe-creator**,
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
@@ -92,6 +92,9 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
   separately from `smoke`'s 200-task sample via `SPREADSHEETBENCH_VARIANT=full_912` — see
   `ci/benchmarks/spreadsheetbench/fetch_data.sh`), matching the population SpreadsheetBench's
   self-reported leaderboard is computed over; `swebench` and `skillsbench` are not yet.
+  `rfe-creator/full/tasks.json` covers all 25 curated cases; a full run there costs real
+  money (~$235 for 3 iterations x 25 tasks x 3 trials, measured) — dispatch deliberately,
+  not routinely.
   A 912-task run is long — the `bench` job has a 1440min (`24h`) `timeout-minutes` and
   `full` defaults `SPREADSHEETBENCH_CONCURRENCY` to `8` (vs. smoke's `4`; override either
   via the env var / workflow input if the runner's Docker headroom can't take it — each
@@ -106,6 +109,14 @@ Runs come in two **tiers** (a first-class dimension in the workflow, same workfl
     runner is uid 1004, so the adapter widens the mode of the output dirs it creates; see
     `_make_container_writable` in the adapter. A `PermissionError` on `*_output.xlsx` in
     the traces means that fix regressed.
+
+  **`rfe-creator` runner prerequisites:**
+  - `ci_setup.sh` clones `opendatahub-io/rfe-creator` + `opendatahub-io/agent-eval-harness`
+    (public, unlicensed — see `ci/benchmarks/rfe-creator/utils/fetch_data.sh`) and installs
+    `agent-eval-harness` editable into the shared venv. Neither is vendored, so an air-gapped
+    runner needs its own mirror.
+  - Same gateway/entitlement preflight as every other bench (`ANTHROPIC_BASE_URL` /
+    `ANTHROPIC_AUTH_TOKEN`); no extra credentials (the eval runs `--dry-run`, no Jira).
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page
@@ -163,9 +174,10 @@ Two consequences worth knowing before you compare numbers:
 `runmeta.json` records the `algorithm`, so the history page never compares a hill-climb number
 against an agent-optimize one as though they were the same run type.
 - **On a PR — labels:**
-  - **`benchmark-smoke`** / **`benchmark-full`** → run all four benchmarks of that tier.
+  - **`benchmark-smoke`** / **`benchmark-full`** → run all five benchmarks of that tier.
   - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` ·
-    `skillsbench` · `spreadsheetbench`) → run just that one (combine labels to run a subset).
+    `skillsbench` · `spreadsheetbench` · `rfe-creator`) → run just that one (combine labels
+    to run a subset).
 
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests**
   workflow — the same `run_suite.sh` path as above, scoped to a single-task `integration`
@@ -198,8 +210,8 @@ per **suite iteration** (baseline → each hill-climb step → finalize): `optim
 and `eval $`/time. **Latency** is wall-time and hardware-dependent (baseline and
 optimized are both measured on the same run's runner host; treat cross-host/cross-run
 comparisons as indicative only). **Cost/tokens** are hardware-independent, but the
-tau2/skillsbench runners do not surface usage (reads 0); swebench and spreadsheetbench
-(both litellm) do.
+tau2/skillsbench runners do not surface usage (reads 0); swebench, spreadsheetbench, and
+rfe-creator (all shell out to a real agent CLI) do.
 
 ## Adding / changing tasks
 

@@ -160,6 +160,15 @@ case "$BENCH" in
     # pilot's tasks are drawn from full's train split, so it needs the 912-task dataset too.
     case "${TIER:-smoke}" in full|pilot) SB_VARIANT="full_912";; esac
     SPREADSHEETBENCH_DATA_DIR="$(SPREADSHEETBENCH_VARIANT="$SB_VARIANT" "$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
+  rfe-creator)
+    # Clones opendatahub-io/rfe-creator + opendatahub-io/agent-eval-harness (both public,
+    # unlicensed — see run_suite.sh's rfe-creator arm) and merges this repo's own
+    # reward_overlay.yaml onto the upstream eval config. pyyaml is needed both by this
+    # merge and by rfe-creator's own scripts (invoked BY the Claude Code agent).
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX pyyaml
+    "$REPO/ci/benchmarks/rfe-creator/utils/fetch_data.sh" "$CACHE/rfe-creator-src" >&2
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/rfe-creator-src/agent-eval-harness"
+    export RFE_CREATOR_SRC="$CACHE/rfe-creator-src" ;;
 esac
 
 "$CAPEVOLVE_PY" -c "import cap_evolve; print('cap_evolve OK')"
@@ -256,6 +265,7 @@ if [ -n "${GITHUB_ENV:-}" ]; then
     # and the adapter (which does the bind-mount) runs in the "Run suite" step.
     if [ -n "${HARBOR_NPM_CACHE:-}" ]; then echo "HARBOR_NPM_CACHE=$HARBOR_NPM_CACHE"; fi
     if [ -n "${SPREADSHEETBENCH_DATA_DIR:-}" ]; then echo "SPREADSHEETBENCH_DATA_DIR=$SPREADSHEETBENCH_DATA_DIR"; fi
+    if [ -n "${RFE_CREATOR_SRC:-}" ]; then echo "RFE_CREATOR_SRC=$RFE_CREATOR_SRC"; fi
     echo "PATH=$HOME/.local/bin:$PATH"
   } >> "$GITHUB_ENV"
 fi

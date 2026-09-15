@@ -18,7 +18,7 @@ WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
 JS = REPO / "site" / "benchmarks.js"
 HTML = REPO / "site" / "benchmarks.html"
 
-BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench"]
+BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
 
 
 def _workflow_tiers() -> list[str]:

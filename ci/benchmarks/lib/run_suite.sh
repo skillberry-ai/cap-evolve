@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|parsec)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -524,6 +524,40 @@ ENV
     # match — the "native hard score" that published comparisons report). Both are recorded
     # on every rollout either way; this picks the one the GATE optimizes against.
     export SPREADSHEETBENCH_SCORING="${SB_SCORING:-soft}"
+    ;;
+  rfe-creator)
+    # Optimizes 7 Claude Code skills (rfe.speedrun, rfe.create, rfe.auto-fix, rfe.review,
+    # rfe-feasibility-review, rfe.split, rfe.submit) against agent-eval-harness's
+    # RFE-creation eval. Both upstream repos (opendatahub-io/rfe-creator,
+    # opendatahub-io/agent-eval-harness) are public but UNLICENSED, so neither their code
+    # nor the 25 eval cases are vendored — fetch_data.sh clones both and merges this
+    # repo's own reward_overlay.yaml onto the upstream eval config, same convention as
+    # skillsbench/spreadsheetbench (dataset fetched, not committed).
+    RFE_SRC="${RFE_CREATOR_SRC:-$REPO/e2e/rfe-creator-src}"
+    if [ ! -f "$RFE_SRC/eval.merged.yaml" ]; then
+      echo "::error:: rfe-creator data not found at $RFE_SRC (run ci/benchmarks/rfe-creator/utils/fetch_data.sh first, or set RFE_CREATOR_SRC)"
+      exit 1
+    fi
+    cp "$TPL/rfe_creator/adapter.py" "$PROJ/adapters/"
+    SEED="$PROJ/seed_capability"; mkdir -p "$SEED"
+    for skill in rfe.speedrun rfe.create rfe.auto-fix rfe.review rfe-feasibility-review rfe.split rfe.submit; do
+      cp -R "$RFE_SRC/rfe-creator/.claude/skills/$skill" "$SEED/$skill"
+    done
+    CAPS="[skill-package]"
+    cat > "$WORK/.env" <<ENV
+ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL
+ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN
+RFE_CREATOR_DIR=$RFE_SRC/rfe-creator
+AGENT_EVAL_HARNESS_DIR=$RFE_SRC/agent-eval-harness
+RFE_EVAL_CONFIG=$RFE_SRC/eval.merged.yaml
+RFE_RUNNER_MODEL=$AGENT_MODEL
+RFE_HARNESS_PY=$PY
+ENV
+    export RFE_CREATOR_DIR="$RFE_SRC/rfe-creator"
+    export AGENT_EVAL_HARNESS_DIR="$RFE_SRC/agent-eval-harness"
+    export RFE_EVAL_CONFIG="$RFE_SRC/eval.merged.yaml"
+    export RFE_RUNNER_MODEL="$AGENT_MODEL"
+    export RFE_HARNESS_PY="$PY"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac

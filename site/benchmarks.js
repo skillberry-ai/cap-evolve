@@ -4,7 +4,7 @@ const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
 // hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
 // invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
 // ("plan legs", "aggregate history") never match.
-const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
+const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator)$/;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
 // site/benchmarks.fixture.json). Local-only affordance for exercising the filter cascade
 // through many reload cycles; the default path is unchanged.

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "case-012-mlflow-observability-bridge-for-rhoai-mo",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-007-allow-project-and-workbench-environment",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-017-clone-rename-llama-stack-to-remove-meta",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-023-align-kfp-sdk-with-pipeline-server",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-014-maintain-rayjobs-via-the-codeflare-sdk",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  }
+]

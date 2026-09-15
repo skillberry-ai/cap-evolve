@@ -49,7 +49,7 @@ def _run_plan(*, event, tier_sel=None, bench_sel=None, labels=None):
     return [(leg["tier"], leg["bench"]) for leg in json.loads(m.group(1))]
 
 
-ALL_BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench"]
+ALL_BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
 
 
 # ---- adding `pilot` must not disturb existing selections ---------------------
