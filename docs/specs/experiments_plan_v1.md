@@ -144,7 +144,7 @@ in** — the same selection load as A0, not as A0f. So:
 `VOCABULARY.json`, on the premise that this ground truth "lives nowhere as data." That premise
 was wrong — it already lives, richly, in four artifacts on `skillsbench-history`:
 
-- `insights/SKILLS_TASKS_MAP.md` and `insights/skills_tasks_map.html` (same content, two
+- `insights/SKILLS_TASKS_MAP.md` and `ui/skills_tasks_map.html` (same content, two
   formats) — Table A (87 tasks → skill numbers, by category), Table B (196 skills → task sets,
   categories, task numbers), and the boilerplate-filename list (`README.md`/`LICENSE`/etc.,
   which is exactly the 195-vs-196 discrepancy: `licenses`-style boilerplate is already excluded

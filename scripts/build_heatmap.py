@@ -32,6 +32,7 @@ FIELDS = [
     "task", "category", "source", "status",
     "seed", "cand_0001", "cand_0002", "cand_0003", "cand_0004",
     "best", "best_tag", "final_test", "delta",
+    "a0f", "a0f_delta",
 ]
 
 DATA_START_RE = re.compile(r"^const DATA = \[\n", re.MULTILINE)
