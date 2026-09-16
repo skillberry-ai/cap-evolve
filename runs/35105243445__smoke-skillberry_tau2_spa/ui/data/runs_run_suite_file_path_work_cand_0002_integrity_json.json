@@ -1,0 +1,1 @@
+{"path":"work/cand_0002.integrity.json","binary":false,"size":351,"truncated":false,"text":"{\n  \"files\": {\n    \"my_skill/SKILL.md\": \"«redacted»\",\n    \"primitive_tools/functions.py\": \"«redacted»\"\n  },\n  \"patterns\": [\n    \"primitive_tools/*\",\n    \"my_skill/SKILL.md\"\n  ],\n  \"root\": \".capevolve/run_suite/work/cand_0002\",\n  \"version\": 1\n}"}
