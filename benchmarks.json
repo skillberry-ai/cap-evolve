@@ -1,5 +1,85 @@
 [
   {
+    "run_id": 20260915001,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/a0f-full-vocab/summary.md",
+    "bench": "skillsbench",
+    "tier": "pilot",
+    "experiment": "A0f",
+    "event": "local",
+    "source": "bcarmeli",
+    "pr": null,
+    "branch": null,
+    "sha": null,
+    "date": "2026-09-15T00:00:00Z",
+    "iterations": 0,
+    "trials": 10,
+    "agent_model": "claude-sonnet-5",
+    "optimizer_model": "none",
+    "conclusion": "success",
+    "schema": 1,
+    "summary_url": "https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/a0f-full-vocab/summary.md",
+    "report_url": "https://skillberry-ai.github.io/cap-evolve/skillsbench/results/a0f-full-vocab/summary.html",
+    "tasks": [
+      {
+        "task": "hvac-control",
+        "reward_baseline": 1.0,
+        "reward_opt": 0.5
+      },
+      {
+        "task": "mario-coin-counting",
+        "reward_baseline": 1.0,
+        "reward_opt": 0.1
+      },
+      {
+        "task": "earthquake-plate-calculation",
+        "reward_baseline": 0.9,
+        "reward_opt": 1.0
+      },
+      {
+        "task": "jpg-ocr-stat",
+        "reward_baseline": 0.8,
+        "reward_opt": 0.7
+      },
+      {
+        "task": "adaptive-cruise-control",
+        "reward_baseline": 0.7,
+        "reward_opt": 0.7
+      },
+      {
+        "task": "react-performance-debugging",
+        "reward_baseline": 0.6,
+        "reward_opt": 0.4
+      },
+      {
+        "task": "organize-messy-files",
+        "reward_baseline": 0.5,
+        "reward_opt": 0.5
+      },
+      {
+        "task": "setup-fuzzing-py",
+        "reward_baseline": 0.364,
+        "reward_opt": 0.513
+      },
+      {
+        "task": "civ6-adjacency-optimizer",
+        "reward_baseline": 0.31,
+        "reward_opt": 0.325
+      },
+      {
+        "task": "energy-unit-commitment",
+        "reward_baseline": 0.1,
+        "reward_opt": 0.0
+      }
+    ],
+    "steps": [],
+    "suite": {
+      "reward_base": 0.6274,
+      "reward_opt": 0.4738,
+      "n": 10
+    },
+    "note": "A0f pilot: the entire 196-skill seed library deployed to each task (instead of that task's own ~2.7 shipped skills), evaluated at --max-iterations 0. reward_opt is this arm's measured score, not an optimized one -- there is no optimizer loop here, so this reuses transfer-eval-8fold's field convention rather than its literal meaning. reward_baseline is the task's own seed score (A0) from results/results.json (task-by-task-87 sweep, generated 2026-08-28); reward_opt is the A0f measurement. The mean delta (-0.154, -24.5% relative) is directional, not significant: paired bootstrap 95% CI [-0.360, +0.008] over 20k resamples, Wilcoxon signed-rank p=0.20. Two of the largest regressions (hvac-control, mario-coin-counting) are tasks where reward_baseline was already at the 1.0 ceiling, where regression was the only available direction. Caveat: reward_baseline was not re-measured under the A0f harness, so this pairing crosses harness versions. 10 of 87 tasks measured so far; the rest will be appended to a future record as they run. Full methodology, per-task trial vectors, and caveats: results/a0f-full-vocab/summary.md on the skillsbench-history branch."
+  },
+  {
     "run_id": 34363545319,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/34363545319",
     "bench": "tau2",
