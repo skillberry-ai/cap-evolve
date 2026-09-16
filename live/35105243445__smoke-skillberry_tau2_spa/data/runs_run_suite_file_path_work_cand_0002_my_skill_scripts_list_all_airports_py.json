@@ -1,0 +1,1 @@
+{"path":"work/cand_0002/my_skill/scripts/list_all_airports.py","binary":false,"size":200,"truncated":false,"text":"def list_all_airports():\n    \"\"\"\n    Returns a list of all available airports.\n\n    Returns:\n        A dictionary mapping IATA codes to AirportInfo objects.\n    \"\"\"\n    return env_list_all_airports()\n"}
