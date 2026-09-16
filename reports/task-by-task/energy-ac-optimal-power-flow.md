@@ -16,6 +16,7 @@ _Numbers above are generated from `results/results.json`. Val rewards unless lab
 - [`best/PROCESS.md`](../../artifacts/task-by-task/energy-ac-optimal-power-flow/best/PROCESS.md) — the optimizer's own write-up of the winning iteration: per-trial ground truth, ranked failure clusters with root causes, the kept edit, and what it deliberately skipped
 - [`best/`](../../artifacts/task-by-task/energy-ac-optimal-power-flow/best/) vs [`seed/`](../../artifacts/task-by-task/energy-ac-optimal-power-flow/seed/) — diff these two trees to see exactly what changed
 - [`per-task-logs/energy-ac-optimal-power-flow.md`](../../results/task-by-task-43/per-task-logs/energy-ac-optimal-power-flow.md) — per-trial reward vectors, from the earlier 43-task sweep (numbers may differ from above: different run)
+- [`evidence/energy-ac-optimal-power-flow-vocabulary-violation/`](../../evidence/energy-ac-optimal-power-flow-vocabulary-violation/) — full evidence bundle (journal, diffs, run reports)
 
 <!-- END:auto -->
 

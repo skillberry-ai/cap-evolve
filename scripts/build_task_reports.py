@@ -105,8 +105,20 @@ def build_auto_block(t: dict, man: dict) -> str:
         "",
         "_Numbers above are generated from `results/results.json`. Val rewards unless labelled test._",
         "",
-        "**Material:**",
     ]
+
+    a0f = t.get("a0f")
+    if a0f is not None:
+        a0f_delta = t.get("a0f_delta") or 0
+        lines += [
+            f"**A0f (196-skill vocabulary):** {fmt(a0f)} · "
+            f"**Δ vs A0 (seed):** {('+' if a0f_delta >= 0 else '')}{fmt(a0f_delta)} · "
+            "10 trials · see "
+            "[`results/a0f-full-vocab/summary.md`](../../results/a0f-full-vocab/summary.md)",
+            "",
+        ]
+
+    lines += ["**Material:**"]
 
     mat = []
     if process_md.is_file():

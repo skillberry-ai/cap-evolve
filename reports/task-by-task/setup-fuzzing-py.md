@@ -12,6 +12,8 @@
 
 _Numbers above are generated from `results/results.json`. Val rewards unless labelled test._
 
+**A0f (196-skill vocabulary):** 0.513 · **Δ vs A0 (seed):** +0.149 · 10 trials · see [`results/a0f-full-vocab/summary.md`](../../results/a0f-full-vocab/summary.md)
+
 **Material:**
 - [`best/PROCESS.md`](../../artifacts/task-by-task/setup-fuzzing-py/best/PROCESS.md) — the optimizer's own write-up of the winning iteration: per-trial ground truth, ranked failure clusters with root causes, the kept edit, and what it deliberately skipped
 - [`best/`](../../artifacts/task-by-task/setup-fuzzing-py/best/) vs [`seed/`](../../artifacts/task-by-task/setup-fuzzing-py/seed/) — diff these two trees to see exactly what changed
