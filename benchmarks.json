@@ -1,5 +1,196 @@
 [
   {
+    "run_id": 35116790842,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/35116790842",
+    "bench": "tau2",
+    "tier": "smoke",
+    "event": "workflow_dispatch",
+    "source": "manual (main)",
+    "pr": null,
+    "branch": "main",
+    "sha": "c6114115b52b78ccd40e9cf6e9febe3779041f89",
+    "date": "2026-09-16T16:38:01Z",
+    "iterations": 2,
+    "trials": 2,
+    "agent_model": "aws/gpt-oss-120b",
+    "optimizer_model": "claude-opus-4-8",
+    "gate_k_se": 1.0,
+    "algorithm": "hill-climb-all",
+    "warm_seed": false,
+    "conclusion": "success",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "8",
+        "reward_baseline": 0.5,
+        "reward_opt": 0.5,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "11",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "12",
+        "reward_baseline": 0.5,
+        "reward_opt": 1.0,
+        "reward_delta": 0.5,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "17",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "19",
+        "reward_baseline": 1.0,
+        "reward_opt": 1.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "22",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "23",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "25",
+        "reward_baseline": 0.5,
+        "reward_opt": 0.5,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "37",
+        "reward_baseline": 0.0,
+        "reward_opt": 1.0,
+        "reward_delta": 1.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "tau2",
+        "tier": "smoke",
+        "task": "40",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": 0.0,
+        "opt_infra": false,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_tau2_proj/.capevolve/run_suite"
+      }
+    ],
+    "steps": [
+      {
+        "phase": "baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.25,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 171.42
+      },
+      {
+        "phase": "iterate",
+        "iter": 1,
+        "candidate": "cand_0001",
+        "accepted": true,
+        "reward": 0.45,
+        "optimizer_usd": 4.559386,
+        "optimizer_seconds": 905.96,
+        "eval_usd": 0.0,
+        "eval_seconds": 378.78
+      },
+      {
+        "phase": "iterate",
+        "iter": 2,
+        "candidate": "cand_0002",
+        "accepted": false,
+        "reward": 0.45,
+        "optimizer_usd": 5.069862,
+        "optimizer_seconds": 1089.45,
+        "eval_usd": 0.0,
+        "eval_seconds": 347.42
+      },
+      {
+        "phase": "finalize",
+        "iter": null,
+        "candidate": "cand_0001",
+        "accepted": null,
+        "reward": 0.4,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 404.87
+      },
+      {
+        "phase": "finalize_baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.45,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 134.68
+      }
+    ],
+    "suite": {
+      "reward_base": 0.25,
+      "reward_opt": 0.4,
+      "n": 10,
+      "n_scored": 10,
+      "eval_usd": 0,
+      "optimizer_usd": 9.629248,
+      "eval_seconds": 1437.17,
+      "optimizer_seconds": 1995.41
+    },
+    "has_ui": true
+  },
+  {
     "run_id": 35111801588,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/35111801588",
     "bench": "skillberry_tau2_direct",

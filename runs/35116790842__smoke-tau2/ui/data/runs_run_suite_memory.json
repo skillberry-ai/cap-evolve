@@ -1,0 +1,1 @@
+{"history":[{"candidate_id":"cand_0001","summary":"candidate cand_0001 (val 0.450, Δ +0.200)","val":0.45}],"rejected":[{"candidate_id":"cand_0002","summary":"candidate cand_0002 (val 0.450, Δ +0.000)","reason":"paired Δ̄=+0.0000 <= 1.0·SE=0.1826 (SE=0.1826, n=10, resolvable effect size 2·SE=0.3651)","val":0.45}]}
