@@ -137,12 +137,12 @@ conflict *can* occur is in the 2–3 truly shared files
 real but currently-empty parsec feature). Per the scope decision below, this
 phase does not attempt to resolve that; it's deferred to `v4_t3_e1`.
 
-## Phase-1 scope: pure task-by-task, no merge, no regression
+## Phase-2 scope: pure task-by-task, no merge, no regression
 
 For each of the 21 sub-1.0 tasks: an independent cap-evolve optimization run
 with **train = val = test = {that task}**, candidate free to edit any of the
 8 prompt files. No cross-task regression checking. No dependencies between
-task runs. The only question phase 1 answers is: *can each task independently
+task runs. The only question phase 2 answers is: *can each task independently
 reach reward 1.0?*
 
 Explicitly deferred to later phases:
@@ -176,16 +176,26 @@ analysis and decision is `v4_t3_e1`, out of scope for this doc.
 `platform-034-rate-limit-not-an-outage` — all 21 of the sub-1.0 tasks from
 `v4_t1_e1`, per-task 3-trial average computed from `progress.csv`. The 4
 tasks the earlier draft scope had called out as a "challenge tranche" are
-included, per explicit instruction — no task is excluded from phase 1.
+included, per explicit instruction — no task is excluded from phase 2.
 
 ## Run parameters
 
 - 5 trials per iteration, 3 iterations, per task.
-- `--stop-at-reward 1.0`: kill a task's job the moment an accepted candidate
-  hits reward 1.0 — matches the A2p pilot's operational rule ("kill a job the
-  moment its accepted candidate hits val 1.0... a further iteration only
-  spends budget").
-- No held-out test run (see *Phase-1 scope* above).
+- Reward-1.0 early stop: **not** a cap-evolve flag — `cap-evolve run --help`
+  has no such option, and nothing in `core/cap_evolve/` stops a loop on
+  reward alone (`budget_exhausted()` only checks `max_iterations`,
+  `max_metric_calls`, `max_usd`, `max_optimizer_usd`, `stall`). The mechanism
+  the A2p pilot actually used is `intake_skillbench_v2/ceiling_watchdog.sh`: a
+  companion bash process, run alongside (not inside) `cap-evolve run`, that
+  polls each active run's `baseline.json` and `events.jsonl` every 45s; the
+  moment it finds val reward `1.0` with `stderr 0.0` (seed already saturated,
+  or an accepted candidate), it `SIGTERM`s the matching `cap-evolve run`
+  process by exact PID (escalating to `SIGKILL` after 8s if needed) and
+  renames the run dir to `..._KILLED_ceiling_reached_1.0`. This phase reuses
+  that same script shape, retargeted at `v4_t2_e1`'s 21 `run_task_<task>_*`
+  dirs, run once for the whole batch of lanes (not per-lane) since it just
+  polls run-dir files on disk.
+- No held-out test run (see *Phase-2 scope* above).
 - Model assignment per existing convention: Opus 5 as optimizer, Sonnet 5 as
   evaluator/runtime agent.
 
@@ -241,18 +251,35 @@ parallelism; a job-pool dispatcher (same shape as `run_all_seven_parallel.sh`
 per-task cap-evolve runs across the K lanes, one task active per lane at a
 time.
 
-**Recommendation: start local, not CCC.** `CCC_PODMAN_SETUP.md`'s entire
-runbook (rootless-podman UID workarounds, the LSF batch-mode lessons) was
-built and validated for BenchFlow/SkillsBench specifically — it has never
-been exercised for bench-v4's docker-compose-based harness or its host-side
-`parsec-live` process, and porting it is new, unvalidated scope, not a drop-in
-reuse. Given the user's own repeated preference this round for reducing
-moving parts (task-by-task only, no regression, no merge), stand up 2–3
-local lanes on the Mac first (port-offset the existing `start-sims-v4.sh` /
-`start-parsec.sh` scripts per lane) and measure real wall-clock before
-deciding whether CCC is worth the additional infra risk. If it later is, the
-CCC doc's operational rules remain directly applicable and worth carrying
-forward as-is:
+**Decision: yes, parallel, and concretely 2 lanes.** This phase runs the 21
+per-task cap-evolve jobs across **2 local lanes on the Mac**, not
+sequentially — matching `run_all_seven_parallel.sh`'s own default
+(`MAX_PAR=2`) for the same reason it chose that number: 2 lanes keeps
+concurrent LLM-gateway load and simulation-harness load bounded to something
+already validated, while still halving the wall-clock of a strictly serial
+sweep. Mechanically: port-offset the existing `start-sims-v4.sh` /
+`start-parsec.sh` scripts to produce a second full stack (its own patched
+parsec clone + uvicorn process + 5-service harness `docker-compose` project,
+all on an offset port block, per *What does parallelize* above), then a
+job-pool dispatcher in the same shape as `run_all_seven_parallel.sh`
+(dispatch up to 2 at a time, reap finished PIDs, refill) round-robins the 21
+tasks across the 2 lanes. Going to 3+ lanes is not planned for this phase —
+if the observed wall-clock with 2 lanes turns out to leave significant
+headroom (LLM-gateway rate and harness latency, per *Local resource
+watch-items* below, staying well under their limits), that's a decision for
+a later `e2` config, not a mid-phase change here.
+
+**Not CCC.** `CCC_PODMAN_SETUP.md`'s entire runbook (rootless-podman UID
+workarounds, the LSF batch-mode lessons) was built and validated for
+BenchFlow/SkillsBench specifically — it has never been exercised for
+bench-v4's docker-compose-based harness or its host-side `parsec-live`
+process, and porting it is new, unvalidated scope, not a drop-in reuse.
+Given the user's own repeated preference this round for reducing moving
+parts (task-by-task only, no regression, no merge, 2 lanes not N), CCC is
+deferred to a later configuration/experiment regardless of what the 2-lane
+local wall-clock turns out to be. If it's taken up later, the CCC doc's
+operational rules remain directly applicable and worth carrying forward
+as-is:
 - kill a job the instant its accepted candidate hits reward 1.0, by exact
   job ID only (never a bulk `bkill`);
 - poll the run's own log for a complete result, not `bjobs`/LSF `STAT` (a
@@ -261,7 +288,7 @@ forward as-is:
   `brsvs -w` for hidden reservations), no `-W` wall-clock limit.
 
 **Local resource watch-items**, carried over from `intake_skillbench_v2`'s
-own experience: LLM-gateway request-rate (K lanes multiply concurrent calls
+own experience: LLM-gateway request-rate (2 lanes multiply concurrent calls
 to both the simulation-synthesis model and the parsec/agent model) and the
 simulation harness's own per-call latency (30–60s per simulated tool call,
 per the v4 README) are more likely binding constraints than local CPU/RAM for
@@ -273,7 +300,8 @@ container RAM is the ceiling.
 - Any cross-task regression checking or dependency between task runs.
 - Any merge of the 21 resulting mutations (deferred to `v4_t3_e1`).
 - A held-out test evaluation.
-- Porting execution to CCC/LSF (deferred pending local wall-clock data).
+- Porting execution to CCC/LSF (deferred to a later configuration/experiment,
+  regardless of the 2-lane local wall-clock outcome).
 - Any directory rename or artifact move (per the *Directory-naming
   resolution* section — nothing needs to move).
 
