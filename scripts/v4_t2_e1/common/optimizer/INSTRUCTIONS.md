@@ -1,6 +1,8 @@
 # Optimizing parsec v4's system prompts for one task
 
-You are optimizing {{TARGET_READER}}. {{FOCUS_SUMMARY}}
+{{TARGET_READER}}
+
+{{FOCUS_SUMMARY}}
 
 {{EMPTY_SEED}}
 
@@ -94,18 +96,7 @@ At the end of your work on this candidate, write:
 
 ---
 
-**Failing rollouts (what to fix):**
-
 {{FAILURES}}
-
-**Passing rollouts (what NOT to break):**
-
 {{PASSING}}
-
-**Capability brief:**
-
 {{CAP_BRIEF}}
-
-**Algorithm brief:**
-
 {{ALGO_BRIEF}}
