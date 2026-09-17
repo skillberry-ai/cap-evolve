@@ -181,20 +181,27 @@ included, per explicit instruction — no task is excluded from phase 2.
 ## Run parameters
 
 - 5 trials per iteration, 3 iterations, per task.
-- Reward-1.0 early stop: **not** a cap-evolve flag — `cap-evolve run --help`
-  has no such option, and nothing in `core/cap_evolve/` stops a loop on
-  reward alone (`budget_exhausted()` only checks `max_iterations`,
-  `max_metric_calls`, `max_usd`, `max_optimizer_usd`, `stall`). The mechanism
-  the A2p pilot actually used is `intake_skillbench_v2/ceiling_watchdog.sh`: a
-  companion bash process, run alongside (not inside) `cap-evolve run`, that
-  polls each active run's `baseline.json` and `events.jsonl` every 45s; the
-  moment it finds val reward `1.0` with `stderr 0.0` (seed already saturated,
-  or an accepted candidate), it `SIGTERM`s the matching `cap-evolve run`
-  process by exact PID (escalating to `SIGKILL` after 8s if needed) and
-  renames the run dir to `..._KILLED_ceiling_reached_1.0`. This phase reuses
-  that same script shape, retargeted at `v4_t2_e1`'s 21 `run_task_<task>_*`
-  dirs, run once for the whole batch of lanes (not per-lane) since it just
-  polls run-dir files on disk.
+- `stop_at_reward: 1.0` in each task's `capevolve.yaml` (equivalently
+  `--stop-at-reward 1.0` on the CLI) — a genuine, first-class `Budget` field
+  (`core/cap_evolve/rundir.py`), not something invented for this doc: added by
+  `d1275b32a` / PR #415 ("Add stop_at_reward: stop optimizing once val reward
+  hits the ceiling"), checked centrally in `budget_exhausted()`, fed by both
+  the seed baseline eval and every accepted candidate's best val reward — so
+  it fires before iteration 1 if the seed is already saturated, not only
+  after an accept. The sealed test split still gets scored at finalize
+  either way. Confirmed present on this worktree's own branch
+  (`core/cap_evolve/{rundir,cli,dashboard}.py` all carry it) and merged to
+  `origin/main`. This is the proper successor to
+  `intake_skillbench_v2/ceiling_watchdog.sh` — that external poll-and-SIGTERM
+  script was exactly the "manual bkill-on-saturation workaround" the PR's own
+  commit message cites as the reason it added `stop_at_reward` as a
+  first-class budget check instead; no external watchdog process is needed
+  this phase. One pre-flight to do before the first real run: confirm
+  whatever `cap-evolve` install actually executes v4_t2_e1's jobs is built
+  from a checkout that includes `d1275b32a` (this worktree's `core/` does; a
+  separately-installed `cap-evolve-core` package elsewhere might not — that's
+  what made an earlier `--help` check on a stale install wrongly appear to
+  show no such flag).
 - No held-out test run (see *Phase-2 scope* above).
 - Model assignment per existing convention: Opus 5 as optimizer, Sonnet 5 as
   evaluator/runtime agent.
