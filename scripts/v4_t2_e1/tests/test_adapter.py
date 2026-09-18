@@ -68,18 +68,59 @@ class TestAdapterApply(unittest.TestCase):
     @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
     def test_apply_copies_candidate_files_into_live_prompts_dir(self):
         a = adapter_mod.Adapter()
+        # Guard rail for the C2 corruption class: assert BEFORE any mutation
+        # that this Adapter's live-prompts target is inside this test's own
+        # tmpdir, so no future refactor (e.g. reintroducing a module-level
+        # constant computed at import time) can let this test write into the
+        # real shared parsec-live clone.
+        self.assertEqual(a.live_prompts_dir, self.live_prompts_dir)
+        self.assertTrue(
+            str(a.live_prompts_dir).startswith(self.tmp.name),
+            f"test would write outside its own tmpdir: {a.live_prompts_dir}",
+        )
         with tempfile.TemporaryDirectory() as cand_dir_s:
             cand_dir = Path(cand_dir_s)
-            (cand_dir / "orchestrator.md").write_text("MUTATED orchestrator\n")
+            # Must clear MIN_ORCHESTRATOR_BYTES — a 21-byte orchestrator.md is
+            # exactly the corrupted-fixture shape apply() now refuses.
+            mutated = "MUTATED orchestrator\n" + ("filler line to reach a plausible size\n" * 40)
+            (cand_dir / "orchestrator.md").write_text(mutated)
             a.apply(cand_dir)
             self.assertEqual(
                 (self.live_prompts_dir / "orchestrator.md").read_text(),
-                "MUTATED orchestrator\n",
+                mutated,
             )
             # a file the candidate didn't touch is left alone
             self.assertEqual(
                 (self.live_prompts_dir / "shared_context.md").read_text(),
                 "seed shared_context.md\n",
+            )
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_apply_refuses_an_implausibly_short_orchestrator(self):
+        """The C2 corruption chain: a test fixture's 21-byte "MUTATED
+        orchestrator\\n" reached the live parsec-live clone and was then frozen
+        into 21 seed snapshots. The real prompt is ~11.7KB, so a candidate
+        whose orchestrator.md is a few dozen bytes is truncated or placeholder
+        content and must be refused rather than served.
+        """
+        a = adapter_mod.Adapter()
+        before = {
+            name: (self.live_prompts_dir / name).read_text()
+            for name in adapter_mod.PROMPT_FILES
+        }
+        with tempfile.TemporaryDirectory() as cand_dir_s:
+            cand_dir = Path(cand_dir_s)
+            (cand_dir / "orchestrator.md").write_text("MUTATED orchestrator\n")
+            # A sibling file that WOULD otherwise be copied, to prove the refusal
+            # happens before any write, not partway through the loop.
+            (cand_dir / "shared_context.md").write_text("x" * 2000)
+            with self.assertRaises(ValueError) as ctx:
+                a.apply(cand_dir)
+        self.assertIn("orchestrator.md", str(ctx.exception))
+        for name, original in before.items():
+            self.assertEqual(
+                (self.live_prompts_dir / name).read_text(), original,
+                f"{name} must be left completely unmodified by a refused apply()",
             )
 
 

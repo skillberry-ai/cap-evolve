@@ -65,6 +65,12 @@ PROMPT_FILES = [
     "security_agent.md",
 ]
 
+#: Plausibility floor for a candidate's orchestrator.md. The real prompt is
+#: ~11.7KB; the corrupted fixture that once reached the live clone (and was
+#: then frozen into all 21 seed snapshots) was 21 bytes. Anything under this
+#: is truncated or placeholder content, not a prompt worth serving.
+MIN_ORCHESTRATOR_BYTES = 500
+
 MCP_PORTS = {
     "PLATFORM_MCP_URL": 8086,
     "GITHUB_MCP_URL": 8087,
@@ -123,6 +129,18 @@ class Adapter(CapabilityAdapter):
     # so there is no partial-edit case to special-case here.
     # ------------------------------------------------------------------
     def apply(self, candidate_dir: Path, edits: dict | None = None) -> None:
+        # Refuse before writing anything: a partial apply is worse than none,
+        # because the live clone would then serve a mix of the candidate and
+        # the previous occupant.
+        orch = Path(candidate_dir) / "orchestrator.md"
+        if orch.exists():
+            size = orch.stat().st_size
+            if size < MIN_ORCHESTRATOR_BYTES:
+                raise ValueError(
+                    f"refusing to apply candidate: orchestrator.md is {size} bytes "
+                    f"(< {MIN_ORCHESTRATOR_BYTES}) — looks like truncated/placeholder "
+                    f"content, not a real prompt ({orch})"
+                )
         for name in PROMPT_FILES:
             src = Path(candidate_dir) / name
             if src.exists():
