@@ -266,6 +266,102 @@ class TestRunTaskSymlinkPreflight(unittest.TestCase):
         mock_run.assert_not_called()
 
 
+class TestProgressLogIsScopedToItsCapevolveDir(unittest.TestCase):
+    """_log() ignored the capevolve_dir handed to run_task() and always appended
+    to the module-level global, so every unit test in this file had been writing
+    real lines into this worktree's own .capevolve/v4_t2_e1_progress.log —
+    polluting the operator's actual progress record with "task-a" noise. Same
+    module-level-default-reaches-a-real-shared-path pattern that caused C2.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo_root = Path(self.tmp.name)
+        self.capevolve_dir = self.repo_root / ".capevolve"
+        proj = self.capevolve_dir / "v4_t2_e1_task-a" / "project"
+        proj.mkdir(parents=True)
+        common = self.capevolve_dir / "v4_t2_e1_common"
+        (common / "adapters").mkdir(parents=True)
+        (common / "optimizer").mkdir(parents=True)
+        (proj / "adapters").symlink_to(common / "adapters", target_is_directory=True)
+        (proj / "optimizer").symlink_to(common / "optimizer", target_is_directory=True)
+        # Where the module-level default WOULD write, redirected somewhere we can
+        # prove was never touched.
+        self.sentinel_dir = Path(self.tmp.name) / "module_default_capevolve"
+        self.global_patch = patch.object(run_one_task, "CAPEVOLVE_DIR", self.sentinel_dir)
+        self.global_patch.start()
+
+    def tearDown(self):
+        self.global_patch.stop()
+        self.tmp.cleanup()
+
+    def _fake_run(self, cmd, env=None, cwd=None):
+        class _Result:
+            returncode = 0
+        return _Result()
+
+    def test_run_task_logs_only_under_its_own_capevolve_dir(self):
+        with patch("subprocess.run", side_effect=self._fake_run):
+            run_one_task.run_task(
+                "task-a", capevolve_dir=self.capevolve_dir, repo_root=self.repo_root
+            )
+        scoped = self.capevolve_dir / "v4_t2_e1_progress.log"
+        self.assertTrue(scoped.exists(), "run_task must log under the dir it was given")
+        text = scoped.read_text()
+        self.assertIn("starting task-a", text)
+        self.assertIn("finished task-a", text)
+        self.assertFalse(
+            self.sentinel_dir.exists(),
+            "run_task must not touch the module-level CAPEVOLVE_DIR at all",
+        )
+
+    def test_symlink_abort_also_logs_under_its_own_capevolve_dir(self):
+        (self.capevolve_dir / "v4_t2_e1_task-a" / "project" / "adapters").unlink()
+        with patch("subprocess.run") as mock_run:
+            code = run_one_task.run_task(
+                "task-a", capevolve_dir=self.capevolve_dir, repo_root=self.repo_root
+            )
+        self.assertEqual(code, 3)
+        mock_run.assert_not_called()
+        self.assertIn(
+            "ABORT", (self.capevolve_dir / "v4_t2_e1_progress.log").read_text()
+        )
+        self.assertFalse(self.sentinel_dir.exists())
+
+    def test_lock_abort_also_logs_under_its_own_capevolve_dir(self):
+        holder = open(self.capevolve_dir / "v4_t2_e1.lock", "w")
+        fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            with patch("subprocess.run"):
+                code = run_one_task.run_task(
+                    "task-a", capevolve_dir=self.capevolve_dir, repo_root=self.repo_root
+                )
+        finally:
+            fcntl.flock(holder, fcntl.LOCK_UN)
+            holder.close()
+        self.assertEqual(code, 4)
+        self.assertIn(
+            "already in flight",
+            (self.capevolve_dir / "v4_t2_e1_progress.log").read_text(),
+        )
+        self.assertFalse(self.sentinel_dir.exists())
+
+
+class TestModuleDocstringInvariants(unittest.TestCase):
+    def test_docstring_warns_that_exit_0_must_imply_final_json(self):
+        """The documented `while python3 run_one_task.py; do :; done` recipe spins
+        forever if run_task() ever returns 0 without final.json existing. That
+        invariant is easy to break silently in a later edit, so it is written
+        down next to the recipe it protects."""
+        doc = run_one_task.__doc__ or ""
+        self.assertIn("INVARIANT", doc)
+        self.assertIn("final.json", doc)
+        self.assertIn("returns 0 only when", doc)
+        # The recipe the invariant protects must actually be documented here,
+        # otherwise the note is guarding nothing.
+        self.assertIn("while python3", doc)
+
+
 class TestMainStackHealthGate(unittest.TestCase):
     """main() must refuse to commit a task's budget to a broken stack. Every
     trial against a downed MCP service scores 0.0, which is indistinguishable

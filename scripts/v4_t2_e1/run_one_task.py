@@ -16,6 +16,21 @@ Usage:
 External repetition (run from the repo root):
     while python3 scripts/v4_t2_e1/run_one_task.py; do :; done
 
+INVARIANT that recipe depends on: run_task() returns 0 only when the run it
+launched actually wrote final.json (`cap-evolve run`'s finalize does this, and
+resolve_next_task_id() reads it as the "done" marker). If a future edit ever
+makes run_task() return 0 for a task that still has no final.json, this loop
+spins forever on that one task — resolve_next_task_id() would keep handing it
+back as pending. Preserve the invariant, or drop the loop from these docs.
+
+Exit codes:
+    0  the task ran to completion (final.json written) — or ALL_DONE
+    2  pre-flight refused: stale installed cap-evolve tool, or unknown task id
+    3  the task's project has a missing/dangling adapters|optimizer symlink
+    4  another v4_t2_e1 run holds the single-lane lock; nothing was attempted
+    5  the shared simulation stack is not healthy; nothing was attempted
+    *  anything else is `cap-evolve run`'s own exit code, passed through
+
 Or, to survive the terminal closing / the machine sleeping less easily:
     caffeinate -i python3 -c '
     import subprocess, sys
@@ -29,7 +44,6 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import json
 import os
 import subprocess
 import sys
@@ -38,18 +52,27 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CAPEVOLVE_DIR = REPO_ROOT / ".capevolve"
-PROGRESS_LOG = CAPEVOLVE_DIR / "v4_t2_e1_progress.log"
+PROGRESS_LOG_NAME = "v4_t2_e1_progress.log"
+LOCK_NAME = "v4_t2_e1.lock"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import preflight_check  # noqa: E402
 from scaffold_projects import TASK_IDS  # noqa: E402
 
 
-def _log(msg: str) -> None:
+def _log(msg: str, capevolve_dir: Path = CAPEVOLVE_DIR) -> None:
+    """Append one timestamped line to ``capevolve_dir``'s progress log.
+
+    ``capevolve_dir`` is a parameter, not the module global, because run_task()
+    takes one too: a caller (a test, a second checkout) that scopes its work to
+    its own directory must not have its log lines land in the operator's real
+    progress record. Ignoring it is how this file's unit tests came to append
+    150+ "task-a" lines to the live .capevolve/v4_t2_e1_progress.log.
+    """
     line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
     print(line, flush=True)
-    CAPEVOLVE_DIR.mkdir(parents=True, exist_ok=True)
-    with open(PROGRESS_LOG, "a", encoding="utf-8") as f:
+    capevolve_dir.mkdir(parents=True, exist_ok=True)
+    with open(capevolve_dir / PROGRESS_LOG_NAME, "a", encoding="utf-8") as f:
         f.write(line + "\n")
 
 
@@ -77,7 +100,7 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
     # comes from the capevolve_dir ARGUMENT, never the module-level global, so a
     # test's tmp dir can never contend with a real run (see M4).
     capevolve_dir.mkdir(parents=True, exist_ok=True)
-    lock_path = capevolve_dir / "v4_t2_e1.lock"
+    lock_path = capevolve_dir / LOCK_NAME
     lock_file = open(lock_path, "w")
     try:
         fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -85,7 +108,8 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
         _log(
             f"ABORT: another v4_t2_e1 run is already in flight (lock held at "
             f"{lock_path}) — the 5-service harness is single-lane; wait for it "
-            f"to finish."
+            f"to finish.",
+            capevolve_dir,
         )
         lock_file.close()
         return 4
@@ -104,7 +128,8 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
                 _log(
                     f"ABORT: {task_id}'s {name!r} symlink at {link} is missing or "
                     f"dangling (does not resolve) — re-run scaffold_projects.py "
-                    f"after confirming its common source exists."
+                    f"after confirming its common source exists.",
+                    capevolve_dir,
                 )
                 return 3
 
@@ -115,9 +140,9 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
         env = dict(os.environ)
         env["TASK_ID"] = task_id
 
-        _log(f"starting {task_id}: {' '.join(cmd)}")
+        _log(f"starting {task_id}: {' '.join(cmd)}", capevolve_dir)
         proc = subprocess.run(cmd, env=env, cwd=str(repo_root))
-        _log(f"finished {task_id}: exit={proc.returncode}")
+        _log(f"finished {task_id}: exit={proc.returncode}", capevolve_dir)
         return proc.returncode
     finally:
         # In a finally, not on the success path: a lock left held would wedge
