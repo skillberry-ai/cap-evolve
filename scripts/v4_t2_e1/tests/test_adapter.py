@@ -122,6 +122,11 @@ class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
         created_trial_dirs: list[Path] = []
 
         def fake_harbor_run(cmd, **kwargs):
+            # run_target() also shells out to install_seeds.py before harbor
+            # (see TestAdapterRunTargetSeedsSimulationData) — let that succeed
+            # silently; this test is only about harbor's own output layout.
+            if cmd[0] != "harbor":
+                return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
             # cmd == ["harbor", "run", "--config", <cfg_path>, "--n-concurrent", "1"]
             cfg_path = Path(cmd[3])
             trial_dir = cfg_path.parent
@@ -155,6 +160,97 @@ class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
         finally:
             for d in created_trial_dirs:
                 shutil.rmtree(d, ignore_errors=True)
+
+
+class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
+    """The 5 MCP harness services are SHARED across all 21 tasks, and each one
+    keeps serving whatever dataset was PUT into it last. install_seeds.py's own
+    docstring spells out the consequence: "A service that is reachable but
+    unseeded serves whatever the previous task left behind, which produces a
+    plausible reward for the wrong dataset." So run_target() must install this
+    task's seeds immediately before every trial — exactly as the reference
+    driver (v4_2026-09-16/run_full34.py's run_seed()) does — not once per
+    stack bring-up.
+    """
+
+    def _fake_harbor_output(self, trial_dir: Path, reward: float) -> None:
+        job_dir = trial_dir / "2026-09-18__09-17-39"
+        trial_sub = job_dir / "bench-v4-icinga-011-aap2-job-sta__qtXiDNr"
+        verifier_dir = trial_sub / "verifier"
+        verifier_dir.mkdir(parents=True)
+        (verifier_dir / "reward.json").write_text(json.dumps({"reward": reward}))
+        (trial_sub / "config.json").write_text(json.dumps({"task": {"name": KNOWN_TASK_ID}}))
+
+    @staticmethod
+    def _index_of(calls: list[list[str]], needle: str) -> int:
+        for i, cmd in enumerate(calls):
+            if any(needle in str(part) for part in cmd):
+                return i
+        raise AssertionError(f"no subprocess.run call contained {needle!r}; saw {calls}")
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_run_target_installs_seeds_before_harbor_run(self):
+        calls: list[list[str]] = []
+        created_trial_dirs: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(list(cmd))
+            if cmd[0] == "harbor":
+                trial_dir = Path(cmd[3]).parent
+                created_trial_dirs.append(trial_dir)
+                self._fake_harbor_output(trial_dir, 0.42)
+                return subprocess.CompletedProcess(cmd, 0)
+            return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
+
+        try:
+            with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+                a = adapter_mod.Adapter()
+                task = a.tasks("val")[0]
+                with patch.object(
+                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                    rollout = a.run_target(task, ctx=None)
+
+            self.assertIsNone(rollout.error)
+            seed_idx = self._index_of(calls, "install_seeds.py")
+            harbor_idx = self._index_of(calls, "harbor")
+            self.assertLess(
+                seed_idx, harbor_idx,
+                "install_seeds.py must run BEFORE harbor run, not after",
+            )
+            self.assertIn(
+                task.metadata["task_dir"], [str(p) for p in calls[seed_idx]],
+                "install_seeds.py must be given this task's own task dir",
+            )
+        finally:
+            for d in created_trial_dirs:
+                shutil.rmtree(d, ignore_errors=True)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_seeding_failure_is_an_infra_error_not_a_zero_reward(self):
+        """A failed seed must surface as Rollout.error (infra noise) so the
+        harness excludes the trial, and must NOT proceed to run harbor against
+        the previous task's dataset."""
+        calls: list[list[str]] = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(list(cmd))
+            if any("install_seeds.py" in str(part) for part in cmd):
+                return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="port 8088 refused")
+            raise AssertionError(f"should not have reached {cmd!r} after a seed failure")
+
+        with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+            a = adapter_mod.Adapter()
+            task = a.tasks("val")[0]
+            with patch.object(
+                adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+            ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                rollout = a.run_target(task, ctx=None)
+
+        self.assertIsNotNone(rollout.error)
+        self.assertIn("install_seeds", rollout.error)
+        self.assertIn("port 8088 refused", rollout.error)
+        self.assertEqual(len(calls), 1, f"harbor must not have been invoked; saw {calls}")
 
 
 if __name__ == "__main__":

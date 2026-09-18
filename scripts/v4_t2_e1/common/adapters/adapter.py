@@ -135,6 +135,26 @@ class Adapter(CapabilityAdapter):
         trial_dir = JOBS_ROOT / self.task_id / f"seed-{seed}" / str(int(time.time() * 1000))
         trial_dir.mkdir(parents=True, exist_ok=True)
 
+        # The 5 MCP harness services are SHARED by all 21 tasks and keep serving
+        # whatever dataset was PUT into them last. Per install_seeds.py's own
+        # docstring, a reachable-but-unseeded service "serves whatever the
+        # previous task left behind, which produces a plausible reward for the
+        # wrong dataset" — so every trial re-installs its own task's seeds
+        # first, exactly as the reference driver (run_full34.py's run_seed())
+        # does. A seeding failure returns Rollout(error=...) rather than a 0.0
+        # reward so the harness counts it as infra noise (missing data), not a
+        # capability regression.
+        seed_proc = subprocess.run(
+            [sys.executable, "install_seeds.py", str(task_dir)],
+            cwd=str(V4N), capture_output=True, text=True, timeout=120,
+        )
+        if seed_proc.returncode != 0:
+            return Rollout(
+                task_id=task.id,
+                error=f"install_seeds failed rc={seed_proc.returncode}: {seed_proc.stderr[-500:]}",
+                metadata={"trial_dir": str(trial_dir)},
+            )
+
         try:
             docker_host = _resolve_docker_host()
         except (subprocess.SubprocessError, OSError, json.JSONDecodeError, KeyError, IndexError) as exc:
