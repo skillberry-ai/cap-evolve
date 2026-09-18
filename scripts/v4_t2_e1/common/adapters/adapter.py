@@ -172,7 +172,19 @@ class Adapter(CapabilityAdapter):
             return Rollout(task_id=task.id, error=f"harbor run exited {proc.returncode}",
                            metadata={"trial_dir": str(trial_dir)})
 
-        results = parse_job_dir(trial_dir)
+        # `harbor run -o <jobs_dir>` (here, trial_dir) writes its actual
+        # output one level deeper, into a timestamp-named subdirectory it
+        # creates itself (mirrors capevolve_harbor.run.harbor_run()'s own
+        # `job_dirs = sorted(jobs_dir.iterdir()); job_dir = job_dirs[-1]`
+        # resolution) — trial_dir itself only ever holds harbor_config.json/
+        # harbor_run.log plus that one subdirectory, so filter to dirs.
+        job_dirs = sorted(p for p in trial_dir.iterdir() if p.is_dir())
+        if not job_dirs:
+            return Rollout(task_id=task.id, error="harbor produced no job directory",
+                           metadata={"trial_dir": str(trial_dir)})
+        job_dir = job_dirs[-1]
+
+        results = parse_job_dir(job_dir)
         if not results:
             return Rollout(task_id=task.id, error="harbor produced no parseable result",
                            metadata={"trial_dir": str(trial_dir)})

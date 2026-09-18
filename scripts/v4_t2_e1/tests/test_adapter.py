@@ -1,7 +1,10 @@
 # scripts/v4_t2_e1/tests/test_adapter.py
 from __future__ import annotations
 
+import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -103,6 +106,55 @@ class TestAdapterScore(unittest.TestCase):
             rollout = Rollout(task_id=task.id, metadata={"trial_result": tr.__dict__})
             score = a.score(task, rollout)
             self.assertEqual(score.reward, 0.83)
+
+
+class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
+    """Regression test for the job-dir nesting bug found by Task 6's live
+    E2E smoke test: `harbor run -o <trial_dir>` writes its actual result
+    one level deeper, into a timestamp-named subdirectory it creates
+    itself — run_target() must resolve into that subdirectory (the same
+    way capevolve_harbor.run.harbor_run() does) before calling
+    parse_job_dir(), not hand it trial_dir directly.
+    """
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_run_target_descends_into_harbors_timestamp_subdir(self):
+        created_trial_dirs: list[Path] = []
+
+        def fake_harbor_run(cmd, **kwargs):
+            # cmd == ["harbor", "run", "--config", <cfg_path>, "--n-concurrent", "1"]
+            cfg_path = Path(cmd[3])
+            trial_dir = cfg_path.parent
+            created_trial_dirs.append(trial_dir)
+
+            # Mimic real harbor: trial_dir holds harbor_config.json (already
+            # written by run_target) plus a timestamp-named subdir that
+            # harbor itself creates, containing the real per-trial result.
+            job_dir = trial_dir / "2026-09-18__09-17-39"
+            trial_sub = job_dir / "bench-v4-icinga-011-aap2-job-sta__qtXiDNr"
+            verifier_dir = trial_sub / "verifier"
+            verifier_dir.mkdir(parents=True)
+            (verifier_dir / "reward.json").write_text(json.dumps({"reward": 0.58}))
+            (trial_sub / "config.json").write_text(
+                json.dumps({"task": {"name": KNOWN_TASK_ID}})
+            )
+            return subprocess.CompletedProcess(cmd, 0)
+
+        try:
+            with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+                a = adapter_mod.Adapter()
+                task = a.tasks("val")[0]
+                with patch.object(
+                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_harbor_run):
+                    rollout = a.run_target(task, ctx=None)
+
+            self.assertIsNone(rollout.error)
+            score = a.score(task, rollout)
+            self.assertAlmostEqual(score.reward, 0.58)
+        finally:
+            for d in created_trial_dirs:
+                shutil.rmtree(d, ignore_errors=True)
 
 
 if __name__ == "__main__":
