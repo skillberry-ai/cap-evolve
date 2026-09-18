@@ -491,6 +491,29 @@ class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
         self.assertIn("port 8088 refused", rollout.error)
         self.assertEqual(len(calls), 1, f"harbor must not have been invoked; saw {calls}")
 
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_a_hung_or_unlaunchable_seed_is_also_an_infra_error(self):
+        """A 120s hang, or a missing install_seeds.py, must come back as
+        Rollout.error like every other infra failure in run_target — not escape
+        as an exception the caller has to guess the meaning of."""
+        for exc in (
+            subprocess.TimeoutExpired(cmd=["install_seeds.py"], timeout=120),
+            OSError("No such file or directory: install_seeds.py"),
+        ):
+            with self.subTest(exc=type(exc).__name__):
+                with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+                    a = adapter_mod.Adapter()
+                    task = a.tasks("val")[0]
+                    with patch.object(
+                        adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                    ), patch.object(adapter_mod.subprocess, "run", side_effect=exc):
+                        rollout = a.run_target(task, ctx=None)
+                self.assertIsNotNone(rollout.error)
+                self.assertIn("install_seeds", rollout.error)
+                score = a.score(task, rollout)
+                self.assertEqual(score.reward, 0.0)
+                self.assertIn("install_seeds", score.feedback)
+
 
 class TestAdapterTrajectories(unittest.TestCase):
     """trajectories() is the directory cap-evolve copies verbatim into the

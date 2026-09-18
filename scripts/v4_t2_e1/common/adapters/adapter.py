@@ -228,10 +228,21 @@ class Adapter(CapabilityAdapter):
         # does. A seeding failure returns Rollout(error=...) rather than a 0.0
         # reward so the harness counts it as infra noise (missing data), not a
         # capability regression.
-        seed_proc = subprocess.run(
-            [sys.executable, "install_seeds.py", str(task_dir)],
-            cwd=str(V4N), capture_output=True, text=True, timeout=120,
-        )
+        try:
+            seed_proc = subprocess.run(
+                [sys.executable, "install_seeds.py", str(task_dir)],
+                cwd=str(V4N), capture_output=True, text=True, timeout=120,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            # A hang past the timeout, or install_seeds.py/V4N not being there at
+            # all, is the same class of event as a non-zero exit: infra, not
+            # capability. Reported the same way rather than escaping as an
+            # exception the caller would have to interpret.
+            return Rollout(
+                task_id=task.id,
+                error=f"install_seeds could not be run: {type(exc).__name__}: {exc}",
+                metadata={"trial_dir": str(trial_dir)},
+            )
         if seed_proc.returncode != 0:
             return Rollout(
                 task_id=task.id,
