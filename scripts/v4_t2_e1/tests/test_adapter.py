@@ -492,5 +492,123 @@ class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
         self.assertEqual(len(calls), 1, f"harbor must not have been invoked; saw {calls}")
 
 
+class TestAdapterTrajectories(unittest.TestCase):
+    """trajectories() is the directory cap-evolve copies verbatim into the
+    optimizer's ./trajectories/, so it must point at the newest trial's whole
+    harbor JOB dir (agent/ AND verifier/ output), and "newest" must be resolved
+    numerically: a lexicographic sort puts "seed-10" before "seed-2", so the
+    tenth trial's trajectory would be silently discarded as soon as num_trials
+    exceeded 10.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.jobs_root = Path(self.tmp.name) / "jobs"
+        self.env_patch = patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True)
+        self.env_patch.start()
+        # JOBS_ROOT is a module-level constant read at CALL time, so patching the
+        # module attribute keeps this test entirely inside its own tmpdir instead
+        # of writing fixtures into the real shared _run/jobs tree.
+        self.jobs_patch = patch.object(adapter_mod, "JOBS_ROOT", self.jobs_root)
+        self.jobs_patch.start()
+
+    def tearDown(self):
+        self.jobs_patch.stop()
+        self.env_patch.stop()
+        self.tmp.cleanup()
+
+    def _make_trial(self, seed: int, millis: str, harbor_ts: str = "2026-09-18__09-17-39") -> Path:
+        job_dir = self.jobs_root / KNOWN_TASK_ID / f"seed-{seed}" / millis / harbor_ts
+        trial_sub = job_dir / "bench-v4-icinga-011__zz"
+        (trial_sub / "agent").mkdir(parents=True)
+        (trial_sub / "verifier").mkdir(parents=True)
+        (trial_sub / "agent" / "trajectory.json").write_text("[]")
+        (trial_sub / "verifier" / "reward.json").write_text(json.dumps({"reward": 0.5}))
+        return job_dir
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_returns_none_when_nothing_has_run(self):
+        a = adapter_mod.Adapter()
+        self.assertIsNone(a.trajectories("val"))
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_returns_the_job_dir_not_one_trials_agent_dir(self):
+        job_dir = self._make_trial(0, "1789740746891")
+        a = adapter_mod.Adapter()
+        got = a.trajectories("val")
+        self.assertEqual(got, job_dir)
+        self.assertNotEqual(got.name, "agent")
+        # The job dir is what parse_job_dir() consumes: its children are trial
+        # dirs carrying BOTH agent/ and verifier/.
+        self.assertTrue(any((child / "verifier").is_dir() for child in got.iterdir()))
+        self.assertTrue(any((child / "agent").is_dir() for child in got.iterdir()))
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_seed_10_sorts_after_seed_2(self):
+        self._make_trial(2, "1789740746891")
+        expected = self._make_trial(10, "1789740746000")  # EARLIER millis, higher seed
+        a = adapter_mod.Adapter()
+        self.assertEqual(
+            a.trajectories("val"), expected,
+            "seed-10 must sort after seed-2; a lexicographic sort gets this backwards",
+        )
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_latest_millis_wins_within_one_seed(self):
+        self._make_trial(3, "1789740746000")
+        expected = self._make_trial(3, "1789740999999")
+        a = adapter_mod.Adapter()
+        self.assertEqual(a.trajectories("val"), expected)
+
+
+class TestAdapterPythonPath(unittest.TestCase):
+    """`harbor run` needs "." on PYTHONPATH to import parsec_harbor_agent from
+    V4N, but clobbering the variable outright drops whatever the caller's
+    environment (or the `cap-evolve run` parent process) already put there.
+    """
+
+    def _captured_env(self, initial_pythonpath: str | None) -> dict:
+        captured: dict = {}
+        created: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            if cmd[0] != "harbor":
+                return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
+            captured.update(kwargs.get("env") or {})
+            trial_dir = Path(cmd[3]).parent
+            created.append(trial_dir)
+            trial_sub = trial_dir / "2026-09-18__09-17-39" / "bench-v4-icinga-011__zz"
+            (trial_sub / "verifier").mkdir(parents=True)
+            (trial_sub / "verifier" / "reward.json").write_text(json.dumps({"reward": 1.0}))
+            (trial_sub / "config.json").write_text(json.dumps({"task": {"name": KNOWN_TASK_ID}}))
+            return subprocess.CompletedProcess(cmd, 0)
+
+        base = {"TASK_ID": KNOWN_TASK_ID}
+        if initial_pythonpath is not None:
+            base["PYTHONPATH"] = initial_pythonpath
+        try:
+            with patch.dict(os.environ, base, clear=True):
+                a = adapter_mod.Adapter()
+                task = a.tasks("val")[0]
+                with patch.object(
+                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                    a.run_target(task, ctx=None)
+        finally:
+            for d in created:
+                shutil.rmtree(d, ignore_errors=True)
+        return captured
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_prepends_dot_and_keeps_an_existing_pythonpath(self):
+        env = self._captured_env("/some/caller/path")
+        self.assertEqual(env["PYTHONPATH"], "." + os.pathsep + "/some/caller/path")
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_is_exactly_dot_when_nothing_was_set(self):
+        env = self._captured_env(None)
+        self.assertEqual(env["PYTHONPATH"], ".")
+
+
 if __name__ == "__main__":
     unittest.main()

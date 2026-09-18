@@ -34,6 +34,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -81,6 +82,34 @@ MCP_PORTS = {
     "COST_MCP_URL": 8089,
     "CLOUD_MCP_URL": 8090,
 }
+
+
+_SEED_SEGMENT_RE = re.compile(r"^seed-(\d+)$")
+
+
+def _path_sort_key(path: Path, root: Path) -> list[tuple[int, int, str]]:
+    """Order ``path`` under ``root`` by segment, numerically where it is a number.
+
+    Needed because run_target()'s layout is ``seed-<N>/<millis>/<harbor-ts>`` and
+    plain string ordering gets the numeric segments wrong: ``"seed-10" <
+    "seed-2"`` and ``"1789740999999" < "989740746891"``. Each segment becomes
+    ``(0, <int>, "")`` when it is (or wraps) an integer and ``(1, 0, <text>)``
+    otherwise, so numbers order numerically and sort before free text.
+    """
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError:
+        parts = path.parts
+    key: list[tuple[int, int, str]] = []
+    for part in parts:
+        match = _SEED_SEGMENT_RE.match(part)
+        if match:
+            key.append((0, int(match.group(1)), ""))
+        elif part.isdigit():
+            key.append((0, int(part), ""))
+        else:
+            key.append((1, 0, part))
+    return key
 
 
 def _resolve_docker_host() -> str:
@@ -224,7 +253,14 @@ class Adapter(CapabilityAdapter):
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
 
         env = dict(os.environ)
-        env["PYTHONPATH"] = "."
+        # `harbor run` (cwd=V4N) needs "." to import parsec_harbor_agent — but
+        # PREPEND it, don't clobber: assigning outright discards whatever the
+        # caller's environment, or the parent `cap-evolve run` process, already
+        # put on PYTHONPATH.
+        _existing_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = (
+            "." + os.pathsep + _existing_pythonpath if _existing_pythonpath else "."
+        )
         env["PARSEC_URL"] = "http://127.0.0.1:8000"
         env["PARSEC_SIM_TRACE"] = str(V4N / "_run" / "logs" / "parsec-trace" / "trace.jsonl")
         env["DOCKER_HOST"] = docker_host
@@ -299,5 +335,25 @@ class Adapter(CapabilityAdapter):
         return Score(task_id=task.id, reward=reward, feedback=feedback, n=1)
 
     def trajectories(self, split: str, ctx=None) -> Path | None:
-        candidates = sorted(glob.glob(str(JOBS_ROOT / self.task_id / "**" / "agent"), recursive=True))
-        return Path(candidates[-1]) if candidates else None
+        """The newest trial's harbor JOB directory, copied verbatim by cap-evolve
+        into the optimizer's ./trajectories/.
+
+        Returns the job dir — the one parse_job_dir() consumes, whose children
+        are trial dirs carrying BOTH agent/ and verifier/ — not a single trial's
+        agent/ subdirectory, which withholds the verifier output that explains
+        the reward.
+
+        "Newest" is resolved with a NUMERIC key, not a lexicographic one:
+        run_target() lays trials out as <task>/seed-<N>/<millis>/<harbor-ts>/,
+        and sorted() on those strings puts "seed-10" before "seed-2", so the
+        tenth trial's trajectories would be silently dropped the moment
+        num_trials exceeded 10.
+        """
+        task_root = JOBS_ROOT / self.task_id
+        job_dirs = {
+            Path(p).parents[1]  # .../agent -> trial dir -> job dir
+            for p in glob.glob(str(task_root / "**" / "agent"), recursive=True)
+        }
+        if not job_dirs:
+            return None
+        return max(job_dirs, key=lambda d: _path_sort_key(d, task_root))
