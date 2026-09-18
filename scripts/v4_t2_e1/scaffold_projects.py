@@ -23,6 +23,7 @@ another task's.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -32,7 +33,12 @@ CAPEVOLVE_DIR = REPO_ROOT / ".capevolve"
 COMMON_ADAPTERS_SRC = Path(__file__).resolve().parent / "common" / "adapters"
 COMMON_OPTIMIZER_SRC = Path(__file__).resolve().parent / "common" / "optimizer"
 
-PARSEC_V4N = Path("/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16")
+# Same env var, same default, as common/adapters/adapter.py's V4N. Two sources
+# of truth for "which parsec checkout" is how a seed snapshot gets frozen from
+# one tree while the trials that score it run against another.
+PARSEC_V4N = Path(
+    os.environ.get("PARSEC_V4N", "/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16")
+)
 PROMPTS_DIR = PARSEC_V4N / "_run" / "parsec-live" / "config" / "prompts"
 
 PROMPT_FILES = [
@@ -103,9 +109,7 @@ def render_split_ids(task_id: str) -> str:
 def _ensure_symlink(link: Path, target: Path) -> Path:
     """Create ``link`` -> relative(``target``) if missing; verify it if present."""
     link.parent.mkdir(parents=True, exist_ok=True)
-    rel_target = Path(
-        __import__("os").path.relpath(target, start=link.parent)
-    )
+    rel_target = Path(os.path.relpath(target, start=link.parent))
     if link.is_symlink() or link.exists():
         if link.resolve() != target.resolve():
             raise RuntimeError(
@@ -179,7 +183,29 @@ def main() -> int:
         print(f"prompts dir not found: {PROMPTS_DIR}", file=sys.stderr)
         return 1
 
-    paths = scaffold_all(CAPEVOLVE_DIR, task_ids=task_ids)
+    # _ensure_symlink() uses Path.symlink_to(), which does NOT validate that its
+    # target exists. Scaffolding against a missing common/ source therefore
+    # produced 21 projects' worth of dangling `adapters`/`optimizer` symlinks and
+    # still exited 0. Task 5's runner catches that later, one task at a time;
+    # refusing here means it never gets written in the first place.
+    for label, src in (("common adapters source", COMMON_ADAPTERS_SRC),
+                       ("common optimizer source", COMMON_OPTIMIZER_SRC)):
+        if not src.exists():
+            print(
+                f"{label} not found: {src} — scaffolding now would create dangling "
+                f"symlinks in every project. Nothing was written.",
+                file=sys.stderr,
+            )
+            return 1
+
+    # Pass the sources explicitly rather than leaning on scaffold_all()'s
+    # def-time defaults, so main() scaffolds from exactly the paths it just
+    # validated — the two cannot drift apart.
+    paths = scaffold_all(
+        CAPEVOLVE_DIR, task_ids=task_ids, prompts_dir=PROMPTS_DIR,
+        common_adapters_src=COMMON_ADAPTERS_SRC,
+        common_optimizer_src=COMMON_OPTIMIZER_SRC,
+    )
     print(f"scaffolded {len(task_ids)} task project(s), {len(paths)} paths touched.")
     return 0
 
