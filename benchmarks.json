@@ -1,5 +1,165 @@
 [
   {
+    "run_id": 35369189777,
+    "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/35369189777",
+    "bench": "skillsbench",
+    "tier": "smoke",
+    "event": "workflow_dispatch",
+    "source": "manual (main)",
+    "pr": null,
+    "branch": "main",
+    "sha": "c6114115b52b78ccd40e9cf6e9febe3779041f89",
+    "date": "2026-09-18T16:44:08Z",
+    "iterations": 1,
+    "trials": 1,
+    "agent_model": "aws/gpt-oss-120b",
+    "optimizer_model": "claude-opus-4-8",
+    "gate_k_se": 1.0,
+    "algorithm": "hill-climb-all",
+    "warm_seed": false,
+    "conclusion": "failure",
+    "schema": 1,
+    "tasks": [
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "offer-letter-generator",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "exceltable-in-ppt",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "xlsx-recover-data",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "sales-pivot-analysis",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "invoice-fraud-detection",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "weighted-gdp-calc",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "financial-modeling-qa",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "pdf-excel-diff",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "pptx-reference-formatting",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      },
+      {
+        "bench": "skillsbench",
+        "tier": "smoke",
+        "task": "reserves-at-risk-calc",
+        "reward_baseline": 0.0,
+        "reward_opt": 0.0,
+        "reward_delta": null,
+        "opt_infra": true,
+        "run_dir": "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_smoke_skillsbench_proj/.capevolve/run_suite"
+      }
+    ],
+    "steps": [
+      {
+        "phase": "baseline",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.0,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 101.05
+      },
+      {
+        "phase": "iterate",
+        "iter": 1,
+        "candidate": "cand_0001",
+        "accepted": false,
+        "reward": 0.0,
+        "optimizer_usd": 1.005639,
+        "optimizer_seconds": 257.74,
+        "eval_usd": 0.0,
+        "eval_seconds": 101.04
+      },
+      {
+        "phase": "finalize",
+        "iter": null,
+        "candidate": "seed",
+        "accepted": null,
+        "reward": 0.0,
+        "optimizer_usd": 0.0,
+        "optimizer_seconds": 0.0,
+        "eval_usd": 0.0,
+        "eval_seconds": 101.19
+      }
+    ],
+    "suite": null,
+    "has_ui": true
+  },
+  {
     "run_id": 35232046179,
     "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/35232046179",
     "bench": "tau2",
