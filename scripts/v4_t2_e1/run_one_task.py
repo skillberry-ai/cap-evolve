@@ -28,7 +28,9 @@ Or, to survive the terminal closing / the machine sleeping less easily:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
+import os
 import subprocess
 import sys
 import time
@@ -66,35 +68,62 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
              repo_root: Path = REPO_ROOT, follow: bool = False) -> int:
     project = capevolve_dir / f"v4_t2_e1_{task_id}" / "project"
 
-    # Task 2's _ensure_symlink() uses Path.symlink_to(), which does not
-    # validate that its target exists — so a project scaffolded before its
-    # common/ source existed can end up with a dangling `adapters` or
-    # `optimizer` symlink and exit 0. Path.exists() follows symlinks and
-    # returns False for a dangling one, which is exactly the failure mode
-    # we need to catch here (is_symlink() alone would return True even when
-    # dangling, so it can't be used for this check).
-    for name in ("adapters", "optimizer"):
-        link = project / name
-        if not link.exists():
-            _log(
-                f"ABORT: {task_id}'s {name!r} symlink at {link} is missing or "
-                f"dangling (does not resolve) — re-run scaffold_projects.py "
-                f"after confirming its common source exists."
-            )
-            return 3
+    # Single-lane enforcement across separate invocations. resolve_next_task_id()
+    # treats an in-flight task (no final.json yet) as still pending, so two
+    # concurrent invocations of this script would both pick the SAME task and
+    # both launch `cap-evolve run` — two agents mutating the one shared
+    # simulation stack and the one shared parsec-live prompts dir. An advisory
+    # flock, non-blocking, makes the second one refuse instead. The lock path
+    # comes from the capevolve_dir ARGUMENT, never the module-level global, so a
+    # test's tmp dir can never contend with a real run (see M4).
+    capevolve_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = capevolve_dir / "v4_t2_e1.lock"
+    lock_file = open(lock_path, "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        _log(
+            f"ABORT: another v4_t2_e1 run is already in flight (lock held at "
+            f"{lock_path}) — the 5-service harness is single-lane; wait for it "
+            f"to finish."
+        )
+        lock_file.close()
+        return 4
 
-    cmd = ["cap-evolve", "run", "--project", str(project), "--dashboard", "off"]
-    if follow:
-        cmd.append("--follow")
+    try:
+        # Task 2's _ensure_symlink() uses Path.symlink_to(), which does not
+        # validate that its target exists — so a project scaffolded before its
+        # common/ source existed can end up with a dangling `adapters` or
+        # `optimizer` symlink and exit 0. Path.exists() follows symlinks and
+        # returns False for a dangling one, which is exactly the failure mode
+        # we need to catch here (is_symlink() alone would return True even when
+        # dangling, so it can't be used for this check).
+        for name in ("adapters", "optimizer"):
+            link = project / name
+            if not link.exists():
+                _log(
+                    f"ABORT: {task_id}'s {name!r} symlink at {link} is missing or "
+                    f"dangling (does not resolve) — re-run scaffold_projects.py "
+                    f"after confirming its common source exists."
+                )
+                return 3
 
-    import os
-    env = dict(os.environ)
-    env["TASK_ID"] = task_id
+        cmd = ["cap-evolve", "run", "--project", str(project), "--dashboard", "off"]
+        if follow:
+            cmd.append("--follow")
 
-    _log(f"starting {task_id}: {' '.join(cmd)}")
-    proc = subprocess.run(cmd, env=env, cwd=str(repo_root))
-    _log(f"finished {task_id}: exit={proc.returncode}")
-    return proc.returncode
+        env = dict(os.environ)
+        env["TASK_ID"] = task_id
+
+        _log(f"starting {task_id}: {' '.join(cmd)}")
+        proc = subprocess.run(cmd, env=env, cwd=str(repo_root))
+        _log(f"finished {task_id}: exit={proc.returncode}")
+        return proc.returncode
+    finally:
+        # In a finally, not on the success path: a lock left held would wedge
+        # the whole remaining 21-task sequence behind a single crashed run.
+        fcntl.flock(lock_file, fcntl.LOCK_UN)
+        lock_file.close()
 
 
 def main() -> int:
