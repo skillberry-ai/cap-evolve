@@ -119,6 +119,47 @@ class TestScaffoldProjects(unittest.TestCase):
         )
         self.assertEqual(sorted(first), sorted(second))
 
+    def test_seed_capability_is_not_silently_overwritten_on_rescaffold(self):
+        """Once a task has a full seed snapshot, it's live optimizer input, not
+        scratch — a later scaffold_all() call (e.g. after fixing a common/ bug)
+        must not clobber it. This is the guard against the exact mechanism that
+        let a transient live-clone contamination get frozen into all 21 seeds."""
+        task_ids = ["task-a"]
+        scaffold_projects.scaffold_all(
+            self.capevolve_dir, prompts_dir=self.prompts_dir, task_ids=task_ids,
+            common_adapters_src=self.common_adapters_src,
+            common_optimizer_src=self.common_optimizer_src,
+        )
+        proj = self.capevolve_dir / "v4_t2_e1_task-a" / "project"
+        orch = proj / "seed_capability" / "orchestrator.md"
+        orch.write_text("MUTATED BY IN-PROGRESS OPTIMIZATION\n")
+
+        scaffold_projects.scaffold_all(
+            self.capevolve_dir, prompts_dir=self.prompts_dir, task_ids=task_ids,
+            common_adapters_src=self.common_adapters_src,
+            common_optimizer_src=self.common_optimizer_src,
+        )
+        self.assertEqual(orch.read_text(), "MUTATED BY IN-PROGRESS OPTIMIZATION\n")
+
+    def test_refresh_seeds_flag_forces_overwrite(self):
+        task_ids = ["task-a"]
+        scaffold_projects.scaffold_all(
+            self.capevolve_dir, prompts_dir=self.prompts_dir, task_ids=task_ids,
+            common_adapters_src=self.common_adapters_src,
+            common_optimizer_src=self.common_optimizer_src,
+        )
+        proj = self.capevolve_dir / "v4_t2_e1_task-a" / "project"
+        orch = proj / "seed_capability" / "orchestrator.md"
+        orch.write_text("MUTATED BY IN-PROGRESS OPTIMIZATION\n")
+
+        scaffold_projects.scaffold_all(
+            self.capevolve_dir, prompts_dir=self.prompts_dir, task_ids=task_ids,
+            common_adapters_src=self.common_adapters_src,
+            common_optimizer_src=self.common_optimizer_src,
+            refresh_seeds=True,
+        )
+        self.assertEqual(orch.read_text(), "# seed content for orchestrator.md\n")
+
 
 class TestParsecV4NIsEnvOverridable(unittest.TestCase):
     """adapter.py resolves V4N from the PARSEC_V4N env var; the scaffolder
@@ -129,27 +170,30 @@ class TestParsecV4NIsEnvOverridable(unittest.TestCase):
 
     def test_module_reads_the_same_env_var_adapter_py_does(self):
         override = Path(tempfile.gettempdir()) / "fake-parsec-v4n"
-        with patch.dict(os.environ, {"PARSEC_V4N": str(override)}, clear=False):
-            reloaded = importlib.reload(scaffold_projects)
-            try:
+        try:
+            with patch.dict(os.environ, {"PARSEC_V4N": str(override)}, clear=False):
+                reloaded = importlib.reload(scaffold_projects)
                 self.assertEqual(reloaded.PARSEC_V4N, override)
                 self.assertEqual(
                     reloaded.PROMPTS_DIR,
                     override / "_run" / "parsec-live" / "config" / "prompts",
                 )
-            finally:
-                importlib.reload(scaffold_projects)
+        finally:
+            # Reload OUTSIDE the patched env: reloading while still inside the
+            # `with` block (the original bug here) re-applies the override
+            # instead of restoring the module's real environment.
+            importlib.reload(scaffold_projects)
 
     def test_default_matches_adapter_pys_default(self):
-        with patch.dict(os.environ, {}, clear=True):
-            reloaded = importlib.reload(scaffold_projects)
-            try:
+        try:
+            with patch.dict(os.environ, {}, clear=True):
+                reloaded = importlib.reload(scaffold_projects)
                 self.assertEqual(
                     reloaded.PARSEC_V4N,
                     Path("/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16"),
                 )
-            finally:
-                importlib.reload(scaffold_projects)
+        finally:
+            importlib.reload(scaffold_projects)
 
 
 class TestMainChecksItsSources(unittest.TestCase):
@@ -213,6 +257,21 @@ class TestMainChecksItsSources(unittest.TestCase):
         self.assertEqual(kwargs["prompts_dir"], self.prompts_dir)
         self.assertEqual(kwargs["common_adapters_src"], self.present)
         self.assertEqual(kwargs["common_optimizer_src"], self.present)
+        self.assertEqual(kwargs["refresh_seeds"], False)
+
+    def test_refresh_seeds_flag_threads_through_to_scaffold_all(self):
+        missing_capevolve = Path(self.tmp.name) / ".capevolve"
+        with patch.object(sys, "argv",
+                           ["scaffold_projects.py", "--only", "task-a", "--refresh-seeds"]), \
+             patch.object(scaffold_projects, "TASK_IDS", ["task-a"]), \
+             patch.object(scaffold_projects, "PROMPTS_DIR", self.prompts_dir), \
+             patch.object(scaffold_projects, "CAPEVOLVE_DIR", missing_capevolve), \
+             patch.object(scaffold_projects, "COMMON_ADAPTERS_SRC", self.present), \
+             patch.object(scaffold_projects, "COMMON_OPTIMIZER_SRC", self.present), \
+             patch.object(scaffold_projects, "scaffold_all") as mock_scaffold:
+            code = scaffold_projects.main()
+        self.assertEqual(code, 0)
+        self.assertEqual(mock_scaffold.call_args.kwargs["refresh_seeds"], True)
 
 
 class TestEnsureSymlinkUsesTopLevelOs(unittest.TestCase):

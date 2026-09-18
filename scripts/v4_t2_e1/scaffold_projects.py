@@ -128,6 +128,7 @@ def scaffold_all(
     task_ids: list[str] | None = None,
     common_adapters_src: Path = COMMON_ADAPTERS_SRC,
     common_optimizer_src: Path = COMMON_OPTIMIZER_SRC,
+    refresh_seeds: bool = False,
 ) -> list[Path]:
     task_ids = list(task_ids) if task_ids is not None else list(TASK_IDS)
     created: list[Path] = []
@@ -140,9 +141,18 @@ def scaffold_all(
         proj = capevolve_dir / f"v4_t2_e1_{task_id}" / "project"
         seed_dir = proj / "seed_capability"
         seed_dir.mkdir(parents=True, exist_ok=True)
+        # Once a task already has a full seed snapshot, its seed_capability/ is
+        # live optimizer input, not scratch — a later scaffold_all() call (e.g.
+        # re-running this script mid-sweep after fixing a common/ bug) must not
+        # silently re-copy over it. Only --refresh-seeds may intentionally do
+        # that (e.g. resyncing a snapshot known to have been corrupted).
+        already_seeded = all((seed_dir / name).exists() for name in PROMPT_FILES)
         for name in PROMPT_FILES:
             src = prompts_dir / name
             dst = seed_dir / name
+            if already_seeded and not refresh_seeds:
+                created.append(dst)
+                continue
             shutil.copyfile(src, dst)
             created.append(dst)
 
@@ -166,6 +176,12 @@ def main() -> int:
                          help="print what would be created, write nothing")
     parser.add_argument("--only", action="append", default=None,
                          help="scaffold only this task id (repeatable)")
+    parser.add_argument("--refresh-seeds", action="store_true",
+                         help="overwrite an already-scaffolded task's seed_capability "
+                              "prompt files from prompts_dir. Default: skip tasks that "
+                              "already have a full seed snapshot, so a later re-scaffold "
+                              "can't silently clobber an in-progress task's optimizer "
+                              "input. Use this only to intentionally resync a snapshot.")
     args = parser.parse_args()
 
     task_ids = args.only if args.only else TASK_IDS
@@ -205,6 +221,7 @@ def main() -> int:
         CAPEVOLVE_DIR, task_ids=task_ids, prompts_dir=PROMPTS_DIR,
         common_adapters_src=COMMON_ADAPTERS_SRC,
         common_optimizer_src=COMMON_OPTIMIZER_SRC,
+        refresh_seeds=args.refresh_seeds,
     )
     print(f"scaffolded {len(task_ids)} task project(s), {len(paths)} paths touched.")
     return 0
