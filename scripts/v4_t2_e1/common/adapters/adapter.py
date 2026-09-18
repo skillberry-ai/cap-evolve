@@ -14,6 +14,9 @@ Candidate delivery: system_prompt.py's get_agent_prompt() re-reads
 config/prompts/*.md from disk on every request, keyed by mtime (see the
 design doc) — so apply() just overwrites those files in the live
 parsec-live clone. No process restart, no Harbor injection flag needed.
+Because that clone is shared and long-lived, live() is overridden to
+snapshot those files on entry and restore them in a finally, so a crash
+mid-evaluation cannot leave a candidate's prompts serving indefinitely.
 
 Note on PARSEC_LIVE_PROMPTS_DIR: this is read into an INSTANCE attribute
 (self.live_prompts_dir) inside __init__, evaluated fresh every time an
@@ -147,6 +150,40 @@ class Adapter(CapabilityAdapter):
                 (self.live_prompts_dir / name).write_text(
                     src.read_text(encoding="utf-8"), encoding="utf-8"
                 )
+
+    # ------------------------------------------------------------------
+    # live() teardown. apply() mutates a SHARED, long-lived resource — the one
+    # parsec-live clone every task's trials talk to — and the base
+    # CapabilityAdapter.live() has an empty `finally`. So a crash anywhere
+    # between apply() and the end of an evaluation (a VPN drop, a machine
+    # sleep, a KeyboardInterrupt) left that candidate's prompts serving
+    # indefinitely, and the NEXT run's "baseline" would silently be the
+    # previous run's mutant. Snapshotting the 8 PROMPT_FILES on entry and
+    # restoring them in a finally makes the mutation strictly scoped to the
+    # one evaluation, which is exactly the contract the base class documents.
+    #
+    # Signature and yield value match the base class deliberately:
+    # harness.py's _live() does `with adapter.live(candidate_dir) as ctx:` and
+    # hands that ctx straight to run_target/run_trials.
+    # ------------------------------------------------------------------
+    @contextmanager
+    def live(self, candidate_dir: Path):
+        snapshot: dict[str, str | None] = {}
+        for name in PROMPT_FILES:
+            p = self.live_prompts_dir / name
+            snapshot[name] = p.read_text(encoding="utf-8") if p.exists() else None
+        try:
+            self.apply(candidate_dir)
+            yield candidate_dir
+        finally:
+            for name, content in snapshot.items():
+                p = self.live_prompts_dir / name
+                if content is None:
+                    # Restore means restore: a prompt the candidate ADDED is not
+                    # part of the pre-entry state and must not survive the run.
+                    p.unlink(missing_ok=True)
+                else:
+                    p.write_text(content, encoding="utf-8")
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         task_dir = task.metadata["task_dir"]

@@ -133,6 +133,104 @@ class TestAdapterApply(unittest.TestCase):
             )
 
 
+class TestAdapterLiveTeardown(unittest.TestCase):
+    """apply() mutates a SHARED, long-lived resource — the one parsec-live
+    clone every task's trials talk to. The base CapabilityAdapter.live() has an
+    empty finally, so a crash anywhere between apply() and the end of an
+    evaluation left that candidate's prompts serving indefinitely: the next
+    run's "baseline" would silently be the previous run's mutant. live() must
+    snapshot the 8 PROMPT_FILES on entry and restore them in a finally.
+
+    harness.py's _live() enters this context manager around the WHOLE
+    evaluation (see its call site at harness.py's redirect_stdout block), so
+    per-evaluation scoping is the right granularity.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.live_prompts_dir = Path(self.tmp.name) / "live_prompts"
+        self.live_prompts_dir.mkdir()
+        for name in adapter_mod.PROMPT_FILES:
+            (self.live_prompts_dir / name).write_text(f"seed {name}\n")
+        self.env_patch = patch.dict(
+            os.environ,
+            {"TASK_ID": KNOWN_TASK_ID, "PARSEC_LIVE_PROMPTS_DIR": str(self.live_prompts_dir)},
+            clear=True,
+        )
+        self.env_patch.start()
+        self.candidate = Path(self.tmp.name) / "candidate"
+        self.candidate.mkdir()
+        self.mutated = "CANDIDATE orchestrator\n" + ("body line\n" * 80)
+        (self.candidate / "orchestrator.md").write_text(self.mutated)
+        (self.candidate / "cost_agent.md").write_text("CANDIDATE cost agent\n")
+
+    def tearDown(self):
+        self.env_patch.stop()
+        self.tmp.cleanup()
+
+    def _current(self) -> dict[str, str | None]:
+        out: dict[str, str | None] = {}
+        for name in adapter_mod.PROMPT_FILES:
+            p = self.live_prompts_dir / name
+            out[name] = p.read_text() if p.exists() else None
+        return out
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_live_applies_the_candidate_inside_the_context(self):
+        a = adapter_mod.Adapter()
+        with a.live(self.candidate) as ctx:
+            self.assertEqual((self.live_prompts_dir / "orchestrator.md").read_text(),
+                             self.mutated)
+            self.assertEqual((self.live_prompts_dir / "cost_agent.md").read_text(),
+                             "CANDIDATE cost agent\n")
+        # ctx contract: the base class yields candidate_dir, callers pass it to
+        # run_target as `ctx` — the override must not change that.
+        self.assertEqual(Path(str(ctx)), self.candidate)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_live_restores_the_snapshot_after_a_crash_inside_the_block(self):
+        a = adapter_mod.Adapter()
+        before = self._current()
+        with self.assertRaises(RuntimeError):
+            with a.live(self.candidate):
+                self.assertEqual((self.live_prompts_dir / "orchestrator.md").read_text(),
+                                 self.mutated)
+                raise RuntimeError("VPN dropped mid-trial")
+        self.assertEqual(self._current(), before)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_live_restores_the_snapshot_on_a_clean_exit_too(self):
+        a = adapter_mod.Adapter()
+        before = self._current()
+        with a.live(self.candidate):
+            pass
+        self.assertEqual(self._current(), before)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_live_removes_a_file_that_did_not_exist_before_entry(self):
+        """Restore means restore: a prompt the candidate ADDS must be deleted on
+        exit, not left behind as a permanent addition to the live clone."""
+        (self.live_prompts_dir / "cost_agent.md").unlink()
+        a = adapter_mod.Adapter()
+        with a.live(self.candidate):
+            self.assertTrue((self.live_prompts_dir / "cost_agent.md").exists())
+        self.assertFalse((self.live_prompts_dir / "cost_agent.md").exists())
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_live_restores_even_when_apply_itself_refuses(self):
+        """A candidate rejected by the MIN_ORCHESTRATOR_BYTES floor must not
+        leave the live clone in a half-state either."""
+        bad = Path(self.tmp.name) / "bad_candidate"
+        bad.mkdir()
+        (bad / "orchestrator.md").write_text("MUTATED orchestrator\n")
+        a = adapter_mod.Adapter()
+        before = self._current()
+        with self.assertRaises(ValueError):
+            with a.live(bad):
+                pass  # pragma: no cover — apply() raises before the yield
+        self.assertEqual(self._current(), before)
+
+
 class TestAdapterScore(unittest.TestCase):
     @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
     def test_score_is_zero_on_rollout_error(self):
