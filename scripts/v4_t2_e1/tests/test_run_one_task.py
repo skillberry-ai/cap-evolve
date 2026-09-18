@@ -368,9 +368,47 @@ class TestMainStackHealthGate(unittest.TestCase):
     from a capability failure once it is in the run record.
     """
 
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.capevolve_dir = Path(self.tmp.name) / ".capevolve"
+        # main() must be as redirectable as run_task(): without this its ABORT
+        # lines land in the operator's real .capevolve/v4_t2_e1_progress.log.
+        self.global_patch = patch.object(run_one_task, "CAPEVOLVE_DIR", self.capevolve_dir)
+        self.global_patch.start()
+
+    def tearDown(self):
+        self.global_patch.stop()
+        self.tmp.cleanup()
+
     def _run_main(self):
         with patch.object(sys, "argv", ["run_one_task.py"]):
             return run_one_task.main()
+
+    def test_main_logs_under_the_module_capevolve_dir_it_was_pointed_at(self):
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=True), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy",
+                           return_value=(False, ["ICINGA_MCP"])):
+            self._run_main()
+        log = self.capevolve_dir / "v4_t2_e1_progress.log"
+        self.assertTrue(
+            log.exists(),
+            "main()'s log lines must follow CAPEVOLVE_DIR, not _log()'s def-time default",
+        )
+        self.assertIn("ICINGA_MCP", log.read_text())
+
+    def test_main_passes_its_capevolve_dir_down_to_run_task(self):
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=True), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy",
+                           return_value=(True, [])), \
+             patch.object(run_one_task, "resolve_next_task_id", return_value="task-x"), \
+             patch.object(run_one_task, "TASK_IDS", ["task-x"]), \
+             patch.object(run_one_task, "run_task", return_value=0) as mock_run_task:
+            self._run_main()
+        self.assertEqual(
+            mock_run_task.call_args.kwargs["capevolve_dir"], self.capevolve_dir
+        )
 
     def test_aborts_with_exit_5_when_a_service_is_unreachable(self):
         with patch.object(run_one_task.preflight_check,

@@ -159,8 +159,16 @@ def main() -> int:
                          help="pass --follow through to `cap-evolve run`")
     args = parser.parse_args()
 
+    # Resolved from the module global at CALL time, then threaded through every
+    # _log()/resolve/run_task below. _log()'s own default is bound at def time,
+    # so reading it here is what makes main() as redirectable as run_task() —
+    # without this, main()'s log lines land in the real progress record even when
+    # a caller has pointed the module elsewhere.
+    capevolve_dir = CAPEVOLVE_DIR
+
     if not preflight_check.installed_cli_supports_stop_at_reward():
-        _log("ABORT: installed cap-evolve tool is stale — see preflight_check.py output")
+        _log("ABORT: installed cap-evolve tool is stale — see preflight_check.py output",
+             capevolve_dir)
         preflight_check.main()
         return 2
 
@@ -173,19 +181,20 @@ def main() -> int:
             f"ABORT: simulation stack is not healthy — unreachable: "
             f"{', '.join(unreachable)}. Bring the harness/parsec-live services up "
             f"before starting a task; every trial against a broken stack scores "
-            f"0.0 and is indistinguishable from a capability failure afterwards."
+            f"0.0 and is indistinguishable from a capability failure afterwards.",
+            capevolve_dir,
         )
         return 5
 
-    task_id = args.task_id or resolve_next_task_id(CAPEVOLVE_DIR, TASK_IDS)
+    task_id = args.task_id or resolve_next_task_id(capevolve_dir, TASK_IDS)
     if task_id is None:
-        _log("ALL_DONE: every v4_t2_e1 task has a final.json")
+        _log("ALL_DONE: every v4_t2_e1 task has a final.json", capevolve_dir)
         return 0
     if task_id not in TASK_IDS:
-        _log(f"ABORT: unknown task id {task_id!r}")
+        _log(f"ABORT: unknown task id {task_id!r}", capevolve_dir)
         return 2
 
-    return run_task(task_id, follow=args.follow)
+    return run_task(task_id, capevolve_dir=capevolve_dir, follow=args.follow)
 
 
 if __name__ == "__main__":
