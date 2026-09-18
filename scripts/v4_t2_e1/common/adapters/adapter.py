@@ -234,9 +234,17 @@ class Adapter(CapabilityAdapter):
         # reconstruct a TrialResult from a plain dict to recompute it.
         feedback = build_feedback(trial_result)
 
+        # trial_result.error is set only when the trial produced NO score at all
+        # (image build failure, agent-setup timeout, agent timeout). That is
+        # missing data, not a reward of 0.0 — propagating it is what lets the
+        # harness exclude the trial from the mean instead of handing the
+        # optimizer a phantom capability regression to "fix".
         return Rollout(
             task_id=task.id,
             output=feedback,
+            error=trial_result.error,
+            cost_usd=trial_result.cost_usd,
+            tokens=trial_result.tokens,
             metadata={
                 "trial_dir": str(trial_dir),
                 "trial_result": trial_result.__dict__,

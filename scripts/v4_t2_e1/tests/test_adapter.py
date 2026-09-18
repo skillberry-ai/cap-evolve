@@ -158,6 +158,97 @@ class TestAdapterScore(unittest.TestCase):
             self.assertEqual(score.reward, 0.83)
 
 
+class TestAdapterInfraErrorPropagation(unittest.TestCase):
+    """parse_job_dir() sets TrialResult.error only when a trial produced NO
+    score at all — an image build failure, an agent-setup timeout, an agent
+    timeout. That is missing data, not a reward of 0.0, and only Rollout.error
+    tells the harness to exclude it from the mean instead of feeding the
+    optimizer a phantom capability regression. run_target() computed
+    trial_result.error and then dropped it on the floor.
+    """
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_run_target_surfaces_an_unscored_trial_as_rollout_error(self):
+        created_trial_dirs: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            if cmd[0] != "harbor":
+                return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
+            trial_dir = Path(cmd[3]).parent
+            created_trial_dirs.append(trial_dir)
+            # No verifier/reward.* at all: harbor blew up before scoring.
+            trial_sub = trial_dir / "2026-09-18__09-17-39" / "bench-v4-icinga-011__zz"
+            trial_sub.mkdir(parents=True)
+            (trial_sub / "config.json").write_text(json.dumps({"task": {"name": KNOWN_TASK_ID}}))
+            (trial_sub / "result.json").write_text(json.dumps({
+                "exception_info": {
+                    "exception_type": "ImageBuildError",
+                    "exception_message": "some infra failure",
+                }
+            }))
+            return subprocess.CompletedProcess(cmd, 0)
+
+        try:
+            with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+                a = adapter_mod.Adapter()
+                task = a.tasks("val")[0]
+                with patch.object(
+                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                    rollout = a.run_target(task, ctx=None)
+
+            self.assertIsNotNone(
+                rollout.error,
+                "an unscored trial must set Rollout.error, not look like reward 0.0",
+            )
+            self.assertIn("some infra failure", rollout.error)
+            score = a.score(task, rollout)
+            self.assertEqual(score.reward, 0.0)
+            self.assertIn(
+                "some infra failure", score.feedback,
+                "the optimizer must see the infra cause, not a generic zero-reward",
+            )
+        finally:
+            for d in created_trial_dirs:
+                shutil.rmtree(d, ignore_errors=True)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_run_target_carries_cost_and_tokens_onto_the_rollout(self):
+        created_trial_dirs: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            if cmd[0] != "harbor":
+                return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
+            trial_dir = Path(cmd[3]).parent
+            created_trial_dirs.append(trial_dir)
+            trial_sub = trial_dir / "2026-09-18__09-17-39" / "bench-v4-icinga-011__zz"
+            (trial_sub / "verifier").mkdir(parents=True)
+            (trial_sub / "verifier" / "reward.json").write_text(json.dumps({"reward": 1.0}))
+            (trial_sub / "config.json").write_text(json.dumps({"task": {"name": KNOWN_TASK_ID}}))
+            (trial_sub / "result.json").write_text(
+                json.dumps({"cost_usd": 1.37, "tokens": 42000})
+            )
+            return subprocess.CompletedProcess(cmd, 0)
+
+        try:
+            with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
+                a = adapter_mod.Adapter()
+                task = a.tasks("val")[0]
+                with patch.object(
+                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                    rollout = a.run_target(task, ctx=None)
+            self.assertIsNone(rollout.error)
+            self.assertEqual(rollout.cost_usd, 1.37)
+            self.assertEqual(rollout.tokens, 42000)
+            tr = rollout.metadata["trial_result"]
+            self.assertEqual(rollout.cost_usd, tr["cost_usd"])
+            self.assertEqual(rollout.tokens, tr["tokens"])
+        finally:
+            for d in created_trial_dirs:
+                shutil.rmtree(d, ignore_errors=True)
+
+
 class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
     """Regression test for the job-dir nesting bug found by Task 6's live
     E2E smoke test: `harbor run -o <trial_dir>` writes its actual result
