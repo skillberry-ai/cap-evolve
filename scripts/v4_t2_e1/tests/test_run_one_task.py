@@ -266,5 +266,64 @@ class TestRunTaskSymlinkPreflight(unittest.TestCase):
         mock_run.assert_not_called()
 
 
+class TestMainStackHealthGate(unittest.TestCase):
+    """main() must refuse to commit a task's budget to a broken stack. Every
+    trial against a downed MCP service scores 0.0, which is indistinguishable
+    from a capability failure once it is in the run record.
+    """
+
+    def _run_main(self):
+        with patch.object(sys, "argv", ["run_one_task.py"]):
+            return run_one_task.main()
+
+    def test_aborts_with_exit_5_when_a_service_is_unreachable(self):
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=True), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy",
+                           return_value=(False, ["ICINGA_MCP"])), \
+             patch.object(run_one_task, "run_task") as mock_run_task, \
+             patch("subprocess.run") as mock_subprocess:
+            code = self._run_main()
+        self.assertEqual(code, 5)
+        mock_run_task.assert_not_called()
+        mock_subprocess.assert_not_called()
+
+    def test_checks_the_stack_before_resolving_a_task_id(self):
+        """Resolving the next task id is harmless, but the check must not sit
+        after run_task() — order is the whole point of a pre-flight."""
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=True), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy",
+                           return_value=(False, ["COST_MCP", "CLOUD_MCP"])) as mock_health, \
+             patch.object(run_one_task, "resolve_next_task_id") as mock_resolve, \
+             patch.object(run_one_task, "run_task") as mock_run_task:
+            code = self._run_main()
+        self.assertEqual(code, 5)
+        mock_health.assert_called_once()
+        mock_resolve.assert_not_called()
+        mock_run_task.assert_not_called()
+
+    def test_proceeds_to_run_task_when_the_stack_is_healthy(self):
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=True), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy",
+                           return_value=(True, [])), \
+             patch.object(run_one_task, "resolve_next_task_id", return_value="task-x"), \
+             patch.object(run_one_task, "TASK_IDS", ["task-x"]), \
+             patch.object(run_one_task, "run_task", return_value=0) as mock_run_task:
+            code = self._run_main()
+        self.assertEqual(code, 0)
+        mock_run_task.assert_called_once()
+
+    def test_does_not_reach_the_stack_check_when_the_cli_is_stale(self):
+        with patch.object(run_one_task.preflight_check,
+                           "installed_cli_supports_stop_at_reward", return_value=False), \
+             patch.object(run_one_task.preflight_check, "main", return_value=1), \
+             patch.object(run_one_task.preflight_check, "stack_is_healthy") as mock_health:
+            code = self._run_main()
+        self.assertEqual(code, 2)
+        mock_health.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

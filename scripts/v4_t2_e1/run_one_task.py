@@ -139,6 +139,19 @@ def main() -> int:
         preflight_check.main()
         return 2
 
+    # Committing a task's budget (up to 3 iterations x 5 trials, max_usd 50) to
+    # a stack with a downed service buys nothing but a run full of 0.0 rewards
+    # that read exactly like a capability failure. Five TCP connects is cheaper.
+    healthy, unreachable = preflight_check.stack_is_healthy()
+    if not healthy:
+        _log(
+            f"ABORT: simulation stack is not healthy — unreachable: "
+            f"{', '.join(unreachable)}. Bring the harness/parsec-live services up "
+            f"before starting a task; every trial against a broken stack scores "
+            f"0.0 and is indistinguishable from a capability failure afterwards."
+        )
+        return 5
+
     task_id = args.task_id or resolve_next_task_id(CAPEVOLVE_DIR, TASK_IDS)
     if task_id is None:
         _log("ALL_DONE: every v4_t2_e1 task has a final.json")
