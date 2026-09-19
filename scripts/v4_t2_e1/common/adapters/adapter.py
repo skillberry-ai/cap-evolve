@@ -28,6 +28,16 @@ keep writing to the real default directory instead of the caller's chosen
 one. Reading it per-instance is what makes the env var actually override
 the default at every construction, which is exactly what
 TestAdapterApply relies on.
+
+Cost/token telemetry: Harbor's own result.json never carries real cost data
+for ParsecAgent (its agent_result.cost_usd is a hard null — the agent's real
+LLM calls happen inside the external, already-running parsec-live process,
+entirely outside Harbor's own metering loop). run_target() instead reads
+parsec-live's own MetricsCollector log (one "usage runtime=..." line per
+conversation turn, written unconditionally regardless of MLflow reachability)
+and attributes lines to a trial by timestamp window. PARSEC_LIVE_LOG follows
+the exact same per-instance, env-overridable pattern as PARSEC_LIVE_PROMPTS_DIR
+above, for the same testability reason (self.live_log_path).
 """
 from __future__ import annotations
 
@@ -39,6 +49,7 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # This file is reached through a chain of symlinks (project/adapters ->
@@ -122,6 +133,87 @@ def _resolve_docker_host() -> str:
     return f"unix://{path}"
 
 
+# ParsecAgent's real LLM calls happen entirely inside the already-running,
+# external parsec-live process (one POST /api/query per trial) — completely
+# outside Harbor's own agent-invocation/metering loop. Harbor's result.json
+# therefore never carries real cost/token data for this agent (its
+# agent_result.cost_usd is a hard null, not a fallback zero). The real,
+# authoritative numbers are already computed by parsec-live's own
+# MetricsCollector (_run/parsec-live/src/metrics/collector.py) and logged —
+# one line per conversation turn — regardless of whether MLflow is reachable.
+# So run_target() reads that log directly instead of trusting
+# TrialResult.cost_usd/.tokens (see the module docstring's testability note —
+# same reasoning applies to self.live_log_path below).
+_USAGE_LINE_RE = re.compile(
+    r"^(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}).*"
+    r"usage runtime=\S+ agent=\S+ "
+    r"in=(?P<in_tok>\d+) out=(?P<out_tok>\d+) "
+    r"cache_read=(?P<cache_read>\d+) cache_write=(?P<cache_write>\d+) "
+    r"cache_hit=[\d.]+% tools=\d+ errors=\d+ "
+    r"cost_usd=(?P<cost>[\d.]+) latency_ms=[\d.]+"
+)
+
+# Trials never overlap on the shared parsec-live process (harbor run
+# --n-concurrent 1, plus live()'s own advisory lock), so a timestamp-window
+# match against this adapter's own harbor subprocess is unambiguous. This
+# buffer only absorbs clock-skew between when the line was logged and when
+# this process's own before/after datetime.now() calls landed.
+_USAGE_MATCH_BUFFER_SEC = 5.0
+
+
+def _parse_usage_line(line: str) -> tuple[datetime, float, int] | None:
+    """Parse one parsec-live MetricsCollector "usage runtime=..." log line.
+
+    Returns ``(timestamp_utc, cost_usd, total_tokens)``, or None if ``line``
+    doesn't match. The logged timestamp has no timezone — it is parsed as
+    naive local time and converted to UTC using the CURRENT local UTC
+    offset. A DST transition mid-sweep would make that offset wrong for
+    lines logged on the other side of the transition, causing a false
+    non-match (safe: falls back to 0 cost/tokens for that trial, loudly
+    absent) rather than silently attributing cost to the wrong trial.
+    """
+    match = _USAGE_LINE_RE.match(line)
+    if not match:
+        return None
+    naive_local = datetime.strptime(match["ts"], "%Y-%m-%d %H:%M:%S,%f")
+    local_tz = datetime.now().astimezone().tzinfo
+    ts_utc = naive_local.replace(tzinfo=local_tz).astimezone(timezone.utc)
+    tokens = (
+        int(match["in_tok"]) + int(match["out_tok"])
+        + int(match["cache_read"]) + int(match["cache_write"])
+    )
+    return ts_utc, float(match["cost"]), tokens
+
+
+def _read_parsec_usage_cost(
+    log_path: Path, window_start: datetime, window_end: datetime,
+) -> tuple[float, int]:
+    """Sum real cost_usd/tokens for every usage line logged within
+    ``[window_start, window_end]`` (plus _USAGE_MATCH_BUFFER_SEC on each
+    side). Summing rather than taking a single match is deliberately
+    defensive: today one Harbor trial produces exactly one usage line, but
+    summing stays correct even if that 1:1 assumption ever breaks (e.g. a
+    future retry-on-error inside one trial). Returns (0.0, 0) if the log
+    doesn't exist — a missing log is infra noise, not a reason to fail the
+    trial itself.
+    """
+    if not log_path.exists():
+        return 0.0, 0
+    lo = window_start - timedelta(seconds=_USAGE_MATCH_BUFFER_SEC)
+    hi = window_end + timedelta(seconds=_USAGE_MATCH_BUFFER_SEC)
+    total_cost = 0.0
+    total_tokens = 0
+    for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        parsed = _parse_usage_line(line)
+        if parsed is None:
+            continue
+        ts_utc, cost_usd, tokens = parsed
+        if lo <= ts_utc <= hi:
+            total_cost += cost_usd
+            total_tokens += tokens
+    return total_cost, total_tokens
+
+
 class Adapter(CapabilityAdapter):
     def __init__(self) -> None:
         task_id = os.environ.get("TASK_ID", "").strip()
@@ -144,6 +236,13 @@ class Adapter(CapabilityAdapter):
                 "PARSEC_LIVE_PROMPTS_DIR",
                 str(V4N / "_run" / "parsec-live" / "config" / "prompts"),
             )
+        )
+        # Same per-instance, env-overridable pattern as live_prompts_dir above,
+        # and for the same reason: PARSEC_LIVE_LOG must be re-read fresh on
+        # every construction so a test (or caller) that sets it before
+        # constructing an Adapter always gets it.
+        self.live_log_path = Path(
+            os.environ.get("PARSEC_LIVE_LOG", str(V4N / "_run" / "logs" / "parsec-live.log"))
         )
 
     # ------------------------------------------------------------------
@@ -279,6 +378,12 @@ class Adapter(CapabilityAdapter):
             env[var] = f"http://localhost:{port}/mcp/sse"
 
         log_path = trial_dir / "harbor_run.log"
+        # Window bracketing this trial's one harbor subprocess invocation —
+        # used below to attribute parsec-live's own usage-log line(s) to this
+        # trial (see _read_parsec_usage_cost). Captured around the
+        # subprocess.run call itself, not the whole method, so it stays tight
+        # even though install_seeds.py and _resolve_docker_host() ran earlier.
+        usage_window_start = datetime.now(timezone.utc)
         try:
             with open(log_path, "w", encoding="utf-8") as logf:
                 proc = subprocess.run(
@@ -289,6 +394,7 @@ class Adapter(CapabilityAdapter):
         except subprocess.TimeoutExpired:
             return Rollout(task_id=task.id, error=f"harbor run timed out after {TRIAL_TIMEOUT_SEC}s",
                            metadata={"trial_dir": str(trial_dir)})
+        usage_window_end = datetime.now(timezone.utc)
 
         if proc.returncode != 0:
             return Rollout(task_id=task.id, error=f"harbor run exited {proc.returncode}",
@@ -318,6 +424,15 @@ class Adapter(CapabilityAdapter):
         # reconstruct a TrialResult from a plain dict to recompute it.
         feedback = build_feedback(trial_result)
 
+        # trial_result.cost_usd/.tokens come from Harbor's own result.json and
+        # are always null/zero for ParsecAgent — its real LLM calls happen
+        # inside the external parsec-live process, entirely outside Harbor's
+        # metering. The real numbers come from parsec-live's own usage log
+        # instead (see _read_parsec_usage_cost's docstring).
+        real_cost_usd, real_tokens = _read_parsec_usage_cost(
+            self.live_log_path, usage_window_start, usage_window_end,
+        )
+
         # trial_result.error is set only when the trial produced NO score at all
         # (image build failure, agent-setup timeout, agent timeout). That is
         # missing data, not a reward of 0.0 — propagating it is what lets the
@@ -327,12 +442,16 @@ class Adapter(CapabilityAdapter):
             task_id=task.id,
             output=feedback,
             error=trial_result.error,
-            cost_usd=trial_result.cost_usd,
-            tokens=trial_result.tokens,
+            cost_usd=real_cost_usd,
+            tokens=real_tokens,
             metadata={
                 "trial_dir": str(trial_dir),
                 "trial_result": trial_result.__dict__,
                 "feedback": feedback,
+                "parsec_usage_window": {
+                    "start": usage_window_start.isoformat(),
+                    "end": usage_window_end.isoformat(),
+                },
             },
         )
 

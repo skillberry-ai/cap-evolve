@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -311,7 +312,15 @@ class TestAdapterInfraErrorPropagation(unittest.TestCase):
                 shutil.rmtree(d, ignore_errors=True)
 
     @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
-    def test_run_target_carries_cost_and_tokens_onto_the_rollout(self):
+    def test_run_target_cost_and_tokens_are_zero_when_no_usage_log_matches(self):
+        """cost_usd/tokens on the Rollout come from parsec-live's own usage
+        log (see TestAdapterParsecUsageLog below), not from result.json's
+        cost_usd/tokens — ParsecAgent never populates those (its real LLM
+        calls happen inside the external parsec-live process, entirely
+        outside Harbor's own agent-invocation metering). A missing/no-match
+        log must degrade to 0, not silently fall back to result.json's
+        null/wrong fields — that silent fallback was the original bug.
+        """
         created_trial_dirs: list[Path] = []
 
         def fake_run(cmd, **kwargs):
@@ -329,22 +338,81 @@ class TestAdapterInfraErrorPropagation(unittest.TestCase):
             return subprocess.CompletedProcess(cmd, 0)
 
         try:
-            with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
-                a = adapter_mod.Adapter()
-                task = a.tasks("val")[0]
-                with patch.object(
-                    adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
-                ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
-                    rollout = a.run_target(task, ctx=None)
+            with tempfile.TemporaryDirectory() as log_dir_s:
+                missing_log = Path(log_dir_s) / "no-such-parsec-live.log"
+                with patch.dict(
+                    os.environ,
+                    {"TASK_ID": KNOWN_TASK_ID, "PARSEC_LIVE_LOG": str(missing_log)},
+                    clear=True,
+                ):
+                    a = adapter_mod.Adapter()
+                    task = a.tasks("val")[0]
+                    with patch.object(
+                        adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                    ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                        rollout = a.run_target(task, ctx=None)
             self.assertIsNone(rollout.error)
-            self.assertEqual(rollout.cost_usd, 1.37)
-            self.assertEqual(rollout.tokens, 42000)
+            self.assertEqual(rollout.cost_usd, 0.0)
+            self.assertEqual(rollout.tokens, 0)
             tr = rollout.metadata["trial_result"]
-            self.assertEqual(rollout.cost_usd, tr["cost_usd"])
-            self.assertEqual(rollout.tokens, tr["tokens"])
+            self.assertEqual(
+                tr["cost_usd"], 1.37,
+                "result.json's own (unused-for-rollout) field is still kept for reference",
+            )
         finally:
             for d in created_trial_dirs:
                 shutil.rmtree(d, ignore_errors=True)
+
+    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    def test_run_target_reads_cost_and_tokens_from_the_parsec_live_log(self):
+        """The real fix: cost/tokens come from parsec-live's own MetricsCollector
+        log, matched to this trial by the timestamp window run_target() captures
+        around its one harbor subprocess call.
+        """
+        created_trial_dirs: list[Path] = []
+        with tempfile.TemporaryDirectory() as log_dir_s:
+            log_path = Path(log_dir_s) / "parsec-live.log"
+
+            def fake_run(cmd, **kwargs):
+                if cmd[0] != "harbor":
+                    return subprocess.CompletedProcess(cmd, 0, stdout="seeded", stderr="")
+                trial_dir = Path(cmd[3]).parent
+                created_trial_dirs.append(trial_dir)
+                trial_sub = trial_dir / "2026-09-18__09-17-39" / "bench-v4-icinga-011__zz"
+                (trial_sub / "verifier").mkdir(parents=True)
+                (trial_sub / "verifier" / "reward.json").write_text(json.dumps({"reward": 1.0}))
+                (trial_sub / "config.json").write_text(json.dumps({"task": {"name": KNOWN_TASK_ID}}))
+                (trial_sub / "result.json").write_text(json.dumps({}))
+                # Written "live" during the harbor call itself, so its
+                # timestamp always falls inside run_target()'s usage-window
+                # capture regardless of how slow this test process is.
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                log_path.write_text(
+                    f"{ts} INFO src.metrics.collector — usage runtime=legacy agent=icinga "
+                    "in=34455 out=1145 cache_read=0 cache_write=0 cache_hit=0.0% tools=6 "
+                    "errors=1 cost_usd=0.1205 latency_ms=123041\n"
+                )
+                return subprocess.CompletedProcess(cmd, 0)
+
+            try:
+                with patch.dict(
+                    os.environ,
+                    {"TASK_ID": KNOWN_TASK_ID, "PARSEC_LIVE_LOG": str(log_path)},
+                    clear=True,
+                ):
+                    a = adapter_mod.Adapter()
+                    task = a.tasks("val")[0]
+                    with patch.object(
+                        adapter_mod, "_resolve_docker_host", return_value="unix:///tmp/fake.sock"
+                    ), patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+                        rollout = a.run_target(task, ctx=None)
+                self.assertIsNone(rollout.error)
+                self.assertAlmostEqual(rollout.cost_usd, 0.1205)
+                self.assertEqual(rollout.tokens, 34455 + 1145)
+                self.assertIn("parsec_usage_window", rollout.metadata)
+            finally:
+                for d in created_trial_dirs:
+                    shutil.rmtree(d, ignore_errors=True)
 
 
 class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
@@ -631,6 +699,81 @@ class TestAdapterPythonPath(unittest.TestCase):
     def test_is_exactly_dot_when_nothing_was_set(self):
         env = self._captured_env(None)
         self.assertEqual(env["PYTHONPATH"], ".")
+
+
+class TestParsecUsageLineParsing(unittest.TestCase):
+    """Ground truth: this exact line was cross-referenced during the original
+    investigation against the one real Harbor trial it belongs to —
+    result.json's agent_execution.finished_at (2026-09-18T06:52:47.751114Z
+    UTC) matches this line's local timestamp (09:52:47,746) to the second,
+    local = UTC+3 on the machine that produced it. The parser must reproduce
+    cost_usd=0.1205 and tokens=34455+1145 from it exactly.
+    """
+
+    REAL_LINE = (
+        "2026-09-18 09:52:47,746 INFO src.metrics.collector — usage runtime=legacy "
+        "agent=icinga in=34455 out=1145 cache_read=0 cache_write=0 cache_hit=0.0% "
+        "tools=6 errors=1 cost_usd=0.1205 latency_ms=123041"
+    )
+
+    def test_parses_the_real_ground_truth_line(self):
+        parsed = adapter_mod._parse_usage_line(self.REAL_LINE)
+        self.assertIsNotNone(parsed)
+        ts_utc, cost_usd, tokens = parsed
+        self.assertAlmostEqual(cost_usd, 0.1205)
+        self.assertEqual(tokens, 34455 + 1145 + 0 + 0)
+        self.assertEqual(
+            ts_utc.astimezone().strftime("%Y-%m-%d %H:%M:%S"),
+            "2026-09-18 09:52:47",
+        )
+
+    def test_non_usage_line_does_not_match(self):
+        self.assertIsNone(adapter_mod._parse_usage_line(
+            "2026-09-18 09:52:47,746 INFO some.other.module — unrelated log line"
+        ))
+
+    def test_blank_and_malformed_lines_do_not_match(self):
+        for line in ("", "\n", "not a log line at all", "usage runtime=legacy agent=icinga"):
+            self.assertIsNone(adapter_mod._parse_usage_line(line))
+
+
+class TestReadParsecUsageCost(unittest.TestCase):
+    REAL_LINE = TestParsecUsageLineParsing.REAL_LINE
+
+    def test_sums_matches_within_the_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "parsec-live.log"
+            log_path.write_text(self.REAL_LINE + "\n")
+            ts_utc, _, _ = adapter_mod._parse_usage_line(self.REAL_LINE)
+            cost, tokens = adapter_mod._read_parsec_usage_cost(log_path, ts_utc, ts_utc)
+            self.assertAlmostEqual(cost, 0.1205)
+            self.assertEqual(tokens, 35600)
+
+    def test_sums_two_matching_lines_rather_than_only_the_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "parsec-live.log"
+            log_path.write_text(self.REAL_LINE + "\n" + self.REAL_LINE + "\n")
+            ts_utc, _, _ = adapter_mod._parse_usage_line(self.REAL_LINE)
+            cost, tokens = adapter_mod._read_parsec_usage_cost(log_path, ts_utc, ts_utc)
+            self.assertAlmostEqual(cost, 0.1205 * 2)
+            self.assertEqual(tokens, 35600 * 2)
+
+    def test_ignores_lines_outside_the_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "parsec-live.log"
+            log_path.write_text(self.REAL_LINE + "\n")
+            ts_utc, _, _ = adapter_mod._parse_usage_line(self.REAL_LINE)
+            far_start = ts_utc + timedelta(hours=1)
+            far_end = ts_utc + timedelta(hours=2)
+            cost, tokens = adapter_mod._read_parsec_usage_cost(log_path, far_start, far_end)
+            self.assertEqual((cost, tokens), (0.0, 0))
+
+    def test_returns_zero_when_log_file_is_missing(self):
+        now = datetime.now(timezone.utc)
+        cost, tokens = adapter_mod._read_parsec_usage_cost(
+            Path("/tmp/definitely-not-a-real-parsec-live-log.log"), now, now,
+        )
+        self.assertEqual((cost, tokens), (0.0, 0))
 
 
 if __name__ == "__main__":
