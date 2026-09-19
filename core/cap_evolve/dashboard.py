@@ -828,6 +828,7 @@ _NARRATIVE_FILES = (
 _CONFIG_KEY_GROUPS = {
     "capabilities": "Capability", "capability_path": "Capability",
     "capability_sources": "Capability", "actions": "Capability",
+    "intervention": "Delivery", "skill_name": "Delivery", "protected_paths": "Delivery",
     "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
     "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
     "optimizer_usd_per_iter": "Algorithm & optimizer",
@@ -847,7 +848,7 @@ _CONFIG_KEY_GROUPS = {
     "metric_directions": "Metrics & display",
     "github_integration": "GitHub",
 }
-_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+_CONFIG_GROUP_ORDER = ("Capability", "Delivery", "Algorithm & optimizer", "Data & splits",
                         "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
 
 #: A file this big gets size + path only in the Config tab's file tree — never an
@@ -938,7 +939,9 @@ def _read_config(root: Path) -> dict:
         except OSError:
             spec = {}
     groups: dict[str, list] = {}
-    for k, v in spec.items():
+    # `intervention` absent means direct, so render that rather than nothing: two runs of one
+    # capability can differ only in how it was delivered.
+    for k, v in {"intervention": "direct", **spec}.items():
         groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
     spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
 

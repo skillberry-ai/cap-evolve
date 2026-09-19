@@ -4,7 +4,15 @@ const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
 // hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
 // invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
 // ("plan legs", "aggregate history") never match.
-const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator)$/;
+// Any bench token, not a hardcoded list: enumerating them here silently hid the two
+// tau2-airline arms from this panel entirely.
+const JOB_RE = /^([a-z][a-z0-9-]*) \/ ([a-z][a-z0-9_-]*)$/;
+// The arms are internal leg names; the picker calls them tau2-custom + intervention.
+const BENCH_LABEL = {
+  skillberry_tau2_direct: "tau2-custom (direct)",
+  skillberry_tau2_spa: "tau2-custom (spa)",
+};
+const benchLabel = (b) => BENCH_LABEL[b] || b;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
 // site/benchmarks.fixture.json). Local-only affordance for exercising the filter cascade
 // through many reload cycles; the default path is unchanged.
@@ -98,11 +106,11 @@ function renderRunning(items) {
   list.innerHTML = sorted.map((it) => {
     if (!it.live) {
       return `<li><span class="badge badge-amber">queued</span>
-        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a></li>`;
+        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(benchLabel(it.bench))}</a></li>`;
     }
     const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
     return `<li><span class="badge badge-accent">live</span>
-      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
+      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(benchLabel(it.bench))}</a>
       <span class="elapsed" data-started="${esc(it.startedAt)}"></span>
       — <a href="./dashboard-ui/index.html?dataBase=${dataBase}#/runs/run_suite" target="_blank" rel="noopener">Watch live</a></li>`;
   }).join("");

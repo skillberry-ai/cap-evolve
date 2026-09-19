@@ -1,11 +1,18 @@
 # ============================================================================
-# Integration test — tau2 (airline task 9) end-to-end optimization regression.
+# Integration test — tau2 airline task 9, end-to-end optimization regression.
 # ============================================================================
 #
 # The general pipeline regression on a real benchmark: agent aws/gpt-oss-120b,
 # optimizer Claude Code @ claude-opus-4-8, 1 iteration, 1 trial, via the adapter template.
 # Runs the same run_suite.sh path benchmarks.yml uses, scoped to a single-task
-# "integration" tier (ci/benchmarks/tau2/integration/tasks.json = [task 9]).
+# "integration" tier (ci/benchmarks/<bench>/integration/tasks.json = [task 9]).
+#
+# The `bench` dispatch input picks WHICH tau2 leg: the adapter template (`tau2`, the default
+# and what the PR label runs), or one of the two delivery arms from
+# examples/skillberry_benchmarks_tau2_airline (`skillberry_tau2_direct` /
+# `skillberry_tau2_spa`). `integration` is not a tier benchmarks.yml can dispatch — its tier
+# picker offers smoke/pilot/full — so this workflow is the only way to reach it, and it is the
+# cheap one-task check to run on an arm before spending a curated tier on it.
 # Passes when the run COMPLETES and the sealed test does not regress vs baseline
 # (with 1 task the gate usually rejects — a legitimate PASS proving the pipeline runs).
 #
@@ -19,13 +26,21 @@
 name: Integration tests
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      bench:
+        description: "Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). skillberry_tau2_direct / skillberry_tau2_spa = the two DELIVERY ARMS from examples/skillberry_benchmarks_tau2_airline — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
+        type: choice
+        default: tau2
+        options: [tau2, skillberry_tau2_direct, skillberry_tau2_spa]
   pull_request:
     types: [labeled]
 
 jobs:
   tau2:
-    name: tau2 (task 9)
+    # Resolves to the literal "tau2 (task 9)" for a PR-label run and for a default dispatch, so
+    # the check name only changes when an arm is deliberately selected.
+    name: ${{ github.event.inputs.bench || 'tau2' }} (task 9)
     runs-on: [self-hosted, ibm-vpc]
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
     # runner only when the PR author is a known collaborator — never for outside/
@@ -41,18 +56,21 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      # A PR-label run has no inputs, so it keeps running tau2 exactly as before. Only a
+      # deliberate dispatch selects an arm.
+      BENCH: ${{ github.event.inputs.bench || 'tau2' }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup runner env (tau2)
-        run: bash ci/benchmarks/lib/ci_setup.sh tau2
-      - name: Run tau2 task-9 end-to-end (agent gpt-oss-120b, optimizer claude-opus-4-8)
+      - name: Setup runner env
+        run: bash ci/benchmarks/lib/ci_setup.sh "$BENCH"
+      - name: Run task-9 end-to-end (agent gpt-oss-120b, optimizer claude-opus-4-8)
         env:
           TIER: integration
           ITERATIONS: "1"
           NUM_TRIALS: "1"
         run: |
           set -euo pipefail
-          out="$(bash ci/benchmarks/lib/run_suite.sh tau2 "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_integration_tau2")"
+          out="$(bash ci/benchmarks/lib/run_suite.sh "$BENCH" "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_integration_$BENCH")"
           echo "$out"
           run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
           "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" --min-iterations 1
@@ -60,8 +78,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tau2-itest-run
+          name: ${{ github.event.inputs.bench || 'tau2' }}-itest-run
           path: |
-            ci/benchmarks/.work/suite_integration_tau2_proj/.capevolve/run_suite/**
-            ci/benchmarks/.work/suite_integration_tau2/**
+            ci/benchmarks/.work/suite_integration_${{ github.event.inputs.bench || 'tau2' }}_proj/.capevolve/run_suite/**
+            ci/benchmarks/.work/suite_integration_${{ github.event.inputs.bench || 'tau2' }}/**
           if-no-files-found: ignore

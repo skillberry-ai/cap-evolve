@@ -10,7 +10,14 @@
 set -euo pipefail
 BENCH="${1:?bench}"
 CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}"
-VENV="$CACHE/venv"
+# The arms get their OWN venv. They install tau2 from skillberry-benchmarks; the `tau2` leg
+# installs the public sierra-research checkout. Same package name, two sources, both editable —
+# in one venv whichever ran last wins, and the loser fails with a missing domain rather than an
+# install error. Sequencing on a single runner hides it; a second runner would not.
+case "$BENCH" in
+  skillberry_tau2_*) VENV="$CACHE/venv-skillberry-tau2" ;;
+  *)                 VENV="$CACHE/venv" ;;
+esac
 CAPEVOLVE_PY="$VENV/bin/python"
 IDX="--index-url https://pypi.org/simple"
 mkdir -p "$CACHE"
@@ -146,6 +153,62 @@ case "$BENCH" in
   tau2)
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
     uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
+  skillberry_tau2_direct|skillberry_tau2_spa)
+    # A DIFFERENT tau2 build from the `tau2` leg above. Both arms are onboarded against
+    # skillberry-ai/skillberry-benchmarks at a PINNED commit. ONE build for both arms is what keeps
+    # a direct-vs-spa comparison meaningful;
+    #
+    # The pin is the SAME default the arms own setup.sh scripts use, so a CI number and a
+    # local `bash examples/.../run.sh` number refer to the same benchmark code. 
+    BENCH_REF="${BENCH_REF:-a3a83266008275e9d800fd709927fa3dc4f23ec5}"
+    SB_DIR="$CACHE/skillberry-benchmarks"
+    if [ ! -d "$SB_DIR/.git" ]; then
+      git clone -q https://github.com/skillberry-ai/skillberry-benchmarks.git "$SB_DIR" || {
+        echo "::error:: could not clone skillberry-ai/skillberry-benchmarks."
+        echo "::error:: The repository is PUBLIC and needs no credentials, so this is almost"
+        echo "::error:: always transient — network, DNS, or a GitHub blip. Re-run the job."
+        echo "::error:: Without the checkout neither arm can run at all."
+        exit 1; }
+    fi
+    git -C "$SB_DIR" fetch -q --all || echo "::warning:: fetch failed; using the cached checkout"
+    git -C "$SB_DIR" checkout -q "$BENCH_REF" \
+      || { echo "::error:: checkout $BENCH_REF failed in $SB_DIR"; exit 1; }
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$SB_DIR/tau2/tau2-bench[skillberry]" \
+      || { echo "::error:: pip install tau2-bench[skillberry] failed"; exit 1; }
+    "$CAPEVOLVE_PY" -c "import tau2; print('tau2 (skillberry build) OK')"
+    # run_suite.sh resolves the arm's `runner_repo_path` from this. It must be ABSOLUTE: the
+    # arms' committed specs use a project-relative '../../vendor/skillberry-benchmarks', which
+    # would resolve to nothing under ci/benchmarks/.work/.
+    echo "skillberry-benchmarks @ $(git -C "$SB_DIR" rev-parse HEAD)"
+    if [ "$BENCH" = "skillberry_tau2_spa" ]; then
+      # Put the stack's clones in the CACHE, not the checkout. spa_env defaults its vendor dir
+      # to <repo>/vendor, and actions/checkout wipes untracked files in the workspace — so the
+      # default would re-clone and re-install BOTH services on every single run (minutes each),
+      # unlike every other cached dependency here. $CACHE survives between jobs.
+      export SPA_VENDOR_DIR="$CACHE/spa-vendor"
+      mkdir -p "$SPA_VENDOR_DIR"
+      # PROVISION ONLY (clone + venv + install the Store and the Proxy-Agent), never start:
+      # starting belongs to the run, as in the arm's own setup.sh. spa_env is the same module the
+      # example uses, so CI and a local run provision an identical stack — including the log
+      # rotation it patches into each clone, so nothing here needs to bound a log.
+      ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$CAPEVOLVE_PY" - <<'PYEOF'
+import json, sys
+sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
+import spa_env
+print("  " + json.dumps(spa_env.provision()))
+print(f"  store ref {spa_env.STORE_REF} @ {spa_env.store_dir()}")
+print(f"  agent ref {spa_env.AGENT_REF[:7]} @ {spa_env.agent_dir()}")
+PYEOF
+      ) || { echo "::error:: Skillberry stack provisioning failed — the spa arm cannot run"; exit 1; }
+    fi
+    if [ -n "${GITHUB_ENV:-}" ]; then
+      echo "SKILLBERRY_BENCH_DIR=$SB_DIR" >> "$GITHUB_ENV"
+      # MUST reach the "Run suite" step: spa_env recomputes its vendor dir from the environment
+      # in that process too, and a run that disagreed with setup about where the stack lives
+      # would re-provision from scratch mid-leg.
+      if [ -n "${SPA_VENDOR_DIR:-}" ]; then echo "SPA_VENDOR_DIR=$SPA_VENDOR_DIR" >> "$GITHUB_ENV"; fi
+    fi
+    export SKILLBERRY_BENCH_DIR="$SB_DIR" ;;
   skillsbench)
     uv tool install $IDX benchflow >/dev/null 2>&1 || true
     [ -d "$CACHE/skillsbench-src/.git" ] || GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/benchflow-ai/skillsbench "$CACHE/skillsbench-src" ;;

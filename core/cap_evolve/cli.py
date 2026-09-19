@@ -842,7 +842,10 @@ def _cmd_run(argv):
         _RunDir.open(workdir / run_dir).log_event(
             "run_config", spec=str(spec_path), project=str(proj_abs),
             algorithm=algorithm_name, optimizer=str(optimizer_name),
-            orchestration_mode=orchestration_mode)
+            orchestration_mode=orchestration_mode,
+            # How the candidate was DELIVERED. Two runs of one capability can differ only in
+            # this, so a run dir that omits it cannot say which number is which.
+            intervention=str(intervention_rec.get("intervention") or _intervention.DIRECT))
     except Exception:  # noqa: BLE001 — provenance is best-effort, never fatal
         pass
 

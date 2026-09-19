@@ -29,7 +29,12 @@ on:
         description: "Which benchmark to run"
         type: choice
         default: all
-        options: [all, tau2, swebench, skillsbench, spreadsheetbench, rfe-creator]
+        options: [all, tau2, swebench, skillsbench, spreadsheetbench, rfe-creator, tau2-custom]
+      intervention:
+        description: "How the candidate reaches the model."
+        type: choice
+        default: direct
+        options: [direct, spa]
       tier:
         description: "Which tier (default smoke; pilot is a small cost/runtime measurement rig — its rewards are NOT comparable; full is the whole benchmark and is expensive). A tier only runs for benchmarks that populate it."
         type: choice
@@ -120,9 +125,6 @@ on:
         type: choice
         default: hill-climb-all
         options: [hill-climb-all, hill-climb-cyclic, hill-climb-hardest-first, agent-optimize]
-      # NB: workflow_dispatch allows at most 10 inputs and this list is full. SPLIT_SEED is
-      # therefore driven by the repo variable `vars.BENCH_SPLIT_SEED` (see the job env) rather
-      # than an 11th input, which would make this workflow invalid.
   pull_request:
     types: [labeled]
 
@@ -176,6 +178,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
           BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+          INTERVENTION_SEL: ${{ github.event.inputs.intervention || 'direct' }}
           # toJSON (not a ','-join) so labels stay exactly comparable: label names may
           # themselves contain commas, and the PR gate below is an exact-match test.
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
@@ -188,7 +191,20 @@ jobs:
           # tier is a first-class dimension. full runs the whole/representative benchmark
           # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
           TIERS = ["smoke", "pilot", "full"]
-          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
+          # skillberry_tau2_direct / _spa are the DELIVERY ARMS of the tau2 airline benchmark:
+          # same tasks and tiers, candidate delivered in-process versus through the Skillberry
+          # Store + Proxy-Agent. They stay separate legs so each keeps its own tier task lists,
+          # its own history row and its own concurrency group.
+          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator",
+                     "skillberry_tau2_direct", "skillberry_tau2_spa"]
+
+          # `tau2-custom` is the picker's name for "the arms"; `intervention` chooses which one.
+          # A benchmark token is what the rest of the pipeline keys off — tasks.json paths, the
+          # work dirs, the history rows — so resolve it here, once.
+          CUSTOM = "tau2-custom"
+          ARM_OF = {"direct": "skillberry_tau2_direct", "spa": "skillberry_tau2_spa"}
+          # `all` sweeps both arms regardless of `intervention`: it means every leg, and the two
+          # arms are the comparison they exist for.
 
           # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
           # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
@@ -207,7 +223,13 @@ jobs:
           event = os.environ["EVENT"]
           tier_sel = os.environ.get("TIER_SEL") or "smoke"
           bench_sel = os.environ.get("BENCH_SEL") or "all"
+          intervention = (os.environ.get("INTERVENTION_SEL") or "direct").strip().lower()
           labels = set(json.loads(os.environ.get("LABELS") or "[]") or [])
+
+          if bench_sel == CUSTOM:
+              bench_sel = ARM_OF.get(intervention, ARM_OF["direct"])
+              print(f"{CUSTOM} + intervention={intervention} -> {bench_sel}",
+                    file=sys.stderr, flush=True)
 
           legs = []
           for tier in TIERS:
@@ -447,6 +469,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
+          # EXACTLY ONE path. A second one makes upload-artifact re-root the artifact at the
+          # common ancestor of both, and the aggregate job reads runmeta.json flat at the root —
+          # it would then skip the leg and publish no history row.
           path: ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}/**
           if-no-files-found: warn
 

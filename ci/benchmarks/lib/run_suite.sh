@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|skillberry_tau2_direct|skillberry_tau2_spa)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -30,10 +30,14 @@ AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
 OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"
 GATE_K_SE="${GATE_K_SE:-1.0}"
-# Raw native trajectories (today: tau2's own results.json, via adapter._sim_save_path) are
-# OFF here. They are a reading aid for a human working a run locally, and CI is not that
-# reader.
-export CAPEVOLVE_NATIVE_SIMS="${CAPEVOLVE_NATIVE_SIMS:-0}"
+# Raw native trajectories (tau2's own results.json, via adapter._sim_save_path). ON for the
+# tau2 legs, whose adapters write them and where a failed rollout is only readable from the
+# trajectory; no other adapter produces them. Env wins, so a dispatch can still force either way.
+case "$BENCH" in
+  tau2|skillberry_tau2_*) _NATIVE_SIMS_DEFAULT=1 ;;
+  *)                      _NATIVE_SIMS_DEFAULT=0 ;;
+esac
+export CAPEVOLVE_NATIVE_SIMS="${CAPEVOLVE_NATIVE_SIMS:-$_NATIVE_SIMS_DEFAULT}"
 
 # ---- algorithm selection ----------------------------------------------------
 # ALGORITHM is the workflow's `algorithm` input. It names the algorithm AND, for
@@ -211,6 +215,189 @@ MAX_TOKENS=8000
 TEMPERATURE=0.0
 ENV
     export TAU2_MAX_CONCURRENCY=10
+    ;;
+  skillberry_tau2_direct|skillberry_tau2_spa)
+    # The two DELIVERY ARMS of the tau2 airline benchmark. Same 50 airline tasks as the `tau2`
+    # leg above, same tier ids, but a different question: `tau2` asks "can the optimizer
+    # improve the agent's prompt+tools", these ask "does the candidate still land when it is
+    # delivered THIS way" — in the runner's own process (direct) or through the Skillberry
+    # Store + Proxy-Agent (spa). direct-vs-spa is the comparison; neither is comparable to the
+    # `tau2` leg, whose capability surface includes policy.md and whose tau2 build differs.
+    #
+    # The adapter comes from examples/, not templates/adapters/: a copy under templates/ would
+    # duplicate ~700 lines per arm and be free to drift from the example a reviewer reads. The
+    # tau2 leg already sources examples/tau2_airline/seed_capability, so this is the convention.
+    ARM="${BENCH#skillberry_tau2_}"                     # -> direct | spa
+    ARM_DIR="$REPO/examples/skillberry_benchmarks_tau2_airline/$ARM"
+    [ -d "$ARM_DIR" ] || { echo "::error:: no such arm: $ARM_DIR"; exit 2; }
+    cp "$ARM_DIR/adapters/adapter.py" "$ARM_DIR/adapters/gateway.py" "$PROJ/adapters/"
+    # scoring.py is the mixin both arms include, deployed beside adapter.py exactly as their own
+    # setup.sh does it. Copied when present so this holds whether or not the arms share it yet.
+    [ -f "$REPO/examples/skillberry_benchmarks_tau2_airline/scoring.py" ] \
+      && cp "$REPO/examples/skillberry_benchmarks_tau2_airline/scoring.py" "$PROJ/adapters/"
+    rm -rf "$PROJ/seed_capability"; cp -R "$ARM_DIR/seed_capability" "$PROJ/seed_capability"
+    # The arm's own optimizer instructions, pinned ABSOLUTE. The generic template speaks of
+    # policy.md + tools.py; the direct arm has no policy surface and the spa arm's artifact is a
+    # skill package, so the shared text would send the optimizer looking for files that are not
+    # there. Absolute because a relative value resolves against different cwds in check vs run
+    # and can silently fall back to the generic template (#252).
+    mkdir -p "$PROJ/optimizer"; cp "$ARM_DIR/optimizer/INSTRUCTIONS.md" "$PROJ/optimizer/"
+    OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
+    CAPS="[tools]"          # both arms: the agent's TOOL SURFACE only, exactly as their specs say
+    # The pinned Skillberry benchmark checkout ci_setup.sh installed, as READ-ONLY context for
+    # the optimizer (real tool implementations, task definitions, reward checks). ABSOLUTE: the
+    # arms' committed specs use a project-relative '../../vendor/skillberry-benchmarks', which
+    # resolves to nothing from ci/benchmarks/.work/<...>/.capevolve/project.
+    SB_DIR="${SKILLBERRY_BENCH_DIR:-${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/skillberry-benchmarks}"
+    # In CI the "Setup runner env" step always precedes "Run suite", so this only fires for a
+    # local invocation — name the command rather than asking whether it ran.
+    [ -d "$SB_DIR/tau2/tau2-bench" ] || {
+      echo "::error:: no skillberry-benchmarks checkout at $SB_DIR"
+      echo "::error:: Run the setup step for this bench first:"
+      echo "::error::   bash ci/benchmarks/lib/ci_setup.sh $BENCH"
+      echo "::error:: It clones the pinned benchmark, installs tau2-bench[skillberry] into the"
+      echo "::error:: cached venv, and (for the spa arm) provisions the Skillberry stack."
+      exit 1; }
+    # Credentials. The arms' gateway.py reads OPENAI_BASE_URL / OPENAI_API_KEY (litellm's
+    # `openai/` route), not the LITELLM_PROXY_* names the tau2 leg uses; the ete-litellm gateway
+    # answers both, so the same secret pair serves both. Written to .env AND exported: gateway.py
+    # walks to the nearest ancestor .env and `setdefault`s, so the export wins and the file is
+    # what `store: git` can show a reviewer.
+    cat > "$WORK/.env" <<ENV
+OPENAI_BASE_URL=$ANTHROPIC_BASE_URL
+OPENAI_API_BASE=$ANTHROPIC_BASE_URL
+OPENAI_API_KEY=$ANTHROPIC_AUTH_TOKEN
+ENV
+    export OPENAI_BASE_URL="$ANTHROPIC_BASE_URL" OPENAI_API_BASE="$ANTHROPIC_BASE_URL"
+    export OPENAI_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+    export TAU2_USER_MODEL="$AGENT_MODEL"               # the user simulator, both arms
+    export TAU2_LLM_TIMEOUT="${TAU2_LLM_TIMEOUT:-240}"
+    export TAU2_LLM_RETRIES="${TAU2_LLM_RETRIES:-2}"
+    export TAU2_INFRA_RETRIES="${TAU2_INFRA_RETRIES:-2}"
+    if [ "$ARM" = "direct" ]; then
+      # In-process delivery: no service to start, so nothing here mirrors the spa block below.
+      # The agent under test IS the gateway model; gateway.py refuses the spa sentinel here.
+      export TAU2_AGENT_MODEL="$AGENT_MODEL"
+      export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-10}"
+      EXTRA_YAML="actions: [edit]
+capability_sources: [seed_capability/reference/data_model.py]
+runner_repo_path: \"$SB_DIR\""
+    else
+      # SPA delivery. Three services, and the run owns their lifecycle: ci_setup.sh provisioned
+      # them but deliberately did not start them (starting on the operator's behalf during
+      # provisioning is the anti-pattern the intervention skill calls out).
+      #
+      # Concurrency 4 — the adapter's own default (adapter.py) and what the arm's run.sh uses.
+      # Only ONE candidate is in flight per evaluation, so parallel rollouts all want the same
+      # skill the proxy is already bound to.
+      export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-ibm/skillberry-local}"   # the SPA sentinel
+      export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-4}"
+      # What the proxy calls upstream once the sentinel reaches it, and what runner_model()
+      # reports. Comes from the repo-root .env locally; CI has none, and unset falls back to
+      # gateway.DEFAULT_GATEWAY_MODEL, so a dispatched agent_model would be silently ignored.
+      # openai/ is the litellm route for a gateway id — adding it twice 404s.
+      case "$AGENT_MODEL" in
+        openai/*) export SPA_MODEL_NAME="${SPA_MODEL_NAME:-$AGENT_MODEL}" ;;
+        *)        export SPA_MODEL_NAME="${SPA_MODEL_NAME:-openai/$AGENT_MODEL}" ;;
+      esac
+      echo "  SPA upstream model: $SPA_MODEL_NAME (sentinel: $TAU2_AGENT_MODEL)"
+      # Same vendor dir ci_setup.sh provisioned into. spa_env recomputes this from the
+      # environment in every process, so setup and run must agree or the run re-clones.
+      export SPA_VENDOR_DIR="${SPA_VENDOR_DIR:-${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spa-vendor}"
+      # Service logs are not ours to manage: each service rotates its own from inside the process
+      # holding the fd. This leg only reads bounded tails on the way out, from paths spa_env
+      # exports so they cannot drift from what the stack writes.
+      SPA_LOGS="$( cd "$REPO" && "$PY" - <<'PYEOF' 2>/dev/null || true
+import sys
+sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
+import spa_env
+print(" ".join((spa_env.AGENT_LOG_FILE, spa_env.STORE_LOG_FILE,
+                spa_env.AGENT_TOOLS_LOG_FILE, spa_env.STORE_TOOLS_LOG_FILE)))
+PYEOF
+)"
+      ENV_PORT="${ENV_PORT:-8004}"
+      export SPA_REMOTE_ENV_URL="${SPA_REMOTE_ENV_URL:-http://127.0.0.1:$ENV_PORT}"
+      # Not a Skillberry service, so spa_env does not launch it — but its log is ours to bound.
+      # /tmp like the stack's other three, rotated by spa_env's helper rather than a second one.
+      ENV_LOG=/tmp/env_manager.log
+      # Fronts the airline env over HTTP; the store's executor calls it per rollout. Start only if
+      # nothing is listening — a leg following another on this serialized runner finds a live one.
+      # Probe /docs or /, NOT /health: this FastAPI app serves no /health, so probing it reports a
+      # healthy service as dead and the poll below burns all 60 attempts.
+      if curl -sf -o /dev/null --max-time 3 "http://127.0.0.1:$ENV_PORT/docs" \
+         || curl -sf -o /dev/null --max-time 3 "http://127.0.0.1:$ENV_PORT/"; then
+        echo "  tau2 environment service already up on $ENV_PORT"
+      else
+        echo "  starting tau2 environment service -> $ENV_LOG"
+        # Rotate ONLY inside this branch, where we are about to launch: rotating a log the
+        # running env manager holds open leaves it appending to a deleted inode while the fresh
+        # file stays empty (see rotate_if_large in spa_env).
+        ( cd "$REPO" && "$PY" -c "import sys
+sys.path.insert(0, 'skills/interventions/llm-proxies/spa/scripts')
+import spa_env; spa_env.rotate_if_large('$ENV_LOG')" ) \
+          || echo "::warning:: could not rotate $ENV_LOG (continuing; it may grow unbounded)"
+        # LITELLM_LOCAL_MODEL_COST_MAP=True skips litellm's doomed remote cost-map fetch, which
+        # otherwise stalls startup until it times out.
+        ( cd "$REPO" && LITELLM_LOCAL_MODEL_COST_MAP=True nohup "$PY" -c "
+import asyncio
+from tau2.orchestrator.environment_manager import EnvironmentManager
+asyncio.run(EnvironmentManager(host='127.0.0.1', port=$ENV_PORT).run())
+" > "$ENV_LOG" 2>&1 & )
+        # POLL rather than sleep a fixed amount: importing tau2 pulls in litellm, so a cold
+        # start is ~10s and a fixed sleep either wastes time or races the service.
+        for _ in $(seq 1 60); do
+          curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$ENV_PORT/docs" && break
+          curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$ENV_PORT/" && break
+          sleep 1
+        done
+        curl -sf -o /dev/null --max-time 3 "http://127.0.0.1:$ENV_PORT/docs" \
+          || curl -sf -o /dev/null --max-time 3 "http://127.0.0.1:$ENV_PORT/" \
+          || { echo "::error:: tau2 environment service did not come up on $ENV_PORT"
+               tail -40 "$ENV_LOG" 2>/dev/null; exit 1; }
+        echo "  healthy"
+      fi
+      # Store, then Proxy-Agent — ORDER MATTERS: the store must be healthy before SPA starts,
+      # and SPA binds `my_skill` at start. Both starts are idempotent.
+      ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$PY" - <<'PYEOF'
+import json, sys
+sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
+import spa_env
+spa_env.start_store()
+spa_env.start_spa("my_skill")
+print("  " + json.dumps(spa_env.status()))
+PYEOF
+      ) || { echo "::error:: could not start the Skillberry stack (Store + Proxy-Agent)"; exit 1; }
+      # TEAR DOWN on the way out, unlike the arm's run.sh which deliberately leaves the stack up
+      # for a human to poke at. CI has no such operator, and a leftover proxy still bound to the
+      # PREVIOUS leg's skill is a silent wrong-candidate hazard for whatever runs next.
+      # `|| true` throughout: a failed teardown must not turn a finished run into a failed job.
+      _spa_teardown() {
+        ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$PY" - <<'PYEOF' || true
+import sys
+sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
+import spa_env
+spa_env.stop_all()
+print("  Skillberry stack stopped")
+PYEOF
+        ) || true
+        # stop_all() does not own the tau2 Environment Manager — it is tau2's service, started
+        # above, so it is stopped here by port rather than left listening on 8004.
+        pkill -f "EnvironmentManager(host='127.0.0.1', port=$ENV_PORT)" 2>/dev/null || true
+        # Bounded tails into the artifacts, originals untouched: their owners rotate them, and
+        # truncating a file whose fd a live process holds fights that owner.
+        for _src in $SPA_LOGS "$ENV_LOG"; do
+          [ -f "$_src" ] || continue
+          tail -c 2097152 "$_src" > "$OUT/spa-$(basename "$_src").tail" 2>/dev/null || true
+        done
+      }
+      trap _spa_teardown EXIT
+      EXTRA_YAML="actions: [edit]
+capability_sources: []
+intervention: spa
+skill_name: my_skill
+protected_paths: [\"primitive_tools/*\", \"my_skill/SKILL.md\"]
+runner_repo_path: \"$SB_DIR\""
+    fi
     ;;
   swebench)
     # Harbor is the ONLY swebench path. The litellm single-shot adapter was removed: it needs
@@ -619,6 +806,19 @@ optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
 # template (issue #252), which would erase an arm's instructions with no error.
 optimizer_instructions_file: "${OPT_INSTRUCTIONS:-}"
 $ALGO_YAML
+# Per-benchmark spec keys, set by the case block above and EMPTY for every benchmark that does
+# not need them (an empty expansion leaves a blank line, which the reader ignores). This is how
+# a benchmark whose delivery path is not the in-process default declares it — the skillberry
+# tau2 arms use it for intervention, skill_name, protected_paths, capability_sources, actions
+# and an absolute runner_repo_path. Putting them here rather than in each case's own heredoc
+# keeps ONE spec template, so a key added for every benchmark cannot miss one arm.
+# NB a comment in here is still SHELL TEXT, not prose: this heredoc's delimiter is unquoted so
+# that variables expand, which means a backtick runs a command and a dollar sign dereferences a
+# name even inside a '#' line. Both were introduced here and both misfired — the key names
+# written in backticks made bash try to execute them ("intervention: command not found", six
+# times), and a literal dollar-VAR tripped 'set -u' as an unbound variable. Keep comment lines
+# in this block plain: no backticks, no dollar signs.
+${EXTRA_YAML:-}
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
 # With an explicit split_ids_file the partition is fixed, so split_seed only varies the

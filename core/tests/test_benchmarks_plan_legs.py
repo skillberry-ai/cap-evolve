@@ -49,7 +49,12 @@ def _run_plan(*, event, tier_sel=None, bench_sel=None, labels=None):
     return [(leg["tier"], leg["bench"]) for leg in json.loads(m.group(1))]
 
 
-ALL_BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
+# The two skillberry_tau2_* entries are the tau2 airline benchmark's DELIVERY ARMS (direct =
+# in-process, spa = Store + Proxy-Agent), not two more benchmarks. They are listed here because
+# the planner treats them as ordinary benches: each populates smoke/integration/full, so every
+# fan-out assertion below holds for them unchanged.
+ALL_BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator",
+               "skillberry_tau2_direct", "skillberry_tau2_spa"]
 
 
 # ---- adding `pilot` must not disturb existing selections ---------------------

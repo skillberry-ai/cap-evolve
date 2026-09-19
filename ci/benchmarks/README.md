@@ -1,7 +1,8 @@
 # Benchmark regression suite
 
 Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
-spreadsheetbench · rfe-creator**,
+spreadsheetbench · rfe-creator**, plus the two tau2-airline **delivery arms**
+(**skillberry_tau2_direct · skillberry_tau2_spa**),
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
@@ -81,6 +82,35 @@ or drop `--ephemeral` in the script for a persistent runner). The runner package
 live under `~/.cache/capevolve-gh-runner/` (outside the repo). Confirm it appears under
 repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
+## The two tau2-airline delivery arms
+
+`skillberry_tau2_direct` and `skillberry_tau2_spa` are one benchmark measured twice, not two
+benchmarks. Both run the **same** airline task ids with the **same** tools-only capability
+surface, sourced from [`examples/skillberry_benchmarks_tau2_airline/`](../../examples/skillberry_benchmarks_tau2_airline/);
+the only difference is how a candidate reaches the agent:
+
+| | `skillberry_tau2_direct` | `skillberry_tau2_spa` |
+|---|---|---|
+| delivery | the runner imports the candidate tools in its own process | the Skillberry **Store** serves the candidate skill and the **Proxy-Agent** injects it |
+| tau2 agent model | the gateway model itself | the `ibm/skillberry-local` sentinel, which routes through the proxy to that same model |
+| services started by the run | none | tau2 Environment Manager (`:8004`) + Store + Proxy-Agent, torn down on exit |
+| rollout concurrency | 10 | **1** — the proxy binds one skill at a time, so parallel candidates would serve the wrong tools |
+
+Pick them with **`benchmark: tau2-custom`** plus **`intervention: direct | spa`**, which maps
+straight onto the spec key of the same name. `intervention` is ignored by every other benchmark —
+they all run direct. Internally each arm stays its own leg (`skillberry_tau2_direct` /
+`skillberry_tau2_spa`) so it keeps its own tier task lists, history row and concurrency group, and
+`benchmark=all` sweeps both regardless of `intervention`.
+
+Their rewards are comparable **to each other**, and *not* to the plain `tau2` leg: that one
+also optimizes `policy.md` and installs the public `sierra-research/tau2-bench`, while the arms
+install `skillberry-ai/skillberry-benchmarks` at the pin their own `setup.sh` uses (a test
+asserts the two pins stay equal). The `spa` arm additionally needs that build's
+`airline_skillberry` domain, which the public checkout does not have.
+
+Cheapest way to exercise an arm: **Integration tests** → Run workflow → `bench` =
+`skillberry_tau2_spa`. One task, 1 iteration, 1 trial.
+
 ## Trigger the suite
 
 Runs come in two **tiers** (a first-class dimension in the workflow, same workflow + history page):
@@ -142,8 +172,7 @@ has a **Type** column + filter.
 
 #### The `algorithm` input
 
-One token names the algorithm and, for hill-climb, its focus schedule — because
-`workflow_dispatch` caps a workflow at 10 inputs and that list is full.
+One token names the algorithm and, for hill-climb, its focus schedule.
 
   | value | what runs |
   |---|---|
@@ -174,14 +203,16 @@ Two consequences worth knowing before you compare numbers:
 `runmeta.json` records the `algorithm`, so the history page never compares a hill-climb number
 against an agent-optimize one as though they were the same run type.
 - **On a PR — labels:**
-  - **`benchmark-smoke`** / **`benchmark-full`** → run all five benchmarks of that tier.
+  - **`benchmark-smoke`** / **`benchmark-full`** → run every benchmark of that tier, the two
+    delivery arms included.
   - **`benchmark-smoke-<bench>`** / **`benchmark-full-<bench>`** (`tau2` · `swebench` ·
-    `skillsbench` · `spreadsheetbench` · `rfe-creator`) → run just that one (combine labels
-    to run a subset).
+    `skillsbench` · `spreadsheetbench` · `rfe-creator` · `skillberry_tau2_direct` ·
+    `skillberry_tau2_spa`) → run just that one (combine labels to run a subset).
 
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests**
   workflow — the same `run_suite.sh` path as above, scoped to a single-task `integration`
-  tier: `ci/benchmarks/tau2/integration/tasks.json`.)
+  tier: `ci/benchmarks/<bench>/integration/tasks.json`. The label always runs `tau2`; to run an
+  arm's integration tier, dispatch that workflow with `bench` set.)
 
 ### Populate the `full` tier
 

@@ -60,17 +60,25 @@ def _native_sims_enabled() -> bool:
 
 
 def _spa_env():
-    """Import the SPA intervention's library from the skills tree. Lazy: no import-time
-    cost for ``check``, and the path is resolved from this project's location."""
-    root = Path(__file__).resolve().parents[3]      # <repo>/.capevolve/project/adapters
-    scripts = root / "skills" / "interventions" / "llm-proxies" / "spa" / "scripts"
-    if not (scripts / "spa_env.py").exists():
-        raise RuntimeError(f"SPA intervention library not found at {scripts}")
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    import spa_env  # noqa: PLC0415
+    """Import the SPA intervention's library. Lazy: no import-time cost for ``check``.
 
-    return spa_env
+    ``CAPEVOLVE_SKILLS_DIR`` first, then ``parents[3]`` — which only reaches the repo root for a
+    project at ``<repo>/.capevolve*/project``, not one nested deeper as CI scaffolds it.
+    """
+    rel = Path("interventions") / "llm-proxies" / "spa" / "scripts"
+    tried = []
+    env_dir = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    for scripts in ([Path(env_dir) / rel] if env_dir else []) + [
+        Path(__file__).resolve().parents[3] / "skills" / rel
+    ]:
+        if (scripts / "spa_env.py").exists():
+            if str(scripts) not in sys.path:
+                sys.path.insert(0, str(scripts))
+            import spa_env  # noqa: PLC0415
+
+            return spa_env
+        tried.append(str(scripts))
+    raise RuntimeError("SPA intervention library not found at " + ", ".join(tried))
 
 
 # docs/TAU2_SUMMARY.md row 7: tau2's user simulator sometimes emits ``###STOP###`` in the
