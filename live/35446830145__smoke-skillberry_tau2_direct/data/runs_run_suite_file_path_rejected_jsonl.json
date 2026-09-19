@@ -1,1 +1,0 @@
-{"path":"rejected.jsonl","binary":false,"size":239,"truncated":false,"text":"{\"candidate_id\": \"cand_0001\", \"summary\": \"candidate cand_0001 (val 0.333, \\u0394 -0.067)\", \"reason\": \"paired \\u0394\\u0304=-0.1111 <= 1.0\\u00b7SE=0.2606 (SE=0.2606, n=9, resolvable effect size 2\\u00b7SE=0.5212)\", \"val\": 0.3333333333333333}\n"}
