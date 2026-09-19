@@ -133,7 +133,18 @@ def run_task(task_id: str, *, capevolve_dir: Path = CAPEVOLVE_DIR,
                 )
                 return 3
 
-        cmd = ["cap-evolve", "run", "--project", str(project), "--dashboard", "off"]
+        # cap-evolve's own _find_skills_dir() checks `./.claude/skills` (never
+        # present in this repo) and then `~/.claude/skills` — which DOES exist
+        # here, but holds unrelated personal Claude Code skills with no
+        # `_registry/manifest.json`. Since it finds that directory first, it
+        # never falls through to this repo's real `skills/` (which has the
+        # manifest cap-evolve needs), and `cap-evolve run` fails immediately
+        # with "no manifest". Pointing it explicitly at this repo's own
+        # skills/ sidesteps that unrelated directory entirely.
+        cmd = [
+            "cap-evolve", "run", "--project", str(project), "--dashboard", "off",
+            "--skills-dir", str(repo_root / "skills"),
+        ]
         if follow:
             cmd.append("--follow")
 

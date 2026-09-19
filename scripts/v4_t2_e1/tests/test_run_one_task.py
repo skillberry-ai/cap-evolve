@@ -98,6 +98,29 @@ class TestRunTask(unittest.TestCase):
         self.assertEqual(captured["env"]["TASK_ID"], "task-a")
         self.assertEqual(captured["cwd"], str(self.repo_root))
 
+    def test_passes_this_repos_own_skills_dir_explicitly(self):
+        """cap-evolve's own _find_skills_dir() stops at the first existing
+        candidate directory, even one with no manifest — and ~/.claude/skills
+        (unrelated personal Claude Code skills) exists on this machine, so it
+        wins over this repo's real skills/ unless we pass --skills-dir."""
+        captured = {}
+
+        def fake_run(cmd, env=None, cwd=None):
+            captured["cmd"] = cmd
+
+            class _Result:
+                returncode = 0
+
+            return _Result()
+
+        with patch("subprocess.run", side_effect=fake_run):
+            run_one_task.run_task(
+                "task-a", capevolve_dir=self.capevolve_dir, repo_root=self.repo_root
+            )
+        cmd = captured["cmd"]
+        self.assertIn("--skills-dir", cmd)
+        self.assertEqual(cmd[cmd.index("--skills-dir") + 1], str(self.repo_root / "skills"))
+
     def test_propagates_nonzero_exit_code(self):
         def fake_run(cmd, env=None, cwd=None):
             class _Result:
