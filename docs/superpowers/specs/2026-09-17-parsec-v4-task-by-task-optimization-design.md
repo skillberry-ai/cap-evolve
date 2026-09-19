@@ -21,6 +21,75 @@ left off and resolves its one deferred hard problem.
 - **`v4_t3_e1`** (not yet designed): post-analysis / merge decision, informed
   by diffing the 21 mutations this phase produces.
 
+## Why v1/v2's approach doesn't carry over to v4
+
+`parsec-intake_v1` and `parsec-intake_v2` already ran real cap-evolve
+optimization loops against parsec-shaped Harbor tasks (v1: 30
+`traces_parsec-aap2-*` tasks; v2: 10 hand-authored tasks, one isolated
+simulator per task). It's natural to ask why `v4_t2_e1` couldn't just reuse
+that same intake/adapter pattern instead of ~24h of new build work
+(`adapter.py`'s `apply()`/`live()`, the per-task scaffolder, the single-task
+runner, the advisory lock, the pre-flight check). The answer is a difference
+in what the *capability* is and where it runs, not a redesign choice made
+against v1/v2 — this section exists so that difference doesn't have to be
+re-derived from scratch by the next person who asks.
+
+**v1/v2's capability was a file, injected into a container that dies.** The
+capability under optimization was a `SKILL.md` package read by Harbor's
+generic claude-code agent, running *inside* an ephemeral per-trial Harbor
+container. cap-evolve's existing generic Harbor adapter template
+(`templates/adapters/harbor/adapter.py`) already knew how to drop a
+candidate's `SKILL.md` into that container at trial start — v1/v2 needed
+almost no new adapter code because the injection point (a file the container
+reads once at boot) and the isolation boundary (the container itself) were
+both already solved problems.
+
+**v4's capability is 8 live prompt files served by a standing process.**
+`v4_t2_e1` optimizes parsec's own real, production-lineage multi-agent system
+(orchestrator + 6 domain sub-agents), patched to redirect its tool calls at
+the simulated backends. Per the delivered `v4_2026-09-16` package, this runs
+as one long-lived host-side process (`uv run uvicorn src.app:app --host
+127.0.0.1 --port 8000`) that Harbor's `ParsecAgent` POSTs HTTP requests to —
+there is no per-trial container to inject a file into. The 2026-09-09 intake
+design doc identified this as the blocking gap and deliberately scoped
+itself to baseline-only, deferring "candidate injection into parsec's live
+prompts" as explicitly out of scope. This doc's *deferred hard problem,
+resolved* section above is that deferral finally being paid off: injection
+turned out to mean overwriting `config/prompts/*.md` in the live clone
+(picked up on the next request via the mtime-keyed cache in
+`system_prompt.py`, no restart needed) — a mechanism that did not exist and
+had to be designed and built, not a config toggle that was already there.
+
+**The real tradeoff: isolation for free vs. avoided infra churn.** It's
+tempting to assume the shared-process design was chosen because it makes
+*scoping or merging* candidate mutations easier. It doesn't — if anything
+it's the opposite. A disposable per-trial container gave isolation for
+free: it just dies at the end of the trial, so nothing a candidate did
+inside it can possibly leak into the next one. The shared-process design has
+no such guarantee — one `parsec-live` clone and its 5 simulated-backend
+containers are reused across every trial of every candidate for every one
+of the 21 tasks — so isolation has to be hand-built. That's exactly what
+`adapter.py`'s `live()` does: snapshot the 8 prompt files on entry, apply
+the candidate, `yield`, then restore the snapshot in a `finally` — so a
+crash mid-evaluation (a VPN drop, a machine sleep, a `KeyboardInterrupt`)
+can't leave one candidate's mutant prompts serving the next trial
+indefinitely. That hand-built restore step, and the advisory lock that
+keeps two trials from ever overlapping on the one shared stack, are real
+ongoing risk surface that the container-per-trial model structurally never
+had.
+
+What the shared-process design buys in exchange isn't easier merging — it's
+avoiding repeated, expensive setup/teardown of a *heavyweight* real service
+plus LLM-backed simulators (each simulated tool call takes the harness
+30–60 seconds to synthesize, per the v4 README) on every single trial, when
+the only thing that actually changes between candidates is prompt text, not
+code or infrastructure. Trading free isolation for realism (the real parsec
+codebase, not a stand-in agent) and fewer infra restarts is the actual
+advantage — and it's inherited from the `v4_2026-09-16` benchmark package's
+own architecture (delivered as a standalone, run-by-hand Harbor benchmark
+with no cap-evolve integration of its own), not a decision made to move away
+from v1/v2's model.
+
 ## Naming and experiment-ID scheme
 
 `<dataset>_t<phase>_e<config>`:
