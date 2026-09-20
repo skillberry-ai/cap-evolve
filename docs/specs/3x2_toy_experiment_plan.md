@@ -1,5 +1,17 @@
 # A2p baseline plan — cross-task skill-variant evaluation before merge
 
+> **Naming migration (2026-09-20):** this pilot, informally called "A2p" throughout the
+> narrative below, is now referred to as **3x2_toy** — chosen to avoid colliding with the
+> `A2p`/`A0`/`A1` letter-code scheme in `docs/specs/experiments_plan_v1.md`. The historical
+> narrative below is left as originally written, including "A2p" prose mentions, old global
+> arm numbers (1–10), and literal artifact identifiers (project/yaml names containing
+> `a2p_`, e.g. `project_a2p_joint_single_merged_seed_v1`) — those identifiers exist on disk
+> and in job configs and are not renamed retroactively. Do not use "A2p" as a name in any
+> future document. See §12 for the old-arm-number → new-arm-id mapping. The current results
+> table (renamed `three-skills`/`combo-skill` sections, `A1`–`A6`/`B1`–`B6` arm ids) lives in
+> `results/3x2_toy/summary.md` on branch `bench-history/add-a2p-skill-merge` in the
+> `skillsbench-history` worktree (a separate branch — not present in this worktree's checkout).
+
 > **Status: design document only.** No `bsub` job goes out until scope is confirmed here.
 > Worktree: `intake_skillbench_c7` (branch `intake_skillbench_c7`, forked from `main` at
 > `020cae22`, same base as c1–c6).
@@ -680,3 +692,44 @@ bundle merge, single-skill merge, joint or per-task optimization — comes from
 optimizer-added content (environment hardening, DC-model-fidelity guardrails, task-specific
 solver scripts) reaching the skill, not from the act of merging or collapsing files by
 itself.
+
+## 12. Naming migration (2026-09-20): old global arm numbers → new per-section arm ids
+
+The global 1–10 arm numbering above is superseded by per-section ids (`A1`–`A6` for
+three-skills, `B1`–`B6` for combo-skill), and the experiment itself is renamed **3x2_toy**
+(never "A2p" again — see the note at the top of this document). Two arms were identified as
+genuine gaps — symmetric holes each section already fills for the other — and are recorded
+here as named, not-yet-run placeholders rather than left undocumented.
+
+| New id | Name | Old arm # | Status |
+|---|---|---|---|
+| A1 | three-skills/seed | 1 | run |
+| A2 | three-skills/tbt | 3 | run |
+| A3 | three-skills/tbt-cross | 4 | run |
+| A4 | three-skills/tbt-merge | 5 | run |
+| A5 | three-skills/tbt-merge-joint | 6 | run |
+| A6 | three-skills/joint | *(new)* | **not run** — direct joint optimization of the native seed, no tbt, no merge |
+| B1 | combo-skill/seed | 2 | run |
+| B2 | combo-skill/tbt | 9 | run |
+| B3 | combo-skill/tbt-merge (lineage: via A2) | 7 | run |
+| B4 | combo-skill/tbt-merge (lineage: via B2) | 10 | run |
+| B5 | combo-skill/tbt-merge-joint | *(new)* | **not run** — continue optimizing a tbt-merge result jointly |
+| B6 | combo-skill/joint | 8 | run |
+
+Notes on this mapping:
+
+- **B3 and B4 share one name** (`combo-skill/tbt-merge`) but come from different lineages
+  (old Arm 7 merges Arm 3's already-tbt-optimized three-file donors; old Arm 10 merges Arm
+  9's two per-task mutations of the seed-merge) and score slightly differently (0.9/1.0 vs
+  1.0/1.0) — kept as two rows rather than conflated into one.
+- **A6 and B5 are the two documented gaps.** Section A never ran a direct seed→joint arm
+  (no tbt, no merge); Section B never ran a tbt-merge→joint continuation. Each section is
+  missing exactly the cell the other section already has. Neither has been queued as a CCC
+  job as of this migration — see `results/3x2_toy/summary.md` for the up-to-date table and
+  gap description.
+- The renamed, renumbered results table and all machine-readable per-arm data now live in
+  the `skillsbench-history` worktree at `results/3x2_toy/summary.md` and
+  `results/3x2_toy/results.json` (formerly `results/a2p-skill-merge/`). This document's own
+  historical §§1–11 narrative, old arm numbers, and literal `a2p_`-prefixed artifact
+  identifiers are left unchanged above for traceability to the actual job configs/run
+  directories on disk.
