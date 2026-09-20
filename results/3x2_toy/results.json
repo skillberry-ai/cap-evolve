@@ -1,95 +1,140 @@
 {
+  "experiment": "3x2_toy",
+  "_note": "Formerly informally called 'A2p' (a letter-code from docs/specs/experiments_plan_v1.md). Renamed 2026-09-20 to avoid collision with that lettering scheme. Do not use 'A2p' as a name going forward.",
   "tasks": ["energy-market-pricing", "grid-dispatch-operator"],
   "sections": {
-    "three_separate_skill_files": {
+    "three-skills": {
       "skills": ["dc-power-flow", "economic-dispatch", "power-flow-data"],
       "arms": [
         {
-          "arm": 1,
+          "arm_id": "A1",
+          "name": "three-skills/seed",
+          "old_arm": 1,
           "description": "Native seed - each task's own skills, before any optimization",
           "mode": "zs",
           "scores": {"energy-market-pricing": 0.0, "grid-dispatch-operator": 0.0},
           "source": "results/results.json (tasks[].seed)"
         },
         {
-          "arm": 3,
-          "description": "Native optimized - each task's own skills, after its own optimization run",
+          "arm_id": "A2",
+          "name": "three-skills/tbt",
+          "old_arm": 3,
+          "description": "Task-by-task - each task's own skills, after its own independent optimization run",
           "mode": "opt",
           "scores": {"energy-market-pricing": 0.9, "grid-dispatch-operator": 1.0},
           "source": "results/results.json (tasks[].best)"
         },
         {
-          "arm": 4,
-          "description": "Cross-task transfer - the other task's optimized donor skills, no adaptation",
+          "arm_id": "A3",
+          "name": "three-skills/tbt-cross",
+          "old_arm": 4,
+          "description": "Cross-task transfer - the other task's tbt-optimized donor skills, no adaptation",
           "mode": "zs",
           "scores": {"energy-market-pricing": 0.7, "grid-dispatch-operator": 0.8},
           "jobs": {"energy-market-pricing": 777816, "grid-dispatch-operator": 777815}
         },
         {
-          "arm": 5,
-          "description": "Merged bundle - both tasks' optimized donor skills unioned into 3 files, no further optimization",
+          "arm_id": "A4",
+          "name": "three-skills/tbt-merge",
+          "old_arm": 5,
+          "description": "Merged bundle - both tasks' tbt-optimized donor skills unioned into 3 files, no further optimization",
           "mode": "zs",
           "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
           "jobs": {"energy-market-pricing": 778690, "grid-dispatch-operator": 778691}
         },
         {
-          "arm": 6,
-          "description": "Merged bundle, then jointly optimized further on both tasks",
+          "arm_id": "A5",
+          "name": "three-skills/tbt-merge-joint",
+          "old_arm": 6,
+          "description": "Merged bundle (A4), then jointly optimized further on both tasks",
           "mode": "opt",
           "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
           "jobs": {"joint": 778692},
           "note": "seed val 0.889, cand_0001 val 1.0 accepted iter 1/2, killed by exact ID before iter 2"
+        },
+        {
+          "arm_id": "A6",
+          "name": "three-skills/joint",
+          "old_arm": null,
+          "description": "Direct joint optimization of the native three-skill seed on both tasks together, no tbt pass, no merge",
+          "mode": "opt",
+          "status": "not_run",
+          "scores": null,
+          "note": "Gap identified 2026-09-20: mirrors combo-skill/joint (B6) but for the three-separate-files structure. Not yet queued."
         }
       ]
     },
-    "single_merged_skill": {
+    "combo-skill": {
       "skill": "power-system-optimization",
       "arms": [
         {
-          "arm": 2,
+          "arm_id": "B1",
+          "name": "combo-skill/seed",
+          "old_arm": 2,
           "description": "Pure seed-stage merge - collapse the three never-optimized seed files into one, no optimization at all",
           "mode": "zs",
           "scores": {"energy-market-pricing": 0.0, "grid-dispatch-operator": 0.0},
           "jobs": {"energy-market-pricing": 787174, "grid-dispatch-operator": 787175}
         },
         {
-          "arm": 7,
-          "description": "Collapse the three already per-task-optimized donor files into one, no further optimization",
-          "mode": "zs",
-          "scores": {"energy-market-pricing": 0.9, "grid-dispatch-operator": 1.0},
-          "jobs": {"energy-market-pricing": 778790, "grid-dispatch-operator": 778791}
-        },
-        {
-          "arm": 8,
-          "description": "Start from the seed-merge (Arm 2) and optimize it jointly on both tasks",
-          "mode": "opt",
-          "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
-          "jobs": {"joint": 795839},
-          "note": "seed val 0.0 (n_tasks=2), cand_0001 val 1.0 accepted iter 1/2, killed by exact ID before iter 2; optimizer_usd 5.83, optimizer_tokens 55197"
-        },
-        {
-          "arm": 9,
-          "description": "Start from the seed-merge (Arm 2) and optimize it independently per task (two separate runs)",
+          "arm_id": "B2",
+          "name": "combo-skill/tbt",
+          "old_arm": 9,
+          "description": "Start from the seed-merge (B1) and optimize it independently per task (two separate runs), not yet merged back",
           "mode": "opt",
           "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
           "jobs": {"energy-market-pricing": 795840, "grid-dispatch-operator": 795739},
           "note": "each run: seed val 0.0, cand_0001 val 1.0 accepted iter 1/2, killed by exact ID before iter 2; grid-dispatch-operator optimizer_usd 9.46/optimizer_tokens 80543, energy-market-pricing optimizer_usd 6.46/optimizer_tokens 64138"
         },
         {
-          "arm": 10,
-          "description": "Merge the two Arm-9 per-task mutations back into one file, score zero-shot, no further optimization",
+          "arm_id": "B3",
+          "name": "combo-skill/tbt-merge",
+          "old_arm": 7,
+          "lineage": "via-A2: collapse the three already tbt-optimized (A2) donor files into one, no further optimization",
+          "description": "Collapse the three already per-task-optimized donor files into one, no further optimization",
+          "mode": "zs",
+          "scores": {"energy-market-pricing": 0.9, "grid-dispatch-operator": 1.0},
+          "jobs": {"energy-market-pricing": 778790, "grid-dispatch-operator": 778791}
+        },
+        {
+          "arm_id": "B4",
+          "name": "combo-skill/tbt-merge",
+          "old_arm": 10,
+          "lineage": "via-B2: merge the two B2 per-task mutations (each derived from the seed-merge B1) back into one file, score zero-shot",
+          "description": "Merge the two B2 per-task mutations back into one file, score zero-shot, no further optimization",
           "mode": "zs",
           "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
           "jobs": {"joint": 797395},
-          "note": "baseline_val 1.0, test_reward 1.0, test_delta 0.0, iterations 0, n_scored 2"
+          "note": "baseline_val 1.0, test_reward 1.0, test_delta 0.0, iterations 0, n_scored 2. B3 and B4 share the name combo-skill/tbt-merge but differ in lineage (which donors were merged) and score slightly differently (0.9/1.0 vs 1.0/1.0) - kept as two rows, not conflated."
+        },
+        {
+          "arm_id": "B5",
+          "name": "combo-skill/tbt-merge-joint",
+          "old_arm": null,
+          "description": "Take a tbt-merge result (B3 or B4) and continue optimizing it jointly on both tasks",
+          "mode": "opt",
+          "status": "not_run",
+          "scores": null,
+          "note": "Gap identified 2026-09-20: mirrors three-skills/joint (A6) - the two sections are each missing exactly the cell the other section already has. Not yet queued."
+        },
+        {
+          "arm_id": "B6",
+          "name": "combo-skill/joint",
+          "old_arm": 8,
+          "description": "Start from the seed-merge (B1) and optimize it jointly on both tasks",
+          "mode": "opt",
+          "scores": {"energy-market-pricing": 1.0, "grid-dispatch-operator": 1.0},
+          "jobs": {"joint": 795839},
+          "note": "seed val 0.0 (n_tasks=2), cand_0001 val 1.0 accepted iter 1/2, killed by exact ID before iter 2; optimizer_usd 5.83, optimizer_tokens 55197"
         }
       ]
     }
   },
   "provenance": {
     "worktree": "intake_skillbench_c7",
-    "branch": "intake_skillbench_c7",
-    "doc": "docs/specs/a2p_experiment_plan.md",
-    "date_range": "2026-09-10 to 2026-09-16"
+    "branch": "docs/a2p-skill-merge-results",
+    "doc": "docs/specs/3x2_toy_experiment_plan.md",
+    "date_range": "2026-09-10 to 2026-09-16",
+    "renamed": "2026-09-20: arm numbers 1-10 (global) replaced by per-section A1-A6/B1-B6; experiment renamed A2p -> 3x2_toy; two gap arms (A6, B5) added as not-yet-run placeholders"
   }
 }
