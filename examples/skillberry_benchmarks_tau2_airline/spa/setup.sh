@@ -123,7 +123,10 @@ say "4/5  Wire the project (adapter + gateway + seed + spec)"
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$BASE" --workdir "$REPO" --force >/dev/null \
   || die "intake scaffold failed"
 mkdir -p "$PROJECT/adapters"
-cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$PROJECT/adapters/"
+# scoring.py is shared by BOTH arms (see ../scoring.py) and ships beside adapter.py in
+# the deployed project, so `import scoring` resolves the same way `import gateway` does.
+cp "$EX_DIR/adapters/adapter.py" "$EX_DIR/adapters/gateway.py" "$EX_DIR/../scoring.py" \
+   "$PROJECT/adapters/"
 # The seed is TWO things: my_skill/ (the capability the optimizer edits) and
 # primitive_tools/ (the FROZEN substrate, protected by the spec). Copy both.
 rm -rf "$PROJECT/seed_capability"; cp -R "$EX_DIR/seed_capability" "$PROJECT/seed_capability"
