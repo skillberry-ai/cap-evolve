@@ -32,12 +32,27 @@ Top-line numbers (from `results/parsec34/results.json`, built by
 
 | tranche | n | JB reward (mean) | our T1 seed (mean) | our T2 final (mean)\* | Δ vs JB | Δ vs T1 |
 |---|---|---|---|---|---|---|
-| regression | 30 | 0.833 | 0.845 | 0.941 | +0.109 | +0.097 |
+| regression | 30 | 0.833 | 0.845 | 0.963 | +0.131 | +0.119 |
 | challenge | 4 | 0.730 | 0.792 | 0.873 | +0.143 | +0.081 |
 
 \*T2 final falls back to the T1 seed score for the 13 tasks T2 never
 targeted (they were already at ceiling), so this column is not a clean
 "optimized-only" average — see §3.
+
+\*\*Three tasks (`platform-005-wrong-owner-trap`, `platform-007-directory-path-fetch`,
+`platform-008-log-does-not-say`) hit a team-wide LLM API budget cap partway
+through their first `v4_t2_e1` attempt on 2026-09-20 and were re-run.
+`build_parsec34_heatmap.py` originally took the chronologically-latest run
+as canonical for any multi-run task; for `platform-007`/`platform-008` that
+happened to be correct (their first attempt genuinely underperformed or
+never finalized), but `platform-005`'s *first* attempt had already
+finalized cleanly (3 candidates, monotonic improvement, held-out test
+1.0 ± 0.0, a 0.0 val→test gap) despite the budget errors, and its rerun was
+a redundant resample whose noisier seed measurement made the rerun's two
+candidates look like a regression (final 0.346 vs. the first attempt's
+1.0). The script now takes, per task, the finalized run with the best
+`test_reward` rather than the latest one — this is what moved the
+regression tranche's T2 final mean from 0.941 to 0.963 above.
 
 ## 1. Why a grouping-granularity axis, not a selection/interference axis
 
@@ -149,13 +164,13 @@ C3/C4/G3/G4 result is a pure "all inputs were T2-optimized" case, with no
 already-perfect tasks to regress-check within that tranche — the
 regression-check concern above is entirely a `regression`-tranche concern.
 
-## 4. Open question: what does "merge" mean for a 7-file multi-agent bundle
+## 4. Open question: what does "merge" mean for an 8-file multi-agent bundle
 
 `3x2_toy`'s `merge` arm unions **distinct, non-overlapping** SKILL.md files
 (three separate skill packages) — union is unambiguous because each
 donor task's optimizer only ever touched its own file.
 
-Parsec's bundle is the opposite shape: one shared set of 7 files
+Parsec's bundle is the opposite shape: one shared set of 8 files
 (`orchestrator.md`, 6 domain agents, `shared_context.md`), and once T2
 optimizes a task independently, its optimizer may have edited *any* subset
 of those 7 files in task-specific ways. Merging two tasks' T2 outputs means
@@ -192,10 +207,14 @@ This spec is step 1 of the same two-PR structure `3x2_toy` used:
    no job submitted yet for any `not_run` arm.
 2. **Results PR into `parsec-history`** — `results/v4/summary.md` +
    `results.json` (T1/T2 rows populated now with real scores; C/G rows
-   present with `status: "not_run"`, `scores: null`, per §2), folded into
-   the shared heatmap, plus `recipes/v4/`, `artifacts/v4/<task>/{seed,best,rejected}/`
-   for the 21 T2-optimized tasks, and `reports/task-by-task/v4-*.md` for
-   all 34 tasks. This references this spec doc.
+   present with `status: "not_run"`, `scores: null`, per §2), with its own
+   separate v4 ledger and heatmap page — kept structurally independent from
+   v1/v2's shared `results/results.json` / `ui/heatmap.html` rather than
+   folded in, since v4's 34-task/multi-arm shape doesn't match v1/v2's
+   per-experiment shape — plus `recipes/v4/`,
+   `artifacts/v4/<task>/{seed,best,rejected}/` for the 21 T2-optimized
+   tasks, and `reports/task-by-task/v4-*.md` for all 34 tasks. This
+   references this spec doc.
 3. **`benchmark-history` record** referencing both (1) and (2), following
    the PR #466 pattern.
 
