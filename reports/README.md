@@ -17,12 +17,18 @@ Two experiments share one directory, so the experiment is part of the filename:
 |---|---|--:|
 | v1 (trace-extracted) | `v1-aap2-<NNNN>.md` | 30 |
 | v2 (hand-authored) | `v2-<task>.md` | 10 |
+| v4 (task-by-task, 34-task benchmark) | `v4-<task>.md` | 34 |
 
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped
 and only the number kept — `v1-aap2-0047.md`. v2's ids are already readable
 (`bench-aap2-004-failing-task-and-host`) and are used whole. The mapping is not a convention to
 re-derive by hand: every task row in `results/results.json` carries a `report` field with the exact
 path, and [`scripts/build_task_reports.py`](../scripts/build_task_reports.py) reads it.
+
+v4's ids are already readable (`platform-005-wrong-owner-trap`) and are used whole, like v2's.
+Unlike v1/v2, v4's `report` pointer is carried in `results/v4/results.json` (a separate ledger from
+`results/results.json`), and `scripts/build_v4_task_reports.py` reads that file instead of
+`build_task_reports.py`'s.
 
 ## The auto block
 

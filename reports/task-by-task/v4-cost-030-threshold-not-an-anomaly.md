@@ -1,0 +1,27 @@
+# cost-030-threshold-not-an-anomaly
+
+<!-- BEGIN:auto -->
+
+**task:** `cost-030-threshold-not-an-anomaly`  
+**category:** cost  
+**tranche:** regression  
+**services:** cost  
+**status:** optimized  
+**run:** `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407` (n_runs: 1)  
+
+_Read no cell without the `n` and split beside it._
+
+| measurement | split | n | reward |
+|---|---|--:|--:|
+| JB baseline | test | 1 | 1.000 |
+| our baseline (v4_t1_e1) | test | 3 | 0.953 |
+| seed (val, v4_t2_e1) | val | 5 | 1.000 |
+| final (test, v4_t2_e1) | test | 5 | 1.000 |
+
+delta vs JB: 0.000 · delta vs our baseline: 0.047
+
+Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/report.md`, `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/JOURNAL.md`
+
+<!-- END:auto -->
+
+T2 ran the optimizer on this task, but no candidate beat the seed bundle on validation (`best_tag: "seed"`) -- see `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/report.md` and `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/JOURNAL.md` in the `parsec-intake_v4` worktree (not committed here) for what it tried. `final` above is the seed's own held-out test measurement, not a fallback.
