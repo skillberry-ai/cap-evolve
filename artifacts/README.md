@@ -12,6 +12,7 @@ directory per candidate.
 | `v1/rejected/cand_000{1,2}/` | v1's two candidates, both proposed and both rejected by the gate |
 | `v2/rejected/run_20260816_202942-cand_0001/` | v2's iteration-1 candidate, proposed and rejected — the one run whose optimizer *did* write a journal entry (see [`../reports/README.md`](../reports/README.md)'s "v2 journal caveat") |
 | `v2/discarded/run_run_20260818_161550-cand_000{1,2}/` | not gate-rejected — **discarded by an operator bug**. A `--resume --run-ts` invocation silently started a fresh run instead of resuming, so these two candidates were produced against a restarted state and never evaluated against the real headline lineage. See [`../results/v2/summary.md`](../results/v2/summary.md)'s "The discarded iteration 3" section |
+| [`v4/`](v4/) | 21 task-by-task optimizer runs (of 34 tasks total) — `v4/seed/`, `v4/<task>/best/` (or `NOTE.md`), `v4/<task>/rejected/`, `v4/<task>/discarded/` (3 tasks) |
 
 `v1/seed/SKILL.md` and `v1/best/SKILL.md` are **byte-identical** (`diff` reports no
 difference). v1's headline run never accepted a candidate — `best_id == "seed"` in
@@ -61,3 +62,18 @@ rejected on the mean but for different reasons — `cand_0002` is, per
 reject and wrong to discard" section, the only artifact in v1 that ever matched trajectory on
 either optimized task. Diff it against `v1/seed/SKILL.md` if you want to see what a correct
 gate call still threw away.
+
+## v4's discarded runs: a budget cap, not an operator bug
+
+v2's `discarded/` candidates (above) came from an operator bug — a `--resume --run-ts` invocation
+that silently started a fresh run instead of resuming. v4's three multi-run tasks
+(`platform-005-wrong-owner-trap`, `platform-007-directory-path-fetch`,
+`platform-008-log-does-not-say`) have a different cause: a team-wide LLM API budget cap was hit
+mid-run on 2026-09-20 ("Budget has been exceeded" `optimizer_error` events), and each task was
+simply re-run afterward. `artifacts/v4/<task>/discarded/<run_ts>-<cand_id>/` holds every non-seed
+candidate from each task's non-canonical run (the run whose finalize `test_reward` was not the
+best). For `platform-007` and `platform-008` the rerun is a genuine improvement over the discarded
+run. For `platform-005`, the discarded run is actually the *rerun* — its first attempt
+(`run_20260920_103719`) had already finalized cleanly and is the one vendored to `best/`/`rejected/`
+above; see `results/v4/summary.md`'s data-quality caveats and
+`reports/task-by-task/v4-platform-005-wrong-owner-trap.md` for the full account.
