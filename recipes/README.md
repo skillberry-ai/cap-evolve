@@ -9,6 +9,7 @@ recipe reruns the experiment from scratch, the artifact is what the run actually
 |---|---|---|
 | [`v1/`](v1/) | 30 trace-extracted `traces_parsec-aap2-*` tasks | `capevolve.yaml`, `splits.json`, `PROJECT.md` |
 | [`v2/`](v2/) | 10 hand-authored `bench-aap2-*` tasks | `capevolve.v2.2.yaml`, `splits-v2.2.json`, `PROJECT.md`, `patch-harbor-tasks-v2.1.sh` |
+| [`v4/`](v4/) | 34-task multi-agent parsec benchmark, 21 task-by-task optimizer runs | `capevolve.yaml`, `split_ids.json`, `INSTRUCTIONS.md`, `README.md` |
 
 ## Read the per-directory README before rerunning either
 
@@ -19,6 +20,8 @@ instead of the pinned two tasks), v2's in a way that misdescribes it (comments c
 that document a different task count, a different split shape, and a different scoring formula).
 Neither file was edited to look better. [`v1/README.md`](v1/README.md) and
 [`v2/README.md`](v2/README.md) list every divergence found, with the source of truth for each.
+v4's yaml has no known divergence from what actually ran — see
+[`v4/README.md`](v4/README.md)'s "Recipe vs. run" section for the two-task check that confirmed it.
 
 ## What is deliberately not here
 
@@ -31,6 +34,9 @@ Neither file was edited to look better. [`v1/README.md`](v1/README.md) and
   rather than being duplicated under `recipes/`.
 - **No optimizer instructions.** Both yamls reference `optimizer/INSTRUCTIONS.md`, which is
   cap-evolve's own file, not a parsec artifact.
+- **Exception: v4 *does* vendor `optimizer/INSTRUCTIONS.md`.** Unlike v1/v2 (which used cap-evolve's
+  generic default, excluded above), v4's `INSTRUCTIONS.md` was authored specifically for this
+  project — see [`v4/README.md`](v4/README.md).
 - **No task definitions.** The harbor task directories (`harbor-tasks/`, `harbor-tasks-v2.1/`) are
   hundreds of files. Every contract that any number in this branch depends on is committed in
   machine-readable form instead: [`../results/v1/tasks.json`](../results/v1/tasks.json) and
