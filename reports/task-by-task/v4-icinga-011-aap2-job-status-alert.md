@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Same shape as icinga-010, on an alert about AAP2 job failures: after checking the service state and suppression, the task requires reading the check script to learn the failure window, the warning threshold, and a specific job action the script deliberately ignores when counting -- a detail that changes how the reported number should be read.
+
 ## What the optimizer tried
 
 A single candidate (`cand_0001`) against `icinga_agent.md` and `shared_context.md`, after first showing the "flaky" label was wrong: all 5 val trials scored exactly 0.860 with zero variance, missing the identical answer item (`live-alert`) every time. It rewrote the Output Format's `Acknowledged`/`In Downtime` label pair into a full-sentence `Suppression:` line, made an empty comments/downtimes result a reportable finding rather than a silent non-event, and added a new "Reporting Suppression State" section.

@@ -26,4 +26,8 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+A cost-monitor alert fired for an account, and the task is to decide whether it's a real anomaly before anyone opens an incident. The trap is the baseline: comparing against last month makes the spend look like a 2.5x jump, but comparing against the same month a year earlier shows it's an ordinary 5% seasonal increase -- so the task measures whether the agent checks the year-over-year baseline rather than stopping at month-over-month.
+
 T2 ran the optimizer on this task, but no candidate beat the seed bundle on validation (`best_tag: "seed"`) -- see `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/report.md` and `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/JOURNAL.md` in the `parsec-intake_v4` worktree (not committed here) for what it tried. `final` above is the seed's own held-out test measurement, not a fallback.

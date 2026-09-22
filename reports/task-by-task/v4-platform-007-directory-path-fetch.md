@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Asks to find and read a specific role's task file under a directory of OCP workload roles, telling the agent outright that the path is a directory, not a file. The trap -- the second most common real mistake in the corpus -- is fetching that directory path directly instead of listing it first and fetching the file it returns.
+
 ## What the optimizer tried
 
 Single iteration (`cand_0001`) touching `aap2_agent.md` (plus a matching fix to `babylon_agent.md`) after finding the prompt taught a forbidden move in three places while banning it abstractly in only one: it rewrote Critical Rule 3 to name the two concrete prohibited moves (never pass a directory path to `fetch_github_file`; never guess a file path from naming convention), corrected two tool descriptions that falsely told the agent `fetch_github_file` reads directories, added a new "Finding a File in a GitHub Repo" section with a 3-branch selector (catalog lookup → `lookup_catalog_item`; a complete path from a tool result → `fetch_github_file` verbatim; anything else, including a directory → `search_github_repo` first), and deleted a worked example that had demonstrated the forbidden directory fetch. This is a rerun (`run_20260920_185422`); the first attempt (`run_20260920_121011`) genuinely underperformed — both of its candidates were framework-synthesized "empty handover" placeholders (no prompt-edit rationale was recorded) and both were rejected, leaving the seed as champion at val 0.630 and test 0.475, well below this run's result.

@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+An Icinga alert reports AnarchySubjects stuck on a host. The task is to check the service's state and any suppression (comments or downtimes), then read the actual check script on GitHub to learn its configured critical threshold and report by how much the current value exceeds it -- grounding the verdict in configuration rather than the alert's own wording.
+
 ## What the optimizer tried
 
 Two candidates against `orchestrator.md`, `shared_context.md`, `icinga_agent.md`, and `babylon_agent.md`. `cand_0001` initially diagnosed a missing Icinga entry in `orchestrator.md`'s Routing Guidelines (the alert's Babylon-sounding hostname routes it to the wrong domain agent) and added routing, suppression-reporting, and threshold-reporting rules — then, mid-iteration, found via direct code inspection that `orchestrator.md` and `icinga_agent.md` are never loaded for this task at all: a regex fast-path (`classify_fast`) dispatches straight to the Babylon agent before the orchestrator prompt is ever read. It pivoted to editing `babylon_agent.md` instead, adding a defer-guard against substituting a live measurement for the monitoring value the alert actually asked about. `cand_0002` made three further edits to `icinga_agent.md` (an explicit call-order table, a conditional step, and a consolidated "start from the user's location" rule) while stating up front that these are unmeasurable — `icinga_agent.md` contributes 0 characters to this task's prompt.

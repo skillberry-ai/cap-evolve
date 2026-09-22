@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+An AAP2 provisioning job failed. The task is a two-hop root-cause chain: read the job's log for the error, then read the actual execution-environment entrypoint script in the AgnosticD content repository to explain what's wrong with how it was invoked, citing the file that needs to change and a root-cause category.
+
 ## What the optimizer tried
 
 Two iterations rewriting `aap2_agent.md` (plus a narrow `orchestrator.md` exception and a `shared_context.md` fix). `cand_0001` added a new "Step 9: Assign Exactly One Root Cause Category" — the 13-token taxonomy verbatim, an evidence-to-category table, and required `Category`/`Confidence` output fields — after finding the seed missed the graded `verdict.category` fact in 5/5 trials; it also replaced a hardcoded owner table with "parse the owner from a tool result, never recall it." `cand_0002` kept those edits and added two new Critical Rules forcing `lookup_catalog_item` to run before any GitHub fetch and reframing an empty GitHub result as usually a path problem rather than a wrong-owner problem — after an adversarial audit caught the first draft of that second rule pointing the opposite way (it would have licensed exactly the owner-substitution reflex that produced forbidden-owner calls elsewhere in the baseline run).

@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+A sandbox is reported as failing to provision, and the task asks Splunk to be searched for its GUID over a specific error window. The search legitimately returns nothing, and the task measures whether the agent treats that absence correctly -- as "no errors logged in this window," not as evidence the sandbox never started or was never provisioned.
+
 ## What the optimizer tried
 
 Two iterations, both touching `orchestrator.md` and `shared_context.md`, plus `babylon_agent.md`/`aap2_agent.md` for domain-specific Splunk guidance (`cand_0001` also lightly touched `cost_agent.md`, `icinga_agent.md`, `ocpv_agent.md` and `security_agent.md`; `cand_0002` deliberately left those four alone because none of those agents run for this task). `cand_0001` diagnosed the entire 0.2 val loss as one forbidden clause — a seed trial's "the pod **never started** and therefore never emitted logs" tripped `expected.json`'s `inferred-from-silence` ban — and tried to fix it with a `### Reporting an Empty or Negative Result` contract in both `orchestrator.md` and `shared_context.md`: a 3-part shape (absence + scope → what it does/doesn't establish → next check) plus a Do-NOT-write/Write-instead table that named the banned phrasings explicitly, and matching guidance in `babylon_agent.md`/`aap2_agent.md` about what a zero-event Splunk result does and doesn't mean. `cand_0002` (the winner) removed that table and its enumeration entirely, replacing them with a new `### When a Search Comes Back Empty` section: a 4-part worked shape (Searched → `Result: no events — 0 results.` → what that establishes → what it does not tell us → Next checks) whose only forward-looking slot is a plain checklist of next checks, never framed as possible causes; a word-level vocabulary ban (the words "never" and "confirms"/"proves"/"shows" about what a result means, rather than a ban on specific phrases); and every open question forced into a fixed `whether`-form sentence.

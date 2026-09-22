@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+An AAP2 job failed while creating a CNV inventory. The task requires reading the actual failing role code -- in a less obvious repository than the usual content repo -- to explain what's wrong with a value passed through Ansible's `to_json` filter, and to recommend the fix.
+
 ## What the optimizer tried
 
 Two iterations, both editing `aap2_agent.md` only (the other 7 files stayed byte-identical to the seed). `cand_0001` added a new "Step 9: Assign Exactly One Root Cause Category" (the taxonomy, an 11-row evidence table, a write contract requiring the literal token even when a read failed), a new "Step 6b: Namespaced Roles Live in Their Own Collection Repo" section mapping an FQCN to the correct `fetch_github_file` argument, and removed the forbidden `agnosticd/agnosticd-v2` owner from two places the prompt itself printed it. `cand_0002` kept all of that and added a discriminator for `application_bug` vs `configuration` (settle it by pointing at the line that sets the value), a mechanical pre-send check that flags any category cell containing a space/hyphen/slash/capital as not a valid taxonomy token, and a rule that a handed-to-you `owner`/`repo` pair travels together and should never be re-resolved via a different `ref`.

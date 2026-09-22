@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+An Icinga check is UNKNOWN because the plugin path it names no longer exists in the monitoring repository. The task is to find where the script actually lives now, read its real threshold, and correctly conclude that the fault is the check's own broken configuration -- not the thing it was supposed to be monitoring.
+
 ## What the optimizer tried
 
 A single candidate (`cand_0001`), 11 edits confined to `icinga_agent.md` (248 → 371 lines). It first had to work around the shipped `trajectories/*.json` being empty (`trace: null`) by following `rollout.metadata.trial_dir` into the real run directory to read `verifier/reward-detail.json` directly, which showed the agent locates the moved script correctly in every trial and fails only on how it names the fault. It rewrote the Reference Repositories guidance (a plugin path on the Icinga host is a checkout directory, not a repository name; compare only the repo-relative tail), replaced the stale Step 0.5 diagnosis logic with a "stale check configuration" rule providing a copyable verdict sentence, and added matching vocabulary to three separate output surfaces (`Summary`, `Script Source`, and a new `### What Is Wrong` section).

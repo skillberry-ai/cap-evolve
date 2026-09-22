@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+A job is recorded as failed, and the task asks for the root cause. The seeded log genuinely ends mid-task with no error text or result line, so the correct answer is to say plainly that the log doesn't establish a cause, rather than inventing one.
+
 ## What the optimizer tried
 
 Single iteration (`cand_0001`) rewriting `aap2_agent.md`, `shared_context.md`, and `orchestrator.md` after finding all 5 seed trials scored an identical 0.8 by missing the same graded fact (`no-root-cause`) for two different reasons: 3/5 trials fabricated a cause the evidence didn't support, and 2/5 got the right verdict but lost credit to markdown bolding breaking a literal substring match. The optimizer traced the fabrication to the prompt itself — `aap2_agent.md` said "Long = timeout," licensing a cause from elapsed time alone — and removed that licence, added a new "Does the evidence actually establish a cause?" step naming what does and does not establish a cause, added a "when no cause is established" output branch, and, after an adversarial review round caught that `orchestrator.md` never received the anti-bolding rule that lived only in the other two files, added the same plain-text formatting rule to `orchestrator.md`. This is a rerun (`run_20260920_144310`); the first attempt (`run_20260920_124829`) never finalized — its `state.json` shows 2 iterations spent and a best val of 0.96, but no `report.md`/`final.json` were ever written, consistent with `results/v4/summary.md`'s account of a budget-cap interruption.

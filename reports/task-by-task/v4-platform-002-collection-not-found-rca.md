@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Same two-hop RCA shape as platform-001, on a different failure: a missing Ansible role or collection whose cause is only visible in the execution environment's own `ansible.cfg`, not in the job log alone.
+
 ## What the optimizer tried
 
 Single iteration (`cand_0001`) touching `aap2_agent.md`, `shared_context.md`, and `orchestrator.md`. It added a "Root Cause Category and Confidence" section (the taxonomy verbatim, a 10-row evidence-to-category table, two boundary rules for `dependency` vs `configuration`/`timeout_failure`), grew the AAP2 output contract from 4 to 6 required items so a verbatim category and confidence are always stated, added a new "Step 7d: Missing Collection or Role" pattern for stating what a fetched value does not include, and rewrote the Step 6 owner table to stop teaching a hardcoded (and forbidden) owner/repo pair.

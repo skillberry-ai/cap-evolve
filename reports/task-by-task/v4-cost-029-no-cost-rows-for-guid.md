@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Finance asks what a specific sandbox cost us in Azure for a given month. The task is that no cost rows exist for that subscription in that period, and the correct answer says so explicitly, with a plausible explanation, rather than reporting a fabricated `$0`.
+
 ## What the optimizer tried
 
 Two candidates, both editing `cost_agent.md` and `shared_context.md` (the task's only prompt footprint, per `classify_fast()` skipping the orchestrator for single-domain cost queries). `cand_0001` diagnosed that all 5 seed trials filtered `query_azure_costs` to one subscription, got back an empty result (`total_cost: 0`), and reported that as a measured $0 spend rather than an absence of data — and added a new "Empty Cost Results" section distinguishing a measured zero from an absent row. It was rejected (Δ +0.000) because 4 of 5 trials still failed on citing a sibling subscription's honest total with padded cents ("$310.00"), which matches the forbidden `invented-figure` check as a bare substring. `cand_0002` kept the absence/measured-zero distinction and added a "write the number the way the source recorded it" rule banning cents-padding on whole-dollar values, plus tightened the contract to state the gap without characterizing it.

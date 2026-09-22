@@ -29,6 +29,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Someone forwards an Icinga alert and asks whether it needs action. The correct answer is no: the service is acknowledged, sits inside an active downtime, and carries a comment explaining an expected condition. The task measures whether the agent will correctly say "no problem" rather than escalate an alert that only looks urgent.
+
 ## What the optimizer tried
 
 Three candidates against `shared_context.md`, `babylon_agent.md`, and (unused) `icinga_agent.md`, after finding via direct code inspection that this alert's pasted service name ("Babylon Schema YAML Diff") matches `\bbabylon\b` and gets fast-path-routed to the Babylon agent before `orchestrator.md` or `icinga_agent.md` are ever loaded. `cand_0001` added a "no tool for the system being asked about" section (give the verdict from the evidence in the request rather than just refusing) and status-reading rules to `shared_context.md`, plus a Babylon-agent guard against re-framing an out-of-scope alert as a Babylon question. `cand_0002` wrote no JOURNAL.md entry of its own — the framework's synthesized note and `events.jsonl` show it was an infrastructure failure (an API error, "ENOTFOUND") that made zero capability edits to the prompt, not a rejected hypothesis. `cand_0003` rewrote the verdict-wording rule again, replacing a hedged "qualified verdict" instruction with a rule to state the verdict with no qualifier inside the sentence itself, mirroring the requester's own wording.

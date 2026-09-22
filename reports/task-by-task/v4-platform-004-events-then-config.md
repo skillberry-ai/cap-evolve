@@ -28,6 +28,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+A cluster-provision job failed. The task that actually failed, and the role it belongs to, only show up in the job's *events*, not in the log alone, and a config file supplies how many retries the wait was allowed. The seed also includes a second, successful host, so naming the wrong host is a distinguishable mistake.
+
 ## What the optimizer tried
 
 Two iterations, both resolving one rule conflict: four different rules told the agent not to make a second `query_aap2` call after `get_job_log` (a redundant-call ban, a round budget, two re-fetch echoes in `shared_context.md`), while only one narrow rule said to make it — and that one lived in a GUID-discovery flow this task never enters, since a separate tip routes a direct job ID straight to `get_job_log`. `cand_0001` rewrote `aap2_agent.md`, `shared_context.md`, and `orchestrator.md` to make all of those rules agree (redundant now means same action *and* same arguments; a new Critical Rule 5 requires `get_job_events(failed_only=true)` after a failed job's log, before any GitHub fetch) and also fixed a `Role` field the report template required but no log in this task's trials could source. `cand_0001` was rejected on paper (val 0.400), but JOURNAL.md's post-mortem — reading all 5 trials' raw records rather than the aggregate — found this was a LiteLLM gateway outage: 2 of 5 trials scored 1.0 with the byte-identical prompt, and the other 3 never received a model response at all (TLS handshake timeouts and a 600s request timeout, before any output was produced). `cand_0002` re-delivered the same behavioral contract in about a third of the diff size (no changes to `orchestrator.md`) and was accepted at val 1.0.

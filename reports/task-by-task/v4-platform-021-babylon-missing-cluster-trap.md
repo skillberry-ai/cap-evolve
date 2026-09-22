@@ -19,6 +19,10 @@ delta vs JB: 0.000 · delta vs our baseline: 0.000
 
 <!-- END:auto -->
 
+## What this task is about
+
+Asks to look up a Babylon component's lifespan and config path. Babylon runs several clusters, and the lookup requires a `cluster` argument to say which one -- the instruction states that cluster directly, so the task measures whether the agent passes an argument it was explicitly handed, something the real agent it's modeled on failed to do twice.
+
 T2 never targeted this task: its seed bundle already scored a perfect 1.0 on our baseline run (`our_baseline`), so there was no headroom to optimize against (spec Sec.3). `seed`/`best`/`final` above all repeat `our_baseline` because no independent optimizer measurement exists -- they are not three separate results.
 
 This task will be evaluated again once a category or global merge (C3/C4/G3/G4, spec Sec.2) produces a bundle edited by other tasks' optimizer runs, as a regression check (spec Sec.3).

@@ -29,6 +29,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+Asks to look up a catalog item, find the AgnosticD content repository it points to, and read a workload role's defaults file from it. The trap is the single most common real mistake in the underlying trajectory corpus: fetching from the wrong repository owner (`rhpds/agnosticd-v2`, which doesn't exist) instead of the correct `agnosticd/agnosticd-v2`.
+
 ## Why this task has two runs
 
 A team-wide LLM API budget cap ("Budget has been exceeded") fired partway through this task's first attempt (`run_20260920_103719`) on 2026-09-20, but that run had already finalized cleanly before the errors mattered — 3 candidates, monotonic improvement, held-out test `1.0 ± 0.0`. It was re-run anyway (`run_20260920_162208`); the rerun's *seed* happened to score higher on validation that time (0.604 vs. 0.32), so neither of its 2 candidates beat it and it finalized at a mediocre `0.346`. `results/v4/results.json` takes the run with the best finalize `test_reward` across all of a task's finalized runs (not simply the latest), so the numbers above are from the first run; the rerun's material is vendored under `artifacts/v4/platform-005-wrong-owner-trap/discarded/run_20260920_162208-*/` for the record, not as this task's result.

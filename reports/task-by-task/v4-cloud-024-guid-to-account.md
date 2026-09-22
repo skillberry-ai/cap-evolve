@@ -27,6 +27,10 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
+## What this task is about
+
+The entire instruction is a bare five-character token -- a Babylon/RHDP GUID with no question attached -- the shape six real user prompts took verbatim. The task is to recognize that a lone GUID is an implicit request to look up the account or sandbox it belongs to, not a string to comment on.
+
 ## What the optimizer tried
 
 The optimizer ran a single iteration (`cand_0001`) after first correcting the task's "flaky" label — all 8 trials on disk (5 in this run, 3 in an earlier run) scored an identical 0.2, i.e. deterministic, not noisy. It traced the failure to the orchestrator, which never delegated to a domain agent at all, so it rewrote `orchestrator.md` (a new "Bare Identifiers and Minimal Prompts" section teaching that a lone identifier-shaped message is a lookup request, a narrowed "Asking Clarifying Questions" rule, and a `query_aws_account_db` Direct Tools bullet) and `shared_context.md` (splitting the identifier-shape rule by question type).
