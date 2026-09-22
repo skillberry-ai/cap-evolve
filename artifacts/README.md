@@ -1,9 +1,11 @@
 # artifacts/ — skill packages
 
-What the recipes in [`../recipes/`](../recipes/) actually produced. Each package is three
-files — `SKILL.md` (the instructions an agent reads), `INSTRUCTIONS.md` and `PROCESS.md`
-(cap-evolve's own optimizer-facing bookkeeping, carried through unedited) — under one
-directory per candidate.
+What the recipes in [`../recipes/`](../recipes/) actually produced. For v1/v2, each package is
+three files — `SKILL.md` (the instructions an agent reads), `INSTRUCTIONS.md` and
+`PROCESS.md` (cap-evolve's own optimizer-facing bookkeeping, carried through unedited) — under
+one directory per candidate. v4's packages are larger: a shared 8-file multi-agent bundle
+(`orchestrator.md`, `shared_context.md`, six `*_agent.md` files) plus the same
+`INSTRUCTIONS.md`/`PROCESS.md` pair — no `SKILL.md`.
 
 | directory | what it is |
 |---|---|

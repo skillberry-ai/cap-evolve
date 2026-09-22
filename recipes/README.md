@@ -1,7 +1,7 @@
 # recipes/
 
 The cap-evolve project configs a rerun needs — the `capevolve*.yaml`, the pinned split file, the
-`PROJECT.md` decision log, and (for v2) the task-patching script. **Copied verbatim** from the two
+`PROJECT.md` decision log, and (for v2) the task-patching script. **Copied verbatim** from the three
 source worktrees, one subdirectory per experiment. Paired with [`../artifacts/`](../artifacts/): a
 recipe reruns the experiment from scratch, the artifact is what the run actually produced.
 
@@ -11,7 +11,7 @@ recipe reruns the experiment from scratch, the artifact is what the run actually
 | [`v2/`](v2/) | 10 hand-authored `bench-aap2-*` tasks | `capevolve.v2.2.yaml`, `splits-v2.2.json`, `PROJECT.md`, `patch-harbor-tasks-v2.1.sh` |
 | [`v4/`](v4/) | 34-task multi-agent parsec benchmark, 21 task-by-task optimizer runs | `capevolve.yaml`, `split_ids.json`, `INSTRUCTIONS.md`, `README.md` |
 
-## Read the per-directory README before rerunning either
+## Read the per-directory README before rerunning any of them
 
 These are verbatim copies, which means they are **also a record of what the recipes got wrong**. In
 both experiments the committed yaml disagrees with what the run actually did — v1's in a way that
@@ -25,13 +25,13 @@ v4's yaml has no known divergence from what actually ran — see
 
 ## What is deliberately not here
 
-- **No `.env`.** Both source worktrees have one (600-perm, gitignored) holding gateway credentials
-  and the LiteLLM base URL. `v1/PROJECT.md` documents the variable *names*; no value is in this
-  branch. This branch has no `.gitignore` inherited from `main` for most of its history — a
+- **No `.env`.** All three source worktrees have one (600-perm, gitignored) holding gateway
+  credentials and the LiteLLM base URL. `v1/PROJECT.md` documents the variable *names*; no value is
+  in this branch. This branch has no `.gitignore` inherited from `main` for most of its history — a
   minimal one is committed at the root — so check `git status` before staging anything new here.
 - **No `seed_capability/`.** The seed skill package the recipes point at lives in
-  [`../artifacts/v1/seed/`](../artifacts/v1/seed/) and [`../artifacts/v2/seed/`](../artifacts/v2/seed/)
-  rather than being duplicated under `recipes/`.
+  [`../artifacts/v1/seed/`](../artifacts/v1/seed/), [`../artifacts/v2/seed/`](../artifacts/v2/seed/)
+  and [`../artifacts/v4/seed/`](../artifacts/v4/seed/) rather than being duplicated under `recipes/`.
 - **No optimizer instructions.** Both yamls reference `optimizer/INSTRUCTIONS.md`, which is
   cap-evolve's own file, not a parsec artifact.
 - **Exception: v4 *does* vendor `optimizer/INSTRUCTIONS.md`.** Unlike v1/v2 (which used cap-evolve's
@@ -44,8 +44,9 @@ v4's yaml has no known divergence from what actually ran — see
 
 ## To rerun
 
-Both recipes assume a live simulator fleet, which is the part a recipe cannot capture. v1 needs
-four kaegis endpoints (aap2 `:8086`, github `:8087`, babylon `:8088`, provisions_db `:8090`) — and
-**25 of its 30 tasks were scored while only the first two were up**, which is the single most
-important fact in [`../results/v1/summary.md`](../results/v1/summary.md). v2 needs one kaegis process
-per task (`:9086`–`:9095`), each seeded from that task's own `seed.json`.
+All three recipes assume a live simulator fleet, which is the part a recipe cannot capture. v1
+needs four kaegis endpoints (aap2 `:8086`, github `:8087`, babylon `:8088`, provisions_db
+`:8090`) — and **25 of its 30 tasks were scored while only the first two were up**, which is the
+single most important fact in [`../results/v1/summary.md`](../results/v1/summary.md). v2 needs one
+kaegis process per task (`:9086`–`:9095`), each seeded from that task's own `seed.json`. v4's fleet
+requirements are harbor-native and task-specific — see [`v4/README.md`](v4/README.md).

@@ -14,8 +14,8 @@ one was accepted or rejected, what a number does and doesn't mean. That has no h
 machine-written (by `ci/benchmarks/lib/record.py` on `main`) and periodically pruned; it
 carries the numbers, not the story behind them. This branch is where the story lives.
 
-Two independent experiments are recorded here, both against parsec's AAP2 job-diagnosis
-domain, sharing nothing except the branch:
+Three independent experiments are recorded here, sharing nothing except the branch — v1 and
+v2 both target parsec's AAP2 job-diagnosis domain, v4 is wider (see below):
 
 | experiment | tasks | source |
 |---|---|---|

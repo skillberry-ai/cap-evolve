@@ -6,12 +6,12 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4.html`](../ui/heatmap_v4.html) (v4) |
 | **3** | **why a task moved, and what it teaches** | **`reports/task-by-task/<task>.md`** |
 
 ## Naming
 
-Two experiments share one directory, so the experiment is part of the filename:
+Three experiments share one directory, so the experiment is part of the filename:
 
 | experiment | pattern | count |
 |---|---|--:|
