@@ -12,6 +12,8 @@
 
 _Numbers above are generated from `results/results.json`. Val rewards unless labelled test._
 
+**A0f (196-skill vocabulary):** 0.500 · **Δ vs A0 (seed):** -0.500 · 10 trials · see [`results/a0f-full-vocab/summary.md`](../../results/a0f-full-vocab/summary.md)
+
 **Material:**
 - [`seed/`](../../artifacts/task-by-task/hvac-control/seed/) — seed skill package (no `best/`: no candidate was ever accepted for this task)
 - [`per-task-logs/hvac-control.md`](../../results/task-by-task-43/per-task-logs/hvac-control.md) — per-trial reward vectors, from the earlier 43-task sweep (numbers may differ from above: different run)

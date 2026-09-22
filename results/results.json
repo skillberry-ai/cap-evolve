@@ -23,7 +23,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "ada-bathroom-plan-repair",
@@ -40,7 +42,9 @@
       "best_tag": "cand_0003",
       "iters_spent": 3,
       "final_test": null,
-      "delta": 0.6
+      "delta": 0.6,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "adaptive-cruise-control",
@@ -57,7 +61,9 @@
       "best_tag": "cand_0003",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.30000000000000004
+      "delta": 0.30000000000000004,
+      "a0f": 0.7,
+      "a0f_delta": 0.0
     },
     {
       "task": "azure-bgp-oscillation-route-leak",
@@ -74,7 +80,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "bike-rebalance",
@@ -91,7 +99,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": null,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "citation-check",
@@ -108,7 +118,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "civ6-adjacency-optimizer",
@@ -125,7 +137,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.69
+      "delta": 0.69,
+      "a0f": 0.325,
+      "a0f_delta": 0.015
     },
     {
       "task": "court-form-filling",
@@ -142,7 +156,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.7
+      "delta": 0.7,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "crystallographic-wyckoff-position-analysis",
@@ -159,7 +175,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": 0.317,
-      "delta": 0.20899999999999996
+      "delta": 0.20899999999999996,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "dapt-intrusion-detection",
@@ -176,7 +194,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "data-to-d3",
@@ -193,7 +213,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.5
+      "delta": 0.5,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "debug-trl-grpo",
@@ -210,7 +232,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": null,
-      "delta": 0.575
+      "delta": 0.575,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "dialogue-parser",
@@ -227,7 +251,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "drone-planning-control",
@@ -244,7 +270,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "dynamic-object-aware-egomotion",
@@ -261,7 +289,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "earthquake-phase-association",
@@ -278,7 +308,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "earthquake-plate-calculation",
@@ -295,7 +327,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": 1.0,
+      "a0f_delta": 0.1
     },
     {
       "task": "econ-detrending-correlation",
@@ -312,7 +346,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "edit-pdf",
@@ -329,7 +365,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "energy-ac-optimal-power-flow",
@@ -346,7 +384,9 @@
       "best_tag": "cand_0003",
       "iters_spent": 3,
       "final_test": null,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "energy-market-pricing",
@@ -363,7 +403,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": 0.8,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "energy-unit-commitment",
@@ -380,7 +422,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": 0.1,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": 0.0,
+      "a0f_delta": -0.1
     },
     {
       "task": "enterprise-information-search",
@@ -397,7 +441,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "exam-block-sequencing",
@@ -414,7 +460,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "exceltable-in-ppt",
@@ -431,7 +479,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "exoplanet-detection-period",
@@ -448,7 +498,9 @@
       "best_tag": "seed",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "financial-modeling-qa",
@@ -465,7 +517,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "fix-build-agentops",
@@ -482,7 +536,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "fix-build-google-auto",
@@ -499,7 +555,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "fix-druid-loophole-cve",
@@ -516,7 +574,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "fix-erlang-ssh-cve",
@@ -533,7 +593,9 @@
       "best_tag": "cand_0003",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.30000000000000004
+      "delta": 0.30000000000000004,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "fix-visual-stability",
@@ -550,7 +612,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "flink-query",
@@ -567,7 +631,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 0.9,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "flood-risk-analysis",
@@ -584,7 +650,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "glm-lake-mendota",
@@ -601,7 +669,9 @@
       "best_tag": "seed",
       "iters_spent": 0,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "gravitational-wave-detection",
@@ -618,7 +688,9 @@
       "best_tag": "seed",
       "iters_spent": 3,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "grid-dispatch-operator",
@@ -635,7 +707,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "hvac-control",
@@ -652,7 +726,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": 0.5,
+      "a0f_delta": -0.5
     },
     {
       "task": "invoice-fraud-detection",
@@ -669,7 +745,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.10000000000000003
+      "delta": 0.10000000000000003,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "jax-computing-basics",
@@ -686,7 +764,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "jpg-ocr-stat",
@@ -703,7 +783,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.19999999999999996
+      "delta": 0.19999999999999996,
+      "a0f": 0.7,
+      "a0f_delta": -0.1
     },
     {
       "task": "lab-unit-harmonization",
@@ -720,7 +802,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.002100000000000102
+      "delta": 0.002100000000000102,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "lake-warming-attribution",
@@ -737,7 +821,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "latex-formula-extraction",
@@ -754,7 +840,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 0.8,
-      "delta": 0.6000000000000001
+      "delta": 0.6000000000000001,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "lean4-proof",
@@ -771,7 +859,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "llm-prefix-cache-replay",
@@ -788,7 +878,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "manufacturing-codebook-normalization",
@@ -805,7 +897,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": null,
-      "delta": 0.8
+      "delta": 0.8,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "manufacturing-equipment-maintenance",
@@ -822,7 +916,9 @@
       "best_tag": "cand_0003",
       "iters_spent": 4,
       "final_test": null,
-      "delta": 0.30000000000000004
+      "delta": 0.30000000000000004,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "manufacturing-fjsp-optimization",
@@ -839,7 +935,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.19999999999999996
+      "delta": 0.19999999999999996,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "mario-coin-counting",
@@ -856,7 +954,9 @@
       "best_tag": "seed",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": 0.1,
+      "a0f_delta": -0.9
     },
     {
       "task": "mars-clouds-clustering",
@@ -873,7 +973,9 @@
       "best_tag": "seed",
       "iters_spent": 0,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "multilingual-video-dubbing",
@@ -890,7 +992,9 @@
       "best_tag": "cand_0004",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.30000000000000004
+      "delta": 0.30000000000000004,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "offer-letter-generator",
@@ -907,7 +1011,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "organize-messy-files",
@@ -924,7 +1030,9 @@
       "best_tag": "cand_0003",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.4
+      "delta": 0.4,
+      "a0f": 0.5,
+      "a0f_delta": 0.0
     },
     {
       "task": "paper-anonymizer",
@@ -941,7 +1049,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "parallel-tfidf-search",
@@ -958,7 +1068,9 @@
       "best_tag": "seed",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "paratransit-routing",
@@ -975,7 +1087,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 3,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "pddl-airport-planning",
@@ -992,7 +1106,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "pddl-tpp-planning",
@@ -1009,7 +1125,9 @@
       "best_tag": "seed",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "pdf-excel-diff",
@@ -1026,7 +1144,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "powerlifting-coef-calc",
@@ -1043,7 +1163,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "pptx-reference-formatting",
@@ -1060,7 +1182,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "protein-expression-analysis",
@@ -1077,7 +1201,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "python-scala-translation",
@@ -1094,7 +1220,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "quantum-numerical-simulation",
@@ -1111,7 +1239,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "r2r-mpc-control",
@@ -1128,7 +1258,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.7
+      "delta": 0.7,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "radar-vital-signs",
@@ -1145,7 +1277,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "react-performance-debugging",
@@ -1162,7 +1296,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": null,
-      "delta": 0.4
+      "delta": 0.4,
+      "a0f": 0.4,
+      "a0f_delta": -0.2
     },
     {
       "task": "reserves-at-risk-calc",
@@ -1179,7 +1315,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "sales-pivot-analysis",
@@ -1196,7 +1334,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "sec-financial-report",
@@ -1213,7 +1353,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.09999999999999998
+      "delta": 0.09999999999999998,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "seismic-phase-picking",
@@ -1230,7 +1372,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.0,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "setup-fuzzing-py",
@@ -1247,7 +1391,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 0.881,
-      "delta": 0.18500000000000005
+      "delta": 0.18500000000000005,
+      "a0f": 0.513,
+      "a0f_delta": 0.149
     },
     {
       "task": "shock-analysis-demand",
@@ -1264,7 +1410,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 0.9,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "shock-analysis-supply",
@@ -1281,7 +1429,9 @@
       "best_tag": "cand_0004",
       "iters_spent": 4,
       "final_test": 0.2,
-      "delta": 0.3
+      "delta": 0.3,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "simpo-code-reproduction",
@@ -1298,7 +1448,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 2,
       "final_test": null,
-      "delta": 0.19999999999999996
+      "delta": 0.19999999999999996,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "software-dependency-audit",
@@ -1315,7 +1467,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.7
+      "delta": 0.7,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "spring-boot-jakarta-migration",
@@ -1332,7 +1486,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "suricata-custom-exfil",
@@ -1349,7 +1505,9 @@
       "best_tag": "seed",
       "iters_spent": 4,
       "final_test": 0.6666666666666666,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "syzkaller-ppdev-syzlang",
@@ -1366,7 +1524,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.30000000000000004
+      "delta": 0.30000000000000004,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "threejs-structure-parser",
@@ -1383,7 +1543,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.5
+      "delta": 0.5,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "threejs-to-obj",
@@ -1400,7 +1562,9 @@
       "best_tag": "seed",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.0
+      "delta": 0.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "tictoc-unnecessary-abort-detection",
@@ -1417,7 +1581,9 @@
       "best_tag": "cand_0001",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.11499999999999999
+      "delta": 0.11499999999999999,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "travel-planning",
@@ -1434,7 +1600,9 @@
       "best_tag": "cand_0003",
       "iters_spent": 4,
       "final_test": 0.8,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "video-silence-remover",
@@ -1451,7 +1619,9 @@
       "best_tag": "cand_0002",
       "iters_spent": 4,
       "final_test": 1.0,
-      "delta": 0.9
+      "delta": 0.9,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "weighted-gdp-calc",
@@ -1468,7 +1638,9 @@
       "best_tag": "cand_0001",
       "iters_spent": null,
       "final_test": null,
-      "delta": 0.19999999999999996
+      "delta": 0.19999999999999996,
+      "a0f": null,
+      "a0f_delta": null
     },
     {
       "task": "xlsx-recover-data",
@@ -1485,7 +1657,9 @@
       "best_tag": "cand_0002",
       "iters_spent": null,
       "final_test": null,
-      "delta": 1.0
+      "delta": 1.0,
+      "a0f": null,
+      "a0f_delta": null
     }
   ]
 }

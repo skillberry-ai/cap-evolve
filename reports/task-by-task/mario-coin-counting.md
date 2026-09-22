@@ -12,6 +12,8 @@
 
 _Numbers above are generated from `results/results.json`. Val rewards unless labelled test._
 
+**A0f (196-skill vocabulary):** 0.100 · **Δ vs A0 (seed):** -0.900 · 10 trials · see [`results/a0f-full-vocab/summary.md`](../../results/a0f-full-vocab/summary.md)
+
 **Material:**
 - [`seed/`](../../artifacts/task-by-task/mario-coin-counting/seed/) — seed skill package (no `best/`: no candidate was ever accepted for this task)
 
