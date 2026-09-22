@@ -97,10 +97,10 @@ actually **gate**? `references/edit-design-lessons.md`.
 right" but "did the agent follow it at all". Never exercised ⇒ the **form** is wrong; exercised and
 still wrong ⇒ the content is.
 
-**2. Sort every edit into a bucket before spending, per the form table below** (deterministic →
-B, probabilistic → A). **A:** sibling candidates, N≥3, gated separately — unchanged default.
-**B:** merge every low-risk structural fix into one working copy, gate it once via steps 3–4 — no
-per-fix screen or gate, since each part already cleared its own bar alone. Details:
+**2. Bucket every edit before spending, per the form table below** (deterministic → B,
+probabilistic → A). **A:** sibling candidates, N≥3, gated separately — unchanged default.
+**B:** merge every low-risk structural fix into one working copy, gate once via steps 3–4 — no
+per-fix screen/gate, since each part already cleared its own bar alone. Details:
 `references/algorithm.md`, "Bucketing edits before spending".
 
 ```bash
@@ -319,5 +319,4 @@ One level deep — each is read on its own, and none points at another.
   for the first time, or after two rejects.
 - [`references/microcase.md`](references/microcase.md) — the micro-test schema and `gen` contract.
   **Load** before proposing a candidate for a cluster with (or needing) a case.
-- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared.
-  **Load** in Phase 0.
+- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared. **Load** in Phase 0.
