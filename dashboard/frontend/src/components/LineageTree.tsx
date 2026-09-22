@@ -17,6 +17,9 @@ const FILL: Record<GraphNode['status'], string> = {
   rejected: 'var(--rejected)',
   indecisive: 'var(--indecisive)',
   failed: 'var(--muted)',
+  // A screen never earns a real graph node (see TaskMatrix's synthetic column), so this
+  // is unreachable here — the map must stay exhaustive over NodeStatus regardless.
+  screened: 'var(--muted)',
 }
 
 /** Best-path-as-spine lineage: the winning chain reads as a flat amber line
