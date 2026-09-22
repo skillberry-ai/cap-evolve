@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-22T09:30:36Z",
+  "generated_at": "2026-09-22T13:08:28Z",
   "generator": "scripts/build_v4_results_json.py",
   "benchmark": "parsec",
   "target": "parsec multi-agent bundle (orchestrator.md + 6 domain agents + shared_context.md; capabilities: [system-prompt])",
@@ -1357,7 +1357,7 @@
         }
       ],
       "cost_time": {
-        "note": "T2-optimized tasks only (21 of 34); tranches are kept separate and must never be pooled into one number -- see spec Sec.0 and results/v4/summary.md's aggregate caution.",
+        "note": "T2-optimized tasks only (21 of 34); tranches are kept separate and must never be pooled into one number -- see spec Sec.0 and results/v4/summary.md's aggregate caution. by_stage groups the same 96 detail-table rows by iteration stage instead of by tranche.",
         "by_tranche": {
           "regression": {
             "n_tasks": 17,
@@ -1374,6 +1374,92 @@
             "time_s": 37660.2,
             "eval_cost_usd": 27.65,
             "opt_cost_usd": 100.1091
+          }
+        },
+        "by_stage": {
+          "seed": {
+            "n": 21,
+            "cost_usd": 12.9023,
+            "tokens": 3941514,
+            "time_s": 17923.9,
+            "eval_cost_usd": 12.9023,
+            "eval_tokens": 3941514,
+            "eval_s": 17923.9,
+            "opt_cost_usd": 0.0,
+            "opt_tokens": 0,
+            "opt_s": 0.0
+          },
+          "iter1": {
+            "n": 20,
+            "cost_usd": 250.2819,
+            "tokens": 6670551,
+            "time_s": 54803.9,
+            "eval_cost_usd": 14.6839,
+            "eval_tokens": 4531541,
+            "eval_s": 15831.9,
+            "opt_cost_usd": 235.598,
+            "opt_tokens": 2139010,
+            "opt_s": 38972.0
+          },
+          "iter2": {
+            "n": 13,
+            "cost_usd": 154.6196,
+            "tokens": 4041649,
+            "time_s": 35699.5,
+            "eval_cost_usd": 8.7697,
+            "eval_tokens": 2674190,
+            "eval_s": 9582.9,
+            "opt_cost_usd": 145.8499,
+            "opt_tokens": 1367459,
+            "opt_s": 26116.6
+          },
+          "iter3": {
+            "n": 2,
+            "cost_usd": 21.2834,
+            "tokens": 407156,
+            "time_s": 3465.3,
+            "eval_cost_usd": 0.5465,
+            "eval_tokens": 167013,
+            "eval_s": 476.3,
+            "opt_cost_usd": 20.7369,
+            "opt_tokens": 240143,
+            "opt_s": 2989.0
+          },
+          "FINAL": {
+            "n": 21,
+            "cost_usd": 13.9108,
+            "tokens": 4246509,
+            "time_s": 13677.5,
+            "eval_cost_usd": 13.9108,
+            "eval_tokens": 4246509,
+            "eval_s": 13677.5,
+            "opt_cost_usd": 0.0,
+            "opt_tokens": 0,
+            "opt_s": 0.0
+          },
+          "FINAL_seed": {
+            "n": 19,
+            "cost_usd": 12.5939,
+            "tokens": 3812799,
+            "time_s": 18859.1,
+            "eval_cost_usd": 12.5939,
+            "eval_tokens": 3812799,
+            "eval_s": 18859.1,
+            "opt_cost_usd": 0.0,
+            "opt_tokens": 0,
+            "opt_s": 0.0
+          },
+          "TOTAL": {
+            "n": 96,
+            "cost_usd": 465.5919,
+            "tokens": 23120178,
+            "time_s": 144429.2,
+            "eval_cost_usd": 63.4071,
+            "eval_tokens": 19373566,
+            "eval_s": 76351.6,
+            "opt_cost_usd": 402.1848,
+            "opt_tokens": 3746612,
+            "opt_s": 68077.6
           }
         }
       }

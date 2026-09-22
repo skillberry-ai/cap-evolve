@@ -173,6 +173,64 @@ def parse_cost_time_source():
     return out
 
 
+STAGE_ORDER = ["seed", "iter1", "iter2", "iter3", "FINAL", "FINAL_seed"]
+
+
+def parse_cost_time_by_stage():
+    """Aggregate the same Per-iteration detail table as parse_cost_time_source(),
+    but grouped by iteration stage (seed/iter1/iter2/iter3/FINAL/FINAL_seed)
+    instead of by task, split into eval vs. optimizer cost/tokens/time.
+
+    Returns {stage: {n, cost_usd, tokens, time_s, eval_cost_usd, eval_tokens,
+    eval_s, opt_cost_usd, opt_tokens, opt_s}} for each of STAGE_ORDER plus a
+    "TOTAL" row. Raises if the table contains a stage label outside
+    STAGE_ORDER (e.g. "iter1(cand_0001)" normalizes to "iter1").
+    """
+    lines = COST_TIME_SOURCE.read_text().splitlines()
+    detail_header = _find_header(lines, ["Task", "Stage", "Eval $", "Opt $"])
+
+    raw = {stage: {"n": 0, "eval_cost_usd": 0.0, "eval_tokens": 0, "eval_s": 0.0,
+                   "opt_cost_usd": 0.0, "opt_tokens": 0, "opt_s": 0.0}
+           for stage in STAGE_ORDER}
+    for row in _parse_pipe_table(lines, detail_header):
+        stage = row[2].split("(")[0]
+        if stage not in raw:
+            raise ValueError(f"unrecognized stage label: {row[2]!r}")
+        s = raw[stage]
+        s["n"] += 1
+        s["eval_cost_usd"] += _num(row[6])
+        s["eval_tokens"] += int(_num(row[7]))
+        s["eval_s"] += _num(row[8])
+        s["opt_cost_usd"] += _num(row[9])
+        s["opt_tokens"] += int(_num(row[10]))
+        s["opt_s"] += _num(row[11])
+
+    def finalize(s):
+        return {
+            "n": s["n"],
+            "cost_usd": round(s["eval_cost_usd"] + s["opt_cost_usd"], 4),
+            "tokens": s["eval_tokens"] + s["opt_tokens"],
+            "time_s": round(s["eval_s"] + s["opt_s"], 1),
+            "eval_cost_usd": round(s["eval_cost_usd"], 4),
+            "eval_tokens": s["eval_tokens"],
+            "eval_s": round(s["eval_s"], 1),
+            "opt_cost_usd": round(s["opt_cost_usd"], 4),
+            "opt_tokens": s["opt_tokens"],
+            "opt_s": round(s["opt_s"], 1),
+        }
+
+    by_stage = {stage: finalize(raw[stage]) for stage in STAGE_ORDER}
+
+    total_raw = {"n": 0, "eval_cost_usd": 0.0, "eval_tokens": 0, "eval_s": 0.0,
+                 "opt_cost_usd": 0.0, "opt_tokens": 0, "opt_s": 0.0}
+    for stage in STAGE_ORDER:
+        for k in total_raw:
+            total_raw[k] += raw[stage][k]
+    by_stage["TOTAL"] = finalize(total_raw)
+
+    return by_stage
+
+
 def build_task_ledger(source, cost_time):
     rows = []
     for row in source["tasks"]:
@@ -211,9 +269,11 @@ def build_cost_time_section(task_ledger):
         "note": (
             "T2-optimized tasks only (21 of 34); tranches are kept separate and "
             "must never be pooled into one number -- see spec Sec.0 and "
-            "results/v4/summary.md's aggregate caution."
+            "results/v4/summary.md's aggregate caution. by_stage groups the same "
+            "96 detail-table rows by iteration stage instead of by tranche."
         ),
         "by_tranche": by_tranche,
+        "by_stage": parse_cost_time_by_stage(),
     }
 
 

@@ -76,6 +76,31 @@ table for all 21 tasks, and its Per-iteration detail table for the eval-vs-optim
 individual seed/candidate/test eval — each per-task report also carries its own line (e.g.
 [`reports/task-by-task/v4-cloud-024-guid-to-account.md`](../../reports/task-by-task/v4-cloud-024-guid-to-account.md)).
 
+**The same 96 detail-table rows, grouped by iteration stage instead of by tranche**
+(`sections.task.cost_time.by_stage` in `results.json`, built by
+`parse_cost_time_by_stage()` in `build_v4_results_json.py`):
+
+| stage | n | total cost | total tokens | total time | eval cost | optimizer cost |
+|---|--:|--:|--:|--:|--:|--:|
+| seed | 21 | $12.90 | 3,941,514 | 17,924s (5.0h) | $12.90 | $0.00 |
+| iter1 | 20 | $250.28 | 6,670,551 | 54,804s (15.2h) | $14.68 | $235.60 |
+| iter2 | 13 | $154.62 | 4,041,649 | 35,700s (9.9h) | $8.77 | $145.85 |
+| iter3 | 2 | $21.28 | 407,156 | 3,465s (1.0h) | $0.55 | $20.74 |
+| FINAL | 21 | $13.91 | 4,246,509 | 13,678s (3.8h) | $13.91 | $0.00 |
+| FINAL_seed | 19 | $12.59 | 3,812,799 | 18,859s (5.2h) | $12.59 | $0.00 |
+| **TOTAL** | **96** | **$465.59** | **23,120,178** | **144,429s (40.1h)** | **$63.41** | **$402.18** |
+
+`n` counts how many of the 21 T2-optimized tasks reached that stage, not tasks overall — every row's
+TOTAL still matches the "both, summed" row above exactly (same 96 source rows, grouped differently).
+`seed` and `FINAL` run for all 21 tasks by construction (the required baseline and held-out-test
+evals). Only `cost-030-threshold-not-an-anomaly` skips `iter1` entirely — its seed already scored a
+perfect 1.0, so T2 made zero optimizer calls — which is also why `iter2`/`iter3` shrink to 13 and 2
+tasks as fewer candidates kept improving enough to justify another round. `FINAL_seed` (a test-time
+re-measurement of the seed bundle, giving a seed-vs-final comparison point) is skipped when the seed
+itself is already the winning bundle — true for `cost-030` and, after its clean rerun, also for
+`platform-005-wrong-owner-trap` — so it appears for 19 of 21 tasks. As with the tranche table, read
+each stage row on its own; the TOTAL row is an operational sum, not a scientific comparison.
+
 **Tasks 13-15's budget-cap rerun cost more than the run it replaced,** per the source table's own
 footnote — the tainted-run numbers below aren't in `results.json` (only the clean rerun is), but are
 worth knowing when reading the cost total above:
