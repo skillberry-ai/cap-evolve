@@ -6,6 +6,7 @@ Usage: python3 scripts/build_v4_task_reports.py [--check] [--stats]
   --stats   print coverage: how many reports exist, how many have a
             hand-written narrative (no "_Not yet analysed._" placeholder).
 """
+import difflib
 import json
 import re
 import sys
@@ -14,10 +15,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_JSON = ROOT / "results" / "v4" / "results.json"
 REPORTS_DIR = ROOT / "reports" / "task-by-task" / "v4"
+ARTIFACTS_DIR = ROOT / "artifacts" / "v4"
 
 AUTO_START = "<!-- BEGIN:auto -->"
 AUTO_END = "<!-- END:auto -->"
 AUTO_RE = re.compile(re.escape(AUTO_START) + r".*?" + re.escape(AUTO_END), re.DOTALL)
+
+DIFF_START = "<!-- BEGIN:diff -->"
+DIFF_END = "<!-- END:diff -->"
+DIFF_RE = re.compile(re.escape(DIFF_START) + r".*?" + re.escape(DIFF_END), re.DOTALL)
 
 PLACEHOLDER = "_Not yet analysed._"
 
@@ -103,6 +109,70 @@ def build_auto_block(row):
     return "\n".join(lines)
 
 
+def file_diff(seed_path, best_path):
+    """(diff_lines, added, removed) for one file, seed -> best."""
+    seed_lines = seed_path.read_text().splitlines(keepends=True)
+    best_lines = best_path.read_text().splitlines(keepends=True)
+    diff_lines = list(difflib.unified_diff(
+        seed_lines, best_lines,
+        fromfile=f"seed/{seed_path.name}", tofile=f"{best_path.parent.parent.name}/best/{seed_path.name}",
+    ))
+    added = sum(1 for l in diff_lines if l.startswith("+") and not l.startswith("+++"))
+    removed = sum(1 for l in diff_lines if l.startswith("-") and not l.startswith("---"))
+    return diff_lines, added, removed
+
+
+def build_diff_block(task):
+    """Auto-managed 'what changed' section: seed/*.md vs <task>/best/*.md.
+
+    None means no best/ dir exists for this task (T2 never ran, or the
+    task's only artifact is a NOTE.md) -- the caller drops any stale block.
+    """
+    seed_dir = ARTIFACTS_DIR / "seed"
+    best_dir = ARTIFACTS_DIR / task / "best"
+    if not best_dir.is_dir():
+        return None
+
+    seed_files = sorted(seed_dir.glob("*.md"))
+    changed = []
+    for seed_file in seed_files:
+        best_file = best_dir / seed_file.name
+        if not best_file.is_file():
+            continue
+        diff_lines, added, removed = file_diff(seed_file, best_file)
+        if diff_lines:
+            changed.append((seed_file.name, added, removed, diff_lines))
+
+    lines = [DIFF_START, "", "## What changed (seed → best)", ""]
+    if not changed:
+        lines.append(
+            "Every skill file is byte-identical to "
+            "[`artifacts/v4/seed/`](../../../artifacts/v4/seed/) -- the champion "
+            "made no edits."
+        )
+        lines += ["", DIFF_END]
+        return "\n".join(lines)
+
+    lines.append(
+        f"{len(changed)} of {len(seed_files)} skill files changed. Full unified "
+        f"diffs, [`artifacts/v4/seed/`](../../../artifacts/v4/seed/) → "
+        f"[`artifacts/v4/{task}/best/`](../../../artifacts/v4/{task}/best/):"
+    )
+    lines.append("")
+    for name, added, removed, diff_lines in changed:
+        lines.append("<details>")
+        lines.append(f"<summary><code>{name}</code> (+{added}/−{removed})</summary>")
+        lines.append("")
+        lines.append("```diff")
+        lines.extend(l.rstrip("\n") for l in diff_lines)
+        lines.append("```")
+        lines.append("")
+        lines.append("</details>")
+        lines.append("")
+    lines.append(DIFF_END)
+    return "\n".join(lines)
+
+
 def prefilled_hand_section(row):
     if row["status"] != "optimized":
         return PREFILLED_NOT_OPTIMIZED
@@ -113,15 +183,23 @@ def prefilled_hand_section(row):
 
 def build_report(row, existing_text):
     auto_block = build_auto_block(row)
+    diff_block = build_diff_block(row["task"])
+
     if existing_text is None:
         hand = prefilled_hand_section(row)
         if hand is None:
             hand = PLACEHOLDER
-        return f"# {row['task']}\n\n{auto_block}\n\n{hand}\n"
+        text = f"# {row['task']}\n\n{auto_block}\n\n{hand}\n"
+    elif AUTO_RE.search(existing_text):
+        text = AUTO_RE.sub(auto_block, existing_text, count=1)
+    else:
+        text = existing_text.rstrip("\n") + "\n\n" + auto_block + "\n"
 
-    if AUTO_RE.search(existing_text):
-        return AUTO_RE.sub(auto_block, existing_text, count=1)
-    return existing_text.rstrip("\n") + "\n\n" + auto_block + "\n"
+    if diff_block is None:
+        return DIFF_RE.sub("", text) if DIFF_RE.search(text) else text
+    if DIFF_RE.search(text):
+        return DIFF_RE.sub(diff_block, text, count=1)
+    return text.rstrip("\n") + "\n\n" + diff_block + "\n"
 
 
 def main():

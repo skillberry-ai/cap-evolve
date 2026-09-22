@@ -50,6 +50,22 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
 
+## The diff block (v4 only)
+
+The 20 v4 tasks where T2 accepted a candidate over the seed also get a second generated
+section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`, appended after the hand-written
+narrative: real, file-by-file unified diffs of `artifacts/v4/seed/*.md` against that
+task's `artifacts/v4/<task>/best/*.md`, one collapsible `<details>` per changed file so
+the report stays scannable with the full edit one click away (e.g.
+[`platform-004-events-then-config`](task-by-task/v4/platform-004-events-then-config.md)).
+It answers Item 2 of this branch's cleanup — a prose summary of "what the optimizer
+tried" is not the same as seeing the edit — without needing a separate diff viewer:
+GitHub and most local Markdown renderers syntax-highlight a fenced ` ```diff ` block on
+their own. `build_v4_task_reports.py` regenerates it the same way it regenerates the
+auto block above; the 14 v4 tasks with no `best/` directory (13 T2 never ran on, plus
+`cost-030-threshold-not-an-anomaly`, which only has a `NOTE.md`) get no diff block at
+all rather than an empty one.
+
 ## Where this departs from `skillsbench-history`
 
 The scheme is copied from `skillsbench-history`'s `reports/` and three things are deliberately
