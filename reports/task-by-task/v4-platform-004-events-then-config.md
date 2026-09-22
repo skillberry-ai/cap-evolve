@@ -26,4 +26,14 @@ Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitig
 
 <!-- END:auto -->
 
-_Not yet analysed._
+## What the optimizer tried
+
+Two iterations, both resolving one rule conflict: four different rules told the agent not to make a second `query_aap2` call after `get_job_log` (a redundant-call ban, a round budget, two re-fetch echoes in `shared_context.md`), while only one narrow rule said to make it — and that one lived in a GUID-discovery flow this task never enters, since a separate tip routes a direct job ID straight to `get_job_log`. `cand_0001` rewrote `aap2_agent.md`, `shared_context.md`, and `orchestrator.md` to make all of those rules agree (redundant now means same action *and* same arguments; a new Critical Rule 5 requires `get_job_events(failed_only=true)` after a failed job's log, before any GitHub fetch) and also fixed a `Role` field the report template required but no log in this task's trials could source. `cand_0001` was rejected on paper (val 0.400), but JOURNAL.md's post-mortem — reading all 5 trials' raw records rather than the aggregate — found this was a LiteLLM gateway outage: 2 of 5 trials scored 1.0 with the byte-identical prompt, and the other 3 never received a model response at all (TLS handshake timeouts and a 600s request timeout, before any output was produced). `cand_0002` re-delivered the same behavioral contract in about a third of the diff size (no changes to `orchestrator.md`) and was accepted at val 1.0.
+
+## Why the winning candidate won
+
+JOURNAL.md's `reward-detail.json` reading shows all 5 baseline trials differ at exactly one decision point — whether a second `query_aap2` call happens after `get_job_log` — and that one skipped call costs both the `tool_calls` and `answer` components simultaneously (0.267 of reward). `cand_0002`'s conflict-resolved rules made that call fire consistently, moving val 0.787 → 1.0 (Δ+0.213) and fixing the task per the RESULT line. On the held-out test split, `report.md` records the baseline `seed` skills at 0.713 ± 0.008 versus the optimized skills at 1.0 ± 0.0, a test-side improvement of +0.287; the auto block's `delta vs JB` of 0.000 reflects that the single-trial JB baseline measurement already sat at reward 1.0, not that the optimizer made no difference against the team's own earlier (n=3) baseline of 0.733.
+
+## Caveats
+
+n=5 val trials is a small sample, and this was single-task tuning (see `results/v4/summary.md`'s "Coverage" section). JOURNAL.md's own account is a caveat on interpreting any single rejected candidate at face value: `cand_0001`'s val=0.400 looked like a regression but was actually 2 clean 1.0 trials plus 3 infrastructure failures (a gateway outage) that the eval layer scored as 0.0 — a distinction JOURNAL.md says the framework currently cannot make automatically (filed as a framework escalation).
