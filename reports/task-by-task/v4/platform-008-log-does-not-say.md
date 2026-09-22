@@ -21,7 +21,7 @@ _Read no cell without the `n` and split beside it._
 
 delta vs JB: 0.000 · delta vs our baseline: 0.067
 
-**T2 cost/time:** $13.83, 438,410 tokens, 1.65h (eval $1.04/322,925tok · optimizer $12.79/115,485tok) — see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)
+**T2 cost/time:** $13.83, 438,410 tokens, 1.65h (eval $1.04/322,925tok · optimizer $12.79/115,485tok) — see [`../../../results/v4/cost_time/`](../../../results/v4/cost_time/)
 
 Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_platform-008-log-does-not-say/run_20260920_144310/report.md`, `.capevolve/v4_t2_e1_platform-008-log-does-not-say/run_20260920_144310/JOURNAL.md`
 
@@ -33,7 +33,7 @@ A job is recorded as failed, and the task asks for the root cause. The seeded lo
 
 ## What the optimizer tried
 
-Single iteration (`cand_0001`) rewriting `aap2_agent.md`, `shared_context.md`, and `orchestrator.md` after finding all 5 seed trials scored an identical 0.8 by missing the same graded fact (`no-root-cause`) for two different reasons: 3/5 trials fabricated a cause the evidence didn't support, and 2/5 got the right verdict but lost credit to markdown bolding breaking a literal substring match. The optimizer traced the fabrication to the prompt itself — `aap2_agent.md` said "Long = timeout," licensing a cause from elapsed time alone — and removed that licence, added a new "Does the evidence actually establish a cause?" step naming what does and does not establish a cause, added a "when no cause is established" output branch, and, after an adversarial review round caught that `orchestrator.md` never received the anti-bolding rule that lived only in the other two files, added the same plain-text formatting rule to `orchestrator.md`. This is a rerun (`run_20260920_144310`); the first attempt (`run_20260920_124829`) never finalized — its `state.json` shows 2 iterations spent and a best val of 0.96, but no `report.md`/`final.json` were ever written, consistent with `results/v4/summary.md`'s account of a budget-cap interruption.
+Single iteration (`cand_0001`) rewriting `aap2_agent.md`, `shared_context.md`, and `orchestrator.md` after finding all 5 seed trials scored an identical 0.8 by missing the same graded fact (`no-root-cause`) for two different reasons: 3/5 trials fabricated a cause the evidence didn't support, and 2/5 got the right verdict but lost credit to markdown bolding breaking a literal substring match. The optimizer traced the fabrication to the prompt itself — `aap2_agent.md` said "Long = timeout," licensing a cause from elapsed time alone — and removed that licence, added a new "Does the evidence actually establish a cause?" step naming what does and does not establish a cause, added a "when no cause is established" output branch, and, after an adversarial review round caught that `orchestrator.md` never received the anti-bolding rule that lived only in the other two files, added the same plain-text formatting rule to `orchestrator.md`. This is a rerun (`run_20260920_144310`); the first attempt (`run_20260920_124829`) never finalized — its `state.json` shows 2 iterations spent and a best val of 0.96, but no `report.md`/`final.json` were ever written, due to an unrelated infrastructure interruption during that run (see `results/v4/summary.md`'s "Data-quality caveats").
 
 ## Why the winning candidate won
 

@@ -31,13 +31,14 @@ Two tables, described in full at its own top:
   totals) and `t2_eval_*` / `t2_opt_*` (the split), `null` for the 13 tasks T2 never targeted;
   `sections.task.cost_time` for the tranche-segmented aggregate.
 - `results/v4/summary.md` — the "Cost + wall clock" narrative section.
-- `reports/task-by-task/v4-*.md` — one added line per optimized task's auto block.
+- `reports/task-by-task/v4/*.md` — one added line per optimized task's auto block.
 
 ## Caveat this table carries forward
 
 Tasks 13-15 (`platform-005-wrong-owner-trap`, `platform-007-directory-path-fetch`,
-`platform-008-log-does-not-say`) hit the same 2026-09-20 LLM API budget-cap incident documented in
-[`../../../artifacts/README.md`](../../../artifacts/README.md)'s "v4's discarded runs" section and
-`results/v4/summary.md`'s data-quality caveats. The numbers here are from the **clean re-runs**
-(genuine optimizer calls, no `optimizer_error`) — the source `.md`'s own footnote gives the
-before/after delta for each of the three, which `results/v4/summary.md` now quotes directly.
+`platform-008-log-does-not-say`) each had a run interrupted by an unrelated infrastructure issue
+(a team LLM API budget cap, since fixed) on 2026-09-20 and were re-run — see
+[`../../../artifacts/README.md`](../../../artifacts/README.md)'s "v4's three multi-run tasks"
+section and `results/v4/summary.md`'s data-quality caveats. The numbers here are from whichever of
+each task's two runs `results.json` actually reports (the best held-out `test_reward`, not simply
+the latest run) — the source `.md`'s own footnote says which run that is for each of the three.

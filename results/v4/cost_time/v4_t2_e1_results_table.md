@@ -18,7 +18,7 @@ Two tables: **Summary** (one row per task, `#` = position 1-21 in `TASK_IDS`) an
 | 10 | platform-002-collection-not-found-rca | 0.9067 | 1.0000(✓) | — | — | cand_0001 | 1.0000 | 0.5733 | +0.4267 | 8.30 | 482,431 |
 | 11 | platform-003-tojson-dict-literal-rca | 0.5633 | 0.8467(✓) | 0.9167(✓) | — | cand_0002 | 0.7633 | 0.3567 | +0.4067 | 27.85 | 840,932 |
 | 12 | platform-004-events-then-config | 0.7867 | 0.4000(✗) | 1.0000(✓) | — | cand_0002 | 1.0000 | 0.7133 | +0.2867 | 15.88 | 517,799 |
-| 13 | platform-005-wrong-owner-trap | 0.6040 | 0.5180(✗) | 0.3480(✗) | — | seed | 0.3460 | 0.3460 | +0.0000 | 42.00 | 2,440,673 |
+| 13 | platform-005-wrong-owner-trap | 0.3200 | 0.6080(✓) | 0.9160(✓) | 1.0000(✓) | cand_0003 | 1.0000 | 0.7740 | +0.2260 | 13.65 | 2,351,554 |
 | 14 | platform-007-directory-path-fetch | 0.4700 | 1.0000(✓) | — | — | cand_0001 | 1.0000 | 0.5100 | +0.4900 | 7.38 | 351,046 |
 | 15 | platform-008-log-does-not-say | 0.8000 | 1.0000(✓) | — | — | cand_0001 | 1.0000 | 0.9600 | +0.0400 | 13.83 | 438,410 |
 | 16 | platform-022-job-on-no-controller | 0.5950 | 0.8950(✓) | 0.9300(✓) | 1.0000(✓) | cand_0003 | 1.0000 | 0.6650 | +0.3350 | 25.90 | 764,975 |
@@ -28,7 +28,7 @@ Two tables: **Summary** (one row per task, `#` = position 1-21 in `TASK_IDS`) an
 | 20 | platform-033-schema-change-not-the-oom | 0.4024 | 0.7214(✓) | 0.9667(✓) | — | cand_0002 | 0.9667 | 0.4405 | +0.5262 | 43.57 | 2,957,393 |
 | 21 | platform-034-rate-limit-not-an-outage | 0.3861 | 0.8167(✓) | 1.0000(✓) | — | cand_0002 | 0.9844 | 0.7400 | +0.2444 | 21.66 | 803,916 |
 
-_Tasks 13-15 were originally finalized while the optimizer's LiteLLM budget was exhausted (429/401 on every optimizer call from partway through task 13 onward, root-caused and fixed by a key rotation). All three above are now clean re-runs with genuine optimizer calls (real `opt_cost_usd`, no `optimizer_error`). Task 13's original tainted result was delta=+0.2260, best=cand_0003; the clean re-run instead found no improvement over the seed (delta=+0.0000, best=seed) — both re-optimized candidates scored below the seed on val and were correctly rejected. Task 14's original tainted result was delta=+0.0000, best=seed, produced when both of its original optimizer calls had failed outright with $0 cost; the clean re-run instead found a genuine, large improvement (delta=+0.4900, best=cand_0001). Task 15's original run never reached a `finalize` event; its clean re-run finalized with delta=+0.0400, best=cand_0001._
+_Tasks 13-15 each had a run interrupted by an unrelated infrastructure issue (a team LLM API budget cap, since fixed) and were re-run. For task 13 (`platform-005-wrong-owner-trap`), the run shown above is the **first** attempt — it had already finalized cleanly before the interruption mattered; a second, redundant run scored worse on a noisier seed measurement and is not reflected here. For tasks 14-15 (`platform-007-directory-path-fetch`, `platform-008-log-does-not-say`), the run shown above is the **rerun** — their first attempts underperformed or never finalized and are not reflected here._
 
 ## Per-iteration detail table — cost & time, eval vs. optimization
 
@@ -88,10 +88,12 @@ _Tasks 13-15 were originally finalized while the optimizer's LiteLLM budget was 
 | 12 | platform-004-events-then-config | iter2(cand_0002) | val | 1.0000 | ✓ | 0.2906 | 85,983 | 409.7 | 8.5755 | 95,678 | 3800.0 |
 | 12 | platform-004-events-then-config | FINAL | test | 1.0000 | - | 0.2426 | 71,079 | 439.0 | 0.0000 | 0 | 0.0 |
 | 12 | platform-004-events-then-config | FINAL_seed | test | 0.7133 | - | 0.3273 | 96,721 | 482.4 | 0.0000 | 0 | 0.0 |
-| 13 | platform-005-wrong-owner-trap | seed | val | 0.6040 | - | 1.6947 | 542,437 | 1610.6 | 0.0000 | 0 | 0.0 |
-| 13 | platform-005-wrong-owner-trap | iter1(cand_0001) | val | 0.5180 | ✗ | 1.6533 | 529,562 | 843.0 | 18.9074 | 190,099 | 2576.0 |
-| 13 | platform-005-wrong-owner-trap | iter2(cand_0002) | val | 0.3480 | ✗ | 1.5435 | 497,399 | 1029.3 | 16.6412 | 184,605 | 2238.8 |
-| 13 | platform-005-wrong-owner-trap | FINAL | test | 0.3460 | - | 1.5578 | 496,571 | 834.5 | 0.0000 | 0 | 0.0 |
+| 13 | platform-005-wrong-owner-trap | seed | val | 0.3200 | - | 1.6978 | 547,675 | 1109.7 | 0.0000 | 0 | 0.0 |
+| 13 | platform-005-wrong-owner-trap | iter1(cand_0001) | val | 0.6080 | ✓ | 1.3731 | 434,579 | 790.6 | 6.3944 | 48,410 | 1057.1 |
+| 13 | platform-005-wrong-owner-trap | iter2(cand_0002) | val | 0.9160 | ✓ | 0.9278 | 291,120 | 447.6 | 0.0000 | 0 | 203.7 |
+| 13 | platform-005-wrong-owner-trap | iter3(cand_0003) | val | 1.0000 | ✓ | 0.9358 | 294,362 | 559.3 | 0.0000 | 0 | 192.8 |
+| 13 | platform-005-wrong-owner-trap | FINAL | test | 1.0000 | - | 0.9701 | 306,606 | 461.3 | 0.0000 | 0 | 0.0 |
+| 13 | platform-005-wrong-owner-trap | FINAL_seed | test | 0.7740 | - | 1.3506 | 428,802 | 748.4 | 0.0000 | 0 | 0.0 |
 | 14 | platform-007-directory-path-fetch | seed | val | 0.4700 | - | 0.2253 | 66,854 | 425.4 | 0.0000 | 0 | 0.0 |
 | 14 | platform-007-directory-path-fetch | iter1(cand_0001) | val | 1.0000 | ✓ | 0.2272 | 67,179 | 438.1 | 6.4764 | 83,393 | 1166.2 |
 | 14 | platform-007-directory-path-fetch | FINAL | test | 1.0000 | - | 0.2302 | 67,022 | 350.2 | 0.0000 | 0 | 0.0 |

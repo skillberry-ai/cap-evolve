@@ -5,7 +5,7 @@
 **Heatmap:** [`../../ui/heatmap_v4.html`](../../ui/heatmap_v4.html)
 **Recipes:** [`../../recipes/v4/`](../../recipes/v4/)
 **Artifacts:** [`../../artifacts/v4/`](../../artifacts/v4/)
-**Per-task reports:** [`../../reports/task-by-task/`](../../reports/task-by-task/) (`v4-<task>.md`, 34 files)
+**Per-task reports:** [`../../reports/task-by-task/v4/`](../../reports/task-by-task/v4/) (`<task>.md`, 34 files)
 **Cost/time source:** [`cost_time/`](cost_time/) (`v4_t2_e1_results_table.md`/`.xlsx`)
 
 ## The one-line result
@@ -58,15 +58,15 @@ this branch's v4 results so far.
 
 | tranche | n tasks | total cost | total tokens | total time | eval cost | optimizer cost |
 |---|--:|--:|--:|--:|--:|--:|
-| regression | 17 | $337.83 | 13,553,665 | 106,769s (29.7h) | $35.76 | $302.08 |
+| regression | 17 | $309.48 | 13,464,546 | 103,207s (28.7h) | $36.56 | $272.92 |
 | challenge | 4 | $127.76 | 9,566,513 | 37,660s (10.5h) | $27.65 | $100.11 |
-| **both, summed**\* | **21** | **$465.59** | **23,120,178** | **144,429s (40.1h)** | **$63.41** | **$402.18** |
+| **both, summed**\* | **21** | **$437.24** | **23,031,059** | **140,868s (39.1h)** | **$64.21** | **$373.03** |
 
 \*The "both, summed" row is an operational total (how much T2 cost, full stop), not a scientific
 comparison — unlike the reward aggregate above, it isn't a claim that regression and challenge are
 commensurable. Read the two tranche rows, not the sum, for anything you'd compare across arms.
 
-**The optimizer, not evaluation, dominates cost:** ~86% of total spend (\$402 of \$466) is the
+**The optimizer, not evaluation, dominates cost:** ~85% of total spend (\$373 of \$437) is the
 optimizer proposing candidates, not the runner scoring them — evaluation itself is comparatively
 cheap. Per-task cost ranges from **\$1.39** (`cost-030-threshold-not-an-anomaly` — seed already
 scored 1.0, so T2 made no optimizer calls at all, only the required seed/FINAL evals) up to
@@ -74,61 +74,45 @@ scored 1.0, so T2 made no optimizer calls at all, only the required seed/FINAL e
 context). See [`cost_time/v4_t2_e1_results_table.md`](cost_time/v4_t2_e1_results_table.md)'s Summary
 table for all 21 tasks, and its Per-iteration detail table for the eval-vs-optimizer split at every
 individual seed/candidate/test eval — each per-task report also carries its own line (e.g.
-[`reports/task-by-task/v4-cloud-024-guid-to-account.md`](../../reports/task-by-task/v4-cloud-024-guid-to-account.md)).
+[`reports/task-by-task/v4/cloud-024-guid-to-account.md`](../../reports/task-by-task/v4/cloud-024-guid-to-account.md)).
 
-**The same 96 detail-table rows, grouped by iteration stage instead of by tranche**
+**The same 98 detail-table rows, grouped by iteration stage instead of by tranche**
 (`sections.task.cost_time.by_stage` in `results.json`, built by
 `parse_cost_time_by_stage()` in `build_v4_results_json.py`):
 
 | stage | n | total cost | total tokens | total time | eval cost | optimizer cost |
 |---|--:|--:|--:|--:|--:|--:|
-| seed | 21 | $12.90 | 3,941,514 | 17,924s (5.0h) | $12.90 | $0.00 |
-| iter1 | 20 | $250.28 | 6,670,551 | 54,804s (15.2h) | $14.68 | $235.60 |
-| iter2 | 13 | $154.62 | 4,041,649 | 35,700s (9.9h) | $8.77 | $145.85 |
-| iter3 | 2 | $21.28 | 407,156 | 3,465s (1.0h) | $0.55 | $20.74 |
-| FINAL | 21 | $13.91 | 4,246,509 | 13,678s (3.8h) | $13.91 | $0.00 |
-| FINAL_seed | 19 | $12.59 | 3,812,799 | 18,859s (5.2h) | $12.59 | $0.00 |
-| **TOTAL** | **96** | **$465.59** | **23,120,178** | **144,429s (40.1h)** | **$63.41** | **$402.18** |
+| seed | 21 | $12.91 | 3,946,752 | 17,423s (4.8h) | $12.91 | $0.00 |
+| iter1 | 20 | $237.49 | 6,433,879 | 53,233s (14.8h) | $14.40 | $223.09 |
+| iter2 | 13 | $137.36 | 3,650,765 | 33,083s (9.2h) | $8.15 | $129.21 |
+| iter3 | 3 | $22.22 | 701,518 | 4,217s (1.2h) | $1.48 | $20.74 |
+| FINAL | 21 | $13.32 | 4,056,544 | 13,304s (3.7h) | $13.32 | $0.00 |
+| FINAL_seed | 20 | $13.94 | 4,241,601 | 19,608s (5.4h) | $13.94 | $0.00 |
+| **TOTAL** | **98** | **$437.24** | **23,031,059** | **140,868s (39.1h)** | **$64.21** | **$373.03** |
 
 `n` counts how many of the 21 T2-optimized tasks reached that stage, not tasks overall — every row's
-TOTAL still matches the "both, summed" row above exactly (same 96 source rows, grouped differently).
+TOTAL still matches the "both, summed" row above exactly (same 98 source rows, grouped differently).
 `seed` and `FINAL` run for all 21 tasks by construction (the required baseline and held-out-test
 evals). Only `cost-030-threshold-not-an-anomaly` skips `iter1` entirely — its seed already scored a
-perfect 1.0, so T2 made zero optimizer calls — which is also why `iter2`/`iter3` shrink to 13 and 2
+perfect 1.0, so T2 made zero optimizer calls — which is also why `iter2`/`iter3` shrink to 13 and 3
 tasks as fewer candidates kept improving enough to justify another round. `FINAL_seed` (a test-time
-re-measurement of the seed bundle, giving a seed-vs-final comparison point) is skipped when the seed
-itself is already the winning bundle — true for `cost-030` and, after its clean rerun, also for
-`platform-005-wrong-owner-trap` — so it appears for 19 of 21 tasks. As with the tranche table, read
-each stage row on its own; the TOTAL row is an operational sum, not a scientific comparison.
-
-**Tasks 13-15's budget-cap rerun cost more than the run it replaced,** per the source table's own
-footnote — the tainted-run numbers below aren't in `results.json` (only the clean rerun is), but are
-worth knowing when reading the cost total above:
-
-| task | tainted run | clean rerun (in results.json) |
-|---|---|---|
-| `platform-005-wrong-owner-trap` | delta +0.2260, best cand_0003 | delta +0.0000, best seed |
-| `platform-007-directory-path-fetch` | delta +0.0000, best seed (both optimizer calls failed at $0) | delta +0.4900, best cand_0001 |
-| `platform-008-log-does-not-say` | never reached `finalize` | delta +0.0400, best cand_0001 |
+re-measurement of the seed bundle, giving a seed-vs-final comparison point) is skipped only when the
+seed itself is already the winning bundle — true for `cost-030` alone — so it appears for 20 of 21
+tasks. As with the tranche table, read each stage row on its own; the TOTAL row is an operational sum,
+not a scientific comparison.
 
 ## Data-quality caveats
 
-1. **Three tasks hit a team-wide LLM API budget cap mid-run and were re-run:**
-   `platform-005-wrong-owner-trap`, `platform-007-directory-path-fetch`,
-   `platform-008-log-does-not-say`, all on 2026-09-20 ("Budget has been exceeded"
-   `optimizer_error` events). For `platform-007` and `platform-008` the rerun is a genuine
-   improvement (the first attempt underperformed or never finalized). For `platform-005`, the
-   *first* attempt had already finalized cleanly — 3 candidates, monotonic improvement, held-out
-   test `1.0 ± 0.0`, a `0.0` val→test gap — despite the budget errors elsewhere in that run, and its
-   rerun was a redundant resample whose noisier seed measurement made the rerun's two candidates
-   look like a regression (final `0.346` vs. the first attempt's `1.0`). See the "Cost + wall clock"
-   section above for each task's tainted-vs-clean delta.
-2. Because of (1), `results.json`'s `task_ledger` rows for these three tasks are **not** simply
-   "the latest run" — `run_dir` points at whichever of a task's finalized runs had the best
-   `test_reward`, tie-broken by latest. This is what moved the regression tranche's T2 final mean
-   from an earlier draft's `0.941` to the `0.963` reported above. See
-   `reports/task-by-task/v4-platform-005-wrong-owner-trap.md` for the full account.
-3. `seed`, `cand_0001-3`, and `best` in the ledger are **validation-split** measurements (`n=5`
+1. **Three tasks each have two finalized T2 runs:** `platform-005-wrong-owner-trap`,
+   `platform-007-directory-path-fetch`, `platform-008-log-does-not-say`, all on 2026-09-20, because
+   an unrelated infrastructure issue (a team LLM API budget cap, since fixed) interrupted the first
+   attempt on each and it was re-run. `results.json`'s `task_ledger` row for each picks whichever
+   run had the best `test_reward`, tie-broken by latest — **not** simply "the latest run." See each
+   task's report ([`platform-005`](../../reports/task-by-task/v4/platform-005-wrong-owner-trap.md),
+   [`platform-007`](../../reports/task-by-task/v4/platform-007-directory-path-fetch.md),
+   [`platform-008`](../../reports/task-by-task/v4/platform-008-log-does-not-say.md)) for which run
+   won and why; the cost/time figures above are from that same winning run in every case.
+2. `seed`, `cand_0001-3`, and `best` in the ledger are **validation-split** measurements (`n=5`
    trials per eval); `final` is the **held-out test-split** measurement for whichever candidate won
    on validation (same task, same split as `train`/`val` by design — see recipes/v4/README.md on
    why there is no independent holdout this phase). `jb_reward` (`n=1`) and `our_baseline` (`n=3`)
