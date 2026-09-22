@@ -235,7 +235,7 @@ def build_task_ledger(source, cost_time):
     rows = []
     for row in source["tasks"]:
         row = dict(row)
-        row["report"] = f"reports/task-by-task/v4-{row['task']}.md"
+        row["report"] = f"reports/task-by-task/v4/{row['task']}.md"
         ct = cost_time.get(row["task"])
         for key in COST_TIME_FIELDS:
             row[key] = ct[key] if ct else None

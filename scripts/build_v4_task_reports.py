@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build reports/task-by-task/v4-<task>.md from results/v4/results.json.
+"""Build reports/task-by-task/v4/<task>.md from results/v4/results.json.
 
 Usage: python3 scripts/build_v4_task_reports.py [--check] [--stats]
   --check   exit 1 if any auto block is stale, instead of writing it.
@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_JSON = ROOT / "results" / "v4" / "results.json"
-REPORTS_DIR = ROOT / "reports" / "task-by-task"
+REPORTS_DIR = ROOT / "reports" / "task-by-task" / "v4"
 
 AUTO_START = "<!-- BEGIN:auto -->"
 AUTO_END = "<!-- END:auto -->"
@@ -89,7 +89,7 @@ def build_auto_block(row):
             f"{row['t2_time_s']/3600:.2f}h "
             f"(eval ${row['t2_eval_cost_usd']:.2f}/{row['t2_eval_tokens']:,}tok · "
             f"optimizer ${row['t2_opt_cost_usd']:.2f}/{row['t2_opt_tokens']:,}tok) — "
-            f"see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)"
+            f"see [`../../../results/v4/cost_time/`](../../../results/v4/cost_time/)"
         )
     if row.get("run_dir"):
         lines.append("")
@@ -134,7 +134,7 @@ def main():
     if stats_only:
         written = analysed = 0
         for row in rows:
-            path = REPORTS_DIR / f"v4-{row['task']}.md"
+            path = REPORTS_DIR / f"{row['task']}.md"
             if path.exists():
                 written += 1
                 if PLACEHOLDER not in path.read_text():
@@ -144,7 +144,7 @@ def main():
 
     stale = []
     for row in rows:
-        path = REPORTS_DIR / f"v4-{row['task']}.md"
+        path = REPORTS_DIR / f"{row['task']}.md"
         existing = path.read_text() if path.exists() else None
         new_text = build_report(row, existing)
         if new_text == existing:
@@ -155,7 +155,7 @@ def main():
             path.write_text(new_text)
 
     if not stale:
-        print("reports/task-by-task/v4-*.md already up to date.")
+        print("reports/task-by-task/v4/*.md already up to date.")
         return 0
     if check_only:
         print(f"{len(stale)} report(s) stale:", file=sys.stderr)
