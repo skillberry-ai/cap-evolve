@@ -82,6 +82,15 @@ def build_auto_block(row):
     lines.append("")
     lines.append(f"delta vs JB: {fmt(row['delta_vs_jb'])} · "
                   f"delta vs our baseline: {fmt(row['delta_vs_our_baseline'])}")
+    if row.get("t2_cost_usd") is not None:
+        lines.append("")
+        lines.append(
+            f"**T2 cost/time:** ${row['t2_cost_usd']:.2f}, {row['t2_tokens']:,} tokens, "
+            f"{row['t2_time_s']/3600:.2f}h "
+            f"(eval ${row['t2_eval_cost_usd']:.2f}/{row['t2_eval_tokens']:,}tok · "
+            f"optimizer ${row['t2_opt_cost_usd']:.2f}/{row['t2_opt_tokens']:,}tok) — "
+            f"see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)"
+        )
     if row.get("run_dir"):
         lines.append("")
         lines.append(

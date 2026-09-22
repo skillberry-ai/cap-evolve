@@ -6,6 +6,7 @@
 **Recipes:** [`../../recipes/v4/`](../../recipes/v4/)
 **Artifacts:** [`../../artifacts/v4/`](../../artifacts/v4/)
 **Per-task reports:** [`../../reports/task-by-task/`](../../reports/task-by-task/) (`v4-<task>.md`, 34 files)
+**Cost/time source:** [`cost_time/`](cost_time/) (`v4_t2_e1_results_table.md`/`.xlsx`)
 
 ## The one-line result
 
@@ -47,6 +48,44 @@ to merge in for them when C3/C4/G3/G4 eventually run — but those arms **must**
 task in their group, including these 13, specifically to catch a regression that merging other
 tasks' edits into the shared bundle could introduce (spec §3, §4).
 
+## Cost + wall clock (T2 task-by-task optimization)
+
+Source: [`cost_time/v4_t2_e1_results_table.md`](cost_time/v4_t2_e1_results_table.md), parsed and
+cross-validated by `build_v4_results_json.py` into `results.json`'s `task_ledger[].t2_*` fields (per
+task, `null` for the 13 tasks T2 never targeted) and `sections.task.cost_time` (this table). Only T2
+made real optimizer calls per task — C2-C4/G2-G4 haven't run, so this is the only cost/time data in
+this branch's v4 results so far.
+
+| tranche | n tasks | total cost | total tokens | total time | eval cost | optimizer cost |
+|---|--:|--:|--:|--:|--:|--:|
+| regression | 17 | $337.83 | 13,553,665 | 106,769s (29.7h) | $35.76 | $302.08 |
+| challenge | 4 | $127.76 | 9,566,513 | 37,660s (10.5h) | $27.65 | $100.11 |
+| **both, summed**\* | **21** | **$465.59** | **23,120,178** | **144,429s (40.1h)** | **$63.41** | **$402.18** |
+
+\*The "both, summed" row is an operational total (how much T2 cost, full stop), not a scientific
+comparison — unlike the reward aggregate above, it isn't a claim that regression and challenge are
+commensurable. Read the two tranche rows, not the sum, for anything you'd compare across arms.
+
+**The optimizer, not evaluation, dominates cost:** ~86% of total spend (\$402 of \$466) is the
+optimizer proposing candidates, not the runner scoring them — evaluation itself is comparatively
+cheap. Per-task cost ranges from **\$1.39** (`cost-030-threshold-not-an-anomaly` — seed already
+scored 1.0, so T2 made no optimizer calls at all, only the required seed/FINAL evals) up to
+**\$43.57** (`platform-033-schema-change-not-the-oom`, 2 accepted iterations on a task with a large
+context). See [`cost_time/v4_t2_e1_results_table.md`](cost_time/v4_t2_e1_results_table.md)'s Summary
+table for all 21 tasks, and its Per-iteration detail table for the eval-vs-optimizer split at every
+individual seed/candidate/test eval — each per-task report also carries its own line (e.g.
+[`reports/task-by-task/v4-cloud-024-guid-to-account.md`](../../reports/task-by-task/v4-cloud-024-guid-to-account.md)).
+
+**Tasks 13-15's budget-cap rerun cost more than the run it replaced,** per the source table's own
+footnote — the tainted-run numbers below aren't in `results.json` (only the clean rerun is), but are
+worth knowing when reading the cost total above:
+
+| task | tainted run | clean rerun (in results.json) |
+|---|---|---|
+| `platform-005-wrong-owner-trap` | delta +0.2260, best cand_0003 | delta +0.0000, best seed |
+| `platform-007-directory-path-fetch` | delta +0.0000, best seed (both optimizer calls failed at $0) | delta +0.4900, best cand_0001 |
+| `platform-008-log-does-not-say` | never reached `finalize` | delta +0.0400, best cand_0001 |
+
 ## Data-quality caveats
 
 1. **Three tasks hit a team-wide LLM API budget cap mid-run and were re-run:**
@@ -57,7 +96,8 @@ tasks' edits into the shared bundle could introduce (spec §3, §4).
    *first* attempt had already finalized cleanly — 3 candidates, monotonic improvement, held-out
    test `1.0 ± 0.0`, a `0.0` val→test gap — despite the budget errors elsewhere in that run, and its
    rerun was a redundant resample whose noisier seed measurement made the rerun's two candidates
-   look like a regression (final `0.346` vs. the first attempt's `1.0`).
+   look like a regression (final `0.346` vs. the first attempt's `1.0`). See the "Cost + wall clock"
+   section above for each task's tainted-vs-clean delta.
 2. Because of (1), `results.json`'s `task_ledger` rows for these three tasks are **not** simply
    "the latest run" — `run_dir` points at whichever of a task's finalized runs had the best
    `test_reward`, tie-broken by latest. This is what moved the regression tranche's T2 final mean

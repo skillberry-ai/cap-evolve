@@ -20,6 +20,8 @@ _Read no cell without the `n` and split beside it._
 
 delta vs JB: 0.000 · delta vs our baseline: 0.047
 
+**T2 cost/time:** $1.39, 396,441 tokens, 0.32h (eval $1.39/396,441tok · optimizer $0.00/0tok) — see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)
+
 Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/report.md`, `.capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407/JOURNAL.md`
 
 <!-- END:auto -->

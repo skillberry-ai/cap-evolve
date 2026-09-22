@@ -22,6 +22,8 @@ _Read no cell without the `n` and split beside it._
 
 delta vs JB: 0.530 · delta vs our baseline: 0.286
 
+**T2 cost/time:** $27.85, 840,932 tokens, 2.88h (eval $2.28/618,675tok · optimizer $25.56/222,257tok) — see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)
+
 Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_platform-003-tojson-dict-literal-rca/run_20260920_054127/report.md`, `.capevolve/v4_t2_e1_platform-003-tojson-dict-literal-rca/run_20260920_054127/JOURNAL.md`
 
 <!-- END:auto -->

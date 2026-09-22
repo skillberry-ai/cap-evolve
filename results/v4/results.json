@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-21T16:23:37Z",
+  "generated_at": "2026-09-22T09:30:36Z",
   "generator": "scripts/build_v4_results_json.py",
   "benchmark": "parsec",
   "target": "parsec multi-agent bundle (orchestrator.md + 6 domain agents + shared_context.md; capabilities: [system-prompt])",
@@ -124,7 +124,16 @@
       "delta_vs_our_baseline": 0.7999999999999999,
       "run_dir": ".capevolve/v4_t2_e1_cloud-024-guid-to-account/run_20260919_122425",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-cloud-024-guid-to-account.md"
+      "report": "reports/task-by-task/v4-cloud-024-guid-to-account.md",
+      "t2_cost_usd": 14.4732,
+      "t2_tokens": 333524,
+      "t2_time_s": 5503.0,
+      "t2_eval_cost_usd": 0.7004,
+      "t2_eval_tokens": 220558,
+      "t2_eval_s": 740.4,
+      "t2_opt_cost_usd": 13.7728,
+      "t2_opt_tokens": 112966,
+      "t2_opt_s": 4762.6
     },
     {
       "task": "cloud-025-gcp-project-status",
@@ -151,7 +160,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-cloud-025-gcp-project-status.md"
+      "report": "reports/task-by-task/v4-cloud-025-gcp-project-status.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "cloud-026-gpu-abuse-triage",
@@ -178,7 +196,16 @@
       "delta_vs_our_baseline": 0.11388900000000002,
       "run_dir": ".capevolve/v4_t2_e1_cloud-026-gpu-abuse-triage/run_20260919_141620",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-cloud-026-gpu-abuse-triage.md"
+      "report": "reports/task-by-task/v4-cloud-026-gpu-abuse-triage.md",
+      "t2_cost_usd": 22.6847,
+      "t2_tokens": 597023,
+      "t2_time_s": 7007.3,
+      "t2_eval_cost_usd": 1.5999,
+      "t2_eval_tokens": 453615,
+      "t2_eval_s": 3017.7,
+      "t2_opt_cost_usd": 21.0848,
+      "t2_opt_tokens": 143408,
+      "t2_opt_s": 3989.6
     },
     {
       "task": "cloud-027-azure-pool-database-trap",
@@ -205,7 +232,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-cloud-027-azure-pool-database-trap.md"
+      "report": "reports/task-by-task/v4-cloud-027-azure-pool-database-trap.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "cost-028-highest-spend-provider",
@@ -232,7 +268,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-cost-028-highest-spend-provider.md"
+      "report": "reports/task-by-task/v4-cost-028-highest-spend-provider.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "cost-029-no-cost-rows-for-guid",
@@ -259,7 +304,16 @@
       "delta_vs_our_baseline": 0.19999999999999984,
       "run_dir": ".capevolve/v4_t2_e1_cost-029-no-cost-rows-for-guid/run_20260919_161308",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-cost-029-no-cost-rows-for-guid.md"
+      "report": "reports/task-by-task/v4-cost-029-no-cost-rows-for-guid.md",
+      "t2_cost_usd": 26.117,
+      "t2_tokens": 1045237,
+      "t2_time_s": 8456.7,
+      "t2_eval_cost_usd": 2.6945,
+      "t2_eval_tokens": 827852,
+      "t2_eval_s": 1657.3,
+      "t2_opt_cost_usd": 23.4225,
+      "t2_opt_tokens": 217385,
+      "t2_opt_s": 6799.4
     },
     {
       "task": "cost-030-threshold-not-an-anomaly",
@@ -286,7 +340,16 @@
       "delta_vs_our_baseline": 0.046666666666666745,
       "run_dir": ".capevolve/v4_t2_e1_cost-030-threshold-not-an-anomaly/run_20260919_183407",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-cost-030-threshold-not-an-anomaly.md"
+      "report": "reports/task-by-task/v4-cost-030-threshold-not-an-anomaly.md",
+      "t2_cost_usd": 1.3876,
+      "t2_tokens": 396441,
+      "t2_time_s": 1166.4,
+      "t2_eval_cost_usd": 1.3876,
+      "t2_eval_tokens": 396441,
+      "t2_eval_s": 1166.4,
+      "t2_opt_cost_usd": 0.0,
+      "t2_opt_tokens": 0,
+      "t2_opt_s": 0.0
     },
     {
       "task": "icinga-010-stuck-anarchysubjects",
@@ -313,7 +376,16 @@
       "delta_vs_our_baseline": 0.09333333333333332,
       "run_dir": ".capevolve/v4_t2_e1_icinga-010-stuck-anarchysubjects/run_20260919_185334",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-icinga-010-stuck-anarchysubjects.md"
+      "report": "reports/task-by-task/v4-icinga-010-stuck-anarchysubjects.md",
+      "t2_cost_usd": 28.1207,
+      "t2_tokens": 1477226,
+      "t2_time_s": 5709.9,
+      "t2_eval_cost_usd": 4.0753,
+      "t2_eval_tokens": 1243007,
+      "t2_eval_s": 2954.3,
+      "t2_opt_cost_usd": 24.0454,
+      "t2_opt_tokens": 234219,
+      "t2_opt_s": 2755.6
     },
     {
       "task": "icinga-011-aap2-job-status-alert",
@@ -340,7 +412,16 @@
       "delta_vs_our_baseline": 0.046666666666666745,
       "run_dir": ".capevolve/v4_t2_e1_icinga-011-aap2-job-status-alert/run_20260919_202845",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-icinga-011-aap2-job-status-alert.md"
+      "report": "reports/task-by-task/v4-icinga-011-aap2-job-status-alert.md",
+      "t2_cost_usd": 12.7734,
+      "t2_tokens": 743549,
+      "t2_time_s": 3156.1,
+      "t2_eval_cost_usd": 2.4063,
+      "t2_eval_tokens": 694680,
+      "t2_eval_s": 1713.6,
+      "t2_opt_cost_usd": 10.3671,
+      "t2_opt_tokens": 48869,
+      "t2_opt_s": 1442.5
     },
     {
       "task": "icinga-012-nodes-ready-threshold",
@@ -367,7 +448,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-icinga-012-nodes-ready-threshold.md"
+      "report": "reports/task-by-task/v4-icinga-012-nodes-ready-threshold.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "icinga-013-acknowledged-not-an-issue",
@@ -394,7 +484,16 @@
       "delta_vs_our_baseline": 0.26666666666666666,
       "run_dir": ".capevolve/v4_t2_e1_icinga-013-acknowledged-not-an-issue/run_20260919_212123",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-icinga-013-acknowledged-not-an-issue.md"
+      "report": "reports/task-by-task/v4-icinga-013-acknowledged-not-an-issue.md",
+      "t2_cost_usd": 23.571,
+      "t2_tokens": 538477,
+      "t2_time_s": 5762.1,
+      "t2_eval_cost_usd": 1.2182,
+      "t2_eval_tokens": 370437,
+      "t2_eval_s": 1256.3,
+      "t2_opt_cost_usd": 22.3528,
+      "t2_opt_tokens": 168040,
+      "t2_opt_s": 4505.8
     },
     {
       "task": "icinga-014-check-script-path-moved",
@@ -421,7 +520,16 @@
       "delta_vs_our_baseline": 0.1166666666666667,
       "run_dir": ".capevolve/v4_t2_e1_icinga-014-check-script-path-moved/run_20260919_225727",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-icinga-014-check-script-path-moved.md"
+      "report": "reports/task-by-task/v4-icinga-014-check-script-path-moved.md",
+      "t2_cost_usd": 14.2245,
+      "t2_tokens": 1196824,
+      "t2_time_s": 4235.5,
+      "t2_eval_cost_usd": 3.675,
+      "t2_eval_tokens": 1113913,
+      "t2_eval_s": 2653.0,
+      "t2_opt_cost_usd": 10.5495,
+      "t2_opt_tokens": 82911,
+      "t2_opt_s": 1582.5
     },
     {
       "task": "icinga-015-problems-by-severity",
@@ -448,7 +556,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-icinga-015-problems-by-severity.md"
+      "report": "reports/task-by-task/v4-icinga-015-problems-by-severity.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "icinga-016-hosts-most-problems",
@@ -475,7 +592,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-icinga-016-hosts-most-problems.md"
+      "report": "reports/task-by-task/v4-icinga-016-hosts-most-problems.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "icinga-017-invented-action-trap",
@@ -502,7 +628,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-icinga-017-invented-action-trap.md"
+      "report": "reports/task-by-task/v4-icinga-017-invented-action-trap.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-001-ee-entrypoint-rca",
@@ -529,7 +664,16 @@
       "delta_vs_our_baseline": 0.2866666666666666,
       "run_dir": ".capevolve/v4_t2_e1_platform-001-ee-entrypoint-rca/run_20260920_000803",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-001-ee-entrypoint-rca.md"
+      "report": "reports/task-by-task/v4-platform-001-ee-entrypoint-rca.md",
+      "t2_cost_usd": 38.3017,
+      "t2_tokens": 866365,
+      "t2_time_s": 12987.9,
+      "t2_eval_cost_usd": 1.9264,
+      "t2_eval_tokens": 548561,
+      "t2_eval_s": 8778.6,
+      "t2_opt_cost_usd": 36.3753,
+      "t2_opt_tokens": 317804,
+      "t2_opt_s": 4209.3
     },
     {
       "task": "platform-002-collection-not-found-rca",
@@ -556,7 +700,16 @@
       "delta_vs_our_baseline": 0.21666700000000005,
       "run_dir": ".capevolve/v4_t2_e1_platform-002-collection-not-found-rca/run_20260920_034433",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-002-collection-not-found-rca.md"
+      "report": "reports/task-by-task/v4-platform-002-collection-not-found-rca.md",
+      "t2_cost_usd": 8.3035,
+      "t2_tokens": 482431,
+      "t2_time_s": 7012.9,
+      "t2_eval_cost_usd": 1.3359,
+      "t2_eval_tokens": 393252,
+      "t2_eval_s": 5947.6,
+      "t2_opt_cost_usd": 6.9676,
+      "t2_opt_tokens": 89179,
+      "t2_opt_s": 1065.3
     },
     {
       "task": "platform-003-tojson-dict-literal-rca",
@@ -583,7 +736,16 @@
       "delta_vs_our_baseline": 0.28555520000000006,
       "run_dir": ".capevolve/v4_t2_e1_platform-003-tojson-dict-literal-rca/run_20260920_054127",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-003-tojson-dict-literal-rca.md"
+      "report": "reports/task-by-task/v4-platform-003-tojson-dict-literal-rca.md",
+      "t2_cost_usd": 27.846,
+      "t2_tokens": 840932,
+      "t2_time_s": 10378.4,
+      "t2_eval_cost_usd": 2.2834,
+      "t2_eval_tokens": 618675,
+      "t2_eval_s": 6664.8,
+      "t2_opt_cost_usd": 25.5626,
+      "t2_opt_tokens": 222257,
+      "t2_opt_s": 3713.6
     },
     {
       "task": "platform-004-events-then-config",
@@ -610,7 +772,16 @@
       "delta_vs_our_baseline": 0.266667,
       "run_dir": ".capevolve/v4_t2_e1_platform-004-events-then-config/run_20260920_083427",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-004-events-then-config.md"
+      "report": "reports/task-by-task/v4-platform-004-events-then-config.md",
+      "t2_cost_usd": 15.8834,
+      "t2_tokens": 517799,
+      "t2_time_s": 7370.5,
+      "t2_eval_cost_usd": 1.2162,
+      "t2_eval_tokens": 357549,
+      "t2_eval_s": 2688.9,
+      "t2_opt_cost_usd": 14.6672,
+      "t2_opt_tokens": 160250,
+      "t2_opt_s": 4681.6
     },
     {
       "task": "platform-005-wrong-owner-trap",
@@ -637,7 +808,16 @@
       "delta_vs_our_baseline": 0.18666666666666665,
       "run_dir": ".capevolve/v4_t2_e1_platform-005-wrong-owner-trap/run_20260920_103719",
       "n_runs": 2,
-      "report": "reports/task-by-task/v4-platform-005-wrong-owner-trap.md"
+      "report": "reports/task-by-task/v4-platform-005-wrong-owner-trap.md",
+      "t2_cost_usd": 41.9979,
+      "t2_tokens": 2440673,
+      "t2_time_s": 9132.2,
+      "t2_eval_cost_usd": 6.4493,
+      "t2_eval_tokens": 2065969,
+      "t2_eval_s": 4317.4,
+      "t2_opt_cost_usd": 35.5486,
+      "t2_opt_tokens": 374704,
+      "t2_opt_s": 4814.8
     },
     {
       "task": "platform-006-version-tag-not-a-ref",
@@ -664,7 +844,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-006-version-tag-not-a-ref.md"
+      "report": "reports/task-by-task/v4-platform-006-version-tag-not-a-ref.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-007-directory-path-fetch",
@@ -691,7 +880,16 @@
       "delta_vs_our_baseline": 0.20000000000000007,
       "run_dir": ".capevolve/v4_t2_e1_platform-007-directory-path-fetch/run_20260920_185422",
       "n_runs": 2,
-      "report": "reports/task-by-task/v4-platform-007-directory-path-fetch.md"
+      "report": "reports/task-by-task/v4-platform-007-directory-path-fetch.md",
+      "t2_cost_usd": 7.3831,
+      "t2_tokens": 351046,
+      "t2_time_s": 2842.8,
+      "t2_eval_cost_usd": 0.9067,
+      "t2_eval_tokens": 267653,
+      "t2_eval_s": 1676.6,
+      "t2_opt_cost_usd": 6.4764,
+      "t2_opt_tokens": 83393,
+      "t2_opt_s": 1166.2
     },
     {
       "task": "platform-008-log-does-not-say",
@@ -718,7 +916,16 @@
       "delta_vs_our_baseline": 0.06666666666666676,
       "run_dir": ".capevolve/v4_t2_e1_platform-008-log-does-not-say/run_20260920_144310",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-008-log-does-not-say.md"
+      "report": "reports/task-by-task/v4-platform-008-log-does-not-say.md",
+      "t2_cost_usd": 13.8283,
+      "t2_tokens": 438410,
+      "t2_time_s": 5929.7,
+      "t2_eval_cost_usd": 1.0354,
+      "t2_eval_tokens": 322925,
+      "t2_eval_s": 4164.0,
+      "t2_opt_cost_usd": 12.7929,
+      "t2_opt_tokens": 115485,
+      "t2_opt_s": 1765.7
     },
     {
       "task": "platform-009-catalog-item-no-config",
@@ -745,7 +952,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-009-catalog-item-no-config.md"
+      "report": "reports/task-by-task/v4-platform-009-catalog-item-no-config.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-018-find-jobs-window",
@@ -772,7 +988,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-018-find-jobs-window.md"
+      "report": "reports/task-by-task/v4-platform-018-find-jobs-window.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-019-anarchysubject-state",
@@ -799,7 +1024,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-019-anarchysubject-state.md"
+      "report": "reports/task-by-task/v4-platform-019-anarchysubject-state.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-020-ocpv-vm-inventory",
@@ -826,7 +1060,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-020-ocpv-vm-inventory.md"
+      "report": "reports/task-by-task/v4-platform-020-ocpv-vm-inventory.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-021-babylon-missing-cluster-trap",
@@ -853,7 +1096,16 @@
       "delta_vs_our_baseline": 0.0,
       "run_dir": null,
       "n_runs": null,
-      "report": "reports/task-by-task/v4-platform-021-babylon-missing-cluster-trap.md"
+      "report": "reports/task-by-task/v4-platform-021-babylon-missing-cluster-trap.md",
+      "t2_cost_usd": null,
+      "t2_tokens": null,
+      "t2_time_s": null,
+      "t2_eval_cost_usd": null,
+      "t2_eval_tokens": null,
+      "t2_eval_s": null,
+      "t2_opt_cost_usd": null,
+      "t2_opt_tokens": null,
+      "t2_opt_s": null
     },
     {
       "task": "platform-022-job-on-no-controller",
@@ -880,7 +1132,16 @@
       "delta_vs_our_baseline": 0.30000000000000016,
       "run_dir": ".capevolve/v4_t2_e1_platform-022-job-on-no-controller/run_20260920_201840",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-022-job-on-no-controller.md"
+      "report": "reports/task-by-task/v4-platform-022-job-on-no-controller.md",
+      "t2_cost_usd": 25.8953,
+      "t2_tokens": 764975,
+      "t2_time_s": 5729.2,
+      "t2_eval_cost_usd": 1.5216,
+      "t2_eval_tokens": 451487,
+      "t2_eval_s": 1923.8,
+      "t2_opt_cost_usd": 24.3737,
+      "t2_opt_tokens": 313488,
+      "t2_opt_s": 3805.4
     },
     {
       "task": "platform-023-splunk-guid-no-events",
@@ -907,7 +1168,16 @@
       "delta_vs_our_baseline": 0.06666666666666676,
       "run_dir": ".capevolve/v4_t2_e1_platform-023-splunk-guid-no-events/run_20260920_215411",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-023-splunk-guid-no-events.md"
+      "report": "reports/task-by-task/v4-platform-023-splunk-guid-no-events.md",
+      "t2_cost_usd": 15.0415,
+      "t2_tokens": 522733,
+      "t2_time_s": 4388.4,
+      "t2_eval_cost_usd": 1.325,
+      "t2_eval_tokens": 368469,
+      "t2_eval_s": 1886.2,
+      "t2_opt_cost_usd": 13.7165,
+      "t2_opt_tokens": 154264,
+      "t2_opt_s": 2502.2
     },
     {
       "task": "platform-031-helm-url-not-a-timeout",
@@ -934,7 +1204,16 @@
       "delta_vs_our_baseline": 0.17083333333333328,
       "run_dir": ".capevolve/v4_t2_e1_platform-031-helm-url-not-a-timeout/run_20260920_230721",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-031-helm-url-not-a-timeout.md"
+      "report": "reports/task-by-task/v4-platform-031-helm-url-not-a-timeout.md",
+      "t2_cost_usd": 26.4167,
+      "t2_tokens": 2985624,
+      "t2_time_s": 9144.4,
+      "t2_eval_cost_usd": 8.9973,
+      "t2_eval_tokens": 2791144,
+      "t2_eval_s": 5947.5,
+      "t2_opt_cost_usd": 17.4194,
+      "t2_opt_tokens": 194480,
+      "t2_opt_s": 3196.9
     },
     {
       "task": "platform-032-shared-secret-not-a-registry-outage",
@@ -961,7 +1240,16 @@
       "delta_vs_our_baseline": -0.07500000000000007,
       "run_dir": ".capevolve/v4_t2_e1_platform-032-shared-secret-not-a-registry-outage/run_20260921_013947",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-032-shared-secret-not-a-registry-outage.md"
+      "report": "reports/task-by-task/v4-platform-032-shared-secret-not-a-registry-outage.md",
+      "t2_cost_usd": 36.1146,
+      "t2_tokens": 2819580,
+      "t2_time_s": 9065.8,
+      "t2_eval_cost_usd": 7.9945,
+      "t2_eval_tokens": 2562040,
+      "t2_eval_s": 4916.6,
+      "t2_opt_cost_usd": 28.1201,
+      "t2_opt_tokens": 257540,
+      "t2_opt_s": 4149.2
     },
     {
       "task": "platform-033-schema-change-not-the-oom",
@@ -988,7 +1276,16 @@
       "delta_vs_our_baseline": 0.03809546666666663,
       "run_dir": ".capevolve/v4_t2_e1_platform-033-schema-change-not-the-oom/run_20260921_041054",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-033-schema-change-not-the-oom.md"
+      "report": "reports/task-by-task/v4-platform-033-schema-change-not-the-oom.md",
+      "t2_cost_usd": 43.5664,
+      "t2_tokens": 2957393,
+      "t2_time_s": 8871.3,
+      "t2_eval_cost_usd": 8.6447,
+      "t2_eval_tokens": 2732135,
+      "t2_eval_s": 4820.6,
+      "t2_opt_cost_usd": 34.9217,
+      "t2_opt_tokens": 225258,
+      "t2_opt_s": 4050.7
     },
     {
       "task": "platform-034-rate-limit-not-an-outage",
@@ -1015,7 +1312,16 @@
       "delta_vs_our_baseline": 0.19000039999999985,
       "run_dir": ".capevolve/v4_t2_e1_platform-034-rate-limit-not-an-outage/run_20260921_063847",
       "n_runs": 1,
-      "report": "reports/task-by-task/v4-platform-034-rate-limit-not-an-outage.md"
+      "report": "reports/task-by-task/v4-platform-034-rate-limit-not-an-outage.md",
+      "t2_cost_usd": 21.6614,
+      "t2_tokens": 803916,
+      "t2_time_s": 10578.7,
+      "t2_eval_cost_usd": 2.0135,
+      "t2_eval_tokens": 573204,
+      "t2_eval_s": 7460.0,
+      "t2_opt_cost_usd": 19.6479,
+      "t2_opt_tokens": 230712,
+      "t2_opt_s": 3118.7
     }
   ],
   "sections": {
@@ -1049,7 +1355,28 @@
           "delta_vs_our_baseline_mean": 0.08098229999999992,
           "delta_vs_our_baseline_n": 4
         }
-      ]
+      ],
+      "cost_time": {
+        "note": "T2-optimized tasks only (21 of 34); tranches are kept separate and must never be pooled into one number -- see spec Sec.0 and results/v4/summary.md's aggregate caution.",
+        "by_tranche": {
+          "regression": {
+            "n_tasks": 17,
+            "cost_usd": 337.8328,
+            "tokens": 13553665,
+            "time_s": 106769.0,
+            "eval_cost_usd": 35.7571,
+            "opt_cost_usd": 302.0757
+          },
+          "challenge": {
+            "n_tasks": 4,
+            "cost_usd": 127.7591,
+            "tokens": 9566513,
+            "time_s": 37660.2,
+            "eval_cost_usd": 27.65,
+            "opt_cost_usd": 100.1091
+          }
+        }
+      }
     },
     "category": {
       "rows": [
@@ -1185,7 +1512,8 @@
   "provenance": {
     "source_parsec34_results": "results/v4/source_parsec34.json",
     "source_parsec34_generator": "parsec-intake_v4/scripts/build_parsec34_heatmap.py",
+    "cost_time_source": "results/v4/cost_time/v4_t2_e1_results_table.md",
     "spec": "docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md",
-    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer. category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). C2-C4/G2-G4 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question."
+    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer and the t2_* cost/time fields parsed from cost_time_source (null for the 13 tasks T2 never targeted). category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). C2-C4/G2-G4 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question."
   }
 }

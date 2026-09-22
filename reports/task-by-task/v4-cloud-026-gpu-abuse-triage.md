@@ -22,6 +22,8 @@ _Read no cell without the `n` and split beside it._
 
 delta vs JB: 0.192 · delta vs our baseline: 0.114
 
+**T2 cost/time:** $22.68, 597,023 tokens, 1.95h (eval $1.60/453,615tok · optimizer $21.08/143,408tok) — see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)
+
 Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_cloud-026-gpu-abuse-triage/run_20260919_141620/report.md`, `.capevolve/v4_t2_e1_cloud-026-gpu-abuse-triage/run_20260919_141620/JOURNAL.md`
 
 <!-- END:auto -->

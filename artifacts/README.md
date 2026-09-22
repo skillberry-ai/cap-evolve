@@ -79,3 +79,5 @@ run. For `platform-005`, the discarded run is actually the *rerun* — its first
 (`run_20260920_103719`) had already finalized cleanly and is the one vendored to `best/`/`rejected/`
 above; see `results/v4/summary.md`'s data-quality caveats and
 `reports/task-by-task/v4-platform-005-wrong-owner-trap.md` for the full account.
+The tainted-vs-clean delta for all three tasks is in `results/v4/summary.md`'s "Cost + wall clock"
+section, sourced from `results/v4/cost_time/`.

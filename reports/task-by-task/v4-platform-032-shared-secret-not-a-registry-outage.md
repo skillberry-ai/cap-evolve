@@ -21,6 +21,8 @@ _Read no cell without the `n` and split beside it._
 
 delta vs JB: 0.100 · delta vs our baseline: -0.075
 
+**T2 cost/time:** $36.11, 2,819,580 tokens, 2.52h (eval $7.99/2,562,040tok · optimizer $28.12/257,540tok) — see [`../../results/v4/cost_time/`](../../results/v4/cost_time/)
+
 Optimizer run material (not committed here -- `parsec-intake_v4` worktree, gitignored): `.capevolve/v4_t2_e1_platform-032-shared-secret-not-a-registry-outage/run_20260921_013947/report.md`, `.capevolve/v4_t2_e1_platform-032-shared-secret-not-a-registry-outage/run_20260921_013947/JOURNAL.md`
 
 <!-- END:auto -->
