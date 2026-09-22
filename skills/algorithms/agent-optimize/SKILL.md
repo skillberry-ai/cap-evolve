@@ -105,7 +105,7 @@ stop **churn** — same mean, a *different* set of tasks passing — from readin
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
-cp -r "$R/candidates/$BEST" "$R/work/$TAG"
+python "$A/prepare_candidate.py" -r "$R" -t "$TAG"
 # edit the files under $R/work/$TAG your capability owns (Example only: see capability_path).
 ```
 

@@ -466,6 +466,12 @@ def _main(argv=None) -> int:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))
         return 2
 
+    # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
+    # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them
+    # — this guarantees them regardless of how each tag's dir came to exist.
+    for t in tags:
+        harness.ensure_framework_memory(work / t, run_dir)
+
     # Compliance instrumentation (issue #401): log, per candidate, whether screen.py was
     # invoked for it BEFORE this full-val eval — a distinct, auditable event rather than
     # something only inferable (or not) from SKILL.md prose. `screen.py` writes
