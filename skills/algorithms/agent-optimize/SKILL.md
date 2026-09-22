@@ -32,15 +32,15 @@ Every script imports `_bootstrap` itself (no `PYTHONPATH`) and prints JSON on st
 ## Phase 0 — understand before you optimize
 
 Once, before any edit, and **ask the user any blocking question here** so the loop then runs unattended.
-Read `PROJECT.md`, `capevolve.yaml`, the adapter and every file under `capability_path`, and understand what
-**one evaluation** does: what a task is, what `run_target` produces, what `score()` rewards, and what the
-per-task **feedback** says — that is your learning signal. Note the val/test sizes, `num_trials`,
-`gate_mode`/`gate_k_se` and the allowed edit surface.
+Read `PROJECT.md`, `capevolve.yaml`, the adapter, every file under `capability_path`,
+`./guidance/<cap>/SKILL.md`, `optimizer/INSTRUCTIONS.md` if present; understand the task,
+`run_target` output, `score()` reward, per-task feedback, val/test size, `num_trials`,
+`gate_mode`/`gate_k_se`, edit surface.
 
-Then let `spend.py` parse the free-text **`stop_condition`** rather than restating it from memory: it prints
-`constraints.predicates`, every concrete check it could extract, with its actual. **If
+Then let `spend.py` parse the free-text **`stop_condition`** rather than restating it: it prints
+`constraints.predicates`, every concrete check it extracts. **If
 `constraints.ambiguous` is non-empty, ASK THE USER before the loop starts** — a vague clause is reported,
-never guessed at, and this is the one moment where asking is cheap.
+never guessed at; this is the cheapest moment to ask.
 
 ## Agent-mode loop
 
@@ -319,3 +319,5 @@ One level deep — each is read on its own, and none points at another.
   for the first time, or after two rejects.
 - [`references/microcase.md`](references/microcase.md) — the micro-test schema and `gen` contract.
   **Load** before proposing a candidate for a cluster with (or needing) a case.
+- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared.
+  **Load** in Phase 0.

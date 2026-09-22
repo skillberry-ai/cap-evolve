@@ -1984,6 +1984,74 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
         run_dir.log_event("optimizer_context_warning", what="trajectories", error=str(e)[:300])
 
 
+def stage_capability_guidance(run_dir: RunDir, dest: Path, *, capabilities=None,
+                              capability_sources=None, project_dir: Path | None = None) -> None:
+    """Copy each declared capability's edit-space skill, any ``capability_sources``, and
+    the diagnose (failure-clustering) skill VERBATIM into ``dest/guidance/``.
+
+    Extracted out of ``_inject_optimizer_context`` (which calls this with
+    ``dest=workdir``, the per-iteration optimizer/agent's ephemeral working dir) so
+    ``baseline`` can call it a SECOND time with ``dest=run_dir.root`` — once, at baseline
+    time, for EVERY run regardless of ``orchestration_mode``. Agent mode has no
+    per-iteration optimizer-subprocess step to piggyback the deterministic path's
+    materialization on, so without this a driving agent that never invokes
+    ``agent-optimize/scripts/host.py`` (which stages its own copy into its workdir) gets
+    no ``guidance/`` at all. Same files both times — never a re-authored copy.
+    """
+    caps = [c for c in (capabilities or []) if c]
+    if caps:
+        skills_root = _capabilities_root()
+        for c in caps:
+            src = skills_root / c
+            if not src.is_dir():
+                continue
+            try:
+                dst = dest / "guidance" / c
+                if dst.exists():
+                    shutil.rmtree(dst)
+                shutil.copytree(
+                    src, dst,
+                    ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
+                )
+            except Exception as e:  # noqa: BLE001
+                run_dir.log_event("optimizer_context_warning", what=f"guidance/{c}", error=str(e)[:300])
+
+    # capability_sources — supporting source files (data models / types the tools
+    # import) copied VERBATIM into ./guidance/sources/<basename> so the optimizer can
+    # write correct code against them. Paths resolve relative to the project dir;
+    # missing files are tolerated.
+    sources = [s for s in (capability_sources or []) if s]
+    if sources:
+        sdst = dest / "guidance" / "sources"
+        for s in sources:
+            try:
+                sp = Path(s)
+                if not sp.is_absolute() and project_dir is not None:
+                    sp = Path(project_dir) / s
+                if not sp.is_file():
+                    continue
+                sdst.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(sp, sdst / sp.name)
+            except Exception as e:  # noqa: BLE001
+                run_dir.log_event("optimizer_context_warning",
+                                  what=f"guidance/sources/{s}", error=str(e)[:300])
+
+    # the diagnose phase skill (the failure-clustering method) as local guidance.
+    repo_root = Path(__file__).resolve().parents[2]
+    diag_src = repo_root / "skills" / "phases" / "diagnose"
+    if diag_src.is_dir():
+        try:
+            dst = dest / "guidance" / "diagnose"
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(
+                diag_src, dst,
+                ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
+            )
+        except Exception as e:  # noqa: BLE001
+            run_dir.log_event("optimizer_context_warning", what="guidance/diagnose", error=str(e)[:300])
+
+
 def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split: str,
                               capabilities=None, optimizer_name: str | None = None,
                               capability_sources=None, project_dir: Path | None = None,
@@ -2012,60 +2080,15 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # guarantee via per-tag fallback then the native dir.
     _copy_step_trajectories(adapter, run_dir, workdir, split, tag=tag)
 
-    # 2) capability skills as local guidance
+    # 2, 2b, 3) capability skills + capability_sources + the diagnose skill, as local
+    # guidance under ./guidance/ — shared with ``stage_capability_guidance`` so baseline
+    # (which materializes the SAME files into the run dir root, once, regardless of
+    # orchestration mode) never re-authors this copy.
+    stage_capability_guidance(run_dir, workdir, capabilities=capabilities,
+                              capability_sources=capability_sources, project_dir=project_dir)
     caps = [c for c in (capabilities or []) if c]
-    if caps:
-        skills_root = _capabilities_root()
-        for c in caps:
-            src = skills_root / c
-            if not src.is_dir():
-                continue
-            try:
-                dst = workdir / "guidance" / c
-                if dst.exists():
-                    shutil.rmtree(dst)
-                shutil.copytree(
-                    src, dst,
-                    ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
-                )
-            except Exception as e:  # noqa: BLE001
-                run_dir.log_event("optimizer_context_warning", what=f"guidance/{c}", error=str(e)[:300])
-
-    # 2b) capability_sources — supporting source files (data models / types the tools
-    # import) copied VERBATIM into ./guidance/sources/<basename> so the optimizer can
-    # write correct code against them. Paths resolve relative to the project dir;
-    # missing files are tolerated.
-    sources = [s for s in (capability_sources or []) if s]
-    if sources:
-        sdst = workdir / "guidance" / "sources"
-        for s in sources:
-            try:
-                sp = Path(s)
-                if not sp.is_absolute() and project_dir is not None:
-                    sp = Path(project_dir) / s
-                if not sp.is_file():
-                    continue
-                sdst.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(sp, sdst / sp.name)
-            except Exception as e:  # noqa: BLE001
-                run_dir.log_event("optimizer_context_warning",
-                                  what=f"guidance/sources/{s}", error=str(e)[:300])
 
     repo_root = Path(__file__).resolve().parents[2]
-
-    # 3) the diagnose phase skill (the failure-clustering method) as local guidance.
-    diag_src = repo_root / "skills" / "phases" / "diagnose"
-    if diag_src.is_dir():
-        try:
-            dst = workdir / "guidance" / "diagnose"
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(
-                diag_src, dst,
-                ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
-            )
-        except Exception as e:  # noqa: BLE001
-            run_dir.log_event("optimizer_context_warning", what="guidance/diagnose", error=str(e)[:300])
 
     # 4) the resolved optimizer's features reference (parallel subagents etc.).
     if optimizer_name:
