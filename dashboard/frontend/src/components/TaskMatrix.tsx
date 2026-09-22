@@ -1,8 +1,44 @@
 import { useMemo, useState } from 'react'
-import type { GraphNode, RunSummaryDetail } from '../lib/types'
+import type { GraphNode, RunSummaryDetail, ScreenRow } from '../lib/types'
 import { Card } from './ui/Card'
 import { VerdictBadge } from './StatusBadge'
 import { cn } from '../lib/cn'
+
+/** A screen's per-task rewards, read as a synthetic column — same shape as a full-val
+ *  node's `per_task`, so it renders identically and reuses the "not run" hatched cell
+ *  for every task outside its subset. `kind: 'screen'` keeps it out of anything that
+ *  treats a column as a gated candidate (Candidates table, lineage tree, gate log). */
+function screenToNode(s: ScreenRow): GraphNode {
+  // Per-cell delta vs the screen's own reference, from `paired.deltas` — the number the
+  // screen actually decided on. Prefixed onto the existing per-task feedback (if any)
+  // rather than replacing it, so nothing recorded is lost.
+  const deltas = s.delta_by_task ?? {}
+  const feedback: Record<string, string> = {}
+  for (const [tid, fb] of Object.entries(s.feedback ?? {})) feedback[tid] = fb
+  for (const [tid, d] of Object.entries(deltas)) {
+    const line = `Δ vs ${s.reference ?? 'reference'}: ${d > 0 ? '+' : ''}${d.toFixed(3)}`
+    feedback[tid] = feedback[tid] ? `${line} — ${feedback[tid]}` : line
+  }
+  return {
+    id: s.screen_tag,
+    parent: s.reference ?? null,
+    children: [],
+    status: 'screened',
+    val: null,
+    // The screen's own aggregate — its mean_delta/se, NOT a mean of per_task (that
+    // would silently compute a different, unweighted number for the same decision).
+    stderr: s.se,
+    per_task: s.per_task ?? {},
+    feedback,
+    fixed: s.fixed,
+    broke: s.regressed,
+    kind: 'screen',
+    reason: s.mean_delta == null ? s.rationale ?? null
+      : `subset Δ̄ ${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}` +
+        (s.se != null ? ` ± ${s.se.toFixed(4)}` : '') +
+        ` → ${s.decision ?? '—'}${s.inconclusive ? ' (inconclusive)' : ''}`,
+  }
+}
 
 /** Reward → cell class. `null` (never run) is visually distinct from 0 (ran, failed):
  *  a hatched empty cell, not a dark red one. Missing must never read as measured. */
@@ -35,20 +71,26 @@ export function TaskMatrix({
   summary,
   nodes,
   selectedId,
+  screens,
 }: {
   summary: RunSummaryDetail
   nodes: GraphNode[]
   selectedId?: string | null
+  /** agent-optimize's cheap screens — subset evals that ran BEFORE full val, and would
+   *  otherwise never appear here since they earn no graph node of their own. */
+  screens?: ScreenRow[]
 }) {
   const [hover, setHover] = useState<{ task: string; node: GraphNode } | null>(null)
 
-  const cols = useMemo(
-    () =>
-      nodes
-        .filter((n) => Object.keys(n.per_task ?? {}).length > 0)
-        .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0)),
-    [nodes],
-  )
+  const cols = useMemo(() => {
+    const candidateCols = nodes
+      .filter((n) => Object.keys(n.per_task ?? {}).length > 0)
+      .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
+    const screenCols = (screens ?? [])
+      .filter((s) => Object.keys(s.per_task ?? {}).length > 0)
+      .map(screenToNode)
+    return [...candidateCols, ...screenCols]
+  }, [nodes, screens])
 
   const selectedNode = useMemo(
     () => (selectedId ? cols.find((n) => n.id === selectedId) : undefined),
@@ -246,6 +288,13 @@ function ColumnSummary({ cols, nTasks }: { cols: GraphNode[]; nTasks: number }) 
               )}
               {!!n.fixed?.length && <span className="tnum text-accepted">fixed {n.fixed.join(' ')}</span>}
               {!!n.broke?.length && <span className="tnum text-rejected">broke {n.broke.join(' ')}</span>}
+              {/* A screen's decision was made on Δ̄ vs its reference, not on the raw
+                  subset mean above — show the number it actually decided on. */}
+              {n.kind === 'screen' && n.reason && (
+                <span className="tnum text-muted" title="This screen's own aggregate — the statistic it actually gated on.">
+                  {n.reason}
+                </span>
+              )}
             </li>
           )
         })}

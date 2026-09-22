@@ -24,9 +24,8 @@ import { TaskMatrix } from '../components/TaskMatrix'
 import { LogStream } from '../components/LogStream'
 import {
   EvographPanel,
-  FreeformPanel,
   GepaPanel,
-  ScreensPanel,
+  RoundsTimeline,
   SkillOptPanel,
 } from '../components/AlgoPanels'
 import { FileTree } from '../components/FileTree'
@@ -72,9 +71,10 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
   tabs.push({ id: 'cost', label: 'Cost' })
   tabs.push({ id: 'logs', label: 'Logs' })
 
-  // Per-algorithm additions, behind a capability check.
-  if (c.freeform) tabs.push({ id: 'rounds', label: 'Agent rounds' })
-  if (c.screens) tabs.push({ id: 'screens', label: 'Screens' })
+  // Per-algorithm additions, behind a capability check. Rounds and screens are ONE
+  // tab: a round's screen(s), full-val gate, control-relative verdict and final
+  // decision are one decision trail, not two views cross-linked by candidate id.
+  if (c.freeform || c.screens) tabs.push({ id: 'rounds', label: 'Rounds' })
   if (c.gepa || c.minibatch) tabs.push({ id: 'gepa', label: 'GEPA' })
   if (c.skillopt || c.epochs) tabs.push({ id: 'skillopt', label: 'SkillOpt' })
   if (c.evograph) tabs.push({ id: 'evograph', label: 'Weakness graph' })
@@ -221,7 +221,14 @@ function TabBody({
     case 'gate':
       return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
-      return <TaskMatrix summary={s} nodes={data.graph.nodes} selectedId={selectedCandidate} />
+      return (
+        <TaskMatrix
+          summary={s}
+          nodes={data.graph.nodes}
+          selectedId={selectedCandidate}
+          screens={extra.screens}
+        />
+      )
     case 'cost':
       // The ledger already accounts for every dollar by phase; CostPanel's by-role chart
       // restated the ledger and was dropped. Its per-iteration table is the only place
@@ -237,15 +244,13 @@ function TabBody({
     case 'logs':
       return <LogStream log={s.log ?? []} />
     case 'rounds':
-      return <FreeformPanel summary={s} nodes={data.graph.nodes} />
-    case 'screens':
-      return <ScreensPanel screens={extra.screens ?? []} nodes={data.graph.nodes} />
+      return <RoundsTimeline summary={s} nodes={data.graph.nodes} screens={extra.screens ?? []} />
     case 'gepa':
       return <GepaPanel extra={extra} nodes={data.graph.nodes} />
     case 'skillopt':
       return <SkillOptPanel extra={extra} nodes={data.graph.nodes} />
     case 'evograph':
-      return <EvographPanel extra={extra} />
+      return <EvographPanel extra={extra} metered={s.cost?.metered !== false} />
     case 'process':
       return <ProcessPanel runId={runId} />
     case 'diffs':
