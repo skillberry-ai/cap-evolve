@@ -126,3 +126,36 @@ def test_estimate_calibrates_from_prior_run(tmp_path):
     out = cli._estimate_core(spec, proj)
     assert out["cost_usd"]["source"] == "calibrated from prior runs"
     assert out["calibration"]["usd_per_metric_call"] == 0.1
+
+
+def _project_with_val(tmp_path, n_val: int):
+    """A project whose val split resolves to exactly ``n_val`` tasks, via split_ids_file
+    (the cheapest way to give ``_val_size`` a known answer with no real adapter)."""
+    proj = tmp_path / "project"
+    proj.mkdir()
+    ids_file = proj / "splits.json"
+    ids_file.write_text(json.dumps({"val": list(range(n_val))}), encoding="utf-8")
+    return proj, str(ids_file)
+
+
+def test_estimate_agent_mode_is_not_priced_as_a_fixed_iteration_loop(tmp_path):
+    """orchestration_mode: agent — rounds are not fixed by max_iterations, so the
+    estimate must not multiply metric calls by it, and optimizer_calls (a fixed
+    per-iteration count) is undefined here."""
+    proj, ids_file = _project_with_val(tmp_path, n_val=5)
+    spec = {"num_trials": 3, "max_iterations": 10, "orchestration_mode": "agent",
+            "split_ids_file": ids_file}
+    out = cli._estimate_core(spec, proj)
+    assert out["calls"]["optimizer_calls"] is None
+    assert out["calls"]["metric_calls_per_round"] == 5 * 3   # val * trials, NOT * iters
+    assert "metric_calls" not in out["calls"]
+    assert out["note"]
+
+
+def test_estimate_deterministic_mode_unchanged_by_agent_mode_branch(tmp_path):
+    """Regression guard: the same spec (minus orchestration_mode) still prices as
+    val * trials * max_iterations, exactly as before the agent-mode branch existed."""
+    proj, ids_file = _project_with_val(tmp_path, n_val=5)
+    spec = {"num_trials": 3, "max_iterations": 10, "split_ids_file": ids_file}
+    out = cli._estimate_core(spec, proj)
+    assert out["calls"] == {"metric_calls": 5 * 3 * 10, "optimizer_calls": 10}

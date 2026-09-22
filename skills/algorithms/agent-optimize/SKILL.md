@@ -12,9 +12,10 @@ needs: [scores, traces, candidate]
 
 The one algorithm with **no deterministic subprocess** and **no per-iteration optimizer**: you — the agent
 that ran intake — are the optimizer, the scheduler and the stopping rule. `cap-evolve run` (with
-`orchestration_mode: agent`) does check → baseline, prints a handoff with the `run_dir`, and returns. From
-there the search is yours, bounded by the invariants core enforces and the free-text **`stop_condition`**.
-Drive the *existing* primitives so the run dir and dashboard stay populated as in a deterministic run.
+`orchestration_mode: agent`) does check → baseline, prints a handoff, and returns. From there the search is
+yours, bounded by core's invariants and the free-text **`stop_condition`**. Drive the *existing*
+primitives so the run dir and dashboard stay populated as in a deterministic run (unattended:
+`host.py`/`--agent-driver`).
 
 ## Shell variables used below
 
