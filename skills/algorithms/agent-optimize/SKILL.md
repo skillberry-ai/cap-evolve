@@ -44,6 +44,8 @@ never guessed at; this is the cheapest moment to ask.
 
 ## Agent-mode loop
 
+**Every round's objective: the fewest evaluations that reach the target score.**
+
 Baseline has scored the seed on val and set `best_id = seed`. Each round:
 
 **0. Check you can afford the round — for the number of candidates you intend to run**, with
@@ -95,13 +97,11 @@ actually **gate**? `references/edit-design-lessons.md`.
 right" but "did the agent follow it at all". Never exercised ⇒ the **form** is wrong; exercised and
 still wrong ⇒ the content is.
 
-**2. Propose an edit per candidate — and address EVERY cluster the round can afford**, either as
-**sibling candidates, default N≥3** (one cluster each, gated independently — the safe default) or
-**one bold multi-part edit** (higher variance, but the only way a prompt change *and* a tool change
-land together). Bundle only *independent* parts — different files, different rules — so a rejected
-bundle can be resubmitted as its surviving part; `regressed`/`regressions` say which to drop.
-Siblings gate better (a narrow edit's footprint is resolvable, a bundle's is the whole split) and
-stop **churn** — same mean, a *different* set of tasks passing — from reading as a tie.
+**2. Sort every edit into a bucket before spending, per the form table below** (deterministic →
+B, probabilistic → A). **A:** sibling candidates, N≥3, gated separately — unchanged default.
+**B:** merge every low-risk structural fix into one working copy, gate it once via steps 3–4 — no
+per-fix screen or gate, since each part already cleared its own bar alone. Details:
+`references/algorithm.md`, "Bucketing edits before spending".
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
@@ -111,8 +111,8 @@ python "$A/prepare_candidate.py" -r "$R" -t "$TAG"
 
 Every edit encodes a **general rule** — never a task's id, gold value, or answer.
 
-**Choose the edit FORM from the failure TYPE — before you write a word.** The form matters more than the
-wording, because the form that repairs one failure type measurably backfires on another:
+**Choose the edit FORM from the failure TYPE, before you write a word** — the form that fixes one
+failure type measurably backfires on another:
 
 | the failure you observed | the form that fixes it | the form that makes it worse |
 | --- | --- | --- |
@@ -125,21 +125,24 @@ Then: **no nuance clauses**; **exemption clauses do not scope** (still suppresse
 guard to a prose rule where the capability owns its tools** — prose when the agent lacks a decision
 criterion, code when it has one and violates it. Costs, and the guard-closure trap: `edit-design-lessons.md`.
 
-**Every round evaluates a null control** first — a byte-for-byte copy of the current best; that
-eval is the round's noise floor. **Read `$R/rejected.jsonl` and make each proposal STRUCTURALLY
-different from what is in it** — never a narrower version of a rejected rule.
+**Every round evaluates a null control first** — a byte-for-byte copy of the current best; that
+eval is the noise floor. **Read `$R/rejected.jsonl`, and make each proposal STRUCTURALLY
+different** — never a narrower version of a rejected rule.
 
 **2b. Micro-test first, when the cluster has one** — `microcase.py run-all`; `micro_test_fail`
 rejects on the spot, no rollout paid.
 
-**3. Cheap SUBSET screen — the promotion ladder.** Do not pay full val to learn an edit is bad:
+**3. Cheap SUBSET screen — the promotion ladder.** Do not pay full val to learn an edit is bad.
+Default to your own subset, named via `--ids` — the tasks THIS edit plausibly touches (the primary
+interface, `references/algorithm.md` "Choosing your own subset"; `--tier 1/2/3` falls back with no
+better idea which tasks to pick):
 
 ```bash
 python "$A/screen.py" --run-dir "$R" --project "$P" \
-       --candidate "$R/work/$TAG" --tier 1 --k-se 1.0
+       --candidate "$R/work/$TAG" --ids <comma-separated task ids> --k-se 1.0
 ```
 
-Only the candidate pays, for the subset (`--ids`: your pick). `decision` is `kill` or `promote`
+Only the candidate pays, for the subset. `decision` is `kill` or `promote`
 — **never accept** — kills only on proven harm. **Check the arithmetic before trusting a screen:**
 `savings.breakeven_kill_rate` (`fired / full_val_rollouts`) is the fraction it must kill to pay for itself;
 `savings.net_rollouts` books what it cost. Screen only when that break-even sits below your observed kill
