@@ -31,6 +31,27 @@ export interface GateDecision {
   k_se: number | null
   threshold: number | null
   reason: string
+  /** Which reference the gate actually used ("parent" vs a drift-controlled reference). */
+  gate_mode?: string | null
+  /** The RAW gate verdict before any override — present only when the driver overrode
+   *  it (see `overrode_gate`). A raw accept can still end in a final `verdict` of
+   *  reject: this is the number that disagreement is measured against. */
+  gate_verdict?: Verdict | null
+  /** A second, drift-controlled verdict against same-round null-control replicates —
+   *  absent when the round measured no controls. */
+  control_relative_verdict?: Verdict | null
+  control_relative_delta?: number | null
+  /** Whether `control_relative_verdict` agrees across EVERY control replicate, not
+   *  just on their pooled average — read from the round's own gate table. */
+  verdict_stable?: boolean | null
+  /** The smallest delta this round could resolve as real signal (vs measurement
+   *  noise) — a candidate's delta below this is not evidence either way. */
+  evidence_bar?: number | null
+  /** True when the driver's final `verdict` disagrees with the raw `gate_verdict` —
+   *  e.g. a raw accept overridden to reject on the control-relative comparison. */
+  overrode_gate?: boolean | null
+  /** Why the driver overrode the raw gate, when it did (e.g. "driver_judgement"). */
+  reject_basis?: string | null
 }
 
 /** One spend row. `usd: null` means the cost was never recorded (show "—", not $0). */
@@ -91,6 +112,9 @@ export interface RunCapabilities {
   /** The optimizer wrote its own `dashboard.html` snapshot mid-run (via `cap-evolve
    *  dashboard --export`) -- shows the "Process" tab. */
   process_html: boolean
+  /** At least one round's driver reported an empty/malformed handover
+   *  (`optimizer_context_warning`) — that round's note is reconstructed, not live. */
+  context_warnings?: boolean
 }
 
 export interface SplitsInfo {
@@ -158,6 +182,17 @@ export interface ScreenRow {
   regressed: string[]
   pool_n: number | null
   t: number | null
+  rationale?: string | null
+  /** The candidate this screen compared against (usually the current best/parent). */
+  reference?: string | null
+  /** Per-task reward on the subset, rebuilt from this screen's own persisted rollouts —
+   *  the same shape a full-val node's `per_task` uses, so a screen renders identically
+   *  in the Tasks matrix. Empty when no rollouts were persisted for this screen. */
+  per_task?: Record<string, number>
+  feedback?: Record<string, string>
+  /** Per-task delta vs `reference`, straight from this screen's own `paired.deltas` —
+   *  the number the screen actually decided on (never re-derived from `per_task`). */
+  delta_by_task?: Record<string, number>
 }
 
 /** One row from GET /api/runs (light hub summary). */
@@ -180,7 +215,7 @@ export interface RunSummary {
   mtime: number
 }
 
-export type NodeStatus = 'seed' | 'accepted' | 'rejected' | 'indecisive' | 'failed'
+export type NodeStatus = 'seed' | 'accepted' | 'rejected' | 'indecisive' | 'failed' | 'screened'
 
 /** One row of reduced["summary"].per_iteration — optimizer vs runner cost/time per step.
  * Cost fields are nullable (runner cost is often $0/null on RITS); time is always set. */
@@ -250,6 +285,14 @@ export interface GraphNode {
   /** The task subset a cheap screen ran this candidate on before full val (graph.jsonl). */
   subset?: { task_ids: string[]; tier: number | null } | null
   micro_tests?: string[]
+  /** 'screen' marks a synthetic, non-graph entry the Tasks matrix builds from a cheap
+   *  screen's own rollouts (see `ScreenRow.per_task`) — never emitted by the reducer
+   *  itself, so absent means "a real candidate". */
+  kind?: 'candidate' | 'screen'
+  /** Set when the driver's own handover file came back empty/malformed for this
+   *  round: the `reason`/`note` shown is reconstructed after the fact, not the
+   *  optimizer's live reasoning. */
+  context_warning?: { what: string | null; error: string | null } | null
 }
 
 export interface RunGraph {
