@@ -259,6 +259,22 @@ def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
     return row.get("verdict") if row else None
 
 
+def _control_relative_verdict(run_dir: RunDir, candidate_id: str) -> dict:
+    """This candidate's drift-corrected verdict — ``round.py``'s ``control_relative``
+    comparison against the round's own null-control replicate(s), read back from the same
+    row ``_gate_row``/``_gate_verdict`` use. Distinct from the raw ``verdict`` (against the
+    STORED parent reward, which can carry drift since the parent was last measured).
+
+    ``stable`` is ``row["verdict_stable"]`` when the round had 2+ control replicates to check
+    the verdict against (``round.py``'s two-seed-block agreement check); ``None`` when the
+    round had only one, in which case there is nothing to check stability against and the
+    single verdict stands on its own.
+    """
+    row = _gate_row(run_dir, candidate_id) or {}
+    ctl = row.get("control_relative") or {}
+    return {"verdict": ctl.get("verdict"), "stable": row.get("verdict_stable")}
+
+
 def _has_grown(run_dir: RunDir, candidate_id: str) -> bool:
     """Has ``scripts/grow.py`` already bought this candidate at least one extra round of
     trials? True iff a ``work/grow_<candidate_id>_r*.json`` table exists.
@@ -308,15 +324,19 @@ def main(argv=None) -> int:
     # that asserts a full-val paired gate actually ran.
     p.add_argument("--reject-basis", default=None,
                    choices=["gate", "screen_kill", "ceiling", "budget", "infra",
-                            "micro_test_fail", "driver_judgement"],
+                            "micro_test_fail", "driver_judgement", "drift_control"],
                    help="what evidence the reject rests on: gate=full-val paired gate ran AND "
                         "rejected; screen_kill=screen proved harm; ceiling=arithmetic proof no "
                         "accept was reachable, so full val was never paid; budget=screen "
                         "evidence plus a budget call; infra=missing data, not a judgement; "
                         "micro_test_fail=microcase.py proved the candidate's own targeted "
                         "mechanism does not fire, before any rollout was spent (#436); "
-                        "driver_judgement=the gate ACCEPTED and you are overriding it (say why "
-                        "in --note)")
+                        "drift_control=the raw parent-relative gate ACCEPTED, but round.py's "
+                        "drift-corrected control_relative comparison (vs a same-round "
+                        "null-control replicate) says reject and is verdict-stable — a "
+                        "structured disagreement, not a one-off override; "
+                        "driver_judgement=the gate ACCEPTED and you are overriding it for any "
+                        "OTHER reason (say why in --note)")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -341,6 +361,12 @@ def main(argv=None) -> int:
     if not src.is_dir():
         print(json.dumps({"error": f"--from-dir does not exist: {src}"}, indent=2))
         return 2
+
+    # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
+    # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them.
+    # This is snapshotted below (`run_dir.snapshot`), so guaranteeing it here also guarantees
+    # every future candidate_dir built by copying THIS snapshot forward.
+    harness.ensure_framework_memory(src, run_dir)
 
     if not args.force:
         prior = _prior_decision(run_dir, args.candidate_id)
@@ -405,8 +431,10 @@ def main(argv=None) -> int:
     if args.reject_basis == "gate" and gate_verdict in ("accept", "inconclusive"):
         verb = ("ACCEPTED" if gate_verdict == "accept"
                 else "could not resolve (verdict: inconclusive)")
-        fix = ("pass --reject-basis driver_judgement and say in --note why you are overriding "
-               "the gate — e.g. a task you care about regressed"
+        fix = ("pass --reject-basis drift_control if round.py's control_relative comparison "
+               "against a same-round null-control replicate also says reject and is "
+               "verdict-stable, or --reject-basis driver_judgement and say in --note why you "
+               "are overriding the gate for some OTHER reason"
                if gate_verdict == "accept" else
                "book it as --decision inconclusive (charges the iteration, not the stall) and "
                "re-measure under a FRESH tag; or, if you are choosing to drop the edit anyway, "
@@ -418,6 +446,36 @@ def main(argv=None) -> int:
             "fix": fix,
         }, indent=2))
         return 2
+    # `--reject-basis drift_control`: the raw parent-relative gate accepted, but round.py's
+    # control_relative comparison — the SAME round's byte-identical null-control replicate(s),
+    # which removes drift since the parent was last measured — says reject and the verdict is
+    # stable across whichever replicate is the reference. A real, structured disagreement
+    # between the two comparisons (confirmed live: the driver had to fall back to
+    # driver_judgement and hand-explain this exact situation in --note before this basis
+    # existed), so it gets its own name rather than folding into the unstructured override.
+    if args.reject_basis == "drift_control":
+        ctl = _control_relative_verdict(run_dir, args.candidate_id)
+        if ctl["verdict"] != "reject":
+            print(json.dumps({
+                "error": f"--reject-basis drift_control, but round.py's control_relative "
+                         f"verdict for {args.candidate_id} is {ctl['verdict']!r}, not 'reject'",
+                "control_relative": ctl,
+                "fix": "pass --reject-basis driver_judgement instead and say why in --note, "
+                       "or re-check work/round_*.json — this basis asserts the drift-corrected "
+                       "comparison itself rejected",
+            }, indent=2))
+            return 2
+        if ctl["stable"] is False:
+            print(json.dumps({
+                "error": f"--reject-basis drift_control, but {args.candidate_id}'s verdict is "
+                         "NOT stable across the round's control replicates (verdict_stable: "
+                         "false) — it flips depending on which byte-identical replicate is the "
+                         "reference, so it is not evidence either way",
+                "control_relative": ctl,
+                "fix": "book it as --decision inconclusive instead and re-measure under a "
+                       "FRESH tag",
+            }, indent=2))
+            return 2
 
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.

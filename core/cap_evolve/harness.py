@@ -1691,6 +1691,38 @@ def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
     return written
 
 
+#: The files a workdir is promised — see ``seed_framework_memory``'s docstring for why.
+_MEMORY_FILES = ("LEDGER.md", "JOURNAL.md", "RUNMAP.md", "PROCESS.md")
+
+
+def ensure_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
+    """Defensive guard: seed ``target`` with the framework memory files IFF NONE of them
+    exist yet, so a workdir built by any means other than the two call sites that already
+    seed it (this harness's own materialize path, and ``host.py``'s ``_stage_context`` /
+    ``commit.py``'s re-seed onto ``candidates/<best_id>/``) still gets them.
+
+    SKILL.md step 2's own documented pattern — ``cp -r "$R/candidates/$BEST" "$R/work/$TAG"``
+    — is neither of those call sites, so a driver following it literally copies whatever is
+    (or is not) already under ``candidates/$BEST``. Confirmed live on run_20260922_154227:
+    none of ``work/cand_1`` through ``work/cand_4`` had LEDGER.md/JOURNAL.md/RUNMAP.md/
+    PROCESS.md — the bug this guards against is a workdir with ZERO of them, not one
+    missing a single file.
+
+    The "none exist" check (rather than "any exist", or an unconditional call) matters
+    because ``seed_framework_memory`` is only idempotent about WHICH files exist — its
+    actual content is freshly rebuilt every call, including overwriting ``JOURNAL.md`` with
+    the run-level copy. A workdir the optimizer is actively working in normally already has
+    JOURNAL.md (seeded at round start) with its own in-progress append below the marker, but
+    may be missing some OTHER file for an unrelated reason; reseeding on "any missing" would
+    silently discard that append. Reseeding only a virgin workdir (none of the files present)
+    avoids that while still fixing the actual bug.
+    """
+    target = Path(target)
+    if any((target / f).exists() for f in _MEMORY_FILES):
+        return []
+    return seed_framework_memory(target, run_dir)
+
+
 def _run_ending_signal(run_dir: RunDir) -> str:
     """Tell the optimizer where this iteration sits against the run's budget.
 
