@@ -33,5 +33,7 @@ Follow `next`; pass `reason` on to the user. Two things the JSON cannot say for 
    intake already happened; it does not run intake.
 3. **Agent handoff** — with `orchestration_mode: agent`, `cap-evolve run` stops after
    baseline and hands the loop back to you; no sealed-test number until you finalize.
+   For an unattended run instead, pass `cap-evolve run --agent-driver <name>` to drive
+   the loop via `skills/algorithms/agent-optimize/scripts/host.py`.
 
 No plugin, or a non-Claude host: follow `RUN.md` step by step. Same engine, same rules.

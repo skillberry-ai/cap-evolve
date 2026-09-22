@@ -590,6 +590,12 @@ def _cmd_run(argv):
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
+    p.add_argument("--agent-driver", default=None,
+                   help="agent mode only: after baseline, drive the agent-optimize loop "
+                        "unattended via skills/algorithms/agent-optimize/scripts/host.py "
+                        "instead of printing the handoff and returning. Value is the "
+                        "host agent (a row in optimizers/registry.yaml, e.g. claude-code). "
+                        "Opt-in: omit this flag to keep today's handoff-and-return behavior.")
     args = p.parse_args(argv)
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
@@ -880,6 +886,23 @@ def _cmd_run(argv):
     # primitives, and sealing by running the finalize phase script. cap-evolve run does
     # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
     if orchestration_mode == "agent":
+        if args.agent_driver:
+            # Opt-in only: without --agent-driver this branch is unreachable and behavior
+            # is byte-identical to before. host.py is the existing headless driver for
+            # this exact handoff (skills/algorithms/agent-optimize/scripts/host.py) —
+            # invoked the same way its own tests invoke it (subprocess, stdout is its
+            # one JSON document), so its output becomes this command's output as-is.
+            host_script = skills_dir / "algorithms" / "agent-optimize" / "scripts" / "host.py"
+            host_cmd = [py, str(host_script), "--run-dir", str(workdir / run_dir),
+                       "--project", str(proj_abs), "--agent", args.agent_driver]
+            if spec.get("optimizer_model"):
+                host_cmd += ["--model", str(spec["optimizer_model"])]
+            if spec.get("optimizer_max_turns"):
+                host_cmd += ["--budget", str(int(spec["optimizer_max_turns"]))]
+            if spec.get("max_optimizer_usd"):
+                host_cmd += ["--usd-budget", str(float(spec["max_optimizer_usd"]))]
+            proc = subprocess.run(host_cmd, cwd=str(workdir))
+            return done(proc.returncode)
         print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
                           "spec_path": str(spec_path), "dashboard": dash_url or "off",
                           "stop_condition": str(spec.get("stop_condition", "")),
@@ -1136,13 +1159,35 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     val = _val_size(spec, project)
     trials = int(spec.get("num_trials", 1) or 1)
     iters = int(spec.get("max_iterations", 10) or 10)
+    opt_model = spec.get("optimizer_model")
+    run_model = spec.get("runner_model") or spec.get("model")
+
+    # agent mode: the driving agent owns the loop under a free-text `stop_condition`.
+    # `max_iterations`/`stall` are informational-only ceilings there, not a fixed round
+    # count, so pricing this as iters x val x trials would silently price a free-form run
+    # as a fixed N-iteration deterministic one.
+    if str(spec.get("orchestration_mode") or "deterministic") == "agent":
+        metric_calls_per_round = (val * trials) if val is not None else None
+        cap = int(spec.get("max_metric_calls", 0) or 0)
+        if metric_calls_per_round is not None and cap:
+            metric_calls_per_round = min(metric_calls_per_round, cap)
+        return {
+            "spec_summary": {"val_tasks": val, "num_trials": trials, "max_iterations": iters,
+                             "optimizer_model": opt_model, "runner_model": run_model},
+            "calls": {"metric_calls_per_round": metric_calls_per_round, "optimizer_calls": None},
+            "budget": {k: spec.get(k) for k in ("max_usd", "max_optimizer_usd", "max_metric_calls")},
+            "dominant_cost_knob": "stop_condition (agent mode: rounds are not fixed by max_iterations)",
+            "note": ("orchestration_mode is 'agent': cost is driven by stop_condition and the "
+                     "driving agent's own judgement, not a fixed iteration count, so "
+                     "optimizer_calls cannot be priced up front — use "
+                     "`spend.py --run-dir <R>` for a live number mid-run."),
+        }
+
     metric_calls = (val * trials * iters) if val is not None else None
     cap = int(spec.get("max_metric_calls", 0) or 0)
     if metric_calls is not None and cap:
         metric_calls = min(metric_calls, cap)
     opt_calls = iters
-    opt_model = spec.get("optimizer_model")
-    run_model = spec.get("runner_model") or spec.get("model")
 
     out: dict = {
         "spec_summary": {"val_tasks": val, "num_trials": trials, "max_iterations": iters,
