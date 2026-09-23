@@ -10,10 +10,14 @@ SETUP:
      or clone+filter upstream yourself (see third_party/spreadsheetbench/NOTICE.md):
        SPREADSHEETBENCH_HARNESS_DIR=/path/to/cap-evolve/third_party/spreadsheetbench
 
-  2. Fetch the dataset (NOT vendored — ~19MB of xlsx files, fetched at run time):
+  2. Fetch the dataset (NOT vendored — tens of MB of xlsx files, fetched at run time):
        ci/benchmarks/spreadsheetbench/fetch_data.sh /some/cache/dir
      then point at the extracted folder (contains dataset.json + spreadsheet/):
        SPREADSHEETBENCH_DATA_DIR=/some/cache/dir/sample_data_200
+     SPREADSHEETBENCH_VARIANT selects which release: `sample_200`, `full_912` (the original
+     912-task set, 3 graded copies per task) or `verified_400` (the 400-task verified
+     re-release, 1 graded copy per task — what recent published work evaluates on). The
+     adapter reads the number of graded copies off disk, so all three just work.
 
   3. Install Docker (required — each task runs in its own sandboxed container) and,
      for accurate scoring of formula-bearing outputs, LibreOffice:
@@ -62,10 +66,11 @@ HOW IT WORKS:
                      per-task Docker/Jupyter sandbox (SpreadsheetBench's own harness),
                      the result/traceback feeds back, up to MAX_TURNS rounds. Once the
                      first test case's output file exists, the SAME generated code is
-                     replayed (no new LLM calls) against test cases 2 and 3.
+                     replayed (no new LLM calls) against whatever OTHER graded copies the
+                     dataset ships — two on the 912 set, none on the verified 400.
   - score()       → compares each test case's output workbook against its answer
                      workbook cell-by-cell over answer_position (SpreadsheetBench's own
-                     comparison logic). Reward = Soft Restriction = matches / 3.
+                     comparison logic). Reward = Soft Restriction = matches / cases.
 
 NOTE ON SCORING:
   Each task spins up its own Docker container (the upstream harness's design — one
@@ -139,12 +144,14 @@ VERIFY_TURNS = int(os.environ.get("SPREADSHEETBENCH_VERIFY_TURNS", "3"))
 LIBREOFFICE_BIN = os.environ.get("SPREADSHEETBENCH_LIBREOFFICE_BIN", "")
 
 # Which of SpreadsheetBench's two OJ-style metrics becomes the optimization target.
-#   soft (default) — matches / 3, i.e. partial credit per test case.
-#   hard           — 1.0 only when ALL THREE test cases match, 0.0 otherwise.
+#   soft (default) — matches / graded cases, i.e. partial credit per test case.
+#   hard           — 1.0 only when EVERY graded case matches, 0.0 otherwise.
 # Both are computed on every rollout regardless (see score()); this only decides which one
 # is `reward`, and therefore what the gate and the headline are measured on. `hard` exists
 # for comparisons against work that reports the benchmark's "native hard score" — mixing the
 # two silently flatters us, because soft >= hard by construction.
+# NB on a dataset with ONE graded case per task (the verified 400) the two are identical by
+# construction, so that tier's number is directly comparable to a published hard score.
 SCORING = os.environ.get("SPREADSHEETBENCH_SCORING", "soft").strip().lower()
 if SCORING not in ("soft", "hard"):
     raise RuntimeError(
@@ -272,8 +279,21 @@ def _load_dataset() -> list[dict]:
     if TASK_IDS:
         want = set(TASK_IDS)
         entries = [e for e in entries if str(e["id"]) in want]
-        if not entries:
-            raise RuntimeError(f"None of SPREADSHEETBENCH_TASK_IDS={TASK_IDS} are in the dataset.")
+        # EVERY requested id must exist, not just one of them. Filtering and carrying on used to
+        # mean a tier listing 10 ids of which 3 were absent silently ran 7 — and nothing
+        # downstream noticed, because assert_run.py checks the infra-failure FRACTION, not the
+        # task count, so a shrunken run is indistinguishable from a clean one. That matters more
+        # now that a tier's roster can be derived from ANOTHER dataset variant's roster (smoke is
+        # drawn from full_verified's train ids but evaluated on the 200-task sample), where an id
+        # present in one archive and absent from the other is a real and silent possibility.
+        missing = sorted(want - {str(e["id"]) for e in entries})
+        if missing:
+            raise RuntimeError(
+                f"{len(missing)} of {len(want)} requested SPREADSHEETBENCH_TASK_IDS are not in "
+                f"the dataset at {d}: {missing}. Running the remaining "
+                f"{len(entries)} would silently change what this tier measures — fix the tier's "
+                f"tasks.json or point SPREADSHEETBENCH_DATA_DIR at the variant that has them."
+            )
 
     _dataset_cache = entries
     return _dataset_cache
@@ -638,7 +658,7 @@ def _preflight_mount(data_dir: Path) -> None:
     # modes `tar` leaves depends on the extracting shell's umask (the runner's 077 yields a
     # 0700 root, an interactive 027 yields 0750 dirs and 0640 workbooks), so check a real
     # file rather than trusting the root's mode alone.
-    probe = next((data_dir / "spreadsheet").glob("*/*_input.xls*"), None)
+    probe = _input_probe(data_dir)
 
     def _readable(p: Path) -> bool:
         # Both classes, for the group-precedence reason documented at _READ_BITS.
@@ -1051,30 +1071,35 @@ def _target_facts(answer_position: str) -> str:
 
 
 def _sibling_inputs(local_dir: Path, sid: str, container_dir: str) -> str:
-    """Name the other two graded copies, and the constraint the replay imposes.
+    """Name the OTHER graded copies of this workbook, and the constraint the replay imposes.
 
-    This task is scored on three copies of the workbook whose data differs, and the other two
-    are already on disk beside the input. On pilot 30799393875 the agent was told 201 times
-    across 150 rollouts that its code would be "replayed on two other copies" and referenced
-    them ZERO times — it was never told where they are, and never enumerated the directory.
-    8 of 50 val tasks failed only on those copies.
+    On the 912 set a task is scored on three copies whose data differs, and the other two are
+    already on disk beside the input. On pilot 30799393875 the agent was told 201 times across
+    150 rollouts that its code would be "replayed on two other copies" and referenced them
+    ZERO times — it was never told where they are, and never enumerated the directory. 8 of 50
+    val tasks failed only on those copies.
 
-    The final paragraph is load-bearing, not advice. Cases 2 and 3 are produced by replaying
+    The count comes from the dataset (see _case_indices), so on a single-case dataset such as
+    the verified 400 this returns "" and the whole paragraph vanishes: there is nothing to
+    replay onto, and promising the agent a replay that never happens is a prompt defect.
+
+    The final paragraph is load-bearing, not advice. The other cases are produced by replaying
     the agent's FINAL code block with the input/output filenames substituted (see run_target).
     A final block that itself loops over several copies would have those names rewritten too,
     corrupting the very outputs being graded — so the one-input constraint must be stated.
     """
+    indices = _case_indices(local_dir, sid)
     others = [
-        f"{container_dir}/{p.name}"
-        for p in (_resolve_case_file(local_dir, idx, sid, "input") for idx in (2, 3))
-        if p.exists()
+        f"{container_dir}/{_resolve_case_file(local_dir, idx, sid, 'input').name}"
+        for idx in indices[1:]
     ]
     if not others:
         return ""
     listing = "\n  ".join(others)
     return (
-        "OTHER GRADED COPIES: this task is scored on three copies of this workbook whose data "
-        "differs (row counts and values change). The other two are already on disk at:\n  "
+        f"OTHER GRADED COPIES: this task is scored on {len(indices)} copies of this workbook "
+        f"whose data differs (row counts and values change). The other {len(others)} are "
+        "already on disk at:\n  "
         f"{listing}\n"
         "Your FINAL code block is replayed verbatim on each of them with the input and output "
         "filenames substituted, so that final block must read exactly ONE input — the "
@@ -1105,16 +1130,105 @@ def _workbook_context(
     return "\n\n".join([*blocks, preview]) if blocks else preview
 
 
+# On-disk filename vocabulary, per dataset variant. SpreadsheetBench ships in two layouts
+# and nothing in dataset.json says which one you have:
+#   original 912 (v0.1)  `{idx}_{sid}_input.xlsx`  / `{idx}_{sid}_answer.xlsx`
+#   verified 400         `1_{sid}_init.xlsx`       / `1_{sid}_golden.xlsx`
+#                        …plus five tasks (13284, 32023, 32789, 56274, 58109) that ship bare
+#                        `initial.xlsx` / `golden.xlsx` with no index or id prefix at all.
+# kind -> (indexed suffixes tried in order, bare case-1 stems).
+_CASE_NAMES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "input": (("input", "init"), ("initial",)),
+    "answer": (("answer", "golden"), ("golden",)),
+}
+
+# No variant ships more than three graded copies of a task: the 912 set ships exactly three,
+# the verified 400 exactly one.
+_MAX_CASES = 3
+
+
 def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
-    """Resolve a test case's real on-disk filename, tolerating upstream data quirks
-    in the 912-task set (a few ids use .xlsm; a few have a stray space before the
-    extension). Falls back to the canonical name if nothing matches, so a
-    genuinely-missing file still surfaces as a normal missing-file miss."""
-    canonical = dir_path / f"{idx}_{sid}_{kind}.xlsx"
-    if canonical.exists():
-        return canonical
-    matches = sorted(dir_path.glob(f"{idx}_{sid}_{kind}*.xls*"))
-    return matches[0] if matches else canonical
+    """Resolve a test case's real on-disk filename, across both dataset layouts.
+
+    Tolerates the 912 set's quirks (a few ids use .xlsm; a few have a stray space before the
+    extension) as well as the verified 400's different suffixes. Falls back to the canonical
+    912 name if nothing matches, so a genuinely-missing file still surfaces as a normal
+    missing-file miss rather than an exception.
+    """
+    suffixes, bare = _CASE_NAMES[kind]
+    for suffix in suffixes:
+        canonical = dir_path / f"{idx}_{sid}_{suffix}.xlsx"
+        if canonical.exists():
+            return canonical
+        matches = sorted(dir_path.glob(f"{idx}_{sid}_{suffix}*.xls*"))
+        if matches:
+            return matches[0]
+    if idx == 1:
+        # Everything below identifies case 1 ONLY. Letting case 2/3 fall back here would
+        # silently grade a replay against case 1's workbook instead of recording an honest
+        # miss — and 4 of the 912 tasks really do ship fewer than three cases (43026, 46444,
+        # 4714 with one; 52964 with two), so that path is reachable.
+        for stem in bare:
+            hit = dir_path / f"{stem}.xlsx"
+            if hit.exists():
+                return hit
+            matches = sorted(dir_path.glob(f"{stem}.xls*"))
+            if matches:
+                return matches[0]
+        # Last resort: an id TYPO in the filename. Verified task 42930 ships its golden as
+        # `1_43930_golden.xlsx`, and 43930 is not a task id in any release — it is the only
+        # such file in the 400, and without this that one task can never score. Accepted only
+        # when the choice is UNIQUE within this task's own directory: two candidates means we
+        # cannot know which one grades the task, and a guess would fabricate a result where a
+        # miss belongs.
+        for suffix in suffixes:
+            matches = sorted(dir_path.glob(f"*_{suffix}.xls*"))
+            if len(matches) == 1:
+                return matches[0]
+    return dir_path / f"{idx}_{sid}_{suffixes[0]}.xlsx"
+
+
+def _case_indices(dir_path: Path, sid: str) -> list[int]:
+    """Which test cases this task is actually graded on, read from DISK.
+
+    The 912 set grades three copies of every task; the verified 400 grades one. Hardcoding
+    three is not a graceful degradation on the verified set — cases 2 and 3 are missing, so
+    `hard = all(results)` is False for every task and a whole run reports a plausible-looking
+    0.000 with no error anywhere.
+
+    Always returns at least ``[1]``: a task dir with no readable input is a real fault that
+    must surface as a normal missing-file MISS, and an empty list would make `all([])` True
+    and score it as a silent PASS.
+    """
+    found = [idx for idx in range(1, _MAX_CASES + 1)
+             if _resolve_case_file(dir_path, idx, sid, "input").exists()]
+    return found or [1]
+
+
+def _input_probe(data_dir: Path) -> Path | None:
+    """One real input workbook from anywhere in the dataset, for the mount readability check.
+
+    Globs every layout's input naming. A probe that matches nothing silently DISABLES that
+    check (see _preflight_mount) — and that check is what turns an unusable bind mount into a
+    5-second error instead of a full eval at 0.000 (run 30691123806: $77, ~3h).
+    """
+    spreadsheet = data_dir / "spreadsheet"
+    for pattern in ("*/*_input.xls*", "*/*_init.xls*", "*/initial.xls*"):
+        hit = next(spreadsheet.glob(pattern), None)
+        if hit is not None:
+            return hit
+    return None
+
+
+def _replay_code(solution_code: str, input_name: str, case_input_name: str,
+                 sid: str, idx: int) -> str:
+    """The agent's final code block, retargeted at another graded copy — no new LLM call.
+
+    Both filenames are the RESOLVED on-disk names, so the substitution holds whatever the
+    dataset calls its inputs (`_input` on the 912 set, `_init` on the verified 400).
+    """
+    retargeted = solution_code.replace(input_name, case_input_name)
+    return retargeted.replace(f"1_{sid}_output.xlsx", f"{idx}_{sid}_output.xlsx")
 
 
 # ---------------------------------------------------------------------------
@@ -1347,11 +1461,11 @@ class Adapter(CapabilityAdapter):
                         metadata={"run_tag": run_tag, "id": sid, "model": model_config.MODEL, "seed": seed},
                     )
             else:
-                # Case 1 solved — replay the SAME code onto cases 2 and 3 (no new LLM calls).
-                for idx in (2, 3):
+                # Case 1 solved — replay the SAME code onto whatever OTHER copies this dataset
+                # grades (two more on the 912 set, none on the verified 400). No new LLM calls.
+                for idx in _case_indices(local_dir, sid)[1:]:
                     case_input = _resolve_case_file(local_dir, idx, sid, "input")
-                    solution = solution_code.replace(input_file.name, case_input.name)
-                    solution = solution.replace(f"1_{sid}_output.xlsx", f"{idx}_{sid}_output.xlsx")
+                    solution = _replay_code(solution_code, input_file.name, case_input.name, sid, idx)
                     try:
                         vendor["exec_code"](client, solution)
                     except Exception:  # noqa: BLE001
@@ -1412,7 +1526,9 @@ class Adapter(CapabilityAdapter):
         missing: list[int] = []
         mismatched: list[int] = []
         recalc_failed: list[int] = []   # cases whose formula recalc could not run
-        for idx in (1, 2, 3):
+        # How many copies this task is graded on comes from the dataset, not from a constant:
+        # the 912 set ships three, the verified 400 ships one. See _case_indices.
+        for idx in _case_indices(data_dir / "spreadsheet" / sid, sid):
             gt_path = _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer")
             proc_path = data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx"
             if not proc_path.exists():

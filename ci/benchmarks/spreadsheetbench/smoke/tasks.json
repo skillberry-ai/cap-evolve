@@ -1,12 +1,62 @@
 [
-  {"id": "32468", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "40467", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "47484", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "52216", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "53161", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "55457", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "160-6", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "347-49", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "374-9", "tag": "repr", "agent": "aws/gpt-oss-120b"},
-  {"id": "418-29", "tag": "repr", "agent": "aws/gpt-oss-120b"}
+  {
+    "id": "160-6",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "sheet"
+  },
+  {
+    "id": "168-17",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "sheet"
+  },
+  {
+    "id": "188-39",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "sheet"
+  },
+  {
+    "id": "43213",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  },
+  {
+    "id": "438-18",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "sheet"
+  },
+  {
+    "id": "47766",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  },
+  {
+    "id": "49945",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  },
+  {
+    "id": "52532",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  },
+  {
+    "id": "53449",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  },
+  {
+    "id": "56915",
+    "tag": "repr",
+    "agent": "aws/gpt-oss-120b",
+    "type": "cell"
+  }
 ]

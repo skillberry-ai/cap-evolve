@@ -1,19 +1,161 @@
 # SpreadsheetBench tier configuration
 
-Three tiers, with **different purposes and different honesty guarantees**.
+Four tiers, with **different purposes and different honesty guarantees**.
 
-| | `smoke` | `pilot` | `full` |
+| | `smoke` | `pilot` | `full` | `full_verified` |
+|---|---|---|---|---|
+| Dataset | `sample_200` | `full_912` | `full_912` | **`verified_400`** |
+| Tasks | 10 (from `full_verified`'s train split) | 60 (from `full`'s train split) | 912 (SpreadsheetBench original) | **400 (verified re-release)** |
+| Graded cases/task | 3 | 3 | 3 | **1** |
+| Split | **no-holdout FIT** | 5 / **50** / 5 — sized to measure | **held-out** — 182 / 91 / 639 | **held-out** — 80 / 40 / 280 |
+| `finalize` number is | a FIT metric | **meaningless** | a real generalization number | a real generalization number |
+| Agent turns | 5 | **30** | **30** | **30** |
+| Container concurrency | 4 | 8 | 8 | 8 |
+| Runs on `tier=all`? | yes | **no — explicit only** | yes | **no — explicit only** |
+| Purpose | cheap, fast CI signal | cost/runtime measurement | comparison vs the 912 set | **comparison vs recent papers** |
+
+`full` and `full_verified` both produce numbers that may be put next to a paper — but next to
+*different* papers, because they are different benchmarks (see below). The smoke report labels
+itself `train==val==test (FIT metric, not a generalization/held-out claim)`.
+
+`full_verified` is excluded from `tier=all` for **cost, not honesty**: an `all` dispatch already
+launches `full` at ~2,279 rollouts/seed, and sweeping full_verified in would put two four-figure legs
+in every dispatch. Run it by name — `tier=full_verified`, or a `benchmark-full_verified-spreadsheetbench`
+PR label.
+
+## The `full_verified` tier — the set recent work actually reports on
+
+> **Why `full_verified` and not `full400`.** The tier name is deliberately **generic**: it means
+> "this benchmark's verified/curated re-release, wherever upstream publishes one". Any other
+> benchmark that gains such a release uses the same tier name rather than inventing one with a
+> task count baked in. SpreadsheetBench's happens to have 400 tasks — nothing else needs to,
+> and a future re-release of it may not either. The task COUNT is asserted by the tier's tests,
+> not encoded in its name.
+
+WikiSkill (arXiv 2608.27454v1) Table 6 gives, for its SpreadSheet benchmark:
+
+> Train **80** · Val **40** · Test **280** · Multi-Step · tools: `bash`
+>
+> "All task splits and available toolsets are strictly matched with prior work
+> (Yang et al., 2026 [SkillOpt]; Alzubi et al., 2026 [EvoSkill])."
+
+80/40/280 is **400 tasks at exactly 2:1:7** — the verified release, not the 912 set `full`
+runs. Two consequences:
+
+1. Every SkillOpt/EvoSkill/Trace2Skill number in that paper is on these 400 tasks. A `full`
+   result cannot be placed beside them.
+2. It **confirms the 2:1:7 reading** `full`'s split was built on. Table 2's 4:1:5 caption is an
+   ablation panel, not the headline. The `--ratios 4,1,5` hedge below is no longer needed.
+
+Reported scores there are the **average of three independent runs of the whole pipeline**, with
+paired bootstrap significance testing (1,000 resamples, p<0.05). The paper does not state its
+evolution-iteration budget — that remains an unmatched dimension.
+
+### The verified 400 is NOT a filter of the 912 — do not derive it that way
+
+All 400 ids appear in `full/tasks.json`, which makes subsetting look safe. It is not. The
+verified release is a **re-release with corrected content**:
+
+| | difference from the 912 set |
+|---|---|
+| Instructions | **226 of 400 rewritten** — several substantively, not cosmetically |
+| `answer_position` | 4 changed |
+| Golden workbooks | 61 of 394 resolvable ones differ byte-for-byte |
+| Graded cases | **1 per task, not 3** |
+| Filenames | `1_<id>_init.xlsx` / `_golden.xlsx`; five tasks ship bare `initial.xlsx` / `golden.xlsx` |
+
+Filtering the 912 archive to these ids would score the **older** benchmark while claiming
+comparability with work that reports the new one. It is fetched as its own archive
+(`SPREADSHEETBENCH_VARIANT=verified_400`, ~15MB), and the adapter reads the number of graded
+cases off disk (`_case_indices`) rather than assuming three.
+
+> Because the verified release grades **one** case per task, `soft` and `hard` are identical by
+> construction on this tier — so its number is directly comparable to a published "native hard
+> score" with no caveat about which metric is quoted. On `full` that caveat is load-bearing.
+
+Regenerate the tier (needs the fetched archive — its id list cannot come from this repo):
+
+```bash
+data=$(SPREADSHEETBENCH_VARIANT=verified_400 ci/benchmarks/spreadsheetbench/fetch_data.sh)
+python3 ci/benchmarks/spreadsheetbench/utils/make_full_verified.py --data-dir "$data" --write
+```
+
+### Cost, versus `full`
+
+Per-iteration evaluation hits the selection split only; `finalize` evaluates test twice.
+At `trials=1, iterations=10`:
+
+| | rollouts / seed | × 3 seeds (the paper's protocol) |
+|---|---|---|
+| `full` (912) | `91 + 10×91 + 2×639` = **2,279** | 6,837 |
+| `full_verified` (400) | `40 + 10×40 + 2×280` = **1,000** | 3,000 |
+
+**~44% of the token cost**, and better than that on wall clock: each rollout also drops from
+three LibreOffice recalc+compare cycles to one, and the deterministic replay of the final code
+block onto cases 2 and 3 disappears entirely. That is what makes three seeds affordable.
+
+The agent model is pinned to `full`'s (`aws/gpt-oss-120b`) so the two tiers differ in the
+dataset **only**. The paper's own model axis (Qwen-3.5-4B/9B, Qwen-3.6-27B, Gemma-4-31B,
+Gemini-3.5-Flash) is a separate decision: the two small Qwens fit a laptop, the 27B/31B need
+real GPUs (the `openshift/` vLLM path), and Gemini is API-only.
+
+## The `smoke` tier — 10 tasks that are also part of `full_verified`
+
+Smoke is the cheap signal guarding the tiers we report, so its roster is **not arbitrary**:
+
+    pool = sample_200 ids  ∩  full_verified TRAIN ids        (17 candidates; 10 chosen, seed 42)
+
+This is the lesson of the scoring bug this tier configuration was written alongside. Smoke used
+to be 10 unrelated tasks from the 200-task sample, and it passed green while `full_verified`
+would have scored **0.000 on all 400 tasks** — the two shared only 3 of 10 ids and nothing tied
+them together. Both halves of the rule are load-bearing:
+
+- **`sample_200`**, because that is the dataset the smoke tier actually evaluates. An id outside
+  it cannot be scored — and the adapter now **refuses** such a run instead of silently dropping
+  the task and reporting a clean, shorter run (`assert_run.py` checks the infra-failure
+  *fraction*, not the task count, so a shrunken run looked identical to a healthy one).
+- **`full_verified`'s TRAIN split**, not its whole roster, because smoke runs a real (if short)
+  optimization. 0 of the 10 touch that tier's selection or sealed-test splits.
+
+Both instruction types stay represented (currently 6 Cell-Level / 4 Sheet-Level): they exercise
+different comparison paths, and a single-type smoke set silently stops guarding the other.
+
+> **Smoke tasks are part of `full_verified` by ID, not by content.** Smoke grades each task using
+> `sample_200`'s copy, so for ids the verified release rewrote (226 of 400) it sees the older
+> wording. That is deliberate: keeping smoke on `sample_200` is what preserves cheap coverage of
+> the **three-graded-case** path `full` and `pilot` depend on. The verified release's single-case
+> layout is covered by unit tests instead of a paid rollout — see
+> `core/tests/test_spreadsheetbench_case_layout.py`, which reproduces the 0.000 bug end to end.
+
+Only **5** of the 17 candidates also sit outside `full`'s sealed test split, so the generator
+takes those first and then fills: 5 of the 10 overlap `full`'s test ids (it was 4 of 10 before).
+Widening the pool to `full_verified`'s val split too reaches only 9 of 10 clean, which is not
+worth touching a second reported split for. Regenerate with:
+
+```bash
+data=$(SPREADSHEETBENCH_VARIANT=sample_200 ci/benchmarks/spreadsheetbench/fetch_data.sh)
+python3 ci/benchmarks/spreadsheetbench/utils/make_smoke.py --data-dir "$data" --write
+```
+
+## Upstream data defects, and what they cost
+
+The number of graded cases is read off disk (`_case_indices`), not assumed. That surfaced two
+real defects, both now handled — and one of them **changes `full`'s numbers**:
+
+| Dataset | Task(s) | Defect | Effect before the fix |
 |---|---|---|---|
-| Tasks | 10 | 60 (from `full`'s train split) | 912 (all of SpreadsheetBench original) |
-| Split | **no-holdout FIT** | 5 / **50** / 5 — sized to measure | **held-out** — 182 / 91 / 639, disjoint |
-| `finalize` number is | a FIT metric | **meaningless** | a real generalization number |
-| Agent turns | 5 | **30** | **30** (SkillOpt parity) |
-| Container concurrency | 4 | 8 | 8 |
-| Runs on `tier=all`? | yes | **no — explicit only** | yes |
-| Purpose | cheap, fast CI signal | cost/runtime measurement | paper comparison |
+| 912 | `43026`, `46444`, `4714` | ship **1** test case, not 3 | scored 0 at `hard`, capped at 1/3 at `soft` |
+| 912 | `52964` | ships **2** test cases | scored 0 at `hard`, capped at 2/3 at `soft` |
+| verified 400 | `42930` | golden misnamed `1_43930_golden.xlsx` (no such id) | task could never score |
 
-Only `full` produces a number that may be put next to a paper. The smoke report labels itself
-`train==val==test (FIT metric, not a generalization/held-out claim)`.
+> **All four defective 912 tasks are in `full`'s sealed `test` split.** At `SB_SCORING=hard`
+> they were **unwinnable** in every `full` run to date. Grading them on the cases that exist
+> raises `full`'s sealed score by up to **+0.63pp** (4 of 639) from the fix alone, independent
+> of any prompt change. When comparing a new `full` row against an older one on the benchmarks
+> page, that much of any gain is bookkeeping: the old denominator was too harsh.
+
+`full_verified` is unaffected by this — it had no valid numbers to be inconsistent with, because the
+tier is new.
 
 ## The `pilot` tier — a measurement rig, not a benchmark
 
