@@ -118,7 +118,11 @@ activate_sim() {
   while :; do
     # %{http_code} is "000" when the request got no response at all
     # (connection refused, reset, timeout) — distinguishable in the message.
+    # --max-time/--connect-timeout are what make WAIT_BUDGET actually bound this
+    # loop: without them a peer that accepts the connection and never responds
+    # blocks inside curl forever, so the deadline check below never runs.
     code="$(curl -o /dev/null -s -w '%{http_code}' \
+                 --max-time 10 --connect-timeout 5 \
                  -X POST "http://127.0.0.1:$port/api/v1/simulation/start" \
                  -H 'content-type: application/json' \
                  -d "{\"name\": \"parsec-$name\"}" 2>/dev/null || true)"
@@ -146,10 +150,15 @@ activate_sim() {
 # which can only err toward a timeout — never toward a false ready.
 sim_ready() {
   local port="$1" body
-  body="$(curl -fsS "http://127.0.0.1:$port/api/v1/simulation" 2>/dev/null)" || return 1
+  # Timeouts, as in activate_sim: an accepts-but-never-responds peer would
+  # otherwise block inside curl past wait_sim_ready's WAIT_BUDGET deadline.
+  body="$(curl -fsS --max-time 10 --connect-timeout 5 \
+               "http://127.0.0.1:$port/api/v1/simulation" 2>/dev/null)" || return 1
   # An empty body is NOT ready: `jq -e` on empty input produces no output and
-  # exits 0, which would otherwise read as ready (verified).
-  [[ -n "$body" ]] || return 1
+  # exits 0, which would otherwise read as ready (verified). jq treats a
+  # WHITESPACE-ONLY body as empty input too, so strip whitespace before the
+  # emptiness test rather than testing $body directly.
+  [[ -n "${body//[[:space:]]/}" ]] || return 1
   if command -v jq >/dev/null 2>&1; then
     printf '%s' "$body" | jq -e '.status == "ready"' >/dev/null 2>&1
   else
@@ -242,36 +251,44 @@ stop_live() {
       echo "stopped $name (pid $pid)"
     fi
     rm -f "$pid_file"
+    # start_live records the pid of `uv`, not of the `uvicorn` child it launches.
+    # Current `uv` forwards SIGTERM, but if it ever failed to, the port would stay
+    # held with no pid file left: the next `up` would write a fresh pid file,
+    # start_live would report success, and `status` would see port $port open (the
+    # STALE process) and report OK — the "next job silently reuses a stale,
+    # wrongly-seeded stack" failure run_ccc_parsec.sh's EXIT trap exists to
+    # prevent. So verify the port was actually released and, if not, fall back to
+    # the same port-based kill `reap` does. Never a bare kill of an unverified pid.
+    #
+    # Scoped to this branch on purpose: it is a *fallback* for a kill this script
+    # just attempted against its own recorded pid. In the no-pid-file branch there
+    # is by definition nothing of ours to clean up, and anything listening on the
+    # port is someone else's — and since `down` runs from run_ccc_parsec.sh's EXIT
+    # trap on every job, an unconditional kill there would reap an unrelated
+    # process on the live port (8000 being a very common dev-server default).
+    # Explicit port reaping with no pid file is what `reap` is for.
+    #
+    # Deliberately lsof, not port_open, to decide this: port_open *connects*, and a
+    # process that is wedged holding the port while never calling accept() fills
+    # its listen backlog after a few probes, after which connect() blocks — which
+    # would hang `down`, and `down` runs from the EXIT trap on every job. lsof only
+    # reads the socket table, so it cannot block. If lsof is unavailable, or the
+    # holder is another user's process (invisible to a non-root lsof), this
+    # degrades to a no-op, same as `reap`.
+    local waited=0 pids=""
+    while (( waited < 5 )); do
+      pids="$(lsof -t -i ":$port" -sTCP:LISTEN 2>/dev/null || true)"
+      [[ -n "$pids" ]] || break
+      sleep 1
+      waited=$((waited + 1))
+    done
+    if [[ -n "$pids" ]]; then
+      printf '%s\n' "$pids" | xargs -r -n1 kill 2>/dev/null || true
+      echo "$name: port $port still held after the pid kill — killed by port" \
+           "(pids $(printf '%s' "$pids" | tr '\n' ' '))"
+    fi
   else
     echo "$name: no pid file, nothing to stop"
-  fi
-  # start_live records the pid of `uv`, not of the `uvicorn` child it launches.
-  # Current `uv` forwards SIGTERM, but if it ever failed to, the port would stay
-  # held with no pid file left: the next `up` would write a fresh pid file,
-  # start_live would report success, and `status` would see port $port open (the
-  # STALE process) and report OK — the "next job silently reuses a stale,
-  # wrongly-seeded stack" failure run_ccc_parsec.sh's EXIT trap exists to
-  # prevent. So verify the port was actually released and, if not, fall back to
-  # the same port-based kill `reap` does. Never a bare kill of an unverified pid.
-  #
-  # Deliberately lsof, not port_open, to decide this: port_open *connects*, and a
-  # process that is wedged holding the port while never calling accept() fills
-  # its listen backlog after a few probes, after which connect() blocks — which
-  # would hang `down`, and `down` runs from run_ccc_parsec.sh's EXIT trap on
-  # every job. lsof only reads the socket table, so it cannot block. If lsof is
-  # unavailable, or the holder is another user's process (invisible to a
-  # non-root lsof), this degrades to a no-op, same as `reap`.
-  local waited=0 pids=""
-  while (( waited < 5 )); do
-    pids="$(lsof -t -i ":$port" -sTCP:LISTEN 2>/dev/null || true)"
-    [[ -n "$pids" ]] || break
-    sleep 1
-    waited=$((waited + 1))
-  done
-  if [[ -n "$pids" ]]; then
-    printf '%s\n' "$pids" | xargs -r -n1 kill 2>/dev/null || true
-    echo "$name: port $port still held after the pid kill — killed by port" \
-         "(pids $(printf '%s' "$pids" | tr '\n' ' '))"
   fi
 }
 

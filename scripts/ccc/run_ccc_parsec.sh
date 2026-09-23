@@ -137,12 +137,19 @@ teardown_stack() {
   bash "$SCRIPT_DIR/parsec_stack.sh" down >> "$SETUP_LOG" 2>&1 || true
 }
 trap teardown_stack EXIT
+# Armed BEFORE `up`, not after it returns: `up` can take minutes (six starts, up
+# to 5x60s of wait_port, up to 5x60s of activation retries), and a signal that
+# arrives while it is still running (LSF wall-clock kill, bkill, Ctrl-C) fires
+# this EXIT trap immediately. Arming only afterwards would skip teardown for
+# exactly that case and leak the whole stack. So: arm optimistically, and disarm
+# only on the one outcome that proves nothing was started (rc 2 = preconditions).
+STACK_UP=true
 set +e
 bash "$SCRIPT_DIR/parsec_stack.sh" up | tee -a "$SETUP_LOG"
 UP_RC="${PIPESTATUS[0]}"
 set -e
-if (( UP_RC != 2 )); then
-  STACK_UP=true
+if (( UP_RC == 2 )); then
+  STACK_UP=false
 fi
 if (( UP_RC != 0 )); then
   echo "FATAL: parsec_stack.sh up failed (rc=$UP_RC) — see $SETUP_LOG" >&2
