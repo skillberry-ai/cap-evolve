@@ -541,6 +541,85 @@ and `uvx --with pytest ...` runs normally.
 used. Same fix expected to unblock 7 other SkillsBench tasks whose
 verifiers hardcode the same `uvx` pattern.
 
+## Parsec v4 (v4_t2_e1): host-process harness, not docker-compose
+
+Earlier handoff/design docs for parsec v4 describe its runtime as a 5-service
+`docker-compose` stack. **That premise is false.** The real topology has
+three layers, and only the third one is a container at all:
+
+1. **5 MCP simulation services — host Python processes, not containers.**
+   Each is a plain `uvicorn` process running the `simulation_harness` module
+   against one config file under `<PARSEC_V4N>/_run/harness-cfg/*.yaml`:
+
+   | Service  | Config file                    | Port |
+   |----------|---------------------------------|------|
+   | platform | `harness-cfg/platform.yaml`     | 8086 |
+   | github   | `harness-cfg/github.yaml`       | 8087 |
+   | icinga   | `harness-cfg/icinga.yaml`       | 8088 |
+   | cost     | `harness-cfg/cost.yaml`         | 8089 |
+   | cloud    | `harness-cfg/cloud.yaml`        | 8090 |
+
+   These port numbers are not arbitrary — they are the single source of
+   truth in `scripts/v4_t2_e1/common/parsec_paths.py`'s `MCP_PORTS`, and
+   every trial's `harbor run` invocation gets them injected as
+   `PLATFORM_MCP_URL`/`GITHUB_MCP_URL`/`ICINGA_MCP_URL`/`COST_MCP_URL`/
+   `CLOUD_MCP_URL` (see `adapter.py`'s `run_target()`).
+
+2. **`parsec-live` — a second, separate host process, port 8000.** A plain
+   `uv run uvicorn src.app:app` invocation from
+   `<PARSEC_V4N>/_run/parsec-live/`. This is the live agent process whose
+   `config/prompts/*.md` files a candidate's `apply()` overwrites, and whose
+   own `MetricsCollector` log (not Harbor's `result.json`, which is always
+   null for this agent) is where real cost/token telemetry comes from — see
+   `adapter.py`'s module docstring.
+
+3. **The Harbor task container — the only genuine container workload.**
+   One `harbor run --config <trial>/harbor_config.json --n-concurrent 1`
+   invocation per trial, using the `ParsecAgent` Harbor agent
+   (`parsec_harbor_agent:ParsecAgent`) against one task directory under
+   `<PARSEC_V4N>/_run/tasks/bench-v4-<task-id>/`. **This is the only layer
+   the rest of this document's rootless-podman/docker-shim fixes apply
+   to** — layers 1 and 2 are ordinary host processes and need none of it.
+
+Because the task image here is `registry.access.redhat.com/ubi9/ubi:latest`
+(not `ubuntu:24.04`), the host-networking fix in §A and the uv-preinstall
+fix in §D do not apply to parsec's Harbor container — only the
+`storage.conf`/`XDG_RUNTIME_DIR`/dbus-socket/docker-shim layers (the
+one-time and per-session setup sections above) do.
+
+### Bringing the stack up on a CCC compute node
+
+```bash
+export PARSEC_V4N=/dccstor/knewedge2/boazc/workarea/python/rhdp-parsec/v4_2026-09-16
+bash scripts/ccc/parsec_stack.sh up
+bash scripts/ccc/parsec_stack.sh status   # waits for all 6 ports to accept
+```
+
+See `scripts/ccc/parsec_stack.sh --help` for `down`/`status`/`reap`. It is
+deliberately a thin wrapper — one `uvicorn` per harness-cfg file, one
+`uv run uvicorn` for `parsec-live` — because the reference driver
+(`run_full34.py`) already starts these the same way; the script exists so a
+CCC job doesn't need an interactive shell per service.
+
+### Known gaps not solved by this change
+
+- **GPFS multi-host collision:** the 6 processes above, plus
+  `<PARSEC_V4N>/_run/skills/`, are shared, stateful resources with no
+  per-lane isolation. Running two concurrent lanes against the *same*
+  `$PARSEC_V4N` tree on two different hosts will corrupt both runs. Until a
+  future change adds per-lane checkouts, run exactly one lane per
+  `$PARSEC_V4N` tree at a time — matches the "one dedicated host per
+  concurrent job" rule in the Batch (LSF) mode section below.
+- **`install_seeds.py` hardcodes `localhost` and the fixed ports above** — a
+  per-lane port-offsetting scheme is not just unimplemented, it is
+  incompatible with this script's current form. Not addressed here.
+- **A live LiteLLM API key was found in cleartext** in one CCC copy's
+  `_run/parsec-live/config/config.local.yaml` (mode `644`, world/group
+  readable). This is a credential exposure independent of anything in this
+  section — rotate that key and `chmod 600` the file. Never let this file's
+  contents reach a run's `env_snapshot.txt` or any other output that leaves
+  the local disk.
+
 ## Verification: run the smoke
 
 ```bash
@@ -609,6 +688,8 @@ above have the detail and the reproduction commands.
 | 11 | Postinst chowns (fontconfig/poppler/cairo) | wrap `chown`/`chgrp`; pre-install `poppler-utils`, `build-essential` | patched base v3 |
 | 12 | Postinst creates system users (`_dbus`, `messagebus`) | wrap `useradd`/`groupadd`/`usermod`/`groupmod`/`adduser`/`addgroup` | patched base v4 |
 | 13 | `dpkg-statoverride` `fchown()` → hard dpkg error, cascading through libpam-systemd/gnumeric/libgtk/libgoffice/libreoffice | wrap `dpkg-statoverride` | patched base v5 |
+| 14 | `podman machine inspect podman-machine-default` fails with "no such machine" | You're running parsec's Harbor-container docker-host resolution on Linux. `adapter.py`'s `_resolve_docker_host()` now prefers `$DOCKER_HOST` (already exported by `setup_podman.sh`) — confirm it's exported in your shell before invoking `cap-evolve run`/`harbor run` directly. | parsec `adapter.py` |
+| 15 | A parsec trial scores 0.0 on every task, but the stack "looks" healthy | The 5 MCP services / `parsec-live` are host processes, not containers — `podman ps` won't show them. Use `scripts/ccc/parsec_stack.sh status` (TCP-checks all 6 ports), not `podman ps`, to check parsec's own stack health. | parsec `adapter.py` / `parsec_stack.sh` |
 
 Removing any one of these puts the smoke back to failing. ⚠ Layer 8 is
 **not** wired for the cap-evolve path — see §C.
@@ -629,6 +710,7 @@ it is in `$HOME` or host-local `/tmp`; nothing needs root.
 | `/tmp/podman-<UID>/`, `/tmp/podman-run-<UID>/` | image store, sockets, dbus, pidfiles | `setup_podman.sh`, per host |
 | `docker.io/library/ubuntu:24.04` | **replaced** with the patched base | `setup_podman.sh` — see the blast-radius section |
 | benchflow's `site-packages` | `docker-compose-base.yaml` (§A), `docker.py` (§B) | you, by hand; originals kept as `.orig` |
+| `$PARSEC_V4N/_run/logs/`, `$PARSEC_V4N/_run/jobs/v4_t2_e1/` | Per-trial Harbor job output and the parsec-live/trace logs `adapter.py` reads for cost attribution. Grows unboundedly across runs — not cleaned up by anything in this repo. | `scripts/ccc/parsec_stack.sh` / Harbor tasks |
 
 The benchflow edits are wiped by `uv tool install --force benchflow`; re-apply
 §A and §B after any upgrade.
