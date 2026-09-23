@@ -119,19 +119,35 @@ source "$SETUP_PODMAN" > >(tee "$SETUP_LOG") 2>&1
 wait 2>/dev/null || true
 
 banner "Phase 2: parsec stack up + health-wait"
-# Arm the teardown BEFORE `up`, so a stack that comes up but fails its health
-# check is still torn down. Without this an LSF job exit leaves the 5 simulator
-# containers and parsec-live running and holding ports 8000/8086-8090, which
-# then makes the next job on this host silently reuse a stale, wrongly-seeded
-# stack. `|| true` so a teardown failure never masks the run's real exit code.
+# Arm the trap BEFORE `up`, so a stack that starts but then fails (activation or
+# the health check) is still torn down. Without teardown an LSF job exit leaves
+# the 5 simulator containers and parsec-live running and holding ports
+# 8000/8086-8090, which then makes the next job on this host silently reuse a
+# stale, wrongly-seeded stack. `|| true` so a teardown failure never masks the
+# run's real exit code.
 STACK_UP=false
 teardown_stack() {
+  # STACK_UP guards only the one case where there is provably nothing to tear
+  # down: `up` exiting 2, its precondition failure, which happens before
+  # anything is started. It does NOT distinguish a stack this script started
+  # from one the caller had already brought up by hand — `start_sim`/`start_live`
+  # both report "already running" and return 0, so the script cannot tell — so a
+  # pre-existing stack is torn down too. `down` is idempotent either way.
   [[ "$STACK_UP" == true ]] || return 0
   bash "$SCRIPT_DIR/parsec_stack.sh" down >> "$SETUP_LOG" 2>&1 || true
 }
 trap teardown_stack EXIT
-STACK_UP=true
+set +e
 bash "$SCRIPT_DIR/parsec_stack.sh" up | tee -a "$SETUP_LOG"
+UP_RC="${PIPESTATUS[0]}"
+set -e
+if (( UP_RC != 2 )); then
+  STACK_UP=true
+fi
+if (( UP_RC != 0 )); then
+  echo "FATAL: parsec_stack.sh up failed (rc=$UP_RC) — see $SETUP_LOG" >&2
+  exit "$UP_RC"
+fi
 bash "$SCRIPT_DIR/parsec_stack.sh" status | tee -a "$SETUP_LOG"
 
 {

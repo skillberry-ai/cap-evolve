@@ -541,7 +541,7 @@ and `uvx --with pytest ...` runs normally.
 used. Same fix expected to unblock 7 other SkillsBench tasks whose
 verifiers hardcode the same `uvx` pattern.
 
-## Parsec v4 (v4_t2_e1): simulator containers plus two host processes
+## Parsec v4 (v4_t2_e1): simulator containers, one host process, one task container
 
 Earlier handoff/design docs for parsec v4 described its runtime as a 5-service
 `docker-compose` stack; an earlier revision of *this* section then
@@ -772,7 +772,7 @@ above have the detail and the reproduction commands.
 | 12 | Postinst creates system users (`_dbus`, `messagebus`) | wrap `useradd`/`groupadd`/`usermod`/`groupmod`/`adduser`/`addgroup` | patched base v4 |
 | 13 | `dpkg-statoverride` `fchown()` → hard dpkg error, cascading through libpam-systemd/gnumeric/libgtk/libgoffice/libreoffice | wrap `dpkg-statoverride` | patched base v5 |
 | 14 | `podman machine inspect podman-machine-default` fails with "no such machine" | You're running parsec's Harbor-container docker-host resolution on Linux. `adapter.py`'s `_resolve_docker_host()` now prefers `$DOCKER_HOST` (already exported by `setup_podman.sh`) — confirm it's exported in your shell before invoking `cap-evolve run`/`harbor run` directly. | parsec `adapter.py` |
-| 15 | A parsec trial scores 0.0 on every task, but the stack "looks" healthy | The 5 MCP services / `parsec-live` are host processes, not containers — `podman ps` won't show them. Use `scripts/ccc/parsec_stack.sh status` (TCP-checks all 6 ports), not `podman ps`, to check parsec's own stack health. | parsec `adapter.py` / `parsec_stack.sh` |
+| 15 | A parsec trial scores 0.0 on every task, but the stack "looks" healthy | The 5 MCP simulators **are** containers (`parsec-sim-*`), so `podman ps` is a fair first check — but a running container proves nothing: an unactivated harness accepts TCP and answers `/healthz` while serving no tools. `parsec-live` is the one host process (port 8000), invisible to `podman ps`. Use `scripts/ccc/parsec_stack.sh status`, which polls each sim's `GET /api/v1/simulation` for `status: ready` (plus a TCP check for `parsec-live`, which has no equivalent ready endpoint). | parsec `adapter.py` / `parsec_stack.sh` |
 
 Removing any one of these puts the smoke back to failing. ⚠ Layer 8 is
 **not** wired for the cap-evolve path — see §C.

@@ -21,8 +21,8 @@
 #   bash scripts/ccc/parsec_stack.sh reap     # force-remove/kill anything on our ports
 #
 # Exits non-zero if $PARSEC_V4N is unset, if any of `up`'s preconditions are
-# unmet, or (for `status`) if any port isn't accepting connections or any
-# simulation isn't `ready` within the wait budget.
+# unmet, if a sim's activation POST never returns 2xx/409, or (for `status`) if
+# any port isn't accepting connections or a simulation isn't `ready` in budget.
 
 set -eo pipefail
 
@@ -84,7 +84,9 @@ container_name() { printf 'parsec-sim-%s\n' "$1"; }
 
 port_open() {
   local port="$1"
-  (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && exec 3>&- 3<&-
+  # fd 3 is opened inside the subshell, so the subshell's exit closes it —
+  # there is nothing left open in this shell to clean up afterwards.
+  (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null
 }
 
 wait_port() {
@@ -101,19 +103,58 @@ wait_port() {
 # POST /api/v1/simulation/start with {"name": "parsec-<svc>"} against this
 # instance's own published port. A harness process hosts at most one
 # simulation, so a second start returns 409 — which means "already activated",
-# not an error, hence the || true plus the readiness poll that follows.
+# so 2xx and 409 are both success here and nothing else is.
+#
+# Retried within WAIT_BUDGET, and deliberately NOT `|| true`: under rootless
+# podman the published port is accepted by the port-forwarder as soon as
+# `run -d` returns, which can precede the harness inside actually binding
+# $SIM_INTERNAL_PORT — so wait_port can report success while the app is not yet
+# serving and a single POST would be refused. Swallowing that (or a 404/422/5xx)
+# made `up` exit 0 having activated nothing, and the operator learned ~60s later
+# only that the harness was "unactivated", with no link back to the failed POST.
 activate_sim() {
-  local name="$1" port="$2"
-  curl -fsS -X POST "http://127.0.0.1:$port/api/v1/simulation/start" \
-       -H 'content-type: application/json' \
-       -d "{\"name\": \"parsec-$name\"}" >/dev/null 2>&1 \
-    || true
+  local name="$1" port="$2" code
+  local deadline=$((SECONDS + WAIT_BUDGET))
+  while :; do
+    # %{http_code} is "000" when the request got no response at all
+    # (connection refused, reset, timeout) — distinguishable in the message.
+    code="$(curl -o /dev/null -s -w '%{http_code}' \
+                 -X POST "http://127.0.0.1:$port/api/v1/simulation/start" \
+                 -H 'content-type: application/json' \
+                 -d "{\"name\": \"parsec-$name\"}" 2>/dev/null || true)"
+    case "$code" in
+      2??|409) return 0 ;;
+    esac
+    if (( SECONDS >= deadline )); then
+      echo "FATAL: could not activate simulation parsec-$name (port $port)" \
+           "within ${WAIT_BUDGET}s — last HTTP status: ${code:-<none>}" \
+           "(000 = no response at all: the harness inside the container is not" \
+           "serving yet, or the container exited — check" \
+           "'$CRI logs $(container_name "$name")')" >&2
+      return 1
+    fi
+    sleep 2
+  done
 }
 
+# Readiness must be the TOP-LEVEL `status`, not some nested per-component or
+# per-skill status field: a false "ready" is precisely the silent-wrong-data
+# failure this check exists to close, so a bare substring grep is too loose.
+# jq is not a dependency of this repo's scripts (grep: zero other uses), so it
+# is used only when present; the fallback anchors the match to the start of the
+# JSON object, before any nested object can open ([^{}] cannot cross a brace),
+# which can only err toward a timeout — never toward a false ready.
 sim_ready() {
-  local port="$1"
-  curl -fsS "http://127.0.0.1:$port/api/v1/simulation" 2>/dev/null \
-    | grep -q '"status"[[:space:]]*:[[:space:]]*"ready"'
+  local port="$1" body
+  body="$(curl -fsS "http://127.0.0.1:$port/api/v1/simulation" 2>/dev/null)" || return 1
+  # An empty body is NOT ready: `jq -e` on empty input produces no output and
+  # exits 0, which would otherwise read as ready (verified).
+  [[ -n "$body" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$body" | jq -e '.status == "ready"' >/dev/null 2>&1
+  else
+    printf '%s' "$body" | tr -d '[:space:]' | grep -q '^{[^{}]*"status":"ready"'
+  fi
 }
 
 wait_sim_ready() {
@@ -191,7 +232,7 @@ stop_sim() {
 }
 
 stop_live() {
-  local name="$1"
+  local name="$1" port="$2"
   local pid_file="$PID_DIR/$name.pid"
   if [[ -f "$pid_file" ]]; then
     local pid
@@ -203,6 +244,34 @@ stop_live() {
     rm -f "$pid_file"
   else
     echo "$name: no pid file, nothing to stop"
+  fi
+  # start_live records the pid of `uv`, not of the `uvicorn` child it launches.
+  # Current `uv` forwards SIGTERM, but if it ever failed to, the port would stay
+  # held with no pid file left: the next `up` would write a fresh pid file,
+  # start_live would report success, and `status` would see port $port open (the
+  # STALE process) and report OK — the "next job silently reuses a stale,
+  # wrongly-seeded stack" failure run_ccc_parsec.sh's EXIT trap exists to
+  # prevent. So verify the port was actually released and, if not, fall back to
+  # the same port-based kill `reap` does. Never a bare kill of an unverified pid.
+  #
+  # Deliberately lsof, not port_open, to decide this: port_open *connects*, and a
+  # process that is wedged holding the port while never calling accept() fills
+  # its listen backlog after a few probes, after which connect() blocks — which
+  # would hang `down`, and `down` runs from run_ccc_parsec.sh's EXIT trap on
+  # every job. lsof only reads the socket table, so it cannot block. If lsof is
+  # unavailable, or the holder is another user's process (invisible to a
+  # non-root lsof), this degrades to a no-op, same as `reap`.
+  local waited=0 pids=""
+  while (( waited < 5 )); do
+    pids="$(lsof -t -i ":$port" -sTCP:LISTEN 2>/dev/null || true)"
+    [[ -n "$pids" ]] || break
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if [[ -n "$pids" ]]; then
+    printf '%s\n' "$pids" | xargs -r -n1 kill 2>/dev/null || true
+    echo "$name: port $port still held after the pid kill — killed by port" \
+         "(pids $(printf '%s' "$pids" | tr '\n' ' '))"
   fi
 }
 
@@ -252,9 +321,9 @@ case "$CMD" in
     for entry in "${SERVICES[@]}"; do
       IFS=: read -r name port kind <<< "$entry"
       [[ "$kind" == "sim" ]] || continue
-      wait_port "$name" "$port"
-      activate_sim "$name" "$port"
-      echo "requested activation of parsec-$name on port $port"
+      wait_port "$name" "$port" || exit 1
+      activate_sim "$name" "$port" || exit 1
+      echo "activated simulation parsec-$name on port $port"
     done
     echo
     echo "Now run: bash $0 status"
@@ -262,11 +331,11 @@ case "$CMD" in
   down)
     banner "stopping parsec v4 stack"
     for entry in "${SERVICES[@]}"; do
-      IFS=: read -r name _ kind <<< "$entry"
+      IFS=: read -r name port kind <<< "$entry"
       if [[ "$kind" == "sim" ]]; then
         stop_sim "$name"
       else
-        stop_live "$name"
+        stop_live "$name" "$port"
       fi
     done
     ;;
