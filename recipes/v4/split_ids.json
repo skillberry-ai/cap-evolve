@@ -1,0 +1,5 @@
+{
+  "train": ["platform-005-wrong-owner-trap"],
+  "val":   ["platform-005-wrong-owner-trap"],
+  "test":  ["platform-005-wrong-owner-trap"]
+}

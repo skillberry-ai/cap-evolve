@@ -56,8 +56,8 @@ PLACEHOLDER = "_Not yet analysed._"
 
 AUTO_BLOCK_RE = re.compile(re.escape(AUTO_BEGIN) + r".*?" + re.escape(AUTO_END), re.DOTALL)
 
-# Depth from reports/task-by-task/<file>.md back to the branch root.
-UP = "../.."
+# Depth from reports/task-by-task/<exp>/<file>.md back to the branch root.
+UP = "../../.."
 
 
 def fmt(v):
@@ -593,7 +593,8 @@ def main() -> int:
         an = sum(e["analysed"] for e in by_exp.values())
         print(f"total: {an}/{tot} fully analysed")
         orphans = sorted(
-            p.name for p in (REPORTS_DIR.glob("*.md") if REPORTS_DIR.is_dir() else [])
+            str(p.relative_to(REPORTS_DIR))
+            for p in (REPORTS_DIR.glob("**/*.md") if REPORTS_DIR.is_dir() else [])
             if p.name != "README.md" and p not in {report_path(t) for t in tasks}
         )
         if orphans:

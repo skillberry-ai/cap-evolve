@@ -123,14 +123,14 @@ def mean(xs):
 
 
 def report_name(exp: str, task: str) -> str:
-    """Report filenames are prefixed by experiment because the two task-id namespaces are
-    unrelated and a flat `reports/task-by-task/` must not collide or imply kinship.
-    v1: traces_parsec-aap2-0037 -> v1-aap2-0037.md
-    v2: bench-aap2-003-never-started-explanation -> v2-bench-aap2-003-never-started-explanation.md
+    """Report filenames live under a per-experiment subfolder because the two task-id
+    namespaces are unrelated and must not collide or imply kinship (mirrors artifacts/<exp>/).
+    v1: traces_parsec-aap2-0037 -> v1/aap2-0037.md
+    v2: bench-aap2-003-never-started-explanation -> v2/bench-aap2-003-never-started-explanation.md
     """
     if exp == "v1":
-        return "v1-aap2-" + task.rsplit("-", 1)[-1] + ".md"
-    return "v2-" + task + ".md"
+        return "v1/aap2-" + task.rsplit("-", 1)[-1] + ".md"
+    return "v2/" + task + ".md"
 
 
 # ------------------------------------------------------------------- reconciliation

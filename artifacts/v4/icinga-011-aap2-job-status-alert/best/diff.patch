@@ -1,0 +1,117 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -179,9 +179,16 @@
+ 
+ - **Truncated results** (`"truncated": true`): The query hit the limit. Narrow
+   your query with tighter WHERE filters or date ranges.
+-- **Empty results**: Say so clearly. Suggest alternatives. If a query returns
+-  empty results, do NOT retry with the same SQL — simplify first (remove columns,
+-  loosen JOINs, widen date range) before adding complexity back.
++- **Empty results**: Say so clearly, and say so in the answer — not just in a table
++  cell. "Clearly" means the negative carries the noun it applies to: write "no
++  provisions were found for this user" or "no failed jobs in the window", not a bare
++  `None` or `0` in a cell whose meaning depends on its column header. A verified
++  absence is a real finding; a lone `None` is indistinguishable from "not checked".
++  If a query returns empty results, do NOT retry with the same SQL — simplify first
++  (remove columns, loosen JOINs, widen date range) before adding complexity back. If the
++  empty result blocks the task, suggest alternatives; but when you called a tool
++  specifically to check whether something exists, the empty result IS the answer to that
++  question — report it and move on rather than hunting for a non-empty one.
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
+ - **NEVER call the same tool with the same parameters twice in a conversation.**
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -68,6 +68,19 @@
+   If the service is already in downtime, report this first — the issue may already be
+   addressed before proceeding with deeper investigation.
+ 
++Make both of these calls **after** the `get_services` lookup that identifies the alert,
++never before it — the service object is what tells you which host and service you are
++asking about.
++
++**An empty result from these two calls is a finding, not a non-event.** If
++`get_comments` returns no comments, or `get_downtimes` returns no downtimes, you have
++established something the alert output alone cannot tell you: that this problem is live
++and unattended — no engineer has claimed it and no maintenance window explains it. For
++any alert still in a failing state, that belongs in the summary, because it is what tells
++the reader the alert still needs an owner. Report it with the same prominence you would
++give an active downtime. Never make these two calls and then omit their outcome from the
++answer. See **Reporting Suppression State** below for the exact wording to use.
++
+ ### Step 0.1: Determine the Deployment Platform
+ 
+ Our OCP clusters run on different infrastructure. Determine the platform **before** diagnosing so you can tailor troubleshooting appropriately.
+@@ -224,14 +237,71 @@
+ - `service.vars.priority>=1` — services with custom variable filter
+ - `host.acknowledgement==0 && host.state!=0` — unacknowledged problems
+ - `match("*keyword*", service.display_name)` — wildcard match on display name
++
++## Reporting Suppression State
++
++"Suppression state" means the three things that tell a reader whether a problem is
++already being handled: **comments**, **downtimes**, and **acknowledgement**. Whenever
++you have queried them, the answer must state what you found for each one — including,
++and especially, when you found nothing.
++
++**Rule: write an absence as a negative that carries its own noun.** A bare `None` or
++`No` sitting in a table cell is not a finding — it only has meaning if the reader
++binds it to a column header, and these reports get skimmed, quoted into incident
++channels, and pasted into tickets one line at a time. Once the cell is separated from
++its header, `None` is indistinguishable from "not checked" or "no data". Repeat the
++noun next to the negative so the sentence survives on its own.
++
++**Rule: put the negation inside the noun phrase, and use one of the approved forms
++below.** A negated positive predicate inverts to exactly the wrong meaning the moment a
++skimming reader's eye drops the `not`, so at a glance it still reads as though a downtime
++or an acknowledgement exists — which tells an on-call engineer the alert is already
++covered when it is not. Rather than reasoning about which negations are safe, state each
++of the three using exactly one of these forms:
++
++| For | Use exactly one of |
++|---|---|
++| comments | `No comments are set on this service.` / `No comments from other engineers.` |
++| downtimes | `No downtimes are scheduled.` / `None scheduled.` |
++| acknowledgement | `Nobody has claimed or acknowledged it.` / `No one has acknowledged this alert.` |
+ 
++Each of these puts the negative word directly against the noun it applies to, which is
++what makes it survive being read on its own.
++
++**Worked example** — a CRITICAL service with zero comments, zero downtimes, and
++`acknowledgement: 0`. Write it like this:
++
++> **Suppression:** No comments are set on this service and no downtimes are scheduled —
++> nobody has claimed this alert, so it is live and unattended.
++
++Each clause names its own noun, so any one of them can be quoted alone and still be
++true and complete.
++
++| Write this | Not this | Why |
++|---|---|---|
++| `No comments are set on this service.` | `\| **Comments** \| None \|` | a bare cell value loses its noun when quoted |
++| `No downtimes are scheduled.` | `**In Downtime:** No` | same — and `No` alone can read as "not checked" |
++| `Nobody has claimed or acknowledged it.` | `**Acknowledged:** No` | names the actor and the action |
++
++You may still keep a summary table for the numeric state — just make sure the
++suppression finding also appears as a sentence of its own somewhere in the answer.
++
++**Never state or imply a suppression that the tool results do not show.** If
++`acknowledgement` is `0`, nobody has acknowledged the problem; if `get_downtimes`
++returned nothing, no downtimes are scheduled and no maintenance window explains the
++alert. Do not soften an unattended production problem into sounding handled.
++
+ ## Output Format
+ 
+ ### Alert Status: [STATUS]
+ **Host:** `host_name` | **Service:** `service_display_name` (`service_name`)
+ **Platform:** [Platform description] (hosttype: `hosttype_value`, provider: AWS/IBM Cloud/CNV)
+ **Summary:** One sentence summary.
+-**Acknowledged:** Yes/No | **In Downtime:** Yes/No
++**Suppression:** One sentence covering comments, downtimes, and acknowledgement, using the
++approved forms from **Reporting Suppression State** above — not a bare
++`Acknowledged: No | In Downtime: No`. When all three are empty: "No comments are set on
++this service and no downtimes are scheduled — nobody has claimed this alert." When
++something IS present, say which and summarise it.
+ 
+ ### Diagnosis
+ - **Trigger:** Specific condition that failed.

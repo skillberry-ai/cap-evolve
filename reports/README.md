@@ -6,23 +6,30 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) |
-| **3** | **why a task moved, and what it teaches** | **`reports/task-by-task/<task>.md`** |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4.html`](../ui/heatmap_v4.html) (v4) |
+| **3** | **why a task moved, and what it teaches** | **`reports/task-by-task/<exp>/<task>.md`** |
 
 ## Naming
 
-Two experiments share one directory, so the experiment is part of the filename:
+Three experiments each get their own subfolder — `v1/`, `v2/`, `v4/` — mirroring
+`artifacts/<exp>/`, so the two task-id namespaces never collide or imply kinship:
 
 | experiment | pattern | count |
 |---|---|--:|
-| v1 (trace-extracted) | `v1-aap2-<NNNN>.md` | 30 |
-| v2 (hand-authored) | `v2-<task>.md` | 10 |
+| v1 (trace-extracted) | `v1/aap2-<NNNN>.md` | 30 |
+| v2 (hand-authored) | `v2/<task>.md` | 10 |
+| v4 (task-by-task, 34-task benchmark) | `v4/<task>.md` | 34 |
 
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped
-and only the number kept — `v1-aap2-0047.md`. v2's ids are already readable
+and only the number kept — `v1/aap2-0047.md`. v2's ids are already readable
 (`bench-aap2-004-failing-task-and-host`) and are used whole. The mapping is not a convention to
 re-derive by hand: every task row in `results/results.json` carries a `report` field with the exact
 path, and [`scripts/build_task_reports.py`](../scripts/build_task_reports.py) reads it.
+
+v4's ids are already readable (`platform-005-wrong-owner-trap`) and are used whole, like v2's.
+Unlike v1/v2, v4's `report` pointer is carried in `results/v4/results.json` (a separate ledger from
+`results/results.json`), and `scripts/build_v4_task_reports.py` reads that file instead of
+`build_task_reports.py`'s.
 
 ## The auto block
 
@@ -42,6 +49,22 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
+
+## The diff block (v4 only)
+
+The 20 v4 tasks where T2 accepted a candidate over the seed also get a second generated
+section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`, appended after the hand-written
+narrative: real, file-by-file unified diffs of `artifacts/v4/seed/*.md` against that
+task's `artifacts/v4/<task>/best/*.md`, one collapsible `<details>` per changed file so
+the report stays scannable with the full edit one click away (e.g.
+[`platform-004-events-then-config`](task-by-task/v4/platform-004-events-then-config.md)).
+It answers Item 2 of this branch's cleanup — a prose summary of "what the optimizer
+tried" is not the same as seeing the edit — without needing a separate diff viewer:
+GitHub and most local Markdown renderers syntax-highlight a fenced ` ```diff ` block on
+their own. `build_v4_task_reports.py` regenerates it the same way it regenerates the
+auto block above; the 14 v4 tasks with no `best/` directory (13 T2 never ran on, plus
+`cost-030-threshold-not-an-anomaly`, which only has a `NOTE.md`) get no diff block at
+all rather than an empty one.
 
 ## Where this departs from `skillsbench-history`
 
@@ -144,18 +167,18 @@ improved by `+0.133`. Re-derive per-task verdicts from `seed_train` rather than 
 
 Four reports carry the most, and are the best entry points:
 
-- **[`v1-aap2-0047`](task-by-task/v1-aap2-0047.md)** and
-  **[`v1-aap2-0048`](task-by-task/v1-aap2-0048.md)** — the only two tasks v1's optimizer ever ran on.
+- **[`v1-aap2-0047`](task-by-task/v1/aap2-0047.md)** and
+  **[`v1-aap2-0048`](task-by-task/v1/aap2-0048.md)** — the only two tasks v1's optimizer ever ran on.
   Two candidates, both rejected, and between them the only two trajectory matches ever recorded in
   the whole experiment. The case that a mean-based gate made the right call for the champion and the
   wrong call for the knowledge.
-- **[`v2-bench-aap2-001`](task-by-task/v2-bench-aap2-001-single-job-outcome.md)** — the one large,
+- **[`v2-bench-aap2-001`](task-by-task/v2/bench-aap2-001-single-job-outcome.md)** — the one large,
   clean, mechanistically explained win in the branch (`+0.500` at equal `n`), and the argument that
   what it fixed was a **documentation defect** in the seed skill rather than a reasoning failure.
-- **[`v2-bench-aap2-006`](task-by-task/v2-bench-aap2-006-log-root-cause.md)** — recorded by
+- **[`v2-bench-aap2-006`](task-by-task/v2/bench-aap2-006-log-root-cause.md)** — recorded by
   cap-evolve as broken by the champion; identical to the seed at `n=9` to six decimal places. The
   cleanest counterexample to trusting the run's own `fixed`/`broke` lists.
 
-- **[`v1-aap2-0052`](task-by-task/v1-aap2-0052.md)** is the shortest and the most damning: its
+- **[`v1-aap2-0052`](task-by-task/v1/aap2-0052.md)** is the shortest and the most damning: its
   contract demands **zero** assertions, an empty list scores a vacuous `1.000`, and half of its
   `0.500` baseline measures nothing at all.

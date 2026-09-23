@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parsec v4 heatmap — JB baseline vs v4_t1_e1 vs v4_t2_e1</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #6b7280;
+    --border: #d0d7de;
+    --header-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 16px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  .legend .swatch { display: inline-block; width: 34px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .note {
+    background: var(--header-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  th {
+    background: var(--header-bg);
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    user-select: none;
+    font-size: 11px;
+  }
+  th.sorted { background: #eef1f4; }
+  th .arrow { color: var(--muted); font-size: 10px; margin-left: 2px; }
+  td.task-cell { text-align: left; font-family: ui-monospace, monospace; font-size: 12px; }
+  .badge {
+    display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 10px;
+    margin-left: 4px; font-weight: 600; vertical-align: middle;
+  }
+  .badge.regression { background: #dbeafe; color: #1e40af; }
+  .badge.challenge { background: #fce7f3; color: #9d174d; }
+  .badge.not_optimized { background: #f3f4f6; color: #6b7280; }
+  .badge.optimized { background: #d1fae5; color: #065f46; }
+  .cell-n { font-size: 9px; color: rgba(0,0,0,0.55); display: block; }
+  .empty-cell { background: #f3f4f6 !important; color: #9ca3af; }
+  .best-cell { font-weight: 700; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); }
+  tr.summary-row td, tr.summary-row th {
+    background: #fff7ed; font-weight: 700; border-top: 2px solid #d0d7de;
+  }
+  tr.summary-row td.task-cell { text-align: left; }
+</style>
+</head>
+<body>
+
+<h1>Parsec v4 heatmap</h1>
+<div class="subtitle">All 34 v4 Parsec scenarios · JB baseline (n=1) vs cap-evolve zero-shot baseline v4_t1_e1 (n=3) vs cap-evolve-optimized v4_t2_e1 (n=5 per eval, 21/34 tasks) Category/global arms (C2-C4, G2-G4) not yet run — see results/v4/summary.md.</div>
+
+<div class="note">
+  <strong>Regression and challenge tranches are never pooled into one mean</strong> — the challenge tasks are designed to score below 1.0, so mixing them into the regression mean would misread deliberate difficulty as regression (see <code>baseline.md</code>). Every mean below shows its own <code>n=</code>; different columns use different trial counts and are not directly comparable without it.
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:rgb(220,38,38)"></span>0.0</span>
+  <span><span class="swatch" style="background:rgb(254,243,199)"></span>0.5</span>
+  <span><span class="swatch" style="background:rgb(5,150,105)"></span>1.0</span>
+  <span><span class="badge regression">regression</span> expected 1.000</span>
+  <span><span class="badge challenge">challenge</span> expected &lt;1.000 by design</span>
+  <span><span class="badge optimized">optimized</span> ran through v4_t2_e1</span>
+  <span><span class="badge not_optimized">not optimized</span> baseline only</span>
+  <span>Click a column header to sort.</span>
+</div>
+
+<table id="tbl"></table>
+
+<script>
+const DATA = [
+  {
+    "task": "cloud-024-guid-to-account",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "status": "optimized",
+    "jb_reward": 0.2,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.0,
+    "jb_answer": 0.25,
+    "jb_n": 1,
+    "our_baseline": 0.20000000000000004,
+    "our_baseline_n": 3,
+    "seed": 0.2,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.8,
+    "delta_vs_our_baseline": 0.7999999999999999
+  },
+  {
+    "task": "cloud-025-gcp-project-status",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cloud-026-gpu-abuse-triage",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "status": "optimized",
+    "jb_reward": 0.808,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.75,
+    "jb_answer": 0.833,
+    "jb_n": 1,
+    "our_baseline": 0.886111,
+    "our_baseline_n": 3,
+    "seed": 0.9400000000000001,
+    "cand_0001": 0.9066664,
+    "cand_0002": 0.9766666,
+    "cand_0003": null,
+    "best": 0.9766666,
+    "best_tag": "cand_0002",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.19199999999999995,
+    "delta_vs_our_baseline": 0.11388900000000002
+  },
+  {
+    "task": "cloud-027-azure-pool-database-trap",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cost-028-highest-spend-provider",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cost-029-no-cost-rows-for-guid",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "status": "optimized",
+    "jb_reward": 0.8,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 0.75,
+    "jb_n": 1,
+    "our_baseline": 0.8000000000000002,
+    "our_baseline_n": 3,
+    "seed": 0.8,
+    "cand_0001": 0.8,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.19999999999999996,
+    "delta_vs_our_baseline": 0.19999999999999984
+  },
+  {
+    "task": "cost-030-threshold-not-an-anomaly",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.9533333333333333,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "seed",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.046666666666666745
+  },
+  {
+    "task": "icinga-010-stuck-anarchysubjects",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "status": "optimized",
+    "jb_reward": 0.495,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.25,
+    "jb_answer": 0.6,
+    "jb_n": 1,
+    "our_baseline": 0.40166666666666667,
+    "our_baseline_n": 3,
+    "seed": 0.46699999999999997,
+    "cand_0001": 0.495,
+    "cand_0002": 0.495,
+    "cand_0003": null,
+    "best": 0.495,
+    "best_tag": "cand_0001",
+    "final": 0.495,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.09333333333333332
+  },
+  {
+    "task": "icinga-011-aap2-job-status-alert",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "status": "optimized",
+    "jb_reward": 0.86,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 0.8,
+    "jb_n": 1,
+    "our_baseline": 0.9533333333333333,
+    "our_baseline_n": 3,
+    "seed": 0.86,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.14,
+    "delta_vs_our_baseline": 0.046666666666666745
+  },
+  {
+    "task": "icinga-012-nodes-ready-threshold",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "icinga-013-acknowledged-not-an-issue",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "status": "optimized",
+    "jb_reward": 0.48,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.0,
+    "jb_answer": 0.6,
+    "jb_n": 1,
+    "our_baseline": 0.37333333333333335,
+    "our_baseline_n": 3,
+    "seed": 0.44799999999999995,
+    "cand_0001": 0.608,
+    "cand_0002": 0.0,
+    "cand_0003": 0.64,
+    "best": 0.64,
+    "best_tag": "cand_0003",
+    "final": 0.64,
+    "final_n": 5,
+    "delta_vs_jb": 0.16000000000000003,
+    "delta_vs_our_baseline": 0.26666666666666666
+  },
+  {
+    "task": "icinga-014-check-script-path-moved",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.8833333333333333,
+    "our_baseline_n": 3,
+    "seed": 0.86,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.1166666666666667
+  },
+  {
+    "task": "icinga-015-problems-by-severity",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "icinga-016-hosts-most-problems",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "icinga-017-invented-action-trap",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-001-ee-entrypoint-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.52,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.333,
+    "jb_answer": 0.6,
+    "jb_n": 1,
+    "our_baseline": 0.7133333333333334,
+    "our_baseline_n": 3,
+    "seed": 0.86,
+    "cand_0001": 0.9400000000000001,
+    "cand_0002": 0.952,
+    "cand_0003": null,
+    "best": 0.952,
+    "best_tag": "cand_0002",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.48,
+    "delta_vs_our_baseline": 0.2866666666666666
+  },
+  {
+    "task": "platform-002-collection-not-found-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.883,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 0.833,
+    "jb_n": 1,
+    "our_baseline": 0.783333,
+    "our_baseline_n": 3,
+    "seed": 0.9066666,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.11699999999999999,
+    "delta_vs_our_baseline": 0.21666700000000005
+  },
+  {
+    "task": "platform-003-tojson-dict-literal-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.233,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.0,
+    "jb_answer": 0.333,
+    "jb_n": 1,
+    "our_baseline": 0.477778,
+    "our_baseline_n": 3,
+    "seed": 0.5633334,
+    "cand_0001": 0.8466666,
+    "cand_0002": 0.9166665999999999,
+    "cand_0003": null,
+    "best": 0.9166665999999999,
+    "best_tag": "cand_0002",
+    "final": 0.7633332,
+    "final_n": 5,
+    "delta_vs_jb": 0.5303332000000001,
+    "delta_vs_our_baseline": 0.28555520000000006
+  },
+  {
+    "task": "platform-004-events-then-config",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.733333,
+    "our_baseline_n": 3,
+    "seed": 0.7866664,
+    "cand_0001": 0.4,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.266667
+  },
+  {
+    "task": "platform-005-wrong-owner-trap",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "github",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.8133333333333334,
+    "our_baseline_n": 3,
+    "seed": 0.31999999999999995,
+    "cand_0001": 0.608,
+    "cand_0002": 0.916,
+    "cand_0003": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.18666666666666665
+  },
+  {
+    "task": "platform-006-version-tag-not-a-ref",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-007-directory-path-fetch",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "github",
+    "status": "optimized",
+    "jb_reward": 0.85,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.5,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.7999999999999999,
+    "our_baseline_n": 3,
+    "seed": 0.47000000000000003,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.15000000000000002,
+    "delta_vs_our_baseline": 0.20000000000000007
+  },
+  {
+    "task": "platform-008-log-does-not-say",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.9333333333333332,
+    "our_baseline_n": 3,
+    "seed": 0.8,
+    "cand_0001": 1.0,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.06666666666666676
+  },
+  {
+    "task": "platform-009-catalog-item-no-config",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-018-find-jobs-window",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-019-anarchysubject-state",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "not_optimized",
+    "jb_reward": 0.15,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.5,
+    "jb_answer": 0.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.85,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-020-ocpv-vm-inventory",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-021-babylon-missing-cluster-trap",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "not_optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 1.0,
+    "our_baseline_n": 3,
+    "seed": 1.0,
+    "cand_0001": null,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "our_baseline",
+    "final": 1.0,
+    "final_n": 3,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-022-job-on-no-controller",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "optimized",
+    "jb_reward": 0.7,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.6999999999999998,
+    "our_baseline_n": 3,
+    "seed": 0.595,
+    "cand_0001": 0.8949999999999999,
+    "cand_0002": 0.93,
+    "cand_0003": 1.0,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.30000000000000004,
+    "delta_vs_our_baseline": 0.30000000000000016
+  },
+  {
+    "task": "platform-023-splunk-guid-no-events",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.9333333333333332,
+    "our_baseline_n": 3,
+    "seed": 0.96,
+    "cand_0001": 0.8,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "final": 1.0,
+    "final_n": 5,
+    "delta_vs_jb": 0.0,
+    "delta_vs_our_baseline": 0.06666666666666676
+  },
+  {
+    "task": "platform-031-helm-url-not-a-timeout",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.677,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.8,
+    "jb_answer": 0.625,
+    "jb_n": 1,
+    "our_baseline": 0.7941666666666668,
+    "our_baseline_n": 3,
+    "seed": 0.44083333333333335,
+    "cand_0001": 0.86,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "final": 0.9650000000000001,
+    "final_n": 5,
+    "delta_vs_jb": 0.28800000000000003,
+    "delta_vs_our_baseline": 0.17083333333333328
+  },
+  {
+    "task": "platform-032-shared-secret-not-a-registry-outage",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.475,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 0.25,
+    "jb_n": 1,
+    "our_baseline": 0.65,
+    "our_baseline_n": 3,
+    "seed": 0.4875,
+    "cand_0001": 0.59,
+    "cand_0002": null,
+    "cand_0003": null,
+    "best": 0.59,
+    "best_tag": "cand_0001",
+    "final": 0.575,
+    "final_n": 5,
+    "delta_vs_jb": 0.09999999999999998,
+    "delta_vs_our_baseline": -0.07500000000000007
+  },
+  {
+    "task": "platform-033-schema-change-not-the-oom",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 1.0,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 1.0,
+    "jb_answer": 1.0,
+    "jb_n": 1,
+    "our_baseline": 0.9285713333333333,
+    "our_baseline_n": 3,
+    "seed": 0.40238060000000003,
+    "cand_0001": 0.7214286,
+    "cand_0002": 0.9666667999999999,
+    "cand_0003": null,
+    "best": 0.9666667999999999,
+    "best_tag": "cand_0002",
+    "final": 0.9666667999999999,
+    "final_n": 5,
+    "delta_vs_jb": -0.03333320000000006,
+    "delta_vs_our_baseline": 0.03809546666666663
+  },
+  {
+    "task": "platform-034-rate-limit-not-an-outage",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "status": "optimized",
+    "jb_reward": 0.769,
+    "jb_completion": 1.0,
+    "jb_tool_calls": 0.75,
+    "jb_answer": 0.778,
+    "jb_n": 1,
+    "our_baseline": 0.794444,
+    "our_baseline_n": 3,
+    "seed": 0.386111,
+    "cand_0001": 0.8166664000000001,
+    "cand_0002": 1.0,
+    "cand_0003": null,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "final": 0.9844443999999999,
+    "final_n": 5,
+    "delta_vs_jb": 0.21544439999999987,
+    "delta_vs_our_baseline": 0.19000039999999985
+  }
+];
+
+const SUMMARIES =
+[
+  {
+    "tranche": "regression",
+    "n_tasks": 30,
+    "jb_reward_mean": 0.8326333333333333,
+    "jb_reward_n": 30,
+    "our_baseline_mean": 0.8446296111111111,
+    "our_baseline_n": 30,
+    "final_mean": 0.9632777733333333,
+    "final_n": 30,
+    "delta_vs_jb_mean": 0.13064444,
+    "delta_vs_jb_n": 30,
+    "delta_vs_our_baseline_mean": 0.11864816222222223,
+    "delta_vs_our_baseline_n": 30
+  },
+  {
+    "tranche": "challenge",
+    "n_tasks": 4,
+    "jb_reward_mean": 0.7302500000000001,
+    "jb_reward_n": 4,
+    "our_baseline_mean": 0.7917955000000001,
+    "our_baseline_n": 4,
+    "final_mean": 0.8727777999999999,
+    "final_n": 4,
+    "delta_vs_jb_mean": 0.14252779999999995,
+    "delta_vs_jb_n": 4,
+    "delta_vs_our_baseline_mean": 0.08098229999999992,
+    "delta_vs_our_baseline_n": 4
+  }
+]
+;
+
+const COLUMNS = [
+  { key: "task", label: "task", tip: "Scenario id. Badges show tranche and optimization status." },
+  { key: "category", label: "cat", tip: "Service area, from the task id prefix (cloud/cost/icinga/platform)." },
+  { key: "jb_reward", label: "JB", tip: "JB baseline reward, run baseline-v2, n=1. Hover a cell for the completion/tool_calls/answer breakdown." },
+  { key: "our_baseline", label: "our base", tip: "cap-evolve's own zero-shot baseline (v4_t1_e1), mean of n=3 trials, before any optimization." },
+  { key: "seed", label: "seed", tip: "v4_t2_e1 seed skill's val-split reward (n=5 trials). Equals our baseline for tasks that were not optimized." },
+  { key: "cand_0001", label: "c1", tip: "Candidate 1 val-split reward (n=5 trials)." },
+  { key: "cand_0002", label: "c2", tip: "Candidate 2 val-split reward (n=5 trials)." },
+  { key: "cand_0003", label: "c3", tip: "Candidate 3 val-split reward (n=5 trials)." },
+  { key: "best", label: "best (val)", tip: "Best val-split reward across seed + candidates, with the winning tag." },
+  { key: "final", label: "final", tip: "The number used for delta columns: held-out test-split reward of the best candidate for optimized tasks, else our_baseline." },
+  { key: "delta_vs_jb", label: "Δ vs JB", tip: "final − JB baseline reward." },
+  { key: "delta_vs_our_baseline", label: "Δ vs our base", tip: "final − our v4_t1_e1 baseline. This is the optimizer's own lift; zero by construction for non-optimized tasks." },
+];
+
+let sortState = { key: "task", dir: "asc" };
+
+function color(v) {
+  if (v === null || v === undefined) return "#f3f4f6";
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220, 38, 38], mid = [254, 243, 199], high = [5, 150, 105];
+  let r, g, b;
+  if (t < 0.5) {
+    const k = t * 2;
+    r = low[0] + (mid[0] - low[0]) * k;
+    g = low[1] + (mid[1] - low[1]) * k;
+    b = low[2] + (mid[2] - low[2]) * k;
+  } else {
+    const k = (t - 0.5) * 2;
+    r = mid[0] + (high[0] - mid[0]) * k;
+    g = mid[1] + (high[1] - mid[1]) * k;
+    b = mid[2] + (high[2] - mid[2]) * k;
+  }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
+function textColorFor(bg) {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(bg);
+  if (!m) return "#111";
+  const lum = (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) / 255;
+  return lum > 0.6 ? "#111" : "#fff";
+}
+
+function fmt(v) {
+  return v === null || v === undefined ? "—" : v.toFixed(3);
+}
+
+function fmtDelta(v) {
+  if (v === null || v === undefined) return "—";
+  const s = v >= 0 ? "+" : "";
+  return s + v.toFixed(3);
+}
+
+function rewardCell(v, n, extraClass, tooltip) {
+  const empty = v === null || v === undefined;
+  const bg = color(v);
+  const style = empty ? "" : `background:${bg};color:${textColorFor(bg)};`;
+  const cls = ["reward-cell", extraClass, empty ? "empty-cell" : ""].filter(Boolean).join(" ");
+  const nBadge = !empty && n ? `<span class="cell-n">n=${n}</span>` : "";
+  const title = tooltip ? ` title="${tooltip.replace(/"/g, "&quot;")}"` : "";
+  return `<td class="${cls}" style="${style}"${title}>${fmt(v)}${nBadge}</td>`;
+}
+
+function jbTooltip(row) {
+  return `completion=${fmt(row.jb_completion)} tool_calls=${fmt(row.jb_tool_calls)} answer=${fmt(row.jb_answer)}`;
+}
+
+function sortRows(rows) {
+  const { key, dir } = sortState;
+  const sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = a[key], vb = b[key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === "string") return sign * va.localeCompare(vb);
+    return sign * (va - vb);
+  });
+}
+
+function renderHeader() {
+  return (
+    "<tr>" +
+    COLUMNS.map((c) => {
+      const active = sortState.key === c.key;
+      const arrow = active ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+      return `<th class="${active ? "sorted" : ""}" data-key="${c.key}" title="${c.tip.replace(/"/g, "&quot;")}">${c.label}<span class="arrow">${arrow}</span></th>`;
+    }).join("") +
+    "</tr>"
+  );
+}
+
+function renderTaskCell(row) {
+  const tBadge = `<span class="badge ${row.tranche}">${row.tranche}</span>`;
+  const sBadge = `<span class="badge ${row.status}">${row.status === "optimized" ? "opt" : "base only"}</span>`;
+  return `<td class="task-cell">${row.task}${tBadge}${sBadge}</td>`;
+}
+
+function renderRow(row) {
+  let html = "<tr>";
+  html += renderTaskCell(row);
+  html += `<td>${row.category}</td>`;
+  html += rewardCell(row.jb_reward, row.jb_n, "", jbTooltip(row));
+  html += rewardCell(row.our_baseline, row.our_baseline_n);
+  html += rewardCell(row.seed, row.status === "optimized" ? 5 : row.our_baseline_n);
+  html += rewardCell(row.cand_0001, row.cand_0001 !== null ? 5 : null);
+  html += rewardCell(row.cand_0002, row.cand_0002 !== null ? 5 : null);
+  html += rewardCell(row.cand_0003, row.cand_0003 !== null ? 5 : null);
+  html += rewardCell(row.best, null, "best-cell", `winning: ${row.best_tag}`);
+  html += rewardCell(row.final, row.final_n);
+  html += `<td>${fmtDelta(row.delta_vs_jb)}</td>`;
+  html += `<td>${fmtDelta(row.delta_vs_our_baseline)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function renderSummaryRow(s) {
+  const label = s.tranche === "regression" ? "MEAN — regression (30)" : "MEAN — challenge (4)";
+  let html = `<tr class="summary-row"><td class="task-cell">${label}</td><td></td>`;
+  html += rewardCell(s.jb_reward_mean, s.jb_reward_n);
+  html += rewardCell(s.our_baseline_mean, s.our_baseline_n);
+  html += "<td></td><td></td><td></td><td></td><td></td>";
+  html += rewardCell(s.final_mean, s.final_n);
+  html += `<td>${fmtDelta(s.delta_vs_jb_mean)}</td>`;
+  html += `<td>${fmtDelta(s.delta_vs_our_baseline_mean)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function render() {
+  const tbl = document.getElementById("tbl");
+  const rows = sortRows(DATA);
+  let html = "<thead>" + renderHeader() + "</thead><tbody>";
+  html += SUMMARIES.map(renderSummaryRow).join("");
+  html += rows.map(renderRow).join("");
+  html += "</tbody>";
+  tbl.innerHTML = html;
+
+  tbl.querySelectorAll("th").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState = { key, dir: "asc" };
+      }
+      render();
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>

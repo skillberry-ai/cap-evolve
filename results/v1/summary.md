@@ -165,7 +165,7 @@ assertions each.
 trivially all-satisfied, so its assertion component scores a **vacuous 1.000**, its trajectory scores
 0.000, and its reward is exactly `0.500` — **above the 0.240 set mean**. A task that checks nothing
 drags the aggregate **up**. It is the shortest and most damning report in
-[`reports/task-by-task/v1-aap2-0052.md`](../../reports/task-by-task/v1-aap2-0052.md).
+[`reports/task-by-task/v1/aap2-0052.md`](../../reports/task-by-task/v1/aap2-0052.md).
 
 Three more tasks sit at exactly `0.500` for the mirror-image reason — full assertions, zero
 trajectory (`0016`, `0036`) or full trajectory, zero assertions (`0113`). All four carry the

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T14:19:57Z",
+  "generated_at": "2026-09-22T16:13:14Z",
   "generator": "scripts/build_results_json.py",
   "benchmark": "parsec",
   "target": "parsec aap2 sub-agent SKILL.md (capabilities: [system-prompt])",
@@ -1502,7 +1502,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap2 log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/45274/output",
-      "report": "reports/task-by-task/v1-aap2-0004.md"
+      "report": "reports/task-by-task/v1/aap2-0004.md"
     },
     {
       "experiment": "v1",
@@ -1552,7 +1552,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap2 log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/45274/output",
-      "report": "reports/task-by-task/v1-aap2-0005.md"
+      "report": "reports/task-by-task/v1/aap2-0005.md"
     },
     {
       "experiment": "v1",
@@ -1602,7 +1602,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap log: https://prod0.apps.ocpv-infra01.dal12.infra.demo.redhat.com/#/jobs/playbook/44029/output",
-      "report": "reports/task-by-task/v1-aap2-0006.md"
+      "report": "reports/task-by-task/v1/aap2-0006.md"
     },
     {
       "experiment": "v1",
@@ -1656,7 +1656,7 @@
         "assertions": 0.5
       },
       "prompt": "debug snippet from 42287: [ERROR]: Task failed: Module failed: Traceback (most recent call last): File \"/tmp/ansible_ansible.legacy.async_wrapper_payload_cru4p2c5/ansible_ansible.legacy.async_wrapper_payload.zip/ansible/modules/async_wrapper.py\", line 173, in _run_module File \"/tmp/ansible_ansible.legacy.async_wrapper_payload_cru4p2c5/ansible_ansible.legacy.async_wrapper_payload.zip/ansible/modul\u2026",
-      "report": "reports/task-by-task/v1-aap2-0016.md"
+      "report": "reports/task-by-task/v1/aap2-0016.md"
     },
     {
       "experiment": "v1",
@@ -1707,7 +1707,7 @@
         "assertions": 0.5
       },
       "prompt": "Keep investigating",
-      "report": "reports/task-by-task/v1-aap2-0018.md"
+      "report": "reports/task-by-task/v1/aap2-0018.md"
     },
     {
       "experiment": "v1",
@@ -1757,7 +1757,7 @@
         "assertions": 0.5
       },
       "prompt": "debug failed provision https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2626877/output and suggest fix",
-      "report": "reports/task-by-task/v1-aap2-0021.md"
+      "report": "reports/task-by-task/v1/aap2-0021.md"
     },
     {
       "experiment": "v1",
@@ -1803,7 +1803,7 @@
         "assertions": 0.5
       },
       "prompt": "Check AAP2 job 38627 logs for specific error messages about pool discovery or resource references",
-      "report": "reports/task-by-task/v1-aap2-0023.md"
+      "report": "reports/task-by-task/v1/aap2-0023.md"
     },
     {
       "experiment": "v1",
@@ -1854,7 +1854,7 @@
         "assertions": 0.5
       },
       "prompt": "Keep investigating",
-      "report": "reports/task-by-task/v1-aap2-0030.md"
+      "report": "reports/task-by-task/v1/aap2-0030.md"
     },
     {
       "experiment": "v1",
@@ -1906,7 +1906,7 @@
         "assertions": 0.5
       },
       "prompt": "Keep investigating",
-      "report": "reports/task-by-task/v1-aap2-0032.md"
+      "report": "reports/task-by-task/v1/aap2-0032.md"
     },
     {
       "experiment": "v1",
@@ -1957,7 +1957,7 @@
         "assertions": 0.5
       },
       "prompt": "full logs provided --- Attached file: job_23449.txt --- Vault password (gpte_vault_0): PLAY [Step 0000 Set Action] **************************************************** TASK [Set ACTION to provision when undefined] ********************************** Sunday 05 July 2026 23:33:30 +0000 (0:00:00.009) 0:00:00.009 *********** skipping: [localhost] PLAY [Step 0000 Setup runtime] ************************\u2026",
-      "report": "reports/task-by-task/v1-aap2-0036.md"
+      "report": "reports/task-by-task/v1/aap2-0036.md"
     },
     {
       "experiment": "v1",
@@ -2005,7 +2005,7 @@
         "assertions": 0.5
       },
       "prompt": "aap2 troubleshoot the logs job_23449",
-      "report": "reports/task-by-task/v1-aap2-0037.md"
+      "report": "reports/task-by-task/v1/aap2-0037.md"
     },
     {
       "experiment": "v1",
@@ -2060,7 +2060,7 @@
         "assertions": 0.5
       },
       "prompt": "why is agd-v2.troshka-dedicated.dev-qllxm failing?",
-      "report": "reports/task-by-task/v1-aap2-0044.md"
+      "report": "reports/task-by-task/v1/aap2-0044.md"
     },
     {
       "experiment": "v1",
@@ -2112,7 +2112,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap logs: 297831, 297926, 297964, 298164. recommend fix for provision failure issue.",
-      "report": "reports/task-by-task/v1-aap2-0047.md"
+      "report": "reports/task-by-task/v1/aap2-0047.md"
     },
     {
       "experiment": "v1",
@@ -2164,7 +2164,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap logs: 297831, 297926, 297964, 298164. recommend fix for provision failure issue.",
-      "report": "reports/task-by-task/v1-aap2-0048.md"
+      "report": "reports/task-by-task/v1/aap2-0048.md"
     },
     {
       "experiment": "v1",
@@ -2214,7 +2214,7 @@
         "assertions": 0.5
       },
       "prompt": "compare aap logs 153426, 153388, and 153401. recommend fix for provision failure issue.",
-      "report": "reports/task-by-task/v1-aap2-0049.md"
+      "report": "reports/task-by-task/v1/aap2-0049.md"
     },
     {
       "experiment": "v1",
@@ -2267,7 +2267,7 @@
         "assertions": 0.5
       },
       "prompt": "can you check the user count also, some of this would be 1 users, while the failed one was 30 or 40 i think",
-      "report": "reports/task-by-task/v1-aap2-0052.md"
+      "report": "reports/task-by-task/v1/aap2-0052.md"
     },
     {
       "experiment": "v1",
@@ -2313,7 +2313,7 @@
         "assertions": 0.5
       },
       "prompt": "Can you lookup any aap2 jobs with sandboxes-gpte.ocp-gitops.prod and provision in the name. i need table of number of users, min time to provision, average time to provsion, max time to provision. also number of provisions. is there a stat that is better than average? i want to know how close to the 3h provisioning deadline we get. some of these jobs will have failed. go back 3 months if possible.",
-      "report": "reports/task-by-task/v1-aap2-0053.md"
+      "report": "reports/task-by-task/v1/aap2-0053.md"
     },
     {
       "experiment": "v1",
@@ -2359,7 +2359,7 @@
         "assertions": 0.5
       },
       "prompt": "What are the most recent AAP2 job failures across the controllers, and do any of them share a common root cause?",
-      "report": "reports/task-by-task/v1-aap2-0074.md"
+      "report": "reports/task-by-task/v1/aap2-0074.md"
     },
     {
       "experiment": "v1",
@@ -2410,7 +2410,7 @@
         "assertions": 0.5
       },
       "prompt": "aap 2 log job_2585893",
-      "report": "reports/task-by-task/v1-aap2-0080.md"
+      "report": "reports/task-by-task/v1/aap2-0080.md"
     },
     {
       "experiment": "v1",
@@ -2461,7 +2461,7 @@
         "assertions": 0.5
       },
       "prompt": "compare aap logs 2585964 and 2585712. investigate for reason for deployment failure and suggest a recommended fix.",
-      "report": "reports/task-by-task/v1-aap2-0081.md"
+      "report": "reports/task-by-task/v1/aap2-0081.md"
     },
     {
       "experiment": "v1",
@@ -2511,7 +2511,7 @@
         "assertions": 0.5
       },
       "prompt": "aap log to troubleshoot: job_2585893",
-      "report": "reports/task-by-task/v1-aap2-0082.md"
+      "report": "reports/task-by-task/v1/aap2-0082.md"
     },
     {
       "experiment": "v1",
@@ -2561,7 +2561,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap log: 2584889 . describe why this deployment failed and recommend any suggested fix.",
-      "report": "reports/task-by-task/v1-aap2-0084.md"
+      "report": "reports/task-by-task/v1/aap2-0084.md"
     },
     {
       "experiment": "v1",
@@ -2611,7 +2611,7 @@
         "assertions": 0.5
       },
       "prompt": "debug aap log 2575814 and correllate with ansible error: TASK [redhat.rhel_system_roles.rhc : Set or unset the release] ***************** task path: /usr/share/ansible/collections/ansible_collections/redhat/rhel_system_roles/roles/rhc/tasks/subscription-manager.yml:50 fatal: [edpm-compute-1]: FAILED! => {\"changed\": false, \"cmd\": \"/sbin/subscription-manager release --set 9.4\", \"msg\": \"No releases \u2026",
-      "report": "reports/task-by-task/v1-aap2-0085.md"
+      "report": "reports/task-by-task/v1/aap2-0085.md"
     },
     {
       "experiment": "v1",
@@ -2661,7 +2661,7 @@
         "assertions": 0.5
       },
       "prompt": "Investigate this AAP2 failed job. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2574152/output",
-      "report": "reports/task-by-task/v1-aap2-0087.md"
+      "report": "reports/task-by-task/v1/aap2-0087.md"
     },
     {
       "experiment": "v1",
@@ -2711,7 +2711,7 @@
         "assertions": 0.5
       },
       "prompt": "aap2 job failure log job_2575942",
-      "report": "reports/task-by-task/v1-aap2-0088.md"
+      "report": "reports/task-by-task/v1/aap2-0088.md"
     },
     {
       "experiment": "v1",
@@ -2761,7 +2761,7 @@
         "assertions": 0.5
       },
       "prompt": "Investigate & suggest fix for this AAP2 job failure. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2572577/output",
-      "report": "reports/task-by-task/v1-aap2-0092.md"
+      "report": "reports/task-by-task/v1/aap2-0092.md"
     },
     {
       "experiment": "v1",
@@ -2811,7 +2811,7 @@
         "assertions": 0.5
       },
       "prompt": "troubleshoot aap2 logs job_2566771",
-      "report": "reports/task-by-task/v1-aap2-0094.md"
+      "report": "reports/task-by-task/v1/aap2-0094.md"
     },
     {
       "experiment": "v1",
@@ -2863,7 +2863,7 @@
         "assertions": 0.5
       },
       "prompt": "analyze and compare aap logs 2560582 and 2560167. recommend fix to prevent consecutive failure.",
-      "report": "reports/task-by-task/v1-aap2-0104.md"
+      "report": "reports/task-by-task/v1/aap2-0104.md"
     },
     {
       "experiment": "v1",
@@ -2913,7 +2913,7 @@
         "assertions": 0.5
       },
       "prompt": "Investigate and suggest fix on this AAP2 job. https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/2557893/output",
-      "report": "reports/task-by-task/v1-aap2-0112.md"
+      "report": "reports/task-by-task/v1/aap2-0112.md"
     },
     {
       "experiment": "v1",
@@ -2961,7 +2961,7 @@
         "assertions": 0.5
       },
       "prompt": "aap2 check logs for job job_2557893",
-      "report": "reports/task-by-task/v1-aap2-0113.md"
+      "report": "reports/task-by-task/v1/aap2-0113.md"
     },
     {
       "experiment": "v2",
@@ -3007,7 +3007,7 @@
         "answer": 0.8
       },
       "prompt": "What was the outcome of AAP2 job 90142 on controller prod0, and which job template ran it?",
-      "report": "reports/task-by-task/v2-bench-aap2-001-single-job-outcome.md"
+      "report": "reports/task-by-task/v2/bench-aap2-001-single-job-outcome.md"
     },
     {
       "experiment": "v2",
@@ -3053,7 +3053,7 @@
         "answer": 0.4
       },
       "prompt": "How many AAP2 jobs are in a failed or errored state on controller prod1, and which are they? List them by id.",
-      "report": "reports/task-by-task/v2-bench-aap2-002-failed-jobs-on-controller.md"
+      "report": "reports/task-by-task/v2/bench-aap2-002-failed-jobs-on-controller.md"
     },
     {
       "experiment": "v2",
@@ -3099,7 +3099,7 @@
         "answer": 0.8
       },
       "prompt": "AAP2 job 90233 on prod0 appears never to have run any tasks. Explain why the controller reports it as errored.",
-      "report": "reports/task-by-task/v2-bench-aap2-003-never-started-explanation.md"
+      "report": "reports/task-by-task/v2/bench-aap2-003-never-started-explanation.md"
     },
     {
       "experiment": "v2",
@@ -3145,7 +3145,7 @@
         "answer": 0.8
       },
       "prompt": "AAP2 job 90310 failed. Which Ansible task failed, and on which host?",
-      "report": "reports/task-by-task/v2-bench-aap2-004-failing-task-and-host.md"
+      "report": "reports/task-by-task/v2/bench-aap2-004-failing-task-and-host.md"
     },
     {
       "experiment": "v2",
@@ -3191,7 +3191,7 @@
         "answer": 0.5
       },
       "prompt": "A job failed on AAP2 controller prod0. Find it and tell me which Ansible task failed and why.",
-      "report": "reports/task-by-task/v2-bench-aap2-005-find-then-diagnose.md"
+      "report": "reports/task-by-task/v2/bench-aap2-005-find-then-diagnose.md"
     },
     {
       "experiment": "v2",
@@ -3237,7 +3237,7 @@
         "answer": 0.5
       },
       "prompt": "The certificate rotation on AAP2 controller prod1 failed. Read the job's log and tell me the root cause.",
-      "report": "reports/task-by-task/v2-bench-aap2-006-log-root-cause.md"
+      "report": "reports/task-by-task/v2/bench-aap2-006-log-root-cause.md"
     },
     {
       "experiment": "v2",
@@ -3283,7 +3283,7 @@
         "answer": 0.5
       },
       "prompt": "On AAP2 controller prod0, how many jobs from the patch-rhel9 job template are in a failed or errored state, and which of them started earliest?",
-      "report": "reports/task-by-task/v2-bench-aap2-007-count-and-oldest.md"
+      "report": "reports/task-by-task/v2/bench-aap2-007-count-and-oldest.md"
     },
     {
       "experiment": "v2",
@@ -3329,7 +3329,7 @@
         "answer": 0.8
       },
       "prompt": "AAP2 job 90810 on prod0 stopped part-way through its playbook. Which task failed, and which task completed immediately before it?",
-      "report": "reports/task-by-task/v2-bench-aap2-008-preceding-task.md"
+      "report": "reports/task-by-task/v2/bench-aap2-008-preceding-task.md"
     },
     {
       "experiment": "v2",
@@ -3375,7 +3375,7 @@
         "answer": 0.8
       },
       "prompt": "What happened to AAP2 job 91999 on controller prod0? Summarise its outcome.",
-      "report": "reports/task-by-task/v2-bench-aap2-009-nonexistent-job.md"
+      "report": "reports/task-by-task/v2/bench-aap2-009-nonexistent-job.md"
     },
     {
       "experiment": "v2",
@@ -3421,7 +3421,7 @@
         "answer": 0.8
       },
       "prompt": "AAP2 job 91010 on controller prod1 failed. Was this a network problem? Check the job's log, and tell me which task failed and what the real cause was.",
-      "report": "reports/task-by-task/v2-bench-aap2-010-log-does-not-say.md"
+      "report": "reports/task-by-task/v2/bench-aap2-010-log-does-not-say.md"
     }
   ]
 }

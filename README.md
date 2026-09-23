@@ -14,28 +14,36 @@ one was accepted or rejected, what a number does and doesn't mean. That has no h
 machine-written (by `ci/benchmarks/lib/record.py` on `main`) and periodically pruned; it
 carries the numbers, not the story behind them. This branch is where the story lives.
 
-Two independent experiments are recorded here, both against parsec's AAP2 job-diagnosis
-domain, sharing nothing except the branch:
+Three independent experiments are recorded here, sharing nothing except the branch — v1 and
+v2 both target parsec's AAP2 job-diagnosis domain, v4 is wider (see below):
 
 | experiment | tasks | source |
 |---|---|---|
 | **v1** | 30 trace-extracted `traces_parsec-aap2-*` tasks, real production traces | `parsec-intake_v1` worktree |
 | **v2** | 10 hand-authored `bench-aap2-*` scenarios, one isolated simulator per task | `parsec-intake_v2` worktree |
+| **v4** | 34-task multi-agent AAP2/GCP/ICINGA benchmark (`platform-*`, `cloud-*`, `cost-*`, `icinga-*`), harbor-native | `parsec-intake_v4` worktree |
 
 They are not comparable to each other — different task sets, different simulators, different
 scoring — see [`results/v1/summary.md`](results/v1/summary.md)'s "v1 is not comparable to
 v2" table for exactly why.
 
+v4 is a third, separate experiment against a different, larger task set (34 tasks across four
+categories vs. v1/v2's AAP2-only scope) and a different target (one shared 8-file multi-agent bundle
+vs. v1/v2's single `SKILL.md`). It has its own ledger and heatmap
+([`results/v4/results.json`](results/v4/results.json), [`ui/heatmap_v4.html`](ui/heatmap_v4.html))
+rather than sharing v1/v2's — see [`results/v4/summary.md`](results/v4/summary.md).
+
 ## Layout
 
 | directory | what's in it |
 |---|---|
-| [`results/`](results/) | the numbers — `results.json` (the one generated ledger everything else reads from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories |
+| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` has its own separate `results.json` + `summary.md`, deliberately not folded into the shared one (different task set, different shape) |
 | [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did |
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
 | [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` — everything numeric in this branch is derived by one of these, never hand-typed twice |
-| [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap |
+| [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
+| [`ui/heatmap_v4.html`](ui/heatmap_v4.html) | the same, for v4 — a separate page, not a shared one, matching `results/v4/`'s separate ledger |
 | [`presentation/`](presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
 
 No `insights/`, `evidence/`, `handoffs/`, or `proposals/` here — those are
@@ -65,7 +73,7 @@ git worktree add ../cap-evolve-worktrees/parsec-history parsec-history
 
 This branch's `.gitignore` (unlike `skillsbench-history`, which has none) already excludes
 `__pycache__/`, `.env`, `.env.*`, `.cache/`, and `.DS_Store` — but double-check `git status`
-before every commit anyway. Raw simulator rollouts (~96MB across both experiments) are
+before every commit anyway. Raw simulator rollouts (~96MB across v1/v2) and v4's raw `.capevolve/` run directories are
 deliberately **not** committed here; they remain only in the source `parsec-intake_v1`/
-`parsec-intake_v2` worktrees. If you're adding a new experiment, keep it that way — commit
-the derived per-task score vectors and the recipe that produced them, not the rollout logs.
+`parsec-intake_v2`/`parsec-intake_v4` worktrees. If you're adding a new experiment, keep it that
+way — commit the derived per-task score vectors and the recipe that produced them, not the raw logs.
