@@ -181,7 +181,7 @@ export function TaskMatrix({
           <table className="border-separate border-spacing-[2px] text-[11px]">
             <thead>
               {hasRounds && (
-                <tr aria-hidden={roundGroups.every((g) => g.round_id == null)}>
+                <tr>
                   <th className="sticky left-0 z-10 bg-surface" />
                   {roundGroups.map((g, i) => (
                     <th
@@ -243,10 +243,16 @@ export function TaskMatrix({
                             'relative flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
                             // Solid ring colour, no opacity modifier (see ROUND_BAND_CLASSES
                             // above for why one silently renders nothing in this setup).
-                            'text-[9px] text-muted transition-shadow duration-150 hover:ring-2 hover:ring-border-strong',
+                            // fixed/broke and :hover both set the same --tw-ring-color custom
+                            // property, so a hover utility on top of a fixed/broke ring class
+                            // would win by pseudo-class specificity and hide the marker on the
+                            // exact interaction used to inspect it — one ring colour per state
+                            // (fixed/broke takes priority; hover only applies otherwise).
+                            'text-[9px] text-muted transition-shadow duration-150',
                             (fixed || broke) && 'ring-1 ring-inset',
                             fixed && 'ring-accepted',
                             broke && 'ring-rejected',
+                            !fixed && !broke && 'hover:ring-2 hover:ring-border-strong',
                             c.cls,
                           )}
                         >
