@@ -21,19 +21,39 @@ _Numbers above are generated from `results/results.json`. Val rewards unless lab
 
 ## What changed
 
-_Not yet analysed._
+The optimizer added a `locational-marginal-prices` skill dependency plus, within
+`economic-dispatch`, an LMP-focused inline `cvxpy` formulation that keeps named constraint
+references so `.dual_value` can be read off the nodal balance constraints after solving —
+this task needs LMPs, unlike its skill-sharing partner `grid-dispatch-operator`. It also
+shares `dc-power-flow` and `power-flow-data` with that task, both edited independently there.
+This task-pair conflict (three skills, two independently edited variants each) is the subject
+of the [3x2_toy pilot](../../docs/specs/3x2_toy_experiment_plan.md), which asks whether the two
+tasks' variants can be merged into one shared package without losing either task's needs.
 
 ## What worked
 
-_Not yet analysed._
+The tbt (task-by-task) run reached 0.9 val, short of `grid-dispatch-operator`'s 1.0 — but every
+merge/transfer arm the pilot tried scored *at or above* this task's own tbt result: cross-task
+transfer of `grid-dispatch-operator`'s donor skills scored 0.7 zero-shot (`toy:A3`), the static
+3-file merge scored 1.0 zero-shot (`toy:A4`), and the single-collapsed-skill merge scored 0.9–1.0
+across its variants (`toy:B3`/`toy:B4`). Merging never regressed below this task's own tbt score.
 
 ## What didn't
 
-_Not yet analysed._
-
-_A rejected candidate is not a regression: it reverts to the champion, so a low score on a
-later candidate does not undo an earlier accepted fix._
+Zero-shot cross-task transfer (`toy:A3`, deploying `grid-dispatch-operator`'s optimized
+`economic-dispatch` variant here verbatim) landed at 0.7, not 1.0 — see §6 of the pilot doc: that
+donor's variant replaced the inline LMP-capable formulation with a bundled `solve_dispatch.py`
+that never exposes constraint dual values, which this task needs for LMPs. That's the concrete,
+measured instance of "a donor skill can silently drop information the receiving task needs" —
+the pilot's plain merge (rather than a straight swap) avoided this by keeping the inline
+formulation as the default path.
 
 ## What we can (or can't) learn
 
-_Not yet analysed._
+The lift from 0.9 (this task's own tbt result) to 1.0 (every merge/collapse arm) is a genuine,
+measured case of **the merged package doing better than either task's own independently
+optimized skill** — on this task-pair, resolving a fixed-vocabulary skill conflict cost nothing
+and, if anything, helped. That reading is specific to this DC-OPF skill family (n=2 tasks, one
+domain); the pilot doc's §11 explicitly flags `xlsx`'s 6-task conflict as a case where a donor
+variant instead *hurts* a receiving task, so this result should not be generalized to every
+conflicted skill in `insights/SKILLS_TASKS_MAP.md` Table E.

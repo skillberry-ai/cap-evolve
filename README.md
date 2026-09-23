@@ -40,6 +40,9 @@ the code that got evolved, the reasoning.
   artifacts, and diffs.
 - `handoffs/` — session-to-session handoff docs for in-progress experiment lines.
 - `proposals/` — design docs for experiments not yet (fully) run.
+- `docs/specs/` — study-level experiment design/record docs (e.g.
+  `experiments_plan_v1.md`, `3x2_toy_experiment_plan.md`) — the design predates and outlives
+  any single run, unlike `proposals/`'s not-yet-run scope.
 - `ui/` — standalone browsable HTML artifacts (charts, heatmaps). Open directly in a
   browser from a checkout — no build step, no server.
 
