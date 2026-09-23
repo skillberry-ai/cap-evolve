@@ -184,14 +184,16 @@ class TestParsecV4NIsEnvOverridable(unittest.TestCase):
             # instead of restoring the module's real environment.
             importlib.reload(scaffold_projects)
 
-    def test_default_matches_adapter_pys_default(self):
+    def test_default_is_none_when_env_unset(self):
+        """No Mac fallback: unset PARSEC_V4N must resolve to None, not a
+        hardcoded personal path. This test used to assert the opposite —
+        that the hardcoded Mac path WAS the correct default — which is
+        exactly the two-sources-of-truth defect parsec_paths.py replaces."""
         try:
             with patch.dict(os.environ, {}, clear=True):
                 reloaded = importlib.reload(scaffold_projects)
-                self.assertEqual(
-                    reloaded.PARSEC_V4N,
-                    Path("/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16"),
-                )
+                self.assertIsNone(reloaded.PARSEC_V4N)
+                self.assertIsNone(reloaded.PROMPTS_DIR)
         finally:
             importlib.reload(scaffold_projects)
 

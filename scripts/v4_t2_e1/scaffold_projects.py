@@ -33,13 +33,18 @@ CAPEVOLVE_DIR = REPO_ROOT / ".capevolve"
 COMMON_ADAPTERS_SRC = Path(__file__).resolve().parent / "common" / "adapters"
 COMMON_OPTIMIZER_SRC = Path(__file__).resolve().parent / "common" / "optimizer"
 
-# Same env var, same default, as common/adapters/adapter.py's V4N. Two sources
-# of truth for "which parsec checkout" is how a seed snapshot gets frozen from
-# one tree while the trials that score it run against another.
-PARSEC_V4N = Path(
-    os.environ.get("PARSEC_V4N", "/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16")
+# common/ holds parsec_paths.py, the single source of truth for PARSEC_V4N —
+# see that module's docstring for why adapter.py and this file must not each
+# keep their own copy of the same default.
+_COMMON_DIR = Path(__file__).resolve().parent / "common"
+if str(_COMMON_DIR) not in sys.path:
+    sys.path.insert(0, str(_COMMON_DIR))
+import parsec_paths  # noqa: E402
+
+PARSEC_V4N = parsec_paths.resolve_v4n_or_none()
+PROMPTS_DIR = (
+    PARSEC_V4N / "_run" / "parsec-live" / "config" / "prompts" if PARSEC_V4N else None
 )
-PROMPTS_DIR = PARSEC_V4N / "_run" / "parsec-live" / "config" / "prompts"
 
 PROMPT_FILES = [
     "orchestrator.md",
@@ -195,6 +200,14 @@ def main() -> int:
             print(f"would scaffold {CAPEVOLVE_DIR / f'v4_t2_e1_{task_id}' / 'project'}")
         return 0
 
+    if PROMPTS_DIR is None:
+        print(
+            "PARSEC_V4N environment variable is required (the parsec v4 "
+            "checkout root, e.g. .../rhdp-parsec/v4_2026-09-16) — set it "
+            "before scaffolding.",
+            file=sys.stderr,
+        )
+        return 1
     if not PROMPTS_DIR.exists():
         print(f"prompts dir not found: {PROMPTS_DIR}", file=sys.stderr)
         return 1
