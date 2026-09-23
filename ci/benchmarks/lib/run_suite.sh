@@ -137,8 +137,26 @@ mkdir -p "$OUT/optimized"
 
 [ -f "$BASE/tasks.json" ] || { echo "::warning::no tasks.json for $BENCH/$TIER — nothing to run"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks defined for this tier)" >> "$OUT/report.md"; exit 0; }
 
-: "${ANTHROPIC_BASE_URL:?set ANTHROPIC_BASE_URL (IBM gateway)}"
-: "${ANTHROPIC_AUTH_TOKEN:?set ANTHROPIC_AUTH_TOKEN}"
+# Resolve AGENT_MODEL/OPTIMIZER_MODEL to their provider (ETE gateway, or RITS via the
+# skillberry-1 lite-rits proxy for a "rits/*" id) — see resolve_provider.sh. Each is
+# resolved independently: dispatching a RITS agent_model with a Claude optimizer_model
+# (or vice versa) is a normal, deliberate combination, not an error.
+# shellcheck source=ci/benchmarks/lib/resolve_provider.sh
+. "$LIB_DIR/resolve_provider.sh"
+resolve_provider "$AGENT_MODEL"
+AGENT_MODEL_WIRE="$RESOLVED_MODEL"; AGENT_API_BASE="$RESOLVED_API_BASE"; AGENT_API_KEY="$RESOLVED_API_KEY"
+resolve_provider "$OPTIMIZER_MODEL"
+OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE"; OPTIMIZER_API_KEY="$RESOLVED_API_KEY"
+# The `claude` CLI (optimizer_skill: claude-code, invoked further down by
+# `cap_evolve.cli run` / agent-optimize's host.py) reads ANTHROPIC_BASE_URL/
+# ANTHROPIC_AUTH_TOKEN from the process environment — overriding them here, once, before
+# either is invoked, is what makes an OPTIMIZER_MODEL of "rits/*" actually reach RITS
+# rather than silently keep talking to the ETE gateway with a model id it doesn't
+# recognise. NOT yet verified that lite-rits speaks the Anthropic Messages API the CLI
+# expects — see the PR description.
+export ANTHROPIC_BASE_URL="$OPTIMIZER_API_BASE"
+export ANTHROPIC_AUTH_TOKEN="$OPTIMIZER_API_KEY"
+OPTIMIZER_MODEL="$OPTIMIZER_MODEL_WIRE"
 
 export PYTHONPATH="$REPO/core:$REPO"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
@@ -204,9 +222,9 @@ case "$BENCH" in
     # briefing does it in host.py's `_surface_section`.
     CAPS="[system-prompt, tools]"
     cat > "$WORK/.env" <<ENV
-MODEL=litellm_proxy/$AGENT_MODEL
-LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
-LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MODEL=litellm_proxy/$AGENT_MODEL_WIRE
+LITELLM_PROXY_API_BASE=$AGENT_API_BASE
+LITELLM_PROXY_API_KEY=$AGENT_API_KEY
 MAX_TOKENS=8000
 TEMPERATURE=0.0
 ENV
@@ -223,7 +241,7 @@ ENV
     CAPS="[skill-package]"
     export HARBOR_DATASET=swe-bench/swe-bench-verified
     export HARBOR_AGENT=claude-code
-    export HARBOR_MODEL="$AGENT_MODEL"
+    export HARBOR_MODEL="$AGENT_MODEL_WIRE"
     # Concurrency. 16 was WRONG and pilot run 31274531220 proved it: 34 of 50 tasks
     # infra-errored, the box sat at load 30 of 32 cores, and the failures were agent-bootstrap
     # (npm exit 126/128, NetworkConnectionError) plus CancelledError from rollouts starved of
@@ -283,9 +301,9 @@ ENV
     # this runner and wrong for a LiteLLM key. Setting it makes the adapter export
     # ANTHROPIC_BASE_URL plus the SONNET/HAIKU/OPUS model aliases into the container, so
     # every agent call goes through the same gateway the optimizer uses.
-    export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$ANTHROPIC_BASE_URL}"
-    export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$ANTHROPIC_AUTH_TOKEN}"
-    export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+    export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$AGENT_API_BASE}"
+    export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$AGENT_API_KEY}"
+    export ANTHROPIC_API_KEY="$AGENT_API_KEY"
     : > "$WORK/.env"
     ;;
   parsec)
@@ -330,7 +348,7 @@ ENV
     [ -d "$HARBOR_DATASET" ] || { echo "::error:: parsec shadow tasks not found at $HARBOR_DATASET (set PARSEC_HARBOR_TASKS_V2_DST / PARSEC_HARBOR_TASKS_DST, or run the matching ci/benchmarks/parsec/utils/patch-harbor-tasks*.sh first — see ci/benchmarks/parsec/README.md)"; exit 1; }
     export HARBOR_LOCAL_ASIS=1
     export HARBOR_AGENT=claude-code
-    export HARBOR_MODEL="$AGENT_MODEL"
+    export HARBOR_MODEL="$AGENT_MODEL_WIRE"
     case "${TIER:-smoke}" in
       smoke) _hp_default=2 ;;
       *)     _hp_default=4 ;;
@@ -347,9 +365,9 @@ ENV
     # Route the in-container claude-code at the VPC gateway (same rationale as
     # swebench). Without HARBOR_AGENT_BASE_URL the adapter falls back to bare
     # api.anthropic.com which is unreachable from the runner.
-    export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$ANTHROPIC_BASE_URL}"
-    export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$ANTHROPIC_AUTH_TOKEN}"
-    export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+    export HARBOR_AGENT_BASE_URL="${HARBOR_AGENT_BASE_URL:-$AGENT_API_BASE}"
+    export HARBOR_AGENT_API_KEY="${HARBOR_AGENT_API_KEY:-$AGENT_API_KEY}"
+    export ANTHROPIC_API_KEY="$AGENT_API_KEY"
     # BACKEND_MCP_URL retained for compatibility with any lingering ${VAR}
     # placeholder in task.toml (the v1 shadow patcher replaces most). Points at
     # the aap2 sim by default. Inert for v2, whose task.toml files carry a
@@ -369,13 +387,13 @@ ENV
     cp -R "$SB_SRC/tasks/pdf-excel-diff/environment/skills/pdf"          "$SEED/pdf"
     CAPS="[skill-package]"
     cat > "$WORK/.env" <<ENV
-ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL
-ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN
-SKILLSBENCH_MODEL=$AGENT_MODEL
+ANTHROPIC_BASE_URL=$AGENT_API_BASE
+ANTHROPIC_AUTH_TOKEN=$AGENT_API_KEY
+SKILLSBENCH_MODEL=$AGENT_MODEL_WIRE
 SKILLSBENCH_TASKS_DIR=$SB_SRC/tasks
 SKILLSBENCH_CONCURRENCY=10
 ENV
-    export SKILLSBENCH_MODEL="$AGENT_MODEL"
+    export SKILLSBENCH_MODEL="$AGENT_MODEL_WIRE"
     export SKILLSBENCH_TASKS_DIR="$SB_SRC/tasks"
     export SKILLSBENCH_CONCURRENCY=10
     ;;
@@ -504,9 +522,9 @@ OPTNOTE
     case "$TIER" in full|pilot) SB_MAX_TURNS_DEFAULT=30;; esac
     CAPS="[system-prompt]"
     cat > "$WORK/.env" <<ENV
-MODEL=litellm_proxy/$AGENT_MODEL
-LITELLM_PROXY_API_BASE=$ANTHROPIC_BASE_URL
-LITELLM_PROXY_API_KEY=$ANTHROPIC_AUTH_TOKEN
+MODEL=litellm_proxy/$AGENT_MODEL_WIRE
+LITELLM_PROXY_API_BASE=$AGENT_API_BASE
+LITELLM_PROXY_API_KEY=$AGENT_API_KEY
 MAX_TOKENS=8000
 TEMPERATURE=0.0
 SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
@@ -545,18 +563,18 @@ ENV
     done
     CAPS="[skill-package]"
     cat > "$WORK/.env" <<ENV
-ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL
-ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN
+ANTHROPIC_BASE_URL=$AGENT_API_BASE
+ANTHROPIC_AUTH_TOKEN=$AGENT_API_KEY
 RFE_CREATOR_DIR=$RFE_SRC/rfe-creator
 AGENT_EVAL_HARNESS_DIR=$RFE_SRC/agent-eval-harness
 RFE_EVAL_CONFIG=$RFE_SRC/eval.merged.yaml
-RFE_RUNNER_MODEL=$AGENT_MODEL
+RFE_RUNNER_MODEL=$AGENT_MODEL_WIRE
 RFE_HARNESS_PY=$PY
 ENV
     export RFE_CREATOR_DIR="$RFE_SRC/rfe-creator"
     export AGENT_EVAL_HARNESS_DIR="$RFE_SRC/agent-eval-harness"
     export RFE_EVAL_CONFIG="$RFE_SRC/eval.merged.yaml"
-    export RFE_RUNNER_MODEL="$AGENT_MODEL"
+    export RFE_RUNNER_MODEL="$AGENT_MODEL_WIRE"
     export RFE_HARNESS_PY="$PY"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
@@ -609,7 +627,7 @@ capabilities:       $CAPS
 capability_path:    seed_capability
 optimizer_skill:    claude-code
 optimizer_model:    $OPTIMIZER_MODEL
-target_model:       $AGENT_MODEL
+target_model:       $AGENT_MODEL_WIRE
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
 # Set (to an ABSOLUTE path) only by an arm that ships its own optimizer instructions;

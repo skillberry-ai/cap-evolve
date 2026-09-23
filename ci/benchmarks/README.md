@@ -193,7 +193,38 @@ No baseline-freezing step — `run_suite.sh` computes the baseline fresh, in the
 whatever ids are listed. Pick ids with headroom (baseline not already saturated) by running
 `run_suite.sh` against a candidate list and checking the report.
 
-Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`.
+Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` — the ete-litellm
+gateway, used for every plain (non-`rits/`-prefixed) `agent_model`/`optimizer_model` id.
+
+### RITS (skillberry-1 lite-rits proxy)
+
+A second provider, reached only through a `rits/<vendor>/<model>` model id in either
+dropdown. `resolve_provider.sh` strips the CI-only `rits/` prefix and resolves the rest to
+the `RITS_API_BASE`/`RITS_API_KEY` secrets — a LiteLLM proxy (`lite-rits`) running on
+skillberry-1 itself (`http://localhost:4000`), talking directly to IBM RITS's own API. Since
+the `ibm-vpc` self-hosted runner IS skillberry-1, this needs no new network path.
+
+- **Repo secrets required:** `RITS_API_BASE` (`http://localhost:4000`), `RITS_API_KEY`.
+- **Model ids** are the bare `<vendor>/<model>` strings in lite-rits's own scraped catalog
+  (e.g. `google/gemma-4-31B-it`), prefixed with `rits/` for the dropdown only.
+  `agent_model`/`optimizer_model` resolve independently, so a RITS agent with a
+  gateway optimizer (or vice versa) is a normal, deliberate combination.
+- **`agent_model`/`optimizer_model`'s curated RITS entries** are a general-purpose spread
+  across lite-rits's catalog, granite family excluded on request. Only
+  `rits/google/gemma-4-31B-it` is a genuine match to the WikiSkill paper's
+  (arXiv 2608.27454v1) SpreadsheetBench model axis (Qwen-3.5-4B/9B, Qwen-3.6-27B,
+  Gemma-4-31B, Gemini-3.5-Flash) — RITS carries no small Qwen or Gemini, so the rest of the
+  list is not a reproduction of that axis.
+- **Preflight:** `ci_setup.sh`'s gateway preflight is provider-aware — it skips the
+  ete-litellm `/models` entitlement check for a `rits/*` model (lite-rits's own `/v1/models`
+  is always empty by design: it builds routes dynamically per request rather than
+  publishing a static `model_list`) and instead runs the same completion probe against
+  `RITS_API_BASE`/`RITS_API_KEY`.
+- **Caveat:** `OPTIMIZER_MODEL: rits/*` points the `claude-code` CLI's
+  `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` at lite-rits. It is UNVERIFIED whether
+  lite-rits speaks the Anthropic Messages API shape the CLI expects — a RITS
+  `agent_model` with a gateway (Claude) `optimizer_model` is the combination actually
+  exercised so far.
 
 > **Note:** GitHub only exposes `workflow_dispatch` (and evaluates `pull_request`
 > workflows) from the **default branch**, so `benchmarks.yml` becomes triggerable
