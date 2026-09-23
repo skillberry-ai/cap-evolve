@@ -100,7 +100,7 @@ still wrong ⇒ the content is.
 **2. Bucket every edit before spending, per the form table below** (deterministic → B,
 probabilistic → A). **A:** sibling candidates, N≥3, gated separately — unchanged default.
 **B:** merge every low-risk structural fix into one working copy, gate once via steps 3–4 — no
-per-fix screen/gate, since each part already cleared its own bar alone. Details:
+per-fix screen/gate, each part already cleared its own bar alone. Details:
 `references/algorithm.md`, "Bucketing edits before spending".
 
 ```bash
@@ -208,27 +208,27 @@ python "$A/round.py" --run-dir "$R" --project "$P" \
        --n-trials <num_trials> --k-se <gate_k_se> --concurrency 8 --max-parallel 2
 ```
 
-`--concurrency` is the gate's *measurement* concurrency and defaults deliberately low; `round.py`
-refuses one too hot to resolve its own verdict, so never raise it to buy wall clock. Read
-`noise_floor_from_control` FIRST — a candidate inside that band is not evidence, whatever its verdict.
-`round.py` never commits: which part of a bundle to keep is your judgement.
+`--concurrency` is the gate's *measurement* concurrency, deliberately low by default; `round.py`
+refuses one too hot to resolve its own verdict — never raise it to buy wall clock. Read
+`noise_floor_from_control` FIRST: a candidate inside that band is not evidence, whatever its verdict.
+`round.py` never commits — which part of a bundle to keep is your call.
 
 Four invariants, to state before every fan-out (the reasoning, and where fan-out pays best, are under
 *Parallelism* in [`references/algorithm.md`](references/algorithm.md)):
 
 1. **Diagnosis fans out freely** — read-only, zero rollouts: one `cap-evolve-diagnoser` per failure
    cluster or rollout shard, then merge their JSON.
-2. **Proposal fans out across distinct working copies, one `cp -r` per sibling, tag unique per sibling** —
-   rollouts are `<task>__<tag>__t<k>.json`, so a shared tag interleaves two evals into the same filenames
-   and corrupts both scores.
+2. **Proposal fans out across distinct copies, one `prepare_candidate.py` per sibling (never
+   bare `cp -r`), tag unique per sibling** — rollouts are `<task>__<tag>__t<k>.json`, so a
+   shared tag interleaves two evals into the same filenames and corrupts both scores.
 3. **The gate stays serial** — gate + commit one sibling at a time, and after any accept **re-run
    `gate_check.py` for every remaining sibling against the new best**. Skipping that re-gate
    double-counts a gain and admits an edit that never beat what it now stacks on.
 4. **Never fan out across the test split, and pay before you fan out** — `spend.py --n-siblings N`
    must say `affordable: true` first.
 
-Concurrency also composes *inside* one evaluation (`screen.py --workers N` / `CAPEVOLVE_WORKERS=N`, pooling
-rollout generation only — numbers stay byte-identical to serial). Opt in only when `run_target` is
+Concurrency also composes *inside* one evaluation (`screen.py --workers N` / `CAPEVOLVE_WORKERS=N`,
+pooling rollout generation only — byte-identical to serial). Opt in only when `run_target` is
 thread-safe: no shared scratch dir, single live container, or module-global client.
 
 ### Per-task fan-out — the cheap gradient

@@ -428,6 +428,22 @@ def main(argv=None) -> int:
     # "the gate rejected it" makes events.jsonl assert a judgement no measurement supports.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
     overrode_gate = bool(args.decision == "reject" and gate_verdict == "accept")
+    # ``gate_verdict is None`` means no round table has a row for this candidate at all — no
+    # gate ever ran. ``--reject-basis gate`` asserts a gate rejection happened; with no gate
+    # row to back that up, that assertion is exactly as unsupported as the accept/inconclusive
+    # cases above (found by review — the original check only handled the two DECIDED verdicts
+    # and let the "nothing to attribute to" case slip through the same door it was built to
+    # close).
+    if args.reject_basis == "gate" and gate_verdict is None:
+        print(json.dumps({
+            "error": f"--reject-basis gate, but no round table has a gate row for "
+                     f"{args.candidate_id} at all — nothing to attribute the rejection to",
+            "gate_verdict": None,
+            "fix": "pass --reject-basis driver_judgement and say in --note why you are "
+                   "rejecting without a gate measurement (e.g. a micro-test failure, an "
+                   "infra error, or a deliberate drop before ever evaluating it)",
+        }, indent=2))
+        return 2
     if args.reject_basis == "gate" and gate_verdict in ("accept", "inconclusive"):
         verb = ("ACCEPTED" if gate_verdict == "accept"
                 else "could not resolve (verdict: inconclusive)")

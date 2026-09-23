@@ -81,3 +81,16 @@ def test_reject_basis_drift_control_refused_when_verdict_unstable(tmp_path):
     run_dir, work = _run_dir_with_round_table(tmp_path, table=table)
     p = _commit_with_basis(run_dir, work, "drift_control")
     assert p.returncode == 2, f"commit.py did not refuse an unstable drift_control verdict: {p.stdout}"
+
+
+def test_reject_basis_gate_refused_when_no_gate_row_exists(tmp_path):
+    """Found by review: the ``--reject-basis gate`` check only ever tested
+    ``gate_verdict in ("accept", "inconclusive")`` — with NO round table at all,
+    ``_gate_verdict`` returns None, which is not in that tuple, so the check silently let
+    a gate-basis reject through with zero measurement behind it. Must refuse, same as the
+    accept/inconclusive cases."""
+    run_dir, work = _run_dir_with_round_table(tmp_path, table=None)
+    p = _commit_with_basis(run_dir, work, "gate")
+    assert p.returncode == 2, f"commit.py did not refuse a gate-basis reject with no gate row: {p.stdout}"
+    err = json.loads(p.stdout)
+    assert err["gate_verdict"] is None
