@@ -5,8 +5,8 @@
 # for this example, driven by ../PROMPT.md: a coding agent following RUN.md does exactly
 # these steps. Run it directly to reproduce in one command:
 #
-#   bash examples/skillberry_benchmarks_tau2_airline/spa/setup.sh
-#   bash examples/skillberry_benchmarks_tau2_airline/spa/run.sh
+#   bash examples/tau2_custom/spa/setup.sh
+#   bash examples/tau2_custom/spa/run.sh
 #
 # What the SPA arm needs that the direct arm does not: the Skillberry stack (Store + the
 # Proxy-Agent that injects the candidate skill) and the benchmark's environment service.

@@ -29,7 +29,12 @@ on:
         description: "Which benchmark to run"
         type: choice
         default: all
-        options: [all, tau2, swebench, skillsbench, spreadsheetbench, rfe-creator]
+        options: [all, tau2, swebench, skillsbench, spreadsheetbench, rfe-creator, tau2-custom]
+      intervention:
+        description: "How the candidate reaches the model."
+        type: choice
+        default: direct
+        options: [direct, spa]
       tier:
         description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
@@ -120,9 +125,6 @@ on:
         type: choice
         default: hill-climb-all
         options: [hill-climb-all, hill-climb-cyclic, hill-climb-hardest-first, agent-optimize]
-      # NB: workflow_dispatch allows at most 10 inputs and this list is full. SPLIT_SEED is
-      # therefore driven by the repo variable `vars.BENCH_SPLIT_SEED` (see the job env) rather
-      # than an 11th input, which would make this workflow invalid.
   pull_request:
     types: [labeled]
 
@@ -176,6 +178,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
           BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+          INTERVENTION_SEL: ${{ github.event.inputs.intervention || 'direct' }}
           # toJSON (not a ','-join) so labels stay exactly comparable: label names may
           # themselves contain commas, and the PR gate below is an exact-match test.
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
@@ -192,7 +195,22 @@ jobs:
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
           TIERS = ["smoke", "pilot", "full", "full_verified"]
-          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
+          # tau2_custom_direct / _spa are the DELIVERY ARMS of the tau2 airline benchmark:
+          # same tasks and tiers, candidate delivered in-process versus through the Skillberry
+          # Store + Proxy-Agent. They stay separate legs so each keeps its own tier task lists,
+          # its own history row and its own concurrency group.
+          BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator",
+                     "tau2_custom_direct", "tau2_custom_spa"]
+
+          # `tau2-custom` is the picker's name for "the arms"; `intervention` chooses which one.
+          # A benchmark token is what the rest of the pipeline keys off — tasks.json paths, the
+          # work dirs, the history rows — so resolve it here, once.
+          CUSTOM = "tau2-custom"
+          ARM_OF = {"direct": "tau2_custom_direct", "spa": "tau2_custom_spa"}
+          # Both arms are one benchmark on disk: ci/benchmarks/tau2_custom/<arm>/<tier>/.
+          BENCH_DIR = {v: "tau2_custom/" + k for k, v in ARM_OF.items()}
+          # `all` sweeps both arms regardless of `intervention`: it means every leg, and the two
+          # arms are the comparison they exist for.
 
           # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
           # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
@@ -215,7 +233,13 @@ jobs:
           event = os.environ["EVENT"]
           tier_sel = os.environ.get("TIER_SEL") or "smoke"
           bench_sel = os.environ.get("BENCH_SEL") or "all"
+          intervention = (os.environ.get("INTERVENTION_SEL") or "direct").strip().lower()
           labels = set(json.loads(os.environ.get("LABELS") or "[]") or [])
+
+          if bench_sel == CUSTOM:
+              bench_sel = ARM_OF.get(intervention, ARM_OF["direct"])
+              print(f"{CUSTOM} + intervention={intervention} -> {bench_sel}",
+                    file=sys.stderr, flush=True)
 
           legs = []
           for tier in TIERS:
@@ -238,7 +262,7 @@ jobs:
                   # dispatch into a no-op that still reports success. Only trust the filter
                   # when there is a tree to look at.
                   if run and tree_present and not os.path.isfile(
-                          f"ci/benchmarks/{bench}/{tier}/tasks.json"):
+                          f"ci/benchmarks/{BENCH_DIR.get(bench, bench)}/{tier}/tasks.json"):
                       print(f"skip {tier}/{bench}: no tasks.json for that tier",
                             file=sys.stderr, flush=True)
                       run = False
@@ -390,7 +414,9 @@ jobs:
       - name: Assert the suite run completed
         if: always()
         run: |
-          tasks="ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/tasks.json"
+          bench_dir="${{ matrix.bench }}"
+          case "$bench_dir" in tau2_custom_*) bench_dir="tau2_custom/${bench_dir#tau2_custom_}" ;; esac
+          tasks="ci/benchmarks/$bench_dir/${{ matrix.tier }}/tasks.json"
           if [ ! -f "$tasks" ]; then
             echo "no tasks.json for ${{ matrix.tier }}/${{ matrix.bench }} — nothing to assert"
             exit 0
@@ -419,7 +445,9 @@ jobs:
           # SB_* flags live in the tier's committed overrides.env, which only run_suite.sh
           # sources — so resolve them here too, or the disclosure field below would always read
           # as "not warm" even on a warm-started run. An env var still wins over the file.
-          ov="$GITHUB_WORKSPACE/ci/benchmarks/${{ matrix.bench }}/${{ matrix.tier }}/overrides.env"
+          ov_dir="${{ matrix.bench }}"
+          case "$ov_dir" in tau2_custom_*) ov_dir="tau2_custom/${ov_dir#tau2_custom_}" ;; esac
+          ov="$GITHUB_WORKSPACE/ci/benchmarks/$ov_dir/${{ matrix.tier }}/overrides.env"
           warm_file=$(sed -n 's/^[[:space:]]*SB_WARM_SEED=\([01]\).*/\1/p' "$ov" 2>/dev/null | tail -1)
           if [ "${SB_WARM_SEED:-${warm_file:-0}}" = "1" ]; then warm_json=true; else warm_json=false; fi
           # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
@@ -456,6 +484,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
+          # EXACTLY ONE path. A second one makes upload-artifact re-root the artifact at the
+          # common ancestor of both, and the aggregate job reads runmeta.json flat at the root —
+          # it would then skip the leg and publish no history row.
           path: ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}/**
           if-no-files-found: warn
 

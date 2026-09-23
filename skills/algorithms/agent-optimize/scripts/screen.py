@@ -122,6 +122,11 @@ def main(argv=None) -> int:
     if not cand_dir.is_dir():
         print(json.dumps({"error": f"candidate dir not found: {args.candidate}"}, indent=2))
         return 2
+    # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
+    # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them
+    # — this guarantees them regardless of how `cand_dir` came to exist.
+    harness.ensure_framework_memory(cand_dir, run_dir)
+
     tag = args.tag or cand_dir.name
     cur_tag = args.current or run_dir.best_id
     if not cur_tag:

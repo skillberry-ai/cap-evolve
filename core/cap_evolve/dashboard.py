@@ -370,7 +370,15 @@ _ALGO_MARKERS = (
 #: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
 #: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
 #: candidate on the same (current) runs, so it never carried a graph anyone needs.
-_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
+#:
+#: ``inconclusive`` is commit.py's third booking kind (``accept``/``reject``/
+#: ``inconclusive``) and carries the SAME audit fields (``gate_verdict``,
+#: ``overrode_gate``, ``reject_basis``) that ``accept``/``reject`` do. Leaving it out
+#: made the carry-forward block below never see them: the ``inconclusive`` event was
+#: skipped outright, and the ``step`` event ``record_iteration`` writes right after it
+#: carries none of those fields itself. ``indecisive_ids`` (above) still keeps its
+#: status out of "accepted"/"rejected" — it was never validly judged either way.
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional", "inconclusive")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
@@ -828,6 +836,7 @@ _NARRATIVE_FILES = (
 _CONFIG_KEY_GROUPS = {
     "capabilities": "Capability", "capability_path": "Capability",
     "capability_sources": "Capability", "actions": "Capability",
+    "intervention": "Delivery", "skill_name": "Delivery", "protected_paths": "Delivery",
     "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
     "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
     "optimizer_usd_per_iter": "Algorithm & optimizer",
@@ -847,7 +856,7 @@ _CONFIG_KEY_GROUPS = {
     "metric_directions": "Metrics & display",
     "github_integration": "GitHub",
 }
-_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+_CONFIG_GROUP_ORDER = ("Capability", "Delivery", "Algorithm & optimizer", "Data & splits",
                         "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
 
 #: A file this big gets size + path only in the Config tab's file tree — never an
@@ -938,7 +947,9 @@ def _read_config(root: Path) -> dict:
         except OSError:
             spec = {}
     groups: dict[str, list] = {}
-    for k, v in spec.items():
+    # `intervention` absent means direct, so render that rather than nothing: two runs of one
+    # capability can differ only in how it was delivered.
+    for k, v in {"intervention": "direct", **spec}.items():
         groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
     spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
 
@@ -1153,11 +1164,13 @@ def reduce_run(run_dir) -> dict:
             algorithm, algorithm_source = from_spec, "capevolve.yaml"
         elif has_wiki:
             algorithm, algorithm_source = "evograph", "run-dir wiki/"
-    # Candidates the gate REFUSED TO JUDGE (low coverage, or an integrity tamper).
-    # These are neither accepted nor rejected: the edit was never validly measured.
+    # Candidates the gate REFUSED TO JUDGE (low coverage, an integrity tamper, or
+    # commit.py's own ``--decision inconclusive`` — the verdict flipped across control
+    # replicates, so the measurement itself could not resolve it). All three are
+    # neither accepted nor rejected: the edit was never validly judged.
     indecisive_ids = {
         _step_candidate(e) for e in events
-        if e.get("kind") in ("step_indecisive", "tamper_detected")
+        if e.get("kind") in ("step_indecisive", "tamper_detected", "inconclusive")
     } - {None}
 
     # --- nodes: start with the seed -------------------------------------
@@ -1224,6 +1237,20 @@ def reduce_run(run_dir) -> dict:
             tag = ev.get("tag") or ev.get("candidate")
             if tag:
                 screened_by_tag[str(tag)] = bool(ev.get("screened_before_fullval"))
+
+    # optimizer_context_warning: the driver's own handover file (JOURNAL.md, or
+    # whatever an algorithm uses) came back empty/malformed, so the note attached to
+    # this candidate is framework-reconstructed after the fact, not the optimizer's
+    # live reasoning. Read generically off ANY event of this kind — not tied to
+    # agent-optimize, since any driver's handover can go missing the same way.
+    context_warning_by_tag: dict = {}
+    for ev in events:
+        if ev.get("kind") == "optimizer_context_warning":
+            tag = ev.get("candidate") or ev.get("tag")
+            if tag:
+                context_warning_by_tag[str(tag)] = {
+                    "what": ev.get("what"), "error": ev.get("error"),
+                }
 
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
@@ -1358,6 +1385,10 @@ def reduce_run(run_dir) -> dict:
             # looked up generically by tag below (see ``screened_by_tag``), not tied to the
             # agent-optimize algorithm that happens to be the first emitter.
             "screened": screened_by_tag.get(cid),
+            # optimizer reasoning for this round was NOT captured live — the note shown
+            # is reconstructed after the fact. Generic across drivers (see
+            # ``context_warning_by_tag`` above).
+            "context_warning": context_warning_by_tag.get(cid),
         }
         # Structured gate numbers, when the algorithm recorded them instead of leaving them
         # to be regexed out of a reason string (agent-optimize's commit.py reads them back
@@ -1366,7 +1397,8 @@ def reduce_run(run_dir) -> dict:
         for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
                     "gate_resolvable_effect_size",
                     "gate_mode", "gate_table", "control_relative_verdict",
-                    "control_relative_delta", "evidence_bar"):
+                    "control_relative_delta", "evidence_bar", "gate_verdict",
+                    "overrode_gate", "reject_basis"):
             _v = ev.get(_gk)
             # Version skew, not a hypothetical: older commit.py revisions wrote these on the
             # accept/reject event UNPREFIXED (``delta``/``stderr``/``n``/...), current ones write
@@ -1377,10 +1409,36 @@ def reduce_run(run_dir) -> dict:
                 _v = ev.get(_GATE_FIELD_ALIASES.get(_gk, ""))
             if _v is not None:
                 node[_gk] = _v
+        # ``verdict_stable`` (does the drift-controlled verdict agree across EVERY
+        # control replicate, not just on average?) is not on the event itself — it lives
+        # in the round's own gate table (``work/<gate_table>.json``, referenced by the
+        # ``gate_table`` field above), keyed by candidate tag. Read it from there so the
+        # UI can show "stable" vs "split" rather than nothing at all.
+        if node.get("gate_table"):
+            _gt = _read_json(_safe_subpath(root, "work", str(node["gate_table"])))
+            for _c in (_gt.get("candidates") or []):
+                if isinstance(_c, dict) and _c.get("tag") == cid and "verdict_stable" in _c:
+                    node["verdict_stable"] = _c["verdict_stable"]
+                    break
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
             node["merge_of"] = merge_of
+        # A candidate commonly emits TWO step-kind events for the same cid — e.g.
+        # agent-optimize's ``reject`` (which carries gate_verdict/overrode_gate/
+        # reject_basis) followed by its own ``step`` (which carries none of those). Each
+        # rebuilds ``node`` from scratch, so without this the second event silently threw
+        # the first one's evidence away — the exact fields #3 exists to surface. Carry
+        # forward any of the earlier record's gate/override fields the new one didn't
+        # itself set, rather than losing them to whichever event happened to come last.
+        if cid in nodes:
+            for _carry in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se",
+                           "gate_threshold", "gate_resolvable_effect_size", "gate_mode",
+                           "gate_table", "control_relative_verdict",
+                           "control_relative_delta", "evidence_bar", "gate_verdict",
+                           "overrode_gate", "reject_basis", "verdict_stable"):
+                if _carry not in node and _carry in nodes[cid]:
+                    node[_carry] = nodes[cid][_carry]
         # Last write wins if the same cid appears twice (e.g. gepa local-gate then
         # val-gate); keep the richer (val-bearing) record.
         if cid in nodes and nodes[cid].get("val") is not None and val is None:
@@ -1692,7 +1750,8 @@ def reduce_run(run_dir) -> dict:
         # round measured one. Without these a reader cannot tell that a rejection was
         # reference-dependent — the finding run 32971129203 turned on.
         for _key in ("gate_mode", "control_relative_verdict", "control_relative_delta",
-                     "evidence_bar"):
+                     "evidence_bar", "gate_verdict", "overrode_gate", "reject_basis",
+                     "verdict_stable"):
             if n.get(_key) is not None:
                 row[_key] = n.get(_key)
         gate_decisions.append(row)
@@ -1905,8 +1964,25 @@ def reduce_run(run_dir) -> dict:
             (v for k, v in screen_files.items() if str(v.get("tag")) == tag), {})
         sub = d.get("subset") or {}
         paired = d.get("paired") or {}
+        # Fall back to screen.py's OWN naming convention (``<tag>__screen<tier>``), never
+        # to the bare candidate tag: a screen node's id must stay distinct from its
+        # candidate's, or a candidate that was screened THEN went to full val collides
+        # with its own screen in anything keyed by this id (the Tasks matrix column list,
+        # the graph). This only fires when no ``screens/<x>.json`` matched (``d`` empty).
+        screen_tag = str(d.get("screen_tag") or f"{tag}__screen{e.get('tier') or ''}")
+        # The screen's own rollouts (rollouts/val/<task>__<screen_tag>__t*.json) are the
+        # candidate's ACTUAL per-task reward on the subset it ran — the same canonical
+        # rollout->per-task reconstruction a full-val node uses, so a screen shows up in
+        # the Tasks matrix identically to any other scored node instead of being
+        # invisible there.
+        per_task, per_task_fb = _per_task_from_rollouts(run_dir, screen_tag, "val")
+        # Per-task delta vs the screen's own reference candidate (``current``), straight
+        # from ``paired.deltas`` — the number the screen actually decided on.
+        delta_ids = [str(x) for x in (paired.get("ids") or [])]
+        delta_vals = paired.get("deltas") or []
+        delta_by_task = {tid: v for tid, v in zip(delta_ids, delta_vals) if isinstance(v, (int, float))}
         screens.append({
-            "candidate": tag, "screen_tag": d.get("screen_tag") or tag,
+            "candidate": tag, "screen_tag": screen_tag,
             "tier": e.get("tier"), "decision": e.get("decision"),
             "inconclusive": bool(e.get("inconclusive")),
             "mean_delta": e.get("mean_delta"), "se": e.get("se"), "n": e.get("n"),
@@ -1920,6 +1996,10 @@ def reduce_run(run_dir) -> dict:
             "pool_n": sub.get("pool_n"),
             "rationale": e.get("rationale") or sub.get("rationale"),
             "t": e.get("t"),
+            "reference": d.get("current"),
+            "per_task": per_task,
+            "feedback": per_task_fb,
+            "delta_by_task": delta_by_task,
         })
     if screens:
         algo_extra["screens"] = screens
@@ -1952,7 +2032,8 @@ def reduce_run(run_dir) -> dict:
     # map before mounting an extra one. An absent signal means the panel is omitted —
     # never rendered empty, never faked.
     capabilities = {
-        "per_task": any(n.get("per_task") for n in nodes.values()),
+        "per_task": (any(n.get("per_task") for n in nodes.values())
+                     or any(s.get("per_task") for s in screens)),
         "lineage": len(nodes) > 1,
         "gate": bool(gate_decisions),
         "cost": bool(ledger),
@@ -1973,6 +2054,7 @@ def reduce_run(run_dir) -> dict:
         "host_transcript": bool(host_session),
         "controls": bool(controls),
         "screened": any(n.get("screened") is not None for n in nodes.values()),
+        "context_warnings": any(n.get("context_warning") for n in nodes.values()),
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),

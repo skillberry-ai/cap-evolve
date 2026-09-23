@@ -128,7 +128,7 @@ def test_run_suite_threads_both_knobs_with_previous_behaviour_as_default():
     # The .env the adapter actually reads must carry it too, not just the exported shell var.
     assert "SPREADSHEETBENCH_SCORING=${SB_SCORING:-soft}" in sh
     # And the committed-overrides channel must be wired, since these have no workflow input.
-    assert 'load_overrides "$REPO/ci/benchmarks/$BENCH/$TIER/overrides.env"' in sh
+    assert 'load_overrides "$REPO/ci/benchmarks/$BENCH_DIR/$TIER/overrides.env"' in sh
 
 
 def test_gate_strictness_is_already_a_dispatch_input():

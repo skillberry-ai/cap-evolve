@@ -462,7 +462,7 @@ def test_run_sh_anchors_the_import_path_and_reports_failure(spa_env):
     what the shell hands to it, and no unit test of spa_env can observe a bad path in run.sh.
     """
     run_sh = (SPA_ENV.parents[5]
-              / "examples/skillberry_benchmarks_tau2_airline/spa/run.sh").read_text()
+              / "examples/tau2_custom/spa/run.sh").read_text()
     rotate_line = next(ln for ln in run_sh.splitlines() if "sys.path.insert" in ln
                        and "rotate" in run_sh.split(ln)[1][:120])
 

@@ -19,8 +19,9 @@ $R/microcases/<cluster_id>/
   assert.py         # deterministic pass/fail against case.yaml's `assert` spec, exit 0/1
 ```
 
-`reproduce.py`/`assert.py` are necessarily project-specific (they know the candidate's tool
-module) — `microcase.py` cannot write them for you, only scaffold the fixture and the case
+`reproduce.py`/`assert.py` are necessarily project-specific (they know the candidate's owned
+execution surface — a tool handler, a bundled script, or the applied prompt text) —
+`microcase.py` cannot write them for you, only scaffold the fixture and the case
 metadata from a REAL diagnosed rollout, so the one project-aware step (how to instantiate the
 minimal state the fixture's calls need) is the only thing left to fill in.
 
@@ -38,7 +39,7 @@ python "$A/microcase.py" gen \
 This extracts every tool call in the rollout's trace verbatim into `fixture/calls.json` and
 scaffolds `case.yaml` + a `reproduce.py` stub with a marked TODO. Finish the TODO once per
 cluster (construct the minimal state the fixture's calls need, replay them against the
-candidate's own tool module, write the observed field(s) `assert.py` will check) — every
+candidate's own owned execution surface, write the observed field(s) `assert.py` will check) — every
 candidate that later targets the same cluster reuses the finished case for free.
 
 ## Running it

@@ -6,6 +6,7 @@
 - [How honesty survives handing the agent the wheel](#how-honesty-survives-handing-the-agent-the-wheel)
 - [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
 - [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
+- [Bucketing edits before spending](#bucketing-edits-before-spending)
 - [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
 - [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
 - [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
@@ -239,6 +240,55 @@ and never double-counts — which is exactly what it used to do: the host booked
 report up to twice the optimizer spend it used, and a `max_usd` stop then fired on money nobody
 spent. Pass them when you can estimate your own cost for a round; a round you cannot price is
 better left unattributed than guessed, since the run total is right either way.
+
+## Bucketing edits before spending
+
+SKILL.md's step 2 sorts every proposed edit into one of two buckets *before* anything is spent,
+using the same test the edit-form table already applies (`references/edit-design-lessons.md`,
+"Form, not wording"): does the edit change behaviour deterministically, or only probabilistically?
+
+**Bucket A — atomic/risky.** Prose whose effect is probabilistic, or an edit targeting a cluster
+with no prior evidence. This keeps the section below's default unchanged: independent sibling
+candidates, N≥3, gated separately, one cluster each — because a bundle's measurement footprint is
+the union of its parts, so a narrow edit's footprint stays resolvable while a bundle's noise floor
+rises toward the whole split ("Measuring only what the edit reaches", below). Bundle only
+*independent* parts within one sibling — different files, different rules — so a
+rejected bundle can be resubmitted as its surviving part next round; `regressed`/`regressions` say
+which part to drop.
+
+**Bucket B — obvious/structural.** A code-level guard, a null-safety precondition, a
+docstring/prompt fix that is purely additive knowledge — anything the form table already marks as
+deterministic rather than probabilistic. Accumulate ALL of these into **one working copy for the
+round**, apply every fix to it, and pay for **exactly one** evaluation and one gate on the merged
+bundle — no per-fix screen, no per-fix gate. `phases/evaluate/scripts/run.py` and
+`scripts/gate_check.py` need only a candidate dir and a tag to run; neither requires a
+`mechanisms.jsonl` entry or any other per-target attribution, so the exact commands SKILL.md's
+steps 3–4 already give run unchanged against the merged copy — no new script needed. This trades
+attribution (if the bundle regresses, nothing says which part) for cost, and that trade is sound
+**only** because each part already cleared its own independent low-risk classification going in —
+never because bundling itself is risk-free in general. A Bucket B bundle can still fail the gate as
+a whole; when it does, bisect it into siblings and re-gate each one before concluding any single
+part was the cause.
+
+**Worked example.** Two independent input-validation guards added to two different tool handlers —
+or, for a skill-package capability, two independent null-checks added to two different skill files
+— are both purely additive and deterministic, touch different surfaces, and neither depends on the
+other's outcome: Bucket B, one merged working copy, one gate. A prompt clause that changes when the
+agent should escalate a decision to a human is prose whose effect is probabilistic: Bucket A, its
+own sibling candidate, gated alone. The line is the same one the form table already draws — a
+structural REQUIRED slot or a code-level precondition on one side, a prose rule or conditional on
+the other — applied here to a bundling decision instead of a single edit's form.
+
+**A full-val gate (step 4) has a precondition: exhaust this round's cheap exploration first.**
+Before the round's first full-val gate, you must have read every cluster `diagnose.py` reported for
+this round and, for each one, either (a) designed an edit and folded it into the current Bucket
+A/B bundle, or (b) recorded in the round's plan why it is deliberately deferred (no safe fix known
+yet, or it is the same structural issue as one already covered). A full-val gate that fires while a
+cheap, diagnosed, addressable cluster still sits untried is premature — one small edit gated alone
+buys one gate's worth of signal for a fraction of what the same gate could resolve once every
+addressable cluster is folded in. This applies whatever the capability is (prompt, tools, or a
+skill package) and whatever the benchmark is: the check is "did I look at every cluster before
+paying," not anything specific to one edit surface.
 
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
 

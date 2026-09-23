@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cap-evolve run on tau2-bench airline, DIRECT arm: the runner reads the candidate's tool
 # code in its own process — no proxy, no store, no environment service.
-# Prereq: bash examples/skillberry_benchmarks_tau2_airline/direct/setup.sh
+# Prereq: bash examples/tau2_custom/direct/setup.sh
 #
 #   bash run.sh                 # the pinned spec (capevolve.yaml)
 #   bash run.sh --smoke         # the cheap smoke spec over the same install

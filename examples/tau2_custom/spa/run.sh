@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cap-evolve run on tau2-bench airline, SPA arm: the candidate becomes a Skillberry Store
 # skill and the Proxy-Agent injects it into the agent's LLM calls.
-# Prereq: bash examples/skillberry_benchmarks_tau2_airline/spa/setup.sh
+# Prereq: bash examples/tau2_custom/spa/setup.sh
 #
 #   bash run.sh                 # the pinned spec (capevolve.yaml)
 #   bash run.sh --smoke         # the cheap smoke spec over the same stack

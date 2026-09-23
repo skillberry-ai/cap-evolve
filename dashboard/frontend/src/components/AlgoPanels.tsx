@@ -6,7 +6,8 @@
  * absent the panel is not mounted at all (see `capabilities` in the reducer), so
  * nothing here ever has to invent a placeholder.
  */
-import type { AlgoExtra, GraphNode, RunSummaryDetail } from '../lib/types'
+import { useState } from 'react'
+import type { AlgoExtra, GateDecision, GraphNode, RunSummaryDetail, ScreenRow } from '../lib/types'
 import { Card } from './ui/Card'
 import { VerdictBadge } from './StatusBadge'
 import { duration, pct, usd } from '../lib/format'
@@ -227,7 +228,7 @@ const WEAKNESS_TONE: Record<string, string> = {
  * port: the wiki files ARE the contract, so the one dashboard reads them directly and
  * the panel works identically in the live server and the static export.
  */
-export function EvographPanel({ extra }: { extra: AlgoExtra }) {
+export function EvographPanel({ extra, metered = true }: { extra: AlgoExtra; metered?: boolean }) {
   const eg = extra.evograph
   if (!eg) return null
   const { rounds, weaknesses } = eg
@@ -280,7 +281,9 @@ export function EvographPanel({ extra }: { extra: AlgoExtra }) {
                 />
                 <span className="eyebrow">sealed test</span>
                 <span className="tnum text-[10px] text-muted">
-                  {finalTest.cost_usd != null ? usd(finalTest.cost_usd) : '—'}
+                  {metered === false
+                    ? 'n/a'
+                    : finalTest.cost_usd != null ? usd(finalTest.cost_usd) : '—'}
                 </span>
               </div>
             )}
@@ -335,99 +338,7 @@ export function EvographPanel({ extra }: { extra: AlgoExtra }) {
   )
 }
 
-/* ------------------------------------------------------------- free-form ---- */
-
-/**
- * Free-form (agent-driven) runs — agent-optimize and evograph. There is no
- * deterministic schedule, so the "iteration" column is a commit order, not a plan, and
- * a round may evaluate only a task subset. Saying that plainly is the whole panel.
- */
-export function FreeformPanel({
-  summary,
-  nodes,
-}: {
-  summary: RunSummaryDetail
-  nodes: GraphNode[]
-}) {
-  const rounds = nodes.filter((n) => n.id !== 'seed')
-  const valTasks = summary.splits?.val ?? summary.tasks?.length ?? null
-
-  return (
-    <div className="space-y-4">
-      <Card className="p-3.5">
-        <p className="text-[12px] leading-relaxed text-muted-strong">
-          This run was <strong>agent-driven</strong>: no fixed loop decided what to try
-          next. Rows below are commits in the order the agent made them, and each is gated
-          against the run's best-at-the-time on val — the same honest bar the
-          deterministic loops use.
-        </p>
-      </Card>
-      {rounds.length === 0 ? (
-        <Card>
-          <div className="px-4 py-10 text-center text-sm text-muted">
-            No candidate has been committed yet — the baseline is scored and the loop is
-            the agent's to drive. Rows appear as the agent commits edits with{' '}
-            <code className="text-foreground">cap-evolve gate-check</code>, and the run
-            ends with <code className="text-foreground">cap-evolve finalize</code>.
-          </div>
-        </Card>
-      ) : (
-      <Panel title={`Round log — ${rounds.length} commit(s)`}>
-        <table className="w-full text-left text-[12px]">
-          <thead className="eyebrow border-b border-border">
-            <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">candidate</th>
-              <th className="px-3 py-2">verdict</th>
-              <th className="px-3 py-2 text-right">val</th>
-              <th className="px-3 py-2 text-right">tasks scored</th>
-              <th className="px-3 py-2 text-right">opt time</th>
-              <th className="px-3 py-2">note</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rounds.map((n) => {
-              const scored = Object.keys(n.per_task ?? {}).length
-              const subset = valTasks != null && scored > 0 && scored < valTasks
-              return (
-                <tr key={n.id} className="hover:bg-surface-2">
-                  <td className="tnum px-3 py-1.5 text-muted">{n.iteration ?? '—'}</td>
-                  <td className="px-3 py-1.5 font-mono">{n.id}</td>
-                  <td className="px-3 py-1.5">
-                    <VerdictBadge verdict={n.status} />
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right">
-                    {n.val == null ? '—' : pct(n.val)}
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right">
-                    {scored || '—'}
-                    {valTasks != null && <span className="text-muted"> / {valTasks}</span>}
-                    {subset && (
-                      <span
-                        className="ml-1 text-indecisive"
-                        title="Only a subset of val was scored — the mean covers those tasks only."
-                      >
-                        subset
-                      </span>
-                    )}
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right text-muted">
-                    {duration(n.optimizer_seconds)}
-                  </td>
-                  <td className="min-w-[240px] px-3 py-1.5 leading-relaxed text-muted">
-                    {n.reason || '—'}
-                    <TaskMovement fixed={n.fixed} broke={n.broke} />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </Panel>
-      )}
-    </div>
-  )
-}
+/* -------------------------------------------------------- rounds + screens ---- */
 
 /** Which tasks an edit fixed and which it broke. A mean-preserving swap is churn, and
  *  only these lists prove it — so they render next to the note, not behind a hover. */
@@ -442,66 +353,159 @@ function TaskMovement({ fixed, broke }: { fixed?: string[]; broke?: string[] }) 
   )
 }
 
-/* --------------------------------------------------- agent-optimize screens ---- */
-
 /**
- * agent-optimize's tiered cheap screens. A screen is a PAIRED eval on a small subset,
- * run before paying for full val: it decides whether the candidate is worth the money.
+ * Free-form (agent-driven) runs — agent-optimize and evograph. There is no
+ * deterministic schedule, so "round" is a commit order, not a plan.
  *
- * The point of showing it is the disagreement. A screen that promotes on a 3-task subset
- * and then loses on full val is not a contradiction — it is the screen's variance being
- * visible, and `inconclusive` says the subset could not separate the two at all. The
- * subset ids, holdout, and fixed/regressed lists are read from the run's own
- * `screens/*.json`; a number the screen did not record renders "—".
+ * This is the ONE place a round's whole decision trail lives: the cheap screen(s) that
+ * triaged the edit, the full-val gate's RAW verdict, the drift-controlled
+ * control-relative second opinion (when the round measured one), whether that verdict
+ * held across every control replicate, and the FINAL decision — with an explicit
+ * "overrode the raw gate" callout when the driver's final call disagreed with it. The
+ * Rounds tab and the Screens tab used to be separate views cross-linked only by
+ * candidate-id string match, which is how a run's entire story — "raw gate said
+ * accept, but the drift-controlled comparison said reject, twice, so the driver
+ * overrode it" — stayed recoverable only by reading raw JSON.
  */
-export function ScreensPanel({
-  screens,
+export function RoundsTimeline({
+  summary,
   nodes,
+  screens,
 }: {
-  screens: NonNullable<AlgoExtra['screens']>
+  summary: RunSummaryDetail
   nodes: GraphNode[]
+  screens: ScreenRow[]
 }) {
-  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const rounds = nodes
+    .filter((n) => n.id !== 'seed')
+    .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
+  const gateByCand = new Map((summary.gate_decisions ?? []).map((g) => [g.candidate, g]))
+  const screensByCand = new Map<string, ScreenRow[]>()
+  for (const s of screens) {
+    screensByCand.set(s.candidate, [...(screensByCand.get(s.candidate) ?? []), s])
+  }
+  // The full val split size, so a gate's own `n` (GateDecision.n) can be compared
+  // against it — the difference between "this mean is over all of val" and "this mean
+  // is over a subset", which a full-coverage-looking round otherwise hides.
+  const valTasks = summary.splits?.val ?? summary.tasks?.length ?? null
+
   return (
     <div className="space-y-4">
       <Card className="p-3.5">
         <p className="text-[12px] leading-relaxed text-muted-strong">
-          Before paying for a full val eval, agent-optimize runs a <strong>cheap screen</strong>
-          : a paired comparison on a small subset of val, split into an{' '}
-          <strong>informative</strong> part (tasks the parent already fails or that
-          discriminate) and a <strong>holdout</strong> part (tasks the parent passes, to
-          catch regressions). The subset mean is a <em>screening</em> statistic — it is
-          never the candidate's val score, and a screen that promotes can still lose on
-          full val.
+          This run was <strong>agent-driven</strong>: no fixed loop decided what to try
+          next. Each round below is one committed edit, in the order the agent made it —
+          its cheap screen(s), its full-val gate, and (when the round measured
+          null-control replicates) the drift-controlled second opinion the final
+          decision actually rests on.
         </p>
       </Card>
+      {rounds.length === 0 ? (
+        <Card>
+          <div className="px-4 py-10 text-center text-sm text-muted">
+            No candidate has been committed yet — the baseline is scored and the loop is
+            the agent's to drive. Rounds appear as the agent commits edits with{' '}
+            <code className="text-foreground">cap-evolve gate-check</code>, and the run
+            ends with <code className="text-foreground">cap-evolve finalize</code>.
+          </div>
+        </Card>
+      ) : (
+        rounds.map((n) => (
+          <RoundCard
+            key={n.id}
+            node={n}
+            gate={gateByCand.get(n.id)}
+            screens={screensByCand.get(n.id) ?? []}
+            valTasks={valTasks}
+          />
+        ))
+      )}
+    </div>
+  )
+}
 
-      <Panel title={`Cheap screens — ${screens.length}`}>
-        <table className="w-full min-w-[860px] text-left text-[12px]">
-          <thead className="eyebrow border-b border-border">
-            <tr>
-              <th className="px-3 py-2">candidate</th>
-              <th className="px-3 py-2 text-right">tier</th>
-              <th className="px-3 py-2">decision</th>
-              <th className="px-3 py-2 text-right">subset Δ̄</th>
-              <th className="px-3 py-2 text-right">SE</th>
-              <th className="px-3 py-2 text-right">n / pool</th>
-              <th className="px-3 py-2">subset (holdout · informative)</th>
-              <th className="px-3 py-2 text-right">then full val</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {screens.map((s, i) => {
-              const node = byId.get(s.candidate)
-              const agreed =
-                node?.val == null || s.mean_delta == null
-                  ? null
-                  : (s.mean_delta > 0) === (node.status === 'accepted')
-              return (
-                <tr key={`${s.screen_tag}-${i}`} className="hover:bg-surface-2">
-                  <td className="px-3 py-1.5 font-mono">{s.candidate}</td>
-                  <td className="tnum px-3 py-1.5 text-right text-muted">{s.tier ?? '—'}</td>
-                  <td className="px-3 py-1.5">
+function Step({
+  label,
+  tone,
+  children,
+}: {
+  label: string
+  tone?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex gap-3 border-l-2 border-border py-1.5 pl-3">
+      <span className={cn('w-[92px] shrink-0 text-[11px] font-medium uppercase tracking-wide', tone ?? 'text-muted')}>
+        {label}
+      </span>
+      <div className="min-w-0 flex-1 text-[12px] leading-relaxed">{children}</div>
+    </div>
+  )
+}
+
+function RoundCard({
+  node: n,
+  gate,
+  screens,
+  valTasks,
+}: {
+  node: GraphNode
+  gate?: GateDecision
+  screens: ScreenRow[]
+  /** The full val split size, to flag a gate's `n` as a subset of it. */
+  valTasks?: number | null
+}) {
+  const [open, setOpen] = useState(false)
+  // The final verdict disagreeing with the raw gate is the whole point of surfacing
+  // this — never inferred, only shown when the run itself recorded both.
+  const overrode = gate?.overrode_gate === true && gate?.gate_verdict != null
+    && gate.gate_verdict !== gate.verdict
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5">
+        <span className="tnum text-[11px] text-muted">#{n.iteration ?? '—'}</span>
+        <span className="font-mono text-[13px] font-semibold">{n.id}</span>
+        <VerdictBadge verdict={n.status} />
+        {overrode && (
+          <span
+            className="rounded border border-accent/50 px-1.5 py-0.5 text-[11px] font-medium text-accent"
+            title="The driver's final decision disagreed with the raw gate verdict — see the Final step below."
+          >
+            overrode gate
+          </span>
+        )}
+        <span className="ml-auto tnum text-[11px] text-muted">
+          {duration(n.optimizer_seconds)}
+        </span>
+      </div>
+
+      <div className="space-y-1 px-3.5 py-3">
+        {/* Handover missing — must be the FIRST thing seen, not a footnote. Generalizes
+            to any driver: the reducer sets this off `optimizer_context_warning`, no
+            matter which algorithm emitted it. */}
+        {n.context_warning && (
+          <div className="mb-2 rounded border border-accent/50 bg-accent/[0.06] px-2.5 py-1.5 text-[11px] text-accent">
+            optimizer reasoning for this round was NOT captured live — the note shown
+            below is reconstructed after the fact ({n.context_warning.what ?? 'handover'}
+            : {n.context_warning.error ?? 'empty'}).
+          </div>
+        )}
+
+        {screens.length > 0 && (
+          <Step label="screen">
+            <div className="space-y-1">
+              {screens.map((s, i) => {
+                // Did this screen's promote/kill call agree with what full val later
+                // found? A screen that promoted but whose candidate the full-val gate
+                // then rejected (or vice versa) is the screen failing to reproduce —
+                // the same check the old ScreensPanel made, just re-anchored here.
+                const agreed =
+                  n.val == null || s.mean_delta == null
+                    ? null
+                    : (s.mean_delta > 0) === (n.status === 'accepted')
+                return (
+                  <div key={`${s.screen_tag}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span
                       className={cn(
                         'rounded border px-1.5 py-0.5 text-[11px] font-medium',
@@ -511,72 +515,130 @@ export function ScreensPanel({
                             ? 'border-accepted/50 text-accepted'
                             : 'border-rejected/50 text-rejected',
                       )}
-                      title={
-                        s.inconclusive
-                          ? 'The subset could not separate parent from child — promoted on insufficient evidence, not on a measured win.'
-                          : undefined
-                      }
                     >
                       {s.decision ?? '—'}
                       {s.inconclusive && ' · inconclusive'}
                     </span>
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right">
-                    {s.mean_delta == null
-                      ? '—'
-                      : `${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}`}
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right text-muted">
-                    {s.se == null ? '—' : `±${s.se.toFixed(4)}`}
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right text-muted">
-                    {s.n ?? '—'}
-                    {s.pool_n != null && <span> / {s.pool_n}</span>}
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-[11px]">
-                    {s.holdout.length > 0 && (
-                      <span className="text-muted">holdout {s.holdout.join(' ')}</span>
-                    )}
-                    {s.holdout.length > 0 && s.informative.length > 0 && ' · '}
-                    {s.informative.length > 0 && (
-                      <span className="text-muted-strong">info {s.informative.join(' ')}</span>
-                    )}
-                    {s.holdout.length === 0 && s.informative.length === 0 && (
-                      <span className="text-muted">{s.ids.join(' ') || '—'}</span>
+                    <span className="tnum text-muted">
+                      Δ̄ {s.mean_delta == null ? '—' : `${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}`}
+                      {s.se != null && ` ± ${s.se.toFixed(4)}`}
+                    </span>
+                    <span className="tnum text-[11px] text-muted">
+                      {s.n ?? '—'}
+                      {s.pool_n != null && ` / ${s.pool_n}`} tasks (tier {s.tier ?? '—'})
+                    </span>
+                    {agreed === false && (
+                      <span
+                        className="text-[11px] font-medium text-accent"
+                        title="The screen and the full val eval disagreed — the subset did not reproduce."
+                      >
+                        ≠ screen
+                      </span>
                     )}
                     <TaskMovement fixed={s.fixed} broke={s.regressed} />
-                  </td>
-                  <td className="tnum px-3 py-1.5 text-right">
-                    {node?.val == null ? (
-                      <span className="text-muted" title="No full val eval was recorded for this tag.">
-                        —
-                      </span>
-                    ) : (
-                      <>
-                        {pct(node.val)}{' '}
-                        {agreed === false && (
-                          <span
-                            className="text-accent"
-                            title="The screen and the full val eval disagreed — the subset did not reproduce."
-                          >
-                            ≠ screen
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <p className="border-t border-border px-3.5 py-2 text-[11px] text-muted">
-          A <span className="text-accent">≠ screen</span> row is the screen failing to
-          predict full val. Screens save rollouts; they do not decide acceptance — only
-          the val significance gate does.
-        </p>
-      </Panel>
-    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Step>
+        )}
+
+        {gate && (
+          <Step label="full-val gate">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="tnum">
+                val {n.val == null ? '—' : pct(n.val)} vs parent{' '}
+                {n.parent_val == null ? '—' : pct(n.parent_val)}
+              </span>
+              <span className="tnum text-muted">
+                Δ {gate.delta == null ? '—' : `${gate.delta > 0 ? '+' : ''}${gate.delta.toFixed(4)}`}
+                {gate.stderr != null && ` ± ${gate.stderr.toFixed(4)}`}
+                {gate.threshold != null && ` (threshold ${gate.threshold.toFixed(4)})`}
+              </span>
+              {gate.gate_mode && <span className="text-[11px] text-muted">mode: {gate.gate_mode}</span>}
+              {gate.n != null && (
+                <span className="tnum text-[11px] text-muted">
+                  {gate.n}
+                  {valTasks != null && <span> / {valTasks}</span>} tasks
+                  {valTasks != null && gate.n > 0 && gate.n < valTasks && (
+                    <span
+                      className="ml-1 text-indecisive"
+                      title="Only a subset of val was scored — this mean covers those tasks only."
+                    >
+                      subset
+                    </span>
+                  )}
+                </span>
+              )}
+              <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium">
+                raw: {gate.gate_verdict ?? gate.verdict}
+              </span>
+            </div>
+          </Step>
+        )}
+
+        {gate?.control_relative_verdict != null && (
+          <Step label="vs control" tone="text-primary">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="rounded border border-primary/50 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                {gate.control_relative_verdict}
+              </span>
+              <span className="tnum text-muted">
+                Δ {gate.control_relative_delta == null ? '—' :
+                  `${gate.control_relative_delta > 0 ? '+' : ''}${gate.control_relative_delta.toFixed(4)}`}
+                {gate.evidence_bar != null && ` (evidence bar ${gate.evidence_bar.toFixed(4)})`}
+              </span>
+              {gate.verdict_stable != null && (
+                <span
+                  className={cn(
+                    'text-[11px] font-medium',
+                    gate.verdict_stable ? 'text-accepted' : 'text-accent',
+                  )}
+                  title={
+                    gate.verdict_stable
+                      ? 'This verdict agreed against EVERY control replicate, not just their pooled average.'
+                      : 'Control replicates disagreed with each other — this verdict is not stable.'
+                  }
+                >
+                  {gate.verdict_stable ? 'stable' : 'not stable'}
+                </span>
+              )}
+            </div>
+          </Step>
+        )}
+
+        <Step label="final" tone={overrode ? 'text-accent' : 'text-muted'}>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <VerdictBadge verdict={n.status} />
+            {overrode && (
+              <span className="text-accent">
+                raw gate said <span className="font-medium">{gate?.gate_verdict}</span>,
+                overridden to <span className="font-medium">{gate?.verdict}</span>
+                {gate?.reject_basis && <> — basis: <span className="font-mono">{gate.reject_basis}</span></>}
+              </span>
+            )}
+            <TaskMovement fixed={n.fixed} broke={n.broke} />
+          </div>
+        </Step>
+
+        {(n.reason || gate?.reason) && (
+          <div className="mt-1.5 pl-3">
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="text-[11px] text-muted underline hover:text-foreground"
+            >
+              {open ? 'hide note' : 'show note'}
+            </button>
+            {open && (
+              <p className="mt-1 max-w-[900px] whitespace-pre-wrap text-[11px] leading-relaxed text-muted-strong">
+                {n.reason || gate?.reason}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 

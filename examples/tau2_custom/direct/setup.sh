@@ -5,8 +5,8 @@
 # for this example, driven by ../PROMPT.md: a coding agent following RUN.md does exactly
 # these steps. Run it directly to reproduce in one command:
 #
-#   bash examples/skillberry_benchmarks_tau2_airline/direct/setup.sh
-#   bash examples/skillberry_benchmarks_tau2_airline/direct/run.sh
+#   bash examples/tau2_custom/direct/setup.sh
+#   bash examples/tau2_custom/direct/run.sh
 #
 # What the DIRECT arm does NOT need, and this script therefore never touches: the
 # Skillberry stack (Store + Proxy-Agent) and the benchmark's environment service. The

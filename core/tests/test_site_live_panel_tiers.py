@@ -18,7 +18,15 @@ WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
 JS = REPO / "site" / "benchmarks.js"
 HTML = REPO / "site" / "benchmarks.html"
 
-BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator"]
+def _workflow_benches() -> list[str]:
+    """Derived, not hardcoded: a list repeated here is a list that goes stale, and a bench the
+    panel cannot match is a bench whose runs are invisible."""
+    src = WORKFLOW.read_text(encoding="utf-8")
+    m = re.search(r"^\s*BENCHES\s*=\s*\[([^\]]*)\]", src, re.M | re.S)
+    assert m, "BENCHES not found in benchmarks.yml"
+    benches = re.findall(r'"([^"]+)"', m.group(1))
+    assert benches, m.group(1)
+    return benches
 
 
 def _workflow_tiers() -> list[str]:
@@ -42,7 +50,7 @@ def _job_regex() -> re.Pattern:
 
 def test_live_panel_matches_every_tier_the_workflow_can_run():
     rx = _job_regex()
-    missing = [f"{t} / {b}" for t in _workflow_tiers() for b in BENCHES
+    missing = [f"{t} / {b}" for t in _workflow_tiers() for b in _workflow_benches()
                if not rx.match(f"{t} / {b}")]
     assert not missing, (
         "site/benchmarks.js JOB_RE does not match these CI job names, so those runs would be "

@@ -49,17 +49,14 @@ ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
 #: each ships as ONE self-contained file copied into a project's ``adapters/`` — so the
 #: alignment is held by the test below rather than by a shared import.
 #:
-#: The two ``skillberry_benchmarks_tau2_airline`` arms do not exist on ``main`` yet — they
-#: land with PR #424 — so the check SKIPS a path that is absent rather than failing on it.
-#: Listing them anyway is the point: the guard widens by itself the moment #424 merges,
-#: with no follow-up edit to remember, and this tuple stays byte-identical to the one on
-#: the ``skillberry_benchmarks_tau2`` branch. ``_MIN_ADAPTERS`` is what stops "skip the
-#: missing ones" from degenerating into "compare nothing and pass".
+#: A path that is ABSENT is skipped rather than failed on, so this tuple can name an adapter a
+#: given checkout does not have. ``_MIN_ADAPTERS`` is what stops "skip the missing ones" from
+#: degenerating into "compare nothing and pass".
 TAU2_ADAPTERS = (
     REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py",
     REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py",
-    REPO / "examples" / "skillberry_benchmarks_tau2_airline" / "direct" / "adapters" / "adapter.py",
-    REPO / "examples" / "skillberry_benchmarks_tau2_airline" / "spa" / "adapters" / "adapter.py",
+    REPO / "examples" / "tau2_custom" / "direct" / "adapters" / "adapter.py",
+    REPO / "examples" / "tau2_custom" / "spa" / "adapters" / "adapter.py",
 )
 
 #: Below this many present adapters the alignment check is not checking alignment.
