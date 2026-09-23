@@ -149,7 +149,9 @@ Only the candidate pays, for the subset. `decision` is `kill` or `promote`
 rate — on a small val the tier-1 floor makes it unreachable, so pay full val directly — and read a screen as
 evidence about the tasks the edit targeted, never as a gate decision.
 
-**4. Honest gate on FULL val.** Evaluate the whole split (this writes rollouts + results under tag
+**4. Honest gate on FULL val.** Before this step, confirm every addressable diagnosed cluster
+for the round is folded in or deferred (with why) — "Bucketing edits before spending",
+`algorithm.md`. Evaluate the whole split (this writes rollouts + results under tag
 `$TAG` — the evaluate phase tags by the candidate **dir name**), then decide off those rollouts:
 
 ```bash
@@ -302,21 +304,20 @@ with no run-dir artifacts is a bug**, so fix it rather than drive around the pri
 
 ## References
 
-One level deep — each is read on its own, and none points at another.
+One level deep — each read standalone, none points at another.
 
 - [`references/algorithm.md`](references/algorithm.md) — why free-form, how honesty survives full
-  autonomy, the screening break-even, parallel-safe steps, the constraint surface, provisional
-  candidates. **Load** before relying on a screen, growing a candidate, or skipping a rule.
-- [`references/measured-lessons.md`](references/measured-lessons.md) — every measurement rule with the
-  number that bought it: binomial floor, full val vs a hard subset, the load-vs-noise tables, the sign
-  test, the across-runs estimator. **Load** before your first gate decision on a new benchmark, or
-  when a result surprises you.
-- [`references/per-task-fanout.md`](references/per-task-fanout.md) — the fan-out's economics, the
-  subagent briefing contract, canary selection, every helper's flags. **Load** when the loss is
-  concentrated in a few named tasks.
-- [`references/edit-design-lessons.md`](references/edit-design-lessons.md) — the scorer audit, guard
-  closure, and the measured backfires behind the edit-form table. **Load** before editing a surface
-  for the first time, or after two rejects.
-- [`references/microcase.md`](references/microcase.md) — the micro-test schema and `gen` contract.
+  autonomy, screening break-even, parallel-safe steps, the constraint surface. **Load** before
+  relying on a screen, growing a candidate, or skipping a rule.
+- [`references/measured-lessons.md`](references/measured-lessons.md) — every measurement rule:
+  binomial floor, full val vs a hard subset, load-vs-noise tables, the sign test. **Load** before
+  your first gate decision on a new benchmark, or when a result surprises you.
+- [`references/per-task-fanout.md`](references/per-task-fanout.md) — fan-out economics, briefing
+  contract, canary selection, every helper's flags. **Load** when the loss is concentrated in a
+  few named tasks.
+- [`references/edit-design-lessons.md`](references/edit-design-lessons.md) — scorer audit, guard
+  closure, measured backfires behind the edit-form table. **Load** before editing a surface the
+  first time, or after two rejects.
+- [`references/microcase.md`](references/microcase.md) — micro-test schema, `gen` contract.
   **Load** before proposing a candidate for a cluster with (or needing) a case.
-- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared. **Load** in Phase 0.
+- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared.

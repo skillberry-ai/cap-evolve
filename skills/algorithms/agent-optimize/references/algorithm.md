@@ -279,6 +279,17 @@ own sibling candidate, gated alone. The line is the same one the form table alre
 structural REQUIRED slot or a code-level precondition on one side, a prose rule or conditional on
 the other — applied here to a bundling decision instead of a single edit's form.
 
+**A full-val gate (step 4) has a precondition: exhaust this round's cheap exploration first.**
+Before the round's first full-val gate, you must have read every cluster `diagnose.py` reported for
+this round and, for each one, either (a) designed an edit and folded it into the current Bucket
+A/B bundle, or (b) recorded in the round's plan why it is deliberately deferred (no safe fix known
+yet, or it is the same structural issue as one already covered). A full-val gate that fires while a
+cheap, diagnosed, addressable cluster still sits untried is premature — one small edit gated alone
+buys one gate's worth of signal for a fraction of what the same gate could resolve once every
+addressable cluster is folded in. This applies whatever the capability is (prompt, tools, or a
+skill package) and whatever the benchmark is: the check is "did I look at every cluster before
+paying," not anything specific to one edit surface.
+
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
 
 A round pays fixed overhead regardless of how many candidates it gates: the null-control
