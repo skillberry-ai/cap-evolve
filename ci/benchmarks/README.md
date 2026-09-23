@@ -83,22 +83,28 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
 ## Trigger the suite
 
-Runs come in two **tiers** (a first-class dimension in the workflow, same workflow + history page):
+Runs come in several **tiers** (a first-class dimension in the workflow, same workflow + history page):
 - **`smoke`** — a few representative tasks per benchmark (fast regression; the default).
 - **`full`** — the whole/representative benchmark per bench (thorough; expensive). Its tasks
   live under `ci/benchmarks/<bench>/full/tasks.json`; a bench with an empty list simply runs
-  zero tasks until populated (see below). `tau2/full/tasks.json` is already populated (50
-  tasks); `spreadsheetbench/full/tasks.json` is populated with the real 912-task set (fetched
-  separately from `smoke`'s 200-task sample via `SPREADSHEETBENCH_VARIANT=full_912` — see
-  `ci/benchmarks/spreadsheetbench/fetch_data.sh`), matching the population SpreadsheetBench's
-  self-reported leaderboard is computed over; `swebench` and `skillsbench` are not yet.
-  `rfe-creator/full/tasks.json` covers all 25 curated cases; a full run there costs real
-  money (~$235 for 3 iterations x 25 tasks x 3 trials, measured) — dispatch deliberately,
-  not routinely.
-  A 912-task run is long — the `bench` job has a 1440min (`24h`) `timeout-minutes` and
-  `full` defaults `SPREADSHEETBENCH_CONCURRENCY` to `8` (vs. smoke's `4`; override either
-  via the env var / workflow input if the runner's Docker headroom can't take it — each
-  container is ~8GB RAM / 2 CPU).
+  zero tasks until populated (see below). Not every benchmark populates it yet. A whole-set run
+  is long and can cost real money, so dispatch it deliberately, not routinely — the `bench` job
+  carries a 1440min (`24h`) `timeout-minutes` for that reason.
+- **`full_verified`** — a benchmark's **verified/curated re-release**, where upstream publishes
+  one. Generic by design: any bench that gains such a release populates
+  `ci/benchmarks/<bench>/full_verified/` and uses this same tier, rather than a name with that
+  benchmark's task count baked in. Like `pilot` it runs only when named
+  (`tier=full_verified`, or a `benchmark-full_verified-<bench>` label), never under `tier=all`
+  — but unlike `pilot` that exclusion is about **cost**, not about the numbers being
+  meaningless: a `full_verified` result is a real held-out number.
+- **`pilot`** — a cost/runtime measurement rig whose reward numbers are **not comparable to
+  anything**. Explicit dispatch only.
+
+> Tier **sizes, datasets, splits, turn budgets and costs are per-benchmark** and are documented
+> in `ci/benchmarks/<bench>/README.md`. They deliberately do not appear here: a tier is a
+> dimension of the suite, not a property of whichever benchmark needed it first. Which
+> benchmarks populate which tier is likewise not listed here — it is exactly the set of
+> `ci/benchmarks/<bench>/<tier>/tasks.json` files, which is what the planner reads.
 
   **`spreadsheetbench` runner prerequisites** (installed on `skillberry-1`):
   - **LibreOffice** (`sudo dnf install libreoffice-calc`). Scoring uses it to recalculate

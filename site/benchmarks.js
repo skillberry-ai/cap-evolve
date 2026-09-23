@@ -1,10 +1,12 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
 const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
-// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full, …) and
-// hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
-// invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
-// ("plan legs", "aggregate history") never match.
-const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator)$/;
+// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full,
+// full_verified, …) and hardcoding it here silently hides new tiers from the live panel — a
+// `pilot` run was invisible while it was executing. The character class must therefore admit
+// every shape a tier name can take, UNDERSCORE INCLUDED: `full_verified` fails `[a-z0-9-]*`,
+// which would have reproduced the exact pilot bug for it. The bench allowlist stays explicit
+// so unrelated jobs ("plan legs", "aggregate history") never match.
+const JOB_RE = /^([a-z][a-z0-9_-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator)$/;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
 // site/benchmarks.fixture.json). Local-only affordance for exercising the filter cascade
 // through many reload cycles; the default path is unchanged.

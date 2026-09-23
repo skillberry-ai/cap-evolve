@@ -8,7 +8,104 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **`full_verified`: a tier on a benchmark's verified/curated re-release — for SpreadsheetBench,
+  the verified 400-task set that recent work actually reports on.** The tier name is deliberately
+  generic rather than count-bearing (`full400`), so any other benchmark that gains such a release
+  reuses it instead of inventing a name that goes stale when upstream re-cuts the set. The task
+  count is asserted by the tier's tests, not encoded in its name. `full` runs the original 912-task set; WikiSkill (arXiv
+  2608.27454v1) Table 6 reports SpreadSheet as Train **80** / Val **40** / Test **280** — 400
+  tasks at exactly 2:1:7 — and states its splits are "strictly matched with prior work
+  (Yang et al., 2026 [SkillOpt]; Alzubi et al., 2026 [EvoSkill])". So every baseline number in
+  that paper is on 400 tasks, and no `full` result can be placed beside them. 80/40/280 also
+  **confirms the 2:1:7 reading** `full`'s split was already built on, which retires the
+  `--ratios 4,1,5` hedge. The new tier is a separate download (`SPREADSHEETBENCH_VARIANT=
+  verified_400`), a committed 80/40/280 split from the same seed-42 generator `full` uses, and
+  `SB_SCORING=hard` with a pristine seed. It runs only when named (`tier=full_verified`), for cost
+  rather than honesty reasons: `tier=all` already launches `full` at ~2,279 rollouts/seed, and
+  full_verified is 1,000 — **~44%** of it, which is what makes the paper's 3-seed protocol affordable.
+  New `utils/make_full_verified.py` generates the tier from the fetched archive and refuses to run
+  against the wrong one.
+
 ### Fixed
+- **A whole SpreadsheetBench variant scored 0.000 on every task, with no error anywhere.** The
+  adapter hardcoded `for idx in (1, 2, 3)` and the 912 set's `_input`/`_answer` filenames. The
+  verified 400-task release grades **one** case per task, named `1_<id>_init.xlsx` /
+  `_golden.xlsx` (and five tasks ship bare `initial.xlsx` / `golden.xlsx`), so pointing the
+  adapter at it failed three ways at once: case 1's answer resolved to a nonexistent
+  `_answer.xlsx` so even a perfect solve mismatched; cases 2 and 3 were missing and scored 0;
+  and `hard = all(test_results)` was therefore 0.0 for all 400 tasks. The mount-readability
+  probe globbed `*/*_input.xls*` and silently matched nothing, disabling the very guard that
+  exists because an unusable bind mount once cost $77 and ~3h at 0.000 (run 30691123806). This
+  is the shape of failure that looks like a bad prompt and is not. The case list now comes from
+  disk (`_case_indices`, floored at `[1]` so a broken task dir stays an honest missing-file miss
+  rather than `all([]) is True`), `_resolve_case_file` knows both naming schemes while keeping
+  the 912 set's `.xlsm`/stray-space quirks, the probe globs every layout, and the prompt's
+  "OTHER GRADED COPIES" paragraph states the real count and vanishes when there is only one.
+  Corollary worth having: with a single graded case `soft` and `hard` coincide by construction,
+  so a `full_verified` number is directly comparable to a published native-hard score with no caveat
+  about which metric is quoted.
+- **Four tasks in `full`'s sealed test split were unwinnable, and nobody knew.** Reading the
+  case count off disk turned up an upstream defect in the 912-task set itself: `43026`, `46444`
+  and `4714` ship ONE test case, `52964` ships two — and all four are in the **test** split. The
+  old hardcoded `(1, 2, 3)` scored their absent cases as misses, so at `SB_SCORING=hard` those
+  four tasks scored 0 in every `full` run to date no matter what the agent produced, and at
+  `soft` they were capped at 1/3 and 2/3. They are now graded on the cases that exist.
+  **This shifts `full`'s numbers**: up to +0.63pp on the sealed test score (4 of 639) and
+  +0.44pp on the whole set, from the fix alone and independent of any prompt change. A new
+  `full` result is therefore very slightly optimistic against older `full` rows on the
+  benchmarks page — the old denominator was too harsh, not the new one too kind.
+- **One verified-400 task could never score, from a digit typo upstream.** Task `42930` ships
+  its golden as `1_43930_golden.xlsx`, and `43930` is not a task id in any release. It is the
+  only such file among the 400. `_resolve_case_file` now accepts a uniquely-matching
+  `*_<kind>` file within the task's own directory as a last resort — uniqueness being the
+  safety property, since two candidates would mean guessing which one grades the task. Verified
+  end to end: all 1,312 tasks across both datasets now resolve every graded file they claim.
+- **A `full_verified` run would have been invisible on the benchmarks page while it executed.**
+  `site/benchmarks.js`'s `JOB_RE` matched the tier as `[a-z][a-z0-9-]*` — digits but no
+  underscore — so `full_verified / spreadsheetbench` did not match and the run would get no
+  entry in the "Running now" panel and no "Open UI" link. That is precisely the `pilot`-tier
+  incident the matcher's own comment documents, about to repeat for the first tier name with an
+  underscore in it; `test_site_live_panel_tiers` caught it on the rename. The class now admits
+  underscores, and every `TIERS` x `BENCHES` job name is asserted to match.
+
+### Changed
+- **Tiers are documented as suite dimensions, not as features of one benchmark.** The shared CI
+  files had drifted into explaining tiers in spreadsheetbench's terms: the dispatch combobox's
+  help text described `full_verified` as "the 400-task set recent papers report on", the
+  planner's comments quoted "~2,279 rollouts/seed", the job-timeout rationale cited "912 tasks",
+  and the suite README restated one benchmark's dataset variants, split sizes and concurrency.
+  Every operator of every benchmark reads that combobox, and the second benchmark to populate
+  `full_verified` would inherit documentation that is simply wrong for it. All of it is now
+  generic and points at `ci/benchmarks/<bench>/README.md` for per-benchmark sizes, datasets,
+  splits, turn budgets and costs; the tier list no longer names which benchmarks populate which
+  tier, since that is exactly the set of `<bench>/<tier>/tasks.json` files the planner reads.
+  Benchmark-specific wiring stays where it belongs — inside the `<bench>)` arms of the shared
+  shell libs, and under `ci/benchmarks/<bench>/`. `test_tiers_are_benchmark_agnostic` enforces
+  the split: generic files may not name a benchmark on a tier line, may not state any single
+  benchmark's data or cost facts, and the shell libs may only reference a tier inside a
+  per-benchmark arm. Nothing was lost in the move — `rfe-creator`'s cost figure was already
+  documented more precisely in its own README.
+- **The smoke tier's tasks are now part of `full_verified`, and a dropped task is now an error.**
+  Smoke is the cheap signal guarding the tiers we report, but its 10 tasks were an arbitrary draw
+  from the 200-task sample: only **3 of 10** were in `full_verified` at all, and 2 of those 3 sat
+  in that tier's sealed test split. That is precisely how the verified-release scoring bug
+  survived — smoke ran three graded cases on `sample_200` and passed green while `full_verified`
+  would have scored 0.000 on all 400 tasks. Smoke is now drawn deterministically (seed 42) from
+  `sample_200 ids` INTERSECT `full_verified TRAIN ids`, so all 10 are in the reported roster and
+  **none** touch that tier's selection or sealed-test splits, with both instruction types kept
+  represented (6 Cell-Level / 4 Sheet-Level). New `utils/make_smoke.py` generates it. Smoke
+  deliberately stays on `sample_200`, which keeps cheap coverage of the THREE-graded-case path
+  `full` and `pilot` depend on — so smoke tasks are part of `full_verified` by **id**, not by
+  content. Only 5 of the 17 candidates also avoid `full`'s sealed test split, so 5 of the 10
+  overlap it (4 did before); widening the pool reaches just 9 of 10 clean, which is not worth
+  touching a second reported split for.
+- **A requested task absent from the dataset no longer shrinks the run silently.** `_load_dataset`
+  filtered to `SPREADSHEETBENCH_TASK_IDS` and complained only when NONE matched, so a tier listing
+  10 ids of which 3 were absent ran 7 and looked healthy — `assert_run.py` checks the
+  infra-failure *fraction*, not the task count, so there was nothing to notice. Survivable while
+  every tier's roster came from its own dataset; not survivable now that smoke's roster is derived
+  from a DIFFERENT archive's roster. It now raises and names every missing id.
 - **A gate that never ran was published as a gate that decided nothing.** On run 33492876620
   round 3 the whole round table came back with `reward`, `gate_delta`, `gate_threshold` and
   `verdict` `null` for all three candidates *and* for the control, `control_replicates: []` and

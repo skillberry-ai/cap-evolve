@@ -190,8 +190,11 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     pinned here: a tier acquiring a config silently is how a run's numbers stop meaning what
     the reader thinks they mean.
 
-    spreadsheetbench pilot+full optimize the HARD score, to be comparable with published work
-    that reports a benchmark's native hard score (soft >= hard by construction).
+    spreadsheetbench pilot+full+full_verified optimize the HARD score, to be comparable with
+    published work that reports a benchmark's native hard score (soft >= hard by construction).
+    On `full_verified` the two metrics coincide anyway — the verified 400-task release grades ONE
+    case per task — but it is pinned so the reported metric name matches `full`'s and so a
+    future multi-case release cannot silently loosen this tier to partial credit.
 
     The pilot ALSO sets `SB_WARM_SEED=1`, and that is exactly the kind of deviation this test
     exists to make loud. Learning was not cumulative across runs: pilot 30799393875 learned
@@ -213,6 +216,7 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     }
     assert shipped == {
         "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
+        "ci/benchmarks/spreadsheetbench/full_verified/overrides.env": {"SB_SCORING": "hard"},
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
             "SB_SCORING": "hard", "SB_WARM_SEED": "1",
         },
