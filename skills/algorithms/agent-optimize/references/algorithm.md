@@ -7,6 +7,7 @@
 - [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
 - [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
 - [Bucketing edits before spending](#bucketing-edits-before-spending)
+- [Prioritizing clusters, and code over prose](#prioritizing-clusters-and-code-over-prose--ported-from-the-deterministic-optimizers-briefing)
 - [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
 - [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
 - [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
@@ -249,12 +250,25 @@ using the same test the edit-form table already applies (`references/edit-design
 
 **Bucket A — atomic/risky.** Prose whose effect is probabilistic, or an edit targeting a cluster
 with no prior evidence. This keeps the section below's default unchanged: independent sibling
-candidates, N≥3, gated separately, one cluster each — because a bundle's measurement footprint is
-the union of its parts, so a narrow edit's footprint stays resolvable while a bundle's noise floor
-rises toward the whole split ("Measuring only what the edit reaches", below). Bundle only
-*independent* parts within one sibling — different files, different rules — so a
-rejected bundle can be resubmitted as its surviving part next round; `regressed`/`regressions` say
-which part to drop.
+candidates, N≥3, one cluster each. Bundle only *independent* parts within one sibling — different
+files, different rules — so a rejected bundle can be resubmitted as its surviving part next round;
+`regressed`/`regressions` say which part to drop.
+
+**Gating N Bucket-A siblings does not mean paying full val N times.** Screen every sibling first
+(SKILL.md step 3, cheap subset, kill-only) — that is the whole point of `screen.py` existing before
+step 4 — then run `scripts/merge_search.py` on the disjoint SCREEN-SURVIVORS (its own module
+docstring: "the missing piece is simply DECIDING which survivors are safe to try merging and
+DOING it, instead of leaving that to a driver under time pressure who defaults to the cheapest
+step"). `merge_search.py` was built for exactly this shape — prior real runs (run_agentoptv3,
+run_agentoptv4) produced 3-6 narrow single-issue candidates per round, each individually full-val
+gated and rejected, and never combined. `--survivors` accepts any tag under `$R/work/`, screened or
+not, so a screen-survivor works exactly like the finalize-time "Merging accepted candidates"
+survivors below — disjointness is a property of what each edit TOUCHED, not of how far through the
+gate it got. The resulting merged candidate(s), plus any survivor `funcmerge.py` refuses to merge
+(a real collision, not a bundling choice), are what pay for full val — never each of the N siblings
+alone when a cheap screen-then-merge path existed. A bundle's measurement footprint is the union of
+its parts, so this still costs resolvable power on a large, unrelated bundle ("Measuring only what
+the edit reaches", below) — merge disjoint survivors, not everything that happened to screen clean.
 
 **Bucket B — obvious/structural.** A code-level guard, a null-safety precondition, a
 docstring/prompt fix that is purely additive knowledge — anything the form table already marks as
@@ -289,6 +303,44 @@ buys one gate's worth of signal for a fraction of what the same gate could resol
 addressable cluster is folded in. This applies whatever the capability is (prompt, tools, or a
 skill package) and whatever the benchmark is: the check is "did I look at every cluster before
 paying," not anything specific to one edit surface.
+
+## Prioritizing clusters, and code over prose — ported from the deterministic optimizer's briefing
+
+`templates/project/optimizer/INSTRUCTIONS.md` — the briefing the deterministic
+loops (hill-climb/gepa/skillopt) hand their per-iteration optimizer subprocess — carries three
+disciplines agent-optimize's own instructions lacked, adapted here (this loop has no optimizer
+subprocess, so they land on you, the driving agent, directly):
+
+1. **Attack by leverage, not just by raw score.** `diagnose.py`'s clusters already sort by
+   `score_lost` descending, which — since `score_lost` sums `(1 − reward)` over every trial in the
+   cluster — already IS the leverage figure (failing tasks × trials × score recoverable), not a
+   proxy for it. SKILL.md's step 2 says to work that order; the reason is the same one the
+   deterministic briefing states explicitly: the biggest visible cluster is not always the biggest
+   *fixable* one, but score_lost is where the ceiling on any fix's payoff actually lives, so it is
+   the right thing to exhaust before moving to a smaller cluster with a nicer-looking fix.
+2. **Prefer a code-level fix over a prompt-level one for the same cluster, whenever `tools` is a
+   selected capability.** The failure-type table above already routes a rule-violation or a missing
+   required element to a code-level guard over prose — this is the same rule restated as a
+   cross-capability preference: a capability set that includes `tools` should see its RULE-VIOLATION
+   and CAPABILITY-GAP clusters fixed in the tool body first, and only fall back to a prompt edit for
+   a genuine knowledge gap (a fact/format/criterion the agent cannot derive by any code check). The
+   deterministic briefing's own worked example generalizes directly: an in-body guard that fires only
+   on the exact violating condition — `if payment_id not in methods: raise ValueError(...)` — is
+   BOUNDED (only already-failing inputs hit it) where the equivalent prose reminder is not, and it is
+   the fix that "drove the best prior results" on every capability that owns code for its surface.
+3. **Verify each kept edit before it pays for a gate**, the same THREE-TESTS discipline
+   (real/safe/verified) the deterministic briefing enforces: REAL — it targets a cluster failing in
+   the traces you just diagnosed, never a hypothetical one; SAFE — for a bounded in-body guard,
+   confirm it does not fire on 1-2 currently-passing tasks that use the same surface (see SKILL.md's
+   step 2 "Verify before you gate"); for an UNBOUNDED edit — one that loosens or alters a global
+   decision/permission/refusal rule — enumerate the passing tasks in that decision class and confirm
+   none relied on the old behaviour, or replace it with a scoped discriminating-condition guard
+   instead; VERIFIED — you ran the check, not just reasoned about it. An edit that fails any of the
+   three is dropped before it ever reaches step 3's screen, not after it burns a rollout.
+
+None of this changes what pays for a rollout or what the gate decides — `screen.py`/`gate_check.py`
+are unmoved — it only orders and filters what you propose before you spend, the same as Bucketing
+above.
 
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
 
@@ -377,6 +429,19 @@ optimizer workdir): the framework re-seeds the same file at the same two points
 (`harness._seed_journal` called once before the session starts, and once per `commit.py` call
 afterward) so a session that never gets a fresh workdir per iteration still gets a fresh append
 target every round.
+
+### INSIGHTS.md / META_INSIGHTS.md — the same accumulator mechanic, a real use in this loop too
+
+`harness.seed_framework_memory` seeds `INSIGHTS.md`/`META_INSIGHTS.md`/`FRAMEWORK_IMPROVEMENTS.md`
+into every workdir the same way and on the same schedule as `JOURNAL.md` — nothing about the
+seeding is deterministic-mode-specific, so they are not off-limits in agent mode either; they are
+a genuinely useful SUMMARY layer above the verbose per-round `JOURNAL.md`, most valuable in a run
+long enough that re-reading the whole journal every round gets expensive. Use them sparingly, not
+every round: append to `INSIGHTS.md` when a `commit.py` RESULT confirms a durable, cross-cluster
+finding worth a future round reading instead of re-deriving from the journal; append to
+`META_INSIGHTS.md` when the round reveals something about the SEARCH itself (a stall, a lever
+switch, screen vs. gate mismatch) rather than about the capability. `FRAMEWORK_IMPROVEMENTS.md` is
+step 6's — see SKILL.md.
 
 ## Parallelism: fan out on the cheap steps, stay serial where state moves
 

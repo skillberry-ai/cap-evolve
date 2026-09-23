@@ -78,10 +78,14 @@ coding agent proposes edits), the algorithm (*the search loop*), dataset, splits
    literally, that feedback is the learning signal. Note in `PROJECT.md` if you
    deliberately return `None` from `trajectories()` (cap-evolve then falls back to its
    own per-rollout JSON).
-4. **Customize the scaffolded `optimizer/INSTRUCTIONS.md`** for THIS benchmark. The
-   shipped template already carries the depth mandate, the non-overfitting guardrail,
-   the STEP-0 reading mandate and the cross-iteration file protocol — do not
-   re-author any of them. Your three jobs:
+4. **Customize the scaffolded `optimizer/INSTRUCTIONS.md`** for THIS benchmark — **skip
+   this step when `orchestration_mode` resolved to `agent`**: that mode's algorithm
+   (`agent-optimize`) never reads `INSTRUCTIONS.md`, it drives its own briefing via
+   `SKILL.md`/`references/algorithm.md`, so customizing it would be wasted effort; note
+   in `PROJECT.md` that it was skipped and why. Deterministic mode: the shipped template
+   already carries the depth mandate, the non-overfitting guardrail, the STEP-0 reading
+   mandate and the cross-iteration file protocol — do not re-author any of them. Your
+   three jobs:
    a. keep every `{{...}}` placeholder intact (`{{FOCUS_SUMMARY}}`, `{{FAILURES}}`,
       `{{CAP_BRIEF}}`, `{{ALGO_BRIEF}}`, `{{BENCH_REPO}}` — the harness fills them per
       iteration; `implement-and-check`'s pipeline self-test fails if one is deleted,
