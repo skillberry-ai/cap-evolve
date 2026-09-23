@@ -75,6 +75,46 @@ describe('RoundsTimeline', () => {
     expect(screen.getByText('driver_judgement')).toBeInTheDocument()
   })
 
+  it('flags a gate mean scored over a subset of the full val split', () => {
+    render(
+      <RoundsTimeline
+        summary={summary({
+          splits: { train: 4, val: 5, test: 2, seed: 0, no_holdout: false, warning: '' },
+          gate_decisions: [
+            {
+              iteration: 1, candidate: 'cand_a', verdict: 'accept', val: 0.6, parent: 'seed',
+              parent_val: 0.5, delta: 0.1, stderr: 0.02, n: 2, k_se: 0.2, threshold: 0.01,
+              reason: '',
+            },
+          ],
+        })}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.6 })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.getByText('subset')).toBeInTheDocument()
+  })
+
+  it('does not flag a subset when the gate scored the whole val split', () => {
+    render(
+      <RoundsTimeline
+        summary={summary({
+          splits: { train: 4, val: 2, test: 2, seed: 0, no_holdout: false, warning: '' },
+          gate_decisions: [
+            {
+              iteration: 1, candidate: 'cand_a', verdict: 'accept', val: 0.6, parent: 'seed',
+              parent_val: 0.5, delta: 0.1, stderr: 0.02, n: 2, k_se: 0.2, threshold: 0.01,
+              reason: '',
+            },
+          ],
+        })}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.6 })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.queryByText('subset')).not.toBeInTheDocument()
+  })
+
   it('flags a round whose handover was not captured live', () => {
     render(
       <RoundsTimeline
@@ -108,6 +148,28 @@ describe('RoundsTimeline screens', () => {
       />,
     )
     expect(screen.getByText('promote · inconclusive')).toBeInTheDocument()
+  })
+
+  it('flags a screen that predicted promote but whose candidate full val then rejected', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'cand_a', status: 'rejected', val: 0.5 })]}
+        screens={[screenRow({ mean_delta: 0.5, inconclusive: false })]}
+      />,
+    )
+    expect(screen.getByText('≠ screen')).toBeInTheDocument()
+  })
+
+  it('does not flag a screen whose call agreed with the full-val verdict', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.5 })]}
+        screens={[screenRow({ mean_delta: 0.5, inconclusive: false })]}
+      />,
+    )
+    expect(screen.queryByText('≠ screen')).not.toBeInTheDocument()
   })
 })
 

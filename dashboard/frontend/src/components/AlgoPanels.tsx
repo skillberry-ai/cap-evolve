@@ -384,6 +384,10 @@ export function RoundsTimeline({
   for (const s of screens) {
     screensByCand.set(s.candidate, [...(screensByCand.get(s.candidate) ?? []), s])
   }
+  // The full val split size, so a gate's own `n` (GateDecision.n) can be compared
+  // against it — the difference between "this mean is over all of val" and "this mean
+  // is over a subset", which a full-coverage-looking round otherwise hides.
+  const valTasks = summary.splits?.val ?? summary.tasks?.length ?? null
 
   return (
     <div className="space-y-4">
@@ -412,6 +416,7 @@ export function RoundsTimeline({
             node={n}
             gate={gateByCand.get(n.id)}
             screens={screensByCand.get(n.id) ?? []}
+            valTasks={valTasks}
           />
         ))
       )}
@@ -442,10 +447,13 @@ function RoundCard({
   node: n,
   gate,
   screens,
+  valTasks,
 }: {
   node: GraphNode
   gate?: GateDecision
   screens: ScreenRow[]
+  /** The full val split size, to flag a gate's `n` as a subset of it. */
+  valTasks?: number | null
 }) {
   const [open, setOpen] = useState(false)
   // The final verdict disagreeing with the raw gate is the whole point of surfacing
@@ -487,32 +495,50 @@ function RoundCard({
         {screens.length > 0 && (
           <Step label="screen">
             <div className="space-y-1">
-              {screens.map((s, i) => (
-                <div key={`${s.screen_tag}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span
-                    className={cn(
-                      'rounded border px-1.5 py-0.5 text-[11px] font-medium',
-                      s.inconclusive
-                        ? 'border-indecisive/50 text-indecisive'
-                        : s.decision === 'promote'
-                          ? 'border-accepted/50 text-accepted'
-                          : 'border-rejected/50 text-rejected',
+              {screens.map((s, i) => {
+                // Did this screen's promote/kill call agree with what full val later
+                // found? A screen that promoted but whose candidate the full-val gate
+                // then rejected (or vice versa) is the screen failing to reproduce —
+                // the same check the old ScreensPanel made, just re-anchored here.
+                const agreed =
+                  n.val == null || s.mean_delta == null
+                    ? null
+                    : (s.mean_delta > 0) === (n.status === 'accepted')
+                return (
+                  <div key={`${s.screen_tag}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span
+                      className={cn(
+                        'rounded border px-1.5 py-0.5 text-[11px] font-medium',
+                        s.inconclusive
+                          ? 'border-indecisive/50 text-indecisive'
+                          : s.decision === 'promote'
+                            ? 'border-accepted/50 text-accepted'
+                            : 'border-rejected/50 text-rejected',
+                      )}
+                    >
+                      {s.decision ?? '—'}
+                      {s.inconclusive && ' · inconclusive'}
+                    </span>
+                    <span className="tnum text-muted">
+                      Δ̄ {s.mean_delta == null ? '—' : `${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}`}
+                      {s.se != null && ` ± ${s.se.toFixed(4)}`}
+                    </span>
+                    <span className="tnum text-[11px] text-muted">
+                      {s.n ?? '—'}
+                      {s.pool_n != null && ` / ${s.pool_n}`} tasks (tier {s.tier ?? '—'})
+                    </span>
+                    {agreed === false && (
+                      <span
+                        className="text-[11px] font-medium text-accent"
+                        title="The screen and the full val eval disagreed — the subset did not reproduce."
+                      >
+                        ≠ screen
+                      </span>
                     )}
-                  >
-                    {s.decision ?? '—'}
-                    {s.inconclusive && ' · inconclusive'}
-                  </span>
-                  <span className="tnum text-muted">
-                    Δ̄ {s.mean_delta == null ? '—' : `${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}`}
-                    {s.se != null && ` ± ${s.se.toFixed(4)}`}
-                  </span>
-                  <span className="tnum text-[11px] text-muted">
-                    {s.n ?? '—'}
-                    {s.pool_n != null && ` / ${s.pool_n}`} tasks (tier {s.tier ?? '—'})
-                  </span>
-                  <TaskMovement fixed={s.fixed} broke={s.regressed} />
-                </div>
-              ))}
+                    <TaskMovement fixed={s.fixed} broke={s.regressed} />
+                  </div>
+                )
+              })}
             </div>
           </Step>
         )}
@@ -530,6 +556,20 @@ function RoundCard({
                 {gate.threshold != null && ` (threshold ${gate.threshold.toFixed(4)})`}
               </span>
               {gate.gate_mode && <span className="text-[11px] text-muted">mode: {gate.gate_mode}</span>}
+              {gate.n != null && (
+                <span className="tnum text-[11px] text-muted">
+                  {gate.n}
+                  {valTasks != null && <span> / {valTasks}</span>} tasks
+                  {valTasks != null && gate.n > 0 && gate.n < valTasks && (
+                    <span
+                      className="ml-1 text-indecisive"
+                      title="Only a subset of val was scored — this mean covers those tasks only."
+                    >
+                      subset
+                    </span>
+                  )}
+                </span>
+              )}
               <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium">
                 raw: {gate.gate_verdict ?? gate.verdict}
               </span>

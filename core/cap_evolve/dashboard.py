@@ -370,7 +370,15 @@ _ALGO_MARKERS = (
 #: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
 #: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
 #: candidate on the same (current) runs, so it never carried a graph anyone needs.
-_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
+#:
+#: ``inconclusive`` is commit.py's third booking kind (``accept``/``reject``/
+#: ``inconclusive``) and carries the SAME audit fields (``gate_verdict``,
+#: ``overrode_gate``, ``reject_basis``) that ``accept``/``reject`` do. Leaving it out
+#: made the carry-forward block below never see them: the ``inconclusive`` event was
+#: skipped outright, and the ``step`` event ``record_iteration`` writes right after it
+#: carries none of those fields itself. ``indecisive_ids`` (above) still keeps its
+#: status out of "accepted"/"rejected" — it was never validly judged either way.
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional", "inconclusive")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
@@ -1153,11 +1161,13 @@ def reduce_run(run_dir) -> dict:
             algorithm, algorithm_source = from_spec, "capevolve.yaml"
         elif has_wiki:
             algorithm, algorithm_source = "evograph", "run-dir wiki/"
-    # Candidates the gate REFUSED TO JUDGE (low coverage, or an integrity tamper).
-    # These are neither accepted nor rejected: the edit was never validly measured.
+    # Candidates the gate REFUSED TO JUDGE (low coverage, an integrity tamper, or
+    # commit.py's own ``--decision inconclusive`` — the verdict flipped across control
+    # replicates, so the measurement itself could not resolve it). All three are
+    # neither accepted nor rejected: the edit was never validly judged.
     indecisive_ids = {
         _step_candidate(e) for e in events
-        if e.get("kind") in ("step_indecisive", "tamper_detected")
+        if e.get("kind") in ("step_indecisive", "tamper_detected", "inconclusive")
     } - {None}
 
     # --- nodes: start with the seed -------------------------------------
@@ -1951,7 +1961,12 @@ def reduce_run(run_dir) -> dict:
             (v for k, v in screen_files.items() if str(v.get("tag")) == tag), {})
         sub = d.get("subset") or {}
         paired = d.get("paired") or {}
-        screen_tag = str(d.get("screen_tag") or tag)
+        # Fall back to screen.py's OWN naming convention (``<tag>__screen<tier>``), never
+        # to the bare candidate tag: a screen node's id must stay distinct from its
+        # candidate's, or a candidate that was screened THEN went to full val collides
+        # with its own screen in anything keyed by this id (the Tasks matrix column list,
+        # the graph). This only fires when no ``screens/<x>.json`` matched (``d`` empty).
+        screen_tag = str(d.get("screen_tag") or f"{tag}__screen{e.get('tier') or ''}")
         # The screen's own rollouts (rollouts/val/<task>__<screen_tag>__t*.json) are the
         # candidate's ACTUAL per-task reward on the subset it ran — the same canonical
         # rollout->per-task reconstruction a full-val node uses, so a screen shows up in
