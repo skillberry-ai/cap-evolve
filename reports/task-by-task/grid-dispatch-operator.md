@@ -21,19 +21,46 @@ _Numbers above are generated from `results/results.json`. Val rewards unless lab
 
 ## What changed
 
-_Not yet analysed._
+The optimizer added, within `economic-dispatch`, a hardened "Step 0" environment section
+(install the solver stack into the system `python3`, not a venv, because the grader re-runs
+`pip3 install` against the system interpreter) and a bundled `scripts/solve_dispatch.py` the
+agent can just run instead of hand-rolling the `cvxpy` formulation — this task doesn't need
+locational marginal prices, so it never needed the dual-value plumbing its skill-sharing
+partner `energy-market-pricing` required. It shares `dc-power-flow`, `economic-dispatch`, and
+`power-flow-data` with that task, each edited independently there. This task-pair conflict is
+the subject of the [3x2_toy pilot](../../docs/specs/3x2_toy_experiment_plan.md), which asks
+whether the two tasks' variants can be merged into one shared package without losing either
+task's needs.
 
 ## What worked
 
-_Not yet analysed._
+This task's own tbt (task-by-task) run already reached the 1.0 ceiling, and every merge/transfer
+arm the pilot tried held that ceiling: cross-task transfer of `energy-market-pricing`'s donor
+skills scored 0.8 zero-shot (`toy:A3` — lower, since that donor lacks this task's env-hardening),
+but the static 3-file merge (`toy:A4`), the jointly-optimized merge (`toy:A5`), and every
+single-collapsed-skill variant (`toy:B1` excepted — see below) all scored 1.0. Merging this
+task's already-optimized donor into a shared package never cost it anything.
 
 ## What didn't
 
-_Not yet analysed._
-
-_A rejected candidate is not a regression: it reverts to the champion, so a low score on a
-later candidate does not undo an earlier accepted fix._
+The one clean negative result in the whole pilot belongs to this task: `toy:B1`, the
+single-collapsed skill built from the two tasks' never-optimized *seed* variants (zero
+optimizer-added content), scored **0.0** here — matching the true pre-optimization floor, not a
+useful merge lift. Inspecting a rollout showed the agent recovering from a missing-`numpy` error
+on its own, then solving the DC-OPF and writing a well-formed `report.json` — and still scoring
+0.0. That points at the *other* piece of optimizer-added content this task's own variant needed
+and the seed lacked: the "Reference DC model conventions" guardrail against folding transformer
+tap ratios / phase-shift angles into the susceptance matrix. Confirms this is a genuine seed-stage
+capability gap, not a merge-construction bug (see the pilot doc §10).
 
 ## What we can (or can't) learn
 
-_Not yet analysed._
+Collapsing three skill files into one, on its own, neither helps nor hurts — `toy:B1`'s 0.0
+exactly matches this task's own pre-optimization seed score (`toy:A1`). Every lift above that
+floor, for this task, came from **optimizer-added content reaching the skill** (the env-hardening
+and DC-model guardrail), not from merging or collapsing files per se — and once that content is
+present, merging preserves it without regression, whether via a static 3-file union, a single
+collapsed file, or a re-merge of two independently optimized mutations of the collapsed file.
+That reading is specific to this DC-OPF skill family (n=2 tasks); see
+[`results/3x2_toy/summary.md`](../../results/3x2_toy/summary.md) for the full arm table and the
+caveat that `xlsx`'s conflict does not show the same "merging never hurts" pattern.

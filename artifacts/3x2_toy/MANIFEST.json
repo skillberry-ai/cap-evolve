@@ -1,0 +1,48 @@
+{
+  "experiment": "3x2_toy",
+  "_note": "Arm-keyed, unlike ../task-by-task/MANIFEST.json (task-keyed) - one package here can feed more than one arm. Field names mirror results/3x2_toy/results.json so the two can be cross-checked directly. Source: cap-evolve-worktrees/intake_skillbench_c7/.capevolve/_merged_a2p_*/ (literal 'a2p_' names are on-disk identifiers, not renamed).",
+  "packages": [
+    {
+      "dir": "merged_bundle",
+      "source": "_merged_a2p_bundle_v1",
+      "skills": ["dc-power-flow", "economic-dispatch", "power-flow-data"],
+      "description": "Three separate SKILL.md packages, each a pairwise union of the two tasks' tbt-optimized (A2) donor variants per the docs/specs/3x2_toy_experiment_plan.md §6 merge methodology (M1-style union for dc-power-flow and power-flow-data; economic-dispatch keeps the inline formulation as default and demotes the bundled solver script to an explicitly-scoped shortcut).",
+      "feeds_arms": ["A4", "A5"],
+      "files": 7
+    },
+    {
+      "dir": "merged_single_skill_seed",
+      "source": "_merged_a2p_single_skill_seed_v1",
+      "skills": ["power-system-optimization"],
+      "description": "The three skills' seed (pre-optimization, never-touched-by-cap-evolve) variants collapsed into one skill. Zero optimizer-added content by construction - no Step 0 env-hardening, no DC-model-fidelity guardrail.",
+      "feeds_arms": ["B1"],
+      "files": 3
+    },
+    {
+      "dir": "merged_single_skill_tbt",
+      "source": "_merged_a2p_single_skill_v1",
+      "skills": ["power-system-optimization"],
+      "description": "The three skills' tbt-optimized (A2) best/ donor variants collapsed into one skill - same donors as merged_bundle, but boundaries collapsed into a single SKILL.md instead of kept as three files.",
+      "feeds_arms": ["B3"],
+      "files": 5
+    },
+    {
+      "dir": "merged_single_skill_mutations",
+      "source": "_merged_a2p_single_skill_expC_v1",
+      "skills": ["power-system-optimization"],
+      "description": "Union of the two independently-optimized (B2) per-task mutations of the seed-merge collapsed skill - not a merge of separate files (like merged_bundle) but a merge of two optimizer runs' edits to the *same already-collapsed* file. SKILL.md diverged only in its per-task Step 0/Quickstart head; the tail was byte-identical and appended once.",
+      "feeds_arms": ["B4"],
+      "files": 7,
+      "extra_file_note": "Also contains locational-marginal-prices/SKILL.md, which docs/specs/3x2_toy_experiment_plan.md never mentions. Verified byte-identical to artifacts/task-by-task/energy-market-pricing/seed/locational-marginal-prices/SKILL.md (the pre-optimization seed variant, not the 'best'/native one the B4 test project actually seeded alongside the merged skill). This looks like a stray leftover copied in during package assembly rather than an intentional part of the tested B4 package - the B4 job description in the plan doc says it seeded the *native* locational-marginal-prices skill, and results/3x2_toy/results.json's B4 scores (1.0/1.0) match that description, not a run against this weaker seed-stage copy. Kept here for faithfulness to what is actually on disk, flagged as not part of the intended package rather than silently dropped."
+    }
+  ],
+  "no_standalone_package": {
+    "A3": "three-skills/tbt-cross - each side of the cross-transfer is just one task's already-existing tbt-optimized (A2) donor deployed as-is on the other task; no new package was built, see artifacts/task-by-task/{energy-market-pricing,grid-dispatch-operator}/best/.",
+    "B2": "combo-skill/tbt - the two per-task optimizer runs' output candidates (cand_0001 under each run's own run_dir) were never copied out as standalone packages before B4 merged them; only the merged result (merged_single_skill_mutations) was preserved.",
+    "B6": "combo-skill/joint - the optimizer's accepted candidate (cand_0001) from the joint run was never copied out as a standalone package; only its seed input (merged_single_skill_seed, shared with B1) is preserved."
+  },
+  "already_covered_by_task-by-task": {
+    "A1": "three-skills/seed - artifacts/task-by-task/{energy-market-pricing,grid-dispatch-operator}/seed/{dc-power-flow,economic-dispatch,power-flow-data}/",
+    "A2": "three-skills/tbt - artifacts/task-by-task/{energy-market-pricing,grid-dispatch-operator}/best/{dc-power-flow,economic-dispatch,power-flow-data}/"
+  }
+}

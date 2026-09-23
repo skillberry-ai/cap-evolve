@@ -1,19 +1,18 @@
 # Experiment Plan — Can a fixed skill vocabulary retain per-task specialization?
 
-> **Status: design document only.** Nothing in here is to be executed until the plan is
-> approved. The first deliverable is this document committed to the repo; experiments follow.
+> **Arm-id namespaces — read this before any table.** Two independent arm schemes exist in
+> SkillsBench documents. `study:` ids (`A0`, `A0f`, `A1`, `A2p`, `A2f`, `A3`, `A4`) are this
+> document's study-level arms over 87 tasks / 196 skills. `toy:` ids (`A1`–`A6`, `B1`–`B6`) are
+> the [3x2_toy pilot](3x2_toy_experiment_plan.md)'s arms over 2 tasks / 3 skills. **`A1`, `A3`,
+> and `A4` mean different things in each scheme.** Committed data files store bare ids;
+> resolve them by directory — `results/3x2_toy/**` is `toy:`, everything else in this repo is
+> `study:`. This document uses bare `study:` ids throughout for brevity, since it never discusses
+> the pilot's arms directly.
 >
-> **First action on approval:** copy this document verbatim to
-> `docs/specs/experiments_plan_v1.md` in the **`intake_skillbench_manager`** worktree
-> (`../cap-evolve-worktrees/intake_skillbench_manager`, branch `consolidation/skillbench`,
-> clean, 28 commits ahead of `origin/main`) and leave it staged-but-uncommitted for review.
-> That worktree already holds both files this plan modifies —
-> `skills/capabilities/skill-package/scripts/abstract.py` (step 2) and
-> `skills/algorithms/agent-optimize/scripts/{merge_taskopt,funcmerge,integrate}.py` (step 3) —
-> so the document and its implementation stay on one branch.
-> Note `docs/specs/` currently uses a date-prefixed convention
-> (`2026-06-24-multi-agent-support-design.md`); the explicit `experiments_plan_v1.md` name
-> departs from it deliberately so the version, not the date, is the identifier.
+> **Status: living document, on `skillsbench-history`.** Step 1 is complete (2026-09-10, PR #484).
+> The `study:A2p` arm was additionally piloted at 2-task/3-skill scale as
+> [**3x2_toy**](3x2_toy_experiment_plan.md) — 10 of its 12 arms run; see the Pilot section below.
+> Full 87-task execution of the remaining steps has not started.
 >
 > **This is a living document.** It gets amended in place as findings correct or extend it —
 > not replaced by side documents — and bumps to a `_v2` filename only on a real design change to
@@ -22,10 +21,14 @@
 > lives in `insights/SKILLS_TASKS_MAP.md` / `skills_tasks_map.html` and `ui/heatmap.html` /
 > `ui/evoskill_comparison_chart_87.html` on `skillsbench-history`, so Step 1 now targets those
 > artifacts instead of a new manifest script.
+> Note `docs/specs/` currently uses a date-prefixed convention
+> (`2026-06-24-multi-agent-support-design.md`); the explicit `experiments_plan_v1.md` name
+> departs from it deliberately so the version, not the date, is the identifier.
 
 ## Context
 
-We have a benchmark (SkillsBench, **87 tasks**) and a skill library (**195–196 skills**), and we
+We have a benchmark (SkillsBench, **87 tasks**) and a skill library (**196 skills deployed**;
+195 excluding the `licenses` boilerplate package — see the fact table below), and we
 have already shown that optimizing each task's own skills in isolation lifts the aggregate score
 a lot. The paper's claim needs something stronger than that: a **single deployable library** that
 honors a fixed vocabulary — no new skills, each skill keeps its role, but prose *and* bundled
@@ -87,7 +90,7 @@ selection half of that question.
 compared a 4-skill library to per-task 3-skill libraries, and every joint run was additionally
 KILLED with `best_id: "seed"`. Arm 4 must be re-run from the full vocabulary.
 
-## Design — six arms, and what each subtraction means
+## Design — seven arms, and what each subtraction means
 
 All arms are evaluated on the **same 87 tasks** with the **same** `num_trials`, so every
 comparison is paired per task. `A1` and `A3` are optimization runs; the rest are pure evaluations
@@ -98,7 +101,7 @@ comparison is paired per task. `A1` and `A3` are optimization runs; the rest are
 | **A0** per-task seed | that task's seed skills | ~2.7 | **have** (0.508) |
 | **A0f** full seed | all 196 seed skills | 196 | **new, cheap, run first** |
 | **A1** per-task optimized | that task's best variant | ~2.7 | have, needs clean re-score |
-| **A2p** merged, per-task view | that task's skills, **merged** versions | ~2.7 | new |
+| **A2p** merged, per-task view | that task's skills, **merged** versions | ~2.7 | piloted at 2-task/3-skill scale as [3x2_toy](3x2_toy_experiment_plan.md) (10/12 arms run); full 87-task run outstanding |
 | **A2f** merged, full library | all 196, merged | 196 | **new — the paper's artifact** |
 | **A3** jointly optimized | all 196, optimized together | 196 | new (prior attempt invalid) |
 | **A4** cluster-optimized | all 196, optimized per task-cluster | 196 | conditional on A3 |
@@ -109,14 +112,19 @@ The subtractions are the results:
   against the honest baseline. This is the paper's headline.
 - `A1 − A2p` — **compression cost in isolation.** Selection difficulty is held constant; only the
   6 merged skills differ. Prediction: small, and confined to the ~20 tasks those 6 skills serve.
+  First pilot evidence (3x2_toy, 3 of the 6 skills, 2 of the ~20 tasks): the merged package scored
+  ≥ native on both tasks (1.0/1.0 vs 0.9/1.0 native) — compression cost was zero or negative on
+  this pair, though the pilot cannot rule out worse behavior on the other 3 conflicted skills or
+  the other ~18 tasks.
 - `A0f − A0` and `A2f − A2p` — **selection / interference cost**, measured once without
   optimization and once with. If these are large and similar, vocabulary size hurts through
   selection, not through lost specialization — a sharp, falsifiable claim.
 - `A3 vs A2f` — the user's arm 4: **does the route matter**, joint vs per-task-then-merge, now
   from the same starting vocabulary and the same budget.
 - `A4` — run only if `A3 vs A2f` is significant under the paired gate. Clusters are defined by
-  *shared skills*: the 16 multi-task skills induce a task graph; its connected components are the
-  clusters, and the 71 single-task skills stay in whichever cluster their task lands in.
+  *shared skills*: the 6 conflicted (multi-task-edited) skills induce a task graph; its connected
+  components are the clusters, and the 65 single-task-edited skills stay in whichever cluster
+  their task lands in.
 
 `A1` remains a **non-deployable oracle** — 87 libraries selected by knowing the task in advance.
 It is the upper reference line, not a competing system, and the paper must say so.
@@ -137,6 +145,12 @@ in** — the same selection load as A0, not as A0f. So:
   can run, and be reported, without waiting on A0f.
 - Practical effect on sequencing: **A2p can start in parallel with A0f**, not after it. A0f still
   gates A2f/A3/A4, per the Risks section and Delivery order below.
+
+**The 2-task pilot that first exercised this arm was informally called "the A2p phase" during
+design; it is now named [3x2_toy](3x2_toy_experiment_plan.md)** and has its own document, results
+summary, and arm lettering (`toy:A1`–`A6`/`toy:B1`–`B6` — see the namespace note at the top of
+this document). `A2p` itself remains this document's name for the study-level arm; only the
+pilot's informal name changed.
 
 ### Step 1 — pin the ground truth (no compute, mostly no new artifact)
 
@@ -262,7 +276,11 @@ as a precondition Step 3 must satisfy before A2p can start.
 ### Step 3 — build the merged library (arm A2)
 
 Only **6 skills** need merging, so all four methods are cheap enough to run and compare. Reuse the
-existing machinery in `skills/algorithms/agent-optimize/scripts/` rather than inventing:
+existing machinery in `skills/algorithms/agent-optimize/scripts/` rather than inventing.
+**Piloted on 3 of the 6** (`dc-power-flow`, `economic-dispatch`, `power-flow-data`) by
+[3x2_toy](3x2_toy_experiment_plan.md), which built and scored merged packages via a mix of M1-style
+splicing and cap-evolve-driven collapse; see that document's skill-pair diff assessment for
+measured (not assumed) results. `xlsx`, `pdf`, and `fuzzy-match` are not yet attempted.
 
 - **M1 mechanical** — `merge_taskopt.py` (`git merge-file` 3-way across N variants). Its
   `FILES_DEFAULT = "policy/policy.md,tools/tools.py"` is tau2-shaped; extend it to enumerate
@@ -281,10 +299,16 @@ existing machinery in `skills/algorithms/agent-optimize/scripts/` rather than in
   enough?"
 
 Pick per-skill by M2-style verified measurement on that skill's own tasks; report all four so the
-merge method is a measured choice, not an assumption. The concrete conflicts to expect: `xlsx`
-(13 tasks) and `pdf` (11 tasks) dominate, and the `xlsx` variants carry **directly contradictory
-first-action mandates** plus hardcoded output paths (`/root/output/rar_result.xlsx`) — overfit
-that a splice will preserve and that M3 is best placed to remove.
+merge method is a measured choice, not an assumption.
+
+**Measured** (3x2_toy pilot, `dc-power-flow`/`economic-dispatch`/`power-flow-data`): see that
+document's skill-pair diff assessment for the actual per-skill divergences found and how each
+merge method handled them.
+
+**Still expected, not yet measured:** `xlsx` (13 tasks) and `pdf` (11 tasks) dominate the
+remaining conflicts, and the `xlsx` variants carry **directly contradictory first-action
+mandates** plus hardcoded output paths (`/root/output/rar_result.xlsx`) — overfit that a splice
+will preserve and that M3 is best placed to remove.
 
 ### Step 4 — arm A3, joint optimization, done properly
 
@@ -365,20 +389,36 @@ size with specialization held at zero.
 
 ## Delivery order
 
-1. This document → `docs/specs/experiments_plan_v1.md` on `consolidation/skillbench` in the
-   `intake_skillbench_manager` worktree (see the Status note above). Staged, not committed —
-   you commit it. Optionally cross-linked later from
-   `skillsbench-history:proposals/` alongside `train_test_split_proposal.md` and
-   `transfer_eval_runs.md`, which is where the *data* provenance docs live; the plan itself
-   belongs with the code that implements it.
+1. **Done.** This document lives at `docs/specs/experiments_plan_v1.md` on `skillsbench-history`.
 2. **Done (2026-09-10).** Step 1 — Table D/E append to `SKILLS_TASKS_MAP.md`/`skills_tasks_map.html`
    + evidence cross-links, via `scripts/build_capability_change_tables.py` (no compute; a new
    script was needed after all — see Step 1's completion note above). Landed on
    `skillsbench-history` PR #484.
-3. Step 2 invariant + tests (no compute) — **next up**.
-4. **A0f** — cheapest arm, highest information, and it de-risks everything downstream.
-5. A1 re-score, A2 merge + A2p/A2f.
-6. A3, then A4 only if warranted.
+3. **Done.** [3x2_toy](3x2_toy_experiment_plan.md) pilot — `A2p` explored at 2-task/3-skill
+   scale, 10 of 12 pilot arms run. See its results summary for the reading.
+4. Step 2 invariant + tests (no compute) — still outstanding; not required for the
+   pure-evaluation arms already piloted, but needed before any `--max-iterations > 0` run on a
+   shared skill (A3/A4, or a future optimized A2p).
+5. **A0f** — cheapest arm, highest information, and it de-risks everything downstream.
+6. A1 re-score, full 87-task A2 merge + A2p/A2f.
+7. A3, then A4 only if warranted.
+
+## Pilot: 3x2_toy
+
+Before running the full 87-task `A2p` arm, a 2-task, 3-skill pilot exercised the merge question
+at small scale: `energy-market-pricing` and `grid-dispatch-operator` both independently edited
+`dc-power-flow`, `economic-dispatch`, and `power-flow-data` — one of the 6 conflicted skills
+groups from Table E above. 12 arms were designed (Section A: keep the three skills distinct and
+merge; Section B: collapse them into one skill first), 10 run, 2 documented as not-yet-run gaps.
+
+**Headline:** every arm that scored 1.0/1.0 got there via the optimizer adding content, not via
+merging per se — the merged-but-zero-shot arms matched or exceeded native zero-shot, so
+compression cost (on this skill triple, these two tasks) was zero or negative, consistent with
+the `A1 − A2p` prediction above.
+
+Full narrative, arm-by-arm job table, and skill-pair diff assessment:
+[`3x2_toy_experiment_plan.md`](3x2_toy_experiment_plan.md). Results tables, LSF job IDs, and the
+two gap arms: `results/3x2_toy/summary.md`. Merged skill packages: `artifacts/3x2_toy/`.
 
 ## Out of scope
 
