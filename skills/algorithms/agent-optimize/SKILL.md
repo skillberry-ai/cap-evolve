@@ -59,9 +59,9 @@ Act on the single `recommendation`: **`stop`** (a ceiling breached, `budget_exha
 goal met on FULL val) → **Stop & seal**; **`narrow_scope`** (≥80% of a ceiling consumed, goal unmet) → ONE
 cheap candidate at tier 1, no fan-out; **`continue`** → run the round you planned.
 
-`afford.affordable: false` (with `afford.blockers` naming the ceiling) means **do not fan out N** — check
-BEFORE dispatching proposers, since N candidates can blow a budget with room for one.
-`afford.runner_spend_metered: false` means $0 is *unmetered*, not free — bound such a run with
+`afford.affordable: false` (`afford.blockers` names the ceiling) means **do not fan out N** — check
+BEFORE dispatching proposers; N candidates can blow a budget with room for one.
+`afford.runner_spend_metered: false` means $0 is *unmetered*, not free — bound the run with
 `max_metric_calls` and report **rollout counts, not dollars**.
 
 **1. Read the signal.** Free — no new evaluation:
@@ -87,21 +87,23 @@ scores val only, so pay one `evaluate --split train` first.)
 | `4/10` – `7/10` | genuinely unstable behaviour | fix by *removing* ambiguity, not adding rules |
 | `8/10` – `9/10` | noise around a working path | **leave it alone**; "fixing" it is how churn starts |
 
-**Audit the MEASUREMENT before you credit a failure**, in round 1 while free (scoring re-derives
-on persisted rollouts): a failing task is a claim by the scorer. Does the feedback name the
-**defect** or only the tool; does any helper fail **silently**; is *silent* distinguished from
-*wrong*; did the rollout **run**, or is this missing data wearing a 0.0; which components
-actually **gate**? `references/edit-design-lessons.md`.
+**Audit the MEASUREMENT before you credit a failure**, in round 1 while free: a failing task is a
+claim by the scorer. Does feedback name the **defect** or only the tool; does a helper fail
+**silently**; did the rollout **run**, or is this missing data wearing a 0.0? `edit-design-lessons.md`.
 
 **After two rejected rounds, read the candidate's TRACE before writing a third** — not "was the rule
 right" but "did the agent follow it at all". Never exercised ⇒ the **form** is wrong; exercised and
 still wrong ⇒ the content is.
 
 **2. Bucket every edit before spending, per the form table below** (deterministic → B,
-probabilistic → A). **A:** sibling candidates, N≥3, gated separately — unchanged default.
-**B:** merge every low-risk structural fix into one working copy, gate once via steps 3–4 — no
-per-fix screen/gate, each part already cleared its own bar alone. Details:
-`references/algorithm.md`, "Bucketing edits before spending".
+probabilistic → A). **A:** sibling candidates, N≥3 — screen every one first (step 3, kill-only),
+then `merge_search.py` on the disjoint SCREEN-SURVIVORS, fewest candidates possible, and gate only
+the merged one(s) plus any unmergeable survivor on full val — never gate N siblings individually
+when screen-then-merge was an option. **B:** merge every low-risk structural fix into one working
+copy, gate once via steps 3–4 — no per-fix screen/gate, each part already cleared its own bar
+alone. Attack clusters in `score_lost` order; when `tools` is a selected capability, prefer a
+code-level fix over a prompt-level one for the same cluster. Details: `references/algorithm.md`,
+"Bucketing edits before spending".
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
@@ -124,6 +126,9 @@ failure type measurably backfires on another:
 Then: **no nuance clauses**; **exemption clauses do not scope** (still suppresses X); **prefer an in-code
 guard to a prose rule where the capability owns its tools** — prose when the agent lacks a decision
 criterion, code when it has one and violates it. Costs, and the guard-closure trap: `edit-design-lessons.md`.
+**Verify before you gate**: run the edit against the exact args/state from the trace it targets and
+confirm it fires, then against 1-2 currently-passing tasks on the same surface and confirm it does
+NOT fire — an edit you cannot check this way is a guess, drop it.
 
 **Every round evaluates a null control first** — a byte-for-byte copy of the current best; that
 eval is the noise floor. **Read `$R/rejected.jsonl`, and make each proposal STRUCTURALLY
@@ -196,7 +201,9 @@ after which `grow.py` buys trials on the SAME candidate, re-gating at the pooled
 
 **6. Write the handover before ending this round** — append one `## Iteration <cid>` entry below
 `work/$TAG/JOURNAL.md`'s marker (never `$R/JOURNAL.md`, framework-owned): what you tried, why, what
-the numbers said. The only thing the NEXT round reads (`references/algorithm.md`).
+the numbers said. The only thing the NEXT round reads (`references/algorithm.md`). A real
+framework bug/gap (not the capability)? Log it in `work/$TAG/FRAMEWORK_IMPROVEMENTS.md` (its
+seeded format), not just in chat.
 
 ## Parallel round (optional)
 
@@ -242,16 +249,10 @@ harness timeout while healthy), `mechanisms.py` (the shared ledger; `list` BEFOR
 optimisers implement one fix and collide at merge with only one measured), `integrate.py`, `funcmerge.py`,
 `merge_taskopt.py` — then gate the artifact once on full val via `round.py`. Economics, briefing contract,
 canary selection, every flag: [`references/per-task-fanout.md`](references/per-task-fanout.md). Two rules
-decide whether the shape is safe at all, so they live here:
-
-**A parallel optimiser's deliverable is a MECHANISM WITH TRACE PROOF, not a rate.** A fan-out is a
-high-load regime by construction — where a per-task rate cannot resolve the effect — so ask for
-load-independent evidence (the guard fired, the next action changed), then gate the survivors serially.
-
-**A multi-branch artifact is assembled with `integrate.py`, never by one merge**, one branch at a time with
-a measurement after each: fewer mechanisms routinely beat more, and one number for N simultaneous changes
-cannot tell you that. `funcmerge` merging cleanly is **not** evidence the branches compose — Clean merge is
-a syntactic property; composition is an empirical one.
+decide whether the shape is safe: a parallel optimiser's deliverable is a mechanism with trace proof, not
+a rate; **a multi-branch artifact is assembled with `integrate.py`, never by one merge**, one branch at a
+time, measured after each — `funcmerge` merging cleanly is **not** evidence the branches compose. Clean
+merge is a syntactic property; composition is an empirical one.
 
 ## Measurement discipline
 
@@ -261,14 +262,11 @@ unchanged (`control_reuse`). Two more rules; the rest — ceiling arithmetic, th
 mechanism-vs-artifact designs, gating the sum, the sign test — is in
 [`references/measured-lessons.md`](references/measured-lessons.md).
 
-1. **Explore fast, gate slow, gate ALONE.** The load knob is *total in-flight requests* (K processes at
-   concurrency C is K·C), not any per-process flag, and oversubscription fails silently as latency, not an
-   error. Pause the fan-out, run both gate arms in one batch alone; if you cannot quiet the machine, say
-   so next to the verdict.
+1. **Explore fast, gate slow, gate ALONE.** The load knob is total in-flight requests, not a per-process
+   flag, and oversubscription fails silently as latency. Pause the fan-out for both gate arms.
 2. **Two independently-seeded blocks, agreeing in sign, before a small effect is a result.** A paired
-   run's SE is over *tasks*, so it cannot see run-to-run nondeterminism; `multirep.py` takes the error
-   across whole runs (`--base-seed` picks the block — raising `--n` extends the same one, not a
-   replication). Several full runs unaffordable ⇒ "not resolvable at this budget" is the honest output.
+   run's SE is over tasks, not runs; `multirep.py` takes the error across whole runs. Unaffordable ⇒
+   "not resolvable at this budget" is the honest output.
 
 ## Stop & seal, then MEASURE (once)
 
