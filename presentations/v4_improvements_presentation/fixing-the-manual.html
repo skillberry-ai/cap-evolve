@@ -1,0 +1,1180 @@
+<title>Fixing the Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,500;0,72,600;1,72,400;1,72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #eef1f0;
+    --paper-raised: #e2e7e5;
+    --ink: #171b1f;
+    --ink-soft: #4b535a;
+    --hair: #c7cec9;
+    --accent: #b5791e;
+    --accent-ink: #171b1f;
+    --diff-add-bg: #dcf0e2;
+    --diff-add-ink: #1e6b3f;
+    --diff-add-mark: #3fae6a;
+    --diff-rem-bg: #f6dede;
+    --diff-rem-ink: #8a2b2b;
+    --diff-rem-mark: #c64545;
+    --panel: #14181c;
+    --panel-ink: #d9dedb;
+    --panel-hair: #2b3238;
+    --shadow: rgba(20,24,20,0.08);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #10141a;
+      --paper-raised: #171d24;
+      --ink: #e7ebe8;
+      --ink-soft: #a3adaa;
+      --hair: #2c3339;
+      --accent: #e0a949;
+      --accent-ink: #10141a;
+      --diff-add-bg: #103824;
+      --diff-add-ink: #7fd9a1;
+      --diff-add-mark: #57d68d;
+      --diff-rem-bg: #3a1717;
+      --diff-rem-ink: #ed9a9a;
+      --diff-rem-mark: #e5686b;
+      --panel: #0a0d10;
+      --panel-ink: #c7cec9;
+      --panel-hair: #23292d;
+      --shadow: rgba(0,0,0,0.4);
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #10141a;
+    --paper-raised: #171d24;
+    --ink: #e7ebe8;
+    --ink-soft: #a3adaa;
+    --hair: #2c3339;
+    --accent: #e0a949;
+    --accent-ink: #10141a;
+    --diff-add-bg: #103824;
+    --diff-add-ink: #7fd9a1;
+    --diff-add-mark: #57d68d;
+    --diff-rem-bg: #3a1717;
+    --diff-rem-ink: #ed9a9a;
+    --diff-rem-mark: #e5686b;
+    --panel: #0a0d10;
+    --panel-ink: #c7cec9;
+    --panel-hair: #23292d;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .deck{
+    height: 100vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  .deck::-webkit-scrollbar{ display:none; }
+
+  section.slide{
+    min-height: 100vh;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(28px, 6vw, 88px);
+    position: relative;
+  }
+
+  .folio{
+    position: absolute;
+    top: clamp(20px, 4vw, 40px);
+    left: clamp(28px, 6vw, 88px);
+    right: clamp(28px, 6vw, 88px);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .folio .n{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .eyebrow{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  .cover h1{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(2.6rem, 6.5vw, 5.2rem);
+    line-height: 1.02;
+    margin: 0 0 22px;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+  .cover .lede{
+    font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    line-height: 1.55;
+    margin: 0 0 44px;
+  }
+  .cover .lede strong{ color: var(--ink); font-weight: 600; }
+
+  table.roster{
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 760px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+  }
+  table.roster th{
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    padding: 0 14px 10px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  table.roster td{
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  table.roster td.task{ font-family: "IBM Plex Sans", sans-serif; font-weight: 500; white-space: normal; }
+  table.roster tr:last-child td{ border-bottom: none; }
+  .score-move{ font-variant-numeric: tabular-nums; display:flex; align-items:center; gap:6px; }
+  .score-move .before{ color: var(--diff-rem-mark); }
+  .score-move .after{ color: var(--diff-add-mark); }
+  .score-move .arrow{ color: var(--ink-soft); }
+
+  .score-cap{
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--diff-rem-mark);
+    white-space: nowrap;
+  }
+  .score-cap .lock{ font-size: 0.85em; }
+  .score-cap .sep{ color: var(--ink-soft); font-weight: 400; }
+  table.roster tr.split td{ border-bottom: none; padding-bottom: 2px; }
+  table.roster tr.split + tr td{ padding-top: 2px; color: var(--ink-soft); font-size: 0.86rem; }
+
+  .scrollhint{
+    margin-top: 40px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scrollhint .chev{ animation: bob 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .scrollhint .chev{ animation: none; } }
+  @keyframes bob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(4px); } }
+
+  /* ---------- Item slides ---------- */
+  .item{
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) 1fr;
+    gap: clamp(28px, 4vw, 64px);
+    align-items: start;
+  }
+  @media (max-width: 860px){
+    .item{ grid-template-columns: 1fr; }
+  }
+
+  .item-left{ padding-top: 46px; }
+  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
+  .tag{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .tag.muted{
+    color: var(--diff-rem-mark);
+    border-color: var(--diff-rem-mark);
+    background: var(--diff-rem-bg);
+  }
+  .item h2{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    line-height: 1.08;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .item .taskname{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin: 0 0 26px;
+  }
+  .score-badge{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+  .score-badge .before{ color: var(--diff-rem-mark); }
+  .score-badge .after{ color: var(--diff-add-mark); }
+  .score-badge .arrow{ color: var(--ink-soft); font-size: 1.1rem; }
+  .score-badge .cap{
+    display:block;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .request{
+    margin: 0 0 24px;
+    padding: 13px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--paper-raised);
+    border-radius: 0 5px 5px 0;
+  }
+  .request .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .request p{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.08rem;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0;
+  }
+  .request .note{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .block{ margin-bottom: 22px; }
+  .block h3{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .block p{
+    font-size: 1.01rem;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .diffpanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+  }
+  .diffpanel + .diffpanel{ margin-top: 18px; }
+  .diff-tab{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-hair);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--panel-ink);
+  }
+  .diff-tab .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); flex-shrink:0; }
+  .diff-tab .reward{
+    margin-left: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .diff-tab .reward.bad{ color: var(--diff-rem-mark); }
+  .diff-tab .reward.good{ color: var(--diff-add-mark); }
+  .diff-lines{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    padding: 4px 0;
+    overflow-x: auto;
+  }
+  .diff-lines .row{
+    display: flex;
+    padding: 3px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-lines .row .mark{
+    width: 1.4em;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.85;
+  }
+  .row.rem{ background: var(--diff-rem-bg); color: var(--diff-rem-ink); }
+  .row.rem .mark{ color: var(--diff-rem-mark); }
+  .row.add{ background: var(--diff-add-bg); color: var(--diff-add-ink); }
+  .row.add .mark{ color: var(--diff-add-mark); }
+  .row.ctx{ color: var(--panel-ink); opacity: 0.6; }
+  .row.ctx .mark{ color: var(--panel-ink); }
+  .row.call{ color: var(--panel-ink); }
+  .row.call .mark{ color: var(--accent); }
+  .diff-note{
+    padding: 10px 16px 14px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    opacity: 0.75;
+    border-top: 1px dashed var(--panel-hair);
+  }
+
+  /* ---------- Closing ---------- */
+  .closing{
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .closing h2{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+    line-height: 1.28;
+    margin: 0 0 32px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .closing .attn{ color: var(--accent); font-style: normal; }
+  .recap{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 40px;
+  }
+  @media (max-width: 760px){ .recap{ grid-template-columns: 1fr 1fr; } }
+  .recap .card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 14px 14px 16px;
+    background: var(--paper-raised);
+  }
+  .recap .card .k{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .recap .card .move{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .recap .card .move .before{ color: var(--diff-rem-mark); }
+  .recap .card .move .after{ color: var(--diff-add-mark); }
+  .closing .evidence-note{
+    margin-top: 28px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 66ch;
+  }
+
+  /* ---------- Locked-ceiling slides ---------- */
+  .ceilings{
+    display: flex;
+    gap: 14px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .ceiling-card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    min-width: 190px;
+  }
+  .ceiling-card .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .ceiling-card .task{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ceiling-card .val{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--diff-rem-mark);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .ceiling-card .val .lock{ font-size: 1rem; }
+  .ceiling-card .sub{
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .tracepanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+    padding: 22px 22px 20px;
+  }
+  .trace-step{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    padding: 10px 14px;
+    border: 1px solid var(--panel-hair);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+  }
+  .trace-step .k{
+    display:block;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .trace-arrow{
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .trace-fork{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 520px){ .trace-fork{ grid-template-columns: 1fr; } }
+  .trace-branch{
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .trace-branch.blocked{
+    border: 1px dashed var(--panel-hair);
+    color: var(--ink-soft);
+    opacity: 0.7;
+  }
+  .trace-branch.blocked .k{ color: var(--diff-rem-mark); text-decoration: line-through; }
+  .trace-branch.reached{
+    border: 1px solid var(--accent);
+    background: rgba(224,169,73,0.08);
+    color: var(--panel-ink);
+  }
+  .trace-branch.reached .k{ color: var(--accent); }
+  .trace-branch .k{
+    display:block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .diff-note.stark{
+    border-top: 1px dashed var(--panel-hair);
+    font-style: italic;
+  }
+
+  /* ---------- Nav ---------- */
+  .navdots{
+    position: fixed;
+    right: clamp(14px, 3vw, 32px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+  }
+  .navdots button{
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-soft);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .navdots button:hover{ transform: scale(1.25); }
+  .navdots button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .navdots button[aria-current="true"]{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 640px){
+    .navdots{ display:none; }
+  }
+</style>
+
+<div class="deck" id="deck" tabindex="0">
+
+  <section class="slide" id="s0">
+    <div class="folio"><span>Skill audit &middot; v4 optimization branch</span><span class="n">i</span></div>
+    <div class="cover">
+      <p class="eyebrow">Diagnostic report</p>
+      <h1>Fixing the manual</h1>
+      <p class="lede">Five phenomena, five different shapes of the same audit. Four tasks jumped to a perfect score after a single change to the written instructions the agent follows &mdash; not a smarter model, not a new tool. In every one of those, <strong>the manual was telling the agent the wrong thing</strong>, and once it stopped, the agent got it right. The fifth breaks that pattern on purpose: two tasks that stayed capped no matter what the manual said, because <strong>a bug in the routing code</strong> never let the right specialist take the question. Every claim on the following pages is backed by the actual harbor trial that produced it &mdash; the real transcript, the real reward, for all five.</p>
+      <table class="roster">
+        <thead>
+          <tr><th>Item</th><th>Task</th><th>Score</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>01</td><td class="task">A bare ID isn&rsquo;t a failed message</td><td><span class="score-move"><span class="before">20%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>02</td><td class="task">The fetch tool doesn&rsquo;t read folders</td><td><span class="score-move"><span class="before">47%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>03</td><td class="task">Four rules, one contradiction</td><td><span class="score-move"><span class="before">79%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>04</td><td class="task">Long doesn&rsquo;t mean timeout</td><td><span class="score-move"><span class="before">80%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr class="split"><td>05</td><td class="task">The router decided before anyone else got a vote &mdash; icinga&#8209;010</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 49.5%</span></td></tr>
+          <tr><td></td><td class="task">&mdash; and icinga&#8209;013, same bug</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 64.0%</span></td></tr>
+        </tbody>
+      </table>
+      <p class="scrollhint"><span class="chev">&darr;</span> scroll or use the dots to step through each case &mdash; the fix (or the bug), then the actual trial that proves it</p>
+    </div>
+  </section>
+
+  <section class="slide" id="s1">
+    <div class="folio"><span>cloud&#8209;024&#8209;guid&#8209;to&#8209;account</span><span class="n">01</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">orchestrator.md</span><span class="tag">shared_context.md</span></div>
+        <h2>A bare ID isn&rsquo;t a failed message</h2>
+        <p class="taskname">cloud-024-guid-to-account</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">20%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The test request &mdash; the entire message, verbatim</div>
+          <p>&ldquo;jbfsq&rdquo;</p>
+          <div class="note">Nothing else attached. No verb, no question mark. (&ldquo;w4t8r&rdquo; is the token used in the fix&rsquo;s own worked example, not the graded message &mdash; see the next slide.)</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Someone pastes a raw account ID with nothing else attached &mdash; no question, no verb. The coordinator had no rule for that shape of message, so it fell back on its generic manners and asked for clarification instead of just looking the ID up.</p>
+        </div>
+        <div class="block">
+          <h3>The fix</h3>
+          <p>A new rule was added stating that a message made of one identifier-shaped token, on its own, is a routine lookup request &mdash; and gave it the exact steps to resolve it, no question asked.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>orchestrator.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>## Bare Identifiers and Minimal Prompts</div>
+            <div class="row add"><span class="mark">+</span>A message whose entire content is one identifier-shaped</div>
+            <div class="row add"><span class="mark">+</span>token, with no verb and no question, is a routine request</div>
+            <div class="row add"><span class="mark">+</span>&mdash; not a failed or truncated message.</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>Never answer such a message with &ldquo;I didn&rsquo;t catch</div>
+            <div class="row add"><span class="mark">+</span>that.&rdquo;</div>
+          </div>
+          <div class="diff-note">Followed by a lookup table mapping ID shapes (5-char code, 12-digit number, email) to the right tool to call.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s1e">
+    <div class="folio"><span>cloud&#8209;024&#8209;guid&#8209;to&#8209;account &middot; the actual trial</span><span class="n">02</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0001 &middot; run_20260919_122425</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">20%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>The literal trial</h3>
+          <p>The graded message really is the bare GUID <code>jbfsq</code>, which resolves to sandbox2291, AWS account 419283746501, owner rrivers. &ldquo;w4t8r&rdquo; only exists inside the fix itself, as the new rule&rsquo;s own illustrative example &mdash; same shape, different token.</p>
+        </div>
+        <div class="block">
+          <h3>Not a one-off</h3>
+          <p>All ten seed-split trials returned the identical canned reply, word for word. This wasn&rsquo;t one unlucky rollout &mdash; every trial under the old manual hit the same dead end, and every trial under the fixed one didn&rsquo;t.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.20</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>message: &ldquo;jbfsq&rdquo; &mdash; tool_calls: 0</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;I didn&rsquo;t quite catch that &mdash; could you clarify</div>
+            <div class="row rem"><span class="mark">&#10007;</span>what you&rsquo;d like to investigate?&rdquo;</div>
+            <div class="row rem"><span class="mark">&#10007;</span>{{choices}} Look up a provision / Investigate</div>
+            <div class="row rem"><span class="mark">&#10007;</span>costs / Check a failed job / Something else</div>
+          </div>
+          <div class="diff-note">reward-detail.json: unmatched_expected <code>query_aws_account_db</code> &middot; required_missed sandbox2291, 419283746501, rrivers.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0001 &middot; test<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aws_account_db(available=false, max_results=500)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>{"name":"sandbox2291","account_id":"419283746501",</div>
+            <div class="row ctx"><span class="mark">&middot;</span>"owner":"rrivers","guid":"jbfsq", &hellip;}</div>
+            <div class="row add"><span class="mark">&#10003;</span>&ldquo;jbfsq&rdquo; is a provision GUID. It belongs to</div>
+            <div class="row add"><span class="mark">&#10003;</span>sandbox2291, AWS account 419283746501, held</div>
+            <div class="row add"><span class="mark">&#10003;</span>by rrivers.</div>
+          </div>
+          <div class="diff-note">Same seed, same fields, same tool &mdash; one new rule in orchestrator.md. Trial &hellip;__G8FWX77.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s2">
+    <div class="folio"><span>platform&#8209;007&#8209;directory&#8209;path&#8209;fetch</span><span class="n">03</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">aap2_agent.md</span><span class="tag">babylon_agent.md</span></div>
+        <h2>The fetch tool doesn&rsquo;t read folders</h2>
+        <p class="taskname">platform-007-directory-path-fetch</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">47%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request, per the skill&rsquo;s own worked example</div>
+          <p>&ldquo;The workload roles live under <code>ansible/roles_ocp_workloads</code> &mdash; find the task file for the <code>ocp4_workload_etherpad</code> role and report what it configures.&rdquo;</p>
+          <div class="note">You&rsquo;re told where the role lives, not which file inside it &mdash; that gap is exactly what the agent guessed its way through.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>The tool&rsquo;s own description claimed it could fetch &ldquo;files and directories.&rdquo; It can&rsquo;t &mdash; it reads exactly one file. The instructions then modeled calling it on a folder path, so the agent kept trying to open a folder like a document, and failing.</p>
+        </div>
+        <div class="block">
+          <h3>The fix</h3>
+          <p>The tool description was corrected, and the wrong example was replaced with the right two-step move: search the repo for the real path first, then fetch that exact file.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; tool description</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>Fetch file or directory contents from a GitHub repo</div>
+            <div class="row add"><span class="mark">+</span>Fetch one file&rsquo;s contents by its complete file path.</div>
+            <div class="row add"><span class="mark">+</span>It is a read tool, not a discovery tool: give it a path</div>
+            <div class="row add"><span class="mark">+</span>you already have, never a directory and never a path</div>
+            <div class="row add"><span class="mark">+</span>you inferred from convention.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; worked example</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>fetch_github_file(owner, repo, "setup-automation/")</div>
+            <div class="row add"><span class="mark">+</span>search_github_repo(owner, repo, "setup-automation")</div>
+            <div class="row add"><span class="mark">+</span>fetch_github_file(owner, repo, "&lt;path from matches&gt;")</div>
+          </div>
+          <div class="diff-note">A new example was also added showing four wrong calls from real past runs, each labeled with why it fails.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s2e">
+    <div class="folio"><span>platform&#8209;007&#8209;directory&#8209;path&#8209;fetch &middot; the actual trial</span><span class="n">04</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0001 &middot; run_20260920_185422</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">47%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>Two attempts at the fix</h3>
+          <p>The first optimizer pass at this task didn&rsquo;t actually fix it (sealed-test mean 0.475) and was discarded. The version on the previous slide is the second pass &mdash; the one that scored 1.00 on every held-out trial.</p>
+        </div>
+        <div class="block">
+          <h3>How wrong the guess got</h3>
+          <p>The role in this real trial is <code>ocp4_workload_pipelines_operator</code>, not the doc&rsquo;s etherpad example &mdash; same failure shape, different seed. One trial even got both tools flagged &ldquo;operation specification unavailable&rdquo; right after the directory-path call, and gave up concluding the API was down.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.35</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../ocp4_workload_pipelines_operator/tasks")</div>
+            <div class="row ctx"><span class="mark">&larr;</span>{"content":"main.yml\nremove.yml", &hellip;}</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../tasks/main.yml")</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../tasks/remove.yml")</div>
+            <div class="row rem"><span class="mark">&#10007;</span>retries: 30, delay: 20 &mdash; lifted from</div>
+            <div class="row rem"><span class="mark">&#10007;</span>remove.yml, the wrong file</div>
+          </div>
+          <div class="diff-note">reward.json: tool_calls 0.0 &middot; answer 0.5. The directory &ldquo;listing&rdquo; read back enough like file content to keep the agent going.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0001 &middot; test<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>search_github_repo(search="ocp4_workload_pipelines_operator/tasks")</div>
+            <div class="row ctx"><span class="mark">&larr;</span>{"matches":[".../tasks/main.yml"], "total_matches":1}</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../tasks/main.yml")</div>
+            <div class="row add"><span class="mark">&#10003;</span>retries: 40, delay: 15 &mdash; the real file,</div>
+            <div class="row add"><span class="mark">&#10003;</span>found by search, not guessed</div>
+          </div>
+          <div class="diff-note">reward.json: tool_calls 1.0 &middot; answer 1.0. Trial &hellip;__QpQQQPQ.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s3">
+    <div class="folio"><span>platform&#8209;004&#8209;events&#8209;then&#8209;config</span><span class="n">05</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">aap2_agent.md</span><span class="tag">shared_context.md</span></div>
+        <h2>Four rules, one contradiction</h2>
+        <p class="taskname">platform-004-events-then-config</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request, per the skill&rsquo;s own worked example</div>
+          <p>&ldquo;Why did job 11111 on the west controller fail?&rdquo;</p>
+          <div class="note">A direct job ID, GUID lookup skipped &mdash; exactly the shortcut that made the missing step invisible. (The graded trial itself asks about job 90405 on the east controller; job 11111 / west is the fix&rsquo;s own worked example.)</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Three rules said &ldquo;don&rsquo;t call the same job twice.&rdquo; One buried rule needed a second call &mdash; the failed-events check &mdash; right after reading the log. The agent followed the majority and quietly skipped the step that mattered.</p>
+        </div>
+        <div class="block">
+          <h3>The fix</h3>
+          <p>The &ldquo;no repeat calls&rdquo; rule was narrowed to only ban an identical repeat, and a new rule spells out exactly when the second call is required.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; narrowing the old rule</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>Don&rsquo;t re-fetch job data. Do NOT make a redundant</div>
+            <div class="row rem"><span class="mark">&minus;</span>second call to the same job.</div>
+            <div class="row add"><span class="mark">+</span>Reuse values you already hold &mdash; but a different</div>
+            <div class="row add"><span class="mark">+</span>action is not a re-fetch. A call is redundant only</div>
+            <div class="row add"><span class="mark">+</span>when it repeats the same action with the same</div>
+            <div class="row add"><span class="mark">+</span>arguments.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; new Critical Rule 5</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>A failed job needs the log AND the failed events.</div>
+            <div class="row add"><span class="mark">+</span>Call get_job_events(failed_only=true) after</div>
+            <div class="row add"><span class="mark">+</span>get_job_log, before any GitHub fetch. Do the events</div>
+            <div class="row add"><span class="mark">+</span>call even when the log looks self-explanatory.</div>
+          </div>
+          <div class="diff-note">shared_context.md&rsquo;s matching rule was reworded the same way, so the files stopped disagreeing.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s3e">
+    <div class="folio"><span>platform&#8209;004&#8209;events&#8209;then&#8209;config &middot; the actual trial</span><span class="n">06</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0002 &middot; run_20260920_083427</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>The literal trial</h3>
+          <p>Job 90405 on the <code>east</code> controller &mdash; the exact same shortcut and the exact same fix as the worked example on the previous slide, just a different job number.</p>
+        </div>
+        <div class="request">
+          <div class="cap">In the optimizer&rsquo;s own diagnosis</div>
+          <p>&ldquo;Five rules govern &lsquo;make a 2nd <code>query_aap2</code> call?&rsquo; &mdash; four said no&hellip; and the one YES was step 5 of a GUID-discovery flow this task never enters.&rdquo;</p>
+          <div class="note">JOURNAL.md, run_20260920_083427. (The winning edit is cand_0002 &mdash; an earlier candidate, cand_0001, scored 0.400 in val, but that drop was traced to a LiteLLM gateway outage during that run, not the edit itself.)</div>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.73</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(action=get_job_log, controller=east, job_id=90405)</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path="ansible/configs/ocp4-cluster/default_vars.yml")</div>
+            <div class="row rem"><span class="mark">&#10007;</span>Role: &ldquo;ocp4-cluster&rdquo; &mdash; read off the</div>
+            <div class="row rem"><span class="mark">&#10007;</span>directory name, not the job that failed</div>
+          </div>
+          <div class="diff-note">reward-detail.json: unmatched_expected get_job_events(failed_only=true) &middot; &ldquo;the role is in the job_events row, not the log text.&rdquo;</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0002 &middot; test<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(action=get_job_log, controller=east, job_id=90405)</div>
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(action=get_job_events, &hellip;, failed_only=true)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>runner_on_failed &middot; role: ocp4_cluster_nodes</div>
+            <div class="row ctx"><span class="mark">&middot;</span>host: worker-02.vt8dr.sandbox</div>
+            <div class="row add"><span class="mark">&#10003;</span>Role: &ldquo;ocp4_cluster_nodes&rdquo; &mdash; read off</div>
+            <div class="row add"><span class="mark">&#10003;</span>the event that actually failed</div>
+          </div>
+          <div class="diff-note">reward.json: 1.0. Same log, one extra call. Trial &hellip;__X35cMia.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4">
+    <div class="folio"><span>platform&#8209;008&#8209;log&#8209;does&#8209;not&#8209;say</span><span class="n">07</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">aap2_agent.md</span><span class="tag">shared_context.md</span><span class="tag">orchestrator.md</span></div>
+        <h2>Long doesn&rsquo;t mean timeout</h2>
+        <p class="taskname">platform-008-log-does-not-say</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">80%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request &mdash; this task&rsquo;s question shape</div>
+          <p>&ldquo;Why did this job fail?&rdquo;</p>
+          <div class="note">The real job&rsquo;s log simply stops: no error line, no PLAY RECAP, zero failed events. There is nothing in the evidence to name as a cause. (Job 90408 on the west controller, in the graded trial.)</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>A rule of thumb told the agent: if something ran a long time before failing, call it a timeout. So it guessed a cause from the clock instead of checking whether the log actually said so.</p>
+        </div>
+        <div class="block">
+          <h3>The fix</h3>
+          <p>The shortcut was removed, and a whole new check was added asking whether the evidence actually establishes a cause &mdash; before the agent is allowed to name one.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; removing the shortcut</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>Timing &mdash; how long did the failing operation take?</div>
+            <div class="row rem"><span class="mark">&minus;</span>Short = auth/config error. Long = timeout.</div>
+            <div class="row add"><span class="mark">+</span>Timing narrows the candidates &mdash; on its own it is</div>
+            <div class="row add"><span class="mark">+</span>never the cause.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; new Step 7a</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>Does the evidence actually establish a cause?</div>
+            <div class="row add"><span class="mark">+</span>A log that simply stops is not evidence of a cause.</div>
+            <div class="row add"><span class="mark">+</span>A long elapsed time, a round duration, or a wait/poll</div>
+            <div class="row add"><span class="mark">+</span>task as the last line does not establish a timeout.</div>
+            <div class="row add"><span class="mark">+</span>Naming one anyway is the single most common way this</div>
+            <div class="row add"><span class="mark">+</span>report goes wrong.</div>
+          </div>
+          <div class="diff-note">The same &ldquo;don&rsquo;t guess, say so&rdquo; instruction, plus a template for reporting an unestablished cause, was echoed in shared_context.md and orchestrator.md.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4e">
+    <div class="folio"><span>platform&#8209;008&#8209;log&#8209;does&#8209;not&#8209;say &middot; the actual trial</span><span class="n">08</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0001 &middot; run_20260920_144310</p>
+        <div class="score-badge">
+          <span><span class="cap">Before</span><span class="before">80%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">After</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>The literal trial</h3>
+          <p>Job 90408 on the <code>west</code> controller. The seed-split trial below made 16 tool calls, none forbidden, and got every other fact right &mdash; the entire 0.2 gap is one invented sentence.</p>
+        </div>
+        <div class="request">
+          <div class="cap">What the grader was actually checking for</div>
+          <p>&ldquo;The honest answer &mdash; the fact a fabricating agent replaces with an invented cause.&rdquo;</p>
+          <div class="note">reward-detail.json, required_missed rationale for &ldquo;no-root-cause&rdquo;</div>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val, 16 calls<span class="reward bad">reward 0.80</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(action=get_job_events, failed_only=true)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>[] &mdash; zero events</div>
+            <div class="row rem"><span class="mark">&#10007;</span>### Root Cause</div>
+            <div class="row rem"><span class="mark">&#10007;</span>The ROSA cluster installation timed out waiting</div>
+            <div class="row rem"><span class="mark">&#10007;</span>for the cluster to reach &ldquo;ready&rdquo; &mdash; duration</div>
+            <div class="row rem"><span class="mark">&#10007;</span>is exactly 7,200 seconds, a hard AAP2 timeout</div>
+          </div>
+          <div class="diff-note">reward-detail.json: missed &ldquo;does not establish&rdquo; / &ldquo;does not say&rdquo;.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0001 &middot; test, 5 calls<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(action=get_job_events, failed_only=true)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>[] &mdash; zero events</div>
+            <div class="row add"><span class="mark">&#10003;</span>The log does not establish a root cause for</div>
+            <div class="row add"><span class="mark">&#10003;</span>job 90408. No fatal:, no FAILED!, no PLAY</div>
+            <div class="row add"><span class="mark">&#10003;</span>RECAP, zero failed events, empty job_explanation.</div>
+            <div class="row add"><span class="mark">&#10003;</span>I am not naming a cause on that evidence.</div>
+          </div>
+          <div class="diff-note">reward.json: 1.0. Same silence in the log &mdash; reported as silence, not filled in. Trial &hellip;__8Yk3iwf.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4b">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; 1/2</span><span class="n">09</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">classify_fast() &mdash; routing code</span><span class="tag muted">orchestrator.md &mdash; never loaded</span><span class="tag muted">icinga_agent.md &mdash; never loaded</span></div>
+        <h2>The router picked a specialist before anyone else got a vote</h2>
+        <p class="taskname">icinga-010-stuck-anarchysubjects &nbsp;+&nbsp; icinga-013-acknowledged-not-an-issue</p>
+
+        <div class="ceilings">
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;010&#8209;stuck&#8209;anarchysubjects</div>
+            <div class="task">final (held&#8209;out) score</div>
+            <div class="val"><span class="lock">&#128274;</span>49.5%</div>
+            <div class="sub">Ceiling, not a fluke: 0.3&times;0.25&nbsp;+&nbsp;0.7&times;(3/5)&nbsp;=&nbsp;0.495, zero variance across trials</div>
+          </div>
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;013&#8209;acknowledged&#8209;not&#8209;an&#8209;issue</div>
+            <div class="task">final (held&#8209;out) score</div>
+            <div class="val"><span class="lock">&#128274;</span>64.0%</div>
+            <div class="sub">Reward 0.64 &mdash; the answer scored 4 of 5 points possible</div>
+          </div>
+        </div>
+
+        <div class="request">
+          <div class="cap">The two literal triggers, quoted verbatim</div>
+          <p>icinga&#8209;010&rsquo;s instruction: &ldquo;&hellip;on host <code>babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1</code>.&rdquo; icinga&#8209;013&rsquo;s forwarded alert: service &ldquo;<code>Babylon Schema YAML Diff</code>.&rdquo;</p>
+          <div class="note">Both strings just happen to contain &ldquo;babylon&rdquo; &mdash; every actual question underneath is a plain Icinga lookup (get_services / get_comments / get_downtimes). That one substring is the entire trigger for the misroute.</div>
+        </div>
+
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Before the coordinator or the right specialist ever sees the question, a separate piece of code called <code>classify_fast()</code> scans the raw text for a keyword and, on a match, routes straight to a specialist file &mdash; here, the Babylon specialist, not the Icinga one. Both alerts trip it for the same reason: the word &ldquo;babylon&rdquo; appears somewhere in the text, even though the question itself is entirely about Icinga.</p>
+        </div>
+      </div>
+      <div>
+        <div class="tracepanel">
+          <div class="trace-step"><span class="k">Incoming text</span>&ldquo;&hellip;host babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1&hellip;&rdquo; &nbsp;/&nbsp; &ldquo;&hellip;Babylon Schema YAML Diff&hellip;&rdquo;</div>
+          <div class="trace-arrow">&darr;</div>
+          <div class="trace-step"><span class="k">classify_fast() &mdash; keyword match</span>regex <code>\bbabylon\b</code> fires on the raw alert text</div>
+          <div class="trace-arrow">&darr; forks here, before the coordinator ever runs &darr;</div>
+          <div class="trace-fork">
+            <div class="trace-branch blocked">
+              <span class="k">Never reached</span>orchestrator.md<br>icinga_agent.md<br><em>query_icinga tool</em>
+            </div>
+            <div class="trace-branch reached">
+              <span class="k">Reached instead</span>babylon_agent.md<br>&mdash; the wrong specialist for an Icinga question
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4c">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; the actual trials</span><span class="n">10</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>Nothing here is a diff, because nothing here got fixed</h2>
+        <p class="taskname">both tasks, the optimizer&rsquo;s own best (winning) candidate</p>
+        <div class="block">
+          <h3>Same lockout, two different shapes</h3>
+          <p>icinga&#8209;010&rsquo;s trial still tries &mdash; it calls the wrong specialist&rsquo;s tools three separate times looking for a way in. icinga&#8209;013&rsquo;s trial does not call anything at all: the model states outright that it has no Icinga tool.</p>
+        </div>
+        <div class="block">
+          <h3>Both reports reached the same conclusion</h3>
+          <p>Further prompt tuning on these two tasks is, in icinga&#8209;013&rsquo;s own words, &ldquo;close to worthless&rdquo; until <code>classify_fast()</code> itself changes. No rewrite of a specialist file reaches a bug that runs before any specialist file is chosen.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;010 &middot; seed, val<span class="reward bad">reward 0.495</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_babylon_catalog(action=list_anarchy_subjects, cluster=east)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>{"cluster":"east","subjects":[],"count":0}</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path="monitoring/babylon/check_stuck_subjects.py")</div>
+            <div class="row ctx"><span class="mark">&larr;</span>STUCK_MINUTES=30, WARN_COUNT=3, CRIT_COUNT=5</div>
+            <div class="row call"><span class="mark">&rarr;</span>query_splunk(search_raw=&hellip;) &times;3, all 0 results</div>
+            <div class="row rem"><span class="mark">&#10007;</span>query_icinga &mdash; never called, in any form</div>
+          </div>
+          <div class="diff-note">reward-detail.json: 3 unmatched_expected <code>query_icinga</code> calls (get_services/get_comments/get_downtimes) &middot; required_missed &ldquo;no&#8209;suppression&rdquo; &mdash; comments and downtimes were both seeded empty, but nothing ever asked.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;013 &middot; winning candidate, test<span class="reward bad">reward 0.64</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>0 tool calls made &mdash; the entire trial is one message</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;I have no Icinga monitoring tool in this agent,</div>
+            <div class="row rem"><span class="mark">&#10007;</span>so the following is read from the alert text&hellip;&rdquo;</div>
+            <div class="row add"><span class="mark">&#10003;</span>Correctly reasons ACKNOWLEDGED = already triaged,</div>
+            <div class="row add"><span class="mark">&#10003;</span>GitHub 401 = an auth failure, not a schema break</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;no ticket&hellip; I cannot read [the comment]&rdquo;</div>
+          </div>
+          <div class="diff-note">reward-detail.json: tool_calls 0.0/0.2 (all 3 <code>query_icinga</code> calls unmatched_expected) &middot; answer 0.8 &mdash; 3 of 4 facts reasoned correctly with no tool at all; the 4th, ticket <code>RHDPSUP-8812</code>, exists only in a comment this agent could never fetch.</div>
+        </div>
+        <div class="diff-note stark" style="margin-top:4px; border-top:1px dashed var(--hair); color: var(--ink-soft); padding-top:16px;">Both panels above are the optimizer&rsquo;s <em>best</em> trial for each task &mdash; not a bad rollout. The ceiling is the router, not the writing: recoverable only by changing <code>classify_fast()</code>, not by rewriting either specialist&rsquo;s file.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s5">
+    <div class="folio"><span>Closing</span><span class="n">xii</span></div>
+    <div class="closing">
+      <h2>None of the four fixes above is a case of the agent getting <span class="attn">smarter</span>.<br>Every one is the manual either <span class="attn">contradicting itself</span>, describing a tool <span class="attn">wrong</span>, or teaching a shortcut that happened to be <span class="attn">wrong</span>. Once the manual said the true thing, the agent followed it.</h2>
+      <div class="recap">
+        <div class="card"><div class="k">01 &middot; cloud-024</div><div class="move"><span class="before">20%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">02 &middot; platform-007</div><div class="move"><span class="before">47%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">03 &middot; platform-004</div><div class="move"><span class="before">79%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">04 &middot; platform-008</div><div class="move"><span class="before">80%</span> &rarr; <span class="after">100%</span></div></div>
+      </div>
+      <p class="evidence-note">Every score on this page is a real per-trial harbor result &mdash; agent.jsonl transcripts and reward-detail.json verdicts, seed vs. best candidate, five trials per split. The 100% figures are the sealed test split; since that split overlaps the data the optimizer selected against, read it as a fit metric, not a blind holdout &mdash; the val-split trials shown on each &ldquo;actual run&rdquo; slide are the closer thing to one.</p>
+      <p class="diff-note stark" style="margin-top:22px; border-top:1px dashed var(--hair); padding-top:16px; color: var(--ink-soft);">Two more &mdash; icinga&#8209;010 and icinga&#8209;013 &mdash; sit outside that pattern, and outside the recap above. There, the manual was never the obstacle: a routing bug in the code, <code>classify_fast()</code>, picks the wrong specialist before any manual is ever read, and the real trials on the previous two pages show it happening. That one needs an engineer, not an edit.</p>
+    </div>
+  </section>
+
+</div>
+
+<nav class="navdots" id="navdots" aria-label="Slide navigation"></nav>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var dotsWrap = document.getElementById('navdots');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i+1) + ' of ' + slides.length);
+    b.addEventListener('click', function(){
+      s.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+    dotsWrap.appendChild(b);
+  });
+
+  function reduceMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function setActive(){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){
+      if (s.offsetTop <= mid) idx = i;
+    });
+    Array.prototype.forEach.call(dotsWrap.children, function(b, i){
+      b.setAttribute('aria-current', i === idx ? 'true' : 'false');
+    });
+  }
+
+  deck.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  deck.addEventListener('keydown', function(e){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){ if (s.offsetTop <= mid) idx = i; });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown'){
+      e.preventDefault();
+      var next = slides[Math.min(idx + 1, slides.length - 1)];
+      next.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp'){
+      e.preventDefault();
+      var prev = slides[Math.max(idx - 1, 0)];
+      prev.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+  });
+})();
+</script>
