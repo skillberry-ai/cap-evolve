@@ -162,9 +162,24 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # rather than silently keep talking to the ETE gateway with a model id it doesn't
 # recognise. NOT yet verified that lite-rits speaks the Anthropic Messages API the CLI
 # expects — see the PR description.
+#
+# This export is process-wide and OUTLIVES this block, which matters for the skillsbench/
+# rfe-creator arms below: their in-sandbox agent also ultimately shells out to `claude`,
+# and if it just inherited these same two vars it would silently run under the OPTIMIZER's
+# provider/model instead of AGENT_MODEL's. Those two arms instead pass the agent's own
+# credentials (AGENT_API_BASE/AGENT_API_KEY) through dedicated, adapter-specific vars
+# (SKILLSBENCH_AGENT_*/RFE_AGENT_*) that their adapters check BEFORE falling back to
+# ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN — see templates/adapters/skillsbench/adapter.py's
+# _gateway_env() and templates/adapters/rfe_creator/adapter.py's _harness_env().
 export ANTHROPIC_BASE_URL="$OPTIMIZER_API_BASE"
 export ANTHROPIC_AUTH_TOKEN="$OPTIMIZER_API_KEY"
-OPTIMIZER_MODEL="$OPTIMIZER_MODEL_WIRE"
+# NB: no `OPTIMIZER_MODEL="$OPTIMIZER_MODEL_WIRE"` reassignment here (there used to be
+# one) — resolve_provider never strips/rewrites the model id, so RESOLVED_MODEL (hence
+# OPTIMIZER_MODEL_WIRE) is always textually identical to the input OPTIMIZER_MODEL. The
+# reassignment was a no-op; removing it keeps OPTIMIZER_MODEL as the one source of truth
+# used both for the wire call above and for the capevolve.yaml/metrics.py provenance
+# fields further down (both want the CI-facing "rits/…"-prefixed alias, not a rewritten
+# form).
 
 export PYTHONPATH="$REPO/core:$REPO"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
@@ -587,6 +602,12 @@ ENV
     export SKILLSBENCH_MODEL="$AGENT_MODEL_WIRE"
     export SKILLSBENCH_TASKS_DIR="$SB_SRC/tasks"
     export SKILLSBENCH_CONCURRENCY=10
+    # Dedicated agent-only credentials: the plain ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN
+    # above (both the .env line and the process env) are already pinned to the OPTIMIZER's
+    # provider a few lines up, so the adapter's _gateway_env() reads THESE instead — see
+    # the comment on the ANTHROPIC_BASE_URL export above.
+    export SKILLSBENCH_AGENT_BASE_URL="$AGENT_API_BASE"
+    export SKILLSBENCH_AGENT_API_KEY="$AGENT_API_KEY"
     ;;
   spreadsheetbench)
     cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
@@ -767,6 +788,12 @@ ENV
     export RFE_EVAL_CONFIG="$RFE_SRC/eval.merged.yaml"
     export RFE_RUNNER_MODEL="$AGENT_MODEL_WIRE"
     export RFE_HARNESS_PY="$PY"
+    # Dedicated agent-only credentials — same rationale as SKILLSBENCH_AGENT_* above: the
+    # adapter's _harness_env() copies the full process env (which already carries the
+    # OPTIMIZER's ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN), then overrides those two keys
+    # from THESE vars before handing the env to the `claude` subprocess tree.
+    export RFE_AGENT_BASE_URL="$AGENT_API_BASE"
+    export RFE_AGENT_API_KEY="$AGENT_API_KEY"
     ;;
   *) echo "unknown bench: $BENCH" >&2; exit 2;;
 esac

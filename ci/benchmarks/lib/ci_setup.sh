@@ -327,6 +327,24 @@ if command -v curl >/dev/null; then
   # would be a false alarm.
   probe_model() {
     local role="$1" model="$2"
+    # Graceful skip, not a hard abort: resolve_provider's non-"rits/*" branch does a hard
+    # `:?` on ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN, which would otherwise kill this WHOLE
+    # script (set -uo pipefail; no outer `if` catches a `:?` failure) for a run that never
+    # asked for the gateway at all — e.g. a local/laptop run of a RITS-only dispatch, or one
+    # with the other role on RITS and this role's gateway secrets simply not exported. Before
+    # this check existed, the only gate was `[ -n "${ANTHROPIC_BASE_URL:-}" ] && ... &&
+    # command -v curl` around the ENTIRE preflight block above; narrowing that to
+    # `command -v curl` (so RITS-only dispatches still get probed) reintroduced exactly the
+    # failure mode it used to prevent for the non-RITS case.
+    case "$model" in
+      rits/*) : ;;
+      *)
+        if [ -z "${ANTHROPIC_BASE_URL:-}" ] || [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+          echo "::warning:: ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN not set — skipping $role model preflight probe for '$model'"
+          return 0
+        fi
+        ;;
+    esac
     resolve_provider "$model"
     local probe="/tmp/capevolve_budget_probe.$$_${role}.json"
     local code
@@ -354,8 +372,18 @@ if command -v curl >/dev/null; then
     echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code"
     rm -f "$probe"
   }
-  probe_model agent "$PF_AGENT"
-  probe_model optimizer "$PF_OPTIMIZER"
+  # Run both probes concurrently — each hits a different role's endpoint (often a
+  # different provider entirely, gateway vs. RITS) and neither depends on the other's
+  # result, so the worst-case wall time is one 60s timeout instead of two. Backgrounding a
+  # shell function still lets `exit 1` inside it end just that subshell; `wait "$pid"`
+  # below recovers that as a normal nonzero status, so a probe failure still aborts this
+  # script exactly as it did when the calls were sequential.
+  probe_model agent "$PF_AGENT" & pid_agent=$!
+  probe_model optimizer "$PF_OPTIMIZER" & pid_optimizer=$!
+  fail=0
+  wait "$pid_agent" || fail=1
+  wait "$pid_optimizer" || fail=1
+  [ "$fail" = 0 ] || exit 1
 fi
 
 # Export for later workflow steps (no-op locally).

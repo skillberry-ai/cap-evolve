@@ -54,6 +54,9 @@ SETUP (standalone, outside CI):
      export AGENT_EVAL_HARNESS_DIR=<dest-dir>/agent-eval-harness
      export RFE_EVAL_CONFIG=<dest-dir>/eval.merged.yaml
      export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...   # or ANTHROPIC_API_KEY
+     # Running alongside a DIFFERENT optimizer model? Use the dedicated agent-only pair
+     # instead (takes priority over the two vars above — see _harness_env()):
+     #   export RFE_AGENT_BASE_URL=...  RFE_AGENT_API_KEY=...
   3. pip install -e <dest-dir>/agent-eval-harness pyyaml
   4. Copy this directory to .capevolve/project/adapters/
   5. Run: cap-evolve check && cap-evolve run
@@ -118,7 +121,18 @@ def _run(cmd: list, *, cwd: Path, env: dict, timeout: int) -> subprocess.Complet
 
 
 def _harness_env() -> dict:
+    """Env for the harness subprocess tree (preflight/workspace/execute/collect, which in
+    turn shells out to the `claude` CLI). Starts from the full parent env, then lets
+    RFE_AGENT_BASE_URL/RFE_AGENT_API_KEY override ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN
+    when set — a caller that also runs an optimizer model (e.g. cap-evolve's own
+    run_suite.sh, invoking `claude` for OPTIMIZER_MODEL) may already have those two vars
+    exported process-wide for THAT model, and a plain dict(os.environ) copy would silently
+    hand the sandboxed agent the optimizer's credentials instead of its own."""
     env = dict(os.environ)
+    if os.environ.get("RFE_AGENT_BASE_URL"):
+        env["ANTHROPIC_BASE_URL"] = os.environ["RFE_AGENT_BASE_URL"]
+    if os.environ.get("RFE_AGENT_API_KEY"):
+        env["ANTHROPIC_AUTH_TOKEN"] = os.environ["RFE_AGENT_API_KEY"]
     env["AGENT_EVAL_RUNS_DIR"] = str(RUNS_DIR)
     # rfe-creator's own scripts (invoked BY the Claude Code agent as e.g.
     # `python3 scripts/frontmatter.py ...`) need pyyaml, which the system default python3
