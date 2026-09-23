@@ -590,7 +590,7 @@ one-time and per-session setup sections above) do.
 ### Bringing the stack up on a CCC compute node
 
 ```bash
-export PARSEC_V4N=/dccstor/knewedge2/boazc/workarea/python/rhdp-parsec/v4_2026-09-16
+export PARSEC_V4N=/dccstor/<project>/<user>/workarea/python/rhdp-parsec/v4_2026-09-16
 bash scripts/ccc/parsec_stack.sh up
 bash scripts/ccc/parsec_stack.sh status   # waits for all 6 ports to accept
 ```
@@ -669,7 +669,7 @@ troubleshooting table.
 
 ## Layer index: symptom → fix
 
-Thirteen distinct failures had to be resolved to get one task to run, each
+Fifteen distinct failures had to be resolved to get one task to run, each
 one hidden behind the last. This is the scannable index; the sections
 above have the detail and the reproduction commands.
 
