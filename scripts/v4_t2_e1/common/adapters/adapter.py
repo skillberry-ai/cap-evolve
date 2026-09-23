@@ -60,13 +60,23 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+# common/ (this file's parent's parent) holds parsec_paths.py, the single
+# source of truth for PARSEC_V4N/MCP_PORTS — see that module's docstring.
+_COMMON_DIR = Path(__file__).resolve().parents[1]
+if str(_COMMON_DIR) not in sys.path:
+    sys.path.insert(0, str(_COMMON_DIR))
 
 from capevolve_harbor.results import build_feedback, parse_job_dir  # noqa: E402
 from cap_evolve import CapabilityAdapter, Rollout, Score, Task  # noqa: E402
+import parsec_paths  # noqa: E402
 
-V4N = Path(os.environ.get("PARSEC_V4N", "/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16"))
-TASKS_DIR = V4N / "_run" / "tasks"
-JOBS_ROOT = V4N / "_run" / "jobs" / "v4_t2_e1"
+# May be None if $PARSEC_V4N is unset — deliberately not resolved to a
+# machine-specific default (see parsec_paths.py's docstring). Adapter()
+# raises a clear RuntimeError at construction time if it is None; nothing
+# below the class definition dereferences V4N directly at import time.
+V4N = parsec_paths.resolve_v4n_or_none()
+TASKS_DIR = V4N / "_run" / "tasks" if V4N else None
+JOBS_ROOT = V4N / "_run" / "jobs" / "v4_t2_e1" if V4N else None
 TRIAL_TIMEOUT_SEC = 20 * 60
 
 PROMPT_FILES = [
@@ -86,13 +96,7 @@ PROMPT_FILES = [
 #: is truncated or placeholder content, not a prompt worth serving.
 MIN_ORCHESTRATOR_BYTES = 500
 
-MCP_PORTS = {
-    "PLATFORM_MCP_URL": 8086,
-    "GITHUB_MCP_URL": 8087,
-    "ICINGA_MCP_URL": 8088,
-    "COST_MCP_URL": 8089,
-    "CLOUD_MCP_URL": 8090,
-}
+MCP_PORTS = parsec_paths.MCP_PORTS
 
 
 _SEED_SEGMENT_RE = re.compile(r"^seed-(\d+)$")
@@ -124,6 +128,23 @@ def _path_sort_key(path: Path, root: Path) -> list[tuple[int, int, str]]:
 
 
 def _resolve_docker_host() -> str:
+    """The docker/podman socket run_target() sets $DOCKER_HOST to for
+    `harbor run`'s own docker-py client.
+
+    Preference order:
+      1. $DOCKER_HOST, already set in this process's environment — on CCC,
+         setup_podman.sh exports this before any adapter code runs (see
+         docs/how-to/ccc/CCC_PODMAN_SETUP.md), so trusting it here means
+         this function does nothing platform-specific on Linux at all.
+      2. `podman machine inspect podman-machine-default` — Mac/Windows
+         only. "podman machine" is the VM rootless podman runs inside on
+         those platforms; Linux runs podman natively and has no such
+         concept, so this branch is unreachable on CCC and exists only for
+         local Mac development.
+    """
+    existing = os.environ.get("DOCKER_HOST", "").strip()
+    if existing:
+        return existing
     out = subprocess.run(
         ["podman", "machine", "inspect", "podman-machine-default"],
         capture_output=True, text=True, check=True, timeout=30,
@@ -222,6 +243,11 @@ class Adapter(CapabilityAdapter):
                 "TASK_ID environment variable is required — this adapter is shared by "
                 "all 21 v4_t2_e1 projects via a symlink and has no other way to know "
                 "which task it is running. Set it before invoking `cap-evolve run`."
+            )
+        if V4N is None:
+            raise RuntimeError(
+                "PARSEC_V4N environment variable is required — see parsec_paths.py. "
+                "Set it before invoking `cap-evolve run`."
             )
         task_dir = TASKS_DIR / f"bench-v4-{task_id}"
         if not task_dir.exists():
@@ -371,8 +397,15 @@ class Adapter(CapabilityAdapter):
         env["PYTHONPATH"] = (
             "." + os.pathsep + _existing_pythonpath if _existing_pythonpath else "."
         )
-        env["PARSEC_URL"] = "http://127.0.0.1:8000"
-        env["PARSEC_SIM_TRACE"] = str(V4N / "_run" / "logs" / "parsec-trace" / "trace.jsonl")
+        # setdefault, not assignment: a caller (e.g. a CCC run pinning a
+        # run-scoped trace path so concurrent lanes don't interleave into one
+        # file) may have already set these — overwriting them unconditionally
+        # would silently discard that intent.
+        env.setdefault("PARSEC_URL", "http://127.0.0.1:8000")
+        env.setdefault(
+            "PARSEC_SIM_TRACE",
+            str(V4N / "_run" / "logs" / "parsec-trace" / "trace.jsonl"),
+        )
         env["DOCKER_HOST"] = docker_host
         for var, port in MCP_PORTS.items():
             env[var] = f"http://localhost:{port}/mcp/sse"

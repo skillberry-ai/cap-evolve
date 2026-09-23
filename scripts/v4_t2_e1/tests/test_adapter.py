@@ -26,7 +26,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "core"))
 import adapter as adapter_mod  # noqa: E402
 
 
-REAL_TASKS_DIR = Path("/Users/boazc/workarea/Python/rhdp-parsec/v4_2026-09-16/_run/tasks")
+# adapter_mod.TASKS_DIR is derived from $PARSEC_V4N via parsec_paths.py (may
+# be None if it's unset) — using it here, rather than a second hardcoded
+# literal, is the fix for the exact defect this constant used to encode:
+# REAL_TASKS_DIR previously named a Mac-only path completely independent of
+# $PARSEC_V4N, so these tests silently skipped on any other machine
+# regardless of what PARSEC_V4N was set to.
+REAL_TASKS_DIR = adapter_mod.TASKS_DIR
+_REAL_TASKS_DIR_PRESENT = REAL_TASKS_DIR is not None and REAL_TASKS_DIR.exists()
 KNOWN_TASK_ID = "icinga-011-aap2-job-status-alert"  # one of the 21; real dir on disk
 
 
@@ -42,7 +49,7 @@ class TestAdapterTaskResolution(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 adapter_mod.Adapter()
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_tasks_returns_the_one_pinned_task(self):
         with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
             a = adapter_mod.Adapter()
@@ -55,6 +62,29 @@ class TestAdapterTaskResolution(unittest.TestCase):
             # split argument is ignored on purpose — train == val == test == this task
             self.assertEqual(a.tasks("train"), tasks)
             self.assertEqual(a.tasks("test"), tasks)
+
+
+class TestResolveDockerHost(unittest.TestCase):
+    def test_prefers_docker_host_env_var_when_set(self):
+        with patch.dict(os.environ, {"DOCKER_HOST": "unix:///run/user/1000/podman/podman.sock"}, clear=True):
+            self.assertEqual(
+                adapter_mod._resolve_docker_host(),
+                "unix:///run/user/1000/podman/podman.sock",
+            )
+
+    def test_falls_back_to_podman_machine_inspect_when_unset(self):
+        fake_stdout = json.dumps([
+            {"ConnectionInfo": {"PodmanSocket": {"Path": "/tmp/podman-machine.sock"}}}
+        ])
+        with patch.dict(os.environ, {}, clear=True), \
+             patch.object(
+                 adapter_mod.subprocess, "run",
+                 return_value=subprocess.CompletedProcess([], 0, stdout=fake_stdout, stderr=""),
+             ) as mock_run:
+            result = adapter_mod._resolve_docker_host()
+            self.assertEqual(result, "unix:///tmp/podman-machine.sock")
+            mock_run.assert_called_once()
+            self.assertEqual(mock_run.call_args.args[0][:2], ["podman", "machine"])
 
 
 class TestAdapterApply(unittest.TestCase):
@@ -75,7 +105,7 @@ class TestAdapterApply(unittest.TestCase):
         self.env_patch.stop()
         self.tmp.cleanup()
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_apply_copies_candidate_files_into_live_prompts_dir(self):
         a = adapter_mod.Adapter()
         # Guard rail for the C2 corruption class: assert BEFORE any mutation
@@ -105,7 +135,7 @@ class TestAdapterApply(unittest.TestCase):
                 "seed shared_context.md\n",
             )
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_apply_refuses_an_implausibly_short_orchestrator(self):
         """The C2 corruption chain: a test fixture's 21-byte "MUTATED
         orchestrator\\n" reached the live parsec-live clone and was then frozen
@@ -176,7 +206,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
             out[name] = p.read_text() if p.exists() else None
         return out
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_live_applies_the_candidate_inside_the_context(self):
         a = adapter_mod.Adapter()
         with a.live(self.candidate) as ctx:
@@ -188,7 +218,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
         # run_target as `ctx` — the override must not change that.
         self.assertEqual(Path(str(ctx)), self.candidate)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_live_restores_the_snapshot_after_a_crash_inside_the_block(self):
         a = adapter_mod.Adapter()
         before = self._current()
@@ -199,7 +229,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
                 raise RuntimeError("VPN dropped mid-trial")
         self.assertEqual(self._current(), before)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_live_restores_the_snapshot_on_a_clean_exit_too(self):
         a = adapter_mod.Adapter()
         before = self._current()
@@ -207,7 +237,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
             pass
         self.assertEqual(self._current(), before)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_live_removes_a_file_that_did_not_exist_before_entry(self):
         """Restore means restore: a prompt the candidate ADDS must be deleted on
         exit, not left behind as a permanent addition to the live clone."""
@@ -217,7 +247,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
             self.assertTrue((self.live_prompts_dir / "cost_agent.md").exists())
         self.assertFalse((self.live_prompts_dir / "cost_agent.md").exists())
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_live_restores_even_when_apply_itself_refuses(self):
         """A candidate rejected by the MIN_ORCHESTRATOR_BYTES floor must not
         leave the live clone in a half-state either."""
@@ -233,7 +263,7 @@ class TestAdapterLiveTeardown(unittest.TestCase):
 
 
 class TestAdapterScore(unittest.TestCase):
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_score_is_zero_on_rollout_error(self):
         from cap_evolve import Rollout
         with patch.dict(os.environ, {"TASK_ID": KNOWN_TASK_ID}, clear=True):
@@ -244,7 +274,7 @@ class TestAdapterScore(unittest.TestCase):
             self.assertEqual(score.reward, 0.0)
             self.assertIn("timeout", score.feedback)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_score_reads_reward_from_trial_result(self):
         from cap_evolve import Rollout
         from capevolve_harbor.results import TrialResult
@@ -266,7 +296,7 @@ class TestAdapterInfraErrorPropagation(unittest.TestCase):
     trial_result.error and then dropped it on the floor.
     """
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_run_target_surfaces_an_unscored_trial_as_rollout_error(self):
         created_trial_dirs: list[Path] = []
 
@@ -311,7 +341,7 @@ class TestAdapterInfraErrorPropagation(unittest.TestCase):
             for d in created_trial_dirs:
                 shutil.rmtree(d, ignore_errors=True)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_run_target_cost_and_tokens_are_zero_when_no_usage_log_matches(self):
         """cost_usd/tokens on the Rollout come from parsec-live's own usage
         log (see TestAdapterParsecUsageLog below), not from result.json's
@@ -363,7 +393,7 @@ class TestAdapterInfraErrorPropagation(unittest.TestCase):
             for d in created_trial_dirs:
                 shutil.rmtree(d, ignore_errors=True)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_run_target_reads_cost_and_tokens_from_the_parsec_live_log(self):
         """The real fix: cost/tokens come from parsec-live's own MetricsCollector
         log, matched to this trial by the timestamp window run_target() captures
@@ -424,7 +454,7 @@ class TestAdapterRunTargetJobDirResolution(unittest.TestCase):
     parse_job_dir(), not hand it trial_dir directly.
     """
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_run_target_descends_into_harbors_timestamp_subdir(self):
         created_trial_dirs: list[Path] = []
 
@@ -495,7 +525,7 @@ class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
                 return i
         raise AssertionError(f"no subprocess.run call contained {needle!r}; saw {calls}")
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_run_target_installs_seeds_before_harbor_run(self):
         calls: list[list[str]] = []
         created_trial_dirs: list[Path] = []
@@ -533,7 +563,7 @@ class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
             for d in created_trial_dirs:
                 shutil.rmtree(d, ignore_errors=True)
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_seeding_failure_is_an_infra_error_not_a_zero_reward(self):
         """A failed seed must surface as Rollout.error (infra noise) so the
         harness excludes the trial, and must NOT proceed to run harbor against
@@ -559,7 +589,7 @@ class TestAdapterRunTargetSeedsSimulationData(unittest.TestCase):
         self.assertIn("port 8088 refused", rollout.error)
         self.assertEqual(len(calls), 1, f"harbor must not have been invoked; saw {calls}")
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_a_hung_or_unlaunchable_seed_is_also_an_infra_error(self):
         """A 120s hang, or a missing install_seeds.py, must come back as
         Rollout.error like every other infra failure in run_target — not escape
@@ -617,12 +647,12 @@ class TestAdapterTrajectories(unittest.TestCase):
         (trial_sub / "verifier" / "reward.json").write_text(json.dumps({"reward": 0.5}))
         return job_dir
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_returns_none_when_nothing_has_run(self):
         a = adapter_mod.Adapter()
         self.assertIsNone(a.trajectories("val"))
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_returns_the_job_dir_not_one_trials_agent_dir(self):
         job_dir = self._make_trial(0, "1789740746891")
         a = adapter_mod.Adapter()
@@ -634,7 +664,7 @@ class TestAdapterTrajectories(unittest.TestCase):
         self.assertTrue(any((child / "verifier").is_dir() for child in got.iterdir()))
         self.assertTrue(any((child / "agent").is_dir() for child in got.iterdir()))
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_seed_10_sorts_after_seed_2(self):
         self._make_trial(2, "1789740746891")
         expected = self._make_trial(10, "1789740746000")  # EARLIER millis, higher seed
@@ -644,7 +674,7 @@ class TestAdapterTrajectories(unittest.TestCase):
             "seed-10 must sort after seed-2; a lexicographic sort gets this backwards",
         )
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_latest_millis_wins_within_one_seed(self):
         self._make_trial(3, "1789740746000")
         expected = self._make_trial(3, "1789740999999")
@@ -690,12 +720,12 @@ class TestAdapterPythonPath(unittest.TestCase):
                 shutil.rmtree(d, ignore_errors=True)
         return captured
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_prepends_dot_and_keeps_an_existing_pythonpath(self):
         env = self._captured_env("/some/caller/path")
         self.assertEqual(env["PYTHONPATH"], "." + os.pathsep + "/some/caller/path")
 
-    @unittest.skipUnless(REAL_TASKS_DIR.exists(), "real bench-v4 tasks dir not present")
+    @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_is_exactly_dot_when_nothing_was_set(self):
         env = self._captured_env(None)
         self.assertEqual(env["PYTHONPATH"], ".")
