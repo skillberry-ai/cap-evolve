@@ -17,7 +17,17 @@
 #
 # REQUIRES a SELF-HOSTED runner on the IBM network (the gateway is VPC-internal;
 # GitHub-hosted runners cannot reach it). See ci/benchmarks/README.md +
-# ci/benchmarks/runner/arm-runner.sh. Repo secrets: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN.
+# ci/benchmarks/runner/arm-runner.sh. Repo secrets: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
+# RITS_API_BASE, RITS_API_KEY.
+#
+# TWO providers can be picked per model, resolved by ci/benchmarks/lib/resolve_provider.sh:
+#   * the default ete-litellm gateway — every plain model id above.
+#   * RITS, via the lite-rits proxy running on skillberry-1 (the same box this self-hosted
+#     runner is on) — any id prefixed "rits/<vendor>/<model>". The prefix is CI-only: it is
+#     stripped before the bare id is sent on the wire, since lite-rits's own scraped catalog
+#     doesn't know it. agent_model and optimizer_model resolve independently, so pairing a
+#     RITS agent with a gateway optimizer (or vice versa) is a normal combination, not an
+#     error.
 # ============================================================================
 
 name: Benchmarks
@@ -49,7 +59,7 @@ on:
         type: string
         default: ""
       agent_model:
-        description: "Evaluation model — the agent under test (litellm_proxy alias on the ete-litellm gateway)"
+        description: "Evaluation model — the agent under test. Plain id = ete-litellm gateway alias; \"rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh). Independent of optimizer_model — any pairing is valid."
         type: choice
         default: "aws/gpt-oss-120b"
         options:
@@ -77,9 +87,23 @@ on:
           - "gcp/gemini-3.6-flash"
           - "gemini-2.5-flash"
           - "gemini-2.5-pro"
-          - "rits/google/gemma-4-31B"
+          # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh ----
+          # Curated from the live rits.json catalog (105 models), granite family excluded on
+          # request. Only gemma-4-31B-it is a genuine match to the WikiSkill paper's model
+          # axis (arXiv 2608.27454v1: Qwen-3.5-4B/9B, Qwen-3.6-27B, Gemma-4-31B, Gemini-3.5-
+          # Flash) — RITS carries no small Qwen or Gemini, so the other 8 are a general-
+          # purpose spread across vendor/size rather than a reproduction of that paper's axis.
+          - "rits/google/gemma-4-31B-it"
+          - "rits/Qwen/Qwen3-8B"
+          - "rits/Qwen/Qwen2.5-72B-Instruct"
+          - "rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
+          - "rits/meta-llama/llama-3-3-70b-instruct"
+          - "rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+          - "rits/deepseek-ai/DeepSeek-V3.2"
+          - "rits/openai/gpt-oss-120b-a100"
+          - "rits/moonshotai/Kimi-K2.7-Code"
       optimizer_model:
-        description: "Optimization model — the Claude Code optimizer's model (litellm_proxy alias on the ete-litellm gateway)"
+        description: "Optimization model — the Claude Code optimizer's model. Plain id = ete-litellm gateway alias; \"rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh) — the claude-code CLI is pointed at it via ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN, UNVERIFIED whether lite-rits speaks the Anthropic Messages API shape the CLI expects."
         type: choice
         default: "claude-opus-4-8"
         options:
@@ -107,7 +131,17 @@ on:
           - "gcp/gemini-3.6-flash"
           - "gemini-2.5-flash"
           - "gemini-2.5-pro"
-          - "rits/google/gemma-4-31B"
+          # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh and the
+          # agent_model list above for the same catalog note. ----
+          - "rits/google/gemma-4-31B-it"
+          - "rits/Qwen/Qwen3-8B"
+          - "rits/Qwen/Qwen2.5-72B-Instruct"
+          - "rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
+          - "rits/meta-llama/llama-3-3-70b-instruct"
+          - "rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+          - "rits/deepseek-ai/DeepSeek-V3.2"
+          - "rits/openai/gpt-oss-120b-a100"
+          - "rits/moonshotai/Kimi-K2.7-Code"
       optimizer_usd_per_iter:
         description: "Per-iteration $ cap on the optimizer (default unlimited — 0 disables the native --max-budget-usd cap entirely; set e.g. 4.0 to bound spend)"
         type: string
@@ -299,6 +333,11 @@ jobs:
     env:
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      # lite-rits proxy on skillberry-1 — the SAME box this self-hosted runner is on, so
+      # RITS_API_BASE is a plain localhost URL, not a VPC-internal address. Used only for a
+      # "rits/*" agent_model/optimizer_model id; see resolve_provider.sh.
+      RITS_API_BASE: ${{ secrets.RITS_API_BASE }}
+      RITS_API_KEY: ${{ secrets.RITS_API_KEY }}
       # Smoke DEFAULTS to 3 iterations (cheap, fast regression) but an explicit dispatch value
       # now wins, exactly as it does for NUM_TRIALS below and for the same reason: the input's
       # own default is "" so "user asked for 10" is distinguishable from "user asked for

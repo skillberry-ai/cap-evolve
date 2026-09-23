@@ -269,52 +269,93 @@ echo "claude-code optimizer: $(command -v claude) ($(claude --version 2>/dev/nul
 # `aws/gpt-oss-120b` instead of the models the run actually selected, and only hard-failed on
 # HTTP 429 budget_exceeded — so a `team not allowed to access model` rejection printed
 # "(not budget-blocked)" and sailed straight through.
-if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ] && command -v curl >/dev/null; then
+# Two providers can be selected (see resolve_provider.sh): the ETE gateway, entitlement- and
+# budget-checked below exactly as before, and RITS via skillberry-1's lite-rits proxy, which
+# has neither concept — it's a single-tenant proxy scraping IBM RITS's own catalog, so there
+# is no per-team allowlist to drift out of sync with the dropdown and no shared budget to
+# exhaust. Its `/v1/models` is ALSO always empty by design (it builds routes dynamically per
+# request instead of publishing a static model_list), so running check_models.py against it
+# would be a guaranteed false failure, not a weaker check — skip straight to a completion
+# probe, which is the only signal lite-rits can actually give.
+if command -v curl >/dev/null; then
   PF_AGENT="${AGENT_MODEL:-aws/gpt-oss-120b}"
   PF_OPTIMIZER="${OPTIMIZER_MODEL:-claude-opus-4-8}"
+  # shellcheck source=ci/benchmarks/lib/resolve_provider.sh
+  . "$LIB_DIR/resolve_provider.sh"
 
-  # 1. ENTITLEMENT — is each SELECTED model served to this key at all?
-  # /models is an `llm_api_routes` call. The richer /model/info and /key/info are NOT: these
-  # virtual keys are route-scoped and answer both with 403 "not allowed to call this route",
-  # which is also the real reason the old preflight logged a mystery HTTP 403.
-  models=/tmp/capevolve_models.$$.json
-  mcode="$(curl -sS -m 30 -o "$models" -w '%{http_code}' \
-    "$ANTHROPIC_BASE_URL/models" \
-    -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" 2>/dev/null || echo 000)"
-  if [ "$mcode" = "200" ]; then
-    if ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" \
-        --require agent="$PF_AGENT" --require optimizer="$PF_OPTIMIZER"; then
-      rm -f "$models"; exit 1
+  case "$PF_AGENT" in
+    rits/*) PF_AGENT_IS_RITS=1 ;;
+    *)      PF_AGENT_IS_RITS=0 ;;
+  esac
+  case "$PF_OPTIMIZER" in
+    rits/*) PF_OPTIMIZER_IS_RITS=1 ;;
+    *)      PF_OPTIMIZER_IS_RITS=0 ;;
+  esac
+
+  # 1. ENTITLEMENT — is each SELECTED *gateway* model served to this key at all? Only
+  # gateway-routed models are checkable this way; a "rits/*" model has no /models listing to
+  # confirm against, so it is simply not passed to --require (its absence from the gateway's
+  # list is expected, not a fault).
+  if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ] \
+      && { [ "$PF_AGENT_IS_RITS" = 0 ] || [ "$PF_OPTIMIZER_IS_RITS" = 0 ]; }; then
+    # /models is an `llm_api_routes` call. The richer /model/info and /key/info are NOT: these
+    # virtual keys are route-scoped and answer both with 403 "not allowed to call this route",
+    # which is also the real reason the old preflight logged a mystery HTTP 403.
+    models=/tmp/capevolve_models.$$.json
+    mcode="$(curl -sS -m 30 -o "$models" -w '%{http_code}' \
+      "$ANTHROPIC_BASE_URL/models" \
+      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" 2>/dev/null || echo 000)"
+    if [ "$mcode" = "200" ]; then
+      require_args=()
+      [ "$PF_AGENT_IS_RITS" = 0 ] && require_args+=(--require "agent=$PF_AGENT")
+      [ "$PF_OPTIMIZER_IS_RITS" = 0 ] && require_args+=(--require "optimizer=$PF_OPTIMIZER")
+      if ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" "${require_args[@]}"; then
+        rm -f "$models"; exit 1
+      fi
+    else
+      echo "::warning:: gateway /models returned HTTP $mcode — cannot verify model entitlement"
     fi
-  else
-    echo "::warning:: gateway /models returned HTTP $mcode — cannot verify model entitlement"
+    rm -f "$models"
   fi
-  rm -f "$models"
 
-  # 2. BUDGET + call-time entitlement — one real completion with the SELECTED agent model.
-  # Listing a model is necessary but not sufficient: the team check happens at call time.
+  # 2. BUDGET/ENTITLEMENT at call time — one real completion per SELECTED model, against
+  # whichever provider actually serves it. Listing a gateway model is necessary but not
+  # sufficient (the team check happens at call time), and RITS has no listing step at all, so
+  # this probe is the only check it gets.
   # `max_completion_tokens` (not `max_tokens`) is used because the Azure reasoning
   # deployments reject the latter outright, and a probe that 400s on its own parameters
   # would be a false alarm.
-  probe=/tmp/capevolve_budget_probe.$$.json
-  code="$(curl -sS -m 60 -o "$probe" -w '%{http_code}' \
-    "$ANTHROPIC_BASE_URL/chat/completions" \
-    -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" -H 'Content-Type: application/json' \
-    -d "{\"model\":\"$PF_AGENT\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_completion_tokens\":16}" \
-    2>/dev/null || echo 000)"
-  if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
-    echo "::error:: model gateway is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
-    echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
-    head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
-  fi
-  if grep -qi 'not allowed to access model' "$probe" 2>/dev/null; then
-    echo "::error:: gateway REFUSED agent model '$PF_AGENT' at call time (HTTP $code):"
-    echo "::error:: the key's team is not entitled to it, so every rollout would fail and the"
-    echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
-    head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
-  fi
-  rm -f "$probe"
-  echo "gateway preflight: agent='$PF_AGENT' optimizer='$PF_OPTIMIZER' entitled; completion probe HTTP $code (not budget-blocked)"
+  probe_model() {
+    local role="$1" model="$2"
+    resolve_provider "$model"
+    local probe="/tmp/capevolve_budget_probe.$$_${role}.json"
+    local code
+    code="$(curl -sS -m 60 -o "$probe" -w '%{http_code}' \
+      "$RESOLVED_API_BASE/chat/completions" \
+      -H "Authorization: Bearer $RESOLVED_API_KEY" -H 'Content-Type: application/json' \
+      -d "{\"model\":\"$RESOLVED_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_completion_tokens\":16}" \
+      2>/dev/null || echo 000)"
+    if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
+      echo "::error:: $role model gateway ($RESOLVED_API_BASE) is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
+      echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
+      head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+    fi
+    if grep -qi 'not allowed to access model' "$probe" 2>/dev/null; then
+      echo "::error:: gateway REFUSED $role model '$model' at call time (HTTP $code):"
+      echo "::error:: the key's team is not entitled to it, so every rollout would fail and the"
+      echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
+      head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+    fi
+    if [ "$code" != "200" ] && [ "$RESOLVED_API_BASE" = "${RITS_API_BASE:-}" ]; then
+      echo "::error:: RITS probe for $role model '$model' failed (HTTP $code) against $RESOLVED_API_BASE:"
+      echo "::error:: lite-rits may be down, or this model id is not in its scraped rits.json."
+      head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+    fi
+    echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code"
+    rm -f "$probe"
+  }
+  probe_model agent "$PF_AGENT"
+  probe_model optimizer "$PF_OPTIMIZER"
 fi
 
 # Export for later workflow steps (no-op locally).
