@@ -46,11 +46,35 @@ function cellFor(v: number | null | undefined) {
   // Solid token colours only. A Tailwind opacity modifier over a `var()` colour silently
   // produces no declaration in this setup, which is how "fail" cells rendered invisible
   // and made a failing task look like a task that never ran.
+  // The exact reward is rendered as visible text (not just colour) so two cells of the
+  // same verdict but different scores (e.g. two "partial"s) aren't visually identical.
+  const glyph = v == null ? '·' : v.toFixed(2)
   if (v == null) return { cls: 'bg-surface-3 border border-dashed border-border-strong',
-                          label: 'not run', glyph: '·' }
-  if (v >= 0.999) return { cls: 'bg-accepted', label: 'pass', glyph: '' }
-  if (v <= 0.001) return { cls: 'bg-rejected', label: 'fail', glyph: '' }
-  return { cls: 'bg-accent', label: 'partial', glyph: '' }
+                          label: 'not run', glyph }
+  if (v >= 0.999) return { cls: 'bg-accepted', label: 'pass', glyph }
+  if (v <= 0.001) return { cls: 'bg-rejected', label: 'fail', glyph }
+  return { cls: 'bg-accent', label: 'partial', glyph }
+}
+
+/** Round-robin colours for the thin band that groups same-round columns — cycles so an
+ *  arbitrary number of rounds still reads as alternating, not one repeated pair. Solid
+ *  tokens only (no opacity modifier): a Tailwind opacity modifier over one of this
+ *  project's `var()` colours silently produces no declaration (see `cellFor` above) —
+ *  harmless here since the band is a 6px strip, not a wash over the column body. */
+const ROUND_BAND_CLASSES = ['bg-primary', 'bg-accent', 'bg-indecisive']
+
+/** Consecutive columns sharing the same (non-null) `round_id` collapse into one group,
+ *  so the header can render a single spanning band over candidates round.py gated
+ *  together. A column with no `round_id` (not gated via round.py) is its own group. */
+function groupByRound(cols: GraphNode[]): { round_id: string | null; cols: GraphNode[] }[] {
+  const groups: { round_id: string | null; cols: GraphNode[] }[] = []
+  for (const n of cols) {
+    const rid = n.round_id ?? null
+    const last = groups[groups.length - 1]
+    if (last && rid != null && last.round_id === rid) last.cols.push(n)
+    else groups.push({ round_id: rid, cols: [n] })
+  }
+  return groups
 }
 
 /**
@@ -125,6 +149,8 @@ export function TaskMatrix({
   }
 
   const churn = findChurn(cols)
+  const roundGroups = useMemo(() => groupByRound(cols), [cols])
+  const hasRounds = roundGroups.some((g) => g.round_id != null)
 
   return (
     <div className="space-y-4">
@@ -154,6 +180,22 @@ export function TaskMatrix({
         <div className="scroll-x">
           <table className="border-separate border-spacing-[2px] text-[11px]">
             <thead>
+              {hasRounds && (
+                <tr aria-hidden={roundGroups.every((g) => g.round_id == null)}>
+                  <th className="sticky left-0 z-10 bg-surface" />
+                  {roundGroups.map((g, i) => (
+                    <th
+                      key={g.round_id ?? `solo-${i}`}
+                      colSpan={g.cols.length}
+                      title={g.round_id ? `gated together by round.py: ${g.round_id}` : undefined}
+                      className={cn(
+                        'h-1.5 rounded-[2px] p-0',
+                        g.round_id ? ROUND_BAND_CLASSES[i % ROUND_BAND_CLASSES.length] : '',
+                      )}
+                    />
+                  ))}
+                </tr>
+              )}
               <tr>
                 <th className="sticky left-0 z-10 bg-surface pr-2 text-left font-normal text-muted">
                   task
@@ -184,6 +226,8 @@ export function TaskMatrix({
                   {cols.map((n) => {
                     const v = n.per_task?.[t]
                     const c = cellFor(v)
+                    const fixed = n.fixed?.includes(t)
+                    const broke = n.broke?.includes(t)
                     return (
                       <td key={n.id} className="p-0">
                         <button
@@ -192,10 +236,17 @@ export function TaskMatrix({
                           onFocus={() => setHover({ task: t, node: n })}
                           onMouseLeave={() => setHover(null)}
                           onBlur={() => setHover(null)}
-                          aria-label={`${t} on ${n.id}: ${c.label}${v != null ? ` (${v.toFixed(3)})` : ''}`}
+                          aria-label={`${t} on ${n.id}: ${c.label}${v != null ? ` (${v.toFixed(3)})` : ''}${
+                            fixed ? ' — fixed vs parent' : broke ? ' — broke vs parent' : ''
+                          }`}
                           className={cn(
-                            'flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
-                            'text-[9px] text-muted transition-transform duration-150 hover:scale-110',
+                            'relative flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
+                            // Solid ring colour, no opacity modifier (see ROUND_BAND_CLASSES
+                            // above for why one silently renders nothing in this setup).
+                            'text-[9px] text-muted transition-shadow duration-150 hover:ring-2 hover:ring-border-strong',
+                            (fixed || broke) && 'ring-1 ring-inset',
+                            fixed && 'ring-accepted',
+                            broke && 'ring-rejected',
                             c.cls,
                           )}
                         >
@@ -222,27 +273,36 @@ export function TaskMatrix({
           <span>rows worst-mean first</span>
         </div>
 
-        {hover && (
-          <div className="border-t border-border bg-surface-2 px-3.5 py-2.5 text-[12px]">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono">{hover.task}</span>
-              <span className="text-muted">on</span>
-              <span className="font-mono">{hover.node.id}</span>
-              <VerdictBadge verdict={hover.node.status} />
-              <span className="tnum text-muted">
-                reward{' '}
-                <span className="text-foreground">
-                  {hover.node.per_task?.[hover.task]?.toFixed(3) ?? '—'}
+        {/* Fixed min-height, always in flow: a cell's detail used to be inserted only on
+            hover, and its height varied with feedback length — growing/shrinking the card
+            shifted every element below it as the mouse moved across the grid ("jumping").
+            Reserving the height up front (and never conditionally unmounting) keeps the
+            layout stable regardless of which cell is hovered. */}
+        <div className="min-h-[64px] border-t border-border bg-surface-2 px-3.5 py-2.5 text-[12px]">
+          {hover ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono">{hover.task}</span>
+                <span className="text-muted">on</span>
+                <span className="font-mono">{hover.node.id}</span>
+                <VerdictBadge verdict={hover.node.status} />
+                <span className="tnum text-muted">
+                  reward{' '}
+                  <span className="text-foreground">
+                    {hover.node.per_task?.[hover.task]?.toFixed(3) ?? '—'}
+                  </span>
                 </span>
-              </span>
-            </div>
-            {hover.node.feedback?.[hover.task] && (
-              <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted-strong">
-                {hover.node.feedback[hover.task]}
-              </p>
-            )}
-          </div>
-        )}
+              </div>
+              {hover.node.feedback?.[hover.task] && (
+                <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted-strong">
+                  {hover.node.feedback[hover.task]}
+                </p>
+              )}
+            </>
+          ) : (
+            <span className="text-muted">Hover a cell for its reward and feedback.</span>
+          )}
+        </div>
       </Card>
     </div>
   )
@@ -289,9 +349,17 @@ function ColumnSummary({ cols, nTasks }: { cols: GraphNode[]; nTasks: number }) 
               {!!n.fixed?.length && <span className="tnum text-accepted">fixed {n.fixed.join(' ')}</span>}
               {!!n.broke?.length && <span className="tnum text-rejected">broke {n.broke.join(' ')}</span>}
               {/* A screen's decision was made on Δ̄ vs its reference, not on the raw
-                  subset mean above — show the number it actually decided on. */}
-              {n.kind === 'screen' && n.reason && (
-                <span className="tnum text-muted" title="This screen's own aggregate — the statistic it actually gated on.">
+                  subset mean above — show the number it actually decided on. A real
+                  candidate's `reason` is the gate/agent's own accept-or-reject note —
+                  equally worth showing, and previously hidden here for every non-screen
+                  column even though the node already carries it. */}
+              {n.reason && (
+                <span
+                  className="tnum text-muted"
+                  title={n.kind === 'screen'
+                    ? "This screen's own aggregate — the statistic it actually gated on."
+                    : 'The gate/agent note recorded for this decision.'}
+                >
                   {n.reason}
                 </span>
               )}

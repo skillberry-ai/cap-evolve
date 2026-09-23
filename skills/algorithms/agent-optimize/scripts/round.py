@@ -518,6 +518,16 @@ def _main(argv=None) -> int:
     PRIOR_CTL = prior_attempt_controls(run_dir)
     CTL = control_tag(run_dir)
     MEASUREMENT = measurement_context(args.split, args.n_trials, args.concurrency)
+    # One shared identifier for every candidate THIS invocation gates, so the dashboard can
+    # group same-round candidates instead of showing them as if they had run sequentially
+    # (they are gated together but committed one at a time, serially, by the driver).
+    # Logged as its own event, decoupled from commit.py's per-candidate bookkeeping: by the
+    # time a later candidate in this same round is committed, `record_iteration` may already
+    # have advanced `spent.iterations` for an earlier one, so re-deriving this round's stem
+    # from a candidate's OWN commit-time iteration count would rename it out from under the
+    # candidates committed after the first. STEM is already unique per invocation
+    # (iteration + attempt), so it doubles as the batch id — no separate id needed.
+    run_dir.log_event("agent_optimize_round_batch", batch_id=STEM, candidates=list(tags))
     ctl_tags: list[str] = []
     REUSED = None
     # Not under --gate-against control: that mode's whole premise is a control measured
@@ -746,6 +756,7 @@ def _main(argv=None) -> int:
         # watching the stream saw two identical control evaluations and no statement that the
         # second had replaced the first.
         "attempt": ATTEMPT,
+        "batch_id": STEM,
         "attempt_reading": (
             f"RE-GATE: attempt {ATTEMPT} at iteration {int(run_dir.spent.iterations)}. Its "
             f"{len(PRIOR_CTL)} earlier control replicate(s) are pooled into `null_delta_...` "

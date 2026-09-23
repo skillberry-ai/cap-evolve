@@ -29,7 +29,7 @@ The candidate **graph** schema (``reduced["graph"]``)::
          "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
          "gate_resolvable_effect_size"?, "screened": bool | None,
          "cluster_ids"?: [...], "subset"?: {"task_ids": [...], "tier": int | None},
-         "micro_tests"?: [...]}
+         "micro_tests"?: [...], "round_id"?: str | None}
      ],
      "root": "seed", "best_id": "..."}
 
@@ -1252,6 +1252,17 @@ def reduce_run(run_dir) -> dict:
                     "what": ev.get("what"), "error": ev.get("error"),
                 }
 
+    # agent_optimize_round_batch: one event per round.py invocation naming every candidate
+    # tag it gated together, so candidates committed serially (and possibly across a stall
+    # or a later iteration bump) still know they were measured in the SAME round. Read
+    # generically off any event carrying "batch_id" + "candidates" — round.py is the first
+    # emitter, but nothing here is tied to its name.
+    round_id_by_tag: dict = {}
+    for ev in events:
+        if ev.get("batch_id") and isinstance(ev.get("candidates"), list):
+            for tag in ev["candidates"]:
+                round_id_by_tag[str(tag)] = str(ev["batch_id"])
+
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
     last_accepted = "seed"
@@ -1385,6 +1396,9 @@ def reduce_run(run_dir) -> dict:
             # looked up generically by tag below (see ``screened_by_tag``), not tied to the
             # agent-optimize algorithm that happens to be the first emitter.
             "screened": screened_by_tag.get(cid),
+            # Which round.py invocation gated this candidate, when one did — nodes sharing
+            # this id were evaluated together, not sequentially, and the UI groups them.
+            "round_id": round_id_by_tag.get(cid),
             # optimizer reasoning for this round was NOT captured live — the note shown
             # is reconstructed after the fact. Generic across drivers (see
             # ``context_warning_by_tag`` above).

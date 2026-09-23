@@ -293,6 +293,10 @@ export interface GraphNode {
    *  round: the `reason`/`note` shown is reconstructed after the fact, not the
    *  optimizer's live reasoning. */
   context_warning?: { what: string | null; error: string | null } | null
+  /** Which round.py invocation gated this candidate, when one did (agent-optimize).
+   *  Nodes sharing this id were evaluated and gated TOGETHER, not sequentially —
+   *  absent for candidates not gated via round.py. */
+  round_id?: string | null
 }
 
 export interface RunGraph {

@@ -460,3 +460,40 @@ def test_screened_badge_read_generically_by_candidate_tag():
     assert nodes["cand_1"]["screened"] is True
     assert nodes["cand_2"]["screened"] is None
     assert reduced["summary"]["capabilities"]["screened"] is True
+
+
+def test_round_id_groups_candidates_gated_in_one_round_py_invocation():
+    """``agent_optimize_round_batch`` — one round.py call gating 2+ candidates at once —
+    must mark every candidate it named with the SAME ``round_id``, read generically off
+    any event carrying ``batch_id``/``candidates`` (round.py is the first emitter, but
+    nothing here is tied to its name). A candidate committed outside any round.py call
+    (e.g. an earlier deterministic-style commit) must get ``round_id: None``, never a
+    fabricated one.
+
+    Candidates gated together are committed SERIALLY by the driver, and each commit's
+    ``record_iteration`` advances ``spent.iterations`` — so this id must come from the
+    round-batch event itself, not be re-derived from a later candidate's own iteration
+    count (which would already have moved on from the round's).
+    """
+    from cap_evolve import Budget, RunDir, dashboard
+    tmp = Path(tempfile.mkdtemp())
+    rd = RunDir.create(tmp, ts="t", budget=Budget())
+    events = [
+        {"t": 1.0, "kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0},
+        {"t": 2.0, "kind": "evaluate", "split": "val", "tag": "seed", "reward": 0.5},
+        {"t": 3.0, "kind": "baseline", "val": 0.5},
+        # One round.py invocation gates cand_1 and cand_2 together.
+        {"t": 4.0, "kind": "agent_optimize_round_batch", "batch_id": "round_i1",
+         "candidates": ["cand_1", "cand_2"]},
+        {"t": 5.0, "kind": "reject", "candidate": "cand_1", "val": 0.5, "note": "x"},
+        {"t": 6.0, "kind": "reject", "candidate": "cand_2", "val": 0.51, "note": "y"},
+        # cand_3 commits later, outside that round entirely.
+        {"t": 7.0, "kind": "reject", "candidate": "cand_3", "val": 0.49, "note": "z"},
+    ]
+    rd.events_path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+    (rd.root / "baseline.json").write_text(json.dumps({"val": {"reward": 0.5}}), encoding="utf-8")
+    reduced = dashboard.reduce_run(rd)
+    nodes = {n["id"]: n for n in reduced["graph"]["nodes"]}
+    assert nodes["cand_1"]["round_id"] == "round_i1"
+    assert nodes["cand_2"]["round_id"] == "round_i1"
+    assert nodes["cand_3"]["round_id"] is None

@@ -63,4 +63,39 @@ describe('TaskMatrix', () => {
     expect(screen.getByText('t2')).toBeInTheDocument()
     expect(screen.getByText('t3')).toBeInTheDocument()
   })
+
+  it('renders the exact reward as visible cell text, not just a colour glyph', () => {
+    render(<TaskMatrix summary={summary()} nodes={[seed, fullCandidate]} />)
+    // fullCandidate: t1=1, t2=1, t3=0 -> "1.00" appears (twice: t1, t2) and "0.00" (t3).
+    expect(screen.getAllByText('1.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('0.00').length).toBeGreaterThan(0)
+  })
+
+  it('marks a cell whose task the candidate fixed or broke vs its parent', () => {
+    const withMovement = node({
+      id: 'cand_move',
+      per_task: { t1: 1, t2: 0, t3: 1 },
+      fixed: ['t1'],
+      broke: ['t2'],
+    })
+    render(<TaskMatrix summary={summary()} nodes={[seed, withMovement]} />)
+    expect(screen.getByLabelText(/t1 on cand_move:.*fixed vs parent/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/t2 on cand_move:.*broke vs parent/)).toBeInTheDocument()
+  })
+
+  it("renders a real (non-screen) candidate's own reason text", () => {
+    const rejected = node({ id: 'cand_r', per_task: { t1: 0 }, reason: 'churn — no net gain' })
+    render(<TaskMatrix summary={summary()} nodes={[seed, rejected]} />)
+    expect(screen.getByText('churn — no net gain')).toBeInTheDocument()
+  })
+
+  it('groups candidates gated by the same round.py invocation under one round_id', () => {
+    const a = node({ id: 'cand_a', per_task: { t1: 1 }, round_id: 'round_i1' })
+    const b = node({ id: 'cand_b', per_task: { t1: 0 }, round_id: 'round_i1' })
+    const c = node({ id: 'cand_c', per_task: { t1: 1 }, round_id: 'round_i2' })
+    render(<TaskMatrix summary={summary()} nodes={[seed, a, b, c]} />)
+    // The round band header carries the batch id as a title/tooltip on the spanning cell.
+    expect(screen.getByTitle(/gated together by round.py: round_i1/)).toBeInTheDocument()
+    expect(screen.getByTitle(/gated together by round.py: round_i2/)).toBeInTheDocument()
+  })
 })
