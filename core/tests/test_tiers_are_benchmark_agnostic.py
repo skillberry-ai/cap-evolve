@@ -59,7 +59,8 @@ def _bench_arm(path: Path, bench: str) -> str:
     """
     src = path.read_text(encoding="utf-8")
     start = src.index(f"  {bench})")
-    ends = [src.index(m, start) for m in ("\n  *)", "\nesac") if m in src[start:]]
+    boundaries = [f"\n  {b})" for b in BENCH_NAMES if b != bench] + ["\n  *)", "\nesac"]
+    ends = [src.index(m, start) for m in boundaries if m in src[start:]]
     return src[start:min(ends)] if ends else src[start:]
 
 

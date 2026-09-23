@@ -1143,7 +1143,9 @@ _CASE_NAMES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 }
 
 # No variant ships more than three graded copies of a task: the 912 set ships exactly three,
-# the verified 400 exactly one.
+# the verified 400 exactly one. `_case_indices` only probes range(1, _MAX_CASES+1) — if a
+# future release ever ships a 4th graded copy, it would be silently never graded (no error,
+# just a quietly wrong denominator). Bump this if that assumption ever stops holding.
 _MAX_CASES = 3
 
 
@@ -1168,6 +1170,12 @@ def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
         # silently grade a replay against case 1's workbook instead of recording an honest
         # miss — and 4 of the 912 tasks really do ship fewer than three cases (43026, 46444,
         # 4714 with one; 52964 with two), so that path is reachable.
+        #
+        # KNOWN GAP: if the same id-typo shape ever showed up on a case 2/3 filename (the 912
+        # set has 3 real files per task, so it's plausible there too), this scoping would miss
+        # it — `_case_indices` would just silently under-report the case count for that task,
+        # indistinguishable from the 4 genuinely-short tasks above. No known occurrence today;
+        # revisit if one turns up.
         for stem in bare:
             hit = dir_path / f"{stem}.xlsx"
             if hit.exists():
@@ -1181,8 +1189,15 @@ def _resolve_case_file(dir_path: Path, idx: int, sid: str, kind: str) -> Path:
         # when the choice is UNIQUE within this task's own directory: two candidates means we
         # cannot know which one grades the task, and a guess would fabricate a result where a
         # miss belongs.
+        #
+        # Anchored to idx (== 1, this branch is idx==1 only): an unanchored `*_{suffix}.xls*`
+        # would also match a DIFFERENT case's file in a 912-style 3-case task dir (e.g.
+        # `2_{sid}_golden.xlsx`) whenever that's the only other suffix-matching file present —
+        # passing the "exactly one match" uniqueness check while actually cross-assigning case
+        # 2's golden to case 1, silently double-grading the same file for two cases instead of
+        # surfacing case 1's genuine miss.
         for suffix in suffixes:
-            matches = sorted(dir_path.glob(f"*_{suffix}.xls*"))
+            matches = sorted(dir_path.glob(f"{idx}_*_{suffix}.xls*"))
             if len(matches) == 1:
                 return matches[0]
     return dir_path / f"{idx}_{sid}_{suffixes[0]}.xlsx"
@@ -1208,12 +1223,15 @@ def _case_indices(dir_path: Path, sid: str) -> list[int]:
 def _input_probe(data_dir: Path) -> Path | None:
     """One real input workbook from anywhere in the dataset, for the mount readability check.
 
-    Globs every layout's input naming. A probe that matches nothing silently DISABLES that
-    check (see _preflight_mount) — and that check is what turns an unusable bind mount into a
-    5-second error instead of a full eval at 0.000 (run 30691123806: $77, ~3h).
+    Globs every layout's input naming, derived from `_CASE_NAMES["input"]` (rather than a
+    separately-spelled suffix list) so this — the probe whose silent failure once disabled the
+    mount-readability check outright (see _preflight_mount; run 30691123806: $77, ~3h) — cannot
+    drift out of sync with the suffix vocabulary the rest of this module resolves against.
     """
     spreadsheet = data_dir / "spreadsheet"
-    for pattern in ("*/*_input.xls*", "*/*_init.xls*", "*/initial.xls*"):
+    suffixes, bare = _CASE_NAMES["input"]
+    patterns = [f"*/*_{suffix}.xls*" for suffix in suffixes] + [f"*/{stem}.xls*" for stem in bare]
+    for pattern in patterns:
         hit = next(spreadsheet.glob(pattern), None)
         if hit is not None:
             return hit

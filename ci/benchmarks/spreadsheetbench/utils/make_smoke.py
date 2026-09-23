@@ -40,6 +40,12 @@ USAGE
     data=$(SPREADSHEETBENCH_VARIANT=sample_200 ci/benchmarks/spreadsheetbench/fetch_data.sh)
     python3 ci/benchmarks/spreadsheetbench/utils/make_smoke.py --data-dir "$data"          # print
     python3 ci/benchmarks/spreadsheetbench/utils/make_smoke.py --data-dir "$data" --write  # write
+
+PREREQUISITE: full/split_ids.json and full_verified/split_ids.json (both normally already
+committed) must exist before running this script — it reads both to build the selection pool
+and does not generate either itself. Produce them first if missing:
+    python3 ci/benchmarks/spreadsheetbench/utils/make_split.py --write
+    python3 ci/benchmarks/spreadsheetbench/utils/make_full_verified.py --data-dir <verified_400 root> --write
 """
 
 from __future__ import annotations
@@ -115,6 +121,18 @@ def build_smoke(sample_ids: dict[str, str], verified_train: set[str],
             for i in sorted(chosen)]
 
 
+def load_split_ids(path: Path, key: str, *, generator_hint: str) -> set[str]:
+    """Read one id set out of a `split_ids.json`, refusing with a clear message if it's missing.
+
+    Unlike `make_full_verified.py`'s own `load_verified_ids()`, this file has no fallback if
+    its two split files aren't there yet — surface that as a helpful SystemExit instead of a
+    raw FileNotFoundError.
+    """
+    if not path.exists():
+        raise SystemExit(f"{path} not found. Generate it first: {generator_hint}")
+    return {str(i) for i in json.loads(path.read_text(encoding="utf-8"))[key]}
+
+
 def load_sample_types(data_dir: Path) -> dict[str, str]:
     ds = data_dir / "dataset.json"
     if not ds.exists():
@@ -139,8 +157,11 @@ def main(argv=None) -> int:
 
     tasks = build_smoke(
         load_sample_types(args.data_dir),
-        {str(i) for i in json.loads(VERIFIED_SPLIT.read_text(encoding="utf-8"))["train"]},
-        {str(i) for i in json.loads(FULL_SPLIT.read_text(encoding="utf-8"))["test"]},
+        load_split_ids(VERIFIED_SPLIT, "train", generator_hint=(
+            "python3 ci/benchmarks/spreadsheetbench/utils/make_full_verified.py "
+            "--data-dir <verified_400 root> --write")),
+        load_split_ids(FULL_SPLIT, "test", generator_hint=(
+            "python3 ci/benchmarks/spreadsheetbench/utils/make_split.py --write")),
     )
     payload = json.dumps(tasks, indent=2) + "\n"
 

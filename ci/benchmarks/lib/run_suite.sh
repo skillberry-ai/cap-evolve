@@ -484,6 +484,12 @@ OPTNOTE
     SB_DEFAULT="$SB_CACHE/sample_data_200"
     # pilot draws its tasks from full's train split, so it needs the 912-task dataset too.
     case "$TIER" in full|pilot) SB_DEFAULT="$SB_CACHE/all_data_912_v0.1";; esac
+    # full_verified is the OTHER dataset variant (see fetch_data.sh) — a different download
+    # and layout, not a subset of the 912 archive. Without this arm, a direct
+    # `TIER=full_verified` invocation without SPREADSHEETBENCH_DATA_DIR set (e.g. locally,
+    # bypassing ci_setup.sh) would silently fall through to the sample_200 fallback above
+    # and score the wrong benchmark under the full_verified tier's name.
+    case "$TIER" in full_verified) SB_DEFAULT="$SB_CACHE/spreadsheetbench_verified_400";; esac
     # SPREADSHEETBENCH_DATA_DIR is expected to be set (and exported to GITHUB_ENV) by
     # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
     # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
