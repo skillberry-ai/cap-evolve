@@ -22,7 +22,12 @@ from pathlib import Path
 
 #: Every v4_t2_e1 trial's target: the 5 harness-simulation MCP endpoints,
 #: keyed by the env var name adapter.py sets before invoking `harbor run`.
-#: Values mirror each service's `server.port` in _run/harness-cfg/*.yaml.
+#: Values are the simulator containers' PUBLISHED ports (their internal port is
+#: always 8086), per the compose topology in <PARSEC_V4N>/README.md. This dict
+#: is the source of truth for them in this repo; scripts/ccc/parsec_stack.sh and
+#: CCC_PODMAN_SETUP.md's table both point here. (_run/harness-cfg/*.yaml carry
+#: the same numbers as `server.port`, but those files are Mac-local leftovers
+#: that nothing on this branch reads — do not treat them as the reference.)
 MCP_PORTS: dict[str, int] = {
     "PLATFORM_MCP_URL": 8086,
     "GITHUB_MCP_URL": 8087,
@@ -30,6 +35,17 @@ MCP_PORTS: dict[str, int] = {
     "COST_MCP_URL": 8089,
     "CLOUD_MCP_URL": 8090,
 }
+
+
+#: One source of truth for the "you forgot to set PARSEC_V4N" wording.
+#: resolve_v4n() raises it; callers that must keep their own *condition* (because
+#: they branch on a module-level constant captured at import time, not on a fresh
+#: read of the environment) still reuse this text rather than paraphrasing it.
+V4N_REQUIRED_MSG = (
+    "PARSEC_V4N environment variable is required — it must point at "
+    "the root of a parsec v4 checkout (e.g. "
+    ".../rhdp-parsec/v4_2026-09-16, the directory containing _run/)."
+)
 
 
 def resolve_v4n_or_none() -> Path | None:
@@ -42,10 +58,5 @@ def resolve_v4n() -> Path:
     """Like resolve_v4n_or_none(), but raises when PARSEC_V4N is unset."""
     v4n = resolve_v4n_or_none()
     if v4n is None:
-        raise RuntimeError(
-            "PARSEC_V4N environment variable is required — it must point at "
-            "the root of a parsec v4 checkout (e.g. "
-            ".../rhdp-parsec/v4_2026-09-16, the directory containing _run/). "
-            "Set it before running this script."
-        )
+        raise RuntimeError(f"{V4N_REQUIRED_MSG} Set it before running this script.")
     return v4n

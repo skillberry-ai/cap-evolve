@@ -14,7 +14,15 @@
 #     setup.log            # setup_podman.sh + parsec_stack.sh output
 #     cap-evolve.log        # cap-evolve stdout+stderr
 #     env_snapshot.txt      # PARSEC_V4N, capevolve.yaml, git commit, hostname
-#     run/                  # cap-evolve's run dir (symlinked from .capevolve/run_<run-id>)
+#     run/                  # symlink to cap-evolve's real run dir, which is
+#                           # .capevolve/v4_t2_e1_<task-id>/run_<run-id>
+#
+# --max-iterations is NOT defaulted: omit it and the scaffolded spec's own
+# `max_iterations` governs. Pass `--max-iterations 0` explicitly for a
+# baseline-only run.
+#
+# The parsec stack is torn down by an EXIT trap, so an LSF job that dies
+# doesn't leave 5 containers and parsec-live holding ports 8000/8086-8090.
 #
 # Exits non-zero if setup fails, the stack never becomes healthy, or
 # cap-evolve returns an error.
@@ -23,11 +31,11 @@ set -eo pipefail
 
 TASK_ID=""
 RUN_ID=""
-MAX_ITERATIONS="0"
+MAX_ITERATIONS=""
 DRY_RUN=false
 
 usage() {
-  sed -n '2,20p' "$0"
+  sed -n '2,28p' "$0"
   exit 2
 }
 
@@ -89,7 +97,7 @@ banner "parsec v4 (v4_t2_e1) on CCC: $TASK_ID / $RUN_ID"
   echo "PARSEC_V4N:    $PARSEC_V4N"
   echo "OUT_DIR:       $OUT_DIR"
   echo "TASK_ID:       $TASK_ID"
-  echo "MAX_ITER:      $MAX_ITERATIONS"
+  echo "MAX_ITER:      ${MAX_ITERATIONS:-(from spec)}"
   if [[ -n "${LSB_JOBID:-}" ]]; then
     echo "LSF job:       $LSB_JOBID"
   fi
@@ -111,6 +119,18 @@ source "$SETUP_PODMAN" > >(tee "$SETUP_LOG") 2>&1
 wait 2>/dev/null || true
 
 banner "Phase 2: parsec stack up + health-wait"
+# Arm the teardown BEFORE `up`, so a stack that comes up but fails its health
+# check is still torn down. Without this an LSF job exit leaves the 5 simulator
+# containers and parsec-live running and holding ports 8000/8086-8090, which
+# then makes the next job on this host silently reuse a stale, wrongly-seeded
+# stack. `|| true` so a teardown failure never masks the run's real exit code.
+STACK_UP=false
+teardown_stack() {
+  [[ "$STACK_UP" == true ]] || return 0
+  bash "$SCRIPT_DIR/parsec_stack.sh" down >> "$SETUP_LOG" 2>&1 || true
+}
+trap teardown_stack EXIT
+STACK_UP=true
 bash "$SCRIPT_DIR/parsec_stack.sh" up | tee -a "$SETUP_LOG"
 bash "$SCRIPT_DIR/parsec_stack.sh" status | tee -a "$SETUP_LOG"
 
@@ -128,9 +148,20 @@ cd "$PROJECT_ROOT"
 export TASK_ID
 export PARSEC_V4N
 
-CE_RUN_ABS="$PROJECT_ROOT/.capevolve/run_${RUN_ID}"
+# cli.py composes the run dir as `proj_abs.parent / run_<ts>` (workdir is
+# proj_abs.parent.parent, base is proj_abs.parent relative to it — cli.py:636-639,
+# :800). v4_t2_e1's project has one MORE nesting level than the sibling
+# run_ccc_experiment.sh's `.capevolve/project`, so the run dir is under
+# .capevolve/v4_t2_e1_<task-id>/, NOT directly under .capevolve/.
+CE_RUN_ABS="$PROJECT_ROOT/.capevolve/v4_t2_e1_${TASK_ID}/run_${RUN_ID}"
 ln -sfn "$CE_RUN_ABS" "$OUT_DIR/run"
-export PYTHONPATH="$PROJECT_DIR/adapters${PYTHONPATH:+:$PYTHONPATH}"
+# Absolute, not relative: cap-evolve runs every skill subprocess with
+# cwd=workdir ($PROJECT_ROOT/.capevolve here), where a relative
+# ".capevolve/..." path does not resolve.
+export PYTHONPATH="$PROJECT_ROOT/$PROJECT_DIR/adapters${PYTHONPATH:+:$PYTHONPATH}"
+# Pin the skills dir the same way the sibling run_ccc_experiment.sh does, so
+# cli.py's _find_skills_dir can't silently fall back to a stale ~/.claude/skills.
+export CAPEVOLVE_SKILLS_DIR="$PROJECT_ROOT/skills"
 
 if [[ -z "${CE_BIN:-}" ]]; then
   if [[ -x "$PROJECT_ROOT/.venv/bin/cap-evolve" ]]; then
@@ -144,9 +175,17 @@ if [[ -z "$CE_BIN" || ! -x "$CE_BIN" ]]; then
   exit 2
 fi
 
+# Only pass --max-iterations when the caller asked for one: cli.py treats the
+# flag as an override of the spec ("None = not passed, leave spec value"), and
+# `--max-iterations 0` means zero iterations / baseline-only. Defaulting it to 0
+# silently overrode the scaffolded spec's own max_iterations.
+CE_ARGS=(run --spec "$SPEC" --project "$PROJECT_DIR" --run-ts "$RUN_ID")
+if [[ -n "$MAX_ITERATIONS" ]]; then
+  CE_ARGS+=(--max-iterations "$MAX_ITERATIONS")
+fi
+
 set +e
-stdbuf -oL -eL "$CE_BIN" run --spec "$SPEC" --project "$PROJECT_DIR" \
-    --run-ts "$RUN_ID" --max-iterations "$MAX_ITERATIONS" 2>&1 | tee "$RUN_LOG"
+stdbuf -oL -eL "$CE_BIN" "${CE_ARGS[@]}" 2>&1 | tee "$RUN_LOG"
 RC="${PIPESTATUS[0]}"
 set -e
 

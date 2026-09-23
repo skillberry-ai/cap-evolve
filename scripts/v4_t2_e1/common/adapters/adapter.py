@@ -245,9 +245,15 @@ class Adapter(CapabilityAdapter):
                 "which task it is running. Set it before invoking `cap-evolve run`."
             )
         if V4N is None:
+            # Message text from parsec_paths, so there is one wording to keep
+            # right. The *condition* deliberately stays on the module-level V4N
+            # constant rather than calling resolve_v4n(): the rest of this class
+            # dereferences V4N/TASKS_DIR/JOBS_ROOT, all captured at import, so a
+            # fresh env read that succeeded here would only defer the failure to
+            # an AttributeError on None further down.
             raise RuntimeError(
-                "PARSEC_V4N environment variable is required — see parsec_paths.py. "
-                "Set it before invoking `cap-evolve run`."
+                f"{parsec_paths.V4N_REQUIRED_MSG} Set it before invoking "
+                "`cap-evolve run`."
             )
         task_dir = TASKS_DIR / f"bench-v4-{task_id}"
         if not task_dir.exists():

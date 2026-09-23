@@ -11,7 +11,15 @@
 #   bash scripts/ccc/parsec_bootstrap.sh --tree /path/to/rhdp-parsec/v4_2026-09-16 --check
 #
 # --check reports what's broken without changing anything (exit 1 if
-# anything needs repair, 0 if the tree is already healthy).
+# anything needs repair, 0 if the two things checked are both fine).
+#
+# Scope, deliberately narrow: these two are what a Mac->CCC tree copy breaks
+# for the code paths this repo actually uses. It does NOT touch
+# _run/harness-cfg/*.yaml, whose `skills.folder`/`logging.destination_folder`
+# still hold stale /Users/... paths: those files are Mac-local leftovers that
+# nothing on this branch reads (the 5 simulators are containers configured
+# entirely by environment variables — see CCC_PODMAN_SETUP.md's "Parsec v4"
+# section). Its success message says so rather than claiming the whole tree.
 
 set -eo pipefail
 
@@ -19,7 +27,7 @@ TREE=""
 CHECK_ONLY=false
 
 usage() {
-  sed -n '2,14p' "$0"
+  sed -n '2,22p' "$0"
   exit 2
 }
 
@@ -100,7 +108,10 @@ fi
 
 banner "Result"
 if [[ "$broken" -eq 0 ]]; then
-  echo "OK: $TREE is healthy."
+  echo "OK: $TREE's .claude/skills symlinks and parsec-live venv are healthy."
+  echo "    (Not checked: _run/harness-cfg/*.yaml still holds stale /Users/..."
+  echo "     paths. Nothing on this branch reads those files — see this"
+  echo "     script's header and CCC_PODMAN_SETUP.md's \"Parsec v4\" section.)"
   exit 0
 elif [[ "$CHECK_ONLY" == true ]]; then
   echo "NEEDS REPAIR: re-run without --check to fix."
