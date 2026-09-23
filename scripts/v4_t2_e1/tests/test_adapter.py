@@ -45,9 +45,13 @@ class TestAdapterTaskResolution(unittest.TestCase):
             self.assertIn("TASK_ID", str(ctx.exception))
 
     def test_raises_clearly_when_task_dir_missing(self):
-        with patch.dict(os.environ, {"TASK_ID": "not-a-real-task-xyz"}, clear=True):
-            with self.assertRaises(FileNotFoundError):
-                adapter_mod.Adapter()
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_tasks_dir = Path(tmp)
+            with patch.object(adapter_mod, "V4N", fake_tasks_dir), \
+                 patch.object(adapter_mod, "TASKS_DIR", fake_tasks_dir), \
+                 patch.dict(os.environ, {"TASK_ID": "not-a-real-task-xyz"}, clear=True):
+                with self.assertRaises(FileNotFoundError):
+                    adapter_mod.Adapter()
 
     @unittest.skipUnless(_REAL_TASKS_DIR_PRESENT, "real bench-v4 tasks dir not present (set PARSEC_V4N)")
     def test_tasks_returns_the_one_pinned_task(self):
