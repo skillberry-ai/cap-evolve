@@ -66,11 +66,11 @@ start_one() {
   fi
   if [[ "$kind" == "sim" ]]; then
     ( cd "$PARSEC_V4N" && \
-      nohup python3 -m simulation_harness --config "_run/harness-cfg/$name.yaml" \
+      exec nohup python3 -m simulation_harness --config "_run/harness-cfg/$name.yaml" \
         > "$LOG_DIR/$name.log" 2>&1 & echo $! > "$pid_file" )
   else
     ( cd "$PARSEC_V4N/_run/parsec-live" && \
-      nohup uv run uvicorn src.app:app --host 0.0.0.0 --port "$port" \
+      exec nohup uv run uvicorn src.app:app --host 0.0.0.0 --port "$port" \
         > "$LOG_DIR/$name.log" 2>&1 & echo $! > "$pid_file" )
   fi
   echo "started $name (pid $(cat "$pid_file"), port $port, log $LOG_DIR/$name.log)"
