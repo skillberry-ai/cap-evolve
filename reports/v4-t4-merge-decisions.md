@@ -6,8 +6,9 @@ against the shared seed (`artifacts/v4/seed/*.md`) into a single bundle
 (`artifacts/v4/t4-merge/*.md`), so all 34 tasks can be scored zero-shot against one
 candidate instead of 34 separate ones. T4 is "Approach A": a region-union merge of
 disjoint donor edits, with hand-reconciled text for any region two or more donors both
-touched. Approach B (whole-bundle re-optimization or similar) is deferred, tentatively
-T5/T6.
+touched. Approach B (whole-bundle re-optimization or similar) is deferred as **T5**
+(merge-joint) in the spec's now-canonical arm scheme
+(`docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md` Sec.2).
 
 **Where things live:**
 - Merge script: [`scripts/build_v4_t4_merge.py`](../scripts/build_v4_t4_merge.py) (paths are
@@ -17,17 +18,26 @@ T5/T6.
 - Splice manifest: `/tmp/merge_splices.json` (a debug dump, regenerated on every run of the
   script; not committed — it's fully derived from the script + the committed donor bundles).
 
-**Naming note — "T4" vs. the results-ledger arm id:** this session named Approach A "T4"
-informally, before `results/v4/results.json`'s own arm scaffold was consulted. That ledger
-(built by [`scripts/build_v4_results_json.py`](../scripts/build_v4_results_json.py), per
-`docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md`) already has a slot for exactly
-this experiment: **`G3`** (`section: "global"`, `name: "merge"`, `mode: "zs"` — "union of all
-21 T2 bundles, evaluated zero-shot on all 34 tasks, including the 13 already-perfect ones"),
-currently `"status": "not_run"`. "T4" and "G3" refer to the same arm; this report keeps
-calling it T4 throughout since that's the name it was built under, but whoever records scores
-should write them into the **`G3`** row (and flip its `status` off `"not_run"`), not invent a
-new arm id. `G4` (`"G3's union, continued optimization jointly on all 34 tasks"`) is the
-ledger's existing slot for deferred Approach B (this session's tentative "T5"/"T6").
+**Naming note — this report's arm ids are now canonical:** this session originally named
+Approach A "T4" informally, before checking whether `results/v4/results.json`'s arm scaffold
+already had a slot for it under a different id. At the time it did: **`G3`** (a
+global-scope merge/merge-joint lineage that also had a `G4`). The spec has since dropped
+that global-scope merge lineage entirely — **`T4`** (merge) and **`T5`** (merge-joint) are
+the only ids for this experiment now (per
+`docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md` Sec.2, built into
+[`scripts/build_v4_results_json.py`](../scripts/build_v4_results_json.py)'s arm scaffold);
+the G-lineage stops at `G2`. Nothing below needs translating from "T4" to any other id —
+this report's own informal naming turned out to be the one the spec adopted.
+
+T4 has since actually run: `v4_t4_e1` (`parsec-intake_v4_t4_e1` worktree) evaluated this
+merged bundle zero-shot against all 34 tasks (`n=5` trials), and its results are recorded in
+`results/v4/results.json`'s `task_ledger[].t4_*` fields and `sections.task.t4_summary`, on
+the `parsec-history` branch — see that branch's `results/v4/summary.md` ("T4" section) for
+the write-up. Headline: a mixed result — 18/34 tasks improved, but 8 regressed, including 5
+of the 13 tasks that were already perfect before the merge — exactly the failure mode this
+audit's clean-merge gate exists to catch. Whether that means the gate needs to be stricter,
+or it's simply a regression only a real eval surfaces, is open (see that same doc's "Next
+moves").
 
 ## Method
 
@@ -286,12 +296,13 @@ produced so far, using the same technique that found defects #2 and #3.
   (`artifacts/v4/t4-merge/*.md`), and this report are now committed on this worktree's
   branch. Confirmed the committed script reproduces byte-identical output before
   committing (reran it in place; splice counts per file matched this report's table).
-- A dedicated worktree/branch, `parsec-intake_v4_t4_e1`, has been forked from this commit
-  to actually run the 34-task × n=5 zero-shot evaluation (170 trials) against the live
-  parsec-live stack — see `handoff.md` there for the execution plan. That run will record
-  its scores into the **`G3`** arm in `results/v4/results.json` (see the naming note
-  above), and T3 (`tbt-cross`, skipped) still needs its own row/decision.
+- A dedicated worktree/branch, `parsec-intake_v4_t4_e1`, was forked from this commit to
+  actually run the 34-task × n=5 zero-shot evaluation (170 trials) against the live
+  parsec-live stack — see `handoff.md` there for the execution plan. That run has since
+  completed and its scores are recorded in the **`T4`** arm in `results/v4/results.json`
+  (see the naming note above; done on the `parsec-history` branch). T3 (`tbt-cross`,
+  transfer) still needs its own row/decision — it isn't designed yet.
 - The design doc (`docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md`,
-  branch `docs/parsec-v4-experiment-plan`) still needs a T3 row and a note that Approach B
-  (this session's tentative "T5"/"T6", i.e. the ledger's existing `G4` slot) is an
-  undecided future arm.
+  branch `docs/parsec-v4-experiment-plan`) has since been updated: it now carries a T3 row
+  (not yet designed) and adopted **`T5`** as the canonical id for Approach B, dropping both
+  the tentative "T5"/"T6" naming above and the ledger's old `G4` slot.
