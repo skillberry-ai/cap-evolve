@@ -143,9 +143,14 @@ on:
           - "rits/openai/gpt-oss-120b-a100"
           - "rits/moonshotai/Kimi-K2.7-Code"
       optimizer_usd_per_iter:
-        description: "Per-iteration $ cap on the optimizer (default unlimited — 0 disables the native --max-budget-usd cap entirely; set e.g. 4.0 to bound spend)"
+        description: "Per-iteration $ cap on the optimizer. LEAVE BLANK for the tier default: smoke $50/iteration, every other tier unlimited. 0 disables the cap explicitly; set e.g. 4.0 to bound spend. In agent-optimize mode the whole loop is one agent process, so the per-iteration cap becomes a whole-loop ceiling of cap x iterations."
         type: string
-        default: "0"
+        # MUST stay empty. A non-empty default is TRUTHY in the `||` chain below (only the
+        # empty string is falsy — '0' is not), which made every tier fallback unreachable:
+        # smoke's $50 cap was dead code and a blank dispatch ran with no dollar ceiling at
+        # all. Same rule NUM_TRIALS/iterations follow — see
+        # core/tests/test_benchmarks_optimizer_budget.py.
+        default: ""
       optimizer_max_turns:
         description: "Per-iteration turn cap on the optimizer (default 80)"
         type: string

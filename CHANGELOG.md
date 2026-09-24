@@ -8,6 +8,20 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **`optimizer_usd_per_iter`'s `"0"` default made every spend ceiling unreachable.** In a
+  GitHub `||` chain only the EMPTY string is falsy — `"0"` is truthy — so the input always won
+  and `${{ inputs.optimizer_usd_per_iter || (matrix.tier == 'smoke' && '50' || '0') }}` could
+  never reach its own smoke branch. Smoke's $50/iteration cap was dead code, and since `0`
+  means *unlimited* (`run_suite.sh` omits the spend clause from the derived agent-mode
+  `stop_condition` entirely at 0) every blank dispatch ran with **no dollar ceiling** — on run
+  35861572021 the operator had to pass the cap by hand to bound an Opus 5 agent loop. The
+  default is now `""`, so blank means "the tier default" ($50 on smoke, unlimited elsewhere,
+  unchanged) while an explicit `0` still disables the cap deliberately. This is the rule
+  `iterations`/`trials` already followed and that `test_an_explicit_iterations_dispatch_reaches_smoke`
+  documents; a new test pins it for **every** input in the file, so the next one added cannot
+  repeat it.
+
 ### Added
 - **`full_verified`: a tier on a benchmark's verified/curated re-release — for SpreadsheetBench,
   the verified 400-task set that recent work actually reports on.** The tier name is deliberately
