@@ -855,14 +855,25 @@ fi
 # `algorithm_focus: all` never evaluates the train split, and `finalize` scores test TWICE
 # (champion + baseline). Advisory only: it reports, it does not refuse — a deliberate long
 # run is legitimate, an accidental one is not.
-"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-1}" "${ITER:-1}" >&2 <<'PLAN'
+# NUM_TRIALS/ITER are always set by here (lines 32/34) — no ":-N" fallback needed, and one
+# would be actively misleading (their real defaults are 10/3, not 1).
+# `iters * per_val` assumes one val-eval per iteration, which holds for the deterministic
+# hill-climb-* path but is only an upper bound under `algorithm: agent-optimize`, where a
+# headless agent is merely ASKED to stay under an iteration budget via a free-text
+# stop_condition rather than being hard-capped in code.
+case "${ALGORITHM:-}" in
+  agent-optimize) _plan_note=" (upper bound — agent-optimize is only asked to respect this budget, not capped to it)" ;;
+  *) _plan_note="" ;;
+esac
+"$PY" - "$PROJ/inputs/split_ids.json" "$NUM_TRIALS" "$ITER" "$_plan_note" >&2 <<'PLAN'
 import json, sys
 split = json.load(open(sys.argv[1]))
 trials, iters = int(sys.argv[2]), int(sys.argv[3])
+note = sys.argv[4]
 val, test = len(split["val"]), len(split["test"])
 per_val = val * trials
 total = per_val + iters * per_val + 2 * test * trials
-print(f">>> plan: {total} rollouts — baseline {per_val} + {iters} x {per_val} val "
+print(f">>> plan: {total} rollouts{note} — baseline {per_val} + {iters} x {per_val} val "
       f"+ finalize 2 x {test * trials} "
       f"(val={val} test={test} trials={trials} iterations={iters})")
 PLAN
