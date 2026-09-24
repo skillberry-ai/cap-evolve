@@ -54,11 +54,23 @@ import re
 import sys
 from pathlib import Path
 
-WORKFLOW = ".github/workflows/benchmarks.yml"
-RUN_SUITE = "ci/benchmarks/lib/run_suite.sh"
+WORKFLOW = Path(".github/workflows/benchmarks.yml")
+RUN_SUITE = Path("ci/benchmarks/lib/run_suite.sh")
 PICKERS = ("agent_model", "optimizer_model")
 
 EXIT_OK, EXIT_DRIFT, EXIT_DECISION = 0, 1, 2
+
+
+def _prefix(model_id: str) -> str:
+    """The CI provider tag a served/option model id carries, e.g. 'ibm-ete-int'."""
+    return model_id.split("/", 1)[0]
+
+
+def _bare_id(model_id: str) -> str:
+    """The pre-rename shape a tasks.json pin uses: rits/<vendor>/<model> for ibm-rits ids
+    (resolve_provider.sh only strips the 'ibm-' part for RITS), the bare suffix otherwise."""
+    prefix, _, rest = model_id.partition("/")
+    return f"rits/{rest}" if prefix == "ibm-rits" else rest
 
 
 def served_ids(body: str) -> list[str]:
@@ -164,7 +176,7 @@ def task_pins(repo: Path) -> dict[str, set[str]]:
     return pins
 
 
-def sync(repo: Path, models: list[str], write: bool,
+def sync(repo: Path, models: list[str], polled_prefixes: set[str], write: bool,
          agent_default: str | None = None, optimizer_default: str | None = None) -> tuple[int, list[str]]:
     """Returns (exit_code, report lines)."""
     rep: list[str] = []
@@ -193,12 +205,14 @@ def sync(repo: Path, models: list[str], write: bool,
                 text = rewrite_default(text, picker, override)
                 rs_text = rewrite_run_suite_default(rs_text, rs_var[picker], override)
                 rep.append(f"  {picker}: default {cur!r} -> {override!r} (and {rs_var[picker]} fallback)")
-        elif cur and cur not in models:
+        elif cur and _prefix(cur) in polled_prefixes and cur not in models:
             # Retained on purpose — see "HOW AN UNSERVED DEFAULT IS HANDLED" above. It must stay
-            # in `options` too or the workflow is invalid.
+            # in `options` too or the workflow is invalid. Scoped to defaults whose own prefix was
+            # actually polled this run — a default under a prefix we didn't poll (e.g. ibm-rits,
+            # never entitlement-listed) isn't "unserved," it's simply out of scope for this call.
             keep[picker] = cur
             rep.append(
-                f"  ::warning:: {picker} default {cur!r} is NOT served by this key. Kept anyway, so an"
+                f"  ::warning:: {picker} unserved default {cur!r} is NOT served by this key. Kept anyway, so an"
                 f" unset dispatch fails LOUDLY at the entitlement preflight (seconds, no spend)"
                 f" rather than silently running a different model. Choose a served model in the"
                 f" dispatch dialog, or pass --{picker.replace('_model','')}-default to change it.")
@@ -207,11 +221,14 @@ def sync(repo: Path, models: list[str], write: bool,
         rep.append("  candidate served defaults: " + ", ".join(models[:8]) + (" …" if len(models) > 8 else ""))
         return EXIT_DECISION, rep
 
-    # Options are per-picker: the served set, plus THAT picker's own retained default if it is
-    # unserved. Retaining it globally would offer an unusable model in the other picker too.
+    # Options are per-picker: the served set, plus any current option under a prefix this run
+    # never polled (e.g. ibm-rits — hand-curated, never entitlement-listed), plus THAT picker's
+    # own retained default if it is unserved. Retaining the default globally would offer an
+    # unusable model in the other picker too.
     def opts_for(picker: str) -> list[str]:
         extra = keep.get(picker)
-        return sorted(set(models) | ({extra} if extra else set()), key=lambda s: (s.lower(), s))
+        unpolled_kept = {o for o in current_options(text, picker) if _prefix(o) not in polled_prefixes}
+        return sorted(unpolled_kept | set(models) | ({extra} if extra else set()), key=lambda s: (s.lower(), s))
 
     changed = rs_text != (rs_path.read_text(encoding="utf-8") if rs_path.exists() else "")
     for picker in PICKERS:
@@ -229,9 +246,12 @@ def sync(repo: Path, models: list[str], write: bool,
         text = rewrite_options(text, picker, want)
         changed = True
 
-    # Advisory: task pins only produce a warning at run time.
+    # Advisory: task pins only produce a warning at run time. Pins are written in the
+    # pre-rename bare/rits-prefixed shape; served models always carry a CI prefix now, so
+    # compare against each served id's bare form rather than the prefixed id itself.
+    served_bare = {_bare_id(m) for m in models}
     for tier, agents in task_pins(repo).items():
-        bad = sorted(a for a in agents if a not in models)
+        bad = sorted(a for a in agents if a not in served_bare)
         if bad:
             rep.append(f"  ::warning:: tasks.json {tier} pins unserved agent(s): {', '.join(bad)}")
 
@@ -248,28 +268,34 @@ def sync(repo: Path, models: list[str], write: bool,
     return EXIT_OK, rep
 
 
-def validate(repo: Path) -> tuple[int, list[str]]:
-    """Assert every picker default is among its own options — no gateway needed.
+def validate(workflow_text: str, run_suite_text: str) -> tuple[bool, list[str]]:
+    """Assert every picker default is among its own options — no repo or gateway needed.
 
     A ``default:`` outside its ``options:`` is an INVALID workflow: actionlint rejects it and
     the dispatch dialog cannot honour it. Kept here rather than inline in the workflow so the
     check is unit-tested and runs identically on a runner without actionlint installed.
+
+    ``run_suite_text`` is accepted for parity with this module's other text-based helpers (see
+    ``run_suite_defaults()``) but not cross-checked here — the workflow's own default/options
+    pair is the only invariant this validates.
     """
-    text = (repo / WORKFLOW).read_text(encoding="utf-8")
+    del run_suite_text
     rep, bad = [], False
     for picker in PICKERS:
-        opts, dflt = current_options(text, picker), current_default(text, picker)
+        opts, dflt = current_options(workflow_text, picker), current_default(workflow_text, picker)
         if dflt not in opts:
             rep.append(f"::error:: {picker} default {dflt!r} is not among its own {len(opts)} options")
             bad = True
         else:
             rep.append(f"  {picker}: {len(opts)} options, default {dflt!r} OK")
-    return (EXIT_DECISION if bad else EXIT_OK), rep
+    return not bad, rep
 
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--models", help="path to a /models response body (not needed with --validate)")
+    ap.add_argument("--models", action="append", default=[], metavar="PREFIX=PATH",
+                    help="PREFIX=PATH to a /models response body, repeatable, one per gateway"
+                         " provider (not needed with --validate)")
     ap.add_argument("--repo", default=".", help="repository root")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--check", action="store_true", help="report drift, write nothing (default)")
@@ -281,21 +307,33 @@ def main(argv: list[str]) -> int:
     a = ap.parse_args(argv)
 
     if a.validate:
-        code, report = validate(Path(a.repo))
+        wf_text = (Path(a.repo) / WORKFLOW).read_text(encoding="utf-8")
+        rs_path = Path(a.repo) / RUN_SUITE
+        rs_text = rs_path.read_text(encoding="utf-8") if rs_path.exists() else ""
+        ok, report = validate(wf_text, rs_text)
         for line in report:
             print(line)
-        return code
+        return EXIT_OK if ok else EXIT_DECISION
     if not a.models:
         print("::error:: --models is required unless --validate is given")
         return EXIT_DECISION
 
-    try:
-        models = served_ids(Path(a.models).read_text(encoding="utf-8"))
-    except Exception as exc:
-        print(f"::error:: cannot parse {a.models}: {exc}")
-        return EXIT_DECISION
+    models: list[str] = []
+    polled_prefixes: set[str] = set()
+    for spec in a.models:
+        prefix, sep, path = spec.partition("=")
+        if not sep or not prefix or not path:
+            print(f"::error:: --models must be PREFIX=PATH, got {spec!r}")
+            return EXIT_DECISION
+        try:
+            served = served_ids(Path(path).read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"::error:: cannot parse {path}: {exc}")
+            return EXIT_DECISION
+        polled_prefixes.add(prefix)
+        models.extend(f"{prefix}/{m}" for m in served)
 
-    code, report = sync(Path(a.repo), models, write=a.write,
+    code, report = sync(Path(a.repo), models, polled_prefixes, write=a.write,
                         agent_default=a.agent_default, optimizer_default=a.optimizer_default)
     for line in report:
         print(line)

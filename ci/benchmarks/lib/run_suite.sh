@@ -30,9 +30,9 @@ case "$BENCH" in tau2_custom_*) BENCH_DIR="tau2_custom/${BENCH#tau2_custom_}" ;;
 load_overrides "$REPO/ci/benchmarks/$BENCH_DIR/$TIER/overrides.env"
 
 ITER="${ITERATIONS:-3}"
-AGENT_MODEL="${AGENT_MODEL:-aws/gpt-oss-120b}"
+AGENT_MODEL="${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
-OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"
+OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}"
 GATE_K_SE="${GATE_K_SE:-1.0}"
 # Raw native trajectories (tau2's own results.json, via adapter._sim_save_path). ON for the
 # tau2 legs, whose adapters write them and where a failed rollout is only readable from the
@@ -145,10 +145,11 @@ mkdir -p "$OUT/optimized"
 
 [ -f "$BASE/tasks.json" ] || { echo "::warning::no tasks.json for $BENCH/$TIER — nothing to run"; echo "## ${TIER^} suite — $BENCH" > "$OUT/report.md"; echo "(no tasks defined for this tier)" >> "$OUT/report.md"; exit 0; }
 
-# Resolve AGENT_MODEL/OPTIMIZER_MODEL to their provider (ETE gateway, or RITS via the
-# skillberry-1 lite-rits proxy for a "rits/*" id) — see resolve_provider.sh. Each is
-# resolved independently: dispatching a RITS agent_model with a Claude optimizer_model
-# (or vice versa) is a normal, deliberate combination, not an error.
+# Resolve AGENT_MODEL/OPTIMIZER_MODEL to their provider (ibm-ete-int, ibm-ete, or
+# ibm-rits — see resolve_provider.sh for the prefix scheme). Each is resolved
+# independently: dispatching an ibm-rits agent_model with an ibm-ete-int (or ibm-ete)
+# optimizer_model, or any other pairing, is a normal, deliberate combination, not an
+# error.
 # shellcheck source=ci/benchmarks/lib/resolve_provider.sh
 . "$LIB_DIR/resolve_provider.sh"
 resolve_provider "$AGENT_MODEL"
@@ -158,10 +159,10 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # The `claude` CLI (optimizer_skill: claude-code, invoked further down by
 # `cap_evolve.cli run` / agent-optimize's host.py) reads ANTHROPIC_BASE_URL/
 # ANTHROPIC_AUTH_TOKEN from the process environment — overriding them here, once, before
-# either is invoked, is what makes an OPTIMIZER_MODEL of "rits/*" actually reach RITS
-# rather than silently keep talking to the ETE gateway with a model id it doesn't
-# recognise. NOT yet verified that lite-rits speaks the Anthropic Messages API the CLI
-# expects — see the PR description.
+# either is invoked, is what makes an OPTIMIZER_MODEL on ibm-ete, or ibm-rits, actually
+# reach that provider rather than silently keep talking to the ibm-ete-int gateway with a
+# model id it doesn't recognise. NOT yet verified that lite-rits (ibm-rits) speaks the
+# Anthropic Messages API the CLI expects — see the PR description.
 #
 # This export is process-wide and OUTLIVES this block, which matters for the skillsbench/
 # rfe-creator arms below: their in-sandbox agent also ultimately shells out to `claude`,
@@ -173,13 +174,16 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # _gateway_env() and templates/adapters/rfe_creator/adapter.py's _harness_env().
 export ANTHROPIC_BASE_URL="$OPTIMIZER_API_BASE"
 export ANTHROPIC_AUTH_TOKEN="$OPTIMIZER_API_KEY"
-# NB: no `OPTIMIZER_MODEL="$OPTIMIZER_MODEL_WIRE"` reassignment here (there used to be
-# one) — resolve_provider never strips/rewrites the model id, so RESOLVED_MODEL (hence
-# OPTIMIZER_MODEL_WIRE) is always textually identical to the input OPTIMIZER_MODEL. The
-# reassignment was a no-op; removing it keeps OPTIMIZER_MODEL as the one source of truth
-# used both for the wire call above and for the capevolve.yaml/metrics.py provenance
-# fields further down (both want the CI-facing "rits/…"-prefixed alias, not a rewritten
-# form).
+# NB: OPTIMIZER_MODEL itself is NEVER reassigned to the wire form here — it stays the
+# CI-facing "ibm-ete-int/…"/"ibm-ete/…"/"ibm-rits/…"-prefixed alias, used for the
+# progress line below and metrics.py's provenance display further down. resolve_provider
+# DOES strip that prefix into OPTIMIZER_MODEL_WIRE (unlike this comment used to claim —
+# resolve_provider.sh now rewrites the model id on purpose, see its own header comment).
+# Every call site below that hands a model id to a provider ON THE WIRE, not just into a
+# human-readable report, must use the _WIRE variant: capevolve.yaml's `optimizer_model:`
+# key and the agent-mode host.py invocation both pass this straight to the `claude` CLI's
+# own --model flag (core/cap_evolve/cli.py:711 and :902), so an un-stripped CI prefix
+# there is not provenance text, it's a broken subprocess argument.
 
 export PYTHONPATH="$REPO/core:$REPO"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
@@ -201,7 +205,7 @@ PY
 # dispatch is a normal, deliberate thing to do (that IS the benchmark), so a mismatch is
 # informational, never a "::warning::" — a same-every-time warning trains people to stop
 # reading warnings (#420 item 10).
-"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" "$BENCH/$TIER" <<'PY'
+"$PY" - "$BASE/tasks.json" "$AGENT_MODEL_WIRE" "$BENCH/$TIER" <<'PY'
 import json,sys
 ts=json.load(open(sys.argv[1]))
 agents={t.get("agent") for t in ts if t.get("agent")}
@@ -307,14 +311,14 @@ OPENAI_API_KEY=$ANTHROPIC_AUTH_TOKEN
 ENV
     export OPENAI_BASE_URL="$ANTHROPIC_BASE_URL" OPENAI_API_BASE="$ANTHROPIC_BASE_URL"
     export OPENAI_API_KEY="$ANTHROPIC_AUTH_TOKEN"
-    export TAU2_USER_MODEL="$AGENT_MODEL"               # the user simulator, both arms
+    export TAU2_USER_MODEL="$AGENT_MODEL_WIRE"          # the user simulator, both arms
     export TAU2_LLM_TIMEOUT="${TAU2_LLM_TIMEOUT:-240}"
     export TAU2_LLM_RETRIES="${TAU2_LLM_RETRIES:-2}"
     export TAU2_INFRA_RETRIES="${TAU2_INFRA_RETRIES:-2}"
     if [ "$ARM" = "direct" ]; then
       # In-process delivery: no service to start, so nothing here mirrors the spa block below.
       # The agent under test IS the gateway model; gateway.py refuses the spa sentinel here.
-      export TAU2_AGENT_MODEL="$AGENT_MODEL"
+      export TAU2_AGENT_MODEL="$AGENT_MODEL_WIRE"
       export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-10}"
       EXTRA_YAML="actions: [edit]
 capability_sources: [seed_capability/reference/data_model.py]
@@ -333,9 +337,9 @@ runner_repo_path: \"$SB_DIR\""
       # reports. Comes from the repo-root .env locally; CI has none, and unset falls back to
       # gateway.DEFAULT_GATEWAY_MODEL, so a dispatched agent_model would be silently ignored.
       # openai/ is the litellm route for a gateway id — adding it twice 404s.
-      case "$AGENT_MODEL" in
-        openai/*) export SPA_MODEL_NAME="${SPA_MODEL_NAME:-$AGENT_MODEL}" ;;
-        *)        export SPA_MODEL_NAME="${SPA_MODEL_NAME:-openai/$AGENT_MODEL}" ;;
+      case "$AGENT_MODEL_WIRE" in
+        openai/*) export SPA_MODEL_NAME="${SPA_MODEL_NAME:-$AGENT_MODEL_WIRE}" ;;
+        *)        export SPA_MODEL_NAME="${SPA_MODEL_NAME:-openai/$AGENT_MODEL_WIRE}" ;;
       esac
       echo "  SPA upstream model: $SPA_MODEL_NAME (sentinel: $TAU2_AGENT_MODEL)"
       # Same vendor dir ci_setup.sh provisioned into. spa_env recomputes this from the
@@ -852,7 +856,7 @@ cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability
 optimizer_skill:    claude-code
-optimizer_model:    $OPTIMIZER_MODEL
+optimizer_model:    $OPTIMIZER_MODEL_WIRE
 target_model:       $AGENT_MODEL_WIRE
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
@@ -939,7 +943,7 @@ if [ "$ORCH_MODE" = "agent" ]; then
   echo ">>> agent mode — handing the loop to the headless host (turns=$HOST_TURNS)" >&2
   "$PY" "$REPO/skills/algorithms/agent-optimize/scripts/host.py" \
         --run-dir "$RUN_DIR" --project "$PROJ" \
-        --agent claude-code --model "$OPTIMIZER_MODEL" \
+        --agent claude-code --model "$OPTIMIZER_MODEL_WIRE" \
         --budget "$HOST_TURNS" "${HOST_USD_ARGS[@]}" </dev/null || \
     echo "::error::agent-optimize host exited non-zero for $BENCH — see its JSON above"
 fi

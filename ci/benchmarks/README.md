@@ -230,38 +230,72 @@ No baseline-freezing step — `run_suite.sh` computes the baseline fresh, in the
 whatever ids are listed. Pick ids with headroom (baseline not already saturated) by running
 `run_suite.sh` against a candidate list and checking the report.
 
-Repo secrets required: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` — the ete-litellm
-gateway, used for every plain (non-`rits/`-prefixed) `agent_model`/`optimizer_model` id.
+Requires `IBM_ETE_INT_API_BASE`/`IBM_ETE_INT_API_KEY` (and, for an `ibm-ete/*` or
+`ibm-rits/*` model, that provider's own pair — see below) set as repo secrets.
 
-### RITS (skillberry-1 lite-rits proxy)
+### ibm-rits (skillberry-1 lite-rits proxy)
 
-A second provider, reached only through a `rits/<vendor>/<model>` model id in either
-dropdown. `resolve_provider.sh` strips the CI-only `rits/` prefix and resolves the rest to
-the `RITS_API_BASE`/`RITS_API_KEY` secrets — a LiteLLM proxy (`lite-rits`) running on
+A second provider, reached only through an `ibm-rits/<vendor>/<model>` model id in either
+dropdown. `resolve_provider.sh` strips the CI-only `ibm-rits/` prefix, rewrites it to the
+`rits/<vendor>/<model>` wire-format lite-rits itself expects, and resolves it to
+the `IBM_RITS_API_BASE`/`IBM_RITS_API_KEY` secrets — a LiteLLM proxy (`lite-rits`) running on
 skillberry-1 itself (`http://localhost:4000`), talking directly to IBM RITS's own API. Since
 the `ibm-vpc` self-hosted runner IS skillberry-1, this needs no new network path.
 
-- **Repo secrets required:** `RITS_API_BASE` (`http://localhost:4000`), `RITS_API_KEY`.
+- **Repo secrets required:** `IBM_RITS_API_BASE` (`http://localhost:4000`), `IBM_RITS_API_KEY`.
 - **Model ids** are the bare `<vendor>/<model>` strings in lite-rits's own scraped catalog
-  (e.g. `google/gemma-4-31B-it`), prefixed with `rits/` for the dropdown only.
+  (e.g. `google/gemma-4-31B-it`), prefixed with `ibm-rits/` for the dropdown only —
+  `resolve_provider.sh` sends `rits/<vendor>/<model>` on the wire.
   `agent_model`/`optimizer_model` resolve independently, so a RITS agent with a
   gateway optimizer (or vice versa) is a normal, deliberate combination.
 - **`agent_model`/`optimizer_model`'s curated RITS entries** are a general-purpose spread
   across lite-rits's catalog, granite family excluded on request. Only
-  `rits/google/gemma-4-31B-it` is a genuine match to the WikiSkill paper's
+  `ibm-rits/google/gemma-4-31B-it` is a genuine match to the WikiSkill paper's
   (arXiv 2608.27454v1) SpreadsheetBench model axis (Qwen-3.5-4B/9B, Qwen-3.6-27B,
   Gemma-4-31B, Gemini-3.5-Flash) — RITS carries no small Qwen or Gemini, so the rest of the
   list is not a reproduction of that axis.
 - **Preflight:** `ci_setup.sh`'s gateway preflight is provider-aware — it skips the
-  ete-litellm `/models` entitlement check for a `rits/*` model (lite-rits's own `/v1/models`
-  is always empty by design: it builds routes dynamically per request rather than
-  publishing a static `model_list`) and instead runs the same completion probe against
-  `RITS_API_BASE`/`RITS_API_KEY`.
-- **Caveat:** `OPTIMIZER_MODEL: rits/*` points the `claude-code` CLI's
+  ete-litellm `/models` entitlement check for an `ibm-rits/*` model (lite-rits's own
+  `/v1/models` is always empty by design: it builds routes dynamically per request rather
+  than publishing a static `model_list`) and instead runs the same completion probe against
+  `IBM_RITS_API_BASE`/`IBM_RITS_API_KEY`.
+- **Caveat:** `OPTIMIZER_MODEL: ibm-rits/*` points the `claude-code` CLI's
   `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` at lite-rits. It is UNVERIFIED whether
   lite-rits speaks the Anthropic Messages API shape the CLI expects — a RITS
   `agent_model` with a gateway (Claude) `optimizer_model` is the combination actually
   exercised so far.
+
+### ibm-ete (second ete-litellm gateway)
+
+A second, separate ete-litellm gateway (`https://ete-litellm.ai-models.vpc.res.ibm.com`)
+from the one `ibm-ete-int` uses — a different auth domain; an `IBM_ETE_INT_API_KEY` is not
+recognized here and vice versa. Serves models `ibm-ete-int` doesn't (e.g. GLM), subject to
+the team's LiteLLM budget on IBM's side.
+
+Requires `IBM_ETE_API_BASE`/`IBM_ETE_API_KEY` as repo secrets. Use an `ibm-ete/<model>`
+id in `agent_model`/`optimizer_model` — `resolve_provider.sh` strips the `ibm-ete/` prefix
+and sends `<model>` on the wire verbatim.
+
+The `agent_model`/`optimizer_model` dropdowns ship with **zero seeded `ibm-ete/*`
+options** — the catalog isn't reliably queryable yet (currently budget-capped), and
+hand-typing a guessed model-id spelling risks the exact prefix/case-drift failure
+`check_models.py`'s docstring documents. `sync-model-lists.yml` populates real entries
+automatically the first time it successfully polls this gateway; until then, dispatching
+an `ibm-ete/*` model requires typing the exact id `workflow_dispatch` will still accept
+only if it's already one of the enumerated `options:` — i.e. not at all, until the sync
+workflow adds it.
+
+### Adding a fourth provider
+
+Every provider follows the same shape: a CI-only dropdown prefix (e.g. `ibm-newprovider/`),
+a secret pair named `IBM_<NAME>_API_BASE`/`IBM_<NAME>_API_KEY`, and a case arm in
+`resolve_provider.sh` (`ci/benchmarks/lib/resolve_provider.sh`) that strips the prefix (or
+rewrites it, if the provider needs a different wire-level id shape than its CI prefix, the
+way `ibm-rits/*` does) and returns that provider's credentials. `ci_setup.sh`'s
+`classify_provider`/`check_entitlement` and `sync_models.py`'s `--models PREFIX=PATH`
+polling both key off this same prefix, so a new provider needs no changes to their
+matching logic — only a new case arm and, if it should be polled automatically, a new
+`fetch_one` call in `sync-model-lists.yml`.
 
 > **Note:** GitHub only exposes `workflow_dispatch` (and evaluates `pull_request`
 > workflows) from the **default branch**, so `benchmarks.yml` becomes triggerable
