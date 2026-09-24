@@ -18,8 +18,13 @@ const benchLabel = (b) => BENCH_LABEL[b] || b;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
 // site/benchmarks.fixture.json). Local-only affordance for exercising the filter cascade
 // through many reload cycles; the default path is unchanged.
+//
+// benchmarks.json/meta.json are same-origin: pages.yml renders them fresh from
+// benchmark-history's records/ on every deploy, they're never committed to that branch
+// (an ever-growing aggregate rewritten in full on every run — see pages.yml for why).
+// RAW is still used below for live/ (in-progress run data a once-per-run deploy can't serve).
 const FEED = new URLSearchParams(location.search).has("fixture")
-  ? "benchmarks.fixture.json" : `${RAW}/benchmarks.json`;
+  ? "benchmarks.fixture.json" : "benchmarks.json";
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
@@ -177,7 +182,7 @@ async function load() {
   try {
     const [recs, meta] = await Promise.all([
       fetch(`${FEED}?t=${Date.now()}`).then((r) => r.json()),
-      fetch(`${RAW}/meta.json?t=${Date.now()}`).then((r) => r.json()).catch(() => null),
+      fetch(`meta.json?t=${Date.now()}`).then((r) => r.json()).catch(() => null),
     ]);
     RECORDS = Array.isArray(recs) ? recs : [];
     const zh = $("#date-zone");

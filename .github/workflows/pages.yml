@@ -6,11 +6,18 @@ name: Deploy GitHub Pages
 #   - push to main that touches site/ or this workflow → auto-deploy
 #   - manual dispatch → deploy on demand
 #   - the Benchmarks workflow completing → redeploy so a new run's CapEvolve UI
-#     snapshot (benchmark-history's runs/**) becomes browsable
+#     snapshot (benchmark-history's runs/**) becomes browsable, and its record
+#     is reflected in the rendered benchmarks.json/meta.json (see below)
 #
 # What it does: uploads site/ (plus benchmark-history's runs/** folded in under
 # site/benchmark-ui/runs/**) as the Pages artifact and hands it to the official
 # Pages deploy action. No build step for site/ itself (static HTML/CSS/PNG only).
+#
+# benchmarks.json/meta.json are rendered here, fresh, from benchmark-history's
+# records/ on every deploy — NOT committed to that branch. It's an aggregate over
+# every run ever recorded, so committing it in full on every run would rewrite an
+# ever-growing file forever (quadratic git growth); records/<id>.json stays
+# git-committed (cheap: one small additive file per run) and is the source of truth.
 
 on:
   push:
@@ -75,15 +82,28 @@ jobs:
           npm ci
           VITE_STATIC=1 npx vite build --outDir "$GITHUB_WORKSPACE/site/dashboard-ui"
 
-      - name: Fold in benchmark-history UI snapshots
+      - name: Fold in benchmark-history UI snapshots + render benchmarks.json
         run: |
+          empty_feed() {
+            echo "[]" > site/benchmarks.json
+            echo '{"count":0,"runs":0,"updated":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > site/meta.json
+          }
           rm -rf _bench_history
-          git clone --depth 1 --branch benchmark-history \
-            "https://github.com/${{ github.repository }}.git" _bench_history || {
-              echo "benchmark-history branch not found — deploying without UI snapshots"; exit 0; }
+          if ! git clone --depth 1 --branch benchmark-history \
+              "https://github.com/${{ github.repository }}.git" _bench_history; then
+            echo "benchmark-history branch not found — deploying without UI snapshots or history"
+            empty_feed
+            exit 0
+          fi
           mkdir -p site/benchmark-ui
           if [ -d _bench_history/runs ]; then
             cp -R _bench_history/runs site/benchmark-ui/runs
+          fi
+          if [ -d _bench_history/records ]; then
+            python3 ci/benchmarks/lib/record.py aggregate _bench_history/records \
+              --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out site
+          else
+            empty_feed
           fi
 
       # skillsbench-history's summaries, heatmaps and per-task reports are rendered
