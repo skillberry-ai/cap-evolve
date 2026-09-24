@@ -19,8 +19,13 @@
 # For the full reward/latency/cost suite over many curated tasks, see benchmarks.yml.
 #
 # REAL models / real $ → on-demand only: manual dispatch, or the `integration-test`
-# PR label. Needs a SELF-HOSTED runner on the IBM network (VPC gateway) + repo secrets
-# ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN. See ci/benchmarks/README.md.
+# PR label. Needs a SELF-HOSTED runner on the IBM network (VPC gateway). See
+# ci/benchmarks/README.md.
+#
+# Uses the same six IBM_<NAME>_API_BASE/IBM_<NAME>_API_KEY secrets benchmarks.yml does
+# (IBM_ETE_INT_*, IBM_ETE_*, IBM_RITS_*) — see resolve_provider.sh for the prefix scheme.
+# This workflow only exercises tau2 today, but gets all three provider's credentials so a
+# future dispatch against an ibm-ete/*or ibm-rits/* model isn't silently broken.
 # ============================================================================
 
 name: Integration tests
@@ -54,8 +59,12 @@ jobs:
       group: itest-tau2-${{ github.ref }}
       cancel-in-progress: true
     env:
-      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      IBM_ETE_INT_API_BASE: ${{ secrets.IBM_ETE_INT_API_BASE }}
+      IBM_ETE_INT_API_KEY: ${{ secrets.IBM_ETE_INT_API_KEY }}
+      IBM_ETE_API_BASE: ${{ secrets.IBM_ETE_API_BASE }}
+      IBM_ETE_API_KEY: ${{ secrets.IBM_ETE_API_KEY }}
+      IBM_RITS_API_BASE: ${{ secrets.IBM_RITS_API_BASE }}
+      IBM_RITS_API_KEY: ${{ secrets.IBM_RITS_API_KEY }}
       # A PR-label run has no inputs, so it keeps running tau2 exactly as before. Only a
       # deliberate dispatch selects an arm.
       BENCH: ${{ github.event.inputs.bench || 'tau2' }}
