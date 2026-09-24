@@ -17,17 +17,18 @@
 #
 # REQUIRES a SELF-HOSTED runner on the IBM network (the gateway is VPC-internal;
 # GitHub-hosted runners cannot reach it). See ci/benchmarks/README.md +
-# ci/benchmarks/runner/arm-runner.sh. Repo secrets: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
-# RITS_API_BASE, RITS_API_KEY.
+# ci/benchmarks/runner/arm-runner.sh.
 #
-# TWO providers can be picked per model, resolved by ci/benchmarks/lib/resolve_provider.sh:
-#   * the default ete-litellm gateway — every plain model id above.
-#   * RITS, via the lite-rits proxy running on skillberry-1 (the same box this self-hosted
-#     runner is on) — any id prefixed "rits/<vendor>/<model>". The prefix is CI-only: it is
-#     stripped before the bare id is sent on the wire, since lite-rits's own scraped catalog
-#     doesn't know it. agent_model and optimizer_model resolve independently, so pairing a
-#     RITS agent with a gateway optimizer (or vice versa) is a normal combination, not an
-#     error.
+# Three model-gateway providers are wired into this workflow, each behind its own
+# IBM_<NAME>_API_BASE / IBM_<NAME>_API_KEY secret pair (see resolve_provider.sh for the
+# full prefix scheme):
+#   - ibm-ete-int/<model>       IBM_ETE_INT_API_BASE / IBM_ETE_INT_API_KEY
+#   - ibm-ete/<model>           IBM_ETE_API_BASE / IBM_ETE_API_KEY
+#   - ibm-rits/<vendor>/<model> IBM_RITS_API_BASE / IBM_RITS_API_KEY
+# Every agent_model/optimizer_model dropdown entry below carries one of these three
+# prefixes. ibm-ete currently ships with zero seeded options — its catalog is
+# budget-capped and unverified; sync-model-lists.yml populates real entries once it's
+# queryable, so no guessed model-id spellings ever land in the dropdown by hand.
 # ============================================================================
 
 name: Benchmarks
@@ -59,89 +60,89 @@ on:
         type: string
         default: ""
       agent_model:
-        description: "Evaluation model — the agent under test. Plain id = ete-litellm gateway alias; \"rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh). Independent of optimizer_model — any pairing is valid."
+        description: "Evaluation model — the agent under test. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh). Independent of optimizer_model — any pairing is valid."
         type: choice
-        default: "aws/gpt-oss-120b"
+        default: "ibm-ete-int/aws/gpt-oss-120b"
         options:
-          - "aws/claude-haiku-4-5"
-          - "aws/claude-opus-4-7"
-          - "aws/claude-opus-4-8"
-          - "aws/claude-opus-5"
-          - "aws/claude-sonnet-4-6"
-          - "aws/claude-sonnet-5"
-          - "aws/gpt-oss-120b"
-          - "Azure/gpt-5-mini-2025-08-07"
-          - "azure/gpt-5.4"
-          - "azure/gpt-5.5"
-          - "azure/gpt-5.6-luna"
-          - "azure/gpt-5.6-sol"
-          - "azure/gpt-5.6-terra"
-          - "Azure/o4-mini"
-          - "claude-haiku-4-5-20251001"
-          - "claude-opus-4-6"
-          - "claude-opus-4-8"
-          - "claude-sonnet-4-6"
-          - "gcp/gemini-3-pro-preview"
-          - "gcp/gemini-3.1-pro-preview"
-          - "gcp/gemini-3.5-flash-lite"
-          - "gcp/gemini-3.6-flash"
-          - "gemini-2.5-flash"
-          - "gemini-2.5-pro"
+          - "ibm-ete-int/aws/claude-haiku-4-5"
+          - "ibm-ete-int/aws/claude-opus-4-7"
+          - "ibm-ete-int/aws/claude-opus-4-8"
+          - "ibm-ete-int/aws/claude-opus-5"
+          - "ibm-ete-int/aws/claude-sonnet-4-6"
+          - "ibm-ete-int/aws/claude-sonnet-5"
+          - "ibm-ete-int/aws/gpt-oss-120b"
+          - "ibm-ete-int/Azure/gpt-5-mini-2025-08-07"
+          - "ibm-ete-int/azure/gpt-5.4"
+          - "ibm-ete-int/azure/gpt-5.5"
+          - "ibm-ete-int/azure/gpt-5.6-luna"
+          - "ibm-ete-int/azure/gpt-5.6-sol"
+          - "ibm-ete-int/azure/gpt-5.6-terra"
+          - "ibm-ete-int/Azure/o4-mini"
+          - "ibm-ete-int/claude-haiku-4-5-20251001"
+          - "ibm-ete-int/claude-opus-4-6"
+          - "ibm-ete-int/claude-opus-4-8"
+          - "ibm-ete-int/claude-sonnet-4-6"
+          - "ibm-ete-int/gcp/gemini-3-pro-preview"
+          - "ibm-ete-int/gcp/gemini-3.1-pro-preview"
+          - "ibm-ete-int/gcp/gemini-3.5-flash-lite"
+          - "ibm-ete-int/gcp/gemini-3.6-flash"
+          - "ibm-ete-int/gemini-2.5-flash"
+          - "ibm-ete-int/gemini-2.5-pro"
           # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh ----
           # Curated from the live rits.json catalog (105 models), granite family excluded on
           # request. Only gemma-4-31B-it is a genuine match to the WikiSkill paper's model
           # axis (arXiv 2608.27454v1: Qwen-3.5-4B/9B, Qwen-3.6-27B, Gemma-4-31B, Gemini-3.5-
           # Flash) — RITS carries no small Qwen or Gemini, so the other 8 are a general-
           # purpose spread across vendor/size rather than a reproduction of that paper's axis.
-          - "rits/google/gemma-4-31B-it"
-          - "rits/Qwen/Qwen3-8B"
-          - "rits/Qwen/Qwen2.5-72B-Instruct"
-          - "rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
-          - "rits/meta-llama/llama-3-3-70b-instruct"
-          - "rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
-          - "rits/deepseek-ai/DeepSeek-V3.2"
-          - "rits/openai/gpt-oss-120b-a100"
-          - "rits/moonshotai/Kimi-K2.7-Code"
+          - "ibm-rits/google/gemma-4-31B-it"
+          - "ibm-rits/Qwen/Qwen3-8B"
+          - "ibm-rits/Qwen/Qwen2.5-72B-Instruct"
+          - "ibm-rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
+          - "ibm-rits/meta-llama/llama-3-3-70b-instruct"
+          - "ibm-rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+          - "ibm-rits/deepseek-ai/DeepSeek-V3.2"
+          - "ibm-rits/openai/gpt-oss-120b-a100"
+          - "ibm-rits/moonshotai/Kimi-K2.7-Code"
       optimizer_model:
-        description: "Optimization model — the Claude Code optimizer's model. Plain id = ete-litellm gateway alias; \"rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh) — the claude-code CLI is pointed at it via ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN, UNVERIFIED whether lite-rits speaks the Anthropic Messages API shape the CLI expects."
+        description: "Optimization model — the Claude Code optimizer's model. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh), UNVERIFIED whether lite-rits speaks the Anthropic Messages API shape the claude-code CLI expects."
         type: choice
-        default: "claude-opus-4-8"
+        default: "ibm-ete-int/claude-opus-4-8"
         options:
-          - "aws/claude-haiku-4-5"
-          - "aws/claude-opus-4-7"
-          - "aws/claude-opus-4-8"
-          - "aws/claude-opus-5"
-          - "aws/claude-sonnet-4-6"
-          - "aws/claude-sonnet-5"
-          - "aws/gpt-oss-120b"
-          - "Azure/gpt-5-mini-2025-08-07"
-          - "azure/gpt-5.4"
-          - "azure/gpt-5.5"
-          - "azure/gpt-5.6-luna"
-          - "azure/gpt-5.6-sol"
-          - "azure/gpt-5.6-terra"
-          - "Azure/o4-mini"
-          - "claude-haiku-4-5-20251001"
-          - "claude-opus-4-6"
-          - "claude-opus-4-8"
-          - "claude-sonnet-4-6"
-          - "gcp/gemini-3-pro-preview"
-          - "gcp/gemini-3.1-pro-preview"
-          - "gcp/gemini-3.5-flash-lite"
-          - "gcp/gemini-3.6-flash"
-          - "gemini-2.5-flash"
-          - "gemini-2.5-pro"
+          - "ibm-ete-int/aws/claude-haiku-4-5"
+          - "ibm-ete-int/aws/claude-opus-4-7"
+          - "ibm-ete-int/aws/claude-opus-4-8"
+          - "ibm-ete-int/aws/claude-opus-5"
+          - "ibm-ete-int/aws/claude-sonnet-4-6"
+          - "ibm-ete-int/aws/claude-sonnet-5"
+          - "ibm-ete-int/aws/gpt-oss-120b"
+          - "ibm-ete-int/Azure/gpt-5-mini-2025-08-07"
+          - "ibm-ete-int/azure/gpt-5.4"
+          - "ibm-ete-int/azure/gpt-5.5"
+          - "ibm-ete-int/azure/gpt-5.6-luna"
+          - "ibm-ete-int/azure/gpt-5.6-sol"
+          - "ibm-ete-int/azure/gpt-5.6-terra"
+          - "ibm-ete-int/Azure/o4-mini"
+          - "ibm-ete-int/claude-haiku-4-5-20251001"
+          - "ibm-ete-int/claude-opus-4-6"
+          - "ibm-ete-int/claude-opus-4-8"
+          - "ibm-ete-int/claude-sonnet-4-6"
+          - "ibm-ete-int/gcp/gemini-3-pro-preview"
+          - "ibm-ete-int/gcp/gemini-3.1-pro-preview"
+          - "ibm-ete-int/gcp/gemini-3.5-flash-lite"
+          - "ibm-ete-int/gcp/gemini-3.6-flash"
+          - "ibm-ete-int/gemini-2.5-flash"
+          - "ibm-ete-int/gemini-2.5-pro"
           # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh and the
           # agent_model list above for the same catalog note. ----
-          - "rits/google/gemma-4-31B-it"
-          - "rits/Qwen/Qwen3-8B"
-          - "rits/Qwen/Qwen2.5-72B-Instruct"
-          - "rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
-          - "rits/meta-llama/llama-3-3-70b-instruct"
-          - "rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
-          - "rits/deepseek-ai/DeepSeek-V3.2"
-          - "rits/openai/gpt-oss-120b-a100"
-          - "rits/moonshotai/Kimi-K2.7-Code"
+          - "ibm-rits/google/gemma-4-31B-it"
+          - "ibm-rits/Qwen/Qwen3-8B"
+          - "ibm-rits/Qwen/Qwen2.5-72B-Instruct"
+          - "ibm-rits/Qwen/Qwen3-30B-A3B-Thinking-2507"
+          - "ibm-rits/meta-llama/llama-3-3-70b-instruct"
+          - "ibm-rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+          - "ibm-rits/deepseek-ai/DeepSeek-V3.2"
+          - "ibm-rits/openai/gpt-oss-120b-a100"
+          - "ibm-rits/moonshotai/Kimi-K2.7-Code"
       optimizer_usd_per_iter:
         description: "Per-iteration $ cap on the optimizer (default unlimited — 0 disables the native --max-budget-usd cap entirely; set e.g. 4.0 to bound spend)"
         type: string
@@ -340,13 +341,17 @@ jobs:
       group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
       cancel-in-progress: false
     env:
-      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-      # lite-rits proxy on skillberry-1 — the SAME box this self-hosted runner is on, so
-      # RITS_API_BASE is a plain localhost URL, not a VPC-internal address. Used only for a
-      # "rits/*" agent_model/optimizer_model id; see resolve_provider.sh.
-      RITS_API_BASE: ${{ secrets.RITS_API_BASE }}
-      RITS_API_KEY: ${{ secrets.RITS_API_KEY }}
+      IBM_ETE_INT_API_BASE: ${{ secrets.IBM_ETE_INT_API_BASE }}
+      IBM_ETE_INT_API_KEY: ${{ secrets.IBM_ETE_INT_API_KEY }}
+      # A second, separate ete-litellm gateway — a DIFFERENT auth domain from
+      # IBM_ETE_INT_* (a key valid on one is unrecognized on the other). Used only for an
+      # "ibm-ete/*" agent_model/optimizer_model id; see resolve_provider.sh.
+      IBM_ETE_API_BASE: ${{ secrets.IBM_ETE_API_BASE }}
+      IBM_ETE_API_KEY: ${{ secrets.IBM_ETE_API_KEY }}
+      # lite-rits proxy on skillberry-1 — the same box this self-hosted runner is on.
+      # Used only for an "ibm-rits/*" agent_model/optimizer_model id; see resolve_provider.sh.
+      IBM_RITS_API_BASE: ${{ secrets.IBM_RITS_API_BASE }}
+      IBM_RITS_API_KEY: ${{ secrets.IBM_RITS_API_KEY }}
       # Smoke DEFAULTS to 3 iterations (cheap, fast regression) but an explicit dispatch value
       # now wins, exactly as it does for NUM_TRIALS below and for the same reason: the input's
       # own default is "" so "user asked for 10" is distinguishable from "user asked for
@@ -370,8 +375,8 @@ jobs:
       # non-empty default there is no way to tell "user asked for 10" from "user asked for
       # nothing", and smoke would silently get 10 instead of its intended 3.
       NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || '10' }}
-      AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
-      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
+      AGENT_MODEL: ${{ github.event.inputs.agent_model || 'ibm-ete-int/aws/gpt-oss-120b' }}
+      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'ibm-ete-int/claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
       # full stays unlimited by default. An explicit `optimizer_usd_per_iter`
       # dispatch input overrides this for whichever tier(s) run in that dispatch.
@@ -508,8 +513,8 @@ jobs:
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
-            "agent_model": "${AGENT_MODEL:-aws/gpt-oss-120b}",
-            "optimizer_model": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
+            "agent_model": "${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}",
+            "optimizer_model": "${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}",
             "gate_k_se": ${GATE_K_SE:-1.0},
             "algorithm": "${ALGORITHM:-hill-climb-all}",
             "warm_seed": $warm_json,
