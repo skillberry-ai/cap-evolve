@@ -383,7 +383,12 @@ if command -v curl >/dev/null; then
           return 0
         fi
         ;;
-      ibm-rits/*) : ;;
+      ibm-rits/*)
+        if [ -z "${IBM_RITS_API_BASE:-}" ] || [ -z "${IBM_RITS_API_KEY:-}" ]; then
+          echo "::warning:: IBM_RITS_API_BASE/IBM_RITS_API_KEY not set — skipping $role model preflight probe for '$model'"
+          return 0
+        fi
+        ;;
     esac
     resolve_provider "$model"
     local probe="/tmp/capevolve_budget_probe.$$_${role}.json"
