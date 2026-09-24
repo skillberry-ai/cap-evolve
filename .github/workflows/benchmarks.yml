@@ -51,7 +51,7 @@ on:
         default: smoke
         options: [all, smoke, pilot, full, full_verified]
       iterations:
-        description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step."
+        description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step. WHAT ONE ITERATION BUYS DEPENDS ON THE ALGORITHM: on the hill-climb (deterministic) path it is one optimizer call; under agent-optimize it is one CANDIDATE taken to a gate decision, so a wave of three parallel siblings spends three iterations at once. Budget accordingly — 3 under agent-optimize can mean a single wave and no iteration at all."
         type: string
         default: ""
       trials:
