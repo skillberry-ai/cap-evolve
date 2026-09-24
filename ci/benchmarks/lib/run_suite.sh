@@ -855,8 +855,12 @@ fi
 # `algorithm_focus: all` never evaluates the train split, and `finalize` scores test TWICE
 # (champion + baseline). Advisory only: it reports, it does not refuse — a deliberate long
 # run is legitimate, an accidental one is not.
-# NUM_TRIALS/ITER are always set by here (lines 32/34) — no ":-N" fallback needed, and one
-# would be actively misleading (their real defaults are 10/3, not 1).
+# NUM_TRIALS/ITER are always set by here (lines 32/34) when this script runs top to bottom;
+# the ":-10"/":-3" below exist only so this block stays self-contained when a test lifts and
+# runs it on its own (test_run_suite_split_hook.py does exactly that, sharing this snippet
+# with the split hook above it) — they match the script's own real defaults, not the "${:-1}"
+# this replaced, which was both dead (always shadowed by line 32/34) and actively misleading
+# next to those real defaults.
 # `iters * per_val` assumes one val-eval per iteration, which holds for the deterministic
 # hill-climb-* path but is only an upper bound under `algorithm: agent-optimize`, where a
 # headless agent is merely ASKED to stay under an iteration budget via a free-text
@@ -865,7 +869,7 @@ case "${ALGORITHM:-}" in
   agent-optimize) _plan_note=" (upper bound — agent-optimize is only asked to respect this budget, not capped to it)" ;;
   *) _plan_note="" ;;
 esac
-"$PY" - "$PROJ/inputs/split_ids.json" "$NUM_TRIALS" "$ITER" "$_plan_note" >&2 <<'PLAN'
+"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-10}" "${ITER:-3}" "$_plan_note" >&2 <<'PLAN'
 import json, sys
 split = json.load(open(sys.argv[1]))
 trials, iters = int(sys.argv[2]), int(sys.argv[3])
