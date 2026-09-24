@@ -102,17 +102,33 @@ case "$ALGORITHM" in
     # tried a code-level guard, which its own reject note ("require calculate tool for all
     # money") had already identified as the right form. Rejections bound nothing; rounds and
     # spend do.
+    #
+    # The SIBLINGS clause below exists because gating a wave of candidates in parallel spends
+    # the whole round budget just as fast as gating them one at a time. On smoke run
+    # 35861572021 (iterations=3), a first wave of three edit-surface variants consumed all
+    # three rounds outright, and the clearest finding it produced — one surface beating another
+    # by 0.089 — had no round left to act on (the obvious next round, retesting the winning
+    # surface alone, was unavailable). That wave was exactly the shape references/algorithm.md's
+    # "Gating N Bucket-A siblings does not mean paying full val N times" rule already covers:
+    # screen every sibling first, merge_search.py the disjoint survivors, and gate only the
+    # merge — a path that costs zero extra rounds. The clause below is for when siblings truly
+    # are independent risks that must each be gated alone; it points back at that rule rather
+    # than duplicating or replacing it. Numbers specific to run 35861572021 stay in THIS
+    # comment, not in the derived text below, which spend.py/constraints.py parse for
+    # enforcement — a bare run id or reward delta there reads as an unrecognized constraint and
+    # trips the "ask the user before the loop starts" ambiguity check for no enforcement gain.
     STOP_CONDITION="Spend at most ${_rounds} rounds, where a round is one candidate taken to a\
  full-val gate decision (accepted or rejected) and booked with commit.py. Stop when spend.py's\
  recommendation is 'stop', or after ${_rounds} rounds.${_stop_usd} Do NOT stop early merely\
  because rounds were rejected: a rejection is the signal to change the edit FORM or the SURFACE\
- on the next round, not to finish. Use every round the budget allows. SIBLINGS ARE NOT FREE:\
- candidates you gate in the same wave each consume a round, so a wave of three spends three of\
- ${_rounds}. Budget the wave and keep rounds in RESERVE for what it shows -- on run 35861572021 a\
- first wave of three siblings consumed a 3-round budget outright, and the clearest finding it\
- produced (one edit SURFACE beating another by 0.089) could never be followed up. Prefer narrow\
- early waves, then spend the reserve on the surface or form the evidence points at. Gate every candidate on\
- FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\
+ on the next round, not to finish. Use every round the budget allows over the course of the\
+ run — not all in one wave. SIBLINGS ARE NOT FREE: candidates gated in the same wave each\
+ consume a round. Before gating a wave on full val, confirm this is not a screen-then-merge\
+ case (screen every sibling first, merge the disjoint survivors, gate only the merge — see\
+ references/algorithm.md, 'Gating N Bucket-A siblings...') — that path costs zero extra rounds.\
+ When siblings truly are independent risks that must each be gated alone, keep a narrow first\
+ wave and hold rounds in RESERVE for the follow-up the evidence points at. Gate every candidate\
+ on FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\
  --gate-against control on every round.py call: its default reference is the parent's reward as\
  measured in an EARLIER round, so that reward's drift since then sits inside every candidate\
  delta, while a control is a byte-identical replicate measured in the SAME round. Always\

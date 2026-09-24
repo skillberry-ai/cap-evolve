@@ -28,8 +28,6 @@ import re
 import subprocess
 from pathlib import Path
 
-from pathlib import Path as _P
-
 REPO = Path(__file__).resolve().parents[2]
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
 WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
@@ -75,6 +73,58 @@ def test_the_warning_travels_with_the_round_count_it_applies_to():
     for n in ("3", "12"):
         stop = _stop(ITERATIONS=n)
         assert n in stop and "sibling" in stop.lower()
+
+
+def test_the_clause_points_back_at_the_screen_then_merge_rule():
+    """Run 35861572021's three siblings were exactly the shape references/algorithm.md's
+    screen-then-merge rule already covers (screen first, merge_search.py the disjoint
+    survivors, gate only the merge) — that path costs zero extra rounds. The new clause must
+    say so, or an agent can read "siblings cost rounds, so run fewer at once" and still never
+    reach for the fix that avoids spending rounds on this at all."""
+    low = _stop(ITERATIONS="3").lower()
+    assert "screen" in low and "merge" in low, (
+        f"the clause never points at the screen-then-merge rule: {low}"
+    )
+
+
+def test_the_clause_no_longer_contradicts_use_every_round_the_budget_allows():
+    """"Use every round the budget allows" immediately followed by "siblings are not free...
+    keep rounds in reserve" reads as two opposite asks in one paragraph. The first sentence
+    must be qualified so it no longer reads as "spend everything in one wave"."""
+    stop = _stop(ITERATIONS="3")
+    assert "Use every round the budget allows" in stop
+    assert "one wave" in stop.lower(), (
+        "the budget-allows sentence is not qualified against spending it all in one wave"
+    )
+
+
+def test_the_derived_text_carries_no_bare_run_id_or_delta():
+    """The illustrative run id (35861572021) and reward delta (0.089) from the sibling-budget
+    incident must live in a comment, not in the machine-parsed STOP_CONDITION: SKILL.md's
+    Phase 0 tells the agent to ASK THE USER when constraints.ambiguous is non-empty, and a bare
+    number with no unit there is exactly what makes an entry ambiguous. See
+    test_the_derived_text_does_not_regress_the_ambiguity_check for the parser-level check."""
+    stop = _stop(ITERATIONS="3")
+    assert "35861572021" not in stop
+    assert "0.089" not in stop
+
+
+def test_the_derived_text_does_not_regress_the_ambiguity_check():
+    """Parses the real derived text with cap_evolve.constraints.parse_constraints (the same
+    parser SKILL.md's Phase 0 tells the agent to run) and pins its ambiguous-entry count to
+    what main already has (2, from the pre-existing bare gate_k_se=1.0/10 trial(s) figures,
+    unrelated to this clause) — not 4, which is what a version of this clause carrying the
+    run id and delta inline produced."""
+    import sys
+
+    sys.path.insert(0, str(REPO / "core"))
+    from cap_evolve.constraints import parse_constraints  # noqa: PLC0415
+
+    parsed = parse_constraints(_stop(ITERATIONS="3"))
+    assert len(parsed["ambiguous"]) == 2, (
+        f"expected the same 2 pre-existing ambiguous entries as main, got "
+        f"{len(parsed['ambiguous'])}: {parsed['ambiguous']}"
+    )
 
 
 # --- everything that was already load-bearing stays ----------------------------------------
