@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Parsec v4 heatmap — JB baseline vs v4_t1_e1 vs v4_t2_e1</title>
+<title>Parsec v4 heatmap — JB baseline vs v4_t1_e1 vs v4_t2_e1 vs v4_t4_e1</title>
 <style>
   :root {
     --bg: #ffffff;
@@ -69,7 +69,7 @@
 <body>
 
 <h1>Parsec v4 heatmap</h1>
-<div class="subtitle">All 34 v4 Parsec scenarios · JB baseline (n=1) vs cap-evolve zero-shot baseline v4_t1_e1 (n=3) vs cap-evolve-optimized v4_t2_e1 (n=5 per eval, 21/34 tasks) Category/global arms (C2-C4, G2-G4) not yet run — see results/v4/summary.md.</div>
+<div class="subtitle">All 34 v4 Parsec scenarios · JB baseline (n=1) vs cap-evolve zero-shot baseline v4_t1_e1 (n=3) vs cap-evolve-optimized v4_t2_e1 (n=5 per eval, 21/34 tasks) vs the T4 merged-bundle regression check v4_t4_e1 (n=5 per eval, all 34 tasks). T3/T5/C2-C4/G2 not yet run — see results/v4/summary.md.</div>
 
 <div class="note">
   <strong>Regression and challenge tranches are never pooled into one mean</strong> — the challenge tasks are designed to score below 1.0, so mixing them into the regression mean would misread deliberate difficulty as regression (see <code>baseline.md</code>). Every mean below shows its own <code>n=</code>; different columns use different trial counts and are not directly comparable without it.
@@ -112,7 +112,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.8,
-    "delta_vs_our_baseline": 0.7999999999999999
+    "delta_vs_our_baseline": 0.7999999999999999,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.8
   },
   {
     "task": "cloud-025-gcp-project-status",
@@ -136,7 +138,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "cloud-026-gpu-abuse-triage",
@@ -160,7 +164,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.19199999999999995,
-    "delta_vs_our_baseline": 0.11388900000000002
+    "delta_vs_our_baseline": 0.11388900000000002,
+    "t4_reward": 0.6133,
+    "t4_delta_vs_our_baseline": -0.2728
   },
   {
     "task": "cloud-027-azure-pool-database-trap",
@@ -184,7 +190,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "cost-028-highest-spend-provider",
@@ -208,7 +216,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 0.4,
+    "t4_delta_vs_our_baseline": -0.6
   },
   {
     "task": "cost-029-no-cost-rows-for-guid",
@@ -232,7 +242,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.19999999999999996,
-    "delta_vs_our_baseline": 0.19999999999999984
+    "delta_vs_our_baseline": 0.19999999999999984,
+    "t4_reward": 0.96,
+    "t4_delta_vs_our_baseline": 0.16
   },
   {
     "task": "cost-030-threshold-not-an-anomaly",
@@ -256,7 +268,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.046666666666666745
+    "delta_vs_our_baseline": 0.046666666666666745,
+    "t4_reward": 0.72,
+    "t4_delta_vs_our_baseline": -0.2333
   },
   {
     "task": "icinga-010-stuck-anarchysubjects",
@@ -280,7 +294,9 @@ const DATA = [
     "final": 0.495,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.09333333333333332
+    "delta_vs_our_baseline": 0.09333333333333332,
+    "t4_reward": 0.439,
+    "t4_delta_vs_our_baseline": 0.0373
   },
   {
     "task": "icinga-011-aap2-job-status-alert",
@@ -304,7 +320,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.14,
-    "delta_vs_our_baseline": 0.046666666666666745
+    "delta_vs_our_baseline": 0.046666666666666745,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0467
   },
   {
     "task": "icinga-012-nodes-ready-threshold",
@@ -328,7 +346,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "icinga-013-acknowledged-not-an-issue",
@@ -352,7 +372,9 @@ const DATA = [
     "final": 0.64,
     "final_n": 5,
     "delta_vs_jb": 0.16000000000000003,
-    "delta_vs_our_baseline": 0.26666666666666666
+    "delta_vs_our_baseline": 0.26666666666666666,
+    "t4_reward": 0.64,
+    "t4_delta_vs_our_baseline": 0.2667
   },
   {
     "task": "icinga-014-check-script-path-moved",
@@ -376,7 +398,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.1166666666666667
+    "delta_vs_our_baseline": 0.1166666666666667,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.1167
   },
   {
     "task": "icinga-015-problems-by-severity",
@@ -400,7 +424,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "icinga-016-hosts-most-problems",
@@ -424,7 +450,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "icinga-017-invented-action-trap",
@@ -448,7 +476,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "platform-001-ee-entrypoint-rca",
@@ -472,7 +502,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.48,
-    "delta_vs_our_baseline": 0.2866666666666666
+    "delta_vs_our_baseline": 0.2866666666666666,
+    "t4_reward": 0.76,
+    "t4_delta_vs_our_baseline": 0.0467
   },
   {
     "task": "platform-002-collection-not-found-rca",
@@ -496,7 +528,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.11699999999999999,
-    "delta_vs_our_baseline": 0.21666700000000005
+    "delta_vs_our_baseline": 0.21666700000000005,
+    "t4_reward": 0.9567,
+    "t4_delta_vs_our_baseline": 0.1734
   },
   {
     "task": "platform-003-tojson-dict-literal-rca",
@@ -520,7 +554,9 @@ const DATA = [
     "final": 0.7633332,
     "final_n": 5,
     "delta_vs_jb": 0.5303332000000001,
-    "delta_vs_our_baseline": 0.28555520000000006
+    "delta_vs_our_baseline": 0.28555520000000006,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.5222
   },
   {
     "task": "platform-004-events-then-config",
@@ -544,7 +580,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.266667
+    "delta_vs_our_baseline": 0.266667,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.2667
   },
   {
     "task": "platform-005-wrong-owner-trap",
@@ -568,7 +606,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.18666666666666665
+    "delta_vs_our_baseline": 0.18666666666666665,
+    "t4_reward": 0.912,
+    "t4_delta_vs_our_baseline": 0.0987
   },
   {
     "task": "platform-006-version-tag-not-a-ref",
@@ -592,7 +632,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "platform-007-directory-path-fetch",
@@ -616,7 +658,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.15000000000000002,
-    "delta_vs_our_baseline": 0.20000000000000007
+    "delta_vs_our_baseline": 0.20000000000000007,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.2
   },
   {
     "task": "platform-008-log-does-not-say",
@@ -640,7 +684,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.06666666666666676
+    "delta_vs_our_baseline": 0.06666666666666676,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0667
   },
   {
     "task": "platform-009-catalog-item-no-config",
@@ -664,7 +710,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 0.825,
+    "t4_delta_vs_our_baseline": -0.175
   },
   {
     "task": "platform-018-find-jobs-window",
@@ -688,7 +736,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 0.028,
+    "t4_delta_vs_our_baseline": -0.972
   },
   {
     "task": "platform-019-anarchysubject-state",
@@ -712,7 +762,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.85,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 0.32,
+    "t4_delta_vs_our_baseline": -0.68
   },
   {
     "task": "platform-020-ocpv-vm-inventory",
@@ -736,7 +788,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 0.34,
+    "t4_delta_vs_our_baseline": -0.66
   },
   {
     "task": "platform-021-babylon-missing-cluster-trap",
@@ -760,7 +814,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 3,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.0
+    "delta_vs_our_baseline": 0.0,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0
   },
   {
     "task": "platform-022-job-on-no-controller",
@@ -784,7 +840,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.30000000000000004,
-    "delta_vs_our_baseline": 0.30000000000000016
+    "delta_vs_our_baseline": 0.30000000000000016,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.3
   },
   {
     "task": "platform-023-splunk-guid-no-events",
@@ -808,7 +866,9 @@ const DATA = [
     "final": 1.0,
     "final_n": 5,
     "delta_vs_jb": 0.0,
-    "delta_vs_our_baseline": 0.06666666666666676
+    "delta_vs_our_baseline": 0.06666666666666676,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0667
   },
   {
     "task": "platform-031-helm-url-not-a-timeout",
@@ -832,7 +892,9 @@ const DATA = [
     "final": 0.9650000000000001,
     "final_n": 5,
     "delta_vs_jb": 0.28800000000000003,
-    "delta_vs_our_baseline": 0.17083333333333328
+    "delta_vs_our_baseline": 0.17083333333333328,
+    "t4_reward": 0.8655,
+    "t4_delta_vs_our_baseline": 0.0713
   },
   {
     "task": "platform-032-shared-secret-not-a-registry-outage",
@@ -856,7 +918,9 @@ const DATA = [
     "final": 0.575,
     "final_n": 5,
     "delta_vs_jb": 0.09999999999999998,
-    "delta_vs_our_baseline": -0.07500000000000007
+    "delta_vs_our_baseline": -0.07500000000000007,
+    "t4_reward": 0.645,
+    "t4_delta_vs_our_baseline": -0.005
   },
   {
     "task": "platform-033-schema-change-not-the-oom",
@@ -880,7 +944,9 @@ const DATA = [
     "final": 0.9666667999999999,
     "final_n": 5,
     "delta_vs_jb": -0.03333320000000006,
-    "delta_vs_our_baseline": 0.03809546666666663
+    "delta_vs_our_baseline": 0.03809546666666663,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.0714
   },
   {
     "task": "platform-034-rate-limit-not-an-outage",
@@ -904,7 +970,9 @@ const DATA = [
     "final": 0.9844443999999999,
     "final_n": 5,
     "delta_vs_jb": 0.21544439999999987,
-    "delta_vs_our_baseline": 0.19000039999999985
+    "delta_vs_our_baseline": 0.19000039999999985,
+    "t4_reward": 1.0,
+    "t4_delta_vs_our_baseline": 0.2056
   }
 ];
 
@@ -922,7 +990,9 @@ const SUMMARIES =
     "delta_vs_jb_mean": 0.13064444,
     "delta_vs_jb_n": 30,
     "delta_vs_our_baseline_mean": 0.11864816222222223,
-    "delta_vs_our_baseline_n": 30
+    "delta_vs_our_baseline_n": 30,
+    "t4_reward_mean": 0.8305,
+    "t4_delta_vs_our_baseline_mean": -0.0142
   },
   {
     "tranche": "challenge",
@@ -936,7 +1006,9 @@ const SUMMARIES =
     "delta_vs_jb_mean": 0.14252779999999995,
     "delta_vs_jb_n": 4,
     "delta_vs_our_baseline_mean": 0.08098229999999992,
-    "delta_vs_our_baseline_n": 4
+    "delta_vs_our_baseline_n": 4,
+    "t4_reward_mean": 0.8776,
+    "t4_delta_vs_our_baseline_mean": 0.0858
   }
 ]
 ;
@@ -954,6 +1026,8 @@ const COLUMNS = [
   { key: "final", label: "final", tip: "The number used for delta columns: held-out test-split reward of the best candidate for optimized tasks, else our_baseline." },
   { key: "delta_vs_jb", label: "Δ vs JB", tip: "final − JB baseline reward." },
   { key: "delta_vs_our_baseline", label: "Δ vs our base", tip: "final − our v4_t1_e1 baseline. This is the optimizer's own lift; zero by construction for non-optimized tasks." },
+  { key: "t4_reward", label: "T4 merge", tip: "v4_t4_e1: static union of all 21 T2 bundles, evaluated zero-shot on all 34 tasks (n=5 trials) -- a regression check, not part of the seed/candidate/best/final lineage above." },
+  { key: "t4_delta_vs_our_baseline", label: "T4 Δ vs our base", tip: "T4 merge reward − our v4_t1_e1 baseline. Negative means the merged bundle regressed this task relative to the untouched seed." },
 ];
 
 let sortState = { key: "task", dir: "asc" };
@@ -1052,6 +1126,8 @@ function renderRow(row) {
   html += rewardCell(row.final, row.final_n);
   html += `<td>${fmtDelta(row.delta_vs_jb)}</td>`;
   html += `<td>${fmtDelta(row.delta_vs_our_baseline)}</td>`;
+  html += rewardCell(row.t4_reward, row.t4_reward !== null ? 5 : null);
+  html += `<td>${fmtDelta(row.t4_delta_vs_our_baseline)}</td>`;
   html += "</tr>";
   return html;
 }
@@ -1065,6 +1141,8 @@ function renderSummaryRow(s) {
   html += rewardCell(s.final_mean, s.final_n);
   html += `<td>${fmtDelta(s.delta_vs_jb_mean)}</td>`;
   html += `<td>${fmtDelta(s.delta_vs_our_baseline_mean)}</td>`;
+  html += rewardCell(s.t4_reward_mean, s.n_tasks);
+  html += `<td>${fmtDelta(s.t4_delta_vs_our_baseline_mean)}</td>`;
   html += "</tr>";
   return html;
 }

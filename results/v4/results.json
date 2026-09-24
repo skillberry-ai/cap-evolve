@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-22T16:42:33Z",
+  "generated_at": "2026-09-24T07:24:47Z",
   "generator": "scripts/build_v4_results_json.py",
   "benchmark": "parsec",
   "target": "parsec multi-agent bundle (orchestrator.md + 6 domain agents + shared_context.md; capabilities: [system-prompt])",
@@ -24,6 +24,33 @@
       "status": "done_by_design",
       "source": "v4_t2_e1",
       "description": "independent optimizer run per task, 21 of 34 tasks (the other 13 already scored 1.0 on the seed -- spec Sec.3)"
+    },
+    {
+      "arm_id": "T3",
+      "section": "task",
+      "name": "transfer",
+      "mode": "zs",
+      "status": "not_run",
+      "source": null,
+      "description": "one task's T2-optimized bundle, evaluated zero-shot on a different task -- not yet designed (spec Sec.2)"
+    },
+    {
+      "arm_id": "T4",
+      "section": "task",
+      "name": "merge",
+      "mode": "zs",
+      "status": "done",
+      "source": "v4_t4_e1",
+      "description": "union of all 21 T2 bundles, evaluated zero-shot on all 34 tasks, including the 13 already-perfect ones -- a regression check (spec Sec.3); merge strategy in reports/v4-t4-merge-decisions.md (spec Sec.4)"
+    },
+    {
+      "arm_id": "T5",
+      "section": "task",
+      "name": "merge-joint",
+      "mode": "opt",
+      "status": "not_run",
+      "source": null,
+      "description": "T4's union, continued optimization jointly on all 34 tasks"
     },
     {
       "arm_id": "C1",
@@ -78,24 +105,6 @@
       "status": "not_run",
       "source": null,
       "description": "one optimizer run scoring all 34 tasks together"
-    },
-    {
-      "arm_id": "G3",
-      "section": "global",
-      "name": "merge",
-      "mode": "zs",
-      "status": "not_run",
-      "source": null,
-      "description": "union of all 21 T2 bundles, evaluated zero-shot on all 34 tasks, including the 13 already-perfect ones (spec Sec.3)"
-    },
-    {
-      "arm_id": "G4",
-      "section": "global",
-      "name": "merge-joint",
-      "mode": "opt",
-      "status": "not_run",
-      "source": null,
-      "description": "G3's union, continued optimization jointly on all 34 tasks"
     }
   ],
   "task_ledger": [
@@ -133,7 +142,13 @@
       "t2_eval_s": 740.4,
       "t2_opt_cost_usd": 13.7728,
       "t2_opt_tokens": 112966,
-      "t2_opt_s": 4762.6
+      "t2_opt_s": 4762.6,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.4164,
+      "t4_tokens": 133729,
+      "t4_time_s": 273.4,
+      "t4_delta_vs_our_baseline": 0.8
     },
     {
       "task": "cloud-025-gcp-project-status",
@@ -169,7 +184,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.0586,
+      "t4_tokens": 340658,
+      "t4_time_s": 306.8,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "cloud-026-gpu-abuse-triage",
@@ -205,7 +226,13 @@
       "t2_eval_s": 3017.7,
       "t2_opt_cost_usd": 21.0848,
       "t2_opt_tokens": 143408,
-      "t2_opt_s": 3989.6
+      "t2_opt_s": 3989.6,
+      "t4_reward": 0.6133,
+      "t4_stderr": 0.1891,
+      "t4_cost_usd": 0.4434,
+      "t4_tokens": 128681,
+      "t4_time_s": 566.3,
+      "t4_delta_vs_our_baseline": -0.2728
     },
     {
       "task": "cloud-027-azure-pool-database-trap",
@@ -241,7 +268,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.7074,
+      "t4_tokens": 227259,
+      "t4_time_s": 280.4,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "cost-028-highest-spend-provider",
@@ -277,7 +310,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 0.4,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.8011,
+      "t4_tokens": 252276,
+      "t4_time_s": 244.2,
+      "t4_delta_vs_our_baseline": -0.6
     },
     {
       "task": "cost-029-no-cost-rows-for-guid",
@@ -313,7 +352,13 @@
       "t2_eval_s": 1657.3,
       "t2_opt_cost_usd": 23.4225,
       "t2_opt_tokens": 217385,
-      "t2_opt_s": 6799.4
+      "t2_opt_s": 6799.4,
+      "t4_reward": 0.96,
+      "t4_stderr": 0.04,
+      "t4_cost_usd": 0.7137,
+      "t4_tokens": 226728,
+      "t4_time_s": 238.2,
+      "t4_delta_vs_our_baseline": 0.16
     },
     {
       "task": "cost-030-threshold-not-an-anomaly",
@@ -349,7 +394,13 @@
       "t2_eval_s": 1166.4,
       "t2_opt_cost_usd": 0.0,
       "t2_opt_tokens": 0,
-      "t2_opt_s": 0.0
+      "t2_opt_s": 0.0,
+      "t4_reward": 0.72,
+      "t4_stderr": 0.1171,
+      "t4_cost_usd": 0.7795,
+      "t4_tokens": 234863,
+      "t4_time_s": 360.4,
+      "t4_delta_vs_our_baseline": -0.2333
     },
     {
       "task": "icinga-010-stuck-anarchysubjects",
@@ -385,7 +436,13 @@
       "t2_eval_s": 2954.3,
       "t2_opt_cost_usd": 24.0454,
       "t2_opt_tokens": 234219,
-      "t2_opt_s": 2755.6
+      "t2_opt_s": 2755.6,
+      "t4_reward": 0.439,
+      "t4_stderr": 0.0343,
+      "t4_cost_usd": 1.6261,
+      "t4_tokens": 520302,
+      "t4_time_s": 413.7,
+      "t4_delta_vs_our_baseline": 0.0373
     },
     {
       "task": "icinga-011-aap2-job-status-alert",
@@ -421,7 +478,13 @@
       "t2_eval_s": 1713.6,
       "t2_opt_cost_usd": 10.3671,
       "t2_opt_tokens": 48869,
-      "t2_opt_s": 1442.5
+      "t2_opt_s": 1442.5,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.059,
+      "t4_tokens": 328448,
+      "t4_time_s": 403.0,
+      "t4_delta_vs_our_baseline": 0.0467
     },
     {
       "task": "icinga-012-nodes-ready-threshold",
@@ -457,7 +520,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.8901,
+      "t4_tokens": 270555,
+      "t4_time_s": 319.4,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-013-acknowledged-not-an-issue",
@@ -493,7 +562,13 @@
       "t2_eval_s": 1256.3,
       "t2_opt_cost_usd": 22.3528,
       "t2_opt_tokens": 168040,
-      "t2_opt_s": 4505.8
+      "t2_opt_s": 4505.8,
+      "t4_reward": 0.64,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.5368,
+      "t4_tokens": 171800,
+      "t4_time_s": 177.5,
+      "t4_delta_vs_our_baseline": 0.2667
     },
     {
       "task": "icinga-014-check-script-path-moved",
@@ -529,7 +604,13 @@
       "t2_eval_s": 2653.0,
       "t2_opt_cost_usd": 10.5495,
       "t2_opt_tokens": 82911,
-      "t2_opt_s": 1582.5
+      "t2_opt_s": 1582.5,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.7243,
+      "t4_tokens": 541697,
+      "t4_time_s": 611.3,
+      "t4_delta_vs_our_baseline": 0.1167
     },
     {
       "task": "icinga-015-problems-by-severity",
@@ -565,7 +646,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.1088,
+      "t4_tokens": 350938,
+      "t4_time_s": 288.3,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-016-hosts-most-problems",
@@ -601,7 +688,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.8446,
+      "t4_tokens": 268145,
+      "t4_time_s": 221.3,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-017-invented-action-trap",
@@ -637,7 +730,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.2685,
+      "t4_tokens": 403439,
+      "t4_time_s": 409.9,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-001-ee-entrypoint-rca",
@@ -673,7 +772,13 @@
       "t2_eval_s": 8778.6,
       "t2_opt_cost_usd": 36.3753,
       "t2_opt_tokens": 317804,
-      "t2_opt_s": 4209.3
+      "t2_opt_s": 4209.3,
+      "t4_reward": 0.76,
+      "t4_stderr": 0.0443,
+      "t4_cost_usd": 0.5822,
+      "t4_tokens": 172657,
+      "t4_time_s": 1134.5,
+      "t4_delta_vs_our_baseline": 0.0467
     },
     {
       "task": "platform-002-collection-not-found-rca",
@@ -709,7 +814,13 @@
       "t2_eval_s": 5947.6,
       "t2_opt_cost_usd": 6.9676,
       "t2_opt_tokens": 89179,
-      "t2_opt_s": 1065.3
+      "t2_opt_s": 1065.3,
+      "t4_reward": 0.9567,
+      "t4_stderr": 0.0433,
+      "t4_cost_usd": 0.5702,
+      "t4_tokens": 171849,
+      "t4_time_s": 1065.2,
+      "t4_delta_vs_our_baseline": 0.1734
     },
     {
       "task": "platform-003-tojson-dict-literal-rca",
@@ -745,7 +856,13 @@
       "t2_eval_s": 6664.8,
       "t2_opt_cost_usd": 25.5626,
       "t2_opt_tokens": 222257,
-      "t2_opt_s": 3713.6
+      "t2_opt_s": 3713.6,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.5282,
+      "t4_tokens": 156611,
+      "t4_time_s": 427.5,
+      "t4_delta_vs_our_baseline": 0.5222
     },
     {
       "task": "platform-004-events-then-config",
@@ -781,7 +898,13 @@
       "t2_eval_s": 2688.9,
       "t2_opt_cost_usd": 14.6672,
       "t2_opt_tokens": 160250,
-      "t2_opt_s": 4681.6
+      "t2_opt_s": 4681.6,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.6483,
+      "t4_tokens": 201187,
+      "t4_time_s": 495.3,
+      "t4_delta_vs_our_baseline": 0.2667
     },
     {
       "task": "platform-005-wrong-owner-trap",
@@ -817,7 +940,13 @@
       "t2_eval_s": 4116.9,
       "t2_opt_cost_usd": 6.3944,
       "t2_opt_tokens": 48410,
-      "t2_opt_s": 1453.6
+      "t2_opt_s": 1453.6,
+      "t4_reward": 0.912,
+      "t4_stderr": 0.088,
+      "t4_cost_usd": 2.0414,
+      "t4_tokens": 662262,
+      "t4_time_s": 388.2,
+      "t4_delta_vs_our_baseline": 0.0987
     },
     {
       "task": "platform-006-version-tag-not-a-ref",
@@ -853,7 +982,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.4775,
+      "t4_tokens": 145933,
+      "t4_time_s": 348.3,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-007-directory-path-fetch",
@@ -889,7 +1024,13 @@
       "t2_eval_s": 1676.6,
       "t2_opt_cost_usd": 6.4764,
       "t2_opt_tokens": 83393,
-      "t2_opt_s": 1166.2
+      "t2_opt_s": 1166.2,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.4527,
+      "t4_tokens": 142162,
+      "t4_time_s": 348.1,
+      "t4_delta_vs_our_baseline": 0.2
     },
     {
       "task": "platform-008-log-does-not-say",
@@ -925,7 +1066,13 @@
       "t2_eval_s": 4164.0,
       "t2_opt_cost_usd": 12.7929,
       "t2_opt_tokens": 115485,
-      "t2_opt_s": 1765.7
+      "t2_opt_s": 1765.7,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.5115,
+      "t4_tokens": 155588,
+      "t4_time_s": 846.2,
+      "t4_delta_vs_our_baseline": 0.0667
     },
     {
       "task": "platform-009-catalog-item-no-config",
@@ -961,7 +1108,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 0.825,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.5074,
+      "t4_tokens": 157064,
+      "t4_time_s": 657.1,
+      "t4_delta_vs_our_baseline": -0.175
     },
     {
       "task": "platform-018-find-jobs-window",
@@ -997,7 +1150,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 0.028,
+      "t4_stderr": 0.028,
+      "t4_cost_usd": 2.5566,
+      "t4_tokens": 835103,
+      "t4_time_s": 398.0,
+      "t4_delta_vs_our_baseline": -0.972
     },
     {
       "task": "platform-019-anarchysubject-state",
@@ -1033,7 +1192,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 0.32,
+      "t4_stderr": 0.17,
+      "t4_cost_usd": 2.1212,
+      "t4_tokens": 690591,
+      "t4_time_s": 425.8,
+      "t4_delta_vs_our_baseline": -0.68
     },
     {
       "task": "platform-020-ocpv-vm-inventory",
@@ -1069,7 +1234,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 0.34,
+      "t4_stderr": 0.1691,
+      "t4_cost_usd": 1.3,
+      "t4_tokens": 407534,
+      "t4_time_s": 631.9,
+      "t4_delta_vs_our_baseline": -0.66
     },
     {
       "task": "platform-021-babylon-missing-cluster-trap",
@@ -1105,7 +1276,13 @@
       "t2_eval_s": null,
       "t2_opt_cost_usd": null,
       "t2_opt_tokens": null,
-      "t2_opt_s": null
+      "t2_opt_s": null,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 1.049,
+      "t4_tokens": 343097,
+      "t4_time_s": 229.7,
+      "t4_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-022-job-on-no-controller",
@@ -1141,7 +1318,13 @@
       "t2_eval_s": 1923.8,
       "t2_opt_cost_usd": 24.3737,
       "t2_opt_tokens": 313488,
-      "t2_opt_s": 3805.4
+      "t2_opt_s": 3805.4,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.4586,
+      "t4_tokens": 141393,
+      "t4_time_s": 351.1,
+      "t4_delta_vs_our_baseline": 0.3
     },
     {
       "task": "platform-023-splunk-guid-no-events",
@@ -1177,7 +1360,13 @@
       "t2_eval_s": 1886.2,
       "t2_opt_cost_usd": 13.7165,
       "t2_opt_tokens": 154264,
-      "t2_opt_s": 2502.2
+      "t2_opt_s": 2502.2,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.4824,
+      "t4_tokens": 144948,
+      "t4_time_s": 328.7,
+      "t4_delta_vs_our_baseline": 0.0667
     },
     {
       "task": "platform-031-helm-url-not-a-timeout",
@@ -1213,7 +1402,13 @@
       "t2_eval_s": 5947.5,
       "t2_opt_cost_usd": 17.4194,
       "t2_opt_tokens": 194480,
-      "t2_opt_s": 3196.9
+      "t2_opt_s": 3196.9,
+      "t4_reward": 0.8655,
+      "t4_stderr": 0.0928,
+      "t4_cost_usd": 7.2532,
+      "t4_tokens": 2356745,
+      "t4_time_s": 1028.5,
+      "t4_delta_vs_our_baseline": 0.0713
     },
     {
       "task": "platform-032-shared-secret-not-a-registry-outage",
@@ -1249,7 +1444,13 @@
       "t2_eval_s": 4916.6,
       "t2_opt_cost_usd": 28.1201,
       "t2_opt_tokens": 257540,
-      "t2_opt_s": 4149.2
+      "t2_opt_s": 4149.2,
+      "t4_reward": 0.645,
+      "t4_stderr": 0.0327,
+      "t4_cost_usd": 4.1784,
+      "t4_tokens": 1359945,
+      "t4_time_s": 1295.8,
+      "t4_delta_vs_our_baseline": -0.005
     },
     {
       "task": "platform-033-schema-change-not-the-oom",
@@ -1285,7 +1486,13 @@
       "t2_eval_s": 4820.6,
       "t2_opt_cost_usd": 34.9217,
       "t2_opt_tokens": 225258,
-      "t2_opt_s": 4050.7
+      "t2_opt_s": 4050.7,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 2.3041,
+      "t4_tokens": 736042,
+      "t4_time_s": 509.7,
+      "t4_delta_vs_our_baseline": 0.0714
     },
     {
       "task": "platform-034-rate-limit-not-an-outage",
@@ -1321,7 +1528,13 @@
       "t2_eval_s": 7460.0,
       "t2_opt_cost_usd": 19.6479,
       "t2_opt_tokens": 230712,
-      "t2_opt_s": 3118.7
+      "t2_opt_s": 3118.7,
+      "t4_reward": 1.0,
+      "t4_stderr": 0.0,
+      "t4_cost_usd": 0.7749,
+      "t4_tokens": 221262,
+      "t4_time_s": 1686.1,
+      "t4_delta_vs_our_baseline": 0.2056
     }
   ],
   "sections": {
@@ -1462,7 +1675,23 @@
             "opt_s": 64716.4
           }
         }
-      }
+      },
+      "t4_summary": [
+        {
+          "tranche": "regression",
+          "n_tasks": 30,
+          "t4_reward_mean": 0.8305,
+          "our_baseline_mean": 0.8446,
+          "delta_vs_our_baseline_mean": -0.0142
+        },
+        {
+          "tranche": "challenge",
+          "n_tasks": 4,
+          "t4_reward_mean": 0.8776,
+          "our_baseline_mean": 0.7918,
+          "delta_vs_our_baseline_mean": 0.0858
+        }
+      ]
     },
     "category": {
       "rows": [
@@ -1581,16 +1810,6 @@
           "status": "not_run",
           "scores": null,
           "note": "Design only, per docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md Sec.2. No job has been submitted for this arm."
-        },
-        "G3_merge": {
-          "status": "not_run",
-          "scores": null,
-          "note": "Design only, per docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md Sec.2. No job has been submitted for this arm. Merge strategy for the shared 8-file bundle is an open question -- see docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md Sec.4."
-        },
-        "G4_merge_joint": {
-          "status": "not_run",
-          "scores": null,
-          "note": "Design only, per docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md Sec.2. No job has been submitted for this arm. Merge strategy for the shared 8-file bundle is an open question -- see docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md Sec.4."
         }
       }
     }
@@ -1599,7 +1818,8 @@
     "source_parsec34_results": "results/v4/source_parsec34.json",
     "source_parsec34_generator": "parsec-intake_v4/scripts/build_parsec34_heatmap.py",
     "cost_time_source": "results/v4/cost_time/v4_t2_e1_results_table.md",
+    "t4_results_source": "results/v4/cost_time/v4_t4_e1_results_table.md",
     "spec": "docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md",
-    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer and the t2_* cost/time fields parsed from cost_time_source (null for the 13 tasks T2 never targeted). category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). C2-C4/G2-G4 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question."
+    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer, the t2_* cost/time fields parsed from cost_time_source (null for the 13 tasks T2 never targeted), and the t4_* reward/cost/time fields parsed from t4_results_source (present for all 34 -- T4 is a whole-ledger regression check, spec Sec.3). category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). T3/T5/C2-C4/G2 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question (resolved for T4, still open for C3/C4/T5)."
   }
 }

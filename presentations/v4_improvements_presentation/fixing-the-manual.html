@@ -180,6 +180,19 @@
   .score-move .after{ color: var(--diff-add-mark); }
   .score-move .arrow{ color: var(--ink-soft); }
 
+  .score-cap{
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--diff-rem-mark);
+    white-space: nowrap;
+  }
+  .score-cap .lock{ font-size: 0.85em; }
+  .score-cap .sep{ color: var(--ink-soft); font-weight: 400; }
+  table.roster tr.split td{ border-bottom: none; padding-bottom: 2px; }
+  table.roster tr.split + tr td{ padding-top: 2px; color: var(--ink-soft); font-size: 0.86rem; }
+
   .scrollhint{
     margin-top: 40px;
     font-family: "IBM Plex Mono", monospace;
@@ -218,6 +231,11 @@
     border-radius: 3px;
     color: var(--ink-soft);
     background: var(--paper-raised);
+  }
+  .tag.muted{
+    color: var(--diff-rem-mark);
+    border-color: var(--diff-rem-mark);
+    background: var(--diff-rem-bg);
   }
   .item h2{
     font-family: "Newsreader", serif;
@@ -420,6 +438,122 @@
     max-width: 66ch;
   }
 
+  /* ---------- Locked-ceiling slides ---------- */
+  .ceilings{
+    display: flex;
+    gap: 14px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .ceiling-card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    min-width: 190px;
+  }
+  .ceiling-card .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .ceiling-card .task{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ceiling-card .val{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--diff-rem-mark);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .ceiling-card .val .lock{ font-size: 1rem; }
+  .ceiling-card .sub{
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .tracepanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+    padding: 22px 22px 20px;
+  }
+  .trace-step{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    padding: 10px 14px;
+    border: 1px solid var(--panel-hair);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+  }
+  .trace-step .k{
+    display:block;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .trace-arrow{
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .trace-fork{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 520px){ .trace-fork{ grid-template-columns: 1fr; } }
+  .trace-branch{
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .trace-branch.blocked{
+    border: 1px dashed var(--panel-hair);
+    color: var(--ink-soft);
+    opacity: 0.7;
+  }
+  .trace-branch.blocked .k{ color: var(--diff-rem-mark); text-decoration: line-through; }
+  .trace-branch.reached{
+    border: 1px solid var(--accent);
+    background: rgba(224,169,73,0.08);
+    color: var(--panel-ink);
+  }
+  .trace-branch.reached .k{ color: var(--accent); }
+  .trace-branch .k{
+    display:block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .diff-note.stark{
+    border-top: 1px dashed var(--panel-hair);
+    font-style: italic;
+  }
+
   /* ---------- Nav ---------- */
   .navdots{
     position: fixed;
@@ -463,19 +597,21 @@
     <div class="cover">
       <p class="eyebrow">Diagnostic report</p>
       <h1>Fixing the manual</h1>
-      <p class="lede">Four tasks jumped to a perfect score after a single change to the written instructions the agent follows &mdash; not a smarter model, not a new tool. In every case, <strong>the manual was telling the agent the wrong thing</strong>, and once it stopped, the agent got it right. Every claim on the following pages is backed by the actual harbor trial that produced it &mdash; the real transcript, the real reward.</p>
+      <p class="lede">Five phenomena, five different shapes of the same audit. Four tasks jumped to a perfect score after a single change to the written instructions the agent follows &mdash; not a smarter model, not a new tool. In every one of those, <strong>the manual was telling the agent the wrong thing</strong>, and once it stopped, the agent got it right. The fifth breaks that pattern on purpose: two tasks that stayed capped no matter what the manual said, because <strong>a bug in the routing code</strong> never let the right specialist take the question. Every claim on the following pages is backed by the actual harbor trial that produced it &mdash; the real transcript, the real reward, for all five.</p>
       <table class="roster">
         <thead>
-          <tr><th>Fix</th><th>Task</th><th>Score</th></tr>
+          <tr><th>Item</th><th>Task</th><th>Score</th></tr>
         </thead>
         <tbody>
           <tr><td>01</td><td class="task">A bare ID isn&rsquo;t a failed message</td><td><span class="score-move"><span class="before">20%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
           <tr><td>02</td><td class="task">The fetch tool doesn&rsquo;t read folders</td><td><span class="score-move"><span class="before">47%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
           <tr><td>03</td><td class="task">Four rules, one contradiction</td><td><span class="score-move"><span class="before">79%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
           <tr><td>04</td><td class="task">Long doesn&rsquo;t mean timeout</td><td><span class="score-move"><span class="before">80%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr class="split"><td>05</td><td class="task">The router decided before anyone else got a vote &mdash; icinga&#8209;010</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 49.5%</span></td></tr>
+          <tr><td></td><td class="task">&mdash; and icinga&#8209;013, same bug</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 64.0%</span></td></tr>
         </tbody>
       </table>
-      <p class="scrollhint"><span class="chev">&darr;</span> scroll or use the dots to step through each case &mdash; the fix, then the actual trial that proves it</p>
+      <p class="scrollhint"><span class="chev">&darr;</span> scroll or use the dots to step through each case &mdash; the fix (or the bug), then the actual trial that proves it</p>
     </div>
   </section>
 
@@ -875,10 +1011,109 @@
     </div>
   </section>
 
+  <section class="slide" id="s4b">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; 1/2</span><span class="n">09</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">classify_fast() &mdash; routing code</span><span class="tag muted">orchestrator.md &mdash; never loaded</span><span class="tag muted">icinga_agent.md &mdash; never loaded</span></div>
+        <h2>The router picked a specialist before anyone else got a vote</h2>
+        <p class="taskname">icinga-010-stuck-anarchysubjects &nbsp;+&nbsp; icinga-013-acknowledged-not-an-issue</p>
+
+        <div class="ceilings">
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;010&#8209;stuck&#8209;anarchysubjects</div>
+            <div class="task">final (held&#8209;out) score</div>
+            <div class="val"><span class="lock">&#128274;</span>49.5%</div>
+            <div class="sub">Ceiling, not a fluke: 0.3&times;0.25&nbsp;+&nbsp;0.7&times;(3/5)&nbsp;=&nbsp;0.495, zero variance across trials</div>
+          </div>
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;013&#8209;acknowledged&#8209;not&#8209;an&#8209;issue</div>
+            <div class="task">final (held&#8209;out) score</div>
+            <div class="val"><span class="lock">&#128274;</span>64.0%</div>
+            <div class="sub">Reward 0.64 &mdash; the answer scored 4 of 5 points possible</div>
+          </div>
+        </div>
+
+        <div class="request">
+          <div class="cap">The two literal triggers, quoted verbatim</div>
+          <p>icinga&#8209;010&rsquo;s instruction: &ldquo;&hellip;on host <code>babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1</code>.&rdquo; icinga&#8209;013&rsquo;s forwarded alert: service &ldquo;<code>Babylon Schema YAML Diff</code>.&rdquo;</p>
+          <div class="note">Both strings just happen to contain &ldquo;babylon&rdquo; &mdash; every actual question underneath is a plain Icinga lookup (get_services / get_comments / get_downtimes). That one substring is the entire trigger for the misroute.</div>
+        </div>
+
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Before the coordinator or the right specialist ever sees the question, a separate piece of code called <code>classify_fast()</code> scans the raw text for a keyword and, on a match, routes straight to a specialist file &mdash; here, the Babylon specialist, not the Icinga one. Both alerts trip it for the same reason: the word &ldquo;babylon&rdquo; appears somewhere in the text, even though the question itself is entirely about Icinga.</p>
+        </div>
+      </div>
+      <div>
+        <div class="tracepanel">
+          <div class="trace-step"><span class="k">Incoming text</span>&ldquo;&hellip;host babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1&hellip;&rdquo; &nbsp;/&nbsp; &ldquo;&hellip;Babylon Schema YAML Diff&hellip;&rdquo;</div>
+          <div class="trace-arrow">&darr;</div>
+          <div class="trace-step"><span class="k">classify_fast() &mdash; keyword match</span>regex <code>\bbabylon\b</code> fires on the raw alert text</div>
+          <div class="trace-arrow">&darr; forks here, before the coordinator ever runs &darr;</div>
+          <div class="trace-fork">
+            <div class="trace-branch blocked">
+              <span class="k">Never reached</span>orchestrator.md<br>icinga_agent.md<br><em>query_icinga tool</em>
+            </div>
+            <div class="trace-branch reached">
+              <span class="k">Reached instead</span>babylon_agent.md<br>&mdash; the wrong specialist for an Icinga question
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4c">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; the actual trials</span><span class="n">10</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>Nothing here is a diff, because nothing here got fixed</h2>
+        <p class="taskname">both tasks, the optimizer&rsquo;s own best (winning) candidate</p>
+        <div class="block">
+          <h3>Same lockout, two different shapes</h3>
+          <p>icinga&#8209;010&rsquo;s trial still tries &mdash; it calls the wrong specialist&rsquo;s tools three separate times looking for a way in. icinga&#8209;013&rsquo;s trial does not call anything at all: the model states outright that it has no Icinga tool.</p>
+        </div>
+        <div class="block">
+          <h3>Both reports reached the same conclusion</h3>
+          <p>Further prompt tuning on these two tasks is, in icinga&#8209;013&rsquo;s own words, &ldquo;close to worthless&rdquo; until <code>classify_fast()</code> itself changes. No rewrite of a specialist file reaches a bug that runs before any specialist file is chosen.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;010 &middot; seed, val<span class="reward bad">reward 0.495</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_babylon_catalog(action=list_anarchy_subjects, cluster=east)</div>
+            <div class="row ctx"><span class="mark">&larr;</span>{"cluster":"east","subjects":[],"count":0}</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path="monitoring/babylon/check_stuck_subjects.py")</div>
+            <div class="row ctx"><span class="mark">&larr;</span>STUCK_MINUTES=30, WARN_COUNT=3, CRIT_COUNT=5</div>
+            <div class="row call"><span class="mark">&rarr;</span>query_splunk(search_raw=&hellip;) &times;3, all 0 results</div>
+            <div class="row rem"><span class="mark">&#10007;</span>query_icinga &mdash; never called, in any form</div>
+          </div>
+          <div class="diff-note">reward-detail.json: 3 unmatched_expected <code>query_icinga</code> calls (get_services/get_comments/get_downtimes) &middot; required_missed &ldquo;no&#8209;suppression&rdquo; &mdash; comments and downtimes were both seeded empty, but nothing ever asked.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;013 &middot; winning candidate, test<span class="reward bad">reward 0.64</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>0 tool calls made &mdash; the entire trial is one message</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;I have no Icinga monitoring tool in this agent,</div>
+            <div class="row rem"><span class="mark">&#10007;</span>so the following is read from the alert text&hellip;&rdquo;</div>
+            <div class="row add"><span class="mark">&#10003;</span>Correctly reasons ACKNOWLEDGED = already triaged,</div>
+            <div class="row add"><span class="mark">&#10003;</span>GitHub 401 = an auth failure, not a schema break</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;no ticket&hellip; I cannot read [the comment]&rdquo;</div>
+          </div>
+          <div class="diff-note">reward-detail.json: tool_calls 0.0/0.2 (all 3 <code>query_icinga</code> calls unmatched_expected) &middot; answer 0.8 &mdash; 3 of 4 facts reasoned correctly with no tool at all; the 4th, ticket <code>RHDPSUP-8812</code>, exists only in a comment this agent could never fetch.</div>
+        </div>
+        <div class="diff-note stark" style="margin-top:4px; border-top:1px dashed var(--hair); color: var(--ink-soft); padding-top:16px;">Both panels above are the optimizer&rsquo;s <em>best</em> trial for each task &mdash; not a bad rollout. The ceiling is the router, not the writing: recoverable only by changing <code>classify_fast()</code>, not by rewriting either specialist&rsquo;s file.</div>
+      </div>
+    </div>
+  </section>
+
   <section class="slide" id="s5">
-    <div class="folio"><span>Closing</span><span class="n">x</span></div>
+    <div class="folio"><span>Closing</span><span class="n">xii</span></div>
     <div class="closing">
-      <h2>None of these four is a case of the agent getting <span class="attn">smarter</span>.<br>Every one is the manual either <span class="attn">contradicting itself</span>, describing a tool <span class="attn">wrong</span>, or teaching a shortcut that happened to be <span class="attn">wrong</span>. Once the manual said the true thing, the agent followed it.</h2>
+      <h2>None of the four fixes above is a case of the agent getting <span class="attn">smarter</span>.<br>Every one is the manual either <span class="attn">contradicting itself</span>, describing a tool <span class="attn">wrong</span>, or teaching a shortcut that happened to be <span class="attn">wrong</span>. Once the manual said the true thing, the agent followed it.</h2>
       <div class="recap">
         <div class="card"><div class="k">01 &middot; cloud-024</div><div class="move"><span class="before">20%</span> &rarr; <span class="after">100%</span></div></div>
         <div class="card"><div class="k">02 &middot; platform-007</div><div class="move"><span class="before">47%</span> &rarr; <span class="after">100%</span></div></div>
@@ -886,6 +1121,7 @@
         <div class="card"><div class="k">04 &middot; platform-008</div><div class="move"><span class="before">80%</span> &rarr; <span class="after">100%</span></div></div>
       </div>
       <p class="evidence-note">Every score on this page is a real per-trial harbor result &mdash; agent.jsonl transcripts and reward-detail.json verdicts, seed vs. best candidate, five trials per split. The 100% figures are the sealed test split; since that split overlaps the data the optimizer selected against, read it as a fit metric, not a blind holdout &mdash; the val-split trials shown on each &ldquo;actual run&rdquo; slide are the closer thing to one.</p>
+      <p class="diff-note stark" style="margin-top:22px; border-top:1px dashed var(--hair); padding-top:16px; color: var(--ink-soft);">Two more &mdash; icinga&#8209;010 and icinga&#8209;013 &mdash; sit outside that pattern, and outside the recap above. There, the manual was never the obstacle: a routing bug in the code, <code>classify_fast()</code>, picks the wrong specialist before any manual is ever read, and the real trials on the previous two pages show it happening. That one needs an engineer, not an edit.</p>
     </div>
   </section>
 
