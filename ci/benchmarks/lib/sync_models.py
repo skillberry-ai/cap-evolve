@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Sync the benchmark model pickers to what the gateway key can actually serve.
 
-  sync_models.py --models <models.json> [--check|--write] [--repo <root>]
+  sync_models.py --models PREFIX=PATH [--models PREFIX=PATH ...] [--check|--write] [--repo <root>]
 
-``models.json`` is the raw body of ``GET $ANTHROPIC_BASE_URL/models``.
+Each ``PATH`` is the raw body of a ``GET <that provider's base>/models`` call, repeatable
+once per polled gateway (e.g. ``--models ibm-ete-int=/tmp/a.json --models ibm-ete=/tmp/b.json``).
 
 WHY THIS EXISTS
 ---------------

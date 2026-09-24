@@ -151,8 +151,9 @@ Runs come in several **tiers** (a first-class dimension in the workflow, same wo
     (public, unlicensed — see `ci/benchmarks/rfe-creator/utils/fetch_data.sh`) and installs
     `agent-eval-harness` editable into the shared venv. Neither is vendored, so an air-gapped
     runner needs its own mirror.
-  - Same gateway/entitlement preflight as every other bench (`ANTHROPIC_BASE_URL` /
-    `ANTHROPIC_AUTH_TOKEN`); no extra credentials (the eval runs `--dry-run`, no Jira).
+  - Same gateway/entitlement preflight as every other bench (whichever provider's secret pair
+    the selected model's prefix resolves to — see "Populate the full tier" above); no extra
+    credentials (the eval runs `--dry-run`, no Jira).
 
 The tier surfaces everywhere: PR checks read **`<tier> / <bench>`** (e.g. `smoke / tau2`,
 `full / swebench`), the report header reads **`## <Tier> suite — <bench>`**, and the history page

@@ -8,6 +8,11 @@ import pytest
 
 import sync_models as sm
 
+# Repo root, independent of cwd — pytest may be invoked from here or from the repo root
+# (the module's own real-repo test command uses the latter), and sm.WORKFLOW/sm.RUN_SUITE are
+# relative Paths meant to be joined onto a caller-supplied repo path, not read bare.
+REPO = Path(__file__).resolve().parents[3]
+
 WF = """\
 name: Benchmarks
 on:
@@ -240,7 +245,7 @@ def test_task_pins_are_warnings_not_failures(tmp_path):
 
 
 def test_parses_the_real_workflow():
-    text = sm.WORKFLOW.read_text()
+    text = (REPO / sm.WORKFLOW).read_text()
     for picker in sm.PICKERS:
         opts = sm.current_options(text, picker)
         assert opts, f"{picker} has no options in the real workflow"
@@ -248,7 +253,7 @@ def test_parses_the_real_workflow():
 
 
 def test_roundtrip_on_a_copy_of_the_real_workflow_is_byte_stable(tmp_path):
-    real = sm.WORKFLOW.read_text()
+    real = (REPO / sm.WORKFLOW).read_text()
     r = tmp_path
     (r / ".github" / "workflows").mkdir(parents=True)
     dest = r / ".github" / "workflows" / sm.WORKFLOW.name
@@ -259,7 +264,7 @@ def test_roundtrip_on_a_copy_of_the_real_workflow_is_byte_stable(tmp_path):
 
 
 def test_validate_passes_on_the_real_workflow():
-    ok, problems = sm.validate(sm.WORKFLOW.read_text(), sm.RUN_SUITE.read_text())
+    ok, problems = sm.validate((REPO / sm.WORKFLOW).read_text(), (REPO / sm.RUN_SUITE).read_text())
     assert ok, problems
 
 
