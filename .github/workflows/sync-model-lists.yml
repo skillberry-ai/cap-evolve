@@ -64,8 +64,10 @@ jobs:
     runs-on: [self-hosted, ibm-vpc]
     timeout-minutes: 15
     env:
-      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-      ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+      IBM_ETE_INT_API_BASE: ${{ secrets.IBM_ETE_INT_API_BASE }}
+      IBM_ETE_INT_API_KEY: ${{ secrets.IBM_ETE_INT_API_KEY }}
+      IBM_ETE_API_BASE: ${{ secrets.IBM_ETE_API_BASE }}
+      IBM_ETE_API_KEY: ${{ secrets.IBM_ETE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,50 +75,62 @@ jobs:
           token: ${{ secrets.SKILLBERRY_BOT_TOKEN }}
           persist-credentials: true
 
-      - name: Fetch the served model list
+      - name: Fetch the served model lists
+        id: fetch
         run: |
-          set -euo pipefail
-          : "${ANTHROPIC_BASE_URL:?}" ; : "${ANTHROPIC_AUTH_TOKEN:?}"
-          # Retry, and capture curl's own failure instead of letting `set -e` abort here.
-          # Run 31307599376 died with a bare "exit code 28" (curl timeout) precisely because an
-          # unguarded curl under `set -e` skips straight past the HTTP-code handling below, so
-          # the useful diagnostics never printed. The gateway is also slow on a cold DNS/TLS
-          # path — measured 12s for the first call from this runner, then sub-second.
-          code=000
-          for attempt in 1 2 3; do
-            code=$(curl -sS -m 90 -o /tmp/served_models.json -w '%{http_code}' \
-              "$ANTHROPIC_BASE_URL/models" \
-              -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" 2>/tmp/curl.err) || code="curl-exit-$?"
-            [ "$code" = "200" ] && break
-            echo "attempt $attempt: $code $(head -c 120 /tmp/curl.err 2>/dev/null)"
-            sleep $((attempt * 10))
-          done
-          if [ "$code" != "200" ]; then
-            echo "::error:: gateway /models unreachable after 3 attempts (last: $code)"
-            echo "::error:: nothing was changed. This is transient far more often than not —"
-            echo "::error:: re-run the workflow. The scheduled pass will also retry on its own."
-            head -c 300 /tmp/served_models.json 2>/dev/null || true
-            head -c 200 /tmp/curl.err 2>/dev/null || true
+          set -uo pipefail  # not -e: one provider's failure must not abort the whole step
+          fetch_one() {
+            local label="$1" base="$2" key="$3" out="$4"
+            if [ -z "$base" ] || [ -z "$key" ]; then
+              echo "$label: no base/key set — skipping"
+              return 1
+            fi
+            local code=000
+            for attempt in 1 2 3; do
+              code=$(curl -sS -m 90 -o "$out" -w '%{http_code}' \
+                "$base/models" -H "Authorization: Bearer $key" 2>"/tmp/curl.$label.err") || code="curl-error"
+              [ "$code" = "200" ] && break
+              echo "$label attempt $attempt: HTTP $code $(head -c 160 "/tmp/curl.$label.err" 2>/dev/null)"
+              sleep $((attempt * 10))
+            done
+            if [ "$code" != "200" ]; then
+              echo "::warning:: $label /models unreachable after 3 attempts (last: $code) — its dropdown options are left as-is"
+              return 1
+            fi
+            local n
+            n=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('data', [])))" "$out")
+            echo "$label serves $n model(s)"
+            if [ "$n" -le 0 ]; then
+              echo "::warning:: $label returned an empty model list — its dropdown options are left as-is"
+              return 1
+            fi
+            return 0
+          }
+          MODELS_ARGS=""
+          if fetch_one ibm-ete-int "$IBM_ETE_INT_API_BASE" "$IBM_ETE_INT_API_KEY" /tmp/ete_int_models.json; then
+            MODELS_ARGS="$MODELS_ARGS --models ibm-ete-int=/tmp/ete_int_models.json"
+          fi
+          if fetch_one ibm-ete "$IBM_ETE_API_BASE" "$IBM_ETE_API_KEY" /tmp/ete_models.json; then
+            MODELS_ARGS="$MODELS_ARGS --models ibm-ete=/tmp/ete_models.json"
+          fi
+          if [ -z "$MODELS_ARGS" ]; then
+            echo "::error:: every provider poll failed — nothing to sync"
             exit 1
           fi
-          n=$(python3 -c "import json;print(len(json.load(open('/tmp/served_models.json'))['data']))")
-          echo "gateway serves $n model(s)"
-          [ "$n" -gt 0 ] || { echo "::error:: empty model list — refusing to blank the pickers"; exit 1; }
+          echo "MODELS_ARGS=$MODELS_ARGS" >> "$GITHUB_ENV"
 
       - name: Sync
         id: sync
         run: |
           set +e
-          args=(--models /tmp/served_models.json --repo .)
+          args=($MODELS_ARGS --repo .)
           if [ "${{ inputs.apply }}" = "false" ]; then args+=(--check); else args+=(--write); fi
           [ -n "${{ inputs.agent_default }}" ]     && args+=(--agent-default "${{ inputs.agent_default }}")
           [ -n "${{ inputs.optimizer_default }}" ] && args+=(--optimizer-default "${{ inputs.optimizer_default }}")
           python3 ci/benchmarks/lib/sync_models.py "${args[@]}" | tee /tmp/sync.log
           rc=${PIPESTATUS[0]}
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
-          # 0 = in sync / applied, 1 = drift (check mode only), 2 = needs a human decision.
-          [ "$rc" = "2" ] && exit 2
-          exit 0
+          exit "$rc"
 
       - name: Validate the generated workflow
         # A default outside its own options is an invalid workflow; sync_models refuses to
@@ -144,8 +158,11 @@ jobs:
           {
             echo "ci(benchmarks): sync model pickers to the gateway key"
             echo
-            echo "Regenerated by .github/workflows/sync-model-lists.yml from the live"
-            echo "GET \$ANTHROPIC_BASE_URL/models for the key currently in ANTHROPIC_AUTH_TOKEN."
+            echo "Regenerated by .github/workflows/sync-model-lists.yml from each polled gateway's live"
+            echo "GET <base>/models (ibm-ete-int always; ibm-ete when its catalog is reachable and"
+            echo "non-empty). ibm-rits stays hand-curated — it is never polled, since lite-rits's own"
+            echo "/v1/models is always empty by design."
+            echo
             echo "A stale picker means a dispatch can select a model the key cannot call, which"
             echo "fails every rollout and reports a 0.000 that was never measured."
             echo
