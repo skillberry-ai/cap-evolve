@@ -284,45 +284,73 @@ echo "claude-code optimizer: $(command -v claude) ($(claude --version 2>/dev/nul
 # would be a guaranteed false failure, not a weaker check — skip straight to a completion
 # probe, which is the only signal lite-rits can actually give.
 if command -v curl >/dev/null; then
-  PF_AGENT="${AGENT_MODEL:-aws/gpt-oss-120b}"
-  PF_OPTIMIZER="${OPTIMIZER_MODEL:-claude-opus-4-8}"
+  PF_AGENT="${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}"
+  PF_OPTIMIZER="${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}"
   # shellcheck source=ci/benchmarks/lib/resolve_provider.sh
   . "$LIB_DIR/resolve_provider.sh"
 
-  case "$PF_AGENT" in
-    rits/*) PF_AGENT_IS_RITS=1 ;;
-    *)      PF_AGENT_IS_RITS=0 ;;
-  esac
-  case "$PF_OPTIMIZER" in
-    rits/*) PF_OPTIMIZER_IS_RITS=1 ;;
-    *)      PF_OPTIMIZER_IS_RITS=0 ;;
-  esac
+  classify_provider() {
+    case "$1" in
+      ibm-ete-int/*) echo "ibm-ete-int" ;;
+      ibm-ete/*)     echo "ibm-ete" ;;
+      ibm-rits/*)    echo "ibm-rits" ;;
+      *) echo "ci_setup: '$1' has no recognized provider prefix (expected ibm-ete-int/, ibm-ete/, or ibm-rits/)" >&2; exit 1 ;;
+    esac
+  }
+  PF_AGENT_PROVIDER="$(classify_provider "$PF_AGENT")"
+  PF_OPTIMIZER_PROVIDER="$(classify_provider "$PF_OPTIMIZER")"
 
   # 1. ENTITLEMENT — is each SELECTED *gateway* model served to this key at all? Only
-  # gateway-routed models are checkable this way; a "rits/*" model has no /models listing to
-  # confirm against, so it is simply not passed to --require (its absence from the gateway's
-  # list is expected, not a fault).
-  if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ] \
-      && { [ "$PF_AGENT_IS_RITS" = 0 ] || [ "$PF_OPTIMIZER_IS_RITS" = 0 ]; }; then
+  # gateway-routed models are checkable this way; an "ibm-rits/*" model has no /models listing
+  # to confirm against, so it is simply skipped (its absence from a gateway's list is expected,
+  # not a fault).
+  # NB: check_models.py takes a pre-fetched /models JSON file plus --require ROLE=MODEL_ID
+  # pairs (see check_models.py's own docstring); it has no --base/--key mode. check_entitlement
+  # below still does its own curl fetch per provider, preserving the exact behavior the old
+  # single-gateway block had, just parameterized over which provider's base/key to hit and
+  # which role(s) actually resolved to it.
+  check_entitlement() {
+    local provider="$1" base="$2" key="$3"
+    shift 3
+    local require_args=()
+    for spec in "$@"; do require_args+=(--require "$spec"); done
+    echo "::group::Entitlement check — $provider"
     # /models is an `llm_api_routes` call. The richer /model/info and /key/info are NOT: these
     # virtual keys are route-scoped and answer both with 403 "not allowed to call this route",
     # which is also the real reason the old preflight logged a mystery HTTP 403.
-    models=/tmp/capevolve_models.$$.json
+    local models="/tmp/capevolve_models_${provider}.$$.json"
+    local mcode
     mcode="$(curl -sS -m 30 -o "$models" -w '%{http_code}' \
-      "$ANTHROPIC_BASE_URL/models" \
-      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" 2>/dev/null || echo 000)"
+      "$base/models" \
+      -H "Authorization: Bearer $key" 2>/dev/null || echo 000)"
     if [ "$mcode" = "200" ]; then
-      require_args=()
-      [ "$PF_AGENT_IS_RITS" = 0 ] && require_args+=(--require "agent=$PF_AGENT")
-      [ "$PF_OPTIMIZER_IS_RITS" = 0 ] && require_args+=(--require "optimizer=$PF_OPTIMIZER")
       if ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" "${require_args[@]}"; then
-        rm -f "$models"; exit 1
+        rm -f "$models"; echo "::endgroup::"; exit 1
       fi
     else
-      echo "::warning:: gateway /models returned HTTP $mcode — cannot verify model entitlement"
+      echo "::warning:: $provider /models returned HTTP $mcode — cannot verify model entitlement"
     fi
     rm -f "$models"
-  fi
+    echo "::endgroup::"
+  }
+
+  # Dedupe first (agent and optimizer may share a provider) so each provider's
+  # ::group::/::endgroup:: block is emitted exactly once and stays contiguous — piping the
+  # loop's output through `sort -u` instead would reorder lines WITHIN a block and corrupt
+  # the group markers, so dedupe the provider list, not the output.
+  providers_seen=""
+  for provider in "$PF_AGENT_PROVIDER" "$PF_OPTIMIZER_PROVIDER"; do
+    case " $providers_seen " in *" $provider "*) continue ;; esac
+    providers_seen="$providers_seen $provider"
+    require_args=()
+    [ "$PF_AGENT_PROVIDER" = "$provider" ] && require_args+=("agent=$PF_AGENT")
+    [ "$PF_OPTIMIZER_PROVIDER" = "$provider" ] && require_args+=("optimizer=$PF_OPTIMIZER")
+    case "$provider" in
+      ibm-ete-int) check_entitlement ibm-ete-int "$IBM_ETE_INT_API_BASE" "$IBM_ETE_INT_API_KEY" "${require_args[@]}" ;;
+      ibm-ete)     check_entitlement ibm-ete     "$IBM_ETE_API_BASE"     "$IBM_ETE_API_KEY"     "${require_args[@]}" ;;
+      ibm-rits) : ;;  # lite-rits's /v1/models is always empty by design — never entitlement-listed
+    esac
+  done
 
   # 2. BUDGET/ENTITLEMENT at call time — one real completion per SELECTED model, against
   # whichever provider actually serves it. Listing a gateway model is necessary but not
@@ -333,23 +361,29 @@ if command -v curl >/dev/null; then
   # would be a false alarm.
   probe_model() {
     local role="$1" model="$2"
-    # Graceful skip, not a hard abort: resolve_provider's non-"rits/*" branch does a hard
-    # `:?` on ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN, which would otherwise kill this WHOLE
-    # script (set -uo pipefail; no outer `if` catches a `:?` failure) for a run that never
-    # asked for the gateway at all — e.g. a local/laptop run of a RITS-only dispatch, or one
-    # with the other role on RITS and this role's gateway secrets simply not exported. Before
-    # this check existed, the only gate was `[ -n "${ANTHROPIC_BASE_URL:-}" ] && ... &&
-    # command -v curl` around the ENTIRE preflight block above; narrowing that to
-    # `command -v curl` (so RITS-only dispatches still get probed) reintroduced exactly the
-    # failure mode it used to prevent for the non-RITS case.
+    # Graceful skip, not a hard abort: resolve_provider's ibm-ete-int/ibm-ete branches each do a
+    # hard `:?` on their own IBM_<NAME>_API_BASE/IBM_<NAME>_API_KEY, which would otherwise kill
+    # this WHOLE script (set -uo pipefail; no outer `if` catches a `:?` failure) for a run that
+    # never asked for that gateway at all — e.g. a local/laptop run of an ibm-rits-only
+    # dispatch, or one with the other role on a different provider and this role's gateway
+    # secrets simply not exported. Before this check existed, the only gate was
+    # `[ -n "${ANTHROPIC_BASE_URL:-}" ] && ... && command -v curl` around the ENTIRE preflight
+    # block above; narrowing that to `command -v curl` (so RITS-only dispatches still get
+    # probed) reintroduced exactly the failure mode it used to prevent for the gateway case.
     case "$model" in
-      rits/*) : ;;
-      *)
-        if [ -z "${ANTHROPIC_BASE_URL:-}" ] || [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-          echo "::warning:: ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN not set — skipping $role model preflight probe for '$model'"
+      ibm-ete-int/*)
+        if [ -z "${IBM_ETE_INT_API_BASE:-}" ] || [ -z "${IBM_ETE_INT_API_KEY:-}" ]; then
+          echo "::warning:: IBM_ETE_INT_API_BASE/IBM_ETE_INT_API_KEY not set — skipping $role model preflight probe for '$model'"
           return 0
         fi
         ;;
+      ibm-ete/*)
+        if [ -z "${IBM_ETE_API_BASE:-}" ] || [ -z "${IBM_ETE_API_KEY:-}" ]; then
+          echo "::warning:: IBM_ETE_API_BASE/IBM_ETE_API_KEY not set — skipping $role model preflight probe for '$model'"
+          return 0
+        fi
+        ;;
+      ibm-rits/*) : ;;
     esac
     resolve_provider "$model"
     local probe="/tmp/capevolve_budget_probe.$$_${role}.json"
@@ -370,7 +404,7 @@ if command -v curl >/dev/null; then
       echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
       head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
     fi
-    if [ "$code" != "200" ] && [ "$RESOLVED_API_BASE" = "${RITS_API_BASE:-}" ]; then
+    if [ "$code" != "200" ] && [ "$RESOLVED_PROVIDER" = "ibm-rits" ]; then
       echo "::error:: RITS probe for $role model '$model' failed (HTTP $code) against $RESOLVED_API_BASE:"
       echo "::error:: lite-rits may be down, or this model id is not in its scraped rits.json."
       head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
