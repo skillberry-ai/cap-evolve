@@ -55,7 +55,7 @@ on:
         type: string
         default: ""
       trials:
-        description: "Trials per task per eval. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value only to override deliberately — on a 5-task binary tier, 1 trial cannot separate signal from noise, which is why blank does not mean 1."
+        description: "Trials per task per eval. LEAVE BLANK for the tier default: smoke 3, the whole-set tiers (full, full_verified) 1, everything else 10. The whole-set tiers default to 1 because at 10 they plan more rollouts than the job's 24h timeout can absorb, and because task count dominates the noise there anyway — grow.py buys extra trials per candidate when one looks promising. Set a value only to override deliberately: on a 5-task binary tier 1 trial cannot separate signal from noise, which is why blank does not mean 1 everywhere."
         type: string
         default: ""
       agent_model:
@@ -369,7 +369,14 @@ jobs:
       # default is "" rather than "10" precisely so the two cases are distinguishable — with a
       # non-empty default there is no way to tell "user asked for 10" from "user asked for
       # nothing", and smoke would silently get 10 instead of its intended 3.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || '10' }}
+      # Tier-sized, because a blank dispatch must produce a run the job can FINISH. The
+      # whole-set tiers get 1: at 10 they plan 22,790 (full) and 10,000 (full_verified)
+      # rollouts, which is ~167h and ~73h at the measured rate against timeout-minutes: 1440
+      # — and both tiers' READMEs already quote their cost at trials=1. Task count, not
+      # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
+      # and `grow.py` exists to buy replication only where a candidate looks promising.
+      # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
+      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);

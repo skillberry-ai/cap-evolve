@@ -8,6 +8,19 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **A blank-`trials` dispatch of a whole-set tier was guaranteed to be killed by the job
+  timeout.** `NUM_TRIALS` defaulted to 10 on every non-smoke tier, which plans 22,790 rollouts
+  for `full` (91 val / 639 test) and 10,000 for `full_verified` (40 / 280) — roughly 167h and
+  73h at the measured 2.28 rollouts/min, against `timeout-minutes: 1440`. It also contradicted
+  the cost model both tiers' READMEs publish, which quote `trials=1` (2,279 and 1,000). The
+  whole-set tiers now default to **1 trial**; smoke keeps 3, `pilot` keeps 10, and an explicit
+  `trials` still wins on every tier. This is not a loss of rigour — task count, not trials,
+  dominates the noise (val SE 0.158 at 10 tasks x 3 trials vs ~0.079 projected at 40 x 1), and
+  `grow.py` exists to buy replication only for candidates that look promising. `run_suite.sh`
+  now also prints the planned rollout count next to the split it was computed from, so an
+  over-budget dispatch is visible in the first seconds of the log instead of at hour 24.
+
 ### Added
 - **`full_verified`: a tier on a benchmark's verified/curated re-release — for SpreadsheetBench,
   the verified 400-task set that recent work actually reports on.** The tier name is deliberately

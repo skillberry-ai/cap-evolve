@@ -848,6 +848,24 @@ print(json.dumps({"train":ids,"val":ids,"test":ids}))
 PY
 fi
 
+# PLAN. Print what this dispatch will actually spend BEFORE it spends it. An over-budget
+# `trials` x `iterations` combination is otherwise invisible until the job is killed at
+# `timeout-minutes`, hours in and with nothing to show — which is exactly how a blank-trials
+# whole-set dispatch used to fail. Same cost model both tier READMEs publish:
+# `algorithm_focus: all` never evaluates the train split, and `finalize` scores test TWICE
+# (champion + baseline). Advisory only: it reports, it does not refuse — a deliberate long
+# run is legitimate, an accidental one is not.
+"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-1}" "${ITER:-1}" >&2 <<'PLAN'
+import json, sys
+split = json.load(open(sys.argv[1]))
+trials, iters = int(sys.argv[2]), int(sys.argv[3])
+val, test = len(split["val"]), len(split["test"])
+per_val = val * trials
+total = per_val + iters * per_val + 2 * test * trials
+print(f">>> plan: {total} rollouts — baseline {per_val} + {iters} x {per_val} val "
+      f"+ finalize 2 x {test * trials} "
+      f"(val={val} test={test} trials={trials} iterations={iters})")
+PLAN
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability
