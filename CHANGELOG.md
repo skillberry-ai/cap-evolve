@@ -8,6 +8,20 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Changed
+- **`benchmark-history`'s `benchmarks.json`/`meta.json` are no longer committed to git — they're
+  rendered fresh from `records/` at GitHub Pages deploy time instead.** That aggregate over every
+  run ever recorded was being rewritten in full and committed on every completed run/leg
+  (~126-129 times), making it responsible for 69.6 of the branch's 73.7 MiB compressed size — an
+  O(n²) cost in total run count, versus `records/`'s O(n). `.github/workflows/pages.yml` now
+  clones `benchmark-history` and runs `ci/benchmarks/lib/record.py aggregate` against its
+  `records/` on every deploy, the same deploy-time-render pattern already used for
+  `skillsbench-history`. `site/benchmarks.js` fetches the result same-origin instead of via
+  `raw.githubusercontent.com`. **A push to `benchmark-history` is no longer enough to update the
+  live page on its own** — a manual publish (see `ci/benchmarks/PUBLISHING.md`) now also needs a
+  `pages.yml` `workflow_dispatch` to render it. The live-watch feed and per-run frozen UI
+  snapshots read unrelated data paths and are unaffected. See #532/#533.
+
 ### Added
 - **`full_verified`: a tier on a benchmark's verified/curated re-release — for SpreadsheetBench,
   the verified 400-task set that recent work actually reports on.** The tier name is deliberately

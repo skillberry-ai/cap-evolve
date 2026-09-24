@@ -44,6 +44,11 @@ there — an interrupted run you resumed by hand, or one driven directly on the 
 scripts CI does; disclose hand-finished runs in the record's `source` field rather than passing
 them off as clean CI runs.
 
+Previewing `site/benchmarks.html` by opening the file directly (no local server) now always shows
+the error state: `benchmarks.json`/`meta.json` are rendered by the Pages deploy, not committed
+anywhere in the repo, so the default fetch has nothing to load outside a full Pages build. Add
+`?fixture` to the URL to load the committed `site/benchmarks.fixture.json` sample data instead.
+
 ## Quality bar for skills
 - SKILL.md body under ~500 lines (it is the primary doc); references one level deep with a TOC if long, and only when filled.
 - Check it yourself with `python skills/_registry/lint_skills.py skills` — the same

@@ -85,8 +85,8 @@ jobs:
       - name: Fold in benchmark-history UI snapshots + render benchmarks.json
         run: |
           empty_feed() {
-            echo "[]" > site/benchmarks.json
-            echo '{"count":0,"runs":0,"updated":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' > site/meta.json
+            python3 -c "import json; open('site/benchmarks.json', 'w').write(json.dumps([], indent=2))"
+            python3 -c "import json; from datetime import datetime, timezone; open('site/meta.json', 'w').write(json.dumps({'count': 0, 'runs': 0, 'updated': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}, indent=2))"
           }
           rm -rf _bench_history
           if ! git clone --depth 1 --branch benchmark-history \
