@@ -6,13 +6,17 @@
 **Recipes:** [`../../recipes/v4/`](../../recipes/v4/)
 **Artifacts:** [`../../artifacts/v4/`](../../artifacts/v4/)
 **Per-task reports:** [`../../reports/task-by-task/v4/`](../../reports/task-by-task/v4/) (`<task>.md`, 34 files)
-**Cost/time source:** [`cost_time/`](cost_time/) (`v4_t2_e1_results_table.md`/`.xlsx`)
+**Cost/time source:** [`cost_time/`](cost_time/) (`v4_t2_e1_results_table.md`/`.xlsx`, `v4_t4_e1_results_table.md`)
 
 ## The one-line result
 
 Task-by-task optimization (T2) raises the mean reward over both the JB baseline and our own
 zero-shot baseline, on both tranches — but it only ran on 21 of the 34 tasks, by design (see
-"Coverage" below), and none of the category- or global-scope arms (C2-C4, G2-G4) have been run yet.
+"Coverage" below). Statically merging those 21 optimized bundles into one shared bundle (T4) and
+re-evaluating all 34 tasks zero-shot is a mixed result: it raises the challenge-tranche mean but
+regresses 8 individual tasks, including 5 of the 13 tasks that were already perfect before the merge
+(see "T4" below) — the exact failure mode the regression check exists to catch (spec §3). T3, T5,
+and the category-/global-scope arms (C2-C4, G2) have not been run yet.
 
 ## Aggregate: T1 seed vs. T2 final
 
@@ -44,17 +48,18 @@ bundle hadn't already scored a perfect 1.0 on our own baseline run (`our_baselin
 
 All 13 skipped tasks are in the `regression` tranche (0 `challenge`) — every `challenge` task was
 T2-optimized. Since those 13 tasks were already at ceiling, there is no missing optimized content
-to merge in for them when C3/C4/G3/G4 eventually run — but those arms **must** still evaluate every
-task in their group, including these 13, specifically to catch a regression that merging other
-tasks' edits into the shared bundle could introduce (spec §3, §4).
+to merge in for them — but T4 (and, later, C3/C4) **must** still evaluate every task in their group,
+including these 13, specifically to catch a regression that merging other tasks' edits into the
+shared bundle could introduce (spec §3, §4). T4 has now run this check on all 34 tasks — see "T4"
+below: 5 of these 13 already-perfect tasks did in fact regress.
 
 ## Cost + wall clock (T2 task-by-task optimization)
 
 Source: [`cost_time/v4_t2_e1_results_table.md`](cost_time/v4_t2_e1_results_table.md), parsed and
 cross-validated by `build_v4_results_json.py` into `results.json`'s `task_ledger[].t2_*` fields (per
 task, `null` for the 13 tasks T2 never targeted) and `sections.task.cost_time` (this table). Only T2
-made real optimizer calls per task — C2-C4/G2-G4 haven't run, so this is the only cost/time data in
-this branch's v4 results so far.
+made real optimizer calls per task — T4's cost/time (below) is all zero-shot eval, no optimizer
+loop, and T3/T5/C2-C4/G2 haven't run at all.
 
 | tranche | n tasks | total cost | total tokens | total time | eval cost | optimizer cost |
 |---|--:|--:|--:|--:|--:|--:|
@@ -101,6 +106,55 @@ seed itself is already the winning bundle — true for `cost-030` alone — so i
 tasks. As with the tranche table, read each stage row on its own; the TOTAL row is an operational sum,
 not a scientific comparison.
 
+## T4: merge (union of T2 bundles), zero-shot on all 34 tasks — the regression check
+
+`v4_t4_e1` statically unions all 21 T2-optimized bundles' final skill files into one shared 8-file
+bundle, then evaluates it zero-shot (no further optimization, `n=5` trials) on all 34 tasks —
+including the 13 tasks T2 never targeted — specifically to check whether merging independently
+optimized edits regresses a task that was fine before (spec §3). Source:
+[`cost_time/v4_t4_e1_results_table.md`](cost_time/v4_t4_e1_results_table.md), parsed into
+`results.json`'s `task_ledger[].t4_*` fields (present for all 34 tasks) and
+`sections.task.t4_summary` (this table).
+
+| tranche | n | T4 reward (mean) | our T1 baseline (mean) | Δ vs our baseline |
+|---|---|---|---|---|
+| regression | 30 | 0.8305 | 0.8446 | −0.0142 |
+| challenge | 4 | 0.8776 | 0.7918 | +0.0858 |
+
+This compares against `our_baseline_mean` across the full 34 tasks, not T2's smaller 21-task
+`final_mean` from the aggregate table above — that's the comparison the regression check is built to
+make (`t4_delta_vs_our_baseline` in the per-task ledger; see the note in `build_v4_results_json.py`).
+
+The tranche means hide two opposite effects at the per-task level: **18 of 34 tasks improved**, 8 are
+unchanged, and **8 regressed**:
+
+- **5 of the 13 already-perfect seed tasks regressed** — merging in other tasks' optimizer edits
+  broke something these tasks depended on, exactly the failure mode this arm exists to catch:
+  `platform-018-find-jobs-window` (1.0 → 0.028, −0.972), `platform-019-anarchysubject-state`
+  (1.0 → 0.32, −0.68), `platform-020-ocpv-vm-inventory` (1.0 → 0.34, −0.66),
+  `cost-028-highest-spend-provider` (1.0 → 0.4, −0.6), `platform-009-catalog-item-no-config`
+  (1.0 → 0.825, −0.175).
+- **3 of the 21 T2-optimized tasks also slipped** when their own optimized edits were combined with
+  20 other tasks' edits instead of standing alone: `cloud-026-gpu-abuse-triage` (0.886 → 0.613,
+  −0.273), `cost-030-threshold-not-an-anomaly` (0.953 → 0.72, −0.233),
+  `platform-032-shared-secret-not-a-registry-outage` (0.65 → 0.645, −0.005, within noise).
+- The 18 improved tasks are mostly the remaining T2-optimized tasks, whose own edits still apply
+  unchanged inside the union and score as they did standing alone — e.g.
+  `cloud-024-guid-to-account` (0.2 → 1.0, +0.8), `platform-003-tojson-dict-literal-rca`
+  (0.478 → 1.0, +0.522).
+
+**Cost/time:** $42.78 total, 13,601,491 tokens, 295.2 min (4.92h) wall time across all 34
+single-eval, no-optimizer runs — far cheaper than T2's $437.24/39.1h, since each T4 task is one
+zero-shot eval rather than an optimizer loop. See
+[`cost_time/v4_t4_e1_results_table.md`](cost_time/v4_t4_e1_results_table.md) for the per-task
+breakdown.
+
+This is the merge strategy described in `reports/v4-t4-merge-decisions.md` (spec §4) — a naive
+static union with no conflict resolution beyond what that report documents. It's resolved for T4;
+whether the same strategy holds up for the still-undesigned T5 (which continues optimizing jointly
+after the merge, and so has a chance to correct these regressions) or for C3/C4 (smaller,
+category-scoped unions) is still open.
+
 ## Data-quality caveats
 
 1. **Three tasks each have two finalized T2 runs:** `platform-005-wrong-owner-trap`,
@@ -122,10 +176,15 @@ not a scientific comparison.
 
 ## Next moves (open)
 
-- **A. Run C2-C4 and G2-G4.** Designed in the spec (§2) but not submitted. C1/G1 need no new job —
-  they're already derivable from T1 and are computed directly into `results.json` by
+- **A. Design T3** (transfer) — spec §2 describes it but it isn't designed yet: one task's T2
+  bundle, evaluated zero-shot on a different task.
+- **B. Run T5, C2-C4, and G2.** Designed in the spec (§2) but not submitted. C1/G1 need no new
+  job — they're already derivable from T1 and are computed directly into `results.json` by
   `build_v4_results_json.py`.
-- **B. Resolve the merge-conflict strategy** for combining multiple tasks' edits to the same 8-file
-  bundle before C3/C4/G3/G4 can run (spec §4) — this doc does not pick one.
-- **C. CCC/LSF parallel migration** for running C2-C4/G2-G4's jobs is deferred until this local work
+- **C. Decide whether T4's merge strategy (a naive static union, `reports/v4-t4-merge-decisions.md`,
+  spec §4) is good enough for T5/C3/C4, or whether the 8 regressions found above (5 of them on
+  previously-perfect tasks) call for a different conflict-resolution approach before those arms run.**
+  T5 in particular gets a chance T4 didn't — continued joint optimization after the merge — so it may
+  self-correct some of these; that's untested until T5 runs.
+- **D. CCC/LSF parallel migration** for running T5/C2-C4/G2's jobs is deferred until this local work
   (this PR and the recipe/artifact/report PRs alongside it) is committed and pushed (spec §7).
