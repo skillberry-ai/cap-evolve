@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build results/v4/results.json from the frozen source_parsec34.json snapshot
-plus the C/G arm scaffold from
-docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md.
+"""Build results/v4/results.json from the frozen source_parsec34.json snapshot,
+T4's real per-task results table, and the T3/T5/C/G not-yet-run arm scaffold
+from docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md.
 
 Usage: python3 scripts/build_v4_results_json.py [--check]
   --check   exit 1 if regenerating would change results.json, instead of writing it.
@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_JSON = ROOT / "results" / "v4" / "source_parsec34.json"
 COST_TIME_SOURCE = ROOT / "results" / "v4" / "cost_time" / "v4_t2_e1_results_table.md"
+T4_COST_TIME_SOURCE = ROOT / "results" / "v4" / "cost_time" / "v4_t4_e1_results_table.md"
 RESULTS_JSON = ROOT / "results" / "v4" / "results.json"
 SPEC = "docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md"
 
@@ -21,6 +22,10 @@ COST_TIME_FIELDS = (
     "t2_cost_usd", "t2_tokens", "t2_time_s",
     "t2_eval_cost_usd", "t2_eval_tokens", "t2_eval_s",
     "t2_opt_cost_usd", "t2_opt_tokens", "t2_opt_s",
+)
+
+T4_COST_TIME_FIELDS = (
+    "t4_reward", "t4_stderr", "t4_cost_usd", "t4_tokens", "t4_time_s",
 )
 
 ARMS = [
@@ -31,6 +36,19 @@ ARMS = [
      "status": "done_by_design", "source": "v4_t2_e1",
      "description": "independent optimizer run per task, 21 of 34 tasks "
                      "(the other 13 already scored 1.0 on the seed -- spec Sec.3)"},
+    {"arm_id": "T3", "section": "task", "name": "transfer", "mode": "zs",
+     "status": "not_run", "source": None,
+     "description": "one task's T2-optimized bundle, evaluated zero-shot on "
+                     "a different task -- not yet designed (spec Sec.2)"},
+    {"arm_id": "T4", "section": "task", "name": "merge", "mode": "zs",
+     "status": "done", "source": "v4_t4_e1",
+     "description": "union of all 21 T2 bundles, evaluated zero-shot on all "
+                     "34 tasks, including the 13 already-perfect ones -- a "
+                     "regression check (spec Sec.3); merge strategy in "
+                     "reports/v4-t4-merge-decisions.md (spec Sec.4)"},
+    {"arm_id": "T5", "section": "task", "name": "merge-joint", "mode": "opt",
+     "status": "not_run", "source": None,
+     "description": "T4's union, continued optimization jointly on all 34 tasks"},
     {"arm_id": "C1", "section": "category", "name": "seed", "mode": "zs",
      "status": "done", "source": "derived from T1",
      "description": "native bundle, zero-shot, scored per category"},
@@ -52,13 +70,6 @@ ARMS = [
     {"arm_id": "G2", "section": "global", "name": "joint", "mode": "opt",
      "status": "not_run", "source": None,
      "description": "one optimizer run scoring all 34 tasks together"},
-    {"arm_id": "G3", "section": "global", "name": "merge", "mode": "zs",
-     "status": "not_run", "source": None,
-     "description": "union of all 21 T2 bundles, evaluated zero-shot on all "
-                     "34 tasks, including the 13 already-perfect ones (spec Sec.3)"},
-    {"arm_id": "G4", "section": "global", "name": "merge-joint", "mode": "opt",
-     "status": "not_run", "source": None,
-     "description": "G3's union, continued optimization jointly on all 34 tasks"},
 ]
 
 NOT_RUN_NOTE_MERGE = (
@@ -173,6 +184,35 @@ def parse_cost_time_source():
     return out
 
 
+def parse_t4_results_table():
+    """Parse results/v4/cost_time/v4_t4_e1_results_table.md's Summary table
+    into per-task reward/cost/time for all 34 tasks.
+
+    Unlike T2, T4 has no optimizer stage -- one zero-shot baseline eval per
+    task -- so there is no eval/opt split and no second table to cross-check
+    against; this just reads the one Summary table's columns straight.
+
+    Returns {task_id: {t4_reward, t4_stderr, t4_cost_usd, t4_tokens,
+    t4_time_s}}, skipping any row still marked "*pending*" (a partial
+    mid-sweep table; the full 34/34 table has none).
+    """
+    lines = T4_COST_TIME_SOURCE.read_text().splitlines()
+    header = _find_header(lines, ["#", "Task", "Reward(val)"])
+    out = {}
+    for row in _parse_pipe_table(lines, header):
+        task, reward_cell = row[1], row[2].strip()
+        if reward_cell == "*pending*":
+            continue
+        out[task] = {
+            "t4_reward": _num(reward_cell),
+            "t4_stderr": _num(row[3]),
+            "t4_cost_usd": round(_num(row[7]), 4),
+            "t4_tokens": int(_num(row[8])),
+            "t4_time_s": round(_num(row[9]), 1),
+        }
+    return out
+
+
 STAGE_ORDER = ["seed", "iter1", "iter2", "iter3", "FINAL", "FINAL_seed"]
 
 
@@ -231,7 +271,7 @@ def parse_cost_time_by_stage():
     return by_stage
 
 
-def build_task_ledger(source, cost_time):
+def build_task_ledger(source, cost_time, t4_data):
     rows = []
     for row in source["tasks"]:
         row = dict(row)
@@ -239,6 +279,12 @@ def build_task_ledger(source, cost_time):
         ct = cost_time.get(row["task"])
         for key in COST_TIME_FIELDS:
             row[key] = ct[key] if ct else None
+        t4 = t4_data.get(row["task"])
+        for key in T4_COST_TIME_FIELDS:
+            row[key] = t4[key] if t4 else None
+        row["t4_delta_vs_our_baseline"] = (
+            round(t4["t4_reward"] - row["our_baseline"], 4) if t4 else None
+        )
         rows.append(row)
     return rows
 
@@ -277,6 +323,41 @@ def build_cost_time_section(task_ledger):
     }
 
 
+def build_t4_summary(task_ledger):
+    """Tranche-segmented mean t4_reward vs. our_baseline, across all 34
+    tasks -- this IS T4's regression check (spec Sec.3): T4 must not regress
+    any of the 13 tasks that were already perfect on the untouched seed, so
+    the comparison here is against our_baseline_mean (all 34 tasks), not
+    against T2's smaller 21-task final_mean in sections.task.summaries.
+    """
+    by_tranche = {}
+    for row in task_ledger:
+        if row.get("t4_reward") is None:
+            continue
+        t = by_tranche.setdefault(row["tranche"], {
+            "n_tasks": 0, "t4_reward_sum": 0.0, "our_baseline_sum": 0.0,
+        })
+        t["n_tasks"] += 1
+        t["t4_reward_sum"] += row["t4_reward"]
+        t["our_baseline_sum"] += row["our_baseline"]
+    out = []
+    for tranche in ("regression", "challenge"):  # matches source["summaries"]'s order
+        if tranche not in by_tranche:
+            continue
+        t = by_tranche[tranche]
+        n = t["n_tasks"]
+        t4_mean = t["t4_reward_sum"] / n
+        base_mean = t["our_baseline_sum"] / n
+        out.append({
+            "tranche": tranche,
+            "n_tasks": n,
+            "t4_reward_mean": round(t4_mean, 4),
+            "our_baseline_mean": round(base_mean, 4),
+            "delta_vs_our_baseline_mean": round(t4_mean - base_mean, 4),
+        })
+    return out
+
+
 def mean(vals):
     vals = [v for v in vals if v is not None]
     return (sum(vals) / len(vals), len(vals)) if vals else (None, 0)
@@ -311,19 +392,24 @@ def build_global_row(task_ledger):
         "G1_seed": {"source": "derived from T1", "jb_reward_mean": jb_mean,
                     "our_baseline_mean": seed_mean, "n": seed_n},
         "G2_joint": {"status": "not_run", "scores": None, "note": NOT_RUN_NOTE_JOINT},
-        "G3_merge": {"status": "not_run", "scores": None, "note": NOT_RUN_NOTE_MERGE},
-        "G4_merge_joint": {"status": "not_run", "scores": None, "note": NOT_RUN_NOTE_MERGE},
     }
 
 
 def build_results(source):
     cost_time = parse_cost_time_source()
-    task_ledger = build_task_ledger(source, cost_time)
+    t4_data = parse_t4_results_table()
+    task_ledger = build_task_ledger(source, cost_time, t4_data)
     n_optimized = sum(1 for r in task_ledger if r["status"] == "optimized")
     n_cost = sum(1 for r in task_ledger if r.get("t2_cost_usd") is not None)
     assert n_cost == n_optimized, (
         f"cost/time source covers {n_cost} tasks but n_optimized={n_optimized} "
         f"-- {COST_TIME_SOURCE} and {SOURCE_JSON} disagree on which tasks T2 ran on"
+    )
+    n_t4 = sum(1 for r in task_ledger if r.get("t4_reward") is not None)
+    assert n_t4 == len(task_ledger), (
+        f"T4 results table covers {n_t4} of {len(task_ledger)} tasks -- T4 is "
+        f"a regression check and must cover all 34 (spec Sec.3), not just "
+        f"the 21 T2 optimized -- {T4_COST_TIME_SOURCE} and {SOURCE_JSON} disagree"
     )
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -340,6 +426,7 @@ def build_results(source):
             "task": {
                 "summaries": source["summaries"],
                 "cost_time": build_cost_time_section(task_ledger),
+                "t4_summary": build_t4_summary(task_ledger),
             },
             "category": {"rows": build_category_rows(task_ledger)},
             "global": {"row": build_global_row(task_ledger)},
@@ -348,15 +435,20 @@ def build_results(source):
             "source_parsec34_results": "results/v4/source_parsec34.json",
             "source_parsec34_generator": "parsec-intake_v4/scripts/build_parsec34_heatmap.py",
             "cost_time_source": "results/v4/cost_time/v4_t2_e1_results_table.md",
+            "t4_results_source": "results/v4/cost_time/v4_t4_e1_results_table.md",
             "spec": SPEC,
             "note": (
                 "task_ledger rows are the frozen source's 34 task rows verbatim, "
-                "plus a 'report' pointer and the t2_* cost/time fields parsed from "
-                "cost_time_source (null for the 13 tasks T2 never targeted). "
-                "category/global C1/G1 rows are computed here from T1's "
-                "our_baseline column, not from a new job (spec Sec.2). C2-C4/G2-G4 "
-                "are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only "
-                "21/34 tasks and Sec.4 for the open merge-strategy question."
+                "plus a 'report' pointer, the t2_* cost/time fields parsed from "
+                "cost_time_source (null for the 13 tasks T2 never targeted), and "
+                "the t4_* reward/cost/time fields parsed from t4_results_source "
+                "(present for all 34 -- T4 is a whole-ledger regression check, "
+                "spec Sec.3). category/global C1/G1 rows are computed here from "
+                "T1's our_baseline column, not from a new job (spec Sec.2). "
+                "T3/T5/C2-C4/G2 are not_run (spec Sec.2); see spec Sec.3 for why "
+                "T2 covers only 21/34 tasks and Sec.4 for the open "
+                "merge-strategy question (resolved for T4, still open for "
+                "C3/C4/T5)."
             ),
         },
     }

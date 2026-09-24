@@ -26,6 +26,7 @@ FIELDS = [
     "best", "best_tag",
     "final", "final_n",
     "delta_vs_jb", "delta_vs_our_baseline",
+    "t4_reward", "t4_delta_vs_our_baseline",
 ]
 
 
@@ -35,6 +36,22 @@ def build_data_block(tasks):
     lines = body.splitlines()
     assert lines[0] == "[" and lines[-1] == "]"
     return "\n".join(lines[1:-1])
+
+
+def build_summaries_block(task_section):
+    """Merge sections.task.summaries (T1/T2 comparison) with t4_summary
+    (T4's regression check) by tranche, so the heatmap's one MEAN row per
+    tranche can show both without a second summary table."""
+    t4_by_tranche = {s["tranche"]: s for s in task_section["t4_summary"]}
+    merged = []
+    for s in task_section["summaries"]:
+        row = dict(s)
+        t4 = t4_by_tranche.get(s["tranche"])
+        if t4:
+            row["t4_reward_mean"] = t4["t4_reward_mean"]
+            row["t4_delta_vs_our_baseline_mean"] = t4["delta_vs_our_baseline_mean"]
+        merged.append(row)
+    return merged
 
 
 def regenerate(results, check_only):
@@ -59,7 +76,7 @@ def regenerate(results, check_only):
     new_html = (
         new_html[: s_m.start()]
         + s_m.group(1)
-        + json.dumps(results["sections"]["task"]["summaries"], indent=2)
+        + json.dumps(build_summaries_block(results["sections"]["task"]), indent=2)
         + s_m.group(3)
         + new_html[s_m.end():]
     )
