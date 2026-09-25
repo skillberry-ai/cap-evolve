@@ -17,7 +17,7 @@ capability_sources: [seed_capability/reference/data_model.py]
 # --- HOW the capability reaches the model -----------------------------------
 # No `intervention:` line: DIRECT is the default, and it is what this project is wired
 # for. The runner reads the candidate's tools in its own process — no proxy, no store, no
-# environment service. The SPA arm is a SEPARATE onboarding in its own project; the two
+# environment service. The blackbox arm is a SEPARATE onboarding in its own project; the two
 # numbers are NOT like-for-like and must never be averaged.
 
 # --- who proposes edits -----------------------------------------------------

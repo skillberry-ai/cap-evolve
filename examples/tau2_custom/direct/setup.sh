@@ -11,15 +11,15 @@
 # What the DIRECT arm does NOT need, and this script therefore never touches: the
 # Skillberry stack (Store + Proxy-Agent) and the benchmark's environment service. The
 # runner reads the candidate's tool code in its OWN process, so there is no service to
-# provision and nothing for run.sh to start — which is why the SPA arm's step 3 has no
-# counterpart here and this script has four steps where spa/setup.sh has five.
+# provision and nothing for run.sh to start — which is why the blackbox arm's step 3 has no
+# counterpart here and this script has four steps where blackbox/setup.sh has five.
 set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../../.." && pwd)"
-# The SAME pinned Skillberry build of tau2 the SPA arm installs — it still exposes the
+# The SAME pinned Skillberry build of tau2 the blackbox arm installs — it still exposes the
 # plain `airline` domain this arm uses. ONE build for both arms is what keeps a later
-# direct-vs-spa comparison meaningful; two checkouts would make the two numbers
+# direct-vs-blackbox comparison meaningful; two checkouts would make the two numbers
 # incomparable for a reason that has nothing to do with the delivery path.
 BENCH_REPO="https://github.com/skillberry-ai/skillberry-benchmarks.git"
 BENCH_REF="${BENCH_REF:-a3a83266008275e9d800fd709927fa3dc4f23ec5}"
@@ -30,8 +30,8 @@ case "$VENV" in /*) ;; *) VENV="$REPO/$VENV" ;; esac
 PY="$VENV/bin/python"
 PYTHON="${PYTHON:-python3}"
 PIP_INDEX="${PIP_INDEX:-https://pypi.org/simple}"
-# The DEFAULT base, deliberately: this arm is the plain onboarding, and the SPA arm is the
-# one that moves aside (.capevolve-spa). The two arms are separate onboardings, so a shared
+# The DEFAULT base, deliberately: this arm is the plain onboarding, and the blackbox arm is the
+# one that moves aside (.capevolve-blackbox). The two arms are separate onboardings, so a shared
 # project dir would let one arm's seed/spec silently overwrite the other's — delivering
 # candidates one way while the record says the other. (.gitignore covers .capevolve*/.)
 BASE="${BASE:-$REPO/.capevolve}"
@@ -74,7 +74,7 @@ git -C "$BENCH_DIR" fetch -q --all || die "git fetch skillberry-benchmarks faile
 git -C "$BENCH_DIR" checkout -q "$BENCH_REF" || die "checkout $BENCH_REF failed"
 [ -d "$TAU2_DIR" ] || die "expected tau2-bench at $TAU2_DIR — is $BENCH_REF the right pin?"
 # The [skillberry] extra is not needed by THIS arm, but it is what makes the install
-# byte-identical to the SPA arm's — see the ONE-build note above. Installing it costs a few
+# byte-identical to the blackbox arm's — see the ONE-build note above. Installing it costs a few
 # wheels and buys a like-for-like environment.
 "$PY" -m pip install -q --index-url "$PIP_INDEX" -e "$TAU2_DIR[skillberry]" \
   || die "pip install tau2-bench[skillberry] failed"

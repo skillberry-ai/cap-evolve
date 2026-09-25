@@ -70,7 +70,7 @@ shopt -s nullglob
 COMPONENTS=(orchestrate phases capabilities algorithms optimizers interventions)
 for comp in "${COMPONENTS[@]}"; do
   # A skill dir is one that HOLDS a meta.yaml — found at any depth, because a component
-  # may group its skills in sub-directories (interventions/llm-proxies/spa). A fixed
+  # may group its skills in sub-directories (interventions/llm-proxies/blackbox). A fixed
   # */ glob would copy the GROUP dir as if it were a skill and lose the skill itself.
   while IFS= read -r meta; do
     skill="$(dirname "$meta")/"

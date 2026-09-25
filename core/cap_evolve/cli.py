@@ -717,7 +717,12 @@ def _cmd_run(argv):
     # usd_budget_flag (e.g. claude-code → --max-budget-usd N), enforced by the optimizer
     # CLI itself. Rows without one (e.g. ibm-bob) ignore it — bound those via
     # optimizer_max_turns and/or the cumulative max_optimizer_usd instead.
-    if spec.get("optimizer_usd_per_iter"):
+    # Every committed example quotes this as a bare number (0.0, 40.0), which YAML parses
+    # as int/float and bool(0.0) is correctly False — but a hand-written capevolve.yaml
+    # that quotes it as the STRING "0" hits the identical footgun #530 fixed one layer up
+    # in benchmarks.yml's `||` chain: bool("0") is True in Python, so a plain truthiness
+    # check would render an unintended near-zero --usd-budget instead of treating it as off.
+    if spec.get("optimizer_usd_per_iter") not in (None, "", 0, "0"):
         opt_cmd += f" --usd-budget {float(spec['optimizer_usd_per_iter'])}"
 
     # Algorithm semantics: the three hill-climb variants are one ``hill-climb``

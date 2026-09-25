@@ -182,7 +182,7 @@ class Adapter(CapabilityAdapter):
 
     # ---- tau2's OWN simulation records -----------------------------------
     # ONE path format, byte-identical in EVERY tau2 adapter in this repo (this one, the
-    # skillberry_benchmarks direct + spa arms, and templates/adapters/tau2_bench):
+    # tau2_custom direct + blackbox arms, and templates/adapters/tau2_bench):
     #
     #     <run_dir>/native_sims/<tag>/<split>/results_<YYYYmmdd_HHMMSS>_<pid>.json
     #
@@ -660,9 +660,9 @@ class Adapter(CapabilityAdapter):
         cdir = Path(candidate_dir)
         tools_py = cdir / "tools" / "tools.py"
         if not tools_py.exists():
-            # The SPA arm's candidate is ONE skill package (my_skill/SKILL.md + scripts/).
+            # The blackbox arm's candidate is ONE skill package (my_skill/SKILL.md + scripts/).
             # Naming it here is what turns a spec/seed mismatch into a loud failure.
-            hint = ("; this candidate looks like the SPA arm's skill package, so the spec "
+            hint = ("; this candidate looks like the blackbox arm's skill package, so the spec "
                     "and the seed disagree about the delivery path"
                     if (cdir / "my_skill").exists() else "")
             self._deploy_error = (
