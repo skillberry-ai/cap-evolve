@@ -1,12 +1,23 @@
 """Tests for role-based spend tracking, optimizer-cost capture, soft spend
 warnings, budget enforcement on total spend, and the pre-run cost estimate."""
 
+import importlib.util
 import json
+from pathlib import Path
 
 from cap_evolve import RunDir
 from cap_evolve.rundir import Budget, Spent
 from cap_evolve.harness import _parse_optimizer_cost, optimizer_from_command
 from cap_evolve import cli, pricing, harness
+
+_REPO = Path(__file__).resolve().parents[2]
+_RUN_OPTIMIZER_SCRIPTS = _REPO / "skills" / "optimizers" / "run-optimizer" / "scripts"
+import sys as _sys  # noqa: E402
+if str(_RUN_OPTIMIZER_SCRIPTS) not in _sys.path:
+    _sys.path.insert(0, str(_RUN_OPTIMIZER_SCRIPTS))  # so run.py's `import _bootstrap` resolves
+_spec = importlib.util.spec_from_file_location("run_optimizer_run", _RUN_OPTIMIZER_SCRIPTS / "run.py")
+run_optimizer_run = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(run_optimizer_run)
 
 
 # ---- Spent / Budget round-trip + total ------------------------------------
@@ -71,6 +82,37 @@ def test_parse_optimizer_cost_from_runner_payload():
 def test_parse_optimizer_cost_absent():
     assert _parse_optimizer_cost("just some prose, no json") is None
     assert _parse_optimizer_cost(json.dumps({"cost": {"total_cost_usd": None, "tokens": None}})) is None
+
+
+# ---- run-optimizer's own parse_cost must scan the WHOLE JSONL stream, not just
+# the last line: a session that ends on a trailing system event (e.g. a
+# `task_notification` after a background tool was killed) has no cost on its last
+# line even though an earlier `result` message reported real spend. Reading only
+# the last line silently books $0 for a session that actually cost money.
+
+def test_parse_cost_finds_result_before_trailing_system_events():
+    stream = "\n".join(json.dumps(o) for o in [
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "result", "subtype": "success", "total_cost_usd": 3.65,
+         "usage": {"input_tokens": 100, "output_tokens": 50}},
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "result", "subtype": "success", "total_cost_usd": 3.86,
+         "usage": {"input_tokens": 150, "output_tokens": 80}},
+        {"type": "system", "subtype": "task_updated", "patch": {"status": "killed"}},
+        {"type": "system", "subtype": "task_notification", "status": "stopped"},
+    ])
+    out = run_optimizer_run.parse_cost(stream)
+    assert out["usd"] == 3.86  # the LAST result before the trailing system noise
+    assert out["tokens"] == 230
+
+
+def test_parse_cost_no_result_at_all():
+    stream = "\n".join(json.dumps(o) for o in [
+        {"type": "system", "subtype": "task_updated"},
+        {"type": "system", "subtype": "task_notification"},
+    ])
+    out = run_optimizer_run.parse_cost(stream)
+    assert out["usd"] is None
 
 
 # ---- optimizer cost must survive a non-zero optimizer exit ----------------

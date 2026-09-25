@@ -123,21 +123,30 @@ def parse_cost(stdout: str) -> dict:
     if not stdout or not stdout.strip():
         return out
 
-    # Try whole-string JSON first, then last-nonempty-line (JSONL streams like codex).
+    # Try whole-string JSON first, then EVERY line of a JSONL stream (claude-code
+    # stream-json, codex --json). Scanning only the last non-empty line missed the
+    # cost when the stream's final lines are trailing system events (e.g. a
+    # `task_notification`/`task_updated` pair after a background tool was killed)
+    # rather than the CLI's own terminal `result` message — that message, carrying
+    # the session's cumulative `total_cost_usd`, can be several lines earlier. A
+    # run recorded $0.00 optimizer spend for a session whose transcript had real
+    # `result` events reporting $3.65 / $3.86, purely because the stream's last two
+    # lines were `task_updated`/`task_notification`, not `result` — this reproduces
+    # that exact case.
     objs: list = []
     text = stdout.strip()
     try:
         objs.append(json.loads(text))
     except Exception:
-        for line in reversed(text.splitlines()):
+        for line in text.splitlines():
             line = line.strip()
             if not line:
                 continue
             try:
                 objs.append(json.loads(line))
-                break
             except Exception:
                 continue
+        objs.reverse()  # scan newest-first, same preference order as before
     if not objs:
         return out
 
@@ -169,8 +178,17 @@ def parse_cost(stdout: str) -> dict:
                     _scan(v)
 
     for o in objs:
+        found_usd_before, found_tokens_before = out["usd"], out["tokens"]
         _scan(o)
-        out["raw"] = o
+        # `raw` must be the object that actually SUPPLIED the cost/token figures — not
+        # just whichever object the loop happened to visit last. With multiple JSONL
+        # lines scanned newest-first, "last visited" is the OLDEST line once nothing
+        # more remains to find, which fed a stale/irrelevant object (e.g. a `system`
+        # `init` line) into `_stop_info()` downstream.
+        if out["raw"] is None and (out["usd"] != found_usd_before or out["tokens"] != found_tokens_before):
+            out["raw"] = o
+        if out["usd"] is not None and out["tokens"] is not None:
+            break
     return out
 
 
