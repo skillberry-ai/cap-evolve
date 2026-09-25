@@ -10,7 +10,7 @@
 # The `bench` dispatch input picks WHICH tau2 leg: the adapter template (`tau2`, the default
 # and what the PR label runs), or one of the two delivery arms from
 # examples/tau2_custom (`tau2_custom_direct` /
-# `tau2_custom_spa`). `integration` is not a tier benchmarks.yml can dispatch — its tier
+# `tau2_custom_blackbox`). `integration` is not a tier benchmarks.yml can dispatch — its tier
 # picker offers smoke/pilot/full — so this workflow is the only way to reach it, and it is the
 # cheap one-task check to run on an arm before spending a curated tier on it.
 # Passes when the run COMPLETES and the sealed test does not regress vs baseline
@@ -29,10 +29,10 @@ on:
   workflow_dispatch:
     inputs:
       bench:
-        description: "Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_custom_direct / tau2_custom_spa = the two DELIVERY ARMS from examples/tau2_custom — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
+        description: "Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_custom_direct / tau2_custom_blackbox = the two DELIVERY ARMS from examples/tau2_custom — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
         type: choice
         default: tau2
-        options: [tau2, tau2_custom_direct, tau2_custom_spa]
+        options: [tau2, tau2_custom_direct, tau2_custom_blackbox]
   pull_request:
     types: [labeled]
 

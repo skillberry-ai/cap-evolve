@@ -1,6 +1,6 @@
 """The Skillberry proxy stack as a library — provision, run, deploy, stop, clean.
 
-SPA mode ("proxy runtime") delivers an optimized capability to the model under test
+Blackbox mode ("proxy runtime") delivers an optimized capability to the model under test
 by putting it in the **Skillberry Store** and letting the **Skillberry Proxy-Agent
 (SPA)** inject it into every LLM call the agent makes. The benchmark sees no skill
 files; it just talks to what it believes is an LLM.
@@ -164,9 +164,9 @@ def repo_root() -> Path:
 
     Found by walking UP for a marker rather than counting parents. A fixed
     ``parents[4]`` is only correct in the repo layout
-    (``<root>/skills/interventions/llm-proxies/spa/scripts``): ``install.sh`` copies each skill to
+    (``<root>/skills/interventions/llm-proxies/blackbox/scripts``): ``install.sh`` copies each skill to
     ``$DEST/<name>``, so an installed tree puts this file at
-    ``$DEST/spa/scripts/spa_env.py`` and ``parents[4]`` resolves to ``$HOME`` — which
+    ``$DEST/blackbox/scripts/blackbox_env.py`` and ``parents[4]`` resolves to ``$HOME`` — which
     would silently point ``vendor/`` at the home directory and clone gigabytes there.
     Falling back to the cwd keeps that blast radius inside the project being run;
     ``SPA_VENDOR_DIR`` remains the explicit override for any layout.
@@ -458,7 +458,7 @@ def _apply_patch(f: Path, anchor: str, replacement: str, *, ref: str, what: str,
             f"anchor, found {text.count(anchor)}.\n"
             f"This patch was written against the PINNED ref {ref!r}. Changing the ref is changing "
             f"the source this patch edits, so it becomes YOUR responsibility: update the anchor in "
-            f"spa_env._patch_store_logging / _patch_agent_logging to match the new source, or the "
+            f"blackbox_env._patch_store_logging / _patch_agent_logging to match the new source, or the "
             f"service will run with an unrotated, unbounded log.")
     f.write_text(text.replace(anchor, replacement, 1), encoding="utf-8")
     return True
@@ -482,7 +482,7 @@ def _patch_store_logging(d: Path, ref: str) -> None:
         "import logging\n"
         "from logging.handlers import RotatingFileHandler\n"
         "\n"
-        + _PATCH_MARKER + " installed by cap-evolve's spa intervention skill at provision time.\n"
+        + _PATCH_MARKER + " installed by cap-evolve's blackbox intervention skill at provision time.\n"
         "# Rotates from INSIDE this process, the only place a live log CAN be rotated: an external\n"
         "# rotator renames the file while this process keeps writing to the now-deleted inode.\n"
         "# Deliberately NO StreamHandler -- the stdout copy is what grew without limit.\n"
@@ -543,7 +543,7 @@ def _patch_agent_logging(d: Path, ref: str) -> None:
         d / "main.py",
         "# Configure logger\n"
         "logging.basicConfig(level=log_level, handlers=[console_handler, file_handler])\n",
-        _PATCH_MARKER + " adjusted by cap-evolve's spa intervention skill at provision time.\n"
+        _PATCH_MARKER + " adjusted by cap-evolve's blackbox intervention skill at provision time.\n"
         "# console_handler is deliberately absent: it duplicated every record onto stdout, which\n"
         "# start-service.sh captures into a file nothing can rotate mid-run. file_handler is the\n"
         "# agent's own RotatingFileHandler, unchanged -- it already rotates from inside this process.\n"
@@ -867,8 +867,8 @@ def status() -> dict:
     rows = {
         "store": {"port": store_port(), "pid_file": STORE_PID_FILE, "markers": STORE_PROC_MARKERS,
                   "dir": str(store_dir())},
-        "spa": {"port": SPA_PORT, "pid_file": SPA_PID_FILE, "markers": SPA_PROC_MARKERS,
-                "dir": str(agent_dir())},
+        "agent": {"port": SPA_PORT, "pid_file": SPA_PID_FILE, "markers": SPA_PROC_MARKERS,
+                  "dir": str(agent_dir())},
     }
     out: dict = {}
     for name, r in rows.items():

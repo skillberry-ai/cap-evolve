@@ -1,6 +1,6 @@
 """The two tau2_custom DELIVERY ARMS as CI benchmark legs.
 
-`tau2_custom_direct` and `tau2_custom_spa` run the SAME 50 tau2 airline tasks by two
+`tau2_custom_direct` and `tau2_custom_blackbox` run the SAME 50 tau2 airline tasks by two
 different delivery routes: in the runner's own process, and through the Skillberry Store +
 Proxy-Agent. What makes them worth having in CI is that the two numbers are comparable to each
 other — so the things worth pinning are the ones that would silently break that comparison, or
@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / ".github/workflows/benchmarks.yml"
 RUN_SUITE = REPO / "ci/benchmarks/lib/run_suite.sh"
 CI_SETUP = REPO / "ci/benchmarks/lib/ci_setup.sh"
-ARMS = ("tau2_custom_direct", "tau2_custom_spa")
+ARMS = ("tau2_custom_direct", "tau2_custom_blackbox")
 
 
 def tier_dir(arm: str, tier: str) -> Path:
@@ -33,7 +33,7 @@ TIERS = ("smoke", "integration", "full")
 def _arm_case() -> str:
     """The run_suite.sh case body shared by both arms."""
     sh = RUN_SUITE.read_text(encoding="utf-8")
-    head = "  tau2_custom_direct|tau2_custom_spa)"
+    head = "  tau2_custom_direct|tau2_custom_blackbox)"
     assert head in sh, "the arms' case block is gone from run_suite.sh"
     return sh.split(head, 1)[1].split("\n  swebench)", 1)[0]
 
@@ -42,9 +42,9 @@ def _arm_case() -> str:
 
 def test_both_arms_are_dispatchable_and_planned():
     """A bench in the picker but not in BENCHES is unselectable; the reverse is worse — it
-    runs under `benchmark=all` with no way to run it alone."""
+    would run on every dispatch with no way to run it alone."""
     wf = WORKFLOW.read_text(encoding="utf-8")
-    options = re.search(r"options: \[all, tau2,(.*?)\]", wf, re.S).group(1)
+    options = re.search(r"benchmark:.*?options: \[(.*?)\]", wf, re.S).group(1)
     benches = re.search(r"BENCHES = \[(.*?)\]", wf, re.S).group(1)
     assert "tau2-custom" in options, "the picker must offer tau2-custom"
     for arm in ARMS:
@@ -56,7 +56,7 @@ def test_the_intervention_input_offers_exactly_the_spec_values():
     """The input feeds the spec key of the same name, so its values must be core's."""
     wf = WORKFLOW.read_text(encoding="utf-8")
     block = wf.split("      intervention:", 1)[1].split("      tier:", 1)[0]
-    assert "options: [direct, spa]" in block
+    assert "options: [direct, blackbox]" in block
     assert "default: direct" in block, "every other benchmark runs direct"
 
 
@@ -72,7 +72,7 @@ def test_the_dispatch_form_stays_within_githubs_input_ceiling():
 def test_tau2_custom_resolves_to_an_arm_through_the_intervention_input():
     wf = WORKFLOW.read_text(encoding="utf-8")
     assert 'INTERVENTION_SEL: ${{ github.event.inputs.intervention' in wf, "planner needs it"
-    assert '"direct": "tau2_custom_direct", "spa": "tau2_custom_spa"' in wf
+    assert '"direct": "tau2_custom_direct", "blackbox": "tau2_custom_blackbox"' in wf
     assert 'bench_sel = ARM_OF.get(intervention, ARM_OF["direct"])' in wf
 
 
@@ -99,7 +99,7 @@ def test_the_two_arms_run_identical_task_ids(tier):
 
 
 def test_smoke_matches_the_plain_tau2_leg():
-    """Sharing tau2/smoke's ids makes tau2 / direct / spa three readings of one sample rather
+    """Sharing tau2/smoke's ids makes tau2 / direct / blackbox three readings of one sample rather
     than three different samples. Deliberate; change it and say so."""
     arm = [r["id"] for r in json.loads(
         (tier_dir(ARMS[0], "smoke") / "tasks.json").read_text(encoding="utf-8"))]
@@ -109,7 +109,7 @@ def test_smoke_matches_the_plain_tau2_leg():
 
 
 @pytest.mark.parametrize("arm", ARMS)
-def test_the_recorded_agent_is_a_gateway_model_not_the_spa_sentinel(arm):
+def test_the_recorded_agent_is_a_gateway_model_not_the_SPA_sentinel(arm):
     """`ibm/skillberry-local` is not a model the gateway serves — it is the signal to route the
     turn through the Proxy-Agent, which then calls a real model. Recording it as a tier's
     `agent` would make sync_models.py report an unserved agent on every scheduled pass."""
@@ -151,7 +151,7 @@ def test_the_arm_dir_the_leg_derives_actually_exists(arm):
 
 def test_both_arms_land_their_own_optimizer_instructions():
     """The generic template names policy.md and tools.py. The direct arm has no policy surface
-    and the spa arm's artifact is a skill package, so the shared text sends the optimizer
+    and the blackbox arm's artifact is a skill package, so the shared text sends the optimizer
     looking for files that do not exist."""
     case = _arm_case()
     assert 'cp "$ARM_DIR/optimizer/INSTRUCTIONS.md" "$PROJ/optimizer/"' in case
@@ -204,7 +204,7 @@ def test_the_spec_template_carries_the_per_bench_extra_keys():
 
 @pytest.mark.parametrize("arm,expect", [
     ("direct", {"actions", "capability_sources", "runner_repo_path"}),
-    ("spa", {"actions", "capability_sources", "intervention", "skill_name",
+    ("blackbox", {"actions", "capability_sources", "intervention", "skill_name",
              "protected_paths", "runner_repo_path"}),
 ])
 def test_each_arms_extra_yaml_parses_and_declares_its_delivery(arm, expect):
@@ -220,23 +220,23 @@ def test_each_arms_extra_yaml_parses_and_declares_its_delivery(arm, expect):
     assert parsed["runner_repo_path"].startswith("/"), (
         "runner_repo_path must be ABSOLUTE — the arms' committed specs use a project-relative "
         "path that resolves to nothing under ci/benchmarks/.work/")
-    if arm == "spa":
-        assert parsed["intervention"] == "spa"
+    if arm == "blackbox":
+        assert parsed["intervention"] == "blackbox"
         assert parsed["skill_name"] == "my_skill"
         assert "my_skill/SKILL.md" in parsed["protected_paths"]
         assert "primitive_tools/*" in parsed["protected_paths"]
 
 
-def test_the_spa_arm_matches_the_adapters_own_concurrency():
+def test_the_blackbox_arm_matches_the_adapters_own_concurrency():
     """The CI leg must not invent a different value from the one the arm runs with locally."""
     case = _arm_case()
-    spa = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
-    adapter = (REPO / "examples/tau2_custom/spa/adapters/adapter.py"
+    blackbox = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
+    adapter = (REPO / "examples/tau2_custom/blackbox/adapters/adapter.py"
                ).read_text(encoding="utf-8")
     default = re.search(r'TAU2_MAX_CONCURRENCY", "(\d+)"', adapter).group(1)
-    assert f"TAU2_MAX_CONCURRENCY:-{default}" in spa, (
-        f"adapter defaults to {default}; the spa leg must use the same")
-    assert 'TAU2_AGENT_MODEL:-ibm/skillberry-local' in spa, "spa delivery needs the sentinel"
+    assert f"TAU2_MAX_CONCURRENCY:-{default}" in blackbox, (
+        f"adapter defaults to {default}; the blackbox leg must use the same")
+    assert 'TAU2_AGENT_MODEL:-ibm/skillberry-local' in blackbox, "blackbox delivery needs the Blackbox sentinel"
 
 
 def test_native_sims_are_on_for_the_tau2_legs():
@@ -258,16 +258,16 @@ def test_the_arms_use_their_own_venv():
     assert 'VENV="$CACHE/venv"' in head, "every other bench keeps the shared venv"
 
 
-def test_the_spa_arm_sets_the_upstream_model_the_proxy_calls():
+def test_the_blackbox_arm_sets_the_upstream_model_the_proxy_calls():
     """SPA_MODEL_NAME must be derived from AGENT_MODEL, not left unset or pinned.
 
     CI has no repo-root .env, and unset makes the adapter fall back to a hardcoded default — so a
     dispatched agent_model would be silently ignored by both the proxy and the report.
     """
     case = _arm_case()
-    spa = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
-    code = "\n".join(ln for ln in spa.splitlines() if not ln.strip().startswith("#"))
-    assert "SPA_MODEL_NAME" in code, "the spa leg must set the proxy's upstream model"
+    blackbox = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
+    code = "\n".join(ln for ln in blackbox.splitlines() if not ln.strip().startswith("#"))
+    assert "SPA_MODEL_NAME" in code, "the blackbox leg must set the proxy's upstream model"
     assert "openai/$AGENT_MODEL" in code, "derive it from AGENT_MODEL"
     assert "openai/*)" in code, "openai/openai/... is a 404; only prefix when absent"
     direct = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[0]
@@ -276,12 +276,12 @@ def test_the_spa_arm_sets_the_upstream_model_the_proxy_calls():
 
 def test_the_env_manager_log_lives_in_tmp_and_is_rotated_by_the_shared_helper():
     """Every log this stack produces lives in /tmp, with one rotation implementation in the tree.
-    tau2's env manager is not a Skillberry service, so spa_env does not launch it -- but the leg
+    tau2's env manager is not a Skillberry service, so blackbox_env does not launch it -- but the leg
     that starts it owns bounding its log, as the arm's own run.sh does."""
     case = _arm_case()
     assert "ENV_LOG=/tmp/env_manager.log" in case, "the env manager log must live in /tmp"
     assert "$OUT/env_manager.log" not in case, "no service log may be written into $OUT"
-    assert "spa_env.rotate_if_large(" in case, (
+    assert "blackbox_env.rotate_if_large(" in case, (
         "rotate through the shared helper rather than reimplementing rotation here")
 
 
@@ -301,17 +301,17 @@ def test_the_env_manager_health_probe_uses_a_route_it_actually_serves():
     assert "/docs" in code, "probe /docs, which the app does serve"
 
 
-def test_the_spa_arm_tears_its_stack_down():
+def test_the_blackbox_arm_tears_its_stack_down():
     """The arm's own run.sh leaves the stack up for a human. CI has no operator, and a proxy
     still bound to the previous leg's skill is a silent wrong-candidate hazard for the next
     job on this serialized runner."""
     case = _arm_case()
-    assert "trap _spa_teardown EXIT" in case
-    assert "spa_env.stop_all()" in case
+    assert "trap _blackbox_teardown EXIT" in case
+    assert "blackbox_env.stop_all()" in case
     assert "pkill -f" in case, "stop_all() does not own tau2's Environment Manager"
 
 
-def test_the_spa_arm_reads_service_logs_and_never_writes_them():
+def test_the_blackbox_arm_reads_service_logs_and_never_writes_them():
     """Service logs belong to the services, not to this leg.
 
     Each rotates its own from inside the process holding the fd -- the only place a live log can
@@ -319,17 +319,17 @@ def test_the_spa_arm_reads_service_logs_and_never_writes_them():
     file stays empty. So CI may only READ bounded tails into the artifacts.
     """
     case = _arm_case()
-    spa = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
-    assert "SPA_VENDOR_DIR" in spa, "the run must agree with ci_setup.sh on the vendor dir"
-    assert ': > "$_log"' not in spa, "must not truncate a log a live service owns"
-    assert "tail -c" in spa, "no bounded tail captured for the artifacts"
-    # Paths come from spa_env rather than being retyped, so they cannot drift.
+    blackbox = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[1]
+    assert "SPA_VENDOR_DIR" in blackbox, "the run must agree with ci_setup.sh on the vendor dir"
+    assert ': > "$_log"' not in blackbox, "must not truncate a log a live service owns"
+    assert "tail -c" in blackbox, "no bounded tail captured for the artifacts"
+    # Paths come from blackbox_env rather than being retyped, so they cannot drift.
     for name in ("AGENT_LOG_FILE", "STORE_LOG_FILE", "AGENT_TOOLS_LOG_FILE",
                  "STORE_TOOLS_LOG_FILE"):
-        assert f"spa_env.{name}" in spa, f"tail capture should source {name} from spa_env"
+        assert f"blackbox_env.{name}" in blackbox, f"tail capture should source {name} from blackbox_env"
 
     setup = CI_SETUP.read_text(encoding="utf-8")
-    arm_case = setup.split("  tau2_custom_direct|tau2_custom_spa)", 1)[1] \
+    arm_case = setup.split("  tau2_custom_direct|tau2_custom_blackbox)", 1)[1] \
                     .split("\n  skillsbench)", 1)[0]
     assert 'export SPA_VENDOR_DIR="$CACHE/spa-vendor"' in arm_case, (
         "the stack must be provisioned into the cache, not the checkout — actions/checkout "
@@ -340,12 +340,12 @@ def test_the_spa_arm_reads_service_logs_and_never_writes_them():
         "setup must not truncate service logs either — see the fd argument above")
 
 
-def test_the_spa_log_paths_the_leg_captures_all_exist_in_spa_env():
-    """A tail capture naming a constant spa_env does not export would silently capture nothing."""
-    src = (REPO / "skills/interventions/llm-proxies/spa/scripts/spa_env.py").read_text()
+def test_the_blackbox_log_paths_the_leg_captures_all_exist_in_blackbox_env():
+    """A tail capture naming a constant blackbox_env does not export would silently capture nothing."""
+    src = (REPO / "skills/interventions/llm-proxies/blackbox/scripts/blackbox_env.py").read_text()
     for name in ("AGENT_LOG_FILE", "STORE_LOG_FILE", "AGENT_TOOLS_LOG_FILE",
                  "STORE_TOOLS_LOG_FILE"):
-        assert re.search(rf"^{name}\s*=", src, re.M), f"spa_env no longer defines {name}"
+        assert re.search(rf"^{name}\s*=", src, re.M), f"blackbox_env no longer defines {name}"
 
 
 def test_the_direct_arm_starts_no_services():
@@ -353,7 +353,7 @@ def test_the_direct_arm_starts_no_services():
     would not be measuring the direct path."""
     case = _arm_case()
     direct = case.split('if [ "$ARM" = "direct" ]', 1)[1].split("else", 1)[0]
-    for forbidden in ("spa_env", "start_store", "EnvironmentManager", "SPA_REMOTE_ENV_URL"):
+    for forbidden in ("blackbox_env", "start_store", "EnvironmentManager", "SPA_REMOTE_ENV_URL"):
         assert forbidden not in direct, f"direct arm should not touch {forbidden}"
 
 
@@ -361,10 +361,10 @@ def test_the_direct_arm_starts_no_services():
 
 def test_the_arms_install_the_pinned_skillberry_build_not_public_tau2():
     """The `tau2` leg installs sierra-research/tau2-bench, which has neither the
-    `airline_skillberry` domain the spa arm needs nor the [skillberry] extra. ONE build for
-    both arms is what keeps direct-vs-spa meaningful."""
+    `airline_skillberry` domain the blackbox arm needs nor the [skillberry] extra. ONE build for
+    both arms is what keeps direct-vs-blackbox meaningful."""
     sh = CI_SETUP.read_text(encoding="utf-8")
-    case = sh.split("  tau2_custom_direct|tau2_custom_spa)", 1)[1].split("\n  skillsbench)", 1)[0]
+    case = sh.split("  tau2_custom_direct|tau2_custom_blackbox)", 1)[1].split("\n  skillsbench)", 1)[0]
     assert "skillberry-ai/skillberry-benchmarks" in case
     assert "tau2/tau2-bench[skillberry]" in case
     # CODE only: the comment above the case deliberately names sierra-research to say why the
@@ -378,7 +378,7 @@ def test_the_ci_pin_matches_the_examples_own_pin():
     benchmark code, or they are not comparable and nobody would know."""
     sh = CI_SETUP.read_text(encoding="utf-8")
     ci_ref = re.search(r'BENCH_REF="\$\{BENCH_REF:-([0-9a-f]{40})\}"', sh).group(1)
-    for arm in ("direct", "spa"):
+    for arm in ("direct", "blackbox"):
         setup = (REPO / "examples/tau2_custom" / arm / "setup.sh"
                  ).read_text(encoding="utf-8")
         arm_ref = re.search(r'BENCH_REF="\$\{BENCH_REF:-([0-9a-f]{40})\}"', setup).group(1)
@@ -400,7 +400,7 @@ def test_the_integration_workflow_can_select_either_arm():
 def test_the_integration_workflow_still_defaults_to_tau2():
     """A PR-label run supplies no inputs. If the fallback ever stopped being 'tau2', the
     `integration-test` label would silently start running a different benchmark — an arm leg
-    installs a different tau2 build and (for spa) starts three services, so a label run would
+    installs a different tau2 build and (for blackbox) starts three services, so a label run would
     stop measuring what it has always measured."""
     wf = (REPO / ".github/workflows/integration-tests.yml").read_text(encoding="utf-8")
     assert re.search(r"default: tau2", wf), "the bench input's default moved off tau2"
@@ -412,11 +412,11 @@ def test_the_integration_workflow_still_defaults_to_tau2():
         assert "|| 'tau2'" in u, f"missing tau2 fallback in {u}"
 
 
-def test_only_the_spa_arm_provisions_the_skillberry_stack():
+def test_only_the_blackbox_arm_provisions_the_skillberry_stack():
     sh = CI_SETUP.read_text(encoding="utf-8")
-    case = sh.split("  tau2_custom_direct|tau2_custom_spa)", 1)[1].split("\n  skillsbench)", 1)[0]
-    assert 'if [ "$BENCH" = "tau2_custom_spa" ]; then' in case
-    assert "spa_env.provision()" in case
+    case = sh.split("  tau2_custom_direct|tau2_custom_blackbox)", 1)[1].split("\n  skillsbench)", 1)[0]
+    assert 'if [ "$BENCH" = "tau2_custom_blackbox" ]; then' in case
+    assert "blackbox_env.provision()" in case
     # PROVISION, never start: starting during setup is the anti-pattern the intervention skill
     # calls out, and the arm's own setup.sh is careful about the same line.
     assert "start_store" not in case and "start_spa" not in case

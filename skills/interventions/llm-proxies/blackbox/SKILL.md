@@ -1,21 +1,21 @@
 ---
-name: spa
-description: The Skillberry proxy intervention — put the optimized capability in the Skillberry Store and let the Skillberry Proxy-Agent (SPA) inject it into the agent's LLM calls, so the benchmark never sees skill files. Use when a capevolve.yaml sets `intervention: spa`, or when you need to provision, start, deploy to, stop or clean that stack.
+name: blackbox
+description: The Skillberry proxy intervention — put the optimized capability in the Skillberry Store and let the Skillberry Proxy-Agent (SPA) inject it into the agent's LLM calls, so the benchmark never sees skill files. Use when a capevolve.yaml sets `intervention: blackbox`, or when you need to provision, start, deploy to, stop or clean that stack.
 component: intervention
-argument-hint: "[--json]   # run.py reports status; lifecycle is driven from spa_env"
+argument-hint: "[--json]   # run.py reports status; lifecycle is driven from blackbox_env"
 allowed-tools: Read, Write, Edit, Bash
 provides: []
 needs: []
 ---
 
-# Intervention: SPA (the Skillberry proxy)
+# Intervention: blackbox (delivered through the Skillberry proxy)
 
 An **intervention** answers *how a candidate reaches the model under test* — as opposed to a
 **capability**, which is *what gets edited*. The two are independent: the same
 `skill-package` capability can be delivered by writing files where a runner reads them
 (`intervention: direct`) or by this intervention.
 
-In SPA mode:
+In blackbox mode:
 
 ```
 benchmark runner
@@ -35,7 +35,7 @@ the shape Skillberry actually ships, so optimizing here optimizes the real thing
 Two things must already be true of the runner, and this intervention checks rather than
 supplies them. Onboard a runner that lacks either and the data is wrong, not missing.
 
-* **The runner must be SPA-aware.** Three integrations have to be present for SPA mode to
+* **The runner must be SPA-aware.** Three integrations have to be present for blackbox mode to
   produce correct data: Skillberry context headers on the agent's LLM calls, a merge of the
   proxy-side trajectory into the runner's own, and a `disconnect` at session end. A
   Skillberry-aware build carries them; a stock runner does not.
@@ -48,7 +48,7 @@ supplies them. Onboard a runner that lacks either and the data is wrong, not mis
 
 `needs: []`, `provides: []` — deliberately. An intervention owns an out-of-process delivery
 stack, not a step in the run DAG, so it neither consumes nor produces a pipeline token. It is
-selected by the spec (`intervention: spa`), not sequenced by `orchestrate`.
+selected by the spec (`intervention: blackbox`), not sequenced by `orchestrate`.
 
 ## How to run
 
@@ -56,25 +56,25 @@ selected by the spec (`intervention: spa`), not sequenced by `orchestrate`.
 subcommand:
 
 ```bash
-python skills/interventions/llm-proxies/spa/scripts/run.py [--json]   # per-service: provisioned, running, healthy
-python skills/interventions/llm-proxies/spa/scripts/check.py          # offline contract check, no services needed
+python skills/interventions/llm-proxies/blackbox/scripts/run.py [--json]   # per-service: provisioned, running, healthy
+python skills/interventions/llm-proxies/blackbox/scripts/check.py          # offline contract check, no services needed
 ```
 
 Everything else is a call into the library, which is what an adapter and an onboarding
 step use anyway — one place to change, no CLI surface to keep in sync:
 
 ```python
-import sys; sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
+import sys; sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
 
-spa_env.provision()                       # clone + venv + install both services (idempotent)
-spa_env.start_store()                     # EXECUTE_PYTHON_LOCALLY=True, health-checked
-spa_env.import_standalone_tools(mod, tags=(FROZEN_TAG,))   # the project's own tag
-spa_env.upload_skill(skill_dir)           # primitives FIRST, then the skill
-spa_env.start_spa(SKILL_NAME)             # SPA binds ONE skill at start
-spa_env.status()                          # what run.py prints
-spa_env.stop_spa(); spa_env.stop_store()
-spa_env.clean()                           # drops clones/venvs/logs under vendor/
+blackbox_env.provision()                       # clone + venv + install both services (idempotent)
+blackbox_env.start_store()                     # EXECUTE_PYTHON_LOCALLY=True, health-checked
+blackbox_env.import_standalone_tools(mod, tags=(FROZEN_TAG,))   # the project's own tag
+blackbox_env.upload_skill(skill_dir)           # primitives FIRST, then the skill
+blackbox_env.start_spa(SKILL_NAME)             # SPA binds ONE skill at start
+blackbox_env.status()                          # what run.py prints
+blackbox_env.stop_spa(); blackbox_env.stop_store()
+blackbox_env.clean()                           # drops clones/venvs/logs under vendor/
 ```
 
 `start_store` / `start_spa` are idempotent: a healthy service is reported, never
@@ -83,7 +83,7 @@ restarted — restarting SPA mid-evaluation would swap the skill under a running
 ## Using it from an adapter
 
 ```python
-from spa_env import Protection, reset_store_to_skill, restart_spa
+from blackbox_env import Protection, reset_store_to_skill, restart_spa
 
 PROTECT = Protection(tags=(FROZEN_TAG,))           # the frozen substrate, by tag
 
@@ -143,7 +143,7 @@ infrastructure noise and not a verdict on the capability.
 
 ## Pinned versions
 
-`scripts/spa_env.py` holds the pins (store tag `0.2.1`, agent commit `e359494`), each
+`scripts/blackbox_env.py` holds the pins (store tag `0.2.1`, agent commit `e359494`), each
 env-overridable (`SKILLBERRY_STORE_REF`, `SKILLBERRY_AGENT_REF`) for a bisect. Both
 services need their own Python 3.11 venv, created with `uv`.
 
@@ -160,7 +160,7 @@ services need their own Python 3.11 venv, created with `uv`.
 
 ## References
 
-* `scripts/spa_env.py` — the library: provisioning, service lifecycle, store deployment,
+* `scripts/blackbox_env.py` — the library: provisioning, service lifecycle, store deployment,
   agent routing. Read it before adding a command; everything else here calls into it.
 * `scripts/check.py` — the offline contract check (pins, vendor layout), runnable with no
   services up.

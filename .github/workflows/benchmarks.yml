@@ -13,7 +13,7 @@
 #
 # REAL models, real $ → NOT part of always-on CI. Runs ONLY when requested:
 #   * manually  — Actions → "Benchmarks" → Run workflow (pick a benchmark), or
-#   * on a PR   — add the `benchmark-test` label.
+#   * on a PR   — add a `benchmark-<tier>-<bench>` label (e.g. benchmark-smoke-tau2).
 #
 # REQUIRES a SELF-HOSTED runner on the IBM network (the gateway is VPC-internal;
 # GitHub-hosted runners cannot reach it). See ci/benchmarks/README.md +
@@ -38,13 +38,13 @@ on:
       benchmark:
         description: "Which benchmark to run"
         type: choice
-        default: all
-        options: [all, tau2, swebench, skillsbench, spreadsheetbench, rfe-creator, tau2-custom]
+        default: tau2
+        options: [tau2, swebench, skillsbench, spreadsheetbench, rfe-creator, tau2-custom]
       intervention:
         description: "How the candidate reaches the model."
         type: choice
         default: direct
-        options: [direct, spa]
+        options: [direct, blackbox]
       tier:
         description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
@@ -55,7 +55,7 @@ on:
         type: string
         default: ""
       trials:
-        description: "Trials per task per eval. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value only to override deliberately — on a 5-task binary tier, 1 trial cannot separate signal from noise, which is why blank does not mean 1."
+        description: "Trials per task per eval. LEAVE BLANK for the tier default: smoke 3, the whole-set tiers (full, full_verified) 1, everything else 10. The whole-set tiers default to 1 because at 10 they plan more rollouts than the job's 24h timeout can absorb, and because task count dominates the noise there anyway — grow.py buys extra trials per candidate when one looks promising. Set a value only to override deliberately: on a 5-task binary tier 1 trial cannot separate signal from noise, which is why blank does not mean 1 everywhere."
         type: string
         default: ""
       agent_model:
@@ -187,16 +187,20 @@ jobs:
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
     # runner only when the PR author is a known collaborator — never for outside/
     # first-time contributors, who could otherwise run arbitrary code with secrets.
-    # PR trigger: any label containing 'benchmark-smoke' or 'benchmark-full'
-    # (an all-label or a per-bench one); the step below picks the exact tier×bench.
+    # PR trigger: any label CONTAINING 'benchmark-' — this is a substring test over the
+    # comma-joined label list, not a per-label prefix test, so an unrelated label that merely
+    # embeds the string (`no-benchmark-needed`) also admits the PR. That is deliberate here:
+    # over-admitting costs only a cheap planner run, and narrowing an authorization guard to
+    # sharpen a diagnostic would be the wrong trade. The planner applies the precise prefix
+    # test, so those PRs select nothing and exit 0 rather than being failed.
+    # The step below picks the exact tier×bench.
     # Guarding `plan` (not just `bench`) means an untrusted PR never even reaches the
     # planner, and `bench` inherits the guard transitively via `needs`.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
-        (contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-smoke') ||
-         contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-full')))
+        contains(join(github.event.pull_request.labels.*.name, ','), 'benchmark-'))
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       # An empty matrix is an error to GitHub, not a no-op, so `bench` keys its own `if:`
@@ -216,7 +220,7 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           TIER_SEL: ${{ github.event.inputs.tier || 'smoke' }}
-          BENCH_SEL: ${{ github.event.inputs.benchmark || 'all' }}
+          BENCH_SEL: ${{ github.event.inputs.benchmark || 'tau2' }}
           INTERVENTION_SEL: ${{ github.event.inputs.intervention || 'direct' }}
           # toJSON (not a ','-join) so labels stay exactly comparable: label names may
           # themselves contain commas, and the PR gate below is an exact-match test.
@@ -234,29 +238,26 @@ jobs:
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
           TIERS = ["smoke", "pilot", "full", "full_verified"]
-          # tau2_custom_direct / _spa are the DELIVERY ARMS of the tau2 airline benchmark:
+          # tau2_custom_direct / _blackbox are the DELIVERY ARMS of the tau2 airline benchmark:
           # same tasks and tiers, candidate delivered in-process versus through the Skillberry
           # Store + Proxy-Agent. They stay separate legs so each keeps its own tier task lists,
           # its own history row and its own concurrency group.
           BENCHES = ["tau2", "swebench", "skillsbench", "spreadsheetbench", "rfe-creator",
-                     "tau2_custom_direct", "tau2_custom_spa"]
+                     "tau2_custom_direct", "tau2_custom_blackbox"]
 
           # `tau2-custom` is the picker's name for "the arms"; `intervention` chooses which one.
           # A benchmark token is what the rest of the pipeline keys off — tasks.json paths, the
           # work dirs, the history rows — so resolve it here, once.
           CUSTOM = "tau2-custom"
-          ARM_OF = {"direct": "tau2_custom_direct", "spa": "tau2_custom_spa"}
+          ARM_OF = {"direct": "tau2_custom_direct", "blackbox": "tau2_custom_blackbox"}
           # Both arms are one benchmark on disk: ci/benchmarks/tau2_custom/<arm>/<tier>/.
           BENCH_DIR = {v: "tau2_custom/" + k for k, v in ARM_OF.items()}
-          # `all` sweeps both arms regardless of `intervention`: it means every leg, and the two
-          # arms are the comparison they exist for.
-
           # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
           # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
           # so its rewards are not comparable to anything, and the aggregate job publishes
           # EVERY leg to benchmark-history. Letting "all" pick it up would put meaningless
-          # numbers on the benchmarks page. A `benchmark-pilot` label still works, because
-          # that names the tier deliberately.
+          # numbers on the benchmarks page. A `benchmark-pilot-<bench>` label still works,
+          # because that names both the tier and the bench deliberately.
           # `full_verified` is a REAL comparison tier, unlike pilot — it is excluded for COST,
           # not for honesty. A benchmark populating both whole-set tiers would put two of them
           # in every `all` dispatch, and each is a full-length run on its own. Run it by name:
@@ -271,7 +272,7 @@ jobs:
 
           event = os.environ["EVENT"]
           tier_sel = os.environ.get("TIER_SEL") or "smoke"
-          bench_sel = os.environ.get("BENCH_SEL") or "all"
+          bench_sel = os.environ.get("BENCH_SEL") or "tau2"
           intervention = (os.environ.get("INTERVENTION_SEL") or "direct").strip().lower()
           labels = set(json.loads(os.environ.get("LABELS") or "[]") or [])
 
@@ -286,10 +287,9 @@ jobs:
                   if event == "workflow_dispatch":
                       tier_ok = (tier_sel == tier
                                  or (tier_sel == "all" and tier not in EXPLICIT_ONLY_TIERS))
-                      run = tier_ok and bench_sel in ("all", bench)
+                      run = tier_ok and bench_sel == bench
                   else:
-                      # pull_request: benchmark-<tier> (all of tier) OR benchmark-<tier>-<bench>
-                      run = f"benchmark-{tier}" in labels or f"benchmark-{tier}-{bench}" in labels
+                      run = f"benchmark-{tier}-{bench}" in labels
                   # A tier only exists for a benchmark that populates it. run_suite.sh already
                   # no-ops on a missing tasks.json, but emitting the leg anyway claims a slot on
                   # the single serialized self-hosted runner just to warn and exit — precisely
@@ -313,6 +313,35 @@ jobs:
           # stdout fails the whole step with "Invalid format", which took down every
           # dispatch and every labelled PR (the legs were selected correctly; only the
           # reporting was wrong).
+          # ZERO LEGS IS A FAILURE, not a quiet success. `has_legs=false` skips the `bench`
+          # job, so without this the whole workflow reports green having measured nothing —
+          # the failure mode run 30682558719 was, and the one removing `all` makes reachable
+          # again: `all` used to mask a selection that matched nothing by running everything.
+          #
+          # Keyed on the OUTCOME, not on how the request arrived: a dispatch that names a
+          # tier the benchmark does not populate (tier=pilot + bench=tau2) selects nothing
+          # just as surely as a retired bare label does, and dispatch is now the only route
+          # to the benches that have no per-bench label.
+          #
+          # `requested` exists so an ordinary PR is never failed by this. The trust gate above
+          # is a SUBSTRING test on the joined label list, so it also admits a PR whose labels
+          # merely contain "benchmark-" somewhere (`no-benchmark-needed`). Those reach the
+          # planner, select nothing correctly, and must exit 0 — the prefix test here is what
+          # separates "asked for benchmarks and got none" from "never asked".
+          requested = (event == "workflow_dispatch"
+                       or any(l.startswith("benchmark-") for l in labels))
+          if not legs and requested:
+              how = (f"tier={tier_sel!r} benchmark={bench_sel!r}"
+                     if event == "workflow_dispatch" else f"labels={sorted(labels)}")
+              print(
+                  f"::error::no legs selected for {how} — nothing would run. Check that the "
+                  f"benchmark populates that tier (ci/benchmarks/<bench>/<tier>/tasks.json), "
+                  f"and that a PR label names a bench: benchmark-<tier>-<bench>, "
+                  f"e.g. benchmark-smoke-tau2.",
+                  file=sys.stderr, flush=True,
+              )
+              sys.exit(1)
+
           print("matrix=" + json.dumps(legs))
           print("has_legs=" + ("true" if legs else "false"))
           print(f"selected {len(legs)} leg(s): {json.dumps(legs)}", file=sys.stderr, flush=True)
@@ -374,7 +403,14 @@ jobs:
       # default is "" rather than "10" precisely so the two cases are distinguishable — with a
       # non-empty default there is no way to tell "user asked for 10" from "user asked for
       # nothing", and smoke would silently get 10 instead of its intended 3.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || '10' }}
+      # Tier-sized, because a blank dispatch must produce a run the job can FINISH. The
+      # whole-set tiers get 1: at 10 they plan 22,790 (full) and 10,000 (full_verified)
+      # rollouts, which is ~167h and ~73h at the measured rate against timeout-minutes: 1440
+      # — and both tiers' READMEs already quote their cost at trials=1. Task count, not
+      # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
+      # and `grow.py` exists to buy replication only where a candidate looks promising.
+      # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
+      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);

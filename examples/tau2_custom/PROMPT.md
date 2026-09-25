@@ -4,8 +4,8 @@ Paste this to your coding agent (Claude Code) at the cap-evolve repo root and sa
 **"follow RUN.md."** Intake treats this as a brand-new benchmark: the integration step
 **clones + installs tau2-bench**, writes the adapter, seeds the capability, runs the
 `cap-evolve check` gate, then the full optimize → gate → sealed-test → report loop with a
-live dashboard. The delivery path is ONE choice you make up front — `direct` or `intervention: spa` — and the
-intervention skill owns everything about how `spa` works. Everything below is the input
+live dashboard. The delivery path is ONE choice you make up front — `direct` or `intervention: blackbox` — and the
+intervention skill owns everything about how `blackbox` works. Everything below is the input
 intake needs.
 
 ```text
@@ -22,10 +22,10 @@ exists). Here is everything intake needs:
 # 0. DELIVERY PATH  (pick EXACTLY ONE arm)
 - the CAPABILITY is the same either way — the airline agent's TOOL SURFACE only (tools,
                 not the system prompt / policy). Only the delivery differs, and that is a spec key:
-                  direct (no `intervention:` line) | intervention: spa
-- ASK ME WHICH ONE and WAIT for the answer: `direct` or `spa`. Ask it as a PLAIN question with
+                  direct (no `intervention:` line) | intervention: blackbox
+- ASK ME WHICH ONE and WAIT for the answer: `direct` or `blackbox`. Ask it as a PLAIN question with
                 ONE SHORT SENTENCE per option — "direct: the runner reads the candidate's files
-                in its own process, no extra services" / "spa: the candidate becomes a store
+                in its own process, no extra services" / "blackbox: the candidate becomes a store
                 skill the proxy injects, and needs the Skillberry stack plus the benchmark's
                 environment service". Do NOT render preview panes, option cards, or dumps of
                 spec fields; one sentence each is the whole point of the question.
@@ -35,12 +35,12 @@ exists). Here is everything intake needs:
                 stale, doubles the onboarding, and invites a spec/seed mismatch that delivers
                 candidates one way while the record says the other. The second arm is a
                 SEPARATE onboarding in its own project (intake `--base`), done only if I ask.
-- for `intervention: spa`, FOLLOW THE INTERVENTION SKILL —
-                `skills/interventions/llm-proxies/spa/SKILL.md` and the seeding reference it
+- for `intervention: blackbox`, FOLLOW THE INTERVENTION SKILL —
+                `skills/interventions/llm-proxies/blackbox/SKILL.md` and the seeding reference it
                 points to. It owns provisioning, service lifecycle, the seed shape (one skill
                 package + a frozen primitives module), the wrapper authoring rules, store
                 import order, and the per-candidate deploy. Do NOT re-derive any of that from
-                this prompt, and do not hand-roll a copy of spa_env. This prompt supplies only
+                this prompt, and do not hand-roll a copy of blackbox_env. This prompt supplies only
                 what the skill cannot know: the benchmark and the environment.
 
 # 1. CAPABILITY TO OPTIMIZE  (a copy is edited each iteration; the original is never touched)
@@ -58,7 +58,7 @@ exists). Here is everything intake needs:
                 Reservation, Passenger, Payment) so the optimizer can write correct tool code.
                 Seed tools must be CLEAN runnable code — no baked-in optimizer instructions in
                 the docstrings.
-- IF spa:       capabilities [tools]; the seed is GENERATED from the same 14 primitives
+- IF blackbox:  capabilities [tools]; the seed is GENERATED from the same 14 primitives
                 per the intervention skill's seeding procedure. capability_sources [].
                 THE SEED MUST BE NEUTRAL. my_skill/SKILL.md must be an EMPTY FILE (empty
                 string). The optimizer edits only tools (scripts/<tool>.py); SKILL.md is
@@ -67,7 +67,7 @@ exists). Here is everything intake needs:
 
 # 1b. INTERVENTION  (how the capability reaches the model — a spec key)
 - direct:       the spec has NO `intervention:` line (direct is the default).
-- spa:          the spec gets the top-level line:  intervention: spa
+- blackbox:     the spec gets the top-level line:  intervention: blackbox
                 (`capabilities:` says WHAT is edited; `intervention:` says HOW it reaches the
                 model. capevolve.yaml-only — no CLI override.)
 - VERIFY:       `cap-evolve check .capevolve/project` green for the ONE spec you prepared, and
@@ -81,19 +81,19 @@ exists). Here is everything intake needs:
 - repo:         https://github.com/skillberry-ai/skillberry-benchmarks.git
                 pin commit a3a83266008275e9d800fd709927fa3dc4f23ec5 → vendor/skillberry-benchmarks
 - install:      pip install -e vendor/skillberry-benchmarks/tau2/tau2-bench[skillberry]
-- WHY this build, whichever arm: its runner already carries what SPA mode needs — Skillberry
+- WHY this build, whichever arm: its runner already carries what blackbox mode needs — Skillberry
                 context headers on the agent's LLM calls, a merge of the proxy-side trajectory
                 into tau2's own, and a `disconnect` at session end — and it still exposes the
                 plain airline domain for direct. Using one build regardless of arm is what keeps
                 a later comparison meaningful; a different runner per arm makes it worthless.
-- domain:       direct → "airline";  spa → "airline_skillberry"
+- domain:       direct → "airline";  blackbox → "airline_skillberry"
 - tasks:        "adapter" — all 50 airline tasks from
                 tau2.domains.airline.environment.get_tasks; no network in tasks()
 - splits:       all 50 as train = val = test (no-holdout fit metric; the engine logs a
                 splits_warning and the report flags the test number as a fit metric). Pin them
                 in split_ids.json.
 
-# 2b. THE BENCHMARK'S ENVIRONMENT SERVICE  [SPA ONLY — skip entirely for direct]
+# 2b. THE BENCHMARK'S ENVIRONMENT SERVICE  [BLACKBOX ONLY — skip entirely for direct]
 - tau2 HAS one — the Environment Manager. The intervention skill requires such a service
                 and aborts without it; these are the facts it cannot infer:
 - start it:     port 8004, inline, from cap-evolve's venv:
@@ -124,7 +124,7 @@ exists). Here is everything intake needs:
                 instead of looping run_batch per trial; per-trial persistence
                 (rollouts/<split>/<task>__<tag>__t<k>.json) is UNCHANGED so pass^k / SE / resume
                 keep working. This collapses N sequential eval passes into one batched run.
-- apply(): implement the ONE arm you were asked for and nothing else. For spa, call the
+- apply(): implement the ONE arm you were asked for and nothing else. For blackbox, call the
                 intervention skill's deploy helpers; for direct, read the candidate's policy +
                 tools and pass them to tau2's Environment constructor. Guard it on the
                 CANDIDATE'S SHAPE (is a skill package present?) rather than on the spec, so a
@@ -133,10 +133,10 @@ exists). Here is everything intake needs:
                 errored, so the harness EXCLUDES the candidate instead of scoring it 0.0.
 - models:       tau2 model settings TAU2_AGENT_MODEL / TAU2_USER_MODEL, as litellm
                 "openai/<model>" strings against the gateway in 3b (e.g.
-                openai/aws/gpt-oss-120b). [SPA ONLY] the AGENT's model is the SPA-routed name
+                openai/aws/gpt-oss-120b). [BLACKBOX ONLY] the AGENT's model is the SPA-routed name
                 (default `ibm/skillberry-local`) while the user simulator stays on the gateway
                 model — the intervention skill states why that boundary is a correctness rule.
-- concurrency:  TAU2_MAX_CONCURRENCY=125 on the direct arm. [SPA ONLY] start LOW (e.g. 4) —
+- concurrency:  TAU2_MAX_CONCURRENCY=125 on the direct arm. [BLACKBOX ONLY] start LOW (e.g. 4) —
                 every agent call funnels through one proxy and one store process.
 
 # 3b. ENVIRONMENT — LLM ACCESS  (the run owner's environment supplies this; do not hardcode)
@@ -212,7 +212,7 @@ exists). Here is everything intake needs:
                 candidates/<tag> for baseline and finalize, work/<tag> for an iteration eval;
                 <split> stands in for the phase, which no adapter is told. The timestamp+pid
                 matters: tau2 reads an existing results file as a run to RESUME and prompts on
-                stdin, which an eval does not have.) On the spa arm the Skillberry build already
+                stdin, which an eval does not have.) On the blackbox arm the Skillberry build already
                 merges the proxy-side trajectory into tau2's own, so one trace covers both.
 - expose:       adapter.trajectories(split) returns that directory; cap-evolve copies it
                 VERBATIM into the optimizer's workdir as ./trajectories/ each iteration
@@ -255,6 +255,6 @@ exists). Here is everything intake needs:
 - stall:            3
 - ONE ARM PER RUN. If I later ask for the other arm, it is a separate onboarding in its own
                     project — and the two numbers are NOT like-for-like (under direct the
-                    optimizer may change what the tools DO; under spa only how they are presented
+                    optimizer may change what the tools DO; under blackbox only how they are presented
                     and composed). Report them side by side, never averaged.
 ```

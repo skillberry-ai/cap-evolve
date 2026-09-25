@@ -151,10 +151,10 @@ case "$BENCH" in
   tau2)
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
     uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
-  tau2_custom_direct|tau2_custom_spa)
+  tau2_custom_direct|tau2_custom_blackbox)
     # A DIFFERENT tau2 build from the `tau2` leg above. Both arms are onboarded against
     # skillberry-ai/skillberry-benchmarks at a PINNED commit. ONE build for both arms is what keeps
-    # a direct-vs-spa comparison meaningful;
+    # a direct-vs-blackbox comparison meaningful;
     #
     # The pin is the SAME default the arms own setup.sh scripts use, so a CI number and a
     # local `bash examples/.../run.sh` number refer to the same benchmark code. 
@@ -178,30 +178,30 @@ case "$BENCH" in
     # arms' committed specs use a project-relative '../../vendor/skillberry-benchmarks', which
     # would resolve to nothing under ci/benchmarks/.work/.
     echo "skillberry-benchmarks @ $(git -C "$SB_DIR" rev-parse HEAD)"
-    if [ "$BENCH" = "tau2_custom_spa" ]; then
-      # Put the stack's clones in the CACHE, not the checkout. spa_env defaults its vendor dir
+    if [ "$BENCH" = "tau2_custom_blackbox" ]; then
+      # Put the stack's clones in the CACHE, not the checkout. blackbox_env defaults its vendor dir
       # to <repo>/vendor, and actions/checkout wipes untracked files in the workspace — so the
       # default would re-clone and re-install BOTH services on every single run (minutes each),
       # unlike every other cached dependency here. $CACHE survives between jobs.
       export SPA_VENDOR_DIR="$CACHE/spa-vendor"
       mkdir -p "$SPA_VENDOR_DIR"
       # PROVISION ONLY (clone + venv + install the Store and the Proxy-Agent), never start:
-      # starting belongs to the run, as in the arm's own setup.sh. spa_env is the same module the
+      # starting belongs to the run, as in the arm's own setup.sh. blackbox_env is the same module the
       # example uses, so CI and a local run provision an identical stack — including the log
       # rotation it patches into each clone, so nothing here needs to bound a log.
       ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$CAPEVOLVE_PY" - <<'PYEOF'
 import json, sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-print("  " + json.dumps(spa_env.provision()))
-print(f"  store ref {spa_env.STORE_REF} @ {spa_env.store_dir()}")
-print(f"  agent ref {spa_env.AGENT_REF[:7]} @ {spa_env.agent_dir()}")
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+print("  " + json.dumps(blackbox_env.provision()))
+print(f"  store ref {blackbox_env.STORE_REF} @ {blackbox_env.store_dir()}")
+print(f"  agent ref {blackbox_env.AGENT_REF[:7]} @ {blackbox_env.agent_dir()}")
 PYEOF
-      ) || { echo "::error:: Skillberry stack provisioning failed — the spa arm cannot run"; exit 1; }
+      ) || { echo "::error:: Skillberry stack provisioning failed — the blackbox arm cannot run"; exit 1; }
     fi
     if [ -n "${GITHUB_ENV:-}" ]; then
       echo "SKILLBERRY_BENCH_DIR=$SB_DIR" >> "$GITHUB_ENV"
-      # MUST reach the "Run suite" step: spa_env recomputes its vendor dir from the environment
+      # MUST reach the "Run suite" step: blackbox_env recomputes its vendor dir from the environment
       # in that process too, and a run that disagreed with setup about where the stack lives
       # would re-provision from scratch mid-leg.
       if [ -n "${SPA_VENDOR_DIR:-}" ]; then echo "SPA_VENDOR_DIR=$SPA_VENDOR_DIR" >> "$GITHUB_ENV"; fi

@@ -12,7 +12,7 @@ const JOB_RE = /^([a-z][a-z0-9_-]*) \/ ([a-z][a-z0-9_-]*)$/;
 // The arms are internal leg names; the picker calls them tau2-custom + intervention.
 const BENCH_LABEL = {
   tau2_custom_direct: "tau2-custom (direct)",
-  tau2_custom_spa: "tau2-custom (spa)",
+  tau2_custom_blackbox: "tau2-custom (blackbox)",
 };
 const benchLabel = (b) => BENCH_LABEL[b] || b;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
@@ -259,7 +259,7 @@ function render() {
     empty.hidden = false;
     empty.innerHTML = RECORDS.length
       ? "No runs match the current filters — try widening the time range."
-      : "No runs recorded yet — trigger the suite (add a <code>benchmark-smoke</code> label to a PR, or Actions → Benchmarks).";
+      : "No runs recorded yet — trigger the suite (add a <code>benchmark-smoke-&lt;bench&gt;</code> label to a PR, or Actions → Benchmarks).";
   } else {
     empty.hidden = true;
   }
