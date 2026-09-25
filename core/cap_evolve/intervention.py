@@ -5,10 +5,11 @@ delivered:
 
 * ``direct`` (default, and every pre-existing spec) — the runner reads the artifact from
   disk or its own config. Nothing extra happens; this module is a no-op.
-* ``spa`` — the artifact lives in the Skillberry Store and the Skillberry Proxy-Agent
-  injects it into the agent's LLM calls. The stack that makes that possible is a
-  ``component: intervention`` skill (``skills/interventions/llm-proxies/spa/``), and a run must not begin
-  unless it is actually up.
+* ``blackbox`` — the artifact lives in the Skillberry Store and the Skillberry Proxy-Agent
+  injects it into the agent's LLM calls, so the agent under test is never modified. The stack
+  that makes that possible is a ``component: intervention`` skill
+  (``skills/interventions/llm-proxies/blackbox/``), and a run must not begin unless it is
+  actually up.
 
 Two things this module exists to prevent:
 
@@ -31,9 +32,8 @@ import sys
 from pathlib import Path
 
 DIRECT = "direct"
-SPA = "spa"
-KNOWN = (DIRECT, SPA)
-
+BLACKBOX = "blackbox"
+KNOWN = (DIRECT, BLACKBOX)
 
 class InterventionError(RuntimeError):
     """An intervention that is misdeclared, missing, or not ready."""
@@ -75,19 +75,19 @@ def skill_dir(intervention: str, skills: dict, skills_dir: Path) -> Path:
     return skills_dir / row["path"]
 
 
-def _load_spa_env(intervention_dir: Path):
-    """Import the SPA intervention's library from its skill dir, without polluting sys.path.
+def _load_blackbox_env(intervention_dir: Path):
+    """Import the blackbox intervention's library from its skill dir, without polluting sys.path.
 
     Loaded by file location rather than by name so this works from any cwd and does not
     depend on the skills dir being importable.
     """
-    mod_path = intervention_dir / "scripts" / "spa_env.py"
+    mod_path = intervention_dir / "scripts" / "blackbox_env.py"
     if not mod_path.exists():
         raise InterventionError(f"intervention library not found at {mod_path}")
     scripts = str(intervention_dir / "scripts")
     if scripts not in sys.path:
         sys.path.insert(0, scripts)
-    spec_ = importlib.util.spec_from_file_location("spa_env", mod_path)
+    spec_ = importlib.util.spec_from_file_location("blackbox_env", mod_path)
     module = importlib.util.module_from_spec(spec_)
     spec_.loader.exec_module(module)
     return module
@@ -96,7 +96,7 @@ def _load_spa_env(intervention_dir: Path):
 def preflight(spec: dict, skills: dict, skills_dir: Path) -> dict:
     """Verify the declared intervention is ready, and return a record for the run metadata.
 
-    ``direct`` is always ready. For ``spa``: the services must be provisioned and
+    ``direct`` is always ready. For ``blackbox``: the services must be provisioned and
     healthy; an already-provisioned but stopped stack is STARTED here, because that is
     recoverable and a human would only run the same two calls by hand. Provisioning is
     NOT done here — cloning and installing two services is minutes of network and
@@ -111,20 +111,20 @@ def preflight(spec: dict, skills: dict, skills_dir: Path) -> dict:
         return {"intervention": DIRECT}
 
     d = skill_dir(rt, skills, skills_dir)
-    env = _load_spa_env(d)
+    env = _load_blackbox_env(d)
 
     st = env.status()
-    missing = [n for n in ("store", "spa") if not st[n]["provisioned"]]
+    missing = [n for n in ("store", "agent") if not st[n]["provisioned"]]
     if missing:
         raise InterventionError(
-            f"intervention 'spa' is declared but {', '.join(missing)} is not provisioned "
+            f"intervention 'blackbox' is declared but {', '.join(missing)} is not provisioned "
             f"(expected under {env.vendor_dir()}). Run the example's setup.sh first — "
             "provisioning clones and installs two services, which a run deliberately "
             "does not do on your behalf.")
 
     # A port held by something that is NOT our service is a different problem from a
     # stopped service, and the fix differs, so say which one it is.
-    for name in ("store", "spa"):
+    for name in ("store", "agent"):
         r = st[name]
         if not r["healthy"] and r["pids"] and not r["ours"]:
             raise InterventionError(
@@ -132,21 +132,21 @@ def preflight(spec: dict, skills: dict, skills_dir: Path) -> dict:
                 f"{name} service. Free the port and retry.")
 
     skill_name = str(spec.get("skill_name") or "").strip()
-    if not st["spa"]["healthy"] and not skill_name:
+    if not st["agent"]["healthy"] and not skill_name:
         raise InterventionError(
-            "intervention 'spa' needs `skill_name:` in the spec to start the proxy-agent: SPA "
-            "serves exactly one skill, and with no name it falls back to searching the "
+            "intervention 'blackbox' needs `skill_name:` in the spec to start the proxy-agent: the "
+            "proxy-agent serves exactly one skill, and with no name it falls back to searching the "
             "store — which succeeds silently even when the store is empty.")
 
     if not st["store"]["healthy"]:
         env.start_store()
-    if not st["spa"]["healthy"]:
+    if not st["agent"]["healthy"]:
         env.start_spa(skill_name)
 
     st = env.status()
-    for name in ("store", "spa"):
+    for name in ("store", "agent"):
         if not st[name]["healthy"]:
-            raise InterventionError(f"intervention 'spa': {name} is not healthy on port "
+            raise InterventionError(f"intervention 'blackbox': {name} is not healthy on port "
                                 f"{st[name]['port']} after a start attempt")
 
     rec = {
@@ -154,7 +154,7 @@ def preflight(spec: dict, skills: dict, skills_dir: Path) -> dict:
         "skill_dir": str(d),
         "skill_name": skill_name or None,
         "store_port": st["store"]["port"],
-        "spa_port": st["spa"]["port"],
+        "proxy_port": st["agent"]["port"],
         "remote_env": st["remote_env"]["url"] or None,
         "remote_env_healthy": st["remote_env"]["healthy"],
     }
@@ -171,7 +171,7 @@ def describe(rec: dict) -> str:
     if rec.get("intervention", DIRECT) == DIRECT:
         return "intervention: direct (candidate delivered as files)"
     bits = [f"intervention: {rec['intervention']}",
-            f"store :{rec.get('store_port')}", f"proxy :{rec.get('spa_port')}"]
+            f"store :{rec.get('store_port')}", f"proxy :{rec.get('proxy_port')}"]
     if rec.get("skill_name"):
         bits.append(f"skill={rec['skill_name']}")
     if rec.get("remote_env"):

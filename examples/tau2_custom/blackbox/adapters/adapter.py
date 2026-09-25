@@ -59,26 +59,26 @@ def _native_sims_enabled() -> bool:
         "0", "false", "no", "off"}
 
 
-def _spa_env():
-    """Import the SPA intervention's library. Lazy: no import-time cost for ``check``.
+def _blackbox_env():
+    """Import the blackbox intervention's library. Lazy: no import-time cost for ``check``.
 
     ``CAPEVOLVE_SKILLS_DIR`` first, then ``parents[3]`` — which only reaches the repo root for a
     project at ``<repo>/.capevolve*/project``, not one nested deeper as CI scaffolds it.
     """
-    rel = Path("interventions") / "llm-proxies" / "spa" / "scripts"
+    rel = Path("interventions") / "llm-proxies" / "blackbox" / "scripts"
     tried = []
     env_dir = os.environ.get("CAPEVOLVE_SKILLS_DIR")
     for scripts in ([Path(env_dir) / rel] if env_dir else []) + [
         Path(__file__).resolve().parents[3] / "skills" / rel
     ]:
-        if (scripts / "spa_env.py").exists():
+        if (scripts / "blackbox_env.py").exists():
             if str(scripts) not in sys.path:
                 sys.path.insert(0, str(scripts))
-            import spa_env  # noqa: PLC0415
+            import blackbox_env  # noqa: PLC0415
 
-            return spa_env
+            return blackbox_env
         tried.append(str(scripts))
-    raise RuntimeError("SPA intervention library not found at " + ", ".join(tried))
+    raise RuntimeError("blackbox intervention library not found at " + ", ".join(tried))
 
 
 # docs/TAU2_SUMMARY.md row 7: tau2's user simulator sometimes emits ``###STOP###`` in the
@@ -159,7 +159,7 @@ class Adapter(CapabilityAdapter):
 
     # ---- tau2's OWN simulation records -----------------------------------
     # ONE path format, byte-identical in EVERY tau2 adapter in this repo (this one, the
-    # skillberry_benchmarks direct + spa arms, and templates/adapters/tau2_bench):
+    # tau2_custom direct + blackbox arms, and templates/adapters/tau2_bench):
     #
     #     <run_dir>/native_sims/<tag>/<split>/results_<YYYYmmdd_HHMMSS>_<pid>.json
     #
@@ -646,15 +646,15 @@ class Adapter(CapabilityAdapter):
             return
 
         try:
-            spa = _spa_env()
-            protect = spa.Protection(tags=(FROZEN_TAG,))
+            bbenv = _blackbox_env()
+            protect = bbenv.Protection(tags=(FROZEN_TAG,))
             # Self-heal a store that has no substrate (e.g. a cold start): the frozen
             # module is byte-identical in every candidate, so importing it from here is
             # the same substrate the onboarding registered, and Protection keeps it
             # across every later redeploy.
             if len(protect.present_names()) < N_PRIMITIVES:
-                spa.import_standalone_tools(frozen, tags=(FROZEN_TAG,))
-            spa.reset_store_to_skill(skill_dir, SKILL_NAME, protect)   # primitives first, skill second
-            spa.restart_spa(SKILL_NAME)
+                bbenv.import_standalone_tools(frozen, tags=(FROZEN_TAG,))
+            bbenv.reset_store_to_skill(skill_dir, SKILL_NAME, protect)   # primitives first, skill second
+            bbenv.restart_spa(SKILL_NAME)
         except Exception as e:  # noqa: BLE001 — see the docstring: must not raise
             self._deploy_error = f"{type(e).__name__}: {e}"

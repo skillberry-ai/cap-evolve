@@ -22,6 +22,44 @@ All notable changes to cap-evolve are documented here. The format follows
   `pages.yml` `workflow_dispatch` to render it. The live-watch feed and per-run frozen UI
   snapshots read unrelated data paths and are unaffected. See #532/#533.
 
+### Fixed
+- **A blank-`trials` dispatch of a whole-set tier was guaranteed to be killed by the job
+  timeout.** `NUM_TRIALS` defaulted to 10 on every non-smoke tier, which plans 22,790 rollouts
+  for `full` (91 val / 639 test) and 10,000 for `full_verified` (40 / 280) — roughly 167h and
+  73h at the measured 2.28 rollouts/min, against `timeout-minutes: 1440`. It also contradicted
+  the cost model both tiers' READMEs publish, which quote `trials=1` (2,279 and 1,000). The
+  whole-set tiers now default to **1 trial**; smoke keeps 3, `pilot` keeps 10, and an explicit
+  `trials` still wins on every tier. This is not a loss of rigour — task count, not trials,
+  dominates the noise (val SE 0.158 at 10 tasks x 3 trials vs ~0.079 projected at 40 x 1), and
+  `grow.py` exists to buy replication only for candidates that look promising. `run_suite.sh`
+  now also prints the planned rollout count next to the split it was computed from, so an
+  over-budget dispatch is visible in the first seconds of the log instead of at hour 24.
+- **`optimizer_usd_per_iter`'s `"0"` default made every spend ceiling unreachable.** In a
+  GitHub `||` chain only the EMPTY string is falsy — `"0"` is truthy — so the input always won
+  and `${{ inputs.optimizer_usd_per_iter || (matrix.tier == 'smoke' && '50' || '0') }}` could
+  never reach its own smoke branch. Smoke's $50/iteration cap was dead code, and since `0`
+  means *unlimited* (`run_suite.sh` omits the spend clause from the derived agent-mode
+  `stop_condition` entirely at 0) every blank dispatch ran with **no dollar ceiling** — on run
+  35861572021 the operator had to pass the cap by hand to bound an Opus 5 agent loop. The
+  default is now `""`, so blank means "the tier default" ($50 on smoke, unlimited elsewhere,
+  unchanged) while an explicit `0` still disables the cap deliberately. This is the rule
+  `iterations`/`trials` already followed and that `test_an_explicit_iterations_dispatch_reaches_smoke`
+  documents; a new test pins it for **every** input in the file, so the next one added cannot
+  repeat it.
+- **An agent-optimize wave of parallel siblings silently spent the whole `iterations` budget.**
+  The derived `stop_condition` defines a round as "one candidate taken to a full-val gate
+  decision", so siblings gated together each consume one — but nothing said so, and the very
+  next clause reads as encouragement to go wide ("Use every round the budget allows"). On run
+  35861572021 (`iterations=3`) the agent proposed three siblings in one wave, booked all three
+  rounds, and finished with none left — having produced a clear result it could not act on: the
+  same knowledge scored 0.511 on the `prompt.md` prose surface (with two task regressions) and
+  0.600 on `task_template.md`, with the composition between them at 0.556. The obvious next
+  round, re-testing the winning surface alone, was unavailable. The briefing now states that
+  siblings each cost a round and asks the agent to keep rounds in reserve for what a wave
+  shows; the `iterations` input description now says what one iteration buys in each
+  orchestration mode. No change to the accounting itself — `iterations` still bounds gate
+  decisions, which is what bounds cost and what `spend.py`/`grow.py` reason about.
+
 ### Added
 - **`full_verified`: a tier on a benchmark's verified/curated re-release — for SpreadsheetBench,
   the verified 400-task set that recent work actually reports on.** The tier name is deliberately

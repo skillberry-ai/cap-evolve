@@ -7,7 +7,7 @@
 #   bash run.sh --smoke         # the cheap smoke spec over the same install
 #   SPEC=capevolve.itest.yaml bash run.sh     # any spec already copied into the project
 #
-# Unlike the SPA arm's run.sh there is NO stack to start and nothing left running
+# Unlike the blackbox arm's run.sh there is NO stack to start and nothing left running
 # afterwards: this arm's only external dependency is the gateway the LLM calls go to.
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,7 +42,7 @@ done
 export PYTHONPATH="$PROJECT/adapters"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
 # HIGH on purpose: nothing funnels through a single process on this arm, so the ceiling is
-# the gateway's, not ours. The SPA arm runs at 4 for exactly the opposite reason.
+# the gateway's, not ours. The blackbox arm runs at 4 for exactly the opposite reason.
 export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-125}"
 export TAU2_LLM_TIMEOUT="${TAU2_LLM_TIMEOUT:-240}"
 export TAU2_LLM_RETRIES="${TAU2_LLM_RETRIES:-2}"

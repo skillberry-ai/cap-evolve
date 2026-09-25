@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import spa_env  # noqa: E402
+import blackbox_env  # noqa: E402
 
 
 def _expect_refusal(fn, label: str, problems: list[str]) -> None:
@@ -39,9 +39,9 @@ def _expect_refusal(fn, label: str, problems: list[str]) -> None:
 
 
 def main() -> int:
-    report = {"skill": "spa", "component": "intervention", "ok": False, "problems": [], "notes": []}
+    report = {"skill": "blackbox", "component": "intervention", "ok": False, "problems": [], "notes": []}
     problems: list[str] = report["problems"]
-    repo = spa_env.repo_root()
+    repo = blackbox_env.repo_root()
 
     # 1. Deletion guards -----------------------------------------------------
     for target, label in [
@@ -54,23 +54,23 @@ def main() -> int:
         (repo / ".venv" / "lib", "under .venv"),
         (Path("/tmp"), "outside the repo"),
     ]:
-        _expect_refusal(lambda t=target, l=label: spa_env.safe_rm(t, l),
+        _expect_refusal(lambda t=target, l=label: blackbox_env.safe_rm(t, l),
                         f"safe_rm({label})", problems)
     # A legitimate target that simply is not there must report, not raise. The library
     # prints as it goes; a skill's stdout is a JSON contract, so swallow that here.
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            removed = spa_env.safe_rm(repo / "vendor" / "does-not-exist-xyz", "absent vendor dir")
+            removed = blackbox_env.safe_rm(repo / "vendor" / "does-not-exist-xyz", "absent vendor dir")
         if removed:
             problems.append("safe_rm claimed to remove a path that does not exist")
     except RuntimeError as e:
         problems.append(f"safe_rm refused a legitimate absent target: {e}")
 
     # 2. SPA must never start nameless --------------------------------------
-    _expect_refusal(lambda: spa_env.start_spa(""), "start_spa('')", problems)
+    _expect_refusal(lambda: blackbox_env.start_spa(""), "start_spa('')", problems)
 
     # 3. Protection ---------------------------------------------------------
-    p = spa_env.Protection(tags=("frozen",), names=("keep_me",), modules=("substrate.py",))
+    p = blackbox_env.Protection(tags=("frozen",), names=("keep_me",), modules=("substrate.py",))
     cases = [
         ({"name": "x", "tags": ["frozen"]}, True, "tag match"),
         ({"name": "keep_me", "tags": []}, True, "name match"),
@@ -81,7 +81,7 @@ def main() -> int:
     for row, expected, label in cases:
         if p.covers(row) is not expected:
             problems.append(f"Protection.covers({label}) -> {not expected}, expected {expected}")
-    if spa_env.Protection():
+    if blackbox_env.Protection():
         problems.append("an empty Protection must be falsy (it protects nothing)")
     if not p:
         problems.append("a populated Protection must be truthy")
@@ -92,24 +92,24 @@ def main() -> int:
     for fn in ("provision", "start_store", "start_spa", "restart_spa", "reset_store_to_skill",
                "upload_skill", "delete_skill", "purge_orphans", "import_standalone_tools",
                "status", "clean", "spa_base_url", "docker_bridge_ip", "upstream_llm_args"):
-        if not callable(getattr(spa_env, fn, None)):
+        if not callable(getattr(blackbox_env, fn, None)):
             problems.append(f"missing public entry point: {fn}")
 
     # 5. Pins ---------------------------------------------------------------
-    if not spa_env.STORE_REF:
+    if not blackbox_env.STORE_REF:
         problems.append("STORE_REF pin is empty")
-    if len(spa_env.AGENT_REF) != 40 or not all(c in "0123456789abcdef" for c in spa_env.AGENT_REF):
-        problems.append(f"AGENT_REF should be a full 40-char commit sha, got {spa_env.AGENT_REF!r}")
-    if spa_env.SPA_PORT != "7000":
+    if len(blackbox_env.AGENT_REF) != 40 or not all(c in "0123456789abcdef" for c in blackbox_env.AGENT_REF):
+        problems.append(f"AGENT_REF should be a full 40-char commit sha, got {blackbox_env.AGENT_REF!r}")
+    if blackbox_env.SPA_PORT != "7000":
         problems.append("SPA_PORT must stay 7000 — SPA and its consumers hardcode it")
 
     # public_functions is pure AST: assert the underscore filter, on this very file.
-    names = spa_env.public_functions(Path(__file__))
+    names = blackbox_env.public_functions(Path(__file__))
     if "main" not in names or any(n.startswith("_") for n in names):
         problems.append(f"public_functions() filter is wrong: {names}")
 
-    report["notes"].append(f"pins: store={spa_env.STORE_REF} agent={spa_env.AGENT_REF[:7]}")
-    report["notes"].append(f"vendor: {spa_env.vendor_dir()}")
+    report["notes"].append(f"pins: store={blackbox_env.STORE_REF} agent={blackbox_env.AGENT_REF[:7]}")
+    report["notes"].append(f"vendor: {blackbox_env.vendor_dir()}")
     report["ok"] = not problems
     print(json.dumps(report, indent=2))
     return 0 if report["ok"] else 1

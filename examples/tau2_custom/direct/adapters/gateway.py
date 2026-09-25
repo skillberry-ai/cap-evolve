@@ -91,7 +91,7 @@ def _refuse_spa(m: str, who: str) -> None:
             "route. This project is the DIRECT arm: the candidate tool surface is installed "
             "in this process and there is no proxy running, so that model id would resolve "
             "to nothing. Use a gateway catalog id (e.g. aws/gpt-oss-120b), or onboard the "
-            "spa arm as its own project.")
+            "blackbox arm as its own project.")
 
 
 def agent_model() -> str:

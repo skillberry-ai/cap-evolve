@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# cap-evolve run on tau2-bench airline, SPA arm: the candidate becomes a Skillberry Store
+# cap-evolve run on tau2-bench airline, blackbox arm: the candidate becomes a Skillberry Store
 # skill and the Proxy-Agent injects it into the agent's LLM calls.
-# Prereq: bash examples/tau2_custom/spa/setup.sh
+# Prereq: bash examples/tau2_custom/blackbox/setup.sh
 #
 #   bash run.sh                 # the pinned spec (capevolve.yaml)
 #   bash run.sh --smoke         # the cheap smoke spec over the same stack
@@ -13,7 +13,7 @@
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../../.." && pwd)"
-BASE="${BASE:-$REPO/.capevolve-spa}"
+BASE="${BASE:-$REPO/.capevolve-blackbox}"
 PROJECT="${PROJECT:-$BASE/project}"
 VENV="${VENV:-$REPO/.venv}"
 case "$VENV" in /*) ;; *) VENV="$REPO/$VENV" ;; esac
@@ -56,7 +56,7 @@ export TAU2_USER_MODEL="${TAU2_USER_MODEL:-aws/gpt-oss-120b}"
 export SPA_REMOTE_ENV_URL="${SPA_REMOTE_ENV_URL:-http://127.0.0.1:8004}"
 ENV_PORT="${ENV_PORT:-8004}"
 
-# tau2's env manager is not a Skillberry service, so spa_env does not launch it — but its log is
+# tau2's env manager is not a Skillberry service, so blackbox_env does not launch it — but its log is
 # ours to bound. /tmp, like the other three, and rotated by the same helper (never reimplemented
 # here) so there is one rotation implementation in the tree.
 ENV_LOG=/tmp/env_manager.log
@@ -71,10 +71,10 @@ if curl -sf -o /dev/null --max-time 3 "http://127.0.0.1:$ENV_PORT/docs" \
 else
   echo "  starting -> $ENV_LOG"
   # Rotate ONLY here, inside the "not already up" branch: rotating a log the running env manager
-  # holds open would leave it appending to a deleted inode (see rotate_if_large in spa_env).
+  # holds open would leave it appending to a deleted inode (see rotate_if_large in blackbox_env).
 
-  "$PY" -c "import sys; sys.path.insert(0, '$REPO/skills/interventions/llm-proxies/spa/scripts')
-import spa_env; spa_env.rotate_if_large('$ENV_LOG')" \
+  "$PY" -c "import sys; sys.path.insert(0, '$REPO/skills/interventions/llm-proxies/blackbox/scripts')
+import blackbox_env; blackbox_env.rotate_if_large('$ENV_LOG')" \
     || echo "  WARNING: could not rotate $ENV_LOG (continuing; it may grow unbounded)" >&2
   ( cd "$REPO" && LITELLM_LOCAL_MODEL_COST_MAP=True nohup "$PY" -c "
 import asyncio
@@ -99,11 +99,11 @@ say "2/3  The Skillberry stack (Store, then Proxy-Agent)"
 # name at start. Both starts are idempotent — a healthy service is reported, not restarted.
 "$PY" - <<'PYEOF' || die "could not start the Skillberry stack"
 import json, sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-spa_env.start_store()
-spa_env.start_spa("my_skill")
-print("  " + json.dumps(spa_env.status()))
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+blackbox_env.start_store()
+blackbox_env.start_spa("my_skill")
+print("  " + json.dumps(blackbox_env.status()))
 PYEOF
 
 say "3/3  cap-evolve run  (spec: $SPEC)"
@@ -118,7 +118,7 @@ echo "------ cap-evolve run ------"
 rc=$?
 
 # Left running on purpose (a later run reuses a healthy stack). To stop:
-#   python -c "import sys; sys.path.insert(0,'skills/interventions/llm-proxies/spa/scripts'); import spa_env; spa_env.stop_all()"
-printf '\nstack left running. stop it with:\n  %s -c "import sys; sys.path.insert(0,%s); import spa_env; spa_env.stop_all()"\n' \
-  "$PY" "'skills/interventions/llm-proxies/spa/scripts'"
+#   python -c "import sys; sys.path.insert(0,'skills/interventions/llm-proxies/blackbox/scripts'); import blackbox_env; blackbox_env.stop_all()"
+printf '\nstack left running. stop it with:\n  %s -c "import sys; sys.path.insert(0,%s); import blackbox_env; blackbox_env.stop_all()"\n' \
+  "$PY" "'skills/interventions/llm-proxies/blackbox/scripts'"
 exit $rc

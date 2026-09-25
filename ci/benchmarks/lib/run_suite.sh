@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_custom_direct|tau2_custom_spa)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_custom_direct|tau2_custom_blackbox)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -102,12 +102,33 @@ case "$ALGORITHM" in
     # tried a code-level guard, which its own reject note ("require calculate tool for all
     # money") had already identified as the right form. Rejections bound nothing; rounds and
     # spend do.
+    #
+    # The SIBLINGS clause below exists because gating a wave of candidates in parallel spends
+    # the whole round budget just as fast as gating them one at a time. On smoke run
+    # 35861572021 (iterations=3), a first wave of three edit-surface variants consumed all
+    # three rounds outright, and the clearest finding it produced — one surface beating another
+    # by 0.089 — had no round left to act on (the obvious next round, retesting the winning
+    # surface alone, was unavailable). That wave was exactly the shape references/algorithm.md's
+    # "Gating N Bucket-A siblings does not mean paying full val N times" rule already covers:
+    # screen every sibling first, merge_search.py the disjoint survivors, and gate only the
+    # merge — a path that costs zero extra rounds. The clause below is for when siblings truly
+    # are independent risks that must each be gated alone; it points back at that rule rather
+    # than duplicating or replacing it. Numbers specific to run 35861572021 stay in THIS
+    # comment, not in the derived text below, which spend.py/constraints.py parse for
+    # enforcement — a bare run id or reward delta there reads as an unrecognized constraint and
+    # trips the "ask the user before the loop starts" ambiguity check for no enforcement gain.
     STOP_CONDITION="Spend at most ${_rounds} rounds, where a round is one candidate taken to a\
  full-val gate decision (accepted or rejected) and booked with commit.py. Stop when spend.py's\
  recommendation is 'stop', or after ${_rounds} rounds.${_stop_usd} Do NOT stop early merely\
  because rounds were rejected: a rejection is the signal to change the edit FORM or the SURFACE\
- on the next round, not to finish. Use every round the budget allows. Gate every candidate on\
- FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\
+ on the next round, not to finish. Use every round the budget allows over the course of the\
+ run — not all in one wave. SIBLINGS ARE NOT FREE: candidates gated in the same wave each\
+ consume a round. Before gating a wave on full val, confirm this is not a screen-then-merge\
+ case (screen every sibling first, merge the disjoint survivors, gate only the merge — see\
+ references/algorithm.md, 'Gating N Bucket-A siblings...') — that path costs zero extra rounds.\
+ When siblings truly are independent risks that must each be gated alone, keep a narrow first\
+ wave and hold rounds in RESERVE for the follow-up the evidence points at. Gate every candidate\
+ on FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\
  --gate-against control on every round.py call: its default reference is the parent's reward as\
  measured in an EARLIER round, so that reward's drift since then sits inside every candidate\
  delta, while a control is a byte-identical replicate measured in the SAME round. Always\
@@ -253,18 +274,18 @@ TEMPERATURE=0.0
 ENV
     export TAU2_MAX_CONCURRENCY=10
     ;;
-  tau2_custom_direct|tau2_custom_spa)
+  tau2_custom_direct|tau2_custom_blackbox)
     # The two DELIVERY ARMS of the tau2 airline benchmark. Same 50 airline tasks as the `tau2`
     # leg above, same tier ids, but a different question: `tau2` asks "can the optimizer
     # improve the agent's prompt+tools", these ask "does the candidate still land when it is
     # delivered THIS way" — in the runner's own process (direct) or through the Skillberry
-    # Store + Proxy-Agent (spa). direct-vs-spa is the comparison; neither is comparable to the
+    # Store + Proxy-Agent (blackbox). direct-vs-blackbox is the comparison; neither is comparable to the
     # `tau2` leg, whose capability surface includes policy.md and whose tau2 build differs.
     #
     # The adapter comes from examples/, not templates/adapters/: a copy under templates/ would
     # duplicate ~700 lines per arm and be free to drift from the example a reviewer reads. The
     # tau2 leg already sources examples/tau2_airline/seed_capability, so this is the convention.
-    ARM="${BENCH#tau2_custom_}"                         # -> direct | spa
+    ARM="${BENCH#tau2_custom_}"                         # -> direct | blackbox
     ARM_DIR="$REPO/examples/tau2_custom/$ARM"
     [ -d "$ARM_DIR" ] || { echo "::error:: no such arm: $ARM_DIR"; exit 2; }
     cp "$ARM_DIR/adapters/adapter.py" "$ARM_DIR/adapters/gateway.py" "$PROJ/adapters/"
@@ -274,7 +295,7 @@ ENV
       && cp "$REPO/examples/tau2_custom/scoring.py" "$PROJ/adapters/"
     rm -rf "$PROJ/seed_capability"; cp -R "$ARM_DIR/seed_capability" "$PROJ/seed_capability"
     # The arm's own optimizer instructions, pinned ABSOLUTE. The generic template speaks of
-    # policy.md + tools.py; the direct arm has no policy surface and the spa arm's artifact is a
+    # policy.md + tools.py; the direct arm has no policy surface and the blackbox arm's artifact is a
     # skill package, so the shared text would send the optimizer looking for files that are not
     # there. Absolute because a relative value resolves against different cwds in check vs run
     # and can silently fall back to the generic template (#252).
@@ -293,7 +314,7 @@ ENV
       echo "::error:: Run the setup step for this bench first:"
       echo "::error::   bash ci/benchmarks/lib/ci_setup.sh $BENCH"
       echo "::error:: It clones the pinned benchmark, installs tau2-bench[skillberry] into the"
-      echo "::error:: cached venv, and (for the spa arm) provisions the Skillberry stack."
+      echo "::error:: cached venv, and (for the blackbox arm) provisions the Skillberry stack."
       exit 1; }
     # Credentials. The arms' gateway.py reads OPENAI_BASE_URL / OPENAI_API_KEY (litellm's
     # `openai/` route), not the LITELLM_PROXY_* names the tau2 leg uses; the ete-litellm gateway
@@ -312,22 +333,22 @@ ENV
     export TAU2_LLM_RETRIES="${TAU2_LLM_RETRIES:-2}"
     export TAU2_INFRA_RETRIES="${TAU2_INFRA_RETRIES:-2}"
     if [ "$ARM" = "direct" ]; then
-      # In-process delivery: no service to start, so nothing here mirrors the spa block below.
-      # The agent under test IS the gateway model; gateway.py refuses the spa sentinel here.
+      # In-process delivery: no service to start, so nothing here mirrors the blackbox block below.
+      # The agent under test IS the gateway model; gateway.py refuses the Blackbox sentinel here.
       export TAU2_AGENT_MODEL="$AGENT_MODEL"
       export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-10}"
       EXTRA_YAML="actions: [edit]
 capability_sources: [seed_capability/reference/data_model.py]
 runner_repo_path: \"$SB_DIR\""
     else
-      # SPA delivery. Three services, and the run owns their lifecycle: ci_setup.sh provisioned
+      # Blackbox delivery via the Skillberry Proxy-Agent. Three services, and the run owns their lifecycle: ci_setup.sh provisioned
       # them but deliberately did not start them (starting on the operator's behalf during
       # provisioning is the anti-pattern the intervention skill calls out).
       #
       # Concurrency 4 — the adapter's own default (adapter.py) and what the arm's run.sh uses.
       # Only ONE candidate is in flight per evaluation, so parallel rollouts all want the same
       # skill the proxy is already bound to.
-      export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-ibm/skillberry-local}"   # the SPA sentinel
+      export TAU2_AGENT_MODEL="${TAU2_AGENT_MODEL:-ibm/skillberry-local}"   # the Blackbox sentinel
       export TAU2_MAX_CONCURRENCY="${TAU2_MAX_CONCURRENCY:-4}"
       # What the proxy calls upstream once the sentinel reaches it, and what runner_model()
       # reports. Comes from the repo-root .env locally; CI has none, and unset falls back to
@@ -337,25 +358,25 @@ runner_repo_path: \"$SB_DIR\""
         openai/*) export SPA_MODEL_NAME="${SPA_MODEL_NAME:-$AGENT_MODEL}" ;;
         *)        export SPA_MODEL_NAME="${SPA_MODEL_NAME:-openai/$AGENT_MODEL}" ;;
       esac
-      echo "  SPA upstream model: $SPA_MODEL_NAME (sentinel: $TAU2_AGENT_MODEL)"
-      # Same vendor dir ci_setup.sh provisioned into. spa_env recomputes this from the
+      echo "  Blackbox upstream model: $SPA_MODEL_NAME (sentinel: $TAU2_AGENT_MODEL)"
+      # Same vendor dir ci_setup.sh provisioned into. blackbox_env recomputes this from the
       # environment in every process, so setup and run must agree or the run re-clones.
       export SPA_VENDOR_DIR="${SPA_VENDOR_DIR:-${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spa-vendor}"
       # Service logs are not ours to manage: each service rotates its own from inside the process
-      # holding the fd. This leg only reads bounded tails on the way out, from paths spa_env
+      # holding the fd. This leg only reads bounded tails on the way out, from paths blackbox_env
       # exports so they cannot drift from what the stack writes.
       SPA_LOGS="$( cd "$REPO" && "$PY" - <<'PYEOF' 2>/dev/null || true
 import sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-print(" ".join((spa_env.AGENT_LOG_FILE, spa_env.STORE_LOG_FILE,
-                spa_env.AGENT_TOOLS_LOG_FILE, spa_env.STORE_TOOLS_LOG_FILE)))
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+print(" ".join((blackbox_env.AGENT_LOG_FILE, blackbox_env.STORE_LOG_FILE,
+                blackbox_env.AGENT_TOOLS_LOG_FILE, blackbox_env.STORE_TOOLS_LOG_FILE)))
 PYEOF
 )"
       ENV_PORT="${ENV_PORT:-8004}"
       export SPA_REMOTE_ENV_URL="${SPA_REMOTE_ENV_URL:-http://127.0.0.1:$ENV_PORT}"
-      # Not a Skillberry service, so spa_env does not launch it — but its log is ours to bound.
-      # /tmp like the stack's other three, rotated by spa_env's helper rather than a second one.
+      # Not a Skillberry service, so blackbox_env does not launch it — but its log is ours to bound.
+      # /tmp like the stack's other three, rotated by blackbox_env's helper rather than a second one.
       ENV_LOG=/tmp/env_manager.log
       # Fronts the airline env over HTTP; the store's executor calls it per rollout. Start only if
       # nothing is listening — a leg following another on this serialized runner finds a live one.
@@ -368,10 +389,10 @@ PYEOF
         echo "  starting tau2 environment service -> $ENV_LOG"
         # Rotate ONLY inside this branch, where we are about to launch: rotating a log the
         # running env manager holds open leaves it appending to a deleted inode while the fresh
-        # file stays empty (see rotate_if_large in spa_env).
+        # file stays empty (see rotate_if_large in blackbox_env).
         ( cd "$REPO" && "$PY" -c "import sys
-sys.path.insert(0, 'skills/interventions/llm-proxies/spa/scripts')
-import spa_env; spa_env.rotate_if_large('$ENV_LOG')" ) \
+sys.path.insert(0, 'skills/interventions/llm-proxies/blackbox/scripts')
+import blackbox_env; blackbox_env.rotate_if_large('$ENV_LOG')" ) \
           || echo "::warning:: could not rotate $ENV_LOG (continuing; it may grow unbounded)"
         # LITELLM_LOCAL_MODEL_COST_MAP=True skips litellm's doomed remote cost-map fetch, which
         # otherwise stalls startup until it times out.
@@ -393,27 +414,27 @@ asyncio.run(EnvironmentManager(host='127.0.0.1', port=$ENV_PORT).run())
                tail -40 "$ENV_LOG" 2>/dev/null; exit 1; }
         echo "  healthy"
       fi
-      # Store, then Proxy-Agent — ORDER MATTERS: the store must be healthy before SPA starts,
-      # and SPA binds `my_skill` at start. Both starts are idempotent.
+      # Store, then Proxy-Agent — ORDER MATTERS: the store must be healthy before the Proxy-Agent starts,
+      # and the Proxy-Agent binds `my_skill` at start. Both starts are idempotent.
       ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$PY" - <<'PYEOF'
 import json, sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-spa_env.start_store()
-spa_env.start_spa("my_skill")
-print("  " + json.dumps(spa_env.status()))
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+blackbox_env.start_store()
+blackbox_env.start_spa("my_skill")
+print("  " + json.dumps(blackbox_env.status()))
 PYEOF
       ) || { echo "::error:: could not start the Skillberry stack (Store + Proxy-Agent)"; exit 1; }
       # TEAR DOWN on the way out, unlike the arm's run.sh which deliberately leaves the stack up
       # for a human to poke at. CI has no such operator, and a leftover proxy still bound to the
       # PREVIOUS leg's skill is a silent wrong-candidate hazard for whatever runs next.
       # `|| true` throughout: a failed teardown must not turn a finished run into a failed job.
-      _spa_teardown() {
+      _blackbox_teardown() {
         ( cd "$REPO" && CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$PY" - <<'PYEOF' || true
 import sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-spa_env.stop_all()
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+blackbox_env.stop_all()
 print("  Skillberry stack stopped")
 PYEOF
         ) || true
@@ -424,13 +445,13 @@ PYEOF
         # truncating a file whose fd a live process holds fights that owner.
         for _src in $SPA_LOGS "$ENV_LOG"; do
           [ -f "$_src" ] || continue
-          tail -c 2097152 "$_src" > "$OUT/spa-$(basename "$_src").tail" 2>/dev/null || true
+          tail -c 2097152 "$_src" > "$OUT/blackbox-$(basename "$_src").tail" 2>/dev/null || true
         done
       }
-      trap _spa_teardown EXIT
+      trap _blackbox_teardown EXIT
       EXTRA_YAML="actions: [edit]
 capability_sources: []
-intervention: spa
+intervention: blackbox
 skill_name: my_skill
 protected_paths: [\"primitive_tools/*\", \"my_skill/SKILL.md\"]
 runner_repo_path: \"$SB_DIR\""
@@ -848,6 +869,39 @@ print(json.dumps({"train":ids,"val":ids,"test":ids}))
 PY
 fi
 
+# PLAN. Print what this dispatch will actually spend BEFORE it spends it. An over-budget
+# `trials` x `iterations` combination is otherwise invisible until the job is killed at
+# `timeout-minutes`, hours in and with nothing to show — which is exactly how a blank-trials
+# whole-set dispatch used to fail. Same cost model both tier READMEs publish:
+# `algorithm_focus: all` never evaluates the train split, and `finalize` scores test TWICE
+# (champion + baseline). Advisory only: it reports, it does not refuse — a deliberate long
+# run is legitimate, an accidental one is not.
+# NUM_TRIALS/ITER are always set by here (lines 32/34) when this script runs top to bottom;
+# the ":-10"/":-3" below exist only so this block stays self-contained when a test lifts and
+# runs it on its own (test_run_suite_split_hook.py does exactly that, sharing this snippet
+# with the split hook above it) — they match the script's own real defaults, not the "${:-1}"
+# this replaced, which was both dead (always shadowed by line 32/34) and actively misleading
+# next to those real defaults.
+# `iters * per_val` assumes one val-eval per iteration, which holds for the deterministic
+# hill-climb-* path but is only an upper bound under `algorithm: agent-optimize`, where a
+# headless agent is merely ASKED to stay under an iteration budget via a free-text
+# stop_condition rather than being hard-capped in code.
+case "${ALGORITHM:-}" in
+  agent-optimize) _plan_note=" (upper bound — agent-optimize is only asked to respect this budget, not capped to it)" ;;
+  *) _plan_note="" ;;
+esac
+"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-10}" "${ITER:-3}" "$_plan_note" >&2 <<'PLAN'
+import json, sys
+split = json.load(open(sys.argv[1]))
+trials, iters = int(sys.argv[2]), int(sys.argv[3])
+note = sys.argv[4]
+val, test = len(split["val"]), len(split["test"])
+per_val = val * trials
+total = per_val + iters * per_val + 2 * test * trials
+print(f">>> plan: {total} rollouts{note} — baseline {per_val} + {iters} x {per_val} val "
+      f"+ finalize 2 x {test * trials} "
+      f"(val={val} test={test} trials={trials} iterations={iters})")
+PLAN
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability

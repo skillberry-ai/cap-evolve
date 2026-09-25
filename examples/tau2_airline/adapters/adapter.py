@@ -285,7 +285,7 @@ class Adapter(CapabilityAdapter):
 
     # ---- tau2's OWN simulation records -----------------------------------
     # ONE path format, byte-identical in EVERY tau2 adapter in this repo (this one, the
-    # skillberry_benchmarks direct + spa arms, and templates/adapters/tau2_bench):
+    # tau2_custom direct + blackbox arms, and templates/adapters/tau2_bench):
     #
     #     <run_dir>/native_sims/<tag>/<split>/results_<YYYYmmdd_HHMMSS>_<pid>.json
     #

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Onboard tau2-bench airline for the SPA arm and prepare it for optimization.
+# Onboard tau2-bench airline for the blackbox arm and prepare it for optimization.
 #
 # This is the executable transcript of the cap-evolve INTAKE / implement-and-check phase
 # for this example, driven by ../PROMPT.md: a coding agent following RUN.md does exactly
 # these steps. Run it directly to reproduce in one command:
 #
-#   bash examples/tau2_custom/spa/setup.sh
-#   bash examples/tau2_custom/spa/run.sh
+#   bash examples/tau2_custom/blackbox/setup.sh
+#   bash examples/tau2_custom/blackbox/run.sh
 #
-# What the SPA arm needs that the direct arm does not: the Skillberry stack (Store + the
+# What the blackbox arm needs that the direct arm does not: the Skillberry stack (Store + the
 # Proxy-Agent that injects the candidate skill) and the benchmark's environment service.
 # This script PROVISIONS the stack but does not start it — starting is a run's job, per
 # the intervention skill: a run that provisions on the operator's behalf is the anti-pattern.
@@ -16,10 +16,10 @@ set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$EX_DIR/../../.." && pwd)"
-# The pinned Skillberry build of tau2 — its runner already carries what SPA mode needs
+# The pinned Skillberry build of tau2 — its runner already carries what blackbox mode needs
 # (context headers on the agent's LLM calls, the proxy-side trajectory merged into tau2's
 # own, a disconnect at session end) and still exposes the plain airline domain. ONE build
-# for both arms is what keeps a later direct-vs-spa comparison meaningful.
+# for both arms is what keeps a later direct-vs-blackbox comparison meaningful.
 BENCH_REPO="https://github.com/skillberry-ai/skillberry-benchmarks.git"
 BENCH_REF="${BENCH_REF:-a3a83266008275e9d800fd709927fa3dc4f23ec5}"
 BENCH_DIR="$REPO/vendor/skillberry-benchmarks"
@@ -32,8 +32,8 @@ PIP_INDEX="${PIP_INDEX:-https://pypi.org/simple}"
 # Its OWN base, not the shared .capevolve: the two arms are separate onboardings, and a
 # shared project dir means one arm's seed/spec silently overwrites the other's — which
 # delivers candidates one way while the record says the other. Runs land here too, so
-# .capevolve-spa/run_* never mixes with the direct arm's. (.gitignore covers .capevolve*/.)
-BASE="${BASE:-$REPO/.capevolve-spa}"
+# .capevolve-blackbox/run_* never mixes with the direct arm's. (.gitignore covers .capevolve*/.)
+BASE="${BASE:-$REPO/.capevolve-blackbox}"
 PROJECT="${PROJECT:-$BASE/project}"
 say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 die(){ printf '\n\033[1;31mSETUP FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -107,16 +107,16 @@ echo "  tau2-bench (skillberry build) installed @ $BENCH_SHA"
 
 say "3/5  INTAKE (b) — provision the Skillberry stack (Store + Proxy-Agent)"
 # PROVISION ONLY: clone + venv + install both services, idempotently. Starting them is
-# run.sh's job. The pins live in spa_env (store tag + agent commit), env-overridable via
+# run.sh's job. The pins live in blackbox_env (store tag + agent commit), env-overridable via
 # SKILLBERRY_STORE_REF / SKILLBERRY_AGENT_REF for a bisect.
 CAPEVOLVE_SKILLS_DIR="$REPO/skills" "$PY" - <<'PYEOF' || die "Skillberry stack provisioning failed"
 import json, sys
-sys.path.insert(0, "skills/interventions/llm-proxies/spa/scripts")
-import spa_env
-out = spa_env.provision()
+sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
+import blackbox_env
+out = blackbox_env.provision()
 print("  " + json.dumps(out))
-print(f"  store ref {spa_env.STORE_REF} @ {spa_env.store_dir()}")
-print(f"  agent ref {spa_env.AGENT_REF[:7]} @ {spa_env.agent_dir()}")
+print(f"  store ref {blackbox_env.STORE_REF} @ {blackbox_env.store_dir()}")
+print(f"  agent ref {blackbox_env.AGENT_REF[:7]} @ {blackbox_env.agent_dir()}")
 PYEOF
 
 say "4/5  Wire the project (adapter + gateway + seed + spec)"
@@ -144,4 +144,4 @@ PYTHONPATH="$PROJECT/adapters" CAPEVOLVE_SKILLS_DIR="$REPO/skills" \
   "$VENV/bin/cap-evolve" check "$PROJECT" || die "cap-evolve check did not pass"
 
 printf '\n\033[1;32mREADY.\033[0m  Next:\n  bash %s/run.sh              # full run (run.sh prints the scale + cost first)\n  bash %s/run.sh --smoke      # cheap smoke over the same stack\n' "$EX_DIR" "$EX_DIR"
-printf '\nNote: the current SPA mode version does not support running with `cap-evolve run`.\n'
+printf '\nNote: the current blackbox mode version does not support running with `cap-evolve run`.\n'

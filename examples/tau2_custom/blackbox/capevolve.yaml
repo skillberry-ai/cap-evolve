@@ -10,11 +10,11 @@ actions: [edit]
 capability_sources: []
 
 # --- how the candidate REACHES the model (the intervention) -----------------
-# capabilities: says WHAT is edited; intervention: says HOW it is delivered. Under `spa`
+# capabilities: says WHAT is edited; intervention: says HOW it is delivered. Under `blackbox`
 # the candidate is imported into the Skillberry Store and the Skillberry Proxy-Agent
 # injects it into the agent's LLM calls — the benchmark never sees skill files.
 # capevolve.yaml-only: there is no CLI override.
-intervention: spa
+intervention: blackbox
 # SPA serves exactly ONE skill, and with no name it silently falls back to searching the
 # store (which "succeeds" even against an empty one), so the name is required.
 skill_name: my_skill
