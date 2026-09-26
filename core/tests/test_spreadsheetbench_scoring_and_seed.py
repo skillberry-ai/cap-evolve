@@ -216,7 +216,11 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     }
     assert shipped == {
         "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
-        "ci/benchmarks/spreadsheetbench/full_verified/overrides.env": {"SB_SCORING": "hard"},
+        # TEMPORARY (this branch only): SB_EMPTY_SEED=1 takes the one-off no-skill control
+        # measurement on this tier. Reverting the overrides file reverts this too.
+        "ci/benchmarks/spreadsheetbench/full_verified/overrides.env": {
+            "SB_SCORING": "hard", "SB_EMPTY_SEED": "1",
+        },
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
             "SB_SCORING": "hard", "SB_WARM_SEED": "1",
         },
