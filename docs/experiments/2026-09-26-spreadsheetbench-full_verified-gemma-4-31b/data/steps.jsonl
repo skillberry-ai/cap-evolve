@@ -1,0 +1,12 @@
+{"phase": "baseline", "iter": null, "candidate": "seed", "accepted": null, "reward": 0.625, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 2044.83}
+{"phase": "iterate", "iter": 1, "candidate": "r1_contract", "accepted": true, "reward": 0.775, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 903.85}
+{"phase": "iterate", "iter": 2, "candidate": "r2_numeric", "accepted": false, "reward": 0.8462, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 1907.78}
+{"phase": "iterate", "iter": 3, "candidate": "r3_decide", "accepted": true, "reward": 0.8875, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 2001.81}
+{"phase": "iterate", "iter": 4, "candidate": "r4_silent", "accepted": false, "reward": 0.8421052631578947, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 7970.55}
+{"phase": "iterate", "iter": 5, "candidate": "r5_verdict", "accepted": false, "reward": 0.8, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 2575.03}
+{"phase": "iterate", "iter": 6, "candidate": "r6_scope", "accepted": false, "reward": 0.7692307692307693, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 1697.05}
+{"phase": "iterate", "iter": 7, "candidate": "r7_path", "accepted": false, "reward": 0.8461538461538461, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 1856.27}
+{"phase": "iterate", "iter": 8, "candidate": "r8_cut", "accepted": false, "reward": 0.875, "optimizer_usd": 0.0, "optimizer_seconds": null, "eval_usd": 0.0, "eval_seconds": 2494.98}
+{"phase": "finalize", "iter": null, "candidate": "r3_decide", "accepted": null, "reward": 0.7642857142857142, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 6209.38}
+{"phase": "finalize_baseline", "iter": null, "candidate": "seed", "accepted": null, "reward": 0.6321428571428571, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 7727.85}
+{"phase": "unattributed", "iter": null, "candidate": "(whole run)", "accepted": null, "reward": null, "optimizer_usd": 57.845429, "optimizer_seconds": 62369.74, "eval_usd": 0.0, "eval_seconds": null}

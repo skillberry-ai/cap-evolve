@@ -1,0 +1,84 @@
+--- a/prompt.md
++++ b/prompt.md
+@@ -123,5 +123,45 @@
+ ```
+ 
+-Three ambiguities are common enough to name outright:
++## The loose question is usually WHICH CELLS, not which formula
++
++When the instruction is a conditional — "when column A is X and B is Y, put Z in column Q" — the
++arithmetic is never the hard part. The unanswered question is what happens to the rows that do NOT
++meet the condition, and a conditional instruction is silent about them by construction. Answer it
++from the pre-filled cells, which are a SAMPLE OF BOTH ANSWERS:
++
++```python
++def matches(r):                       # the instruction's condition, as code
++    return ...
++
++# every cell of the target column that already holds something, with the condition's verdict
++for r in range(FIRST_ROW, LAST_ROW + 1):
++    v = wsv[f"{TGT}{r}"].value
++    if v not in (None, ""):
++        print(r, repr(v), "matches:", matches(r))
++print("rows matching:", sum(1 for r in range(FIRST_ROW, LAST_ROW + 1) if matches(r)))
++```
++
++Read the two groups against each other:
++
++- a pre-filled cell where the condition is **TRUE** shows you what a match becomes — and confirms
++  your condition is even testing the right thing;
++- a pre-filled cell where the condition is **FALSE** and holds some *unrelated* value is the answer
++  to the question the instruction did not answer: non-matching rows KEEP WHAT THEY HAVE. It is not a
++  leftover and not a counter-example to your rule — it is the specification for the other branch.
++
++Printing that one loop turns "the instruction doesn't say whether to clear the rest" into a fact.
++So: a conditional instruction writes to the matching rows and to nothing else, unless a pre-filled
++non-matching cell shows otherwise. Before you save, print how many rows matched and compare it with
++the number of cells you are about to write — if you are writing hundreds of cells where a handful of
++rows matched, you have turned a conditional into an unconditional fill.
++
++The mirror case is just as common: when the pre-filled cells sit in a contiguous block at the TOP of
++the range and all carry the SAME value the rule would produce there, they are a worked example of a
++rule that keeps going — every remaining cell gets what that rule returns, including when that is
++zero or blank-looking. Tell the two apart by whether the pre-filled values VARY and contradict the
++rule (a sample of both branches: write only matches) or AGREE with it (a sample of one branch: fill
++everything your rule covers).
++
++Three further ambiguities are common enough to name outright:
+ 
+ - **"the same calculation, one row further down".** When each cell of a target column repeats a
+@@ -190,4 +230,5 @@
+ print("EMPTY:", len(empty), empty[:20])   # only cells meant to be empty may appear
+ print("CHANGED:", len(moved), moved[:20]) # must be exactly the cells the instruction asked for
++print("CHANGED", len(moved), "vs rows the rule covers", N_RESPONSIBLE)   # from your READ step
+ 
+ # RECONCILE — one value, checked against a number you did not compute:
+@@ -195,4 +236,9 @@
+ print("RECONCILE F2:", repr(ws_out["F2"].value), "vs reference", repr(ref))
+ ```
++
++`N_RESPONSIBLE` is the count you printed during READ, before computing anything. If `CHANGED` is much
++larger, you have widened a conditional into an unconditional fill and overwritten rows that were
++supposed to keep their own values; if it is much smaller, your rule stopped early or your match test
++is too strict. Either way the mismatch is the bug, and it is visible before the grader sees it.
+ 
+ For the reference, use — in this order of preference — a cached formula result elsewhere in the
+--- a/task_template.md
++++ b/task_template.md
+@@ -123,7 +123,13 @@
+ 1. **READ** — print, with `repr()` and type, every cell you will read from, key off, or anchor to,
+    plus the distinct values of any column you will filter on. Print the cells of answer_position as
+-   they arrive: any that already hold a value are a worked example of the intended answer, your rule
+-   must reproduce them, and that same rule then has to keep running over the cells that are still
+-   empty.
++   they arrive: any that already hold a value are a worked example of the intended answer, and your
++   rule must reproduce them.
++   Then answer, in printed output rather than in a comment: **how many cells am I responsible for
++   writing?** If the instruction is conditional ("when A is X, put Z in column Q"), count the rows
++   that actually match and print that count — it is the number of cells you should be writing, and
++   the rows that do not match keep the values they already have. If the instruction is a fill or a
++   continuation, the count runs to the last row that holds DATA, not to the end of the range. Get
++   this number before you compute any values; almost every wrong answer that is arithmetically
++   correct is wrong about this count.
+ 2. **DECIDE** — the instruction will be loose somewhere. Write both readings as code, score each one
+    against a number the file already fixes (a pre-filled target cell, a cached formula result, a
