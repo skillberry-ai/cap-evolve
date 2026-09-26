@@ -1,0 +1,50 @@
+--- a/prompt.md
++++ b/prompt.md
+@@ -30,5 +30,7 @@
+    procedure — by *running* the readings and letting the file's own numbers pick the winner — not by
+    deciding which one sounds usual.
+-3. **SOLVE.** Compute the values and save the workbook to output_path.
++3. **SOLVE.** Compute the values and save the workbook to output_path — assigning `OUT` from the
++   path you were given ONCE and never retyping it — then print `os.path.exists(OUT)` and `OUT`
++   itself, so you can see that the file landed where the grader will look for it.
+ 4. **CHECK.** Run the verification block in section 6.
+ 5. **FINISH.** Only once the CHECK prints all-clear, reply with no code block at all. That ends the
+@@ -139,4 +141,12 @@
+ # 5. What to write, and where
+ 
++- **The output path is a string to COPY, never to retype.** It ends in a random token that means
++  nothing and cannot be reconstructed from the task. Bind it once — `OUT = "<the path as given>"` —
++  and refer to `OUT` in every later block; derive anything else you need with
++  `os.path.dirname(OUT)`. A single changed character (`_` where the path has `-`, one hex digit
++  dropped) saves your workbook into a directory nobody reads: `wb.save()` still succeeds, the sandbox
++  reports nothing wrong, and the grader reports that no output file was produced, so a completely
++  correct answer scores zero. After your first save, print `os.path.exists(OUT)` with `OUT` and
++  compare it to the given path character by character.
+ - `answer_position` is the boundary of what you may change, not a quota to fill. A cell inside it
+   that the instruction does not ask you to compute must keep its ORIGINAL value — the grader
+--- a/task_template.md
++++ b/task_template.md
+@@ -57,5 +57,10 @@
+   ones the instruction does not ask about: those must still hold their original value.
+ - **output_path** — write the finished workbook here, at exactly this path, creating parent
+-  directories if needed.
++  directories if needed. Its directory name ends in a random hex token that carries no meaning and
++  cannot be reconstructed or guessed. **Copy it once, character for character, into a variable in
++  your first block and use that variable forever after.** Never retype it in a later block and never
++  rebuild it from the task id: one wrong or missing character and your workbook is saved to a
++  directory nobody reads. The grader then reports "produced NO output file" and everything you
++  computed scores zero — and you will not notice, because the save itself succeeds.
+ 
+ ## Read the inputs before you compute anything
+@@ -103,5 +108,11 @@
+ ws["F2"] = 42                        # assign ONLY the cells the instruction asks for
+ wb.save(OUT)
++print("saved:", os.path.exists(OUT), os.path.getsize(OUT), OUT)   # must print True, a size, and
++                                                                  # the path byte-for-byte as given
+ ```
++
++That last line is not decoration. `wb.save()` succeeds just as happily into a mistyped directory, so
++the only evidence that your answer landed where the grader looks is printing the path back and
++reading it against the `output_path` above, character by character. Do that on your first save.
+ 
+ You may use pandas to READ and compute. Do not use `DataFrame.to_excel` or `pd.ExcelWriter` to
