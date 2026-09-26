@@ -217,6 +217,11 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     assert shipped == {
         "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
         "ci/benchmarks/spreadsheetbench/full_verified/overrides.env": {"SB_SCORING": "hard"},
+        # The NO-CAPABILITY control for full_verified: same metric, capability blanked. See
+        # core/tests/test_no_skill_control_tier.py for why it must match in every other respect.
+        "ci/benchmarks/spreadsheetbench/no_skill/overrides.env": {
+            "SB_SCORING": "hard", "SB_EMPTY_SEED": "1",
+        },
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
             "SB_SCORING": "hard", "SB_WARM_SEED": "1",
         },

@@ -120,6 +120,7 @@ def test_no_other_benchmark_opted_into_a_committed_split():
     """
     expected = {"ci/benchmarks/spreadsheetbench/full/split_ids.json",
                 "ci/benchmarks/spreadsheetbench/full_verified/split_ids.json",
+                "ci/benchmarks/spreadsheetbench/no_skill/split_ids.json",
                 "ci/benchmarks/spreadsheetbench/pilot/split_ids.json",
                 "ci/benchmarks/swebench/full/split_ids.json"}
     found = {p.relative_to(REPO).as_posix()

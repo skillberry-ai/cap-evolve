@@ -137,6 +137,43 @@ data=$(SPREADSHEETBENCH_VARIANT=sample_200 ci/benchmarks/spreadsheetbench/fetch_
 python3 ci/benchmarks/spreadsheetbench/utils/make_smoke.py --data-dir "$data" --write
 ```
 
+## The `no_skill` tier — the control `full_verified` was missing
+
+Run [36175707483](https://github.com/skillberry-ai/cap-evolve/actions/runs/36175707483) scored
+**0.764** held-out for `rits/google/gemma-4-31B-it` against a **seed** baseline of **0.632**.
+WikiSkill (arXiv 2608.27454v1) reports **68.0** for the same model against a **no-skill** baseline
+of **48.3**.
+
+Those deltas are not comparable. Our seed is a tuned `prompt.md` plus a `task_template.md`, not an
+empty context — it already scores near SkillOpt's 63.1 — so our **+13.2** cannot be set beside
+their **+19.7**. Without a no-skill anchor of our own, only the absolute numbers can be compared,
+and the obvious question ("why does your baseline start 15 points above theirs?") has no answer.
+
+`no_skill` supplies that anchor. It is a **control**, so it differs from `full_verified` in exactly
+one respect:
+
+| | `full_verified` | `no_skill` |
+|---|---|---|
+| dataset | `verified_400` | **same** |
+| task list / split | 400 tasks, 80/40/280 | **byte-identical** |
+| agent turns / concurrency | 30 / 8 | **same** |
+| scoring | `hard` | **same** |
+| capability | pristine seed | **blanked (`SB_EMPTY_SEED=1`)** |
+
+Every row of that table is pinned by `core/tests/test_no_skill_control_tier.py`, because a control
+measured under different conditions is worse than no control: it produces a number that looks
+comparable and is not.
+
+> **What "no skill" means here.** `SB_EMPTY_SEED=1` blanks `prompt.md`, and the adapter then sends
+> **no system message at all** rather than an empty one. The built-in `_TASK_TEMPLATE` still
+> supplies the task framing (instruction, paths, answer_position), so this is "no skill", not "no
+> prompt of any kind" — the closest analogue to the paper's "benchmark's default system prompt"
+> without being identical to it. Say so when quoting the number.
+
+The number to read off the run is **`finalize_baseline`** — the blanked capability on the 280
+sealed tasks. Dispatch: `tier=no_skill`, same `agent_model` as the run you are controlling for,
+`iterations=1` (the loop still runs; only the baseline matters).
+
 ## Upstream data defects, and what they cost
 
 The number of graded cases is read off disk (`_case_indices`), not assumed. That surfaced two

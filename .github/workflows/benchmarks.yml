@@ -46,10 +46,10 @@ on:
         default: direct
         options: [direct, blackbox]
       tier:
-        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
+        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. no_skill is a no-capability CONTROL: identical data, split and conditions to its treatment tier with the capability blanked, so a comparable no-skill baseline exists. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
         default: smoke
-        options: [all, smoke, pilot, full, full_verified]
+        options: [all, smoke, pilot, full, full_verified, no_skill]
       iterations:
         description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step. WHAT ONE ITERATION BUYS DEPENDS ON THE ALGORITHM: on the hill-climb (deterministic) path it is one optimizer call; under agent-optimize it is one CANDIDATE taken to a gate decision, so a wave of three parallel siblings spends three iterations at once. Budget accordingly — 3 under agent-optimize can mean a single wave and no iteration at all."
         type: string
@@ -233,11 +233,13 @@ jobs:
           # literal `matrix.tier` / `matrix.bench` lists).
           # tier is a first-class dimension. full runs the whole/representative benchmark
           # (frozen baselines under <bench>/full/); it no-ops until that tier is populated.
+          # no_skill is a benchmark's NO-CAPABILITY control: same data, split and conditions as
+          # its treatment tier, capability blanked, so a comparable no-skill anchor exists.
           # full_verified is the GENERIC name for a benchmark's verified/curated re-release, so
           # any bench that gains one uses the same tier rather than inventing a name with its
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
-          TIERS = ["smoke", "pilot", "full", "full_verified"]
+          TIERS = ["smoke", "pilot", "full", "full_verified", "no_skill"]
           # tau2_custom_direct / _blackbox are the DELIVERY ARMS of the tau2 airline benchmark:
           # same tasks and tiers, candidate delivered in-process versus through the Skillberry
           # Store + Proxy-Agent. They stay separate legs so each keeps its own tier task lists,
@@ -262,7 +264,7 @@ jobs:
           # not for honesty. A benchmark populating both whole-set tiers would put two of them
           # in every `all` dispatch, and each is a full-length run on its own. Run it by name:
           # `tier=full_verified`, or a `benchmark-full_verified-<bench>` label.
-          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}
+          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "no_skill"}
 
           # Is the repository actually checked out here? See the fail-open note below.
           tree_present = os.path.isdir("ci/benchmarks")
@@ -410,7 +412,7 @@ jobs:
       # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
       # and `grow.py` exists to buy replication only where a candidate looks promising.
       # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
+      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified' || matrix.tier == 'no_skill') && '1') || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);

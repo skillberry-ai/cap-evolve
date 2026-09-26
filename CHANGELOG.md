@@ -8,6 +8,21 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **`no_skill`: a no-capability control tier, so an optimized result can be quoted against a
+  comparable baseline.** Run 36175707483 scored 0.764 held-out on SpreadsheetBench for
+  Gemma-4-31B-It against a *seed* baseline of 0.632, while WikiSkill (arXiv 2608.27454v1) reports
+  68.0 for the same model against a *no-skill* baseline of 48.3. Those deltas are not comparable:
+  our seed is a tuned prompt plus a task template that already scores near SkillOpt's 63.1, so our
+  +13.2 cannot be set beside their +19.7. The blanking mechanism existed (`SB_EMPTY_SEED=1`) but
+  was reachable only by editing a committed `overrides.env` — it is not a dispatch input, and
+  `workflow_dispatch` already declares 11 inputs. A tier is the right dimension anyway, and tiers
+  are not capped. `no_skill` differs from `full_verified` in exactly one respect: same dataset,
+  byte-identical task list and split, same 30-turn budget, same 8-way concurrency, same `hard`
+  scoring, capability blanked. Every one of those is pinned by a test, because a control measured
+  under different conditions is worse than no control — it yields a number that looks comparable
+  and is not. Runs only when named, and defaults to `trials=1` like the other whole-set tiers.
+
 ### Changed
 - **`benchmark-history`'s `benchmarks.json`/`meta.json` are no longer committed to git — they're
   rendered fresh from `records/` at GitHub Pages deploy time instead.** That aggregate over every

@@ -126,6 +126,10 @@ Runs come in several **tiers** (a first-class dimension in the workflow, same wo
   (`tier=full_verified`, or a `benchmark-full_verified-<bench>` label), never under `tier=all`
   — but unlike `pilot` that exclusion is about **cost**, not about the numbers being
   meaningless: a `full_verified` result is a real held-out number.
+- **`no_skill`** — a benchmark's **no-capability control**: identical dataset, split, turn
+  budget and scoring to its treatment tier, with the capability blanked. It exists so a
+  comparable *no-skill* baseline can be quoted next to an optimized result, rather than
+  comparing an optimized number against a tuned seed. Explicit dispatch only.
 - **`pilot`** — a cost/runtime measurement rig whose reward numbers are **not comparable to
   anything**. Explicit dispatch only.
 

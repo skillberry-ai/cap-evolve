@@ -224,7 +224,9 @@ PYEOF
       # full_verified evaluates the VERIFIED 400-task re-release, which is a different download
       # and a different on-disk layout — not a subset of the 912 archive (see fetch_data.sh).
       # Giving it full_912's data would silently score the old benchmark under the new tier's name.
-      full_verified) SB_VARIANT="verified_400" ;;
+      # no_skill is full_verified's no-capability CONTROL, so it must read the SAME archive —
+      # a control on different data is not a control.
+      full_verified|no_skill) SB_VARIANT="verified_400" ;;
     esac
     SPREADSHEETBENCH_DATA_DIR="$(SPREADSHEETBENCH_VARIANT="$SB_VARIANT" "$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
   rfe-creator)
