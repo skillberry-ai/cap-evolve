@@ -545,8 +545,6 @@ for provider in "$PF_AGENT_PROVIDER" "$PF_OPTIMIZER_PROVIDER"; do
 done
 ```
 
-(`sort -u` here is a cheap way to avoid a duplicate `::group::` when agent and optimizer share a provider — since each `check_entitlement` call's whole output is one contiguous block, deduping identical whole lines does not merge two different providers' output.)
-
 - [ ] **Step 3: Update `probe_model()`'s env-presence guard (lines 345-353)**
 
 Before:
@@ -1069,7 +1067,7 @@ ci(sync_models): multi-provider --models PREFIX=PATH, scoped per-prefix sync
 --models changes from a single path to a repeatable PREFIX=PATH (one per
 polled gateway). sync() takes the resulting polled_prefixes set and only
 replaces dropdown options under a prefix that was actually polled this run —
-an unpolled prefix (in practice ibm-rits/*, never polled) is left completely
+an unpolled prefix (in practice ibm-rits, never polled) is left completely
 untouched, which is how RITS stays hand-curated for free. Default-retention
 warnings are scoped the same way: a default under an unpolled prefix was
 never "unserved" in this run's context. task_pins()'s advisory check now
