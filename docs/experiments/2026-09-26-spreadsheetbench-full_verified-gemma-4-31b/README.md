@@ -13,9 +13,11 @@ Actions artifact expires ~90 days after the run; this directory does not.
 
 | | val (40 tasks) | **sealed test (280 tasks)** |
 |---|---|---|
+| no skill ([control](no_skill_control/), run 36306060353) | 0.600 | 0.629 |
 | seed capability | 0.625 | **0.6321** |
 | champion `r3_decide` | 0.8875 | **0.7643** |
-| delta | +0.2625 | **+0.1321 (+21% rel)** |
+| delta over seed | +0.2625 | **+0.1321 (+21% rel)** |
+| delta over no skill | +0.2875 | **+0.1348 (+21% rel)** |
 
 Per-task on the sealed split: **54 improved · 17 regressed · 209 unchanged.**
 
@@ -101,6 +103,10 @@ data/
   steps.jsonl          12 booked steps (baseline, 8 rounds, finalize, finalize_baseline)
   events.jsonl         142 events — every eval_start/evaluate/screen/gate decision with timings
   runmeta.json         run identity + dispatch config
+no_skill_control/    the no-capability anchor (run 36306060353) + its verification
+  README.md            the number, how the blanking was verified, what it means for comparison
+  data/                report.md, 280 per-task metrics, steps, events, runmeta, cand_0001.diff
+  verification/        the run's own listing of the seed capability (one empty file)
 host/
   driver_prompt.md     the briefing the optimizer agent was launched with (incl. stop_condition)
   launch_args.json     exact argv
@@ -146,16 +152,26 @@ Doing so makes the run's `base→opt` delta **not** a from-scratch number, exact
 
 ---
 
-## No-skill control — measurement pending
+## No-skill control — measured
 
-The comparison below needs a no-skill anchor: our seed scores 0.6321 on the sealed split while
-the reference paper's no-skill baseline for the same model is 48.3, so the two systems' *deltas*
-are not comparable until we have our own.
+Run [36306060353](https://github.com/skillberry-ai/cap-evolve/actions/runs/36306060353), same
+model / dataset / split / metric / turn budget, with **no capability at all**. Full record and the
+three-way verification that the blanking took effect: [`no_skill_control/`](no_skill_control/).
 
-A first attempt (run 36261022325) is **not** reported here because it did not measure that
-condition: `SB_EMPTY_SEED` blanked `prompt.md` but left `task_template.md` — 2,453 of the
-capability's 3,418 bytes — in place. Fixed in #545; the corrected measurement is being taken and
-will be added here with its artifacts.
+| | val (40 tasks) | **sealed test (280 tasks)** |
+|---|---|---|
+| **no skill** | 0.600 | **0.629** |
+| seed capability | 0.625 | 0.6321 |
+| champion `r3_decide` | 0.8875 | 0.7643 |
+
+**No skill solves 175 of the 280 sealed tasks; the seed solves 177.** Two tasks, against SE 0.029 —
+so **the seed capability adds nothing measurable**, and the optimizer's gain is `+0.135` over a
+true floor rather than `+0.132` over a tuned one. The two numbers coincide because the seed and
+no-skill are, empirically, the same starting point.
+
+A first attempt (run 36261022325) is not reported: `SB_EMPTY_SEED` blanked `prompt.md` but left
+`task_template.md` — 2,453 of the capability's 3,418 bytes — so its 0.668 measured the wrong
+condition and was retracted. Fixed in #545; this run's seed is verifiably a single empty file.
 
 ## Fair comparison: what this number can and cannot be set against
 
@@ -170,10 +186,12 @@ the metric (native hard score), the model, and a genuinely held-out test split.
 
 **NOT comparable, and why:**
 
-1. **Our baseline is not their "no skill".** Our seed scores **63.2** — essentially SkillOpt's
-   63.1 and far above their no-skill 48.3 — because it is a tuned prompt plus a task template, not
-   an empty context. So our **+13.2 delta cannot be set against their +19.7** (48.3 → 68.0). Only
-   the absolute figures are candidates for comparison.
+1. **Our no-skill floor is 14.6 points above theirs.** Measured, not assumed: **62.9** against
+   their 48.3 for the same model (`no_skill_control/`) — within noise of their *SkillOpt* at 63.1.
+   A no-skill agent here is about as good as their best-but-one published system, so a large part
+   of both the 76.4 and the 68.0 is harness (scaffold, tool surface, 30-turn budget, scoring path),
+   not capability. Our **+13.5 over no skill cannot be set against their +19.7** (48.3 → 68.0), and
+   the absolute figures are comparable only with that floor stated alongside them.
 2. **One seed, not three.** The paper reports "the average test performance across three
    independent runs of the entire evolutionary pipeline". This is a single draw. Pipeline variance
    (which candidate gets accepted) is much larger than the ~0.03 measurement SE on 280 tasks.
