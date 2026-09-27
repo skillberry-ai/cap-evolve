@@ -20,7 +20,7 @@ All gates compare on VAL and never on TRAIN — ``decide`` takes an explicit
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -40,6 +40,18 @@ class GateDecision:
     #: read as "the edits were bad" when the gate simply could not resolve anything that small
     #: (see docs/TAU2_SUMMARY.md).
     resolvable_effect_size: float | None = None
+    #: The COMPOSITION of the change behind ``delta``: which val tasks this candidate broke
+    #: (were passing under the parent, dropped measurably) and which it fixed. The gate
+    #: decides on the MEAN, so a candidate that TRADES tasks passes whenever the net is
+    #: positive — and until these were recorded, nothing said so. Run 36175707483's champion
+    #: was accepted on a positive net while breaking a task against BOTH concurrent controls,
+    #: and on the sealed 280-task split its composition was 54 improved / 17 regressed, every
+    #: sampled regression a 1.000 → 0.000. They are DESCRIPTIVE: they do not move the verdict
+    #: unless the caller opts in with ``gate_max_broke``. Classified by ``harness.movement``,
+    #: which is also what LEDGER.md publishes, so a run cannot say two different things about
+    #: what its accepted candidate did.
+    broke: list = field(default_factory=list)
+    fixed: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -49,6 +61,10 @@ class GateDecision:
             "threshold": self.threshold,
             "indecisive": self.indecisive,
             "resolvable_effect_size": self.resolvable_effect_size,
+            "broke": list(self.broke),
+            "fixed": list(self.fixed),
+            "n_broke": len(self.broke),
+            "n_fixed": len(self.fixed),
         }
 
 
@@ -115,8 +131,75 @@ def decide(
     coverage: float | None = None,
     min_coverage: float = 0.6,
     run_dir=None,
+    broke: list | None = None,
+    fixed: list | None = None,
+    gate_max_broke: int | None = None,
 ) -> GateDecision:
-    """Decide whether to accept the candidate.
+    """Decide whether to accept the candidate — see ``_verdict`` for the statistics.
+
+    ``broke``/``fixed`` are the val tasks the candidate broke and fixed versus its parent
+    (from ``harness.movement``). They are RECORDED on the decision and, unless
+    ``gate_max_broke`` is set, change nothing: the verdict is exactly ``_verdict``'s. That
+    split is the point of this function. The gate decides on the MEAN, so a candidate that
+    trades tasks — fixing some, breaking others — is accepted whenever the net is positive,
+    and run 36175707483's champion was accepted while breaking a task against BOTH of its
+    concurrent controls. On the sealed 280-task split its composition was 54 improved / 17
+    regressed, every sampled regression a 1.000 → 0.000. The net was genuinely positive, so
+    the gate was not WRONG; it was indifferent to composition, and nothing forced the
+    trade-off to be examined.
+
+    ``gate_max_broke`` (None = off, today's behaviour) is the opt-in veto: at most this many
+    broken tasks, or the candidate is rejected with a reason naming the ids. It only ever
+    SUBTRACTS — it can turn an accept into a reject, never the reverse, and it never touches
+    an ``indecisive`` verdict (an unjudged candidate has no composition to hold against it).
+
+    Regressions deliberately do NOT auto-reject. On a 40-task val split with SE ≈ 0.079 a
+    hard no-regression rule rejects nearly everything, and it would be noise-driven: these
+    runs show tasks flipping 1.0 → 0.0 between two BYTE-IDENTICAL control replicates. The
+    per-task ``2·SE`` bar in ``harness.move_is_resolved`` removes the worst of that, not all
+    of it. So: measure and surface always, veto only on request.
+    """
+    d = _verdict(current_val, candidate_val, split=split, mode=mode, k_se=k_se,
+                 candidate_stderr=candidate_stderr, current_stderr=current_stderr,
+                 threshold=threshold, paired_deltas=paired_deltas,
+                 paired_se_floor=paired_se_floor, coverage=coverage,
+                 min_coverage=min_coverage, run_dir=run_dir)
+    d.broke = [str(t) for t in (broke or [])]
+    d.fixed = [str(t) for t in (fixed or [])]
+    if gate_max_broke is None or d.indecisive or not d.accept:
+        # Unset, unjudged, or already rejected: nothing to subtract. With the knob unset this
+        # returns ``_verdict``'s decision untouched down to the reason STRING — which matters
+        # beyond history comparability, because ``dashboard.reduce_run`` regexes the gate's
+        # numbers back out of exactly that string.
+        return d
+    if len(d.broke) > int(gate_max_broke):
+        d.accept = False
+        d.reason += (f"; REJECTED by gate_max_broke={int(gate_max_broke)} — broke "
+                     f"{d.broke} (fixed {d.fixed})")
+    return d
+
+
+def _verdict(
+    current_val: float,
+    candidate_val: float,
+    *,
+    split: str = "val",
+    mode: str = "significant",
+    k_se: float = 1.0,
+    candidate_stderr: float = 0.0,
+    current_stderr: float = 0.0,
+    threshold: float = 0.0,
+    paired_deltas: list | None = None,
+    paired_se_floor: float = 0.0,
+    coverage: float | None = None,
+    min_coverage: float = 0.6,
+    run_dir=None,
+) -> GateDecision:
+    """The gate's STATISTICS — the accept/reject test itself, and nothing else.
+
+    Deliberately knows nothing about per-task composition: ``decide`` records that on top
+    and applies the opt-in ``gate_max_broke`` veto afterwards, so reading this function is
+    enough to know what the bar is, and a change to the reporting cannot move the bar.
 
     Modes:
       - ``paired``: accept iff mean(per-task Δ) > k * SE(Δ), where Δ[t] =

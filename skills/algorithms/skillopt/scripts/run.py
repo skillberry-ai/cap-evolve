@@ -68,6 +68,12 @@ def main(argv=None) -> int:
                    help="train ids sampled for the longitudinal slow-update compare")
     p.add_argument("--no-regression", action="store_true",
                    help="reject candidates that break a passing val task")
+    p.add_argument("--gate-max-broke", type=int, default=None,
+                   help="OPT-IN composition veto (unset = off, today's behaviour): reject an "
+                        "otherwise-accepted candidate that BREAKS more than N val tasks it "
+                        "was passing, naming the ids. The gate decides on the MEAN paired "
+                        "delta, so a net-positive candidate is accepted however many "
+                        "previously-solved tasks it destroys -- with 0 here, none may be.")
     p.add_argument("--store", default="git", help="git|copy|command")
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--resume", action="store_true",
@@ -102,13 +108,19 @@ def main(argv=None) -> int:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    # The gate's kwargs. ``gate_max_broke`` is added ONLY when set, so the dict every run so
+    # far passed is byte-identical and the accept/reject decision cannot have moved.
+    gate_kwargs = ({"k_se": args.k_se} if args.gate_mode == "auto"
+                   else {"mode": args.gate_mode, "k_se": args.k_se})
+    if args.gate_max_broke is not None:
+        gate_kwargs["gate_max_broke"] = int(args.gate_max_broke)
+
     result = skillopt.skillopt_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,
         epochs=args.epochs, batch_size=args.batch_size, accumulation=args.accumulation,
         edit_budget=args.edit_budget, min_edit_budget=args.min_edit_budget,
         lr_schedule=args.lr_schedule, n_trials=args.n_trials,
-        gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
-                     else {"mode": args.gate_mode, "k_se": args.k_se}),
+        gate_kwargs=gate_kwargs,
         no_regression=args.no_regression, slow_update=args.slow_update,
         slow_update_sample=args.slow_update_sample, algorithm=ALGO, store=store,
         ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),

@@ -209,6 +209,12 @@ def main(argv=None) -> int:
                paired_se_floor=se_floor, coverage=frozen_coverage, run_dir=run_dir)
 
     regs = regressions(cur, cand)
+    # The full COMPOSITION of the change, from the framework's shared classifier: what this
+    # candidate broke AND what it fixed. ``regressions`` above is only the broke half, and it
+    # exists to feed the veto; ``movement`` is what gets RECORDED, so a round table and a step
+    # record can say what an accepted candidate traded. `r3_decide` (run 36175707483) was booked
+    # accept with "BROKE vs both controls [33722]" living only in the agent's prose.
+    mv = harness.movement(cur.per_task, cand.per_task)
     accept = bool(d.accept) and not (regs and args.veto_regressions)
     verdict = "indecisive" if d.indecisive else ("accept" if accept else "reject")
     # A reject with delta > 0 is not the same as a reject with delta <= 0: the first is
@@ -252,6 +258,13 @@ def main(argv=None) -> int:
                                    "rewrite-sized diff, no rollouts, or it reaches every "
                                    "task) — full-vector measurement, as before")}),
         "regressions": regs,
+        # broke/fixed/unresolved over the whole val split, so the trade-off is a NUMBER a
+        # driver has to look at rather than something it may mention. `broke` is `regressions`
+        # by construction (same shared rule); `fixed` is the half that was never reported, and
+        # without it "it broke task X" reads as pure loss even when the edit fixed four others.
+        "movement": {k: mv[k] for k in ("broke", "fixed", "unresolved")},
+        "n_broke": len(mv["broke"]),
+        "n_fixed": len(mv["fixed"]),
         "verdict": verdict,
         "directionally_positive_but_inconclusive": directionally_positive_but_inconclusive,
         "next": next_cmd,

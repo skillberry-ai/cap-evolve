@@ -630,6 +630,13 @@ def _main(argv=None) -> int:
             "footprint": g.get("footprint"),
             "verdict": g.get("verdict"),
             "regressions": g.get("regressions"),
+            # What the candidate TRADED (gate_check's `movement`): the broke ids AND the fixed
+            # ids. Persisted so `commit.py` can put them on the step record instead of leaving
+            # the trade-off to the agent's prose — the gate decides on the mean and is
+            # indifferent to composition, so an accept can and does destroy solved tasks.
+            "movement": g.get("movement"),
+            "n_broke": g.get("n_broke"),
+            "n_fixed": g.get("n_fixed"),
             "eval_rc": ev.get("rc"),
             "eval_error": ev.get("error"),
             # True only for a control replicate this round read back instead of measuring.

@@ -1359,6 +1359,14 @@ def reduce_run(run_dir) -> dict:
         # The eval that produced this candidate's val is the only record of what it cost.
         vev = val_eval.get(cid) or {}
         movement = per_task_file.get(cid) or {}
+        # The STEP's own recorded movement wins over ``val_per_task.json``. That file is
+        # optional and hand-written — nothing in the framework produces it — so until the gate
+        # started recording broke/fixed on the step event these two columns were empty on every
+        # real run, including run 36175707483, whose accepted champion broke a task against both
+        # of its controls. Presence, not truthiness: ``broke: []`` from a step that measured both
+        # sides is the real claim "broke nothing", and must not fall back to the file.
+        if ev.get("broke") is not None or ev.get("fixed") is not None:
+            movement = {"fixed": ev.get("fixed") or [], "broke": ev.get("broke") or []}
         node = {
             "id": cid,
             "parent": parent if parent in (None,) or True else parent,
@@ -1453,6 +1461,14 @@ def reduce_run(run_dir) -> dict:
                            "overrode_gate", "reject_basis", "verdict_stable"):
                 if _carry not in node and _carry in nodes[cid]:
                     node[_carry] = nodes[cid][_carry]
+            # Same problem, different shape: ``fixed``/``broke`` are ALWAYS set above (to []
+            # when absent), so the "not in node" test can never rescue them. agent-optimize
+            # emits ``reject``-then-``step`` for one cid and only the first carries the round
+            # table's movement — so without this the second event silently erased exactly the
+            # lists this exists to surface.
+            for _mv in ("fixed", "broke"):
+                if not node.get(_mv) and nodes[cid].get(_mv):
+                    node[_mv] = nodes[cid][_mv]
         # Last write wins if the same cid appears twice (e.g. gepa local-gate then
         # val-gate); keep the richer (val-bearing) record.
         if cid in nodes and nodes[cid].get("val") is not None and val is None:

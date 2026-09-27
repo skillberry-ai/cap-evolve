@@ -1,0 +1,222 @@
+[
+  {
+    "label": "paired_accept",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+0.5000 > 1.0·SE=0.2236 (SE=0.2236, n=6, resolvable effect size 2·SE=0.4472)",
+      "delta": 0.5,
+      "threshold": 0.22360679774997896,
+      "indecisive": false,
+      "resolvable_effect_size": 0.447214
+    }
+  },
+  {
+    "label": "paired_reject_noisy",
+    "decision": {
+      "accept": false,
+      "reason": "paired Δ̄=+0.0200 <= 1.0·SE=0.4477 (SE=0.4477, n=5, resolvable effect size 2·SE=0.8953)",
+      "delta": 0.02,
+      "threshold": 0.4476605857119878,
+      "indecisive": false,
+      "resolvable_effect_size": 0.895321
+    }
+  },
+  {
+    "label": "paired_trade_net_positive",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+0.0750 > 1.0·SE=0.0553 (SE=0.0553, n=40, resolvable effect size 2·SE=0.1107)",
+      "delta": 0.075,
+      "threshold": 0.05532537786493135,
+      "indecisive": false,
+      "resolvable_effect_size": 0.110651
+    }
+  },
+  {
+    "label": "paired_se_zero_strict_fallback",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+0.2500 > 0 (SE=0 → STRICT fallback, warned; n=1)",
+      "delta": 0.25,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "paired_se_zero_negative",
+    "decision": {
+      "accept": false,
+      "reason": "paired Δ̄=-0.2500 <= 0 (SE=0 → STRICT fallback, warned; n=1)",
+      "delta": -0.25,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "paired_identical_deltas",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+0.1000 > 0 (SE=0 → STRICT fallback, warned; n=4)",
+      "delta": 0.1,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "paired_with_se_floor",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+0.0500 > 1.0·SE=0.0289 (SE=0.0289, n=4, resolvable effect size 2·SE=0.0577)",
+      "delta": 0.05,
+      "threshold": 0.02886751345948129,
+      "indecisive": false,
+      "resolvable_effect_size": 0.057735
+    }
+  },
+  {
+    "label": "paired_k_se_2",
+    "decision": {
+      "accept": false,
+      "reason": "paired Δ̄=+0.1667 <= 2.0·SE=0.6146 (SE=0.3073, n=6, resolvable effect size 2·SE=0.6146)",
+      "delta": 0.16666666666666666,
+      "threshold": 0.6146362971528592,
+      "indecisive": false,
+      "resolvable_effect_size": 0.614636
+    }
+  },
+  {
+    "label": "paired_empty_falls_back",
+    "decision": {
+      "accept": true,
+      "reason": "Δ=+0.1000 > 1.0·SE=0.0283 (SE=0.0283, resolvable effect size 2·SE=0.0566)",
+      "delta": 0.09999999999999998,
+      "threshold": 0.0282842712474619,
+      "indecisive": false,
+      "resolvable_effect_size": 0.056569
+    }
+  },
+  {
+    "label": "significant_accept",
+    "decision": {
+      "accept": true,
+      "reason": "Δ=+0.1000 > 1.0·SE=0.0283 (SE=0.0283, resolvable effect size 2·SE=0.0566)",
+      "delta": 0.09999999999999998,
+      "threshold": 0.0282842712474619,
+      "indecisive": false,
+      "resolvable_effect_size": 0.056569
+    }
+  },
+  {
+    "label": "significant_reject",
+    "decision": {
+      "accept": false,
+      "reason": "Δ=+0.0100 <= 1.0·SE=0.1131 (SE=0.1131, resolvable effect size 2·SE=0.2263)",
+      "delta": 0.010000000000000009,
+      "threshold": 0.1131370849898476,
+      "indecisive": false,
+      "resolvable_effect_size": 0.226274
+    }
+  },
+  {
+    "label": "significant_se_zero",
+    "decision": {
+      "accept": true,
+      "reason": "Δ=+0.1000 > 0 (SE=0 → STRICT fallback, warned)",
+      "delta": 0.09999999999999998,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "significant_se_zero_flat",
+    "decision": {
+      "accept": false,
+      "reason": "Δ=+0.0000 <= 0 (SE=0 → STRICT fallback, warned)",
+      "delta": 0.0,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "threshold_accept",
+    "decision": {
+      "accept": true,
+      "reason": "Δ=+0.2000 > 0.1000",
+      "delta": 0.19999999999999996,
+      "threshold": 0.1,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "threshold_reject",
+    "decision": {
+      "accept": false,
+      "reason": "Δ=+0.0500 <= 0.1000",
+      "delta": 0.050000000000000044,
+      "threshold": 0.1,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "strict_accept",
+    "decision": {
+      "accept": true,
+      "reason": "Δ=+0.0001 > 0",
+      "delta": 9.999999999998899e-05,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "strict_reject",
+    "decision": {
+      "accept": false,
+      "reason": "Δ=+0.0000 <= 0",
+      "delta": 0.0,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "low_coverage_indecisive",
+    "decision": {
+      "accept": false,
+      "reason": "INDECISIVE: only 25% of val tasks produced a valid score (< 60% required). The evaluation measured the infrastructure, not the edit — not counted as a rejection.",
+      "delta": 0.4,
+      "threshold": 0.0,
+      "indecisive": true,
+      "resolvable_effect_size": null
+    }
+  },
+  {
+    "label": "coverage_ok",
+    "decision": {
+      "accept": false,
+      "reason": "paired Δ̄=+0.2500 <= 1.0·SE=0.4787 (SE=0.4787, n=4, resolvable effect size 2·SE=0.9574)",
+      "delta": 0.25,
+      "threshold": 0.47871355387816905,
+      "indecisive": false,
+      "resolvable_effect_size": 0.957427
+    }
+  },
+  {
+    "label": "coverage_guard_disabled",
+    "decision": {
+      "accept": true,
+      "reason": "paired Δ̄=+1.0000 > 0 (SE=0 → STRICT fallback, warned; n=2)",
+      "delta": 1.0,
+      "threshold": 0.0,
+      "indecisive": false,
+      "resolvable_effect_size": null
+    }
+  }
+]

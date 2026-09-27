@@ -15,6 +15,7 @@
 - [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
 - [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
 - [Measuring only what the edit reaches](#measuring-only-what-the-edit-reaches)
+- [Composition, not just the mean](#composition-not-just-the-mean)
 - [Caveats](#caveats)
 - [Process snapshot](#process-snapshot)
 - [Sources](#sources)
@@ -644,7 +645,9 @@ change behaviour at all.
 Every such claim now has to clear **2·SE of its own per-task measurement** — the two sides' per-task SEs in
 quadrature, the same "smallest resolvable effect" the gate reports for the split mean, applied per task.
 One function, `harness.move_is_resolved`, is the single bar behind every place the framework makes the
-claim: `LEDGER.md` + the journal RESULT stamp (`_candidate_task_impact`); the `no_regression` veto in both
+claim: `LEDGER.md` + the journal RESULT stamp (`_candidate_task_impact`) and the gate's own step record
+(`harness.movement`), which share one classifier (`_classify_moves`) precisely so they cannot disagree
+about what an accepted candidate did; the `no_regression` veto in both
 the hill-climb and gepa loops, which is the strongest consequence of the set since it turns a
 gate-PASSING candidate into a rejection; the round table's diagnosis list (`gate_check.regressions`);
 skillopt's within-epoch improved/regressed buffer (`_categorize`); the sealed report's seed→best movement
@@ -655,6 +658,38 @@ A sub-threshold move is reported as **`unresolved`**, which is neither "broke" n
 moved, and the measurement cannot say the edit did it. Do not redesign an edit because a task appears
 there, and do not cite one as a regression — re-measure it, or ignore it. At one trial per task every
 per-task SE is 0, the bar collapses to `eps`, and the classification is exactly what it always was.
+
+### Composition, not just the mean
+
+The gate decides on the **mean** paired Δ. So a candidate that TRADES tasks — fixes some, breaks others —
+is accepted whenever the net is positive, no matter how many previously-solved tasks it destroyed. That is
+not a defect in the statistics; the mean is the right thing to test. It is that nothing used to force the
+trade-off to be *examined*.
+
+`r3_decide` was accepted in run 36175707483 and became the champion. Its own gate notes said, in prose:
+
+> Regressions `[33722, 46646]`; FIXED vs both controls `[49036]`, **BROKE vs both controls `[33722]`** —
+> net zero
+
+So the accept was booked *knowing* it had destroyed a task against **both** concurrent controls. On the
+280-task sealed test split that champion scored **0.764** against the seed's **0.632** — a real, large gain
+— but the composition was **54 improved / 17 regressed / 209 unchanged**, and every regression sampled went
+**1.000 → 0.000** (`60-7`, `384-4`, `82-38`, `183-8`, `192-22`, `387-16`, `524-31`, `560-12`, `45635`,
+`48643`). A 40-task val split cannot see a 17-task trade on a 280-task population, so this recurs on every
+`full_verified` run unless someone looks.
+
+`gate_check` therefore reports **`movement`** (`{broke, fixed, unresolved}`) alongside `regressions`, and
+`round.py` persists it so `commit.py` puts it on the step record. Read it, and put the trade in your
+`--note`: "+5 fixed / −1 broke, accepted because X" is a decision; "+0.05, accepted" is not, because that
+same number is produced by five clean fixes and by six fixes with a task destroyed.
+
+Accepting a trade is a legitimate call. Regressions deliberately do **not** auto-reject: on a 40-task val
+split with SE ≈ 0.079 a hard no-regression rule rejects nearly everything, and these runs show tasks
+flipping `1.0 → 0.0` between two *byte-identical* control replicates, so the veto would often be firing on
+noise. `--veto-regressions` (here) and `gate_max_broke` (the deterministic loops) exist for a comparison
+run that wants a no-regression champion, and both are off by default. What is not legitimate is the
+*un-examined* trade — which is what the record used to make unavoidable, since broke/fixed reached
+`LEDGER.md` and the journal but never the step record any report reads.
 
 ## Merging accepted candidates before you finalize
 

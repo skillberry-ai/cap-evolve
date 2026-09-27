@@ -150,6 +150,22 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     # the whole finding: cand_1 was rejected against the parent's STORED reward (Δ 0.0333 vs
     # threshold 0.0440) while the control-relative comparison ACCEPTED it (Δ 0.0556 vs 0.0341).
     # Recording only the booked verdict hides that the decision was reference-dependent.
+    # What this candidate TRADED, from the round table's `movement` (gate_check's shared
+    # `harness.movement`). On the step record because that is what LEDGER/RUNMAP, the dashboard
+    # graph, the TUI and ci/benchmarks/lib/metrics.py all read — and because `r3_decide` was
+    # booked ACCEPT in run 36175707483 with "BROKE vs both controls [33722]" recorded nowhere
+    # but its own prose. Its sealed-split composition was 54 improved / 17 regressed, every
+    # sampled regression a 1.000 → 0.000, and nothing in the run's machine-readable record said
+    # a single task had been destroyed. Written only when the table HAS the movement (an older
+    # table, or a `gate_check`-only round, has none) — a missing measurement stays missing.
+    _mv = entry.get("movement") or {}
+    if _mv:
+        out["broke"] = list(_mv.get("broke") or [])
+        out["fixed"] = list(_mv.get("fixed") or [])
+        # Explicit counts, not derived by every reader: `0` here is a real measured claim
+        # ("broke nothing"), which is why the lists above are written even when empty.
+        out["n_broke"] = len(out["broke"])
+        out["n_fixed"] = len(out["fixed"])
     ctl = entry.get("control_relative") or {}
     if ctl:
         out["control_relative_verdict"] = ctl.get("verdict")

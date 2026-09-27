@@ -9,6 +9,45 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The gate accepted candidates that destroyed previously-solved tasks, and its own record
+  said nothing about it.** Acceptance is decided on the MEAN paired Δ, so a candidate that
+  TRADES tasks — fixing some, breaking others — passes whenever the net is positive. That is
+  not a bug in the statistics; it is that nothing forced the trade-off to be looked at.
+  `r3_decide` was accepted in run 36175707483 and became the champion with its own gate notes
+  reading "BROKE vs both controls `[33722]`" — so the accept was booked *knowing* it had
+  destroyed a task against both concurrent controls, and that sentence existed only in the
+  agent's prose. On the 280-task sealed test split that champion scored 0.764 against the
+  seed's 0.632, a real and large gain, but the composition was **54 improved / 17 regressed /
+  209 unchanged** and every regression sampled went **1.000 → 0.000** (`60-7`, `384-4`,
+  `82-38`, `183-8`, `192-22`, `387-16`, `524-31`, `560-12`, `45635`, `48643`). A 40-task val
+  split structurally cannot see a 17-task trade on a 280-task population, so this recurs
+  silently on every `full_verified` run. The signal was never missing: `_candidate_task_impact`
+  has always computed broke/fixed for `LEDGER.md` and the journal RESULT stamp. It simply never
+  reached the `step` record that every other consumer reads — and the dashboard's own
+  fixed/broke columns read `val_per_task.json`, a file nothing in this framework writes, so
+  they were empty on every real run. Three changes, none of which touch how Δ̄ or SE are
+  computed: the classification moves into one shared `harness.movement` (the same rule the
+  ledger publishes, the same `2·SE` per-task bar, and the same "no valid trial on either side
+  ⇒ DROPPED, not broke" rule that exists because a Docker Hub 429 storm once produced
+  `paired Δ̄=-0.6400` out of infrastructure); `gate.decide` now RECORDS `broke`/`fixed` plus
+  counts on the decision and on the step event, through both engine gate call sites
+  (`run_step` and gepa's `_full_val_gate`, which deliberately does not route through it) and
+  through agent mode's `gate_check` → `round.py` table → `commit.py`; and the suite report grows
+  a `traded` column (`+3 fixed / -1 broke`) plus a prose line naming every accepted candidate
+  that broke something. `gate.decide` is now a thin wrapper whose statistics live untouched in
+  `_verdict`, so "the default decision did not move" is structural rather than a claim —
+  pinned by a 20-case fixture captured from the previous gate covering all four modes, both
+  SE-collapse strict fallbacks, the paired SE floor and the low-coverage indecisive guard.
+- **Added, off by default: `gate_max_broke`** (`--gate-max-broke` on `hill-climb`, `gepa` and
+  `skillopt`, alongside the `--no-regression` it sits next to) — at most N broken val tasks, or
+  the candidate is rejected with a reason naming the ids. Unset is today's behaviour exactly.
+  Deliberately NOT auto-reject: on a 40-task val split with SE ≈ 0.079 a hard no-regression
+  rule rejects nearly everything and would often be noise-driven — these runs show tasks
+  flipping 1.0 → 0.0 between two BYTE-IDENTICAL control replicates. Measure and surface
+  always; veto only when asked. The knob only ever subtracts (it cannot turn a reject into an
+  accept) and never touches an `indecisive` verdict, and a source-walking test asserts every
+  `gate_mod.decide` call site hands it the movement, because a veto that reaches the gate with
+  an empty list rejects nothing and says nothing — strictly worse than not existing.
 - **The `>>> plan:` rollout projection called a floor an "upper bound", and in agent mode that
   floor was 45% of what the run actually spent.** The line exists so an over-budget dispatch is
   visible in the first minute rather than at the 24h `timeout-minutes`, but its model

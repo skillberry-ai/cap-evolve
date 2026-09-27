@@ -63,6 +63,7 @@ from .harness import (
     _resolve_workers,
     _SNAPSHOT_IGNORE,
     evaluate_candidate,
+    movement,
     record_iteration,
     split_result_from_rollouts,
 )
@@ -771,10 +772,16 @@ def _full_val_gate(
     paired = _paired_deltas(parent_result, cand_val)
     if "mode" not in gk and paired is not None:
         gk["mode"] = "paired"
+    # The composition behind the mean — which val tasks this child broke and which it fixed.
+    # Wired here and not only in ``run_step`` because this is a SECOND gate call site: without
+    # it a caller's ``gate_max_broke`` would reach ``decide`` with an empty ``broke`` list and
+    # silently never fire, which is worse than the knob not existing.
+    mv = movement(parent_result.per_task, cand_val.per_task)
     decision = gate_mod.decide(
         parent_result.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=parent_result.stderr,
-        paired_deltas=paired, coverage=cand_val.coverage, run_dir=run_dir, **gk,
+        paired_deltas=paired, coverage=cand_val.coverage, run_dir=run_dir,
+        broke=mv["broke"], fixed=mv["fixed"], **gk,
     )
     accepted = decision.accept
     if accepted and no_regression:
@@ -799,11 +806,16 @@ def _full_val_gate(
     # The iteration record + journal reconcile, through the ONE shared step (#216/#224).
     # Both callers (the main loop and ``_try_merge``) end their iteration here, so
     # neither charges the budget itself.
+    # Only when both sides shared a measured task, so ``broke: []`` cannot be read as
+    # "broke nothing" on a step where there was nothing to compare (see ``movement``).
+    _mv_extra = ({"broke": mv["broke"], "fixed": mv["fixed"],
+                  "n_broke": len(mv["broke"]), "n_fixed": len(mv["fixed"])}
+                 if mv["n_shared"] else {})
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
                      reason=decision.reason, val=cand_val.reward,
                      parent_val=parent_result.reward, memory_skill=memory_skill,
                      runner_seconds=round(cand_val.seconds, 2),
-                     cost_usd=cand_val.cost_usd, tokens=cand_val.tokens)
+                     cost_usd=cand_val.cost_usd, tokens=cand_val.tokens, **_mv_extra)
     return decision.to_dict(), accepted, cand_val
 
 
