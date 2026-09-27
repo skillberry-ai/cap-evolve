@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   call-test-pr:
-    uses: skillberry-ai/skillberry-common/.github/workflows/test-pr-with-bob.yml@main
+    uses: skillberry-ai/skillberry-common/.github/workflows/test-pr-with-bob.yml@fix-bob-version-pin-and-injection-in-sibling-workflows
     secrets: inherit
     permissions:
       actions: read
