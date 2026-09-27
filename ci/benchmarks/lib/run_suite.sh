@@ -894,36 +894,70 @@ fi
 # PLAN. Print what this dispatch will actually spend BEFORE it spends it. An over-budget
 # `trials` x `iterations` combination is otherwise invisible until the job is killed at
 # `timeout-minutes`, hours in and with nothing to show — which is exactly how a blank-trials
-# whole-set dispatch used to fail. Same cost model both tier READMEs publish:
-# `algorithm_focus: all` never evaluates the train split, and `finalize` scores test TWICE
-# (champion + baseline). Advisory only: it reports, it does not refuse — a deliberate long
-# run is legitimate, an accidental one is not.
+# whole-set dispatch used to fail. Advisory only: it reports, it does not refuse — a
+# deliberate long run is legitimate, an accidental one is not.
+#
+# A RANGE, not a number, and neither end is called an "upper bound" (issue #542). The old
+# single figure `per_val + iters*per_val + 2*test*trials` was wrong in both directions:
+#   * run 36175707483 (`agent-optimize`, val=40 train=80 test=280, trials=1, iterations=8)
+#     printed 920 and spent 1,943 — the model is exactly right about what it models (seed +
+#     candidate val 360, finalize 560 = 920) and silently omitted 1,023 rollouts of agent-mode
+#     overhead: 2 null-control replicates per round (640), train-split diagnostics (240),
+#     cheap subset screens (103) and one `grow` replicate (40). That is a FLOOR, not a bound.
+#   * run 36261022325 (`hill-climb-all`, same split, iterations=1) printed 640 and spent 440 —
+#     over by 280 because it assumed `finalize` always scores test TWICE, when nothing was
+#     accepted so `best == seed` and it scored ONE capability; and under by 80 because the
+#     baseline also evaluates the TRAIN split, which it modelled nowhere.
+# (Both actuals counted off the runs' event logs by (tag, split): `seed` is evaluated on both
+# val and train under one tag, so keying by tag alone loses one entry and double-counts the
+# other — that error is what produced the 2,023/480 figures first published on #542.)
+#
+# So: floor = the run every algorithm is guaranteed to pay for — baseline val, the baseline's
+# train eval (over the TRAIN split's own id count, which on the split both runs above used is
+# twice val's — 80 against 40; skipped entirely when the train ids ARE the val ids, the dedup
+# in harness._baseline_train), one val eval per booked iteration, and ONE finalize pass
+# over test. Upper = a second finalize pass (champion + baseline on test), and under
+# `agent-optimize` a per-round allowance for what the agent buys itself and the deterministic
+# path never does: 2 null controls, one more val-sized eval (a `grow` replicate, a re-run
+# train diagnostic), and a subset screen. Those coefficients are a judgement call sized off the
+# two runs above — the requirement is that the printed range CONTAINS reality (720-2040 against
+# 1,943; 440-720 against 440), not that it predicts it exactly.
+#
 # NUM_TRIALS/ITER are always set by here (lines 32/34) when this script runs top to bottom;
 # the ":-10"/":-3" below exist only so this block stays self-contained when a test lifts and
-# runs it on its own (test_run_suite_split_hook.py does exactly that, sharing this snippet
-# with the split hook above it) — they match the script's own real defaults, not the "${:-1}"
-# this replaced, which was both dead (always shadowed by line 32/34) and actively misleading
-# next to those real defaults.
-# `iters * per_val` assumes one val-eval per iteration, which holds for the deterministic
-# hill-climb-* path but is only an upper bound under `algorithm: agent-optimize`, where a
-# headless agent is merely ASKED to stay under an iteration budget via a free-text
-# stop_condition rather than being hard-capped in code.
-case "${ALGORITHM:-}" in
-  agent-optimize) _plan_note=" (upper bound — agent-optimize is only asked to respect this budget, not capped to it)" ;;
-  *) _plan_note="" ;;
-esac
-"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-10}" "${ITER:-3}" "$_plan_note" >&2 <<'PLAN'
+# runs it on its own (test_benchmarks_trials_defaults.py does exactly that) — they match the
+# script's own real defaults, not the "${:-1}" this replaced, which was both dead (always
+# shadowed by line 32/34) and actively misleading next to those real defaults.
+"$PY" - "$PROJ/inputs/split_ids.json" "${NUM_TRIALS:-10}" "${ITER:-3}" "${ALGORITHM:-}" >&2 <<'PLAN'
 import json, sys
 split = json.load(open(sys.argv[1]))
-trials, iters = int(sys.argv[2]), int(sys.argv[3])
-note = sys.argv[4]
+trials, iters, algorithm = int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+agent = algorithm == "agent-optimize"
 val, test = len(split["val"]), len(split["test"])
-per_val = val * trials
-total = per_val + iters * per_val + 2 * test * trials
-print(f">>> plan: {total} rollouts{note} — baseline {per_val} + {iters} x {per_val} val "
-      f"+ finalize 2 x {test * trials} "
+# The train eval is skipped when train and val hold the SAME ids, and otherwise costs the
+# train split's own size — which is NOT val's (80 vs 40 on the split the runs above used).
+train_ids = split.get("train") or ()
+train = 0 if set(train_ids) == set(split["val"]) else len(train_ids)
+why_no_train = (" (no train ids in the split)" if not train_ids else
+                " (train ids = val ids, not re-evaluated)")
+per_val, per_train, per_test = val * trials, train * trials, test * trials
+floor = per_train + per_val + iters * per_val + per_test
+extra = [f"a 2nd finalize {per_test}"]
+upper = floor + per_test
+if agent:
+    controls, spare, screen = 2 * per_val, per_val, trials * max(1, val // 4)
+    upper += iters * (controls + spare + screen)
+    extra.append(f"{iters} x ({controls} null controls + {spare} extra val + {screen} screen)")
+note = (" — agent-optimize is asked to respect the iteration budget, not capped to it"
+        if agent else "")
+print(f">>> plan: {floor}-{upper} rollouts (advisory floor-upper{note}) — "
+      f"floor: baseline {per_val} val"
+      + (f" + {per_train} train" if per_train else why_no_train)
+      + f" + {iters} x {per_val} val + finalize {per_test}; "
+      f"upper adds {' + '.join(extra)} "
       f"(val={val} test={test} trials={trials} iterations={iters})")
 PLAN
+
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability

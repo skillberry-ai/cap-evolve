@@ -174,16 +174,24 @@ def _plan_block() -> str:
     return src[start:src.index("\ncat > \"$PROJ/capevolve.yaml\"", start)]
 
 
-def _run_plan(tmp_path, *, val: int, test: int, trials: int, iterations: int) -> str:
-    """Execute the real projection block against a temp split and report its output."""
+def _run_plan(tmp_path, *, val: int, test: int, trials: int, iterations: int,
+              train: int | str = 3, algorithm: str = "") -> str:
+    """Execute the real projection block against a temp split and report its output.
+
+    ``train`` is the number of train ids, or the string ``"val"`` to make the train split
+    hold exactly the val ids — the case the harness dedups away (``_baseline_train``).
+    ``algorithm`` is what the dispatch set, because agent mode buys rollouts the
+    deterministic path never does.
+    """
     import subprocess
     import textwrap
 
     proj = tmp_path / "proj" / "inputs"
     proj.mkdir(parents=True)
+    val_ids = [f"v{i}" for i in range(val)]
     (proj / "split_ids.json").write_text(json.dumps({
-        "train": [f"tr{i}" for i in range(3)],
-        "val": [f"v{i}" for i in range(val)],
+        "train": list(val_ids) if train == "val" else [f"tr{i}" for i in range(int(train))],
+        "val": val_ids,
         "test": [f"te{i}" for i in range(test)],
     }), encoding="utf-8")
     script = textwrap.dedent(f"""
@@ -192,16 +200,101 @@ def _run_plan(tmp_path, *, val: int, test: int, trials: int, iterations: int) ->
         PROJ={tmp_path / "proj"}
         NUM_TRIALS={trials}
         ITER={iterations}
+        ALGORITHM={algorithm!r}
     """) + _plan_block()
     p = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
     assert p.returncode == 0, p.stderr
     return p.stdout + p.stderr
 
 
+def _plan_range(out: str) -> tuple[int, int]:
+    """The floor and upper end of the printed projection."""
+    m = re.search(r">>> plan: (\d+)-(\d+) rollouts", out)
+    assert m, f"the projection does not print a floor-upper range: {out}"
+    floor, upper = int(m.group(1)), int(m.group(2))
+    assert floor <= upper, f"floor {floor} above upper {upper}: {out}"
+    return floor, upper
+
+
+# The two dispatches this projection was measured against, with the rollouts each really
+# spent (counted off their event logs by (tag, split) — `seed` is evaluated on BOTH val and
+# train under one tag, so keying by tag alone loses one and double-counts the other).
+# Both ran the committed full_verified split: train 80, val 40, test 280.
+SPLIT_36175707483 = dict(val=40, test=280, train=80, trials=1, iterations=8)   # agent-optimize
+ACTUAL_36175707483 = 1943   # val 360 + finalize 560 + null controls 640 + train 240 + screens 103 + grow 40
+SPLIT_36261022325 = dict(val=40, test=280, train=80, trials=1, iterations=1)   # hill-climb-all
+ACTUAL_36261022325 = 440    # seed val 40 + seed train 80 + candidate val 40 + finalize test 280
+
+
+def test_the_projection_prints_a_range_and_never_calls_a_floor_an_upper_bound(tmp_path):
+    """The old line printed ONE number and labelled it an upper bound. It was a floor: on run
+    36175707483 it printed 920 against 1,943 actually spent. A single number cannot describe a
+    run whose overhead is decided by an agent, so print both ends and say which is which."""
+    out = _run_plan(tmp_path, **SPLIT_36175707483, algorithm="agent-optimize")
+    floor, upper = _plan_range(out)
+    assert floor < upper, out
+    assert "upper bound" not in out, f"a floor is still labelled an upper bound: {out}"
+
+
+def test_the_deterministic_floor_is_what_the_deterministic_run_actually_spent(tmp_path):
+    """Run 36261022325 (`hill-climb-all`, iterations=1) spent 440: seed val 40, seed TRAIN 80,
+    one candidate val 40, and test ONCE (280 — nothing was accepted, so `best == seed` and
+    finalize scores one capability, not two). The old model printed 640: over by 280 on a
+    finalize it assumed ran twice, under by 80 on a train eval it did not model at all."""
+    out = _run_plan(tmp_path, **SPLIT_36261022325, algorithm="hill-climb-all")
+    floor, upper = _plan_range(out)
+    assert floor == ACTUAL_36261022325, (
+        f"the deterministic floor is {floor}, not the {ACTUAL_36261022325} that run spent: {out}")
+    assert upper >= ACTUAL_36261022325, out
+
+
+def test_the_agent_mode_range_brackets_what_the_agent_run_actually_spent(tmp_path):
+    """Run 36175707483 (`agent-optimize`, iterations=8) spent 1,943. The projection must
+    CONTAIN that, not sit at 45% of it — the floor below and the upper end at or above."""
+    out = _run_plan(tmp_path, **SPLIT_36175707483, algorithm="agent-optimize")
+    floor, upper = _plan_range(out)
+    assert upper >= ACTUAL_36175707483, (
+        f"the upper end {upper} is below the {ACTUAL_36175707483} run 36175707483 spent, so the "
+        f"projection still understates agent mode: {out}")
+    assert floor <= ACTUAL_36175707483, (
+        f"the floor {floor} is above what the run spent: {out}")
+
+
+def test_agent_mode_projects_more_than_the_deterministic_path_for_the_same_budget(tmp_path):
+    """Null controls and subset screens are bought by agent mode and by nothing else, so the
+    same iterations/trials must not project the same ceiling for both."""
+    det = _plan_range(_run_plan(tmp_path / "det", **SPLIT_36175707483, algorithm="hill-climb-all"))
+    agent = _plan_range(_run_plan(tmp_path / "ag", **SPLIT_36175707483, algorithm="agent-optimize"))
+    assert agent[1] > det[1], f"agent mode projects no more than deterministic: {agent} vs {det}"
+    assert agent[0] == det[0], f"the floor is the same run shape either way: {agent} vs {det}"
+
+
+def test_train_ids_identical_to_val_add_no_train_term(tmp_path):
+    """`_baseline_train` skips the train eval when the train ids ARE the val ids (the numbers
+    would be a copy), so projecting it would invent rollouts the run never spends."""
+    same = _plan_range(_run_plan(tmp_path / "same", val=40, test=280, trials=1, iterations=1,
+                                 train="val"))
+    apart = _plan_range(_run_plan(tmp_path / "apart", val=40, test=280, trials=1, iterations=1,
+                                  train=80))
+    assert same[0] == apart[0] - 80, (
+        f"the train term is not the train split's own id count: {same} vs {apart}")
+    assert same[0] == 40 + 40 + 280, f"a deduped train split still costs rollouts: {same}"
+
+
+def test_the_projection_is_advisory_and_cannot_fail_a_dispatch(tmp_path):
+    """A deliberate long run is legitimate. This block reports; it must never refuse, and must
+    not print anything an operator (or a log scraper) could read as the job failing."""
+    out = _run_plan(tmp_path, **SPLIT_36175707483, algorithm="agent-optimize")
+    for word in ("error", "fail", "traceback", "refus", "abort", "exceed"):
+        assert word not in out.lower(), f"the advisory projection reads as a failure ({word}): {out}"
+
+
 def test_run_suite_projects_the_rollout_count_before_spending_it(tmp_path):
     """An over-budget dispatch must be visible in the log, not discovered at the timeout."""
-    out = _run_plan(tmp_path, val=40, test=280, trials=1, iterations=10)
-    assert "1000 rollouts" in out, f"projection is wrong or missing: {out}"
+    out = _run_plan(tmp_path, val=40, test=280, trials=1, iterations=10, train=80)
+    floor, upper = _plan_range(out)
+    # baseline 40 + train 80 + 10 x 40 val + one finalize 280; upper adds the second finalize.
+    assert (floor, upper) == (800, 1080), out
 
 
 def test_the_projection_reports_the_inputs_it_used(tmp_path):
@@ -213,5 +306,9 @@ def test_the_projection_reports_the_inputs_it_used(tmp_path):
 
 def test_the_projection_scales_with_trials(tmp_path):
     """Guards the arithmetic: 10 trials is 10x the rollouts, which is the whole point."""
-    out = _run_plan(tmp_path, val=40, test=280, trials=10, iterations=10)
-    assert "10000 rollouts" in out, out
+    one = _plan_range(_run_plan(tmp_path / "one", val=40, test=280, trials=1, iterations=10,
+                                train=80, algorithm="agent-optimize"))
+    ten = _plan_range(_run_plan(tmp_path / "ten", val=40, test=280, trials=10, iterations=10,
+                                train=80, algorithm="agent-optimize"))
+    assert ten[0] == 10 * one[0], f"the floor does not scale with trials: {ten} vs {one}"
+    assert ten[1] == 10 * one[1], f"the upper end does not scale with trials: {ten} vs {one}"

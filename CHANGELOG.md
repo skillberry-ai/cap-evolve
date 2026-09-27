@@ -9,6 +9,39 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The `>>> plan:` rollout projection called a floor an "upper bound", and in agent mode that
+  floor was 45% of what the run actually spent.** The line exists so an over-budget dispatch is
+  visible in the first minute rather than at the 24h `timeout-minutes`, but its model
+  (`per_val + iters*per_val + 2*test*trials`) described only the rollouts every algorithm pays
+  for. Run 36175707483 (`agent-optimize`, `iterations=8 trials=1`, val 40 / train 80 / test 280)
+  printed **920** and spent **1,943**: the model is exactly right about what it models — seed +
+  candidate val evals 360, finalize 560 — and silently omitted 1,023 rollouts the agent buys
+  itself, namely two null-control replicates per round (640), train-split diagnostics (240),
+  cheap subset screens (103) and one `grow` replicate (40). The deterministic path was wrong in
+  the other direction *and* the same one: run 36261022325 (`hill-climb-all`, `iterations=1`)
+  printed **640** and spent **440** — over by 280 because the model assumes `finalize` always
+  scores test twice, when nothing was accepted so `best == seed` and it scored one capability;
+  under by 80 because the baseline also evaluates the **train** split, which it modelled nowhere
+  and which on that split holds twice as many ids as val. A projection that is 45% of reality in
+  the mode the suite mostly runs cannot do the one job it has, and labelling it an upper bound
+  invites exactly the dispatch it was added to prevent. It now prints a **range** and names both
+  ends: the floor is baseline val + the baseline's train eval (over the train split's own id
+  count, and omitted when the train ids *are* the val ids — the dedup in
+  `harness._baseline_train`) + one val eval per booked iteration + **one** finalize pass; the
+  upper end adds the second finalize pass and, under `agent-optimize` only, a per-round allowance
+  for what the agent buys and the deterministic path never does — 2 null controls, one more
+  val-sized eval (a `grow` replicate, a re-run diagnostic) and a subset screen. Against the two
+  runs above that prints `720-2040` (actual 1,943) and `440-720` (actual 440, which the floor
+  now hits exactly). The coefficients are a judgement call sized off those runs, so the claim is
+  deliberately the weaker one: the range CONTAINS what the run spends, it does not predict it.
+  Still advisory, still one line, still printed only once the split is resolved so the numbers
+  come from the real partition — it reports, it never refuses, because a deliberate long run is
+  legitimate. The two actuals were counted off the runs' event logs keyed by `(tag, split)`, not
+  by tag: `seed` is evaluated on both val and train under one tag, so keying by tag alone drops
+  one entry and double-counts the other, which is what produced the 2,023/480 figures first
+  published on the issue.
+
+### Fixed
 - **`Stop live snapshot poller` could hang for tens of minutes, hiding the failure it was
   cleaning up after and holding the runner for up to a day.** In run 36304767214
   (`full_verified / spreadsheetbench`) "Setup runner env" failed ~3 minutes in, so "Start live
