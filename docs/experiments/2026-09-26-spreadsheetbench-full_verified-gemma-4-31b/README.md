@@ -105,6 +105,9 @@ host/
   driver_prompt.md     the briefing the optimizer agent was launched with (incl. stop_condition)
   launch_args.json     exact argv
   transcript.jsonl.gz  full optimizer transcript (152 KB gz) — every tool call and decision
+no_skill_control/    run 36261022325 — the SAME tier with the capability blanked
+  report.md            280 per-task rows for the no-skill condition
+  metrics.jsonl steps.jsonl events.jsonl runmeta.json
 ```
 
 The 9 MB interactive UI snapshot is not duplicated here; it is published at
@@ -145,6 +148,70 @@ Doing so makes the run's `base→opt` delta **not** a from-scratch number, exact
 `pilot/overrides.env` documents. Record the provenance if you do it.
 
 ---
+
+## The no-skill control — and why it overturns the comparison
+
+Measured after the fact by run
+[36261022325](https://github.com/skillberry-ai/cap-evolve/actions/runs/36261022325), on the
+**same tier** with `SB_EMPTY_SEED=1` (so: same `verified_400` data, same committed 80/40/280
+split, same 30-turn budget, same 8-way concurrency, same `hard` scoring — capability blanked).
+Artifacts in `no_skill_control/`. Verified genuinely blank: the run's seed `prompt.md` is 0 bytes,
+the `EMPTY seed (no-skill control)` banner fired, and the optimizer had to author 8,714 bytes
+from nothing.
+
+| | sealed test (280 tasks) |
+|---|---|
+| **no skill** (blank capability) | **0.6679** (SE 0.0282) — 187 solved / 93 zero |
+| seed capability | 0.6321 |
+| champion `r3_decide` | 0.7643 |
+
+### Finding 1: our seed adds nothing measurable for this model
+
+No-skill **0.668** vs seed **0.632** — the blank capability scored *higher*, by 0.036 against an
+SE of ~0.028 on each. That difference is not significant, so the honest statement is that the
+tuned seed is **indistinguishable from no capability at all** for Gemma-4-31B-It, not that it
+actively hurts. Either way the seed is not contributing the 15 points its absolute score implies.
+
+This also re-attributes the result: the optimizer's real contribution over *no skill* is
+**+0.096** (0.668 → 0.764), not the +0.132 measured against the seed.
+
+### Finding 2: the harnesses are not comparable, and this is the important one
+
+| | no skill | best reported |
+|---|---|---|
+| WikiSkill paper, Gemma-4-31B | **48.3** | 68.0 (WikiSkill) |
+| this harness, same model | **66.8** | 76.4 (ours) |
+
+**Our no-skill floor is 18.5 points above theirs — and essentially level with their best
+published result.** A no-skill agent in this harness (66.8) already outscores their SkillOpt
+(63.1) and sits within noise of their WikiSkill (68.0).
+
+That is not a result about skill evolution. It means a large part of both numbers comes from the
+**harness**, not the capability, so **the absolute 76.4 cannot be set against their 68.0** — and
+the delta comparison the control was supposed to unlock is dead too, because the baselines differ
+by more than either system's total improvement.
+
+Their no-skill is not a bare prompt either — the paper's Appendix E.1 SpreadsheetBench prompt
+supplies `working_directory`, `instruction`, `spreadsheet_path`, `spreadsheet_content`,
+`instruction_type`, `answer_position` and `output_path` with an empty `{skill_section}`, which is
+close to this adapter's built-in `_TASK_TEMPLATE`. So the gap is not "they had no task framing".
+Plausible contributors, none yet isolated:
+
+- this adapter's **richer workbook context** — structural preview, `TARGET SIZE` from
+  `answer_position`, sibling-copy listing — versus "the first few rows"
+- **30 turns plus `VERIFY_TURNS`**, where the paper never states its turn budget
+- a **different 280-task partition** of the same 400
+- **model serving**: RITS versus their vLLM (quantisation, sampling defaults, temperature)
+
+### What may still be claimed
+
+> Within this harness, on a held-out 280-task split, `agent-optimize` with an Opus 5 optimizer
+> improved a **no-skill** Gemma-4-31B-It agent from **0.668 to 0.764 (+0.096)**, with 54 tasks
+> improved and 17 regressed.
+
+That is a defensible statement about cap-evolve. It must **not** be placed in the same table as
+the paper's figures. Doing so would credit skill evolution for a harness difference nearly twice
+the size of the effect.
 
 ## Fair comparison: what this number can and cannot be set against
 

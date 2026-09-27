@@ -1,0 +1,3 @@
+{"phase": "baseline", "iter": null, "candidate": "seed", "accepted": null, "reward": 0.725, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 1183.9}
+{"phase": "iterate", "iter": 1, "candidate": "cand_0001", "accepted": false, "reward": 0.8, "optimizer_usd": 12.050366, "optimizer_seconds": 2669.61, "eval_usd": 0.0, "eval_seconds": 698.45}
+{"phase": "finalize", "iter": null, "candidate": "seed", "accepted": null, "reward": 0.6678571428571428, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 5576.37}
