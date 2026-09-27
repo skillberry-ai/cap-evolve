@@ -149,6 +149,38 @@ Doing so makes the run's `base→opt` delta **not** a from-scratch number, exact
 
 ---
 
+## ⚠️ RETRACTED: the no-skill control below is invalid
+
+**The measurement reported in the next section is not a no-skill measurement, and the two
+findings drawn from it are withdrawn.**
+
+`SB_EMPTY_SEED` blanked only one of the capability's two surfaces:
+
+    seed_capability/prompt.md          965 bytes  -> blanked
+    seed_capability/task_template.md  2453 bytes  -> SURVIVED  (72% of the capability text)
+
+So run 36261022325 measured *no system prompt but keep the full tuned task template*. The
+surviving surface is the **more** load-bearing of the two: in the smoke run the same knowledge
+scored 0.600 on `task_template.md` versus 0.511 as `prompt.md` prose, and this run's own champion
+`r3_decide` was a `task_template.md` edit. Cause: the flag was written in #281 when `prompt.md`
+was the whole capability, and #282 — the next PR — made `task_template.md` optimizable without
+revisiting it. Fixed in #545; a corrected control is being re-measured.
+
+**Specifically withdrawn:**
+
+- "our seed adds nothing measurable" — 0.668 was not a no-skill number, so it cannot be set
+  against the seed's 0.632.
+- "our no-skill floor is 18.5 points above theirs, so the harnesses are not comparable" — the
+  18.5-point gap is substantially an artefact of measuring the wrong condition. Harness
+  differences may still matter, but this evidence does not establish it.
+
+What survives unaffected: the held-out result itself (seed 0.6321 → champion 0.7643 on the 280
+sealed tasks), the 54/17/209 composition, and every artifact in `data/`, `champion/` and
+`rounds/`. Nothing about the treatment run depended on the control.
+
+The section below is kept verbatim rather than deleted, so the error and its correction are both
+on the record.
+
 ## The no-skill control — and why it overturns the comparison
 
 Measured after the fact by run
