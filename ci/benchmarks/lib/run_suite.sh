@@ -648,8 +648,26 @@ ENV
       exit 1
     fi
     if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
+      # Clear EVERY surface the agent reads, not just the system prompt. The capability has two:
+      # prompt.md and task_template.md. This flag was written in #281 when prompt.md was the whole
+      # capability; #282 -- the very next PR -- made task_template.md optimizable and the flag was
+      # not revisited, so run 36261022325 measured "no system prompt but keep the full tuned task
+      # template" (2453 of 3418 bytes, 72% of the capability text) and reported it as no-skill.
+      #
+      # The two are cleared DIFFERENTLY, and the asymmetry is deliberate:
+      #   prompt.md        BLANKED. Empty means no system message at all. A MISSING file falls
+      #                    back to the adapter's built-in default prompt, which would measure
+      #                    that default while claiming no skill.
+      #   task_template.md REMOVED. A shipped file OVERRIDES the built-in _TASK_TEMPLATE, so
+      #                    blanking it would hand the agent an empty user message -- no
+      #                    instruction, no paths, no answer_position -- and score every task 0.
+      #                    Removing it restores the built-in, which is the correct no-skill
+      #                    condition and close to the reference paper's own Appendix E.1 prompt
+      #                    (same fields, empty {skill_section}).
       : > "$PROJ/seed_capability/prompt.md"
-      echo ">>> spreadsheetbench: EMPTY seed (no-skill control) — prompt.md blanked" >&2
+      rm -f "$PROJ/seed_capability/task_template.md"
+      echo ">>> spreadsheetbench: EMPTY seed (no-skill control) — prompt.md blanked," \
+           "task_template.md removed (built-in _TASK_TEMPLATE applies)" >&2
     fi
     # WARM START. Learning was not cumulative: every run began from the pristine seed, so each
     # explored a different subset of rules and forgot the rest. Across the two pilots' champions,

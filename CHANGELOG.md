@@ -8,6 +8,25 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- **`SB_EMPTY_SEED` left 72% of the capability in place, so every "no-skill control" it produced
+  was mislabelled.** The flag blanked `prompt.md` (965 bytes) and left `task_template.md`
+  (2,453 bytes) untouched. It was correct when written in #281, where `prompt.md` was the whole
+  capability; **#282 — the very next PR — made `task_template.md` optimizable** and the flag was
+  never revisited. #282's own rationale was that "~60% of the text the agent reads" had been
+  frozen in code, which is precisely the fraction the no-skill flag then missed. Run 36261022325
+  was dispatched as a no-skill control and actually measured *no system prompt but keep the full
+  tuned task template* — and that surface is the more load-bearing of the two (in the smoke run
+  the same knowledge scored 0.600 on `task_template.md` versus 0.511 as `prompt.md` prose, and
+  the `full_verified` champion was a `task_template.md` edit). Its 0.668 must not be quoted as a
+  no-skill baseline. The flag now clears both surfaces, asymmetrically and deliberately:
+  `prompt.md` is **blanked** (empty means no system message; a missing file would fall back to
+  the adapter's built-in default and measure that instead), while `task_template.md` is
+  **removed** (a shipped file overrides the built-in `_TASK_TEMPLATE`, so blanking it would hand
+  the agent an empty user message and score every task 0). A new guard enumerates the capability
+  files the adapter actually reads and fails if the flag does not handle all of them — the test
+  #282 would have tripped.
+
 ### Changed
 - **`benchmark-history`'s `benchmarks.json`/`meta.json` are no longer committed to git — they're
   rendered fresh from `records/` at GitHub Pages deploy time instead.** That aggregate over every
