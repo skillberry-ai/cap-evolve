@@ -233,11 +233,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Verbatim captured artifacts (*.diff/*.patch/*.jsonl under docs/experiments) are skipped:
+      # they are byte-exact copies of what a run produced, and an agent's own typo inside one is
+      # data. "Fixing" it would falsify the record the directory exists to preserve.
       - name: codespell
         uses: codespell-project/actions-codespell@v2
         with:
           path: README.md docs
-          skip: docs/sources.bib,docs/assets,docs/superpowers
+          skip: docs/sources.bib,docs/assets,docs/superpowers,*.diff,*.patch,*.jsonl
           ignore_words_list: nd,te,ba,alls,ist,fo,ans,crate,ede,hel,optimizer,capevolve,noteb,fpr
 
 # Made with Bob
