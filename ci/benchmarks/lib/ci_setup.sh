@@ -343,8 +343,12 @@ if command -v curl >/dev/null; then
     case " $providers_seen " in *" $provider "*) continue ;; esac
     providers_seen="$providers_seen $provider"
     require_args=()
-    [ "$PF_AGENT_PROVIDER" = "$provider" ] && require_args+=("agent=$PF_AGENT")
-    [ "$PF_OPTIMIZER_PROVIDER" = "$provider" ] && require_args+=("optimizer=$PF_OPTIMIZER")
+    # WIRE ids, not the CI aliases. The gateway's own `GET /models` listing spells models the
+    # way it serves them, so requiring "ibm-ete-int/aws/claude-opus-5" made every ibm-ete*
+    # model look unserved and aborted preflight (run 36300445911). wire_model does the same
+    # rewrite the completion probe already relies on, without needing the provider's secrets.
+    [ "$PF_AGENT_PROVIDER" = "$provider" ] && require_args+=("agent=$(wire_model "$PF_AGENT")")
+    [ "$PF_OPTIMIZER_PROVIDER" = "$provider" ] && require_args+=("optimizer=$(wire_model "$PF_OPTIMIZER")")
     case "$provider" in
       ibm-ete-int) check_entitlement ibm-ete-int "$IBM_ETE_INT_API_BASE" "$IBM_ETE_INT_API_KEY" "${require_args[@]}" ;;
       ibm-ete)     check_entitlement ibm-ete     "$IBM_ETE_API_BASE"     "$IBM_ETE_API_KEY"     "${require_args[@]}" ;;

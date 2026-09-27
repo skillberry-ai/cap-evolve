@@ -31,11 +31,37 @@
 #   RESOLVED_PROVIDER  — "ibm-ete-int" | "ibm-ete" | "ibm-rits", for callers that need to
 #                        branch on provider identity instead of re-deriving it from
 #                        RESOLVED_API_BASE string comparisons
+# wire_model <ci-model-id> -> prints the id the PROVIDER actually answers to.
+#
+# The rewrite ALONE: no credentials, no side effects, so a caller that only needs to know what
+# goes on the wire can ask without having the provider's secrets exported. That is exactly the
+# entitlement check's situation -- it compares against the gateway's own `GET /models` listing,
+# which uses wire ids, and passing it the CI alias made every ibm-ete* model look unserved
+# (run 36300445911: "optimizer model 'ibm-ete-int/aws/claude-opus-5' is NOT served by this
+# gateway (prefix mismatch)").
+#
+# resolve_provider DELEGATES here rather than repeating the cases, so the probe and the
+# entitlement check can never disagree about what the wire id is.
+wire_model() {
+  local model="${1:?wire_model: model id required}"
+  case "$model" in
+    ibm-ete-int/*) printf '%s' "${model#ibm-ete-int/}" ;;
+    ibm-ete/*)     printf '%s' "${model#ibm-ete/}" ;;
+    # RITS keeps a `rits/` wire prefix: lite-rits's async_pre_call_hook only engages while it is
+    # present, and strips it itself to look up the bare vendor/model in its scraped rits.json.
+    ibm-rits/*)    printf '%s' "rits/${model#ibm-rits/}" ;;
+    *)
+      echo "wire_model: '$model' has no recognized provider prefix (expected ibm-ete-int/, ibm-ete/, or ibm-rits/)" >&2
+      return 1
+      ;;
+  esac
+}
+
 resolve_provider() {
   local model="${1:?resolve_provider: model id required}"
   case "$model" in
     ibm-ete-int/*)
-      RESOLVED_MODEL="${model#ibm-ete-int/}"
+      RESOLVED_MODEL="$(wire_model "$model")"
       RESOLVED_PROVIDER="ibm-ete-int"
       : "${IBM_ETE_INT_API_BASE:?set IBM_ETE_INT_API_BASE (ete-litellm vpc-int gateway)}"
       : "${IBM_ETE_INT_API_KEY:?set IBM_ETE_INT_API_KEY}"
@@ -43,7 +69,7 @@ resolve_provider() {
       RESOLVED_API_KEY="$IBM_ETE_INT_API_KEY"
       ;;
     ibm-ete/*)
-      RESOLVED_MODEL="${model#ibm-ete/}"
+      RESOLVED_MODEL="$(wire_model "$model")"
       RESOLVED_PROVIDER="ibm-ete"
       : "${IBM_ETE_API_BASE:?set IBM_ETE_API_BASE (ete-litellm vpc gateway)}"
       : "${IBM_ETE_API_KEY:?set IBM_ETE_API_KEY}"
@@ -51,7 +77,7 @@ resolve_provider() {
       RESOLVED_API_KEY="$IBM_ETE_API_KEY"
       ;;
     ibm-rits/*)
-      RESOLVED_MODEL="rits/${model#ibm-rits/}"
+      RESOLVED_MODEL="$(wire_model "$model")"
       RESOLVED_PROVIDER="ibm-rits"
       : "${IBM_RITS_API_BASE:?set IBM_RITS_API_BASE (skillberry-1 lite-rits proxy, e.g. http://localhost:4000)}"
       : "${IBM_RITS_API_KEY:?set IBM_RITS_API_KEY}"

@@ -9,6 +9,21 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The entitlement check compared CI aliases against wire model ids, blocking every benchmark
+  dispatch with a gateway model.** #536 renamed the dispatch ids to `ibm-ete-int/…`, `ibm-ete/…`,
+  `ibm-rits/…` and added `resolve_provider.sh` to rewrite each alias into the id the provider
+  answers to. The completion probe used that rewrite; the entitlement check did not — it passed
+  `PF_AGENT`/`PF_OPTIMIZER` straight to `check_models.py`, which compares against the gateway's
+  `GET /models` listing. That listing uses wire ids, so every `ibm-ete*` model looked unserved:
+  `optimizer model 'ibm-ete-int/aws/claude-opus-5' is NOT served by this gateway (prefix
+  mismatch)`. The default optimizer is `ibm-ete-int/claude-opus-4-8`, so a dispatch with no
+  inputs failed too — run 36300445911 died there, and it was the only benchmark dispatch since
+  the rename. A new `wire_model` does the rewrite **alone**, with no credentials required (which
+  is why `resolve_provider` could not be reused — it aborts without the provider's secrets), and
+  `resolve_provider` now delegates to it so the probe and the entitlement check cannot disagree
+  about what the wire id is.
+
+### Fixed
 - **`SB_EMPTY_SEED` left 72% of the capability in place, so every "no-skill control" it produced
   was mislabelled.** The flag blanked `prompt.md` (965 bytes) and left `task_template.md`
   (2,453 bytes) untouched. It was correct when written in #281, where `prompt.md` was the whole
