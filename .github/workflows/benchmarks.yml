@@ -459,15 +459,19 @@ jobs:
 
       - name: Stop live snapshot poller
         if: always()
+        # Best-effort cleanup must never be able to outlive the work it cleans up after. With no
+        # bound it inherits this job's `timeout-minutes: 1440`, and in run 36304767214 it sat
+        # `in_progress` for 20+ minutes on a job whose real work had failed after 3 -- holding a
+        # runner that serves one leg at a time, and holding back the step logs, which GitHub does
+        # not serve until the job ends (#547). This is only the backstop: a step KILLED here is a
+        # FAILED step, so live_push.sh bounds every git call well inside this budget and the
+        # `::warning::` below is what a cleanup failure is allowed to cost.
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          pidfile="$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid"
-          if [ -f "$pidfile" ]; then
-            kill "$(cat "$pidfile")" 2>/dev/null || true
-            rm -f "$pidfile"
-          fi
           bash ci/benchmarks/lib/live_push.sh --cleanup "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
+            "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid" \
             || echo "::warning::live cleanup push failed (best-effort, no action needed)"
 
       - name: Export CapEvolve UI snapshot

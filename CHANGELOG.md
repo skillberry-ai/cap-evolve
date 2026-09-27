@@ -9,6 +9,36 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **`Stop live snapshot poller` could hang for tens of minutes, hiding the failure it was
+  cleaning up after and holding the runner for up to a day.** In run 36304767214
+  (`full_verified / spreadsheetbench`) "Setup runner env" failed ~3 minutes in, so "Start live
+  snapshot poller" and "Run suite" were both *skipped* — and the stop step, the only one with
+  `if: always()`, was still `in_progress` 20+ minutes later. The poller had never started, so
+  there was no process to kill and no `live/` dir to delete; the step hung because it called
+  `live_push.sh --cleanup` unconditionally, and cleanup clones the `benchmark-history` branch —
+  whose tip is ~1.4 GB across 24k files, and grows with every recorded run — with no bound on
+  the clone, the push, or the three retries around them. That cost twice: GitHub serves no step
+  log until the job ends, so the "Setup runner env" error was unreachable for as long as the
+  hang lasted and was discarded when the run was cancelled to force the flush, and the step
+  inherited the job's `timeout-minutes: 1440` (sized for a 912-task suite) on an `ibm-vpc`
+  runner that serves one leg at a time, so anything queued behind it could have waited 24h.
+  Three bounds now, innermost first: `--cleanup` takes the poller's pidfile as an argument and
+  returns immediately when it is absent — no pidfile means the poller never ran, so there is
+  nothing to clean up; every git call runs under a wall-clock cap (`LIVE_PUSH_GIT_TIMEOUT`,
+  60s) with `GIT_TERMINAL_PROMPT=0`, so neither a stalled transfer nor a credential prompt on a
+  tty-less runner can wedge it; and cleanup takes one attempt rather than three, which keeps its
+  worst case (~2min) inside the `timeout-minutes: 3` the step now declares. The step timeout is
+  only a backstop, deliberately: a step *killed* by `timeout-minutes` is a failed step, and a
+  failed best-effort cleanup must not fail a job — so the inner bounds are the ones meant to
+  fire, and a cleanup that gives up still costs exactly one `::warning::`. The kill moved out of
+  the workflow's inline shell and into `live_push.sh`, where it happens before the delete (a
+  surviving poller can push its `live/` dir straight back) and where pytest can reach it. The
+  bound is not free: a `--depth 1` clone of a 1.4 GB branch can legitimately need more than 60s,
+  so cleanup will now sometimes give up and leave a stale "Running now" row on the benchmarks
+  page. That is the intended trade — the branch's size is the real problem, and a cleanup that
+  cannot finish is worth far less than a runner that is never held hostage by one.
+
+### Fixed
 - **The provider preflight probe had no retry, so one transient upstream stall killed a whole
   dispatch before any work started.** `ci_setup.sh`'s `probe_model` fired a single
   `curl -sS -m 60`; runs 36259218074 and 36297602993 both died in "Setup runner env" at exactly
