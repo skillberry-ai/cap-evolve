@@ -9,6 +9,30 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The provider preflight probe had no retry, so one transient upstream stall killed a whole
+  dispatch before any work started.** `ci_setup.sh`'s `probe_model` fired a single
+  `curl -sS -m 60`; runs 36259218074 and 36297602993 both died in "Setup runner env" at exactly
+  60s with `RITS probe ... failed (HTTP 000000)` and the log's two stated causes ("lite-rits may
+  be down", "this model id is not in its scraped rits.json") were both false. Diagnosed by hand
+  on skillberry-1 minutes after each: the container was up with zero restarts, `/health` and
+  `/v1/models` answered 200, and a real completion answered **200 in 1s** on one day and **200 in
+  6s** on the other. A refused connection returns instantly, so the probe had *hung* — an
+  endpoint whose own good answers vary 6x cannot be judged by one shot, and a re-dispatch 20
+  minutes later passed preflight and ran to completion. The probe now retries only plausibly
+  transient outcomes — `000` (connect failure or timeout) and `5xx` — 3 attempts with 5s/15s
+  backoff, logging every attempt so a transient that heals stays visible, and naming the attempt
+  count plus the last observed code when it finally gives up. Definitive answers are unchanged
+  and still abort on the FIRST response: `429` + `budget` (over budget), `not allowed to access
+  model` (entitlement refusal) and any other `4xx` — retrying those would burn the backoff to
+  reach the same conclusion and make a decision read as flakiness. Worst-case wall time does not
+  grow: the per-attempt timeout drops to 25s and a total 60s deadline refuses an attempt that
+  could not finish inside it, so three instant failures cost ~20s of backoff and a hung endpoint
+  stops at 55s instead of 95s. Both roles are still probed concurrently, so the worst case is
+  still one probe, not two. Also fixed en route: `-w '%{http_code}'` already prints `000` on a
+  connect failure, so the old `|| echo 000` fallback concatenated a second one — that is where
+  the mystifying `000000` came from.
+
+### Fixed
 - **The entitlement check compared CI aliases against wire model ids, blocking every benchmark
   dispatch with a gateway model.** #536 renamed the dispatch ids to `ibm-ete-int/…`, `ibm-ete/…`,
   `ibm-rits/…` and added `resolve_provider.sh` to rewrite each alias into the id the provider

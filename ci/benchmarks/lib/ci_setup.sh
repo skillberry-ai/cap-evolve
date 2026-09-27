@@ -396,29 +396,76 @@ if command -v curl >/dev/null; then
     esac
     resolve_provider "$model"
     local probe="/tmp/capevolve_budget_probe.$$_${role}.json"
-    local code
-    code="$(curl -sS -m 60 -o "$probe" -w '%{http_code}' \
-      "$RESOLVED_API_BASE/chat/completions" \
-      -H "Authorization: Bearer $RESOLVED_API_KEY" -H 'Content-Type: application/json' \
-      -d "{\"model\":\"$RESOLVED_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_completion_tokens\":16}" \
-      2>/dev/null || echo 000)"
-    if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
-      echo "::error:: $role model gateway ($RESOLVED_API_BASE) is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
-      echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
-      head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
-    fi
-    if grep -qi 'not allowed to access model' "$probe" 2>/dev/null; then
-      echo "::error:: gateway REFUSED $role model '$model' at call time (HTTP $code):"
-      echo "::error:: the key's team is not entitled to it, so every rollout would fail and the"
-      echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
-      head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
-    fi
+    # RETRY, but only what is plausibly TRANSIENT. A single `curl -m 60` killed two whole
+    # dispatches before any work started (runs 36259218074 and 36297602993, both dying at
+    # exactly 60s with HTTP 000) while the endpoint was in fact healthy: /health and /v1/models
+    # answered 200 minutes later and a real completion answered 200 in 1s one day and 200 in 6s
+    # another. An endpoint whose own good answers vary 6x cannot be judged by one shot.
+    #
+    # The budget is bounded so the WORST case never exceeds the old single-attempt 60s: each
+    # attempt gets 25s, backoff is 5s then 15s, and the loop refuses an attempt that could not
+    # finish inside probe_deadline. Three instant failures therefore cost ~20s (the backoffs)
+    # and three hung ones stop at two attempts rather than spending 95s. A healthy endpoint
+    # answers on attempt 1 and pays nothing, which is the normal case.
+    local probe_attempts="${CAPEVOLVE_PROBE_ATTEMPTS:-3}"
+    local probe_timeout="${CAPEVOLVE_PROBE_TIMEOUT:-25}"
+    local probe_deadline=60
+    # shellcheck disable=SC2206  # deliberate word split: "5 15" -> per-attempt backoffs
+    local backoffs=( ${CAPEVOLVE_PROBE_BACKOFFS:-5 15} )
+    local started_at code attempt=1 backoff_s elapsed
+    started_at="$(date +%s)"
+    while :; do
+      # NB: curl's own `-w '%{http_code}'` already prints 000 on a connect failure/timeout, so
+      # the old `|| echo 000` fallback CONCATENATED a second one — that is where the mystifying
+      # "HTTP 000000" in run 36259218074 came from. Capture the status separately and normalize
+      # anything that is not a plain code to 000 instead.
+      code="$(curl -sS -m "$probe_timeout" -o "$probe" -w '%{http_code}' \
+        "$RESOLVED_API_BASE/chat/completions" \
+        -H "Authorization: Bearer $RESOLVED_API_KEY" -H 'Content-Type: application/json' \
+        -d "{\"model\":\"$RESOLVED_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_completion_tokens\":16}" \
+        2>/dev/null)" || true
+      case "$code" in ''|*[!0-9]*) code=000 ;; esac
+      echo "$role model probe attempt $attempt/$probe_attempts -> HTTP $code ($RESOLVED_API_BASE)"
+      # DEFINITIVE answers, decided on the FIRST response and never retried: a live service has
+      # already told us the run cannot work. Retrying would burn the backoff to reach the same
+      # conclusion and, worse, would dress a decision up as flakiness.
+      if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
+        echo "::error:: $role model gateway ($RESOLVED_API_BASE) is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
+        echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
+        head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+      fi
+      if grep -qi 'not allowed to access model' "$probe" 2>/dev/null; then
+        echo "::error:: gateway REFUSED $role model '$model' at call time (HTTP $code):"
+        echo "::error:: the key's team is not entitled to it, so every rollout would fail and the"
+        echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
+        head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+      fi
+      [ "$code" = "200" ] && break
+      # 000 = connect failure or timeout, 5xx = the upstream itself stumbling. Everything else
+      # (any other 4xx) is a definitive answer from a live service — stop and report it.
+      case "$code" in
+        000|5??) : ;;
+        *) break ;;
+      esac
+      [ "$attempt" -lt "$probe_attempts" ] || break
+      backoff_s="${backoffs[$((attempt-1))]:-}"
+      [ -n "$backoff_s" ] || backoff_s=15
+      elapsed=$(( $(date +%s) - started_at ))
+      if [ $(( elapsed + backoff_s + probe_timeout )) -gt "$probe_deadline" ]; then
+        echo "::warning:: $role model probe: HTTP $code after ${elapsed}s — no room left in the ${probe_deadline}s preflight budget for another attempt"
+        break
+      fi
+      echo "::warning:: $role model probe: HTTP $code from $RESOLVED_API_BASE looks transient — retrying in ${backoff_s}s"
+      sleep "$backoff_s"
+      attempt=$(( attempt + 1 ))
+    done
     if [ "$code" != "200" ] && [ "$RESOLVED_PROVIDER" = "ibm-rits" ]; then
       echo "::error:: RITS probe for $role model '$model' failed (HTTP $code) against $RESOLVED_API_BASE:"
       echo "::error:: lite-rits may be down, or this model id is not in its scraped rits.json."
+      echo "::error:: gave up after $attempt attempt(s); last observed HTTP $code."
       head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
     fi
-    echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code"
+    echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code (attempt $attempt/$probe_attempts)"
     rm -f "$probe"
   }
   # Run both probes concurrently — each hits a different role's endpoint (often a
