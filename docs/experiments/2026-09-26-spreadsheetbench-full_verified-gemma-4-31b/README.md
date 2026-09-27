@@ -105,9 +105,6 @@ host/
   driver_prompt.md     the briefing the optimizer agent was launched with (incl. stop_condition)
   launch_args.json     exact argv
   transcript.jsonl.gz  full optimizer transcript (152 KB gz) — every tool call and decision
-no_skill_control/    run 36261022325 — the SAME tier with the capability blanked
-  report.md            280 per-task rows for the no-skill condition
-  metrics.jsonl steps.jsonl events.jsonl runmeta.json
 ```
 
 The 9 MB interactive UI snapshot is not duplicated here; it is published at
@@ -149,101 +146,16 @@ Doing so makes the run's `base→opt` delta **not** a from-scratch number, exact
 
 ---
 
-## ⚠️ RETRACTED: the no-skill control below is invalid
+## No-skill control — measurement pending
 
-**The measurement reported in the next section is not a no-skill measurement, and the two
-findings drawn from it are withdrawn.**
+The comparison below needs a no-skill anchor: our seed scores 0.6321 on the sealed split while
+the reference paper's no-skill baseline for the same model is 48.3, so the two systems' *deltas*
+are not comparable until we have our own.
 
-`SB_EMPTY_SEED` blanked only one of the capability's two surfaces:
-
-    seed_capability/prompt.md          965 bytes  -> blanked
-    seed_capability/task_template.md  2453 bytes  -> SURVIVED  (72% of the capability text)
-
-So run 36261022325 measured *no system prompt but keep the full tuned task template*. The
-surviving surface is the **more** load-bearing of the two: in the smoke run the same knowledge
-scored 0.600 on `task_template.md` versus 0.511 as `prompt.md` prose, and this run's own champion
-`r3_decide` was a `task_template.md` edit. Cause: the flag was written in #281 when `prompt.md`
-was the whole capability, and #282 — the next PR — made `task_template.md` optimizable without
-revisiting it. Fixed in #545; a corrected control is being re-measured.
-
-**Specifically withdrawn:**
-
-- "our seed adds nothing measurable" — 0.668 was not a no-skill number, so it cannot be set
-  against the seed's 0.632.
-- "our no-skill floor is 18.5 points above theirs, so the harnesses are not comparable" — the
-  18.5-point gap is substantially an artefact of measuring the wrong condition. Harness
-  differences may still matter, but this evidence does not establish it.
-
-What survives unaffected: the held-out result itself (seed 0.6321 → champion 0.7643 on the 280
-sealed tasks), the 54/17/209 composition, and every artifact in `data/`, `champion/` and
-`rounds/`. Nothing about the treatment run depended on the control.
-
-The section below is kept verbatim rather than deleted, so the error and its correction are both
-on the record.
-
-## The no-skill control — and why it overturns the comparison
-
-Measured after the fact by run
-[36261022325](https://github.com/skillberry-ai/cap-evolve/actions/runs/36261022325), on the
-**same tier** with `SB_EMPTY_SEED=1` (so: same `verified_400` data, same committed 80/40/280
-split, same 30-turn budget, same 8-way concurrency, same `hard` scoring — capability blanked).
-Artifacts in `no_skill_control/`. Verified genuinely blank: the run's seed `prompt.md` is 0 bytes,
-the `EMPTY seed (no-skill control)` banner fired, and the optimizer had to author 8,714 bytes
-from nothing.
-
-| | sealed test (280 tasks) |
-|---|---|
-| **no skill** (blank capability) | **0.6679** (SE 0.0282) — 187 solved / 93 zero |
-| seed capability | 0.6321 |
-| champion `r3_decide` | 0.7643 |
-
-### Finding 1: our seed adds nothing measurable for this model
-
-No-skill **0.668** vs seed **0.632** — the blank capability scored *higher*, by 0.036 against an
-SE of ~0.028 on each. That difference is not significant, so the honest statement is that the
-tuned seed is **indistinguishable from no capability at all** for Gemma-4-31B-It, not that it
-actively hurts. Either way the seed is not contributing the 15 points its absolute score implies.
-
-This also re-attributes the result: the optimizer's real contribution over *no skill* is
-**+0.096** (0.668 → 0.764), not the +0.132 measured against the seed.
-
-### Finding 2: the harnesses are not comparable, and this is the important one
-
-| | no skill | best reported |
-|---|---|---|
-| WikiSkill paper, Gemma-4-31B | **48.3** | 68.0 (WikiSkill) |
-| this harness, same model | **66.8** | 76.4 (ours) |
-
-**Our no-skill floor is 18.5 points above theirs — and essentially level with their best
-published result.** A no-skill agent in this harness (66.8) already outscores their SkillOpt
-(63.1) and sits within noise of their WikiSkill (68.0).
-
-That is not a result about skill evolution. It means a large part of both numbers comes from the
-**harness**, not the capability, so **the absolute 76.4 cannot be set against their 68.0** — and
-the delta comparison the control was supposed to unlock is dead too, because the baselines differ
-by more than either system's total improvement.
-
-Their no-skill is not a bare prompt either — the paper's Appendix E.1 SpreadsheetBench prompt
-supplies `working_directory`, `instruction`, `spreadsheet_path`, `spreadsheet_content`,
-`instruction_type`, `answer_position` and `output_path` with an empty `{skill_section}`, which is
-close to this adapter's built-in `_TASK_TEMPLATE`. So the gap is not "they had no task framing".
-Plausible contributors, none yet isolated:
-
-- this adapter's **richer workbook context** — structural preview, `TARGET SIZE` from
-  `answer_position`, sibling-copy listing — versus "the first few rows"
-- **30 turns plus `VERIFY_TURNS`**, where the paper never states its turn budget
-- a **different 280-task partition** of the same 400
-- **model serving**: RITS versus their vLLM (quantisation, sampling defaults, temperature)
-
-### What may still be claimed
-
-> Within this harness, on a held-out 280-task split, `agent-optimize` with an Opus 5 optimizer
-> improved a **no-skill** Gemma-4-31B-It agent from **0.668 to 0.764 (+0.096)**, with 54 tasks
-> improved and 17 regressed.
-
-That is a defensible statement about cap-evolve. It must **not** be placed in the same table as
-the paper's figures. Doing so would credit skill evolution for a harness difference nearly twice
-the size of the effect.
+A first attempt (run 36261022325) is **not** reported here because it did not measure that
+condition: `SB_EMPTY_SEED` blanked `prompt.md` but left `task_template.md` — 2,453 of the
+capability's 3,418 bytes — in place. Fixed in #545; the corrected measurement is being taken and
+will be added here with its artifacts.
 
 ## Fair comparison: what this number can and cannot be set against
 
