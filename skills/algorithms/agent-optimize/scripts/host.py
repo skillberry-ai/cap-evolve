@@ -87,6 +87,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
@@ -147,6 +148,22 @@ _KILLED_STATUSES = {"killed", "stopped", "cancelled", "canceled"}
 #: schema-tolerant like ``_looks_like_a_detach_attempt`` above, rather than committing to one.
 _TS_KEYS = ("timestamp", "ts", "time", "t")
 
+#: Real ``claude-code`` stream-json wraps these as ``type: "system", subtype: "task_updated"``
+#: (see core/tests/test_budget_cost.py) — not a bare ``type: "task_updated"``. Accept both so a
+#: future/alternate CLI shape that DOES put it on ``type`` still matches.
+_TASK_LIFECYCLE_SUBTYPES = ("task_updated", "task_notification")
+
+#: Simultaneous kills a few ms apart (processing order, not the same tick of the clock) are
+#: still the same eviction instant, not coincidence — group anything within this window.
+_MASS_KILL_CLUSTER_MS = 50
+
+
+def _is_task_lifecycle_event(ev: dict) -> bool:
+    t = ev.get("type")
+    if t in _TASK_LIFECYCLE_SUBTYPES:
+        return True
+    return t == "system" and ev.get("subtype") in _TASK_LIFECYCLE_SUBTYPES
+
 
 def _event_timestamp(ev: dict):
     for key in _TS_KEYS:
@@ -156,10 +173,31 @@ def _event_timestamp(ev: dict):
 
 
 def _event_status(ev: dict) -> str:
-    for holder in (ev, ev.get("task"), ev.get("data")):
+    # ``patch`` is where the real CLI puts ``task_updated``'s status
+    # (core/tests/test_budget_cost.py); the rest are schema-tolerant fallbacks.
+    for holder in (ev, ev.get("patch"), ev.get("task"), ev.get("data")):
         if isinstance(holder, dict) and holder.get("status"):
             return str(holder["status"]).lower()
     return ""
+
+
+def _timestamp_to_epoch_ms(ts):
+    """Normalize a timestamp of unknown shape (ISO string, epoch seconds, epoch ms) to a
+    single comparable scale so near-simultaneous events can be clustered by real elapsed time
+    instead of by exact value.
+    """
+    if isinstance(ts, bool):
+        return None
+    if isinstance(ts, (int, float)):
+        # Epoch seconds vs epoch ms are ambiguous from the number alone; ms-scale epoch
+        # values are always > 1e12 for any real timestamp, seconds-scale never are.
+        return float(ts) if abs(ts) >= 1e12 else float(ts) * 1000
+    if isinstance(ts, str):
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp() * 1000
+        except ValueError:
+            return None
+    return None
 
 
 def _mass_kill_events(transcript_path: Path, *, cap: int = _BACKGROUND_CONCURRENCY_CAP
@@ -172,8 +210,10 @@ def _mass_kill_events(transcript_path: Path, *, cap: int = _BACKGROUND_CONCURREN
     events carried the identical millisecond timestamp. That is a session-level ceiling on
     concurrent background tasks, not a per-task timeout and not a network failure (independently
     verified healthy at the time) — tasks cannot all finish naturally at the same millisecond, so
-    more than `cap` of them dying at one timestamp is the fingerprint of that eviction rather
-    than coincidence.
+    more than `cap` of them dying at nearly the same instant is the fingerprint of that eviction
+    rather than coincidence. Timestamps are clustered within `_MASS_KILL_CLUSTER_MS` rather than
+    compared for bit-identical equality, because harness-recorded timestamps for one eviction can
+    differ by a few ms depending on write order.
 
     The driver prompt already tells the agent to stay under the cap; this makes the violation
     detectable after the fact too, because a prompt instruction to a headless agent is not a
@@ -181,7 +221,7 @@ def _mass_kill_events(transcript_path: Path, *, cap: int = _BACKGROUND_CONCURREN
     """
     if not transcript_path.is_file():
         return []
-    groups: dict = {}
+    seen: list = []  # (epoch_ms, raw_ts, task_id)
     try:
         with transcript_path.open(encoding="utf-8") as f:
             for line in f:
@@ -192,20 +232,40 @@ def _mass_kill_events(transcript_path: Path, *, cap: int = _BACKGROUND_CONCURREN
                     ev = json.loads(line)
                 except Exception:  # noqa: BLE001 — a torn line carries no task state
                     continue
-                if not isinstance(ev, dict) or ev.get("type") not in (
-                        "task_updated", "task_notification"):
+                if not isinstance(ev, dict) or not _is_task_lifecycle_event(ev):
                     continue
                 if _event_status(ev) not in _KILLED_STATUSES:
                     continue
-                ts = _event_timestamp(ev)
-                if ts is None:
+                raw_ts = _event_timestamp(ev)
+                if raw_ts is None:
+                    continue
+                epoch_ms = _timestamp_to_epoch_ms(raw_ts)
+                if epoch_ms is None:
                     continue
                 task_id = ev.get("task_id") or ev.get("id") or (ev.get("task") or {}).get("id")
-                groups.setdefault(ts, []).append(task_id)
+                seen.append((epoch_ms, raw_ts, task_id))
     except OSError:
         return []
-    return [{"timestamp": ts, "count": len(ids), "task_ids": ids}
-            for ts, ids in groups.items() if len(ids) > cap]
+
+    seen.sort(key=lambda e: e[0])
+    clusters: list = []
+    for epoch_ms, raw_ts, task_id in seen:
+        if clusters and epoch_ms - clusters[-1][-1][0] <= _MASS_KILL_CLUSTER_MS:
+            clusters[-1].append((epoch_ms, raw_ts, task_id))
+        else:
+            clusters.append([(epoch_ms, raw_ts, task_id)])
+
+    out = []
+    for cluster in clusters:
+        # Dedupe by task_id: the same task can emit both a task_updated AND a
+        # task_notification for one kill, which must count as one task, not two.
+        ids = list(dict.fromkeys(tid for *_, tid in cluster if tid is not None))
+        unidentified = sum(1 for *_, tid in cluster if tid is None)
+        count = len(ids) + unidentified
+        if count > cap:
+            out.append({"timestamp": cluster[0][1], "count": count,
+                        "task_ids": ids + [None] * unidentified})
+    return out
 
 
 # 4h. Long enough for a full-val eval on the slowest benchmark in this repo

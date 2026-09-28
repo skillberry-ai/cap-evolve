@@ -1579,3 +1579,73 @@ def test_tasks_killed_within_the_cap_or_at_different_times_are_not_flagged(tmp_p
 
     assert out.get("background_mass_kills") == [], (
         f"tasks within the cap or at different timestamps were misflagged: {out}")
+
+
+def test_a_mass_kill_is_detected_even_when_timestamps_are_close_but_not_bit_identical(tmp_path):
+    """The confirmed evidence was an identical millisecond, but harness-recorded timestamps for
+    ONE eviction can differ by a couple ms depending on write order — bit-for-bit float equality
+    would false-negative on real transcripts that are merely close, not identical.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    events = [
+        {"type": "task_updated", "task_id": "t0", "status": "killed", "timestamp": 1500.001},
+        {"type": "task_updated", "task_id": "t1", "status": "killed", "timestamp": 1500.0025},
+        {"type": "task_updated", "task_id": "t2", "status": "killed", "timestamp": 1500.003},
+    ]
+    stub = _transcript_stub(tmp_path, transcript_events=events)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    kills = out.get("background_mass_kills")
+    assert kills and kills[0]["count"] == 3, (
+        f"near-simultaneous kills a few ms apart were not flagged: {out}")
+
+
+def test_a_mass_kill_is_detected_in_the_real_cli_wire_shape(tmp_path):
+    """The real ``claude-code`` stream-json wraps these as ``type: "system",
+    subtype: "task_updated"`` with the status under ``patch`` (see
+    core/tests/test_budget_cost.py's ``task_updated``/``task_notification`` fixtures) — never a
+    bare ``type: "task_updated"``. A detector that only matches the bare shape never fires on a
+    real transcript.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    events = [
+        {"type": "system", "subtype": "task_updated", "task_id": "t0",
+         "patch": {"status": "killed"}, "timestamp": "2026-09-03T12:00:00.100Z"},
+        {"type": "system", "subtype": "task_updated", "task_id": "t1",
+         "patch": {"status": "killed"}, "timestamp": "2026-09-03T12:00:00.100Z"},
+        {"type": "system", "subtype": "task_notification", "task_id": "t2",
+         "status": "stopped", "timestamp": "2026-09-03T12:00:00.100Z"},
+    ]
+    stub = _transcript_stub(tmp_path, transcript_events=events)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    kills = out.get("background_mass_kills")
+    assert kills and kills[0]["count"] == 3, (
+        f"the real CLI wire shape (type=system/subtype, patch.status) was not detected: {out}")
+
+
+def test_the_same_task_reported_twice_at_one_instant_counts_once(tmp_path):
+    """A single kill can produce both a ``task_updated`` and a ``task_notification`` event for
+    the SAME task_id at the same instant — that must count as one task, not two, or the detector
+    over-counts and can flag ordinary lifecycle noise as a mass kill.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    events = [
+        {"type": "task_updated", "task_id": "t0", "status": "killed", "timestamp": 1500},
+        {"type": "task_notification", "task_id": "t0", "status": "stopped", "timestamp": 1500},
+        {"type": "task_updated", "task_id": "t1", "status": "killed", "timestamp": 1500},
+    ]
+    stub = _transcript_stub(tmp_path, transcript_events=events)
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out.get("background_mass_kills") == [], (
+        f"one task's two events at one instant were double-counted as two tasks: {out}")
