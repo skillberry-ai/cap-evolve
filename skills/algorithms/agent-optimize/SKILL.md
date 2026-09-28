@@ -225,8 +225,8 @@ refuses one too hot to resolve its own verdict — never raise it to buy wall cl
 Four invariants, to state before every fan-out (the reasoning, and where fan-out pays best, are under
 *Parallelism* in [`references/algorithm.md`](references/algorithm.md)):
 
-1. **Diagnosis fans out freely** — read-only, zero rollouts: one `cap-evolve-diagnoser` per failure
-   cluster or rollout shard, then merge their JSON.
+1. **Diagnosis fans out freely, up to 2 at a time (any purpose)** — read-only, zero
+   rollouts: one `cap-evolve-diagnoser` per cluster/shard, merge JSON.
 2. **Proposal fans out across distinct copies, one `prepare_candidate.py` per sibling (never
    bare `cp -r`), tag unique per sibling** — rollouts are `<task>__<tag>__t<k>.json`, so a
    shared tag interleaves two evals into the same filenames and corrupts both scores.

@@ -450,7 +450,12 @@ Arbor's discipline — dispatch independent workers into separate worktrees, eva
 a dev signal, merge only what clears a held-out margin — ports cleanly, with the boundaries
 cap-evolve's own state model dictates (see `docs/SUBAGENT_PATTERNS.md`):
 
-- **Diagnosis** is read-only and costs no rollouts, so it fans out without limit.
+- **Diagnosis** is read-only and costs no rollouts, so it fans out freely in principle — but
+  never more than 2 background Bash calls in flight at once, across diagnosis or any other
+  purpose. Backgrounding is a session-level resource, not a per-tool one: a real run
+  backgrounded 5 diagnose invocations at once and the harness killed all 5 at the identical
+  millisecond, destroying a whole round's diagnostic work. `TaskStop` one before starting a
+  3rd.
 - **Proposal** fans out across *different* parents/working copies only, never two proposers
   on one candidate dir. Each sibling needs a **unique tag**, because rollouts are written as
   `<task>__<tag>__t<k>.json` and the evaluate phase derives the tag from the candidate dir
