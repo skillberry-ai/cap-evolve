@@ -1126,6 +1126,44 @@ def _read_host_session(root: Path) -> dict:
     return out
 
 
+#: Mirrors host.py's own _BACKGROUND_CONCURRENCY_CAP (PR #558) — kept in sync by hand
+#: since host.py's output JSON (where this is computed) is never persisted to the run
+#: dir, only printed to stdout/stderr by whatever launched it. Reading
+#: host/transcript.jsonl directly (already persisted, already read by
+#: ``_read_host_session`` above) reproduces the same signal for the dashboard.
+_BACKGROUND_CONCURRENCY_CAP = 2
+_KILLED_STATUSES = {"killed", "stopped", "cancelled", "canceled"}
+_TS_KEYS = ("timestamp", "ts", "time", "t")
+
+
+def _background_mass_kills(root: Path) -> list[dict]:
+    """Background ``task_updated``/``task_notification`` events killed at the same
+    instant — the fingerprint of the harness's session-level concurrent-background-task
+    eviction (host.py's ``_mass_kill_events``, PR #558), read straight from
+    ``host/transcript.jsonl`` since host.py itself never writes this to disk."""
+    tf = _safe_subpath(root, "host", "transcript.jsonl")
+    if tf is None or not tf.is_file():
+        return []
+    groups: dict = {}
+    for ev in _read_jsonl(tf):
+        if ev.get("type") not in ("task_updated", "task_notification"):
+            continue
+        status = ""
+        for holder in (ev, ev.get("task"), ev.get("data")):
+            if isinstance(holder, dict) and holder.get("status"):
+                status = str(holder["status"]).lower()
+                break
+        if status not in _KILLED_STATUSES:
+            continue
+        ts = next((ev[k] for k in _TS_KEYS if k in ev), None)
+        if ts is None:
+            continue
+        task_id = ev.get("task_id") or ev.get("id") or (ev.get("task") or {}).get("id")
+        groups.setdefault(ts, []).append(task_id)
+    return [{"timestamp": ts, "count": len(ids), "task_ids": ids}
+            for ts, ids in groups.items() if len(ids) > _BACKGROUND_CONCURRENCY_CAP]
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
@@ -1420,7 +1458,11 @@ def reduce_run(run_dir) -> dict:
                     "gate_resolvable_effect_size",
                     "gate_mode", "gate_table", "control_relative_verdict",
                     "control_relative_delta", "evidence_bar", "gate_verdict",
-                    "overrode_gate", "reject_basis"):
+                    "overrode_gate", "reject_basis",
+                    # commit.py's driver_judgement escape hatch: a candidate rejected via
+                    # --reject-basis driver_judgement with NO screen.py record and NO
+                    # full-val gate row (PR #557) — a compliance WARNING, not an outcome.
+                    "bypassed_screen_and_gate", "bypassed_gate_justification"):
             _v = ev.get(_gk)
             # Version skew, not a hypothetical: older commit.py revisions wrote these on the
             # accept/reject event UNPREFIXED (``delta``/``stderr``/``n``/...), current ones write
@@ -1458,7 +1500,8 @@ def reduce_run(run_dir) -> dict:
                            "gate_threshold", "gate_resolvable_effect_size", "gate_mode",
                            "gate_table", "control_relative_verdict",
                            "control_relative_delta", "evidence_bar", "gate_verdict",
-                           "overrode_gate", "reject_basis", "verdict_stable"):
+                           "overrode_gate", "reject_basis", "verdict_stable",
+                           "bypassed_screen_and_gate", "bypassed_gate_justification"):
                 if _carry not in node and _carry in nodes[cid]:
                     node[_carry] = nodes[cid][_carry]
             # Same problem, different shape: ``fixed``/``broke`` are ALWAYS set above (to []
@@ -2041,10 +2084,52 @@ def reduce_run(run_dir) -> dict:
     # from SKILL.md prose.
     compliance = [{"candidate": e.get("tag"), "iteration": e.get("iteration"),
                    "screened_before_fullval": bool(e.get("screened_before_fullval")),
+                   # WHY screening was skipped, when it was (round.py's
+                   # --skip-screen-justification, PR #557) — None when screened, or when
+                   # skipped via the bare --skip-screen-ladder with no reason recorded.
+                   "skip_justification": e.get("skip_justification"),
                    "t": e.get("t")}
                   for e in events if e.get("kind") == "agent_optimize_compliance"]
     if compliance:
         algo_extra["compliance"] = compliance
+
+    # agent_optimize_round_batch: sibling-count enforcement (PR #559). Every round.py
+    # invocation logs one of these naming its candidates; below MIN_SIBLINGS (3) it also
+    # carries why (an explicit justification or an auto-detected budget block).
+    round_batches = [{
+        "batch_id": e.get("batch_id"), "candidates": list(e.get("candidates") or []),
+        "n_candidates": e.get("n_candidates") if e.get("n_candidates") is not None
+                        else len(e.get("candidates") or []),
+        "single_candidate_justification": e.get("single_candidate_justification"),
+        "single_candidate_justification_source": e.get("single_candidate_justification_source"),
+        "t": e.get("t"),
+    } for e in events if e.get("kind") == "agent_optimize_round_batch"]
+    if round_batches:
+        algo_extra["round_batches"] = round_batches
+
+    # merge_rejects: 3+ safe-but-rejected disjoint candidates never tried together
+    # (PR #560) — an audit signal, mirroring merge_search.py's accepted-candidate one.
+    # Only the LATEST warning matters (a later, satisfied state re-fires None from the
+    # script, but events.jsonl only ever gets a row when the warning actually fired).
+    merge_rejects_warnings = [e for e in events if e.get("kind") == "merge_rejects_compliance_warning"]
+    merge_rejects_proposals = [{
+        "rejects": list(e.get("rejects") or []), "tag": e.get("tag"),
+        "built": bool(e.get("built")), "targets": list(e.get("targets") or []), "t": e.get("t"),
+    } for e in events if e.get("kind") == "merge_rejects_propose"]
+    if merge_rejects_warnings:
+        group = merge_rejects_warnings[-1].get("safe_reject_candidates") or []
+        # "Acted on" = a later --propose touched any of the flagged candidates, not
+        # necessarily every one of them — a driver may have combined a subset.
+        acted_on = any(set(p["rejects"]) & set(group) for p in merge_rejects_proposals)
+        algo_extra["merge_rejects_warning"] = {
+            "safe_reject_candidates": group,
+            "evidence": merge_rejects_warnings[-1].get("evidence") or {},
+            "targets": merge_rejects_warnings[-1].get("targets") or {},
+            "t": merge_rejects_warnings[-1].get("t"),
+            "acted_on": acted_on,
+        }
+    if merge_rejects_proposals:
+        algo_extra["merge_rejects_proposals"] = merge_rejects_proposals
 
     evograph = _read_evograph(root)
     if evograph:
@@ -2056,6 +2141,8 @@ def reduce_run(run_dir) -> dict:
     if par:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
                                    if k not in _LOG_DROP_FIELDS} for e in par]
+
+    background_mass_kills = _background_mass_kills(root)
 
     # --- capabilities: which panels this run has real data for -----------
     # The UI is algorithm-agnostic: it renders the generic panels always and asks this
@@ -2085,6 +2172,10 @@ def reduce_run(run_dir) -> dict:
         "controls": bool(controls),
         "screened": any(n.get("screened") is not None for n in nodes.values()),
         "context_warnings": any(n.get("context_warning") for n in nodes.values()),
+        "screen_gate_bypass": any(n.get("bypassed_screen_and_gate") for n in nodes.values()),
+        "round_batches": "round_batches" in algo_extra,
+        "background_mass_kills": bool(background_mass_kills),
+        "merge_rejects": "merge_rejects_warning" in algo_extra,
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
@@ -2205,6 +2296,10 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Background-task mass-kill (PR #558): 2+ background Bash calls the harness
+        # evicted at the identical millisecond, destroying whatever they were doing.
+        # Never persisted by host.py itself — recomputed here from host/transcript.jsonl.
+        "background_mass_kills": background_mass_kills,
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
@@ -2518,6 +2613,7 @@ td.r,th.r{text-align:right}
 .b-accepted{background:#1f3a23;color:var(--ok)} .b-rejected{background:#3a2f12;color:var(--warn)}
 .b-failed{background:#31173a;color:var(--fail)} .b-seed{background:#22262f;color:var(--muted2)}
 .b-indecisive{background:#152a3f;color:var(--idk)}
+.b-bypass{background:#2a1f3a;color:var(--accent)}
 .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);
 border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
 .banner{display:flex;gap:10px;border:1px solid var(--line);border-left:3px solid var(--warn);
@@ -2684,6 +2780,16 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       'Read it as a sanity check only.'}));
   }
   if(sp&&sp.warning)s.append($('div',{class:'banner',text:sp.warning}));
+  // Background-task mass-kill (PR #558): 2+ backgrounded Bash calls the harness evicted
+  // at the identical millisecond — a compliance WARNING distinct from an outcome, so it
+  // gets the 'bad' banner treatment (No holdout above uses the same class).
+  (S.background_mass_kills||[]).forEach(mk=>{
+    s.append($('div',{class:'banner bad',html:
+      `<b>Background task mass-kill.</b> ${mk.count} background tasks were evicted at the `+
+      `identical timestamp <code>${mk.timestamp}</code> — the harness's concurrent-`+
+      `background-task ceiling, not ${mk.count} tasks coincidentally finishing at once. `+
+      `Task ids: ${(mk.task_ids||[]).join(', ')}.`}));
+  });
   if(sp)s.append($('p',{class:'muted num',style:'margin:10px 0 0',
     text:`splits · train ${sp.train??'—'} · val ${sp.val??'—'} · test ${sp.test??'—'}`+
          (sp.seed!=null?` · seed ${sp.seed}`:'')+
@@ -3293,7 +3399,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
 /* ---------- 10e. agent-optimize internals — screens/compliance/minibatch/gepa/skillopt/parallel (#433) ---------- */
 (function(){
   const C=S.capabilities||{}, AE=S.algo_extra||{};
-  if(!(C.screens||C.compliance||C.minibatch||C.gepa||C.skillopt||C.parallel))return;
+  if(!(C.screens||C.compliance||C.minibatch||C.gepa||C.skillopt||C.parallel||
+       C.round_batches||C.merge_rejects))return;
   const s=sec('agent-optimize internals');
   s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
     "Signals the algorithm computed about its own process — which subset of tasks a cheap screen "+
@@ -3304,13 +3411,57 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(C.compliance){
     s.append(h3('Screen-before-full-val compliance'));
     const t=$('table');
-    t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'iteration'}),$('th',{text:'screened before full-val'})));
+    t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'iteration'}),
+      $('th',{text:'screened before full-val'}),$('th',{text:'why skipped'})));
     (AE.compliance||[]).forEach(r=>t.append($('tr',{},
       $('td',{},$('code',{text:r.candidate})),
       $('td',{class:'r num',text:r.iteration}),
       $('td',{},$('span',{class:'badge '+(r.screened_before_fullval?'b-accepted':'b-rejected'),
-        text:r.screened_before_fullval?'✓ yes':'✗ no'})))));
+        text:r.screened_before_fullval?'✓ yes':'✗ no'})),
+      $('td',{class:'muted',style:'font-size:11px',text:r.skip_justification||'—'}))));
     s.append(t);
+  }
+
+  if(C.round_batches){
+    s.append(h3('Round batches — sibling-count enforcement'));
+    s.append($('p',{class:'muted',style:'margin:0 0 8px;font-size:11.5px',text:
+      'agent-optimize\'s default is N≥ 3 sibling candidates per round.py invocation; '+
+      'fewer requires a recorded reason (an explicit justification, or an unaffordable budget '+
+      'detected from spend.py).'}));
+    const t=$('table');
+    t.append($('tr',{},$('th',{text:'batch'}),$('th',{class:'r',text:'siblings'}),
+      $('th',{text:'candidates'}),$('th',{text:'why < 3'})));
+    (AE.round_batches||[]).forEach(r=>{
+      const below3=r.n_candidates<3;
+      t.append($('tr',{},
+        $('td',{},$('code',{text:r.batch_id||'—'})),
+        $('td',{class:'r num',text:r.n_candidates},
+          below3?$('span',{class:'badge b-rejected',style:'margin-left:6px',text:'<3'}):null),
+        $('td',{class:'muted',style:'font-size:11px',text:(r.candidates||[]).join(', ')}),
+        $('td',{class:'muted',style:'font-size:11px',text:below3?
+          `${r.single_candidate_justification||'—'} (${r.single_candidate_justification_source||'unrecorded'})`
+          :'—'})));
+    });
+    s.append(t);
+  }
+
+  if(C.merge_rejects){
+    s.append(h3('Merge opportunity — safe-but-rejected candidates'));
+    const w=AE.merge_rejects_warning;
+    const box=$('div',{class:'dead',style:'border-left-color:'+(w.acted_on?'var(--ok)':'var(--warn)')});
+    box.append($('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center'},
+      $('span',{text:w.safe_reject_candidates.length+' disjoint safe rejects never tried together: '}),
+      ...w.safe_reject_candidates.map(cid=>$('code',{style:'margin-right:4px',text:cid})),
+      $('span',{class:'badge '+(w.acted_on?'b-accepted':'b-rejected'),
+        text:w.acted_on?'✓ merge proposed':'✗ unmerged'})));
+    box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:
+      'each individually zero-regression with a non-negative gate Δ — run merge_rejects.py '+
+      '--propose on a disjoint subset to combine them.'}));
+    s.append(box);
+    (AE.merge_rejects_proposals||[]).forEach(p=>{
+      s.append($('div',{class:'muted',style:'font-size:11px;margin:4px 0 0',text:
+        'proposed: '+p.tag+' = '+p.rejects.join(' + ')+(p.built?' (built)':' (failed)')}));
+    });
   }
 
   if(C.screens){
@@ -3383,8 +3534,20 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     // rather than printing "—" for a delta both halves of which are known.
     const pv=n.parent_val!=null?n.parent_val:(n.parent&&byId[n.parent]?byId[n.parent].val:null);
     const dlt=pv!=null&&n.val!=null?(n.val-pv):null;
+    const idCell=$('td',{},n.id===S.best_id?'★ '+n.id:n.id);
+    // screen+gate bypass (PR #557): a compliance WARNING (never measured), distinct from
+    // the accepted/rejected OUTCOME ring the status badge already shows — a different
+    // color (b-bypass) so it never reads as a second verdict.
+    if(n.bypassed_screen_and_gate){
+      const bad=$('span',{class:'badge b-bypass',style:'margin-left:6px',text:'⚠ bypass'});
+      bad.addEventListener('mousemove',e=>showTip(e,
+        'screen+gate bypass: rejected via driver_judgement with no screen.py record and no '+
+        'full-val gate row.\njustification: '+(n.bypassed_gate_justification||'—')));
+      bad.addEventListener('mouseleave',hideTip);
+      idCell.append(bad);
+    }
     const cells=[
-      $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
+      idCell,
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),
