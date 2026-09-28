@@ -43,6 +43,7 @@ from cap_evolve.gate import decide
 from cap_evolve.loop import SplitResult
 from cap_evolve.specfile import spec_for_run
 
+import merge_rejects
 import merge_search
 
 
@@ -181,6 +182,13 @@ def main(argv=None) -> int:
     merge_warning = merge_search.check_merge_compliance(run_dir)
     if merge_warning:
         run_dir.log_event("merge_compliance_warning", **merge_warning)
+
+    # Same signal, one step earlier: 3+ REJECTED candidates whose own recorded evidence was
+    # zero-regression and non-negative-delta, with disjoint targets, never tried together —
+    # see merge_rejects.check_rejects_compliance's own docstring.
+    rejects_warning = merge_rejects.check_rejects_compliance(run_dir)
+    if rejects_warning:
+        run_dir.log_event("merge_rejects_compliance_warning", **rejects_warning)
 
     spec = spec_for_run(run_dir, project)
     n_trials = args.n_trials or int(spec.get("num_trials") or 1)

@@ -102,8 +102,7 @@ the merged one(s) plus any unmergeable survivor on full val — never gate N sib
 when screen-then-merge was an option. **B:** merge every low-risk structural fix into one working
 copy, gate once via steps 3–4 — no per-fix screen/gate, each part already cleared its own bar
 alone. Attack clusters in `score_lost` order; when `tools` is a selected capability, prefer a
-code-level fix over a prompt-level one for the same cluster. Details: `references/algorithm.md`,
-"Bucketing edits before spending".
+code-level fix over a prompt-level one for the same cluster (`references/algorithm.md`).
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
@@ -186,7 +185,9 @@ cap-evolve dashboard --export "$R"
 evaluated on full val", so conflating the two makes the run's artifacts contradict themselves. `gate` (a
 full-val paired gate ran and said reject), `screen_kill` (the screen proved harm), `ceiling` (arithmetic
 proved no accept reachable, full val never paid), `budget` (screen evidence plus a budget call, not a
-gate decision), `infra` (missing data). So `screen: promote` + `reject_basis: ceiling` is coherent.
+gate decision), `infra` (missing data).
+
+**3+ rejects? Run `merge_rejects.py`** first (`references/algorithm.md`).
 
 `commit.py` **refuses a `--candidate-id` that already carries a decision event** (`--force` only to
 repair a record deliberately): two drivers tagging a candidate alike otherwise produce two decision

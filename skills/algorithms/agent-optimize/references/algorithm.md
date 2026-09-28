@@ -717,6 +717,42 @@ in the dashboard's activity log like any other event. It never blocks: host.py o
 decisions (the "orchestration freedom" invariant), so this is an audit signal for the same reason
 `agent_optimize_compliance` is one for the screen ladder, not a second enforcement mechanism.
 
+### Merging safe rejects, not just accepts
+
+The gap above is real for accepted candidates, but it is bigger for REJECTED ones. A full
+diagnostic audit of a real multi-hour run on a multi-turn tool-use benchmark found the run
+reject 6 candidates in a row. Two of them, `cand_4` and `cand_5`, each individually
+measured a positive, stable, **zero-regression** signal — `gate_check.py`'s `movement.broke`
+empty, `gate_delta` positive — that simply landed just under the gate's evidence bar at that n.
+The optimizer noticed this by hand and improvised `cand_6 = union(cand_4, cand_5)`; it measured
+a slightly larger, still-zero-regression signal — still sub-threshold at n=30 in that specific
+run, but a clean, mechanically correct merge that moved the right direction. Nothing made that
+anything but a one-off: `merge_search.py`'s own `check_merge_compliance` only ever looks at
+`accepted` graph nodes, so a run can reject six small-but-safe effects in a row and never once
+be nudged to try them together — exactly the situation where bundling has the most headroom,
+since a rejected candidate's signal is, by construction, too small to have cleared the bar
+alone.
+
+`merge_rejects.py` is that nudge, one step earlier in the loop. `find_safe_rejects` reads
+`events.jsonl`'s `"reject"` decision events (the record `commit.py` writes on every reject —
+candidate id, note, `reject_basis`, and, when a gate table exists, `gate_delta` plus
+`movement`'s `broke`/`fixed`) and keeps only the ones with `gate_delta >= 0` and an empty
+`broke` list: it did not clearly hurt, it just did not clear the bar. `rejected.jsonl`
+(`cap_evolve.memory.RejectedMemory`) is deliberately NOT the source — it stores only
+`{candidate_id, summary, reason, val}`, none of the structured gate numbers this needs.
+`check_rejects_compliance` mirrors `check_merge_compliance` exactly (disjointness by target
+task ids via `mechanisms.jsonl`, the same `_mechanisms_targets` fallback): 3+ safe rejects with
+pairwise disjoint targets and no merge-of-rejects proposed yet this run logs
+`merge_rejects_compliance_warning` to `events.jsonl` — an audit signal, never a block, same as
+its accepted-candidate sibling. `--propose --rejects tag1,tag2[,tag3]` builds the actual
+combined candidate: disjointness there is by CHANGED FUNCTIONS (`merge_search.changed_functions`,
+i.e. `funcmerge.py`'s per-function split — a real edit collision is refused, never force-merged),
+and assembly is one `integrate.py` call over every given branch, best-evidenced first, which
+folds them ONE AT A TIME and measures after each — the same discipline `integrate.py`'s own
+docstring already mandates for accepted-candidate merging, so a bad interaction is attributable
+to the specific branch that caused it. The result lands at `$R/work/<tag>` as an ordinary
+candidate directory; screening/gating/accepting stays the driver's job, unchanged.
+
 ## Caveats
 
 - With `train == val` the val gate is a *fit*, not a held-out check — only the sealed test
