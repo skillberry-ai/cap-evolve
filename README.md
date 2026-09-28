@@ -29,21 +29,21 @@ v2" table for exactly why.
 
 v4 is a third, separate experiment against a different, larger task set (34 tasks across four
 categories vs. v1/v2's AAP2-only scope) and a different target (one shared 8-file multi-agent bundle
-vs. v1/v2's single `SKILL.md`). It has its own ledger and heatmap
-([`results/v4/results.json`](results/v4/results.json), [`ui/heatmap_v4.html`](ui/heatmap_v4.html))
-rather than sharing v1/v2's — see [`results/v4/summary.md`](results/v4/summary.md).
+vs. v1/v2's single `SKILL.md`). It now has two arms — T (task-by-task) and G (global, shared
+bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; see
+[`results/v4/README.md`](results/v4/README.md).
 
 ## Layout
 
 | directory | what's in it |
 |---|---|
-| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` has its own separate `results.json` + `summary.md`, deliberately not folded into the shared one (different task set, different shape) |
+| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape) |
 | [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did |
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
-| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` — everything numeric in this branch is derived by one of these, never hand-typed twice |
+| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), and their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms — everything numeric in this branch is derived by one of these, never hand-typed twice |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
-| [`ui/heatmap_v4.html`](ui/heatmap_v4.html) | the same, for v4 — a separate page, not a shared one, matching `results/v4/`'s separate ledger |
+| [`ui/heatmap_v4_t_e1.html`](ui/heatmap_v4_t_e1.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
 | [`presentation/`](presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
 
 No `insights/`, `evidence/`, `handoffs/`, or `proposals/` here — those are
