@@ -18,12 +18,14 @@ conflict-cluster resolution below.
 """
 import difflib
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED_DIR = ROOT / 'artifacts/v4/seed'
-ARTIFACTS = ROOT / 'artifacts/v4'
-OUT_DIR = ROOT / 'artifacts/v4/t4-merge'
+ARTIFACTS = ROOT / 'artifacts/v4/v4_t_e1'
+OUT_DIR = ROOT / 'artifacts/v4/v4_t_e1/t4-merge'
+DEFAULT_MANIFEST = Path('/tmp/merge_splices.json')
 
 DONORS = sorted([
     "cloud-024-guid-to-account", "cloud-026-gpu-abuse-triage",
@@ -1288,22 +1290,42 @@ def build_file(fname):
 
 
 def main():
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    check_only = '--check' in sys.argv
+    manifest_path = DEFAULT_MANIFEST
+    if '--manifest' in sys.argv:
+        manifest_path = Path(sys.argv[sys.argv.index('--manifest') + 1])
+
     all_splices = {}
+    stale = []
     for fname in FILES:
         merged, splices = build_file(fname)
-        (OUT_DIR / fname).write_text(merged)
         all_splices[fname] = splices
+        existing = (OUT_DIR / fname).read_text() if (OUT_DIR / fname).is_file() else None
+        if merged != existing:
+            stale.append(fname)
+        if not check_only:
+            OUT_DIR.mkdir(parents=True, exist_ok=True)
+            (OUT_DIR / fname).write_text(merged)
         n_standalone = sum(1 for s in splices if s[3].startswith('standalone'))
         n_reconciled = sum(1 for s in splices if s[3].startswith('reconciled'))
         print(f"{fname}: {len(splices)} splices ({n_standalone} standalone, {n_reconciled} reconciled)")
 
-    Path('/tmp/merge_splices.json').write_text(json.dumps(
+    if check_only:
+        if stale:
+            print(f"\n{len(stale)} file(s) stale:", file=sys.stderr)
+            for f in stale:
+                print(f"  {f}", file=sys.stderr)
+            return 1
+        print("\nartifacts/v4/v4_t_e1/t4-merge/*.md already up to date.")
+        return 0
+
+    manifest_path.write_text(json.dumps(
         {f: [[i1, i2, tag] for i1, i2, text, tag in splices] for f, splices in all_splices.items()},
         indent=2))
     print("\nWrote merged files to", OUT_DIR)
-    print("Wrote splice manifest to /tmp/merge_splices.json")
+    print("Wrote splice manifest to", manifest_path)
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
