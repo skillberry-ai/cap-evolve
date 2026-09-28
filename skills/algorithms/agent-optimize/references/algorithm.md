@@ -125,6 +125,18 @@ only for the ids it adds — and savings are reported as measured integers
 (`+ (full_val − fired)` on a kill, `− fired` on a promote) so a run's ledger sums to the truth
 instead of to a flattering estimate.
 
+### The hard precondition: `round.py` refuses an unscreened full-val gate
+
+`round.py` refuses to run the full-val gate for any candidate tag with no
+`screens/<tag>__screenN.json` on disk — it exits non-zero and does not spend the 300-rollout
+eval. There are exactly two ways past that: a prior `screen.py` run for that tag (the normal
+path above), or an explicit `--skip-screen-justification "<reason>"` recording WHY you are
+paying full val directly — e.g. `"spend.py: break-even unreachable on this split size"` or
+`"pure additive READ tool, screening cost exceeds expected savings"` (the bare
+`--skip-screen-ladder` still works but records no reason on the compliance event). There is
+no third way in: a full-val eval that never went through `screen.py` and never justified
+skipping it will not run.
+
 ### The break-even, and when the ladder cannot pay for itself
 
 Screening is an economic bet, not a free improvement, and the arithmetic is one division:
@@ -526,7 +538,11 @@ the round-scoped numbers no single-candidate gate can see — `noise_floor_from_
 `verdict_by_reference`/`verdict_stable`, the sign-agreement check across the round's null-control
 replicates. Neither decides for you. Nothing in `commit.py` or `round.py` checks that field against the `--decision` you pass: `set_best()`
 is an unconditional setter, and `--reject-basis driver_judgement` exists precisely so you can log a
-considered disagreement. Treat the printed numbers the way a careful researcher reads a stats printout,
+considered disagreement. It is for overriding a gate verdict that DID run: on a candidate with NEITHER
+a screen record NOR a full-val gate row (skipped both entirely), `commit.py` refuses it unless you also
+pass `--bypassed-gate-justification "<reason>"`, which is then recorded on the decision event and
+surfaced in `commit.py`'s own `warnings` output. Treat the printed numbers the way a careful researcher
+reads a stats printout,
 not the way code reads a boolean:
 
 - Read `resolvable_effect_size` first. It is the smallest true effect this round could have detected at

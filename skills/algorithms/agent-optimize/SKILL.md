@@ -154,15 +154,6 @@ Only the candidate pays, for the subset. `decision` is `kill` or `promote`
 rate — on a small val the tier-1 floor makes it unreachable, so pay full val directly — and read a screen as
 evidence about the tasks the edit targeted, never as a gate decision.
 
-**This is a hard precondition, not advice.** `round.py` refuses to run the full-val gate for any
-candidate tag with no `screens/<tag>__screenN.json` on disk — it exits non-zero and does not spend the
-300-rollout eval. It auto-detects exactly two ways past that: a prior `screen.py` run for that tag (the
-normal path above), or an explicit `--skip-screen-justification "<reason>"` on `round.py` recording WHY
-you are paying full val directly — e.g. `"spend.py: break-even unreachable on this split size"` or
-`"pure additive READ tool, screening cost exceeds expected savings"` (the bare `--skip-screen-ladder`
-still works but records no reason). There is no third way in: a full-val eval that never went through
-`screen.py` and never justified skipping it will not run.
-
 **4. Honest gate on FULL val.** Before this step, confirm every addressable diagnosed cluster
 for the round is folded in or deferred (with why) — "Bucketing edits before spending",
 `algorithm.md`. Evaluate the whole split (this writes rollouts + results under tag
@@ -196,10 +187,6 @@ evaluated on full val", so conflating the two makes the run's artifacts contradi
 full-val paired gate ran and said reject), `screen_kill` (the screen proved harm), `ceiling` (arithmetic
 proved no accept reachable, full val never paid), `budget` (screen evidence plus a budget call, not a
 gate decision), `infra` (missing data). So `screen: promote` + `reject_basis: ceiling` is coherent.
-`driver_judgement` is for overriding a gate verdict that DID run — using it for a candidate that has
-NEITHER a screen record NOR a gate row (skipped both entirely) is refused unless you pass
-`--bypassed-gate-justification "<reason>"`, which is then recorded and surfaced in `commit.py`'s own
-output `warnings`.
 
 `commit.py` **refuses a `--candidate-id` that already carries a decision event** (`--force` only to
 repair a record deliberately): two drivers tagging a candidate alike otherwise produce two decision
