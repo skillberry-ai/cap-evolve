@@ -91,6 +91,23 @@ def test_driver_judgement_proceeds_with_a_bypass_justification(tmp_path):
     assert ev["bypassed_gate_justification"] == "infra failure before any rollout could be scored"
 
 
+def test_driver_judgement_not_fooled_by_another_candidates_screen_record(tmp_path):
+    """A screen record for a DIFFERENT candidate tag (fresh events.jsonl, no history at all
+    for this tag) must not satisfy the guard — the glob has to be tag-specific, not just
+    "some screen file exists in this run"."""
+    run_dir, work = _staged(tmp_path, "byp4")
+    screens = run_dir.root / "screens"
+    screens.mkdir(parents=True, exist_ok=True)
+    (screens / "cand_2__screen1.json").write_text(json.dumps({"decision": "promote"}),
+                                                  encoding="utf-8")
+    assert not run_dir.events_path.is_file()  # fresh run: no events.jsonl yet
+    out = _commit(run_dir, "cand_1", work, "reject",
+                  extra=["--reject-basis", "driver_judgement"])
+    assert out.returncode != 0, (
+        f"a screen record for cand_2 wrongly satisfied the guard for cand_1: {out.stdout}")
+    assert "bypassed-gate-justification" in out.stdout
+
+
 def test_driver_judgement_with_a_screen_record_needs_no_justification(tmp_path):
     """A candidate the screen ladder DID touch is not the bypass this guard targets —
     only the "skipped screen AND gate entirely" case requires the extra flag."""
