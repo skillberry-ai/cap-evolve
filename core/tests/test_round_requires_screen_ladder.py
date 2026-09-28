@@ -98,7 +98,8 @@ def test_skip_screen_justification_records_the_reason_on_the_compliance_event(tm
     run_dir, project, work = _staged_run_dir(tmp_path)
     p = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
               "--project", str(project), "--candidates", "cand_1", "--n-trials", "1",
-              "--skip-screen-justification", "break-even unreachable on this split size"])
+              "--skip-screen-justification", "break-even unreachable on this split size",
+              *_JUSTIFY])
     assert p.returncode == 0, f"--skip-screen-justification did not override the guard: {p.stdout}"
     out = json.loads(p.stdout)
     assert [x["tag"] for x in out.get("candidates") or []] == ["cand_1"]

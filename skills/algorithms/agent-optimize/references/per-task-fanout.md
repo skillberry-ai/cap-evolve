@@ -121,7 +121,8 @@ python "$A/integrate.py" --base "$R/work/<parent>" --branches "$R/work/t7" "$R/w
        --out "$R/work/cand_merged" --tasks <targets> --canary-auto "$R/<baseline-per-task>.json" \
        --n <num_trials> --conc <low> --floor <measured-null-delta>
 python "$A/round.py" --run-dir "$R" --project "$P" --candidates cand_merged \
-       --n-trials <num_trials> --k-se <gate_k_se>
+       --n-trials <num_trials> --k-se <gate_k_se> \
+       --single-candidate-justification "merged branches gated as one candidate"
 ```
 
 `funcmerge.py` is the merge engine `integrate.py` drives per step; call it directly only to inspect

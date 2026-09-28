@@ -99,11 +99,11 @@ still wrong ⇒ the content is.
 probabilistic → A). **A:** sibling candidates, N≥3 — screen each first (step 3, kill-only), then
 `merge_search.py` on disjoint SCREEN-SURVIVORS, and gate only the merged one(s) plus any
 unmergeable survivor on full val — never gate N siblings individually when
-screen-then-merge was an option. Fewer than 3 needs `--single-candidate-justification` or an
-unaffordable `--afford-check-file`, or it refuses. **B:** merge every low-risk structural fix
+screen-then-merge was an option. <3 needs `--single-candidate-justification` or an unaffordable
+`--afford-check-file`, else refused. **B:** merge every low-risk structural fix
 into one working copy, gate once via steps 3–4 — no per-fix screen/gate, each part cleared its
 bar. Attack by `score_lost`; prefer code-level over prompt-level fixes for
-`tools`. Details: `references/algorithm.md`, "Bucketing edits before spending" / "Parallelism".
+`tools`. Details: `references/algorithm.md`, "Bucketing edits before spending"/"Parallelism".
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag
@@ -186,9 +186,7 @@ cap-evolve dashboard --export "$R"
 evaluated on full val", so conflating the two makes the run's artifacts contradict themselves. `gate` (a
 full-val paired gate ran and said reject), `screen_kill` (the screen proved harm), `ceiling` (arithmetic
 proved no accept reachable, full val never paid), `budget` (screen evidence plus a budget call, not a
-gate decision), `infra` (missing data).
-
-**3+ rejects? Run `merge_rejects.py`** first (`references/algorithm.md`).
+gate decision), `infra` (missing data). 3+ rejects? Run `merge_rejects.py` first (`references/algorithm.md`).
 
 `commit.py` **refuses a `--candidate-id` that already carries a decision event** (`--force` only to
 repair a record deliberately): two drivers tagging a candidate alike otherwise produce two decision

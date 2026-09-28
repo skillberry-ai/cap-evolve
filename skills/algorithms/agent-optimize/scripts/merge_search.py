@@ -355,9 +355,17 @@ def main(argv=None) -> int:
         "skipped_no_targets": skipped_no_targets,
         "merges": merges,
         "ready_for_gate": ready_for_gate,
+        # round.py refuses --candidates below its MIN_SIBLINGS (3) without a recorded reason
+        # (see round.py's SingleCandidateUnjustified). A merged survivor gated alone is exactly
+        # SKILL.md's documented screen-then-merge case, not an omission, so this command
+        # supplies that justification itself rather than printing a command the driver would
+        # have to edit before it runs.
         "next": (f"python round.py --run-dir {run_dir} --project {project} "
-                 f"--candidates {','.join(ready_for_gate)} --n-trials {args.n} "
-                 "— gates each merge through the SAME cascade as any candidate"
+                 f"--candidates {','.join(ready_for_gate)} --n-trials {args.n}"
+                 + (" --single-candidate-justification "
+                    "\"screen-then-merge: gating the merged survivor(s) alone per SKILL.md's "
+                    "bucket A\"" if len(ready_for_gate) < 3 else "")
+                 + " — gates each merge through the SAME cascade as any candidate"
                  if ready_for_gate else
                  "no merge candidate was built — see merges[].reason / merges[].result.error"),
     }
