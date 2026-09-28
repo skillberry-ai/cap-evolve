@@ -1399,6 +1399,158 @@ def test_a_permanent_crash_exhausts_retries_and_surfaces_clearly(tmp_path):
         f"the diagnosis should say how many retries were already spent: {msg}")
 
 
+# --- background-task-kill mid-session: returncode 0 / is_error false / --------------------
+# --- stop_reason "task_notification" / num_turns null must retry, not finalize early. ------
+
+
+def _killed_mid_session_payload() -> dict:
+    """The exact real-transcript fingerprint: a clean exit that is actually an infra kill.
+
+    `returncode: 0`, `is_error: false`, `stop_reason: "task_notification"`, `num_turns:
+    null` — the existing `crashed` check reads this as a voluntary stop, so without the new
+    condition the host proceeds straight to `eval_start FINAL` and finalizes on
+    `best_id=seed` with most of the optimizer budget unspent.
+    """
+    return {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "task_notification", "is_error": False, "num_turns": None},
+    }
+
+
+def _stub_from_payloads(tmp_path: Path, counter_name: str, payloads: list) -> Path:
+    """A stub whose Nth invocation returns `payloads[min(n, len(payloads) - 1)]`."""
+    stub = tmp_path / "fake_run_optimizer.py"
+    counter = tmp_path / counter_name
+    stub.write_text(
+        "import json, sys\n"
+        "from pathlib import Path\n"
+        f"counter = Path(r'{counter}')\n"
+        "n = int(counter.read_text()) if counter.exists() else 0\n"
+        "counter.write_text(str(n + 1))\n"
+        f"payloads = {payloads!r}\n"
+        "print(json.dumps(payloads[min(n, len(payloads) - 1)]))\n",
+        encoding="utf-8")
+    return stub
+
+
+def test_a_background_task_kill_mid_session_triggers_a_retry_not_a_finalize(tmp_path):
+    """The confirmed failure mode: a clean-looking exit that is really a mid-session kill.
+
+    First attempt reports the kill fingerprint, second attempt reports a real voluntary
+    stop with real turns — the host must retry once and pick up the recovered attempt,
+    exactly like the existing transient-crash retry path.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    killed = _killed_mid_session_payload()
+    recovered = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": False, "stop_reason": "end_turn",
+                 "num_turns": 12},
+    }
+    stub = _stub_from_payloads(tmp_path, "attempts.txt", [killed, recovered])
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    counter = tmp_path / "attempts.txt"
+    assert int(counter.read_text()) == 2, (
+        f"expected 1 initial attempt + 1 retry (2 CLI invocations), got "
+        f"{counter.read_text()}")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert len(retry_ev) == 1, f"expected exactly 1 retry event, got: {retry_ev}"
+    assert retry_ev[0]["retry_reason"] == "killed_mid_session", (
+        f"the retry must be attributed to the kill fingerprint, not lumped in with crash "
+        f"retries: {retry_ev[0]}")
+    assert retry_ev[0]["stop_reason"] == "task_notification", retry_ev[0]
+    assert retry_ev[0]["num_turns"] is None, retry_ev[0]
+
+    # It recovered on the retry, so it must not read as an abandoned/incomplete run.
+    assert out.get("num_turns") == 12, out
+
+
+def test_a_voluntary_stop_with_real_num_turns_is_not_retried(tmp_path):
+    """Regression guard: `task_notification` with a REAL `num_turns` must NOT be retried.
+
+    This is the ambiguous case the task description calls out — a completed background
+    task's own notification landing as the last stream line after the agent already made
+    real turns — which the existing logic already treats as a genuine stop. Only the
+    `num_turns: null` fingerprint is a kill; a present `num_turns` (even a small one) must
+    keep the pre-existing voluntary-stop behavior untouched.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = tmp_path / "fake_run_optimizer.py"
+    payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "task_notification", "is_error": False, "num_turns": 42},
+    }
+    stub.write_text(f"import json\nprint(json.dumps({payload!r}))\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert retry_ev == [], (
+        f"a present num_turns alongside task_notification must not be retried: {retry_ev}")
+    assert out.get("num_turns") == 42, out
+
+
+def test_a_success_stop_with_real_num_turns_is_not_retried(tmp_path):
+    """Regression guard locking in the pre-existing voluntary-stop distinction.
+
+    `stop_reason: "success"` with a real `num_turns` and `returncode: 0` is a genuinely
+    finished run — the new condition must never fire for it, same as before this change.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = tmp_path / "fake_run_optimizer.py"
+    payload = {
+        "optimizer": "claude-code", "cli_present": True, "returncode": 0,
+        "auth_present": [],
+        "stop": {"subtype": "success", "is_error": False, "stop_reason": "end_turn",
+                 "num_turns": 42},
+    }
+    stub.write_text(f"import json\nprint(json.dumps({payload!r}))\n", encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert retry_ev == [], f"a voluntary success stop must not be retried: {retry_ev}"
+
+
+def test_a_persistent_background_task_kill_exhausts_retries_and_finalizes(tmp_path):
+    """The new condition still respects --max-retries and gives up like the crash path.
+
+    The stub reports the kill fingerprint on EVERY attempt — a persistently hostile
+    environment. The host must retry exactly --max-retries times, then break out of the
+    loop and proceed to finalize rather than retrying forever.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+    stub = _stub_from_payloads(tmp_path, "attempts.txt", [_killed_mid_session_payload()])
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub), "--max-retries", "2")
+
+    counter = tmp_path / "attempts.txt"
+    assert int(counter.read_text()) == 3, (
+        f"expected exactly 3 CLI invocations (bounded retries), got {counter.read_text()}")
+
+    retry_ev = _host_events(run_dir, "host_retry")
+    assert len(retry_ev) == 2, f"retries were not bounded to --max-retries: {retry_ev}"
+    assert all(e["retry_reason"] == "killed_mid_session" for e in retry_ev), retry_ev
+
+    # It gave up and proceeded to finalize rather than looping forever.
+    assert out.get("stop_reason") == "task_notification", out
+
+
 def test_claude_code_registry_row_structurally_disallows_monitor():
     """#431: the Monitor denial on run_e2e_run3 must not depend on luck.
 

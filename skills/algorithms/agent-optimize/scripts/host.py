@@ -934,8 +934,10 @@ def main(argv=None) -> int:
                         "sibling optimizers/run-optimizer)")
     p.add_argument("--max-retries", type=int, default=2,
                    help="bounded retries of the optimizer CLI on a transient crash "
-                        "(terminal_reason in %s), so a single DNS/network blip does not "
-                        "forfeit the rest of the run's budget (default: 2)"
+                        "(terminal_reason in %s) or a background-task kill mid-session "
+                        "(stop_reason=task_notification with no num_turns), so a single "
+                        "DNS/network blip or infra eviction does not forfeit the rest of the "
+                        "run's budget (default: 2)"
                         % sorted(_RETRYABLE_TERMINAL_REASONS))
     args = p.parse_args(argv)
 
@@ -1151,6 +1153,18 @@ def main(argv=None) -> int:
         permission_denials = stop.get("permission_denials")
         crashed = (not timed_out) and (is_error or (proc is not None and proc.returncode != 0))
 
+        # A background-task eviction mid-session exits the CLI CLEANLY: returncode 0,
+        # is_error false, `stop_reason` (subtype) "task_notification", and — because the
+        # process never got back to its own turn loop to report one — `num_turns: null`.
+        # `crashed` above is False for this shape, so without this it reads as a voluntary
+        # stop and the run finalizes on `best_id=seed` with most of the budget unspent.
+        # A genuinely finished background task reports a real `num_turns` alongside the same
+        # subtype (a normal notification arriving as the last stream line after real turns
+        # already happened) — that case is deliberately NOT covered here, only the
+        # null-num_turns fingerprint that means the session was killed before it ever turned.
+        killed_mid_session = (not timed_out) and (stop_reason == "task_notification") \
+            and not num_turns
+
         # Book the host's own spend. The agent books per-round costs it knows about through
         # commit.py --optimizer-usd; it cannot know its own process cost, and the host can.
         rounds_done, rounds_budget = -1, 0
@@ -1190,12 +1204,14 @@ def main(argv=None) -> int:
         # like `error_max_turns` must never be retried — #428's classification above is what
         # tells the two apart), only while rounds/budget remain, and only up to the bound.
         exhausted, _ = rd.budget_exhausted() if rd is not None else (True, "")
-        retryable = crashed and terminal_reason in _RETRYABLE_TERMINAL_REASONS
-        if retryable and attempt < args.max_retries and not exhausted:
+        retry_reason = ("crash" if crashed and terminal_reason in _RETRYABLE_TERMINAL_REASONS
+                        else "killed_mid_session" if killed_mid_session else None)
+        if retry_reason and attempt < args.max_retries and not exhausted:
             if rd is not None:
                 rd.log_event("host_retry", agent=args.agent, attempt=attempt + 1,
                              max_retries=args.max_retries, terminal_reason=terminal_reason,
-                             is_error=is_error,
+                             is_error=is_error, retry_reason=retry_reason,
+                             stop_reason=stop_reason, num_turns=num_turns,
                              returncode=(None if proc is None else proc.returncode))
             attempt += 1
             continue
