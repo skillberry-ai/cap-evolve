@@ -411,7 +411,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-screen-ladder", action="store_true",
                    help="run full-val on a candidate with no screen.py record for it (NOT "
                         "recommended — see the compliance check above). An explicit, recorded "
-                        "choice, the same idiom as --allow-high-concurrency.")
+                        "choice, the same idiom as --allow-high-concurrency. Prefer "
+                        "--skip-screen-justification, which records WHY.")
+    p.add_argument("--skip-screen-justification", default=None,
+                   help="same effect as --skip-screen-ladder (run full-val on a candidate with "
+                        "no screen.py record), but records WHY screening was skipped on the "
+                        "compliance event instead of just the bare choice — e.g. "
+                        "'spend.py: break-even unreachable on this split size' or 'pure "
+                        "additive READ tool, screening cost exceeds expected savings'.")
     return p
 
 
@@ -478,11 +485,13 @@ def _main(argv=None) -> int:
     # `<run_dir>/screens/<tag>__screenN.json`; its absence means this candidate skipped
     # straight to full-val, which the dashboard can now show as its own event kind.
     screens_dir = run_dir.root / "screens"
+    skip_justified = bool(args.skip_screen_ladder or args.skip_screen_justification)
     unscreened = []
     for t in tags:
         screened = screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
         run_dir.log_event("agent_optimize_compliance", tag=t,
                           screened_before_fullval=screened,
+                          skip_justification=args.skip_screen_justification,
                           iteration=int(run_dir.spent.iterations))
         if not screened:
             unscreened.append(t)
@@ -495,7 +504,7 @@ def _main(argv=None) -> int:
     # it a warning would just be a third restatement of the same prose SKILL.md already
     # carried. `--skip-screen-ladder` is the deliberate, recorded override (e.g. a
     # candidate whose val is small enough that screening buys nothing).
-    if unscreened and not args.skip_screen_ladder:
+    if unscreened and not skip_justified:
         print(json.dumps({
             "error": f"candidate(s) {unscreened} went straight to a full-val eval without a "
                      "screen.py record under $R/screens/",
@@ -504,8 +513,11 @@ def _main(argv=None) -> int:
                    "is the exact failure issue #420 item 4 found: every candidate paid full "
                    "val, including ones a quarter-price screen would have killed.",
             "fix": "run screen.py --tier 1 (then --tier 2 if it promotes) on each of these "
-                   "tags first, or pass --skip-screen-ladder to record the deliberate choice "
-                   "to skip it.",
+                   "tags first, or pass --skip-screen-justification \"<reason>\" to record WHY "
+                   "screening was skipped (e.g. break-even unreachable on this split size per "
+                   "spend.py, or a zero-risk additive edit where screening costs more than it "
+                   "could save) — or the bare --skip-screen-ladder if you don't want a reason "
+                   "recorded.",
         }, indent=2))
         return 2
 

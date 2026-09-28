@@ -242,6 +242,17 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _has_screen_record(run_dir: RunDir, candidate_id: str) -> bool:
+    """Has ``screen.py`` ever written a ``<candidate_id>__screenN.json`` record?
+
+    Same check ``round.py`` makes before it will run a full-val gate at all — read here so
+    ``commit.py`` can tell a candidate that went through the screen ladder (and never reached
+    the gate for some other reason, e.g. a screen kill) from one that bypassed BOTH.
+    """
+    screens_dir = run_dir.root / "screens"
+    return screens_dir.is_dir() and any(screens_dir.glob(f"{candidate_id}__screen*.json"))
+
+
 def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     """This candidate's row from ``round.py``'s persisted table, if one exists.
 
@@ -353,6 +364,12 @@ def main(argv=None) -> int:
                         "structured disagreement, not a one-off override; "
                         "driver_judgement=the gate ACCEPTED and you are overriding it for any "
                         "OTHER reason (say why in --note)")
+    p.add_argument("--bypassed-gate-justification", default=None,
+                   help="required alongside --reject-basis driver_judgement when this "
+                        "candidate has NEITHER a full-val gate row NOR a screen.py record — "
+                        "the 'skip screen AND skip the gate entirely' escape hatch. Say why "
+                        "no measurement was ever run for it (e.g. an infra failure before any "
+                        "rollout, or a deliberate drop before evaluating it at all).")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -509,6 +526,31 @@ def main(argv=None) -> int:
             }, indent=2))
             return 2
 
+    # The bare `driver_judgement` escape hatch: a candidate that never had a full-val gate
+    # (gate_verdict is None, same condition `--reject-basis gate` above refuses on) AND never
+    # had a screen.py record either has skipped the ENTIRE screen-then-gate structure — not an
+    # override of a verdict that ran, but a candidate no measurement ever touched. Confirmed
+    # live: a candidate was committed exactly this way, via `--reject-basis driver_judgement`
+    # with no compliance or screen event on record for it at all. That is legitimate only when
+    # said so explicitly, not as commit.py's silent default path.
+    bypassed_screen_and_gate = bool(
+        args.reject_basis == "driver_judgement" and gate_verdict is None
+        and not _has_screen_record(run_dir, args.candidate_id))
+    if bypassed_screen_and_gate and not args.bypassed_gate_justification:
+        print(json.dumps({
+            "error": f"--reject-basis driver_judgement for {args.candidate_id!r}, but it has "
+                     "no full-val gate row AND no screen.py record — this is the "
+                     "skip-screen-and-skip-gate escape hatch",
+            "why": "driver_judgement is for overriding a gate verdict that DID run (see its "
+                   "help text). Rejecting a candidate that was never screened OR gated needs "
+                   "its own recorded reason, not a bare override.",
+            "fix": "pass --bypassed-gate-justification \"<reason>\" explaining why neither "
+                   "screen.py nor a full-val gate ran for this candidate before this commit "
+                   "(e.g. an infra failure before any rollout, or a deliberate drop before "
+                   "evaluating it at all).",
+        }, indent=2))
+        return 2
+
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
@@ -532,6 +574,8 @@ def main(argv=None) -> int:
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
+                      bypassed_screen_and_gate=bypassed_screen_and_gate,
+                      bypassed_gate_justification=args.bypassed_gate_justification,
                       verdict=args.decision,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
@@ -555,6 +599,11 @@ def main(argv=None) -> int:
     if indecisive:
         reason = f"indecisive (gate): {reason}"
     warnings: list[str] = []
+    if bypassed_screen_and_gate:
+        warnings.append(
+            f"screen+gate bypass: {args.candidate_id!r} was rejected via driver_judgement "
+            "with NO screen.py record and NO full-val gate row — justified as: "
+            f"{args.bypassed_gate_justification!r}")
     # `provisional` books the decision event above but stops here: the iteration is not over
     # (the SAME candidate gets a real accept/reject/inconclusive commit later, once `grow.py`
     # has re-gated it at a pooled n), so the stall counter, LEDGER.md and JOURNAL.md must not
