@@ -511,8 +511,11 @@ jobs:
             exit 0
           fi
           run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
+          # A deliberate iterations=0 dispatch (evaluate the seed only, e.g. a no-skill control)
+          # runs no optimizer step, so requiring one would fail a run that completed.
+          min_it=1; [ "${ITERATIONS:-}" = "0" ] && min_it=0
           "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" \
-            --min-iterations 1 --allow-regression
+            --min-iterations "$min_it" --allow-regression
 
       - name: Write run metadata
         if: always()
