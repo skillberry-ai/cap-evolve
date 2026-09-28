@@ -36,7 +36,7 @@ def mod():
     return _load_adapter_module()
 
 
-def _score(mod, *, written: bytes, keep: bool = False, libre: bool = True):
+def _score(mod, *, written: bytes, keep: bool = False, libre: bool = True, recalc: bool = False):
     """Score one verified-400 task whose comparison passes only on the recalculated bytes."""
     from cap_evolve import Rollout, Task
 
@@ -54,18 +54,19 @@ def _score(mod, *, written: bytes, keep: bool = False, libre: bool = True):
     out_dir.mkdir(parents=True)
     (out_dir / "1_13-1_output.xlsx").write_bytes(written)
 
-    def recalc(path, soffice, **_):
+    def fake_recalc(path, soffice, **_):
         Path(path).write_bytes(RECALCED)
         return True
 
-    saved = (mod.DATA_DIR, mod.SCORING, mod.KEEP_OUTPUTS, mod._dataset_cache,
+    saved = (mod.DATA_DIR, mod.SCORING, mod.KEEP_OUTPUTS, mod.REWARD_RECALC, mod._dataset_cache,
              dict(mod._Vendor._mod), mod._recalc_workbook)
     try:
         mod.DATA_DIR = str(root)
         mod.SCORING = "hard"
         mod.KEEP_OUTPUTS = keep
+        mod.REWARD_RECALC = recalc
         mod._dataset_cache = [entry]
-        mod._recalc_workbook = recalc
+        mod._recalc_workbook = fake_recalc
         mod._Vendor._mod = {
             "compare_workbooks": lambda gt, proc, *a, **k: (Path(proc).read_bytes() == RECALCED, None),
             "find_libreoffice": (lambda: "/usr/bin/soffice") if libre else (lambda: None),
@@ -74,7 +75,7 @@ def _score(mod, *, written: bytes, keep: bool = False, libre: bool = True):
                                     Rollout(task_id="13-1", output="", metadata={"run_tag": run_tag}))
         return score, out_dir
     finally:
-        (mod.DATA_DIR, mod.SCORING, mod.KEEP_OUTPUTS, mod._dataset_cache,
+        (mod.DATA_DIR, mod.SCORING, mod.KEEP_OUTPUTS, mod.REWARD_RECALC, mod._dataset_cache,
          mod._Vendor._mod, mod._recalc_workbook) = saved
 
 
@@ -82,25 +83,36 @@ def _metric(score, name):
     return next(m["value"] for m in score.metrics if m["name"] == name)
 
 
-def test_a_formula_answer_passes_recalculated_and_fails_as_saved(mod):
+def test_the_reward_is_the_as_saved_comparison_by_default(mod):
+    """The papers' protocol: a formula answer fails, because the grader never recalculates."""
     score, _ = _score(mod, written=FORMULA)
-    assert score.reward == 1.0
+    assert score.reward == 0.0
     assert score.raw["test_case_results"] == [1]
     assert score.raw["test_case_results_no_recalc"] == [0]
     assert _metric(score, "hard_no_recalc") == 0.0
-    assert _metric(score, "soft_no_recalc") == 0.0
+    assert _metric(score, "hard_restriction") == 1.0
+    assert [m["name"] for m in score.metrics if m["primary"]] == ["hard_no_recalc"]
+
+
+def test_the_optimizer_is_told_a_formula_answer_failed_for_being_a_formula(mod):
+    score, _ = _score(mod, written=FORMULA)
+    assert "FORMULAS" in score.feedback and "literal value" in score.feedback
+    assert "0/1 test cases passed" in score.feedback
+
+
+def test_recalc_mode_grades_after_recalculation(mod):
+    score, _ = _score(mod, written=FORMULA, recalc=True)
+    assert score.reward == 1.0
+    assert _metric(score, "hard_no_recalc") == 0.0
+    assert [m["name"] for m in score.metrics if m["primary"]] == ["hard_restriction"]
+    assert "FORMULAS" not in score.feedback
 
 
 def test_a_literal_answer_passes_both_ways(mod):
-    score, _ = _score(mod, written=RECALCED)
-    assert score.reward == 1.0
-    assert _metric(score, "hard_no_recalc") == 1.0
-
-
-def test_no_recalc_metrics_are_never_primary(mod):
-    score, _ = _score(mod, written=FORMULA)
-    primaries = [m["name"] for m in score.metrics if m["primary"]]
-    assert primaries == ["hard_restriction"]
+    for recalc in (False, True):
+        score, _ = _score(mod, written=RECALCED, recalc=recalc)
+        assert score.reward == 1.0
+        assert _metric(score, "hard_no_recalc") == _metric(score, "hard_restriction") == 1.0
 
 
 def test_outputs_are_deleted_by_default(mod):

@@ -566,6 +566,7 @@ jobs:
             "gate_k_se": ${GATE_K_SE:-1.0},
             "algorithm": "${ALGORITHM:-hill-climb-all}",
             "warm_seed": $warm_json,
+            "reward_metric": "$(cat "$out/reward_metric" 2>/dev/null)",
             "conclusion": "${{ job.status }}"
           }
           JSON

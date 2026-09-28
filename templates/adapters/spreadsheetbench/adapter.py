@@ -161,6 +161,13 @@ if SCORING not in ("soft", "hard"):
         f"SPREADSHEETBENCH_SCORING={SCORING!r} is not recognized (want 'soft' or 'hard')."
     )
 
+# Which comparison is the REWARD. Default 0: the workbook exactly as the agent saved it, with no
+# formula recalculation — how SkillOpt's evaluator scores, and so how the SkillOpt and WikiSkill
+# papers report SpreadsheetBench (a formula cell reads back as None and fails). 1 grades after
+# headless LibreOffice recalculates formula caches. Both are recorded on every rollout; this
+# only picks the one the gate, the headline and the dashboard use.
+REWARD_RECALC = os.environ.get("SPREADSHEETBENCH_REWARD_RECALC", "0") == "1"
+
 # Where the vendored sandbox bind-mounts SPREADSHEETBENCH_DATA_DIR inside every container
 # (code_exec_docker/jupyter.py hardcodes this bind target).
 _CONTAINER_DATA_ROOT = "/mnt/data"
@@ -1604,6 +1611,13 @@ class Adapter(CapabilityAdapter):
         hard = 1.0 if all(test_results) else 0.0
         soft_nr = sum(no_recalc_results) / len(no_recalc_results)
         hard_nr = 1.0 if all(no_recalc_results) else 0.0
+        # Cases whose answer is right only once formulas are recalculated. Under the as-saved
+        # reward they fail, and the optimizer has to be told WHY, or it reads a correct formula
+        # as a wrong answer.
+        formula_only = [i for i, (r, n) in zip(_case_indices(data_dir / "spreadsheet" / sid, sid),
+                                               zip(test_results, no_recalc_results))
+                        if r and not n]
+        graded = test_results if REWARD_RECALC else no_recalc_results
 
         # Localize the failure while the produced workbook is still on disk. Only for a MISS,
         # and only on test case 1 — the diagnosis generalizes across the three cases and this
@@ -1622,29 +1636,37 @@ class Adapter(CapabilityAdapter):
             except Exception:  # noqa: BLE001
                 localized = []
 
-        feedback = _build_feedback(entry, test_results, missing, mismatched, bool(libre),
-                                   recalc_failed, localized)
+        # Recalculation problems only bear on the score when recalculation is the reward.
+        feedback = _build_feedback(entry, graded, missing, mismatched,
+                                   bool(libre) or not REWARD_RECALC,
+                                   recalc_failed if REWARD_RECALC else [], localized,
+                                   formula_only=[] if REWARD_RECALC else formula_only)
 
         # Scoring has consumed every output; drop the per-rollout dir.
         _cleanup_output_dir(rollout)
 
+        if REWARD_RECALC:
+            reward = hard if SCORING == "hard" else soft
+        else:
+            reward = hard_nr if SCORING == "hard" else soft_nr
         return Score(
             task_id=task.id,
-            reward=hard if SCORING == "hard" else soft,
+            reward=reward,
             feedback=feedback,
             raw={"test_case_results": test_results,
-                 "test_case_results_no_recalc": no_recalc_results},
-            # Both are always recorded, whichever is the target — so the other metric can be
-            # recovered from any past run's rollouts without re-running it.
+                 "test_case_results_no_recalc": no_recalc_results,
+                 "reward_recalc": REWARD_RECALC},
+            # All four are always recorded, whichever is the target — so the other metrics can
+            # be recovered from any past run's rollouts without re-running it.
             metrics=[
                 {"name": "soft_restriction", "value": soft,
-                 "primary": SCORING == "soft", "direction": "higher"},
+                 "primary": REWARD_RECALC and SCORING == "soft", "direction": "higher"},
                 {"name": "hard_restriction", "value": hard,
-                 "primary": SCORING == "hard", "direction": "higher"},
+                 "primary": REWARD_RECALC and SCORING == "hard", "direction": "higher"},
                 {"name": "soft_no_recalc", "value": soft_nr,
-                 "primary": False, "direction": "higher"},
+                 "primary": not REWARD_RECALC and SCORING == "soft", "direction": "higher"},
                 {"name": "hard_no_recalc", "value": hard_nr,
-                 "primary": False, "direction": "higher"},
+                 "primary": not REWARD_RECALC and SCORING == "hard", "direction": "higher"},
             ],
         )
 
@@ -1948,6 +1970,7 @@ def _build_feedback(
     entry: dict, test_results: list[int], missing: list[int], mismatched: list[int],
     had_libreoffice: bool, recalc_failed: list[int] | None = None,
     localized: list[str] | None = None,
+    formula_only: list[int] | None = None,
 ) -> str:
     """Gold-SAFE feedback: which test cases passed/failed and why, never gold cell values."""
     n_pass = sum(test_results)
@@ -1957,6 +1980,13 @@ def _build_feedback(
     ]
     if missing:
         lines.append(f"Test case(s) {missing} produced NO output file — the code never wrote output_path.")
+    if formula_only:
+        lines.append(
+            f"Test case(s) {formula_only} FAILED because the answer cells hold FORMULAS: the "
+            "grader reads the values saved in the file and does not recalculate, so a formula "
+            "written with openpyxl reads back as empty. The formula logic itself was right — "
+            "compute the result in Python and write the literal value instead."
+        )
     if mismatched:
         lines.append(
             f"Test case(s) {mismatched} produced an output file but its values in "

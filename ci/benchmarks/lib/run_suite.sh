@@ -796,6 +796,7 @@ SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
 SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
 SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}
 SPREADSHEETBENCH_SCORING=${SB_SCORING:-soft}
+SPREADSHEETBENCH_REWARD_RECALC=${SB_REWARD_RECALC:-0}
 ENV
     export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
     export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
@@ -805,6 +806,15 @@ ENV
     # match — the "native hard score" that published comparisons report). Both are recorded
     # on every rollout either way; this picks the one the GATE optimizes against.
     export SPREADSHEETBENCH_SCORING="${SB_SCORING:-soft}"
+    # REWARD: as saved (default, SB_REWARD_RECALC=0) or after LibreOffice formula recalculation
+    # (1). As saved is how SkillOpt and WikiSkill score SpreadsheetBench, so it is the reward on
+    # every tier; the other is still recorded per rollout. Runs before this default graded with
+    # recalculation, so their published numbers are higher and not directly comparable.
+    export SPREADSHEETBENCH_REWARD_RECALC="${SB_REWARD_RECALC:-0}"
+    if [ "$SPREADSHEETBENCH_REWARD_RECALC" = "1" ]; then SB_REWARD_METRIC="${SPREADSHEETBENCH_SCORING}_restriction"
+    else SB_REWARD_METRIC="${SPREADSHEETBENCH_SCORING}_no_recalc"; fi
+    echo ">>> spreadsheetbench reward: $SB_REWARD_METRIC" >&2
+    printf '%s' "$SB_REWARD_METRIC" > "$OUT/reward_metric"
     # LATEST RUN. One history slot, overwritten by every spreadsheetbench run: the whole run dir
     # plus every output workbook (recalculated and as-saved), kept on the runner so a finished
     # run can be re-scored offline and a later run can build on its seed (SB_REUSE_LATEST_BASELINE).
@@ -997,7 +1007,14 @@ for k in ("train", "val", "test"):
         raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
 print(f">>> reusing the seed of kept run {meta.get('run_id')} ({meta.get('run_url')})", file=sys.stderr)
 PY
-  REUSE_YAML="reuse_baseline:     \"$PRIOR\""
+  # Reuse a COPY re-scored under THIS run's reward: the kept run may have used another one (runs
+  # before the as-saved default graded with recalculation), and a baseline in a different metric
+  # would make every gate decision wrong. The kept slot itself is never modified.
+  RESCORED="$WORK/reused_seed_run"
+  rm -rf "$RESCORED" && mkdir -p "$RESCORED" && cp -a "$PRIOR" "$RESCORED/run_suite" || exit 1
+  "$PY" "$REPO/ci/benchmarks/spreadsheetbench/utils/rescore_run.py" "$RESCORED/run_suite" \
+        --metric "$SB_REWARD_METRIC" >&2 || { echo "::error:: could not re-score the kept run" >&2; exit 1; }
+  REUSE_YAML="reuse_baseline:     \"$RESCORED/run_suite\""
 fi
 
 cat > "$PROJ/capevolve.yaml" <<YAML
@@ -1148,7 +1165,7 @@ if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && 
 {"bench": "$BENCH", "tier": "$TIER", "run_id": "${GITHUB_RUN_ID:-local}",
  "run_url": "${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}",
  "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
- "empty_seed": "${SB_EMPTY_SEED:-0}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+ "empty_seed": "${SB_EMPTY_SEED:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 JSON
     rm -rf "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
       && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2

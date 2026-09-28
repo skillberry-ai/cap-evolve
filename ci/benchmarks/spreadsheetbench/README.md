@@ -112,19 +112,27 @@ Runs before this change used our own seed-42 2:1:7 draw, kept as
 `split_ids.capevolve_seed42.json` (it shares 194 of 280 test tasks with SkillOpt's). Their
 numbers stay valid on that split but are not on the papers' partition.
 
-### Two scorings of every output: recalculated, and as saved
+### The reward is the workbook as saved; recalculation is recorded too
 
-Each output workbook is compared twice. The **reward** is the comparison after headless
-LibreOffice recalculates formula caches. Before that, the workbook is also compared **exactly as
-the agent saved it**, recorded as the non-primary metrics `hard_no_recalc` / `soft_no_recalc`
-(per task in `metrics.jsonl`, per candidate and split in `report.md`).
+Each output workbook is compared twice. First **exactly as the agent saved it**, then after
+headless LibreOffice recalculates formula caches. On every tier the **reward** is the as-saved
+comparison (`hard_no_recalc` / `soft_no_recalc`, following `SB_SCORING`). The recalculated one
+is recorded as the non-primary `hard_restriction` / `soft_restriction`. Both appear per task in
+`metrics.jsonl` and per candidate and split in `report.md`; `runmeta.json` names the reward in
+`reward_metric`.
 
-The second one exists because SkillOpt's evaluator never recalculates
-(`openpyxl.load_workbook(..., data_only=True)`): an answer written as a formula reads back as
-`None` and fails. The SkillOpt maintainers measured that choice at ~21 points of no-skill score
-for gpt-5.4 (41.4 vs 62.1, [SkillOpt#35](https://github.com/microsoft/SkillOpt/issues/35)). So
-`hard_no_recalc` is the number to put beside SkillOpt/WikiSkill figures, and the recalculated
-reward is the number to put beside harnesses that recalculate.
+We score as saved because that is how SkillOpt's evaluator works, and WikiSkill matches
+SkillOpt's setup: it loads with `openpyxl.load_workbook(..., data_only=True)` and never
+recalculates, so an answer written as a formula reads back as `None` and fails. The SkillOpt
+maintainers measured that choice at ~21 points of no-skill score for gpt-5.4 (41.4 vs 62.1,
+[SkillOpt#35](https://github.com/microsoft/SkillOpt/issues/35)). On `full_verified` with
+Gemma-4-31B-It the no-skill test score is 43.5 as saved and 58.3 recalculated (run
+36387149344). When a case fails only because its cells hold formulas, the feedback to the
+optimizer says so.
+
+`SB_REWARD_RECALC=1` (in a tier's `overrides.env`) makes the recalculated comparison the reward
+again. **Runs before this default** (before #538's follow-up) graded after recalculation, so
+their published spreadsheetbench numbers are higher and not comparable with later ones.
 
 ### The latest run is kept on the runner
 
@@ -138,6 +146,12 @@ val and train rollouts and its sealed test score carry over, and the seed is not
 It refuses if the kept run is another tier or another split. The seed's test score is used only
 while the seed capability is byte-identical; the seed snapshot comes from the kept run, so an
 empty-seed kept run gives an empty-seed baseline.
+
+The reuse works on a **copy** of the kept run, re-scored under this run's reward by
+`utils/rescore_run.py`: each rollout's recorded metric becomes its reward, and `baseline.json`
+and the seed's test result are rebuilt from them. A kept run graded after recalculation can
+therefore seed a run with the as-saved reward, and the other way round. The kept slot itself is
+never modified.
 
 ## The `smoke` tier — 10 tasks that are also part of `full_verified`
 

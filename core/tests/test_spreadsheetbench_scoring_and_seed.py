@@ -78,9 +78,12 @@ def test_reward_follows_the_selected_metric_and_both_are_always_recorded():
     """Verified against the adapter source: score() must pick reward by SCORING and keep BOTH
     metrics, so either number is recoverable from any past run without re-running it."""
     src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
-    assert 'reward=hard if SCORING == "hard" else soft' in src
-    assert '"name": "soft_restriction"' in src and '"name": "hard_restriction"' in src
-    assert '"primary": SCORING == "soft"' in src and '"primary": SCORING == "hard"' in src
+    assert 'reward = hard if SCORING == "hard" else soft' in src
+    assert 'reward = hard_nr if SCORING == "hard" else soft_nr' in src
+    for name in ("soft_restriction", "hard_restriction", "soft_no_recalc", "hard_no_recalc"):
+        assert f'"name": "{name}"' in src
+    assert '"primary": REWARD_RECALC and SCORING == "hard"' in src
+    assert '"primary": not REWARD_RECALC and SCORING == "hard"' in src
     # hard must remain all-or-nothing over the test cases.
     assert "hard = 1.0 if all(test_results) else 0.0" in src
 
