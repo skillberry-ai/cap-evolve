@@ -9,6 +9,17 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **The dashboard's Process tab was empty (a 404) in every static export** (#525). Two defects,
+  both needed to break it. The iframe loaded `/api/runs/<id>/process-html`, a route only the
+  live backend has; on GitHub Pages the absolute path resolved outside `/cap-evolve/`. And
+  `export_static` never shipped the page: the run's `dashboard.html` only reached the bundle
+  through the generic `/file` dump, cut at 256 KiB (1.3 MB on run 36175707483). The exporter
+  now copies `dashboard.html` unchanged to `data/runs_<id>_process_html.html` and sets
+  `capabilities.process_html` from what it wrote, not from what the run dir had. In static mode
+  the panel fetches that file from the data base and renders it through `srcdoc`, so it also
+  works under a live `?dataBase=` on raw.githubusercontent.com, which serves `.html` as
+  `text/plain`. The live backend (a local `cap-evolve dashboard`) is unchanged: it still loads
+  the `/api/*` route directly. Forward-only: bundles already published keep their old UI.
 - **The gate accepted candidates that destroyed previously-solved tasks, and its own record
   said nothing about it.** Acceptance is decided on the MEAN paired Δ, so a candidate that
   TRADES tasks — fixing some, breaking others — passes whenever the net is positive. That is

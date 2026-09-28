@@ -76,8 +76,10 @@ export function isLiveOverride(): boolean {
  * pushed this run's first snapshot yet, not a real error. */
 export class LivePendingError extends Error {}
 
-async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const target = STATIC_MODE ? `${dataBase()}/${staticSlug(url)}.json` : url
+/** Fetch an /api/* path — or, in STATIC_MODE, its `<slug><ext>` file under the data base.
+ * Throws for a non-OK response (LivePendingError for a 404 under a live override). */
+async function fetchOK(url: string, ext: string, signal?: AbortSignal): Promise<Response> {
+  const target = STATIC_MODE ? `${dataBase()}/${staticSlug(url)}${ext}` : url
   const res = await fetch(target, { signal })
   if (!res.ok) {
     const message = `${res.status} ${res.statusText} for ${target}`
@@ -86,7 +88,11 @@ async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
     }
     throw new Error(message)
   }
-  return (await res.json()) as T
+  return res
+}
+
+async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  return (await (await fetchOK(url, '.json', signal)).json()) as T
 }
 
 export const api = {
@@ -148,6 +154,14 @@ export const api = {
   streamURL: (id: string) => `/api/runs/${encodeURIComponent(id)}/stream`,
 
   /** The optimizer's own self-rendered dashboard.html, served raw (not through the
-   *  size-capped /file route) so it renders as a real document in an iframe. */
+   *  size-capped /file route) so it renders as a real document in an iframe.
+   *  Live backend only: a static export has no /api/*; use processHtml() there. */
   processHtmlURL: (id: string) => `/api/runs/${encodeURIComponent(id)}/process-html`,
+
+  /** The same document as text, for an iframe's srcdoc. In STATIC_MODE it is the export's
+   *  `<slug>.html` file under the data base. It is read as text, not loaded as an iframe
+   *  src, because a live `?dataBase=` points at raw.githubusercontent.com, which serves
+   *  .html as text/plain — the iframe would show the source, not the page. */
+  processHtml: async (id: string, signal?: AbortSignal) =>
+    (await fetchOK(`/api/runs/${encodeURIComponent(id)}/process-html`, '.html', signal)).text(),
 }
