@@ -23,7 +23,7 @@ What differs:
   a full 170-rollout sweep (34 tasks × 5 trials).
 - **Budget.** T2's per-task budget: `num_trials: 5, max_iterations: 3, stall: 2, max_usd: 50.0,
   max_optimizer_usd: 20.0`. G2's actual run budget (per `state.json`, not the post-run-edited
-  `capevolve.yaml` — see [`v4_g_e1/README.md`](v4_g_e1/README.md) for that divergence):
+  `capevolve.yaml` — see [`../../recipes/v4/v4_g_e1/README.md`](../../recipes/v4/v4_g_e1/README.md) for that divergence):
   `max_iterations: 15, stall: 6, max_usd: 1000.0, max_optimizer_usd: 400.0, stop_at_reward: 1.0`.
 - **`gate_k_se`.** G2 ran with `gate_k_se: 0.0` — any positive paired delta is accepted, ignoring
   the SE margin. T2 has no analogous setting; it doesn't gate on paired significance at all.
