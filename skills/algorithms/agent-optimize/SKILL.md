@@ -96,13 +96,14 @@ right" but "did the agent follow it at all". Never exercised ⇒ the **form** is
 still wrong ⇒ the content is.
 
 **2. Bucket every edit before spending, per the form table below** (deterministic → B,
-probabilistic → A). **A:** sibling candidates, N≥3 — screen every one first (step 3, kill-only),
-then `merge_search.py` on the disjoint SCREEN-SURVIVORS, fewest candidates possible, and gate only
-the merged one(s) plus any unmergeable survivor on full val — never gate N siblings individually
-when screen-then-merge was an option. **B:** merge every low-risk structural fix into one working
-copy, gate once via steps 3–4 — no per-fix screen/gate, each part already cleared its own bar
-alone. Attack clusters in `score_lost` order; when `tools` is a selected capability, prefer a
-code-level fix over a prompt-level one for the same cluster (`references/algorithm.md`).
+probabilistic → A). **A:** sibling candidates, N≥3 — screen each first (step 3, kill-only), then
+`merge_search.py` on disjoint SCREEN-SURVIVORS, and gate only the merged one(s) plus any
+unmergeable survivor on full val — never gate N siblings individually when
+screen-then-merge was an option. Fewer than 3 needs `--single-candidate-justification` or an
+unaffordable `--afford-check-file`, or it refuses. **B:** merge every low-risk structural fix
+into one working copy, gate once via steps 3–4 — no per-fix screen/gate, each part cleared its
+bar. Attack by `score_lost`; prefer code-level over prompt-level fixes for
+`tools`. Details: `references/algorithm.md`, "Bucketing edits before spending" / "Parallelism".
 
 ```bash
 TAG="cand_1"                                   # unique per candidate — it IS the rollout tag

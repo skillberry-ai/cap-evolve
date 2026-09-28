@@ -481,6 +481,22 @@ cap-evolve's own state model dictates (see `docs/SUBAGENT_PATTERNS.md`):
   exhaust a budget that had room for a single round (`spend.py --n-siblings N`).
 - **Screening is where fan-out pays best.** N tier-1 screens cost roughly one full-val eval
   between them, so the expensive stage runs only for survivors.
+- **N≥3 sibling candidates is enforced, not recommended.** This section has said "sibling
+  candidates, N≥3" since PR #522 ("screen-then-merge before gate, cluster priority,
+  framework-improvements handover"). Every round in every audited multi-hour agent-mode run
+  (two full run dirs' `events.jsonl`) proposed exactly 1 candidate anyway — the
+  guidance was prose an agent could skip under time pressure, and it always did, spending
+  wall clock and optimizer budget on one hypothesis at a time when 3+ independent ones could
+  have been screened and gated together. `round.py` now refuses `--candidates` with fewer than
+  `MIN_SIBLINGS` (3) tags unless the driver either records an explicit
+  `--single-candidate-justification` or supplies an `--afford-check-file` (spend.py's own
+  `--n-siblings 3` output) that reports `affordable: false` — the same affordability check this
+  section already told the driver to run BEFORE fanning out, now read automatically as the
+  reason instead of requiring it to be retyped. Either way the reason is written onto the
+  `agent_optimize_round_batch` event, so a serial round stays auditable rather than becoming
+  the silent default again. This does not make 1 candidate impossible: a `narrow_scope`
+  round (this document, "Bucketing edits before spending") or a budget that genuinely cannot
+  afford 3 are both legitimate, and now both leave a record instead of an assumption.
 
 Inside a single evaluation there are two further, composable sources of concurrency: an
 adapter's own `run_batch`/`run_trials` fast path (some adapters run their whole task

@@ -250,7 +250,9 @@ def test_the_merge_result_goes_through_rounds_normal_gate_cascade(tmp_path):
     p = subprocess.run(
         [sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
          "--project", str(project), "--candidates", ab["tag"], "--n-trials", "2",
-         "--concurrency", "1"],
+         "--concurrency", "1",
+         "--single-candidate-justification",
+         "screen-then-merge: gating the merged survivor alone per SKILL.md's bucket A"],
         capture_output=True, text=True, env=_env())
     assert p.returncode == 0, f"round.py could not gate the merge candidate: {p.stdout}\n{p.stderr}"
     table = json.loads(p.stdout)

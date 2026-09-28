@@ -67,7 +67,8 @@ def test_round_seeds_missing_memory_files_into_a_bare_cp_workdir(tmp_path):
 
     p = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
               "--project", str(project), "--candidates", "cand_1", "--n-trials", "1",
-              "--skip-screen-ladder"])
+              "--skip-screen-ladder",
+              "--single-candidate-justification", "memory-seeding regression guard"])
     assert p.returncode == 0, f"round.py failed: {p.stdout}\n{p.stderr}"
     _assert_all_present_and_nonempty(cand_dir, where="round.py")
 

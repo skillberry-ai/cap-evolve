@@ -594,7 +594,10 @@ def _round_control(c: Checker, tmp: Path) -> None:
               "--candidates", "cand_x", "--n-trials", "1", "--k-se", "1.0",
               # This check exercises round.py's own gate mechanics, not the screen ladder
               # (covered separately below) — cand_x never went through screen.py.
-              "--skip-screen-ladder"])
+              "--skip-screen-ladder",
+              # Nor the N>=3 sibling default: this check exercises round.py's gate mechanics
+              # with a single planted candidate, not the fan-out policy (covered separately).
+              "--single-candidate-justification", "check.py: single-candidate gate mechanics"])
     if r:
         ctl_tag = r.get("control", {}).get("tag") or ""
         c.check(ctl_tag.startswith("ctl_null_i") and (work / ctl_tag).is_dir(),
@@ -629,7 +632,8 @@ def _round_control(c: Checker, tmp: Path) -> None:
     r2 = _run(c, "round.py --gate-against control",
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--k-se", "1.0",
-               "--gate-against", "control", "--skip-screen-ladder"])
+               "--gate-against", "control", "--skip-screen-ladder",
+               "--single-candidate-justification", "check.py: single-candidate gate mechanics"])
     if r2:
         ref = (r2.get("gated_against") or {})
         c.check(str(ref.get("tag", "")).startswith("ctl_null_i")
@@ -640,7 +644,9 @@ def _round_control(c: Checker, tmp: Path) -> None:
     r3 = _run(c, "round.py --gate-against control --no-control (refused)",
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--gate-against", "control",
-               "--no-control", "--skip-screen-ladder"], expect_rc=2)
+               "--no-control", "--skip-screen-ladder",
+               "--single-candidate-justification", "check.py: single-candidate gate mechanics"],
+              expect_rc=2)
     c.check(bool(r3) and "control" in json.dumps(r3),
             f"gating against a control that was skipped must be refused, got {r3}",
             note="asking to gate against a control while disabling it is refused, not ignored")

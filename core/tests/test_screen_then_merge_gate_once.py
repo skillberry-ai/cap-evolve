@@ -187,7 +187,9 @@ def test_two_disjoint_siblings_screen_survive_merge_and_gate_exactly_once(tmp_pa
     # 3. Gate ONLY the merged candidate on full val — never the two originals separately.
     table = _run([sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
                    "--project", str(project), "--candidates", merged_tag,
-                   "--n-trials", "2", "--concurrency", "1"])
+                   "--n-trials", "2", "--concurrency", "1",
+                   "--single-candidate-justification",
+                   "screen-then-merge: gating the merged survivor alone per SKILL.md's bucket A"])
 
     assert len(table["candidates"]) == 1, (
         f"round.py must gate exactly one candidate dir, not one per sibling: {table}")

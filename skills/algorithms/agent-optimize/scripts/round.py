@@ -360,6 +360,66 @@ def assert_rows_were_judged(rows: list[dict]) -> None:
             "back, so these rows would publish as 'no movement' for candidates nothing judged")
 
 
+#: Minimum sibling candidates a round is expected to carry. Below this, going serial requires
+#: a recorded reason — either an explicit justification or an auto-detected budget block from
+#: spend.py — never a silent default. See `sibling_justification`.
+MIN_SIBLINGS = 3
+
+
+class SingleCandidateUnjustified(RuntimeError):
+    """Fewer than MIN_SIBLINGS candidates with no recorded reason why.
+
+    Audited runs (`.capevolve/run_20260928_v13_.../events.jsonl`,
+    `.capevolve/run_20260924_v7_.../events.jsonl`) showed every single round proposing exactly
+    one candidate, never the N>=3 SKILL.md step 2 already recommends — because the guidance was
+    prose an agent could always skip under time pressure, and it always did. This is the
+    edit-form table applied to the skill itself: where the agent has the criterion (can I
+    afford 3?) and violates it regardless, the form that works is a guard in the code, not a
+    fourth restatement in prose (issue tracked from PR #522 onward). The guard does not make 1
+    candidate impossible — narrow_scope rounds and unaffordable budgets are real — it makes
+    going serial require a REASON on the record, in events.jsonl, so it is auditable.
+    """
+
+    def __init__(self, n: int):
+        super().__init__(
+            f"{n} candidate(s) passed via --candidates, below the default MIN_SIBLINGS="
+            f"{MIN_SIBLINGS}. agent-optimize's default is N>=3 sibling candidates per round "
+            "(SKILL.md step 2) because every audited run that skipped this ran serially every "
+            "round and paid for it in wall clock. Fix ONE of: "
+            "(1) propose 3 siblings and pass --candidates cand_1,cand_2,cand_3; "
+            "(2) pass --single-candidate-justification \"<why only 1 this round>\" (e.g. "
+            "\"diagnose surfaced only one well-evidenced cluster this round\"); "
+            "(3) pass --afford-check-file <path to spend.py's JSON output with --n-siblings "
+            f"{MIN_SIBLINGS}> when it reports affordable: false — the block is then read "
+            "automatically as the justification.")
+
+
+def sibling_justification(n_candidates: int, explicit: str | None,
+                          afford_check_file: str | None) -> tuple[str | None, str | None]:
+    """Resolve why this round runs below MIN_SIBLINGS, or raise if it cannot.
+
+    Returns ``(justification, source)`` — both ``None`` when ``n_candidates`` already meets
+    the default and no justification was needed. ``source`` is ``"explicit"`` or
+    ``"afford_unaffordable"``, recorded on the round_batch event so a later audit can tell an
+    agent's own reasoning from an automatically-detected budget block.
+    """
+    if n_candidates >= MIN_SIBLINGS:
+        return None, None
+    if explicit and explicit.strip():
+        return explicit.strip(), "explicit"
+    if afford_check_file:
+        try:
+            data = json.loads(Path(afford_check_file).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise SingleCandidateUnjustified(n_candidates) from exc
+        afford = data.get("afford", data) if isinstance(data, dict) else {}
+        if isinstance(afford, dict) and afford.get("affordable") is False:
+            blockers = afford.get("blockers") or ["no blockers listed"]
+            return (f"spend.py reports {MIN_SIBLINGS} siblings unaffordable: "
+                    + "; ".join(str(b) for b in blockers)), "afford_unaffordable"
+    raise SingleCandidateUnjustified(n_candidates)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="round")
     p.add_argument("--run-dir", required=True)
@@ -419,6 +479,16 @@ def build_parser() -> argparse.ArgumentParser:
                         "compliance event instead of just the bare choice — e.g. "
                         "'spend.py: break-even unreachable on this split size' or 'pure "
                         "additive READ tool, screening cost exceeds expected savings'.")
+    p.add_argument("--single-candidate-justification", default=None,
+                   help=f"required (or --afford-check-file) when --candidates has fewer than "
+                        f"{MIN_SIBLINGS} tags — free text, e.g. \"diagnose surfaced only one "
+                        "cluster this round\". Recorded on the agent_optimize_round_batch "
+                        "event so going serial is auditable, not silent.")
+    p.add_argument("--afford-check-file", default=None,
+                   help=f"path to spend.py's JSON output (run with --n-siblings {MIN_SIBLINGS}). "
+                        "When it reports afford.affordable: false, that block is read as the "
+                        "auto-detected justification for fewer than "
+                        f"{MIN_SIBLINGS} candidates — no hand-typed reason needed.")
     return p
 
 
@@ -428,6 +498,9 @@ def main(argv=None) -> int:
     except GateCheckFailed as exc:
         # A traceback would be loud enough, but the driver reads this output to decide what to do
         # next, so say it in the words the skill uses: the round is not booked, re-gating is free.
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except SingleCandidateUnjustified as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
@@ -472,6 +545,13 @@ def _main(argv=None) -> int:
     if missing:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))
         return 2
+
+    # Default N>=3 sibling candidates per round, ENFORCED rather than merely recommended
+    # (SKILL.md step 2) — see SingleCandidateUnjustified's docstring for why. Resolved before
+    # any work-dir mutation or spend below, so an unjustified serial round fails fast with
+    # nothing charged.
+    JUSTIFICATION, JUSTIFICATION_SOURCE = sibling_justification(
+        len(tags), args.single_candidate_justification, args.afford_check_file)
 
     # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
     # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them
@@ -539,7 +619,9 @@ def _main(argv=None) -> int:
     # from a candidate's OWN commit-time iteration count would rename it out from under the
     # candidates committed after the first. STEM is already unique per invocation
     # (iteration + attempt), so it doubles as the batch id — no separate id needed.
-    run_dir.log_event("agent_optimize_round_batch", batch_id=STEM, candidates=list(tags))
+    run_dir.log_event("agent_optimize_round_batch", batch_id=STEM, candidates=list(tags),
+                      n_candidates=len(tags), single_candidate_justification=JUSTIFICATION,
+                      single_candidate_justification_source=JUSTIFICATION_SOURCE)
     ctl_tags: list[str] = []
     REUSED = None
     # Not under --gate-against control: that mode's whole premise is a control measured
