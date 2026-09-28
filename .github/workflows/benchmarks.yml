@@ -441,6 +441,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # TEMPORARY (skillberry-2 smoke test): mirror the skillberry-1 PATH fix — this host's
+      # runner reports a bare system PATH, missing ~/.local/bin (git wrapper/uv/claude) and
+      # ~/bin (jq). "Setup runner env" failed with "git: command not found" (exit 127)
+      # without this.
+      - name: Restore user tool dirs on PATH
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
       - name: Setup runner env
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
