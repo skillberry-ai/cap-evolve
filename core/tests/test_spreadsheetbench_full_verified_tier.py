@@ -29,6 +29,7 @@ Filtering the 912 archive to these ids would score a DIFFERENT, older benchmark 
 claiming comparability. The verified archive must be fetched as its own download.
 """
 
+import hashlib
 import json
 import re
 import subprocess
@@ -44,6 +45,7 @@ TIER = BENCH / "full_verified"
 TASKS = TIER / "tasks.json"
 SPLIT = TIER / "split_ids.json"
 GEN = BENCH / "utils" / "make_split.py"
+SKILLOPT_GEN = BENCH / "utils" / "make_skillopt_split.py"
 FETCH_SH = BENCH / "fetch_data.sh"
 CI_SETUP = REPO / "ci" / "benchmarks" / "lib" / "ci_setup.sh"
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
@@ -118,18 +120,34 @@ def test_split_covers_exactly_the_tier_tasks(split, tasks):
     assert covered == ids, f"split covers {len(covered)} ids but the tier has {len(ids)}"
 
 
-def test_split_is_reproducible_from_the_committed_generator():
-    """Same generator, same seed 42, same 2:1:7 as `full` — only the task list differs."""
+def test_split_is_skillopts_released_split_at_the_pinned_commit(split):
+    """The ids are SkillOpt's released manifests (which WikiSkill matches), not a reconstruction.
+
+    Checked offline against the digests make_skillopt_split.py recorded when it fetched them, and
+    against the commit the script pins, so neither file can be edited without the other."""
+    source = json.loads((TIER / "split_source.json").read_text(encoding="utf-8"))
+    assert source["repo"] == "microsoft/SkillOpt"
+    assert source["dataset_file"] == "spreadsheetbench_verified_400.tar.gz"
+    gen = SKILLOPT_GEN.read_text(encoding="utf-8")
+    assert f'COMMIT = "{source["commit"]}"' in gen, "split_source.json and the generator pin differ"
+    for name in ("train", "val", "test"):
+        got = hashlib.sha256("\n".join(sorted(split[name])).encode()).hexdigest()
+        assert got == source["sha256_sorted_ids"][name], (
+            f"{name} ids differ from SkillOpt's release — regenerate with "
+            "`python3 ci/benchmarks/spreadsheetbench/utils/make_skillopt_split.py --write`"
+        )
+
+
+def test_the_previous_reconstruction_is_kept_for_the_runs_that_used_it():
+    """Records before the switch (e.g. docs/experiments/2026-09-26-...) ran on our own seed-42
+    2:1:7 draw. It stays committed, and still regenerates from make_split.py, so those runs remain
+    checkable."""
+    old = TIER / "split_ids.capevolve_seed42.json"
     out = subprocess.run(
-        [sys.executable, str(GEN), "--tasks", str(TASKS), "--out", str(SPLIT)],
+        [sys.executable, str(GEN), "--tasks", str(TASKS), "--out", str(old)],
         capture_output=True, text=True, check=True,
     )
-    assert out.stdout == SPLIT.read_text(encoding="utf-8"), (
-        "committed split_ids.json differs from the generator's output — regenerate with "
-        "`python3 ci/benchmarks/spreadsheetbench/utils/make_split.py "
-        "--tasks ci/benchmarks/spreadsheetbench/full_verified/tasks.json "
-        "--out ci/benchmarks/spreadsheetbench/full_verified/split_ids.json --write`"
-    )
+    assert out.stdout == old.read_text(encoding="utf-8")
 
 
 def test_split_does_not_reuse_fulls_partition(split):

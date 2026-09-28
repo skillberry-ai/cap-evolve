@@ -805,6 +805,18 @@ ENV
     # match — the "native hard score" that published comparisons report). Both are recorded
     # on every rollout either way; this picks the one the GATE optimizes against.
     export SPREADSHEETBENCH_SCORING="${SB_SCORING:-soft}"
+    # LATEST RUN. One history slot, overwritten by every spreadsheetbench run: the whole run dir
+    # plus every output workbook (recalculated and as-saved), kept on the runner so a finished
+    # run can be re-scored offline and a later run can build on its seed (SB_REUSE_LATEST_BASELINE).
+    # Outputs are otherwise deleted after scoring, and the runner's work dir is wiped per job.
+    SB_KEEP_LATEST_RUN="${SB_KEEP_LATEST_RUN:-1}"
+    SB_LATEST_DIR="${SB_LATEST_DIR:-$HOME/.cache/capevolve-latest/spreadsheetbench}"
+    if [ "$SB_KEEP_LATEST_RUN" = "1" ]; then
+      export SPREADSHEETBENCH_KEEP_OUTPUTS=1
+      echo "SPREADSHEETBENCH_KEEP_OUTPUTS=1" >> "$WORK/.env"
+      # Kept outputs accumulate in the shared data dir, so start this run from an empty one.
+      rm -rf "${SB_DATA:?}/outputs"
+    fi
     ;;
   rfe-creator)
     # Optimizes 7 Claude Code skills (rfe.speedrun, rfe.create, rfe.auto-fix, rfe.review,
@@ -958,6 +970,32 @@ print(f">>> plan: {floor}-{upper} rollouts (advisory floor-upper{note}) — "
       f"(val={val} test={test} trials={trials} iterations={iters})")
 PLAN
 
+# REUSE THE LATEST RUN'S SEED. SB_REUSE_LATEST_BASELINE=1 builds this run on the seed measured by
+# the latest kept spreadsheetbench run (see LATEST RUN above): its val/train rollouts and sealed
+# test score are carried over and the seed is not re-evaluated (harness.reuse_baseline), so the
+# plan above over-counts by the seed's evals. The prior run's frozen split wins over
+# split_ids_file, so it must be THIS tier's split exactly.
+REUSE_YAML=""
+if [ "${BENCH:-}" = "spreadsheetbench" ] && [ "${SB_REUSE_LATEST_BASELINE:-0}" = "1" ]; then
+  PRIOR="$SB_LATEST_DIR/run_suite"
+  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" <<'PY' || exit 1
+import json, sys
+meta_p, prior_p, want_p, tier = sys.argv[1:5]
+try:
+    meta, prior = json.load(open(meta_p)), json.load(open(prior_p))
+except OSError as e:
+    raise SystemExit(f"::error:: SB_REUSE_LATEST_BASELINE=1 but no kept run to reuse: {e}")
+want = json.load(open(want_p))
+if meta.get("tier") != tier:
+    raise SystemExit(f"::error:: the kept run is tier {meta.get('tier')!r}, this run is {tier!r}")
+for k in ("train", "val", "test"):
+    if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
+        raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
+print(f">>> reusing the seed of kept run {meta.get('run_id')} ({meta.get('run_url')})", file=sys.stderr)
+PY
+  REUSE_YAML="reuse_baseline:     \"$PRIOR\""
+fi
+
 cat > "$PROJ/capevolve.yaml" <<YAML
 capabilities:       $CAPS
 capability_path:    seed_capability
@@ -988,6 +1026,7 @@ $ALGO_YAML
 ${EXTRA_YAML:-}
 dataset_source:     adapter
 split_ids_file:     "inputs/split_ids.json"
+$REUSE_YAML
 # With an explicit split_ids_file the partition is fixed, so split_seed only varies the
 # per-trial ROLLOUT seeding (harness base_seed reads splits.seed). That is what makes
 # ">=3 seeds" possible on one committed split: dispatch the same run with 42/43/44.
@@ -1091,6 +1130,27 @@ if [ -d "$RUN_DIR/host" ]; then
     esac
   done
   echo ">>> host record -> $OUT/host ($(du -sh "$OUT/host" 2>/dev/null | cut -f1))" >&2
+fi
+
+# LATEST RUN (spreadsheetbench): replace the one kept slot with this run. Staged next to the slot
+# and swapped in only once complete, so a failure here leaves the previous kept run intact.
+if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && [ -d "$RUN_DIR" ]; then
+  STAGE="$SB_LATEST_DIR.staging"
+  rm -rf "$STAGE" && mkdir -p "$STAGE" && cp -a "$RUN_DIR" "$STAGE/run_suite" \
+    && { [ ! -d "$SB_DATA/outputs" ] || mv "$SB_DATA/outputs" "$STAGE/outputs"; } \
+    && cp "$OUT/metrics.jsonl" "$OUT/report.md" "$STAGE/" 2>/dev/null
+  if [ -d "$STAGE/run_suite" ]; then
+    cat > "$STAGE/latest.json" <<JSON
+{"bench": "$BENCH", "tier": "$TIER", "run_id": "${GITHUB_RUN_ID:-local}",
+ "run_url": "${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}",
+ "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
+ "empty_seed": "${SB_EMPTY_SEED:-0}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+JSON
+    rm -rf "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
+      && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2
+  else
+    echo "::warning:: could not keep this run as the latest spreadsheetbench run (staging failed)" >&2
+  fi
 fi
 
 cat "$OUT/report.md"

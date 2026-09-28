@@ -77,6 +77,47 @@ def _infra_task(pt: dict) -> bool:
     return True
 
 
+def _secondary_metrics(pt: dict) -> dict:
+    """``{name: value}`` of a per-task score's NON-primary metrics (primary == reward)."""
+    return {m["name"]: m.get("value") for m in (pt.get("metrics") or [])
+            if m.get("name") and not m.get("primary")}
+
+
+def _secondary_metrics_section(final: dict) -> list[str]:
+    """Every metric the adapter recorded, per candidate and split, from final.json's bookend.
+
+    Only rendered when some task reports a secondary metric, so benchmarks without any keep
+    exactly the report they had.
+    """
+    names: list[str] = []
+    has_secondary = False
+    cells: list[tuple[str, str, int, dict]] = []
+    for side in ("seed", "best"):
+        for split in ("train", "val", "test"):
+            vals: dict[str, list[float]] = {}
+            pts = [pt for pt in (((final.get(side) or {}).get(split) or {}).get("per_task") or [])
+                   if not _infra_task(pt)]
+            for pt in pts:
+                for m in pt.get("metrics") or []:
+                    if not m.get("name") or not isinstance(m.get("value"), (int, float)):
+                        continue
+                    has_secondary |= not m.get("primary")
+                    if m["name"] not in names:
+                        names.append(m["name"])
+                    vals.setdefault(m["name"], []).append(float(m["value"]))
+            if vals:
+                cells.append((side, split, len(pts), {k: sum(v) / len(v) for k, v in vals.items()}))
+    if not has_secondary:
+        return []
+    out = ["", "### Metrics by candidate and split", "",
+           "| candidate | split | n | " + " | ".join(f"`{n}`" for n in names) + " |",
+           "|---|---|--:|" + "--:|" * len(names)]
+    for side, split, n, means in cells:
+        vals_txt = " | ".join(f"{means[k]:.4f}" if k in means else "—" for k in names)
+        out.append(f"| {side} | {split} | {n} | {vals_txt} |")
+    return out
+
+
 def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
     """Per-iteration latency/cost timeline for ONE run, built from events.jsonl.
 
@@ -285,13 +326,17 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
         rb = b.get("reward")
         ro = o.get("reward")
         infra = _infra_task(o) or _infra_task(b)
-        rows.append({
+        row = {
             "bench": bench, "tier": tier, "task": tid,
             "reward_baseline": rb, "reward_opt": ro,
             "reward_delta": (round(ro - rb, 6) if isinstance(rb, (int, float)) and isinstance(ro, (int, float)) and not infra else None),
             "opt_infra": infra,
             "run_dir": str(rd),
-        })
+        }
+        mb, mo = _secondary_metrics(b), _secondary_metrics(o)
+        if mb or mo:
+            row["metrics_baseline"], row["metrics_opt"] = mb, mo
+        rows.append(row)
     if jsonl_path:
         with open(jsonl_path, "w", encoding="utf-8") as f:
             for r in rows:
@@ -361,6 +406,8 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
                    "no valid result. Check the model gateway (budget/429).")
     else:
         out.append("**Suite:** (no aggregate reward — run may have failed; check logs.)")
+
+    out.extend(_secondary_metrics_section(final))
 
     # ---- render: per-iteration latency/cost timeline ----
     out.append("")

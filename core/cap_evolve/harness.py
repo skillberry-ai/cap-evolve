@@ -30,6 +30,7 @@ from . import footprint as footprint_mod
 from . import gate as gate_mod
 from . import graph as graph_mod
 from . import integrity
+from .cache import hash_candidate_dir
 from .memory import MemorySkill
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
@@ -634,6 +635,30 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
     return result
 
 
+def _prior_seed_test(prior: Path) -> dict | None:
+    """The seed's test SplitResult dict from a prior run's final.json, or None if it has none."""
+    try:
+        final = json.loads((prior / "final.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    seed_test = (final.get("seed") or {}).get("test")
+    if not seed_test and final.get("baseline_id") == "seed":
+        seed_test = final.get("test_baseline")
+    return seed_test or None
+
+
+def reused_seed_test(run_dir: RunDir) -> dict | None:
+    """The seed's test result carried over by ``reuse_baseline``, if the seed is still those bytes."""
+    p = run_dir.root / "reused_seed_test.json"
+    if not p.exists():
+        return None
+    rec = json.loads(p.read_text(encoding="utf-8"))
+    if rec.get("seed_hash") != hash_candidate_dir(run_dir.candidate_dir("seed")):
+        run_dir.log_event("reused_seed_test_ignored", reason="seed candidate changed since reuse")
+        return None
+    return rec
+
+
 def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     """Reuse a PRIOR run's baseline instead of recomputing it.
 
@@ -677,6 +702,26 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(prior_val_rollouts, dst)
+
+    # The seed's TRAIN rollouts too: finalize's bookend and diagnose read them by tag, so with
+    # them on disk neither re-evaluates the seed on train.
+    prior_train = prior / "rollouts" / "train"
+    if prior_train.is_dir():
+        dst = run_dir.rollouts / "train"
+        dst.mkdir(parents=True, exist_ok=True)
+        for f in prior_train.glob("*__seed__t*.json"):
+            shutil.copy2(f, dst / f.name)
+
+    # And the seed's sealed TEST score, as a RESULT rather than as rollouts: test rollouts on disk
+    # would trip begin_test_attempt's second-look guard. finalize uses it only if the seed bytes
+    # still match (reused_seed_test).
+    seed_test = _prior_seed_test(prior)
+    if seed_test is not None:
+        _atomic_write(run_dir.root / "reused_seed_test.json", json.dumps({
+            "prior_run_dir": str(prior),
+            "seed_hash": hash_candidate_dir(run_dir.candidate_dir("seed")),
+            "test": seed_test,
+        }, indent=2))
 
     run_dir.set_best("seed")
 
@@ -3914,14 +3959,28 @@ def finalize(adapter, *, run_dir: RunDir, best_dir: Path, n_trials: int = 1, ks=
     algorithm-specific — instead of prompted behaviour that a run can skip.
     """
     run_dir.begin_test_attempt()
-    result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
-                                n_trials=n_trials, ks=ks, tag="FINAL")
+    # A seed test score carried over by reuse_baseline (same seed bytes, same frozen split) stands
+    # in for re-scoring the seed on test — the test rollouts of the seed are the costliest eval.
+    reused = reused_seed_test(run_dir)
+    best_is_seed = run_dir.best_id == "seed"
+    if reused and best_is_seed:
+        result = SplitResult.from_dict(reused["test"])
+    else:
+        result = evaluate_candidate(adapter, best_dir, run_dir=run_dir, split="test",
+                                    n_trials=n_trials, ks=ks, tag="FINAL")
     payload = {"test": result.to_dict(), "best_id": run_dir.best_id}
+    if reused:
+        payload["seed_test_reused_from"] = reused["prior_run_dir"]
+        run_dir.log_event("seed_test_reused", prior_run_dir=reused["prior_run_dir"],
+                          reward=reused["test"].get("reward"))
 
     # Baseline-on-test: the honest held-out comparison (optimized skills vs seed skills).
     if baseline_dir is not None and Path(baseline_dir).resolve() != Path(best_dir).resolve():
-        base = evaluate_candidate(adapter, baseline_dir, run_dir=run_dir, split="test",
-                                  n_trials=n_trials, ks=ks, tag="FINAL_seed")
+        if reused:
+            base = SplitResult.from_dict(reused["test"])
+        else:
+            base = evaluate_candidate(adapter, baseline_dir, run_dir=run_dir, split="test",
+                                      n_trials=n_trials, ks=ks, tag="FINAL_seed")
         payload["test_baseline"] = base.to_dict()
         payload["baseline_id"] = "seed"
         payload["test_delta"] = round(result.reward - base.reward, 6)

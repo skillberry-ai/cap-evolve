@@ -132,6 +132,9 @@ MAX_TURNS = int(os.environ.get("SPREADSHEETBENCH_MAX_TURNS", "5"))
 PREVIEW_ROWS = int(os.environ.get("SPREADSHEETBENCH_ROWS", "5"))
 CONCURRENCY = int(os.environ.get("SPREADSHEETBENCH_CONCURRENCY", "4"))
 EXEC_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_EXEC_TIMEOUT", "180"))
+# Keep every rollout's output workbooks instead of deleting them after scoring, plus an
+# un-recalculated copy (`*.norecalc.xlsx`) of each, so a run can be re-scored offline.
+KEEP_OUTPUTS = os.environ.get("SPREADSHEETBENCH_KEEP_OUTPUTS", "0") == "1"
 # Container teardown is bookkeeping, not work: keep it short so a hung server delays a
 # finished rollout by seconds, never by the exec timeout.
 RELEASE_TIMEOUT = int(os.environ.get("SPREADSHEETBENCH_RELEASE_TIMEOUT", "30"))
@@ -811,7 +814,7 @@ def _cleanup_output_dir(rollout) -> None:
     written by the container's uid.
     """
     run_tag = (getattr(rollout, "metadata", None) or {}).get("run_tag")
-    if not run_tag:
+    if not run_tag or KEEP_OUTPUTS:
         return
     try:
         shutil.rmtree(_data_dir() / "outputs" / run_tag, ignore_errors=True)
@@ -1544,6 +1547,19 @@ class Adapter(CapabilityAdapter):
         missing: list[int] = []
         mismatched: list[int] = []
         recalc_failed: list[int] = []   # cases whose formula recalc could not run
+        # The same comparison on the workbook AS THE AGENT SAVED IT, before LibreOffice fills
+        # formula caches. That is how SkillOpt's evaluator (and so the WikiSkill paper, which
+        # matches its setup) scores: a formula cell reads back as None and fails.
+        no_recalc_results: list[int] = []
+
+        def _matches(gt: Path, proc: Path) -> bool:
+            try:
+                ok, _ = vendor["compare_workbooks"](
+                    str(gt), str(proc), entry["instruction_type"], entry["answer_position"]
+                )
+            except Exception:
+                ok = False
+            return bool(ok)
         # How many copies this task is graded on comes from the dataset, not from a constant:
         # the 912 set ships three, the verified 400 ships one. See _case_indices.
         for idx in _case_indices(data_dir / "spreadsheet" / sid, sid):
@@ -1552,7 +1568,15 @@ class Adapter(CapabilityAdapter):
             if not proc_path.exists():
                 missing.append(idx)
                 test_results.append(0)
+                no_recalc_results.append(0)
                 continue
+
+            no_recalc_results.append(1 if _matches(gt_path, proc_path) else 0)
+            if KEEP_OUTPUTS:
+                try:
+                    shutil.copyfile(proc_path, proc_path.with_suffix(".norecalc.xlsx"))
+                except OSError:
+                    pass
 
             if libre:
                 # Recalculate cached formula values before comparing. NOT serialized: each
@@ -1571,19 +1595,15 @@ class Adapter(CapabilityAdapter):
                 elif not _recalc_workbook(proc_path, libre):
                     recalc_failed.append(idx)
 
-            try:
-                ok, _ = vendor["compare_workbooks"](
-                    str(gt_path), str(proc_path), entry["instruction_type"], entry["answer_position"]
-                )
-            except Exception:
-                ok = False
-
+            ok = _matches(gt_path, proc_path)
             test_results.append(1 if ok else 0)
             if not ok:
                 mismatched.append(idx)
 
         soft = sum(test_results) / len(test_results)
         hard = 1.0 if all(test_results) else 0.0
+        soft_nr = sum(no_recalc_results) / len(no_recalc_results)
+        hard_nr = 1.0 if all(no_recalc_results) else 0.0
 
         # Localize the failure while the produced workbook is still on disk. Only for a MISS,
         # and only on test case 1 — the diagnosis generalizes across the three cases and this
@@ -1612,7 +1632,8 @@ class Adapter(CapabilityAdapter):
             task_id=task.id,
             reward=hard if SCORING == "hard" else soft,
             feedback=feedback,
-            raw={"test_case_results": test_results},
+            raw={"test_case_results": test_results,
+                 "test_case_results_no_recalc": no_recalc_results},
             # Both are always recorded, whichever is the target — so the other metric can be
             # recovered from any past run's rollouts without re-running it.
             metrics=[
@@ -1620,6 +1641,10 @@ class Adapter(CapabilityAdapter):
                  "primary": SCORING == "soft", "direction": "higher"},
                 {"name": "hard_restriction", "value": hard,
                  "primary": SCORING == "hard", "direction": "higher"},
+                {"name": "soft_no_recalc", "value": soft_nr,
+                 "primary": False, "direction": "higher"},
+                {"name": "hard_no_recalc", "value": hard_nr,
+                 "primary": False, "direction": "higher"},
             ],
         )
 

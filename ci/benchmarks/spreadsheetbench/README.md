@@ -99,11 +99,51 @@ dataset **only**. The paper's own model axis (Qwen-3.5-4B/9B, Qwen-3.6-27B, Gemm
 Gemini-3.5-Flash) is a separate decision: the two small Qwens fit a laptop, the 27B/31B need
 real GPUs (the `openshift/` vLLM path), and Gemini is API-only.
 
+### The split is SkillOpt's released split
+
+`full_verified/split_ids.json` is **SkillOpt's own published partition**, not a reconstruction:
+the id manifests in [microsoft/SkillOpt `data/spreadsheetbench_id_split`](https://github.com/microsoft/SkillOpt/tree/79124b37e9a6371e13b753f8bcd7adb1e493ade1/data/spreadsheetbench_id_split)
+(MIT), built from the same `spreadsheetbench_verified_400.tar.gz` (HF revision `ab0b742b`). WikiSkill
+matches its splits to SkillOpt's, so this is the partition both papers' numbers sit on.
+`split_source.json` pins the commit and a digest of each split; regenerate with
+`python3 ci/benchmarks/spreadsheetbench/utils/make_skillopt_split.py --write`.
+
+Runs before this change used our own seed-42 2:1:7 draw, kept as
+`split_ids.capevolve_seed42.json` (it shares 194 of 280 test tasks with SkillOpt's). Their
+numbers stay valid on that split but are not on the papers' partition.
+
+### Two scorings of every output: recalculated, and as saved
+
+Each output workbook is compared twice. The **reward** is the comparison after headless
+LibreOffice recalculates formula caches. Before that, the workbook is also compared **exactly as
+the agent saved it**, recorded as the non-primary metrics `hard_no_recalc` / `soft_no_recalc`
+(per task in `metrics.jsonl`, per candidate and split in `report.md`).
+
+The second one exists because SkillOpt's evaluator never recalculates
+(`openpyxl.load_workbook(..., data_only=True)`): an answer written as a formula reads back as
+`None` and fails. The SkillOpt maintainers measured that choice at ~21 points of no-skill score
+for gpt-5.4 (41.4 vs 62.1, [SkillOpt#35](https://github.com/microsoft/SkillOpt/issues/35)). So
+`hard_no_recalc` is the number to put beside SkillOpt/WikiSkill figures, and the recalculated
+reward is the number to put beside harnesses that recalculate.
+
+### The latest run is kept on the runner
+
+Every spreadsheetbench run replaces one kept slot at `~/.cache/capevolve-latest/spreadsheetbench`
+on the runner (`SB_LATEST_DIR`): the whole run dir, `latest.json` (run id, tier, sha, model),
+and every output workbook, both `*_output.xlsx` (recalculated) and `*_output.norecalc.xlsx`
+(as saved). Set `SB_KEEP_LATEST_RUN=0` to skip it. Only one run is ever kept.
+
+`SB_REUSE_LATEST_BASELINE=1` (in `overrides.env`) builds a run on the kept run's **seed**: its
+val and train rollouts and its sealed test score carry over, and the seed is not re-evaluated.
+It refuses if the kept run is another tier or another split. The seed's test score is used only
+while the seed capability is byte-identical; the seed snapshot comes from the kept run, so an
+empty-seed kept run gives an empty-seed baseline.
+
 ## The `smoke` tier — 10 tasks that are also part of `full_verified`
 
 Smoke is the cheap signal guarding the tiers we report, so its roster is **not arbitrary**:
 
-    pool = sample_200 ids  ∩  full_verified TRAIN ids        (17 candidates; 10 chosen, seed 42)
+    pool = sample_200 ids  ∩  full_verified TRAIN ids        (15 candidates; 10 chosen, seed 42)
 
 This is the lesson of the scoring bug this tier configuration was written alongside. Smoke used
 to be 10 unrelated tasks from the 200-task sample, and it passed green while `full_verified`
@@ -117,7 +157,7 @@ them together. Both halves of the rule are load-bearing:
 - **`full_verified`'s TRAIN split**, not its whole roster, because smoke runs a real (if short)
   optimization. 0 of the 10 touch that tier's selection or sealed-test splits.
 
-Both instruction types stay represented (currently 6 Cell-Level / 4 Sheet-Level): they exercise
+Both instruction types stay represented (currently 7 Cell-Level / 3 Sheet-Level): they exercise
 different comparison paths, and a single-type smoke set silently stops guarding the other.
 
 > **Smoke tasks are part of `full_verified` by ID, not by content.** Smoke grades each task using
@@ -127,8 +167,9 @@ different comparison paths, and a single-type smoke set silently stops guarding 
 > layout is covered by unit tests instead of a paid rollout — see
 > `core/tests/test_spreadsheetbench_case_layout.py`, which reproduces the 0.000 bug end to end.
 
-Only **5** of the 17 candidates also sit outside `full`'s sealed test split, so the generator
-takes those first and then fills: 5 of the 10 overlap `full`'s test ids (it was 4 of 10 before).
+Only **4** of the 15 candidates also sit outside `full`'s sealed test split, so the generator
+takes those first and then fills: 6 of the 10 overlap `full`'s test ids. (Regenerated when
+`full_verified` moved to SkillOpt's split, which changed its train split.)
 Widening the pool to `full_verified`'s val split too reaches only 9 of 10 clean, which is not
 worth touching a second reported split for. Regenerate with:
 
@@ -213,6 +254,9 @@ These are **our** choices, because the paper does not publish them:
 
 > **Therefore: this is a documented reconstruction, not a reproduction of SkillOpt's split.**
 > Any comparison must say so. Do not describe a result here as "on SkillOpt's split".
+>
+> This applies to `full` (912) only. SkillOpt has since released its split for the verified 400,
+> and `full_verified` uses it verbatim — see "The split is SkillOpt's released split" above.
 
 ### Seeds
 
