@@ -978,9 +978,9 @@ PLAN
 REUSE_YAML=""
 if [ "${BENCH:-}" = "spreadsheetbench" ] && [ "${SB_REUSE_LATEST_BASELINE:-0}" = "1" ]; then
   PRIOR="$SB_LATEST_DIR/run_suite"
-  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" <<'PY' || exit 1
+  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" <<'PY' || exit 1
 import json, sys
-meta_p, prior_p, want_p, tier = sys.argv[1:5]
+meta_p, prior_p, want_p, tier, empty_seed = sys.argv[1:6]
 try:
     meta, prior = json.load(open(meta_p)), json.load(open(prior_p))
 except OSError as e:
@@ -988,6 +988,10 @@ except OSError as e:
 want = json.load(open(want_p))
 if meta.get("tier") != tier:
     raise SystemExit(f"::error:: the kept run is tier {meta.get('tier')!r}, this run is {tier!r}")
+# The kept run's seed snapshot replaces this run's, so the requested seed must be the same one.
+if str(meta.get("empty_seed", "0")) != empty_seed:
+    raise SystemExit(f"::error:: the kept run has SB_EMPTY_SEED={meta.get('empty_seed')}, this run "
+                     f"asks for {empty_seed} — reusing it would silently swap the seed")
 for k in ("train", "val", "test"):
     if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
         raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
