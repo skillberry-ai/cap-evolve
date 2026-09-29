@@ -32,6 +32,15 @@ python skills/_registry/lint_skills.py skills
 cd dashboard/frontend && npm ci && npm run build && npm test
 ```
 
+## Finish the work
+
+- Deliver the whole issue in one PR. A "suggested PR order" in an issue is the
+  order to work in, not a place to stop. Do not leave parts for a later PR.
+- Every change to `core/cap_evolve/`, `skills/*/*/scripts/`,
+  `dashboard/backend/capevolve_dashboard/` or `dashboard/frontend/src/` needs a
+  new or updated test in `core/tests/`, `dashboard/backend/tests/` or
+  `dashboard/frontend/src/test/`. The automation fails the change otherwise.
+
 ## Issues that describe a UI
 
 - A dashboard or UI issue is resolved only when the UI exists in
