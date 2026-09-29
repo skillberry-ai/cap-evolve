@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build reports/task-by-task/v4/v4_t_e1/<task>.md from
+"""Build reports/v4/v4_t_e1/<task>.md from
 results/v4/v4_t_e1/results.json.
 
 Usage: python3 scripts/build_v4_t_task_reports.py [--check] [--stats]
@@ -16,7 +16,7 @@ from v4_report_common import AUTO_END, AUTO_START, PLACEHOLDER, build_diff_block
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_JSON = ROOT / "results" / "v4" / "v4_t_e1" / "results.json"
-REPORTS_DIR = ROOT / "reports" / "task-by-task" / "v4" / "v4_t_e1"
+REPORTS_DIR = ROOT / "reports" / "v4" / "v4_t_e1"
 ARTIFACTS_DIR = ROOT / "artifacts" / "v4"
 
 PREFILLED_NOT_OPTIMIZED = (
@@ -83,7 +83,7 @@ def build_auto_block(row):
             f"{row['t2_time_s']/3600:.2f}h "
             f"(eval ${row['t2_eval_cost_usd']:.2f}/{row['t2_eval_tokens']:,}tok · "
             f"optimizer ${row['t2_opt_cost_usd']:.2f}/{row['t2_opt_tokens']:,}tok) — "
-            f"see [`../../../../results/v4/v4_t_e1/cost_time/`](../../../../results/v4/v4_t_e1/cost_time/)"
+            f"see [`../../../results/v4/v4_t_e1/cost_time/`](../../../results/v4/v4_t_e1/cost_time/)"
         )
     if row.get("run_dir"):
         lines.append("")
@@ -111,8 +111,8 @@ def diff_block_for(task):
     return build_diff_block(
         seed_dir,
         best_dir,
-        ("artifacts/v4/seed/", "../../../../artifacts/v4/seed/"),
-        (f"artifacts/v4/v4_t_e1/{task}/best/", f"../../../../artifacts/v4/v4_t_e1/{task}/best/"),
+        ("artifacts/v4/seed/", "../../../artifacts/v4/seed/"),
+        (f"artifacts/v4/v4_t_e1/{task}/best/", f"../../../artifacts/v4/v4_t_e1/{task}/best/"),
     )
 
 
@@ -153,7 +153,7 @@ def main():
             path.write_text(new_text)
 
     if not stale:
-        print("reports/task-by-task/v4/v4_t_e1/*.md already up to date.")
+        print("reports/v4/v4_t_e1/*.md already up to date.")
         return 0
     if check_only:
         print(f"{len(stale)} report(s) stale:", file=sys.stderr)

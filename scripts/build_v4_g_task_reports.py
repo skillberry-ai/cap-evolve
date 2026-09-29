@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build reports/task-by-task/v4/v4_g_e1/<task>.md from
+"""Build reports/v4/v4_g_e1/<task>.md from
 results/v4/v4_g_e1/results.json.
 
 G2 evolved one shared bundle across all 34 tasks jointly (unlike T2's
@@ -22,7 +22,7 @@ from v4_report_common import AUTO_END, AUTO_START, build_diff_block, build_repor
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_JSON = ROOT / "results" / "v4" / "v4_g_e1" / "results.json"
-REPORTS_DIR = ROOT / "reports" / "task-by-task" / "v4" / "v4_g_e1"
+REPORTS_DIR = ROOT / "reports" / "v4" / "v4_g_e1"
 SEED_DIR = ROOT / "artifacts" / "v4" / "seed"
 BEST_DIR = ROOT / "artifacts" / "v4" / "v4_g_e1" / "best"
 
@@ -30,7 +30,7 @@ CANDS = ["cand_0001", "cand_0002", "cand_0003", "cand_0004", "cand_0005", "cand_
 
 NOT_YET_WRITTEN = (
     "_Per-task narrative not yet written -- see "
-    "[`../../../../results/v4/v4_g_e1/summary.md`](../../../../results/v4/v4_g_e1/summary.md)._"
+    "[`../../../results/v4/v4_g_e1/summary.md`](../../../results/v4/v4_g_e1/summary.md)._"
 )
 
 
@@ -69,8 +69,8 @@ def diff_block_for():
     return build_diff_block(
         SEED_DIR,
         BEST_DIR,
-        ("artifacts/v4/seed/", "../../../../artifacts/v4/seed/"),
-        ("artifacts/v4/v4_g_e1/best/", "../../../../artifacts/v4/v4_g_e1/best/"),
+        ("artifacts/v4/seed/", "../../../artifacts/v4/seed/"),
+        ("artifacts/v4/v4_g_e1/best/", "../../../artifacts/v4/v4_g_e1/best/"),
     )
 
 
@@ -112,7 +112,7 @@ def main():
             path.write_text(new_text)
 
     if not stale:
-        print("reports/task-by-task/v4/v4_g_e1/*.md already up to date.")
+        print("reports/v4/v4_g_e1/*.md already up to date.")
         return 0
     if check_only:
         print(f"{len(stale)} report(s) stale:", file=sys.stderr)

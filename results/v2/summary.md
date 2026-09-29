@@ -243,7 +243,7 @@ on a different, since-replaced task set, and at `n=1` and `n=3`.
 `events.jsonl` records an `optimizer_error` for `cand_0001`. So the six edits that make up the
 champion shipped **with no statement of intent, no per-edit expected effect, and no safety argument**
 — the three things the journal template exists to capture. Every per-task attribution in
-[`reports/task-by-task/`](../../reports/task-by-task/) for v2 is therefore inference from the reward
+[`reports/`](../../reports/) for v2 is therefore inference from the reward
 decomposition above, not a reading of the record.
 
 The **iteration-1 run** (`run_20260816_202942`) has a complete journal entry and is the better read

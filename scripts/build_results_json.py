@@ -2,7 +2,7 @@
 """Generate `results/results.json` — the canonical ledger every other artifact derives from.
 
 `results/results.json` is the single machine-readable source of truth for this branch. The
-heatmap's `DATA` array and the auto blocks in `reports/task-by-task/*.md` are both generated
+heatmap's `DATA` array and the auto blocks in `reports/*.md` are both generated
 *from* it, so a number appears in exactly one place and cannot drift between views.
 
 Inputs — all of them committed inside this branch, so `--check` is meaningful in CI:
@@ -561,7 +561,7 @@ def build_tasks(pts: dict, tasks_meta: dict, exp: str) -> list[dict]:
             "flags": v1_flags(b, m) if exp == "v1" else [],
             "weights": m.get("weights"),
             "prompt": m.get("prompt"),
-            "report": "reports/task-by-task/" + report_name(exp, task),
+            "report": "reports/" + report_name(exp, task),
         }
         rows.append(row)
     return rows

@@ -44,7 +44,7 @@ bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; s
 | [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), and their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms — everything numeric in this branch is derived by one of these, never hand-typed twice |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
 | [`ui/heatmap_v4_t_e1.html`](ui/heatmap_v4_t_e1.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
-| [`presentation/`](presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
+| [`presentations/presentation/`](presentations/presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
 
 No `insights/`, `evidence/`, `handoffs/`, or `proposals/` here — those are
 `skillsbench-history` directories for a scope (87 skillsbench tasks, multiple transfer-eval
