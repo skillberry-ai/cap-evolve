@@ -122,6 +122,68 @@ def test_round_proceeds_once_the_candidate_has_a_screen_record(tmp_path):
     assert p.returncode == 0, f"round.py refused a screened candidate: {p.stdout}"
 
 
+def test_near_duplicate_skip_justification_is_flagged_on_the_compliance_event(tmp_path):
+    """issue #585: boilerplate skip_justification text copy-pasted round after round
+    ("consistent with cand_1/2/...", "...consistent with prior rounds", "...per prior rounds
+    cand_2-...") should be visible on the recorded event, without blocking the round.
+    """
+    run_dir, project, work = _staged_run_dir(tmp_path)
+
+    p1 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+               "--project", str(project), "--candidates", "cand_1", "--n-trials", "1",
+               "--skip-screen-justification",
+               "30-task val makes the tier-1 screen floor unreachable; consistent with cand_1.",
+               *_JUSTIFY])
+    assert p1.returncode == 0, p1.stdout
+
+    from cap_evolve import harness
+    harness.record_iteration(run_dir, work / "cand_1", "cand_1", parent_id="cur",
+                             accepted=False, reason="test", val=0.5, parent_val=0.5)
+    import shutil
+    from cap_evolve.skillcheck import seed_capability_dir
+    shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
+
+    # Round 2: near-identical boilerplate, same template with the candidate list tacked on.
+    p2 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+               "--project", str(project), "--candidates", "cand_2", "--n-trials", "1",
+               "--skip-screen-justification",
+               "30-task val makes the tier-1 screen floor unreachable, per prior rounds cand_1.",
+               *_JUSTIFY])
+    assert p2.returncode == 0, p2.stdout
+    assert "near-duplicate" in p2.stderr, f"no near-duplicate warning on stderr: {p2.stderr}"
+
+    events = [json.loads(ln) for ln in
+              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
+    assert compliance[0]["justification_near_duplicate_of"] is None, (
+        "the first round's justification has nothing prior to duplicate")
+    assert compliance[-1]["justification_near_duplicate_of"] == "cand_1", (
+        f"round 2's boilerplate justification was not flagged as a near-duplicate: {compliance}")
+
+    harness.record_iteration(run_dir, work / "cand_2", "cand_2", parent_id="cur",
+                             accepted=False, reason="test", val=0.5, parent_val=0.5)
+    shutil.copytree(seed_capability_dir(tmp_path / "_src3", level=24), work / "cand_3")
+
+    # Round 3: a genuinely fresh justification describing THIS candidate's own edit surface —
+    # must NOT be flagged as a near-duplicate of the boilerplate above.
+    p3 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+               "--project", str(project), "--candidates", "cand_3", "--n-trials", "1",
+               "--skip-screen-justification",
+               "cand_3 bundles a 4-way diff touching retrieval, prompt template, and two tool "
+               "schemas; screen.py's tier-1 subset is too small to resolve interaction effects "
+               "across that many changed surfaces, so going straight to full-val is deliberate "
+               "here, not rote.",
+               *_JUSTIFY])
+    assert p3.returncode == 0, p3.stdout
+    assert "near-duplicate" not in p3.stderr, f"fresh justification wrongly flagged: {p3.stderr}"
+
+    events = [json.loads(ln) for ln in
+              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
+    assert compliance[-1]["justification_near_duplicate_of"] is None, (
+        f"fresh justification wrongly flagged as a near-duplicate: {compliance[-1]}")
+
+
 def test_round_records_max_parallel_and_warns_on_drift(tmp_path):
     run_dir, project, work = _staged_run_dir(tmp_path)
     screens = run_dir.root / "screens"
