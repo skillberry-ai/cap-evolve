@@ -1,9 +1,9 @@
 # T4 (`tbt-merge`) — merge decisions and audit log
 
 **What T4 is:** one merged 8-file prompt bundle for the v4 parsec benchmark, built by
-combining every task's independently-T2-optimized edits (`artifacts/v4/<task>/best/*.md`)
+combining every task's independently-T2-optimized edits (`artifacts/v4/v4_t_e1/<task>/best/*.md`)
 against the shared seed (`artifacts/v4/seed/*.md`) into a single bundle
-(`artifacts/v4/t4-merge/*.md`), so all 34 tasks can be scored zero-shot against one
+(`artifacts/v4/v4_t_e1/t4-merge/*.md`), so all 34 tasks can be scored zero-shot against one
 candidate instead of 34 separate ones. T4 is "Approach A": a region-union merge of
 disjoint donor edits, with hand-reconciled text for any region two or more donors both
 touched. Approach B (whole-bundle re-optimization or similar) is deferred as **T5**
@@ -14,26 +14,26 @@ touched. Approach B (whole-bundle re-optimization or similar) is deferred as **T
 - Merge script: [`scripts/build_v4_t4_merge.py`](../scripts/build_v4_t4_merge.py) (paths are
   script-relative, so `python3 scripts/build_v4_t4_merge.py` regenerates the bundle from any
   worktree that has this branch checked out).
-- Merged output: `artifacts/v4/t4-merge/*.md` (8 files).
+- Merged output: `artifacts/v4/v4_t_e1/t4-merge/*.md` (8 files).
 - Splice manifest: `/tmp/merge_splices.json` (a debug dump, regenerated on every run of the
   script; not committed — it's fully derived from the script + the committed donor bundles).
 
 **Naming note — this report's arm ids are now canonical:** this session originally named
-Approach A "T4" informally, before checking whether `results/v4/results.json`'s arm scaffold
-already had a slot for it under a different id. At the time it did: **`G3`** (a
+Approach A "T4" informally, before checking whether `results/v4/v4_t_e1/results.json`'s arm
+scaffold already had a slot for it under a different id. At the time it did: **`G3`** (a
 global-scope merge/merge-joint lineage that also had a `G4`). The spec has since dropped
 that global-scope merge lineage entirely — **`T4`** (merge) and **`T5`** (merge-joint) are
 the only ids for this experiment now (per
 `docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md` Sec.2, built into
-[`scripts/build_v4_results_json.py`](../scripts/build_v4_results_json.py)'s arm scaffold);
+[`scripts/build_v4_t_results_json.py`](../scripts/build_v4_t_results_json.py)'s arm scaffold);
 the G-lineage stops at `G2`. Nothing below needs translating from "T4" to any other id —
 this report's own informal naming turned out to be the one the spec adopted.
 
 T4 has since actually run: `v4_t4_e1` (`parsec-intake_v4_t4_e1` worktree) evaluated this
 merged bundle zero-shot against all 34 tasks (`n=5` trials), and its results are recorded in
-`results/v4/results.json`'s `task_ledger[].t4_*` fields and `sections.task.t4_summary`, on
-the `parsec-history` branch — see that branch's `results/v4/summary.md` ("T4" section) for
-the write-up. Headline: a mixed result — 18/34 tasks improved, but 8 regressed, including 5
+`results/v4/v4_t_e1/results.json`'s `task_ledger[].t4_*` fields and `sections.task.t4_summary`,
+on the `parsec-history` branch — see that branch's `results/v4/v4_t_e1/summary.md` ("T4"
+section) for the write-up. Headline: a mixed result — 18/34 tasks improved, but 8 regressed, including 5
 of the 13 tasks that were already perfect before the merge — exactly the failure mode this
 audit's clean-merge gate exists to catch. Whether that means the gate needs to be stricter,
 or it's simply a regression only a real eval surfaces, is open (see that same doc's "Next
@@ -293,14 +293,15 @@ produced so far, using the same technique that found defects #2 and #3.
   contradiction fixed (4), and a broadened pattern-based sweep run with no further
   findings.
 - The merge script (`scripts/build_v4_t4_merge.py`), the merged output
-  (`artifacts/v4/t4-merge/*.md`), and this report are now committed on this worktree's
+  (`artifacts/v4/v4_t_e1/t4-merge/*.md`), and this report are now committed on this worktree's
   branch. Confirmed the committed script reproduces byte-identical output before
   committing (reran it in place; splice counts per file matched this report's table).
 - A dedicated worktree/branch, `parsec-intake_v4_t4_e1`, was forked from this commit to
   actually run the 34-task × n=5 zero-shot evaluation (170 trials) against the live
   parsec-live stack — see `handoff.md` there for the execution plan. That run has since
-  completed and its scores are recorded in the **`T4`** arm in `results/v4/results.json`
-  (see the naming note above; done on the `parsec-history` branch). T3 (`tbt-cross`,
+  completed and its scores are recorded in the **`T4`** arm in
+  `results/v4/v4_t_e1/results.json` (see the naming note above; done on the `parsec-history`
+  branch). T3 (`tbt-cross`,
   transfer) still needs its own row/decision — it isn't designed yet.
 - The design doc (`docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md`,
   branch `docs/parsec-v4-experiment-plan`) has since been updated: it now carries a T3 row

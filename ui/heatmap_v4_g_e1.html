@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parsec v4 heatmap — v4_g2_e1 global-scope bundle</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #6b7280;
+    --border: #d0d7de;
+    --header-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 16px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  .legend .swatch { display: inline-block; width: 34px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .note {
+    background: var(--header-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  th {
+    background: var(--header-bg);
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    user-select: none;
+    font-size: 11px;
+  }
+  th.sorted { background: #eef1f4; }
+  th .arrow { color: var(--muted); font-size: 10px; margin-left: 2px; }
+  td.task-cell { text-align: left; font-family: ui-monospace, monospace; font-size: 12px; }
+  .badge {
+    display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 10px;
+    margin-left: 4px; font-weight: 600; vertical-align: middle;
+  }
+  .badge.regression { background: #dbeafe; color: #1e40af; }
+  .badge.challenge { background: #fce7f3; color: #9d174d; }
+  .cell-n { font-size: 9px; color: rgba(0,0,0,0.55); display: block; }
+  .empty-cell { background: #f3f4f6 !important; color: #9ca3af; }
+  .best-cell { font-weight: 700; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); }
+  .best-cell.best-incomplete { box-shadow: inset 0 0 0 2px #dc2626; }
+  tr.summary-row td, tr.summary-row th {
+    background: #fff7ed; font-weight: 700; border-top: 2px solid #d0d7de;
+  }
+  tr.summary-row td.task-cell { text-align: left; }
+</style>
+</head>
+<body>
+
+<h1>Parsec v4 heatmap — v4_g2_e1</h1>
+<div class="subtitle">All 34 v4 Parsec scenarios · cap-evolve zero-shot baseline (n=5) vs v4_g2_e1: a single global-scope bundle evolved across the whole task set (seed + 6 candidates, n=5 per eval, all 34 tasks every iteration). Unlike T2's per-task bundles, G2 has no per-task "optimized/not optimized" split — every candidate is evaluated on every task. Optimizer selected cand_0004 as best_id; per-task "best" below picks each row's own max, which can differ from the run's overall best_id.</div>
+
+<div class="note">
+  <strong>Regression and challenge tranches are never pooled into one mean</strong> — the challenge tasks are designed to score below 1.0, so mixing them into the regression mean would misread deliberate difficulty as regression. Every mean below shows its own <code>n=</code>; different columns use different trial counts and are not directly comparable without it.
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:rgb(220,38,38)"></span>0.0</span>
+  <span><span class="swatch" style="background:rgb(254,243,199)"></span>0.5</span>
+  <span><span class="swatch" style="background:rgb(5,150,105)"></span>1.0</span>
+  <span><span class="badge regression">regression</span> expected 1.000</span>
+  <span><span class="badge challenge">challenge</span> expected &lt;1.000 by design</span>
+  <span><span class="swatch" style="background:transparent;border:2px solid #dc2626;width:30px;height:8px"></span>best &lt; 1.0</span>
+  <span>Click a column header to sort.</span>
+</div>
+
+<table id="tbl"></table>
+
+<script>
+const DATA = [
+  {
+    "task": "cloud-024-guid-to-account",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "our_baseline": 0.2,
+    "our_baseline_n": 5,
+    "seed": 0.2,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.64,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.8
+  },
+  {
+    "task": "cloud-025-gcp-project-status",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cloud-026-gpu-abuse-triage",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "our_baseline": 0.9400000000000001,
+    "our_baseline_n": 5,
+    "seed": 0.9400000000000001,
+    "seed_n": 5,
+    "cand_0001": 0.9766666,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.9533332,
+    "cand_0003_n": 5,
+    "cand_0004": 0.9533332,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.05999999999999994
+  },
+  {
+    "task": "cloud-027-azure-pool-database-trap",
+    "category": "cloud",
+    "tranche": "regression",
+    "services": "cloud",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 0.972,
+    "cand_0002_n": 5,
+    "cand_0003": 0.88,
+    "cand_0003_n": 5,
+    "cand_0004": 0.91,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cost-028-highest-spend-provider",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.98,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "cost-029-no-cost-rows-for-guid",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "our_baseline": 0.8,
+    "our_baseline_n": 5,
+    "seed": 0.8,
+    "seed_n": 5,
+    "cand_0001": 0.8400000000000001,
+    "cand_0001_n": 5,
+    "cand_0002": 0.96,
+    "cand_0002_n": 5,
+    "cand_0003": 0.92,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 0.96,
+    "cand_0005_n": 5,
+    "cand_0006": 0.96,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.19999999999999996
+  },
+  {
+    "task": "cost-030-threshold-not-an-anomaly",
+    "category": "cost",
+    "tranche": "regression",
+    "services": "cost",
+    "our_baseline": 0.944,
+    "our_baseline_n": 5,
+    "seed": 0.944,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 0.944,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.05600000000000005
+  },
+  {
+    "task": "icinga-010-stuck-anarchysubjects",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "our_baseline": 0.495,
+    "our_baseline_n": 5,
+    "seed": 0.495,
+    "seed_n": 5,
+    "cand_0001": 0.551,
+    "cand_0001_n": 5,
+    "cand_0002": 0.495,
+    "cand_0002_n": 5,
+    "cand_0003": 0.495,
+    "cand_0003_n": 5,
+    "cand_0004": 0.551,
+    "cand_0004_n": 5,
+    "cand_0005": 0.46699999999999997,
+    "cand_0005_n": 5,
+    "cand_0006": 0.46699999999999997,
+    "cand_0006_n": 5,
+    "best": 0.551,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.05600000000000005
+  },
+  {
+    "task": "icinga-011-aap2-job-status-alert",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "our_baseline": 0.944,
+    "our_baseline_n": 5,
+    "seed": 0.944,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.05600000000000005
+  },
+  {
+    "task": "icinga-012-nodes-ready-threshold",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "our_baseline": 0.9720000000000001,
+    "our_baseline_n": 5,
+    "seed": 0.972,
+    "seed_n": 5,
+    "cand_0001": 0.972,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.027999999999999914
+  },
+  {
+    "task": "icinga-013-acknowledged-not-an-issue",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "our_baseline": 0.512,
+    "our_baseline_n": 5,
+    "seed": 0.512,
+    "seed_n": 5,
+    "cand_0001": 0.512,
+    "cand_0001_n": 5,
+    "cand_0002": 0.608,
+    "cand_0002_n": 5,
+    "cand_0003": 0.544,
+    "cand_0003_n": 5,
+    "cand_0004": 0.608,
+    "cand_0004_n": 5,
+    "cand_0005": 0.64,
+    "cand_0005_n": 5,
+    "cand_0006": 0.64,
+    "cand_0006_n": 5,
+    "best": 0.64,
+    "best_tag": "cand_0005",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.128
+  },
+  {
+    "task": "icinga-014-check-script-path-moved",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga, github",
+    "our_baseline": 0.9650000000000001,
+    "our_baseline_n": 5,
+    "seed": 0.965,
+    "seed_n": 5,
+    "cand_0001": 0.84,
+    "cand_0001_n": 5,
+    "cand_0002": 0.965,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0003",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.03499999999999992
+  },
+  {
+    "task": "icinga-015-problems-by-severity",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "icinga-016-hosts-most-problems",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "our_baseline": 0.9359999999999999,
+    "our_baseline_n": 5,
+    "seed": 0.9359999999999999,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.06400000000000006
+  },
+  {
+    "task": "icinga-017-invented-action-trap",
+    "category": "icinga",
+    "tranche": "regression",
+    "services": "icinga",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-001-ee-entrypoint-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 0.752,
+    "our_baseline_n": 5,
+    "seed": 0.752,
+    "seed_n": 5,
+    "cand_0001": 0.9400000000000001,
+    "cand_0001_n": 5,
+    "cand_0002": 0.892,
+    "cand_0002_n": 5,
+    "cand_0003": 0.9400000000000001,
+    "cand_0003_n": 5,
+    "cand_0004": 0.892,
+    "cand_0004_n": 5,
+    "cand_0005": 0.884,
+    "cand_0005_n": 5,
+    "cand_0006": 0.96,
+    "cand_0006_n": 5,
+    "best": 0.96,
+    "best_tag": "cand_0006",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.20799999999999996
+  },
+  {
+    "task": "platform-002-collection-not-found-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 0.8366666,
+    "our_baseline_n": 5,
+    "seed": 0.8366666,
+    "seed_n": 5,
+    "cand_0001": 0.8133334,
+    "cand_0001_n": 5,
+    "cand_0002": 0.8600002,
+    "cand_0002_n": 5,
+    "cand_0003": 0.883333,
+    "cand_0003_n": 5,
+    "cand_0004": 0.9066664,
+    "cand_0004_n": 5,
+    "cand_0005": 0.8599998,
+    "cand_0005_n": 5,
+    "cand_0006": 0.8599998,
+    "cand_0006_n": 5,
+    "best": 0.9066664,
+    "best_tag": "cand_0004",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.06999979999999995
+  },
+  {
+    "task": "platform-003-tojson-dict-literal-rca",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 0.5599998,
+    "our_baseline_n": 5,
+    "seed": 0.5599997999999999,
+    "seed_n": 5,
+    "cand_0001": 0.9766666,
+    "cand_0001_n": 5,
+    "cand_0002": 0.9533332,
+    "cand_0002_n": 5,
+    "cand_0003": 0.9066664,
+    "cand_0003_n": 5,
+    "cand_0004": 0.93,
+    "cand_0004_n": 5,
+    "cand_0005": 0.9299998,
+    "cand_0005_n": 5,
+    "cand_0006": 0.9766666,
+    "cand_0006_n": 5,
+    "best": 0.9766666,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.4166668
+  },
+  {
+    "task": "platform-004-events-then-config",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 0.7866664,
+    "our_baseline_n": 5,
+    "seed": 0.7866664,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.2133336
+  },
+  {
+    "task": "platform-005-wrong-owner-trap",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "github",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 0.888,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-006-version-tag-not-a-ref",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-007-directory-path-fetch",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "github",
+    "our_baseline": 0.7899999999999999,
+    "our_baseline_n": 5,
+    "seed": 0.7899999999999999,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.21000000000000008
+  },
+  {
+    "task": "platform-008-log-does-not-say",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 0.96,
+    "our_baseline_n": 5,
+    "seed": 0.96,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.96,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.040000000000000036
+  },
+  {
+    "task": "platform-009-catalog-item-no-config",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform, github",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-018-find-jobs-window",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 0.58,
+    "cand_0002_n": 5,
+    "cand_0003": 0.72,
+    "cand_0003_n": 5,
+    "cand_0004": 0.72,
+    "cand_0004_n": 5,
+    "cand_0005": 0.86,
+    "cand_0005_n": 5,
+    "cand_0006": 0.86,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-019-anarchysubject-state",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 0.6599999999999999,
+    "our_baseline_n": 5,
+    "seed": 0.66,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 0.935,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.3400000000000001
+  },
+  {
+    "task": "platform-020-ocpv-vm-inventory",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-021-babylon-missing-cluster-trap",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 1.0,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-022-job-on-no-controller",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 0.6649999999999999,
+    "our_baseline_n": 5,
+    "seed": 0.6649999999999999,
+    "seed_n": 5,
+    "cand_0001": 0.895,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.7899999999999999,
+    "cand_0003_n": 5,
+    "cand_0004": 0.965,
+    "cand_0004_n": 5,
+    "cand_0005": 0.9299999999999999,
+    "cand_0005_n": 5,
+    "cand_0006": 0.9299999999999999,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0002",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.3350000000000001
+  },
+  {
+    "task": "platform-023-splunk-guid-no-events",
+    "category": "platform",
+    "tranche": "regression",
+    "services": "platform",
+    "our_baseline": 1.0,
+    "our_baseline_n": 5,
+    "seed": 1.0,
+    "seed_n": 5,
+    "cand_0001": 0.88,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.96,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 0.96,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "seed",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.0
+  },
+  {
+    "task": "platform-031-helm-url-not-a-timeout",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "our_baseline": 0.6425,
+    "our_baseline_n": 5,
+    "seed": 0.6425,
+    "seed_n": 5,
+    "cand_0001": 0.7475,
+    "cand_0001_n": 5,
+    "cand_0002": 0.941,
+    "cand_0002_n": 5,
+    "cand_0003": 0.859,
+    "cand_0003_n": 5,
+    "cand_0004": 0.8775,
+    "cand_0004_n": 5,
+    "cand_0005": 0.9225,
+    "cand_0005_n": 5,
+    "cand_0006": 0.9125,
+    "cand_0006_n": 5,
+    "best": 0.941,
+    "best_tag": "cand_0002",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.2985
+  },
+  {
+    "task": "platform-032-shared-secret-not-a-registry-outage",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "our_baseline": 0.79,
+    "our_baseline_n": 5,
+    "seed": 0.79,
+    "seed_n": 5,
+    "cand_0001": 1.0,
+    "cand_0001_n": 5,
+    "cand_0002": 1.0,
+    "cand_0002_n": 5,
+    "cand_0003": 0.86,
+    "cand_0003_n": 5,
+    "cand_0004": 0.9825,
+    "cand_0004_n": 5,
+    "cand_0005": 0.895,
+    "cand_0005_n": 5,
+    "cand_0006": 1.0,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0001",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.20999999999999996
+  },
+  {
+    "task": "platform-033-schema-change-not-the-oom",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "our_baseline": 0.892857,
+    "our_baseline_n": 5,
+    "seed": 0.892857,
+    "seed_n": 5,
+    "cand_0001": 0.9571428,
+    "cand_0001_n": 5,
+    "cand_0002": 0.790476,
+    "cand_0002_n": 5,
+    "cand_0003": 0.8333332,
+    "cand_0003_n": 5,
+    "cand_0004": 1.0,
+    "cand_0004_n": 5,
+    "cand_0005": 1.0,
+    "cand_0005_n": 5,
+    "cand_0006": 0.897619,
+    "cand_0006_n": 5,
+    "best": 1.0,
+    "best_tag": "cand_0004",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.10714299999999999
+  },
+  {
+    "task": "platform-034-rate-limit-not-an-outage",
+    "category": "platform",
+    "tranche": "challenge",
+    "services": "platform, github",
+    "our_baseline": 0.8155554,
+    "our_baseline_n": 5,
+    "seed": 0.8155554,
+    "seed_n": 5,
+    "cand_0001": 0.6311108,
+    "cand_0001_n": 5,
+    "cand_0002": 0.7849996,
+    "cand_0002_n": 5,
+    "cand_0003": 0.8466664,
+    "cand_0003_n": 5,
+    "cand_0004": 0.892222,
+    "cand_0004_n": 5,
+    "cand_0005": 0.692222,
+    "cand_0005_n": 5,
+    "cand_0006": 0.9083332000000001,
+    "cand_0006_n": 5,
+    "best": 0.9083332000000001,
+    "best_tag": "cand_0006",
+    "best_n": 5,
+    "delta_vs_our_baseline": 0.09277780000000002
+  }
+];
+
+const SUMMARIES =
+[
+  {
+    "tranche": "all",
+    "n_tasks": 34,
+    "our_baseline_mean": 0.8488013294117647,
+    "our_baseline_n": 34,
+    "best_mean": 0.9671666529411764,
+    "best_n": 34,
+    "delta_vs_our_baseline_mean": 0.11836532352941177,
+    "delta_vs_our_baseline_n": 34,
+    "seed_mean": 0.8488013294117647,
+    "seed_n": 34,
+    "cand_0001_mean": 0.9274241235294117,
+    "cand_0001_n": 34,
+    "cand_0002_mean": 0.9353473235294117,
+    "cand_0002_n": 34,
+    "cand_0003_mean": 0.9109215352941177,
+    "cand_0003_n": 34,
+    "cand_0004_mean": 0.9434182823529412,
+    "cand_0004_n": 34,
+    "cand_0005_mean": 0.9376388705882353,
+    "cand_0005_n": 34,
+    "cand_0006_mean": 0.9521211352941177,
+    "cand_0006_n": 34
+  },
+  {
+    "tranche": "regression",
+    "n_tasks": 30,
+    "our_baseline_mean": 0.85727776,
+    "our_baseline_n": 30,
+    "best_mean": 0.9678111,
+    "best_n": 30,
+    "delta_vs_our_baseline_mean": 0.11053334000000001,
+    "delta_vs_our_baseline_n": 30,
+    "seed_mean": 0.85727776,
+    "seed_n": 30,
+    "cand_0001_mean": 0.9398888866666667,
+    "cand_0001_n": 30,
+    "cand_0002_mean": 0.9428444466666667,
+    "cand_0002_n": 30,
+    "cand_0003_mean": 0.9190777533333333,
+    "cand_0003_n": 30,
+    "cand_0004_mean": 0.94413332,
+    "cand_0004_n": 30,
+    "cand_0005_mean": 0.9456666533333333,
+    "cand_0005_n": 30,
+    "cand_0006_mean": 0.9551222133333334,
+    "cand_0006_n": 30
+  },
+  {
+    "tranche": "challenge",
+    "n_tasks": 4,
+    "our_baseline_mean": 0.7852281,
+    "our_baseline_n": 4,
+    "best_mean": 0.9623333000000001,
+    "best_n": 4,
+    "delta_vs_our_baseline_mean": 0.1771052,
+    "delta_vs_our_baseline_n": 4,
+    "seed_mean": 0.7852281,
+    "seed_n": 4,
+    "cand_0001_mean": 0.8339384,
+    "cand_0001_n": 4,
+    "cand_0002_mean": 0.8791188999999999,
+    "cand_0002_n": 4,
+    "cand_0003_mean": 0.8497499,
+    "cand_0003_n": 4,
+    "cand_0004_mean": 0.9380554999999999,
+    "cand_0004_n": 4,
+    "cand_0005_mean": 0.8774305,
+    "cand_0005_n": 4,
+    "cand_0006_mean": 0.9296130499999999,
+    "cand_0006_n": 4
+  }
+]
+;
+
+const COLUMNS = [
+  { key: "task", label: "task", tip: "Scenario id. Badge shows tranche." },
+  { key: "category", label: "cat", tip: "Service area, from the task id prefix (cloud/cost/icinga/platform)." },
+  { key: "our_baseline", label: "our base", tip: "cap-evolve's zero-shot baseline (v4_g2_e1 baseline_fix run), mean of n=5 trials, before any optimization." },
+  { key: "seed", label: "seed", tip: "v4_g2_e1 seed bundle's val-split reward (n=5 trials)." },
+  { key: "cand_0001", label: "c1", tip: "Candidate 1 (shared global-scope bundle) val-split reward (n=5 trials)." },
+  { key: "cand_0002", label: "c2", tip: "Candidate 2 val-split reward (n=5 trials)." },
+  { key: "cand_0003", label: "c3", tip: "Candidate 3 val-split reward (n=5 trials)." },
+  { key: "cand_0004", label: "c4", tip: "Candidate 4 val-split reward (n=5 trials). Optimizer's overall best_id." },
+  { key: "cand_0005", label: "c5", tip: "Candidate 5 val-split reward (n=5 trials)." },
+  { key: "cand_0006", label: "c6", tip: "Candidate 6 val-split reward (n=5 trials)." },
+  { key: "best", label: "best (val)", tip: "Best val-split reward across seed + candidates for this task, with the winning tag." },
+  { key: "delta_vs_our_baseline", label: "Δ vs our base", tip: "best − our zero-shot baseline. No held-out test-split check was run for this arm (test_used=false), so this is a val-split lift, not a final generalization number." },
+];
+
+let sortState = { key: "task", dir: "asc" };
+
+function color(v) {
+  if (v === null || v === undefined) return "#f3f4f6";
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220, 38, 38], mid = [254, 243, 199], high = [5, 150, 105];
+  let r, g, b;
+  if (t < 0.5) {
+    const k = t * 2;
+    r = low[0] + (mid[0] - low[0]) * k;
+    g = low[1] + (mid[1] - low[1]) * k;
+    b = low[2] + (mid[2] - low[2]) * k;
+  } else {
+    const k = (t - 0.5) * 2;
+    r = mid[0] + (high[0] - mid[0]) * k;
+    g = mid[1] + (high[1] - mid[1]) * k;
+    b = mid[2] + (high[2] - mid[2]) * k;
+  }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
+function textColorFor(bg) {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(bg);
+  if (!m) return "#111";
+  const lum = (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) / 255;
+  return lum > 0.6 ? "#111" : "#fff";
+}
+
+function fmt(v) {
+  return v === null || v === undefined ? "—" : v.toFixed(3);
+}
+
+function fmtDelta(v) {
+  if (v === null || v === undefined) return "—";
+  const s = v >= 0 ? "+" : "";
+  return s + v.toFixed(3);
+}
+
+function rewardCell(v, n, extraClass, tooltip) {
+  const empty = v === null || v === undefined;
+  const bg = color(v);
+  const style = empty ? "" : `background:${bg};color:${textColorFor(bg)};`;
+  const cls = ["reward-cell", extraClass, empty ? "empty-cell" : ""].filter(Boolean).join(" ");
+  const nBadge = !empty && n ? `<span class="cell-n">n=${n}</span>` : "";
+  const title = tooltip ? ` title="${tooltip.replace(/"/g, "&quot;")}"` : "";
+  return `<td class="${cls}" style="${style}"${title}>${fmt(v)}${nBadge}</td>`;
+}
+
+function sortRows(rows) {
+  const { key, dir } = sortState;
+  const sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = a[key], vb = b[key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === "string") return sign * va.localeCompare(vb);
+    return sign * (va - vb);
+  });
+}
+
+function renderHeader() {
+  return (
+    "<tr>" +
+    COLUMNS.map((c) => {
+      const active = sortState.key === c.key;
+      const arrow = active ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+      return `<th class="${active ? "sorted" : ""}" data-key="${c.key}" title="${c.tip.replace(/"/g, "&quot;")}">${c.label}<span class="arrow">${arrow}</span></th>`;
+    }).join("") +
+    "</tr>"
+  );
+}
+
+function renderTaskCell(row) {
+  const tBadge = `<span class="badge ${row.tranche}">${row.tranche}</span>`;
+  return `<td class="task-cell">${row.task}${tBadge}</td>`;
+}
+
+function renderRow(row) {
+  let html = "<tr>";
+  html += renderTaskCell(row);
+  html += `<td>${row.category}</td>`;
+  html += rewardCell(row.our_baseline, row.our_baseline_n);
+  html += rewardCell(row.seed, row.seed_n);
+  html += rewardCell(row.cand_0001, row.cand_0001_n);
+  html += rewardCell(row.cand_0002, row.cand_0002_n);
+  html += rewardCell(row.cand_0003, row.cand_0003_n);
+  html += rewardCell(row.cand_0004, row.cand_0004_n);
+  html += rewardCell(row.cand_0005, row.cand_0005_n);
+  html += rewardCell(row.cand_0006, row.cand_0006_n);
+  const bestCls = row.best !== null && row.best < 1 ? "best-cell best-incomplete" : "best-cell";
+  html += rewardCell(row.best, null, bestCls, `winning: ${row.best_tag}`);
+  html += `<td>${fmtDelta(row.delta_vs_our_baseline)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function renderSummaryRow(s) {
+  const labels = { all: "MEAN — all tasks (34)", regression: "MEAN — regression (30)", challenge: "MEAN — challenge (4)" };
+  const label = labels[s.tranche] || `MEAN — ${s.tranche}`;
+  let html = `<tr class="summary-row"><td class="task-cell">${label}</td><td></td>`;
+  html += rewardCell(s.our_baseline_mean, s.our_baseline_n);
+  html += rewardCell(s.seed_mean, s.seed_n);
+  html += rewardCell(s.cand_0001_mean, s.cand_0001_n);
+  html += rewardCell(s.cand_0002_mean, s.cand_0002_n);
+  html += rewardCell(s.cand_0003_mean, s.cand_0003_n);
+  html += rewardCell(s.cand_0004_mean, s.cand_0004_n);
+  html += rewardCell(s.cand_0005_mean, s.cand_0005_n);
+  html += rewardCell(s.cand_0006_mean, s.cand_0006_n);
+  html += rewardCell(s.best_mean, s.best_n);
+  html += `<td>${fmtDelta(s.delta_vs_our_baseline_mean)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function render() {
+  const tbl = document.getElementById("tbl");
+  const rows = sortRows(DATA);
+  let html = "<thead>" + renderHeader() + "</thead><tbody>";
+  html += SUMMARIES.map(renderSummaryRow).join("");
+  html += rows.map(renderRow).join("");
+  html += "</tbody>";
+  tbl.innerHTML = html;
+
+  tbl.querySelectorAll("th").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState = { key, dir: "asc" };
+      }
+      render();
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>

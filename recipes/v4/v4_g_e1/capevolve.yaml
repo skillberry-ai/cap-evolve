@@ -1,0 +1,20 @@
+# v4_g2_e1 — joint optimization of all 34 parsec v4 tasks in a single
+# cap-evolve process (train == val == test == all 34, split_ids.json).
+# See docs/superpowers/plans/2026-09-23-parsec-v4-ccc-port.md and
+# docs/superpowers/specs/2026-09-22-parsec-v4-ccc-handoff.md for the naming
+# convention this project follows (v4_g2_e1, not a c<n> suffix).
+optimizer_skill: claude-code
+optimizer_model: claude-opus-5
+algorithm_skill: hill-climb
+target_model: claude-sonnet-4-6
+capabilities: [system-prompt]
+split_ids_file: split_ids.json
+num_trials: 5
+max_iterations: 10
+stall: 3
+max_usd: 1000.0
+max_optimizer_usd: 100.0
+stop_at_reward: 1.0
+# Any positive paired improvement counts, ignoring the SE margin —
+# accept threshold becomes mean_d > 0 instead of mean_d > k_se*SE.
+gate_k_se: 0.0

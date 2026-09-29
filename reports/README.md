@@ -6,19 +6,21 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4.html`](../ui/heatmap_v4.html) (v4) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t_e1.html`](../ui/heatmap_v4_t_e1.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm) |
 | **3** | **why a task moved, and what it teaches** | **`reports/task-by-task/<exp>/<task>.md`** |
 
 ## Naming
 
 Three experiments each get their own subfolder — `v1/`, `v2/`, `v4/` — mirroring
-`artifacts/<exp>/`, so the two task-id namespaces never collide or imply kinship:
+`artifacts/<exp>/`, so the two task-id namespaces never collide or imply kinship. v4, with two
+arms, splits one level further:
 
 | experiment | pattern | count |
 |---|---|--:|
 | v1 (trace-extracted) | `v1/aap2-<NNNN>.md` | 30 |
 | v2 (hand-authored) | `v2/<task>.md` | 10 |
-| v4 (task-by-task, 34-task benchmark) | `v4/<task>.md` | 34 |
+| v4 T arm (task-by-task) | `v4/v4_t_e1/<task>.md` | 34 |
+| v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
 
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped
 and only the number kept — `v1/aap2-0047.md`. v2's ids are already readable
@@ -27,9 +29,10 @@ re-derive by hand: every task row in `results/results.json` carries a `report` f
 path, and [`scripts/build_task_reports.py`](../scripts/build_task_reports.py) reads it.
 
 v4's ids are already readable (`platform-005-wrong-owner-trap`) and are used whole, like v2's.
-Unlike v1/v2, v4's `report` pointer is carried in `results/v4/results.json` (a separate ledger from
-`results/results.json`), and `scripts/build_v4_task_reports.py` reads that file instead of
-`build_task_reports.py`'s.
+Unlike v1/v2, v4's `report` pointer is carried per arm — `results/v4/v4_t_e1/results.json` and
+`results/v4/v4_g_e1/results.json` (separate ledgers from `results/results.json` and from each
+other) — and `scripts/build_v4_t_task_reports.py` / `scripts/build_v4_g_task_reports.py` read
+those files instead of `build_task_reports.py`'s.
 
 ## The auto block
 
@@ -52,19 +55,29 @@ Numbers stay derived; narrative stays human.
 
 ## The diff block (v4 only)
 
-The 20 v4 tasks where T2 accepted a candidate over the seed also get a second generated
-section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`, appended after the hand-written
-narrative: real, file-by-file unified diffs of `artifacts/v4/seed/*.md` against that
-task's `artifacts/v4/<task>/best/*.md`, one collapsible `<details>` per changed file so
-the report stays scannable with the full edit one click away (e.g.
-[`platform-004-events-then-config`](task-by-task/v4/platform-004-events-then-config.md)).
-It answers Item 2 of this branch's cleanup — a prose summary of "what the optimizer
-tried" is not the same as seeing the edit — without needing a separate diff viewer:
-GitHub and most local Markdown renderers syntax-highlight a fenced ` ```diff ` block on
-their own. `build_v4_task_reports.py` regenerates it the same way it regenerates the
-auto block above; the 14 v4 tasks with no `best/` directory (13 T2 never ran on, plus
-`cost-030-threshold-not-an-anomaly`, which only has a `NOTE.md`) get no diff block at
-all rather than an empty one.
+Both v4 arms get a second generated section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`,
+appended after the hand-written narrative (or, for the G arm, after the not-yet-written-narrative
+placeholder — see below): real, file-by-file unified diffs of `artifacts/v4/seed/*.md` against the
+arm's own candidate.
+
+For the T arm, the 20 tasks where T2 accepted a candidate over the seed get the diff against
+that task's `artifacts/v4/v4_t_e1/<task>/best/*.md`, one collapsible `<details>` per changed file
+so the report stays scannable with the full edit one click away (e.g.
+[`platform-004-events-then-config`](task-by-task/v4/v4_t_e1/platform-004-events-then-config.md)).
+`build_v4_t_task_reports.py` regenerates it the same way it regenerates the auto block above; the
+14 T-arm tasks with no `best/` directory (13 T2 never ran on, plus
+`cost-030-threshold-not-an-anomaly`, which only has a `NOTE.md`) get no diff block at all rather
+than an empty one.
+
+For the G arm, every one of the 34 tasks gets the *same* diff — `artifacts/v4/seed/*.md` against
+the single shared `artifacts/v4/v4_g_e1/best/*.md` — since G evolves one bundle jointly across all
+tasks rather than one per task. `build_v4_g_task_reports.py` generates it from
+`scripts/v4_report_common.py`'s shared diff logic, the same module the T generator uses, so the
+splice markers and diff rendering stay identical between arms.
+
+This answers Item 2 of this branch's cleanup — a prose summary of "what the optimizer tried" is
+not the same as seeing the edit — without needing a separate diff viewer: GitHub and most local
+Markdown renderers syntax-highlight a fenced ` ```diff ` block on their own.
 
 ## Where this departs from `skillsbench-history`
 
