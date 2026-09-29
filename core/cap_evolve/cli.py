@@ -596,7 +596,14 @@ def _cmd_run(argv):
                         "instead of printing the handoff and returning. Value is the "
                         "host agent (a row in optimizers/registry.yaml, e.g. claude-code). "
                         "Opt-in: omit this flag to keep today's handoff-and-return behavior.")
+    p.add_argument("--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR"), default=None,
+                   help="verbose/debug logging for cap_evolve itself (per-task/per-trial "
+                        "detail on DEBUG), surfaced in each phase/algorithm subprocess's "
+                        "relayed stderr. Same as setting CAPEVOLVE_LOG_LEVEL; this flag just "
+                        "sets it for this run's child processes.")
     args = p.parse_args(argv)
+    if args.log_level:
+        os.environ["CAPEVOLVE_LOG_LEVEL"] = args.log_level
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
     if not skills_dir:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -49,6 +50,59 @@ from .types import Rollout, Score, Task
 # of pass-through plumbing (skillopt.py isn't even ours to edit). Add the explicit
 # parameter if two evaluations in ONE process ever need different worker counts.
 DEFAULT_WORKERS = 1
+
+#: cap_evolve's own debug/verbose logging (#589: no such flag existed anywhere in
+#: core). ``cap_evolve/__init__.py`` wires this logger's level to
+#: ``CAPEVOLVE_LOG_LEVEL`` (default: off — Python's usual WARNING-only default),
+#: so setting ``CAPEVOLVE_LOG_LEVEL=DEBUG`` (or ``cap-evolve run --log-level DEBUG``)
+#: surfaces the per-task/per-trial ``logger.debug`` calls below without changing
+#: anything for a caller who never asked for them.
+logger = logging.getLogger(__name__)
+
+#: Default minimum seconds between ``eval_progress`` heartbeats during a long eval
+#: (#589) — matches the issue's "every 30-60s is enough". Read fresh (like
+#: ``CAPEVOLVE_WORKERS`` in ``_resolve_workers`` below) rather than cached at import
+#: time, so ``CAPEVOLVE_EVAL_PROGRESS_INTERVAL`` (tests set it to 0 for one event per
+#: rollout) always reflects the current environment.
+DEFAULT_EVAL_PROGRESS_INTERVAL = 30.0
+
+
+def _progress_interval() -> float:
+    try:
+        return float(os.environ.get("CAPEVOLVE_EVAL_PROGRESS_INTERVAL", DEFAULT_EVAL_PROGRESS_INTERVAL))
+    except (TypeError, ValueError):
+        return DEFAULT_EVAL_PROGRESS_INTERVAL
+
+
+def _progress_emitter(run_dir: RunDir, *, split: str, tag: str, total: int,
+                      per_task_trials: dict) -> Callable[[], None]:
+    """Build a callback that logs a throttled ``eval_progress`` event as rollouts are
+    generated, so a long eval (minutes to hours) leaves a heartbeat in events.jsonl
+    instead of going dark between ``eval_start`` and ``evaluate``/``eval_abandoned``
+    (#589). Cheap on the hot path: bumps an in-memory counter every call and only
+    writes an event every ``EVAL_PROGRESS_INTERVAL`` seconds (or on the final
+    rollout). ``running_mean`` is included only once some task has a scored trial to
+    average — it reads ``per_task_trials`` (mutated in place by ``_persist_trial`` as
+    trials are scored) rather than fabricating a number before any score exists.
+    """
+    from .stats import mean
+    state = {"done": 0, "last": 0.0}
+    interval = _progress_interval()
+
+    def bump() -> None:
+        state["done"] += 1
+        now = time.time()
+        finished = state["done"] >= total
+        if not finished and (now - state["last"]) < interval:
+            return
+        state["last"] = now
+        rewards = [r for trials in per_task_trials.values() for r in trials]
+        run_dir.log_event(
+            "eval_progress", split=split, tag=tag,
+            completed=state["done"], total=total,
+            **({"running_mean": round(mean(rewards), 4)} if rewards else {}))
+
+    return bump
 
 
 def _resolve_workers(workers: int | None) -> int:
@@ -301,6 +355,15 @@ def evaluate_candidate(
     task_by_id = {t.id: t for t in tasks}
     run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}}  # RUNNER spend, summed over rollouts
     t0 = time.time()
+    # See #589: a heartbeat for the long silent stretch between ``eval_start`` and
+    # ``evaluate``. Only the rollout-generation paths that see individual (task,
+    # trial) completions in real time (the per-task workers>1 pool and the plain
+    # serial loop, below) can call this — an adapter's ``run_batch``/``run_trials``
+    # fast path returns its whole grid in one call, so it stays dark here exactly as
+    # it always has (its own runner may print its own progress, e.g. tau2's run_batch).
+    emit_progress = _progress_emitter(
+        run_dir, split=split, tag=tag,
+        total=len(tasks) * max(1, int(n_trials)), per_task_trials=per_task_trials)
 
     def _persist_trial(k: int, rollouts_for_k: dict) -> None:
         """Score + persist one trial's rollouts. The single source of truth for
@@ -369,6 +432,10 @@ def evaluate_candidate(
                 per_task_trials[tid].append(sc.reward)
                 per_task_metrics[tid].append(sc.metrics)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+            # #589: per-task/per-trial detail, opt-in via CAPEVOLVE_LOG_LEVEL=DEBUG
+            # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
+            logger.debug("split=%s tag=%s task=%s trial=%s reward=%s errored=%s",
+                         split, tag, tid, k, getattr(sc, "reward", None), errored)
             (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
@@ -441,10 +508,17 @@ def evaluate_candidate(
                     # so the honest denominator sees missing data, never a 0.0.
                     pooled = run_trials_pool(
                         lambda t, s: adapter.run_target(t, ctx, seed=s),
-                        tasks, n_trials=1, base_seed=seed, max_workers=workers)
+                        tasks, n_trials=1, base_seed=seed, max_workers=workers,
+                        on_progress=emit_progress)
                     rollouts = {tid: (rs[0] if rs else None) for tid, rs in pooled.items()}
                 else:
-                    rollouts = {t.id: adapter.run_target(t, ctx, seed=seed) for t in tasks}
+                    # Plain serial fast path — a for-loop (not a dict comprehension) so
+                    # ``emit_progress`` sees each rollout as it actually finishes rather
+                    # than only after the whole trial's tasks are already done (#589).
+                    rollouts = {}
+                    for t in tasks:
+                        rollouts[t.id] = adapter.run_target(t, ctx, seed=seed)
+                        emit_progress()
                 _persist_trial(k, rollouts)
 
     run_cost, run_tokens = run_acc["cost"], run_acc["tokens"]

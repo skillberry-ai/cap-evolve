@@ -378,6 +378,12 @@ def format_event(ev: dict, totals: dict | None = None, *,
     elif kind == "evaluate":
         body = (f"eval {ev.get('split')}/{ev.get('tag')}  reward={_num(ev.get('reward'))}"
                 f" ±{_num(ev.get('stderr'))}  {_num(ev.get('seconds'), '{:.1f}')}s")
+    elif kind == "eval_progress":
+        # #589: the heartbeat during a long eval's silent stretch.
+        body = (f"eval progress {ev.get('split')}/{ev.get('tag')}  "
+                f"{ev.get('completed')}/{ev.get('total')} rollouts")
+        if ev.get("running_mean") is not None:
+            body += f"  running_mean={_num(ev.get('running_mean'))}"
     elif kind == "gate_warning":
         body = f"gate warning ({ev.get('mode')}): {str(ev.get('reason')).split(' — ')[0]}"
     elif kind == "budget_warning":

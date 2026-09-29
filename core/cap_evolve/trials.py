@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
 from .types import Rollout, Task
@@ -29,6 +29,7 @@ def run_trials_pool(
     n_trials: int,
     base_seed: int,
     max_workers: int = 1,
+    on_progress: Callable[[], None] | None = None,
 ) -> dict[str, list[Rollout]]:
     """Run the ``task × trial`` grid concurrently and return trial-ordered rollouts.
 
@@ -37,6 +38,12 @@ def run_trials_pool(
     trial order preserved). An exception in ``run_one`` becomes an error ``Rollout``
     for that ``(task, trial)`` so one bad trial can't sink the batch. ``max_workers``
     bounds concurrency; ``1`` runs sequentially (identical result, no threads).
+
+    ``on_progress`` (optional), if given, is called once per completed ``(task,
+    trial)`` job — in this function's own thread, never a worker thread, so it needs
+    no locking. This is the harness's hook for a heartbeat during a long eval (see
+    #589): without it, generating hundreds of rollouts through this pool is
+    completely silent from the first job to the last.
     """
     n_trials = max(0, int(n_trials))
     max_workers = max(1, int(max_workers))
@@ -64,8 +71,17 @@ def run_trials_pool(
             for job in jobs:
                 tid, k, rollout = _one(job)
                 results[tid][k] = rollout
+                if on_progress is not None:
+                    on_progress()
         else:
+            # as_completed (not ex.map) so ``on_progress`` fires as each job ACTUALLY
+            # finishes, not merely in submission order — a slow first job must not
+            # block the progress signal for jobs that finished behind it.
             with ThreadPoolExecutor(max_workers=max_workers) as ex:
-                for tid, k, rollout in ex.map(_one, jobs):
+                futures = [ex.submit(_one, job) for job in jobs]
+                for fut in as_completed(futures):
+                    tid, k, rollout = fut.result()
                     results[tid][k] = rollout
+                    if on_progress is not None:
+                        on_progress()
     return results

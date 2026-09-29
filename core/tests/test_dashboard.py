@@ -200,6 +200,37 @@ def test_render_html_shows_per_iteration_latency():
         assert "S.per_iteration" in text
 
 
+# ---- #589: eval_progress heartbeat surfaces in the live status reason ----------
+
+def test_eval_progress_enriches_running_status_reason(tmp_path):
+    """While a split is mid-flight (an open ``eval_start``), the status reason must
+    show the latest ``eval_progress`` heartbeat's real numbers instead of just
+    'still going' — the whole point of #589's heartbeat existing at all."""
+    import time
+    from cap_evolve import dashboard
+    now = time.time()
+    evs = [
+        {"kind": "splits", "train": 4, "val": 300, "test": 2, "seed": 0, "t": now - 100},
+        {"kind": "eval_start", "split": "val", "tag": "seed", "n_tasks": 300,
+         "n_trials": 1, "workers": 8, "rollouts": 300, "t": now - 90},
+        {"kind": "eval_progress", "split": "val", "tag": "seed",
+         "completed": 142, "total": 300, "t": now - 30},
+    ]
+    rd = _mk_run(tmp_path, events=evs)
+    r = dashboard.reduce_run(rd)
+    assert r["summary"]["status"] == "running"
+    assert "142/300 rollouts done" in r["summary"]["status_reason"]
+
+
+def test_eval_busy_omits_progress_when_none_seen_yet():
+    """No ``eval_progress`` heartbeat has landed yet — the message must not
+    fabricate one."""
+    from cap_evolve.dashboard import _eval_busy
+    ev = {"split": "val", "tag": "seed", "rollouts": 300}
+    assert "rollouts done" not in _eval_busy(ev, None)
+    assert "scoring the seed on the val split (300 rollouts)" == _eval_busy(ev, None)
+
+
 def test_dashboard_degrades_without_rollouts_or_finalize():
     """No rollouts, no finalize, no candidate dirs → still reduces + renders."""
     from cap_evolve import dashboard

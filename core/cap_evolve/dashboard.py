@@ -554,11 +554,15 @@ def _spend_metered(total_usd: float, paid_calls: int) -> bool:
     return not (paid_calls > 0 and total_usd == 0.0)
 
 
-def _eval_busy(ev: dict) -> str:
+def _eval_busy(ev: dict, progress: dict | None = None) -> str:
     """"scoring <tag> on <split> (N rollouts)" — what an open ``eval_start`` is doing.
 
     Only facts the event carries; a field the event omits is left out rather than
-    guessed at, so the sentence never over-claims.
+    guessed at, so the sentence never over-claims. ``progress`` (#589) is the latest
+    ``eval_progress`` heartbeat logged since ``ev``, if any — it appends the
+    completed/total rollout count (and running mean, once one is available) so the
+    once-dark stretch between ``eval_start`` and ``evaluate`` shows real numbers
+    instead of just "still going".
     """
     split = ev.get("split") or "a split"
     tag = ev.get("tag")
@@ -567,7 +571,15 @@ def _eval_busy(ev: dict) -> str:
     if tag == "FINAL":
         who = "the best candidate"
     scale = f" ({int(n)} rollouts)" if isinstance(n, (int, float)) and n else ""
-    return f"scoring {who} on the {split} split{scale}"
+    busy = f"scoring {who} on the {split} split{scale}"
+    if progress:
+        done, total = progress.get("completed"), progress.get("total")
+        if isinstance(done, (int, float)) and isinstance(total, (int, float)) and total:
+            busy += f" — {int(done)}/{int(total)} rollouts done"
+            rm = progress.get("running_mean")
+            if isinstance(rm, (int, float)):
+                busy += f", running mean {rm:.3f}"
+    return busy
 
 
 def _heartbeat_pid_alive(pid) -> bool:
@@ -645,10 +657,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     # expected and gets the wider window. `open_eval` is the event itself, so the reason
     # string can name what the run is busy with instead of inferring it.
     open_eval = None
+    open_eval_progress = None  # latest eval_progress heartbeat logged since open_eval (#589)
     for e in reversed(events):
         k = str(e.get("kind") or "")
         if k == "evaluate":
             break
+        if k == "eval_progress" and open_eval_progress is None:
+            open_eval_progress = e
+            continue
         if k == "eval_start":
             open_eval = e
             break
@@ -660,7 +676,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
         if alive:
             # The phase that produces the very first number has not returned yet. That
             # is progress, not an outcome, and must never be reported as one.
-            return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+            return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
                                if open_eval else
                                "the seed's baseline is still being scored — no candidate "
                                f"has been evaluated yet; last event {silent:.0f}s ago")
@@ -675,7 +691,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
             # It started measuring and never came back. "failed — nothing ran" would be
             # wrong about the one thing that is certain: something did run.
             return "interrupted", (
-                f"{_eval_busy(open_eval)} and never returned — silent for "
+                f"{_eval_busy(open_eval, open_eval_progress)} and never returned — silent for "
                 f"{silent / 60.0:.0f} min, so {why}")
         return "failed", f"{why}; silent for {silent / 60.0:.0f} min"
     if agent_mode and has_baseline and not has_candidates and not (alive and open_eval):
@@ -693,7 +709,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
             "phase script)")
 
     if alive:
-        return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+        return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
                            if open_eval else f"last event {silent:.0f}s ago")
     if stopped:
         return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
