@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # cap-evolve run on tau2-bench airline, blackbox arm: the candidate becomes a Skillberry Store
 # skill and the Proxy-Agent injects it into the agent's LLM calls.
-# Prereq: bash examples/tau2_custom/blackbox/setup.sh
+# Prereq: bash examples/tau2_airline/blackbox/setup.sh
 #
 #   bash run.sh                 # the pinned spec (capevolve.yaml)
 #   bash run.sh --smoke         # the cheap smoke spec over the same stack
-#   SPEC=capevolve.itest.yaml bash run.sh     # any spec already copied into the project
+#   SPEC=capevolve.yaml bash run.sh     # any spec already copied into the project
 #
 # STARTS the stack (it was provisioned by setup.sh) and leaves it running: SPA binds ONE
 # skill at start, and restarting it mid-evaluation would swap the skill under a running
@@ -97,7 +97,7 @@ fi
 say "2/3  The Skillberry stack (Store, then Proxy-Agent)"
 # ORDER MATTERS: the store must be healthy before SPA starts, and SPA binds ONE skill by
 # name at start. Both starts are idempotent — a healthy service is reported, not restarted.
-"$PY" - <<'PYEOF' || die "could not start the Skillberry stack"
+( cd "$REPO" && "$PY" - <<'PYEOF'
 import json, sys
 sys.path.insert(0, "skills/interventions/llm-proxies/blackbox/scripts")
 import blackbox_env
@@ -105,9 +105,13 @@ blackbox_env.start_store()
 blackbox_env.start_spa("my_skill")
 print("  " + json.dumps(blackbox_env.status()))
 PYEOF
+) || die "could not start the Skillberry stack"
 
 say "3/3  cap-evolve run  (spec: $SPEC)"
-echo "  benchmark: $(git -C "$REPO/vendor/skillberry-benchmarks" rev-parse --short HEAD 2>/dev/null || echo '?')"
+# The tau2 commit is part of the MEASUREMENT, not decoration: the benchmark owns the policy the
+# agent reads, the task set and the reward checks, so a reward is comparable only against a named
+# commit. Say UNKNOWN loudly rather than printing a bare '?' that reads as cosmetic.
+echo "  benchmark: tau2-bench @ $(git -C "$REPO/vendor/tau2-bench" rev-parse --short HEAD 2>/dev/null || echo 'UNKNOWN (vendor/tau2-bench is not a git checkout)')"
 echo "  agent: $TAU2_AGENT_MODEL (via SPA) | user sim: $TAU2_USER_MODEL (direct to gateway) | concurrency $TAU2_MAX_CONCURRENCY"
 echo "------ pre-run cost preview (spends nothing) ------"
 "$VENV/bin/cap-evolve" estimate --spec "$PROJECT/$SPEC" --project "$PROJECT" || true
@@ -120,5 +124,5 @@ rc=$?
 # Left running on purpose (a later run reuses a healthy stack). To stop:
 #   python -c "import sys; sys.path.insert(0,'skills/interventions/llm-proxies/blackbox/scripts'); import blackbox_env; blackbox_env.stop_all()"
 printf '\nstack left running. stop it with:\n  %s -c "import sys; sys.path.insert(0,%s); import blackbox_env; blackbox_env.stop_all()"\n' \
-  "$PY" "'skills/interventions/llm-proxies/blackbox/scripts'"
+  "$PY" "'$REPO/skills/interventions/llm-proxies/blackbox/scripts'"
 exit $rc

@@ -36,6 +36,12 @@ from pathlib import Path
 # so this exact string matters and case drift is a real failure mode.
 DEFAULT_GATEWAY_MODEL = "aws/gpt-oss-120b"
 
+# The sentinel model id that means "deliver this call through the Skillberry proxy" — the
+# blackbox arm's switch, kept here so both arms share ONE credential/normalization path. It is
+# a MODEL NAME, never a gateway catalog id: it must never be offered as a real model, and
+# `normalize` leaves it untouched because the route is decided by exact string match.
+SPA_AGENT_MODEL = "ibm/skillberry-local"
+
 # Vendor prefixes served by the gateway's OpenAI-compatible /v1 endpoint. Such an id is
 # reached as ``openai/<catalog-id>`` — NOT via litellm's native provider for that vendor,
 # which would try to talk to AWS/Azure/GCP directly and fail auth. Each prefix is one of
@@ -78,7 +84,7 @@ def normalize(model: str) -> str:
     ``openai/openai/...`` is a 404.
     """
     m = (model or "").strip()
-    if not m or m.startswith("openai/"):
+    if not m or m == SPA_AGENT_MODEL or m.startswith("openai/"):
         return m
     return f"openai/{m}" if m.startswith(_GATEWAY_PREFIXES) else m
 
@@ -90,15 +96,35 @@ def _bare(model: str) -> str:
 
 
 def agent_model() -> str:
-    """The AGENT under test — a gateway catalog model."""
+    """The AGENT under test.
+
+    Defaults to a gateway catalog model (the direct arm). The blackbox arm selects itself by
+    setting ``TAU2_AGENT_MODEL`` to :data:`SPA_AGENT_MODEL` — one env var is the whole arm
+    switch here, so nothing has to sniff the spec.
+    """
     load_env()
     return normalize(os.environ.get("TAU2_AGENT_MODEL") or DEFAULT_GATEWAY_MODEL)
 
 
+def is_spa_route(model: str) -> bool:
+    """Whether ``model`` is the sentinel that means "deliver this call through the proxy"."""
+    return (model or "").strip() == SPA_AGENT_MODEL
+
+
 def user_model() -> str:
-    """The USER SIMULATOR — also a gateway catalog model."""
+    """The USER SIMULATOR — ALWAYS a real gateway model, never the proxy route.
+
+    The refusal is a correctness rule, not defensiveness: proxying the simulator injects the
+    optimized capability into the very thing that measures the agent, and the run would still
+    produce a plausible-looking number.
+    """
     load_env()
-    return normalize(os.environ.get("TAU2_USER_MODEL") or DEFAULT_GATEWAY_MODEL)
+    m = os.environ.get("TAU2_USER_MODEL") or DEFAULT_GATEWAY_MODEL
+    if is_spa_route(m):
+        raise RuntimeError(
+            "the user simulator must not be routed through the proxy: that injects the "
+            "capability into the simulated user, which is what measures the agent")
+    return normalize(m)
 
 
 def gateway_credentials() -> tuple[str, str]:
@@ -147,6 +173,17 @@ def llm_args_for(model: str) -> dict:
     return llm_args()
 
 
+def agent_llm_args() -> dict:
+    """litellm args for the PROXY-ROUTED agent (the blackbox arm).
+
+    Deliberately minimal. The route to the proxy (``base_url`` / ``api_key`` /
+    ``custom_llm_provider``) and this rollout's Skillberry context header are added by the
+    tailoring module's agent factory, which is the only place that knows the rollout's
+    ``env_id``. Putting an ``api_base`` here instead would either be redundant or fight it.
+    """
+    return {"temperature": 0.0}
+
+
 def register_zero_cost(*models: str) -> None:
     """Tell litellm the gateway models are unmetered here, so its cost lookup returns 0
     instead of logging "model isn't mapped yet" on every call. Honest: gateway spend is
@@ -169,10 +206,28 @@ def probe(model: str | None = None, *, max_tokens: int = 2048) -> dict:
     with the RESOLVED id. ``max_tokens`` is generous on purpose: a reasoning model spends
     a tight budget on thinking and returns HTTP 200 with EMPTY content, which looks like
     a broken model rather than a truncated reply.
+
+    DEFAULTS TO THE USER-SIMULATOR MODEL, NOT THE AGENT'S. Under this arm the agent model is
+    the SPA sentinel, which ``normalize()`` deliberately leaves unprefixed so the proxy route
+    stays an exact string match — so litellm would have no provider for it and this probe would
+    RAISE instead of probing. It is also the wrong thing to ask: the sentinel is not a gateway
+    model at all, and what needs proving here is the GATEWAY credential path. ``user_model()``
+    is the arm's guaranteed-real gateway id (it refuses the sentinel itself), which makes it
+    both the working choice and the meaningful one. SPA's own health is the intervention
+    skill's check, not this one's.
     """
+    # Guard BEFORE importing litellm, so an explicitly-passed sentinel is refused by NAME and
+    # offline, rather than surfacing as litellm's opaque "LLM Provider NOT provided" error.
+    m = normalize(model) if model else user_model()
+    if is_spa_route(m):
+        raise RuntimeError(
+            f"probe() cannot use the proxy sentinel {m!r}: it is a ROUTE, not a gateway model, "
+            f"so litellm has no provider for it. probe() exists to prove the GATEWAY credential "
+            f"path — pass a real gateway id, or leave it unset to use the user-simulator model. "
+            f"The proxy's own health is checked by the blackbox intervention skill.")
+
     import litellm
 
-    m = normalize(model or (os.environ.get("TAU2_AGENT_MODEL") or DEFAULT_GATEWAY_MODEL))
     base, _ = gateway_credentials()
     register_zero_cost(m)
     resp = litellm.completion(
@@ -194,14 +249,41 @@ if __name__ == "__main__":  # self-check: routing is a credential path
     # every catalog namespace normalizes the same way
     assert normalize("rits/google/gemma-4-31B") == "openai/rits/google/gemma-4-31B"
     assert normalize("") == ""
-    # Neutralize the operator's .env for the DEFAULTING checks. Without this the first
+    # The proxy sentinel passes through untouched: the route is an exact string match, so
+    # normalizing it to openai/ibm/skillberry-local would silently disable the blackbox arm.
+    assert normalize(SPA_AGENT_MODEL) == SPA_AGENT_MODEL
+    assert is_spa_route(SPA_AGENT_MODEL) and not is_spa_route(DEFAULT_GATEWAY_MODEL)
+    # probe() must REFUSE the sentinel by name, offline, before it reaches litellm. It used to
+    # default to TAU2_AGENT_MODEL, which under this arm IS the sentinel — so the credential probe
+    # raised litellm's "LLM Provider NOT provided" instead of probing anything.
+    try:
+        probe(SPA_AGENT_MODEL)
+    except RuntimeError as e:
+        assert "ROUTE, not a gateway model" in str(e), f"wrong refusal: {e}"
+    else:
+        raise AssertionError("probe() accepted the proxy sentinel — it cannot resolve")
+    # Neutralize the operator's .env for the DEFAULTING checks below. Without this the first
     # agent_model() call lazily loads the repo-root .env, which re-supplies the TAU2_* vars we
-    # just popped (`setdefault`), so the assertion silently tested the operator's machine
-    # instead of this file's fallback logic — it passed from /tmp and failed in place.
+    # just popped (`setdefault`), and the assertion silently tests the operator's machine
+    # instead of this file's fallback logic. That is why this self-check passed from /tmp and
+    # failed in place.
     globals()["_ENV_LOADED"] = True
     for var in ("TAU2_AGENT_MODEL", "TAU2_USER_MODEL"):
         os.environ.pop(var, None)
     assert agent_model() == user_model() == "openai/aws/gpt-oss-120b"
+    # blackbox: one env var selects the arm, and the simulator must REFUSE the proxy route.
+    os.environ["TAU2_AGENT_MODEL"] = SPA_AGENT_MODEL
+    assert agent_model() == SPA_AGENT_MODEL
+    os.environ["TAU2_USER_MODEL"] = SPA_AGENT_MODEL
+    try:
+        user_model()
+        raise AssertionError("the user simulator must refuse the proxy route")
+    except RuntimeError:
+        pass
+    os.environ.pop("TAU2_USER_MODEL")
+    os.environ.pop("TAU2_AGENT_MODEL")
+    assert agent_llm_args() == {"temperature": 0.0}, \
+        "the proxy route + context header are the tailoring module's job, not the gateway's"
     os.environ["OPENAI_BASE_URL"] = "https://example.invalid/v1"
     os.environ["OPENAI_API_KEY"] = "not-a-real-key"
     assert "api_key" not in llm_args(), "an api_key in llm_args gets committed by store: git"

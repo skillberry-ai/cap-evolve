@@ -3,9 +3,15 @@
 # existing seed (policy + tools), agent + user simulator = aws/claude-haiku-4-5 via the
 # ETE gateway (itest.sh exports TAU2_AGENT_MODEL / TAU2_USER_MODEL), optimizer =
 # claude-code @ claude-sonnet-4-6. Cheap: 1 task, 1 trial, 1 iteration.
-capabilities: [system-prompt, tools]
+capabilities: [tools]
 capability_path: seed_capability
 actions: [edit]
+# The airline POLICY is the benchmark's own specification of the task — the rules the agent is
+# GRADED against — so it is present (the agent needs it) but never an edit surface. Editing it
+# would let a candidate soften an inconvenient rule and be rewarded for it by the very text it
+# weakened: a measurement leak, not an optimization. NOTE `capabilities` does NOT gate writes (it
+# selects validate() + guidance), so this seal is what actually closes it.
+protected_paths: ["policy/*"]
 capability_sources: [seed_capability/reference/data_model.py]
 
 optimizer_skill: claude-code

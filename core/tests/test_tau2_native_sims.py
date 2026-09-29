@@ -55,12 +55,33 @@ ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
 TAU2_ADAPTERS = (
     REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py",
     REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py",
-    REPO / "examples" / "tau2_custom" / "direct" / "adapters" / "adapter.py",
-    REPO / "examples" / "tau2_custom" / "blackbox" / "adapters" / "adapter.py",
 )
 
 #: Below this many present adapters the alignment check is not checking alignment.
 _MIN_ADAPTERS = 2
+
+
+# tau2 may or may not be installed in the environment running these tests, and this file
+# deliberately STUBS it (the helpers under test touch only one tau2 function). `setdefault` left
+# that dependent on import order: once any other test imported the real tau2 — whose __init__
+# pulls in utils.llm_utils transitively — the stub was silently ignored and these tests exercised
+# the REAL function against fake message objects, failing on a wrong assertion rather than
+# erroring. So install the stubs AUTHORITATIVELY and restore afterwards, which keeps this file
+# hermetic without breaking the tests that need the real tau2.
+_STUBBED = ("tau2", "tau2.utils", "tau2.utils.llm_utils", "tau2.data_model.simulation")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_tau2_modules():
+    saved = {k: sys.modules.get(k) for k in _STUBBED}
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
 
 
 def _load_adapter_module():

@@ -1,0 +1,1008 @@
+"""Project adapter — optimize tau2-bench AIRLINE (the TOOL SURFACE) delivered through the proxy.
+
+This is the BLACKBOX arm. The candidate is not loaded from disk by the benchmark: it is deployed
+as ONE skill package in the Skillberry Store, and the Skillberry Proxy-Agent injects it into the
+agent's LLM calls, so tau2 never sees skill files. The capability is ``[tools]`` ONLY — the
+airline POLICY is the benchmark's own exam text, reaches the agent unchanged, and is never an
+artifact the optimizer can edit. The sibling ``../../adapters/adapter.py`` is the DIRECT arm of
+the same benchmark; delivery is the only thing that differs.
+
+  * ``tasks``      -> all 50 airline tasks (stable, non-empty for every split).
+  * ``run_batch``  -> tau2's own batch runner (``run_tasks``) with a ``TextRunConfig`` naming
+                      this arm's domain + agent (``airline_skillberry`` / ``llm_agent_skillberry``,
+                      both registered by ``tau2_tailoring``, not by the benchmark) and the proxy
+                      sentinel as the agent model; maps each ``SimulationRun`` to a ``Rollout``.
+  * ``run_trials`` -> all N trials in ONE ``run_tasks`` call, grouped by ``sim.trial``.
+  * ``run_target`` -> thin wrapper over ``run_batch`` for one task.
+  * ``score``      -> tau2's own reward in [0,1] (deterministic given a rollout);
+                      gold-AWARE but gold-SAFE, ARGUMENT-LEVEL feedback: for each
+                      failing check it names the wrong argument key + the AGENT'S OWN
+                      wrong value (never the gold value) and what was available on the
+                      user's own profile/state, so the optimizer can localize the fix.
+  * ``trajectories``-> tau2's native per-simulation results, which under this arm must contain
+                      BOTH the primitive calls and the compound skill calls. Only one of the two
+                      means a merge window is wrong (see ``tau2_tailoring``) — a WIRING bug, not
+                      a weak candidate.
+  * ``apply``      -> installs the outside-in tailoring (``tau2_tailoring.install()``: the domain,
+                      the agent factory, and the two trajectory-merge wrappers), then makes the
+                      candidate live in the STORE — frozen primitives first so a skill redeploy
+                      cannot cascade into the protected substrate, then the skill, then the proxy
+                      is rebound onto it. Idempotent.
+                      It MUST NOT RAISE: cap-evolve enters ``live()`` inline, so an exception
+                      would abort the run with the budget half spent over one flaky restart.
+                      A deploy failure is RECORDED and the rollouts come back errored, so the
+                      harness EXCLUDES the candidate rather than scoring it 0.0 — a failed
+                      deployment is infrastructure noise, not a verdict on the capability.
+
+``cap-evolve check`` does NO live LLM call: ``tasks``/``score``/``materialize`` are
+network-free, and gateway credential resolution is lazy (only on a real ``run_batch``).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+# Make sibling helper modules (gateway.py) importable regardless of caller cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from cap_evolve import CapabilityAdapter, Rollout, Score, Task
+
+# This adapter ships ONE arm: the candidate is delivered through the Skillberry proxy. The
+# sibling ../../adapters/adapter.py is the DIRECT arm of the same benchmark, and the two files
+# deliberately share their tasks()/score()/feedback/trajectory code so that the DELIVERY is the
+# only thing that differs between the arms. Keep them in step when touching that shared surface.
+DOMAIN = "airline_skillberry"            # registered by tau2_tailoring, NOT by the benchmark
+AGENT = "llm_agent_skillberry"           # ditto
+SKILL_NAME = "my_skill"                  # the store skill == the capability
+FROZEN_DIR = "primitive_tools"           # the FROZEN substrate (spec-protected)
+FROZEN_MODULE = "functions.py"
+FROZEN_TAG = "tau2-airline-primitives"   # tags the standalone tools so a redeploy can't cascade
+N_PRIMITIVES = 14
+
+
+def _is_store_skill(candidate_dir) -> bool:
+    """True when the candidate has the shape this arm delivers: a STORE SKILL package.
+
+    A GUARD, not an arm switch — this adapter only ever delivers the proxy arm. Checking the
+    candidate's SHAPE rather than trusting ``intervention:`` is deliberate: the two can
+    disagree, and the failure mode of trusting the spec is delivering candidates one way while
+    the record says the other, which is a silently wrong measurement. A direct-shaped candidate
+    here is a deploy error (see ``apply``), never something to quietly adapt to.
+    """
+    return (Path(candidate_dir) / SKILL_NAME / "SKILL.md").exists()
+
+
+def _blackbox_env():
+    """Import the blackbox intervention's library. Lazy: no import-time cost for ``check``.
+
+    ``CAPEVOLVE_SKILLS_DIR`` first, then ``parents[3]`` — which reaches the repo root for a
+    project at ``<repo>/.capevolve*/project``, the layout intake scaffolds.
+    """
+    rel = Path("interventions") / "llm-proxies" / "blackbox" / "scripts"
+    tried = []
+    env_dir = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    for scripts in ([Path(env_dir) / rel] if env_dir else []) + [
+        Path(__file__).resolve().parents[3] / "skills" / rel
+    ]:
+        if (scripts / "blackbox_env.py").exists():
+            if str(scripts) not in sys.path:
+                sys.path.insert(0, str(scripts))
+            import blackbox_env  # noqa: PLC0415
+
+            return blackbox_env
+        tried.append(str(scripts))
+    raise RuntimeError("blackbox intervention library not found at " + ", ".join(tried))
+
+
+# docs/TAU2_SUMMARY.md row 7: the tau2-bench user simulator sometimes emits ``###STOP###``
+# in the SAME message as reasoning that explicitly plans to continue ("we must wait for
+# agent's third message. Continue."), in 15/27 observed task-7 failures — ~4.2% of all
+# rollouts lost to a simulator artifact that measures nothing about agent skill. tau2-bench
+# is an external package (cloned at setup time, not vendored here), so the fix lives on our
+# side of the boundary: detect the leak from the message trace and mark the rollout as
+# infra noise, matching the existing ``rollout.error`` path below rather than scoring the
+# agent down for a bug that is not the agent's.
+_STOP_LEAK_RE = re.compile(
+    r"###\s*stop\s*###.{0,400}\b(?:continue|continuing|wait\s+for|must\s+wait|"
+    r"keep\s+(?:going|talking)|not\s+(?:done|finished)\s+yet)\b"
+    r"|\b(?:continue|continuing|wait\s+for|must\s+wait|"
+    r"keep\s+(?:going|talking)|not\s+(?:done|finished)\s+yet)\b.{0,400}###\s*stop\s*###",
+    re.I | re.S,
+)
+
+
+def _leaked_stop_continuation(messages) -> bool:
+    """True iff a user-simulator turn emits ``###STOP###`` alongside leaked reasoning that
+    explicitly plans to continue the conversation. Only ``user``-role turns are checked —
+    that is the simulator's own voice, not the agent's."""
+    for m in messages or []:
+        if not isinstance(m, dict) or m.get("role") != "user":
+            continue
+        content = m.get("content")
+        if isinstance(content, str) and _STOP_LEAK_RE.search(content):
+            return True
+    return False
+
+
+_cost_unpriced_warned = False
+
+
+def _cost_and_tokens(sim) -> tuple[float, int, dict]:
+    """Cost and token usage for one simulation, plus metadata saying how solid the cost is.
+
+    ``sim.agent_cost``/``sim.user_cost`` come from tau2's ``get_cost``, which is
+    ALL-OR-NOTHING: it returns ``None`` the moment ANY non-tool message lacks a
+    per-message ``cost``. The previous ``sim.agent_cost or 0.0`` therefore collapsed
+    "the provider did not price this" into "$0.00" — every RITS/proxy run (the
+    ``aws/gpt-oss-120b`` target model included) reported $0.0000 of eval spend despite
+    real rollouts, so a genuinely free run was indistinguishable from an unpriced one.
+
+    What this does about it:
+      * TOKENS are always recovered via tau2's ``get_token_usage`` (skips messages
+        without usage instead of nulling the whole run) rather than hardcoding
+        ``tokens=0`` and discarding real usage.
+      * COST falls back to summing the per-message ``cost`` values that ARE present,
+        which beats zero when only a few messages are unpriced.
+      * It deliberately does NOT price tokens from a public rate table here — the
+        proxy/RITS endpoint's real rates are not knowable from this adapter, and a
+        fabricated dollar figure next to measured ones is worse than an absent one.
+      * ``cost_source``/``messages_missing_cost`` record which case happened, so a
+        0.0 reads as "unpriced" rather than "free" (``Rollout.cost_usd`` is a
+        non-optional float that coerces ``None`` to ``0.0``).
+    """
+    global _cost_unpriced_warned
+
+    agent_cost, user_cost = sim.agent_cost, sim.user_cost
+    try:
+        messages = list(sim.get_messages())
+    except Exception:  # noqa: BLE001
+        messages = []
+
+    try:
+        from tau2.utils.llm_utils import get_token_usage
+
+        usage = get_token_usage(messages) or {}
+        tokens = int(usage.get("prompt_tokens", 0)) + int(usage.get("completion_tokens", 0))
+    except Exception:  # noqa: BLE001
+        tokens = 0
+    missing_usage = sum(1 for m in messages if getattr(m, "usage", None) is None)
+
+    if agent_cost is not None or user_cost is not None:
+        return (
+            float(agent_cost or 0.0) + float(user_cost or 0.0),
+            tokens,
+            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
+        )
+
+    # tau2 gave up on the whole run: salvage whatever the provider did price.
+    priced = [m for m in messages if getattr(m, "cost", None) is not None]
+    missing = len(messages) - len(priced)
+    partial = float(sum(m.cost for m in priced))
+    if priced:
+        source = "partial_messages"
+    else:
+        source = "unpriced"
+        if not _cost_unpriced_warned:
+            _cost_unpriced_warned = True
+            print(
+                "tau2: the provider returned no per-message cost for this target model, "
+                "so eval spend cannot be measured for this run; reporting tokens instead. "
+                "Rollout cost_usd will read 0.0 with metadata cost_source='unpriced'.",
+                file=sys.stderr,
+            )
+    return partial, tokens, {
+        "cost_source": source,
+        "messages_missing_cost": missing,
+        "messages_missing_usage": missing_usage,
+    }
+
+
+def _shown_metrics(reward: float, reward_info: dict, rollout) -> list:
+    """Shown-only secondary metrics for display; the GATE still uses reward (primary).
+
+    Always emits the primary ``reward`` (== Score.reward) plus at least one shown-only
+    secondary (``cost_usd``), and ``db_match`` when tau2 reports the DB check. These ride
+    through the results JSON for the dashboard and never affect accept/reject.
+    """
+    metrics = [{"name": "reward", "value": float(reward), "primary": True, "direction": "higher"}]
+    db_check = (reward_info or {}).get("db_check") or {}
+    if "db_match" in db_check:
+        metrics.append({"name": "db_match", "value": 1.0 if db_check.get("db_match") else 0.0,
+                        "primary": False, "direction": "higher"})
+    metrics.append({"name": "cost_usd", "value": float(getattr(rollout, "cost_usd", 0.0) or 0.0),
+                    "primary": False, "direction": "lower"})
+    return metrics
+
+
+# ---------------------------------------------------------------------------
+# Candidate building helpers (pure; no network)
+# ---------------------------------------------------------------------------
+
+
+def _native_sims_enabled() -> bool:
+    """Whether to keep tau2's OWN results.json for this eval (default: yes).
+
+    These are the traces `tau2 view` reads, and reading them is how you learn WHY a
+    candidate scored what it scored. A flag you must set to get the feature is a flag
+    nobody sets, so the default is ON.
+    """
+    return str(os.environ.get("CAPEVOLVE_NATIVE_SIMS", "")).strip().lower() not in {
+        "0", "false", "no", "off"}
+
+class Adapter(CapabilityAdapter):
+
+    def __init__(self) -> None:
+        # A deploy failure is INFRA NOISE, not a verdict on the capability: apply() records it
+        # here and the run methods return errored rollouts, so the harness EXCLUDES the
+        # candidate instead of scoring it 0.0.
+        self._deploy_error: str | None = None
+
+    # ---- delivery wiring -------------------------------------------------
+
+    def _agent_llm_args(self, agent_model: str) -> dict:
+        """litellm args for the PROXY-ROUTED agent.
+
+        ``agent_model`` is accepted and unused: the route to the proxy and this rollout's
+        Skillberry context header are added by the tailoring module's agent factory, the only
+        place that knows the rollout's ``env_id``. The parameter is kept so this method reads
+        the same as the direct arm's, which does need it.
+        """
+        import gateway  # sibling module
+
+        return gateway.agent_llm_args()
+
+    def _max_concurrency(self) -> int:
+        # LOW by default: every agent call funnels through ONE proxy and ONE store process, and
+        # only one candidate is in flight per evaluation anyway.
+        return int(os.environ.get("TAU2_MAX_CONCURRENCY", "4"))
+
+    def _errored(self, tasks: list[Task], why: str) -> dict:
+        return {t.id: Rollout(task_id=t.id, error=why) for t in tasks}
+
+    def runner_model(self) -> str | None:
+        """The CONSUMING model: whatever the PROXY calls upstream, never the sentinel.
+
+        Reporting the sentinel would make the check gate resolve a tier for a model that does
+        not exist and compare the capability against the wrong reader.
+        """
+        import gateway  # sibling module
+
+        gateway.load_env()
+        m = os.environ.get("SPA_MODEL_NAME") or gateway.DEFAULT_GATEWAY_MODEL
+        return m.split("/")[-1]
+
+    def verify(self):
+        """The seam contract for the outside-in tailoring, run OFFLINE by the check gate.
+
+        Unconditional here: this adapter only ever delivers the proxy arm, so the seams it
+        depends on are always the ones to assert. (The direct arm's adapter declares no
+        ``verify()`` at all — it patches nothing and depends on no private tau2 seam.)
+        """
+        import tau2_tailoring  # sibling module
+
+        return tau2_tailoring.verify()
+
+    # ---- tasks -----------------------------------------------------------
+
+    def tasks(self, split: str) -> list[Task]:
+        """Return ALL 50 tau2 airline tasks for any split (stable, non-empty).
+
+        The harness filters by frozen split ids; returning the full set keeps
+        ``tasks`` deterministic and free of network.
+        """
+        from tau2.domains.airline.environment import get_tasks as airline_get_tasks
+
+        tau2_tasks = airline_get_tasks(None)  # all tasks, no split filtering
+        out: list[Task] = []
+        for t in tau2_tasks:
+            out.append(
+                Task(
+                    id=str(t.id),
+                    input=str(getattr(t, "id", "")),
+                    # NOT arm-aware on purpose: tasks() runs at split-freeze time, before any
+                    # apply(), so no arm exists yet — and the task SET is the same either way.
+                    metadata={"domain": DOMAIN},
+                )
+            )
+        return out
+
+    # ---- running ---------------------------------------------------------
+
+    def _tau2_tasks_by_id(self):
+        from tau2.domains.airline.environment import get_tasks as airline_get_tasks
+
+        return {str(t.id): t for t in airline_get_tasks(None)}
+
+    # ---- tau2's OWN simulation records -----------------------------------
+    # ONE path format, byte-identical in EVERY tau2 adapter in this repo
+    # (examples/tau2_airline — which serves BOTH delivery arms — and
+    # templates/adapters/tau2_bench):
+    #
+    #     <run_dir>/native_sims/<tag>/<split>/results_<YYYYmmdd_HHMMSS>_<pid>.json
+    #
+    # Identical on purpose: `tau2 view --dir` takes the same shape whatever arm produced
+    # the run, and a trace is attributable without knowing which adapter wrote it. The
+    # duplication is deliberate — each adapter ships as ONE self-contained file copied
+    # into a project's adapters/, so a shared import would break that.
+
+    def _split_of(self, ctx, task_ids: list[str]) -> str:
+        """Which split this batch is, read from the run's own ``splits.json``.
+
+        ``run_batch``/``run_trials`` are not told the split, and the sims of one split
+        must not land in another's directory. With a pinned no-holdout split every split
+        holds the same ids, so ties resolve in val's favour — val is the split the
+        optimizer reads.
+        """
+        try:
+            import json  # noqa: PLC0415
+
+            c = Path(ctx)
+            splits = json.loads((c.parent.parent / "splits.json").read_text(encoding="utf-8"))
+            want = set(task_ids)
+            for name in ("val", "train", "test"):
+                ids = {str(i) for i in (splits.get(name) or [])}
+                if ids and want <= ids:
+                    return name
+        except Exception:  # noqa: BLE001 — an unreadable splits.json must not break the eval
+            pass
+        return "eval"
+
+    def _sim_save_path(self, ctx, split: str):
+        """``<run_dir>/native_sims/<tag>/<split>/results_<ts>_<pid>.json``, or ``None``.
+
+        Without a save path tau2 builds ``SimulationResults`` in memory, we convert each
+        sim to a ``Rollout``, and the native object is dropped — so `tau2 view` has
+        nothing to show even though tau2 closes every run by recommending it.
+
+        The TAG comes free from ``ctx``, the dir the harness passes — under EITHER of the
+        two names it uses: ``<run_dir>/candidates/<tag>`` for the baseline and the finalize
+        (tag ``seed``, or the winning ``cand_NNNN``), and ``<run_dir>/work/<tag>`` for an
+        iteration eval (tag ``cand_0001``). Accepting only ``candidates`` is why candidate
+        evals used to write nothing at all — the run dir is ``parent.parent`` either way,
+        so one name in the guard is the whole difference. The PHASE ITSELF is not available — no
+        argument or env var tells an adapter whether this is the baseline, an iteration or
+        the finalize — so ``<split>`` stands in for it: the baseline is the seed on val,
+        the finalize is the seed on test.
+
+        WHY the timestamp+pid and not a bare ``results.json``: the same ``<tag>/<split>``
+        pair IS written more than once (the seed at baseline and again at finalize), and a
+        path tau2 has already written is one it tries to RESUME — it prompts on stdin,
+        which an eval does not have. The stamp is unique per (second, process), so there is
+        no collision and no suffix walk.
+
+        Returns ``None`` when saving is off or the layout is neither ``candidates/<tag>``
+        nor ``work/<tag>`` — native traces are a convenience and must never be the thing
+        that breaks a run. tau2 creates the parent dirs itself, so nothing is created here.
+        """
+        if not _native_sims_enabled():
+            return None
+        try:
+            cand = Path(ctx)
+            if cand.parent.name not in ("candidates", "work"):
+                return None
+            stamp = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+            return (cand.parent.parent / "native_sims" / cand.name / str(split)
+                    / f"results_{stamp}.json")
+        except Exception:  # noqa: BLE001 — never let an optional artifact break the eval
+            return None
+
+
+    def run_batch(self, tasks: list[Task], ctx, *, seed: int = 0) -> dict:
+        """Run a batch of airline tasks through tau2's own batch runner.
+
+        Builds a gateway-backed ``TextRunConfig`` and calls ``run_tasks`` with
+        ``num_trials=1`` (cap-evolve owns trials) and ``seed=int(seed)`` so each
+        cap-evolve trial is an independent draw. Returns ``{task_id: Rollout}``.
+        """
+        # BEFORE importing the benchmark: a failed deploy is infrastructure noise, and there is
+        # nothing to run, so nothing needs tau2 importable to say so. Erroring the rollouts makes
+        # the harness EXCLUDE this candidate rather than record 0.0 as if it had been measured.
+        if self._deploy_error:
+            return self._errored(tasks, f"candidate deploy failed: {self._deploy_error}")
+
+        import os
+
+        import gateway  # sibling module
+        from tau2.data_model.simulation import TextRunConfig
+        from tau2.runner import run_tasks
+
+        by_id = self._tau2_tasks_by_id()
+        tau2_tasks = [by_id[t.id] for t in tasks if t.id in by_id]
+        results: dict[str, Rollout] = {}
+
+        # Tasks we couldn't map -> infra error rollouts (shouldn't happen).
+        for t in tasks:
+            if t.id not in by_id:
+                results[t.id] = Rollout(
+                    task_id=t.id, error=f"task id {t.id} not found in airline task set"
+                )
+        if not tau2_tasks:
+            return results
+
+        agent_m = gateway.agent_model()
+        user_m = gateway.user_model()
+        max_concurrency = self._max_concurrency()
+
+        config = TextRunConfig(
+            domain=DOMAIN,
+            agent=AGENT,
+            llm_agent=agent_m,
+            llm_args_agent=self._agent_llm_args(agent_m),
+            user="user_simulator",
+            llm_user=user_m,
+            llm_args_user=gateway.llm_args_for(user_m),
+            num_trials=1,
+            max_steps=100,
+            max_errors=10,
+            max_concurrency=max_concurrency,
+            seed=int(seed),
+        )
+
+        # tau2's run_tasks reconfigures loguru to print() and emits progress to
+        # STDOUT. The cap-evolve skills' stdout is a pure-JSON contract, so redirect
+        # tau2's stdout to stderr for the duration to keep that contract intact.
+        import contextlib
+        import sys
+        with contextlib.redirect_stdout(sys.stderr):
+            sim_save = self._sim_save_path(
+                ctx, self._split_of(ctx, [t.id for t in tasks]))
+            sim_results = run_tasks(
+                config,
+                tau2_tasks,
+                save_path=sim_save,
+                console_display=False,
+            )
+            if sim_save is not None:
+                # tau2 closes with a bare "run: tau2 view", which looks in
+                # data/simulations and finds nothing — these sims live in the run dir.
+                print(f"tau2 view --dir {sim_save.parent}", file=sys.stderr)
+
+        for sim in sim_results.simulations:
+            rollout = self._sim_to_rollout(sim)
+            results[str(rollout.task_id)] = rollout
+
+        # Any requested task with no simulation -> infra error rollout.
+        for t in tasks:
+            if t.id not in results:
+                results[t.id] = Rollout(
+                    task_id=t.id,
+                    error="no simulation produced for task (tau2 returned nothing)",
+                    metadata={"domain": DOMAIN, "tau2_reward": 0.0},
+                )
+        return results
+
+    @staticmethod
+    def _sim_to_rollout(sim, domain: str = DOMAIN) -> Rollout:
+        """Map one tau2 ``SimulationRun`` to a cap-evolve ``Rollout`` (pure).
+
+        Shared by ``run_batch`` and ``run_trials`` so the sim→Rollout contract
+        (reward stashed in metadata for ``score``, infra-error detection, message
+        trace, agent+user cost) is defined in exactly one place.
+        """
+        from tau2.data_model.simulation import TerminationReason
+
+        infra_reasons = {
+            TerminationReason.INFRASTRUCTURE_ERROR,
+            TerminationReason.UNEXPECTED_ERROR,
+        }
+
+        task_id = str(sim.task_id)
+        reward_info = sim.reward_info
+        reward = (
+            float(reward_info.reward)
+            if reward_info is not None and reward_info.reward is not None
+            else 0.0
+        )
+        cost_usd, tokens, cost_meta = _cost_and_tokens(sim)
+        term = sim.termination_reason
+        error = None
+        if term in infra_reasons:
+            error = f"tau2 terminated for infrastructure reason: {term}"
+
+        try:
+            messages = [m.model_dump() for m in sim.get_messages()]
+        except Exception:
+            messages = None
+
+        if error is None and reward < 1.0 and _leaked_stop_continuation(messages):
+            error = (
+                "tau2 user-simulator emitted ###STOP### alongside leaked reasoning that "
+                "explicitly planned to continue the conversation (documented artifact, "
+                "docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an "
+                "agent policy/tool failure."
+            )
+
+        reward_info_dump = (
+            reward_info.model_dump(mode="json") if reward_info is not None else None
+        )
+
+        return Rollout(
+            task_id=task_id,
+            output=messages,
+            trace=messages,
+            cost_usd=cost_usd,
+            tokens=tokens,
+            error=error,
+            metadata={
+                "domain": domain,
+                "tau2_reward": reward,
+                "tau2_reward_info": reward_info_dump,
+                "termination_reason": str(term),
+                **cost_meta,
+            },
+        )
+
+    def run_trials(
+        self, tasks: list[Task], ctx, *, n_trials: int, base_seed: int
+    ) -> dict[str, list[Rollout]]:
+        """Run ALL trials of a task batch in ONE tau2 ``run_tasks`` call.
+
+        Builds a single ``TextRunConfig`` with ``num_trials=n_trials`` and
+        ``seed=int(base_seed)``, calls tau2 ``run_tasks`` once, then groups the
+        returned ``SimulationRun``s by ``(task_id, trial)``. Returns
+        ``{task_id: [rollout_t0, rollout_t1, ...]}`` — a list of length ``n_trials``
+        in trial order, None-filling any (task, trial) tau2 didn't produce. This is
+        much faster than looping ``run_batch`` per trial because tau2 schedules the
+        whole task×trial grid under one concurrency pool.
+        """
+        n_trials = int(n_trials)
+
+        # BEFORE importing the benchmark — see run_batch.
+        if self._deploy_error:
+            why = f"candidate deploy failed: {self._deploy_error}"
+            return {t.id: [Rollout(task_id=t.id, error=why) for _ in range(max(n_trials, 1))]
+                    for t in tasks}
+
+        import os
+
+        import gateway  # sibling module
+        from tau2.data_model.simulation import TextRunConfig
+        from tau2.runner import run_tasks
+
+        by_id = self._tau2_tasks_by_id()
+        tau2_tasks = [by_id[t.id] for t in tasks if t.id in by_id]
+
+        # Pre-seed every requested task with a None-filled trial list so missing
+        # (task, trial) pairs surface as None (the harness records them as failures).
+        results: dict[str, list[Rollout]] = {t.id: [None] * n_trials for t in tasks}
+
+        # Tasks we couldn't map -> infra error rollout for every trial.
+        for t in tasks:
+            if t.id not in by_id:
+                results[t.id] = [
+                    Rollout(task_id=t.id, error=f"task id {t.id} not found in airline task set")
+                    for _ in range(n_trials)
+                ]
+        if not tau2_tasks or n_trials <= 0:
+            return results
+
+        agent_m = gateway.agent_model()
+        user_m = gateway.user_model()
+        max_concurrency = self._max_concurrency()
+
+        config = TextRunConfig(
+            domain=DOMAIN,
+            agent=AGENT,
+            llm_agent=agent_m,
+            llm_args_agent=self._agent_llm_args(agent_m),
+            user="user_simulator",
+            llm_user=user_m,
+            llm_args_user=gateway.llm_args_for(user_m),
+            num_trials=n_trials,
+            max_steps=100,
+            max_errors=10,
+            max_concurrency=max_concurrency,
+            seed=int(base_seed),
+        )
+
+        # tau2 prints progress to stdout; the cap-evolve skills' stdout is a pure-JSON
+        # contract, so redirect tau2's stdout to stderr for the duration.
+        import contextlib
+        import sys
+        with contextlib.redirect_stdout(sys.stderr):
+            sim_save = self._sim_save_path(
+                ctx, self._split_of(ctx, [t.id for t in tasks]))
+            sim_results = run_tasks(
+                config,
+                tau2_tasks,
+                save_path=sim_save,
+                console_display=False,
+            )
+            if sim_save is not None:
+                # tau2 closes with a bare "run: tau2 view", which looks in
+                # data/simulations and finds nothing — these sims live in the run dir.
+                print(f"tau2 view --dir {sim_save.parent}", file=sys.stderr)
+
+        # Group each SimulationRun into its task's per-trial slot by sim.trial.
+        for sim in sim_results.simulations:
+            task_id = str(sim.task_id)
+            trial = int(getattr(sim, "trial", 0) or 0)
+            slot = results.get(task_id)
+            if slot is None:
+                slot = results[task_id] = [None] * n_trials
+            if 0 <= trial < n_trials:
+                slot[trial] = self._sim_to_rollout(sim)
+
+        return results
+
+    def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
+        """Run a single task by delegating to ``run_batch`` (base class requires this)."""
+        batch = self.run_batch([task], ctx, seed=seed)
+        return batch.get(task.id, Rollout(task_id=task.id, error="no rollout produced"))
+
+    # ---- scoring ---------------------------------------------------------
+
+    def score(self, task: Task, rollout: Rollout) -> Score:
+        """Score a rollout with tau2's own reward; gold-AWARE, gold-SAFE feedback.
+
+        Deterministic given the rollout: reads the reward/reward_info stashed in
+        ``rollout.metadata`` during ``run_batch``. Infra-errored rollouts -> 0.0
+        with feedback noting it's uncontrollable.
+        """
+        meta = rollout.metadata or {}
+
+        if rollout.error:
+            return Score(
+                task_id=task.id,
+                reward=0.0,
+                feedback=(
+                    "Rollout did not complete for an infrastructure reason "
+                    f"({rollout.error}). This is uncontrollable noise, not an agent "
+                    "policy/tool failure; do not optimize against it."
+                ),
+                metrics=_shown_metrics(0.0, {}, rollout),
+            )
+
+        reward = float(meta.get("tau2_reward", 0.0) or 0.0)
+        reward_info = meta.get("tau2_reward_info") or {}
+
+        # Surface the message trace to the feedback builder so it can localize
+        # defects from the agent's OWN tool calls / observed state (gold-safe).
+        # Prefer rollout.trace, then rollout.output, then any trace in metadata.
+        ctx = dict(meta)
+        ctx["trace"] = rollout.trace or rollout.output or meta.get("trace") or []
+
+        feedback = self._build_feedback(reward, reward_info, ctx)
+        return Score(
+            task_id=task.id, reward=reward, feedback=feedback,
+            metrics=_shown_metrics(reward, reward_info, rollout),
+        )
+
+    # ---- gold-safe rollout introspection (for argument-level feedback) ----
+    #
+    # The learning signal must localize the defect: name the wrong ARGUMENT key
+    # and the AGENT'S OWN wrong value (never the gold value), the wrong target id,
+    # and — for communication misses — the value the agent failed to state when it
+    # is derivable from the agent's own observed state. Everything below reads ONLY
+    # the agent's own messages/tool-calls/tool-results and the user's own profile
+    # (as the agent observed it via get_user_details). It NEVER reads the gold/
+    # expected arguments stored in reward_info's action_check.action — those keys
+    # are used solely to know WHICH argument matters; the gold VALUES are not read.
+
+    @staticmethod
+    def _iter_agent_tool_calls(meta: dict):
+        """Yield (tool_name, arguments) for every ASSISTANT tool call in the trace.
+
+        Pure read of the agent's own messages. Deterministic order (trace order).
+        """
+        for msg in meta.get("trace") or []:
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("role") != "assistant":
+                continue
+            for tc in msg.get("tool_calls") or []:
+                if not isinstance(tc, dict):
+                    continue
+                name = tc.get("name")
+                args = tc.get("arguments") or {}
+                if name:
+                    yield str(name), (args if isinstance(args, dict) else {})
+
+    @staticmethod
+    def _user_profile_facts(meta: dict) -> dict:
+        """Derive what the AGENT observed about the user's own profile/state.
+
+        Reads only ``get_user_details``/``get_reservation_details`` TOOL RESULTS in
+        the trace (the agent's own observations — gold-safe). Returns:
+          {"payment_methods": [...ids...], "reservation_ids": [...ids...]}
+        Best-effort and deterministic; returns empty lists when nothing is parseable.
+        """
+        import json
+        import re
+
+        payment_ids: list[str] = []
+        reservation_ids: list[str] = []
+        seen_p: set[str] = set()
+        seen_r: set[str] = set()
+
+        for msg in meta.get("trace") or []:
+            if not isinstance(msg, dict) or msg.get("role") != "tool":
+                continue
+            content = msg.get("content")
+            if not isinstance(content, str) or not content:
+                continue
+            obj = None
+            try:
+                obj = json.loads(content)
+            except Exception:
+                obj = None
+
+            if isinstance(obj, dict):
+                pm = obj.get("payment_methods")
+                if isinstance(pm, dict):
+                    for pid in pm.keys():
+                        if pid not in seen_p:
+                            seen_p.add(pid)
+                            payment_ids.append(str(pid))
+                elif isinstance(pm, list):
+                    for entry in pm:
+                        pid = entry.get("id") if isinstance(entry, dict) else None
+                        if pid and pid not in seen_p:
+                            seen_p.add(pid)
+                            payment_ids.append(str(pid))
+                res = obj.get("reservations")
+                if isinstance(res, list):
+                    for rid in res:
+                        rid = str(rid)
+                        if rid not in seen_r:
+                            seen_r.add(rid)
+                            reservation_ids.append(rid)
+                rid = obj.get("reservation_id")
+                if rid and str(rid) not in seen_r:
+                    seen_r.add(str(rid))
+                    reservation_ids.append(str(rid))
+            else:
+                # Fall back to regex over the raw text for known id shapes.
+                for pid in re.findall(r"\b(?:credit_card|gift_card|certificate)_\d+\b", content):
+                    if pid not in seen_p:
+                        seen_p.add(pid)
+                        payment_ids.append(pid)
+
+        return {"payment_methods": payment_ids, "reservation_ids": reservation_ids}
+
+    @classmethod
+    def _localize_action(cls, gold_name: str, gold_keys: list[str], meta: dict, facts: dict) -> str:
+        """Argument-level, gold-SAFE detail for one failed action check.
+
+        ``gold_keys`` are the argument KEYS that matter (names only — gold-safe).
+        We report the AGENT'S OWN value for those keys from its own call(s) of
+        ``gold_name``; we never read or print the gold values. For id-shaped keys
+        we surface what was AVAILABLE on the user's own profile/state.
+        """
+        agent_calls = [args for (n, args) in cls._iter_agent_tool_calls(meta) if n == gold_name]
+        if not agent_calls:
+            return f"{gold_name}: was never called (or not called correctly)"
+
+        keys = gold_keys or sorted({k for c in agent_calls for k in c.keys()})
+        # Use the LAST call of the tool (the state the agent settled on); deterministic.
+        used = agent_calls[-1]
+        parts: list[str] = []
+        for k in keys:
+            v = used.get(k, "<missing>")
+            detail = f"{k}={v!r}"
+            kl = k.lower()
+            if "payment" in kl and facts.get("payment_methods"):
+                avail = facts["payment_methods"]
+                if v not in avail:
+                    detail += f" (not on the user's profile; available={avail})"
+            elif ("reservation" in kl or kl in {"reservation_id", "target", "res_id"}) and facts.get(
+                "reservation_ids"
+            ):
+                avail = facts["reservation_ids"]
+                if v not in avail:
+                    detail += f" (not among the user's reservations; held={avail})"
+            parts.append(detail)
+        return f"{gold_name}: agent used " + ", ".join(parts)
+
+    @classmethod
+    def _localize_communicate(cls, check: dict, meta: dict, facts: dict) -> str | None:
+        """Name a derivable un-stated value for a missed communicate check (gold-safe).
+
+        We only surface a concrete value the agent could have computed from its OWN
+        observed state (e.g. a total cost summed from the user's observed payment/
+        reservation data). The check's ``info`` text may embed the gold answer, so we
+        DO NOT echo it verbatim — we classify the topic and, when a total is derivable,
+        name the computed value. Returns None when nothing is safely derivable.
+        """
+        info = str(check.get("info") or "").lower()
+        if "total" in info and ("cost" in info or "price" in info or "$" in info):
+            total = cls._derive_total_cost(meta)
+            if total is not None:
+                return f"did not state the computed total cost (derivable from your own observed amounts: ${total:.2f})"
+            return "did not state the computed total cost (sum the amounts you already observed and state it)"
+        return None
+
+    @staticmethod
+    def _derive_total_cost(meta: dict):
+        """Best-effort, deterministic sum of payment amounts the AGENT itself observed.
+
+        Reads only the agent's own tool-call arguments / tool results in the trace
+        (e.g. ``payment``/``amount`` fields). Returns a float total or None.
+        """
+        import json
+
+        total = 0.0
+        found = False
+        # From the agent's own write-tool-call payment arguments.
+        for _name, args in Adapter._iter_agent_tool_calls(meta):
+            pay = args.get("payment") if isinstance(args, dict) else None
+            if isinstance(pay, dict) and isinstance(pay.get("amount"), (int, float)):
+                total += float(pay["amount"])
+                found = True
+            elif isinstance(args.get("amount"), (int, float)):
+                total += float(args["amount"])
+                found = True
+        if found:
+            return total
+        # Otherwise from observed tool results carrying an "amount"/"total".
+        for msg in meta.get("trace") or []:
+            if not isinstance(msg, dict) or msg.get("role") != "tool":
+                continue
+            content = msg.get("content")
+            if not isinstance(content, str):
+                continue
+            try:
+                obj = json.loads(content)
+            except Exception:
+                continue
+            if isinstance(obj, dict):
+                for k in ("total", "total_cost", "amount"):
+                    if isinstance(obj.get(k), (int, float)):
+                        total += float(obj[k])
+                        found = True
+        return total if found else None
+
+    @classmethod
+    def _build_feedback(cls, reward: float, reward_info: dict, meta: dict) -> str:
+        """Argument-level, gold-SAFE learning signal.
+
+        For each failing check we localize the defect: name the wrong ARGUMENT key +
+        the AGENT'S OWN wrong value (never the gold value), the wrong target id, and
+        — for communicate misses — the un-stated computed value when derivable from
+        the agent's own state. A tool-name-only signal is too coarse for the optimizer
+        to localize a fix. Falls back to the tool-name message when a piece cannot be
+        safely derived. Deterministic on a fixed rollout.
+        """
+        if not reward_info:
+            if reward >= 1.0:
+                return "Task fully solved (reward 1.0)."
+            return (
+                f"Task scored {reward:.3f}. No detailed check breakdown is available "
+                "for this rollout."
+            )
+
+        facts = cls._user_profile_facts(meta)
+        lines: list[str] = [f"Task reward: {reward:.3f}."]
+
+        # DB check (final environment state matches expectation).
+        db_check = reward_info.get("db_check")
+        if db_check is not None and not db_check.get("db_match", True):
+            lines.append(
+                "Database state does NOT match the expected final state — a "
+                "required write (book/update/cancel) was missing, wrong, or extra. "
+                "See the per-action detail below for the specific wrong argument."
+            )
+
+        # Action checks: localize each failed action at the ARGUMENT level.
+        action_checks = reward_info.get("action_checks") or []
+        details: list[str] = []
+        for ac in action_checks:
+            if ac.get("action_match", True):
+                continue
+            action = ac.get("action") or {}
+            name = action.get("name") or action.get("func_name") or "an action"
+            # KEYS that matter (names only — gold-safe). Prefer compare_args; else the
+            # gold arg keys (keys, not values). Values are never read.
+            gold_keys = action.get("compare_args")
+            if not gold_keys:
+                gold_args = action.get("arguments")
+                gold_keys = sorted(gold_args.keys()) if isinstance(gold_args, dict) else []
+            try:
+                details.append(cls._localize_action(str(name), list(gold_keys or []), meta, facts))
+            except Exception:
+                details.append(f"{name}: not performed correctly (right tool, right arguments)")
+        if details:
+            lines.append("Action-level defects (your own wrong values): " + "; ".join(details) + ".")
+
+        # Communicate checks: name the un-stated derivable value when possible.
+        communicate_checks = reward_info.get("communicate_checks") or []
+        missed_comm = [c for c in communicate_checks if not c.get("met", True)]
+        if missed_comm:
+            comm_details: list[str] = []
+            for c in missed_comm:
+                try:
+                    d = cls._localize_communicate(c, meta, facts)
+                except Exception:
+                    d = None
+                if d:
+                    comm_details.append(d)
+            if comm_details:
+                lines.append("Communication misses: " + "; ".join(comm_details) + ".")
+            else:
+                lines.append(
+                    f"{len(missed_comm)} required piece(s) of information were not clearly "
+                    "communicated to the user. State the confirmations/details (e.g. the "
+                    "computed total, the new flight times) the policy requires you to convey."
+                )
+
+        # NL assertions.
+        nl_assertions = reward_info.get("nl_assertions") or []
+        missed_nl = [n for n in nl_assertions if not n.get("met", True)]
+        if missed_nl:
+            lines.append(
+                f"{len(missed_nl)} behavioral expectation(s) were not met. Re-check the "
+                "policy steps for this scenario."
+            )
+
+        # Env assertions.
+        env_assertions = reward_info.get("env_assertions") or []
+        missed_env = [e for e in env_assertions if not e.get("met", True)]
+        if missed_env:
+            lines.append(
+                f"{len(missed_env)} environment assertion(s) failed (the resulting "
+                "system state was not as required)."
+            )
+
+        if reward >= 1.0 and len(lines) == 1:
+            lines.append("All checks passed.")
+
+        return " ".join(lines)
+
+    # ---- making a candidate live ----------------------------------------
+
+    def apply(self, candidate_dir, edits=None) -> None:
+        """Make ``candidate_dir`` the live capability by deploying it as THE store skill.
+
+        MUST NOT RAISE — see ``_deploy``. A candidate that is not a store skill is a deploy
+        error rather than something to adapt to: this adapter has exactly one delivery path, and
+        silently running a direct-shaped candidate would record the wrong delivery as the
+        requested one.
+        """
+        # Write edits first (pure), if any.
+        if edits:
+            self.materialize(candidate_dir, edits)
+
+        candidate_dir = Path(candidate_dir)
+        self._deploy_error = None          # never inherit the previous candidate's failure
+        self._deploy(candidate_dir)
+
+    def _deploy(self, candidate_dir: Path) -> None:
+        """Deploy the candidate as THE store skill, restart the proxy onto it, and install the
+        outside-in tailoring that makes vanilla tau2 usable under this arm.
+
+        MUST NOT RAISE. cap-evolve enters ``live()`` inline, so an exception here aborts the
+        whole run with the budget half spent over one flaky restart. Record the failure and let
+        the run methods return errored rollouts: the harness then EXCLUDES the candidate, which
+        is correct, because a failed deployment is infrastructure noise and not a verdict on
+        the capability.
+        """
+        skill_dir = candidate_dir / SKILL_NAME
+        frozen = candidate_dir / FROZEN_DIR / FROZEN_MODULE
+        if not _is_store_skill(candidate_dir):
+            self._deploy_error = f"{SKILL_NAME}/SKILL.md missing under {candidate_dir}"
+            return
+        if not frozen.exists():
+            self._deploy_error = f"{FROZEN_DIR}/{FROZEN_MODULE} missing under {candidate_dir}"
+            return
+        try:
+            # 1. Teach vanilla tau2 about this arm (domain + agent factory + the two merge
+            #    wrappers). Idempotent, so re-entry across phases is a no-op.
+            import tau2_tailoring  # sibling module
+
+            tau2_tailoring.install()
+
+            # 2. Reset the store to THIS candidate's single skill, primitives FIRST so a skill
+            #    redeploy cannot cascade into the frozen substrate, then rebind the proxy.
+            bbenv = _blackbox_env()
+            protect = bbenv.Protection(tags=(FROZEN_TAG,))
+            if len(protect.present_names()) < N_PRIMITIVES:
+                bbenv.import_standalone_tools(frozen, tags=(FROZEN_TAG,))
+            bbenv.reset_store_to_skill(skill_dir, SKILL_NAME, protect)
+            bbenv.restart_spa(SKILL_NAME)
+        except Exception as e:  # noqa: BLE001 — see the docstring: must never raise
+            self._deploy_error = f"{type(e).__name__}: {e}"

@@ -1,8 +1,14 @@
 # SMOKE spec — tiny end-to-end autonomy proof (2 tasks, 1 trial, 1 iteration).
 # Real claude-opus-4-6 optimizer with per-iteration $ caps. Not the full run.
-capabilities: [system-prompt, tools]
+capabilities: [tools]
 capability_path: seed_capability
 actions: [edit]
+# The airline POLICY is the benchmark's own specification of the task — the rules the agent is
+# GRADED against — so it is present (the agent needs it) but never an edit surface. Editing it
+# would let a candidate soften an inconvenient rule and be rewarded for it by the very text it
+# weakened: a measurement leak, not an optimization. NOTE `capabilities` does NOT gate writes (it
+# selects validate() + guidance), so this seal is what actually closes it.
+protected_paths: ["policy/*"]
 capability_sources: [seed_capability/reference/data_model.py]
 
 optimizer_skill: claude-code

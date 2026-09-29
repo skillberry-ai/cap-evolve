@@ -18,11 +18,37 @@ than an absent one.
 
 import importlib.util
 import sys
+
+import pytest
 import types
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
+
+
+# tau2 may or may not be installed in the environment running these tests, and this file
+# deliberately STUBS it (the helpers under test touch only one tau2 function). Installing the
+# stubs with `setdefault` left that dependent on IMPORT ORDER: once any other test imported the
+# real tau2 — whose __init__ pulls in utils.llm_utils transitively — the stub was silently
+# ignored and these tests exercised the REAL function against fake message objects, failing on a
+# wrong assertion rather than erroring. So the stubs are installed AUTHORITATIVELY above and
+# restored here, which keeps this file hermetic without breaking tests that need the real tau2.
+_STUBBED_TAU2_MODULES = ("tau2", "tau2.utils", "tau2.utils.llm_utils",
+                         "tau2.data_model.simulation")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_tau2_modules():
+    saved = {k: sys.modules.get(k) for k in _STUBBED_TAU2_MODULES}
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
 
 
 def _load_adapter_module():
@@ -53,7 +79,7 @@ def _load_adapter_module():
         ("tau2.utils", types.ModuleType("tau2.utils")),
         ("tau2.utils.llm_utils", llm_utils),
     ):
-        sys.modules.setdefault(name, mod)
+        sys.modules[name] = mod          # authoritative: see _isolate_tau2_modules
 
     spec = importlib.util.spec_from_file_location("_tau2_adapter_cost", ADAPTER)
     assert spec and spec.loader

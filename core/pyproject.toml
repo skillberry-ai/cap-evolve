@@ -41,3 +41,21 @@ cap_evolve = ["demo_session/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# A `seam_contract` test runs against an EXTERNALLY INSTALLED dependency (a benchmark, a
+# service) rather than against this repo, and answers a different question from every other
+# test here:
+#
+#     a unit test failing      -> OUR code is wrong
+#     a seam contract failing  -> the DEPENDENCY moved
+#
+# Conflating the two makes that signal unreadable, so the marker keeps them apart. Excluded by
+# default because the dependency is not installed in a plain checkout; a caller that wants them
+# selects the marker explicitly (its own `-m` overrides this one), which is what CI does right
+# after installing the dependency and before any paid work.
+#
+# Deliberately NOT named after any one benchmark: core is benchmark-agnostic, and every adapter
+# that tailors an external dependency needs exactly this marker.
+markers = [
+  "seam_contract: asserts seams in an externally installed dependency (needs it installed)",
+]
+addopts = "-m 'not seam_contract'"

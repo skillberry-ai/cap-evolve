@@ -7,12 +7,11 @@ const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
 // which would have reproduced the exact pilot bug for it.
 //
 // Bench is matched GENERICALLY too, not against a hardcoded list: enumerating benches here
-// silently hid the two tau2-airline arms from this panel entirely.
+// silently hid the tau2-airline delivery arm from this panel entirely.
 const JOB_RE = /^([a-z][a-z0-9_-]*) \/ ([a-z][a-z0-9_-]*)$/;
-// The arms are internal leg names; the picker calls them tau2-custom + intervention.
+// Leg tokens are internal; this maps the ones whose raw name reads poorly on the page.
 const BENCH_LABEL = {
-  tau2_custom_direct: "tau2-custom (direct)",
-  tau2_custom_blackbox: "tau2-custom (blackbox)",
+  tau2_blackbox: "tau2 (blackbox)",
 };
 const benchLabel = (b) => BENCH_LABEL[b] || b;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see

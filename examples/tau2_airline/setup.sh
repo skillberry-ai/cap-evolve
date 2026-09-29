@@ -58,10 +58,17 @@ if [ ! -d "$TAU2_DIR/.git" ]; then
   echo "  cloning tau2-bench (latest main) -> $TAU2_DIR"
   git clone --depth 1 https://github.com/sierra-research/tau2-bench "$TAU2_DIR" || die "git clone tau2-bench failed"
 fi
-"$PY" -m pip install -q --index-url "$PIP_INDEX" -e "$TAU2_DIR" || die "pip install tau2-bench failed"
+# `websockets` is NOT optional despite living in tau2's [voice] extra: tau2's data_model imports
+# its voice stack UNCONDITIONALLY, so a base install cannot even `import tau2`. Installing all of
+# [voice] would drag in livekit, boto3 and google-cloud-aiplatform.
+"$PY" -m pip install -q --index-url "$PIP_INDEX" -e "$TAU2_DIR" "websockets>=13.0" \
+  || die "pip install tau2-bench failed"
 TAU2_SHA="$(git -C "$TAU2_DIR" rev-parse HEAD)"
 mkdir -p "$EX_DIR/run_full"; echo "$TAU2_SHA" > "$EX_DIR/run_full/TAU2_COMMIT.txt"
-"$PY" -c "import tau2" >/dev/null 2>&1 || die "tau2 import failed after install"
+if ! _tau2_err="$("$PY" -c "import tau2" 2>&1)"; then
+  printf '%s\n' "$_tau2_err" | tail -5 >&2
+  die "tau2 import failed after install (real error above)"
+fi
 echo "  tau2-bench installed @ $TAU2_SHA"
 # (b) Scaffold the cap-evolve project (the intake script).
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$REPO/.capevolve" --workdir "$REPO" --force >/dev/null \

@@ -462,7 +462,7 @@ def test_run_sh_anchors_the_import_path_and_reports_failure(blackbox_env):
     what the shell hands to it, and no unit test of blackbox_env can observe a bad path in run.sh.
     """
     run_sh = (BLACKBOX_ENV.parents[5]
-              / "examples/tau2_custom/blackbox/run.sh").read_text()
+              / "examples/tau2_airline/blackbox/run.sh").read_text()
     rotate_line = next(ln for ln in run_sh.splitlines() if "sys.path.insert" in ln
                        and "rotate" in run_sh.split(ln)[1][:120])
 

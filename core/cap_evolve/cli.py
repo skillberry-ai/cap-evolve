@@ -377,6 +377,12 @@ _ALGO_FOCUS_ALIASES = {
 #: ``cap_evolve.convergence``). gepa stops on its own ``gepa_stop`` and skillopt on its
 #: epoch schedule, so the spec key is inert for them — and we say so rather than drop it.
 CONVERGENCE_ALGORITHMS = frozenset({"hill-climb"})
+#: Algorithms whose entry script accepts ``--protected-paths``. Agent mode is deliberately absent:
+#: its host has no such flag, so a seal cannot be enforced there — and a spec that declares one is
+#: warned about rather than silently ignored (see where this is used).
+PROTECTED_PATHS_ALGORITHMS = ("hill-climb", "skillopt", "gepa")
+
+
 
 #: Algorithms whose ``run.py`` declares the optimizer-context flags (via
 #: ``harness.OptimizerContext.add_arguments``) and can therefore be handed the full
@@ -992,12 +998,22 @@ def _cmd_run(argv):
             alg_cmd += ["--memory-skill", str(spec["memory_skill"])]
     # Protected-path seal + graded convergence signal. Both are OPT-IN: absent keys
     # add no flags at all, so an existing spec runs byte-identically.
-    if algorithm_name in ("hill-climb", "skillopt", "gepa"):
-        pp = spec.get("protected_paths") or []
-        if isinstance(pp, str):
-            pp = [p.strip() for p in pp.split(",") if p.strip()]
-        if pp:
+    pp = spec.get("protected_paths") or []
+    if isinstance(pp, str):
+        pp = [p.strip() for p in pp.split(",") if p.strip()]
+    if pp:
+        if algorithm_name in PROTECTED_PATHS_ALGORITHMS:
             alg_cmd += ["--protected-paths", ",".join(str(p) for p in pp)]
+        else:
+            # Say so, for the same reason as `convergence` below. A seal is declared to keep a
+            # candidate away from the part of the seed that makes the measurement comparable —
+            # a benchmark's own policy, a frozen substrate. Dropping the key silently leaves a
+            # spec that READS sealed while nothing enforces it, which is worse than an
+            # unsealed spec, because a reviewer trusts the declaration.
+            print(f"warn: spec sets protected_paths {pp}, but {algorithm_name} does not accept "
+                  f"a protected-path seal (only "
+                  f"{', '.join(sorted(PROTECTED_PATHS_ALGORITHMS))}). NOTHING IS SEALED for "
+                  f"this run — the listed paths are editable.", file=sys.stderr)
     if spec.get("convergence"):
         if algorithm_name in CONVERGENCE_ALGORITHMS:
             alg_cmd += ["--convergence"]

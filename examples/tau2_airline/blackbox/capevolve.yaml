@@ -1,11 +1,20 @@
-# SMOKE spec — 2 tasks, 1 trial, 1 iteration, real claude-opus-4-6 optimizer with
-# per-iteration $ caps. Proves a task really executes and returns a real reward with
-# rollout.error null.
+# cap-evolve run spec — optimize tau2-bench AIRLINE's TOOL SURFACE, delivered via the proxy.
 # Kept flat (no inline maps) so the zero-dependency reader can parse it.
+#
+# The PARENT dir's capevolve.yaml is the DIRECT arm of the same benchmark, and every asset
+# here mirrors its name deliberately: `diff ../capevolve.yaml capevolve.yaml` shows exactly
+# the delivery delta and nothing else. Both run against the
+# same VANILLA tau2 checkout (vendor/tau2-bench) — what differs is only how the candidate
+# reaches the model. Everything the proxy arm needs that vanilla tau2 does not do is supplied
+# from OUTSIDE the benchmark by blackbox/adapters/tau2_tailoring.py (deployed into the
+# project's adapters/ beside the SHARED adapter); the checkout is never edited.
 
 # --- what to optimize -------------------------------------------------------
 capabilities: [tools]                    # the agent's TOOL SURFACE only
-capability_path: seed_capability         # my_skill/ (THE capability) + primitive_tools/ (FROZEN)
+# my_skill/ (THE capability) + primitive_tools/ (FROZEN). The canonical DEPLOYED name, which is
+# what a spec resolves against: blackbox/setup.sh copies this dir's seed_capability/ to
+# <project>/seed_capability, and CI's generated spec says the same.
+capability_path: seed_capability
 actions: [edit]
 # The seed is generated from tau2's own primitives and the wrappers call them by NAME
 # through the store — no shared types module is imported by the editable code.
@@ -23,7 +32,7 @@ skill_name: my_skill
 
 # --- what the optimizer may NOT change --------------------------------------
 # The frozen substrate is part of the SEED but NOT part of the capability: the primitives
-# and the shim to the benchmark's environment service are what make the measurement
+# and the bridge to the benchmark's environment service are what make the measurement
 # comparable. SKILL.md is not an edit surface for this run either (an empty file = a
 # neutral seed: the tool surface, not prose, is what is being optimized). Editing one of
 # these makes the candidate INDECISIVE (the measurement is void) rather than scored 0.0.
@@ -32,12 +41,12 @@ protected_paths: ["primitive_tools/*", "my_skill/SKILL.md"]
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: claude-code
 optimizer_model: claude-opus-4-6
-optimizer_max_turns: 40                  # generous; the $ cap below is the real ceiling
-optimizer_usd_per_iter: 3.0              # per-iteration $ cap (claude --max-budget-usd)
+optimizer_max_turns: 400                 # generous; the $ cap below is the real ceiling
+optimizer_usd_per_iter: 40.0             # per-iteration $ cap (claude --max-budget-usd)
 
-# The agent under test reads these tools as gpt-oss-120b (what SPA calls upstream) —
+# The agent under test reads these tools as gpt-oss-120b (what the proxy calls upstream) —
 # distinct from the opus optimizer that PROPOSES the edits.
-target_model: gpt-oss-120b
+target_model: aws/gpt-oss-120b
 
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb
@@ -47,10 +56,11 @@ orchestration_mode: deterministic
 # --- what context the optimizer gets ----------------------------------------
 # Project-RELATIVE (this is also the silent default path), so the example is portable.
 optimizer_instructions_file: optimizer/INSTRUCTIONS.md
-# The pinned benchmark checkout, READ-ONLY: task definitions, the real tool
-# implementations, and the reward checks.
-# Resolved PROJECT-relative (the DEPLOYED project dir, not this file's location).
-runner_repo_path: ../../vendor/skillberry-benchmarks
+# The VANILLA benchmark checkout, READ-ONLY: task definitions, the real tool
+# implementations, and the reward checks. Resolved PROJECT-relative (the DEPLOYED project
+# dir, not this file's location). Read-only is literal — the tailoring module registers the
+# arm's domain at apply() time rather than editing anything here.
+runner_repo_path: ../../vendor/tau2-bench
 
 # --- data + splits ----------------------------------------------------------
 dataset_source: adapter                  # the adapter's tasks() -> all 50 airline tasks
@@ -58,25 +68,23 @@ split_seed: 0
 split_train: 0.5
 split_val: 0.25
 split_test: 0.25
-# This run's budget fixes the work to airline task 9 (see PROJECT.md): train==val==test=={9},
-# a no-holdout FIT metric — the engine logs a splits_warning and the report flags the test
-# number as a fit metric. `split_ids.json` in this dir pins the same no-holdout shape over
-# ALL 50 tasks, for a later full run.
-split_ids_file: smoke_split.json
+# `split_ids.json` pins a no-holdout shape over ALL 50 tasks: train == val == test, a FIT
+# metric — the engine logs a splits_warning and the report flags the test number as such.
+split_ids_file: split_ids.json
 
 # --- scoring ----------------------------------------------------------------
-num_trials: 1                            # smoke: one draw is enough to prove a real reward
+num_trials: 10                           # gpt-oss is stochastic; 10 trials -> mean + stderr + pass^k
 
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # per-task paired SE — banks a real 1-task gain
-gate_k_se: 1.0
+gate_k_se: 0.2
 
 # --- budget -----------------------------------------------------------------
-max_iterations: 1
+max_iterations: 10
 stall: 0
 max_metric_calls: 0
-max_usd: 10.0
-max_optimizer_usd: 8.0
+max_usd: 400.0
+max_optimizer_usd: 400.0
 
 # --- iteration store --------------------------------------------------------
 store: git                               # every iteration committed for an inspectable process

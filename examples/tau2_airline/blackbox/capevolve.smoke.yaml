@@ -1,4 +1,6 @@
-# cap-evolve run spec — optimize tau2-bench AIRLINE's TOOL SURFACE, delivered via SPA.
+# SMOKE spec — 2 tasks, 1 trial, 1 iteration, real claude-opus-4-6 optimizer with
+# per-iteration $ caps. Proves a task really executes and returns a real reward with
+# rollout.error null.
 # Kept flat (no inline maps) so the zero-dependency reader can parse it.
 
 # --- what to optimize -------------------------------------------------------
@@ -30,12 +32,12 @@ protected_paths: ["primitive_tools/*", "my_skill/SKILL.md"]
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: claude-code
 optimizer_model: claude-opus-4-6
-optimizer_max_turns: 400                 # generous; the $ cap below is the real ceiling
-optimizer_usd_per_iter: 40.0             # per-iteration $ cap (claude --max-budget-usd)
+optimizer_max_turns: 40                  # generous; the $ cap below is the real ceiling
+optimizer_usd_per_iter: 3.0              # per-iteration $ cap (claude --max-budget-usd)
 
 # The agent under test reads these tools as gpt-oss-120b (what SPA calls upstream) —
 # distinct from the opus optimizer that PROPOSES the edits.
-target_model: gpt-oss-120b
+target_model: aws/gpt-oss-120b
 
 # --- how to iterate ---------------------------------------------------------
 algorithm_skill: hill-climb
@@ -48,7 +50,7 @@ optimizer_instructions_file: optimizer/INSTRUCTIONS.md
 # The pinned benchmark checkout, READ-ONLY: task definitions, the real tool
 # implementations, and the reward checks.
 # Resolved PROJECT-relative (the DEPLOYED project dir, not this file's location).
-runner_repo_path: ../../vendor/skillberry-benchmarks
+runner_repo_path: ../../vendor/tau2-bench
 
 # --- data + splits ----------------------------------------------------------
 dataset_source: adapter                  # the adapter's tasks() -> all 50 airline tasks
@@ -60,21 +62,21 @@ split_test: 0.25
 # a no-holdout FIT metric — the engine logs a splits_warning and the report flags the test
 # number as a fit metric. `split_ids.json` in this dir pins the same no-holdout shape over
 # ALL 50 tasks, for a later full run.
-split_ids_file: split_ids.json
+split_ids_file: smoke_split.json
 
 # --- scoring ----------------------------------------------------------------
-num_trials: 10                           # gpt-oss is stochastic; 10 trials -> mean + stderr + pass^k
+num_trials: 1                            # smoke: one draw is enough to prove a real reward
 
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # per-task paired SE — banks a real 1-task gain
-gate_k_se: 0.2
+gate_k_se: 1.0
 
 # --- budget -----------------------------------------------------------------
-max_iterations: 10
+max_iterations: 1
 stall: 0
 max_metric_calls: 0
-max_usd: 400.0
-max_optimizer_usd: 400.0
+max_usd: 10.0
+max_optimizer_usd: 8.0
 
 # --- iteration store --------------------------------------------------------
 store: git                               # every iteration committed for an inspectable process

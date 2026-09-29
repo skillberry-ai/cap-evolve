@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ARM = REPO / "examples/tau2_custom/blackbox/adapters"
+ARM = REPO / "examples/tau2_airline/blackbox/adapters"
 SKILL_REL = Path("skills/interventions/llm-proxies/blackbox/scripts")
 
 
@@ -58,14 +58,14 @@ def test_the_local_layout_still_resolves_without_the_env_var(tmp_path, monkeypat
 
 def test_the_ci_layout_resolves_through_the_env_var(tmp_path, monkeypatch):
     root, adapters = _fake_repo(
-        tmp_path, "ci/benchmarks/.work/suite_smoke_tau2_custom_blackbox_proj/.capevolve/project")
+        tmp_path, "ci/benchmarks/.work/suite_smoke_tau2_blackbox_proj/.capevolve/project")
     mod = _load(adapters, monkeypatch, skills_dir=root / "skills")
     assert Path(mod._blackbox_env().__file__) == root / SKILL_REL / "blackbox_env.py"
 
 
 def test_the_ci_layout_fails_without_the_env_var(tmp_path, monkeypatch):
     _, adapters = _fake_repo(
-        tmp_path, "ci/benchmarks/.work/suite_smoke_tau2_custom_blackbox_proj/.capevolve/project")
+        tmp_path, "ci/benchmarks/.work/suite_smoke_tau2_blackbox_proj/.capevolve/project")
     mod = _load(adapters, monkeypatch)
     with pytest.raises(RuntimeError, match="blackbox intervention library not found"):
         mod._blackbox_env()

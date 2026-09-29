@@ -4,13 +4,22 @@
 # Kept flat (no inline maps) so the zero-dependency reader can parse it.
 
 # --- what to optimize -------------------------------------------------------
-capabilities: [system-prompt, tools]     # optimize the airline POLICY and the TOOLS jointly
+capabilities: [tools]                    # the agent's TOOL SURFACE only
 capability_path: seed_capability         # the artifact dir (a copy is optimized)
 actions: [edit]                          # allowed edits (capability-specific)
+# The airline POLICY is the benchmark's own specification of the task — the rules the agent is
+# GRADED against — so it is present (the agent needs it) but never an edit surface. Editing it
+# would let a candidate soften an inconvenient rule and be rewarded for it by the very text it
+# weakened: a measurement leak, not an optimization. NOTE `capabilities` does NOT gate writes (it
+# selects validate() + guidance), so this seal is what actually closes it.
+protected_paths: ["policy/*"]
 # Extra source files the tools import (tau2's airline data model / types), copied
 # verbatim into the optimizer workdir (guidance/sources/) so it can write correct
 # new-tool code against the real types. Resolved relative to this project dir.
 capability_sources: [seed_capability/reference/data_model.py]
+# The benchmark checkout, READ-ONLY optimizer context (real tool implementations, task
+# definitions, reward checks). READ-ONLY is literal: the checkout is never edited or forked.
+runner_repo_path: ../../vendor/tau2-bench
 
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: claude-code             # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)
