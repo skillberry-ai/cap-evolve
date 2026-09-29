@@ -1421,6 +1421,8 @@ def reduce_run(run_dir) -> dict:
             # but the optimizer agent CLI reports opt_cost_usd / opt_tokens per step).
             "opt_cost_usd": ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd"),
             "opt_tokens": ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0,
+            "opt_cache_read_tokens": ev.get("opt_cache_read_tokens") or ev.get("optimizer_cache_read_tokens") or 0,
+            "opt_cache_creation_tokens": ev.get("opt_cache_creation_tokens") or ev.get("optimizer_cache_creation_tokens") or 0,
             "seconds": (ev.get("runner_seconds") or vev.get("seconds") or 0.0)
                        + (ev.get("optimizer_seconds") or 0.0),
             "optimizer_seconds": ev.get("optimizer_seconds") or 0.0,
@@ -1608,6 +1610,8 @@ def reduce_run(run_dir) -> dict:
             "optimizer_usd": n.get("opt_cost_usd"),  # nullable
             "optimizer_seconds": round(n.get("optimizer_seconds") or 0.0, 2),
             "optimizer_tokens": int(n.get("opt_tokens") or 0),
+            "optimizer_cache_read_tokens": int(n.get("opt_cache_read_tokens") or 0),
+            "optimizer_cache_creation_tokens": int(n.get("opt_cache_creation_tokens") or 0),
             # Runner cost is nullable: only surface a real number, not a synthetic 0.
             "runner_usd": (float(runner_cost) if runner_cost else None),
             "runner_seconds": round(n.get("runner_seconds") or 0.0, 2),
@@ -2287,8 +2291,13 @@ def reduce_run(run_dir) -> dict:
                  "metered": _spend_metered(opt_usd + runner_usd + intake_usd,
                                            _paid_calls(sp, evaluations))},
         "tokens": tokens,
-        "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
-                           "optimizer": opt_tokens, "intake": int(intake_tokens)},
+        "tokens_by_role": {
+            "runner": tokens - opt_tokens - int(intake_tokens),
+            "optimizer": opt_tokens, 
+            "intake": int(intake_tokens),
+            "optimizer_cache_read": sum(int(pi.get("optimizer_cache_read_tokens") or 0) for pi in per_iteration),
+            "optimizer_cache_creation": sum(int(pi.get("optimizer_cache_creation_tokens") or 0) for pi in per_iteration)
+        },
         "per_iteration": per_iteration,
         "evaluations": evaluations,
         "intake": intake,

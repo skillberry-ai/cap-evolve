@@ -115,11 +115,13 @@ def parse_cost(stdout: str) -> dict:
         may carry ``total_cost_usd`` or ``usage``.
       * Gemini (`--output-format json``): ``total_cost_usd`` / ``usage`` if present.
 
-    Returns ``{usd: float|None, tokens: int|None, raw: <parsed-or-None>}``. Never
+    Returns ``{usd: float|None, tokens: int|None, cache_read_tokens: int|None, 
+    cache_creation_tokens: int|None, raw: <parsed-or-None>}``. Never
     raises: a CLI that printed prose (no JSON) yields ``{usd: None, ...}`` and the
     caller falls back to the prose-fed path unchanged.
     """
-    out = {"usd": None, "tokens": None, "raw": None}
+    out = {"usd": None, "tokens": None, "cache_read_tokens": None, 
+           "cache_creation_tokens": None, "raw": None}
     if not stdout or not stdout.strip():
         return out
 
@@ -169,12 +171,30 @@ def parse_cost(stdout: str) -> dict:
                         out["tokens"] = int(tot)
                     except (TypeError, ValueError):
                         pass
+            # Extract cache token counts
+            if isinstance(usage, dict):
+                if out["cache_read_tokens"] is None:
+                    cache_read = usage.get("cache_read_input_tokens") or usage.get("cacheReadInputTokens")
+                    if cache_read is not None:
+                        try:
+                            out["cache_read_tokens"] = int(cache_read)
+                        except (TypeError, ValueError):
+                            pass
+                if out["cache_creation_tokens"] is None:
+                    cache_create = usage.get("cache_creation_input_tokens") or usage.get("cacheCreationInputTokens")
+                    if cache_create is not None:
+                        try:
+                            out["cache_creation_tokens"] = int(cache_create)
+                        except (TypeError, ValueError):
+                            pass
             for v in obj.values():
-                if out["usd"] is None or out["tokens"] is None:
+                if (out["usd"] is None or out["tokens"] is None or 
+                    out["cache_read_tokens"] is None or out["cache_creation_tokens"] is None):
                     _scan(v)
         elif isinstance(obj, list):
             for v in obj:
-                if out["usd"] is None or out["tokens"] is None:
+                if (out["usd"] is None or out["tokens"] is None or 
+                    out["cache_read_tokens"] is None or out["cache_creation_tokens"] is None):
                     _scan(v)
 
     for o in objs:
@@ -187,7 +207,8 @@ def parse_cost(stdout: str) -> dict:
         # `init` line) into `_stop_info()` downstream.
         if out["raw"] is None and (out["usd"] != found_usd_before or out["tokens"] != found_tokens_before):
             out["raw"] = o
-        if out["usd"] is not None and out["tokens"] is not None:
+        if (out["usd"] is not None and out["tokens"] is not None and 
+            out["cache_read_tokens"] is not None and out["cache_creation_tokens"] is not None):
             break
     return out
 
@@ -482,7 +503,12 @@ def main(argv=None) -> int:
             args.transcript, stdout, stderr, extra_keys=extra_keys)
     if want_json and json_flag:
         cost = parse_cost(stdout)
-        result["cost"] = {"total_cost_usd": cost["usd"], "tokens": cost["tokens"]}
+        result["cost"] = {
+            "total_cost_usd": cost["usd"], 
+            "tokens": cost["tokens"],
+            "cache_read_tokens": cost["cache_read_tokens"],
+            "cache_creation_tokens": cost["cache_creation_tokens"]
+        }
         if cost["usd"] is None:
             # Headless output wasn't parseable — say so; the loop falls back to no-cost.
             result["cost"]["note"] = ("no total_cost_usd in optimizer output; "

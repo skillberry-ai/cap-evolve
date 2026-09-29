@@ -78,13 +78,13 @@ OptimizerFn = Callable[[Path, str], "dict | None"]
 
 
 def _parse_optimizer_cost(stdout: str) -> dict | None:
-    """Pull ``{"cost_usd","tokens"}`` from a ``run-optimizer`` stdout payload.
+    """Pull ``{"cost_usd","tokens","cache_read_tokens","cache_creation_tokens"}`` from a ``run-optimizer`` stdout payload.
 
     ``run-optimizer`` prints a single JSON object whose ``cost`` field is
-    ``{"total_cost_usd": <float|None>, "tokens": <int|None>}`` (only when invoked
-    with ``--json`` against a CLI that emits structured output). We read the last
-    JSON line that carries a ``cost`` block. Returns ``None`` when no cost is
-    present so callers can leave optimizer spend unmeasured.
+    ``{"total_cost_usd": <float|None>, "tokens": <int|None>, "cache_read_tokens": <int|None>, 
+    "cache_creation_tokens": <int|None>}`` (only when invoked with ``--json`` against a CLI 
+    that emits structured output). We read the last JSON line that carries a ``cost`` block. 
+    Returns ``None`` when no cost is present so callers can leave optimizer spend unmeasured.
     """
     if not stdout or not stdout.strip():
         return None
@@ -100,9 +100,16 @@ def _parse_optimizer_cost(stdout: str) -> dict | None:
             c = obj["cost"]
             usd = c.get("total_cost_usd")
             tokens = c.get("tokens")
+            cache_read = c.get("cache_read_tokens")
+            cache_creation = c.get("cache_creation_tokens")
             if usd is None and tokens is None:
                 return None
-            return {"cost_usd": float(usd or 0.0), "tokens": int(tokens or 0)}
+            result = {"cost_usd": float(usd or 0.0), "tokens": int(tokens or 0)}
+            if cache_read is not None:
+                result["cache_read_tokens"] = int(cache_read)
+            if cache_creation is not None:
+                result["cache_creation_tokens"] = int(cache_creation)
+            return result
     return None
 
 
