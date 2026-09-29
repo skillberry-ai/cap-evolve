@@ -31,7 +31,7 @@ Two tables, described in full at its own top:
   (eval+opt totals) and `t2_eval_*` / `t2_opt_*` (the split), `null` for the 13 tasks T2 never
   targeted; `sections.task.cost_time` for the tranche-segmented aggregate.
 - `results/v4/v4_t_e1/summary.md` — the "Cost + wall clock" narrative section.
-- `reports/task-by-task/v4/v4_t_e1/*.md` — one added line per optimized task's auto block.
+- `reports/v4/v4_t_e1/*.md` — one added line per optimized task's auto block.
 
 ## Caveat this table carries forward
 

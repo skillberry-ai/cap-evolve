@@ -13,7 +13,7 @@ different values (a post-run edit); see
 **Recipes:** [`../../../recipes/v4/v4_g_e1/`](../../../recipes/v4/v4_g_e1/)
 **Artifacts:** [`../../../artifacts/v4/v4_g_e1/`](../../../artifacts/v4/v4_g_e1/) (`best/` = `cand_0004`,
 `rejected/cand_{0001,0002,0003,0005,0006}/`)
-**Per-task reports:** [`../../../reports/task-by-task/v4/v4_g_e1/`](../../../reports/task-by-task/v4/v4_g_e1/)
+**Per-task reports:** [`../../../reports/v4/v4_g_e1/`](../../../reports/v4/v4_g_e1/)
 (`<task>.md`, 34 files -- generated auto+diff blocks only, no hand-written narrative yet)
 **Cost/time source:** [`cost_time/`](cost_time/) (`v4_g2_e1_results_table.md`)
 **Run dirs:** `run_baseline_fix_20260925_003926` (baseline), `run_optimize_fix_20260925_082813`

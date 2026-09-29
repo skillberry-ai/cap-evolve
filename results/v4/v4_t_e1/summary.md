@@ -8,7 +8,7 @@
 **Heatmap:** [`../../../ui/heatmap_v4_t_e1.html`](../../../ui/heatmap_v4_t_e1.html)
 **Recipes:** [`../../../recipes/v4/v4_t_e1/`](../../../recipes/v4/v4_t_e1/)
 **Artifacts:** [`../../../artifacts/v4/v4_t_e1/`](../../../artifacts/v4/v4_t_e1/)
-**Per-task reports:** [`../../../reports/task-by-task/v4/v4_t_e1/`](../../../reports/task-by-task/v4/v4_t_e1/) (`<task>.md`, 34 files)
+**Per-task reports:** [`../../../reports/v4/v4_t_e1/`](../../../reports/v4/v4_t_e1/) (`<task>.md`, 34 files)
 **Cost/time source:** [`cost_time/`](cost_time/) (`v4_t2_e1_results_table.md`/`.xlsx`, `v4_t4_e1_results_table.md`)
 **T vs. G:** see [`../comparison.md`](../comparison.md)
 
@@ -84,7 +84,7 @@ scored 1.0, so T2 made no optimizer calls at all, only the required seed/FINAL e
 context). See [`cost_time/v4_t2_e1_results_table.md`](cost_time/v4_t2_e1_results_table.md)'s Summary
 table for all 21 tasks, and its Per-iteration detail table for the eval-vs-optimizer split at every
 individual seed/candidate/test eval — each per-task report also carries its own line (e.g.
-[`reports/task-by-task/v4/v4_t_e1/cloud-024-guid-to-account.md`](../../../reports/task-by-task/v4/v4_t_e1/cloud-024-guid-to-account.md)).
+[`reports/v4/v4_t_e1/cloud-024-guid-to-account.md`](../../../reports/v4/v4_t_e1/cloud-024-guid-to-account.md)).
 
 **The same 98 detail-table rows, grouped by iteration stage instead of by tranche**
 (`sections.task.cost_time.by_stage` in `results.json`, built by
@@ -166,9 +166,9 @@ after the merge, and so has a chance to correct these regressions) is still open
    an unrelated infrastructure issue (a team LLM API budget cap, since fixed) interrupted the first
    attempt on each and it was re-run. `results.json`'s `task_ledger` row for each picks whichever
    run had the best `test_reward`, tie-broken by latest — **not** simply "the latest run." See each
-   task's report ([`platform-005`](../../../reports/task-by-task/v4/v4_t_e1/platform-005-wrong-owner-trap.md),
-   [`platform-007`](../../../reports/task-by-task/v4/v4_t_e1/platform-007-directory-path-fetch.md),
-   [`platform-008`](../../../reports/task-by-task/v4/v4_t_e1/platform-008-log-does-not-say.md)) for
+   task's report ([`platform-005`](../../../reports/v4/v4_t_e1/platform-005-wrong-owner-trap.md),
+   [`platform-007`](../../../reports/v4/v4_t_e1/platform-007-directory-path-fetch.md),
+   [`platform-008`](../../../reports/v4/v4_t_e1/platform-008-log-does-not-say.md)) for
    which run won and why; the cost/time figures above are from that same winning run in every case.
 2. `seed`, `cand_0001-3`, and `best` in the ledger are **validation-split** measurements (`n=5`
    trials per eval); `final` is the **held-out test-split** measurement for whichever candidate won

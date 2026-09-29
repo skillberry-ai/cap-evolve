@@ -15,7 +15,7 @@ experiment, which IS committed, and which `build_results_json.py` then reads. Th
     intake worktree rollouts/     (not in this branch, 40+ MB)
       -> results/<exp>/per_task_scores.json      (committed, ~10 KB, THIS script)
         -> results/results.json                 (committed, build_results_json.py)
-          -> ui/heatmap.html + reports/task-by-task/*.md   (build_heatmap.py, build_task_reports.py)
+          -> ui/heatmap.html + reports/*.md   (build_heatmap.py, build_task_reports.py)
 
 Only this first hop needs the source worktrees. Everything downstream regenerates from
 files inside the branch, so `--check` in the other three scripts is meaningful in CI.
