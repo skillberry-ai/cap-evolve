@@ -22,18 +22,18 @@ precision (rounding it to one decimal would collapse cand_0001 through cand_0006
 erasing the differences the accept/reject decisions are based on) -- say if you'd like that column
 rounded differently too.
 
-| Stage | Val reward | Parent | Parent val | Accept? | Eval cost($) | Eval tokens | Eval time(s) | Opt cost($) | Opt tokens | Opt time(s) | Total cost($) | Total time(s) |
+| Stage | Val reward | Parent | Parent val | Accept? | Eval cost($) | Eval tokens | Eval time(s / h) | Opt cost($) | Opt tokens | Opt time(s / h) | Total cost($) | Total time(s / h) |
 |---|--:|---|--:|:--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| baseline/seed | 0.848801 | -- | -- | -- | 0.0\* | 0 | 23,003.5 | 0.0 | 0 | 0.0 | 0.0\* | 23,003.5 |
-| cand_0001 | 0.927424 | seed | 0.848801 | **accept** | 0.0\* | 0 | 23,661.2 | 28.0 | 172,151 | 1,956.5 | 28.0\* | 25,617.7 |
-| cand_0002 | 0.935347 | cand_0001 | 0.927424 | reject | 0.0\* | 0 | 23,298.1 | 32.1 | 94,645 | 4,446.5 | 32.1\* | 27,744.6 |
-| cand_0003 | 0.910922 | cand_0001 | 0.927424 | reject | 29.0 | 9,033,586 | 18,978.5 | 58.5 | 139,184 | 8,474.4 | 87.4 | 27,453.0 |
-| cand_0004 | 0.943418 | cand_0001 | 0.927424 | **accept -> best_id** | 25.2 | 7,789,290 | 20,363.3 | 28.8 | 97,511 | 4,808.2 | 53.9 | 25,171.5 |
-| cand_0005 | 0.937639 | cand_0004 | 0.943418 | reject | 24.1 | 7,479,403 | 23,640.4 | 44.5 | 108,359 | 10,560.8 | 68.7 | 34,201.2 |
-| cand_0006 | 0.952121 | cand_0004 | 0.943418 | reject | 27.1 | 8,421,079 | 19,859.2 | 50.5 | 136,608 | 8,869.2 | 77.6 | 28,728.4 |
-| cand_0007 (incomplete)\*\* | -- | cand_0004 | 0.943418 | never scored | 0.0 | 0 | 0.0 | ~71.1 | ~212,752 | ~12,747.8 | ~71.1 | ~12,747.8 |
-| **TOTAL (6 scored iterations)** | | | | | **105.3** | **32,723,358** | **129,800.8** | **313.4** | **961,210** | **51,863.3** | **418.8** | **181,664.1** |
-| **TOTAL incl. baseline** | | | | | **105.3** | **32,723,358** | **152,804.3** | **313.4** | **961,210** | **51,863.3** | **418.8** | **204,667.7** |
+| baseline/seed | 0.848801 | -- | -- | -- | 0.0\* | 0 | 23,003.5 / 6.39h | 0.0 | 0 | 0.0 / 0.00h | 0.0\* | 23,003.5 / 6.39h |
+| cand_0001 | 0.927424 | seed | 0.848801 | **accept** | 0.0\* | 0 | 23,661.2 / 6.57h | 28.0 | 172,151 | 1,956.5 / 0.54h | 28.0\* | 25,617.7 / 7.12h |
+| cand_0002 | 0.935347 | cand_0001 | 0.927424 | reject | 0.0\* | 0 | 23,298.1 / 6.47h | 32.1 | 94,645 | 4,446.5 / 1.24h | 32.1\* | 27,744.6 / 7.71h |
+| cand_0003 | 0.910922 | cand_0001 | 0.927424 | reject | 29.0 | 9,033,586 | 18,978.5 / 5.27h | 58.5 | 139,184 | 8,474.4 / 2.35h | 87.4 | 27,453.0 / 7.63h |
+| cand_0004 | 0.943418 | cand_0001 | 0.927424 | **accept -> best_id** | 25.2 | 7,789,290 | 20,363.3 / 5.66h | 28.8 | 97,511 | 4,808.2 / 1.34h | 53.9 | 25,171.5 / 6.99h |
+| cand_0005 | 0.937639 | cand_0004 | 0.943418 | reject | 24.1 | 7,479,403 | 23,640.4 / 6.57h | 44.5 | 108,359 | 10,560.8 / 2.93h | 68.7 | 34,201.2 / 9.50h |
+| cand_0006 | 0.952121 | cand_0004 | 0.943418 | reject | 27.1 | 8,421,079 | 19,859.2 / 5.52h | 50.5 | 136,608 | 8,869.2 / 2.46h | 77.6 | 28,728.4 / 7.98h |
+| cand_0007 (incomplete)\*\* | -- | cand_0004 | 0.943418 | never scored | 0.0 | 0 | 0.0 / 0.00h | ~71.1 | ~212,752 | ~12,747.8 / 3.54h | ~71.1 | ~12,747.8 / 3.54h |
+| **TOTAL (6 scored iterations)** | | | | | **105.3** | **32,723,358** | **129,800.8 / 36.06h** | **313.4** | **961,210** | **51,863.3 / 14.41h** | **418.8** | **181,664.1 / 50.46h** |
+| **TOTAL incl. baseline** | | | | | **105.3** | **32,723,358** | **152,804.3 / 42.45h** | **313.4** | **961,210** | **51,863.3 / 14.41h** | **418.8** | **204,667.7 / 56.85h** |
 
 \* `cost_usd`/`tokens` show as exactly `0.0`/`0` on the runner side for `baseline/seed`,
 `cand_0001`, and `cand_0002`'s eval -- this is a metering/instrumentation gap in this harness
@@ -75,6 +75,14 @@ contributes $0/0/0s above.
   without costing LLM tokens -- unlike token cost, which only accrues when the model itself is
   generating. Serial execution (`workers: 1`) then multiplies that per-rollout latency by all 170
   rollouts with no overlap, which is most of why a $25-29 eval still takes 5-6.5 wall-clock hours.
+- **Cost and wall-clock time are anti-correlated across the eval/opt split, not just different in
+  scale.** For `cand_0003`-`cand_0006`, eval wall time is consistently 2.2x-4.2x opt wall time
+  (5.3-6.6h eval vs. 1.3-2.9h opt), yet eval costs 90x-131x *less* than opt ($24-29 eval vs. $28-58
+  opt). This isn't a contradiction once the workloads are separated: eval time is dominated by
+  170 serial rollouts of tool-call/environment latency (see the per-rollout note below) that costs
+  wall-clock but barely any billed tokens, while opt time is a handful of optimizer-model calls
+  that are comparatively fast per call but expensive per token. Don't read "eval is cheaper" as
+  "eval does less work" -- it does more wall-clock work for less billed cost.
 - "Total time(s)" per row is `runner_seconds + optimizer_seconds` for that row treated as fully
   sequential (single worker, `orchestration_mode: deterministic`) -- there is no parallel-worker
   discount to apply, matching how T2's per-task total time is reported.
