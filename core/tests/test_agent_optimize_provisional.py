@@ -179,7 +179,8 @@ def _commit(run_dir, candidate_id, from_dir, decision, val=None, extra=()):
     env = dict(os.environ, PYTHONPATH=str(CORE))
     cmd = [sys.executable, str(AGENT_COMMIT), "--run-dir", str(run_dir.root),
            "--candidate-id", candidate_id, "--from-dir", str(from_dir),
-           "--decision", decision, "--note", f"{decision} via test"]
+           "--decision", decision, "--note", f"{decision} via test",
+           "--missing-handover-justification", "fixture: journal handover not under test"]
     if val is not None:
         cmd += ["--val", str(val)]
     cmd += list(extra)

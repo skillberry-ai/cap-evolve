@@ -436,6 +436,11 @@ The write protocol:
    afterward (accept/reject, Δ, and the exact tasks fixed/broken vs the parent), which is the
    authoritative record of what actually worked — read it, don't guess at it.
 
+`commit.py` enforces step 2 as a precondition (#588): it refuses to record a decision when no
+new `## Iteration` entry exists for that candidate, unless you pass
+`--missing-handover-justification "<reason>"`. Write the entry before calling `commit.py`, not
+after.
+
 This is a general convention for ANY continuous-session algorithm (one long-running optimizer
 subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration
 optimizer workdir): the framework re-seeds the same file at the same two points

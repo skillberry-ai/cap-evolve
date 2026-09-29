@@ -153,7 +153,8 @@ def _commit(run_dir, work, *extra):
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", "cand_1", "--from-dir", str(work),
          "--decision", "reject", "--val", "0.5333333333333333",
-         "--note", "delta +0.033 within control noise 0.044", *extra],
+         "--note", "delta +0.033 within control noise 0.044",
+         "--missing-handover-justification", "fixture: journal handover not under test", *extra],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
     assert p.returncode == 0, f"commit.py failed: {p.stdout}\n{p.stderr}"
