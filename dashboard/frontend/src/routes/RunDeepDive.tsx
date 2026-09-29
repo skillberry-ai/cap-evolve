@@ -20,7 +20,7 @@ import { ConfigPanel } from '../components/ConfigPanel'
 import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
 import { CostLedger } from '../components/CostLedger'
 import { GatePanel } from '../components/GatePanel'
-import { TaskMatrix } from '../components/TaskMatrix'
+import { TaskMatrix, SealedTestMatrix } from '../components/TaskMatrix'
 import { LogStream } from '../components/LogStream'
 import {
   EvographPanel,
@@ -222,12 +222,15 @@ function TabBody({
       return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
       return (
-        <TaskMatrix
-          summary={s}
-          nodes={data.graph.nodes}
-          selectedId={selectedCandidate}
-          screens={extra.screens}
-        />
+        <div className="space-y-4">
+          <TaskMatrix
+            summary={s}
+            nodes={data.graph.nodes}
+            selectedId={selectedCandidate}
+            screens={extra.screens}
+          />
+          <SealedTestMatrix summary={s} />
+        </div>
       )
     case 'cost':
       // The ledger already accounts for every dollar by phase; CostPanel's by-role chart

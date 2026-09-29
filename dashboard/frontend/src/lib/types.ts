@@ -93,6 +93,8 @@ export interface LogRow {
 /** Which panels this run has real data for. Absent signal ⇒ panel omitted, never faked. */
 export interface RunCapabilities {
   per_task: boolean
+  /** Sealed test (and seed-on-test) per-task rewards, when finalize() persisted them. */
+  test_per_task?: boolean
   lineage: boolean
   gate: boolean
   cost: boolean
@@ -226,6 +228,10 @@ export interface PerIterationCost {
   optimizer_usd: number | null
   optimizer_seconds: number
   optimizer_tokens: number
+  /** Cache-read/-creation tokens the optimizer CLI reported for this step (#575 D.3).
+   *  Null (not 0) on any run recorded before that capture existed. */
+  optimizer_cache_read_tokens?: number | null
+  optimizer_cache_creation_tokens?: number | null
   runner_usd: number | null
   runner_seconds: number
   runner_tokens: number
@@ -377,7 +383,15 @@ export interface RunSummaryDetail {
   }
   tokens?: number | null
   tokens_by_role?: { runner: number; optimizer: number; intake: number }
+  /** Cache-read/-creation token totals (#575 D.3), summed across iterations that
+   *  reported them. Null ("not recorded"), never 0, when nothing did. */
+  cache_read_tokens?: number | null
+  cache_creation_tokens?: number | null
   per_iteration?: PerIterationCost[]
+  /** Sealed-test per-task rewards for the best candidate / for the seed, when
+   *  finalize() persisted them — shown the same way val's per-task scores are. */
+  test_per_task?: Record<string, number> | null
+  test_baseline_per_task?: Record<string, number> | null
   evaluations?: Evaluation[]
   intake?: {
     usd: number

@@ -1421,6 +1421,13 @@ def reduce_run(run_dir) -> dict:
             # but the optimizer agent CLI reports opt_cost_usd / opt_tokens per step).
             "opt_cost_usd": ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd"),
             "opt_tokens": ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0,
+            # Cache-read/-creation tokens (issue #575 D.3): separate from opt_tokens on
+            # purpose — folding them in would hide the cache hit rate opt_tokens is
+            # supposed to explain. Nullable: absent (not 0) on every run recorded before
+            # the optimizer CLI's usage.cache_read_input_tokens/cache_creation_input_tokens
+            # were captured (see #562, which owns that capture).
+            "opt_cache_read_tokens": ev.get("cache_read_tokens") or ev.get("optimizer_cache_read_tokens"),
+            "opt_cache_creation_tokens": ev.get("cache_creation_tokens") or ev.get("optimizer_cache_creation_tokens"),
             "seconds": (ev.get("runner_seconds") or vev.get("seconds") or 0.0)
                        + (ev.get("optimizer_seconds") or 0.0),
             "optimizer_seconds": ev.get("optimizer_seconds") or 0.0,
@@ -1587,6 +1594,16 @@ def reduce_run(run_dir) -> dict:
         intake_tokens = sp.intake_tokens
         tokens = sp.runner_tokens + sp.optimizer_tokens + sp.intake_tokens
 
+    # Cache-read/-creation token totals (#575 D.3). Summed only from nodes that actually
+    # recorded a value — an all-absent run reports None ("not recorded"), never a
+    # confident 0, same rule as opt_cost_usd above.
+    _cache_read_vals = [n.get("opt_cache_read_tokens") for n in nodes.values()
+                        if n.get("opt_cache_read_tokens") is not None]
+    _cache_creation_vals = [n.get("opt_cache_creation_tokens") for n in nodes.values()
+                            if n.get("opt_cache_creation_tokens") is not None]
+    cache_read_tokens = sum(int(v) for v in _cache_read_vals) if _cache_read_vals else None
+    cache_creation_tokens = sum(int(v) for v in _cache_creation_vals) if _cache_creation_vals else None
+
     test = final.get("test") or {}
     test_reward = test.get("reward")
     try:
@@ -1608,6 +1625,10 @@ def reduce_run(run_dir) -> dict:
             "optimizer_usd": n.get("opt_cost_usd"),  # nullable
             "optimizer_seconds": round(n.get("optimizer_seconds") or 0.0, 2),
             "optimizer_tokens": int(n.get("opt_tokens") or 0),
+            # Nullable (see the node's own comment above): absent means not captured
+            # yet, not zero cache reuse.
+            "optimizer_cache_read_tokens": n.get("opt_cache_read_tokens"),
+            "optimizer_cache_creation_tokens": n.get("opt_cache_creation_tokens"),
             # Runner cost is nullable: only surface a real number, not a synthetic 0.
             "runner_usd": (float(runner_cost) if runner_cost else None),
             "runner_seconds": round(n.get("runner_seconds") or 0.0, 2),
@@ -2151,6 +2172,8 @@ def reduce_run(run_dir) -> dict:
     capabilities = {
         "per_task": (any(n.get("per_task") for n in nodes.values())
                      or any(s.get("per_task") for s in screens)),
+        # Sealed test (and seed-on-test) per-task rewards, when finalize() persisted them.
+        "test_per_task": bool(test.get("per_task")),
         "lineage": len(nodes) > 1,
         "gate": bool(gate_decisions),
         "cost": bool(ledger),
@@ -2261,6 +2284,16 @@ def reduce_run(run_dir) -> dict:
                                 else final.get("test_baseline_reward"),
         "test_delta": final.get("test_delta"),
         "test_sealed": sealed,
+        # Sealed-test per-task rewards for the best candidate and for the seed, so the
+        # test split can be shown the same way the val TaskMatrix already shows val
+        # (#575): per finalize()'s payload, ``test`` is the best candidate's SplitResult
+        # and ``test_baseline`` is the seed's — both carry their own ``per_task`` list,
+        # previously read only for their aggregate reward/n_tasks above.
+        "test_per_task": {pt["task_id"]: pt["reward"] for pt in test.get("per_task", [])} or None,
+        "test_baseline_per_task": {
+            pt["task_id"]: pt["reward"]
+            for pt in (final.get("test_baseline") or {}).get("per_task", [])
+        } or None,
         # The full bookend `finalize` now writes into final.json (seed/best × train/val/
         # test): surfaced here as a couple of scalars rather than the raw nested shape,
         # matching how test_reward/test_baseline_reward are already flattened above.
@@ -2289,6 +2322,11 @@ def reduce_run(run_dir) -> dict:
         "tokens": tokens,
         "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
                            "optimizer": opt_tokens, "intake": int(intake_tokens)},
+        # Cache-read/-creation tokens the optimizer CLI reused/wrote (#575 D.3), kept
+        # SEPARATE from `tokens` on purpose (see the per-node comment above) — folding
+        # them in would hide the cache hit rate they exist to explain.
+        "cache_read_tokens": cache_read_tokens,
+        "cache_creation_tokens": cache_creation_tokens,
         "per_iteration": per_iteration,
         "evaluations": evaluations,
         "intake": intake,

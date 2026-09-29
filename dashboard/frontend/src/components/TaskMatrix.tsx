@@ -42,7 +42,7 @@ function screenToNode(s: ScreenRow): GraphNode {
 
 /** Reward → cell class. `null` (never run) is visually distinct from 0 (ran, failed):
  *  a hatched empty cell, not a dark red one. Missing must never read as measured. */
-function cellFor(v: number | null | undefined) {
+export function cellFor(v: number | null | undefined) {
   // Solid token colours only. A Tailwind opacity modifier over a `var()` colour silently
   // produces no declaration in this setup, which is how "fail" cells rendered invisible
   // and made a failing task look like a task that never ran.
@@ -395,6 +395,88 @@ export function findChurn(nodes: GraphNode[]): { a: string; b: string }[] {
     }
   }
   return out.slice(0, 4)
+}
+
+/**
+ * Sealed test — per task, seed vs the shipped candidate (#575).
+ *
+ * `finalize()` scores BOTH the seed and the best candidate on the held-out test split
+ * and persists a `per_task` list for each, but until now the reducer only read their
+ * aggregate reward — the per-task breakdown was computed and then discarded. This
+ * mirrors the val TaskMatrix above (same cell colours/legend) so seed and sealed-test
+ * results are visible the same way val results already are, just for the two columns
+ * that exist on test: seed and best.
+ */
+export function SealedTestMatrix({ summary }: { summary: RunSummaryDetail }) {
+  const seedPer = summary.test_baseline_per_task
+  const bestPer = summary.test_per_task
+  if (!seedPer && !bestPer) return null
+
+  const ids = new Set([...Object.keys(seedPer ?? {}), ...Object.keys(bestPer ?? {})])
+  const rows = [...ids].sort()
+  const cols: { id: string; per: Record<string, number> | null | undefined }[] = [
+    { id: 'seed', per: seedPer },
+    { id: summary.best_id ?? 'best', per: bestPer },
+  ]
+
+  if (rows.length === 0) return null
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-4 p-3.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Sealed test — per task</h3>
+          <span className="text-[11px] text-muted">scored once, on data the optimizer never saw</span>
+        </div>
+        <div className="scroll-x">
+          <table className="border-separate border-spacing-[2px] text-[11px]">
+            <thead>
+              <tr>
+                <th className="pr-2 text-left font-normal text-muted">task</th>
+                {cols.map((c) => (
+                  <th key={c.id} className="px-0.5 pb-1 text-center font-mono text-[10px] text-muted">
+                    {c.id}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((t) => (
+                <tr key={t}>
+                  <th scope="row" className="max-w-[190px] truncate pr-2 text-left font-mono font-normal text-muted-strong" title={t}>
+                    {t}
+                  </th>
+                  {cols.map((c) => {
+                    const v = c.per?.[t]
+                    const cell = cellFor(v)
+                    return (
+                      <td key={c.id} className="p-0">
+                        <div
+                          title={`${t} on ${c.id}: ${cell.label}${v != null ? ` (${v.toFixed(3)})` : ''}`}
+                          className={cn(
+                            'flex h-6 w-7 items-center justify-center rounded-[3px] text-[9px] text-muted',
+                            cell.cls,
+                          )}
+                        >
+                          {cell.glyph}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted">
+          <Legend cls="bg-accepted">pass (1.0)</Legend>
+          <Legend cls="bg-accent">partial</Legend>
+          <Legend cls="bg-rejected">fail (0.0)</Legend>
+          <Legend cls="bg-surface-3 border border-dashed border-border-strong">not run</Legend>
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 function Legend({ cls, children }: { cls: string; children: React.ReactNode }) {
