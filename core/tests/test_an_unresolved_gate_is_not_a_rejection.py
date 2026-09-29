@@ -79,6 +79,7 @@ def _commit(run_dir, work, *extra, cid="cand_2", decision="inconclusive", val="0
          "--candidate-id", cid, "--from-dir", str(work),
          "--decision", decision, "--val", val,
          "--note", "verdict flipped between control replicates; not resolvable this round",
+         "--missing-handover-justification", "fixture: journal handover not under test",
          *extra, *force],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})

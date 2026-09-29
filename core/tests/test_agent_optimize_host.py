@@ -993,6 +993,53 @@ def test_an_eval_start_followed_by_its_evaluate_is_not_flagged_as_dangling(tmp_p
         f"a closed eval_start/evaluate pair was flagged as abandoned: {out}")
 
 
+def test_a_dangling_val_eval_survives_a_clean_test_seal(tmp_path):
+    """#587: a genuine voluntary stop (``stop_reason: success``, real ``num_turns`` — NOT
+    the ``task_notification``/null-``num_turns`` background-kill fingerprint) can still walk
+    away from a full-val ``eval_start`` it opened for a candidate, with no matching
+    ``evaluate``/``eval_abandoned``/``accept``/``reject``/``provisional`` ever logged.
+
+    That eval is a different (split, tag) key than the sealing test eval
+    (``split=test, tag=FINAL``), so the test seal succeeds on its own — and the host must not
+    read "test sealed" as "nothing was left outstanding" and silently drop the candidate.
+    """
+    project = _project(tmp_path)
+    run_dir = _run_dir(tmp_path)
+
+    # The exact fingerprint: a full-val eval_start for a candidate, no terminal event after it.
+    run_dir.log_event("eval_start", split="val", tag="r1_cand", n_tasks=1, n_trials=1,
+                      workers=1, rollouts=1)
+
+    stub = tmp_path / "fake_run_optimizer.py"
+    stub.write_text(
+        "import json\n"
+        "print(json.dumps({'optimizer': 'claude-code', 'cli_present': True,\n"
+        "                  'returncode': 0, 'auth_present': [],\n"
+        "                  'stop': {'subtype': 'success', 'num_turns': 42,\n"
+        "                           'stop_reason': 'end_turn'}}))\n",
+        encoding="utf-8")
+
+    out = _host("--run-dir", str(run_dir.root), "--project", str(project),
+                "--agent", "claude-code", "--run-optimizer", str(stub))
+
+    assert out["stop_reason"] == "success" and out["num_turns"] == 42, (
+        "this test only means something on the voluntary-stop fingerprint, not the "
+        f"background-kill one: {out}")
+
+    dangling = out.get("dangling_eval")
+    assert dangling is not None, (
+        f"the abandoned val eval_start was dropped once test sealed cleanly: {out}")
+    assert dangling["split"] == "val" and dangling["tag"] == "r1_cand", dangling
+    assert "r1_cand" in out.get("incomplete", ""), (
+        f"the abandoned candidate's eval was not surfaced in the run's own warning: {out}")
+
+    events = [json.loads(l) for l in
+              (run_dir.root / "events.jsonl").read_text(encoding="utf-8").splitlines() if l]
+    assert any(e.get("kind") == "eval_abandoned" and e.get("split") == "val"
+               and e.get("tag") == "r1_cand" for e in events), (
+        f"no eval_abandoned event was logged for the dropped candidate: {events}")
+
+
 # --- run 32861747778: round 1 died on the interpreter, then on concurrency ----
 
 

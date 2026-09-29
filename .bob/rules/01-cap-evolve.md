@@ -32,6 +32,15 @@ python skills/_registry/lint_skills.py skills
 cd dashboard/frontend && npm ci && npm run build && npm test
 ```
 
+## Finish the work
+
+- Deliver the whole issue in one PR. A "suggested PR order" in an issue is the
+  order to work in, not a place to stop. Do not leave parts for a later PR.
+- Every change to `core/cap_evolve/`, `skills/*/*/scripts/`,
+  `dashboard/backend/capevolve_dashboard/` or `dashboard/frontend/src/` needs a
+  new or updated test in `core/tests/`, `dashboard/backend/tests/` or
+  `dashboard/frontend/src/test/`. The automation fails the change otherwise.
+
 ## Issues that describe a UI
 
 - A dashboard or UI issue is resolved only when the UI exists in
@@ -45,6 +54,16 @@ cd dashboard/frontend && npm ci && npm run build && npm test
   export get it without extra endpoints.
 - Add a vitest test for each new component, and a pytest test for each new
   field in `reduce_run`.
+- Frontend tests for data that comes from `reduce_run` must use a payload that
+  `reduce_run` produced (a committed JSON fixture, checked by a pytest test that
+  regenerates it), not hand-written mocks. Hand-written mocks hide shape
+  mismatches between the backend and the frontend: a UI can pass every test and
+  still crash on a real run.
+- Render every new view and every tab from that real payload in a test, and
+  wrap run tabs in an error boundary, so one broken view cannot blank the app.
+- The committed runs under `examples/*/run_*` use an older event format (no
+  `eval_start` or `step` events). New views must render on them too, with less
+  data but no errors. Test both an old run and a current-format run.
 
 ## Writing style
 

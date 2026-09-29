@@ -26,8 +26,12 @@ jobs:
         && python -m pytest dashboard/backend/tests -q
         && python skills/_registry/lint_skills.py skills
         && cd dashboard/frontend && npm run build && npm test
-      timeout_minutes: 60
-      refine_passes: 2
+      # 7 passes x 40 min plus checks stays under the 360-minute job limit.
+      timeout_minutes: 40
+      refine_passes: 6
+      # Source changes must come with test changes (CONTRIBUTING.md house rule).
+      code_paths: '^(core/cap_evolve|skills/[^/]+/[^/]+/scripts|dashboard/backend/capevolve_dashboard|dashboard/frontend/src/(components|routes|lib))/'
+      test_paths: '^(core/tests|dashboard/backend/tests|dashboard/frontend/src/test)/'
     permissions:
       issues: write
       pull-requests: write

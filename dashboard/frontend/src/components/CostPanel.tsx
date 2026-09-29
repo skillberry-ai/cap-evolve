@@ -241,6 +241,14 @@ export function PerIterationCostTime({ summary }: { summary: RunSummaryDetail })
                     run time
                   </span>
                 </th>
+                {/* Cache-read/-creation tokens (#575 D.3) — separate columns, not folded
+                    into opt time/tokens, so cache reuse stays visible per step. */}
+                <th className="py-1.5 pr-2 text-right" title="optimizer CLI cache-read tokens for this step">
+                  cache read
+                </th>
+                <th className="py-1.5 pr-2 text-right" title="optimizer CLI cache-creation tokens for this step">
+                  cache created
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -255,6 +263,12 @@ export function PerIterationCostTime({ summary }: { summary: RunSummaryDetail })
                   <td className="tnum py-1.5 pr-2 text-right">{r.runner_usd != null ? usd(r.runner_usd) : '—'}</td>
                   <td className="py-1.5 pr-2">
                     <TimeBar seconds={r.runner_seconds} max={runMaxSec} color="var(--accepted)" />
+                  </td>
+                  <td className="tnum py-1.5 pr-2 text-right text-muted">
+                    {r.optimizer_cache_read_tokens != null ? compactNum(r.optimizer_cache_read_tokens) : '—'}
+                  </td>
+                  <td className="tnum py-1.5 pr-2 text-right text-muted">
+                    {r.optimizer_cache_creation_tokens != null ? compactNum(r.optimizer_cache_creation_tokens) : '—'}
                   </td>
                 </tr>
               ))}

@@ -47,6 +47,27 @@ def test_zero_trials_is_empty_lists():
     assert out == {"a": [], "b": []}
 
 
+def test_on_progress_fires_once_per_completed_job():
+    """#589: the harness needs a heartbeat as rollouts complete, both serial and
+    concurrent — one call per (task, trial) job, regardless of worker count.
+    """
+    def run_one(task, seed):
+        return Rollout(task_id=task.id, output="ok")
+
+    for workers in (1, 4):
+        calls = []
+        run_trials_pool(run_one, _tasks(["a", "b", "c"]), n_trials=2, base_seed=0,
+                        max_workers=workers, on_progress=lambda: calls.append(1))
+        assert len(calls) == 6  # 3 tasks * 2 trials
+
+
+def test_on_progress_not_required():
+    """Omitting ``on_progress`` (the default) must not change behavior."""
+    out = run_trials_pool(lambda t, s: Rollout(task_id=t.id), _tasks(["a"]),
+                          n_trials=1, base_seed=0, max_workers=2)
+    assert out["a"][0].task_id == "a"
+
+
 def test_caller_stdout_protected_from_concurrent_rollout_output():
     # Adapters' runners (e.g. tau2) print progress to stdout; run in parallel that would
     # race the per-call redirect_stdout and leak into the pure-JSON stdout contract. The

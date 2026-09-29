@@ -187,6 +187,19 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
               ? `runner ${compactNum(t.runner)} · opt ${compactNum(t.optimizer)}`
               : 'this runner does not report token counts'}
           </Fact>
+          <Fact
+            label="cache tokens"
+            value={
+              summary.cache_read_tokens == null && summary.cache_creation_tokens == null
+                ? 'not recorded'
+                : `${compactNum(summary.cache_read_tokens)} read`
+            }
+            dim={summary.cache_read_tokens == null && summary.cache_creation_tokens == null}
+          >
+            {summary.cache_read_tokens == null && summary.cache_creation_tokens == null
+              ? 'optimizer CLI cache-read/-creation tokens not captured on this run'
+              : `${compactNum(summary.cache_creation_tokens)} created · separate from the tokens count above`}
+          </Fact>
           <Fact label="val tasks" value={nVal == null ? '—' : String(nVal)}>
             {summary.splits
               ? `train ${summary.splits.train ?? '—'} · test ${summary.splits.test ?? '—'}`

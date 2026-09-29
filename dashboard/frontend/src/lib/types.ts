@@ -93,6 +93,8 @@ export interface LogRow {
 /** Which panels this run has real data for. Absent signal ⇒ panel omitted, never faked. */
 export interface RunCapabilities {
   per_task: boolean
+  /** Sealed test (and seed-on-test) per-task rewards, when finalize() persisted them. */
+  test_per_task?: boolean
   lineage: boolean
   gate: boolean
   cost: boolean
@@ -226,6 +228,10 @@ export interface PerIterationCost {
   optimizer_usd: number | null
   optimizer_seconds: number
   optimizer_tokens: number
+  /** Cache-read/-creation tokens the optimizer CLI reported for this step (#575 D.3).
+   *  Null (not 0) on any run recorded before that capture existed. */
+  optimizer_cache_read_tokens?: number | null
+  optimizer_cache_creation_tokens?: number | null
   runner_usd: number | null
   runner_seconds: number
   runner_tokens: number
@@ -297,6 +303,12 @@ export interface GraphNode {
    *  Nodes sharing this id were evaluated and gated TOGETHER, not sequentially —
    *  absent for candidates not gated via round.py. */
   round_id?: string | null
+  /** Optimizer diagnosis for this candidate (from DIAGNOSIS.json). */
+  diagnosis?: Diagnosis | null
+  /** Per-task outcome classification vs parent. */
+  outcomes?: Outcomes | null
+  /** Prompt map metadata for capability files. */
+  prompt_map?: PromptMap | null
 }
 
 export interface RunGraph {
@@ -377,8 +389,18 @@ export interface RunSummaryDetail {
   }
   tokens?: number | null
   tokens_by_role?: { runner: number; optimizer: number; intake: number }
+  /** Cache-read/-creation token totals (#575 D.3), summed across iterations that
+   *  reported them. Null ("not recorded"), never 0, when nothing did. */
+  cache_read_tokens?: number | null
+  cache_creation_tokens?: number | null
   per_iteration?: PerIterationCost[]
+  /** Sealed-test per-task rewards for the best candidate / for the seed, when
+   *  finalize() persisted them — shown the same way val's per-task scores are. */
+  test_per_task?: Record<string, number> | null
+  test_baseline_per_task?: Record<string, number> | null
   evaluations?: Evaluation[]
+  /** Timeline activities for visualization (optimizer calls, evaluations, gates). */
+  activities?: Activity[]
   intake?: {
     usd: number
     seconds: number
@@ -561,3 +583,77 @@ export type StreamEvent =
   | { type: 'event'; data: Record<string, unknown> }
   | { type: 'done'; data: { run_id: string } }
   | { type: 'idle'; data: { run_id: string } }
+
+/** Activity on the run timeline (from summary.activities). */
+export interface Activity {
+  id: string
+  type: 'seed' | 'optimize' | 'evaluate' | 'gate' | 'final_eval' | 'finalize'
+  lane: 'phase' | 'iteration' | 'optimizer' | 'evaluator' | 'milestone' | 'chart'
+  iteration: number | null
+  candidate: string | null
+  start: number
+  end: number
+  error: boolean
+}
+
+/** Prompt map metadata for a capability file (from graph.nodes[].prompt_map). */
+export interface PromptMapFile {
+  lines: number
+  bytes: number
+  headings: Array<[number, number, string]>  // [line, level, text]
+  add: number[]  // line numbers added vs parent
+  rem: number[]  // line numbers where content was removed
+  touched: Array<[string, number]>  // [heading text, line number]
+}
+
+export type PromptMap = Record<string, PromptMapFile>
+
+/** Optimizer diagnosis cluster (from graph.nodes[].diagnosis.clusters). */
+export interface Cluster {
+  id: string
+  name: string
+  detail: string
+  tasks: string[]
+  scope: string
+  latent: boolean
+  tag: string
+}
+
+/** Optimizer edit (from graph.nodes[].diagnosis.edits). */
+export interface Edit {
+  id: string
+  title: string
+  files: string[]
+  lever: string
+  clusters: string[]
+  blast_radius: string
+  verified: string
+}
+
+/** Skipped edit (from graph.nodes[].diagnosis.skipped). */
+export interface SkippedEdit {
+  title: string
+  reason: string
+}
+
+/** Optimizer diagnosis (from graph.nodes[].diagnosis). */
+export interface Diagnosis {
+  candidate: string
+  headline: string
+  clusters: Cluster[]
+  edits: Edit[]
+  skipped: SkippedEdit[]
+  techniques: string[]
+  /** Validation warnings from the harness (advisory only). */
+  warnings?: string[]
+}
+
+/** Per-task outcome classification (from graph.nodes[].outcomes). */
+export interface Outcomes {
+  fixed: string[]
+  broke: string[]
+  still_failing: string[]
+  still_passing: string[]
+  /** Tasks that were targeted in the optimizer's diagnosis. */
+  targeted?: string[]
+}

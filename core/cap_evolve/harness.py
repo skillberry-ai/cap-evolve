@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -49,6 +50,59 @@ from .types import Rollout, Score, Task
 # of pass-through plumbing (skillopt.py isn't even ours to edit). Add the explicit
 # parameter if two evaluations in ONE process ever need different worker counts.
 DEFAULT_WORKERS = 1
+
+#: cap_evolve's own debug/verbose logging (#589: no such flag existed anywhere in
+#: core). ``cap_evolve/__init__.py`` wires this logger's level to
+#: ``CAPEVOLVE_LOG_LEVEL`` (default: off — Python's usual WARNING-only default),
+#: so setting ``CAPEVOLVE_LOG_LEVEL=DEBUG`` (or ``cap-evolve run --log-level DEBUG``)
+#: surfaces the per-task/per-trial ``logger.debug`` calls below without changing
+#: anything for a caller who never asked for them.
+logger = logging.getLogger(__name__)
+
+#: Default minimum seconds between ``eval_progress`` heartbeats during a long eval
+#: (#589) — matches the issue's "every 30-60s is enough". Read fresh (like
+#: ``CAPEVOLVE_WORKERS`` in ``_resolve_workers`` below) rather than cached at import
+#: time, so ``CAPEVOLVE_EVAL_PROGRESS_INTERVAL`` (tests set it to 0 for one event per
+#: rollout) always reflects the current environment.
+DEFAULT_EVAL_PROGRESS_INTERVAL = 30.0
+
+
+def _progress_interval() -> float:
+    try:
+        return float(os.environ.get("CAPEVOLVE_EVAL_PROGRESS_INTERVAL", DEFAULT_EVAL_PROGRESS_INTERVAL))
+    except (TypeError, ValueError):
+        return DEFAULT_EVAL_PROGRESS_INTERVAL
+
+
+def _progress_emitter(run_dir: RunDir, *, split: str, tag: str, total: int,
+                      per_task_trials: dict) -> Callable[[], None]:
+    """Build a callback that logs a throttled ``eval_progress`` event as rollouts are
+    generated, so a long eval (minutes to hours) leaves a heartbeat in events.jsonl
+    instead of going dark between ``eval_start`` and ``evaluate``/``eval_abandoned``
+    (#589). Cheap on the hot path: bumps an in-memory counter every call and only
+    writes an event every ``EVAL_PROGRESS_INTERVAL`` seconds (or on the final
+    rollout). ``running_mean`` is included only once some task has a scored trial to
+    average — it reads ``per_task_trials`` (mutated in place by ``_persist_trial`` as
+    trials are scored) rather than fabricating a number before any score exists.
+    """
+    from .stats import mean
+    state = {"done": 0, "last": 0.0}
+    interval = _progress_interval()
+
+    def bump() -> None:
+        state["done"] += 1
+        now = time.time()
+        finished = state["done"] >= total
+        if not finished and (now - state["last"]) < interval:
+            return
+        state["last"] = now
+        rewards = [r for trials in per_task_trials.values() for r in trials]
+        run_dir.log_event(
+            "eval_progress", split=split, tag=tag,
+            completed=state["done"], total=total,
+            **({"running_mean": round(mean(rewards), 4)} if rewards else {}))
+
+    return bump
 
 
 def _resolve_workers(workers: int | None) -> int:
@@ -301,6 +355,15 @@ def evaluate_candidate(
     task_by_id = {t.id: t for t in tasks}
     run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}}  # RUNNER spend, summed over rollouts
     t0 = time.time()
+    # See #589: a heartbeat for the long silent stretch between ``eval_start`` and
+    # ``evaluate``. Only the rollout-generation paths that see individual (task,
+    # trial) completions in real time (the per-task workers>1 pool and the plain
+    # serial loop, below) can call this — an adapter's ``run_batch``/``run_trials``
+    # fast path returns its whole grid in one call, so it stays dark here exactly as
+    # it always has (its own runner may print its own progress, e.g. tau2's run_batch).
+    emit_progress = _progress_emitter(
+        run_dir, split=split, tag=tag,
+        total=len(tasks) * max(1, int(n_trials)), per_task_trials=per_task_trials)
 
     def _persist_trial(k: int, rollouts_for_k: dict) -> None:
         """Score + persist one trial's rollouts. The single source of truth for
@@ -369,6 +432,10 @@ def evaluate_candidate(
                 per_task_trials[tid].append(sc.reward)
                 per_task_metrics[tid].append(sc.metrics)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+            # #589: per-task/per-trial detail, opt-in via CAPEVOLVE_LOG_LEVEL=DEBUG
+            # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
+            logger.debug("split=%s tag=%s task=%s trial=%s reward=%s errored=%s",
+                         split, tag, tid, k, getattr(sc, "reward", None), errored)
             (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
@@ -441,10 +508,17 @@ def evaluate_candidate(
                     # so the honest denominator sees missing data, never a 0.0.
                     pooled = run_trials_pool(
                         lambda t, s: adapter.run_target(t, ctx, seed=s),
-                        tasks, n_trials=1, base_seed=seed, max_workers=workers)
+                        tasks, n_trials=1, base_seed=seed, max_workers=workers,
+                        on_progress=emit_progress)
                     rollouts = {tid: (rs[0] if rs else None) for tid, rs in pooled.items()}
                 else:
-                    rollouts = {t.id: adapter.run_target(t, ctx, seed=seed) for t in tasks}
+                    # Plain serial fast path — a for-loop (not a dict comprehension) so
+                    # ``emit_progress`` sees each rollout as it actually finishes rather
+                    # than only after the whole trial's tasks are already done (#589).
+                    rollouts = {}
+                    for t in tasks:
+                        rollouts[t.id] = adapter.run_target(t, ctx, seed=seed)
+                        emit_progress()
                 _persist_trial(k, rollouts)
 
     run_cost, run_tokens = run_acc["cost"], run_acc["tokens"]
@@ -1041,7 +1115,37 @@ _PROCESS_SEED = (
     "## Good things to PRESERVE (do not let a future iteration undo these)\n"
     "- \n\n"
     "## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)\n"
-    "- \n"
+    "- \n\n"
+    "---\n\n"
+    "# DIAGNOSIS.json — machine-readable diagnosis (OPTIONAL but recommended)\n\n"
+    "In addition to PROCESS.md, you may write a DIAGNOSIS.json file to make your diagnosis "
+    "machine-readable for the dashboard. This is optional; if absent, the dashboard will "
+    "parse PROCESS.md tables when present, or show only outcome data.\n\n"
+    "The schema:\n"
+    "```json\n"
+    "{\n"
+    '  "candidate": "cand_NNNN",\n'
+    '  "headline": "Brief summary of this iteration\'s strategy",\n'
+    '  "clusters": [\n'
+    '    {"id": "A", "name": "Short cluster name",\n'
+    '     "detail": "Root cause explanation", "tasks": ["task-id", ...],\n'
+    '     "scope": "BOUNDED|WIDESPREAD|SYSTEMIC", "latent": false,\n'
+    '     "tag": "KNOWLEDGE|BEHAVIORAL|CAPABILITY-GAP"}\n'
+    "  ],\n"
+    '  "edits": [\n'
+    '    {"id": "E1", "title": "What this edit does",\n'
+    '     "files": ["prompt.md"], "lever": "CONTRACT|KNOWLEDGE|BEHAVIORAL|...",\n'
+    '     "clusters": ["A"], "blast_radius": "BOUNDED|MODERATE|WIDE",\n'
+    '     "verified": "How you tested it"}\n'
+    "  ],\n"
+    '  "skipped": [{"title": "What was skipped", "reason": "Why"}],\n'
+    '  "techniques": ["technique 1", "technique 2"]\n'
+    "}\n"
+    "```\n\n"
+    "Validation is advisory only and never blocks an iteration. Warnings are recorded when:\n"
+    "- A task ID in clusters[].tasks is not in the val split\n"
+    "- An edit references a cluster ID that does not exist\n"
+    "- An edit references a file that does not exist in the candidate\n"
 )
 
 
@@ -2764,6 +2868,12 @@ def run_step(
     # capability-only and the diff shows just the real edit. Only an accepted candidate
     # becomes the new best (parent for the next step).
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    
+    # Validate DIAGNOSIS.json if present (advisory only, never blocks)
+    val_task_ids = [str(t.get("task_id")) for t in (cand_val.per_task or [])]
+    diag_validation = _validate_diagnosis_json(workdir, run_dir=run_dir, 
+                                              val_tasks=val_task_ids)
+    
     if accepted:
         run_dir.set_best(cid)
     # ``accepted=None`` leaves the stall counter untouched. An indecisive step is not
@@ -3209,6 +3319,194 @@ class _ValidationReport:
     def to_dict(self) -> dict:
         return {"problems": self.problems, "warnings": self.warnings,
                 "by_capability": self.by_capability}
+
+
+def _validate_diagnosis_json(cand_dir: Path, run_dir: RunDir | None = None,
+                            val_tasks: list[str] | None = None) -> dict | None:
+    """Validate DIAGNOSIS.json if present (advisory only, never blocks).
+    
+    Returns a dict with 'warnings' list, or None if file doesn't exist.
+    Validation checks:
+    - JSON is parseable
+    - Task IDs in clusters are in val split
+    - Edit cluster references exist
+    - Edit file references exist in candidate
+    
+    All checks produce warnings only; validation never fails an iteration.
+    """
+    diag_path = cand_dir / "DIAGNOSIS.json"
+    if not diag_path.exists():
+        return None
+    
+    warnings: list[str] = []
+    
+    try:
+        content = diag_path.read_text(encoding="utf-8")
+        diag = json.loads(content)
+    except json.JSONDecodeError as e:
+        warnings.append(f"DIAGNOSIS.json is not valid JSON: {e}")
+        if run_dir:
+            run_dir.log_event("diagnosis_validation_warning", 
+                            candidate=diag.get("candidate", "unknown"),
+                            warning="Invalid JSON")
+        return {"warnings": warnings}
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"Could not read DIAGNOSIS.json: {e}")
+        return {"warnings": warnings}
+    
+    # Validate structure
+    if not isinstance(diag, dict):
+        warnings.append("DIAGNOSIS.json root must be an object")
+        return {"warnings": warnings}
+    
+    # Build cluster ID set for reference checking
+    cluster_ids = set()
+    clusters = diag.get("clusters", [])
+    if not isinstance(clusters, list):
+        warnings.append("'clusters' must be an array")
+    else:
+        for i, cluster in enumerate(clusters):
+            if not isinstance(cluster, dict):
+                warnings.append(f"clusters[{i}] must be an object")
+                continue
+            cid = cluster.get("id")
+            if cid:
+                cluster_ids.add(str(cid))
+            
+            # Check task IDs if val_tasks provided
+            if val_tasks:
+                tasks = cluster.get("tasks", [])
+                if isinstance(tasks, list):
+                    for task_id in tasks:
+                        if str(task_id) not in val_tasks:
+                            warnings.append(
+                                f"Cluster '{cid}': task '{task_id}' not in val split"
+                            )
+    
+    # Validate edits
+    edits = diag.get("edits", [])
+    if not isinstance(edits, list):
+        warnings.append("'edits' must be an array")
+    else:
+        for i, edit in enumerate(edits):
+            if not isinstance(edit, dict):
+                warnings.append(f"edits[{i}] must be an object")
+                continue
+            
+            # Check cluster references
+            edit_clusters = edit.get("clusters", [])
+            if isinstance(edit_clusters, list):
+                for cref in edit_clusters:
+                    if str(cref) not in cluster_ids:
+                        warnings.append(
+                            f"Edit '{edit.get('id', i)}': references unknown cluster '{cref}'"
+                        )
+            
+            # Check file references
+            files = edit.get("files", [])
+            if isinstance(files, list):
+                for fname in files:
+                    fpath = cand_dir / fname
+                    if not fpath.exists():
+                        warnings.append(
+                            f"Edit '{edit.get('id', i)}': references non-existent file '{fname}'"
+                        )
+    
+    if warnings and run_dir:
+        run_dir.log_event("diagnosis_validation_warnings",
+                        candidate=diag.get("candidate", "unknown"),
+                        warnings=warnings)
+    
+    return {"warnings": warnings, "diagnosis": diag}
+
+
+def _parse_process_md_tables(process_text: str) -> dict | None:
+    """Fallback: extract diagnosis from PROCESS.md tables when DIAGNOSIS.json absent.
+    
+    Parses the "Ranked issue list" and "Changes made this iteration" tables
+    from PROCESS.md and returns a diagnosis-like structure.
+    
+    Returns None if tables cannot be parsed.
+    """
+    if not process_text:
+        return None
+    
+    clusters = []
+    edits = []
+    
+    # Extract "Ranked issue list" table
+    # Format: | rank | cluster | tasks | shared root cause | tag | planned change class |
+    ranked_match = re.search(
+        r'##\s+Ranked issue list.*?\n\|[^\n]+\|\n\|[-\s|]+\|\n((?:\|[^\n]+\|\n)+)',
+        process_text, re.IGNORECASE | re.DOTALL
+    )
+    if ranked_match:
+        table_rows = ranked_match.group(1).strip().split('\n')
+        for row in table_rows:
+            if not row.strip():
+                continue
+            cells = [c.strip() for c in row.split('|')[1:-1]]  # Skip empty first/last
+            if len(cells) >= 5:
+                cluster_id = cells[1] if len(cells) > 1 else ""
+                tasks_str = cells[2] if len(cells) > 2 else ""
+                # Parse task IDs from various formats: "task1, task2" or "task1 task2"
+                task_ids = [t.strip() for t in re.split(r'[,\s]+', tasks_str) if t.strip()]
+                root_cause = cells[3] if len(cells) > 3 else ""
+                tag = cells[4] if len(cells) > 4 else ""
+                
+                if cluster_id and cluster_id != "cluster":  # Skip header row
+                    clusters.append({
+                        "id": cluster_id,
+                        "name": root_cause[:50] if root_cause else cluster_id,
+                        "detail": root_cause,
+                        "tasks": task_ids,
+                        "tag": tag
+                    })
+    
+    # Extract "Changes made this iteration" table
+    # Format: | cluster | edit class | file / tool | what & why | protects passing? |
+    changes_match = re.search(
+        r'##\s+Changes made this iteration.*?\n\|[^\n]+\|\n\|[-\s|]+\|\n((?:\|[^\n]+\|\n)+)',
+        process_text, re.IGNORECASE | re.DOTALL
+    )
+    if changes_match:
+        table_rows = changes_match.group(1).strip().split('\n')
+        for i, row in enumerate(table_rows):
+            if not row.strip():
+                continue
+            cells = [c.strip() for c in row.split('|')[1:-1]]
+            if len(cells) >= 4:
+                cluster_ref = cells[0] if len(cells) > 0 else ""
+                edit_class = cells[1] if len(cells) > 1 else ""
+                files = cells[2] if len(cells) > 2 else ""
+                what_why = cells[3] if len(cells) > 3 else ""
+                
+                if cluster_ref and cluster_ref != "cluster":  # Skip header row
+                    # Parse file names from "file / tool" column
+                    file_list = [f.strip() for f in files.split(',') if f.strip()]
+                    if not file_list:
+                        file_list = [files] if files else []
+                    
+                    edits.append({
+                        "id": f"E{i+1}",
+                        "title": what_why[:100] if what_why else edit_class,
+                        "files": file_list,
+                        "lever": edit_class,
+                        "clusters": [cluster_ref] if cluster_ref else []
+                    })
+    
+    if not clusters and not edits:
+        return None
+    
+    return {
+        "candidate": "unknown",
+        "headline": "Parsed from PROCESS.md tables",
+        "clusters": clusters,
+        "edits": edits,
+        "skipped": [],
+        "techniques": [],
+        "_source": "process_md_fallback"
+    }
 
 
 def _capability_validate(capabilities, cand_dir: Path,

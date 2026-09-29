@@ -172,9 +172,12 @@ estimate, not proof (`--veto-regressions` restores the old no-regression veto; s
 `footprint` before the delta; `unresolved` is no evidence** — `references/algorithm.md`, "Measuring only
 what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but books no decision.
 
-**5. Commit the decision through the run dir**, so `best_id`, the stall counter and the audit log
-stay real. `--decision reject` keeps the old best; it snapshots the candidate, logs the event
-and advances `iterations` + stall:
+**5. Write the handover, THEN commit.** Append one `## Iteration <cid>` entry below
+`work/$TAG/JOURNAL.md`'s marker (never `$R/JOURNAL.md`, framework-owned): what, why, what the
+numbers said — the only thing the NEXT round reads. `commit.py` refuses a decision with no
+matching entry (`--missing-handover-justification "<reason>"` is the escape hatch). Then
+commit, so `best_id`, stall and the audit log stay real. `--decision reject` keeps the old
+best; it snapshots the candidate, logs the event and advances `iterations` + stall:
 
 ```bash
 python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$TAG" \
@@ -199,11 +202,7 @@ unresolved round (`verdict_stable: false`) — run `grow.py` first, required unl
 after which `grow.py` buys trials on the SAME candidate, re-gating at the pooled n, capped at 2.
 `references/algorithm.md`.
 
-**6. Write the handover before ending this round** — append one `## Iteration <cid>` entry below
-`work/$TAG/JOURNAL.md`'s marker (never `$R/JOURNAL.md`, framework-owned): what you tried, why, what
-the numbers said. The only thing the NEXT round reads (`references/algorithm.md`). A real
-framework bug/gap (not the capability)? Log it in `work/$TAG/FRAMEWORK_IMPROVEMENTS.md` (its
-seeded format), not just in chat.
+**6.** A real framework bug/gap? Log it in `work/$TAG/FRAMEWORK_IMPROVEMENTS.md`, not just chat.
 
 ## Parallel round (optional)
 

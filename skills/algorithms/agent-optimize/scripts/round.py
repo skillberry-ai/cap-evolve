@@ -26,6 +26,7 @@ belongs to the driver, and ``regressions`` is the input to it.
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import re
@@ -50,8 +51,61 @@ from cap_evolve import RunDir, harness
 DEFAULT_CONCURRENCY = 8
 MAX_RESOLVING_CONCURRENCY = 25
 
+#: issue #585: --skip-screen-justification stopped being a fresh per-candidate judgment and
+#: became copy-pasted boilerplate ("consistent with cand_1/2/...", "...consistent with prior
+#: rounds", "...per prior rounds cand_2-...") — every candidate from the second on skipped the
+#: cheap screen and paid full-val (300 rollouts) instead of 8-25, and full-val rejected most of
+#: them anyway. Measured on the issue's own examples with difflib.SequenceMatcher: real boilerplate
+#: variants (same template, different candidate list tacked on) score 0.80-0.99; a justification
+#: describing THIS candidate's actual edit surface scores 0.09-0.3 against them. 0.75 sits well
+#: inside that gap.
+JUSTIFICATION_SIMILARITY_THRESHOLD = 0.75
+
 HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
+
+
+def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
+    """(tag, skip_justification) for every earlier ``agent_optimize_compliance`` event in this
+    run that recorded a non-empty justification. Read straight from ``events.jsonl`` — the file
+    ``log_event`` appends to — so this sees every earlier round of THIS run, not just this
+    process's own candidates.
+    """
+    if not run_dir.events_path.exists():
+        return []
+    out = []
+    for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if rec.get("kind") != "agent_optimize_compliance":
+            continue
+        just = rec.get("skip_justification")
+        if just and just.strip():
+            out.append((rec.get("tag"), just.strip()))
+    return out
+
+
+def _near_duplicate_justification(justification, prior):
+    """Tag of the most similar prior justification, if its similarity clears
+    ``JUSTIFICATION_SIMILARITY_THRESHOLD``, else ``None``.
+
+    ``difflib.SequenceMatcher`` (stdlib, no new dependency — CONTRIBUTING.md's zero-runtime-deps
+    rule) rather than an embedding model: the issue's own evidence is literal copy-pasted
+    sentences, which a character-level ratio catches directly and cheaply.
+    """
+    if not justification or not justification.strip():
+        return None
+    best_tag, best_ratio = None, 0.0
+    for tag, prior_just in prior:
+        ratio = difflib.SequenceMatcher(None, justification.strip().lower(),
+                                         prior_just.lower()).ratio()
+        if ratio > best_ratio:
+            best_tag, best_ratio = tag, ratio
+    return best_tag if best_ratio >= JUSTIFICATION_SIMILARITY_THRESHOLD else None
 
 
 def _all_tables(run_dir) -> list[tuple[int, int, Path]]:
@@ -566,12 +620,25 @@ def _main(argv=None) -> int:
     # straight to full-val, which the dashboard can now show as its own event kind.
     screens_dir = run_dir.root / "screens"
     skip_justified = bool(args.skip_screen_ladder or args.skip_screen_justification)
+    # issue #585: the justification text itself is compared against every earlier round's, so a
+    # copy-pasted "reason" is visible on the recorded event rather than only inferable (or not)
+    # from re-reading every round's prose by hand. Flagged, not blocked — see the docstring on
+    # JUSTIFICATION_SIMILARITY_THRESHOLD for why a driver may still have a good reason to reuse
+    # near-identical wording (the same true fact can hold for several candidates in a row).
+    near_dup_of = _near_duplicate_justification(
+        args.skip_screen_justification, _prior_skip_justifications(run_dir))
+    if near_dup_of:
+        print(f"NOTE: --skip-screen-justification is a near-duplicate of {near_dup_of}'s "
+              "justification earlier in this run — recorded as "
+              "justification_near_duplicate_of on the compliance event, not blocked.",
+              file=sys.stderr)
     unscreened = []
     for t in tags:
         screened = screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
         run_dir.log_event("agent_optimize_compliance", tag=t,
                           screened_before_fullval=screened,
                           skip_justification=args.skip_screen_justification,
+                          justification_near_duplicate_of=near_dup_of,
                           iteration=int(run_dir.spent.iterations))
         if not screened:
             unscreened.append(t)

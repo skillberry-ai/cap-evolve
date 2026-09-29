@@ -370,6 +370,12 @@ def main(argv=None) -> int:
                         "the 'skip screen AND skip the gate entirely' escape hatch. Say why "
                         "no measurement was ever run for it (e.g. an infra failure before any "
                         "rollout, or a deliberate drop before evaluating it at all).")
+    p.add_argument("--missing-handover-justification", default=None,
+                   help="required when this candidate's <from-dir>/JOURNAL.md has no new "
+                        "'## Iteration' entry for it — the escape hatch for committing without "
+                        "one (#588). Say why the optimizer never got to write it (e.g. an infra "
+                        "failure). Without it, commit.py refuses rather than silently booking "
+                        "the framework's synthesized stub.")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -551,6 +557,31 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
+    # Precondition (#588): JOURNAL.md is the ONLY channel that carries a round's own
+    # reasoning — not just its measured outcome — into the NEXT round, and the append step
+    # was skipped often enough that a real ``optimizer_context_warning`` fired on some of a
+    # run's most information-dense rounds, even though ``_reconcile_journal`` already
+    # synthesizes a stub from ``--note`` as a fallback. A synthesized stub is strictly worse
+    # than the optimizer's own entry, so hard-refuse here rather than let the fallback paper
+    # over a skipped step — same shape as the screen-then-gate bypass above: a named escape
+    # hatch that gets logged, not a silent default path. Does not apply to ``provisional``,
+    # which books no iteration and never touches JOURNAL.md (see module docstring).
+    handover = bool(harness.pending_handover(src, run_dir, args.candidate_id))
+    if not provisional and not handover and not args.missing_handover_justification:
+        print(json.dumps({
+            "error": f"no JOURNAL.md handover found for {args.candidate_id!r} — commit.py "
+                     "refuses to record this decision without one",
+            "why": "the run-level JOURNAL.md is how the NEXT round learns what this one "
+                   "tried and why; an empty handover breaks that even though the framework "
+                   "can synthesize a stub from --note as a fallback.",
+            "fix": f"append your entry to <from-dir>/JOURNAL.md as a "
+                   f"'## Iteration {args.candidate_id} — <headline>' block (below the marker "
+                   "line) and re-run commit.py, or pass --missing-handover-justification "
+                   "\"<reason>\" if you are deliberately committing without one (e.g. an "
+                   "infra failure before the optimizer had a chance to write it).",
+        }, indent=2))
+        return 2
+
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
@@ -584,21 +615,22 @@ def main(argv=None) -> int:
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
-    # Did the agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
-    # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and silently
-    # substitutes "(no handover written by the optimizer)" when there is none — which is what
-    # every round of runs 32971129203 and 33046360451 recorded, because nothing asked the agent
-    # for one. Read it BEFORE booking, and report the answer so a forgotten handover is
-    # correctable while rounds remain rather than discovered when the run is over.
-    # ``pending_handover``, not ``_journal_tail``: a working copy cloned from the last round
-    # still holds THAT round's entry, and _reconcile_journal's dedup guard books the placeholder
-    # rather than the same entry twice — so the plain tail reports "recorded" for exactly the
-    # round whose handover went missing.
-    handover = bool(harness.pending_handover(src, run_dir, args.candidate_id))
+    # ``handover`` was already computed (and, absent a justification, enforced) above. Did the
+    # agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
+    # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and, when
+    # ``handover`` is False here, synthesizes an entry from ``--note`` instead of the silent
+    # "(no handover written by the optimizer)" placeholder that every round of runs 32971129203
+    # and 33046360451 recorded — see harness._reconcile_journal.
     reason = args.note or args.decision
     if indecisive:
         reason = f"indecisive (gate): {reason}"
     warnings: list[str] = []
+    if not provisional and not handover and args.missing_handover_justification:
+        warnings.append(
+            f"missing handover: {args.candidate_id!r} was committed with NO JOURNAL.md "
+            "entry, justified as: "
+            f"{args.missing_handover_justification!r} — the run-level JOURNAL.md will carry "
+            "only a framework-synthesized stub for this round.")
     if bypassed_screen_and_gate:
         warnings.append(
             f"screen+gate bypass: {args.candidate_id!r} was rejected via driver_judgement "
@@ -658,15 +690,8 @@ def main(argv=None) -> int:
             # evaluated. Same reasoning as the deterministic hill-climb's own indecisive branch.
             _record_memory(run_dir, args.candidate_id, accepted=accepted,
                            reason=reason, val=args.val, parent_val=parent_val)
-        if not handover:
-            warnings.append(
-                "no handover recorded for this round: the run-level JOURNAL.md now reads "
-                "'(no handover written by the optimizer)' for "
-                f"{args.candidate_id}, so the next round can see WHICH tasks moved but not what "
-                "you tried or why. Before the next commit.py, write your entry to "
-                "<from-dir>/JOURNAL.md as a '## Iteration <candidate> — <headline>' block "
-                "(changes made, expected effect, hypotheses prior RESULT lines already refuted, "
-                "focus next).")
+        # (missing-handover warning, if any, was already appended above — the precondition
+        # earlier already refused the commit unless a justification was given.)
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()

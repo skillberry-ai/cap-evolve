@@ -20,7 +20,7 @@ import { ConfigPanel } from '../components/ConfigPanel'
 import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
 import { CostLedger } from '../components/CostLedger'
 import { GatePanel } from '../components/GatePanel'
-import { TaskMatrix } from '../components/TaskMatrix'
+import { TaskMatrix, SealedTestMatrix } from '../components/TaskMatrix'
 import { LogStream } from '../components/LogStream'
 import {
   EvographPanel,
@@ -31,6 +31,9 @@ import {
 import { FileTree } from '../components/FileTree'
 import { ProcessPanel } from '../components/ProcessPanel'
 import { GitDiff } from '../components/GitDiff'
+import { RunTimeline } from '../components/RunTimeline'
+import { OptimizerStory } from '../components/OptimizerStory'
+import { IterationDetail } from '../components/IterationDetail'
 import type { RunCapabilities, RunDetail } from '../lib/types'
 
 /**
@@ -79,6 +82,15 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
   if (c.skillopt || c.epochs) tabs.push({ id: 'skillopt', label: 'SkillOpt' })
   if (c.evograph) tabs.push({ id: 'evograph', label: 'Weakness graph' })
   if (c.process_html) tabs.push({ id: 'process', label: 'Process' })
+
+  // Timeline and optimizer story tabs (when activities/diagnosis data available)
+  if (detail?.summary.activities && detail.summary.activities.length > 0) {
+    tabs.push({ id: 'timeline', label: 'Timeline' })
+  }
+  const hasDiagnosis = detail?.graph.nodes.some(n => n.diagnosis)
+  if (hasDiagnosis) {
+    tabs.push({ id: 'optimizer-story', label: 'Optimizer story' })
+  }
 
   if (c.diffs) tabs.push({ id: 'diffs', label: 'Diffs' })
   if (c.trajectories) tabs.push({ id: 'trajectories', label: 'Trajectories' })
@@ -222,12 +234,15 @@ function TabBody({
       return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
       return (
-        <TaskMatrix
-          summary={s}
-          nodes={data.graph.nodes}
-          selectedId={selectedCandidate}
-          screens={extra.screens}
-        />
+        <div className="space-y-4">
+          <TaskMatrix
+            summary={s}
+            nodes={data.graph.nodes}
+            selectedId={selectedCandidate}
+            screens={extra.screens}
+          />
+          <SealedTestMatrix summary={s} />
+        </div>
       )
     case 'cost':
       // The ledger already accounts for every dollar by phase; CostPanel's by-role chart
@@ -253,6 +268,60 @@ function TabBody({
       return <EvographPanel extra={extra} metered={s.cost?.metered !== false} />
     case 'process':
       return <ProcessPanel runId={runId} />
+    case 'timeline': {
+      // Check if we're showing iteration detail
+      const iterParam = new URLSearchParams(window.location.search).get('iteration')
+      if (iterParam) {
+        const iteration = parseInt(iterParam, 10)
+        const candidate = data.graph.nodes.find(n => n.iteration === iteration)
+        const parent = candidate?.parent ? data.graph.nodes.find(n => n.id === candidate.parent) : null
+        const gate = s.gate_decisions?.find(g => g.candidate === candidate?.id)
+        
+        if (candidate) {
+          return (
+            <IterationDetail
+              iteration={iteration}
+              candidate={candidate}
+              parent={parent || null}
+              gate={gate || null}
+              runId={runId}
+              onClose={() => {
+                const params = new URLSearchParams(window.location.search)
+                params.delete('iteration')
+                params.delete('tab')
+                window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
+            />
+          )
+        }
+      }
+      
+      return <RunTimeline summary={s} nodes={data.graph.nodes} onActivityClick={(activityId) => {
+        // Parse activity ID to extract iteration number
+        const match = activityId.match(/iter-(\d+)/)
+        if (match) {
+          const iteration = parseInt(match[1], 10)
+          const node = data.graph.nodes.find(n => n.iteration === iteration)
+          if (node) {
+            // Navigate to iteration detail view using search params
+            const params = new URLSearchParams(window.location.search)
+            params.set('iteration', iteration.toString())
+            params.set('tab', 'overview')
+            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+          }
+        }
+      }} />
+    }
+    case 'optimizer-story':
+      return (
+        <OptimizerStory
+          nodes={data.graph.nodes}
+          gates={s.gate_decisions ?? []}
+          perIteration={s.per_iteration ?? []}
+        />
+      )
     case 'diffs':
       return <IterationsDiff runId={runId} graph={data.graph} />
     case 'trajectories':

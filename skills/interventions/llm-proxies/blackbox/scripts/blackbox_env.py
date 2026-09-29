@@ -34,6 +34,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -552,16 +553,72 @@ def _patch_agent_logging(d: Path, ref: str) -> None:
         ref=ref, what="agent basicConfig", marker=_PATCH_MARKER)
 
 
+_MAKE_NOT_FOUND = "make: command not found"
+
+#: Linux package managers that can install `make`, checked in this order, paired with the
+#: install command each one uses. First one present on PATH wins.
+_LINUX_MAKE_INSTALLERS = (
+    ("apt-get", ["sudo", "apt-get", "install", "-y", "make"]),
+    ("dnf", ["sudo", "dnf", "install", "-y", "make"]),
+    ("yum", ["sudo", "yum", "install", "-y", "make"]),
+)
+
+
+def require_make() -> None:
+    """Fail fast, BY NAME, if `make` is missing -- before any clone and before each service start.
+
+    Without `make`, ``_install_service``'s ``make install-requirements || pip install -e .``
+    falls through to plain pip, which cannot resolve the store's local-version torch pin (served
+    only via ``[tool.uv.sources]``, which pip does not read) -- so a missing build tool surfaces,
+    confusingly, as an unresolvable torch pin buried mid-output. Checking here, by name, first,
+    is what keeps the reported error about `make` and never about torch.
+
+    Idempotent: ``shutil.which`` costs nothing when `make` is already on PATH, so calling this
+    once per provision and once per service start installs nothing when the tool is present.
+
+    Linux: auto-installs via whichever of apt-get/dnf/yum is present. macOS: never runs
+    ``brew install make`` (that installs GNU make as `gmake`, leaving `/usr/bin/make` -- what this
+    check and the services' Makefiles actually use -- still missing) or ``xcode-select --install``
+    (it opens a blocking GUI dialog); it prints that instruction and raises instead.
+    """
+    if shutil.which("make"):
+        return
+    if sys.platform == "darwin":
+        raise RuntimeError(
+            f"{_MAKE_NOT_FOUND}. Install Xcode Command Line Tools, which provides a real `make` "
+            "on PATH:\n    xcode-select --install\n"
+            "(not `brew install make` -- that installs GNU make as `gmake`, leaving `make` itself "
+            "missing.)")
+    for mgr, cmd in _LINUX_MAKE_INSTALLERS:
+        if not shutil.which(mgr):
+            continue
+        print(f"  make not found -- installing it via {mgr}: {' '.join(cmd)}")
+        rc, out = _run(cmd)
+        if rc == 0 and shutil.which("make"):
+            print("  ✓ installed make")
+            return
+        raise RuntimeError(f"{_MAKE_NOT_FOUND}, and installing it via {mgr} failed: {out}")
+    raise RuntimeError(
+        f"{_MAKE_NOT_FOUND}, and no supported package manager (apt-get/dnf/yum) was found to "
+        "install it. Install `make` for your platform and retry.")
+
+
 def _install_service(d: Path) -> None:
     """Create the service's own py3.11 venv and install it.
 
     Both services ship a Makefile whose `run` target requires an ACTIVE venv, so the
     venv must live at ``<service>/.venv`` and be activated by the same shell that runs
     make — not merely referenced by interpreter path.
+
+    ``require_make()`` runs first: without `make`, ``make install-requirements`` fails and this
+    falls through to plain ``pip install -e .``, which cannot resolve the store's local-version
+    torch pin (served only via ``[tool.uv.sources]``) -- reporting a confusing torch error for
+    what is really a missing build tool.
     """
     if not shutil.which("uv"):
         raise RuntimeError("uv is required to create the service venvs "
                            "(https://docs.astral.sh/uv/)")
+    require_make()
     if not (d / ".venv").is_dir():
         rc, out = _run(["uv", "venv", "-p", "3.11", ".venv"], cwd=d)
         if rc != 0:
@@ -570,6 +627,11 @@ def _install_service(d: Path) -> None:
     rc, out = _run(". .venv/bin/activate && (make install-requirements || pip install -e .)",
                    cwd=d)
     if rc != 0:
+        if _MAKE_NOT_FOUND in out:
+            # The subshell's own PATH lacked `make` even though require_make() just found it --
+            # e.g. an activated venv, or a non-login shell, that does not inherit this process's
+            # PATH. Whatever masked it, the real cause is still `make`, never torch.
+            raise RuntimeError(f"install failed in {d}: {_MAKE_NOT_FOUND} (see require_make())")
         raise RuntimeError(f"install failed in {d}: {out}")
     print(f"  ✓ installed {d.name}")
 
@@ -592,6 +654,8 @@ def provision(*, store_ref: Optional[str] = None, agent_ref: Optional[str] = Non
     (measured before this existed: 1.10 MB/min for the agent, ~660MB per 10 hours).
     """
     load_env()
+    require_make()          # before any clone: a missing build tool must be reported by name,
+                             # not discovered later as an unresolvable torch pin.
     sd, ad = store_dir(), agent_dir()
     sref = store_ref or os.environ.get("SKILLBERRY_STORE_REF") or STORE_REF
     aref = agent_ref or os.environ.get("SKILLBERRY_AGENT_REF") or AGENT_REF
@@ -725,6 +789,7 @@ def start_store(*, timeout: int = 90) -> None:
     d = store_dir()
     if not (d / ".git").is_dir():
         raise RuntimeError(f"store not provisioned at {d} — run provision() first")
+    require_make()          # before this service start: `make run` is the only supported lifecycle
     conflict = port_owner_conflict(port, STORE_PROC_MARKERS)
     if conflict:
         raise RuntimeError(f"port {port} is held by {conflict}, which is not the store")
@@ -807,6 +872,7 @@ def start_spa(skill_name: str, *, retries: int = 2, timeout: int = 60, **env_ove
     d = agent_dir()
     if not (d / ".git").is_dir():
         raise RuntimeError(f"SPA not provisioned at {d} — run provision() first")
+    require_make()          # before this service start: `make run` is the only supported lifecycle
     if not health_ok(store_port()):
         raise RuntimeError(f"the store is not healthy on {store_port()}; SPA resolves its "
                            "skill through the store, so start the store first")
