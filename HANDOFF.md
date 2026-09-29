@@ -70,7 +70,7 @@ there. Summary so you know what you're looking at:
 
 ## What you need to know from v1 — 30 traced tasks, optimizer never won
 
-Full writeup: [`parsec-history/results/v1/summary.md`](../parsec-history/results/v1/summary.md)
+Full writeup: [`results/v1/summary.md` on `parsec-history`](https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v1/summary.md)
 (worth reading in full if you're building v4's contract/scoring design — its "what the 30
 contracts actually measure" section is the most important part).
 
@@ -114,7 +114,7 @@ contracts actually measure" section is the most important part).
 
 ## What you need to know from v2 — 10 authored tasks, champion accepted but overstated
 
-Full writeup: [`parsec-history/results/v2/summary.md`](../parsec-history/results/v2/summary.md).
+Full writeup: [`results/v2/summary.md` on `parsec-history`](https://github.com/skillberry-ai/cap-evolve/blob/parsec-history/results/v2/summary.md).
 
 - Task set: 10 hand-authored `bench-aap2-*` tasks, one isolated simulator per task. Reward =
   `w_tc·(calls matched) + w_ans·(answer items)`, per-task weights, forbidden facts satisfied by
