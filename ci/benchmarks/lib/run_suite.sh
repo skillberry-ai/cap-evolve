@@ -29,6 +29,22 @@ BENCH_DIR="$BENCH"
 case "$BENCH" in tau2_custom_*) BENCH_DIR="tau2_custom/${BENCH#tau2_custom_}" ;; esac
 load_overrides "$REPO/ci/benchmarks/$BENCH_DIR/$TIER/overrides.env"
 
+# Remove a directory that may hold files a sandbox container created under ITS uid. Our account
+# cannot delete those (their parent dirs are the container's, mode 755), so a plain `rm -rf` stops
+# partway — which once left the kept-run slot half-deleted and blocked the swap after it. Renaming
+# needs write access only on the parent, which is ours, so the path is freed first and always;
+# the delete then falls back to a throwaway root container. Returns non-zero only if the rename fails.
+_discard_dir() {
+  local p="$1" t
+  [ -e "$p" ] || return 0
+  t="$p.discard-$$-$RANDOM"
+  mv "$p" "$t" || return 1
+  rm -rf "$t" 2>/dev/null \
+    || docker run --rm -v "$(dirname "$t"):/d" alpine rm -rf "/d/$(basename "$t")" >/dev/null 2>&1 \
+    || echo "::warning:: could not fully delete $t (files owned by the container's uid); remove it by hand" >&2
+  return 0
+}
+
 ITER="${ITERATIONS:-3}"
 AGENT_MODEL="${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
@@ -825,7 +841,7 @@ ENV
       export SPREADSHEETBENCH_KEEP_OUTPUTS=1
       echo "SPREADSHEETBENCH_KEEP_OUTPUTS=1" >> "$WORK/.env"
       # Kept outputs accumulate in the shared data dir, so start this run from an empty one.
-      rm -rf "${SB_DATA:?}/outputs"
+      _discard_dir "${SB_DATA:?}/outputs" || exit 1
     fi
     ;;
   rfe-creator)
@@ -1154,10 +1170,12 @@ if [ -d "$RUN_DIR/host" ]; then
 fi
 
 # LATEST RUN (spreadsheetbench): replace the one kept slot with this run. Staged next to the slot
-# and swapped in only once complete, so a failure here leaves the previous kept run intact.
+# and swapped in only once complete, so a failure here leaves the previous kept run intact. The old
+# slot is renamed away before it is deleted (_discard_dir), so files a container left in it can
+# never block the swap.
 if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && [ -d "$RUN_DIR" ]; then
   STAGE="$SB_LATEST_DIR.staging"
-  rm -rf "$STAGE" && mkdir -p "$STAGE" && cp -a "$RUN_DIR" "$STAGE/run_suite" \
+  _discard_dir "$STAGE" && mkdir -p "$STAGE" && cp -a "$RUN_DIR" "$STAGE/run_suite" \
     && { [ ! -d "$SB_DATA/outputs" ] || mv "$SB_DATA/outputs" "$STAGE/outputs"; } \
     && cp "$OUT/metrics.jsonl" "$OUT/report.md" "$STAGE/" 2>/dev/null
   if [ -d "$STAGE/run_suite" ]; then
@@ -1167,7 +1185,7 @@ if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && 
  "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
  "empty_seed": "${SB_EMPTY_SEED:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 JSON
-    rm -rf "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
+    _discard_dir "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
       && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2
   else
     echo "::warning:: could not keep this run as the latest spreadsheetbench run (staging failed)" >&2
