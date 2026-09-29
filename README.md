@@ -42,6 +42,7 @@ bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; s
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
 | [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), and their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms — everything numeric in this branch is derived by one of these, never hand-typed twice |
+| [`docs/`](docs/) | the design record — specs and implementation plans for parsec v4, plus its intake handoff; describes decisions, not code, so it lives here rather than on `parsec-intake_v4` |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
 | [`ui/heatmap_v4_t_e1.html`](ui/heatmap_v4_t_e1.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
 | [`presentations/presentation/`](presentations/presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
