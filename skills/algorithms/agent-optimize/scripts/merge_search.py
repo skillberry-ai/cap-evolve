@@ -142,14 +142,20 @@ def find_disjoint_pairs(base_src: str, survivor_srcs: dict[str, str]) -> dict:
             "disjoint_pairs": disjoint, "overlapping_pairs": overlapping}
 
 
-def _integrate(run_dir: Path, project: Path, work: Path, base_dir: Path, a: str, b: str,
+def _integrate(run_dir: Path, project: Path, work: Path, base_dir: Path, a_dir: Path, b_dir: Path,
                tasks: list[str], canary: list[str], canary_auto: str, canary_floor: float,
                n: int, conc: int, base_seed: int, floor: float, file_: str, prose: str,
                out_tag: str) -> dict:
+    """Merge two branches, given their SOURCE DIRECTORIES directly rather than tags implicitly
+    rooted under ``work/`` — the generalization ``merge.py`` (#586) needs to merge a branch
+    that lives under ``candidates/`` (already committed) with one still under ``work/``
+    (an uncommitted survivor), which is exactly what "any two live branch tips" means.
+    ``merge_search.py``'s own call site below is unaffected: it simply passes ``work / a``.
+    """
     json_out = work / f".{out_tag}_integrate.json"
     cmd = [sys.executable, str(HERE / "integrate.py"),
            "--base", str(base_dir), "--project", str(project),
-           "--branches", str(work / a), str(work / b),
+           "--branches", str(a_dir), str(b_dir),
            "--out", str(work / out_tag), "--tasks", ",".join(tasks),
            "--n", str(n), "--conc", str(conc), "--base-seed", str(base_seed),
            "--floor", str(floor), "--file", file_, "--prose", prose,
@@ -320,7 +326,7 @@ def main(argv=None) -> int:
             continue
         union_tasks = sorted(set(targets[a]) | set(targets[b]))
         out_tag = f"merge_{a}_{b}"
-        result = _integrate(run_dir, project, work, base_dir, a, b, union_tasks,
+        result = _integrate(run_dir, project, work, base_dir, work / a, work / b, union_tasks,
                             [i.strip() for i in args.canary.split(",") if i.strip()],
                             canary_auto, args.canary_floor, args.n, args.conc,
                             args.base_seed, args.floor, args.file, args.prose, out_tag)

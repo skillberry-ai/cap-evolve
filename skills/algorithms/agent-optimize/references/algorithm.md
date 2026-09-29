@@ -795,6 +795,25 @@ docstring already mandates for accepted-candidate merging, so a bad interaction 
 to the specific branch that caused it. The result lands at `$R/work/<tag>` as an ordinary
 candidate directory; screening/gating/accepting stays the driver's job, unchanged.
 
+### Merging two arbitrary live branches (#586)
+
+`merge_search.py` and `merge_rejects.py` above are each scoped to how they FIND their two
+branches — this round's `work/` survivors, or this run's recorded safe rejects — not to the
+merge itself. Neither can merge two arbitrary tags, e.g. an already-accepted candidate from an
+earlier iteration with a survivor from a later round, which is the literal "two
+independently-evolving branches" case #586 asks for. `merge.py --a TAG_A --b TAG_B --base
+TAG` is that generalization: it resolves each tag to wherever it currently lives (`work/` if
+still uncommitted, else `candidates/` once `commit.py` has snapshotted it, on either an accept
+or a reject), refuses an overlapping pair the same way `merge_search.changed_functions` does,
+and drives the SAME `integrate.py` call `merge_search.py` uses (generalized to take explicit
+branch directories rather than assuming both live under `work/`). A built merge lands at
+`$R/work/merge_<a>_<b>`, gated by `round.py` with no special-casing; on accept, commit with
+`commit.py --parents <a>,<b>` so `graph.jsonl` records both ancestors instead of one.
+
+Deliberately NOT in this slice, left for a follow-up: calling `merge.py` automatically each
+round whenever 2+ branches are live, and a policy for which pairs among many live branches are
+worth trying — the caller still has to name the two tags.
+
 ## Caveats
 
 - With `train == val` the val gate is a *fit*, not a held-out check — only the sealed test
