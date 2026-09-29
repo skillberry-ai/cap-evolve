@@ -85,7 +85,7 @@ TASK_IDS = [
 def render_capevolve_yaml(task_id: str) -> str:
     return f"""\
 # v4_t2_e1 — single-task optimization project for {task_id}.
-# See docs/superpowers/plans/2026-09-17-parsec-v4-task-by-task-optimization.md
+# See docs/plans/2026-09-17-parsec-v4-task-by-task-optimization.md on the parsec-history branch
 optimizer_skill: claude-code
 optimizer_model: claude-opus-5
 algorithm_skill: hill-climb
