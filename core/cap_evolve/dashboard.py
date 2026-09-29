@@ -228,6 +228,55 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     return per, fb
 
 
+def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list = None, broke: list = None) -> dict:
+    """Classify each task's outcome vs its parent: fixed, broke, still_failing, still_passing.
+    
+    Returns a dict mapping task_id to outcome string. Used for the diagnosis flow view.
+    When per_task data is missing but fixed/broke lists are available, builds outcomes from those.
+    """
+    outcomes = {}
+    
+    # If we have per_task data, use it for detailed classification
+    if per_task:
+        for task_id, reward in per_task.items():
+            if parent_per_task and task_id in parent_per_task:
+                parent_reward = parent_per_task[task_id]
+                if reward > parent_reward:
+                    outcomes[task_id] = "fixed"
+                elif reward < parent_reward:
+                    outcomes[task_id] = "broke"
+                elif reward == 0 or reward < 0.5:  # still failing (binary 0/1 rewards)
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+            else:
+                # No parent comparison available
+                if reward == 0 or reward < 0.5:
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+    
+    # If per_task is missing but we have fixed/broke lists, build outcomes from those
+    elif (fixed or broke) and parent_per_task:
+        # Mark fixed tasks
+        for task_id in (fixed or []):
+            outcomes[task_id] = "fixed"
+        
+        # Mark broke tasks
+        for task_id in (broke or []):
+            outcomes[task_id] = "broke"
+        
+        # Infer still_failing and still_passing from parent's per_task
+        for task_id, parent_reward in parent_per_task.items():
+            if task_id not in outcomes:
+                if parent_reward == 0 or parent_reward < 0.5:
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+    
+    return outcomes
+
+
 def _val_per_task_file(root: Path) -> dict:
     """``val_per_task.json`` — per-candidate per-task val rewards, when the run wrote it.
 
@@ -1363,6 +1412,13 @@ def reduce_run(run_dir) -> dict:
         if not per and cid in per_task_file:
             per = per_task_file[cid]["per_task"]
             fb = per_task_file[cid]["feedback"] or fb
+        # Also check the evaluate event itself for per_task data
+        if not per:
+            vev_check = val_eval.get(cid) or {}
+            if vev_check.get("per_task"):
+                per_task_list = vev_check["per_task"]
+                per = {pt["task_id"]: pt["reward"] for pt in per_task_list if isinstance(pt, dict)}
+                fb = {pt["task_id"]: pt.get("feedback", "") for pt in per_task_list if isinstance(pt, dict)}
         if not per:
             # A candidate killed on a cheap screen has per-task rewards only under its
             # SCREEN tag (``<cid>__screenN``) and over a subset of val. Showing those is
@@ -1460,6 +1516,13 @@ def reduce_run(run_dir) -> dict:
             "fixed": movement.get("fixed") or [],
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
+            # Per-task outcomes: classify each task's result vs parent for UI display
+            "outcomes": _compute_outcomes(
+                per, 
+                nodes.get(parent, {}).get("per_task") if parent else None,
+                fixed=movement.get("fixed"),
+                broke=movement.get("broke")
+            ),
             "best_so_far": best,
             # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
             # looked up generically by tag below (see ``screened_by_tag``), not tied to the
@@ -1544,6 +1607,33 @@ def reduce_run(run_dir) -> dict:
             nodes[cid] = node
         if accepted:
             last_accepted = cid
+    
+    # --- read DIAGNOSIS.json for each candidate -------------------------
+    for nid, n in nodes.items():
+        if nid == "seed":
+            continue
+        cand_dir = _safe_subpath(root, "candidates", nid)
+        if cand_dir and cand_dir.exists():
+            diag_path = cand_dir / "DIAGNOSIS.json"
+            if diag_path.exists():
+                try:
+                    diag_content = diag_path.read_text(encoding="utf-8")
+                    n["diagnosis"] = json.loads(diag_content)
+                except Exception:  # noqa: BLE001
+                    pass  # diagnosis is optional, silently skip on error
+            else:
+                # Fallback: try parsing PROCESS.md tables
+                process_path = cand_dir / "PROCESS.md"
+                if process_path.exists():
+                    try:
+                        from . import harness
+                        process_text = process_path.read_text(encoding="utf-8")
+                        parsed = harness._parse_process_md_tables(process_text)
+                        if parsed:
+                            parsed["candidate"] = nid
+                            n["diagnosis"] = parsed
+                    except Exception:  # noqa: BLE001
+                        pass  # fallback is best-effort
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
@@ -2181,11 +2271,147 @@ def reduce_run(run_dir) -> dict:
 
     background_mass_kills = _background_mass_kills(root)
 
+    # --- activities: timeline bars and markers for the UI ---------------
+    # One entry per activity (optimize, evaluate, gate, final_eval, finalize) that can be
+    # drawn on a timeline. Built from events, using relative timestamps (t - started_t).
+    activities: list[dict] = []
+    ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
+    started_t = min(ts) if ts else 0.0
+    
+    # Track the end time of the last val eval for each iteration to compute optimize spans
+    last_eval_end_by_iter: dict[int, float] = {}
+    
+    # Build a map of eval_start events by (tag, split)
+    eval_start_events = {}
+    for e in events:
+        if e.get("kind") == "eval_start":
+            key = (e.get("tag"), e.get("split"))
+            eval_start_events[key] = e
+    
+    # Seed evaluation (baseline)
+    seed_eval_start = eval_start_events.get(("seed", "val"))
+    seed_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                         and e.get("tag") == "seed" and e.get("split") == "val"), None)
+    if seed_eval_start and seed_eval_ev:
+        activities.append({
+            "id": "seed-eval",
+            "type": "seed",
+            "lane": "evaluator",
+            "iteration": 0,
+            "candidate": "seed",
+            "start": round(seed_eval_start["t"] - started_t, 2),
+            "end": round(seed_eval_ev["t"] - started_t, 2),
+            "error": False,
+        })
+        last_eval_end_by_iter[0] = seed_eval_ev["t"]
+    
+    # Per-iteration activities (optimize, evaluate, gate)
+    for n in sorted((x for x in nodes.values() if (x.get("iteration") or 0) > 0),
+                    key=lambda x: x.get("iteration") or 0):
+        it = n.get("iteration")
+        cid = n["id"]
+        
+        # Find the eval_start and evaluate events for this candidate
+        eval_start_ev = eval_start_events.get((cid, "val"))
+        eval_ev = val_eval.get(cid)
+        
+        if eval_start_ev and eval_ev:
+            eval_start_t = eval_start_ev["t"]
+            eval_end_t = eval_ev["t"]
+            
+            # Optimize span: from last eval end (or run start) to this eval_start
+            opt_start = last_eval_end_by_iter.get(it - 1, started_t)
+            activities.append({
+                "id": f"iter-{it}-opt",
+                "type": "optimize",
+                "lane": "optimizer",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(opt_start - started_t, 2),
+                "end": round(eval_start_t - started_t, 2),
+                "error": n.get("status") == "failed",
+            })
+            
+            # Evaluate span
+            activities.append({
+                "id": f"iter-{it}-eval",
+                "type": "evaluate",
+                "lane": "evaluator",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(eval_start_t - started_t, 2),
+                "end": round(eval_end_t - started_t, 2),
+                "error": False,
+            })
+            last_eval_end_by_iter[it] = eval_end_t
+        
+        # Gate marker (point event at step time)
+        step_ev = next((e for e in events if e.get("kind") in _STEP_KINDS 
+                       and _step_candidate(e) == cid), None)
+        if step_ev and step_ev.get("t"):
+            activities.append({
+                "id": f"iter-{it}-gate",
+                "type": "gate",
+                "lane": "gate",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(step_ev["t"] - started_t, 2),
+                "end": round(step_ev["t"] - started_t, 2),
+                "error": False,
+            })
+    
+    # Final evaluations (test, train)
+    for split in ("test", "train"):
+        # Find eval_start and evaluate events for final evaluations
+        # Final test uses tag="FINAL", final train uses tag=best_id
+        final_eval_start = None
+        final_eval_ev = None
+        
+        # Try FINAL tag first (test split)
+        if split == "test":
+            final_eval_start = eval_start_events.get(("FINAL", split))
+            final_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                                and e.get("split") == split and e.get("tag") == "FINAL"), None)
+        
+        # For train split, the tag is the best candidate's id
+        if split == "train" and best_id:
+            final_eval_start = eval_start_events.get((best_id, split))
+            final_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                                and e.get("split") == split and e.get("tag") == best_id), None)
+        
+        if final_eval_start and final_eval_ev:
+            activities.append({
+                "id": f"final-{split}",
+                "type": "final_eval",
+                "lane": "evaluator",
+                "iteration": None,
+                "candidate": best_id,
+                "split": split,
+                "start": round(final_eval_start["t"] - started_t, 2),
+                "end": round(final_eval_ev["t"] - started_t, 2),
+                "error": False,
+            })
+    
+    # Finalize marker
+    finalize_ev = next((e for e in events if e.get("kind") == "finalize"), None)
+    if finalize_ev and finalize_ev.get("t"):
+        activities.append({
+            "id": "finalize",
+            "type": "finalize",
+            "lane": "finalize",
+            "iteration": None,
+            "candidate": best_id,
+            "start": round(finalize_ev["t"] - started_t, 2),
+            "end": round(finalize_ev["t"] - started_t, 2),
+            "error": False,
+        })
+
     # --- capabilities: which panels this run has real data for -----------
     # The UI is algorithm-agnostic: it renders the generic panels always and asks this
     # map before mounting an extra one. An absent signal means the panel is omitted —
     # never rendered empty, never faked.
     capabilities = {
+        "activities": bool(activities),
         "per_task": (any(n.get("per_task") for n in nodes.values())
                      or any(s.get("per_task") for s in screens)),
         # Sealed test (and seed-on-test) per-task rewards, when finalize() persisted them.
@@ -2258,6 +2484,7 @@ def reduce_run(run_dir) -> dict:
         # Where the identity came from: a distinguishing event kind, the run dir's own
         # evograph wiki, or the project spec. None ⇒ the UI shows "not recorded".
         "algorithm_source": algorithm_source,
+        "activities": activities,
         "capabilities": capabilities,
         "status": status,
         "status_reason": status_reason,
@@ -2377,12 +2604,125 @@ def reduce_run(run_dir) -> dict:
             n["subset"] = gnode["subset"]
         if gnode.get("micro_tests"):
             n["micro_tests"] = gnode["micro_tests"]
+    
+    # Compute prompt_map for each node with capability files
+    cand_root = _safe_subpath(root, "candidates")
+    if cand_root and cand_root.exists():
+        for nid, n in nodes.items():
+            parent = n.get("parent")
+            cdir = _safe_subpath(cand_root, nid)
+            pdir = _safe_subpath(cand_root, parent) if parent else None
+            if cdir and cdir.exists():
+                # Get diff rows for this node if available (used to identify add/rem lines)
+                diff_rows = []
+                if pdir and pdir.exists():
+                    import difflib
+                    cf, pf = _read_dir_files(cdir), _read_dir_files(pdir)
+                    for path in set(cf) | set(pf):
+                        a = pf.get(path, "").splitlines()
+                        b = cf.get(path, "").splitlines()
+                        if a != b:
+                            diff_rows.extend(difflib.unified_diff(a, b, lineterm="", n=0))
+                
+                prompt_map = _compute_prompt_map(cdir, pdir, diff_rows)
+                if prompt_map:
+                    n["prompt_map"] = prompt_map
 
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
     return redact({"graph": graph, "summary": summary})
 
 
 # ---------------------------------------------------------------------------
+
+
+def _compute_prompt_map(cand_dir: Path, parent_dir: Path | None, diff_rows: list) -> dict:
+    """Compute prompt_map for a candidate's capability files.
+    
+    Returns {filename: {lines, bytes, headings, add, rem, touched}} for each file.
+    Headings skip those inside fenced code blocks.
+    """
+    import re
+    
+    prompt_map = {}
+    if not cand_dir or not cand_dir.exists():
+        return prompt_map
+    
+    # Read candidate files
+    cand_files = _read_dir_files(cand_dir)
+    
+    for filename, content in cand_files.items():
+        lines = content.splitlines()
+        file_map = {
+            "lines": len(lines),
+            "bytes": len(content.encode("utf-8")),
+            "headings": [],
+            "add": [],
+            "rem": [],
+            "touched": [],
+        }
+        
+        # Extract headings (skip those in fenced code blocks)
+        in_fence = False
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            # Track fenced code blocks
+            if stripped.startswith("```"):
+                in_fence = not in_fence
+                continue
+            # Extract headings only outside fenced blocks
+            if not in_fence and stripped.startswith("#"):
+                match = re.match(r"^(#{1,6})\s+(.+)$", stripped)
+                if match:
+                    level = len(match.group(1))
+                    text = match.group(2).strip()
+                    file_map["headings"].append([i, level, text])
+        
+        # Extract add/rem line numbers from diff if available
+        if diff_rows and parent_dir and parent_dir.exists():
+            parent_files = _read_dir_files(parent_dir)
+            if filename in parent_files:
+                import difflib
+                a = parent_files[filename].splitlines()
+                b = lines
+                
+                # Track line numbers in new file
+                new_line = 0
+                for line in difflib.unified_diff(a, b, lineterm="", n=0):
+                    if line.startswith("@@"):
+                        # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
+                        match = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+                        if match:
+                            new_line = int(match.group(1))
+                    elif line.startswith("+") and not line.startswith("+++"):
+                        file_map["add"].append(new_line)
+                        new_line += 1
+                    elif line.startswith("-") and not line.startswith("---"):
+                        # Removal: mark the position in new file where lines were removed
+                        file_map["rem"].append(new_line)
+                    elif not line.startswith("\\"):  # Skip "\ No newline" markers
+                        new_line += 1
+                
+                # Identify touched sections (headings with changes in their range)
+                if file_map["add"] or file_map["rem"]:
+                    changed_lines = set(file_map["add"] + file_map["rem"])
+                    for i, (line_num, level, text) in enumerate(file_map["headings"]):
+                        # Find the range for this heading (until next same-or-higher level heading)
+                        start = line_num
+                        end = len(lines) + 1
+                        for j in range(i + 1, len(file_map["headings"])):
+                            next_line, next_level, _ = file_map["headings"][j]
+                            if next_level <= level:
+                                end = next_line
+                                break
+                        # Check if any changed lines fall in this range
+                        if any(start <= ln < end for ln in changed_lines):
+                            file_map["touched"].append([text, start])
+        
+        prompt_map[filename] = file_map
+    
+    return prompt_map
+
+
 # Diff view (candidate vs parent) — computed from candidate dirs
 # ---------------------------------------------------------------------------
 

@@ -245,6 +245,32 @@ per-task specifics and any ground-truth in the traces ONLY to understand the fai
 CLASS, then write the general fix.
 
 ## Handover (REQUIRED before you STOP)
+- **DIAGNOSIS.json** (OPTIONAL but recommended): a machine-readable diagnosis file that makes
+  your diagnosis available to the dashboard. If absent, the dashboard will parse PROCESS.md
+  tables when present, or show only outcome data. The schema:
+  ```json
+  {
+    "candidate": "cand_NNNN",
+    "headline": "Brief summary of this iteration's strategy",
+    "clusters": [
+      {"id": "A", "name": "Short cluster name",
+       "detail": "Root cause explanation", "tasks": ["task-id", ...],
+       "scope": "BOUNDED|WIDESPREAD|SYSTEMIC", "latent": false,
+       "tag": "KNOWLEDGE|BEHAVIORAL|CAPABILITY-GAP"}
+    ],
+    "edits": [
+      {"id": "E1", "title": "What this edit does",
+       "files": ["prompt.md"], "lever": "CONTRACT|KNOWLEDGE|BEHAVIORAL|...",
+       "clusters": ["A"], "blast_radius": "BOUNDED|MODERATE|WIDE",
+       "verified": "How you tested it"}
+    ],
+    "skipped": [{"title": "What was skipped", "reason": "Why"}],
+    "techniques": ["technique 1", "technique 2"]
+  }
+  ```
+  Validation is advisory only and never blocks an iteration. Warnings are recorded when a
+  task ID is not in the val split, an edit references a missing cluster, or an edit
+  references a file that does not exist in the candidate.
 - **PROCESS.md** (this iteration): the ranked cluster list (with leverage + RULE/GAP/
   KNOWLEDGE tag), every kept edit + its lever, the VERIFY-THE-FIX + blast-radius line per
   edit, what you deliberately skipped and why, and (if you used subagents) that you did.

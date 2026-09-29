@@ -1115,7 +1115,37 @@ _PROCESS_SEED = (
     "## Good things to PRESERVE (do not let a future iteration undo these)\n"
     "- \n\n"
     "## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)\n"
-    "- \n"
+    "- \n\n"
+    "---\n\n"
+    "# DIAGNOSIS.json — machine-readable diagnosis (OPTIONAL but recommended)\n\n"
+    "In addition to PROCESS.md, you may write a DIAGNOSIS.json file to make your diagnosis "
+    "machine-readable for the dashboard. This is optional; if absent, the dashboard will "
+    "parse PROCESS.md tables when present, or show only outcome data.\n\n"
+    "The schema:\n"
+    "```json\n"
+    "{\n"
+    '  "candidate": "cand_NNNN",\n'
+    '  "headline": "Brief summary of this iteration\'s strategy",\n'
+    '  "clusters": [\n'
+    '    {"id": "A", "name": "Short cluster name",\n'
+    '     "detail": "Root cause explanation", "tasks": ["task-id", ...],\n'
+    '     "scope": "BOUNDED|WIDESPREAD|SYSTEMIC", "latent": false,\n'
+    '     "tag": "KNOWLEDGE|BEHAVIORAL|CAPABILITY-GAP"}\n'
+    "  ],\n"
+    '  "edits": [\n'
+    '    {"id": "E1", "title": "What this edit does",\n'
+    '     "files": ["prompt.md"], "lever": "CONTRACT|KNOWLEDGE|BEHAVIORAL|...",\n'
+    '     "clusters": ["A"], "blast_radius": "BOUNDED|MODERATE|WIDE",\n'
+    '     "verified": "How you tested it"}\n'
+    "  ],\n"
+    '  "skipped": [{"title": "What was skipped", "reason": "Why"}],\n'
+    '  "techniques": ["technique 1", "technique 2"]\n'
+    "}\n"
+    "```\n\n"
+    "Validation is advisory only and never blocks an iteration. Warnings are recorded when:\n"
+    "- A task ID in clusters[].tasks is not in the val split\n"
+    "- An edit references a cluster ID that does not exist\n"
+    "- An edit references a file that does not exist in the candidate\n"
 )
 
 
@@ -2838,6 +2868,12 @@ def run_step(
     # capability-only and the diff shows just the real edit. Only an accepted candidate
     # becomes the new best (parent for the next step).
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    
+    # Validate DIAGNOSIS.json if present (advisory only, never blocks)
+    val_task_ids = [str(t.get("task_id")) for t in (cand_val.per_task or [])]
+    diag_validation = _validate_diagnosis_json(workdir, run_dir=run_dir, 
+                                              val_tasks=val_task_ids)
+    
     if accepted:
         run_dir.set_best(cid)
     # ``accepted=None`` leaves the stall counter untouched. An indecisive step is not
@@ -3283,6 +3319,194 @@ class _ValidationReport:
     def to_dict(self) -> dict:
         return {"problems": self.problems, "warnings": self.warnings,
                 "by_capability": self.by_capability}
+
+
+def _validate_diagnosis_json(cand_dir: Path, run_dir: RunDir | None = None,
+                            val_tasks: list[str] | None = None) -> dict | None:
+    """Validate DIAGNOSIS.json if present (advisory only, never blocks).
+    
+    Returns a dict with 'warnings' list, or None if file doesn't exist.
+    Validation checks:
+    - JSON is parseable
+    - Task IDs in clusters are in val split
+    - Edit cluster references exist
+    - Edit file references exist in candidate
+    
+    All checks produce warnings only; validation never fails an iteration.
+    """
+    diag_path = cand_dir / "DIAGNOSIS.json"
+    if not diag_path.exists():
+        return None
+    
+    warnings: list[str] = []
+    
+    try:
+        content = diag_path.read_text(encoding="utf-8")
+        diag = json.loads(content)
+    except json.JSONDecodeError as e:
+        warnings.append(f"DIAGNOSIS.json is not valid JSON: {e}")
+        if run_dir:
+            run_dir.log_event("diagnosis_validation_warning", 
+                            candidate=diag.get("candidate", "unknown"),
+                            warning="Invalid JSON")
+        return {"warnings": warnings}
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"Could not read DIAGNOSIS.json: {e}")
+        return {"warnings": warnings}
+    
+    # Validate structure
+    if not isinstance(diag, dict):
+        warnings.append("DIAGNOSIS.json root must be an object")
+        return {"warnings": warnings}
+    
+    # Build cluster ID set for reference checking
+    cluster_ids = set()
+    clusters = diag.get("clusters", [])
+    if not isinstance(clusters, list):
+        warnings.append("'clusters' must be an array")
+    else:
+        for i, cluster in enumerate(clusters):
+            if not isinstance(cluster, dict):
+                warnings.append(f"clusters[{i}] must be an object")
+                continue
+            cid = cluster.get("id")
+            if cid:
+                cluster_ids.add(str(cid))
+            
+            # Check task IDs if val_tasks provided
+            if val_tasks:
+                tasks = cluster.get("tasks", [])
+                if isinstance(tasks, list):
+                    for task_id in tasks:
+                        if str(task_id) not in val_tasks:
+                            warnings.append(
+                                f"Cluster '{cid}': task '{task_id}' not in val split"
+                            )
+    
+    # Validate edits
+    edits = diag.get("edits", [])
+    if not isinstance(edits, list):
+        warnings.append("'edits' must be an array")
+    else:
+        for i, edit in enumerate(edits):
+            if not isinstance(edit, dict):
+                warnings.append(f"edits[{i}] must be an object")
+                continue
+            
+            # Check cluster references
+            edit_clusters = edit.get("clusters", [])
+            if isinstance(edit_clusters, list):
+                for cref in edit_clusters:
+                    if str(cref) not in cluster_ids:
+                        warnings.append(
+                            f"Edit '{edit.get('id', i)}': references unknown cluster '{cref}'"
+                        )
+            
+            # Check file references
+            files = edit.get("files", [])
+            if isinstance(files, list):
+                for fname in files:
+                    fpath = cand_dir / fname
+                    if not fpath.exists():
+                        warnings.append(
+                            f"Edit '{edit.get('id', i)}': references non-existent file '{fname}'"
+                        )
+    
+    if warnings and run_dir:
+        run_dir.log_event("diagnosis_validation_warnings",
+                        candidate=diag.get("candidate", "unknown"),
+                        warnings=warnings)
+    
+    return {"warnings": warnings, "diagnosis": diag}
+
+
+def _parse_process_md_tables(process_text: str) -> dict | None:
+    """Fallback: extract diagnosis from PROCESS.md tables when DIAGNOSIS.json absent.
+    
+    Parses the "Ranked issue list" and "Changes made this iteration" tables
+    from PROCESS.md and returns a diagnosis-like structure.
+    
+    Returns None if tables cannot be parsed.
+    """
+    if not process_text:
+        return None
+    
+    clusters = []
+    edits = []
+    
+    # Extract "Ranked issue list" table
+    # Format: | rank | cluster | tasks | shared root cause | tag | planned change class |
+    ranked_match = re.search(
+        r'##\s+Ranked issue list.*?\n\|[^\n]+\|\n\|[-\s|]+\|\n((?:\|[^\n]+\|\n)+)',
+        process_text, re.IGNORECASE | re.DOTALL
+    )
+    if ranked_match:
+        table_rows = ranked_match.group(1).strip().split('\n')
+        for row in table_rows:
+            if not row.strip():
+                continue
+            cells = [c.strip() for c in row.split('|')[1:-1]]  # Skip empty first/last
+            if len(cells) >= 5:
+                cluster_id = cells[1] if len(cells) > 1 else ""
+                tasks_str = cells[2] if len(cells) > 2 else ""
+                # Parse task IDs from various formats: "task1, task2" or "task1 task2"
+                task_ids = [t.strip() for t in re.split(r'[,\s]+', tasks_str) if t.strip()]
+                root_cause = cells[3] if len(cells) > 3 else ""
+                tag = cells[4] if len(cells) > 4 else ""
+                
+                if cluster_id and cluster_id != "cluster":  # Skip header row
+                    clusters.append({
+                        "id": cluster_id,
+                        "name": root_cause[:50] if root_cause else cluster_id,
+                        "detail": root_cause,
+                        "tasks": task_ids,
+                        "tag": tag
+                    })
+    
+    # Extract "Changes made this iteration" table
+    # Format: | cluster | edit class | file / tool | what & why | protects passing? |
+    changes_match = re.search(
+        r'##\s+Changes made this iteration.*?\n\|[^\n]+\|\n\|[-\s|]+\|\n((?:\|[^\n]+\|\n)+)',
+        process_text, re.IGNORECASE | re.DOTALL
+    )
+    if changes_match:
+        table_rows = changes_match.group(1).strip().split('\n')
+        for i, row in enumerate(table_rows):
+            if not row.strip():
+                continue
+            cells = [c.strip() for c in row.split('|')[1:-1]]
+            if len(cells) >= 4:
+                cluster_ref = cells[0] if len(cells) > 0 else ""
+                edit_class = cells[1] if len(cells) > 1 else ""
+                files = cells[2] if len(cells) > 2 else ""
+                what_why = cells[3] if len(cells) > 3 else ""
+                
+                if cluster_ref and cluster_ref != "cluster":  # Skip header row
+                    # Parse file names from "file / tool" column
+                    file_list = [f.strip() for f in files.split(',') if f.strip()]
+                    if not file_list:
+                        file_list = [files] if files else []
+                    
+                    edits.append({
+                        "id": f"E{i+1}",
+                        "title": what_why[:100] if what_why else edit_class,
+                        "files": file_list,
+                        "lever": edit_class,
+                        "clusters": [cluster_ref] if cluster_ref else []
+                    })
+    
+    if not clusters and not edits:
+        return None
+    
+    return {
+        "candidate": "unknown",
+        "headline": "Parsed from PROCESS.md tables",
+        "clusters": clusters,
+        "edits": edits,
+        "skipped": [],
+        "techniques": [],
+        "_source": "process_md_fallback"
+    }
 
 
 def _capability_validate(capabilities, cand_dir: Path,
