@@ -157,9 +157,15 @@ on:
         type: string
         default: "80"
       gate_k_se:
-        description: "Acceptance-gate strictness: accept a candidate iff improvement > k_se·SE (default 1.0; lower = more lenient, higher = stricter)"
+        description: "Acceptance-gate strictness: accept a candidate iff improvement > k_se·SE. LEAVE BLANK for the tier default: 1.0, except a few tiers that pair a stricter value with hard scoring in their committed overrides.env. Lower = more lenient, higher = stricter."
         type: string
-        default: "1.0"
+        # MUST stay empty — see OPTIMIZER_USD_PER_ITER's comment below and
+        # core/tests/test_benchmarks_optimizer_budget.py. A non-empty default is TRUTHY in the
+        # `||`-less assignment below, which would force GATE_K_SE into the environment before
+        # load_overrides.sh runs and permanently block a tier's overrides.env from correcting it
+        # (run 30890657732: cand_0003 scored 0.600, above the 0.580 champion, wrongly rejected
+        # because gate_k_se=1.0 under a tier's wider gate SE never let Δ=0.020 clear the gate).
+        default: ""
       algorithm:
         description: "Optimization algorithm. hill-climb-* is the deterministic loop and its focus schedule: all (whole train set each iteration) | cyclic (one task at a time) | hardest-first (lowest-scoring task first). agent-optimize is the fully-agentic loop — run_suite.sh switches the run to orchestration_mode: agent and a headless agent drives the rounds itself, bounded by a stop_condition derived from `iterations`/`optimizer_*` rather than a fixed schedule."
         type: choice
@@ -423,7 +429,12 @@ jobs:
       # dispatch input overrides this for whichever tier(s) run in that dispatch.
       OPTIMIZER_USD_PER_ITER: ${{ github.event.inputs.optimizer_usd_per_iter || (matrix.tier == 'smoke' && '50' || '0') }}
       OPTIMIZER_MAX_TURNS: ${{ github.event.inputs.optimizer_max_turns || '80' }}
-      GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}
+      # A blank input must NOT set GATE_K_SE in the environment: load_overrides.sh only fills in
+      # a key that isn't already set, so setting it here (even to the literal '1.0' fallback)
+      # would permanently block a tier's overrides.env from correcting it. An explicit dispatch
+      # value still wins; the literal 1.0 fallback for tiers with no override lives in
+      # run_suite.sh instead. Mirrors OPTIMIZER_USD_PER_ITER's blank-vs-set fix above.
+      GATE_K_SE: ${{ github.event.inputs.gate_k_se }}
       # Names the algorithm and (for hill-climb) its focus schedule in one token, because
       # the 10-input cap above leaves no room for two. run_suite.sh splits it, and maps
       # agent-optimize to orchestration_mode: agent + a derived stop_condition. A PR-label
@@ -542,6 +553,11 @@ jobs:
           ov="$GITHUB_WORKSPACE/ci/benchmarks/$ov_dir/${{ matrix.tier }}/overrides.env"
           warm_file=$(sed -n 's/^[[:space:]]*SB_WARM_SEED=\([01]\).*/\1/p' "$ov" 2>/dev/null | tail -1)
           if [ "${SB_WARM_SEED:-${warm_file:-0}}" = "1" ]; then warm_json=true; else warm_json=false; fi
+          # Same reasoning as SB_WARM_SEED above: a blank gate_k_se dispatch leaves GATE_K_SE
+          # unset here too, so read the tier's overrides.env fallback or this field would report
+          # the wrong gate (e.g. 1.0 for a spreadsheetbench run that actually gated at 0.2).
+          gate_k_se_file=$(sed -n 's/^[[:space:]]*GATE_K_SE=\(.*\)/\1/p' "$ov" 2>/dev/null | tail -1)
+          gate_k_se="${GATE_K_SE:-${gate_k_se_file:-1.0}}"
           # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
           # enough: a branch name containing a double quote would close the string early and
           # produce a runmeta.json the aggregate job cannot parse (verified locally).
@@ -563,7 +579,7 @@ jobs:
             "trials": ${NUM_TRIALS:-10},
             "agent_model": "${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}",
             "optimizer_model": "${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}",
-            "gate_k_se": ${GATE_K_SE:-1.0},
+            "gate_k_se": $gate_k_se,
             "algorithm": "${ALGORITHM:-hill-climb-all}",
             "warm_seed": $warm_json,
             "reward_metric": "$(cat "$out/reward_metric" 2>/dev/null)",

@@ -713,14 +713,17 @@ ENV
     # the gate's SE, so the k_se that is sane under soft scoring rejects almost everything under
     # hard. This bit us twice and silently: pilots 30799393875 and 30890657732 both ran the
     # default k_se=1.0 against SB_SCORING=hard, and 30890657732's cand_0003 scored 0.600 — ABOVE
-    # its accepted champion's 0.580 — and was rejected on a delta of 0.020. GATE_K_SE is always
-    # set by the workflow so it cannot be corrected from overrides.env; warn loudly instead.
+    # its accepted champion's 0.580 — and was rejected on a delta of 0.020. GATE_K_SE now blank-
+    # defaults in the workflow so a tier's overrides.env can correct it (see full/pilot/
+    # full_verified's GATE_K_SE=0.2), but a hard-scoring tier that omits that pairing would
+    # silently reproduce the same wrongful reject — hard-fail instead of warning.
     if [ "${SB_SCORING:-soft}" = "hard" ]; then
       if awk "BEGIN{exit !(${GATE_K_SE:-1.0} >= 0.5)}"; then
-        echo "::warning:: SB_SCORING=hard with gate_k_se=${GATE_K_SE:-1.0}. Bernoulli per-task" \
+        echo "::error:: SB_SCORING=hard with gate_k_se=${GATE_K_SE:-1.0}. Bernoulli per-task" \
              "reward widens the gate's SE, so real gains are likely to be REJECTED (run" \
-             "30890657732 rejected a 0.600 candidate in favour of 0.580). Dispatch with" \
-             "gate_k_se=0.2 for hard scoring." >&2
+             "30890657732 rejected a 0.600 candidate in favour of 0.580). Pair SB_SCORING=hard" \
+             "with GATE_K_SE=0.2 in this tier's overrides.env, or dispatch gate_k_se=0.2." >&2
+        exit 1
       fi
     fi
     # Prompt-only optimizer instructions. The default template shipped in
