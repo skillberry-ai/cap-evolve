@@ -24,7 +24,9 @@ REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO / "core"))
 
 from cap_evolve.harness import split_result_from_rollouts  # noqa: E402
+from cap_evolve.loop import aggregate_scores  # noqa: E402
 from cap_evolve.rundir import RunDir  # noqa: E402
+from cap_evolve.types import Score  # noqa: E402
 
 _PASSED = re.compile(r"^\d+/\d+ test cases passed")
 _FORMULA_NOTE = (
@@ -61,6 +63,35 @@ def _rescore_rollout(path: Path, metric: str) -> None:
     path.write_text(json.dumps(rec, default=str), encoding="utf-8")
 
 
+def _rescore_result(split: str, result: dict, metric: str) -> dict:
+    """Re-score a stored SplitResult dict from its per-task metrics.
+
+    For a split with no rollouts on disk — a seed test score that was itself carried over by an
+    earlier reuse exists only as this stored result.
+    """
+    scores = []
+    for pt in result.get("per_task") or []:
+        metrics = [dict(m) for m in pt.get("metrics") or []]
+        values = {m.get("name"): m.get("value") for m in metrics}
+        reward = float(values[metric]) if metric in values else float(pt.get("reward") or 0.0)
+        for m in metrics:
+            m["primary"] = m.get("name") == metric
+        n = int(pt.get("n") or 1)
+        scores.append(Score(task_id=pt["task_id"], reward=reward, feedback=pt.get("feedback", ""),
+                            n=n, trial_rewards=[reward] * n, raw=pt.get("raw") or {},
+                            metrics=metrics if metric in values else []))
+    return aggregate_scores(split, scores).to_dict()
+
+
+def _split(rd: RunDir, tag: str, split: str, stored: dict | None, metric: str) -> dict:
+    sr = split_result_from_rollouts(rd, tag, split)
+    if sr.per_task:
+        return sr.to_dict()
+    if stored and stored.get("per_task"):
+        return _rescore_result(split, stored, metric)
+    raise SystemExit(f"::error:: no {split} result to re-score for tag {tag!r}: no rollouts and no stored result")
+
+
 def rescore(run_dir: Path, metric: str) -> dict:
     for f in sorted((run_dir / "rollouts").glob("*/*.json")):
         _rescore_rollout(f, metric)
@@ -68,13 +99,11 @@ def rescore(run_dir: Path, metric: str) -> dict:
     out = {}
 
     baseline = json.loads((run_dir / "baseline.json").read_text(encoding="utf-8"))
-    val = split_result_from_rollouts(rd, "seed", "val")
-    baseline["val"] = val.to_dict()
-    out["val"] = val.reward
+    baseline["val"] = _split(rd, "seed", "val", baseline.get("val"), metric)
+    out["val"] = baseline["val"]["reward"]
     if "train" in baseline:
-        train = split_result_from_rollouts(rd, "seed", "train")
-        baseline["train"] = train.to_dict()
-        out["train"] = train.reward
+        baseline["train"] = _split(rd, "seed", "train", baseline.get("train"), metric)
+        out["train"] = baseline["train"]["reward"]
     baseline["reward_metric"] = metric
     (run_dir / "baseline.json").write_text(json.dumps(baseline, indent=2), encoding="utf-8")
 
@@ -82,7 +111,10 @@ def rescore(run_dir: Path, metric: str) -> dict:
     if final_p.exists():
         final = json.loads(final_p.read_text(encoding="utf-8"))
         seed_is_best = final.get("best_id") == "seed"
-        test = split_result_from_rollouts(rd, "FINAL" if seed_is_best else "FINAL_seed", "test").to_dict()
+        # The seed's test rollouts are missing when this run REUSED its seed test score; the
+        # stored seed result is then the only record, and is re-scored from its metrics.
+        stored = (final.get("seed") or {}).get("test") or final.get("test_baseline")
+        test = _split(rd, "FINAL" if seed_is_best else "FINAL_seed", "test", stored, metric)
         final["test_baseline"] = test
         final.setdefault("seed", {})["test"] = test
         if seed_is_best:

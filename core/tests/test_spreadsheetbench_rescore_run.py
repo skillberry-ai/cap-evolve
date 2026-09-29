@@ -96,3 +96,26 @@ def test_run_suite_reuses_a_rescored_copy_never_the_kept_slot():
     block = sh.split("# REUSE THE LATEST RUN'S SEED", 1)[1].split('cat > "$PROJ/capevolve.yaml"', 1)[0]
     assert "rescore_run.py" in block and '--metric "$SB_REWARD_METRIC"' in block
     assert 'REUSE_YAML="reuse_baseline:     \\"$RESCORED/run_suite\\""' in block
+
+
+def _pt(tid, recalc, as_saved):
+    return {"task_id": tid, "reward": recalc, "n": 1, "raw": {},
+            "metrics": [{"name": "hard_restriction", "value": recalc, "primary": True, "direction": "higher"},
+                        {"name": "hard_no_recalc", "value": as_saved, "primary": False, "direction": "higher"}]}
+
+
+def test_a_seed_test_score_that_was_itself_reused_is_rescored_from_the_stored_result(tmp_path):
+    """The kept run may be an optimization run whose seed test score was REUSED: it has champion
+    FINAL rollouts but no FINAL_seed ones. Rebuilding from rollouts alone gave an empty result and
+    a seed test score of 0.0 (run 36522466236)."""
+    rd = _run_dir(tmp_path)
+    stored = {"split": "test", "reward": 0.75,
+              "per_task": [_pt("t1", 1.0, 1.0), _pt("t2", 1.0, 0.0), _pt("t3", 1.0, 1.0), _pt("t4", 0.0, 0.0)]}
+    (rd / "final.json").write_text(json.dumps({"best_id": "cand_0003", "baseline_id": "seed",
+                                              "test": {"reward": 0.9}, "test_baseline": stored,
+                                              "seed": {"test": stored}}))
+    out = _load().rescore(rd, "hard_no_recalc")
+    assert out["test"] == 0.5
+    final = json.loads((rd / "final.json").read_text())
+    assert final["seed"]["test"]["reward"] == 0.5 and final["test_baseline"]["reward"] == 0.5
+    assert final["test"]["reward"] == 0.9, "the champion's own test result must be left alone"
