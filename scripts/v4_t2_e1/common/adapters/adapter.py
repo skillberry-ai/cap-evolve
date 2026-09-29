@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
-"""Harbor adapter for v4_t2_e1 — single-task, system-prompt-only cap-evolve
-optimization of parsec v4.
+"""Harbor adapter for parsec v4, system-prompt-only cap-evolve optimization.
 
-Shared by all 21 per-task projects via a symlink chain
-(project/adapters -> .capevolve/v4_t2_e1_common/adapters -> this file's own
-directory). Since load_adapter() (core/cap_evolve/check.py) instantiates
-Adapter() with zero constructor arguments, this adapter reads a required
-TASK_ID environment variable — set by scripts/v4_t2_e1/run_one_task.py
-immediately before each `cap-evolve run` invocation — to know which of the
-21 tasks it is running.
+Multi-task: tasks() enumerates every ``bench-v4-*`` directory under
+``$PARSEC_V4N/_run/tasks/`` and returns one Task per id, regardless of the
+``split`` argument. This matches core/cap_evolve/harness.py's actual
+contract — it only ever calls ``adapter.tasks("all")`` (both in
+``ensure_splits`` and in ``_tasks_for``), then filters the result down to
+whichever real train/val/test split it needs using the ids frozen in
+``split_ids.json`` — and mirrors templates/adapters/skillsbench/adapter.py's
+own ``tasks()`` (split-agnostic, fixed id list). So one project's
+``split_ids.json`` can list any subset of tasks (or all 34) for
+train/val/test, and this adapter needs no per-task construction argument;
+``load_adapter()`` (core/cap_evolve/check.py) already instantiates Adapter()
+with zero constructor arguments.
+
+Historically (through 2026-09-23) this file required a TASK_ID environment
+variable and resolved exactly one task_dir at construction, shared by 21
+one-task-per-process projects via a symlink chain. That restriction was
+never a cap-evolve framework requirement — just this adapter's own design —
+so it has been removed in favor of the framework's native multi-task
+support, letting all tasks optimize jointly in a single process.
 
 Candidate delivery: system_prompt.py's get_agent_prompt() re-reads
 config/prompts/*.md from disk on every request, keyed by mtime (see the
@@ -76,8 +87,13 @@ import parsec_paths  # noqa: E402
 # below the class definition dereferences V4N directly at import time.
 V4N = parsec_paths.resolve_v4n_or_none()
 TASKS_DIR = V4N / "_run" / "tasks" if V4N else None
-JOBS_ROOT = V4N / "_run" / "jobs" / "v4_t2_e1" if V4N else None
+# v4_g2_e1-scoped (not v4_t2_e1): the old per-task projects wrote trial data
+# under .../jobs/v4_t2_e1/<task_id>/..., and this adapter no longer knows
+# about those runs (TASK_ID support removed) — a shared namespace would let
+# stale v4_t2_e1 job dirs be picked up by trajectories()'s "newest" search.
+JOBS_ROOT = V4N / "_run" / "jobs" / "v4_g2_e1" if V4N else None
 TRIAL_TIMEOUT_SEC = 20 * 60
+TASK_DIR_PREFIX = "bench-v4-"
 
 PROMPT_FILES = [
     "orchestrator.md",
@@ -97,34 +113,6 @@ PROMPT_FILES = [
 MIN_ORCHESTRATOR_BYTES = 500
 
 MCP_PORTS = parsec_paths.MCP_PORTS
-
-
-_SEED_SEGMENT_RE = re.compile(r"^seed-(\d+)$")
-
-
-def _path_sort_key(path: Path, root: Path) -> list[tuple[int, int, str]]:
-    """Order ``path`` under ``root`` by segment, numerically where it is a number.
-
-    Needed because run_target()'s layout is ``seed-<N>/<millis>/<harbor-ts>`` and
-    plain string ordering gets the numeric segments wrong: ``"seed-10" <
-    "seed-2"`` and ``"1789740999999" < "989740746891"``. Each segment becomes
-    ``(0, <int>, "")`` when it is (or wraps) an integer and ``(1, 0, <text>)``
-    otherwise, so numbers order numerically and sort before free text.
-    """
-    try:
-        parts = path.relative_to(root).parts
-    except ValueError:
-        parts = path.parts
-    key: list[tuple[int, int, str]] = []
-    for part in parts:
-        match = _SEED_SEGMENT_RE.match(part)
-        if match:
-            key.append((0, int(match.group(1)), ""))
-        elif part.isdigit():
-            key.append((0, int(part), ""))
-        else:
-            key.append((1, 0, part))
-    return key
 
 
 def _resolve_docker_host() -> str:
@@ -237,13 +225,6 @@ def _read_parsec_usage_cost(
 
 class Adapter(CapabilityAdapter):
     def __init__(self) -> None:
-        task_id = os.environ.get("TASK_ID", "").strip()
-        if not task_id:
-            raise RuntimeError(
-                "TASK_ID environment variable is required — this adapter is shared by "
-                "all 21 v4_t2_e1 projects via a symlink and has no other way to know "
-                "which task it is running. Set it before invoking `cap-evolve run`."
-            )
         if V4N is None:
             # Message text from parsec_paths, so there is one wording to keep
             # right. The *condition* deliberately stays on the module-level V4N
@@ -255,11 +236,6 @@ class Adapter(CapabilityAdapter):
                 f"{parsec_paths.V4N_REQUIRED_MSG} Set it before invoking "
                 "`cap-evolve run`."
             )
-        task_dir = TASKS_DIR / f"bench-v4-{task_id}"
-        if not task_dir.exists():
-            raise FileNotFoundError(f"no such bench-v4 task directory: {task_dir}")
-        self.task_id = task_id
-        self.task_dir = task_dir
         # Read fresh on every construction (see module docstring) so a caller —
         # e.g. a test — that sets PARSEC_LIVE_PROMPTS_DIR before constructing an
         # Adapter always gets it; a module-level constant would not.
@@ -273,16 +249,37 @@ class Adapter(CapabilityAdapter):
         # and for the same reason: PARSEC_LIVE_LOG must be re-read fresh on
         # every construction so a test (or caller) that sets it before
         # constructing an Adapter always gets it.
+        #
+        # Default matches parsec_stack.sh's own LOG_DIR ("$PARSEC_V4N/_run/logs/sims"),
+        # where it actually starts parsec-live. The old default one level up
+        # (_run/logs/parsec-live.log) is a stale file nothing writes to anymore —
+        # every usage-window lookup against it silently returned (0.0, 0), which is
+        # how a whole run's cost_usd/tokens came back zero despite the trials
+        # themselves costing real money.
         self.live_log_path = Path(
-            os.environ.get("PARSEC_LIVE_LOG", str(V4N / "_run" / "logs" / "parsec-live.log"))
+            os.environ.get(
+                "PARSEC_LIVE_LOG", str(V4N / "_run" / "logs" / "sims" / "parsec-live.log")
+            )
         )
 
     # ------------------------------------------------------------------
-    # tasks() ignores the split argument: train == val == test == the one
-    # task pinned via split_ids.json (see Task 2's capevolve.yaml).
+    # tasks() ignores the split argument on purpose: harness.py only ever
+    # calls it with split="all" (both in ensure_splits and in _tasks_for),
+    # then filters the result itself down to whichever train/val/test ids
+    # are frozen in the project's split_ids.json. So this enumerates every
+    # task the adapter knows about — every bench-v4-<id> directory under
+    # $PARSEC_V4N/_run/tasks/ — and the project decides, via split_ids.json,
+    # which subset (up to all 34) actually gets optimized/evaluated.
     # ------------------------------------------------------------------
     def tasks(self, split: str) -> list[Task]:
-        return [Task(id=self.task_id, metadata={"task_dir": str(self.task_dir)})]
+        task_dirs = sorted(TASKS_DIR.glob(f"{TASK_DIR_PREFIX}*"))
+        return [
+            Task(
+                id=d.name[len(TASK_DIR_PREFIX):],
+                metadata={"task_dir": str(d)},
+            )
+            for d in task_dirs
+        ]
 
     # ------------------------------------------------------------------
     # Candidate delivery: overwrite whichever *.md files the candidate
@@ -347,10 +344,10 @@ class Adapter(CapabilityAdapter):
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
         task_dir = task.metadata["task_dir"]
-        trial_dir = JOBS_ROOT / self.task_id / f"seed-{seed}" / str(int(time.time() * 1000))
+        trial_dir = JOBS_ROOT / task.id / f"seed-{seed}" / str(int(time.time() * 1000))
         trial_dir.mkdir(parents=True, exist_ok=True)
 
-        # The 5 MCP harness services are SHARED by all 21 tasks and keep serving
+        # The 5 MCP harness services are SHARED by every task and keep serving
         # whatever dataset was PUT into them last. Per install_seeds.py's own
         # docstring, a reachable-but-unseeded service "serves whatever the
         # previous task left behind, which produces a plausible reward for the
@@ -504,25 +501,32 @@ class Adapter(CapabilityAdapter):
         return Score(task_id=task.id, reward=reward, feedback=feedback, n=1)
 
     def trajectories(self, split: str, ctx=None) -> Path | None:
-        """The newest trial's harbor JOB directory, copied verbatim by cap-evolve
-        into the optimizer's ./trajectories/.
+        """The newest trial's harbor JOB directory across every task, copied
+        verbatim by cap-evolve into the optimizer's ./trajectories/.
+
+        This is only a last-resort fallback (harness.py's
+        ``_copy_step_trajectories`` prefers a per-tag rollout copy scoped to
+        one candidate; it falls back to this native dir only when neither
+        that nor the seed tag has anything on disk yet), so it does not need
+        to be scoped to one task — it searches every task's trial dirs under
+        JOBS_ROOT and returns the single newest one, same as it did when
+        JOBS_ROOT held only one task's trials.
 
         Returns the job dir — the one parse_job_dir() consumes, whose children
         are trial dirs carrying BOTH agent/ and verifier/ — not a single trial's
         agent/ subdirectory, which withholds the verifier output that explains
         the reward.
 
-        "Newest" is resolved with a NUMERIC key, not a lexicographic one:
-        run_target() lays trials out as <task>/seed-<N>/<millis>/<harbor-ts>/,
-        and sorted() on those strings puts "seed-10" before "seed-2", so the
-        tenth trial's trajectories would be silently dropped the moment
-        num_trials exceeded 10.
+        "Newest" is resolved by mtime, not by sorting path segments: job dirs
+        now nest under a task id (<task>/seed-<N>/<millis>/<harbor-ts>/), and
+        a per-segment key would sort by task id first — wrong once trials
+        span more than one task. mtime is correct regardless of how many
+        tasks' trials are mixed in under JOBS_ROOT.
         """
-        task_root = JOBS_ROOT / self.task_id
         job_dirs = {
             Path(p).parents[1]  # .../agent -> trial dir -> job dir
-            for p in glob.glob(str(task_root / "**" / "agent"), recursive=True)
+            for p in glob.glob(str(JOBS_ROOT / "**" / "agent"), recursive=True)
         }
         if not job_dirs:
             return None
-        return max(job_dirs, key=lambda d: _path_sort_key(d, task_root))
+        return max(job_dirs, key=lambda d: d.stat().st_mtime)
