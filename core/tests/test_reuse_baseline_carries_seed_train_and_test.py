@@ -76,6 +76,24 @@ def test_a_reused_baseline_evaluates_nothing_for_the_seed(tmp_path):
     assert not list((rd.rollouts / "test").glob("*.json")), "test rollouts must not be copied"
 
 
+def test_the_prior_runs_candidate_rollouts_are_not_copied(tmp_path):
+    """Candidate ids restart at cand_0001 in every run, so a copied prior candidate rollout would
+    read as this run's result for a candidate it has not evaluated yet (seen in run 36523096755)."""
+    from cap_evolve import Budget, RunDir, harness
+
+    prior = _prior_run(tmp_path)
+    seed_val = next((prior.rollouts / "val").glob("*__seed__t0.json"))
+    for split in ("val", "train"):
+        (prior.rollouts / split / seed_val.name.replace("__seed__", "__cand_0001__")).write_text("{}")
+
+    rd = RunDir.create(tmp_path / ".capevolve", ts="next", budget=Budget(max_iterations=0))
+    harness.reuse_baseline(prior.root, run_dir=rd)
+
+    for split in ("val", "train"):
+        names = [f.name for f in (rd.rollouts / split).glob("*.json")]
+        assert names and all("__seed__" in n for n in names), f"{split}: {names}"
+
+
 def test_a_changed_seed_is_rescored_on_test(tmp_path):
     from cap_evolve import Budget, RunDir, harness
 

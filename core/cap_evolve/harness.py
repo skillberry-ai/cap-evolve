@@ -695,21 +695,19 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     if prior_seed.is_dir():
         run_dir.snapshot("seed", prior_seed)
 
-    # Copy the seed's val rollouts so diagnose/algorithm can read them without a re-run.
-    prior_val_rollouts = prior / "rollouts" / "val"
-    if prior_val_rollouts.is_dir():
-        dst = run_dir.rollouts / "val"
+    # The seed's val and train rollouts only: finalize's bookend and diagnose read them by tag, so
+    # with them on disk neither re-evaluates the seed. The prior run's CANDIDATE rollouts are not
+    # copied — they share names (cand_0001, …) with this run's candidates, so a reader could see
+    # the prior run's result for a candidate this run has not evaluated yet.
+    for split in ("val", "train"):
+        src = prior / "rollouts" / split
+        if not src.is_dir():
+            continue
+        dst = run_dir.rollouts / split
         if dst.exists():
             shutil.rmtree(dst)
-        shutil.copytree(prior_val_rollouts, dst)
-
-    # The seed's TRAIN rollouts too: finalize's bookend and diagnose read them by tag, so with
-    # them on disk neither re-evaluates the seed on train.
-    prior_train = prior / "rollouts" / "train"
-    if prior_train.is_dir():
-        dst = run_dir.rollouts / "train"
-        dst.mkdir(parents=True, exist_ok=True)
-        for f in prior_train.glob("*__seed__t*.json"):
+        dst.mkdir(parents=True)
+        for f in src.glob("*__seed__t*.json"):
             shutil.copy2(f, dst / f.name)
 
     # And the seed's sealed TEST score, as a RESULT rather than as rollouts: test rollouts on disk
