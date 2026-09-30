@@ -143,7 +143,9 @@ A justification is a per-candidate judgment, not boilerplate (#585). `round.py` 
 nothing spent, no compliance event logged — unless you also pass
 `--duplicate-skip-justification "<why the SAME reasoning genuinely holds for THIS candidate>"`,
 which is recorded on the `agent_optimize_compliance` event next to
-`justification_near_duplicate_of`. A first-time (novel) skip reason passes on its own. If you
+`justification_near_duplicate_of`. A first-time (novel) skip reason passes on its own. The
+bare `--skip-screen-ladder` gets the same treatment: the first one in a run passes, every later
+one is refused without `--duplicate-skip-justification`. If you
 find yourself reaching for the same excuse again, screen instead: tier 1 is ~6-25 rollouts.
 
 ### The break-even, and when the ladder cannot pay for itself

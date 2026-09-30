@@ -65,11 +65,10 @@ HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 
 
-def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
-    """(tag, skip_justification) for every earlier ``agent_optimize_compliance`` event in this
-    run that recorded a non-empty justification. Read straight from ``events.jsonl`` — the file
-    ``log_event`` appends to — so this sees every earlier round of THIS run, not just this
-    process's own candidates.
+def _compliance_events(run_dir) -> list[dict]:
+    """Every earlier ``agent_optimize_compliance`` event in this run. Read straight from
+    ``events.jsonl`` — the file ``log_event`` appends to — so this sees every earlier round of
+    THIS run, not just this process's own candidates.
     """
     if not run_dir.events_path.exists():
         return []
@@ -81,12 +80,28 @@ def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
             rec = json.loads(line)
         except ValueError:
             continue
-        if rec.get("kind") != "agent_optimize_compliance":
-            continue
-        just = rec.get("skip_justification")
-        if just and just.strip():
-            out.append((rec.get("tag"), just.strip()))
+        if rec.get("kind") == "agent_optimize_compliance":
+            out.append(rec)
     return out
+
+
+def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
+    """(tag, skip_justification) for every earlier compliance event with a non-empty one."""
+    return [(rec.get("tag"), rec["skip_justification"].strip())
+            for rec in _compliance_events(run_dir)
+            if (rec.get("skip_justification") or "").strip()]
+
+
+def _prior_bare_skip(run_dir):
+    """Tag of the latest earlier unscreened candidate that went through on a bare
+    ``--skip-screen-ladder`` (no justification text), else ``None``. Only events carrying
+    ``skip_screen_ladder`` count — a candidate REFUSED for having no skip flag at all is logged
+    too, and must not read as a bare skip.
+    """
+    bare = [rec.get("tag") for rec in _compliance_events(run_dir)
+            if rec.get("skip_screen_ladder") and not rec.get("screened_before_fullval")
+            and not (rec.get("skip_justification") or "").strip()]
+    return bare[-1] if bare else None
 
 
 def _near_duplicate_justification(justification, prior):
@@ -535,8 +550,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "additive READ tool, screening cost exceeds expected savings'.")
     p.add_argument("--duplicate-skip-justification", default=None,
                    help="required when --skip-screen-justification is a near-duplicate of an "
-                        "earlier skip reason in this run and a candidate has no screen.py "
-                        "record (#585). Say why the SAME reasoning genuinely holds for this "
+                        "earlier skip reason in this run — or on the 2nd+ bare "
+                        "--skip-screen-ladder — and a candidate has no screen.py record (#585). Say why the SAME reasoning genuinely holds for this "
                         "candidate. Without it, round.py refuses rather than paying full val "
                         "on a copy-pasted excuse.")
     p.add_argument("--single-candidate-justification", default=None,
@@ -631,6 +646,12 @@ def _main(argv=None) -> int:
     # from re-reading every round's prose by hand.
     near_dup_of = _near_duplicate_justification(
         args.skip_screen_justification, _prior_skip_justifications(run_dir))
+    # A bare --skip-screen-ladder (no reason) has no text to compare, so without this a driver
+    # refused below would just drop the reason next time. The 2nd+ bare skip in a run counts as
+    # a duplicate of the earlier one — same refusal, same override.
+    bare_skip = args.skip_screen_ladder and not (args.skip_screen_justification or "").strip()
+    if bare_skip:
+        near_dup_of = _prior_bare_skip(run_dir)
     screened_by_tag = {t: screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
                        for t in tags}
     unscreened = [t for t in tags if not screened_by_tag[t]]
@@ -643,9 +664,11 @@ def _main(argv=None) -> int:
     # several candidates in a row). A first-time (novel) skip reason still passes on its own.
     if unscreened and near_dup_of and not (args.duplicate_skip_justification or "").strip():
         print(json.dumps({
-            "error": f"candidate(s) {unscreened} skip screen.py with a "
-                     "--skip-screen-justification that is a near-duplicate of "
-                     f"{near_dup_of}'s earlier in this run",
+            "error": f"candidate(s) {unscreened} skip screen.py with "
+                     + ("a bare --skip-screen-ladder (no reason), repeating "
+                        f"{near_dup_of}'s bare skip" if bare_skip else
+                        "a --skip-screen-justification that is a near-duplicate of "
+                        f"{near_dup_of}'s") + " earlier in this run",
             "why": "a skip reason reused round after round is boilerplate, not a per-candidate "
                    "judgment (issue #585): screen.py's tier-1 subset costs ~6-25 rollouts vs "
                    "full val's hundreds, and most unscreened candidates are rejected by full "
@@ -657,12 +680,12 @@ def _main(argv=None) -> int:
         }, indent=2))
         return 2
     if near_dup_of:
-        print(f"NOTE: --skip-screen-justification is a near-duplicate of {near_dup_of}'s "
-              "justification earlier in this run — allowed, recorded as "
-              "justification_near_duplicate_of on the compliance event.", file=sys.stderr)
+        print(f"NOTE: this skip repeats {near_dup_of}'s earlier in this run — allowed, recorded "
+              "as justification_near_duplicate_of on the compliance event.", file=sys.stderr)
     for t in tags:
         run_dir.log_event("agent_optimize_compliance", tag=t,
                           screened_before_fullval=screened_by_tag[t],
+                          skip_screen_ladder=bool(args.skip_screen_ladder),
                           skip_justification=args.skip_screen_justification,
                           justification_near_duplicate_of=near_dup_of,
                           duplicate_skip_justification=args.duplicate_skip_justification,

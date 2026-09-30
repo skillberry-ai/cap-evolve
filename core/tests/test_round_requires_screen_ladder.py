@@ -163,7 +163,7 @@ def test_near_duplicate_skip_justification_is_refused_without_override(tmp_path)
     override = "cand_2 is a one-line wording tweak of cand_1's prompt; same split-size fact holds"
     p2 = _run([*round2, "--duplicate-skip-justification", override])
     assert p2.returncode == 0, p2.stdout
-    assert "near-duplicate" in p2.stderr, f"no near-duplicate note on stderr: {p2.stderr}"
+    assert "repeats cand_1" in p2.stderr, f"no near-duplicate note on stderr: {p2.stderr}"
 
     events = [json.loads(ln) for ln in
               run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
@@ -196,6 +196,48 @@ def test_near_duplicate_skip_justification_is_refused_without_override(tmp_path)
     compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
     assert compliance[-1]["justification_near_duplicate_of"] is None, (
         f"fresh justification wrongly flagged as a near-duplicate: {compliance[-1]}")
+
+
+def test_repeated_bare_skip_screen_ladder_is_refused_without_override(tmp_path):
+    """issue #585 loophole: a bare --skip-screen-ladder has no text to near-duplicate, so a
+    driver refused for a boilerplate reason could just drop the reason. The first bare skip in a
+    run passes; the 2nd+ is refused unless --duplicate-skip-justification records why.
+    """
+    run_dir, project, work = _staged_run_dir(tmp_path)
+
+    def rnd(tag, *extra):
+        return _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                     "--project", str(project), "--candidates", tag, "--n-trials", "1",
+                     *_JUSTIFY, *extra])
+
+    # A round refused for having NO skip flag at all still logs a compliance event; it must not
+    # count as the run's first bare skip.
+    assert rnd("cand_1").returncode == 2
+    p1 = rnd("cand_1", "--skip-screen-ladder")
+    assert p1.returncode == 0, f"the first bare skip in a run must pass: {p1.stdout}"
+
+    from cap_evolve import harness
+    harness.record_iteration(run_dir, work / "cand_1", "cand_1", parent_id="cur",
+                             accepted=False, reason="test", val=0.5, parent_val=0.5)
+    import shutil
+    from cap_evolve.skillcheck import seed_capability_dir
+    shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
+
+    refused = rnd("cand_2", "--skip-screen-ladder")
+    assert refused.returncode == 2, f"a repeated bare skip was not refused: {refused.stdout}"
+    err = json.loads(refused.stdout)
+    assert "bare --skip-screen-ladder" in err["error"] and "cand_1" in err["error"]
+    assert "--duplicate-skip-justification" in err["fix"]
+
+    override = "cand_2 only renames a tool argument; nothing a subset could discriminate"
+    p2 = rnd("cand_2", "--skip-screen-ladder", "--duplicate-skip-justification", override)
+    assert p2.returncode == 0, p2.stdout
+    events = [json.loads(ln) for ln in
+              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    last = [e for e in events if e.get("kind") == "agent_optimize_compliance"][-1]
+    assert last["tag"] == "cand_2" and last["skip_screen_ladder"] is True
+    assert last["justification_near_duplicate_of"] == "cand_1"
+    assert last["duplicate_skip_justification"] == override
 
 
 def test_round_records_max_parallel_and_warns_on_drift(tmp_path):

@@ -638,6 +638,9 @@ def _round_control(c: Checker, tmp: Path) -> None:
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--k-se", "1.0",
                "--gate-against", "control", "--skip-screen-ladder",
+               # A 2nd bare skip in this run is refused without a reason (#585); this check is
+               # about gate mechanics, not that guard.
+               "--duplicate-skip-justification", "check.py: gate mechanics, not the ladder",
                "--single-candidate-justification", "check.py: single-candidate gate mechanics"])
     if r2:
         ref = (r2.get("gated_against") or {})
@@ -650,6 +653,7 @@ def _round_control(c: Checker, tmp: Path) -> None:
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--gate-against", "control",
                "--no-control", "--skip-screen-ladder",
+               "--duplicate-skip-justification", "check.py: gate mechanics, not the ladder",
                "--single-candidate-justification", "check.py: single-candidate gate mechanics"],
               expect_rc=2)
     c.check(bool(r3) and "control" in json.dumps(r3),
