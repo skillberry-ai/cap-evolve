@@ -1990,6 +1990,11 @@ def reduce_run(run_dir) -> dict:
                 note = (f"{note + ' — ' if note else ''}unpriced: the target model's "
                         f"provider returned no per-message cost for {unpriced} rollout(s) "
                         f"({int(ev.get('tokens') or 0):,} tokens recorded instead)")
+            elif cs_counts.get("partial_models"):
+                # e.g. the agent under test is priced but the user simulator is not.
+                note = (f"{note + ' — ' if note else ''}partially priced: "
+                        f"{cs_counts['partial_models']} rollout(s) include an unpriced "
+                        f"model, so this cost is a lower bound")
             ledger.append({
                 "phase": _phase_for(ev), "split": split,
                 "kind": "baseline_eval" if is_base else ("test_eval" if split == "test"
