@@ -44,9 +44,9 @@ def test_probe_tier_is_selectable_and_explicit_only():
     assert 'EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "full_verified_probe"}' in WF
 
 
-def test_bench_job_runs_on_either_skillberry_machine():
-    # both skillberry-1 and skillberry-2 hold the frozen seed copy; no other runner has the label
-    assert "runs-on: [self-hosted, ibm-vpc]" in WF
+def test_bench_job_is_pinned_to_skillberry_1():
+    # skillberry-2's sandbox lost 15/40 val rollouts to exec timeouts (run 36746122576)
+    assert "runs-on: [self-hosted, ibm-vpc, skillberry-1]" in WF
 
 
 def test_queued_dispatches_are_never_cancelled():
