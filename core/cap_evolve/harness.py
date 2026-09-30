@@ -4209,6 +4209,10 @@ def _finalize_train_val(adapter, run_dir: RunDir, cid: str, tag: str, *,
 
     if not tr:
         train_out = {"status": "empty — no train ids in the frozen split"}
+    elif os.environ.get("CAPEVOLVE_SKIP_FINAL_TRAIN") == "1":
+        # exp #606 (temp branch): the bookend train pass runs AFTER test and changes no gated or
+        # reported test/val number, but costs ~45 min per SpreadsheetBench probe run.
+        train_out = {"status": "skipped: CAPEVOLVE_SKIP_FINAL_TRAIN=1"}
     elif tr == va:
         train_out = {"status": "skipped: train ids are identical to val — see the val entry"}
     else:

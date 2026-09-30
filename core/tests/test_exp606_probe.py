@@ -86,6 +86,22 @@ def test_probe_overrides_never_touch_the_live_slot():
     assert env["SB_LATEST_DIR"] == "/home/skillberry/.cache/capevolve-latest/spreadsheetbench-606"
     assert env["SB_REUSE_FROM_TIER"] == "full_verified" and env["SB_EMPTY_SEED"] == "1"
     assert env["SB_REUSE_LATEST_BASELINE"] == "1" and env["SB_SCORING"] == "hard" and env["GATE_K_SE"] == "0.2"
+    assert env["CAPEVOLVE_SKIP_FINAL_TRAIN"] == "1"
+
+
+def test_skip_final_train_skips_only_the_train_bookend(tmp_path, monkeypatch):
+    from cap_evolve import harness
+    from cap_evolve.rundir import RunDir
+    from cap_evolve.splits import Splits
+    rd = RunDir.create(tmp_path)
+    rd.write_splits(Splits(train=["t1"], val=["v1"], test=["x1"], seed=0))
+    monkeypatch.setenv("CAPEVOLVE_SKIP_FINAL_TRAIN", "1")
+
+    def boom(*a, **k):
+        raise AssertionError("train must not be evaluated")
+    monkeypatch.setattr(harness, "evaluate_candidate", boom)
+    out = harness._finalize_train_val(None, rd, "seed", "seed", n_trials=1)
+    assert out["train"]["status"].startswith("skipped: CAPEVOLVE_SKIP_FINAL_TRAIN")
 
 
 def test_reader_files_are_whole_blocks_that_render_verbatim():

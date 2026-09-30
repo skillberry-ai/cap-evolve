@@ -237,7 +237,7 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
             "SB_SCORING": "hard", "GATE_K_SE": "0.2", "SB_EMPTY_SEED": "1",
             "SB_REUSE_LATEST_BASELINE": "1", "SB_REUSE_FROM_TIER": "full_verified",
             "SB_LATEST_DIR": "/home/skillberry/.cache/capevolve-latest/spreadsheetbench-606",
-            "SB_KEEP_LATEST_RUN": "0",
+            "SB_KEEP_LATEST_RUN": "0", "CAPEVOLVE_SKIP_FINAL_TRAIN": "1",
         },
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
             "SB_SCORING": "hard", "SB_WARM_SEED": "1", "GATE_K_SE": "0.2",
