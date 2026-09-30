@@ -834,12 +834,16 @@ ENV
     else SB_REWARD_METRIC="${SPREADSHEETBENCH_SCORING}_no_recalc"; fi
     echo ">>> spreadsheetbench reward: $SB_REWARD_METRIC" >&2
     printf '%s' "$SB_REWARD_METRIC" > "$OUT/reward_metric"
-    # LATEST RUN. One history slot, overwritten by every spreadsheetbench run: the whole run dir
-    # plus every output workbook (recalculated and as-saved), kept on the runner so a finished
-    # run can be re-scored offline and a later run can build on its seed (SB_REUSE_LATEST_BASELINE).
-    # Outputs are otherwise deleted after scoring, and the runner's work dir is wiped per job.
+    # LATEST RUN. One history slot PER (tier, agent model), overwritten by the next spreadsheetbench
+    # run with the same tier and model: the whole run dir plus every output workbook (recalculated
+    # and as-saved), kept on the runner so a finished run can be re-scored offline and a later run
+    # can build on its seed (SB_REUSE_LATEST_BASELINE). Keyed so that, e.g., a GPT baseline never
+    # overwrites the Gemma seed another experiment reuses. Outputs are otherwise deleted after
+    # scoring, and the runner's work dir is wiped per job.
     SB_KEEP_LATEST_RUN="${SB_KEEP_LATEST_RUN:-1}"
-    SB_LATEST_DIR="${SB_LATEST_DIR:-$HOME/.cache/capevolve-latest/spreadsheetbench}"
+    SB_SLOT_KEY="${TIER}__$(printf '%s' "$AGENT_MODEL" | tr -c 'A-Za-z0-9._-' '_')"
+    SB_LATEST_DIR="${SB_LATEST_DIR:-$HOME/.cache/capevolve-latest/spreadsheetbench-slots/$SB_SLOT_KEY}"
+    echo ">>> spreadsheetbench kept-run slot: $SB_LATEST_DIR" >&2
     if [ "$SB_KEEP_LATEST_RUN" = "1" ]; then
       export SPREADSHEETBENCH_KEEP_OUTPUTS=1
       echo "SPREADSHEETBENCH_KEEP_OUTPUTS=1" >> "$WORK/.env"

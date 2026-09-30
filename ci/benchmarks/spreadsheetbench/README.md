@@ -136,10 +136,13 @@ their published spreadsheetbench numbers are higher and not comparable with late
 
 ### The latest run is kept on the runner
 
-Every spreadsheetbench run replaces one kept slot at `~/.cache/capevolve-latest/spreadsheetbench`
-on the runner (`SB_LATEST_DIR`): the whole run dir, `latest.json` (run id, tier, sha, model),
-and every output workbook, both `*_output.xlsx` (recalculated) and `*_output.norecalc.xlsx`
-(as saved). Set `SB_KEEP_LATEST_RUN=0` to skip it. Only one run is ever kept.
+Every spreadsheetbench run replaces the kept slot for its **tier and agent model**, at
+`~/.cache/capevolve-latest/spreadsheetbench-slots/<tier>__<model>` on the runner (for example
+`full_verified__ibm-rits_google_gemma-4-31B-it`; override with `SB_LATEST_DIR`). A slot holds the
+whole run dir, `latest.json` (run id, tier, sha, model), and every output workbook, both
+`*_output.xlsx` (recalculated) and `*_output.norecalc.xlsx` (as saved). Set
+`SB_KEEP_LATEST_RUN=0` to skip it. One run is kept per tier and model, so a run on another model
+never overwrites a seed that a different experiment reuses. Slots are per runner machine.
 
 `SB_REUSE_LATEST_BASELINE=1` (in `overrides.env`) builds a run on the kept run's **seed**: its
 val and train rollouts and its sealed test score carry over, and the seed is not re-evaluated.
