@@ -148,7 +148,13 @@
       "t4_cost_usd": 0.4164,
       "t4_tokens": 133729,
       "t4_time_s": 273.4,
-      "t4_delta_vs_our_baseline": 0.8
+      "t4_delta_vs_our_baseline": 0.8,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.418,
+      "t4_e2_tokens": 133833,
+      "t4_e2_time_s": 287.7,
+      "t4_e2_delta_vs_our_baseline": 0.8
     },
     {
       "task": "cloud-025-gcp-project-status",
@@ -190,7 +196,13 @@
       "t4_cost_usd": 1.0586,
       "t4_tokens": 340658,
       "t4_time_s": 306.8,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.0604,
+      "t4_e2_tokens": 340847,
+      "t4_e2_time_s": 243.0,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "cloud-026-gpu-abuse-triage",
@@ -232,7 +244,13 @@
       "t4_cost_usd": 0.4434,
       "t4_tokens": 128681,
       "t4_time_s": 566.3,
-      "t4_delta_vs_our_baseline": -0.2728
+      "t4_delta_vs_our_baseline": -0.2728,
+      "t4_e2_reward": 0.9767,
+      "t4_e2_stderr": 0.0233,
+      "t4_e2_cost_usd": 0.5679,
+      "t4_e2_tokens": 167542,
+      "t4_e2_time_s": 789.4,
+      "t4_e2_delta_vs_our_baseline": 0.0906
     },
     {
       "task": "cloud-027-azure-pool-database-trap",
@@ -274,7 +292,13 @@
       "t4_cost_usd": 0.7074,
       "t4_tokens": 227259,
       "t4_time_s": 280.4,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.0531,
+      "t4_e2_tokens": 341221,
+      "t4_e2_time_s": 300.0,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "cost-028-highest-spend-provider",
@@ -316,7 +340,13 @@
       "t4_cost_usd": 0.8011,
       "t4_tokens": 252276,
       "t4_time_s": 244.2,
-      "t4_delta_vs_our_baseline": -0.6
+      "t4_delta_vs_our_baseline": -0.6,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.7442,
+      "t4_e2_tokens": 231482,
+      "t4_e2_time_s": 217.0,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "cost-029-no-cost-rows-for-guid",
@@ -358,7 +388,13 @@
       "t4_cost_usd": 0.7137,
       "t4_tokens": 226728,
       "t4_time_s": 238.2,
-      "t4_delta_vs_our_baseline": 0.16
+      "t4_delta_vs_our_baseline": 0.16,
+      "t4_e2_reward": 0.64,
+      "t4_e2_stderr": 0.04,
+      "t4_e2_cost_usd": 0.707,
+      "t4_e2_tokens": 227525,
+      "t4_e2_time_s": 250.4,
+      "t4_e2_delta_vs_our_baseline": -0.16
     },
     {
       "task": "cost-030-threshold-not-an-anomaly",
@@ -400,7 +436,13 @@
       "t4_cost_usd": 0.7795,
       "t4_tokens": 234863,
       "t4_time_s": 360.4,
-      "t4_delta_vs_our_baseline": -0.2333
+      "t4_delta_vs_our_baseline": -0.2333,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.8686,
+      "t4_e2_tokens": 261614,
+      "t4_e2_time_s": 469.7,
+      "t4_e2_delta_vs_our_baseline": 0.0467
     },
     {
       "task": "icinga-010-stuck-anarchysubjects",
@@ -442,7 +484,13 @@
       "t4_cost_usd": 1.6261,
       "t4_tokens": 520302,
       "t4_time_s": 413.7,
-      "t4_delta_vs_our_baseline": 0.0373
+      "t4_delta_vs_our_baseline": 0.0373,
+      "t4_e2_reward": 0.243,
+      "t4_e2_stderr": 0.0524,
+      "t4_e2_cost_usd": 1.8613,
+      "t4_e2_tokens": 592214,
+      "t4_e2_time_s": 686.9,
+      "t4_e2_delta_vs_our_baseline": -0.1587
     },
     {
       "task": "icinga-011-aap2-job-status-alert",
@@ -484,7 +532,13 @@
       "t4_cost_usd": 1.059,
       "t4_tokens": 328448,
       "t4_time_s": 403.0,
-      "t4_delta_vs_our_baseline": 0.0467
+      "t4_delta_vs_our_baseline": 0.0467,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.2273,
+      "t4_e2_tokens": 379367,
+      "t4_e2_time_s": 476.6,
+      "t4_e2_delta_vs_our_baseline": 0.0467
     },
     {
       "task": "icinga-012-nodes-ready-threshold",
@@ -526,7 +580,13 @@
       "t4_cost_usd": 0.8901,
       "t4_tokens": 270555,
       "t4_time_s": 319.4,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.9625,
+      "t4_e2_tokens": 296667,
+      "t4_e2_time_s": 296.6,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-013-acknowledged-not-an-issue",
@@ -568,7 +628,13 @@
       "t4_cost_usd": 0.5368,
       "t4_tokens": 171800,
       "t4_time_s": 177.5,
-      "t4_delta_vs_our_baseline": 0.2667
+      "t4_delta_vs_our_baseline": 0.2667,
+      "t4_e2_reward": 0.64,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.5374,
+      "t4_e2_tokens": 172076,
+      "t4_e2_time_s": 168.9,
+      "t4_e2_delta_vs_our_baseline": 0.2667
     },
     {
       "task": "icinga-014-check-script-path-moved",
@@ -610,7 +676,13 @@
       "t4_cost_usd": 1.7243,
       "t4_tokens": 541697,
       "t4_time_s": 611.3,
-      "t4_delta_vs_our_baseline": 0.1167
+      "t4_delta_vs_our_baseline": 0.1167,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.7583,
+      "t4_e2_tokens": 547107,
+      "t4_e2_time_s": 646.5,
+      "t4_e2_delta_vs_our_baseline": 0.1167
     },
     {
       "task": "icinga-015-problems-by-severity",
@@ -652,7 +724,13 @@
       "t4_cost_usd": 1.1088,
       "t4_tokens": 350938,
       "t4_time_s": 288.3,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.2,
+      "t4_e2_tokens": 378764,
+      "t4_e2_time_s": 297.7,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-016-hosts-most-problems",
@@ -694,7 +772,13 @@
       "t4_cost_usd": 0.8446,
       "t4_tokens": 268145,
       "t4_time_s": 221.3,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.8427,
+      "t4_e2_tokens": 268027,
+      "t4_e2_time_s": 201.2,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "icinga-017-invented-action-trap",
@@ -736,7 +820,13 @@
       "t4_cost_usd": 1.2685,
       "t4_tokens": 403439,
       "t4_time_s": 409.9,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 0.972,
+      "t4_e2_stderr": 0.028,
+      "t4_e2_cost_usd": 1.2822,
+      "t4_e2_tokens": 405548,
+      "t4_e2_time_s": 325.3,
+      "t4_e2_delta_vs_our_baseline": -0.028
     },
     {
       "task": "platform-001-ee-entrypoint-rca",
@@ -778,7 +868,13 @@
       "t4_cost_usd": 0.5822,
       "t4_tokens": 172657,
       "t4_time_s": 1134.5,
-      "t4_delta_vs_our_baseline": 0.0467
+      "t4_delta_vs_our_baseline": 0.0467,
+      "t4_e2_reward": 0.696,
+      "t4_e2_stderr": 0.0492,
+      "t4_e2_cost_usd": 0.7137,
+      "t4_e2_tokens": 211870,
+      "t4_e2_time_s": 952.6,
+      "t4_e2_delta_vs_our_baseline": -0.0173
     },
     {
       "task": "platform-002-collection-not-found-rca",
@@ -820,7 +916,13 @@
       "t4_cost_usd": 0.5702,
       "t4_tokens": 171849,
       "t4_time_s": 1065.2,
-      "t4_delta_vs_our_baseline": 0.1734
+      "t4_delta_vs_our_baseline": 0.1734,
+      "t4_e2_reward": 0.69,
+      "t4_e2_stderr": 0.1509,
+      "t4_e2_cost_usd": 0.5284,
+      "t4_e2_tokens": 161782,
+      "t4_e2_time_s": 835.8,
+      "t4_e2_delta_vs_our_baseline": -0.0933
     },
     {
       "task": "platform-003-tojson-dict-literal-rca",
@@ -862,7 +964,13 @@
       "t4_cost_usd": 0.5282,
       "t4_tokens": 156611,
       "t4_time_s": 427.5,
-      "t4_delta_vs_our_baseline": 0.5222
+      "t4_delta_vs_our_baseline": 0.5222,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.5312,
+      "t4_e2_tokens": 156826,
+      "t4_e2_time_s": 673.2,
+      "t4_e2_delta_vs_our_baseline": 0.5222
     },
     {
       "task": "platform-004-events-then-config",
@@ -904,7 +1012,13 @@
       "t4_cost_usd": 0.6483,
       "t4_tokens": 201187,
       "t4_time_s": 495.3,
-      "t4_delta_vs_our_baseline": 0.2667
+      "t4_delta_vs_our_baseline": 0.2667,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.4658,
+      "t4_e2_tokens": 144362,
+      "t4_e2_time_s": 387.5,
+      "t4_e2_delta_vs_our_baseline": 0.2667
     },
     {
       "task": "platform-005-wrong-owner-trap",
@@ -946,7 +1060,13 @@
       "t4_cost_usd": 2.0414,
       "t4_tokens": 662262,
       "t4_time_s": 388.2,
-      "t4_delta_vs_our_baseline": 0.0987
+      "t4_delta_vs_our_baseline": 0.0987,
+      "t4_e2_reward": 0.744,
+      "t4_e2_stderr": 0.1583,
+      "t4_e2_cost_usd": 1.6078,
+      "t4_e2_tokens": 519202,
+      "t4_e2_time_s": 340.5,
+      "t4_e2_delta_vs_our_baseline": -0.0693
     },
     {
       "task": "platform-006-version-tag-not-a-ref",
@@ -988,7 +1108,13 @@
       "t4_cost_usd": 0.4775,
       "t4_tokens": 145933,
       "t4_time_s": 348.3,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.4758,
+      "t4_e2_tokens": 146376,
+      "t4_e2_time_s": 347.4,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-007-directory-path-fetch",
@@ -1030,7 +1156,13 @@
       "t4_cost_usd": 0.4527,
       "t4_tokens": 142162,
       "t4_time_s": 348.1,
-      "t4_delta_vs_our_baseline": 0.2
+      "t4_delta_vs_our_baseline": 0.2,
+      "t4_e2_reward": 0.595,
+      "t4_e2_stderr": 0.1653,
+      "t4_e2_cost_usd": 0.4524,
+      "t4_e2_tokens": 141698,
+      "t4_e2_time_s": 370.4,
+      "t4_e2_delta_vs_our_baseline": -0.205
     },
     {
       "task": "platform-008-log-does-not-say",
@@ -1072,7 +1204,13 @@
       "t4_cost_usd": 0.5115,
       "t4_tokens": 155588,
       "t4_time_s": 846.2,
-      "t4_delta_vs_our_baseline": 0.0667
+      "t4_delta_vs_our_baseline": 0.0667,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.5155,
+      "t4_e2_tokens": 156624,
+      "t4_e2_time_s": 1155.5,
+      "t4_e2_delta_vs_our_baseline": 0.0667
     },
     {
       "task": "platform-009-catalog-item-no-config",
@@ -1114,7 +1252,13 @@
       "t4_cost_usd": 0.5074,
       "t4_tokens": 157064,
       "t4_time_s": 657.1,
-      "t4_delta_vs_our_baseline": -0.175
+      "t4_delta_vs_our_baseline": -0.175,
+      "t4_e2_reward": 0.77,
+      "t4_e2_stderr": 0.055,
+      "t4_e2_cost_usd": 0.5196,
+      "t4_e2_tokens": 159637,
+      "t4_e2_time_s": 902.9,
+      "t4_e2_delta_vs_our_baseline": -0.23
     },
     {
       "task": "platform-018-find-jobs-window",
@@ -1156,7 +1300,13 @@
       "t4_cost_usd": 2.5566,
       "t4_tokens": 835103,
       "t4_time_s": 398.0,
-      "t4_delta_vs_our_baseline": -0.972
+      "t4_delta_vs_our_baseline": -0.972,
+      "t4_e2_reward": 0.028,
+      "t4_e2_stderr": 0.028,
+      "t4_e2_cost_usd": 2.5524,
+      "t4_e2_tokens": 836064,
+      "t4_e2_time_s": 268.9,
+      "t4_e2_delta_vs_our_baseline": -0.972
     },
     {
       "task": "platform-019-anarchysubject-state",
@@ -1198,7 +1348,13 @@
       "t4_cost_usd": 2.1212,
       "t4_tokens": 690591,
       "t4_time_s": 425.8,
-      "t4_delta_vs_our_baseline": -0.68
+      "t4_delta_vs_our_baseline": -0.68,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.6004,
+      "t4_e2_tokens": 519666,
+      "t4_e2_time_s": 259.0,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-020-ocpv-vm-inventory",
@@ -1240,7 +1396,13 @@
       "t4_cost_usd": 1.3,
       "t4_tokens": 407534,
       "t4_time_s": 631.9,
-      "t4_delta_vs_our_baseline": -0.66
+      "t4_delta_vs_our_baseline": -0.66,
+      "t4_e2_reward": 0.215,
+      "t4_e2_stderr": 0.0545,
+      "t4_e2_cost_usd": 1.4094,
+      "t4_e2_tokens": 444746,
+      "t4_e2_time_s": 413.1,
+      "t4_e2_delta_vs_our_baseline": -0.785
     },
     {
       "task": "platform-021-babylon-missing-cluster-trap",
@@ -1282,7 +1444,13 @@
       "t4_cost_usd": 1.049,
       "t4_tokens": 343097,
       "t4_time_s": 229.7,
-      "t4_delta_vs_our_baseline": 0.0
+      "t4_delta_vs_our_baseline": 0.0,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 1.0499,
+      "t4_e2_tokens": 343626,
+      "t4_e2_time_s": 197.2,
+      "t4_e2_delta_vs_our_baseline": 0.0
     },
     {
       "task": "platform-022-job-on-no-controller",
@@ -1324,7 +1492,13 @@
       "t4_cost_usd": 0.4586,
       "t4_tokens": 141393,
       "t4_time_s": 351.1,
-      "t4_delta_vs_our_baseline": 0.3
+      "t4_delta_vs_our_baseline": 0.3,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 0.4461,
+      "t4_e2_tokens": 139299,
+      "t4_e2_time_s": 330.6,
+      "t4_e2_delta_vs_our_baseline": 0.3
     },
     {
       "task": "platform-023-splunk-guid-no-events",
@@ -1366,7 +1540,13 @@
       "t4_cost_usd": 0.4824,
       "t4_tokens": 144948,
       "t4_time_s": 328.7,
-      "t4_delta_vs_our_baseline": 0.0667
+      "t4_delta_vs_our_baseline": 0.0667,
+      "t4_e2_reward": 0.96,
+      "t4_e2_stderr": 0.04,
+      "t4_e2_cost_usd": 0.4791,
+      "t4_e2_tokens": 144430,
+      "t4_e2_time_s": 380.3,
+      "t4_e2_delta_vs_our_baseline": 0.0267
     },
     {
       "task": "platform-031-helm-url-not-a-timeout",
@@ -1408,7 +1588,13 @@
       "t4_cost_usd": 7.2532,
       "t4_tokens": 2356745,
       "t4_time_s": 1028.5,
-      "t4_delta_vs_our_baseline": 0.0713
+      "t4_delta_vs_our_baseline": 0.0713,
+      "t4_e2_reward": 0.965,
+      "t4_e2_stderr": 0.0214,
+      "t4_e2_cost_usd": 4.4018,
+      "t4_e2_tokens": 1416763,
+      "t4_e2_time_s": 705.7,
+      "t4_e2_delta_vs_our_baseline": 0.1708
     },
     {
       "task": "platform-032-shared-secret-not-a-registry-outage",
@@ -1450,7 +1636,13 @@
       "t4_cost_usd": 4.1784,
       "t4_tokens": 1359945,
       "t4_time_s": 1295.8,
-      "t4_delta_vs_our_baseline": -0.005
+      "t4_delta_vs_our_baseline": -0.005,
+      "t4_e2_reward": 0.715,
+      "t4_e2_stderr": 0.035,
+      "t4_e2_cost_usd": 3.2055,
+      "t4_e2_tokens": 1031613,
+      "t4_e2_time_s": 600.2,
+      "t4_e2_delta_vs_our_baseline": 0.065
     },
     {
       "task": "platform-033-schema-change-not-the-oom",
@@ -1492,7 +1684,13 @@
       "t4_cost_usd": 2.3041,
       "t4_tokens": 736042,
       "t4_time_s": 509.7,
-      "t4_delta_vs_our_baseline": 0.0714
+      "t4_delta_vs_our_baseline": 0.0714,
+      "t4_e2_reward": 1.0,
+      "t4_e2_stderr": 0.0,
+      "t4_e2_cost_usd": 2.4358,
+      "t4_e2_tokens": 776121,
+      "t4_e2_time_s": 472.3,
+      "t4_e2_delta_vs_our_baseline": 0.0714
     },
     {
       "task": "platform-034-rate-limit-not-an-outage",
@@ -1534,7 +1732,13 @@
       "t4_cost_usd": 0.7749,
       "t4_tokens": 221262,
       "t4_time_s": 1686.1,
-      "t4_delta_vs_our_baseline": 0.2056
+      "t4_delta_vs_our_baseline": 0.2056,
+      "t4_e2_reward": 0.9844,
+      "t4_e2_stderr": 0.0156,
+      "t4_e2_cost_usd": 0.7195,
+      "t4_e2_tokens": 204455,
+      "t4_e2_time_s": 1198.4,
+      "t4_e2_delta_vs_our_baseline": 0.19
     }
   ],
   "sections": {
@@ -1691,6 +1895,22 @@
           "our_baseline_mean": 0.7918,
           "delta_vs_our_baseline_mean": 0.0858
         }
+      ],
+      "t4_e2_summary": [
+        {
+          "tranche": "regression",
+          "n_tasks": 30,
+          "t4_e2_reward_mean": 0.839,
+          "our_baseline_mean": 0.8446,
+          "delta_vs_our_baseline_mean": -0.0056
+        },
+        {
+          "tranche": "challenge",
+          "n_tasks": 4,
+          "t4_e2_reward_mean": 0.9161,
+          "our_baseline_mean": 0.7918,
+          "delta_vs_our_baseline_mean": 0.1243
+        }
       ]
     },
     "category": {
@@ -1819,7 +2039,8 @@
     "source_parsec34_generator": "parsec-intake_v4/scripts/build_parsec34_heatmap.py",
     "cost_time_source": "results/v4/v4_t_e1/cost_time/v4_t2_e1_results_table.md",
     "t4_results_source": "results/v4/v4_t_e1/cost_time/v4_t4_e1_results_table.md",
+    "t4_e2_results_source": "results/v4/v4_t_e1/cost_time/v4_t4_e2_results_table.md",
     "spec": "docs/specs/2026-09-21-parsec-v4-experiment-plan-design.md",
-    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer, the t2_* cost/time fields parsed from cost_time_source (null for the 13 tasks T2 never targeted), and the t4_* reward/cost/time fields parsed from t4_results_source (present for all 34 -- T4 is a whole-ledger regression check, spec Sec.3). category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). T3/T5/C2-C4/G2 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question (resolved for T4, still open for C3/C4/T5)."
+    "note": "task_ledger rows are the frozen source's 34 task rows verbatim, plus a 'report' pointer, the t2_* cost/time fields parsed from cost_time_source (null for the 13 tasks T2 never targeted), and the t4_* reward/cost/time fields parsed from t4_results_source (present for all 34 -- T4 is a whole-ledger regression check, spec Sec.3). t4_e2_* fields are a second run of that same static merge-bundle regression check (v4_t4_e2), parsed from t4_e2_results_source, also present for all 34. category/global C1/G1 rows are computed here from T1's our_baseline column, not from a new job (spec Sec.2). T3/T5/C2-C4/G2 are not_run (spec Sec.2); see spec Sec.3 for why T2 covers only 21/34 tasks and Sec.4 for the open merge-strategy question (resolved for T4, still open for C3/C4/T5)."
   }
 }

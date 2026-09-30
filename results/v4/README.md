@@ -25,7 +25,7 @@ only the *scope* at which the optimizer edits that bundle. Two arms have run so 
 
 | arm | scope | result | links |
 |---|---|---|---|
-| **T** (`v4_t_e1`) | task-by-task: one optimizer loop per task | T2 raises mean reward on both tranches over 21/34 tasks; T4's static merge of those bundles regresses 8 tasks | [`summary.md`](v4_t_e1/summary.md) · [`results.json`](v4_t_e1/results.json) · [`cost_time/`](v4_t_e1/cost_time/) · [heatmap](../../ui/heatmap_v4_t_e1.html) · [artifacts](../../artifacts/v4/v4_t_e1/) · [recipe](../../recipes/v4/v4_t_e1/) · [reports](../../reports/v4/v4_t_e1/) |
+| **T** (`v4_t_e1`) | task-by-task: one optimizer loop per task | T2 raises mean reward on both tranches over 21/34 tasks; T4's static merge of those bundles regresses 8 tasks | [`summary.md`](v4_t_e1/summary.md) · [`results.json`](v4_t_e1/results.json) · [`cost_time/`](v4_t_e1/cost_time/) · [heatmap](../../ui/heatmap_v4_t.html) · [artifacts](../../artifacts/v4/v4_t_e1/) · [recipe](../../recipes/v4/v4_t_e1/) · [reports](../../reports/v4/v4_t_e1/) |
 | **G** (`v4_g_e1`) | global: one shared bundle evolved jointly across all 34 tasks | +0.0946 all-tasks mean reward over baseline after 6 iterations (run stopped, not a clean budget exhaustion) | [`summary.md`](v4_g_e1/summary.md) · [`results.json`](v4_g_e1/results.json) · [`cost_time/`](v4_g_e1/cost_time/) · [heatmap](../../ui/heatmap_v4_g_e1.html) · [artifacts](../../artifacts/v4/v4_g_e1/) · [recipe](../../recipes/v4/v4_g_e1/) · [reports](../../reports/v4/v4_g_e1/) |
 
 See [`comparison.md`](comparison.md) for the T-vs-G head-to-head.
