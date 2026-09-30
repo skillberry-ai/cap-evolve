@@ -37,7 +37,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 # Imported for its side effect ONLY: seeds sys.path so `cap_evolve` resolves when
@@ -46,6 +48,8 @@ from pathlib import Path
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
 from cap_evolve import RunDir, harness
+
+import meter
 
 
 def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
@@ -601,6 +605,17 @@ def main(argv=None) -> int:
     # `provisional` decision never reaches record_iteration and would otherwise carry none.
     gate = _round_gate_numbers(run_dir, args.candidate_id)
     parent_val = gate.pop("parent_val", None)
+    # #610: under host.py the proposer's spend is METERED, not guessed — the delta since this
+    # session's previous checkpoint, read from claude-code's own session log (see meter.py).
+    # A metered figure replaces the agent's self-report; USD is not knowable mid-session, so
+    # host.py attributes it per candidate once the session's real total exists.
+    metered = (meter.checkpoint(run_dir.root, time.time())
+               if os.environ.get("CAPEVOLVE_HOST_METER") == "1" else None)
+    meter_field = {}
+    if metered is not None:
+        args.optimizer_tokens = metered["tokens"]
+        args.optimizer_seconds = round(metered["seconds"], 3)
+        meter_field["opt_meter"] = metered["meter"]
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
@@ -611,7 +626,7 @@ def main(argv=None) -> int:
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
-                      **gate)
+                      **meter_field, **gate)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
