@@ -427,6 +427,8 @@ export interface RunSummaryDetail {
   } | null
   budget_warnings?: { metric: string; pct: number; spent: number; limit: number }[]
   gate_warnings?: unknown[]
+  /** Run-level annotations ({kind, candidate, text}): diagnose/optimizer_error events and
+   *  diagnosis_parse_warning. NOT per-candidate diagnoses — read graph.nodes[i].diagnosis. */
   diagnoses?: unknown[]
   git_log?: { hash: string; subject: string }[]
   /** The intake-authored project config — capevolve.yaml (grouped), PROJECT.md, and

@@ -1117,9 +1117,11 @@ _PROCESS_SEED = (
     "## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)\n"
     "- \n\n"
     "---\n\n"
-    "# DIAGNOSIS.json — machine-readable diagnosis (OPTIONAL but recommended)\n\n"
-    "In addition to PROCESS.md, you may write a DIAGNOSIS.json file to make your diagnosis "
-    "machine-readable for the dashboard. This is optional; if absent, the dashboard will "
+    "# DIAGNOSIS.json — machine-readable diagnosis (REQUIRED under agent-optimize)\n\n"
+    "In addition to PROCESS.md, write a DIAGNOSIS.json file to make your diagnosis "
+    "machine-readable for the dashboard and graph.jsonl (cluster_ids/subset). agent-optimize's "
+    "commit.py refuses a decision without one (--missing-diagnosis-justification is the escape "
+    "hatch); for other algorithms it is optional, and if absent the dashboard will "
     "parse PROCESS.md tables when present, or show only outcome data.\n\n"
     "The schema:\n"
     "```json\n"
@@ -1739,6 +1741,7 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                      val: float | None = None, parent_val: float | None = None,
                      indecisive: bool = False, parents: list | None = None,
                      edit_kind: str | None = None, memory_skill: str | None = None,
+                     cluster_ids: list[str] | None = None, subset: dict | None = None,
                      **extra) -> None:
     """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
 
@@ -1790,7 +1793,7 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
             run_dir, node_id=cid,
             parents=list(parents) if parents else [parent_id or "seed"],
             edit_kind=edit_kind, status="accepted" if accepted else "rejected",
-            val_mean=val, note=reason)
+            val_mean=val, note=reason, cluster_ids=cluster_ids, subset=subset)
     except Exception as e:  # noqa: BLE001 — a log write must never break a run
         run_dir.log_event("optimizer_context_warning", what="graph.jsonl", error=str(e)[:300])
 

@@ -53,7 +53,7 @@ optimizer raised); `seed` is the baseline node.
  "cost": {"optimizer_usd","runner_usd","total_usd"},
  "tokens",
  "gate_warnings": [{"reason","context","mode"}],
- "diagnoses": [{"kind","candidate","text"}],   // gate reasons + diagnose/optimizer_error
+ "diagnoses": [{"kind","candidate","text"}],   // run-level annotations: diagnose/optimizer_error + diagnosis_parse_warning (per-candidate diagnosis content is graph.nodes[i].diagnosis only)
  "git_log": [{"hash","subject"}]}              // one row per iteration commit
 ```
 

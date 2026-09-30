@@ -126,6 +126,9 @@ def _run_agent_optimize(tmp_path):
             f"# JOURNAL\n\n## Iteration {cid} — {decision} candidate\n"
             f"- test handover for {cid}\n",
             encoding="utf-8")
+        # ...and a real DIAGNOSIS.json, which commit.py also requires (#611).
+        (work / "DIAGNOSIS.json").write_text(json.dumps(
+            {"candidate": cid, "clusters": [{"id": "A", "tasks": ["t0"]}]}), encoding="utf-8")
         out = subprocess.run(
             [sys.executable, str(AGENT_COMMIT), "--run-dir", str(run_dir.root),
              "--candidate-id", cid, "--from-dir", str(work), "--decision", decision,

@@ -96,19 +96,22 @@ def append_node(run_dir, *, node_id: str, parents: list[str], status: str,
                  cluster_ids: list[str] | None = None,
                  micro_tests: list[str] | None = None,
                  note: str | None = None, gate: dict | None = None,
-                 screen: dict | None = None) -> dict:
+                 screen: dict | None = None, subset: dict | None = None) -> dict:
     """Append one candidate node to ``$R/graph.jsonl``.
 
     ``gate``/``screen`` default to a fresh lookup via :func:`gate_row` /
     :func:`collect_screen_info` when not supplied — callers with the data
     already in hand (``round.py``'s in-memory table) may pass it directly to
     avoid re-reading disk.
+
+    ``subset`` is the fallback task subset when no screen ran — e.g. the tasks of the
+    DIAGNOSIS.json clusters an agent-optimize edit targeted (#611). A screen.py subset,
+    when one exists, always wins: it is what was actually measured.
     """
     if gate is None:
         gate = gate_row(run_dir, node_id)
     if screen is None:
         screen = collect_screen_info(run_dir, node_id)
-    subset = None
     if screen and screen.get("subset_ids"):
         subset = {"task_ids": screen["subset_ids"], "rationale": None,
                   "tier": screen.get("last_tier")}

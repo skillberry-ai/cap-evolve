@@ -63,6 +63,12 @@ PREFIX convention (agent-optimize's ``ctl_null_i<N>`` plus its ``r<k>``/``a<k>``
 or an explicit ``role: "control"`` / truthy ``is_control`` field on the event. They also appear
 in ``evaluations`` with ``kind: "control"``, so a control is never in neither place.
 
+``diagnoses`` is NOT a second copy of per-candidate diagnoses (#611): it is a flat list of
+run-level ``{"kind", "candidate", "text"}`` annotations — ``diagnose``/``optimizer_error``
+events plus a ``diagnosis_parse_warning`` for every candidate whose DIAGNOSIS.json/PROCESS.md
+yielded no diagnosis. The canonical per-candidate diagnosis content (clusters/edits) lives
+ONLY on ``graph.nodes[i].diagnosis``.
+
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
 """
@@ -1609,6 +1615,15 @@ def reduce_run(run_dir) -> dict:
             last_accepted = cid
     
     # --- read DIAGNOSIS.json for each candidate -------------------------
+    # A read/parse failure here used to be swallowed, so a run whose optimizer never
+    # wrote a diagnosis (#611: 0/17 candidates) looked identical to one with nothing to
+    # show. Never fatal, but always visible: the warning rides on the node's own
+    # ``diagnosis.warnings`` (which DiagnosisFlow renders) AND on ``summary.diagnoses``.
+    def _diag_warning(nid: str, n: dict, msg: str) -> None:
+        n["diagnosis"] = {"candidate": nid, "headline": "", "clusters": [], "edits": [],
+                          "skipped": [], "techniques": [], "warnings": [msg]}
+        diagnoses.append({"kind": "diagnosis_parse_warning", "candidate": nid, "text": msg})
+
     for nid, n in nodes.items():
         if nid == "seed":
             continue
@@ -1619,8 +1634,8 @@ def reduce_run(run_dir) -> dict:
                 try:
                     diag_content = diag_path.read_text(encoding="utf-8")
                     n["diagnosis"] = json.loads(diag_content)
-                except Exception:  # noqa: BLE001
-                    pass  # diagnosis is optional, silently skip on error
+                except Exception as e:  # noqa: BLE001
+                    _diag_warning(nid, n, f"DIAGNOSIS.json unreadable: {str(e)[:200]}")
             else:
                 # Fallback: try parsing PROCESS.md tables
                 process_path = cand_dir / "PROCESS.md"
@@ -1632,8 +1647,13 @@ def reduce_run(run_dir) -> dict:
                         if parsed:
                             parsed["candidate"] = nid
                             n["diagnosis"] = parsed
-                    except Exception:  # noqa: BLE001
-                        pass  # fallback is best-effort
+                        else:
+                            _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md's "
+                                          "'Ranked issue list' / 'Changes made' tables have "
+                                          "no data rows — no diagnosis was recorded")
+                    except Exception as e:  # noqa: BLE001
+                        _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md could not "
+                                      f"be parsed: {str(e)[:200]}")
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
