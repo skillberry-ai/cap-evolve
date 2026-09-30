@@ -781,7 +781,7 @@ OPTNOTE
     # `TIER=full_verified` invocation without SPREADSHEETBENCH_DATA_DIR set (e.g. locally,
     # bypassing ci_setup.sh) would silently fall through to the sample_200 fallback above
     # and score the wrong benchmark under the full_verified tier's name.
-    case "$TIER" in full_verified) SB_DEFAULT="$SB_CACHE/spreadsheetbench_verified_400";; esac
+    case "$TIER" in full_verified|full_verified_probe) SB_DEFAULT="$SB_CACHE/spreadsheetbench_verified_400";; esac
     # SPREADSHEETBENCH_DATA_DIR is expected to be set (and exported to GITHUB_ENV) by
     # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
     # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
@@ -791,7 +791,7 @@ OPTNOTE
     # (still bounded; each container is ~8GB RAM / 2 CPU, see adapter.py's NOTE ON SCORING)
     # unless the caller already pinned SPREADSHEETBENCH_CONCURRENCY explicitly.
     SB_CONCURRENCY_DEFAULT=4
-    case "$TIER" in full|pilot|full_verified) SB_CONCURRENCY_DEFAULT=8;; esac
+    case "$TIER" in full|pilot|full_verified|full_verified_probe) SB_CONCURRENCY_DEFAULT=8;; esac
     # Rounds of code-exec interaction the agent gets per task. SkillOpt runs SpreadsheetBench
     # as "multi-round codegen with up to 30 turns" (arXiv 2605.23904), and the adapter's own
     # default is 5 — a real handicap on a multi-round benchmark, so full (the comparison tier)
@@ -801,7 +801,7 @@ OPTNOTE
     # pilot exists to MEASURE the full tier, so it must match full's turn budget. full_verified is
     # the other comparison tier (the verified 400-task release) and matches it for the same
     # reason: the turn budget is part of what is being compared, not an implementation detail.
-    case "$TIER" in full|pilot|full_verified) SB_MAX_TURNS_DEFAULT=30;; esac
+    case "$TIER" in full|pilot|full_verified|full_verified_probe) SB_MAX_TURNS_DEFAULT=30;; esac
     CAPS="[system-prompt]"
     cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL_WIRE
@@ -1007,23 +1007,31 @@ PLAN
 REUSE_YAML=""
 if [ "${BENCH:-}" = "spreadsheetbench" ] && [ "${SB_REUSE_LATEST_BASELINE:-0}" = "1" ]; then
   PRIOR="$SB_LATEST_DIR/run_suite"
-  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" <<'PY' || exit 1
+  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" "${SB_REUSE_FROM_TIER:-$TIER}" <<'PY' || exit 1
 import json, sys
 meta_p, prior_p, want_p, tier, empty_seed = sys.argv[1:6]
+reuse_tier = sys.argv[6] if len(sys.argv) > 6 else tier  # exp #606: a probe tier reuses its parent's seed
 try:
     meta, prior = json.load(open(meta_p)), json.load(open(prior_p))
 except OSError as e:
     raise SystemExit(f"::error:: SB_REUSE_LATEST_BASELINE=1 but no kept run to reuse: {e}")
 want = json.load(open(want_p))
-if meta.get("tier") != tier:
-    raise SystemExit(f"::error:: the kept run is tier {meta.get('tier')!r}, this run is {tier!r}")
+if meta.get("tier") != reuse_tier:
+    raise SystemExit(f"::error:: the kept run is tier {meta.get('tier')!r}, this run reuses {reuse_tier!r}")
 # The kept run's seed snapshot replaces this run's, so the requested seed must be the same one.
 if str(meta.get("empty_seed", "0")) != empty_seed:
     raise SystemExit(f"::error:: the kept run has SB_EMPTY_SEED={meta.get('empty_seed')}, this run "
                      f"asks for {empty_seed} — reusing it would silently swap the seed")
-for k in ("train", "val", "test"):
+for k in ("train", "val"):
     if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
         raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
+# exp #606: the test split may be a SUBSET of the kept run's; the seed's test result is then
+# re-aggregated over just those tasks (rescore_run.py --test-subset).
+pt, wt = set(map(str, prior.get("test", []))), set(map(str, want["test"]))
+if not wt <= pt:
+    raise SystemExit(f"::error:: this tier's test split is not a subset of the kept run's ({len(wt - pt)} ids missing)")
+if wt != pt:
+    print(f">>> reusing on a {len(wt)}-task test subset of the kept run's {len(pt)}", file=sys.stderr)
 print(f">>> reusing the seed of kept run {meta.get('run_id')} ({meta.get('run_url')})", file=sys.stderr)
 PY
   # Reuse a COPY re-scored under THIS run's reward: the kept run may have used another one (runs
@@ -1032,8 +1040,40 @@ PY
   RESCORED="$WORK/reused_seed_run"
   rm -rf "$RESCORED" && mkdir -p "$RESCORED" && cp -a "$PRIOR" "$RESCORED/run_suite" || exit 1
   "$PY" "$REPO/ci/benchmarks/spreadsheetbench/utils/rescore_run.py" "$RESCORED/run_suite" \
-        --metric "$SB_REWARD_METRIC" >&2 || { echo "::error:: could not re-score the kept run" >&2; exit 1; }
+        --metric "$SB_REWARD_METRIC" --test-subset "$PROJ/inputs/split_ids.json" >&2 || { echo "::error:: could not re-score the kept run" >&2; exit 1; }
   REUSE_YAML="reuse_baseline:     \"$RESCORED/run_suite\""
+fi
+
+# exp #606: which reader block the optimizer gets. A = the current rendering (tier strong),
+# B/R = a whole block from the probe tier's reader/ dir, C = none (agnostic).
+# Only a dispatch that sets SB_READER takes this path; without it the spec is exactly main's.
+TARGET_MODEL_LINE="target_model:       ${AGENT_MODEL_WIRE:-}"
+TARGET_PROFILE_LINE=""
+RF=""
+case "${SB_READER:-A}" in
+  A) ;;
+  B|R)
+    RF="$REPO/ci/benchmarks/$BENCH_DIR/$TIER/reader/$([ "$SB_READER" = B ] && echo B_frontier.md || echo R_results_driven.md)"
+    [ -s "$RF" ] || { echo "::error:: SB_READER=$SB_READER but $RF is missing or empty" >&2; exit 1; }
+    TARGET_PROFILE_LINE="target_profile_file: \"$RF\"" ;;
+  C) TARGET_MODEL_LINE='target_model:       ""' ;;
+  *) echo "::error:: SB_READER must be A, B, C or R (got '$SB_READER')" >&2; exit 1 ;;
+esac
+READER_TM="${AGENT_MODEL_WIRE:-}"; [ "${SB_READER:-A}" = C ] && READER_TM=""
+if [ -n "${SB_READER:-}" ]; then
+mkdir -p "$OUT"
+touch "$OUT/.exp606_started"  # optimizer session logs newer than this belong to this run
+PYTHONPATH="$REPO/core${PYTHONPATH:+:$PYTHONPATH}" "$PY" - "$READER_TM" "$RF" "$OUT/reader_block.md" "${SB_READER:-A}" <<'PY' || exit 1
+import hashlib, sys
+from cap_evolve import target_profile as tp
+tm, rf, out, variant = sys.argv[1:5]
+block = tp.reader_block(tp.resolve(tm, rf or None))
+if rf and block != open(rf, encoding="utf-8").read().rstrip("\n") + "\n":
+    raise SystemExit(f"::error:: rendered reader block is not the file {rf} verbatim")
+open(out, "w", encoding="utf-8").write(block)
+print(f">>> reader: variant={variant} sha256={hashlib.sha256(block.encode()).hexdigest()[:12]} "
+      f"chars={len(block)}\n{block or '(no reader block)'}", file=sys.stderr)
+PY
 fi
 
 cat > "$PROJ/capevolve.yaml" <<YAML
@@ -1041,7 +1081,8 @@ capabilities:       $CAPS
 capability_path:    seed_capability
 optimizer_skill:    claude-code
 optimizer_model:    $OPTIMIZER_MODEL_WIRE
-target_model:       $AGENT_MODEL_WIRE
+$TARGET_MODEL_LINE
+$TARGET_PROFILE_LINE
 optimizer_max_turns:    ${OPTIMIZER_MAX_TURNS:-80}
 optimizer_usd_per_iter: ${OPTIMIZER_USD_PER_ITER:-0}
 # Set (to an ABSOLUTE path) only by an arm that ships its own optimizer instructions;
@@ -1170,6 +1211,38 @@ if [ -d "$RUN_DIR/host" ]; then
     esac
   done
   echo ">>> host record -> $OUT/host ($(du -sh "$OUT/host" 2>/dev/null | cut -f1))" >&2
+fi
+
+# exp #606 (temp branch): which model the optimizer REALLY was, from the Claude Code session logs
+# this run's candidates wrote (the artifact carries no optimizer transcript on the hill-climb
+# path), plus each candidate's rendered optimizer instructions, which hold the reader block.
+if [ -f "$OUT/.exp606_started" ]; then
+  mkdir -p "$OUT/optimizer_instructions"
+  for d in "$RUN_DIR"/work/cand_*; do
+    [ -d "$d" ] || continue
+    for f in "$d"/INSTRUCTIONS.md "$d"/instructions.md; do
+      [ -f "$f" ] && cp "$f" "$OUT/optimizer_instructions/$(basename "$d").md" && break
+    done
+  done
+  "$PY" - "$OUT/.exp606_started" "$HOME/.claude/projects" "$RUN_DIR" "$OUT/optimizer_models.json" <<'PY' || true
+import json, re, sys
+from collections import Counter
+from pathlib import Path
+marker, projects, run_dir, out = sys.argv[1:5]
+since = Path(marker).stat().st_mtime
+key = re.sub(r"[^A-Za-z0-9]", "-", str(Path(run_dir).resolve()))
+models, files = Counter(), []
+for d in Path(projects).glob("*"):
+    if not (d.is_dir() and d.name.startswith(key) and "-work-cand-" in d.name):
+        continue
+    for f in d.glob("*.jsonl"):
+        if f.stat().st_mtime < since:
+            continue
+        files.append(str(f))
+        models.update(re.findall(r'"model"\s*:\s*"([^"]+)"', f.read_text(errors="replace")))
+json.dump({"models": dict(models), "session_files": sorted(files), "dir_key": key}, open(out, "w"), indent=2)
+print(f">>> optimizer models (from {len(files)} session log(s)): {dict(models)}", file=sys.stderr)
+PY
 fi
 
 # LATEST RUN (spreadsheetbench): replace the one kept slot with this run. Staged next to the slot

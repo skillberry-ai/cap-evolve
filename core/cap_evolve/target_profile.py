@@ -158,6 +158,10 @@ def reader_block(profile: TargetProfile) -> str:
     """Render the ``{{TARGET_READER}}`` block. Empty string when agnostic."""
     if profile.is_agnostic:
         return ""
+    # A profile file that is already a whole block (it opens with the block's own header) is used
+    # as written, so an experiment can control every word the optimizer reads (#606).
+    if profile.brief.startswith("## THE READER"):
+        return profile.brief.rstrip("\n") + "\n"
     return (
         "## THE READER (who consumes what you edit)\n"
         f"At runtime these capabilities are read by `{profile.model}` — capability tier: "

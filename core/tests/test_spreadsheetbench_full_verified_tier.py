@@ -206,7 +206,7 @@ def test_ci_setup_fetches_the_verified_archive_for_this_tier():
     """full_verified must NOT get full_912's data — that would score the old benchmark."""
     sh = CI_SETUP.read_text(encoding="utf-8")
     arm = sh.split("  spreadsheetbench)", 1)[1].split("\n  *)", 1)[0]
-    assert 'full_verified) SB_VARIANT="verified_400"' in arm, (
+    assert 'full_verified|full_verified_probe) SB_VARIANT="verified_400"' in arm, (
         "the full_verified tier must map to the verified_400 archive"
     )
     # and the existing mapping must be untouched
@@ -220,8 +220,8 @@ def test_the_tier_gets_the_thirty_turn_budget_and_full_concurrency():
     """Turn budget is part of the comparison: smoke's 5 turns is not a comparable setting."""
     sh = RUN_SUITE.read_text(encoding="utf-8")
     arm = sh.split("  spreadsheetbench)", 1)[1].split("\n  *)", 1)[0]
-    assert 'case "$TIER" in full|pilot|full_verified) SB_CONCURRENCY_DEFAULT=8;; esac' in arm
-    assert 'case "$TIER" in full|pilot|full_verified) SB_MAX_TURNS_DEFAULT=30;; esac' in arm
+    assert 'case "$TIER" in full|pilot|full_verified|full_verified_probe) SB_CONCURRENCY_DEFAULT=8;; esac' in arm
+    assert 'case "$TIER" in full|pilot|full_verified|full_verified_probe) SB_MAX_TURNS_DEFAULT=30;; esac' in arm
 
 
 def test_run_suite_is_valid_bash():
@@ -251,7 +251,7 @@ def test_the_tier_starts_from_the_pristine_seed():
 
 def test_the_tier_is_a_known_tier_in_the_benchmarks_workflow():
     wf = WORKFLOW.read_text(encoding="utf-8")
-    assert 'TIERS = ["smoke", "pilot", "full", "full_verified"]' in wf, (
+    assert 'TIERS = ["smoke", "pilot", "full", "full_verified", "full_verified_probe"]' in wf, (
         "an unregistered tier can never be dispatched — the planner emits no leg for it"
     )
 
@@ -304,7 +304,7 @@ def test_the_tier_does_not_join_the_tier_all_sweep_yet():
     would launch two four-figure legs per dispatch, and the tier's model axis is still open.
     It runs when named — `tier=full_verified`, or a `benchmark-full_verified-spreadsheetbench` label."""
     wf = WORKFLOW.read_text(encoding="utf-8")
-    assert 'EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}' in wf
+    assert 'EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "full_verified_probe"}' in wf
 
 
 # --- documentation ------------------------------------------------------------------------

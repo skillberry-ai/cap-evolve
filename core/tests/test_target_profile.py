@@ -73,3 +73,24 @@ def test_reader_block_names_model_and_tier():
     block = tp.reader_block(tp.resolve("gpt-oss-120b"))
     assert "gpt-oss-120b" in block and "mid" in block
     assert "THE READER" in block
+
+
+def test_verbatim_reader_file_replaces_the_whole_block(tmp_path):
+    f = tmp_path / "r.md"
+    f.write_text("## THE READER (who consumes what you edit)\nYou do not know which model reads this skill.\n")
+    out = tp.reader_block(tp.resolve("rits/google/gemma-4-31B-it", f))
+    assert out == "## THE READER (who consumes what you edit)\nYou do not know which model reads this skill.\n"
+    assert "gemma" not in out and "capability tier" not in out
+
+
+def test_brief_only_file_keeps_the_rendered_frame(tmp_path):
+    f = tmp_path / "b.md"
+    f.write_text("Custom brief.")
+    out = tp.reader_block(tp.resolve("gpt-oss-120b", f))
+    assert out.startswith("## THE READER") and "`gpt-oss-120b`" in out and "Custom brief." in out
+
+
+def test_verbatim_file_is_ignored_when_agnostic(tmp_path):
+    f = tmp_path / "r.md"
+    f.write_text("## THE READER\nx\n")
+    assert tp.reader_block(tp.resolve("", f)) == ""

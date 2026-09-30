@@ -50,7 +50,7 @@ on:
         description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
         default: smoke
-        options: [all, smoke, pilot, full, full_verified]
+        options: [all, smoke, pilot, full, full_verified, full_verified_probe]
       iterations:
         description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step. WHAT ONE ITERATION BUYS DEPENDS ON THE ALGORITHM: on the hill-climb (deterministic) path it is one optimizer call; under agent-optimize it is one CANDIDATE taken to a gate decision, so a wave of three parallel siblings spends three iterations at once. Budget accordingly — 3 under agent-optimize can mean a single wave and no iteration at all."
         type: string
@@ -68,6 +68,7 @@ on:
           - "ibm-ete-int/aws/claude-opus-4-7"
           - "ibm-ete-int/aws/claude-opus-4-8"
           - "ibm-ete-int/aws/claude-opus-5"
+          - "ibm-ete-int/aws/claude-opus-5-5"
           - "ibm-ete-int/aws/claude-sonnet-4-6"
           - "ibm-ete-int/aws/claude-sonnet-5"
           - "ibm-ete-int/aws/gpt-oss-120b"
@@ -112,6 +113,7 @@ on:
           - "ibm-ete-int/aws/claude-opus-4-7"
           - "ibm-ete-int/aws/claude-opus-4-8"
           - "ibm-ete-int/aws/claude-opus-5"
+          - "ibm-ete-int/aws/claude-opus-5-5"
           - "ibm-ete-int/aws/claude-sonnet-4-6"
           - "ibm-ete-int/aws/claude-sonnet-5"
           - "ibm-ete-int/aws/gpt-oss-120b"
@@ -171,6 +173,11 @@ on:
         type: choice
         default: hill-climb-all
         options: [hill-climb-all, hill-climb-cyclic, hill-climb-hardest-first, agent-optimize]
+      reader_variant:
+        description: "exp #606 only (temp branch): the optimizer's reader block. A=strong (current text), B=frontier brief, C=no block, R=results-driven"
+        type: choice
+        default: A
+        options: [A, B, C, R]
   pull_request:
     types: [labeled]
 
@@ -244,7 +251,7 @@ jobs:
           # any bench that gains one uses the same tier rather than inventing a name with its
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
-          TIERS = ["smoke", "pilot", "full", "full_verified"]
+          TIERS = ["smoke", "pilot", "full", "full_verified", "full_verified_probe"]
           # tau2_custom_direct / _blackbox are the DELIVERY ARMS of the tau2 airline benchmark:
           # same tasks and tiers, candidate delivered in-process versus through the Skillberry
           # Store + Proxy-Agent. They stay separate legs so each keeps its own tier task lists,
@@ -269,7 +276,7 @@ jobs:
           # not for honesty. A benchmark populating both whole-set tiers would put two of them
           # in every `all` dispatch, and each is a full-length run on its own. Run it by name:
           # `tier=full_verified`, or a `benchmark-full_verified-<bench>` label.
-          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}
+          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "full_verified_probe"}
 
           # Is the repository actually checked out here? See the fail-open note below.
           tree_present = os.path.isdir("ci/benchmarks")
@@ -361,7 +368,7 @@ jobs:
     # where the coarse label check above passes but no leg matches exactly (e.g. a
     # 'benchmark-smoke-typo' label), which would otherwise be an empty-matrix error.
     if: needs.plan.outputs.has_legs == 'true'
-    runs-on: [self-hosted, ibm-vpc]
+    runs-on: [self-hosted, ibm-vpc, skillberry-1]
     # GitHub's default 360min job timeout is too tight for a whole-set tier (a benchmark's
     # full task list x trials x iterations, and some benchmarks run a container per task);
     # self-hosted runners aren't GH-minute-billed, so a generous ceiling just prevents a
@@ -378,7 +385,7 @@ jobs:
         # Exactly the legs `plan` selected — one job per leg, no self-skipping legs.
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     concurrency:
-      group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}
+      group: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}-${{ github.ref }}-${{ github.run_id }}
       cancel-in-progress: false
     env:
       IBM_ETE_INT_API_BASE: ${{ secrets.IBM_ETE_INT_API_BASE }}
@@ -421,7 +428,7 @@ jobs:
       # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
       # and `grow.py` exists to buy replication only where a candidate looks promising.
       # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
+      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified' || matrix.tier == 'full_verified_probe') && '1') || '10' }}
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'ibm-ete-int/aws/gpt-oss-120b' }}
       OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'ibm-ete-int/claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
@@ -440,6 +447,8 @@ jobs:
       # agent-optimize to orchestration_mode: agent + a derived stop_condition. A PR-label
       # dispatch has no inputs at all, so the default keeps every existing leg unchanged.
       ALGORITHM: ${{ github.event.inputs.algorithm || 'hill-climb-all' }}
+      # exp #606 (temp branch): which reader block the optimizer gets (run_suite.sh).
+      SB_READER: ${{ github.event.inputs.reader_variant }}
       # Run seed. With a tier that ships a committed split_ids.json the partition is FIXED, so
       # this varies only the per-trial rollout seeding — which is what makes the independent
       # seeds a paper comparison needs (">=3 seeds") possible on one split. Set the repo
@@ -581,6 +590,7 @@ jobs:
             "optimizer_model": "${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}",
             "gate_k_se": $gate_k_se,
             "algorithm": "${ALGORITHM:-hill-climb-all}",
+            "reader_variant": "${SB_READER:-A}",
             "warm_seed": $warm_json,
             "reward_metric": "$(cat "$out/reward_metric" 2>/dev/null)",
             "conclusion": "${{ job.status }}"

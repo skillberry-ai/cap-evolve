@@ -224,7 +224,7 @@ PYEOF
       # full_verified evaluates the VERIFIED 400-task re-release, which is a different download
       # and a different on-disk layout — not a subset of the 912 archive (see fetch_data.sh).
       # Giving it full_912's data would silently score the old benchmark under the new tier's name.
-      full_verified) SB_VARIANT="verified_400" ;;
+      full_verified|full_verified_probe) SB_VARIANT="verified_400" ;;
     esac
     SPREADSHEETBENCH_DATA_DIR="$(SPREADSHEETBENCH_VARIANT="$SB_VARIANT" "$REPO/ci/benchmarks/spreadsheetbench/fetch_data.sh" "$CACHE/spreadsheetbench-data")" ;;
   rfe-creator)
@@ -474,6 +474,17 @@ if command -v curl >/dev/null; then
   # shell function still lets `exit 1` inside it end just that subshell; `wait "$pid"`
   # below recovers that as a normal nonzero status, so a probe failure still aborts this
   # script exactly as it did when the calls were sequential.
+  # exp #606 (temp branch): WARM an idle RITS model before the 60s probe. After idle time the first
+  # Gemma request took ~80s in #538, which failed preflight; a queued run has no one to warm it by
+  # hand. One tiny request with a long timeout, never fatal — the probe below still decides.
+  if [ "$PF_AGENT_PROVIDER" = "ibm-rits" ] && [ -n "${IBM_RITS_API_BASE:-}" ] && [ -n "${IBM_RITS_API_KEY:-}" ]; then
+    ( resolve_provider "$PF_AGENT"
+      curl -sS -m 180 -o /dev/null -w ">>> rits warm-up: HTTP %{http_code} in %{time_total}s\n" \
+        "$RESOLVED_API_BASE/chat/completions" \
+        -H "Authorization: Bearer $RESOLVED_API_KEY" -H 'Content-Type: application/json' \
+        -d "{\"model\":\"$RESOLVED_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_completion_tokens\":4}" \
+        2>/dev/null || echo ">>> rits warm-up: no answer within 180s" ) || true
+  fi
   probe_model agent "$PF_AGENT" & pid_agent=$!
   probe_model optimizer "$PF_OPTIMIZER" & pid_optimizer=$!
   fail=0

@@ -92,7 +92,7 @@ def _split(rd: RunDir, tag: str, split: str, stored: dict | None, metric: str) -
     raise SystemExit(f"::error:: no {split} result to re-score for tag {tag!r}: no rollouts and no stored result")
 
 
-def rescore(run_dir: Path, metric: str) -> dict:
+def rescore(run_dir: Path, metric: str, test_ids: set[str] | None = None) -> dict:
     for f in sorted((run_dir / "rollouts").glob("*/*.json")):
         _rescore_rollout(f, metric)
     rd = RunDir.open(run_dir)
@@ -115,6 +115,14 @@ def rescore(run_dir: Path, metric: str) -> dict:
         # stored seed result is then the only record, and is re-scored from its metrics.
         stored = (final.get("seed") or {}).get("test") or final.get("test_baseline")
         test = _split(rd, "FINAL" if seed_is_best else "FINAL_seed", "test", stored, metric)
+        if test_ids is not None:
+            # exp #606: a probe tier tests on a SUBSET of the kept run's test split, so the reused
+            # seed test score must be the one measured on exactly those tasks.
+            rows = [pt for pt in test.get("per_task") or [] if str(pt["task_id"]) in test_ids]
+            missing = test_ids - {str(pt["task_id"]) for pt in rows}
+            if missing:
+                raise SystemExit(f"::error:: the kept seed has no test row for {sorted(missing)}")
+            test = _rescore_result("test", dict(test, per_task=rows), metric)
         final["test_baseline"] = test
         final.setdefault("seed", {})["test"] = test
         if seed_is_best:
@@ -122,6 +130,12 @@ def rescore(run_dir: Path, metric: str) -> dict:
         final["reward_metric"] = metric
         final_p.write_text(json.dumps(final, indent=2), encoding="utf-8")
         out["test"] = test["reward"]
+    if test_ids is not None:
+        splits_p = run_dir / "splits.json"
+        splits = json.loads(splits_p.read_text(encoding="utf-8"))
+        splits["test"] = sorted(test_ids)
+        splits_p.write_text(json.dumps(splits, indent=2), encoding="utf-8")
+        out["test_n"] = len(test_ids)
     return out
 
 
@@ -130,9 +144,14 @@ def main() -> None:
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--metric", required=True,
                     choices=["soft_restriction", "hard_restriction", "soft_no_recalc", "hard_no_recalc"])
+    ap.add_argument("--test-subset", type=Path, default=None,
+                    help="split_ids.json whose `test` ids the seed test result is restricted to")
     args = ap.parse_args()
+    test_ids = None
+    if args.test_subset:
+        test_ids = set(map(str, json.loads(args.test_subset.read_text(encoding="utf-8"))["test"]))
     print(json.dumps({"rescored": str(args.run_dir), "metric": args.metric,
-                      **rescore(args.run_dir, args.metric)}))
+                      **rescore(args.run_dir, args.metric, test_ids)}))
 
 
 if __name__ == "__main__":
