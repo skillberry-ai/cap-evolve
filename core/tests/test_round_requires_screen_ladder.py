@@ -122,10 +122,11 @@ def test_round_proceeds_once_the_candidate_has_a_screen_record(tmp_path):
     assert p.returncode == 0, f"round.py refused a screened candidate: {p.stdout}"
 
 
-def test_near_duplicate_skip_justification_is_flagged_on_the_compliance_event(tmp_path):
-    """issue #585: boilerplate skip_justification text copy-pasted round after round
+def test_near_duplicate_skip_justification_is_refused_without_override(tmp_path):
+    """issue #585 (reopened): boilerplate skip_justification text copy-pasted round after round
     ("consistent with cand_1/2/...", "...consistent with prior rounds", "...per prior rounds
-    cand_2-...") should be visible on the recorded event, without blocking the round.
+    cand_2-...") is refused on an unscreened candidate unless --duplicate-skip-justification
+    records why; a first-time or genuinely fresh justification still passes on its own.
     """
     run_dir, project, work = _staged_run_dir(tmp_path)
 
@@ -144,13 +145,25 @@ def test_near_duplicate_skip_justification_is_flagged_on_the_compliance_event(tm
     shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
 
     # Round 2: near-identical boilerplate, same template with the candidate list tacked on.
-    p2 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
-               "--project", str(project), "--candidates", "cand_2", "--n-trials", "1",
-               "--skip-screen-justification",
-               "30-task val makes the tier-1 screen floor unreachable, per prior rounds cand_1.",
-               *_JUSTIFY])
+    round2 = [str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+              "--project", str(project), "--candidates", "cand_2", "--n-trials", "1",
+              "--skip-screen-justification",
+              "30-task val makes the tier-1 screen floor unreachable, per prior rounds cand_1.",
+              *_JUSTIFY]
+    refused = _run(round2)
+    assert refused.returncode == 2, f"near-duplicate skip was not refused: {refused.stdout}"
+    err = json.loads(refused.stdout)
+    assert "near-duplicate of cand_1" in err["error"]
+    assert "--duplicate-skip-justification" in err["fix"]
+    events = [json.loads(ln) for ln in
+              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert [e["tag"] for e in events if e.get("kind") == "agent_optimize_compliance"] == [
+        "cand_1"], "a refused round must not log a compliance event"
+
+    override = "cand_2 is a one-line wording tweak of cand_1's prompt; same split-size fact holds"
+    p2 = _run([*round2, "--duplicate-skip-justification", override])
     assert p2.returncode == 0, p2.stdout
-    assert "near-duplicate" in p2.stderr, f"no near-duplicate warning on stderr: {p2.stderr}"
+    assert "near-duplicate" in p2.stderr, f"no near-duplicate note on stderr: {p2.stderr}"
 
     events = [json.loads(ln) for ln in
               run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
@@ -159,6 +172,7 @@ def test_near_duplicate_skip_justification_is_flagged_on_the_compliance_event(tm
         "the first round's justification has nothing prior to duplicate")
     assert compliance[-1]["justification_near_duplicate_of"] == "cand_1", (
         f"round 2's boilerplate justification was not flagged as a near-duplicate: {compliance}")
+    assert compliance[-1]["duplicate_skip_justification"] == override
 
     harness.record_iteration(run_dir, work / "cand_2", "cand_2", parent_id="cur",
                              accepted=False, reason="test", val=0.5, parent_val=0.5)
